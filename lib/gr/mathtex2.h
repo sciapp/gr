@@ -12,7 +12,7 @@
 enum State
 {
   OUTSIDE_SYMBOL = 0,
-  INSIDE_SYMBOL = 1,
+  INSIDE_SYMBOL = 1
 };
 
 typedef enum ParserNodeType_

@@ -16,7 +16,7 @@ UNAME := $(shell uname)
      DEFINES = $(GSDEFS) -DGRDIR=\"$(GRDIR)\"
     INCLUDES = -I../gks -I$(THIRDPARTYDIR)/include
           CC = cc
-      CFLAGS = $(DEFINES) -O3 -Wall -fPIC $(EXTRA_CFLAGS)
+      CFLAGS = $(DEFINES) -O3 -Wall -Wextra -ansi -pedantic -fPIC $(EXTRA_CFLAGS)
           AR = ar
       RANLIB = ar ts
 ifeq ($(UNAME), Darwin)

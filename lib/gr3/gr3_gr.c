@@ -304,9 +304,12 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
   int projection_type;
   trans_t tx, ty, tz;
   int new_num_vertices;
-  float *new_vertices, *new_normals, *new_colors;
+  float *new_vertices = NULL;
+  float *new_normals = NULL;
+  float *new_colors = NULL;
   int new_idx, l, errind;
-  double linewidth_y, linewidth_x;
+  float linewidth_y = 0;
+  float linewidth_x = 0;
 
   gr_inqprojectiontype(&projection_type);
   gr_inqcolormapinds(&first_color, &last_color);
@@ -432,7 +435,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               if (option & GR3_SURFACE_GRZSHADED)
                 color = (int)pz[k] + first_color;
               else
-                color = (int)(zvalue * (last_color - first_color) + first_color);
+                color = (int)(zvalue * (float)(last_color - first_color) + (float)first_color);
               if (color < first_color)
                 color = first_color;
               else if (color > last_color)
@@ -445,9 +448,9 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
             }
           else
             {
-              c[0] = 1.0;
-              c[1] = 1.0;
-              c[2] = 1.0;
+              c[0] = 1.0f;
+              c[1] = 1.0f;
+              c[2] = 1.0f;
             }
         }
     }
@@ -477,7 +480,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               else
                 {
                   dx = ((v[1] - v[-dirx + 1]) / (v[0] - v[-dirx + 0]) + (v[dirx + 1] - v[1]) / (v[dirx + 0] - v[0])) /
-                       2.0;
+                       2.0f;
                 }
 
               if (j == 0)
@@ -491,7 +494,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               else
                 {
                   dy = ((v[1] - v[-diry + 1]) / (v[2] - v[-diry + 2]) + (v[diry + 1] - v[1]) / (v[diry + 2] - v[2])) /
-                       2.0;
+                       2.0f;
                 }
 
               n[0] = -dx;
@@ -504,6 +507,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
   new_num_vertices = num_indices;
   if (context_struct_.use_software_renderer && context_struct_.option <= OPTION_FILLED_MESH)
     {
+      double linewidth;
       int quality = context_struct_.quality;
       int ssaa_factor = quality & ~1;
       if (ssaa_factor == 0) ssaa_factor = 1;
@@ -525,13 +529,14 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
           free(new_normals);
           RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
         }
-      gks_inq_pline_linewidth(&errind, &linewidth_y);
-      linewidth_y *= 2 * ssaa_factor;
+      gks_inq_pline_linewidth(&errind, &linewidth);
+      linewidth *= 2 * ssaa_factor;
       if (errind != GKS_K_NO_ERROR)
         {
           RETURN_ERROR(errind);
         }
-      linewidth_x = linewidth_y;
+      linewidth_x = (float)linewidth;
+      linewidth_y = (float)linewidth;
       if (context_struct_.option == OPTION_LINES)
         {
           linewidth_x = 0; /* set to zero to not be drawn */
@@ -722,8 +727,8 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
     }
   else if (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC)
     {
-      memset(grviewmatrix, 0, 16 * sizeof(GLfloat));
       double camera_pos[3], up[3], focus_point[3];
+      memset(grviewmatrix, 0, 16 * sizeof(GLfloat));
       gr_inqtransformationparameters(&camera_pos[0], &camera_pos[1], &camera_pos[2], &up[0], &up[1], &up[2],
                                      &focus_point[0], &focus_point[1], &focus_point[2]);
       gr3_cameralookat((GLfloat)camera_pos[0], (GLfloat)camera_pos[1], (GLfloat)camera_pos[2], (GLfloat)focus_point[0],
@@ -762,12 +767,13 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
 GR3API void gr3_drawsurface(int mesh)
 {
   int projection_type;
-  gr_inqprojectiontype(&projection_type);
   float directions[3] = {0.0f, 0.0f, 1.0f};
   float ups[3] = {0.0f, 1.0f, 0.0f};
   float positions[3] = {-1.0f, -1.0f, -1.0f};
   float colors[3] = {1.0f, 1.0f, 1.0f};
   float scales[3] = {2.0f, 2.0f, 2.0f};
+
+  gr_inqprojectiontype(&projection_type);
 
   if (projection_type == GR_PROJECTION_ORTHOGRAPHIC || projection_type == GR_PROJECTION_PERSPECTIVE)
     {
@@ -806,6 +812,11 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
       (context_struct_.use_software_renderer && option <= OPTION_FILLED_MESH))
     {
       int mesh;
+      int width, height;
+      double device_pixel_ratio;
+      double vpxmin, vpxmax, vpymin, vpymax;
+      double aspect;
+      int projection_type;
       double xmin, xmax, ymin, ymax;
       int scale;
       int surfaceoption;
@@ -848,15 +859,11 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
           ymin = ymax;
           ymax = tmp;
         }
-      int width, height;
-      double device_pixel_ratio;
       gr_inqvpsize(&width, &height, &device_pixel_ratio);
       width *= device_pixel_ratio;
       height *= device_pixel_ratio;
-      double vpxmin, vpxmax, vpymin, vpymax;
       gr_inqviewport(&vpxmin, &vpxmax, &vpymin, &vpymax);
-      double aspect = fabs((vpxmax - vpxmin) / (vpymax - vpymin));
-      int projection_type;
+      aspect = fabs((vpxmax - vpxmin) / (vpymax - vpymin));
       gr_inqprojectiontype(&projection_type);
       if (projection_type == GR_PROJECTION_DEFAULT)
         {
@@ -1055,6 +1062,8 @@ GR3API void gr3_drawtrianglesurface(int n, const float *positions)
   int j;
   int mesh;
   int scale;
+  int width, height;
+  double device_pixel_ratio;
   double z_min;
   double z_max;
   struct
@@ -1141,8 +1150,6 @@ GR3API void gr3_drawtrianglesurface(int n, const float *positions)
       window.y_max = tmp;
     }
 
-  int width, height;
-  double device_pixel_ratio;
   gr_inqvpsize(&width, &height, &device_pixel_ratio);
   width *= device_pixel_ratio;
   height *= device_pixel_ratio;
@@ -1183,113 +1190,6 @@ GR3API void gr3_drawtrianglesurface(int n, const float *positions)
  */
 GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, double *dmin_ptr, double *dmax_ptr)
 {
-#if defined(GR3_CAN_USE_VBO) && (defined(GL_ARB_framebuffer_object) || defined(GL_EXT_framebuffer_object))
-  double xmin, ymin, xmax, ymax, zmin, zmax;
-  int rotation, tilt, scale;
-  int projection_type;
-  double min, max;
-  int i;
-  int *color_data, *colormap;
-  int first_color, last_color;
-  GLfloat fovy, zNear, zFar, aspect, tfov2;
-  GLfloat *pixel_data, *fdata;
-  GLsizei vertex_shader_source_lines, fragment_shader_source_lines;
-  GLfloat grmatrix[16], grviewmatrix[16], projection_matrix[16];
-  GLint width, height;
-  GLfloat camera_direction[3];
-  GLint nmax, success;
-  GLuint vertex_shader, fragment_shader, program;
-  GLuint vbo, texture, framebuffer, framebuffer_texture;
-  GLint previous_viewport[4];
-  GLint previous_framebuffer_binding;
-  GLboolean previous_cull_face_state;
-  GLint previous_cull_face_mode;
-  GLfloat previous_clear_color[4];
-
-  const float vertices[] = {
-      -1, -1, -1, -1, -1, +1, -1, +1, -1, -1, +1, -1, -1, -1, +1, -1, +1, +1, /* yz-plane, negative x */
-      +1, -1, -1, +1, +1, -1, +1, -1, +1, +1, -1, +1, +1, +1, -1, +1, +1, +1, /* yz-plane, positive x */
-      -1, -1, -1, +1, -1, -1, -1, -1, +1, -1, -1, +1, +1, -1, -1, +1, -1, +1, /* xz-plane, negative y */
-      -1, +1, -1, -1, +1, +1, +1, +1, -1, +1, +1, -1, -1, +1, +1, +1, +1, +1, /* xz-plane, positive y*/
-      -1, -1, -1, -1, +1, -1, +1, -1, -1, +1, -1, -1, -1, +1, -1, +1, +1, -1, /* xy-plane, negatize z*/
-      -1, -1, +1, +1, -1, +1, -1, +1, +1, -1, +1, +1, +1, -1, +1, +1, +1, +1  /* xz-plane, positive z*/
-  };
-
-  const char *vertex_shader_source[] = {
-      "#version 120\n",
-      "\n",
-      "attribute vec3 position;\n",
-      "varying vec3 vf_tex_coord;\n",
-      "varying vec3 vf_camera_direction;\n",
-      "uniform vec3 camera_direction;\n",
-      "uniform vec3 camera_position;\n",
-      "uniform mat4 model;\n",
-      "uniform mat4 inv_model;\n",
-      "uniform mat4 view;\n",
-      "uniform mat4 projection;\n",
-      "\n",
-      "void main() {\n",
-      "    vf_camera_direction = float(abs(projection[2][3]) < 0.5) * (transpose(view)*vec4(camera_direction, 0)).xyz ",
-      "    + float(abs(projection[2][3]) > 0.5) * (position - (inv_model*vec4(camera_position, 1.0)).xyz);\n",
-      "    vf_tex_coord = position*0.5+vec3(0.5);\n",
-      "    gl_Position = projection*view*model*vec4(position, 1.0);\n",
-      "}\n",
-  };
-
-  const char *fragment_shader_source[] = {
-      "#version 120\n",
-      "\n",
-      "varying vec3 vf_tex_coord;\n",
-      "varying vec3 vf_camera_position;\n",
-      "varying vec3 vf_camera_direction;\n",
-      "\n",
-      "uniform int n;\n",
-      "uniform sampler3D tex;\n",
-      "\n",
-      "float transfer_function(float step_length, float tex_val, float current_value);\n",
-      "float initial_value();\n",
-      "\n",
-      "void main() {\n",
-      "    vec3 camera_dir = normalize(vf_camera_direction);\n",
-      "\n",
-      "    float result = initial_value();\n",
-      "    int n_samples = int(max(1000, sqrt(3)*n));\n",
-      "    float step_length = sqrt(3.0) / n_samples;\n",
-      "    vec3 tex_coord = vf_tex_coord;\n",
-      "    for (int i = 0; i <= n_samples; i++) {\n",
-      "        float tex_val = max(0, texture3D(tex, tex_coord).r);\n",
-      "        tex_coord += camera_dir * step_length;\n",
-      "        result = transfer_function(step_length, tex_val, result);\n",
-      "        if (any(greaterThan(tex_coord, vec3(1.0)))) break;\n",
-      "        if (any(lessThan(tex_coord, vec3(0.0)))) break;\n",
-      "    }\n",
-      "    gl_FragColor.r = 1+result;\n",
-      "}\n",
-      NULL};
-
-  const char *transfer_functions[] = {
-      /* emission */
-      "float initial_value() {\n"
-      "   return 0.0;\n"
-      "}\n"
-      "float transfer_function(float step_length, float tex_value, float current_value) {\n"
-      "   return current_value + step_length * tex_value;\n"
-      "}\n",
-      /* absorption */
-      "float initial_value() {\n"
-      "   return 1.0;\n"
-      "}\n"
-      "float transfer_function(float step_length, float tex_value, float current_value) {\n"
-      "   return current_value * exp(-step_length * tex_value);\n"
-      "}\n",
-      /* maximum intensity projection */
-      "float initial_value() {\n"
-      "   return 0.0;\n"
-      "}\n"
-      "float transfer_function(float step_length, float tex_value, float current_value) {\n"
-      "   return max(current_value, tex_value);\n"
-      "}\n"};
-
   if (nx <= 0 || ny <= 0 || nz <= 0)
     {
       fprintf(stderr, "Invalid dimensions in gr_volume.\n");
@@ -1313,7 +1213,117 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
     }
   else
     {
+#if defined(GR3_CAN_USE_VBO) && (defined(GL_ARB_framebuffer_object) || defined(GL_EXT_framebuffer_object))
+      double xmin, ymin, xmax, ymax, zmin, zmax;
+      int rotation, tilt, scale;
+      int projection_type;
+      double min, max;
+      int i;
+      int *color_data, *colormap;
+      int first_color, last_color;
+      GLfloat fovy, zNear, zFar, aspect, tfov2;
+      GLfloat *pixel_data, *fdata;
+      GLsizei vertex_shader_source_lines, fragment_shader_source_lines;
+      GLfloat grmatrix[16], grviewmatrix[16], projection_matrix[16];
+      GLint width, height;
+      GLfloat camera_direction[3] = {0, 0, -1};
+      double camera_pos[3];
+      float model_matrix[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+      float inv_model_matrix[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+      GLint nmax, success;
+      GLuint vertex_shader, fragment_shader, program;
+      GLuint vbo, texture, framebuffer, framebuffer_texture;
+      GLint previous_viewport[4];
+      GLint previous_framebuffer_binding;
+      GLboolean previous_cull_face_state;
+      GLint previous_cull_face_mode;
+      GLfloat previous_clear_color[4];
       int border, max_threads, approximative_calculation;
+
+      const float vertices[] = {
+          -1, -1, -1, -1, -1, +1, -1, +1, -1, -1, +1, -1, -1, -1, +1, -1, +1, +1, /* yz-plane, negative x */
+          +1, -1, -1, +1, +1, -1, +1, -1, +1, +1, -1, +1, +1, +1, -1, +1, +1, +1, /* yz-plane, positive x */
+          -1, -1, -1, +1, -1, -1, -1, -1, +1, -1, -1, +1, +1, -1, -1, +1, -1, +1, /* xz-plane, negative y */
+          -1, +1, -1, -1, +1, +1, +1, +1, -1, +1, +1, -1, -1, +1, +1, +1, +1, +1, /* xz-plane, positive y*/
+          -1, -1, -1, -1, +1, -1, +1, -1, -1, +1, -1, -1, -1, +1, -1, +1, +1, -1, /* xy-plane, negatize z*/
+          -1, -1, +1, +1, -1, +1, -1, +1, +1, -1, +1, +1, +1, -1, +1, +1, +1, +1  /* xz-plane, positive z*/
+      };
+
+      const char *vertex_shader_source[] = {
+          "#version 120\n",
+          "\n",
+          "attribute vec3 position;\n",
+          "varying vec3 vf_tex_coord;\n",
+          "varying vec3 vf_camera_direction;\n",
+          "uniform vec3 camera_direction;\n",
+          "uniform vec3 camera_position;\n",
+          "uniform mat4 model;\n",
+          "uniform mat4 inv_model;\n",
+          "uniform mat4 view;\n",
+          "uniform mat4 projection;\n",
+          "\n",
+          "void main() {\n",
+          "    vf_camera_direction = float(abs(projection[2][3]) < 0.5) * (transpose(view)*vec4(camera_direction, "
+          "0)).xyz ",
+          "    + float(abs(projection[2][3]) > 0.5) * (position - (inv_model*vec4(camera_position, 1.0)).xyz);\n",
+          "    vf_tex_coord = position*0.5+vec3(0.5);\n",
+          "    gl_Position = projection*view*model*vec4(position, 1.0);\n",
+          "}\n",
+      };
+
+      const char *fragment_shader_source[] = {
+          "#version 120\n",
+          "\n",
+          "varying vec3 vf_tex_coord;\n",
+          "varying vec3 vf_camera_direction;\n",
+          "\n",
+          "uniform int n;\n",
+          "uniform sampler3D tex;\n",
+          "\n",
+          "float transfer_function(float step_length, float tex_val, float current_value);\n",
+          "float initial_value();\n",
+          "\n",
+          "void main() {\n",
+          "    vec3 camera_dir = normalize(vf_camera_direction);\n",
+          "\n",
+          "    float result = initial_value();\n",
+          "    int n_samples = int(max(1000, sqrt(3)*n));\n",
+          "    float step_length = sqrt(3.0) / n_samples;\n",
+          "    vec3 tex_coord = vf_tex_coord;\n",
+          "    for (int i = 0; i <= n_samples; i++) {\n",
+          "        float tex_val = max(0, texture3D(tex, tex_coord).r);\n",
+          "        tex_coord += camera_dir * step_length;\n",
+          "        result = transfer_function(step_length, tex_val, result);\n",
+          "        if (any(greaterThan(tex_coord, vec3(1.0)))) break;\n",
+          "        if (any(lessThan(tex_coord, vec3(0.0)))) break;\n",
+          "    }\n",
+          "    gl_FragColor.r = 1+result;\n",
+          "}\n",
+          NULL};
+
+      const char *transfer_functions[] = {
+          /* emission */
+          "float initial_value() {\n"
+          "   return 0.0;\n"
+          "}\n"
+          "float transfer_function(float step_length, float tex_value, float current_value) {\n"
+          "   return current_value + step_length * tex_value;\n"
+          "}\n",
+          /* absorption */
+          "float initial_value() {\n"
+          "   return 1.0;\n"
+          "}\n"
+          "float transfer_function(float step_length, float tex_value, float current_value) {\n"
+          "   return current_value * exp(-step_length * tex_value);\n"
+          "}\n",
+          /* maximum intensity projection */
+          "float initial_value() {\n"
+          "   return 0.0;\n"
+          "}\n"
+          "float transfer_function(float step_length, float tex_value, float current_value) {\n"
+          "   return max(current_value, tex_value);\n"
+          "}\n"};
+
       gr_inqvolumeflags(&border, &max_threads, &height, &width, &approximative_calculation);
       gr_inqprojectiontype(&projection_type);
       if (projection_type == GR_PROJECTION_DEFAULT)
@@ -1334,397 +1344,412 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
               height = (int)(height / aspect);
             }
         }
-    }
 
-  pixel_data = malloc(width * height * sizeof(float));
-  assert(pixel_data);
-  fdata = malloc(nx * ny * nz * sizeof(float));
-  assert(fdata);
-  gr_inqcolormapinds(&first_color, &last_color);
-  colormap = malloc((last_color - first_color + 1) * sizeof(int));
-  assert(colormap);
-  color_data = malloc(width * height * sizeof(int));
-  assert(color_data);
+      pixel_data = malloc(width * height * sizeof(float));
+      assert(pixel_data);
+      fdata = malloc(nx * ny * nz * sizeof(float));
+      assert(fdata);
+      gr_inqcolormapinds(&first_color, &last_color);
+      colormap = malloc((last_color - first_color + 1) * sizeof(int));
+      assert(colormap);
+      color_data = malloc(width * height * sizeof(int));
+      assert(color_data);
 
-  for (i = 0; i < nx * ny * nz; i++)
-    {
-      fdata[i] = (float)data[i];
-    }
-
-  /* Add transfer function implementation to fragment shader source */
-  vertex_shader_source_lines = sizeof(vertex_shader_source) / sizeof(vertex_shader_source[0]);
-  fragment_shader_source_lines = sizeof(fragment_shader_source) / sizeof(fragment_shader_source[0]);
-  fragment_shader_source[fragment_shader_source_lines - 1] = transfer_functions[algorithm];
-
-  /* Create and compile shader, link shader program */
-  vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-  fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(vertex_shader, vertex_shader_source_lines, vertex_shader_source, NULL);
-  glCompileShader(vertex_shader);
-  glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &success);
-  if (!success)
-    {
-      fprintf(stderr, "Failed to compile vertex shader in gr_volume.\n");
-      return;
-    }
-  glShaderSource(fragment_shader, fragment_shader_source_lines, fragment_shader_source, NULL);
-  glCompileShader(fragment_shader);
-  glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &success);
-  if (!success)
-    {
-      fprintf(stderr, "Failed to compile fragment shader in gr_volume.\n");
-      return;
-    }
-  program = glCreateProgram();
-  glAttachShader(program, vertex_shader);
-  glAttachShader(program, fragment_shader);
-  glLinkProgram(program);
-  glGetProgramiv(program, GL_LINK_STATUS, &success);
-  if (!success)
-    {
-      fprintf(stderr, "Failed to link shader program in gr_volume.\n");
-      return;
-    }
-  glDeleteShader(vertex_shader);
-  glDeleteShader(fragment_shader);
-  glUseProgram(program);
-
-  memset(projection_matrix, 0, 16 * sizeof(GLfloat));
-  if (projection_type == GR_PROJECTION_DEFAULT)
-    {
-      /* Set projection parameter like in `gr3_drawmesh_grlike` and create (orthographic) projection matrix */
-      fovy = 90.0f;
-      zNear = 1.0f;
-      zFar = 200.0f;
-      tfov2 = (GLfloat)tan(fovy * M_PI / 360.0);
-      GLfloat right = zNear * aspect * tfov2;
-      GLfloat top = zNear * tfov2;
-
-      projection_matrix[0 + 0 * 4] = (GLfloat)1.0 / right; /* left = -right */
-      projection_matrix[0 + 3 * 4] = 0.0;
-      projection_matrix[1 + 1 * 4] = (GLfloat)1.0 / top; /* bottom = -top */
-      projection_matrix[1 + 3 * 4] = 0.0;
-      projection_matrix[2 + 2 * 4] = (GLfloat)-2.0 / (zFar - zNear);
-      projection_matrix[2 + 3 * 4] = -(zFar + zNear) / (zFar - zNear);
-      projection_matrix[3 + 3 * 4] = 1.0;
-    }
-  else if (projection_type == GR_PROJECTION_ORTHOGRAPHIC)
-    {
-      double near, far, left, right, bottom, top;
-      gr_inqorthographicprojection(&left, &right, &bottom, &top, &near, &far);
-      if (aspect > 1)
+      for (i = 0; i < nx * ny * nz; i++)
         {
-          right *= aspect;
-          left *= aspect;
-        }
-      else
-        {
-          top /= aspect;
-          bottom /= aspect;
+          fdata[i] = (float)data[i];
         }
 
-      projection_matrix[0 + 0 * 4] = (GLfloat)(2. / (right - left));
-      projection_matrix[0 + 3 * 4] = (GLfloat)(-(left + right) / (right - left));
-      projection_matrix[1 + 1 * 4] = (GLfloat)(2. / (top - bottom));
-      projection_matrix[1 + 3 * 4] = (GLfloat)(-(bottom + top) / (top - bottom));
-      projection_matrix[2 + 2 * 4] = (GLfloat)(-2. / (far - near));
-      projection_matrix[2 + 3 * 4] = (GLfloat)(-(far + near) / (far - near));
-      projection_matrix[3 + 3 * 4] = 1;
-    }
-  else if (projection_type == GR_PROJECTION_PERSPECTIVE)
-    {
-      double near, far, fov;
-      gr_inqperspectiveprojection(&near, &far, &fov);
+      /* Add transfer function implementation to fragment shader source */
+      vertex_shader_source_lines = sizeof(vertex_shader_source) / sizeof(vertex_shader_source[0]);
+      fragment_shader_source_lines = sizeof(fragment_shader_source) / sizeof(fragment_shader_source[0]);
+      fragment_shader_source[fragment_shader_source_lines - 1] = transfer_functions[algorithm];
 
-      if (aspect >= 1)
+      /* Create and compile shader, link shader program */
+      vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+      fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+      glShaderSource(vertex_shader, vertex_shader_source_lines, vertex_shader_source, NULL);
+      glCompileShader(vertex_shader);
+      glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &success);
+      if (!success)
         {
-          projection_matrix[0 + 0 * 4] = (GLfloat)(cos(fov * M_PI / 360) / sin(fov * M_PI / 360) / aspect);
-          projection_matrix[1 + 1 * 4] = (GLfloat)(cos(fov * M_PI / 360) / sin(fov * M_PI / 360));
+          fprintf(stderr, "Failed to compile vertex shader in gr_volume.\n");
+          return;
         }
-      else
+      glShaderSource(fragment_shader, fragment_shader_source_lines, fragment_shader_source, NULL);
+      glCompileShader(fragment_shader);
+      glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &success);
+      if (!success)
         {
-          projection_matrix[0 + 0 * 4] = (GLfloat)(cos(fov * M_PI / 360) / sin(fov * M_PI / 360));
-          projection_matrix[1 + 1 * 4] = (GLfloat)(cos(fov * M_PI / 360) / sin(fov * M_PI / 360) * aspect);
+          fprintf(stderr, "Failed to compile fragment shader in gr_volume.\n");
+          return;
         }
-      projection_matrix[2 + 2 * 4] = (GLfloat)((far + near) / (near - far));
-      projection_matrix[2 + 3 * 4] = (GLfloat)(2 * far * near / (near - far));
-      projection_matrix[3 + 2 * 4] = -1;
-    }
-
-  /* Create view matrix */
-  double camera_pos[3];
-  if (projection_type == GR_PROJECTION_DEFAULT)
-    {
-      gr_inqspace(&zmin, &zmax, &rotation, &tilt);
-      gr3_grtransformation_(grmatrix, rotation, tilt);
-      gr3_identity_(grviewmatrix);
-      grviewmatrix[2 + 3 * 4] = -4;
-      gr3_matmul_(grviewmatrix, grmatrix);
-    }
-  else if (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC)
-    {
-      memset(grviewmatrix, 0, 16 * sizeof(GLfloat));
-      double up[3];
-      double focus_point[3];
-
-      gr_inqtransformationparameters(&camera_pos[0], &camera_pos[1], &camera_pos[2], &up[0], &up[1], &up[2],
-                                     &focus_point[0], &focus_point[1], &focus_point[2]);
-
-      /* direction between camera and focus point */
-      double F[3] = {focus_point[0] - camera_pos[0], focus_point[1] - camera_pos[1], focus_point[2] - camera_pos[2]};
-      double norm_func = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
-      double f[3] = {F[0] / norm_func, F[1] / norm_func, F[2] / norm_func};
-      double s_deri[3];
-      for (i = 0; i < 3; i++) /* f cross up */
+      program = glCreateProgram();
+      glAttachShader(program, vertex_shader);
+      glAttachShader(program, fragment_shader);
+      glLinkProgram(program);
+      glGetProgramiv(program, GL_LINK_STATUS, &success);
+      if (!success)
         {
-          s_deri[i] = f[(i + 1) % 3] * up[(i + 2) % 3] - up[(i + 1) % 3] * f[(i + 2) % 3];
+          fprintf(stderr, "Failed to link shader program in gr_volume.\n");
+          return;
         }
-      double s_norm = sqrt(s_deri[0] * s_deri[0] + s_deri[1] * s_deri[1] + s_deri[2] * s_deri[2]);
-      double s[3] = {s_deri[0] / s_norm, s_deri[1] / s_norm, s_deri[2] / s_norm};
+      glDeleteShader(vertex_shader);
+      glDeleteShader(fragment_shader);
+      glUseProgram(program);
 
-      /* transformation matrix */
-      grviewmatrix[0 + 0 * 4] = (GLfloat)s[0];
-      grviewmatrix[0 + 1 * 4] = (GLfloat)s[1];
-      grviewmatrix[0 + 2 * 4] = (GLfloat)s[2];
-      grviewmatrix[0 + 3 * 4] = (GLfloat)(-camera_pos[0] * s[0] - camera_pos[1] * s[1] - camera_pos[2] * s[2]);
-      grviewmatrix[1 + 0 * 4] = (GLfloat)up[0];
-      grviewmatrix[1 + 1 * 4] = (GLfloat)up[1];
-      grviewmatrix[1 + 2 * 4] = (GLfloat)up[2];
-      grviewmatrix[1 + 3 * 4] = (GLfloat)(-camera_pos[0] * up[0] - camera_pos[1] * up[1] - camera_pos[2] * up[2]);
-      grviewmatrix[2 + 0 * 4] = (GLfloat)-f[0];
-      grviewmatrix[2 + 1 * 4] = (GLfloat)-f[1];
-      grviewmatrix[2 + 2 * 4] = (GLfloat)-f[2];
-      grviewmatrix[2 + 3 * 4] = (GLfloat)(camera_pos[0] * f[0] + camera_pos[1] * f[1] + camera_pos[2] * f[2]);
-      grviewmatrix[3 + 3 * 4] = 1;
-
-      if (projection_type == GR_PROJECTION_PERSPECTIVE)
+      memset(projection_matrix, 0, 16 * sizeof(GLfloat));
+      if (projection_type == GR_PROJECTION_DEFAULT)
         {
-          camera_direction[0] = focus_point[1] - camera_pos[1];
-          camera_direction[1] = focus_point[1] - camera_pos[1];
-          camera_direction[2] = focus_point[2] - camera_pos[2];
+          GLfloat right, top;
+          /* Set projection parameter like in `gr3_drawmesh_grlike` and create (orthographic) projection matrix */
+          fovy = 90.0f;
+          zNear = 1.0f;
+          zFar = 200.0f;
+          tfov2 = (GLfloat)tan(fovy * M_PI / 360.0);
+          right = zNear * aspect * tfov2;
+          top = zNear * tfov2;
+
+          projection_matrix[0 + 0 * 4] = (GLfloat)1.0 / right; /* left = -right */
+          projection_matrix[0 + 3 * 4] = 0.0f;
+          projection_matrix[1 + 1 * 4] = (GLfloat)1.0 / top; /* bottom = -top */
+          projection_matrix[1 + 3 * 4] = 0.0f;
+          projection_matrix[2 + 2 * 4] = (GLfloat)-2.0 / (zFar - zNear);
+          projection_matrix[2 + 3 * 4] = -(zFar + zNear) / (zFar - zNear);
+          projection_matrix[3 + 3 * 4] = 1.0f;
         }
-    }
+      else if (projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+        {
+          double near, far, left, right, bottom, top;
+          gr_inqorthographicprojection(&left, &right, &bottom, &top, &near, &far);
+          if (aspect > 1)
+            {
+              right *= aspect;
+              left *= aspect;
+            }
+          else
+            {
+              top /= aspect;
+              bottom /= aspect;
+            }
 
-  /* Buffer Vertices */
-  glGenBuffers(1, &vbo);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+          projection_matrix[0 + 0 * 4] = (GLfloat)(2. / (right - left));
+          projection_matrix[0 + 3 * 4] = (GLfloat)(-(left + right) / (right - left));
+          projection_matrix[1 + 1 * 4] = (GLfloat)(2. / (top - bottom));
+          projection_matrix[1 + 3 * 4] = (GLfloat)(-(bottom + top) / (top - bottom));
+          projection_matrix[2 + 2 * 4] = (GLfloat)(-2. / (far - near));
+          projection_matrix[2 + 3 * 4] = (GLfloat)(-(far + near) / (far - near));
+          projection_matrix[3 + 3 * 4] = 1;
+        }
+      else if (projection_type == GR_PROJECTION_PERSPECTIVE)
+        {
+          double near, far, fov;
+          gr_inqperspectiveprojection(&near, &far, &fov);
 
-  /* Buffer input data in a 3D float texture */
-  glGenTextures(1, &texture);
-  glBindTexture(GL_TEXTURE_3D, texture);
-  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-  glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, nx, ny, nz, 0, GL_RED, GL_FLOAT, fdata);
-  free(fdata);
+          if (aspect >= 1)
+            {
+              projection_matrix[0 + 0 * 4] = (GLfloat)(cos(fov * M_PI / 360) / sin(fov * M_PI / 360) / aspect);
+              projection_matrix[1 + 1 * 4] = (GLfloat)(cos(fov * M_PI / 360) / sin(fov * M_PI / 360));
+            }
+          else
+            {
+              projection_matrix[0 + 0 * 4] = (GLfloat)(cos(fov * M_PI / 360) / sin(fov * M_PI / 360));
+              projection_matrix[1 + 1 * 4] = (GLfloat)(cos(fov * M_PI / 360) / sin(fov * M_PI / 360) * aspect);
+            }
+          projection_matrix[2 + 2 * 4] = (GLfloat)((far + near) / (near - far));
+          projection_matrix[2 + 3 * 4] = (GLfloat)(2 * far * near / (near - far));
+          projection_matrix[3 + 2 * 4] = -1;
+        }
 
-  /* Create framebuffer object and bind 2D float texture as COLOR_ATTACHMENT0 to it */
-  glGenTextures(1, &framebuffer_texture);
-  glBindTexture(GL_TEXTURE_2D, framebuffer_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED, GL_FLOAT, NULL);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previous_framebuffer_binding);
+      /* Create view matrix */
+      if (projection_type == GR_PROJECTION_DEFAULT)
+        {
+          gr_inqspace(&zmin, &zmax, &rotation, &tilt);
+          gr3_grtransformation_(grmatrix, rotation, tilt);
+          gr3_identity_(grviewmatrix);
+          grviewmatrix[2 + 3 * 4] = -4;
+          gr3_matmul_(grviewmatrix, grmatrix);
+        }
+      else if (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+        {
+          double up[3];
+          double focus_point[3];
+          double F[3];
+          double norm_func;
+          double f[3];
+          double s_deri[3];
+          double s_norm;
+          double s[3];
+          memset(grviewmatrix, 0, 16 * sizeof(GLfloat));
+
+          gr_inqtransformationparameters(&camera_pos[0], &camera_pos[1], &camera_pos[2], &up[0], &up[1], &up[2],
+                                         &focus_point[0], &focus_point[1], &focus_point[2]);
+
+          /* direction between camera and focus point */
+          F[0] = focus_point[0] - camera_pos[0];
+          F[1] = focus_point[1] - camera_pos[1];
+          F[2] = focus_point[2] - camera_pos[2];
+          norm_func = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
+          f[0] = F[0] / norm_func;
+          f[1] = F[1] / norm_func;
+          f[2] = F[2] / norm_func;
+          for (i = 0; i < 3; i++) /* f cross up */
+            {
+              s_deri[i] = f[(i + 1) % 3] * up[(i + 2) % 3] - up[(i + 1) % 3] * f[(i + 2) % 3];
+            }
+          s_norm = sqrt(s_deri[0] * s_deri[0] + s_deri[1] * s_deri[1] + s_deri[2] * s_deri[2]);
+          s[0] = s_deri[0] / s_norm;
+          s[1] = s_deri[1] / s_norm;
+          s[2] = s_deri[2] / s_norm;
+
+          /* transformation matrix */
+          grviewmatrix[0 + 0 * 4] = (GLfloat)s[0];
+          grviewmatrix[0 + 1 * 4] = (GLfloat)s[1];
+          grviewmatrix[0 + 2 * 4] = (GLfloat)s[2];
+          grviewmatrix[0 + 3 * 4] = (GLfloat)(-camera_pos[0] * s[0] - camera_pos[1] * s[1] - camera_pos[2] * s[2]);
+          grviewmatrix[1 + 0 * 4] = (GLfloat)up[0];
+          grviewmatrix[1 + 1 * 4] = (GLfloat)up[1];
+          grviewmatrix[1 + 2 * 4] = (GLfloat)up[2];
+          grviewmatrix[1 + 3 * 4] = (GLfloat)(-camera_pos[0] * up[0] - camera_pos[1] * up[1] - camera_pos[2] * up[2]);
+          grviewmatrix[2 + 0 * 4] = (GLfloat)-f[0];
+          grviewmatrix[2 + 1 * 4] = (GLfloat)-f[1];
+          grviewmatrix[2 + 2 * 4] = (GLfloat)-f[2];
+          grviewmatrix[2 + 3 * 4] = (GLfloat)(camera_pos[0] * f[0] + camera_pos[1] * f[1] + camera_pos[2] * f[2]);
+          grviewmatrix[3 + 3 * 4] = 1;
+
+          if (projection_type == GR_PROJECTION_PERSPECTIVE)
+            {
+              camera_direction[0] = focus_point[1] - camera_pos[1];
+              camera_direction[1] = focus_point[1] - camera_pos[1];
+              camera_direction[2] = focus_point[2] - camera_pos[2];
+            }
+        }
+
+      /* Buffer Vertices */
+      glGenBuffers(1, &vbo);
+      glBindBuffer(GL_ARRAY_BUFFER, vbo);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+      /* Buffer input data in a 3D float texture */
+      glGenTextures(1, &texture);
+      glBindTexture(GL_TEXTURE_3D, texture);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+      glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, nx, ny, nz, 0, GL_RED, GL_FLOAT, fdata);
+      free(fdata);
+
+      /* Create framebuffer object and bind 2D float texture as COLOR_ATTACHMENT0 to it */
+      glGenTextures(1, &framebuffer_texture);
+      glBindTexture(GL_TEXTURE_2D, framebuffer_texture);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED, GL_FLOAT, NULL);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previous_framebuffer_binding);
 #ifdef GL_ARB_framebuffer_object
-  glGenFramebuffers(1, &framebuffer);
-  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer_texture, 0);
+      glGenFramebuffers(1, &framebuffer);
+      glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer_texture, 0);
 #else
-  glGenFramebuffersEXT(1, &framebuffer);
-  glBindFramebufferEXT(GL_FRAMEBUFFER, framebuffer);
-  glFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer_texture, 0);
+      glGenFramebuffersEXT(1, &framebuffer);
+      glBindFramebufferEXT(GL_FRAMEBUFFER, framebuffer);
+      glFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer_texture, 0);
 #endif
 
-  glGetIntegerv(GL_VIEWPORT, previous_viewport);
-  glViewport(0, 0, width, height);
+      glGetIntegerv(GL_VIEWPORT, previous_viewport);
+      glViewport(0, 0, width, height);
 
-  glGetBooleanv(GL_CULL_FACE, &previous_cull_face_state);
-  glGetIntegerv(GL_CULL_FACE_MODE, &previous_cull_face_mode);
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
-  if (nx > ny && nx > nz)
-    {
-      nmax = nx;
-    }
-  else if (ny > nz)
-    {
-      nmax = ny;
-    }
-  else
-    {
-      nmax = nz;
-    }
+      glGetBooleanv(GL_CULL_FACE, &previous_cull_face_state);
+      glGetIntegerv(GL_CULL_FACE_MODE, &previous_cull_face_mode);
+      glEnable(GL_CULL_FACE);
+      glCullFace(GL_BACK);
+      if (nx > ny && nx > nz)
+        {
+          nmax = nx;
+        }
+      else if (ny > nz)
+        {
+          nmax = ny;
+        }
+      else
+        {
+          nmax = nz;
+        }
 
-  glActiveTexture(GL_TEXTURE0);
-  glGetFloatv(GL_COLOR_CLEAR_VALUE, previous_clear_color);
-  glClearColor(0, 0, 0, 1);
-  glClear(GL_COLOR_BUFFER_BIT);
+      glActiveTexture(GL_TEXTURE0);
+      glGetFloatv(GL_COLOR_CLEAR_VALUE, previous_clear_color);
+      glClearColor(0, 0, 0, 1);
+      glClear(GL_COLOR_BUFFER_BIT);
 
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)NULL);
-  glEnableVertexAttribArray(0);
+      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)NULL);
+      glEnableVertexAttribArray(0);
 
-  if (projection_type != GR_PROJECTION_PERSPECTIVE)
-    {
-      camera_direction[0] = context_struct_.center_x - context_struct_.camera_x;
-      camera_direction[1] = context_struct_.center_y - context_struct_.camera_y;
-      camera_direction[2] = context_struct_.center_z - context_struct_.camera_z;
-    }
+      if (projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+        {
+          camera_direction[0] = context_struct_.center_x - context_struct_.camera_x;
+          camera_direction[1] = context_struct_.center_y - context_struct_.camera_y;
+          camera_direction[2] = context_struct_.center_z - context_struct_.camera_z;
+        }
 
+      if (projection_type != GR_PROJECTION_DEFAULT)
+        {
+          double x_scale_factor, y_scale_factor, z_scale_factor;
+          double x_min, x_max, y_min, y_max, z_min, z_max;
+          gr_inqwindow3d(&x_min, &x_max, &y_min, &y_max, &z_min, &z_max);
+          gr_inqscalefactors3d(&x_scale_factor, &y_scale_factor, &z_scale_factor);
+          model_matrix[0] = 0.5 * (x_max - x_min) * x_scale_factor;
+          inv_model_matrix[0] = 1.0 / model_matrix[0];
+          model_matrix[12] = (0.5 * (x_max - x_min) + x_min) * x_scale_factor;
+          inv_model_matrix[12] = -model_matrix[12] / model_matrix[0];
+          model_matrix[5] = 0.5 * (y_max - y_min) * y_scale_factor;
+          inv_model_matrix[5] = 1.0 / model_matrix[5];
+          model_matrix[13] = (0.5 * (y_max - y_min) + y_min) * y_scale_factor;
+          inv_model_matrix[13] = -model_matrix[13] / model_matrix[5];
+          model_matrix[10] = 0.5 * (z_max - z_min) * z_scale_factor;
+          inv_model_matrix[10] = 1.0 / model_matrix[10];
+          model_matrix[14] = (0.5 * (z_max - z_min) + z_min) * z_scale_factor;
+          inv_model_matrix[14] = -model_matrix[14] / model_matrix[10];
+        }
 
-  float model_matrix[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
-  float inv_model_matrix[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
-  if (projection_type != GR_PROJECTION_DEFAULT)
-    {
-      double x_scale_factor, y_scale_factor, z_scale_factor;
-      double x_min, x_max, y_min, y_max, z_min, z_max;
-      gr_inqwindow3d(&x_min, &x_max, &y_min, &y_max, &z_min, &z_max);
-      gr_inqscalefactors3d(&x_scale_factor, &y_scale_factor, &z_scale_factor);
-      model_matrix[0] = 0.5 * (x_max - x_min) * x_scale_factor;
-      inv_model_matrix[0] = 1.0 / model_matrix[0];
-      model_matrix[12] = (0.5 * (x_max - x_min) + x_min) * x_scale_factor;
-      inv_model_matrix[12] = -model_matrix[12] / model_matrix[0];
-      model_matrix[5] = 0.5 * (y_max - y_min) * y_scale_factor;
-      inv_model_matrix[5] = 1.0 / model_matrix[5];
-      model_matrix[13] = (0.5 * (y_max - y_min) + y_min) * y_scale_factor;
-      inv_model_matrix[13] = -model_matrix[13] / model_matrix[5];
-      model_matrix[10] = 0.5 * (z_max - z_min) * z_scale_factor;
-      inv_model_matrix[10] = 1.0 / model_matrix[10];
-      model_matrix[14] = (0.5 * (z_max - z_min) + z_min) * z_scale_factor;
-      inv_model_matrix[14] = -model_matrix[14] / model_matrix[10];
-    }
+      glUniformMatrix4fv(glGetUniformLocation(program, "model"), 1, GL_FALSE, model_matrix);
+      glUniformMatrix4fv(glGetUniformLocation(program, "inv_model"), 1, GL_FALSE, inv_model_matrix);
+      glUniformMatrix4fv(glGetUniformLocation(program, "view"), 1, GL_FALSE, grviewmatrix);
+      glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix);
+      glUniform3f(glGetUniformLocation(program, "camera_direction"), camera_direction[0], camera_direction[1],
+                  camera_direction[2]);
+      glUniform3f(glGetUniformLocation(program, "camera_position"), camera_pos[0], camera_pos[1], camera_pos[2]);
+      glUniform1i(glGetUniformLocation(program, "n"), nmax);
 
-  glUniformMatrix4fv(glGetUniformLocation(program, "model"), 1, GL_FALSE, model_matrix);
-  glUniformMatrix4fv(glGetUniformLocation(program, "inv_model"), 1, GL_FALSE, inv_model_matrix);
-  glUniformMatrix4fv(glGetUniformLocation(program, "view"), 1, GL_FALSE, grviewmatrix);
-  glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix);
-  glUniform3f(glGetUniformLocation(program, "camera_direction"), camera_direction[0], camera_direction[1],
-              camera_direction[2]);
-  glUniform3f(glGetUniformLocation(program, "camera_position"), camera_pos[0], camera_pos[1], camera_pos[2]);
-  glUniform1i(glGetUniformLocation(program, "n"), nmax);
+      glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / sizeof(vertices[0]) / 3);
+      for (i = 0; i < height; i++)
+        {
+          glPixelStorei(GL_PACK_ROW_LENGTH, width);
+          glReadPixels(0, i, width, 1, GL_RED, GL_FLOAT, pixel_data + i * width);
+        }
 
-  glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / sizeof(vertices[0]) / 3);
-  for (i = 0; i < height; i++)
-    {
-      glPixelStorei(GL_PACK_ROW_LENGTH, width);
-      glReadPixels(0, i, width, 1, GL_RED, GL_FLOAT, pixel_data + i * width);
-    }
+      if (dmin_ptr && *dmin_ptr >= 0)
+        {
+          min = *dmin_ptr;
+        }
+      else
+        {
+          min = 1.0;
+          for (i = 0; i < width * height; i++)
+            {
+              if (pixel_data[i] < min && pixel_data[i] >= 1)
+                {
+                  min = pixel_data[i];
+                }
+            }
+          min -= 1;
+          if (dmin_ptr)
+            {
+              *dmin_ptr = min;
+            }
+        }
 
-  if (dmin_ptr && *dmin_ptr >= 0)
-    {
-      min = *dmin_ptr;
-    }
-  else
-    {
-      min = 1.0;
+      if (dmax_ptr && *dmax_ptr >= 0)
+        {
+          max = *dmax_ptr;
+        }
+      else
+        {
+          max = 1.0;
+          for (i = 0; i < width * height; i++)
+            {
+              if (pixel_data[i] > max)
+                {
+                  max = pixel_data[i];
+                }
+            }
+          max -= 1;
+          if (dmax_ptr)
+            {
+              *dmax_ptr = max;
+            }
+        }
+
+      for (i = first_color; i <= last_color; i++)
+        {
+          gr_inqcolor(i, colormap + i - first_color);
+        }
+
       for (i = 0; i < width * height; i++)
         {
-          if (pixel_data[i] < min && pixel_data[i] >= 1)
+          if (pixel_data[i] < 1)
             {
-              min = pixel_data[i];
+              color_data[i] = 0;
+            }
+          else
+            {
+              int val = (int)((last_color - first_color) * ((pixel_data[i] - 1) - min) / (max - min));
+              if (val < 0)
+                {
+                  val = 0;
+                }
+              else if (val > last_color - first_color)
+                {
+                  val = last_color - first_color;
+                }
+              color_data[i] = (255u << 24) + colormap[val];
             }
         }
-      min -= 1;
-      if (dmin_ptr)
+      free(pixel_data);
+      free(colormap);
+
+      gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
+      gr_inqscale(&scale);
+      if (scale & OPTION_FLIP_X)
         {
-          *dmin_ptr = min;
+          double tmp = xmin;
+          xmin = xmax;
+          xmax = tmp;
         }
-    }
-
-  if (dmax_ptr && *dmax_ptr >= 0)
-    {
-      max = *dmax_ptr;
-    }
-  else
-    {
-      max = 1.0;
-      for (i = 0; i < width * height; i++)
+      if (scale & OPTION_FLIP_Y)
         {
-          if (pixel_data[i] > max)
-            {
-              max = pixel_data[i];
-            }
+          double tmp = ymin;
+          ymin = ymax;
+          ymax = tmp;
         }
-      max -= 1;
-      if (dmax_ptr)
+
+      gr_drawimage(xmin, xmax, ymax, ymin, width, height, color_data, 0);
+
+      free(color_data);
+
+      /* Cleanup and restore previous GL state */
+      glViewport(previous_viewport[0], previous_viewport[1], previous_viewport[2], previous_viewport[3]);
+      if (!previous_cull_face_state)
         {
-          *dmax_ptr = max;
+          glDisable(GL_CULL_FACE);
         }
-    }
-
-  for (i = first_color; i <= last_color; i++)
-    {
-      gr_inqcolor(i, colormap + i - first_color);
-    }
-
-  for (i = 0; i < width * height; i++)
-    {
-      if (pixel_data[i] < 1)
-        {
-          color_data[i] = 0;
-        }
-      else
-        {
-          int val = (int)((last_color - first_color) * ((pixel_data[i] - 1) - min) / (max - min));
-          if (val < 0)
-            {
-              val = 0;
-            }
-          else if (val > last_color - first_color)
-            {
-              val = last_color - first_color;
-            }
-          color_data[i] = (255u << 24) + colormap[val];
-        }
-    }
-  free(pixel_data);
-  free(colormap);
-
-  gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
-  gr_inqscale(&scale);
-  if (scale & OPTION_FLIP_X)
-    {
-      double tmp = xmin;
-      xmin = xmax;
-      xmax = tmp;
-    }
-  if (scale & OPTION_FLIP_Y)
-    {
-      double tmp = ymin;
-      ymin = ymax;
-      ymax = tmp;
-    }
-
-  gr_drawimage(xmin, xmax, ymax, ymin, width, height, color_data, 0);
-
-  free(color_data);
-
-  /* Cleanup and restore previous GL state */
-  glViewport(previous_viewport[0], previous_viewport[1], previous_viewport[2], previous_viewport[3]);
-  if (!previous_cull_face_state)
-    {
-      glDisable(GL_CULL_FACE);
-    }
-  glCullFace(previous_cull_face_mode);
-  glClearColor(previous_clear_color[0], previous_clear_color[1], previous_clear_color[2], previous_clear_color[3]);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindTexture(GL_TEXTURE_3D, 0);
-  glBindTexture(GL_TEXTURE_2D, 0);
+      glCullFace(previous_cull_face_mode);
+      glClearColor(previous_clear_color[0], previous_clear_color[1], previous_clear_color[2], previous_clear_color[3]);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+      glBindTexture(GL_TEXTURE_3D, 0);
+      glBindTexture(GL_TEXTURE_2D, 0);
 
 #ifdef GL_ARB_framebuffer_object
-  glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer_binding);
-  glDeleteFramebuffers(1, &framebuffer);
+      glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer_binding);
+      glDeleteFramebuffers(1, &framebuffer);
 #else
-  glBindFramebufferEXT(GL_FRAMEBUFFER, previous_framebuffer_binding);
-  glDeleteFramebuffersEXT(1, &framebuffer);
+      glBindFramebufferEXT(GL_FRAMEBUFFER, previous_framebuffer_binding);
+      glDeleteFramebuffersEXT(1, &framebuffer);
 #endif
-  glDeleteBuffers(1, &vbo);
-  glDeleteTextures(1, &framebuffer_texture);
-  glDeleteTextures(1, &texture);
-  glDeleteProgram(program);
+      glDeleteBuffers(1, &vbo);
+      glDeleteTextures(1, &framebuffer_texture);
+      glDeleteTextures(1, &texture);
+      glDeleteProgram(program);
 #else
-  fprintf(stderr, "gr_volume support not compiled in.\n");
+      (void)nx;
+      (void)ny;
+      (void)nz;
+      (void)data;
+      (void)algorithm;
+      (void)dmin_ptr;
+      (void)dmax_ptr;
+      fprintf(stderr, "gr_volume support not compiled in.\n");
 #endif
+    }
 }

@@ -25,6 +25,10 @@
 #define DBL_EPSILON 2.2204460492503131e-16
 #endif
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 #define OK 0
 #define MAX_POINTS 2048
 
@@ -319,7 +323,7 @@ static void gks_ddlk(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_
 
 static int gks_parse_encoding(const char *encoding)
 {
-  int i, j;
+  unsigned int i, j;
   const char *utf8_aliases[] = {"utf8", "utf-8"};
   const char *latin1_aliases[] = {"latin1", "latin-1", "iso-8859-1", "iso8859-1", "iso 8859-1"};
 
@@ -1063,6 +1067,11 @@ void gks_set_deferral_state(int wkid, int defmo, int regmo)
 
 void gks_escape(int funid, int dimidr, int *idr, int maxodr, int *lenodr, int *odr)
 {
+  GKS_UNUSED(dimidr);
+  GKS_UNUSED(idr);
+  GKS_UNUSED(maxodr);
+  GKS_UNUSED(lenodr);
+  GKS_UNUSED(odr);
   gks_perror("escape function %d not implemented", funid);
 }
 
@@ -2183,6 +2192,7 @@ void gks_copy_seg_to_ws(int wkid, int segn)
 void gks_set_seg_xform(int segn, double mat[3][2])
 {
   int i, j;
+  GKS_UNUSED(segn);
 
   if (state >= GKS_K_GKOP)
     {
@@ -2218,6 +2228,7 @@ void gks_initialize_locator(int wkid, int lcdnr, int tnr, double px, double py, 
                             double ymin, double ymax, int ldr, char *datrec)
 {
   int wscat;
+  GKS_UNUSED(ldr);
 
   if (state >= GKS_K_WSOP)
     {
@@ -2661,6 +2672,8 @@ void gks_inq_active_ws(int n, int *errind, int *ol, int *wkid)
 
 void gks_inq_segn_ws(int wkid, int n, int *errind, int *ol, int *segn)
 {
+  GKS_UNUSED(wkid);
+  GKS_UNUSED(n);
   *errind = GKS_K_NO_ERROR;
   *ol = 0;
   *segn = 0;
@@ -2668,6 +2681,8 @@ void gks_inq_segn_ws(int wkid, int n, int *errind, int *ol, int *segn)
 
 void gks_inq_color_rep(int wkid, int index, int type, int *errind, double *red, double *green, double *blue)
 {
+  GKS_UNUSED(wkid);
+  GKS_UNUSED(type);
   *errind = GKS_K_NO_ERROR;
   gks_inq_rgb(index, red, green, blue);
 }
@@ -3265,6 +3280,7 @@ static void gksrealloc(int n)
 int gopengks(Gfile *errfile, Glong memory)
 {
   int errfil;
+  GKS_UNUSED(memory);
 
   errfil = (errfile != NULL) ? fileno(errfile) : 0;
 
@@ -3895,6 +3911,7 @@ int ginqtextpath(Gtxpath *text_path, Gint *error_status)
 int ginqtextalign(Gtxalign *align, Gint *error_status)
 {
   int errind, alh, alv;
+  GKS_UNUSED(error_status);
 
   gks_inq_text_align(&errind, &alh, &alv);
 
@@ -4150,6 +4167,7 @@ int ginqtextextent(Gint workstation_id, Gpoint *position, Gchar *string, Gextent
   int wkid = workstation_id, errind;
   double qx, qy, cpx, cpy, tx[4], ty[4];
   char *chars;
+  GKS_UNUSED(error_status);
 
   qx = position->x;
   qy = position->y;

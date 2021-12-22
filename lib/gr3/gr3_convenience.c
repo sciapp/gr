@@ -1112,27 +1112,29 @@ int gr3_createtubemesh(int *mesh, int n, const float *points, const float *color
   free(colors_filtered);
   free(radii_filtered);
 
-  for (i = 0; i < num_new_points - 1; i++)
+  if (num_new_points)
     {
-      directions[i][0] = points2[i + 1][0] - points2[i][0];
-      directions[i][1] = points2[i + 1][1] - points2[i][1];
-      directions[i][2] = points2[i + 1][2] - points2[i][2];
-      normalize(directions[i]);
+      for (i = 0; i < num_new_points - 1; i++)
+        {
+          directions[i][0] = points2[i + 1][0] - points2[i][0];
+          directions[i][1] = points2[i + 1][1] - points2[i][1];
+          directions[i][2] = points2[i + 1][2] - points2[i][2];
+          normalize(directions[i]);
+        }
+      tangents[0][0] = directions[0][0];
+      tangents[0][1] = directions[0][1];
+      tangents[0][2] = directions[0][2];
+      for (i = 1; i < num_new_points - 1; i++)
+        {
+          tangents[i][0] = directions[i - 1][0] + directions[i][0];
+          tangents[i][1] = directions[i - 1][1] + directions[i][1];
+          tangents[i][2] = directions[i - 1][2] + directions[i][2];
+          normalize(tangents[i]);
+        }
+      tangents[num_new_points - 1][0] = directions[num_new_points - 2][0];
+      tangents[num_new_points - 1][1] = directions[num_new_points - 2][1];
+      tangents[num_new_points - 1][2] = directions[num_new_points - 2][2];
     }
-
-  tangents[0][0] = directions[0][0];
-  tangents[0][1] = directions[0][1];
-  tangents[0][2] = directions[0][2];
-  for (i = 1; i < num_new_points - 1; i++)
-    {
-      tangents[i][0] = directions[i - 1][0] + directions[i][0];
-      tangents[i][1] = directions[i - 1][1] + directions[i][1];
-      tangents[i][2] = directions[i - 1][2] + directions[i][2];
-      normalize(tangents[i]);
-    }
-  tangents[num_new_points - 1][0] = directions[num_new_points - 2][0];
-  tangents[num_new_points - 1][1] = directions[num_new_points - 2][1];
-  tangents[num_new_points - 1][2] = directions[num_new_points - 2][2];
 
   for (i = 0; i < num_new_points - 2; i++)
     {

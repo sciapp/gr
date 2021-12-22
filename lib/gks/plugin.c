@@ -105,10 +105,14 @@ static const char *get_qt_version_string()
   qversion_t *qVersion = NULL;
 
 #ifdef _WIN32
-  HMODULE handle = GetModuleHandle("Qt5Core.dll");
+  HMODULE handle = GetModuleHandle("Qt6Core.dll");
+  if (handle == NULL)
+    {
+      handle = GetModuleHandle("Qt5Core.dll");
+    }
   if (handle != NULL) qVersion = (qversion_t *)GetProcAddress(handle, "qVersion");
 #else
-  qVersion = (qversion_t *)dlsym(dlopen(NULL, RTLD_LAZY), "qVersion");
+  *(void **)(&qVersion) = dlsym(dlopen(NULL, RTLD_LAZY), "qVersion");
 #endif
   if (qVersion != NULL) return qVersion();
 
@@ -211,7 +215,18 @@ void gks_qt_plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
       if (qt_version_string != NULL)
         {
           qt_major_version = atoi(qt_version_string);
-          if (qt_major_version == 5) name = "qt5plugin";
+          switch (qt_major_version)
+            {
+            case 6:
+              name = "qt6plugin";
+              break;
+            case 5:
+              name = "qt5plugin";
+              break;
+            default:
+              name = "qtplugin";
+              break;
+            }
         }
       if (name == NULL) name = "qtplugin";
       *(void **)(&entry) = load_library(name);

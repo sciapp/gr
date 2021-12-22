@@ -1,3 +1,7 @@
+#ifdef __unix__
+/* Needed for popen function */
+#define _POSIX_C_SOURCE 2
+#endif
 
 #ifdef NO_FT
 #ifndef NO_CAIRO
@@ -53,6 +57,10 @@ typedef __int64 int64_t;
 #include <unistd.h>
 #endif
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 #ifndef NO_CAIRO
 #include <jpeglib.h>
 
@@ -92,6 +100,11 @@ DLLEXPORT void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *i_arr, 
 
 #define MAX_TNR 9
 
+#define HEIGHT_IN_CELLS 24
+
+#define STR(x) #x
+#define XSTR(x) STR(x)
+
 #define WC_to_NDC(xw, yw, tnr, xn, yn) \
   xn = a[tnr] * (xw) + b[tnr];         \
   yn = c[tnr] * (yw) + d[tnr]
@@ -130,6 +143,15 @@ static gks_state_list_t *gkss;
 
 static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
+#ifndef _WIN32
+enum tmux_state_t
+{
+  NO_TMUX = 0,
+  SINGLE_TMUX_SESSION,
+  NESTED_TMUX_SESSION
+};
+#endif
+
 typedef unsigned char Byte;
 typedef unsigned long uLong;
 
@@ -141,6 +163,9 @@ typedef struct cairo_point_t
 typedef struct ws_state_list_t
 {
   int conid, state, wtype;
+#ifndef _WIN32
+  enum tmux_state_t have_tmux;
+#endif
   double mw, mh;
   int w, h, dpi;
   char *path;
@@ -169,6 +194,7 @@ typedef struct ws_state_list_t
 #endif
   int npoints, max_points;
   int empty, current_page_written, page_counter;
+  int scroll;
   double rect[MAX_TNR][2][2];
   unsigned char *patterns;
   int pattern_counter, use_symbols;
@@ -452,6 +478,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x, y, x0, y0, xi, yi;
   int i;
+  GKS_UNUSED(linetype);
 
   WC_to_NDC(px[0], py[0], tnr, x, y);
   seg_xform(&x, &y);
@@ -1374,15 +1401,17 @@ static void write_page(void)
         }
       else
         {
-          cairo_surface_flush(p->surface);
-          unsigned char *data = cairo_image_surface_get_data(p->surface);
-          int width = cairo_image_surface_get_width(p->surface);
-          int height = cairo_image_surface_get_height(p->surface);
-          int stride = cairo_image_surface_get_stride(p->surface);
-          unsigned char *row = (unsigned char *)gks_malloc(width * 3);
-
+          unsigned char *data, *row;
+          int width, height, stride;
           struct jpeg_compress_struct cinfo;
           struct jpeg_error_mgr jerr;
+
+          cairo_surface_flush(p->surface);
+          data = cairo_image_surface_get_data(p->surface);
+          width = cairo_image_surface_get_width(p->surface);
+          height = cairo_image_surface_get_height(p->surface);
+          stride = cairo_image_surface_get_stride(p->surface);
+          row = (unsigned char *)gks_malloc(width * 3);
 
           cinfo.err = jpeg_std_error(&jerr);
           jpeg_create_compress(&cinfo);
@@ -1433,16 +1462,18 @@ static void write_page(void)
         }
       else
         {
+          int padding, bmp_stride;
+          unsigned int file_size;
+          unsigned char *row, header[54] = {0};
           cairo_surface_flush(p->surface);
           data = cairo_image_surface_get_data(p->surface);
           width = cairo_image_surface_get_width(p->surface);
           height = cairo_image_surface_get_height(p->surface);
           stride = cairo_image_surface_get_stride(p->surface);
-          int padding = width % 4;
-          int bmp_stride = 3 * width + padding;
-          unsigned int file_size = 54 + bmp_stride * height;
-          unsigned char *row = (unsigned char *)gks_malloc(bmp_stride);
-          unsigned char header[54] = {0};
+          padding = width % 4;
+          bmp_stride = 3 * width + padding;
+          file_size = 54 + bmp_stride * height;
+          row = (unsigned char *)gks_malloc(bmp_stride);
           header[0] = 'B';
           header[1] = 'M';
           header[2] = file_size / (1 << 0);
@@ -1587,26 +1618,89 @@ static void write_page(void)
       write_to_six(path, width, height, pix);
       free(pix);
     }
+#ifndef _WIN32
   else if (p->wtype == 151)
     {
+      FILE *stream;
+      long size, b64_size;
+      unsigned char *string;
+      char *b64_string;
+
       gks_filepath(path, p->path, "png", p->page_counter, 0);
       cairo_surface_write_to_png(p->surface, path);
 
-      FILE *stream = fopen(path, "rb");
+      stream = fopen(path, "rb");
       fseek(stream, 0, SEEK_END);
-      long size = ftell(stream);
+      size = ftell(stream);
       fseek(stream, 0, SEEK_SET);
 
-      unsigned char *string = (unsigned char *)gks_malloc(size + 1);
-      fread(string, 1, size, stream);
+      string = (unsigned char *)gks_malloc(size + 1);
+      if ((long)fread(string, 1, size, stream) != size)
+        {
+          fprintf(stderr, "GKS: Failed to read from file: %s\n", path);
+        }
       fclose(stream);
       string[size] = 0;
 
-      long b64_size = size * 4 / 3 + 4;
-      char *b64_string = (char *)gks_malloc(b64_size);
+      b64_size = size * 4 / 3 + 4;
+      b64_string = (char *)gks_malloc(b64_size);
       gks_base64(string, size, b64_string, b64_size);
 
-      fprintf(stdout, "\e]1337;File=inline=1;height=24;preserveAspectRatio=0:%s\a", b64_string);
+      if (p->have_tmux)
+        {
+          int i;
+          /*
+           * tmux does not recognize the drawn image and reserves no space for it
+           * -> place the cursor at the end of the drawing area and jump back to make
+           *    a space reservation.
+           */
+          for (i = 0; i < HEIGHT_IN_CELLS; ++i)
+            {
+              fprintf(stdout, "\n"); /* only `\n` creates new lines on the screen */
+            }
+          fprintf(stdout, "\033[%dA", HEIGHT_IN_CELLS); /* Move up `HEIGHT_IN_CELLS` lines */
+          if (p->have_tmux == SINGLE_TMUX_SESSION)
+            {
+              fprintf(stdout, "\033Ptmux;\033"); /* Start a tmux pass-through sequence */
+            }
+          else
+            {
+              fprintf(stdout, "\033Ptmux;\033\033Ptmux;\033\033\033"); /* Start a nested tmux pass-through sequence */
+            }
+        }
+      else if (!p->scroll)
+        {
+          if (p->page_counter == 1)
+            {
+              fprintf(stdout, "\033[H\033[J");
+            }
+          else
+            {
+              fprintf(stdout, "\033[H");
+            }
+        }
+      fprintf(stdout, "\033]1337;File=inline=1;height=" XSTR(HEIGHT_IN_CELLS) ";preserveAspectRatio=0:%s\a",
+              b64_string);
+      if (p->have_tmux)
+        {
+          if (p->have_tmux == SINGLE_TMUX_SESSION)
+            {
+              fprintf(stdout, "\033\\"); /* End a tmux pass-through sequence */
+            }
+          else
+            {
+              fprintf(stdout, "\033\033\\\033\\"); /* End a nested tmux pass-through sequence */
+            }
+          /*
+           * tmux does not recognize the drawn image and reserves no space for it
+           * -> place the cursor at the end of the drawn image
+           */
+          fprintf(stdout, "\033[%dB", HEIGHT_IN_CELLS); /* Move down `HEIGHT_IN_CELLS` lines */
+        }
+      else if (!p->scroll)
+        {
+          fprintf(stdout, "\033[%dH\n", HEIGHT_IN_CELLS);
+        }
       fflush(stdout);
 
       free(string);
@@ -1614,6 +1708,7 @@ static void write_page(void)
 
       remove(path);
     }
+#endif
 }
 
 static void select_xform(int tnr)
@@ -1672,6 +1767,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   int i, j;
   double x[3], y[3], w, h, a1, a2;
   double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
+  GKS_UNUSED(n);
 
   cairo_new_path(p->cr);
   cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
@@ -2030,9 +2126,56 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
     }
 }
 
+#ifndef _WIN32
+static enum tmux_state_t have_tmux(void)
+{
+  const char *term_env_var = gks_getenv("TERM");
+  if (term_env_var == NULL)
+    {
+      return NO_TMUX;
+    }
+
+  if (strncmp(term_env_var, "screen", 6) == 0 || strncmp(term_env_var, "tmux", 4) == 0)
+    {
+      /* Check if the tmux session is running locally, otherwise the server cannot be queried */
+      if (gks_getenv("TMUX") != NULL)
+        {
+          FILE *fp;
+          char client_termname[80];
+
+          /* Inside tmux we can query the tmux server for the outer terminal name */
+          fp = popen("tmux display -p '#{client_termname}'", "r");
+          if (fp == NULL)
+            {
+              /* Reading failed, assume a single tmux session */
+              return SINGLE_TMUX_SESSION;
+            }
+          /* Read the output a line at a time - output it. */
+          if (fgets(client_termname, sizeof(client_termname), fp) == NULL)
+            {
+              /* Reading failed, assume a single tmux session */
+              pclose(fp);
+              return SINGLE_TMUX_SESSION;
+            }
+          pclose(fp);
+          return (strncmp(client_termname, "screen", 6) == 0 || strncmp(client_termname, "tmux", 4) == 0)
+                     ? NESTED_TMUX_SESSION
+                     : SINGLE_TMUX_SESSION;
+        }
+      return SINGLE_TMUX_SESSION;
+    }
+
+  return NO_TMUX;
+}
+#endif
+
 void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                      char *chars, void **ptr)
 {
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(lc);
+
   p = (ws_state_list *)*ptr;
 
   idle = 0;
@@ -2050,9 +2193,19 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->conid = ia[1];
       p->path = chars;
       p->wtype = ia[2];
+#ifndef _WIN32
+      if (p->wtype == 151)
+        {
+          p->have_tmux = have_tmux();
+        }
+      else
+        {
+          p->have_tmux = NO_TMUX;
+        }
+#endif
       p->mem = NULL;
 
-      if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146 || p->wtype == 151)
+      if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146)
         {
           p->mw = 0.28575;
           p->mh = 0.19685;
@@ -2119,6 +2272,16 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           resize(400, 400);
           p->nominal_size = 0.8;
         }
+      else if (p->wtype == 151)
+        {
+          p->mw = 0.28575;
+          p->mh = 0.19685;
+          p->w = 1920;
+          p->h = 1440;
+          p->dpi = 200;
+          resize(500, 500);
+          p->nominal_size = 1;
+        }
       else
         {
           p->mw = 0.25400;
@@ -2137,6 +2300,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->empty = 1;
       p->current_page_written = 1;
       p->page_counter = 0;
+      p->scroll = gks_getenv("GKS_SCROLL_ITERM") != NULL;
 
       p->transparency = 1.0;
       p->linewidth = p->nominal_size;
@@ -2381,6 +2545,18 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
 void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                      char *chars, void **ptr)
 {
+  GKS_UNUSED(dx);
+  GKS_UNUSED(dy);
+  GKS_UNUSED(dimx);
+  GKS_UNUSED(ia);
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(r1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(r2);
+  GKS_UNUSED(lc);
+  GKS_UNUSED(chars);
+  GKS_UNUSED(ptr);
+
   if (fctid == 2)
     {
       gks_perror("Cairo support not compiled in");

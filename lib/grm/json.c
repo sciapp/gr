@@ -31,6 +31,8 @@
 /* ------------------------- json deserializer ---------------------------------------------------------------------- */
 
 const char *FROMJSON_VALID_DELIMITERS = ",]}";
+const char FROMJSON_STRING_DELIMITER = '"';
+const char FROMJSON_ESCAPE_CHARACTER = '\\';
 
 static error_t (*fromjson_datatype_to_func[])(fromjson_state_t *) = {NULL,
                                                                      fromjson_parse_null,
@@ -367,7 +369,7 @@ error_t fromjson_parse_array(fromjson_state_t *state)
           ++current_value_ptr;                                                                                     \
           state->next_value_memory = current_value_ptr;                                                            \
         }                                                                                                          \
-      snprintf(array_type + strlen(array_type), NEXT_VALUE_TYPE_SIZE, "%c(%lu)", toupper(*state->next_value_type), \
+      snprintf(array_type + strlen(array_type), NEXT_VALUE_TYPE_SIZE, "%c(%zu)", toupper(*state->next_value_type), \
                array_length);                                                                                      \
     }                                                                                                              \
   while (0)
@@ -547,9 +549,23 @@ error_t fromjson_copy_and_filter_json_string(char **dest, const char *src)
   return NO_ERROR;
 }
 
+int fromjson_is_escaped_delimiter(const char *delim_ptr, const char *str)
+{
+  const char *first_non_escape_char_ptr;
+
+  first_non_escape_char_ptr = delim_ptr - 1;
+  while (first_non_escape_char_ptr != str - 1 && *first_non_escape_char_ptr == FROMJSON_ESCAPE_CHARACTER)
+    {
+      --first_non_escape_char_ptr;
+    }
+  return (delim_ptr - first_non_escape_char_ptr) % 2 == 0;
+}
+
 int fromjson_find_next_delimiter(const char **delim_ptr, const char *src, int include_start,
                                  int exclude_nested_structures)
 {
+  int is_in_string = 0;
+
   if (*src == '\0')
     {
       return 0;
@@ -563,26 +579,33 @@ int fromjson_find_next_delimiter(const char **delim_ptr, const char *src, int in
       const char *src_ptr = src;
       int nested_level = 0;
 
-      while (*src_ptr)
+      while (*src_ptr != '\0')
         {
-          if (strchr("[{", *src_ptr))
+          if (*src_ptr == FROMJSON_STRING_DELIMITER && !fromjson_is_escaped_delimiter(src_ptr, src))
             {
-              ++nested_level;
+              is_in_string = !is_in_string;
             }
-          else if (strchr("]}", *src_ptr))
+          if (!is_in_string)
             {
-              if (nested_level > 0)
+              if (strchr("[{", *src_ptr))
                 {
-                  --nested_level;
+                  ++nested_level;
                 }
-              else
+              else if (strchr("]}", *src_ptr))
+                {
+                  if (nested_level > 0)
+                    {
+                      --nested_level;
+                    }
+                  else
+                    {
+                      break;
+                    }
+                }
+              else if (*src_ptr == ',' && nested_level == 0)
                 {
                   break;
                 }
-            }
-          else if (*src_ptr == ',' && nested_level == 0)
-            {
-              break;
             }
           ++src_ptr;
         }
@@ -594,10 +617,18 @@ int fromjson_find_next_delimiter(const char **delim_ptr, const char *src, int in
     }
   else
     {
-      size_t segment_length = strcspn(src, FROMJSON_VALID_DELIMITERS);
-      if (*(src + segment_length) != '\0')
+      const char *src_ptr = src;
+      while (*src_ptr != '\0' && (is_in_string || strchr(FROMJSON_VALID_DELIMITERS, *src_ptr) == NULL))
         {
-          *delim_ptr = src + segment_length;
+          if (*src_ptr == FROMJSON_STRING_DELIMITER && !fromjson_is_escaped_delimiter(src_ptr, src))
+            {
+              is_in_string = !is_in_string;
+            }
+          ++src_ptr;
+        }
+      if (*src_ptr != '\0')
+        {
+          *delim_ptr = src_ptr;
           return 1;
         }
     }
@@ -1654,7 +1685,6 @@ error_t tojson_write_arg(memwriter_t *memwriter, const arg_t *arg)
 
 error_t tojson_write_args(memwriter_t *memwriter, const grm_args_t *args)
 {
-  const char *key_hierarchy_name;
   args_iterator_t *it;
   arg_t *arg;
 

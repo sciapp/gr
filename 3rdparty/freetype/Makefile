@@ -24,7 +24,7 @@ endif
         ftsynth.o \
         ftsystem.o \
         fttype1.o \
-        ftxf86.o \
+        ftmm.o \
         cff.o \
         psaux.o \
         pshinter.o \

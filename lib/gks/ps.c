@@ -56,6 +56,10 @@
 
 #define nint(a) ((int)(a + 0.5))
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 static gks_state_list_t *gkss;
 
 static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
@@ -668,7 +672,7 @@ static void writefile(char *buffer)
 static void ps_header(void)
 {
   int nchars;
-  char info[150], buffer[150];
+  char info[150], buffer[200];
 
   gkinfo(&nchars, info);
   writefile("%!PS-Adobe-2.0\n");
@@ -786,7 +790,7 @@ static void set_clip(double *clrt)
   int i, j;
   int ix1, ix2, iy1, iy2;
   double cx1, cy1, cx2, cy2;
-  char buffer[100];
+  char buffer[120];
 
   i = clrt[0] < clrt[1] ? 0 : 1;
   j = clrt[2] < clrt[3] ? 2 : 3;
@@ -1502,6 +1506,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   double x[3], y[3], w, h, a1, a2;
   double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
   double x1, y1, x2, y2;
+  GKS_UNUSED(n);
 
   sprintf(buffer, "np ");
   packb(buffer);
@@ -1642,6 +1647,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           cur_x = start_x;
           cur_y = start_y;
           packb(buffer);
+          /* fall through */
         case 'S':
           set_linewidth(gkss->bwidth);
           sprintf(buffer, "%.4g %.4g %.4g sc sk", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
@@ -1750,6 +1756,7 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
   int i, j, k, rgba, ln_color = MAX_COLOR;
   double tri_x[3], tri_y[3];
   char buffer[200];
+  GKS_UNUSED(n);
 
   j = 0;
   for (i = 0; i < ntri / 4; ++i)
@@ -1783,6 +1790,7 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
   int j, k, len, fl_color = MAX_COLOR;
   unsigned int rgba;
   char buffer[50];
+  GKS_UNUSED(n);
 
   j = 0;
   while (j < nply)
@@ -1856,6 +1864,9 @@ void gks_drv_ps(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r
   double yres, width, size, x, y, angle;
   int font, tnr, prec;
   int nchars;
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(lc);
 
   p = (ws_state_list *)*ptr;
 

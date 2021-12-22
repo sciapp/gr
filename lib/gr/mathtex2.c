@@ -794,6 +794,10 @@ static const unsigned int symbol_codepoints[] = {
 
 #define MATH_FONT 232
 
+#ifndef GR_UNUSED
+#define GR_UNUSED(x) (void)(x)
+#endif
+
 typedef enum FontVariant_
 {
   FV_DEFAULT = -1,
@@ -804,7 +808,7 @@ typedef enum FontVariant_
   FV_FRAK = 4,
   FV_BB = 5,
   FV_BF = 6,
-  FV_BI = 7,
+  FV_BI = 7
 } FontVariant;
 
 static unsigned int get_codepoint_for_character_variant(unsigned int codepoint, FontVariant variant);
@@ -829,7 +833,7 @@ typedef enum BoxModelNodeType_
   BT_HRULE = 6,
   BT_GLUE = 7,
   BT_HBOX = 8,
-  BT_VBOX = 9,
+  BT_VBOX = 9
 } BoxModelNodeType;
 
 typedef enum GlueType_
@@ -1075,6 +1079,7 @@ static double get_em_width(BoxModelState bm_state)
 
 static double get_underline_thickness(FontVariant font, double fontsize, double dpi)
 {
+  GR_UNUSED(font);
   return ((0.75 / 12.0) * fontsize * dpi) / 72.0;
 }
 
@@ -1097,12 +1102,13 @@ static size_t make_space(double percentage)
 
 static size_t make_char(unsigned int codepoint)
 {
+  BoxModelNode bm_node;
+  double size_factor = 1.16;
+  double width, height, depth, advance, bearing;
   if (codepoint == 0)
     {
       return 0;
     }
-  BoxModelNode bm_node;
-  double size_factor = 1.16;
   if (codepoint == 8747)
     {
       size_factor *= 1.25;
@@ -1112,7 +1118,6 @@ static size_t make_char(unsigned int codepoint)
   bm_node.u.character.codepoint = codepoint;
   bm_node.size = 0;
   bm_node.u.character.state = *get_current_state();
-  double width, height, depth, advance, bearing;
   if (gks_ft_get_metrics(
           MATH_FONT, bm_node.u.character.state.fontsize * size_factor,
           get_codepoint_for_character_variant(bm_node.u.character.codepoint, bm_node.u.character.state.font),
@@ -1161,17 +1166,18 @@ static void shrink(size_t node_index);
 
 static size_t make_accent(unsigned int c, double bearing_factor)
 {
+  double xmin;
+  double xmax;
+  double ymin;
+  double ymax;
+  double bearing;
+  size_t bm_node_index;
   BoxModelNode bm_node;
   bm_node.index = 0;
   bm_node.type = BT_CHAR;
   bm_node.u.character.codepoint = c;
   bm_node.size = 0;
   bm_node.u.character.state = *get_current_state();
-  double xmin;
-  double xmax;
-  double ymin;
-  double ymax;
-  double bearing;
   if (gks_ft_get_metrics(
           MATH_FONT, bm_node.u.character.state.fontsize * 1.16,
           get_codepoint_for_character_variant(bm_node.u.character.codepoint, bm_node.u.character.state.font),
@@ -1194,7 +1200,7 @@ static size_t make_accent(unsigned int c, double bearing_factor)
       bm_node.u.character.shift_amount = 0.0;
       fprintf(stderr, "Missing character %c / %u\n", c, c);
     }
-  size_t bm_node_index = copy_box_model_node(bm_node);
+  bm_node_index = copy_box_model_node(bm_node);
   shrink(bm_node_index);
   return bm_node_index;
 }
@@ -1274,18 +1280,20 @@ static size_t make_vlist()
 
 static void append_to_vlist(size_t vlist_index, size_t bm_node_index)
 {
+  BoxModelNode bm_entry_node;
+  BoxModelNode *bm_vlist_node;
+  size_t last_entry_index;
+  BoxModelNode *bm_existing_entry_node = NULL;
   if (bm_node_index == 0)
     {
       return;
     }
-  BoxModelNode bm_entry_node;
   bm_entry_node.index = 0;
   bm_entry_node.type = BT_VLIST_ENTRY;
   bm_entry_node.u.vlist_entry.next_entry_index = 0;
   bm_entry_node.u.vlist_entry.node_index = bm_node_index;
-  BoxModelNode *bm_vlist_node = get_box_model_node(vlist_index);
-  size_t last_entry_index = bm_vlist_node->u.vlist.first_entry_index;
-  BoxModelNode *bm_existing_entry_node = NULL;
+  bm_vlist_node = get_box_model_node(vlist_index);
+  last_entry_index = bm_vlist_node->u.vlist.first_entry_index;
   while (last_entry_index)
     {
       bm_existing_entry_node = get_box_model_node(last_entry_index);
@@ -1464,18 +1472,20 @@ static size_t make_hlist()
 
 static void append_to_hlist(size_t hlist_index, size_t bm_node_index)
 {
+  BoxModelNode bm_entry_node;
+  BoxModelNode *bm_hlist_node;
+  size_t last_entry_index;
+  BoxModelNode *bm_existing_entry_node = NULL;
   if (bm_node_index == 0)
     {
       return;
     }
-  BoxModelNode bm_entry_node;
   bm_entry_node.index = 0;
   bm_entry_node.type = BT_HLIST_ENTRY;
   bm_entry_node.u.hlist_entry.next_entry_index = 0;
   bm_entry_node.u.hlist_entry.node_index = bm_node_index;
-  BoxModelNode *bm_hlist_node = get_box_model_node(hlist_index);
-  size_t last_entry_index = bm_hlist_node->u.hlist.first_entry_index;
-  BoxModelNode *bm_existing_entry_node = NULL;
+  bm_hlist_node = get_box_model_node(hlist_index);
+  last_entry_index = bm_hlist_node->u.hlist.first_entry_index;
   while (last_entry_index)
     {
       bm_existing_entry_node = get_box_model_node(last_entry_index);
@@ -1489,21 +1499,6 @@ static void append_to_hlist(size_t hlist_index, size_t bm_node_index)
     {
       bm_hlist_node->u.hlist.first_entry_index = copy_box_model_node(bm_entry_node);
     }
-}
-
-static void prepend_to_hlist(size_t hlist_index, size_t bm_node_index)
-{
-  if (bm_node_index == 0)
-    {
-      return;
-    }
-  BoxModelNode *bm_hlist_node = get_box_model_node(hlist_index);
-  BoxModelNode bm_entry_node;
-  bm_entry_node.index = 0;
-  bm_entry_node.type = BT_HLIST_ENTRY;
-  bm_entry_node.u.hlist_entry.next_entry_index = bm_hlist_node->u.hlist.first_entry_index;
-  bm_entry_node.u.hlist_entry.node_index = bm_node_index;
-  bm_hlist_node->u.hlist.first_entry_index = copy_box_model_node(bm_entry_node);
 }
 
 static void hlist_set_glue_(BoxModelNode *hlist_node, double x, int sign, const double *totals, const char *error_type)
@@ -1598,6 +1593,7 @@ static void pack_hlist(size_t hlist_index, double w, int m)
           x += node->u.glue.spec->width * node->u.glue.factor;
           total_stretch[node->u.glue.spec->stretch_order] += node->u.glue.spec->stretch;
           total_shrink[node->u.glue.spec->shrink_order] += node->u.glue.spec->shrink;
+          break;
         case BT_KERN:
           x += node->u.kern.width;
           break;
@@ -1666,12 +1662,12 @@ static void kern_hlist(size_t hlist_index)
               if (kerning != 0)
                 {
                   BoxModelNode kerning_node;
+                  BoxModelNode kerning_hlist_entry;
                   kerning_node.type = BT_KERN;
                   kerning_node.index = 0;
                   kerning_node.size = 0;
                   kerning_node.u.kern.is_auto = 1;
                   kerning_node.u.kern.width = kerning;
-                  BoxModelNode kerning_hlist_entry;
                   kerning_hlist_entry.type = BT_HLIST_ENTRY;
                   kerning_hlist_entry.index = 0;
                   kerning_hlist_entry.u.hlist_entry.node_index = copy_box_model_node(kerning_node);
@@ -1696,7 +1692,7 @@ static size_t convert_space_to_box_model(ParserNode *node)
                       {"\\>", 0.22222}, {"\\:", 0.22222},         {"\\;", 0.27778},
                       {"\\ ", 0.33333}, {"~", 0.33333},           {"\\enspace", 0.5},
                       {"\\quad", 1},    {"\\qquad", 2},           {"\\!", -0.16667}};
-  int i;
+  size_t i;
   for (i = 0; i < sizeof(space_widths) / sizeof(space_widths[0]); i++)
     {
       if (strncmp(space_widths[i].symbol, node->source, node->length) == 0)
@@ -1717,8 +1713,7 @@ static size_t convert_custom_space_to_box_model(ParserNode *node)
       fprintf(stderr, "unable to parse custom space\n");
       width = 0;
     }
-  size_t bm_node_index = make_space(width);
-  return bm_node_index;
+  return make_space(width);
 }
 
 
@@ -1748,10 +1743,11 @@ static size_t convert_math_to_box_model(ParserNode *node)
 
 static size_t convert_function_to_box_model(ParserNode *node)
 {
+  size_t i;
+  size_t bm_node_index;
   push_state();
   get_current_state()->font = FV_RM;
-  size_t bm_node_index = make_hlist();
-  size_t i;
+  bm_node_index = make_hlist();
   for (i = 1; i < node->length; i++)
     {
       append_to_hlist(bm_node_index, make_char((unsigned int)(node->source[i])));
@@ -1766,10 +1762,11 @@ static size_t convert_function_to_box_model(ParserNode *node)
 
 static size_t convert_operatorname_to_box_model(ParserNode *node)
 {
+  ParserNode *inner_node;
+  size_t bm_node_index;
   push_state();
   get_current_state()->font = FV_RM;
-  size_t bm_node_index = make_hlist();
-  ParserNode *inner_node;
+  bm_node_index = make_hlist();
   for (inner_node = node; inner_node; inner_node = get_parser_node(inner_node->u.operatorname.previous))
     {
       append_to_hlist(bm_node_index, convert_to_box_model(inner_node->u.operatorname.token, 0));
@@ -1813,6 +1810,7 @@ static size_t find_in_sorted_string_list(const char *string, size_t string_lengt
 
 static unsigned int symbol_to_codepoint(const unsigned char *utf8_str, size_t length)
 {
+  unsigned int codepoint = 0;
   if (utf8_str[0] == '\\' && length != 1)
     {
       {
@@ -1838,7 +1836,6 @@ static unsigned int symbol_to_codepoint(const unsigned char *utf8_str, size_t le
       return (unsigned int)'?';
     }
 
-  unsigned int codepoint = 0;
   if ((utf8_str[0] & 0x80U) == 0x00U)
     {
       if (length != 1)
@@ -1896,6 +1893,7 @@ static size_t convert_symbol_to_box_model(ParserNode *node)
   size_t pos = find_in_sorted_string_list(node->source, node->length, binary_operators, num_binary_operators);
   int is_binary_operator = pos < num_binary_operators;
   int is_spaced_symbol = is_binary_operator;
+  int is_punctuation_symbol;
   if (!is_spaced_symbol)
     {
       size_t num_spaced_symbols = sizeof(spaced_symbols) / sizeof(spaced_symbols[0]);
@@ -1952,7 +1950,7 @@ static size_t convert_symbol_to_box_model(ParserNode *node)
         }
       return hlist_index;
     }
-  int is_punctuation_symbol =
+  is_punctuation_symbol =
       (node->length == 1 && strchr(",;.!", node->source[0]) != NULL) ||
       (node->length == 6 && (strncmp(node->source, "\\ldotp", 6) == 0 || strncmp(node->source, "\\cdotp", 6) == 0));
   if (is_punctuation_symbol)
@@ -2034,26 +2032,31 @@ static size_t convert_symbol_to_box_model(ParserNode *node)
 static size_t convert_overline_to_box_model(ParserNode *node)
 {
 
+  BoxModelNode *body_node;
+  BoxModelState *state;
+  double thickness, height, depth;
+  size_t stack_index;
+  size_t bm_node_index;
   size_t body_node_index = convert_to_box_model(node->u.overline.body, 0);
   if (!body_node_index)
     {
       return 0;
     }
-  BoxModelNode *body_node = get_box_model_node(body_node_index);
+  body_node = get_box_model_node(body_node_index);
 
-  BoxModelState *state = get_current_state();
-  double thickness = get_underline_thickness(state->font, state->fontsize, state->dpi);
+  state = get_current_state();
+  thickness = get_underline_thickness(state->font, state->fontsize, state->dpi);
 
-  double height = body_node->u.hlist.height - body_node->u.hlist.shift_amount + thickness * 3.0;
-  double depth = body_node->u.hlist.depth + body_node->u.hlist.shift_amount;
+  height = body_node->u.hlist.height - body_node->u.hlist.shift_amount + thickness * 3.0;
+  depth = body_node->u.hlist.depth + body_node->u.hlist.shift_amount;
 
-  size_t stack_index = make_vlist();
+  stack_index = make_vlist();
   append_to_vlist(stack_index, make_hrule(thickness));
   append_to_vlist(stack_index, make_glue(GT_FILL));
   append_to_vlist(stack_index, body_node_index);
   pack_vlist(stack_index, height + (state->fontsize * state->dpi) / (100.0 * 12.0), 0, depth);
 
-  size_t bm_node_index = make_hlist();
+  bm_node_index = make_hlist();
   append_to_hlist(bm_node_index, stack_index);
   kern_hlist(bm_node_index);
   pack_hlist(bm_node_index, 0, 1);
@@ -2158,6 +2161,9 @@ static size_t convert_latextext_to_box_model(ParserNode *node)
 
 static size_t convert_group_to_box_model(ParserNode *node)
 {
+  size_t bm_node_index;
+  ParserNode *inner_node;
+  size_t previous_inner_bm_index = 0;
   const char *font_str = NULL;
   if (strncmp(node->source, "\\math", 5) == 0)
     {
@@ -2169,8 +2175,8 @@ static size_t convert_group_to_box_model(ParserNode *node)
     }
   if (font_str)
     {
-      push_state();
       size_t font_str_length = strchr(font_str, '{') - font_str;
+      push_state();
       if (font_str_length != (size_t)font_str)
         {
           if (strncmp("cal", font_str, font_str_length) == 0 && strlen("cal") == font_str_length)
@@ -2221,9 +2227,7 @@ static size_t convert_group_to_box_model(ParserNode *node)
             }
         }
     }
-  size_t bm_node_index = make_hlist();
-  ParserNode *inner_node;
-  size_t previous_inner_bm_index = 0;
+  bm_node_index = make_hlist();
   for (inner_node = node; inner_node; inner_node = get_parser_node(inner_node->u.operatorname.previous))
     {
       previous_inner_bm_index = convert_to_box_model(inner_node->u.operatorname.token, previous_inner_bm_index);
@@ -2240,11 +2244,12 @@ static size_t convert_group_to_box_model(ParserNode *node)
 
 static void shrink(size_t node_index)
 {
+  BoxModelNode *node;
   if (!node_index)
     {
       return;
     }
-  BoxModelNode *node = get_box_model_node(node_index);
+  node = get_box_model_node(node_index);
   if (!node)
     {
       return;
@@ -2354,23 +2359,28 @@ static void shrink(size_t node_index)
 
 static size_t make_auto_height_char(unsigned int codepoint, double height, double depth, double factor)
 {
+  size_t simple_character_index;
+  BoxModelNode *simple_character;
+  size_t scaled_character_index;
+  BoxModelNode *scaled_character;
+  size_t hlist_index;
+  double target_total = height + depth;
   if (codepoint == 0)
     {
       return 0;
     }
-  double target_total = height + depth;
-  size_t simple_character_index = make_char(codepoint);
-  BoxModelNode *simple_character = get_box_model_node(simple_character_index);
+  simple_character_index = make_char(codepoint);
+  simple_character = get_box_model_node(simple_character_index);
   if (isnan(factor))
     {
       factor = target_total / (simple_character->u.character.height + simple_character->u.character.depth);
     }
   push_state();
   get_current_state()->fontsize *= factor;
-  size_t scaled_character_index = make_char(codepoint);
-  BoxModelNode *scaled_character = get_box_model_node(scaled_character_index);
+  scaled_character_index = make_char(codepoint);
+  scaled_character = get_box_model_node(scaled_character_index);
   pop_state();
-  size_t hlist_index = make_hlist();
+  hlist_index = make_hlist();
   append_to_hlist(hlist_index, scaled_character_index);
   kern_hlist(hlist_index);
   pack_hlist(hlist_index, 0, 1);
@@ -2380,22 +2390,26 @@ static size_t make_auto_height_char(unsigned int codepoint, double height, doubl
 
 static size_t make_auto_width_accent(unsigned int codepoint, double width, double factor, double bearing_factor)
 {
+  size_t simple_character_index;
+  BoxModelNode *simple_character;
+  size_t scaled_character_index;
+  double target_total = width;
+  size_t hlist_index;
   if (codepoint == 0)
     {
       return 0;
     }
-  double target_total = width;
-  size_t simple_character_index = make_accent(codepoint, bearing_factor);
-  BoxModelNode *simple_character = get_box_model_node(simple_character_index);
+  simple_character_index = make_accent(codepoint, bearing_factor);
+  simple_character = get_box_model_node(simple_character_index);
   if (isnan(factor))
     {
       factor = target_total / simple_character->u.character.width;
     }
   push_state();
   get_current_state()->fontsize *= factor;
-  size_t scaled_character_index = make_accent(codepoint, bearing_factor);
+  scaled_character_index = make_accent(codepoint, bearing_factor);
   pop_state();
-  size_t hlist_index = make_hlist();
+  hlist_index = make_hlist();
   append_to_hlist(hlist_index, scaled_character_index);
   kern_hlist(hlist_index);
   pack_hlist(hlist_index, 0, 1);
@@ -2405,6 +2419,9 @@ static size_t make_auto_width_accent(unsigned int codepoint, double width, doubl
 static void remove_auto_space(size_t hlist_index)
 {
   BoxModelNode *hlist_node = get_box_model_node(hlist_index);
+  size_t entry_index;
+  size_t last_non_autokern_index = 0;
+  BoxModelNode *node;
   if (!hlist_node)
     {
       return;
@@ -2413,9 +2430,6 @@ static void remove_auto_space(size_t hlist_index)
     {
       return;
     }
-  size_t entry_index;
-  size_t last_non_autokern_index = 0;
-  BoxModelNode *node;
   for (entry_index = hlist_node->u.hlist.first_entry_index; entry_index;)
     {
       BoxModelNode *entry = get_box_model_node(entry_index);
@@ -2446,6 +2460,11 @@ static size_t make_auto_sized_delim(const char *left_delim_start, size_t left_de
   double height = NAN;
   double depth = 0.0;
   double factor = 1.0;
+  unsigned int left_delim_codepoint = 0;
+  unsigned int right_delim_codepoint = 0;
+  size_t hlist_index;
+  BoxModelState *state;
+  double default_thickness;
   remove_auto_space(middle_node_index);
   if (middle_node_index)
     {
@@ -2462,7 +2481,6 @@ static size_t make_auto_sized_delim(const char *left_delim_start, size_t left_de
       height = NAN;
     }
 
-  unsigned int left_delim_codepoint = 0;
   if (left_delim_start != NULL && left_delim_length != 0)
     {
       left_delim_codepoint = ((unsigned char *)left_delim_start)[0];
@@ -2480,7 +2498,6 @@ static size_t make_auto_sized_delim(const char *left_delim_start, size_t left_de
           left_delim_codepoint = symbol_codepoints[symbol_index];
         }
     }
-  unsigned int right_delim_codepoint = 0;
   if (right_delim_start != NULL && right_delim_length != 0)
     {
       right_delim_codepoint = ((unsigned char *)right_delim_start)[0];
@@ -2500,7 +2517,7 @@ static size_t make_auto_sized_delim(const char *left_delim_start, size_t left_de
         }
     }
 
-  size_t hlist_index = make_hlist();
+  hlist_index = make_hlist();
   if (left_delim_codepoint && left_delim_codepoint != '.')
     {
       if (isnan(height))
@@ -2512,8 +2529,8 @@ static size_t make_auto_sized_delim(const char *left_delim_start, size_t left_de
           append_to_hlist(hlist_index, make_auto_height_char(left_delim_codepoint, height, depth, factor));
         }
     }
-  BoxModelState *state = get_current_state();
-  double default_thickness = get_underline_thickness(state->font, state->fontsize, state->dpi);
+  state = get_current_state();
+  default_thickness = get_underline_thickness(state->font, state->fontsize, state->dpi);
   append_to_hlist(hlist_index, make_kern(2 * default_thickness));
   append_to_hlist(hlist_index, middle_node_index);
   append_to_hlist(hlist_index, make_kern(2 * default_thickness));
@@ -2535,6 +2552,18 @@ static size_t make_auto_sized_delim(const char *left_delim_start, size_t left_de
 
 static size_t convert_genfrac_to_box_model(ParserNode *node)
 {
+  size_t numerator_node_index;
+  size_t denominator_node_index;
+  size_t centered_numerator_node_index;
+  size_t centered_denominator_node_index;
+  BoxModelNode *centered_numerator_node;
+  BoxModelNode *centered_denominator_node;
+  int style = 0;
+  double max_width;
+  size_t vlist_index;
+  size_t hlist_index;
+  double ymax, ymin;
+  double shift;
   BoxModelState *state = get_current_state();
   double default_thickness = get_underline_thickness(state->font, state->fontsize, state->dpi);
   double rule_thickness = node->u.genfrac.thickness;
@@ -2543,11 +2572,9 @@ static size_t convert_genfrac_to_box_model(ParserNode *node)
       rule_thickness = default_thickness;
     }
 
-  size_t numerator_node_index = convert_to_box_model(node->u.genfrac.numerator_group, 0);
-  size_t denominator_node_index = convert_to_box_model(node->u.genfrac.denominator_group, 0);
+  numerator_node_index = convert_to_box_model(node->u.genfrac.numerator_group, 0);
+  denominator_node_index = convert_to_box_model(node->u.genfrac.denominator_group, 0);
 
-
-  int style = 0;
   if (node->u.genfrac.style_text_length == 3)
     {
       char style_char = node->u.genfrac.style_text_start[1];
@@ -2564,26 +2591,26 @@ static size_t convert_genfrac_to_box_model(ParserNode *node)
   remove_auto_space(numerator_node_index);
   remove_auto_space(denominator_node_index);
 
-  size_t centered_numerator_node_index = make_hlist();
+  centered_numerator_node_index = make_hlist();
   append_to_hlist(centered_numerator_node_index, make_glue(GT_SS));
   append_to_hlist(centered_numerator_node_index, numerator_node_index);
   append_to_hlist(centered_numerator_node_index, make_glue(GT_SS));
   pack_hlist(centered_numerator_node_index, 0, 1);
 
-  size_t centered_denominator_node_index = make_hlist();
+  centered_denominator_node_index = make_hlist();
   append_to_hlist(centered_denominator_node_index, make_glue(GT_SS));
   append_to_hlist(centered_denominator_node_index, denominator_node_index);
   append_to_hlist(centered_denominator_node_index, make_glue(GT_SS));
   pack_hlist(centered_denominator_node_index, 0, 1);
 
-  BoxModelNode *centered_numerator_node = get_box_model_node(centered_numerator_node_index);
-  BoxModelNode *centered_denominator_node = get_box_model_node(centered_denominator_node_index);
+  centered_numerator_node = get_box_model_node(centered_numerator_node_index);
+  centered_denominator_node = get_box_model_node(centered_denominator_node_index);
 
-  double max_width = max(centered_numerator_node->u.hlist.width, centered_denominator_node->u.hlist.width);
+  max_width = max(centered_numerator_node->u.hlist.width, centered_denominator_node->u.hlist.width);
   pack_hlist(centered_numerator_node_index, max_width, 0);
   pack_hlist(centered_denominator_node_index, max_width, 0);
 
-  size_t vlist_index = make_vlist();
+  vlist_index = make_vlist();
   append_to_vlist(vlist_index, centered_numerator_node_index);
   append_to_vlist(vlist_index, make_vbox(0, default_thickness * 4.0));
   append_to_vlist(vlist_index, make_hrule_with_width(rule_thickness, max_width + default_thickness * 2));
@@ -2591,16 +2618,14 @@ static size_t convert_genfrac_to_box_model(ParserNode *node)
   append_to_vlist(vlist_index, centered_denominator_node_index);
   pack_vlist(vlist_index, 0, 1, INFINITY);
 
-  double ymax, ymin;
   gks_ft_get_metrics(MATH_FONT, state->fontsize * 1.16, '=', state->dpi, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                      &ymin, &ymax);
 
-  double shift =
-      centered_denominator_node->u.hlist.height + default_thickness * 4 + rule_thickness / 2 - (ymax + ymin) / 2;
+  shift = centered_denominator_node->u.hlist.height + default_thickness * 4 + rule_thickness / 2 - (ymax + ymin) / 2;
 
   get_box_model_node(vlist_index)->u.vlist.shift_amount = shift;
 
-  size_t hlist_index = make_hlist();
+  hlist_index = make_hlist();
   append_to_hlist(hlist_index, make_hbox(default_thickness * 2.0));
   append_to_hlist(hlist_index, vlist_index);
   pack_hlist(hlist_index, 0, 1);
@@ -2615,6 +2640,19 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
   BoxModelNode *previous_node = get_box_model_node(previous_box_model_node_index);
   size_t previous_node_kern_index = 0;
   size_t previous_node_hlist_index = 0;
+  double previous_node_height;
+  double previous_node_depth = 0.0;
+  double previous_node_width = 0.0;
+  double previous_node_kern_width = 0.0;
+  BoxModelNode *hlist_node;
+  size_t body_node_index;
+  size_t body_hlist_index;
+  double body_width;
+  size_t hlist_index;
+  int sub_and_super_filled = 0;
+  BoxModelState *state;
+  double default_thickness;
+  double padding;
   if (previous_node)
     {
       if (previous_node->type == BT_HLIST)
@@ -2626,6 +2664,8 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
         }
       else if (previous_node->type == BT_CHAR)
         {
+          size_t hlist_wrapper_index;
+          BoxModelNode tmp_node;
           switch (previous_node->u.character.codepoint)
             {
             case 8719:
@@ -2647,8 +2687,8 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
               break;
             }
           /* Swap nodes */
-          size_t hlist_wrapper_index = make_hlist();
-          BoxModelNode tmp_node = *get_box_model_node(hlist_wrapper_index);
+          hlist_wrapper_index = make_hlist();
+          tmp_node = *get_box_model_node(hlist_wrapper_index);
           previous_node->index = hlist_wrapper_index;
           tmp_node.index = previous_box_model_node_index;
           *get_box_model_node(hlist_wrapper_index) = *previous_node;
@@ -2663,22 +2703,21 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
         }
     }
 
-  size_t body_node_index = convert_to_box_model(node->u.subsuper.token, 0);
+  body_node_index = convert_to_box_model(node->u.subsuper.token, 0);
   shrink(body_node_index);
 
-  size_t body_hlist_index = make_hlist();
+  body_hlist_index = make_hlist();
   append_to_hlist(body_hlist_index, body_node_index);
   pack_hlist(body_hlist_index, 0, 1);
   body_node_index = body_hlist_index;
-  double body_width = get_box_model_node(body_node_index)->u.hlist.width;
+  body_width = get_box_model_node(body_node_index)->u.hlist.width;
 
-  size_t hlist_index = make_hlist();
-  int sub_and_super_filled = 0;
+  hlist_index = make_hlist();
 
-  BoxModelState *state = get_current_state();
+  state = get_current_state();
 
-  double default_thickness = get_underline_thickness(state->font, state->fontsize, state->dpi);
-  double padding = 2 * default_thickness;
+  default_thickness = get_underline_thickness(state->font, state->fontsize, state->dpi);
+  padding = 2 * default_thickness;
   if (previous_node && previous_node->type == BT_HLIST)
     {
       if (node->u.subsuper.operator== '_' && previous_node->u.hlist.subsuper_width<0)
@@ -2695,18 +2734,16 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
         }
     }
   /* TODO: better default height? */
-  double previous_node_height = state->fontsize;
-  double previous_node_depth = 0.0;
-  double previous_node_width = 0.0;
-  double previous_node_kern_width = 0.0;
+  previous_node_height = state->fontsize;
   if (previous_node)
     {
       if (previous_node->type != BT_HLIST)
         {
+          BoxModelNode *tmp_hlist;
           size_t tmp_hlist_index = make_hlist();
           append_to_hlist(tmp_hlist_index, previous_box_model_node_index);
           pack_hlist(tmp_hlist_index, 0, 1);
-          BoxModelNode *tmp_hlist = get_box_model_node(tmp_hlist_index);
+          tmp_hlist = get_box_model_node(tmp_hlist_index);
           previous_node_height = tmp_hlist->u.hlist.height - tmp_hlist->u.hlist.shift_amount;
           previous_node_depth = tmp_hlist->u.hlist.depth + tmp_hlist->u.hlist.shift_amount;
           if (previous_node->type == BT_CHAR)
@@ -2751,7 +2788,7 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
   append_to_hlist(hlist_index, make_kern(padding));
   append_to_hlist(hlist_index, body_node_index);
   pack_hlist(hlist_index, 0, 1);
-  BoxModelNode *hlist_node = get_box_model_node(hlist_index);
+  hlist_node = get_box_model_node(hlist_index);
   if (hlist_node->u.hlist.width < 0)
     {
       append_to_hlist(hlist_index, make_kern(-hlist_node->u.hlist.width));
@@ -2895,6 +2932,20 @@ static size_t convert_accent_to_box_model(ParserNode *node)
       1,                                                    /* 1, */
       1,
   };
+  ParserNode *token_node;
+  size_t accent_length;
+  size_t accent_index;
+  unsigned int accent_codepoint;
+  int is_wide;
+  size_t accent_node_index = 0;
+  size_t vlist_index;
+  double default_thickness;
+  BoxModelState *state;
+  double max_width;
+  BoxModelNode *centered_numerator_node;
+  BoxModelNode *centered_denominator_node;
+  size_t centered_numerator_node_index;
+  size_t centered_denominator_node_index;
   size_t inner_node_index = convert_to_box_model(node->u.accent.token, 0);
   if (!inner_node_index)
     {
@@ -2905,20 +2956,19 @@ static size_t convert_accent_to_box_model(ParserNode *node)
     {
       remove_auto_space(inner_node_index);
     }
-  ParserNode *token_node = get_parser_node(node->u.accent.token);
-  size_t accent_length = node->length - token_node->length;
-  size_t accent_index = find_in_sorted_string_list(node->source + 1, accent_length - 1, accent_symbols,
-                                                   sizeof(accent_symbols) / sizeof(accent_symbols[0]));
+  token_node = get_parser_node(node->u.accent.token);
+  accent_length = node->length - token_node->length;
+  accent_index = find_in_sorted_string_list(node->source + 1, accent_length - 1, accent_symbols,
+                                            sizeof(accent_symbols) / sizeof(accent_symbols[0]));
   if (accent_index == sizeof(accent_symbols) / sizeof(accent_symbols[0]))
     {
       fprintf(stderr, "Error: Unknown accent");
       return inner_node_index;
     }
-  unsigned int accent_codepoint = accent_codepoints[accent_index];
-  int is_wide = accent_is_wide[accent_index];
-  size_t accent_node_index = 0;
+  accent_codepoint = accent_codepoints[accent_index];
+  is_wide = accent_is_wide[accent_index];
 
-  size_t centered_denominator_node_index = make_hlist();
+  centered_denominator_node_index = make_hlist();
   append_to_hlist(centered_denominator_node_index, make_glue(GT_SS));
   append_to_hlist(centered_denominator_node_index, inner_node_index);
   append_to_hlist(centered_denominator_node_index, make_glue(GT_SS));
@@ -2939,23 +2989,23 @@ static size_t convert_accent_to_box_model(ParserNode *node)
       shrink(accent_node_index);
       shrink(accent_node_index);
     }
-  size_t centered_numerator_node_index = make_hlist();
+  centered_numerator_node_index = make_hlist();
   append_to_hlist(centered_numerator_node_index, make_glue(GT_SS));
   append_to_hlist(centered_numerator_node_index, make_kern(get_box_model_node(accent_node_index)->u.character.width));
   append_to_hlist(centered_numerator_node_index, accent_node_index);
   append_to_hlist(centered_numerator_node_index, make_glue(GT_SS));
   pack_hlist(centered_numerator_node_index, 0, 1);
 
-  BoxModelNode *centered_numerator_node = get_box_model_node(centered_numerator_node_index);
-  BoxModelNode *centered_denominator_node = get_box_model_node(centered_denominator_node_index);
+  centered_numerator_node = get_box_model_node(centered_numerator_node_index);
+  centered_denominator_node = get_box_model_node(centered_denominator_node_index);
 
-  double max_width = max(centered_numerator_node->u.hlist.width, centered_denominator_node->u.hlist.width);
+  max_width = max(centered_numerator_node->u.hlist.width, centered_denominator_node->u.hlist.width);
   pack_hlist(centered_numerator_node_index, max_width, 0);
   pack_hlist(centered_denominator_node_index, max_width, 0);
 
-  BoxModelState *state = get_current_state();
-  double default_thickness = get_underline_thickness(state->font, state->fontsize, state->dpi);
-  size_t vlist_index = make_vlist();
+  state = get_current_state();
+  default_thickness = get_underline_thickness(state->font, state->fontsize, state->dpi);
+  vlist_index = make_vlist();
   append_to_vlist(vlist_index, centered_numerator_node_index);
   append_to_vlist(vlist_index, make_vbox(0, default_thickness * 2.0));
   append_to_vlist(vlist_index, centered_denominator_node_index);
@@ -2965,6 +3015,16 @@ static size_t convert_accent_to_box_model(ParserNode *node)
 
 static size_t convert_sqrt_to_box_model(ParserNode *node)
 {
+  BoxModelNode *inner_node;
+  BoxModelState *state;
+  double default_thickness;
+  double inner_height;
+  double inner_depth;
+  size_t padded_inner_index;
+  size_t hlist_index;
+  size_t right_side_index;
+  size_t sqrt_sign_index;
+  float scaling_factor;
   size_t inner_node_index = convert_to_box_model(node->u.sqrt.token, 0);
   if (!inner_node_index)
     {
@@ -2972,23 +3032,25 @@ static size_t convert_sqrt_to_box_model(ParserNode *node)
       return 0;
     }
   remove_auto_space(inner_node_index);
-  BoxModelNode *inner_node = get_box_model_node(inner_node_index);
-  BoxModelState *state = get_current_state();
-  double default_thickness = get_underline_thickness(state->font, state->fontsize, state->dpi);
-  double inner_height = inner_node->u.hlist.height - inner_node->u.hlist.shift_amount + default_thickness * 5;
-  double inner_depth = inner_node->u.hlist.depth + inner_node->u.hlist.shift_amount;
+  inner_node = get_box_model_node(inner_node_index);
+  state = get_current_state();
+  default_thickness = get_underline_thickness(state->font, state->fontsize, state->dpi);
+  inner_height = inner_node->u.hlist.height - inner_node->u.hlist.shift_amount + default_thickness * 5;
+  inner_depth = inner_node->u.hlist.depth + inner_node->u.hlist.shift_amount;
 
-  size_t padded_inner_index = make_hlist();
+  padded_inner_index = make_hlist();
   append_to_hlist(padded_inner_index, make_hbox(default_thickness * 2.0));
   append_to_hlist(padded_inner_index, inner_node_index);
   append_to_hlist(padded_inner_index, make_hbox(default_thickness * 2.0));
   kern_hlist(padded_inner_index);
   pack_hlist(padded_inner_index, 0, 1);
 
-  size_t hlist_index = make_hlist();
+  hlist_index = make_hlist();
 
   if (node->u.sqrt.index_length)
     {
+      BoxModelNode *inner_hlist_node;
+      double negative_space;
       size_t index_hlist_index = make_hlist();
       size_t i;
       for (i = 0; i < node->u.sqrt.index_length; i++)
@@ -2999,16 +3061,16 @@ static size_t convert_sqrt_to_box_model(ParserNode *node)
       pack_hlist(index_hlist_index, 0, 1);
       shrink(index_hlist_index);
       shrink(index_hlist_index);
-      BoxModelNode *inner_hlist_node = get_box_model_node(index_hlist_index);
+      inner_hlist_node = get_box_model_node(index_hlist_index);
       inner_hlist_node->u.hlist.shift_amount = -inner_height * 0.5;
-      double negative_space = -min(inner_hlist_node->u.hlist.width, (inner_height + inner_depth) * 0.6);
+      negative_space = -min(inner_hlist_node->u.hlist.width, (inner_height + inner_depth) * 0.6);
       append_to_hlist(hlist_index, index_hlist_index);
       append_to_hlist(hlist_index, make_kern(negative_space));
     }
-  float scaling_factor = (inner_height + inner_depth) / state->fontsize * 0.8;
-  size_t sqrt_sign_index = make_auto_height_char(8730, inner_height, inner_depth, NAN);
+  scaling_factor = (inner_height + inner_depth) / state->fontsize * 0.8;
+  sqrt_sign_index = make_auto_height_char(8730, inner_height, inner_depth, NAN);
   append_to_hlist(hlist_index, sqrt_sign_index);
-  size_t right_side_index = make_vlist();
+  right_side_index = make_vlist();
   append_to_vlist(right_side_index, make_hrule(default_thickness * scaling_factor));
   append_to_vlist(right_side_index, make_glue(GT_FILL));
   append_to_vlist(right_side_index, padded_inner_index);
@@ -3024,11 +3086,12 @@ static size_t convert_sqrt_to_box_model(ParserNode *node)
 
 static size_t convert_to_box_model(size_t parser_node_index, size_t previous_box_model_node_index)
 {
+  ParserNode *node;
   if (parser_node_index == 0)
     {
       return 0;
     }
-  ParserNode *node = get_parser_node(parser_node_index);
+  node = get_parser_node(parser_node_index);
   switch (node->type)
     {
     case NT_MATH:
@@ -3079,10 +3142,12 @@ static void apply_transformation(double *x, double *y)
 
 static void render_character(BoxModelNode *node, double x, double y)
 {
+  int window_height;
+  double size_factor;
+  unsigned char utf8_str[5] = {0, 0, 0, 0, 0};
   unsigned int codepoint = node->u.character.codepoint;
   codepoint = get_codepoint_for_character_variant(codepoint, node->u.character.state.font);
   y = canvas_height - y;
-  unsigned char utf8_str[5] = {0, 0, 0, 0, 0};
   if (codepoint == ' ')
     {
       return;
@@ -3114,8 +3179,8 @@ static void render_character(BoxModelNode *node, double x, double y)
       return;
     }
   /* TODO: inquire current workstation window height? */
-  int window_height = 2400;
-  double size_factor = 12 / 15.0 / window_height;
+  window_height = 2400;
+  size_factor = 12 / 15.0 / window_height;
   if (codepoint == 8747)
     {
       size_factor *= 1.25;
@@ -3164,9 +3229,17 @@ static void render_rect(double x, double y, double width, double height)
 {
   y = canvas_height - y;
   {
-    double xs[] = {x, x + width, x + width, x};
-    double ys[] = {y, y, y + height, y + height};
     int i;
+    double xs[4];
+    double ys[4];
+    xs[0] = x;
+    xs[1] = x + width;
+    xs[2] = x + width;
+    xs[3] = x;
+    ys[0] = y;
+    ys[1] = y;
+    ys[2] = y + height;
+    ys[3] = y + height;
     for (i = 0; i < 4; i++)
       {
         apply_transformation(xs + i, ys + i);
@@ -3182,15 +3255,20 @@ static void ship_hlist_out(Ship *this, size_t bm_node_index);
 
 static void ship_vlist_out(Ship *this, size_t bm_node_index)
 {
+  BoxModelNode *node;
+  BoxModelNode *vlist_entry;
+  size_t vlist_entry_index;
+  int cur_g = 0;
+  double cur_glue = 0.0;
+  int glue_order;
+  int glue_sign;
+  double left_edge;
   BoxModelNode *box = get_box_model_node(bm_node_index);
   if (!box) return;
 
-  int cur_g = 0;
-  double cur_glue = 0.0;
-  int glue_order = box->u.vlist.glue_order;
-  int glue_sign = box->u.vlist.glue_sign;
-  double top_edge = this->cur_v;
-  double left_edge = this->cur_h;
+  glue_order = box->u.vlist.glue_order;
+  glue_sign = box->u.vlist.glue_sign;
+  left_edge = this->cur_h;
   this->cur_s += 1;
   if (this->cur_s > this->max_push)
     {
@@ -3198,14 +3276,13 @@ static void ship_vlist_out(Ship *this, size_t bm_node_index)
     }
   this->cur_v -= box->u.vlist.height;
 
-  BoxModelNode *node = box;
-  BoxModelNode *vlist_entry;
-  size_t vlist_entry_index;
+  node = box;
   for (vlist_entry_index = node->u.vlist.first_entry_index; vlist_entry_index;
        vlist_entry_index = get_box_model_node(vlist_entry_index)->u.vlist_entry.next_entry_index)
     {
+      BoxModelNode *child;
       vlist_entry = get_box_model_node(vlist_entry_index);
-      BoxModelNode *child = get_box_model_node(vlist_entry->u.vlist_entry.node_index);
+      child = get_box_model_node(vlist_entry->u.vlist_entry.node_index);
       if (!child) continue;
 
       switch (child->type)
@@ -3221,9 +3298,10 @@ static void ship_vlist_out(Ship *this, size_t bm_node_index)
               }
             else
               {
+                double save_v;
                 this->cur_v += child->u.hlist.height;
                 this->cur_h = left_edge + child->u.hlist.shift_amount;
-                double save_v = this->cur_v;
+                save_v = this->cur_v;
                 child->u.hlist.width = box->u.vlist.width;
                 ship_hlist_out(this, child->index);
                 this->cur_v = save_v + child->u.hlist.depth;
@@ -3239,9 +3317,10 @@ static void ship_vlist_out(Ship *this, size_t bm_node_index)
               }
             else
               {
+                double save_v;
                 this->cur_v += child->u.vlist.height;
                 this->cur_h = left_edge + child->u.vlist.shift_amount;
-                double save_v = this->cur_v;
+                save_v = this->cur_v;
                 child->u.vlist.width = box->u.vlist.width;
                 ship_vlist_out(this, child->index);
                 this->cur_v = save_v + child->u.vlist.depth;
@@ -3309,22 +3388,25 @@ static void ship_vlist_out(Ship *this, size_t bm_node_index)
 
 static void ship_hlist_out(Ship *this, size_t bm_node_index)
 {
-  BoxModelNode *box = get_box_model_node(bm_node_index);
-  if (!box) return;
   int cur_g = 0;
   double cur_glue = 0.0;
-  int glue_order = box->u.hlist.glue_order;
-  int glue_sign = box->u.hlist.glue_sign;
-  double base_line = this->cur_v;
-  double left_edge = this->cur_h;
+  int glue_order;
+  int glue_sign;
+  double base_line;
+  BoxModelNode *hlist_entry;
+  BoxModelNode *node;
+  BoxModelNode *box = get_box_model_node(bm_node_index);
+  if (!box) return;
+  glue_order = box->u.hlist.glue_order;
+  glue_sign = box->u.hlist.glue_sign;
+  base_line = this->cur_v;
   this->cur_s += 1;
   if (this->cur_s > this->max_push)
     {
       this->max_push = this->cur_s;
     }
 
-  BoxModelNode *node = box;
-  BoxModelNode *hlist_entry;
+  node = box;
   for (hlist_entry = get_box_model_node(node->u.hlist.first_entry_index); hlist_entry;
        hlist_entry = get_box_model_node(hlist_entry->u.hlist_entry.next_entry_index))
     {
@@ -3430,10 +3512,10 @@ static void ship_hlist_out(Ship *this, size_t bm_node_index)
 
 static void ship(double ox, double oy, size_t bm_node_index)
 {
+  Ship ship;
   BoxModelNode *box = get_box_model_node(bm_node_index);
   if (!box) return;
   assert(box->type == BT_HLIST);
-  Ship ship;
   ship.max_push = 0;
   ship.cur_s = 0;
   ship.cur_v = 0.0;
@@ -3445,8 +3527,9 @@ static void ship(double ox, double oy, size_t bm_node_index)
 
 static void get_results(size_t bm_node_index, double *width, double *height, double *depth)
 {
+  BoxModelNode *box;
   ship(0, 0, bm_node_index);
-  BoxModelNode *box = get_box_model_node(bm_node_index);
+  box = get_box_model_node(bm_node_index);
   assert(box->type == BT_HLIST);
   *width = ceil(box->u.hlist.width);
   *height = ceil(ceil(box->u.hlist.height) + ceil(box->u.hlist.depth));
@@ -3456,6 +3539,7 @@ static void get_results(size_t bm_node_index, double *width, double *height, dou
 
 static void mathtex_to_box_model(const char *mathtex, double *width, double *height, double *depth)
 {
+  BoxModelNode *result_node;
   state = OUTSIDE_SYMBOL;
   symbol_start = NULL;
   ignore_whitespace = 0;
@@ -3469,7 +3553,7 @@ static void mathtex_to_box_model(const char *mathtex, double *width, double *hei
   result_box_model_node_index = convert_to_box_model(result_parser_node_index, 0);
   kern_hlist(result_box_model_node_index);
   pack_hlist(result_box_model_node_index, 0.0, 1);
-  BoxModelNode *result_node = get_box_model_node(result_box_model_node_index);
+  result_node = get_box_model_node(result_box_model_node_index);
   assert(get_box_model_node(result_box_model_node_index)->type == BT_HLIST);
   canvas_height = result_node->u.hlist.height + result_node->u.hlist.depth;
   canvas_width = result_node->u.hlist.width;

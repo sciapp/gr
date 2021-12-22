@@ -112,17 +112,19 @@
   X(ERROR_PLOT_COLORMAP, 34)                          \
   X(ERROR_PLOT_NORMALIZATION, 35)                     \
   X(ERROR_PLOT_UNKNOWN_KEY, 36)                       \
-  X(ERROR_PLOT_UNKNOWN_KIND, 37)                      \
-  X(ERROR_PLOT_MISSING_DATA, 38)                      \
-  X(ERROR_PLOT_COMPONENT_LENGTH_MISMATCH, 39)         \
-  X(ERROR_PLOT_MISSING_DIMENSIONS, 40)                \
-  X(ERROR_PLOT_MISSING_LABELS, 41)                    \
-  X(ERROR_PLOT_INVALID_ID, 42)                        \
-  X(ERROR_PLOT_OUT_OF_RANGE, 43)                      \
-  X(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS, 44)            \
-  X(ERROR_BASE64_BLOCK_TOO_SHORT, 45)                 \
-  X(ERROR_BASE64_INVALID_CHARACTER, 46)               \
-  Y(ERROR_NOT_IMPLEMENTED, 47)
+  X(ERROR_PLOT_UNKNOWN_ALGORITHM, 37)                 \
+  X(ERROR_PLOT_MISSING_ALGORITHM, 38)                 \
+  X(ERROR_PLOT_UNKNOWN_KIND, 39)                      \
+  X(ERROR_PLOT_MISSING_DATA, 40)                      \
+  X(ERROR_PLOT_COMPONENT_LENGTH_MISMATCH, 41)         \
+  X(ERROR_PLOT_MISSING_DIMENSIONS, 42)                \
+  X(ERROR_PLOT_MISSING_LABELS, 43)                    \
+  X(ERROR_PLOT_INVALID_ID, 44)                        \
+  X(ERROR_PLOT_OUT_OF_RANGE, 45)                      \
+  X(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS, 46)            \
+  X(ERROR_BASE64_BLOCK_TOO_SHORT, 47)                 \
+  X(ERROR_BASE64_INVALID_CHARACTER, 48)               \
+  Y(ERROR_NOT_IMPLEMENTED, 49)
 
 #define ENUM_VALUE(name, value) name = value,
 #define ENUM_LAST_VALUE(name, value) name = value

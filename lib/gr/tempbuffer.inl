@@ -43,7 +43,6 @@ size_t CONCAT(copy_, VALUE_NAME)(VALUE_TYPE VALUE_NAME) {
 }
 
 VALUE_TYPE *CONCAT(get_, VALUE_NAME)(size_t index) {
-    assert(0 <= index);
     assert(index <= SIZE_NAME);
     if (index == 0) {
         return NULL;

@@ -91,6 +91,9 @@ find_package(X11)
 find_package(Fontconfig)
 find_package(OpenGL OPTIONAL_COMPONENTS OpenGL)
 find_package(Gs)
+if(${CMAKE_VERSION} VERSION_GREATER "3.16.0")
+  find_package(Qt6 OPTIONAL_COMPONENTS Widgets Core Network)
+endif()
 find_package(Qt5 OPTIONAL_COMPONENTS Widgets Core Network)
 find_package(Qt4)
 
@@ -104,6 +107,10 @@ if(Qt4_FOUND
    OR (Qt5Widgets_FOUND
        AND Qt5Core_FOUND
        AND Qt5Network_FOUND
+      )
+   OR (Qt6Widgets_FOUND
+       AND Qt6Core_FOUND
+       AND Qt6Network_FOUND
       )
 )
   if(GR_MANUAL_MOC_AND_RCC)
@@ -134,6 +141,15 @@ if(Qt5Widgets_FOUND
   set(QT5_MOC_INCLUDE_FLAGS "")
   foreach(DIR IN LISTS Qt5Core_INCLUDE_DIRS Qt5Gui_INCLUDE_DIRS Qt5Widgets_INCLUDE_DIRS)
     set(QT5_MOC_INCLUDE_FLAGS ${QT5_MOC_INCLUDE_FLAGS} -I${DIR})
+  endforeach()
+endif()
+if(Qt6Widgets_FOUND
+   AND Qt6Core_FOUND
+   AND Qt6Network_FOUND
+)
+  set(QT6_MOC_INCLUDE_FLAGS "")
+  foreach(DIR IN LISTS Qt6Core_INCLUDE_DIRS Qt6Gui_INCLUDE_DIRS Qt6Widgets_INCLUDE_DIRS)
+    set(QT6_MOC_INCLUDE_FLAGS ${QT6_MOC_INCLUDE_FLAGS} -I${DIR})
   endforeach()
 endif()
 
@@ -757,6 +773,37 @@ set_target_properties(
              SUFFIX "${GR_PLUGIN_SUFFIX}"
 )
 
+add_library(qt6plugin SHARED lib/gks/plugin/qt6plugin.cxx)
+target_link_libraries(qt6plugin PUBLIC gks_static)
+if(Qt6Widgets_FOUND AND ${CMAKE_VERSION} VERSION_GREATER "3.16.0")
+  string(APPEND GR_REPORT "- qt6plugin: Yes\n")
+  target_link_libraries(qt6plugin PUBLIC Qt6::Widgets)
+  set_target_properties(
+    qt6plugin
+    PROPERTIES CXX_STANDARD 17
+               CXX_EXTENSIONS OFF
+               CXX_STANDARD_REQUIRED ON
+               PREFIX ""
+               SUFFIX "${GR_PLUGIN_SUFFIX}"
+  )
+else()
+  if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
+    string(APPEND GR_REPORT "- qt6plugin: No (CMake version < 3.16.0)\n")
+  else()
+    string(APPEND GR_REPORT "- qt6plugin: No (Qt6 not found)\n")
+  endif()
+  set_target_properties(
+    qt6plugin
+    PROPERTIES CXX_STANDARD 11
+               CXX_EXTENSIONS OFF
+               CXX_STANDARD_REQUIRED ON
+               PREFIX ""
+               SUFFIX "${GR_PLUGIN_SUFFIX}"
+  )
+  target_compile_definitions(qt6plugin PRIVATE NO_QT6)
+endif()
+target_compile_options(qt6plugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+
 add_library(qtplugin SHARED lib/gks/plugin/qtplugin.cxx)
 target_link_libraries(qtplugin PUBLIC gks_static)
 if(Qt4_FOUND)
@@ -860,6 +907,31 @@ if(Qt5Widgets_FOUND AND Qt5Core_FOUND)
   add_library(GR::qt5gr ALIAS qt5gr)
 endif()
 
+if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
+  add_library(qt6gr SHARED lib/gr/qtgr/grwidget.cxx)
+  target_link_libraries(qt6gr PUBLIC GR::GR)
+  target_link_libraries(qt6gr PUBLIC Qt6::Core Qt6::Widgets)
+  if(MINGW)
+    target_compile_options(qt6gr PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
+  endif()
+  target_compile_options(qt6gr PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(qt6gr PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" INSTALL_RPATH "${INSTALL_RPATH}")
+  if(GR_MANUAL_MOC_AND_RCC)
+    set_target_properties(qt6gr PROPERTIES AUTOMOC OFF AUTORCC OFF)
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_qt6_grwidget.cxx
+      COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${QT6_MOC_INCLUDE_FLAGS}
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_qt6_grwidget.cxx
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.cxx
+    )
+    target_sources(qt6gr PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_qt6_grwidget.cxx)
+  else()
+    set_target_properties(qt6gr PROPERTIES AUTOMOC ON AUTORCC ON)
+    target_sources(qt6gr PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h)
+  endif()
+  add_library(GR::qt6gr ALIAS qt6gr)
+endif()
+
 string(APPEND GR_REPORT "\nGKS applications:\n")
 
 if(APPLE)
@@ -904,13 +976,23 @@ if(Qt4_FOUND
        AND Qt5Core_FOUND
        AND Qt5Network_FOUND
       )
+   OR (Qt6Widgets_FOUND
+       AND Qt6Core_FOUND
+       AND Qt6Network_FOUND
+      )
 )
   add_executable(gksqt WIN32 MACOSX_BUNDLE lib/gks/qt/gksqt.cxx lib/gks/qt/gksserver.cxx lib/gks/qt/gkswidget.cxx)
   set_target_properties(gksqt PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
   target_link_libraries(gksqt PUBLIC gks_static)
-  if(Qt5Widgets_FOUND
-     AND Qt5Core_FOUND
-     AND Qt5Network_FOUND
+  if(Qt6Widgets_FOUND
+     AND Qt6Core_FOUND
+     AND Qt6Network_FOUND
+  )
+    target_link_libraries(gksqt PUBLIC Qt6::Widgets Qt6::Core Qt6::Network)
+  elseif(
+    Qt5Widgets_FOUND
+    AND Qt5Core_FOUND
+    AND Qt5Network_FOUND
   )
     target_link_libraries(gksqt PUBLIC Qt5::Widgets Qt5::Core Qt5::Network)
   elseif(Qt4_FOUND)
@@ -922,9 +1004,15 @@ if(Qt4_FOUND
   target_compile_options(gksqt PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   if(GR_MANUAL_MOC_AND_RCC)
     set_target_properties(gksqt PROPERTIES AUTOMOC OFF AUTORCC OFF)
-    if(Qt5Widgets_FOUND
-       AND Qt5Core_FOUND
-       AND Qt5Network_FOUND
+    if(Qt6Widgets_FOUND
+       AND Qt6Core_FOUND
+       AND Qt6Network_FOUND
+    )
+      set(MOC_INCLUDE_FLAGS ${QT6_MOC_INCLUDE_FLAGS})
+    elseif(
+      Qt5Widgets_FOUND
+      AND Qt5Core_FOUND
+      AND Qt5Network_FOUND
     )
       set(MOC_INCLUDE_FLAGS ${QT5_MOC_INCLUDE_FLAGS})
     else()
@@ -974,7 +1062,7 @@ if(Qt4_FOUND
   endif()
   string(APPEND GR_REPORT "- gksqt: Yes\n")
 else()
-  string(APPEND GR_REPORT "- gksqt: No (Qt4 / Qt5 not found)\n")
+  string(APPEND GR_REPORT "- gksqt: No (Qt4 / Qt5 / Qt6 not found)\n")
 endif()
 
 if(GR_BUILD_DEMOS)
@@ -1032,6 +1120,15 @@ if(GR_INSTALL)
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
   endif()
+  if(TARGET qt6gr)
+    install(
+      TARGETS qt6gr
+      EXPORT GRTargets
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+  endif()
   install(
     EXPORT GRTargets
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
@@ -1058,6 +1155,7 @@ if(GR_INSTALL)
             zmqplugin
             qtplugin
             qt5plugin
+            qt6plugin
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -1085,6 +1183,14 @@ if(GR_INSTALL)
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
   endif()
+  if(TARGET qt6gr)
+    install(
+      TARGETS qt6gr
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+  endif()
   if(TARGET quartzplugin)
     install(
       TARGETS quartzplugin
@@ -1105,7 +1211,10 @@ if(GR_INSTALL)
   endif()
   install(FILES lib/gr/gr.h lib/gks/gks.h lib/gr3/gr3.h lib/grm/grm.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
   install(FILES ${GRM_SUBDIR_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grm/)
-  if(TARGET qt4gr OR TARGET qt5gr)
+  if(TARGET qt4gr
+     OR TARGET qt5gr
+     OR TARGET qt6gr
+  )
     install(FILES lib/gr/qtgr/grwidget.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
   endif()
   install(

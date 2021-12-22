@@ -144,6 +144,8 @@ void GKSConnection::readClient()
           socket->write(reply, sizeof(reply));
           socket_function = SocketFunction::unknown;
           break;
+        default:
+          break;
         }
     }
 }

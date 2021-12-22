@@ -6,6 +6,7 @@
 #ifdef _MSC_VER
 typedef __int64 int64_t;
 #else
+#include <inttypes.h>
 #include <stdint.h>
 #endif
 
@@ -141,12 +142,16 @@ char *str_ftoa(char *result, double value, double reference)
       if (scientific_notation)
         {
           strcat(result, "E");
+#ifdef _MSC_VER
           sprintf(str, "%lld", exponent + 1);
+#else
+          sprintf(str, "%" PRId64, exponent + 1);
+#endif
           strcat(result, str);
         }
       else
         {
-          sprintf(format, "%lg", reference);
+          sprintf(format, "%g", reference);
 
           if (strchr(format, 'E') == 0)
 

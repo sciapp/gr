@@ -257,7 +257,7 @@ JSTerm = function(ispluto=false) {
         return;
       }
       if (typeof WEB_SOCKET_ADDRESS === 'undefined') {
-        WEB_SOCKET_ADDRESS = 'ws://127.0.0.1:8081'
+        WEB_SOCKET_ADDRESS = 'ws://127.0.0.1:8081';
       }
       ws = new WebSocket(WEB_SOCKET_ADDRESS);
       ws.onerror = function(e) {
@@ -528,15 +528,18 @@ JSTerm = function(ispluto=false) {
         if (typeof this.boxzoomTriggerTimeout !== 'undefined') {
           clearTimeout(this.boxzoomTriggerTimeout);
         }
+        grm.switch(this.id);
         if (button == 0) {
           this.overlayCanvas.style.cursor = 'move';
           this.panning = true;
           this.boxzoom = false;
           this.prevMousePos = [x, y];
-          this.boxzoomTriggerTimeout = setTimeout(function() {
-            this.startBoxzoom(x, y, ctrlKey);
-          }.bind(this), BOXZOOM_TRIGGER_THRESHHOLD);
-        } else if (button == 2) {
+          if (!grm.is3d(x, y)) {
+            this.boxzoomTriggerTimeout = setTimeout(function() {
+              this.startBoxzoom(x, y, ctrlKey);
+            }.bind(this), BOXZOOM_TRIGGER_THRESHHOLD);
+          }
+        } else if (button == 2  && !grm.is3d(x, y)) {
           this.startBoxzoom(x, y, ctrlKey);
         }
       };
@@ -743,7 +746,7 @@ JSTerm = function(ispluto=false) {
        * @param  {number} x       x-coordinate on the canvas of the mouse
        * @param  {number} y       y-coordinate on the canvas of the mouse
        */
-      this.handleMouseMove = function(x, y) {
+      this.handleMouseMove = function(x, y, shiftPressed) {
         if (this.panning) {
           this.tooltipDiv.innerHTML = "";
           this.tooltipDiv.style.display = 'none';
@@ -759,6 +762,7 @@ JSTerm = function(ispluto=false) {
           grm.args_push(mouseargs, "y", "i", [this.prevMousePos[1]]);
           grm.args_push(mouseargs, "xshift", "i", [x - this.prevMousePos[0]]);
           grm.args_push(mouseargs, "yshift", "i", [y - this.prevMousePos[1]]);
+          grm.args_push(mouseargs, "shift_pressed", "i", shiftPressed);
           this.grEventinput(mouseargs);
           grm.args_delete(mouseargs);
           this.prevMousePos = [x, y];
@@ -875,7 +879,7 @@ JSTerm = function(ispluto=false) {
           "event": "mousemove",
         });
         if (this.handleEvents) {
-          this.handleMouseMove(coords[0], coords[1]);
+          this.handleMouseMove(coords[0], coords[1], event.shiftKey);
         }
         event.preventDefault();
       };

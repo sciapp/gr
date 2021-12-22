@@ -1,3 +1,5 @@
+#ifndef GR_WIDGET_H_INCLUDED
+#define GR_WIDGET_H_INCLUDED
 #include <QWidget>
 #include <QRubberBand>
 #include <grm.h>
@@ -57,3 +59,5 @@ private:
   MouseState mouse_state_;
   QRubberBand *box_zoom_rubberband_;
 };
+
+#endif /* ifndef GR_WIDGET_H_INCLUDED */

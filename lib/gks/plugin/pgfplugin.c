@@ -40,6 +40,10 @@ extern "C" {
 
 #endif
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 DLLEXPORT void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
                              int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
@@ -441,6 +445,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x, y, x0, y0, xi, yi;
   int i;
+  GKS_UNUSED(linetype);
 
   WC_to_NDC(px[0], py[0], tnr, x, y);
   seg_xform(&x, &y);
@@ -786,7 +791,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   double x1, y1, x2, y2, x, y;
   double ix1, ix2, iy1, iy2;
   double width, height;
-  int red, green, blue, alpha;
+  unsigned int red, green, blue, alpha;
   int i, j, ix, iy, ind, rgb;
   int swapx, swapy;
   png_byte bit_depth = 8;
@@ -1065,6 +1070,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   double x[3], y[3], w, h, a1, a2;
   double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
   int line_width;
+  PGF_stream *buf;
+  GKS_UNUSED(n);
 
   line_width = nint(gkss->bwidth);
   if (line_width < 1) line_width = 0;
@@ -1073,7 +1080,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   pgf_printf(p->stream, "\\definecolor{pathfill}{HTML}{%s}\n", p->rgb[gkss->facoli]);
 
   pgf_printf(p->stream, "\\begin{scope}");
-  PGF_stream *buf = pgf_alloc_stream();
+  buf = pgf_alloc_stream();
 
   j = 0;
   for (i = 0; i < nc; ++i)
@@ -1348,7 +1355,6 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
   int i, j, k, len;
   unsigned int rgba;
   int red, green, blue;
-  double alpha;
 
   if (n > p->max_points)
     {
@@ -1420,6 +1426,9 @@ void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
                    char *chars, void **ptr)
 {
   int i;
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(lc);
 
   p = (ws_state_list *)*ptr;
 

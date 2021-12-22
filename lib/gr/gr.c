@@ -1,5 +1,5 @@
-#ifdef __unix__
-#define _XOPEN_SOURCE
+#if defined(__unix__) && !defined(__FreeBSD__)
+#define _POSIX_C_SOURCE 200809L /* required for mkdtemp */
 #endif
 
 #ifdef _MSC_VER
@@ -76,7 +76,6 @@ typedef __int64 int64_t;
 #define RAYCASTING_CEIL(x) ((x > 0) ? round(x + 0.50000001) : (floor(x + 1.00000001)))
 #define RAYCASTING_FLOOR(x) (round(x - 0.50000001))
 
-
 typedef struct
 {
   int index;
@@ -97,6 +96,8 @@ typedef struct
 {
   int scale_options;
   double xmin, xmax, ymin, ymax, zmin, zmax, a, b, c, d, e, f;
+  double basex, basey, basez;
+  char *basex_s, *basey_s, *basez_s;
 } linear_xform;
 
 typedef struct
@@ -218,7 +219,7 @@ static volume_t vt = {1, 0, 1.25, 1000, 1000, NULL, 1};
 
 static norm_xform nx = {1, 0, 1, 0};
 
-static linear_xform lx = {0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
+static linear_xform lx = {0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 10, 10, 10, "10", "10", "10"};
 
 static world_xform wx = {0, 1, 60, 60, 0, 0, 0, 0, 0, 0, 0};
 
@@ -319,6 +320,14 @@ static unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
 #define OPTION_FLIP_X (1 << 3)
 #define OPTION_FLIP_Y (1 << 4)
 #define OPTION_FLIP_Z (1 << 5)
+
+#define OPTION_X_LOG2 (1 << 6)
+#define OPTION_Y_LOG2 (1 << 7)
+#define OPTION_Z_LOG2 (1 << 8)
+
+#define OPTION_X_LN (1 << 9)
+#define OPTION_Y_LN (1 << 10)
+#define OPTION_Z_LN (1 << 11)
 
 #define LEFT (1 << 0)
 #define RIGHT (1 << 1)
@@ -941,6 +950,11 @@ static void reallocate(int npoints)
   code = (int *)xrealloc(code, maxpath * sizeof(int));
 }
 
+static double blog(double base, double x)
+{
+  return log(x) / log(base);
+}
+
 static double x_lin(double x)
 {
   double result;
@@ -948,7 +962,7 @@ static double x_lin(double x)
   if (OPTION_X_LOG & lx.scale_options)
     {
       if (x > 0)
-        result = lx.a * log10(x) + lx.b;
+        result = lx.a * blog(lx.basex, x) + lx.b;
       else
         result = NAN;
     }
@@ -967,7 +981,7 @@ static double y_lin(double y)
   if (OPTION_Y_LOG & lx.scale_options)
     {
       if (y > 0)
-        result = lx.c * log10(y) + lx.d;
+        result = lx.c * blog(lx.basey, y) + lx.d;
       else
         result = NAN;
     }
@@ -986,7 +1000,7 @@ static double z_lin(double z)
   if (OPTION_Z_LOG & lx.scale_options)
     {
       if (z > 0)
-        result = lx.e * log10(z) + lx.f;
+        result = lx.e * blog(lx.basez, z) + lx.f;
       else
         result = NAN;
     }
@@ -1003,7 +1017,7 @@ static double x_log(double x)
   if (OPTION_FLIP_X & lx.scale_options) x = lx.xmax - x + lx.xmin;
 
   if (OPTION_X_LOG & lx.scale_options)
-    return (pow(10.0, (double)((x - lx.b) / lx.a)));
+    return (pow(lx.basex, (double)((x - lx.b) / lx.a)));
   else
     return (x);
 }
@@ -1013,7 +1027,7 @@ static double y_log(double y)
   if (OPTION_FLIP_Y & lx.scale_options) y = lx.ymax - y + lx.ymin;
 
   if (OPTION_Y_LOG & lx.scale_options)
-    return (pow(10.0, (double)((y - lx.d) / lx.c)));
+    return (pow(lx.basey, (double)((y - lx.d) / lx.c)));
   else
     return (y);
 }
@@ -1023,7 +1037,7 @@ static double z_log(double z)
   if (OPTION_FLIP_Z & lx.scale_options) z = lx.zmax - z + lx.zmin;
 
   if (OPTION_Z_LOG & lx.scale_options)
-    return (pow(10.0, (double)((z - lx.f) / lx.e)));
+    return (pow(lx.basez, (double)((z - lx.f) / lx.e)));
   else
     return (z);
 }
@@ -1058,6 +1072,14 @@ static void apply_world_xform(double *x, double *y, double *z)
       double fov = gpx.fov * M_PI / 180; /* camera angle of perspektiv projection */
       double xaspect = (vxmax - vxmin) / (vymax - vymin);
       double yaspect = 1.0 / xaspect;
+      double F[3]; /* direction between camera and focus point */
+      double norm_func;
+      double f[3];
+
+      double x_val = *x * tx.x_axis_scale;
+      double y_val = *y * tx.y_axis_scale;
+      double z_val = *z * tx.z_axis_scale;
+
       if (xaspect < 1.0)
         {
           xaspect = 1.0;
@@ -1066,14 +1088,13 @@ static void apply_world_xform(double *x, double *y, double *z)
         {
           yaspect = 1.0;
         }
-      double F[3] = {tx.focus_point_x - tx.camera_pos_x, tx.focus_point_y - tx.camera_pos_y,
-                     tx.focus_point_z - tx.camera_pos_z}; /* direction between camera and focus point */
-      double norm_func = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
-      double f[3] = {F[0] / norm_func, F[1] / norm_func, F[2] / norm_func};
-
-      double x_val = *x * tx.x_axis_scale;
-      double y_val = *y * tx.y_axis_scale;
-      double z_val = *z * tx.z_axis_scale;
+      F[0] = tx.focus_point_x - tx.camera_pos_x;
+      F[1] = tx.focus_point_y - tx.camera_pos_y;
+      F[2] = tx.focus_point_z - tx.camera_pos_z;
+      norm_func = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
+      f[0] = F[0] / norm_func;
+      f[1] = F[1] / norm_func;
+      f[2] = F[2] / norm_func;
 
       /* transformation */
       xw = (x_val - tx.camera_pos_x) * tx.s_x + (y_val - tx.camera_pos_y) * tx.s_y + (z_val - tx.camera_pos_z) * tx.s_z;
@@ -1221,12 +1242,30 @@ static int setscale(int options)
   lx.xmin = x_min;
   lx.xmax = x_max;
 
-  if (OPTION_X_LOG & options)
+  if ((OPTION_X_LOG | OPTION_X_LOG2 | OPTION_X_LN) & options)
     {
       if (x_min > 0)
         {
-          lx.a = (x_max - x_min) / log10(x_max / x_min);
-          lx.b = x_min - lx.a * log10(x_min);
+          if (OPTION_X_LOG2 & options)
+            {
+              lx.basex = 2.0;
+              lx.basex_s = "2";
+              lx.scale_options |= OPTION_X_LOG2;
+            }
+          else if (OPTION_X_LN & options)
+            {
+              lx.basex = exp(1);
+              lx.basex_s = "e";
+              lx.scale_options |= OPTION_X_LN;
+            }
+          else
+            {
+              lx.basex = 10.0;
+              lx.basex_s = "10";
+            }
+
+          lx.a = (x_max - x_min) / blog(lx.basex, x_max / x_min);
+          lx.b = x_min - lx.a * blog(lx.basex, x_min);
           lx.scale_options |= OPTION_X_LOG;
         }
       else
@@ -1236,12 +1275,30 @@ static int setscale(int options)
   lx.ymin = y_min;
   lx.ymax = y_max;
 
-  if (OPTION_Y_LOG & options)
+  if ((OPTION_Y_LOG | OPTION_Y_LOG2 | OPTION_Y_LN) & options)
     {
       if (y_min > 0)
         {
-          lx.c = (y_max - y_min) / log10(y_max / y_min);
-          lx.d = y_min - lx.c * log10(y_min);
+          if (OPTION_Y_LOG2 & options)
+            {
+              lx.basey = 2.0;
+              lx.basey_s = "2";
+              lx.scale_options |= OPTION_Y_LOG2;
+            }
+          else if (OPTION_Y_LN & options)
+            {
+              lx.basey = exp(1);
+              lx.basey_s = "e";
+              lx.scale_options |= OPTION_Y_LN;
+            }
+          else
+            {
+              lx.basey = 10.0;
+              lx.basey_s = "10";
+            }
+
+          lx.c = (y_max - y_min) / blog(lx.basey, y_max / y_min);
+          lx.d = y_min - lx.c * blog(lx.basey, y_min);
           lx.scale_options |= OPTION_Y_LOG;
         }
       else
@@ -1253,12 +1310,30 @@ static int setscale(int options)
   lx.zmin = z_min;
   lx.zmax = z_max;
 
-  if (OPTION_Z_LOG & options)
+  if ((OPTION_Z_LOG | OPTION_Z_LOG2 | OPTION_Z_LN) & options)
     {
       if (lx.zmin > 0)
         {
-          lx.e = (lx.zmax - lx.zmin) / log10(lx.zmax / lx.zmin);
-          lx.f = lx.zmin - lx.e * log10(lx.zmin);
+          if (OPTION_Z_LOG2 & options)
+            {
+              lx.basez = 2.0;
+              lx.basez_s = "2";
+              lx.scale_options |= OPTION_Z_LOG2;
+            }
+          else if (OPTION_Z_LN & options)
+            {
+              lx.basez = exp(1);
+              lx.basez_s = "e";
+              lx.scale_options |= OPTION_Z_LN;
+            }
+          else
+            {
+              lx.basez = 10.0;
+              lx.basez_s = "10";
+            }
+
+          lx.e = (lx.zmax - lx.zmin) / blog(lx.basez, lx.zmax / lx.zmin);
+          lx.f = lx.zmin - lx.e * blog(lx.basez, lx.zmin);
           lx.scale_options |= OPTION_Z_LOG;
         }
       else
@@ -1542,6 +1617,7 @@ void gr_deactivatews(int workstation_id)
 
 static void configure(int workstation_id, void *dummy)
 {
+  GR_UNUSED(dummy);
   gks_configure_ws(workstation_id);
 }
 
@@ -1907,21 +1983,20 @@ void gr_cellarray(double xmin, double xmax, double ymin, double ymax, int dimx, 
 void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, int srow, int ncol, int nrow,
                             int *color)
 {
-  int img_data_x, img_data_y, color_x_ind, color_y_ind, color_ind, edges_x = 1, edges_y = 1, size = 2000;
+  int img_data_x, img_data_y, color_x_ind, color_y_ind, color_ind, edges_x = 1, edges_y = 1, size = 2000, scale_options;
   int *img_data;
-  double x_pos, y_pos, x_size, y_size, *x_orig = NULL, *y_orig = NULL;
+  double x_pos, y_pos, x_size, y_size, *x_orig = x, *y_orig = y;
+  double xmin, xmax, ymin, ymax;
 
   if (dimx < 0)
     {
       dimx = -dimx;
       edges_x = 0;
-      x_orig = x;
     }
   if (dimy < 0)
     {
       dimy = -dimy;
       edges_y = 0;
-      y_orig = y;
     }
 
   if (scol < 1 || srow < 1 || scol + ncol - 1 > dimx || srow + nrow - 1 > dimy || (!edges_x && ncol < 2) ||
@@ -1938,9 +2013,11 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
   nrow += srow;
   ncol += scol;
 
+  x = (double *)gks_malloc(sizeof(double) * (ncol + 1));
+  y = (double *)gks_malloc(sizeof(double) * (nrow + 1));
+
   if (!edges_x)
     {
-      x = (double *)gks_malloc(sizeof(double) * (ncol + 1));
       x[scol] = x_orig[scol];
       for (color_x_ind = scol + 1; color_x_ind < ncol; color_x_ind++)
         {
@@ -1948,16 +2025,43 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
         }
       x[ncol] = x_orig[ncol - 1];
     }
+  else
+    {
+      memcpy(x, x_orig, sizeof(double) * (ncol + 1));
+    }
+  xmin = x[scol];
+  xmax = x[ncol];
+
+  if (lx.scale_options & (OPTION_X_LOG | OPTION_X_LOG2 | OPTION_X_LN))
+    {
+      for (color_x_ind = scol; color_x_ind <= ncol; color_x_ind++)
+        {
+          x[color_x_ind] = blog(lx.basex, x[color_x_ind]);
+        }
+    }
 
   if (!edges_y)
     {
-      y = (double *)gks_malloc(sizeof(double) * (nrow + 1));
       y[srow] = y_orig[srow];
       for (color_y_ind = srow + 1; color_y_ind < nrow; color_y_ind++)
         {
           y[color_y_ind] = 0.5 * (y_orig[color_y_ind] + y_orig[color_y_ind - 1]);
         }
       y[nrow] = y_orig[nrow - 1];
+    }
+  else
+    {
+      memcpy(y, y_orig, sizeof(double) * (nrow + 1));
+    }
+  ymin = y[nrow];
+  ymax = y[srow];
+
+  if (lx.scale_options & (OPTION_Y_LOG | OPTION_Y_LOG2 | OPTION_Y_LN))
+    {
+      for (color_y_ind = srow; color_y_ind <= nrow; color_y_ind++)
+        {
+          y[color_y_ind] = blog(lx.basey, y[color_y_ind]);
+        }
     }
 
   for (color_x_ind = scol; color_x_ind < ncol; color_x_ind++)
@@ -2027,16 +2131,26 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
         }
     }
 
-  gr_drawimage(x[scol], x[ncol], y[nrow], y[srow], size, size, img_data, 0);
+  scale_options = lx.scale_options;
+  if (scale_options & OPTION_FLIP_X)
+    {
+      double tmp = xmin;
+      xmin = xmax;
+      xmax = tmp;
+    }
+  if (scale_options & OPTION_FLIP_Y)
+    {
+      double tmp = ymin;
+      ymin = ymax;
+      ymax = tmp;
+    }
+  lx.scale_options = 0;
+  gr_drawimage(xmin, xmax, ymin, ymax, size, size, img_data, 0);
   free(img_data);
-  if (!edges_x)
-    {
-      gks_free(x);
-    }
-  if (!edges_y)
-    {
-      gks_free(y);
-    }
+  lx.scale_options = scale_options;
+
+  gks_free(x);
+  gks_free(y);
 }
 
 /*!
@@ -3592,6 +3706,18 @@ void gr_setcolorrep(int index, double red, double green, double blue)
  * +---------------+--------------------+
  * |OPTION_FLIP_Z  |Flip Z-axis         |
  * +---------------+--------------------+
+ * |OPTION_X_LOG2  |log2 scaled X-axis  |
+ * +---------------+--------------------+
+ * |OPTION_Y_LOG2  |log2 scaled Y-axis  |
+ * +---------------+--------------------+
+ * |OPTION_Z_LOG2  |log2 scaled Z-axis  |
+ * +---------------+--------------------+
+ * |OPTION_X_LN    |ln scaled X-axis    |
+ * +---------------+--------------------+
+ * |OPTION_Y_LN    |ln scaled Y-axis    |
+ * +---------------+--------------------+
+ * |OPTION_Z_LN    |ln scaled Z-axis    |
+ * +---------------+--------------------+
  *
  * \endverbatim
  *
@@ -3917,6 +4043,7 @@ void gr_copysegws(int segment)
 static void redrawseg(int workstation_id, void *foo)
 {
   int wkid = workstation_id;
+  GR_UNUSED(foo);
 
   gks_redraw_seg_on_ws(wkid);
 }
@@ -4081,10 +4208,11 @@ void gr_settransformationparameters(double camera_pos_x, double camera_pos_y, do
                                     double up_y, double up_z, double focus_point_x, double focus_point_y,
                                     double focus_point_z)
 {
+  int i;
+  double F[3], f[3], up[3], s_deri[3], s[3], u[3], u_deri[3];
+  double norm_func, norm_up, s_norm, norm_u;
 
   check_autoinit;
-
-  int i;
 
   tx.camera_pos_x = camera_pos_x;
   tx.camera_pos_y = camera_pos_y;
@@ -4094,26 +4222,33 @@ void gr_settransformationparameters(double camera_pos_x, double camera_pos_y, do
   tx.focus_point_y = focus_point_y;
   tx.focus_point_z = focus_point_z;
 
-  double F[3] = {tx.focus_point_x - tx.camera_pos_x, tx.focus_point_y - tx.camera_pos_y,
-                 tx.focus_point_z - tx.camera_pos_z}; /* direction between camera and focus point */
-  double norm_func = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
-  double f[3] = {F[0] / norm_func, F[1] / norm_func, F[2] / norm_func};
-  double norm_up = sqrt(up_x * up_x + up_y * up_y + up_z * up_z);
-  double up[3] = {up_x / norm_up, up_y / norm_up, up_z / norm_up};
-  double s_deri[3];
+  F[0] = tx.focus_point_x - tx.camera_pos_x; /* direction between camera and focus point */
+  F[1] = tx.focus_point_y - tx.camera_pos_y;
+  F[2] = tx.focus_point_z - tx.camera_pos_z;
+  norm_func = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
+  f[0] = F[0] / norm_func;
+  f[1] = F[1] / norm_func;
+  f[2] = F[2] / norm_func;
+  norm_up = sqrt(up_x * up_x + up_y * up_y + up_z * up_z);
+  up[0] = up_x / norm_up;
+  up[1] = up_y / norm_up;
+  up[2] = up_z / norm_up;
   for (i = 0; i < 3; i++) /*  f cross up */
     {
       s_deri[i] = f[(i + 1) % 3] * up[(i + 2) % 3] - up[(i + 1) % 3] * f[(i + 2) % 3];
     }
-  double s_norm = sqrt(s_deri[0] * s_deri[0] + s_deri[1] * s_deri[1] + s_deri[2] * s_deri[2]);
-  double s[3] = {s_deri[0] / s_norm, s_deri[1] / s_norm, s_deri[2] / s_norm};
-  double u_deri[3];
+  s_norm = sqrt(s_deri[0] * s_deri[0] + s_deri[1] * s_deri[1] + s_deri[2] * s_deri[2]);
+  s[0] = s_deri[0] / s_norm;
+  s[1] = s_deri[1] / s_norm;
+  s[2] = s_deri[2] / s_norm;
   for (i = 0; i < 3; i++) /* s cross f */
     {
       u_deri[i] = s[(i + 1) % 3] * f[(i + 2) % 3] - f[(i + 1) % 3] * s[(i + 2) % 3];
     }
-  double norm_u = sqrt(u_deri[0] * u_deri[0] + u_deri[1] * u_deri[1] + u_deri[2] * u_deri[2]);
-  double u[3] = {u_deri[0] / norm_u, u_deri[1] / norm_u, u_deri[2] / norm_u};
+  norm_u = sqrt(u_deri[0] * u_deri[0] + u_deri[1] * u_deri[1] + u_deri[2] * u_deri[2]);
+  u[0] = u_deri[0] / norm_u;
+  u[1] = u_deri[1] / norm_u;
+  u[2] = u_deri[2] / norm_u;
 
   tx.up_x = u[0];
   tx.up_y = u[1];
@@ -4528,9 +4663,9 @@ static char *replace_minus_sign(char *string)
     {
       if (*s == '-')
         {
-          out[n++] = 0xe2;
-          out[n++] = 0x88;
-          out[n++] = 0x92;
+          out[n++] = (char)0xe2;
+          out[n++] = (char)0x88;
+          out[n++] = (char)0x92;
         }
       else
         out[n++] = *s;
@@ -4674,11 +4809,11 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
       if (OPTION_Y_LOG & lx.scale_options)
         {
-          y0 = pow(10.0, gauss(log10(y_min)));
+          y0 = pow(lx.basey, gauss(blog(lx.basey, y_min)));
 
           i = ipred(y_min / y0);
           yi = y0 + i * y0;
-          decade = igauss(log10(y_min / y_org));
+          decade = igauss(blog(lx.basey, y_min / y_org));
 
           /* draw Y-axis */
 
@@ -4688,26 +4823,26 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
             {
               pline(x_org, yi);
 
+              xi = minor_tick;
               if (i == 0)
                 {
-                  xi = major_tick;
-
                   if (major_y > 0)
                     if (decade % major_y == 0)
-                      if (yi != y_org || y_org == y_min || y_org == y_max)
-                        {
-                          if (y_tick > 1)
-                            {
-                              exponent = iround(log10(yi));
-                              sprintf(string, "10^{%d}", exponent);
-                              text2dlbl(x_label, yi, replace_minus_sign(string), yi, fpy);
-                            }
-                          else
-                            text2dlbl(x_label, yi, gr_ftoa(string, yi, 0.), yi, fpy);
-                        }
+                      {
+                        xi = major_tick;
+                        if (yi != y_org || y_org == y_min || y_org == y_max)
+                          {
+                            if (y_tick > 1)
+                              {
+                                exponent = iround(blog(lx.basey, yi));
+                                sprintf(string, "%s^{%d}", lx.basey_s, exponent);
+                                text2dlbl(x_label, yi, replace_minus_sign(string), yi, fpy);
+                              }
+                            else
+                              text2dlbl(x_label, yi, gr_ftoa(string, yi, 0.), yi, fpy);
+                          }
+                      }
                 }
-              else
-                xi = minor_tick;
 
               if (i == 0 || abs(major_y) == 1)
                 {
@@ -4715,9 +4850,9 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                   pline(x_org, yi);
                 }
 
-              if (i == 9)
+              if (i == 9 || lx.basey < 10)
                 {
-                  y0 = y0 * 10.;
+                  y0 = y0 * lx.basey;
                   i = 0;
                   decade++;
                 }
@@ -4800,11 +4935,11 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
       if (OPTION_X_LOG & lx.scale_options)
         {
-          x0 = pow(10.0, gauss(log10(x_min)));
+          x0 = pow(lx.basex, gauss(blog(lx.basex, x_min)));
 
           i = ipred(x_min / x0);
           xi = x0 + i * x0;
-          decade = igauss(log10(x_min / x_org));
+          decade = igauss(blog(lx.basex, x_min / x_org));
 
           /* draw X-axis */
 
@@ -4814,26 +4949,26 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
             {
               pline(xi, y_org);
 
+              yi = minor_tick;
               if (i == 0)
                 {
-                  yi = major_tick;
-
                   if (major_x > 0)
                     if (decade % major_x == 0)
-                      if (xi != x_org || x_org == x_min || x_org == x_max)
-                        {
-                          if (x_tick > 1)
-                            {
-                              exponent = iround(log10(xi));
-                              sprintf(string, "10^{%d}", exponent);
-                              text2dlbl(xi, y_label, replace_minus_sign(string), xi, fpx);
-                            }
-                          else
-                            text2dlbl(xi, y_label, gr_ftoa(string, xi, 0.), xi, fpx);
-                        }
+                      {
+                        yi = major_tick;
+                        if (xi != x_org || x_org == x_min || x_org == x_max)
+                          {
+                            if (x_tick > 1)
+                              {
+                                exponent = iround(blog(lx.basex, xi));
+                                sprintf(string, "%s^{%d}", lx.basex_s, exponent);
+                                text2dlbl(xi, y_label, replace_minus_sign(string), xi, fpx);
+                              }
+                            else
+                              text2dlbl(xi, y_label, gr_ftoa(string, xi, 0.), xi, fpx);
+                          }
+                      }
                 }
-              else
-                yi = minor_tick;
 
               if (i == 0 || abs(major_x) == 1)
                 {
@@ -4841,9 +4976,9 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                   pline(xi, y_org);
                 }
 
-              if (i == 9)
+              if (i == 9 || lx.basex < 10)
                 {
-                  x0 = x0 * 10.;
+                  x0 = x0 * lx.basex;
                   i = 0;
                   decade++;
                 }
@@ -5031,7 +5166,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
     {
       if (OPTION_Y_LOG & lx.scale_options)
         {
-          y0 = pow(10.0, gauss(log10(y_min)));
+          y0 = pow(lx.basey, gauss(blog(lx.basey, y_min)));
 
           i = ipred(y_min / y0);
           yi = y0 + i * y0;
@@ -5046,9 +5181,9 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                   if (yi != y_min) grid_line(x_min, yi, x_max, yi, color, major);
                 }
 
-              if (i == 9)
+              if (i == 9 || lx.basey < 10)
                 {
-                  y0 = y0 * 10.;
+                  y0 = y0 * lx.basey;
                   i = 0;
                 }
               else
@@ -5087,7 +5222,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
     {
       if (OPTION_X_LOG & lx.scale_options)
         {
-          x0 = pow(10.0, gauss(log10(x_min)));
+          x0 = pow(lx.basex, gauss(blog(lx.basex, x_min)));
 
           i = ipred(x_min / x0);
           xi = x0 + i * x0;
@@ -5102,9 +5237,9 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                   if (xi != x_min) grid_line(xi, y_min, xi, y_max, color, major);
                 }
 
-              if (i == 9)
+              if (i == 9 || lx.basex < 10)
                 {
-                  x0 = x0 * 10.;
+                  x0 = x0 * lx.basex;
                   i = 0;
                 }
               else
@@ -5230,6 +5365,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (modern_projection_type)
     {
+      gks_inq_xform(WC, &errind, wn, vp);
+
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
 
@@ -5266,7 +5403,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
     {
       if (OPTION_Y_LOG & lx.scale_options)
         {
-          z0 = pow(10.0, gauss(log10(z_min)));
+          z0 = pow(lx.basez, gauss(blog(lx.basez, z_min)));
 
           i = ipred(z_min / z0);
           zi = z0 + i * z0;
@@ -5285,9 +5422,9 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                     }
                 }
 
-              if (i == 9)
+              if (i == 9 || lx.basez < 10)
                 {
-                  z0 = z0 * 10.;
+                  z0 = z0 * lx.basez;
                   i = 0;
                 }
               else
@@ -5329,7 +5466,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
     {
       if (OPTION_Y_LOG & lx.scale_options)
         {
-          y0 = pow(10.0, gauss(log10(y_min)));
+          y0 = pow(lx.basey, gauss(blog(lx.basey, y_min)));
 
           i = ipred(y_min / y0);
           yi = y0 + i * y0;
@@ -5348,9 +5485,9 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                     }
                 }
 
-              if (i == 9)
+              if (i == 9 || lx.basey < 10)
                 {
-                  y0 = y0 * 10.;
+                  y0 = y0 * lx.basey;
                   i = 0;
                 }
               else
@@ -5392,7 +5529,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
     {
       if (OPTION_X_LOG & lx.scale_options)
         {
-          x0 = pow(10.0, gauss(log10(x_min)));
+          x0 = pow(lx.basex, gauss(blog(lx.basex, x_min)));
 
           i = ipred(x_min / x0);
           xi = x0 + i * x0;
@@ -5411,9 +5548,9 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                     }
                 }
 
-              if (i == 9)
+              if (i == 9 || lx.basex < 10)
                 {
-                  x0 = x0 * 10.;
+                  x0 = x0 * lx.basex;
                   i = 0;
                 }
               else
@@ -5706,8 +5843,11 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
 
   setscale(lx.scale_options);
 
+  /* inquire current normalization transformation */
+
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
+
   gks_inq_clip(&errind, &clsw, clrt);
 
   modern_projection_type =
@@ -5715,6 +5855,8 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
 
   if (modern_projection_type)
     {
+      gks_inq_xform(WC, &errind, wn, vp);
+
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
     }
@@ -5839,8 +5981,11 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
 
   setscale(lx.scale_options);
 
+  /* inquire current normalization transformation */
+
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
+
   gks_inq_clip(&errind, &clsw, clrt);
 
   modern_projection_type =
@@ -5848,6 +5993,8 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
 
   if (modern_projection_type)
     {
+      gks_inq_xform(WC, &errind, wn, vp);
+
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
     }
@@ -6293,6 +6440,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (modern_projection_type)
     {
+      gks_inq_xform(WC, &errind, wn, vp);
+
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
 
@@ -6422,11 +6571,11 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       if (OPTION_Z_LOG & lx.scale_options)
         {
-          z0 = pow(10.0, gauss(log10(z_min)));
+          z0 = pow(lx.basez, gauss(blog(lx.basez, z_min)));
 
           i = ipred(z_min / z0);
           zi = z0 + i * z0;
-          decade = igauss(log10(z_min / z_org));
+          decade = igauss(blog(lx.basez, z_min / z_org));
 
           /* draw Z-axis */
 
@@ -6436,27 +6585,24 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
             {
               pline3d(x_org, y_org, zi);
 
+              xi = x_minor_tick;
+              yi = y_minor_tick;
               if (i == 0)
                 {
-                  xi = x_major_tick;
-                  yi = y_major_tick;
                   if (major_z > 0 && zi != z_org)
                     if (decade % major_z == 0)
                       {
+                        xi = x_major_tick;
+                        yi = y_major_tick;
                         if (z_tick > 1)
                           {
-                            exponent = iround(log10(zi));
-                            sprintf(string, "10^{%d}", exponent);
+                            exponent = iround(blog(lx.basez, zi));
+                            sprintf(string, "%s^{%d}", lx.basez_s, exponent);
                             text3d(x_label, y_label, zi, replace_minus_sign(string), 0);
                           }
                         else
                           text3d(x_label, y_label, zi, gr_ftoa(string, zi, 0.), 0);
                       }
-                }
-              else
-                {
-                  xi = x_minor_tick;
-                  yi = y_minor_tick;
                 }
 
               if (i == 0 || abs(major_z) == 1)
@@ -6465,9 +6611,9 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   pline3d(x_org, y_org, zi);
                 }
 
-              if (i == 9)
+              if (i == 9 || lx.basez < 10)
                 {
-                  z0 = z0 * 10.;
+                  z0 = z0 * lx.basez;
                   i = 0;
                   decade++;
                 }
@@ -6587,11 +6733,11 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       if (OPTION_Y_LOG & lx.scale_options)
         {
-          y0 = pow(10.0, gauss(log10(y_min)));
+          y0 = pow(lx.basey, gauss(blog(lx.basey, y_min)));
 
           i = ipred(y_min / y0);
           yi = y0 + i * y0;
-          decade = igauss(log10(y_min / y_org));
+          decade = igauss(blog(lx.basey, y_min / y_org));
 
           /* draw Y-axis */
 
@@ -6601,27 +6747,24 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
             {
               pline3d(x_org, yi, z_org);
 
+              xi = x_minor_tick;
+              zi = z_minor_tick;
               if (i == 0)
                 {
-                  xi = x_major_tick;
-                  zi = z_major_tick;
                   if (major_y > 0 && yi != y_org)
                     if (decade % major_y == 0)
                       {
+                        xi = x_major_tick;
+                        zi = z_major_tick;
                         if (y_tick > 1)
                           {
-                            exponent = iround(log10(yi));
-                            sprintf(string, "10^{%d}", exponent);
+                            exponent = iround(blog(lx.basey, yi));
+                            sprintf(string, "%s^{%d}", lx.basey_s, exponent);
                             text3d(x_label, yi, z_label, replace_minus_sign(string), 0);
                           }
                         else
                           text3d(x_label, yi, z_label, gr_ftoa(string, yi, 0.), 0);
                       }
-                }
-              else
-                {
-                  xi = x_minor_tick;
-                  zi = z_minor_tick;
                 }
 
               if (i == 0 || abs(major_y) == 1)
@@ -6630,9 +6773,9 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   pline3d(x_org, yi, z_org);
                 }
 
-              if (i == 9)
+              if (i == 9 || lx.basey < 10)
                 {
-                  y0 = y0 * 10.;
+                  y0 = y0 * lx.basey;
                   i = 0;
                   decade++;
                 }
@@ -6752,11 +6895,11 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       if (OPTION_X_LOG & lx.scale_options)
         {
-          x0 = pow(10.0, gauss(log10(x_min)));
+          x0 = pow(lx.basex, gauss(blog(lx.basex, x_min)));
 
           i = ipred(x_min / x0);
           xi = x0 + i * x0;
-          decade = igauss(log10(x_min / x_org));
+          decade = igauss(blog(lx.basex, x_min / x_org));
 
           /* draw X-axis */
 
@@ -6766,27 +6909,24 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
             {
               pline3d(xi, y_org, z_org);
 
+              yi = y_minor_tick;
+              zi = z_minor_tick;
               if (i == 0)
                 {
-                  yi = y_major_tick;
-                  zi = z_major_tick;
                   if (major_x > 0 && xi != x_org)
                     if (decade % major_x == 0)
                       {
+                        yi = y_major_tick;
+                        zi = z_major_tick;
                         if (x_tick > 1)
                           {
-                            exponent = iround(log10(xi));
-                            sprintf(string, "10^{%d}", exponent);
+                            exponent = iround(blog(lx.basex, xi));
+                            sprintf(string, "%s^{%d}", lx.basex_s, exponent);
                             text3d(xi, y_label, z_label, replace_minus_sign(string), 0);
                           }
                         else
                           text3d(xi, y_label, z_label, gr_ftoa(string, xi, 0.), 0);
                       }
-                }
-              else
-                {
-                  yi = y_minor_tick;
-                  zi = z_minor_tick;
                 }
 
               if (i == 0 || abs(major_x) == 1)
@@ -6795,9 +6935,9 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   pline3d(xi, y_org, z_org);
                 }
 
-              if (i == 9)
+              if (i == 9 || lx.basex < 10)
                 {
-                  x0 = x0 * 10.;
+                  x0 = x0 * lx.basex;
                   i = 0;
                   decade++;
                 }
@@ -6923,6 +7063,8 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 
   if (modern_projection_type)
     {
+      gks_inq_xform(WC, &errind, wn, vp);
+
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
     }
@@ -7481,6 +7623,7 @@ static void pixel(double xmin, double xmax, double ymin, double ymax, int dx, in
 {
   int i, j, ix, nx;
   int sx = 1, sy = 1;
+  GR_UNUSED(dwk);
 
   if ((w + 1) % dx != 0 || (h + 1) % dy != 0)
     {
@@ -7651,6 +7794,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
   setscale(lx.scale_options);
 
+  /* inquire current normalization transformation */
+
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
@@ -7659,6 +7804,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
   if (modern_projection_type)
     {
+      gks_inq_xform(WC, &errind, wn, vp);
+
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
     }
@@ -8090,38 +8237,44 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
   if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC || gpx.projection_type == GR_PROJECTION_PERSPECTIVE)
     {
       triangle_with_distance *ps = (triangle_with_distance *)gks_malloc(ntri * (sizeof(triangle_with_distance)));
-      double f[3] = {tx.focus_point_x - tx.camera_pos_x, tx.focus_point_y - tx.camera_pos_y,
-                     tx.focus_point_z - tx.camera_pos_z};
+      double f[3];
+      f[0] = tx.focus_point_x - tx.camera_pos_x;
+      f[1] = tx.focus_point_y - tx.camera_pos_y;
+      f[2] = tx.focus_point_z - tx.camera_pos_z;
 
       for (i = 0; i < ntri; i++)
         {
-          double x_cord, y_cord, z_cord;
+          double x_cord, y_cord, z_cord, edge_01_scalar, edge_12_scalar, edge_20_scalar, nearest_edge_distance;
+          double xa[3], ya[3], za[3];
 
           /* simplify the access for each triangle point */
-          double xa[3] = {px[triangles[3 * i + 0]], px[triangles[3 * i + 1]], px[triangles[3 * i + 2]]};
-          double ya[3] = {py[triangles[3 * i + 0]], py[triangles[3 * i + 1]], py[triangles[3 * i + 2]]};
-          double za[3] = {pz[triangles[3 * i + 0]], pz[triangles[3 * i + 1]], pz[triangles[3 * i + 2]]};
+          for (j = 0; j < 3; j++)
+            {
+              xa[j] = px[triangles[3 * i + j]];
+              ya[j] = py[triangles[3 * i + j]];
+              za[j] = pz[triangles[3 * i + j]];
+            }
 
           /* calculate the distance of each edge midpoint */
           x_cord = (xa[1] + xa[0]) / 2;
           y_cord = (ya[1] + ya[0]) / 2;
           z_cord = (za[1] + za[0]) / 2;
-          double edge_01_distance[3] = {x_cord - tx.camera_pos_x, y_cord - tx.camera_pos_y, z_cord - tx.camera_pos_z};
-          double edge_01_scalar = edge_01_distance[0] * f[0] + edge_01_distance[1] * f[1] + edge_01_distance[2] * f[2];
+          edge_01_scalar =
+              (x_cord - tx.camera_pos_x) * f[0] + (y_cord - tx.camera_pos_y) * f[1] + (z_cord - tx.camera_pos_z) * f[2];
 
           x_cord = (xa[1] + xa[2]) / 2;
           y_cord = (ya[1] + ya[2]) / 2;
           z_cord = (za[1] + za[2]) / 2;
-          double edge_12_distance[3] = {x_cord - tx.camera_pos_x, y_cord - tx.camera_pos_y, z_cord - tx.camera_pos_z};
-          double edge_12_scalar = edge_12_distance[0] * f[0] + edge_12_distance[1] * f[1] + edge_12_distance[2] * f[2];
+          edge_12_scalar =
+              (x_cord - tx.camera_pos_x) * f[0] + (y_cord - tx.camera_pos_y) * f[1] + (z_cord - tx.camera_pos_z) * f[2];
 
           x_cord = (xa[0] + xa[2]) / 2;
           y_cord = (ya[0] + ya[2]) / 2;
           z_cord = (za[0] + za[2]) / 2;
-          double edge_20_distance[3] = {x_cord - tx.camera_pos_x, y_cord - tx.camera_pos_y, z_cord - tx.camera_pos_z};
-          double edge_20_scalar = edge_20_distance[0] * f[0] + edge_20_distance[1] * f[1] + edge_20_distance[2] * f[2];
+          edge_20_scalar =
+              (x_cord - tx.camera_pos_x) * f[0] + (y_cord - tx.camera_pos_y) * f[1] + (z_cord - tx.camera_pos_z) * f[2];
 
-          double nearest_edge_distance = edge_01_scalar;
+          nearest_edge_distance = edge_01_scalar;
           if (nearest_edge_distance > edge_12_scalar)
             {
               nearest_edge_distance = edge_12_scalar;
@@ -8854,7 +9007,7 @@ void gr_setcolormap(int index)
       last_color = DEFAULT_LAST_COLOR;
     }
 
-  if (ind >= sizeof(cmap) / sizeof(cmap[0])) ind = 0;
+  if (ind >= (int)(sizeof(cmap) / sizeof(cmap[0]))) ind = 0;
 
   for (i = 0; i <= DEFAULT_LAST_COLOR - DEFAULT_FIRST_COLOR; i++)
     {
@@ -10160,17 +10313,18 @@ static void drawimage_calculation(double xmin, double xmax, double ymin, double 
 
   if (lx.scale_options != 0)
     {
+      linear_xform lx_original;
       w = max(width, 500);
       h = max(height, 500);
-      linear_xform lx_original = lx;
+      lx_original = lx;
       lx.xmin = xmin;
       lx.xmax = xmax;
-      lx.a = (xmax - xmin) / log10(xmax / xmin);
-      lx.b = xmin - lx.a * log10(xmin);
+      lx.a = (xmax - xmin) / blog(lx.basex, xmax / xmin);
+      lx.b = xmin - lx.a * blog(lx.basex, xmin);
       lx.ymin = ymin;
       lx.ymax = ymax;
-      lx.c = (ymax - ymin) / log10(ymax / ymin);
-      lx.d = ymin - lx.c * log10(ymin);
+      lx.c = (ymax - ymin) / blog(lx.basey, ymax / ymin);
+      lx.d = ymin - lx.c * blog(lx.basey, ymin);
       imgT = (int *)xmalloc(w * h * sizeof(int));
       for (i = 0; i < w; i++)
         {
@@ -10346,9 +10500,10 @@ void gr_endgraphics(void)
 
 static void latex2image(char *string, int pointSize, double *rgb, int *width, int *height, int **data)
 {
+  static char *temp = NULL;
   int color;
   char s[FILENAME_MAX], path[FILENAME_MAX], cache[33];
-  char *tmp, *temp, *null, cmd[1024];
+  char *null, cmd[2 * FILENAME_MAX + 200];
   static char *preamble = NULL;
   char tex[FILENAME_MAX], dvi[FILENAME_MAX], png[FILENAME_MAX];
   FILE *stream;
@@ -10360,11 +10515,15 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
   color = ((int)(rgb[0] * 255)) + ((int)(rgb[1] * 255) << 8) + ((int)(rgb[2] * 255) << 16) + (255 << 24);
   sprintf(s, "%d%x%s", pointSize, color, string);
   md5(s, cache);
+  if (temp == NULL)
+    {
 #ifdef _WIN32
-  temp = (char *)gks_getenv("TEMP");
+      temp = (char *)gks_getenv("TEMP");
 #else
-  temp = TMPDIR;
+      temp = mkdtemp("gr-temp");
 #endif
+      if (temp == NULL) temp = TMPDIR;
+    }
   sprintf(path, "%s%sgr-cache-%s.png", temp, DIRDELIM, cache);
 
 #ifdef _WIN32
@@ -10375,22 +10534,9 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
 #endif
     {
       math = strstr(string, "\\(") == NULL;
-#ifdef _WIN32
-      tmp = cache;
-      temp = ".";
-#else
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-      tmp = tempnam(temp, NULL);
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-#endif
-      sprintf(tex, "%s.tex", tmp);
-      sprintf(dvi, "%s.dvi", tmp);
-      sprintf(png, "%s.png", tmp);
+      sprintf(tex, "%s%s%s.tex", temp, DIRDELIM, cache);
+      sprintf(dvi, "%s%s%s.dvi", temp, DIRDELIM, cache);
+      sprintf(png, "%s%s%s.png", temp, DIRDELIM, cache);
 #ifdef _WIN32
       null = "NUL";
       MultiByteToWideChar(CP_UTF8, 0, tex, strlen(tex) + 1, w_path, MAX_PATH);
@@ -10448,13 +10594,10 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
           if (ret == 0)
             {
               rename(png, path);
-#ifdef _WIN32
-              sprintf(cmd, "DEL %s.*", tmp);
-#else
-              sprintf(cmd, "rm -f %s.*", tmp);
-#endif
-              ret = system(cmd);
-              if (ret != 0) fprintf(stderr, "error deleting temprorary files\n");
+              if (remove(tex) != 0 || remove(dvi) != 0)
+                {
+                  fprintf(stderr, "error deleting temprorary files\n");
+                }
             }
           else
             fprintf(stderr, "dvipng: PNG conversion failed\n");
@@ -12211,10 +12354,12 @@ static void gr_trackballposition(const double *mouse, double r, double *erg)
       double opposite_catheter = tan(gpx.fov / 2);
       double factor_x = x * opposite_catheter * (ix.xmax - ix.xmin) / (ix.ymax - ix.ymin);
       double factor_y = y * opposite_catheter;
-      double d[3] = {tx.focus_point_x - tx.camera_pos_x, tx.focus_point_y - tx.camera_pos_y,
-                     tx.focus_point_z - tx.camera_pos_z};
+      double d[3], distance;
+      d[0] = tx.focus_point_x - tx.camera_pos_x;
+      d[1] = tx.focus_point_y - tx.camera_pos_y;
+      d[2] = tx.focus_point_z - tx.camera_pos_z;
       /* distance to the focuspoint as offset for the calculated z */
-      double distance = sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+      distance = sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
 
       z = (distance - sqrt(-distance * distance * (factor_x * factor_x + factor_y * factor_y) +
                            r * r * (factor_x * factor_x + factor_y * factor_y + 1))) /
@@ -12261,16 +12406,17 @@ static void gr_calculateradius(double *radius)
   double z_far = pow(ix.zmin - tx.focus_point_z, 2);
   double z_near = pow(ix.zmax - tx.focus_point_z, 2);
 
+  double radii[8];
+
   /* all eight coordinates quadrants */
-  double rtf_radius = sqrt(right + top + z_far);
-  double rtn_radius = sqrt(right + top + z_near);
-  double ltf_radius = sqrt(left + top + z_far);
-  double ltn_radius = sqrt(left + top + z_near);
-  double rbf_radius = sqrt(right + bottom + z_far);
-  double rbn_radius = sqrt(right + bottom + z_near);
-  double lbf_radius = sqrt(left + bottom + z_far);
-  double lbn_radius = sqrt(left + bottom + z_near);
-  double radii[8] = {rtf_radius, rtn_radius, ltf_radius, ltn_radius, rbf_radius, rbn_radius, lbf_radius, lbn_radius};
+  radii[0] = sqrt(right + top + z_far);
+  radii[1] = sqrt(right + top + z_near);
+  radii[2] = sqrt(left + top + z_far);
+  radii[3] = sqrt(left + top + z_near);
+  radii[4] = sqrt(right + bottom + z_far);
+  radii[5] = sqrt(right + bottom + z_near);
+  radii[6] = sqrt(left + bottom + z_far);
+  radii[7] = sqrt(left + bottom + z_near);
 
   /* find the max radius*/
   for (i = 0; i < 8; i++)
@@ -12303,7 +12449,7 @@ void gr_camerainteraction(double start_mouse_pos_x, double start_mouse_pos_y, do
   /* check if there is any mouse movement */
   if (start_mouse_pos_x != end_mouse_pos_x || start_mouse_pos_y != end_mouse_pos_y)
     {
-      double start[3], end[3];
+      double start[3], end[3], mouse_start[3], mouse_end[3], rotation_mat[9];
       double radius, camera_distance;
       double start_length, end_length;
       double cos_angle, c, s;
@@ -12322,8 +12468,12 @@ void gr_camerainteraction(double start_mouse_pos_x, double start_mouse_pos_y, do
         }
 
       /* transform mouseposition onto [-1, 1] */
-      double mouse_start[3] = {(start_mouse_pos_x * 2 - 1), (2 * start_mouse_pos_y - 1), 0};
-      double mouse_end[3] = {(end_mouse_pos_x * 2 - 1), (2 * end_mouse_pos_y - 1), 0};
+      mouse_start[0] = start_mouse_pos_x * 2 - 1;
+      mouse_start[1] = 2 * start_mouse_pos_y - 1;
+      mouse_start[2] = 0;
+      mouse_end[0] = end_mouse_pos_x * 2 - 1;
+      mouse_end[1] = 2 * end_mouse_pos_y - 1;
+      mouse_end[2] = 0;
 
       /* get the trackball positions of the start and end mouseposition */
       gr_trackballposition(mouse_start, camera_distance, start);
@@ -12360,11 +12510,15 @@ void gr_camerainteraction(double start_mouse_pos_x, double start_mouse_pos_y, do
       c = cos_angle;
       s = sqrt(1 - c * c);
 
-      double rotation_mat[9] = {axis_x * axis_x * (1 - c) + c,          axis_x * axis_y * (1 - c) - axis_z * s,
-                                axis_x * axis_z * (1 - c) + axis_y * s, axis_y * axis_x * (1 - c) + axis_z * s,
-                                axis_y * axis_y * (1 - c) + c,          axis_y * axis_z * (1 - c) - axis_x * s,
-                                axis_z * axis_x * (1 - c) - axis_y * s, axis_z * axis_y * (1 - c) + axis_x * s,
-                                axis_z * axis_z * (1 - c) + c};
+      rotation_mat[0] = axis_x * axis_x * (1 - c) + c;
+      rotation_mat[1] = axis_x * axis_y * (1 - c) - axis_z * s;
+      rotation_mat[2] = axis_x * axis_z * (1 - c) + axis_y * s;
+      rotation_mat[3] = axis_y * axis_x * (1 - c) + axis_z * s;
+      rotation_mat[4] = axis_y * axis_y * (1 - c) + c;
+      rotation_mat[5] = axis_y * axis_z * (1 - c) - axis_x * s;
+      rotation_mat[6] = axis_z * axis_x * (1 - c) - axis_y * s;
+      rotation_mat[7] = axis_z * axis_y * (1 - c) + axis_x * s;
+      rotation_mat[8] = axis_z * axis_z * (1 - c) + c;
 
       /* rotate camera position */
       cam_x = (tx.camera_pos_x - tx.focus_point_x) * rotation_mat[0] +
@@ -12423,6 +12577,9 @@ void gr_setwindow3d(double xmin, double xmax, double ymin, double ymax, double z
   ix.ymax = ymax;
   ix.zmin = zmin;
   ix.zmax = zmax;
+
+  wx.zmin = zmin;
+  wx.zmax = zmax;
 
   if (flag_graphics)
     gr_writestream("<setwindow3d xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" zmin=\"%g\" zmax=\"%g\"/>\n", xmin,
@@ -12702,6 +12859,7 @@ void gr_setapproximativecalculation(int approximative_calculation)
  * |GR_VOLUME_WITH_BORDER      |  1|gr_volume with border  |
  * +---------------------------+---+-----------------------+
  *
+ * \endverbatim
  */
 void gr_setvolumebordercalculation(int flag)
 {
@@ -12746,7 +12904,7 @@ static void draw_volume(const double *pixels)
   int i;
   double dmax;
   double xmin, ymin, xmax, ymax;
-  int *ipixels;
+  int *ipixels, *colormap;
 
   ipixels = (int *)gks_malloc(vt.picture_width * vt.picture_height * sizeof(int));
 
@@ -12759,7 +12917,7 @@ static void draw_volume(const double *pixels)
         }
     }
 
-  int *colormap = (int *)gks_malloc((last_color - first_color + 1) * sizeof(int));
+  colormap = (int *)gks_malloc((last_color - first_color + 1) * sizeof(int));
   for (i = first_color; i <= last_color; i++)
     {
       gr_inqcolor(i, colormap + i - first_color);
@@ -12804,7 +12962,7 @@ static void trilinear_interpolation(double c000, double c001, double c010, doubl
 static void ray_casting_thread(void *arg)
 {
   int i, j, s;
-  double ray_start[3], ray_dir[3], ray_dir_default[3], tmp[3];
+  double ray_start[3] = {0, 0, 0}, ray_dir[3] = {0, 0, 0}, ray_dir_default[3], tmp[3];
 
   /* get the necessary attributes out of the structs */
   struct thread_attr *ta = (struct thread_attr *)arg;
@@ -12814,6 +12972,7 @@ static void ray_casting_thread(void *arg)
   int algorithm = rc->algorithm;
   double *data = rc->data, *pixels = rc->pixels;
   double *dmax_ptr = rc->dmax_ptr, *dmin_ptr = rc->dmin_ptr;
+  double f_length, xaspect, yaspect, aspect_ratio;
 
   double eps = 1e-8; /* precision parameter for comparisons */
   double x_spacing = 1. / nx;
@@ -12823,8 +12982,10 @@ static void ray_casting_thread(void *arg)
   double wdh = max(1., ceil(min_n / (double)min(nx, min(ny, nz))));
 
   /* transform values into integer */
-  double min_val_t[3] = {0, 0, 0};
-  double max_val_t[3] = {nx - 1, ny - 1, nz - 1};
+  double min_val_t[3] = {0, 0, 0}, max_val_t[3];
+  max_val_t[0] = nx - 1;
+  max_val_t[1] = ny - 1;
+  max_val_t[2] = nz - 1;
   if (vt.border == GR_VOLUME_WITH_BORDER)
     {
       min_val_t[0] = min_val_t[1] = min_val_t[2] = -0.5;
@@ -12838,15 +12999,15 @@ static void ray_casting_thread(void *arg)
   ray_dir_default[1] = (tx.focus_point_y - tx.camera_pos_y);
   ray_dir_default[2] = (tx.focus_point_z - tx.camera_pos_z);
 
-  double f_length = sqrt(ray_dir_default[0] * ray_dir_default[0] + ray_dir_default[1] * ray_dir_default[1] +
-                         ray_dir_default[2] * ray_dir_default[2]);
+  f_length = sqrt(ray_dir_default[0] * ray_dir_default[0] + ray_dir_default[1] * ray_dir_default[1] +
+                  ray_dir_default[2] * ray_dir_default[2]);
   ray_dir_default[0] /= f_length;
   ray_dir_default[1] /= f_length;
   ray_dir_default[2] /= f_length;
 
   /* determine aspect_ratio */
-  double xaspect = (vxmax - vxmin) / (vymax - vymin);
-  double yaspect = 1.0 / xaspect;
+  xaspect = (vxmax - vxmin) / (vymax - vymin);
+  yaspect = 1.0 / xaspect;
   if (xaspect < 1.0)
     {
       xaspect = 1.0;
@@ -12855,7 +13016,7 @@ static void ray_casting_thread(void *arg)
     {
       yaspect = 1.0;
     }
-  double aspect_ratio = xaspect / yaspect;
+  aspect_ratio = xaspect / yaspect;
 
   if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
     {
@@ -12868,6 +13029,10 @@ static void ray_casting_thread(void *arg)
       for (j = ta->y_start; j < ta->y_end; j++)
         {
           double color = 0;
+          double x_ortho = 0, y_ortho = 0, z_ortho = 0;
+          double lambda[3] = {0};
+          double start = NAN;
+          double max_lambda;
           if (algorithm == 1)
             {
               /* absorption */
@@ -12900,19 +13065,16 @@ static void ray_casting_thread(void *arg)
             }
           else if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE)
             {
+              double near_plane[3], lam = NAN, near_plane_size;
               ray_start[0] = tx.camera_pos_x;
               ray_start[1] = tx.camera_pos_y;
               ray_start[2] = tx.camera_pos_z;
 
               /* calculate position on near_plane */
-              double near_plane[3] = {min(gpx.near_plane, fabs(gpx.near_plane - ray_start[0])),
-                                      min(gpx.near_plane, fabs(gpx.near_plane - ray_start[1])),
-                                      min(gpx.near_plane, fabs(gpx.near_plane - ray_start[2]))};
               near_plane[0] = gpx.near_plane / (gpx.far_plane - gpx.near_plane);
               near_plane[1] = gpx.near_plane / (gpx.far_plane - gpx.near_plane);
               near_plane[2] = gpx.near_plane / (gpx.far_plane - gpx.near_plane);
 
-              double lam = NAN;
               if (fabs(ray_dir_default[0]) >= eps)
                 {
                   lam = fabs((near_plane[0]) / ray_dir_default[0]);
@@ -12935,9 +13097,9 @@ static void ray_casting_thread(void *arg)
                 }
 
               /* calculate size of near plane with tan */
-              double near_plane_size = tan(gpx.fov * M_PI / 360.0) *
-                                       sqrt(pow(lam * ray_dir_default[0], 2) + pow(lam * ray_dir_default[1], 2) +
-                                            pow(lam * ray_dir_default[2], 2));
+              near_plane_size = tan(gpx.fov * M_PI / 360.0) *
+                                sqrt(pow(lam * ray_dir_default[0], 2) + pow(lam * ray_dir_default[1], 2) +
+                                     pow(lam * ray_dir_default[2], 2));
 
               /* calculate the position where each ray starts on the near plane */
               if (aspect_ratio > 1)
@@ -12968,9 +13130,6 @@ static void ray_casting_thread(void *arg)
               ray_dir[2] /= f_length;
             }
           /* transform interval same like the original data points */
-          double x_ortho = 0;
-          double y_ortho = 0;
-          double z_ortho = 0;
           if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
             {
               x_ortho = fabs(ix.xmax) - fabs(ix.xmin);
@@ -12986,10 +13145,6 @@ static void ray_casting_thread(void *arg)
           ray_start[2] =
               ((ray_start[2] - (ix.zmin * 2 - z_ortho) / (ix.zmax - ix.zmin)) / 2 * (max_val_t[2] - min_val_t[2])) +
               min_val_t[2];
-
-          double lambda[3] = {
-              0,
-          };
 
           /* when or does the ray hits parts of the volume */
           /* calculate the lambda for each direction and take maximum of these three values */
@@ -13008,7 +13163,7 @@ static void ray_casting_thread(void *arg)
               double dirfrac = 1.0 / ray_dir[2];
               lambda[2] = min((min_val_t[2] - ray_start[2]) * dirfrac, (max_val_t[2] - ray_start[2]) * dirfrac);
             }
-          double max_lambda = max(lambda[0], max(lambda[1], lambda[2]));
+          max_lambda = max(lambda[0], max(lambda[1], lambda[2]));
 
           /* point where the ray enters the volume when possible */
           if (min_val_t[0] - (ray_start[0] + max_lambda * ray_dir[0]) > eps ||
@@ -13034,14 +13189,15 @@ static void ray_casting_thread(void *arg)
           ray_start[2] += max_lambda * ray_dir[2];
 
           /* influence of the voxels which are passed by each ray */
-          double start[1] = {NAN};
           while (1)
             {
               double voxel_influ = 0;
-              double ray_length;
-              double end[1];
-              double mid_left[1], mid_right[1];
+              double ray_length, lambda_min, start_copy = NAN, voxel_sum = 0;
+              double end, mid_left, mid_right;
               double x_dist, y_dist, z_dist;
+              double ray_end[3];
+              int x_0 = 0, y_0 = 0, z_0 = 0;
+              int x_1 = 0, y_1 = 0, z_1 = 0;
 
               /* end point */
               if (ray_dir[0] < 0)
@@ -13068,19 +13224,17 @@ static void ray_casting_thread(void *arg)
                 {
                   lambda[2] = (min(RAYCASTING_CEIL(ray_start[2]), max_val_t[2]) - ray_start[2]) / ray_dir[2];
                 }
-              double lambda_min = lambda[0];
+              lambda_min = lambda[0];
               if ((fabs(lambda_min) > fabs(lambda[1]) || lambda_min != lambda_min) && lambda[1] == lambda[1])
                 lambda_min = lambda[1];
               if ((fabs(lambda_min) > fabs(lambda[2]) || lambda_min != lambda_min) && lambda[2] == lambda[2])
                 lambda_min = lambda[2];
 
-              double ray_end[3] = {ray_start[0] + lambda_min * ray_dir[0], ray_start[1] + lambda_min * ray_dir[1],
-                                   ray_start[2] + lambda_min * ray_dir[2]};
+              ray_end[0] = ray_start[0] + lambda_min * ray_dir[0];
+              ray_end[1] = ray_start[1] + lambda_min * ray_dir[1];
+              ray_end[2] = ray_start[2] + lambda_min * ray_dir[2];
 
               /* identify voxel */
-              int x_0 = 0, y_0 = 0, z_0 = 0;
-              int x_1 = 0, y_1 = 0, z_1 = 0;
-
               if (ray_dir[0] >= -eps)
                 {
                   if (fabs(ray_start[0]) > eps)
@@ -13156,8 +13310,6 @@ static void ray_casting_thread(void *arg)
                     }
                 }
 
-              double start_copy[1] = {NAN};
-              double voxel_sum = 0;
               ray_length = sqrt(pow((ray_end[0] - ray_start[0]) * x_spacing, 2) +
                                 pow((ray_end[1] - ray_start[1]) * y_spacing, 2) +
                                 pow((ray_end[2] - ray_start[2]) * z_spacing, 2));
@@ -13168,12 +13320,12 @@ static void ray_casting_thread(void *arg)
               for (s = 0; s < (int)wdh; s++)
                 {
                   int k, repeat = 1;
-                  double *bilinear_ptr[1];
-                  if (*start != *start)
+                  double *bilinear_ptr;
+                  double dist_copy[3] = {NAN, NAN, NAN};
+                  if (is_nan(start))
                     {
                       repeat = 0;
                     }
-                  double dist_copy[3] = {NAN, NAN, NAN};
                   for (k = repeat; k < 4; k++)
                     {
                       double ray_position[3];
@@ -13202,19 +13354,19 @@ static void ray_casting_thread(void *arg)
 
                       if (k == 0)
                         {
-                          bilinear_ptr[0] = start;
+                          bilinear_ptr = &start;
                         }
                       else if (k == 1)
                         {
-                          bilinear_ptr[0] = mid_left;
+                          bilinear_ptr = &mid_left;
                         }
                       else if (k == 2)
                         {
-                          bilinear_ptr[0] = mid_right;
+                          bilinear_ptr = &mid_right;
                         }
                       else
                         {
-                          bilinear_ptr[0] = end;
+                          bilinear_ptr = &end;
                         }
 
                       if (ray_dir[0] >= -eps)
@@ -13294,14 +13446,14 @@ static void ray_casting_thread(void *arg)
                               bilinear_interpolation(
                                   data[x_tmp + y_0 * nx + z_0 * (nx * ny)], data[x_tmp + y_1 * nx + z_0 * (nx * ny)],
                                   data[x_tmp + y_0 * nx + z_1 * (nx * ny)], data[x_tmp + y_1 * nx + z_1 * (nx * ny)],
-                                  y_dist, z_dist, bilinear_ptr[0]);
+                                  y_dist, z_dist, bilinear_ptr);
                               if (dist_copy[0] == dist_copy[0])
                                 {
                                   bilinear_interpolation(data[x_tmp + y_0 * nx + z_0 * (nx * ny)],
                                                          data[x_tmp + y_1 * nx + z_0 * (nx * ny)],
                                                          data[x_tmp + y_0 * nx + z_1 * (nx * ny)],
                                                          data[x_tmp + y_1 * nx + z_1 * (nx * ny)], dist_copy[1],
-                                                         dist_copy[2], start);
+                                                         dist_copy[2], &start);
                                 }
                             }
                           else if ((fabs(y_dist - 0) <= eps || fabs(y_dist - 1) <= eps) && fabs(ray_dir[1]) > eps)
@@ -13314,14 +13466,14 @@ static void ray_casting_thread(void *arg)
                               bilinear_interpolation(
                                   data[x_0 + y_tmp * nx + z_0 * (nx * ny)], data[x_1 + y_tmp * nx + z_0 * (nx * ny)],
                                   data[x_0 + y_tmp * nx + z_1 * (nx * ny)], data[x_1 + y_tmp * nx + z_1 * (nx * ny)],
-                                  x_dist, z_dist, bilinear_ptr[0]);
+                                  x_dist, z_dist, bilinear_ptr);
                               if (dist_copy[0] == dist_copy[0])
                                 {
                                   bilinear_interpolation(data[x_0 + y_tmp * nx + z_0 * (nx * ny)],
                                                          data[x_1 + y_tmp * nx + z_0 * (nx * ny)],
                                                          data[x_0 + y_tmp * nx + z_1 * (nx * ny)],
                                                          data[x_1 + y_tmp * nx + z_1 * (nx * ny)], dist_copy[0],
-                                                         dist_copy[2], start);
+                                                         dist_copy[2], &start);
                                 }
                             }
                           else if ((fabs(z_dist - 0) <= eps || fabs(z_dist - 1) <= eps) && fabs(ray_dir[2]) > eps)
@@ -13334,17 +13486,17 @@ static void ray_casting_thread(void *arg)
                               bilinear_interpolation(
                                   data[x_0 + y_0 * nx + z_tmp * (nx * ny)], data[x_1 + y_0 * nx + z_tmp * (nx * ny)],
                                   data[x_0 + y_1 * nx + z_tmp * (nx * ny)], data[x_1 + y_1 * nx + z_tmp * (nx * ny)],
-                                  x_dist, y_dist, bilinear_ptr[0]);
+                                  x_dist, y_dist, bilinear_ptr);
                               if (dist_copy[0] == dist_copy[0])
                                 {
                                   bilinear_interpolation(data[x_0 + y_0 * nx + z_tmp * (nx * ny)],
                                                          data[x_1 + y_0 * nx + z_tmp * (nx * ny)],
                                                          data[x_0 + y_1 * nx + z_tmp * (nx * ny)],
                                                          data[x_1 + y_1 * nx + z_tmp * (nx * ny)], dist_copy[0],
-                                                         dist_copy[1], start);
+                                                         dist_copy[1], &start);
                                 }
                             }
-                          if (*start != *start)
+                          if (is_nan(start))
                             {
                               dist_copy[0] = x_dist;
                               dist_copy[1] = y_dist;
@@ -13358,32 +13510,31 @@ static void ray_casting_thread(void *arg)
                               data[x_0 + y_1 * nx + z_0 * (nx * ny)], data[x_1 + y_0 * nx + z_0 * (nx * ny)],
                               data[x_1 + y_0 * nx + z_1 * (nx * ny)], data[x_1 + y_1 * nx + z_0 * (nx * ny)],
                               data[x_0 + y_1 * nx + z_1 * (nx * ny)], data[x_1 + y_1 * nx + z_1 * (nx * ny)], x_dist,
-                              y_dist, z_dist, bilinear_ptr[0]);
+                              y_dist, z_dist, bilinear_ptr);
                         }
                     }
                   /* set the values */
                   if (s == 0)
                     {
-                      start_copy[0] = *start;
+                      start_copy = start;
                     }
                   if (vt.approximative_calculation == 1)
                     {
-                      voxel_sum += (*start + *end) / 2.;
-                      *start = *end;
+                      voxel_sum += (start + end) / 2.;
+                      start = end;
                     }
                 }
               voxel_influ = voxel_sum / wdh * ray_length;
 
               if (vt.approximative_calculation == 0)
                 {
-                  double y[4] = {start[0], mid_left[0], mid_right[0], end[0]};
-                  double a = 27. / 6. * (y[3] - 3. * y[2] + 3. * y[1] - y[0]);
-                  double b = 9. / 2. * (y[2] - 2. * y[1] + y[0] - 6. / 27. * a);
-                  double c = 3. * (y[1] - y[0] - 1. / 9. * b - 1. / 27. * a);
+                  double a = 27. / 6. * (end - 3. * mid_right + 3. * mid_left - start);
+                  double b = 9. / 2. * (mid_right - 2. * mid_left + start - 6. / 27. * a);
+                  double c = 3. * (mid_left - start - 1. / 9. * b - 1. / 27. * a);
 
                   if (algorithm == 0 || algorithm == 1)
                     {
-                      voxel_influ = (0.25 * a + 1. / 3. * b + 0.5 * c + y[0]) * ray_length;
+                      voxel_influ = (0.25 * a + 1. / 3. * b + 0.5 * c + start) * ray_length;
                     }
                   else
                     {
@@ -13397,8 +13548,8 @@ static void ray_casting_thread(void *arg)
                         {
                           x2 = 0;
                         }
-                      voxel_influ = max(a * pow(x1, 3) + b * pow(x1, 2) + c * x1 + y[0],
-                                        a * pow(x2, 3) + b * pow(x2, 2) + c * x2 + y[0]);
+                      voxel_influ = max(a * pow(x1, 3) + b * pow(x1, 2) + c * x1 + start,
+                                        a * pow(x2, 3) + b * pow(x2, 2) + c * x2 + start);
                       color = max(color, voxel_influ);
                     }
                 }
@@ -13412,15 +13563,15 @@ static void ray_casting_thread(void *arg)
               else
                 {
                   /* MIP */
-                  *start = *start_copy;
-                  color = max(color, max(*start, *end));
+                  start = start_copy;
+                  color = max(color, max(start, end));
                   if (rc->dmax_ptr != NULL && color >= *dmax_ptr) break;
                 }
 
               ray_start[0] = ray_end[0];
               ray_start[1] = ray_end[1];
               ray_start[2] = ray_end[2];
-              *start = *end;
+              start = end;
 
               /* can reuse end value */
               if (fabs(ray_start[0] - max_val_t[0]) <= eps || fabs(ray_start[1] - max_val_t[1]) <= eps ||
@@ -13482,6 +13633,16 @@ static void ray_casting_thread(void *arg)
 void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, double *dmin_ptr, double *dmax_ptr,
                        double *dmin_val, double *dmax_val)
 {
+  int n_x, n_y, size;
+  double *pixels, *min_ptr, *max_ptr;
+  double min_val[3], max_val[3];
+  int x_start = 0, x_end = 0, y_start = 0, y_end = 0;
+  struct ray_casting_attr f;
+#ifndef NO_THREADS
+  threadpool_t *tp;
+#endif
+  struct thread_attr *jobs;
+  int i, j = 0, threadnum;
   check_autoinit;
 
   if (gpx.projection_type == GR_PROJECTION_DEFAULT)
@@ -13491,24 +13652,22 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
       return;
     }
 
-  int n_x, n_y;
-  double *pixels = calloc(vt.picture_width * vt.picture_height, sizeof(double));
+  pixels = calloc(vt.picture_width * vt.picture_height, sizeof(double));
   if (pixels == 0)
     {
       fprintf(stderr, "can't allocate memory");
       return;
     }
   /* size of each thread calculated out of threadnumber */
-  int size = (int)(max(10, (nx + ny + nz) / 3.0 * vt.thread_size));
+  size = (int)(max(10, (nx + ny + nz) / 3.0 * vt.thread_size));
   n_x = (int)ceil(1. * vt.picture_width / size);
   n_y = (int)ceil(1. * vt.picture_height / size);
 
-  double *max_ptr = dmax_ptr;
-  double *min_ptr = dmin_ptr;
+  max_ptr = dmax_ptr;
+  min_ptr = dmin_ptr;
   if (dmax_ptr && *dmax_ptr < 0) max_ptr = NULL;
   if (dmin_ptr && *dmin_ptr < 0) min_ptr = NULL;
 
-  double min_val[3];
   if (dmin_val == NULL)
     {
       min_val[0] = min_val[1] = min_val[2] = -1;
@@ -13519,7 +13678,6 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
       min_val[1] = dmin_val[1];
       min_val[2] = dmin_val[2];
     }
-  double max_val[3];
   if (dmax_val == NULL)
     {
       max_val[0] = max_val[1] = max_val[2] = -1;
@@ -13531,25 +13689,26 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
       max_val[2] = dmax_val[2];
     }
 
-  double **ptr = &data;
-  struct ray_casting_attr f[1] = {{nx, ny, nz, algorithm, ptr[0], min_ptr, max_ptr, min_val, max_val, pixels}};
-  vt.ray_casting = f;
-  int x_start = 0, x_end = 0, y_start = 0, y_end = 0;
+  f.nx = nx;
+  f.ny = ny;
+  f.nz = nz;
+  f.algorithm = algorithm;
+  f.data = data;
+  f.dmin_ptr = min_ptr;
+  f.dmax_ptr = max_ptr;
+  f.min_val = min_val;
+  f.max_val = max_val;
+  f.pixels = pixels;
+  vt.ray_casting = &f;
 
 /* creates the threadpool */
 #ifndef NO_THREADS
-  threadpool_t *tp;
   tp = calloc(1, sizeof(*tp));
   if (tp == 0)
     {
       fprintf(stderr, "can't allocate memory");
       return;
     }
-#endif
-  struct thread_attr *jobs;
-  size_t i, j;
-
-#ifndef NO_THREADS
 #ifdef _WIN32
 #ifndef _SC_NPROCESSORS_ONLN
   SYSTEM_INFO info;
@@ -13558,7 +13717,7 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
 #define _SC_NPROCESSORS_ONLN
 #endif
 #endif
-  int threadnum = ((int)sysconf(_SC_NPROCESSORS_ONLN) - 1) < 256 ? (int)sysconf(_SC_NPROCESSORS_ONLN) - 1 : 256;
+  threadnum = ((int)sysconf(_SC_NPROCESSORS_ONLN) - 1) < 256 ? (int)sysconf(_SC_NPROCESSORS_ONLN) - 1 : 256;
   if (vt.max_threads > 0)
     {
       threadnum = vt.max_threads;

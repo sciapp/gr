@@ -63,8 +63,8 @@ int gr3_platform_initGL_(void)
       gr3_log_(error_message);
       return GR3_ERROR_INIT_FAILED;
     }
-  platform_loader = (struct platform_ * (*)(void (*)(const char *), void (*)(const char *)))
-      dlsym(platform_library, "gr3_platform_initGL_dynamic_");
+  /* write platform_loader as a void* to avoid casting object pointer to function pointer */
+  *(void **)(&platform_loader) = dlsym(platform_library, "gr3_platform_initGL_dynamic_");
   if (!platform_loader)
     {
       char *error_message = dlerror();
