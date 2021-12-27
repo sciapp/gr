@@ -10186,7 +10186,7 @@ void gr_setarrowsize(double size)
 {
   check_autoinit;
 
-  if (arrow_size > 0) arrow_size = size;
+  if (size > 0) arrow_size = size;
 
   if (flag_graphics) gr_writestream("<setarrowsize size=\"%g\"/>\n", size);
 }
