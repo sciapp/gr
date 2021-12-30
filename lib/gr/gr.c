@@ -8211,6 +8211,8 @@ static int compar(const void *a, const void *b)
 void gr_trisurface(int n, double *px, double *py, double *pz)
 {
   int errind, coli, int_style;
+  double wn[4], vp[4];
+  int modern_projection_type;
   int ntri, *triangles = NULL;
   double x[4], y[4], z[4], meanz;
   int i, j, color;
@@ -8224,6 +8226,17 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
   check_autoinit;
 
   setscale(lx.scale_options);
+
+  modern_projection_type =
+      gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC;
+
+  if (modern_projection_type)
+    {
+      gks_inq_xform(WC, &errind, wn, vp);
+
+      gks_set_window(WC, -1, 1, -1, 1);
+      setscale(lx.scale_options);
+    }
 
   /* save fill area interior style and color index */
 
@@ -8351,6 +8364,12 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
       print_float_array("y", n, py);
       print_float_array("z", n, pz);
       gr_writestream("/>\n");
+    }
+
+  if (modern_projection_type)
+    {
+      gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
+      setscale(lx.scale_options);
     }
 }
 
