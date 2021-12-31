@@ -1170,20 +1170,12 @@ static void setspace(double zmin, double zmax, int rotation, int tilt)
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
-  if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
-    {
-      xmin = ix.xmin;
-      xmax = ix.xmax;
-      ymin = ix.ymin;
-      ymax = ix.ymax;
-    }
-  else
-    {
-      xmin = wn[0];
-      xmax = wn[1];
-      ymin = wn[2];
-      ymax = wn[3];
-    }
+  gpx.projection_type = GR_PROJECTION_DEFAULT;
+
+  xmin = wn[0];
+  xmax = wn[1];
+  ymin = wn[2];
+  ymax = wn[3];
 
   wx.zmin = zmin;
   wx.zmax = zmax;

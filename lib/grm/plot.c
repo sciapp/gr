@@ -1470,7 +1470,7 @@ void plot_process_window(grm_args_t *subplot_args)
 
   logger((stderr, "Storing window (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
   grm_args_push(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
-  if (!str_equals_any(kind, 3, "polar", "polar_histogram", "trisurf"))
+  if (!str_equals_any(kind, 2, "polar", "polar_histogram"))
     {
       gr_setwindow(x_min, x_max, y_min, y_max);
     }
