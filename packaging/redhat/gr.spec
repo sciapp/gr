@@ -16,7 +16,7 @@
 
 Name:				gr
 Summary:			GR, a universal framework for visualization applications
-Version:			0.51.1
+Version:			0.63.0
 Release:			3%{?dist}
 License:			MIT
 Group:				Development/Libraries
@@ -28,8 +28,8 @@ Source4:			https://gr-framework.org/downloads/3rdparty/ffmpeg-4.2.1.tar.gz
 Source5:			https://gr-framework.org/downloads/3rdparty/glfw-3.3.3.tar.gz
 Source6:			https://gr-framework.org/downloads/3rdparty/zeromq-4.3.4.tar.gz
 Source7:			https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-Source8:			https://gr-framework.org/downloads/3rdparty/cairo-1.14.6.tar.xz
-Source9:			https://gr-framework.org/downloads/3rdparty/pixman-0.34.0.tar.gz
+Source8:			https://gr-framework.org/downloads/3rdparty/cairo-1.16.0.tar.xz
+Source9:			https://gr-framework.org/downloads/3rdparty/pixman-0.40.0.tar.gz
 Source10:			https://gr-framework.org/downloads/3rdparty/tiff-4.0.10.tar.gz
 Source11:			https://gr-framework.org/downloads/3rdparty/libopenh264-2.0.0.tar.gz
 BuildRequires:		git
