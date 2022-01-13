@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.1...3.16)
 project(
   grm_test_public_api
   DESCRIPTION "Test the public api of GRM"
-  LANGUAGES C
+  LANGUAGES C CXX
 )
 
 set(EXECUTABLE_SOURCES
@@ -11,6 +11,7 @@ set(EXECUTABLE_SOURCES
     barplot.c
     custom_receiver.c
     custom_sender.c
+    dom_render.cpp
     event_handling.c
     heatmap.c
     histogram.c

@@ -11,7 +11,14 @@ extern "C" {
 #include "datatype/uint_map_int.h"
 #include "error_int.h"
 #include "event_int.h"
+
+#ifdef __cplusplus
+}
 #include "plot.h"
+extern "C" {
+#else
+#include "plot.h"
+#endif
 
 
 /* ######################### internal interface ##################################################################### */

@@ -1,5 +1,11 @@
 /* ######################### includes ############################################################################### */
 
+#include "GR/Document.hxx"
+#include "GR/Element.hxx"
+#include "GR/Comment.hxx"
+#include "GR/util.hxx"
+#include "render.hxx"
+
 extern "C" {
 
 #include "layout.h"
@@ -17,7 +23,12 @@ extern "C" {
 #include "gr.h"
 #include "gr3.h"
 #include "logging_int.h"
+}
+
 #include "plot_int.h"
+
+extern "C" {
+
 #include "util_int.h"
 
 #include "datatype/double_map_int.h"
@@ -133,6 +144,8 @@ static grm_args_t *global_root_args = NULL;
 grm_args_t *active_plot_args = NULL;
 static unsigned int active_plot_index = 0;
 grid_t *global_grid = NULL;
+static std::shared_ptr<Render> global_render;
+static std::shared_ptr<GR::Element> global_root;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ event handling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -425,6 +438,7 @@ err_t plot_init_static_variables(void)
       plot_set_flag_defaults();
       error_cleanup_and_set_error_if(!args_values(global_root_args, "plots", "a", &active_plot_args), ERROR_INTERNAL);
       active_plot_index = 1;
+      global_render = Render::createRender();
       meters_per_unit_map = double_map_new_with_data(array_size(symbol_to_meters_per_unit), symbol_to_meters_per_unit);
       error_cleanup_and_set_error_if(meters_per_unit_map == NULL, ERROR_MALLOC);
       fmt_map = string_map_new_with_data(array_size(kind_to_fmt), kind_to_fmt);
@@ -2157,7 +2171,6 @@ err_t plot_line(grm_args_t *subplot_args)
   err_t error;
   const char *kind;
 
-  kind = "line";
   args_values(subplot_args, "series", "A", &current_series);
   args_values(subplot_args, "kind", "s", &kind);
   while (*current_series != NULL)
@@ -2169,18 +2182,30 @@ err_t plot_line(grm_args_t *subplot_args)
       return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      std::vector<double> x_vec(x, x + x_length);
+      std::vector<double> y_vec(y, y + y_length);
       args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
       mask = gr_uselinespec(spec);
       if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
         {
-          gr_polyline(x_length, x, y);
+          int current_line_colorind;
+          gr_inqlinecolorind(&current_line_colorind);
+          auto element = global_render->createPolyline(x_length, x_vec, y_vec);
+          element->setAttribute("linecolorind", current_line_colorind);
+          global_root->append(element);
         }
       if (mask & 2)
         {
-          gr_polymarker(x_length, x, y);
+          int current_marker_colorind;
+          gr_inqmarkercolorind(&current_marker_colorind);
+          auto element = global_render->createPolymarker(x_length, x_vec, y_vec);
+          element->setAttribute("markercolorind", current_marker_colorind);
+          global_root->append(element);
         }
-      error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
-      return_if_error;
+      /*
+       * error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
+       * return_if_error;
+       */
       ++current_series;
     }
 
@@ -7886,6 +7911,9 @@ int grm_plot(const grm_args_t *args)
     }
   else
     {
+      global_root = global_render->createElement("root");
+      global_render->replaceChildren(global_root);
+
       plot_set_attribute_defaults(active_plot_args);
       if (plot_process_grid_arguments(active_plot_args) != ERROR_NONE)
         {
@@ -7912,6 +7940,8 @@ int grm_plot(const grm_args_t *args)
           plot_post_subplot(*current_subplot_args);
           ++current_subplot_args;
         }
+
+      global_render->render();
       plot_post_plot(active_plot_args);
     }
 
@@ -7956,4 +7986,14 @@ int grm_switch(unsigned int id)
 
   return 1;
 }
+}
+
+std::shared_ptr<GR::Element> grm_get_document_root(void)
+{
+  return global_root;
+}
+
+void grm_render(void)
+{
+  global_render->render();
 }
