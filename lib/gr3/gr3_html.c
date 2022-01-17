@@ -155,8 +155,8 @@ int gr3_export_html_(const char *filename, int width, int height)
   fprintf(htmlfp, "            gl.enableVertexAttribArray(shaderProgram.colorLocation);\n");
   fprintf(htmlfp, "            \n");
   fprintf(htmlfp, "          }\n");
-  fprintf(htmlfp,
-          "          this.draw = function (projectionMatrix, viewMatrix, modelMatrix, scales, lightSources) {\n");
+  fprintf(htmlfp, "          this.draw = function (projectionMatrix, viewMatrix, modelMatrix, scales, lightSources, "
+                  "lightParameters) {\n");
   fprintf(htmlfp, "            gl.uniformMatrix4fv(shaderProgram.projectionMatrixLocation, false, new "
                   "Float32Array(projectionMatrix));\n");
   fprintf(htmlfp,
@@ -166,6 +166,8 @@ int gr3_export_html_(const char *filename, int width, int height)
       "            gl.uniformMatrix4fv(shaderProgram.modelMatrixLocation, false, new Float32Array(modelMatrix));\n");
   fprintf(htmlfp, "            gl.uniform3fv(shaderProgram.scalesLocation, new Float32Array(scales));\n");
   fprintf(htmlfp, "            gl.uniform3fv(shaderProgram.lightSourcesLocation, new Float32Array(lightSources));\n");
+  fprintf(htmlfp, "            gl.uniform4f(shaderProgram.lightParametersLocation, lightParameters[0], "
+                  "lightParameters[1], lightParameters[2], lightParameters[3]);\n");
   fprintf(htmlfp, "            gl.uniform1i(shaderProgram.numLightsLocation, lightSources.length/6);\n");
   fprintf(htmlfp, "          gl.uniform3f(shaderProgram.clipMinLocation");
   if (isfinite(context_struct_.clip_xmin))
@@ -192,7 +194,7 @@ int gr3_export_html_(const char *filename, int width, int height)
     {
       fprintf(htmlfp, ", -Infinity");
     }
-  fprintf(htmlfp, ")\n");
+  fprintf(htmlfp, ");\n");
   fprintf(htmlfp, "          gl.uniform3f(shaderProgram.clipMaxLocation");
   if (isfinite(context_struct_.clip_xmax))
     {
@@ -218,7 +220,7 @@ int gr3_export_html_(const char *filename, int width, int height)
     {
       fprintf(htmlfp, ", Infinity");
     }
-  fprintf(htmlfp, ")\n");
+  fprintf(htmlfp, ");\n");
   fprintf(htmlfp, "            \n");
   fprintf(htmlfp, "            gl.drawArrays(gl.TRIANGLES, 0, this.number_of_vertices);\n");
   fprintf(htmlfp, "            \n");
@@ -536,6 +538,11 @@ int gr3_export_html_(const char *filename, int width, int height)
   fprintf(htmlfp, "        ];\n");
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        \n");
+  fprintf(htmlfp, "        var lightParameters = [%f, %f, %f, %f];\n", context_struct_.light_parameters.ambient,
+          context_struct_.light_parameters.diffuse, context_struct_.light_parameters.specular,
+          context_struct_.light_parameters.specular_exponent);
+  fprintf(htmlfp, "        \n");
+  fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        gl.clearColor(%g,%g,%g,%g);\n", context_struct_.background_color[0],
           context_struct_.background_color[1], context_struct_.background_color[2],
           context_struct_.background_color[3]);
@@ -650,8 +657,8 @@ int gr3_export_html_(const char *filename, int width, int height)
             htmlfp,
             "          gl.uniform3f(shaderProgram.modelColorLocation, colors[i][0], colors[i][1], colors[i][2]);\n");
 
-        fprintf(htmlfp,
-                "          mesh.draw(projectionMatrix, viewMatrix, modelMatrices[i], scales[i], lightSources);\n");
+        fprintf(htmlfp, "          mesh.draw(projectionMatrix, viewMatrix, modelMatrices[i], scales[i], lightSources, "
+                        "lightParameters);\n");
         fprintf(htmlfp, "        }\n");
         draw = draw->next;
       }
@@ -683,6 +690,9 @@ int gr3_export_html_(const char *filename, int width, int height)
           "        shaderProgram.modelMatrixLocation = gl.getUniformLocation(shaderProgram, \"ModelMatrix\");\n");
   fprintf(htmlfp,
           "        shaderProgram.lightSourcesLocation = gl.getUniformLocation(shaderProgram, \"LightSources\");\n");
+  fprintf(
+      htmlfp,
+      "        shaderProgram.lightParametersLocation = gl.getUniformLocation(shaderProgram, \"LightParameters\");\n");
   fprintf(htmlfp, "        shaderProgram.numLightsLocation = gl.getUniformLocation(shaderProgram, \"NumLights\");\n");
   fprintf(htmlfp, "        shaderProgram.clipMinLocation = gl.getUniformLocation(shaderProgram, \"ClipMin\");\n");
   fprintf(htmlfp, "        shaderProgram.clipMaxLocation = gl.getUniformLocation(shaderProgram, \"ClipMax\");\n");
@@ -767,6 +777,7 @@ int gr3_export_html_(const char *filename, int width, int height)
           "uniform vec3 ModelColor;\n"
           "uniform vec3 ClipMin;\n"
           "uniform vec3 ClipMax;\n"
+          "uniform vec4 LightParameters;\n"
 
           "varying vec4 WorldSpacePosition;\n"
           "varying vec4 Position;\n"
@@ -779,24 +790,31 @@ int gr3_export_html_(const char *filename, int width, int height)
           "if (gl_FrontFacing == false) { normal = -normal; }\n"
           "vec3 diffuse = vec3(0.0);\n"
           "vec3 spec = vec3(0.0);\n"
-          "float ambient = 0.2;\n"
-          "float specStrength = 0.7;\n"
-          "float diffStrength = 0.8;\n"
+          "float ambient = LightParameters.x;\n"
+          "float specStrength = LightParameters.z;\n"
+          "float diffStrength = LightParameters.y;\n"
           "if (NumLights == 0) {"
           "  diffuse += diffStrength * vec3(normal.z);\n"
           "  spec += specStrength * "
-          "(pow(max(dot(normalize(normalize(-Position.xyz)+vec3(0.0,0.0,1.0)),normal),0.0),128.0));\n"
+          "(pow(max(dot(normalize(normalize(-Position.xyz)+vec3(0.0,0.0,1.0)),normal),0.0), LightParameters.w));\n"
           "}\n"
           "for(int i = 0; i<16;i++)\n"
           "{\n"
           "  if(i<NumLights)\n"
           "  {\n"
           "    vec3 light_color = LightSources[2*i+1];\n"
+          "  if (length(LightSources[2*i]) == 0.0) {"
+          "         diffuse += diffStrength * light_color * vec3(normal.z);\n"
+          "         spec += specStrength * "
+          "         (light_color * pow(max(dot(normalize(normalize(-Position.xyz)+vec3(0.0,0.0,1.0)),normal),0.0), "
+          "LightParameters.w));\n"
+          "        }\n"
+          " else {\n"
           "    vec3 halfway = -normalize(normalize(Position.xyz)+normalize(mat3(ViewMatrix)*LightSources[2*i]));\n"
-          "    spec += specStrength * (light_color*pow(max(dot(normalize(halfway),normal),0.0),128.0));\n"
+          "    spec += specStrength * (light_color*pow(max(dot(normalize(halfway),normal),0.0), LightParameters.w));\n"
           "    diffuse += diffStrength * "
           "(light_color*max(dot(mat3(ViewMatrix)*normalize(-LightSources[2*i]),normal),0.0));\n"
-          "  }\n"
+          "  }}\n"
           "}\n"
           "gl_FragColor=vec4((ambient + diffuse) * Color * ModelColor + spec, 1.0);\n"
           "}\n");

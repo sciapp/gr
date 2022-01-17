@@ -71,14 +71,14 @@ const char *gr3_error_file_ = "";
   {                                                                                                                   \
     GR3_InitStruct_INITIALIZER, 0, 0, 0, NULL, 0, NULL, not_initialized_, NULL, NULL, 0, 0, {{0}}, 0, 0, 0, NAN, NAN, \
         NAN, NAN, 0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0, 0, 0, 4, 0, {0}, {0}, {0},   \
-        {0}, 0, 0, 0, 0, {0}, NAN, NAN, NAN, NAN, NAN, NAN                                                            \
+        {0}, 0, 0, 0, 0, {0}, {0.2, 0.8, 128, 0.7}, NAN, NAN, NAN, NAN, NAN, NAN                                      \
   }
 #else
 #define GR3_ContextStruct_INITIALIZER                                                                                 \
   {                                                                                                                   \
     GR3_InitStruct_INITIALIZER, 0, 0, 0, NULL, 0, NULL, not_initialized_, NULL, NULL, 0, 0, {{0}}, 0, 0, 0, NAN, NAN, \
         NAN, NAN, 0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0, 0, 0, -1, 0, {0}, {0}, {0},  \
-        0, 0, 0, {0}, NAN, NAN, NAN, NAN, NAN, NAN                                                                    \
+        0, 0, 0, {0}, {0.2, 0.8, 128, 0.7}, NAN, NAN, NAN, NAN, NAN, NAN                                              \
   }
 #endif
 GR3_ContextStruct_t_ context_struct_ = GR3_ContextStruct_INITIALIZER;
@@ -302,6 +302,7 @@ GR3API int gr3_init(int *attrib_list)
               "uniform mat4 ViewMatrix;\n",
               "uniform int NumLights;\n",
               "uniform vec3 LightSources[32];\n",
+              "uniform vec4 LightingParameters;\n"
               "uniform vec3 ModelColor;\n",
               "uniform vec3 ClipMin;\n",
               "uniform vec3 ClipMax;\n",
@@ -319,24 +320,33 @@ GR3API int gr3_init(int *attrib_list)
               "if (gl_FrontFacing == false) { normal = -normal; }\n",
               "vec3 diffuse = vec3(0.0);\n",
               "vec3 spec = vec3(0.0);\n",
-              "float ambient = 0.2;\n",
-              "float specStrength = 0.7;\n",
-              "float diffStrength = 0.8;\n",
+              "float ambient = LightingParameters.x;\n",
+              "float diffStrength = LightingParameters.y;\n",
+              "float specStrength = LightingParameters.z;\n",
               "if (NumLights == 0) {\n",
               "  vec3 halfway = -normalize(normalize(Position.xyz)+vec3(0.0,0.0,-1.0));\n",
               "  diffuse += diffStrength * vec3(normal.z);\n",
               "  spec += specStrength * ",
-              "(pow(max(dot(halfway, normal),0.0),128.0));\n",
+              "(pow(max(dot(halfway, normal),0.0), LightingParameters.w));\n",
               "}\n",
               "for(int i = 0; i<16;i++)\n",
               "{\n",
               "if(i<NumLights)\n",
               "{\n",
               "  vec3 light_color = LightSources[2*i+1];\n",
+              "  if (dot(LightSources[2*i], LightSources[2*i]) == 0) {",
+              "     vec3 halfway = -normalize(normalize(Position.xyz)+vec3(0.0,0.0,-1.0));\n",
+              "     diffuse += diffStrength * light_color * vec3(normal.z);\n",
+              "     spec += specStrength * ",
+              "(light_color * pow(max(dot(halfway, normal),0.0), LightingParameters.w));\n",
+              "        }\n",
+              " else {\n",
               "  vec3 halfway = -normalize(normalize(Position.xyz)+normalize(mat3(ViewMatrix)*LightSources[2*i]));\n",
-              "  spec += specStrength * (light_color*pow(max(dot(normalize(halfway),normal),0.0),128.0));\n",
+              "  spec += specStrength * (light_color*pow(max(dot(normalize(halfway),normal),0.0), "
+              "LightingParameters.w));\n",
               "  diffuse += diffStrength * ",
               "light_color*max(dot(mat3(ViewMatrix)*normalize(-LightSources[2*i]),normal),0.0);\n",
+              "}\n",
               "}\n",
               "}\n",
               "gl_FragColor=vec4((ambient + diffuse) * Color * ModelColor + spec, 1.0);\n",
@@ -1708,6 +1718,9 @@ static void gr3_draw_(GLuint width, GLuint height)
         glUniform3fv(glGetUniformLocation(context_struct_.program, "LightSources"), 2 * context_struct_.num_lights,
                      &context_struct_.light_sources[0].x);
         glUniform1i(glGetUniformLocation(context_struct_.program, "NumLights"), context_struct_.num_lights);
+        glUniform4f(glGetUniformLocation(context_struct_.program, "LightingParameters"),
+                    context_struct_.light_parameters.ambient, context_struct_.light_parameters.diffuse,
+                    context_struct_.light_parameters.specular, context_struct_.light_parameters.specular_exponent);
         if (!isfinite(xmin))
           {
             xmin = -INFINITY;
@@ -1720,15 +1733,15 @@ static void gr3_draw_(GLuint width, GLuint height)
           {
             zmin = -INFINITY;
           }
-        if (is_nan(xmax))
+        if (!isfinite(xmax))
           {
             xmax = INFINITY;
           }
-        if (is_nan(ymax))
+        if (!isfinite(ymax))
           {
             ymax = INFINITY;
           }
-        if (is_nan(zmax))
+        if (!isfinite(zmax))
           {
             zmax = INFINITY;
           }
@@ -1741,9 +1754,9 @@ static void gr3_draw_(GLuint width, GLuint height)
   glEnable(GL_NORMALIZE);
   if (!context_struct_.use_vbo)
     {
+      int i;
       glEnable(GL_LIGHTING);
       glEnable(GL_LIGHT0);
-      int i;
       for (i = 0; i < context_struct_.num_lights; i++)
         {
           glEnable(GL_LIGHT0 + i);
@@ -2669,16 +2682,18 @@ static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height)
         glUniform3fv(glGetUniformLocation(context_struct_.program, "LightSources"), 2 * context_struct_.num_lights,
                      &context_struct_.light_sources[0].x);
         glUniform1i(glGetUniformLocation(context_struct_.program, "NumLights"), context_struct_.num_lights);
+        glUniform4f(glGetUniformLocation(context_struct_.program, "LightingParameters"),
+                    context_struct_.light_parameters.ambient, context_struct_.light_parameters.diffuse,
+                    context_struct_.light_parameters.specular, context_struct_.light_parameters.specular_exponent);
       }
 #endif
   }
   glEnable(GL_NORMALIZE);
   if (!context_struct_.use_vbo)
     {
+      int i;
       glEnable(GL_LIGHTING);
       glEnable(GL_LIGHT0);
-
-      int i;
       for (i = 0; i < context_struct_.num_lights; i++)
         {
           glEnable(GL_LIGHT0 + i);
@@ -2857,6 +2872,45 @@ GR3API int gr3_setlightsources(int num_lights, float *directions, float *colors)
       context_struct_.light_sources[j].b = colors[3 * j + 2];
     }
   RETURN_ERROR(GR3_ERROR_NONE);
+}
+
+void gr3_setlightparameters(float ambient, float diffuse, float specular, float specular_power)
+{
+  GR3_DO_INIT;
+  context_struct_.light_parameters.ambient = ambient;
+  context_struct_.light_parameters.diffuse = diffuse;
+  context_struct_.light_parameters.specular = specular;
+  context_struct_.light_parameters.specular_exponent = specular_power;
+}
+
+void gr3_getlightparameters(float *ambient, float *diffuse, float *specular, float *specular_power)
+{
+  GR3_DO_INIT;
+  if (ambient)
+    {
+      *ambient = context_struct_.light_parameters.ambient;
+    }
+  if (diffuse)
+    {
+      *diffuse = context_struct_.light_parameters.diffuse;
+    }
+  if (specular)
+    {
+      *specular = context_struct_.light_parameters.specular;
+    }
+  if (specular_power)
+    {
+      *specular_power = context_struct_.light_parameters.specular_exponent;
+    }
+}
+
+void gr3_setdefaultlightparameters()
+{
+  GR3_DO_INIT;
+  context_struct_.light_parameters.ambient = 0.2;
+  context_struct_.light_parameters.diffuse = 0.8;
+  context_struct_.light_parameters.specular_exponent = 128;
+  context_struct_.light_parameters.specular = 0.7;
 }
 
 GR3API void gr3_setclipping(float xmin, float xmax, float ymin, float ymax, float zmin, float zmax)

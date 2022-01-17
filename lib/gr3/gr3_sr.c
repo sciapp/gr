@@ -72,20 +72,23 @@ static args *malloc_arg(int thread_idx, int mesh, matrix model_mat, matrix view_
                         GR3_LightSource_t_ *light_sources, int num_light_sources);
 static void *draw_triangle_indexbuffer(void *v_arguments);
 static void draw_triangle(unsigned char *pixels, float *dep_buf, int width, int height, vertex_fp *v_fp[3],
-                          const float *colors, const GR3_LightSource_t_ *light_sources, int num_lights);
+                          const float *colors, const GR3_LightSource_t_ *light_sources, int num_lights,
+                          float ambient_str, float diffuse_str, float specular_str, float specular_exp);
 static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int width, int height, vertex_fp *v_fp[3],
                                      color line_color, color fill_color);
 static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int height, const float *colors,
                           vertex_fp **v_fp_sorted, vertex_fp **v_fp, float A12, float A20, float A01, float B12,
-                          float B20, float B01, const GR3_LightSource_t_ *light_sources, int num_lights);
+                          float B20, float B01, const GR3_LightSource_t_ *light_sources, int num_lights,
+                          float ambient_str, float diffuse_str, float specular_str, float specular_exp);
 static void draw_line(unsigned char *pixels, float *dep_buf, int width, const float *colors, int startx, int y,
                       int endx, vertex_fp *v_fp[3], float A12, float A20, float A01, float w0, float w1, float w2,
-                      float sum_inv, const GR3_LightSource_t_ *light_sources, int num_lights);
+                      float sum_inv, const GR3_LightSource_t_ *light_sources, int num_lights, float ambient_str,
+                      float diffuse_str, float specular_str, float specular_exp);
 static void color_pixel(unsigned char *pixels, float *depth_buffer, float depth, int width, int x, int y, color *col);
 static color calc_colors(color_float col_one, color_float col_two, color_float col_three, float fac_one, float fac_two,
                          float fac_three, vertex_fp *v_fp[3], const float *colors,
-                         const GR3_LightSource_t_ *light_sources, int num_light_sources, int *discard,
-                         int front_facing);
+                         const GR3_LightSource_t_ *light_sources, int num_light_sources, int *discard, int front_facing,
+                         float ambient_str, float diffuse_str, float specular_str, float specular_exp);
 
 static int gr3_draw_softwarerendered(queue *queues[MAX_NUM_THREADS], int width, int height);
 static void gr3_dodrawmesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int width, int height,
@@ -801,7 +804,9 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
           vertex_fpp[1] = &vertices_fp[indices[i + 1]];
           vertex_fpp[2] = &vertices_fp[indices[i + 2]];
           draw_triangle(context_struct_.pixmaps[arg->thread_idx], context_struct_.depth_buffers[arg->thread_idx],
-                        arg->width, arg->height, vertex_fpp, arg->colors, arg->light_sources, arg->num_lights);
+                        arg->width, arg->height, vertex_fpp, arg->colors, arg->light_sources, arg->num_lights,
+                        context_struct_.light_parameters.ambient, context_struct_.light_parameters.diffuse,
+                        context_struct_.light_parameters.specular, context_struct_.light_parameters.specular_exponent);
         }
     }
   else
@@ -898,7 +903,10 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
           if (context_struct_.option > 2)
             {
               draw_triangle(context_struct_.pixmaps[arg->thread_idx], context_struct_.depth_buffers[arg->thread_idx],
-                            arg->width, arg->height, vertex_fpp, arg->colors, arg->light_sources, arg->num_lights);
+                            arg->width, arg->height, vertex_fpp, arg->colors, arg->light_sources, arg->num_lights,
+                            context_struct_.light_parameters.ambient, context_struct_.light_parameters.diffuse,
+                            context_struct_.light_parameters.specular,
+                            context_struct_.light_parameters.specular_exponent);
             }
           else
             { /* the mesh should be drawn represented by lines */
@@ -1301,7 +1309,8 @@ static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int 
  * and colors.
  */
 static void draw_triangle(unsigned char *pixels, float *dep_buf, int width, int height, vertex_fp *v_fp[3],
-                          const float *colors, const GR3_LightSource_t_ *light_sources, int num_lights)
+                          const float *colors, const GR3_LightSource_t_ *light_sources, int num_lights,
+                          float ambient_str, float diffuse_str, float specular_str, float specular_exp)
 {
   vertex_fp *v_fp_sorted_y[3];
   float A12, A20, A01, B12, B20, B01;
@@ -1341,7 +1350,7 @@ static void draw_triangle(unsigned char *pixels, float *dep_buf, int width, int 
   B20 = v_fp[0]->x - v_fp[2]->x;
   B01 = v_fp[1]->x - v_fp[0]->x;
   fill_triangle(pixels, dep_buf, width, height, colors, v_fp_sorted_y, v_fp, A12, A20, A01, B12, B20, B01,
-                light_sources, num_lights);
+                light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp);
 }
 
 /*!
@@ -1350,7 +1359,8 @@ static void draw_triangle(unsigned char *pixels, float *dep_buf, int width, int 
  */
 static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int height, const float *colors,
                           vertex_fp **v_fp_sorted, vertex_fp **v_fp, float A12, float A20, float A01, float B12,
-                          float B20, float B01, const GR3_LightSource_t_ *light_sources, int num_lights)
+                          float B20, float B01, const GR3_LightSource_t_ *light_sources, int num_lights,
+                          float ambient_str, float diffuse_str, float specular_str, float specular_exp)
 {
   float invslope_short_1 = (v_fp_sorted[1]->x - v_fp_sorted[0]->x) / (v_fp_sorted[1]->y - v_fp_sorted[0]->y);
   float invslope_short_2 = (v_fp_sorted[2]->x - v_fp_sorted[1]->x) / (v_fp_sorted[2]->y - v_fp_sorted[1]->y);
@@ -1413,7 +1423,7 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
           w1 += dif * A20;
           w2 += dif * A01;
           draw_line(pixels, dep_buf, width, colors, curx, (int)scanlineY, (int)curx2, v_fp, A12, A20, A01, w0, w1, w2,
-                    sum_inv, light_sources, num_lights);
+                    sum_inv, light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp);
         }
       else
         {
@@ -1423,7 +1433,7 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
           w1 += dif * A20;
           w2 += dif * A01;
           draw_line(pixels, dep_buf, width, colors, curx, (int)scanlineY, (int)curx1, v_fp, A12, A20, A01, w0, w1, w2,
-                    sum_inv, light_sources, num_lights);
+                    sum_inv, light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp);
         }
       first_x = curx;
       curx2 += invslope_long;
@@ -1440,7 +1450,8 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
  */
 static void draw_line(unsigned char *pixels, float *dep_buf, int width, const float *colors, int startx, int y,
                       int endx, vertex_fp *v_fp[3], float A12, float A20, float A01, float w0, float w1, float w2,
-                      float sum_inv, const GR3_LightSource_t_ *light_sources, int num_lights)
+                      float sum_inv, const GR3_LightSource_t_ *light_sources, int num_lights, float ambient_str,
+                      float diffuse_str, float specular_str, float specular_exp)
 {
   color col;
   int x;
@@ -1455,7 +1466,7 @@ static void draw_line(unsigned char *pixels, float *dep_buf, int width, const fl
     }
   for (x = startx; x <= endx && x < width; x += 1)
     {
-      int front_facing = (w0 >= 0 && w1 >= 0 && w2 >= 0);
+      int front_facing = (w0 >= 0 || w1 >= 0 || w2 >= 0);
 #ifdef BACKFACE_CULLING
       if (!front_facing)
         {
@@ -1467,7 +1478,7 @@ static void draw_line(unsigned char *pixels, float *dep_buf, int width, const fl
         {
           int discard = 0;
           col = calc_colors(v_fp[0]->c, v_fp[1]->c, v_fp[2]->c, w0, w1, w2, v_fp, colors, light_sources, num_lights,
-                            &discard, front_facing);
+                            &discard, front_facing, ambient_str, diffuse_str, specular_str, specular_exp);
           if (!discard)
             {
               color_pixel(pixels, dep_buf, depth, width, x, y, &col);
@@ -1515,17 +1526,19 @@ static void color_pixel(unsigned char *pixels, float *depth_buffer, float depth,
  * \return a new color as a combination of the given ones*/
 static color calc_colors(color_float col_one, color_float col_two, color_float col_three, float fac_one, float fac_two,
                          float fac_three, vertex_fp *v_fp[3], const float *colors,
-                         const GR3_LightSource_t_ *light_sources, int num_light_sources, int *discard, int front_facing)
+                         const GR3_LightSource_t_ *light_sources, int num_light_sources, int *discard, int front_facing,
+                         float ambient_str, float diffuse_str, float specular_str, float specular_exp)
 {
   /* correct barycentric coordinates
    * (https://github.com/ssloy/tinyrenderer/wiki/Technical-difficulties:-linear-interpolation-with-perspective-deformations)
    */
   int i;
   float sum, dot_light_norm, diff;
-  float ambient = 0.2;
+  float ambient = ambient_str;
   /*set strength of specular highlight*/
-  float specular_strength = 0.7;
-  float diff_strength = 0.8;
+  float specular_strength = specular_str;
+  float diff_strength = diffuse_str;
+  float exponent = specular_exp;
   color_float res;
   vector norm;
   vector diffuse_sum;
@@ -1601,7 +1614,7 @@ static color calc_colors(color_float col_one, color_float col_two, color_float c
           cos_normal_halfway = 0;
         }
       /*exponantiate the dot by a value between 30 and 100*/
-      float spec_cos = pow(cos_normal_halfway, 128);
+      float spec_cos = pow(cos_normal_halfway, exponent);
       /*get specular component by multiply the dot and the specular strength*/
       float specular = specular_strength * spec_cos;
       /*calculate diffuse componant*/
@@ -2001,11 +2014,20 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
               light_dir.x = context_struct_.light_sources[i].x;
               light_dir.y = context_struct_.light_sources[i].y;
               light_dir.z = context_struct_.light_sources[i].z;
-              normalize_vector(&light_dir);
-              mat_vec_mul_3x1(&view_mat_3x3, &light_dir);
-              light_sources[i].x = light_dir.x;
-              light_sources[i].y = light_dir.y;
-              light_sources[i].z = light_dir.z;
+              if (light_dir.x == 0 && light_dir.y == 0 && light_dir.z == 0)
+                {
+                  light_sources[i].x = 0;
+                  light_sources[i].y = 0;
+                  light_sources[i].z = -1;
+                }
+              else
+                {
+                  normalize_vector(&light_dir);
+                  mat_vec_mul_3x1(&view_mat_3x3, &light_dir);
+                  light_sources[i].x = light_dir.x;
+                  light_sources[i].y = light_dir.y;
+                  light_sources[i].z = light_dir.z;
+                }
               light_sources[i].r = context_struct_.light_sources[i].r;
               light_sources[i].g = context_struct_.light_sources[i].g;
               light_sources[i].b = context_struct_.light_sources[i].b;

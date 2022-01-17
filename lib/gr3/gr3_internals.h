@@ -12,6 +12,14 @@ typedef struct _GR3_LightSource_t_
 } GR3_LightSource_t_;
 #define MAX_NUM_LIGHTS 16
 
+typedef struct _GR3_LightParameter_t_
+{
+  float ambient;
+  float diffuse;
+  float specular_exponent;
+  float specular;
+} GR3_LightParameter_t_;
+
 #include "gr3_sr.h"
 #ifndef M_PI
 #define M_PI 3.141592653589793238462643383279
@@ -286,6 +294,7 @@ typedef struct _GR3_ContextStruct_t_
   float aspect_override;
   int num_lights;
   GR3_LightSource_t_ light_sources[MAX_NUM_LIGHTS];
+  GR3_LightParameter_t_ light_parameters;
   float clip_xmin;
   float clip_xmax;
   float clip_ymin;
