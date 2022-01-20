@@ -111,7 +111,7 @@ typedef struct
   int idxstart;
   int idxend;
   vertex_fp *vertices_fp;
-  GR3_LightSource_t_ *light_sources;
+  GR3_LightSource_t_ light_sources[MAX_NUM_LIGHTS];
   int num_lights;
 } args;
 

@@ -772,7 +772,14 @@ static args *malloc_arg(int thread_idx, int mesh, matrix model_mat, matrix view_
   arg->idxstart = idxstart;
   arg->idxend = idxend;
   arg->vertices_fp = vertices_fp;
-  arg->light_sources = light_sources;
+  if (light_sources)
+    {
+      int i;
+      for (i = 0; i < MAX_NUM_LIGHTS; i++)
+        {
+          arg->light_sources[i] = light_sources[i];
+        }
+    }
   arg->num_lights = num_light_sources;
   return arg;
 }
