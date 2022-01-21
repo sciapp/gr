@@ -1,0 +1,11 @@
+--- zeromq-4.3.4.orig/tests/testutil_monitoring.cpp	2021-01-03 22:46:02.000000000 +0100
++++ zeromq-4.3.4/tests/testutil_monitoring.cpp	2022-01-21 10:58:29.000000000 +0100
+@@ -249,7 +249,7 @@
+         TEST_ASSERT_TRUE (zmq_msg_more (&msg));
+         TEST_ASSERT_EQUAL_UINT (sizeof (uint64_t), zmq_msg_size (&msg));
+ 
+-        if (value_ && value_ + i)
++        if (value_ && *value_ + i)
+             memcpy (value_ + i, zmq_msg_data (&msg), sizeof (*value_));
+         zmq_msg_close (&msg);
+     }
