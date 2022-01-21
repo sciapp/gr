@@ -66,23 +66,29 @@ static float dot_vector(vector *v1, vector *v2);
 static vector linearcombination(vector *v1, vector *v2, vector *v3, float fac1, float fac2, float fac3);
 static float triangle_surface_2d(float dif_a_b_x, float dif_a_b_y, float cy, float cx, float ay, float ax);
 
-static args *malloc_arg(int thread_idx, int mesh, matrix model_view_perspective, matrix viewport,
-                        matrix3x3 model_view_3x3, vector light_dir, const float *colors, const float *scales, int width,
-                        int height, int id, int idxstart, int idxend, vertex_fp *vertices_fp);
+static args *malloc_arg(int thread_idx, int mesh, matrix model_mat, matrix view_mat, matrix projection_mat,
+                        matrix viewport, matrix3x3 model_view_3x3, const float *colors, const float *scales, int width,
+                        int height, int id, int idxstart, int idxend, vertex_fp *vertices_fp,
+                        GR3_LightSource_t_ *light_sources, int num_light_sources);
 static void *draw_triangle_indexbuffer(void *v_arguments);
 static void draw_triangle(unsigned char *pixels, float *dep_buf, int width, int height, vertex_fp *v_fp[3],
-                          const float *colors, vector light_dir);
+                          const float *colors, const GR3_LightSource_t_ *light_sources, int num_lights,
+                          float ambient_str, float diffuse_str, float specular_str, float specular_exp);
 static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int width, int height, vertex_fp *v_fp[3],
                                      color line_color, color fill_color);
 static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int height, const float *colors,
-                          vector light_dir, vertex_fp **v_fp_sorted, vertex_fp **v_fp, float A12, float A20, float A01,
-                          float B12, float B20, float B01);
-static void draw_line(unsigned char *pixels, float *dep_buf, int width, const float *colors, vector light_dir,
-                      int startx, int y, int endx, vertex_fp *v_fp[3], float A12, float A20, float A01, float w0,
-                      float w1, float w2, float sum_inv);
+                          vertex_fp **v_fp_sorted, vertex_fp **v_fp, float A12, float A20, float A01, float B12,
+                          float B20, float B01, const GR3_LightSource_t_ *light_sources, int num_lights,
+                          float ambient_str, float diffuse_str, float specular_str, float specular_exp);
+static void draw_line(unsigned char *pixels, float *dep_buf, int width, const float *colors, int startx, int y,
+                      int endx, vertex_fp *v_fp[3], float A12, float A20, float A01, float w0, float w1, float w2,
+                      float sum_inv, const GR3_LightSource_t_ *light_sources, int num_lights, float ambient_str,
+                      float diffuse_str, float specular_str, float specular_exp);
 static void color_pixel(unsigned char *pixels, float *depth_buffer, float depth, int width, int x, int y, color *col);
 static color calc_colors(color_float col_one, color_float col_two, color_float col_three, float fac_one, float fac_two,
-                         float fac_three, vertex_fp *v_fp[3], const float *colors, vector light_dir);
+                         float fac_three, vertex_fp *v_fp[3], const float *colors,
+                         const GR3_LightSource_t_ *light_sources, int num_light_sources, int *discard, int front_facing,
+                         float ambient_str, float diffuse_str, float specular_str, float specular_exp);
 
 static int gr3_draw_softwarerendered(queue *queues[MAX_NUM_THREADS], int width, int height);
 static void gr3_dodrawmesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int width, int height,
@@ -745,17 +751,19 @@ GR3API int gr3_initSR_()
  * the drawing process should start and end. The transformation matrices are included so that every thread
  * transforms its own coordinates leading to a higher proportion of parallelisation.
  */
-static args *malloc_arg(int thread_idx, int mesh, matrix model_view_perspective, matrix viewport,
-                        matrix3x3 model_view_3x3, vector light_dir, const float *colors, const float *scales, int width,
-                        int height, int id, int idxstart, int idxend, vertex_fp *vertices_fp)
+static args *malloc_arg(int thread_idx, int mesh, matrix model_mat, matrix view_mat, matrix projection_mat,
+                        matrix viewport, matrix3x3 model_view_3x3, const float *colors, const float *scales, int width,
+                        int height, int id, int idxstart, int idxend, vertex_fp *vertices_fp,
+                        GR3_LightSource_t_ *light_sources, int num_light_sources)
 {
   args *arg = malloc(sizeof(args));
   arg->thread_idx = thread_idx;
   arg->mesh = mesh;
-  arg->model_view_perspective = model_view_perspective;
+  arg->model_mat = model_mat;
+  arg->view_mat = view_mat;
+  arg->projection_mat = projection_mat;
   arg->viewport = viewport;
   arg->model_view_3x3 = model_view_3x3;
-  arg->light_dir = light_dir;
   arg->colors = colors;
   arg->scales = scales;
   arg->width = width;
@@ -764,6 +772,15 @@ static args *malloc_arg(int thread_idx, int mesh, matrix model_view_perspective,
   arg->idxstart = idxstart;
   arg->idxend = idxend;
   arg->vertices_fp = vertices_fp;
+  if (light_sources)
+    {
+      int i;
+      for (i = 0; i < MAX_NUM_LIGHTS; i++)
+        {
+          arg->light_sources[i] = light_sources[i];
+        }
+    }
+  arg->num_lights = num_light_sources;
   return arg;
 }
 
@@ -794,7 +811,9 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
           vertex_fpp[1] = &vertices_fp[indices[i + 1]];
           vertex_fpp[2] = &vertices_fp[indices[i + 2]];
           draw_triangle(context_struct_.pixmaps[arg->thread_idx], context_struct_.depth_buffers[arg->thread_idx],
-                        arg->width, arg->height, vertex_fpp, arg->colors, arg->light_dir);
+                        arg->width, arg->height, vertex_fpp, arg->colors, arg->light_sources, arg->num_lights,
+                        context_struct_.light_parameters.ambient, context_struct_.light_parameters.diffuse,
+                        context_struct_.light_parameters.specular, context_struct_.light_parameters.specular_exponent);
         }
     }
   else
@@ -857,9 +876,11 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
           for (j = 0; j < 3; j++)
             {
               index = 9 * i + 3 * j;
+
               vertices_fp[j].c.r = colors[index];
               vertices_fp[j].c.g = colors[index + 1];
               vertices_fp[j].c.b = colors[index + 2];
+
               vertices_fp[j].c.a = 1.0f;
               vertices_fp[j].normal.x = normals[index] / div_0;
               vertices_fp[j].normal.y = normals[index + 1] / div_1;
@@ -870,7 +891,15 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
               vertices_fp[j].z = vertices[index + 2];
               vertices_fp[j].w = 1.0;
               vertices_fp[j].w_div = 1.0;
-              mat_vec_mul_4x1(&arg->model_view_perspective, &vertices_fp[j]);
+              mat_vec_mul_4x1(&arg->model_mat, &vertices_fp[j]);
+              vertices_fp[j].world_space_position.x = vertices_fp[j].x;
+              vertices_fp[j].world_space_position.y = vertices_fp[j].y;
+              vertices_fp[j].world_space_position.z = vertices_fp[j].z;
+              mat_vec_mul_4x1(&arg->view_mat, &vertices_fp[j]);
+              vertices_fp[j].view_space_position.x = vertices_fp[j].x;
+              vertices_fp[j].view_space_position.y = vertices_fp[j].y;
+              vertices_fp[j].view_space_position.z = vertices_fp[j].z;
+              mat_vec_mul_4x1(&arg->projection_mat, &vertices_fp[j]);
               divide_by_w(&vertices_fp[j]);
               mat_vec_mul_4x1(&arg->viewport, &vertices_fp[j]);
             }
@@ -881,7 +910,10 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
           if (context_struct_.option > 2)
             {
               draw_triangle(context_struct_.pixmaps[arg->thread_idx], context_struct_.depth_buffers[arg->thread_idx],
-                            arg->width, arg->height, vertex_fpp, arg->colors, arg->light_dir);
+                            arg->width, arg->height, vertex_fpp, arg->colors, arg->light_sources, arg->num_lights,
+                            context_struct_.light_parameters.ambient, context_struct_.light_parameters.diffuse,
+                            context_struct_.light_parameters.specular,
+                            context_struct_.light_parameters.specular_exponent);
             }
           else
             { /* the mesh should be drawn represented by lines */
@@ -901,7 +933,15 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
                       tmp.w_div = 1.0f;
                       tmp.c = dummy_color;
                       tmp.normal = dummy_vector;
-                      mat_vec_mul_4x1(&arg->model_view_perspective, &tmp);
+                      mat_vec_mul_4x1(&arg->model_mat, &tmp);
+                      tmp.world_space_position.x = tmp.x;
+                      tmp.world_space_position.y = tmp.y;
+                      tmp.world_space_position.z = tmp.z;
+                      mat_vec_mul_4x1(&arg->view_mat, &tmp);
+                      tmp.view_space_position.x = tmp.x;
+                      tmp.view_space_position.y = tmp.y;
+                      tmp.view_space_position.z = tmp.z;
+                      mat_vec_mul_4x1(&arg->projection_mat, &tmp);
                       divide_by_w(&tmp);
                       mat_vec_mul_4x1(&arg->viewport, &tmp);
                       vertices_fp[0].normal.y = tmp.x;
@@ -1276,7 +1316,8 @@ static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int 
  * and colors.
  */
 static void draw_triangle(unsigned char *pixels, float *dep_buf, int width, int height, vertex_fp *v_fp[3],
-                          const float *colors, vector light_dir)
+                          const float *colors, const GR3_LightSource_t_ *light_sources, int num_lights,
+                          float ambient_str, float diffuse_str, float specular_str, float specular_exp)
 {
   vertex_fp *v_fp_sorted_y[3];
   float A12, A20, A01, B12, B20, B01;
@@ -1315,7 +1356,8 @@ static void draw_triangle(unsigned char *pixels, float *dep_buf, int width, int 
   B12 = v_fp[2]->x - v_fp[1]->x;
   B20 = v_fp[0]->x - v_fp[2]->x;
   B01 = v_fp[1]->x - v_fp[0]->x;
-  fill_triangle(pixels, dep_buf, width, height, colors, light_dir, v_fp_sorted_y, v_fp, A12, A20, A01, B12, B20, B01);
+  fill_triangle(pixels, dep_buf, width, height, colors, v_fp_sorted_y, v_fp, A12, A20, A01, B12, B20, B01,
+                light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp);
 }
 
 /*!
@@ -1323,8 +1365,9 @@ static void draw_triangle(unsigned char *pixels, float *dep_buf, int width, int 
  * The rasterisation algorithm works with slopes. The parameter light_dir defines the direction of the light.
  */
 static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int height, const float *colors,
-                          vector light_dir, vertex_fp **v_fp_sorted, vertex_fp **v_fp, float A12, float A20, float A01,
-                          float B12, float B20, float B01)
+                          vertex_fp **v_fp_sorted, vertex_fp **v_fp, float A12, float A20, float A01, float B12,
+                          float B20, float B01, const GR3_LightSource_t_ *light_sources, int num_lights,
+                          float ambient_str, float diffuse_str, float specular_str, float specular_exp)
 {
   float invslope_short_1 = (v_fp_sorted[1]->x - v_fp_sorted[0]->x) / (v_fp_sorted[1]->y - v_fp_sorted[0]->y);
   float invslope_short_2 = (v_fp_sorted[2]->x - v_fp_sorted[1]->x) / (v_fp_sorted[2]->y - v_fp_sorted[1]->y);
@@ -1386,8 +1429,8 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
           w0 += dif * A12;
           w1 += dif * A20;
           w2 += dif * A01;
-          draw_line(pixels, dep_buf, width, colors, light_dir, curx, (int)scanlineY, (int)curx2, v_fp, A12, A20, A01,
-                    w0, w1, w2, sum_inv);
+          draw_line(pixels, dep_buf, width, colors, curx, (int)scanlineY, (int)curx2, v_fp, A12, A20, A01, w0, w1, w2,
+                    sum_inv, light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp);
         }
       else
         {
@@ -1396,8 +1439,8 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
           w0 += dif * A12;
           w1 += dif * A20;
           w2 += dif * A01;
-          draw_line(pixels, dep_buf, width, colors, light_dir, curx, (int)scanlineY, (int)curx1, v_fp, A12, A20, A01,
-                    w0, w1, w2, sum_inv);
+          draw_line(pixels, dep_buf, width, colors, curx, (int)scanlineY, (int)curx1, v_fp, A12, A20, A01, w0, w1, w2,
+                    sum_inv, light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp);
         }
       first_x = curx;
       curx2 += invslope_long;
@@ -1412,9 +1455,10 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
  * pixmap. The AIJ values are passed because they are needed for the calculation of barycentrical coordinates.
  * The barycentrical coordinates interpolate the colors and normals on the triangle.
  */
-static void draw_line(unsigned char *pixels, float *dep_buf, int width, const float *colors, vector light_dir,
-                      int startx, int y, int endx, vertex_fp *v_fp[3], float A12, float A20, float A01, float w0,
-                      float w1, float w2, float sum_inv)
+static void draw_line(unsigned char *pixels, float *dep_buf, int width, const float *colors, int startx, int y,
+                      int endx, vertex_fp *v_fp[3], float A12, float A20, float A01, float w0, float w1, float w2,
+                      float sum_inv, const GR3_LightSource_t_ *light_sources, int num_lights, float ambient_str,
+                      float diffuse_str, float specular_str, float specular_exp)
 {
   color col;
   int x;
@@ -1429,8 +1473,9 @@ static void draw_line(unsigned char *pixels, float *dep_buf, int width, const fl
     }
   for (x = startx; x <= endx && x < width; x += 1)
     {
+      int front_facing = (w0 >= 0 || w1 >= 0 || w2 >= 0);
 #ifdef BACKFACE_CULLING
-      if (w0 < 0 && w1 < 0 && w2 < 0)
+      if (!front_facing)
         {
           return;
         }
@@ -1438,8 +1483,13 @@ static void draw_line(unsigned char *pixels, float *dep_buf, int width, const fl
       depth = (w0 * v_fp[0]->z + w1 * v_fp[1]->z + w2 * v_fp[2]->z) * sum_inv;
       if (depth < dep_buf[y * width + x])
         {
-          col = calc_colors(v_fp[0]->c, v_fp[1]->c, v_fp[2]->c, w0, w1, w2, v_fp, colors, light_dir);
-          color_pixel(pixels, dep_buf, depth, width, x, y, &col);
+          int discard = 0;
+          col = calc_colors(v_fp[0]->c, v_fp[1]->c, v_fp[2]->c, w0, w1, w2, v_fp, colors, light_sources, num_lights,
+                            &discard, front_facing, ambient_str, diffuse_str, specular_str, specular_exp);
+          if (!discard)
+            {
+              color_pixel(pixels, dep_buf, depth, width, x, y, &col);
+            }
         }
       w0 += A12;
       w1 += A20;
@@ -1466,6 +1516,7 @@ static void color_pixel(unsigned char *pixels, float *depth_buffer, float depth,
   depth_buffer[y * width + x] = depth;
 }
 
+
 /*!
  * This method calculates the color for a pixel, by interpolating the vertex
  * colors with perspective correction in help of the factors in param fac.
@@ -1481,16 +1532,35 @@ static void color_pixel(unsigned char *pixels, float *depth_buffer, float depth,
  * \param [in] light_dir direction of the light to calculate shadows
  * \return a new color as a combination of the given ones*/
 static color calc_colors(color_float col_one, color_float col_two, color_float col_three, float fac_one, float fac_two,
-                         float fac_three, vertex_fp *v_fp[3], const float *colors, vector light_dir)
+                         float fac_three, vertex_fp *v_fp[3], const float *colors,
+                         const GR3_LightSource_t_ *light_sources, int num_light_sources, int *discard, int front_facing,
+                         float ambient_str, float diffuse_str, float specular_str, float specular_exp)
 {
   /* correct barycentric coordinates
    * (https://github.com/ssloy/tinyrenderer/wiki/Technical-difficulties:-linear-interpolation-with-perspective-deformations)
    */
-
-  float sum, diff_tmp, diff;
+  int i;
+  float sum, dot_light_norm, diff;
+  float ambient = ambient_str;
+  /*set strength of specular highlight*/
+  float specular_strength = specular_str;
+  float diff_strength = diffuse_str;
+  float exponent = specular_exp;
   color_float res;
   vector norm;
+  vector diffuse_sum;
+  vector world_space_position;
+  vector view_space_position;
+  vector view_dir;
+  vector specular_sum;
   color res_float;
+
+  specular_sum.x = 0;
+  specular_sum.y = 0;
+  specular_sum.z = 0;
+  diffuse_sum.x = 0;
+  diffuse_sum.y = 0;
+  diffuse_sum.z = 0;
   fac_one /= v_fp[0]->w_div;
   fac_two /= v_fp[1]->w_div;
   fac_three /= v_fp[2]->w_div;
@@ -1502,14 +1572,75 @@ static color calc_colors(color_float col_one, color_float col_two, color_float c
   res = linearcombination_color(col_one, col_two, col_three, fac_one, fac_two, fac_three);
   /* interpolate normal */
   norm = linearcombination(&v_fp[0]->normal, &v_fp[1]->normal, &v_fp[2]->normal, fac_one, fac_two, fac_three);
-  /* get light direction*/
-  diff_tmp = light_dir.x * norm.x + light_dir.y * norm.y + light_dir.z * norm.z;
-  diff = diff_tmp > 0.0 ? diff_tmp : 0.0;
-  mult_color(&res, diff, 1);
-  res.r *= colors[0];
-  res.g *= colors[1];
-  res.b *= colors[2];
-
+  normalize_vector(&norm);
+  if (!front_facing)
+    {
+      norm.x = -norm.x;
+      norm.y = -norm.y;
+      norm.z = -norm.z;
+    }
+  /* clipping */
+  world_space_position = linearcombination(&v_fp[0]->world_space_position, &v_fp[1]->world_space_position,
+                                           &v_fp[2]->world_space_position, fac_one, fac_two, fac_three);
+  if ((isfinite(context_struct_.clip_xmin) && world_space_position.x < context_struct_.clip_xmin) ||
+      (isfinite(context_struct_.clip_xmax) && world_space_position.x > context_struct_.clip_xmax) ||
+      (isfinite(context_struct_.clip_ymin) && world_space_position.y < context_struct_.clip_ymin) ||
+      (isfinite(context_struct_.clip_ymax) && world_space_position.y > context_struct_.clip_ymax) ||
+      (isfinite(context_struct_.clip_zmin) && world_space_position.z < context_struct_.clip_zmin) ||
+      (isfinite(context_struct_.clip_zmax) && world_space_position.z > context_struct_.clip_zmax))
+    {
+      color discard_color = {0, 0, 0, 0};
+      *discard = 1;
+      return discard_color;
+    }
+  /* interpolate position */
+  view_space_position = linearcombination(&v_fp[0]->view_space_position, &v_fp[1]->view_space_position,
+                                          &v_fp[2]->view_space_position, fac_one, fac_two, fac_three);
+  view_dir.x = -view_space_position.x;
+  view_dir.y = -view_space_position.y;
+  view_dir.z = -view_space_position.z;
+  normalize_vector(&view_dir);
+  for (i = 0; i < num_light_sources; ++i)
+    {
+      vector light_dir;
+      /*Retreive data from GR3_LightSource_t_*/
+      light_dir.x = light_sources[i].x;
+      light_dir.y = light_sources[i].y;
+      light_dir.z = light_sources[i].z;
+      normalize_vector(&light_dir);
+      dot_light_norm = dot_vector(&light_dir, &norm);
+      /*Calculate halfway vector for blinn-phong-illumination model*/
+      vector halfway;
+      halfway.x = view_dir.x - light_dir.x;
+      halfway.y = view_dir.y - light_dir.y;
+      halfway.z = view_dir.z - light_dir.z;
+      normalize_vector(&halfway);
+      float cos_normal_halfway = dot_vector(&norm, &halfway);
+      if (cos_normal_halfway < 0)
+        {
+          cos_normal_halfway = 0;
+        }
+      /*exponantiate the dot by a value between 30 and 100*/
+      float spec_cos = pow(cos_normal_halfway, exponent);
+      /*get specular component by multiply the dot and the specular strength*/
+      float specular = specular_strength * spec_cos;
+      /*calculate diffuse componant*/
+      float diff_tmp = -dot_vector(&light_dir, &norm);
+      diff = diff_tmp > 0.0 ? diff_tmp : 0.0;
+      /*update summs*/
+      specular_sum.x += light_sources[i].r * specular;
+      specular_sum.y += light_sources[i].g * specular;
+      specular_sum.z += light_sources[i].b * specular;
+      diffuse_sum.x += light_sources[i].r * diff;
+      diffuse_sum.y += light_sources[i].g * diff;
+      diffuse_sum.z += light_sources[i].b * diff;
+    }
+  res.r = res.r * (diffuse_sum.x * diff_strength + ambient) * colors[0] + specular_sum.x;
+  res.g = res.g * (diffuse_sum.y * diff_strength + ambient) * colors[1] + specular_sum.y;
+  res.b = res.b * (diffuse_sum.z * diff_strength + ambient) * colors[2] + specular_sum.z;
+  res.r = res.r > 1 ? 1 : res.r;
+  res.g = res.g > 1 ? 1 : res.g;
+  res.b = res.b > 1 ? 1 : res.b;
   res_float = color_float_to_color(res);
   return res_float;
 }
@@ -1615,8 +1746,8 @@ static int gr3_draw_softwarerendered(queue *queues[MAX_NUM_THREADS], int width, 
     {
       for (i = 0; i < context_struct_.num_threads; i++)
         {
-          args *arg = malloc_arg(i, 0, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT3x3_INIT_NUL, VECTOR3x1_INIT_NUL, NULL,
-                                 NULL, 0, 0, 1, 0, 0, NULL);
+          args *arg = malloc_arg(i, 0, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL,
+                                 MAT3x3_INIT_NUL, NULL, NULL, 0, 0, 1, 0, 0, NULL, NULL, 0);
           queue_enqueue(context_struct_.queues[i], arg);
         }
     }
@@ -1756,7 +1887,6 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
   int thread_idx, i, j, numtri, tri_per_thread, index_start_end[MAX_NUM_THREADS + 1], rest, rest_distributed;
   matrix model_mat, view_mat, view_model, perspective, perspective_view_model, viewport;
   matrix3x3 model_mat_3x3, view_mat_3x3, model_view_mat_3x3;
-  vector light_dir;
   color_float c_tmp;
   vertex_fp *vertices_fp;
 
@@ -1791,20 +1921,7 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
     {
       model_view_mat_3x3 = mat_mul_3x3(&view_mat_3x3, &model_mat_3x3);
     }
-  light_dir.x = context_struct_.light_dir[0];
-  light_dir.y = context_struct_.light_dir[1];
-  light_dir.z = context_struct_.light_dir[2];
 
-  /* default is the lighting coming from the camera, meaning the lighting comes from 0,0,1 referring to view Space */
-  if (dot_vector(&light_dir, &light_dir) < 0.001)
-    {
-      light_dir.z = 1.0;
-    }
-  else
-    {
-      normalize_vector(&light_dir);
-      mat_vec_mul_3x1(&view_mat_3x3, &light_dir);
-    }
   vertices_fp = NULL;
   if (context_struct_.mesh_list_[mesh].data.number_of_indices != 0)
     {
@@ -1828,17 +1945,26 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
           tmp_v.z = vertices[i + 2];
           tmp_v.w = 1.0;
           tmp_v.w_div = 1.0;
-          tmp_v.c = c_tmp;
           normal_vector.x = normals[i] / scales[0];
           normal_vector.y = normals[i + 1] / scales[1];
           normal_vector.z = normals[i + 2] / scales[2];
           tmp_v.normal = normal_vector;
+
+          tmp_v.c = c_tmp;
           index = (int)(i / 3);
           vertices_fp[index] = tmp_v;
         }
       for (i = 0; i < num_vertices; i++)
         {
-          mat_vec_mul_4x1(&perspective_view_model, &vertices_fp[i]);
+          mat_vec_mul_4x1(&model_mat, &vertices_fp[i]);
+          vertices_fp[i].world_space_position.x = vertices_fp[i].x;
+          vertices_fp[i].world_space_position.y = vertices_fp[i].y;
+          vertices_fp[i].world_space_position.z = vertices_fp[i].z;
+          mat_vec_mul_4x1(&view_mat, &vertices_fp[i]);
+          vertices_fp[i].view_space_position.x = vertices_fp[i].x;
+          vertices_fp[i].view_space_position.y = vertices_fp[i].y;
+          vertices_fp[i].view_space_position.z = vertices_fp[i].z;
+          mat_vec_mul_4x1(&perspective, &vertices_fp[i]);
           divide_by_w(&vertices_fp[i]);
           mat_vec_mul_4x1(&viewport, &vertices_fp[i]);
           mat_vec_mul_3x1(&model_view_mat_3x3, &vertices_fp[i].normal);
@@ -1870,10 +1996,54 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
     }
   for (thread_idx = 0; thread_idx < context_struct_.num_threads; thread_idx++)
     {
+      vector camera_pos;
+      camera_pos.x = context_struct_.camera_x;
+      camera_pos.y = context_struct_.camera_y;
+      camera_pos.z = context_struct_.camera_z;
+      GR3_LightSource_t_ light_sources[MAX_NUM_LIGHTS];
+      int num_lights = context_struct_.num_lights;
+      if (num_lights == 0)
+        {
+          num_lights = 1;
+          light_sources[0].x = 0;
+          light_sources[0].y = 0;
+          light_sources[0].z = -1;
+          light_sources[0].r = 1;
+          light_sources[0].g = 1;
+          light_sources[0].b = 1;
+        }
+      else
+        {
+          int i;
+          for (i = 0; i < num_lights; i++)
+            {
+              vector light_dir;
+              light_dir.x = context_struct_.light_sources[i].x;
+              light_dir.y = context_struct_.light_sources[i].y;
+              light_dir.z = context_struct_.light_sources[i].z;
+              if (light_dir.x == 0 && light_dir.y == 0 && light_dir.z == 0)
+                {
+                  light_sources[i].x = 0;
+                  light_sources[i].y = 0;
+                  light_sources[i].z = -1;
+                }
+              else
+                {
+                  normalize_vector(&light_dir);
+                  mat_vec_mul_3x1(&view_mat_3x3, &light_dir);
+                  light_sources[i].x = light_dir.x;
+                  light_sources[i].y = light_dir.y;
+                  light_sources[i].z = light_dir.z;
+                }
+              light_sources[i].r = context_struct_.light_sources[i].r;
+              light_sources[i].g = context_struct_.light_sources[i].g;
+              light_sources[i].b = context_struct_.light_sources[i].b;
+            }
+        }
       queue_enqueue(queues[thread_idx],
-                    malloc_arg(thread_idx, mesh, perspective_view_model, viewport, model_view_mat_3x3, light_dir,
+                    malloc_arg(thread_idx, mesh, model_mat, view_mat, perspective, viewport, model_view_mat_3x3,
                                colors_facs, scales, width, height, id, index_start_end[thread_idx],
-                               index_start_end[thread_idx + 1], vertices_fp));
+                               index_start_end[thread_idx + 1], vertices_fp, light_sources, num_lights));
     }
   return 1;
 }
@@ -1936,8 +2106,8 @@ GR3API void gr3_terminateSR_()
           free(context_struct_.pixmaps[i]);
         }
       free(context_struct_.depth_buffers[i]);
-      arg = malloc_arg(i, 0, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT3x3_INIT_NUL, VECTOR3x1_INIT_NUL, NULL, NULL, 0, 0, 2,
-                       0, 0, NULL);
+      arg = malloc_arg(i, 0, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT3x3_INIT_NUL, NULL,
+                       NULL, 0, 0, 2, 0, 0, NULL, NULL, 0);
       queue_enqueue(context_struct_.queues[i], arg);
 #ifndef NO_THREADS
       pthread_join(context_struct_.threads[i], NULL);
