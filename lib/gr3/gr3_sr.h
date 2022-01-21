@@ -38,7 +38,6 @@ struct queue_s
   struct queue_node_s *back;
 };
 typedef struct queue_s queue;
-
 /* defines the queue for a mesh to take the mesh parts out and
  * the area of the pixmaps to be merged by the thread */
 struct queue_merge_area
@@ -91,16 +90,19 @@ typedef struct
   float w_div;
   color_float c;
   vector normal;
+  vector world_space_position;
+  vector view_space_position;
 } vertex_fp;
 
 typedef struct
 {
   int thread_idx;
   int mesh;
-  matrix model_view_perspective;
+  matrix model_mat;
+  matrix view_mat;
+  matrix projection_mat;
   matrix viewport;
   matrix3x3 model_view_3x3;
-  vector light_dir;
   const float *colors;
   const float *scales;
   int width;
@@ -109,6 +111,8 @@ typedef struct
   int idxstart;
   int idxend;
   vertex_fp *vertices_fp;
+  GR3_LightSource_t_ light_sources[MAX_NUM_LIGHTS];
+  int num_lights;
 } args;
 
 GR3API int gr3_initSR_();

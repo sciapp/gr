@@ -676,7 +676,7 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
       if (gr3_geterror(0, NULL, NULL)) return;
       gr3_setcameraprojectionparameters(90.0f, 1.0f, 200.0f);
       if (gr3_geterror(0, NULL, NULL)) return;
-      gr3_setlightdirection(0.0f, 1.0f, 0.0f);
+      gr3_setlightdirection(0.0f, -1.0f, 0.0f);
     }
   else if (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC)
     {
@@ -698,7 +698,7 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
                                         (GLfloat)zfar);
         }
       if (gr3_geterror(0, NULL, NULL)) return;
-      gr3_setlightdirection(ups[0], ups[1], ups[2]);
+      gr3_setlightdirection(-ups[0], -ups[1], -ups[2]);
     }
   if (gr3_geterror(0, NULL, NULL)) return;
 

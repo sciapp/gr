@@ -30,8 +30,8 @@ GR3API void gr3_createxslicemesh(int *mesh, const GR3_MC_DTYPE *data, unsigned i
   float *colormap = getcolormap();
   unsigned int iy;
   unsigned int iz;
-  unsigned int number_of_vertices = dim_z * dim_y * 2;
-  unsigned int number_of_indices = (dim_z - 1) * (dim_y - 1) * 2 * 2 * 3;
+  unsigned int number_of_vertices = dim_z * dim_y;
+  unsigned int number_of_indices = (dim_z - 1) * (dim_y - 1) * 2 * 3;
   float *vertices = (float *)malloc(number_of_vertices * 3 * sizeof(float));
   float *normals = (float *)malloc(number_of_vertices * 3 * sizeof(float));
   float *colors = (float *)malloc(number_of_vertices * 3 * sizeof(float));
@@ -60,39 +60,24 @@ GR3API void gr3_createxslicemesh(int *mesh, const GR3_MC_DTYPE *data, unsigned i
           vertices[(iz * dim_y + iy) * 3 + 0] = ix * step_x + offset_x - SLICE_OFFSET;
           vertices[(iz * dim_y + iy) * 3 + 1] = iy * step_y + offset_y;
           vertices[(iz * dim_y + iy) * 3 + 2] = iz * step_z + offset_z;
-          normals[(iz * dim_y + iy) * 3 + 0] = -1;
+          normals[(iz * dim_y + iy) * 3 + 0] = 1;
           normals[(iz * dim_y + iy) * 3 + 1] = 0;
           normals[(iz * dim_y + iy) * 3 + 2] = 0;
           colors[(iz * dim_y + iy) * 3 + 0] = red;
           colors[(iz * dim_y + iy) * 3 + 1] = green;
           colors[(iz * dim_y + iy) * 3 + 2] = blue;
-          vertices[dim_z * dim_y * 3 + (iz * dim_y + iy) * 3 + 0] = ix * step_x + offset_x + SLICE_OFFSET;
-          vertices[dim_z * dim_y * 3 + (iz * dim_y + iy) * 3 + 1] = iy * step_y + offset_y;
-          vertices[dim_z * dim_y * 3 + (iz * dim_y + iy) * 3 + 2] = iz * step_z + offset_z;
-          normals[dim_z * dim_y * 3 + (iz * dim_y + iy) * 3 + 0] = 1;
-          normals[dim_z * dim_y * 3 + (iz * dim_y + iy) * 3 + 1] = 0;
-          normals[dim_z * dim_y * 3 + (iz * dim_y + iy) * 3 + 2] = 0;
-          colors[dim_z * dim_y * 3 + (iz * dim_y + iy) * 3 + 0] = red;
-          colors[dim_z * dim_y * 3 + (iz * dim_y + iy) * 3 + 1] = green;
-          colors[dim_z * dim_y * 3 + (iz * dim_y + iy) * 3 + 2] = blue;
         }
     }
   for (iz = 0; iz < dim_z - 1; iz++)
     {
       for (iy = 0; iy < dim_y - 1; iy++)
         {
-          indices[(iz * (dim_y - 1) + iy) * 12 + 0] = iz * dim_y + iy;
-          indices[(iz * (dim_y - 1) + iy) * 12 + 1] = iz * dim_y + iy + 1;
-          indices[(iz * (dim_y - 1) + iy) * 12 + 2] = (iz + 1) * dim_y + iy;
-          indices[(iz * (dim_y - 1) + iy) * 12 + 3] = (iz + 1) * dim_y + iy;
-          indices[(iz * (dim_y - 1) + iy) * 12 + 4] = iz * dim_y + iy + 1;
-          indices[(iz * (dim_y - 1) + iy) * 12 + 5] = (iz + 1) * dim_y + iy + 1;
-          indices[(iz * (dim_y - 1) + iy) * 12 + 6] = dim_z * dim_y + (iz + 1) * dim_y + iy + 1;
-          indices[(iz * (dim_y - 1) + iy) * 12 + 7] = dim_z * dim_y + iz * dim_y + iy + 1;
-          indices[(iz * (dim_y - 1) + iy) * 12 + 8] = dim_z * dim_y + (iz + 1) * dim_y + iy;
-          indices[(iz * (dim_y - 1) + iy) * 12 + 9] = dim_z * dim_y + (iz + 1) * dim_y + iy;
-          indices[(iz * (dim_y - 1) + iy) * 12 + 10] = dim_z * dim_y + iz * dim_y + iy + 1;
-          indices[(iz * (dim_y - 1) + iy) * 12 + 11] = dim_z * dim_y + iz * dim_y + iy;
+          indices[(iz * (dim_y - 1) + iy) * 6 + 0] = iz * dim_y + iy;
+          indices[(iz * (dim_y - 1) + iy) * 6 + 1] = iz * dim_y + iy + 1;
+          indices[(iz * (dim_y - 1) + iy) * 6 + 2] = (iz + 1) * dim_y + iy;
+          indices[(iz * (dim_y - 1) + iy) * 6 + 3] = (iz + 1) * dim_y + iy;
+          indices[(iz * (dim_y - 1) + iy) * 6 + 4] = iz * dim_y + iy + 1;
+          indices[(iz * (dim_y - 1) + iy) * 6 + 5] = (iz + 1) * dim_y + iy + 1;
         }
     }
   gr3_createindexedmesh(mesh, number_of_vertices, vertices, normals, colors, number_of_indices, indices);
@@ -107,8 +92,8 @@ GR3API void gr3_createyslicemesh(int *mesh, const GR3_MC_DTYPE *data, unsigned i
   float *colormap = getcolormap();
   unsigned int ix;
   unsigned int iz;
-  unsigned int number_of_vertices = dim_x * dim_z * 2;
-  unsigned int number_of_indices = (dim_x - 1) * (dim_z - 1) * 2 * 2 * 3;
+  unsigned int number_of_vertices = dim_x * dim_z;
+  unsigned int number_of_indices = (dim_x - 1) * (dim_z - 1) * 2 * 3;
   float *vertices = (float *)malloc(number_of_vertices * 3 * sizeof(float));
   float *normals = (float *)malloc(number_of_vertices * 3 * sizeof(float));
   float *colors = (float *)malloc(number_of_vertices * 3 * sizeof(float));
@@ -138,38 +123,23 @@ GR3API void gr3_createyslicemesh(int *mesh, const GR3_MC_DTYPE *data, unsigned i
           vertices[(iz * dim_x + ix) * 3 + 1] = iy * step_y + offset_y + SLICE_OFFSET;
           vertices[(iz * dim_x + ix) * 3 + 2] = iz * step_z + offset_z;
           normals[(iz * dim_x + ix) * 3 + 0] = 0;
-          normals[(iz * dim_x + ix) * 3 + 1] = 1;
+          normals[(iz * dim_x + ix) * 3 + 1] = -1;
           normals[(iz * dim_x + ix) * 3 + 2] = 0;
           colors[(iz * dim_x + ix) * 3 + 0] = red;
           colors[(iz * dim_x + ix) * 3 + 1] = green;
           colors[(iz * dim_x + ix) * 3 + 2] = blue;
-          vertices[dim_x * dim_z * 3 + (iz * dim_x + ix) * 3 + 0] = ix * step_x + offset_x;
-          vertices[dim_x * dim_z * 3 + (iz * dim_x + ix) * 3 + 1] = iy * step_y + offset_y - SLICE_OFFSET;
-          vertices[dim_x * dim_z * 3 + (iz * dim_x + ix) * 3 + 2] = iz * step_z + offset_z;
-          normals[dim_x * dim_z * 3 + (iz * dim_x + ix) * 3 + 0] = 0;
-          normals[dim_x * dim_z * 3 + (iz * dim_x + ix) * 3 + 1] = -1;
-          normals[dim_x * dim_z * 3 + (iz * dim_x + ix) * 3 + 2] = 0;
-          colors[dim_x * dim_z * 3 + (iz * dim_x + ix) * 3 + 0] = red;
-          colors[dim_x * dim_z * 3 + (iz * dim_x + ix) * 3 + 1] = green;
-          colors[dim_x * dim_z * 3 + (iz * dim_x + ix) * 3 + 2] = blue;
         }
     }
   for (iz = 0; iz < dim_z - 1; iz++)
     {
       for (ix = 0; ix < dim_x - 1; ix++)
         {
-          indices[(iz * (dim_x - 1) + ix) * 12 + 0] = iz * dim_x + ix;
-          indices[(iz * (dim_x - 1) + ix) * 12 + 1] = iz * dim_x + ix + 1;
-          indices[(iz * (dim_x - 1) + ix) * 12 + 2] = (iz + 1) * dim_x + ix;
-          indices[(iz * (dim_x - 1) + ix) * 12 + 3] = (iz + 1) * dim_x + ix;
-          indices[(iz * (dim_x - 1) + ix) * 12 + 4] = iz * dim_x + ix + 1;
-          indices[(iz * (dim_x - 1) + ix) * 12 + 5] = (iz + 1) * dim_x + ix + 1;
-          indices[(iz * (dim_x - 1) + ix) * 12 + 6] = dim_x * dim_z + (iz + 1) * dim_x + ix + 1;
-          indices[(iz * (dim_x - 1) + ix) * 12 + 7] = dim_x * dim_z + iz * dim_x + ix + 1;
-          indices[(iz * (dim_x - 1) + ix) * 12 + 8] = dim_x * dim_z + (iz + 1) * dim_x + ix;
-          indices[(iz * (dim_x - 1) + ix) * 12 + 9] = dim_x * dim_z + (iz + 1) * dim_x + ix;
-          indices[(iz * (dim_x - 1) + ix) * 12 + 10] = dim_x * dim_z + iz * dim_x + ix + 1;
-          indices[(iz * (dim_x - 1) + ix) * 12 + 11] = dim_x * dim_z + iz * dim_x + ix;
+          indices[(iz * (dim_x - 1) + ix) * 6 + 0] = iz * dim_x + ix;
+          indices[(iz * (dim_x - 1) + ix) * 6 + 1] = iz * dim_x + ix + 1;
+          indices[(iz * (dim_x - 1) + ix) * 6 + 2] = (iz + 1) * dim_x + ix;
+          indices[(iz * (dim_x - 1) + ix) * 6 + 3] = (iz + 1) * dim_x + ix;
+          indices[(iz * (dim_x - 1) + ix) * 6 + 4] = iz * dim_x + ix + 1;
+          indices[(iz * (dim_x - 1) + ix) * 6 + 5] = (iz + 1) * dim_x + ix + 1;
         }
     }
   gr3_createindexedmesh(mesh, number_of_vertices, vertices, normals, colors, number_of_indices, indices);
@@ -184,8 +154,8 @@ GR3API void gr3_createzslicemesh(int *mesh, const GR3_MC_DTYPE *data, unsigned i
   float *colormap = getcolormap();
   unsigned int ix;
   unsigned int iy;
-  unsigned int number_of_vertices = dim_x * dim_y * 2;
-  unsigned int number_of_indices = (dim_x - 1) * (dim_y - 1) * 2 * 2 * 3;
+  unsigned int number_of_vertices = dim_x * dim_y;
+  unsigned int number_of_indices = (dim_x - 1) * (dim_y - 1) * 2 * 3;
   float *vertices = (float *)malloc(number_of_vertices * 3 * sizeof(float));
   float *normals = (float *)malloc(number_of_vertices * 3 * sizeof(float));
   float *colors = (float *)malloc(number_of_vertices * 3 * sizeof(float));
@@ -220,33 +190,18 @@ GR3API void gr3_createzslicemesh(int *mesh, const GR3_MC_DTYPE *data, unsigned i
           colors[(iy * dim_x + ix) * 3 + 0] = red;
           colors[(iy * dim_x + ix) * 3 + 1] = green;
           colors[(iy * dim_x + ix) * 3 + 2] = blue;
-          vertices[dim_x * dim_y * 3 + (iy * dim_x + ix) * 3 + 0] = ix * step_x + offset_x;
-          vertices[dim_x * dim_y * 3 + (iy * dim_x + ix) * 3 + 1] = iy * step_y + offset_y;
-          vertices[dim_x * dim_y * 3 + (iy * dim_x + ix) * 3 + 2] = iz * step_z + offset_z - SLICE_OFFSET;
-          normals[dim_x * dim_y * 3 + (iy * dim_x + ix) * 3 + 0] = 0;
-          normals[dim_x * dim_y * 3 + (iy * dim_x + ix) * 3 + 1] = 0;
-          normals[dim_x * dim_y * 3 + (iy * dim_x + ix) * 3 + 2] = -1;
-          colors[dim_x * dim_y * 3 + (iy * dim_x + ix) * 3 + 0] = red;
-          colors[dim_x * dim_y * 3 + (iy * dim_x + ix) * 3 + 1] = green;
-          colors[dim_x * dim_y * 3 + (iy * dim_x + ix) * 3 + 2] = blue;
         }
     }
   for (iy = 0; iy < dim_y - 1; iy++)
     {
       for (ix = 0; ix < dim_x - 1; ix++)
         {
-          indices[(iy * (dim_x - 1) + ix) * 12 + 0] = iy * dim_x + ix;
-          indices[(iy * (dim_x - 1) + ix) * 12 + 1] = iy * dim_x + ix + 1;
-          indices[(iy * (dim_x - 1) + ix) * 12 + 2] = (iy + 1) * dim_x + ix;
-          indices[(iy * (dim_x - 1) + ix) * 12 + 3] = (iy + 1) * dim_x + ix;
-          indices[(iy * (dim_x - 1) + ix) * 12 + 4] = iy * dim_x + ix + 1;
-          indices[(iy * (dim_x - 1) + ix) * 12 + 5] = (iy + 1) * dim_x + ix + 1;
-          indices[(iy * (dim_x - 1) + ix) * 12 + 6] = dim_x * dim_y + (iy + 1) * dim_x + ix + 1;
-          indices[(iy * (dim_x - 1) + ix) * 12 + 7] = dim_x * dim_y + iy * dim_x + ix + 1;
-          indices[(iy * (dim_x - 1) + ix) * 12 + 8] = dim_x * dim_y + (iy + 1) * dim_x + ix;
-          indices[(iy * (dim_x - 1) + ix) * 12 + 9] = dim_x * dim_y + (iy + 1) * dim_x + ix;
-          indices[(iy * (dim_x - 1) + ix) * 12 + 10] = dim_x * dim_y + iy * dim_x + ix + 1;
-          indices[(iy * (dim_x - 1) + ix) * 12 + 11] = dim_x * dim_y + iy * dim_x + ix;
+          indices[(iy * (dim_x - 1) + ix) * 6 + 0] = iy * dim_x + ix;
+          indices[(iy * (dim_x - 1) + ix) * 6 + 1] = iy * dim_x + ix + 1;
+          indices[(iy * (dim_x - 1) + ix) * 6 + 2] = (iy + 1) * dim_x + ix;
+          indices[(iy * (dim_x - 1) + ix) * 6 + 3] = (iy + 1) * dim_x + ix;
+          indices[(iy * (dim_x - 1) + ix) * 6 + 4] = iy * dim_x + ix + 1;
+          indices[(iy * (dim_x - 1) + ix) * 6 + 5] = (iy + 1) * dim_x + ix + 1;
         }
     }
   gr3_createindexedmesh(mesh, number_of_vertices, vertices, normals, colors, number_of_indices, indices);
