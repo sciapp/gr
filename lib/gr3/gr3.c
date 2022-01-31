@@ -2818,31 +2818,46 @@ GR3API int gr3_getsurfaceoption(void)
 /*!
  * This method writes up to max_num_lights light sources in directions and colors.
  *
+ * Use gr3_getlightsources(0, NULL, NULL) to query the current number of light
+ * sources without getting the light sources themselves.
+ *
  * \param [in] max_num_lights the maximum number of light sources
- * \param [out] directions the directions of the light
- * \param [out] colors the colors of the light
- * \return the number of light sources written into directions and colors
+ * \param [out] directions the directions of the light, or NULL
+ * \param [out] colors the colors of the light, or NULL
+ * \return the number of light sources written into directions and colors, or
+ *          the current number of light sources
  */
 GR3API int gr3_getlightsources(int max_num_lights, float *directions, float *colors)
 {
   int num_lights = max_num_lights;
   int j;
   GR3_DO_INIT;
+  if (!directions && !colors && max_num_lights == 0)
+    {
+      return context_struct_.num_lights;
+    }
   if (num_lights > context_struct_.num_lights)
     {
       num_lights = context_struct_.num_lights;
     }
   for (j = 0; j < num_lights; j++)
     {
-      directions[3 * j + 0] = context_struct_.light_sources[j].x;
-      directions[3 * j + 1] = context_struct_.light_sources[j].y;
-      directions[3 * j + 2] = context_struct_.light_sources[j].z;
-      colors[3 * j + 0] = context_struct_.light_sources[j].r;
-      colors[3 * j + 1] = context_struct_.light_sources[j].g;
-      colors[3 * j + 2] = context_struct_.light_sources[j].b;
+      if (directions)
+        {
+          directions[3 * j + 0] = context_struct_.light_sources[j].x;
+          directions[3 * j + 1] = context_struct_.light_sources[j].y;
+          directions[3 * j + 2] = context_struct_.light_sources[j].z;
+        }
+      if (colors)
+        {
+          colors[3 * j + 0] = context_struct_.light_sources[j].r;
+          colors[3 * j + 1] = context_struct_.light_sources[j].g;
+          colors[3 * j + 2] = context_struct_.light_sources[j].b;
+        }
     }
   return num_lights;
 }
+
 /*!
  * This method sets the light sources.
  *
