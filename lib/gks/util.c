@@ -1726,7 +1726,7 @@ static int get_default_ws_type(void)
 #else
 #ifndef _WIN32
 #ifdef __APPLE__
-      if (gks_getenv("TERM_PROGRAM") != NULL)
+      if (gks_getenv("TERM_PROGRAM") != NULL || gks_getenv("TERMINAL_EMULATOR") != NULL)
         default_wstype = 400;
       else
 #else
@@ -1734,10 +1734,17 @@ static int get_default_ws_type(void)
         default_wstype = have_gksqt() ? 411 : 211;
       else
 #endif
-        default_wstype = have_iterm() ? 151 : 100;
-      if (default_wstype == 100)
         {
-          gks_perror("cannot open display - headless operation mode active");
+          if (have_iterm()) default_wstype = 151;
+#ifdef __APPLE__
+          else if (access("/dev/console", R_OK) == 0)
+            default_wstype = 400;
+#endif
+          else
+            {
+              default_wstype = 100;
+              gks_perror("cannot open display - headless operation mode active");
+            }
         }
 #else
       default_wstype = have_gksqt() ? 411 : 41;
