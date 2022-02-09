@@ -1593,7 +1593,16 @@ static int have_gksqt(void)
 #endif
     }
   else
-    path = (char *)env;
+    {
+      path = (char *)env;
+      if (strstr(path, "PATH=") != NULL)
+        {
+          /* In Julia BinaryBuilder environments, 'path' is a command string containing
+             loader path specifications, e.g. 'env LD_LIBRARY_PATH=...' or 'set PATH=...'.
+             So we trust that the given command is correct. */
+          return 1;
+        }
+    }
 
 #ifdef _WIN32
   result = _access(path, R_OK);
