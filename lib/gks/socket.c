@@ -223,7 +223,7 @@ static int open_socket(int wstype)
 {
   const char *command = NULL, *env;
   int retry_count;
-  int max_retry_count = 10;
+  int max_retry_count = 20;
   char *cmd = NULL;
   int s;
 
@@ -251,7 +251,7 @@ static int open_socket(int wstype)
 
   for (retry_count = 1; retry_count <= max_retry_count; retry_count++)
     {
-      if ((s = connect_socket(retry_count != 10)) == -1)
+      if ((s = connect_socket(retry_count != max_retry_count)) == -1)
         {
           if (command != NULL && retry_count == 1)
             {
@@ -265,7 +265,8 @@ static int open_socket(int wstype)
 #ifndef _WIN32
           {
             struct timespec delay = {0, 300000000};
-            nanosleep(&delay, NULL);
+            while (nanosleep(&delay, &delay) == -1)
+              ;
           }
 #else
           Sleep(300);
