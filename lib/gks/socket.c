@@ -378,14 +378,13 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
                   r2[0] = workstation_information.mheight;
                 }
             }
+          wss->aspect_ratio = 1.0;
           /*
            * TODO: Send `CREATE_WINDOW` on open workstation or implicit window creation?
            * request_type = SOCKET_FUNCTION_CREATE_WINDOW;
            * send_socket(wss->s, &request_type, 1);
            */
         }
-
-      wss->aspect_ratio = 1.0;
       break;
 
     case 3:
