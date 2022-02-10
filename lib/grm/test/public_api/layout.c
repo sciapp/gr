@@ -23,6 +23,46 @@ void visualize(element_t **elements, int nelems)
   gr_clearws();
 }
 
+void test_dynamic_grid(void)
+{
+  int i, nelems = 6;
+
+  grid_t *grid1 = grid_new(1, 1);
+
+  element_t *elements[nelems];
+
+  for (i = 0; i < nelems; i++)
+    {
+      elements[i] = element_new();
+    }
+
+  grid_setElement(0, 0, elements[0], grid1);
+  grid_setElement(0, 1, elements[1], grid1);
+
+  grid_finalize(grid1);
+
+  visualize(elements, nelems);
+
+  grid_setElement(0, 2, elements[2], grid1);
+
+  grid_finalize(grid1);
+
+  visualize(elements, nelems);
+
+  grid_setElement(1, 0, elements[2], grid1);
+  grid_setElement(1, 1, elements[2], grid1);
+
+  grid_finalize(grid1);
+
+  visualize(elements, nelems);
+
+  grid_delete(grid1);
+
+  // TODO: Test if inserted rows are the same
+  // TODO: Implement usage of slices as indices
+  // TODO: Implement trim function
+}
+
 void test_grid(void)
 {
   int nelems = 6;
@@ -66,7 +106,9 @@ void test_grid(void)
 
 int main(void)
 {
-  test_grid();
+  //  test_grid();
+
+  test_dynamic_grid();
 
   return 0;
 }

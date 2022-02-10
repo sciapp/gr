@@ -2,15 +2,16 @@
 #define LAYOUT_HPP_INCLUDED
 
 #include <vector>
+#include <unordered_map>
 
 class Slice
 {
 public:
-  Slice(int start, int end);
-
-private:
-  int start_;
-  int stop_;
+  Slice(int rowStart, int rowStop, int colStart, int colStop);
+  int rowStart_;
+  int rowStop_;
+  int colStart_;
+  int colStop_;
 };
 
 class GridElement
@@ -58,9 +59,11 @@ public:
   GridElement *getElement(int row, int col) const;
   void printGrid() const;
   virtual void finalizeSubplot();
+  void upsize(int nrows, int ncols);
 
 private:
-  std::vector<GridElement *> elements;
+  std::vector<std::vector<GridElement *>> rows;
+  std::unordered_map<GridElement *, Slice *> elementToPosition;
   int nrows;
   int ncols;
 };

@@ -3,6 +3,11 @@
 
 double epsilon = std::numeric_limits<double>::epsilon();
 
+Slice::Slice(int rowStart, int rowStop, int colStart, int colStop)
+    : rowStart_(rowStart), rowStop_(rowStop), colStart_(colStart), colStop_(colStop)
+{
+}
+
 GridElement::GridElement()
 {
   this->subplot = new double[4];
@@ -246,18 +251,49 @@ void GridElement::setFitParentsWidth(bool fitParentsWidth)
   this->fitParentsWidth = fitParentsWidth;
 }
 
-Grid::Grid(int nrows, int ncols) : GridElement(), nrows(nrows), ncols(ncols), elements(nrows * ncols, nullptr) {}
+Grid::Grid(int nrows, int ncols) : GridElement(), nrows(nrows), ncols(ncols)
+{
+  int i;
+  for (i = 0; i < nrows; ++i)
+    {
+      std::vector<GridElement *> row(ncols, nullptr);
+      rows.push_back(row);
+    }
+}
 
 Grid::~Grid() {}
 
 GridElement *Grid::getElement(int row, int col) const
 {
-  return this->elements[row * (this->ncols) + col];
+  return this->rows.at(row).at(col);
 };
 
 void Grid::setElement(int row, int col, GridElement *element)
 {
-  this->elements[row * (this->ncols) + col] = element;
+  int nrowsToAllocate, ncolsToAllocate;
+  Slice *oldSlice;
+
+  nrowsToAllocate = row + 1;
+  ncolsToAllocate = col + 1;
+
+  /* Resize the container if necessary */
+  upsize(nrowsToAllocate, ncolsToAllocate);
+
+  /* Delete element from grid if it already exists */
+  try
+    {
+      oldSlice = elementToPosition.at(element);
+      rows.at(oldSlice->rowStart_).at(oldSlice->colStart_) = nullptr;
+      elementToPosition.erase(element);
+      delete (oldSlice);
+    }
+  catch (const std::out_of_range &e)
+    {
+    };
+
+  this->rows.at(row).at(col) = element;
+  Slice *newSlice = new Slice(row, row, col, col);
+  elementToPosition[element] = newSlice;
 }
 
 void Grid::printGrid() const
@@ -297,7 +333,7 @@ void Grid::finalizeSubplot()
       for (x = 0; x < this->ncols; x++)
         {
           element = getElement(y, x);
-          if (element->fitParentsHeight && element->absHeight != -1)
+          if (element != nullptr && element->fitParentsHeight && element->absHeight != -1)
             {
               if (element->absHeight > rowHeight)
                 {
@@ -338,7 +374,7 @@ void Grid::finalizeSubplot()
       for (y = 0; y < this->nrows; y++)
         {
           element = getElement(y, x);
-          if (element->fitParentsWidth && element->absWidth != -1)
+          if (element != nullptr && element->fitParentsWidth && element->absWidth != -1)
             {
               if (element->absWidth > colWidth)
                 {
@@ -386,7 +422,10 @@ void Grid::finalizeSubplot()
           elementWidth = (colWidths[x] == -1) ? totalWidthLeft / numColsWithFlexibleWidth : colWidths[x];
           xmax += elementWidth;
 
-          element->setSubplot(xmin, xmax, ymin, ymax);
+          if (element != nullptr)
+            {
+              element->setSubplot(xmin, xmax, ymin, ymax);
+            }
           xmin = xmax;
         }
       ymax = ymin;
@@ -398,7 +437,32 @@ void Grid::finalizeSubplot()
       for (x = 0; x < this->ncols; x++)
         {
           element = getElement(y, x);
-          element->finalizeSubplot();
+          if (element != nullptr)
+            {
+              element->finalizeSubplot();
+            }
         }
+    }
+}
+
+void Grid::upsize(int nrows, int ncols)
+{
+  int i;
+  if (ncols > this->ncols)
+    {
+      for (i = 0; i < this->nrows; ++i)
+        {
+          rows.at(i).resize(ncols, nullptr);
+        }
+      this->ncols = ncols;
+    }
+  if (nrows > this->nrows)
+    {
+      for (i = this->nrows; i < nrows; ++i)
+        {
+          std::vector<GridElement *> row(this->ncols, nullptr);
+          rows.insert(rows.end(), row);
+        }
+      this->nrows = nrows;
     }
 }
