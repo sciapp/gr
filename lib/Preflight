@@ -51,24 +51,29 @@ avdefs=""
 cairodefs=""
 extradefs=""
 if [ `uname` = "Darwin" ]; then
+  if [ `arch` = "arm64" ]; then
+    extra_root="/opt"
+  else
+    extra_root="/usr/local"
+  fi
   if [ -z "${EXTRA_CFLAGS}" ]; then
-    EXTRA_CFLAGS="-I/usr/local/include -I/opt/include"
+    EXTRA_CFLAGS="-I${extra_root}/include"
   fi
   if [ -z "${EXTRA_CXXFLAGS}" ]; then
-    EXTRA_CXXFLAGS="-I/usr/local/include -I/opt/include"
+    EXTRA_CXXFLAGS="-I${extra_root}/include"
   fi
   if [ -z "${EXTRA_LDFLAGS}" ]; then
-    EXTRA_LDFLAGS="-L/usr/local/lib -L/opt/lib"
+    EXTRA_LDFLAGS="-L${extra_root}/lib"
   fi
 fi
 if [ ! -z "${EXTRA_CFLAGS}" ]; then
-  extradefs="EXTRA_CFLAGS=\"$EXTRA_CFLAGS\""
+  extradefs="EXTRA_CFLAGS=$EXTRA_CFLAGS"
 fi
 if [ ! -z "${EXTRA_CXXFLAGS}" ]; then
- extradefs="$extradefs EXTRA_CXXFLAGS=\"$EXTRA_CXXFLAGS\""
+ extradefs="$extradefs EXTRA_CXXFLAGS=$EXTRA_CXXFLAGS"
 fi
 if [ ! -z "${EXTRA_LDFLAGS}" ]; then
-  extradefs="$extradefs EXTRA_LDFLAGS=\"$EXTRA_LDFLAGS\""
+  extradefs="$extradefs EXTRA_LDFLAGS=$EXTRA_LDFLAGS"
 fi
 ret=0
 
