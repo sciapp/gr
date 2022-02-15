@@ -102,7 +102,7 @@ GKSWidget::GKSWidget(QWidget *parent)
       QProcessEnvironment::systemEnvironment().value("GKS_GKSQT_PREVENT_RESIZE").toLower().toStdString();
   if (!gks_qt_prevent_resize.empty())
     {
-      p->prevent_resize =
+      p->prevent_resize_by_dl =
           gks_qt_prevent_resize == "1" || gks_qt_prevent_resize == "true" || gks_qt_prevent_resize == "on";
     }
 }
@@ -139,7 +139,7 @@ void GKSWidget::resizeEvent(QResizeEvent *event)
   // Ignore the initial resize event (in this case `width()` and `height()` of the oldSize are `-1`))
   if ((event->oldSize().width() > 0 && event->oldSize().height() > 0) && !resize_requested_by_application)
     {
-      p->prevent_resize = 1;
+      p->prevent_resize_by_dl = true;
     }
   resize_requested_by_application = false;
 }
@@ -186,7 +186,7 @@ void GKSWidget::interpret(char *dl)
   delete[] this->dl;
   this->dl = dl;
 
-  if (!p->prevent_resize)
+  if (!p->prevent_resize_by_dl)
     {
       set_window_size_from_dl();
     }

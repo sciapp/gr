@@ -111,7 +111,9 @@ typedef struct ws_state_list_t
   double alpha, angle;
   QPixmap *pattern[PATTERNS];
   int pcolor[PATTERNS];
-  int empty, prevent_resize;
+  bool empty;
+  bool prevent_resize_by_dl;
+  bool interp_was_called;
 } ws_state_list;
 
 static ws_state_list p_, *p = &p_;
@@ -1384,7 +1386,7 @@ static void interp(char *str)
 
           gkss->fontfile = saved_gkss.fontfile;
 
-          if (!p->prevent_resize)
+          if (!p->prevent_resize_by_dl)
             {
               p->window[0] = p->window[2] = 0.0;
               p->window[1] = p->window[3] = 1.0;
@@ -1538,8 +1540,16 @@ static void interp(char *str)
           break;
 
         case 54:
-          if (!p->prevent_resize)
+          if (!p->prevent_resize_by_dl || !p->interp_was_called)
             {
+              /*
+               * In floating window managers, there is always a paint event before a user-generated resize event. Thus,
+               * in floating windows managers the first interpretation of the display list always initializes the
+               * wswindow (`p->prevent_resize_by_dl` is `false`). In tiling window managers, the first user-generated
+               * resize event is queued before the first paint event (the wm fits the window into a tile). In this case,
+               * wswindow would never be set. Therefore, always initialize wswindow if this is the first interpretation
+               * of a display list.
+               */
               p->window[0] = f_arr_1[0];
               p->window[1] = f_arr_1[1];
               p->window[2] = f_arr_2[0];
@@ -1551,7 +1561,7 @@ static void interp(char *str)
           break;
 
         case 55:
-          if (!p->prevent_resize)
+          if (!p->prevent_resize_by_dl)
             {
               p->viewport[0] = f_arr_1[0];
               p->viewport[1] = f_arr_1[1];
@@ -1593,6 +1603,8 @@ static void interp(char *str)
     }
 
   memmove(gkss, &saved_gkss, sizeof(gks_state_list_t));
+
+  p->interp_was_called = true;
 }
 
 static void initialize_data()
@@ -1615,8 +1627,9 @@ static void initialize_data()
       p->pcolor[i] = -1;
     }
 
-  p->empty = 1;
-  p->prevent_resize = 0;
+  p->empty = true;
+  p->prevent_resize_by_dl = false;
+  p->interp_was_called = false;
   p->window[0] = 0.0;
   p->window[1] = 1.0;
   p->window[2] = 0.0;
@@ -1789,7 +1802,7 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       memset(p->dl.buffer, 0, sizeof(int));
       p->dl.nbytes = 0;
 
-      p->empty = 1;
+      p->empty = true;
       break;
 
     case 8:
@@ -1808,7 +1821,7 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
     case 15:  /* fill area */
     case 16:  /* cell array */
     case 201: /* draw image */
-      p->empty = 0;
+      p->empty = false;
       break;
 
     case 205: /* configure ws */
