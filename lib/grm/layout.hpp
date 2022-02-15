@@ -8,10 +8,11 @@ class Slice
 {
 public:
   Slice(int rowStart, int rowStop, int colStart, int colStop);
-  int rowStart_;
-  int rowStop_;
-  int colStart_;
-  int colStop_;
+  int rowStart;
+  int rowStop;
+  int colStart;
+  int colStop;
+  Slice *copy();
 };
 
 class GridElement
@@ -19,7 +20,6 @@ class GridElement
 public:
   GridElement();
   virtual void finalizeSubplot();
-  double *subplot;
   void setSubplot(double x1, double x2, double y1, double y2);
   void setAbsHeight(double height);
   void setAbsHeightPxl(int height);
@@ -31,6 +31,8 @@ public:
   void setFitParentsHeight(bool fitParentsHeight);
   void setFitParentsWidth(bool fitParentsWidth);
   double *getSubplot();
+
+  double *subplot;
 
   double absHeight = -1;
   double absWidth = -1;
@@ -56,16 +58,20 @@ public:
   Grid(int nrows, int ncols);
   ~Grid();
   void setElement(int row, int col, GridElement *element);
+  void setElement(Slice *slice, GridElement *element);
   GridElement *getElement(int row, int col) const;
   void printGrid() const;
   virtual void finalizeSubplot();
-  void upsize(int nrows, int ncols);
+  void trim();
+  int getColSpan(GridElement *element);
+  int getRowSpan(GridElement *element);
 
 private:
   std::vector<std::vector<GridElement *>> rows;
   std::unordered_map<GridElement *, Slice *> elementToPosition;
   int nrows;
   int ncols;
+  void upsize(int nrows, int ncols);
 };
 
 #endif /* ifndef LAYOUT_HPP_INCLUDED */

@@ -4,43 +4,49 @@
 double epsilon = std::numeric_limits<double>::epsilon();
 
 Slice::Slice(int rowStart, int rowStop, int colStart, int colStop)
-    : rowStart_(rowStart), rowStop_(rowStop), colStart_(colStart), colStop_(colStop)
+    : rowStart(rowStart), rowStop(rowStop), colStart(colStart), colStop(colStop)
 {
+}
+
+Slice *Slice::copy()
+{
+  Slice *copy = new Slice(this->rowStart, this->rowStop, this->colStart, this->colStop);
+  return copy;
 }
 
 GridElement::GridElement()
 {
-  this->subplot = new double[4];
+  subplot = new double[4];
 };
 
 void GridElement::setSubplot(double x1, double x2, double y1, double y2)
 {
-  if (this->finalized || this->subplotSet == 0)
+  if (finalized || subplotSet == 0)
     {
-      this->subplot[0] = x1;
-      this->subplot[1] = x2;
-      this->subplot[2] = y1;
-      this->subplot[3] = y2;
+      subplot[0] = x1;
+      subplot[1] = x2;
+      subplot[2] = y1;
+      subplot[3] = y2;
 
-      this->finalized = 0;
-      this->subplotSet = 1;
+      finalized = 0;
+      subplotSet = 1;
     }
   else
     {
-      if (y1 < this->subplot[2])
+      if (y1 < subplot[2])
         {
-          this->subplot[2] = y1;
+          subplot[2] = y1;
         }
-      if (x2 > this->subplot[1])
+      if (x2 > subplot[1])
         {
-          this->subplot[1] = x2;
+          subplot[1] = x2;
         }
     }
 }
 
 void GridElement::setAbsHeight(double height)
 {
-  if (this->heightSet)
+  if (heightSet)
     {
       throw std::invalid_argument("Can only set one height attribute");
     }
@@ -48,17 +54,17 @@ void GridElement::setAbsHeight(double height)
     {
       throw std::invalid_argument("Height has to be between 0 and 1");
     }
-  if (this->arSet and this->widthSet)
+  if (arSet and widthSet)
     {
       throw std::invalid_argument("You cant restrict the height on a plot with fixed width and aspect ratio");
     }
-  this->absHeight = height;
-  this->heightSet = 1;
+  absHeight = height;
+  heightSet = 1;
 }
 
 void GridElement::setAbsHeightPxl(int height)
 {
-  if (this->heightSet)
+  if (heightSet)
     {
       throw std::invalid_argument("Can only set one height attribute");
     }
@@ -66,17 +72,17 @@ void GridElement::setAbsHeightPxl(int height)
     {
       throw std::invalid_argument("Pixel height has to be an positive integer");
     }
-  if (this->arSet and this->widthSet)
+  if (arSet and widthSet)
     {
       throw std::invalid_argument("You cant restrict the height on a plot with fixed width and aspect ratio");
     }
-  this->absHeightPxl = height;
-  this->heightSet = 1;
+  absHeightPxl = height;
+  heightSet = 1;
 }
 
 void GridElement::setRelativeHeight(double height)
 {
-  if (this->heightSet)
+  if (heightSet)
     {
       throw std::invalid_argument("Can only set one height attribute");
     }
@@ -84,17 +90,17 @@ void GridElement::setRelativeHeight(double height)
     {
       throw std::invalid_argument("Height has to be between 0 and 1");
     }
-  if (this->arSet and this->widthSet)
+  if (arSet and widthSet)
     {
       throw std::invalid_argument("You cant restrict the height on a plot with fixed width and aspect ratio");
     }
-  this->relativeHeight = height;
-  this->heightSet = 1;
+  relativeHeight = height;
+  heightSet = 1;
 }
 
 void GridElement::setAbsWidth(double width)
 {
-  if (this->widthSet)
+  if (widthSet)
     {
       throw std::invalid_argument("Can only set one width attribute");
     }
@@ -102,17 +108,17 @@ void GridElement::setAbsWidth(double width)
     {
       throw std::invalid_argument("Width has to be between 0 and 1");
     }
-  if (this->arSet and this->heightSet)
+  if (arSet and heightSet)
     {
       throw std::invalid_argument("You cant restrict the width on a plot with fixed height and aspect ratio");
     }
-  this->absWidth = width;
-  this->widthSet = 1;
+  absWidth = width;
+  widthSet = 1;
 }
 
 void GridElement::setAbsWidthPxl(int width)
 {
-  if (this->widthSet)
+  if (widthSet)
     {
       throw std::invalid_argument("Can only set one width attribute");
     }
@@ -120,17 +126,17 @@ void GridElement::setAbsWidthPxl(int width)
     {
       throw std::invalid_argument("Pixel Width has to be an positive integer");
     }
-  if (this->arSet and this->heightSet)
+  if (arSet and heightSet)
     {
       throw std::invalid_argument("You cant restrict the width on a plot with fixed height and aspect ratio");
     }
-  this->absWidthPxl = width;
-  this->widthSet = 1;
+  absWidthPxl = width;
+  widthSet = 1;
 }
 
 void GridElement::setRelativeWidth(double width)
 {
-  if (this->widthSet)
+  if (widthSet)
     {
       throw std::invalid_argument("Can only set one width attribute");
     }
@@ -138,12 +144,12 @@ void GridElement::setRelativeWidth(double width)
     {
       throw std::invalid_argument("Width has to be between 0 and 1");
     }
-  if (this->arSet and this->heightSet)
+  if (arSet and heightSet)
     {
       throw std::invalid_argument("You cant restrict the width on a plot with fixed height and aspect ratio");
     }
-  this->relativeWidth = width;
-  this->widthSet = 1;
+  relativeWidth = width;
+  widthSet = 1;
 }
 
 void GridElement::setAspectRatio(double ar)
@@ -152,93 +158,93 @@ void GridElement::setAspectRatio(double ar)
     {
       throw std::invalid_argument("Aspect ration has to be bigger than 0");
     }
-  if (this->widthSet && this->heightSet)
+  if (widthSet && heightSet)
     {
       throw std::invalid_argument("You cant restrict the aspect ratio on a plot with fixed sides");
     }
-  this->aspectRatio = ar;
-  this->arSet = 1;
+  aspectRatio = ar;
+  arSet = 1;
 }
 
 void GridElement::finalizeSubplot()
 {
-  if (this->finalized)
+  if (finalized)
     {
       return;
     }
 
-  if (this->absHeight != -1)
+  if (absHeight != -1)
     {
       double availableHeight = subplot[3] - subplot[2];
-      if (this->absHeight > availableHeight + epsilon)
+      if (absHeight > availableHeight + epsilon)
         {
           throw std::invalid_argument("Absolute height is bigger than available height");
         }
       double middle = subplot[2] + availableHeight / 2;
-      subplot[2] = middle - this->absHeight / 2;
-      subplot[3] = middle + this->absHeight / 2;
+      subplot[2] = middle - absHeight / 2;
+      subplot[3] = middle + absHeight / 2;
     }
 
-  if (this->absWidth != -1)
+  if (absWidth != -1)
     {
       double availableWidth = subplot[1] - subplot[0];
-      if (this->absWidth > availableWidth + epsilon)
+      if (absWidth > availableWidth + epsilon)
         {
           throw std::invalid_argument("Absolute width is bigger than available width");
         }
       double middle = subplot[0] + availableWidth / 2;
-      subplot[0] = middle - this->absWidth / 2;
-      subplot[1] = middle + this->absWidth / 2;
+      subplot[0] = middle - absWidth / 2;
+      subplot[1] = middle + absWidth / 2;
     }
 
-  if (this->relativeHeight != -1)
+  if (relativeHeight != -1)
     {
       double availableHeight = subplot[3] - subplot[2];
       double middle = subplot[2] + availableHeight / 2;
-      double newHeight = availableHeight * this->relativeHeight;
+      double newHeight = availableHeight * relativeHeight;
       subplot[2] = middle - newHeight / 2;
       subplot[3] = middle + newHeight / 2;
     }
 
-  if (this->relativeWidth != -1)
+  if (relativeWidth != -1)
     {
       double availableWidth = subplot[1] - subplot[0];
       double middle = subplot[0] + availableWidth / 2;
-      double newWidth = availableWidth * this->relativeWidth;
+      double newWidth = availableWidth * relativeWidth;
       subplot[0] = middle - newWidth / 2;
       subplot[1] = middle + newWidth / 2;
     }
 
   /* TODO: implement for pxl */
 
-  if (this->arSet)
+  if (arSet)
     {
       double currentHeigth = (subplot[3] - subplot[2]);
       double currentWidth = (subplot[1] - subplot[0]);
       double currentAR = currentWidth / currentHeigth;
 
-      if (currentAR < this->aspectRatio)
+      if (currentAR < aspectRatio)
         {
-          double newHeight = currentWidth / this->aspectRatio;
+          double newHeight = currentWidth / aspectRatio;
           double middle = subplot[2] + currentHeigth / 2;
           subplot[2] = middle - newHeight / 2;
           subplot[3] = middle + newHeight / 2;
         }
       else
         {
-          double newWidth = currentHeigth * this->aspectRatio;
+          double newWidth = currentHeigth * aspectRatio;
           double middle = subplot[0] + currentWidth / 2;
           subplot[0] = middle - newWidth;
           subplot[1] = middle + newWidth;
         }
     }
 
-  this->finalized = 1;
+  finalized = 1;
 }
 
 double *GridElement::getSubplot()
 {
-  return this->subplot;
+  return subplot;
 }
 
 void GridElement::setFitParentsHeight(bool fitParentsHeight)
@@ -261,11 +267,18 @@ Grid::Grid(int nrows, int ncols) : GridElement(), nrows(nrows), ncols(ncols)
     }
 }
 
-Grid::~Grid() {}
+Grid::~Grid()
+{
+  for (auto const &x : this->elementToPosition)
+    {
+      /* delete allocated slices */
+      delete x.second;
+    }
+}
 
 GridElement *Grid::getElement(int row, int col) const
 {
-  return this->rows.at(row).at(col);
+  return rows.at(row).at(col);
 };
 
 void Grid::setElement(int row, int col, GridElement *element)
@@ -283,7 +296,7 @@ void Grid::setElement(int row, int col, GridElement *element)
   try
     {
       oldSlice = elementToPosition.at(element);
-      rows.at(oldSlice->rowStart_).at(oldSlice->colStart_) = nullptr;
+      rows.at(oldSlice->rowStart).at(oldSlice->colStart) = nullptr;
       elementToPosition.erase(element);
       delete (oldSlice);
     }
@@ -291,19 +304,53 @@ void Grid::setElement(int row, int col, GridElement *element)
     {
     };
 
-  this->rows.at(row).at(col) = element;
+  rows.at(row).at(col) = element;
   Slice *newSlice = new Slice(row, row, col, col);
+  elementToPosition[element] = newSlice;
+}
+
+void Grid::setElement(Slice *slice, GridElement *element)
+{
+  int nrowsToAllocate, ncolsToAllocate;
+  Slice *oldSlice;
+
+  nrowsToAllocate = slice->rowStop;
+  ncolsToAllocate = slice->colStop;
+
+  /* Resize the container if necessary */
+  upsize(nrowsToAllocate, ncolsToAllocate);
+
+  /* Delete element from grid if it already exists */
+  try
+    {
+      oldSlice = elementToPosition.at(element);
+      rows.at(oldSlice->rowStart).at(oldSlice->colStart) = nullptr;
+      elementToPosition.erase(element);
+      delete (oldSlice);
+    }
+  catch (const std::out_of_range &e)
+    {
+    };
+
+  for (int row = slice->rowStart; row < slice->rowStop; ++row)
+    {
+      for (int col = slice->colStart; col < slice->colStop; ++col)
+        {
+          rows.at(row).at(col) = element;
+        }
+    }
+  Slice *newSlice = slice->copy();
   elementToPosition[element] = newSlice;
 }
 
 void Grid::printGrid() const
 {
   double *subplot;
-  for (int i = 0; i < this->nrows; i++)
+  for (int i = 0; i < nrows; i++)
     {
-      for (int j = 0; j < this->ncols; j++)
+      for (int j = 0; j < ncols; j++)
         {
-          subplot = this->getElement(i, j)->subplot;
+          subplot = getElement(i, j)->subplot;
           printf("[%f %f %f %f] ", subplot[0], subplot[1], subplot[2], subplot[3]);
         }
       printf("\n");
@@ -313,31 +360,33 @@ void Grid::printGrid() const
 void Grid::finalizeSubplot()
 {
   double xmin, xmax, ymin, ymax, rowHeight, elementWidth;
-  int y, x;
+  int y, x, rowSpan, colSpan;
   GridElement *element;
 
-  if (!this->subplotSet)
+  if (!subplotSet)
     {
-      this->setSubplot(0, 1, 0, 1);
+      setSubplot(0, 1, 0, 1);
     }
 
   GridElement::finalizeSubplot();
 
   /* calculate height of each row */
-  double rowHeights[this->nrows];
-  double totalHeightLeft = this->subplot[3] - this->subplot[2];
+  double rowHeights[nrows];
+  double totalHeightLeft = subplot[3] - subplot[2];
   int numRowsWithFlexibleHeight = 0;
-  for (y = 0; y < this->nrows; y++)
+  for (y = 0; y < nrows; y++)
     {
       double rowHeight = -1;
-      for (x = 0; x < this->ncols; x++)
+      for (x = 0; x < ncols; x++)
         {
           element = getElement(y, x);
           if (element != nullptr && element->fitParentsHeight && element->absHeight != -1)
             {
-              if (element->absHeight > rowHeight)
+              /* taking into account that an element can range over multiple rows */
+              rowSpan = this->getRowSpan(element);
+              if (element->absHeight / rowSpan > rowHeight)
                 {
-                  rowHeight = element->absHeight;
+                  rowHeight = element->absHeight / rowSpan;
                 }
             }
         }
@@ -358,27 +407,29 @@ void Grid::finalizeSubplot()
   if (numRowsWithFlexibleHeight == 0)
     {
       /* distribute the height that is left */
-      for (y = 0; y < this->nrows; y++)
+      for (y = 0; y < nrows; y++)
         {
-          rowHeights[y] += totalHeightLeft / this->nrows;
+          rowHeights[y] += totalHeightLeft / nrows;
         }
     }
 
   /* calculate width of each column */
-  double totalWidthLeft = this->subplot[1] - this->subplot[0];
-  double colWidths[this->ncols];
+  double totalWidthLeft = subplot[1] - subplot[0];
+  double colWidths[ncols];
   int numColsWithFlexibleWidth = 0;
-  for (x = 0; x < this->ncols; x++)
+  for (x = 0; x < ncols; x++)
     {
       double colWidth = -1;
-      for (y = 0; y < this->nrows; y++)
+      for (y = 0; y < nrows; y++)
         {
           element = getElement(y, x);
           if (element != nullptr && element->fitParentsWidth && element->absWidth != -1)
             {
-              if (element->absWidth > colWidth)
+              /* taking into account that an element can range over multiple columns */
+              colSpan = this->getColSpan(element);
+              if (element->absWidth / colSpan > colWidth)
                 {
-                  colWidth = element->absWidth;
+                  colWidth = element->absWidth / colSpan;
                 }
             }
         }
@@ -398,24 +449,24 @@ void Grid::finalizeSubplot()
     }
   if (numColsWithFlexibleWidth == 0)
     {
-      for (x = 0; x < this->ncols; x++)
+      for (x = 0; x < ncols; x++)
         {
-          colWidths[x] = totalWidthLeft / this->ncols;
+          colWidths[x] += totalWidthLeft / ncols;
         }
     }
 
   /* calculate the subplot for each element */
-  ymax = this->subplot[3];
+  ymax = subplot[3];
   ymin = ymax;
-  for (y = 0; y < this->nrows; y++)
+  for (y = 0; y < nrows; y++)
     {
-      xmin = this->subplot[0];
+      xmin = subplot[0];
       xmax = xmin;
 
       rowHeight = (rowHeights[y] == -1) ? totalHeightLeft / numRowsWithFlexibleHeight : rowHeights[y];
       ymin -= rowHeight;
 
-      for (x = 0; x < this->ncols; x++)
+      for (x = 0; x < ncols; x++)
         {
           element = getElement(y, x);
 
@@ -432,9 +483,9 @@ void Grid::finalizeSubplot()
     }
 
   /* call finalize on each element */
-  for (y = 0; y < this->nrows; y++)
+  for (y = 0; y < nrows; y++)
     {
-      for (x = 0; x < this->ncols; x++)
+      for (x = 0; x < ncols; x++)
         {
           element = getElement(y, x);
           if (element != nullptr)
@@ -461,8 +512,77 @@ void Grid::upsize(int nrows, int ncols)
       for (i = this->nrows; i < nrows; ++i)
         {
           std::vector<GridElement *> row(this->ncols, nullptr);
-          rows.insert(rows.end(), row);
+          this->rows.insert(this->rows.end(), row);
         }
       this->nrows = nrows;
     }
+}
+
+void Grid::trim()
+{
+  int row, col;
+  bool removeRow, removeCol;
+  std::vector<int> colsToRemove;
+
+  /* remove empty rows */
+  auto rowIterator = rows.begin();
+  while (rowIterator != rows.end())
+    {
+      removeRow = true;
+      for (auto colIterator = rowIterator->begin(); colIterator != rowIterator->end(); ++colIterator)
+        {
+          if (*colIterator != nullptr)
+            {
+              removeRow = false;
+            }
+        }
+      if (removeRow)
+        {
+          rowIterator = rows.erase(rowIterator);
+          --(nrows);
+        }
+      else
+        {
+          ++rowIterator;
+        }
+    }
+
+  /* remove empty cols */
+  col = 0;
+  while (col != ncols)
+    {
+      removeCol = true;
+      for (row = 0; row < nrows; ++row)
+        {
+          if (getElement(row, col) != nullptr)
+            {
+              removeCol = false;
+            }
+        }
+      if (removeCol)
+        {
+          for (row = 0; row < nrows; ++row)
+            {
+              auto colIterator = rows.at(row).begin();
+              rows.at(row).erase(colIterator + col);
+            }
+          --(ncols);
+        }
+      else
+        {
+          ++col;
+        }
+    }
+}
+
+int Grid::getColSpan(GridElement *element)
+{
+  Slice *slice = elementToPosition.at(element);
+  return slice->colStop - slice->colStart;
+}
+
+int Grid::getRowSpan(GridElement *element)
+{
+  Slice *slice = elementToPosition.at(element);
+  return slice->rowStop - slice->rowStart;
 }

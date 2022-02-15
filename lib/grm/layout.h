@@ -25,9 +25,11 @@ typedef struct _element_t element_t;
 
 grid_t *grid_new(int nrows, int ncols);
 void grid_print(const grid_t *grid);
-void grid_setElement(int row, int col, element_t *a_element, grid_t *a_grid);
+// void grid_setElement(int row, int col, element_t *a_element, grid_t *a_grid);
+void grid_setElement(int rowStart, int rowStop, int colStart, int colStop, element_t *a_element, grid_t *a_grid);
 void grid_finalize(grid_t *a_grid);
 void grid_delete(const grid_t *grid);
+void trim(grid_t *a_grid);
 
 /* ------------------------- element -------------------------------------------------------------------------------- */
 
