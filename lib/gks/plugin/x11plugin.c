@@ -3611,7 +3611,8 @@ static void get_pointer(int *n, double *x, double *y, int *state, int *term)
       if (p->wstype == 212)
         {
           struct timespec delay = {0, 200000000}; /* 200 ms */
-          nanosleep(&delay, NULL);
+          while (nanosleep(&delay, &delay) == -1)
+            ;
         }
 #endif
 
@@ -3963,7 +3964,8 @@ static void *event_loop(void *arg)
     {
       {
         struct timespec delay = {0, 10000000}; /* 10 ms */
-        nanosleep(&delay, NULL);
+        while (nanosleep(&delay, &delay) == -1)
+          ;
       }
 
       if (idle && p->run)
@@ -4200,7 +4202,8 @@ void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
                   p->run = 0;
                   {
                     struct timespec delay = {0, 10000000}; /* 10 ms */
-                    nanosleep(&delay, NULL);
+                    while (nanosleep(&delay, &delay) == -1)
+                      ;
                   }
                 }
             }

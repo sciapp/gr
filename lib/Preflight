@@ -51,14 +51,19 @@ avdefs=""
 cairodefs=""
 extradefs=""
 if [ `uname` = "Darwin" ]; then
+  if [ `arch` = "arm64" ]; then
+    extra_root="/opt"
+  else
+    extra_root="/usr/local"
+  fi
   if [ -z "${EXTRA_CFLAGS}" ]; then
-    EXTRA_CFLAGS="-I/usr/local/include"
+    EXTRA_CFLAGS="-I${extra_root}/include"
   fi
   if [ -z "${EXTRA_CXXFLAGS}" ]; then
-    EXTRA_CXXFLAGS="-I/usr/local/include"
+    EXTRA_CXXFLAGS="-I${extra_root}/include"
   fi
   if [ -z "${EXTRA_LDFLAGS}" ]; then
-    EXTRA_LDFLAGS="-L/usr/local/lib"
+    EXTRA_LDFLAGS="-L${extra_root}/lib"
   fi
 fi
 if [ ! -z "${EXTRA_CFLAGS}" ]; then
@@ -593,7 +598,7 @@ int main(int argc, char **argv) {
 }
 eof
   libs="-lm"
-  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lcairo -lpixman-1 -lpthread -lfreetype"
+  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lcairo -lpixman-1 -lpthread -lfreetype -lz"
   $cmd $libs >/dev/null 2>&1
   if [ $? -ne 0 ]; then
     cairodefs="CAIRODEFS=-DNO_CAIRO CAIROLIBS="

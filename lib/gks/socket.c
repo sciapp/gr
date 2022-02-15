@@ -223,7 +223,7 @@ static int open_socket(int wstype)
 {
   const char *command = NULL, *env;
   int retry_count;
-  int max_retry_count = 10;
+  int max_retry_count = 20;
   char *cmd = NULL;
   int s;
 
@@ -251,7 +251,7 @@ static int open_socket(int wstype)
 
   for (retry_count = 1; retry_count <= max_retry_count; retry_count++)
     {
-      if ((s = connect_socket(retry_count != 10)) == -1)
+      if ((s = connect_socket(retry_count != max_retry_count)) == -1)
         {
           if (command != NULL && retry_count == 1)
             {
@@ -265,7 +265,8 @@ static int open_socket(int wstype)
 #ifndef _WIN32
           {
             struct timespec delay = {0, 300000000};
-            nanosleep(&delay, NULL);
+            while (nanosleep(&delay, &delay) == -1)
+              ;
           }
 #else
           Sleep(300);
@@ -377,14 +378,13 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
                   r2[0] = workstation_information.mheight;
                 }
             }
+          wss->aspect_ratio = 1.0;
           /*
            * TODO: Send `CREATE_WINDOW` on open workstation or implicit window creation?
            * request_type = SOCKET_FUNCTION_CREATE_WINDOW;
            * send_socket(wss->s, &request_type, 1);
            */
         }
-
-      wss->aspect_ratio = 1.0;
       break;
 
     case 3:

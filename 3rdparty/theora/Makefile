@@ -32,6 +32,7 @@ $(PREFIX)/src/libtheora-$(VERSION).tar.gz:
 $(PREFIX)/src/libtheora-$(VERSION)/configure: $(PREFIX)/src/libtheora-$(VERSION).tar.gz
 	cd $(PREFIX)/src/ && tar -xf libtheora-$(VERSION).tar.gz
 	cd $(PREFIX)/src/ && patch -p0 < $(CURDIR)/libtheora.patch
+	cp $(CURDIR)/config.guess $(CURDIR)/config.sub $$(dirname $@)
 	touch $@
 
 $(PREFIX)/src/libtheora-$(VERSION)/Makefile: $(PREFIX)/src/libtheora-$(VERSION)/configure $(PREFIX)/lib/libogg.a

@@ -1593,7 +1593,16 @@ static int have_gksqt(void)
 #endif
     }
   else
-    path = (char *)env;
+    {
+      path = (char *)env;
+      if (strstr(path, "PATH=") != NULL)
+        {
+          /* In Julia BinaryBuilder environments, 'path' is a command string containing
+             loader path specifications, e.g. 'env LD_LIBRARY_PATH=...' or 'set PATH=...'.
+             So we trust that the given command is correct. */
+          return 1;
+        }
+    }
 
 #ifdef _WIN32
   result = _access(path, R_OK);
@@ -1726,7 +1735,7 @@ static int get_default_ws_type(void)
 #else
 #ifndef _WIN32
 #ifdef __APPLE__
-      if (gks_getenv("TERM_PROGRAM") != NULL)
+      if (gks_getenv("TERM_PROGRAM") != NULL || gks_getenv("TERMINAL_EMULATOR") != NULL)
         default_wstype = 400;
       else
 #else
@@ -1734,10 +1743,17 @@ static int get_default_ws_type(void)
         default_wstype = have_gksqt() ? 411 : 211;
       else
 #endif
-        default_wstype = have_iterm() ? 151 : 100;
-      if (default_wstype == 100)
         {
-          gks_perror("cannot open display - headless operation mode active");
+          if (have_iterm()) default_wstype = 151;
+#ifdef __APPLE__
+          else if (access("/dev/console", R_OK) == 0)
+            default_wstype = 400;
+#endif
+          else
+            {
+              default_wstype = 100;
+              gks_perror("cannot open display - headless operation mode active");
+            }
         }
 #else
       default_wstype = have_gksqt() ? 411 : 41;

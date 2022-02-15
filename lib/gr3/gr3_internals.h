@@ -1,9 +1,32 @@
 #ifndef GR3_INTERNALS_H_INCLUDED
 #define GR3_INTERNALS_H_INCLUDED
 
+typedef struct _GR3_LightSource_t_
+{
+  float x;
+  float y;
+  float z;
+  float r;
+  float g;
+  float b;
+} GR3_LightSource_t_;
+#define MAX_NUM_LIGHTS 16
+
+typedef struct _GR3_LightParameter_t_
+{
+  float ambient;
+  float diffuse;
+  float specular_exponent;
+  float specular;
+} GR3_LightParameter_t_;
+
 #include "gr3_sr.h"
 #ifndef M_PI
 #define M_PI 3.141592653589793238462643383279
+#endif
+
+#ifndef isfinite
+#define isfinite(x) ((x) - (x) == (x) - (x))
 #endif
 
 #if defined(EMSCRIPTEN)
@@ -236,8 +259,6 @@ typedef struct _GR3_ContextStruct_t_
   float bottom;                 /*!< distance to the bottom plane of the orthographic projection */
   float top;                    /*!< distance to the top plane of the orthographic projection */
 
-  GLfloat light_dir[4]; /*!< The direction of light + 0 for showing that it is
-                         not a position, but a direction */
   int use_vbo;
 
   int cylinder_mesh;
@@ -271,6 +292,15 @@ typedef struct _GR3_ContextStruct_t_
   int last_width;
   int last_height;
   float aspect_override;
+  int num_lights;
+  GR3_LightSource_t_ light_sources[MAX_NUM_LIGHTS];
+  GR3_LightParameter_t_ light_parameters;
+  float clip_xmin;
+  float clip_xmax;
+  float clip_ymin;
+  float clip_ymax;
+  float clip_zmin;
+  float clip_zmax;
 } GR3_ContextStruct_t_;
 
 extern GR3_ContextStruct_t_ context_struct_;
