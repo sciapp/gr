@@ -112,6 +112,7 @@ typedef struct ws_state_list_t
   QPixmap *pattern[PATTERNS];
   int pcolor[PATTERNS];
   int empty, prevent_resize;
+  int interp_was_called;
 } ws_state_list;
 
 static ws_state_list p_, *p = &p_;
@@ -1538,8 +1539,16 @@ static void interp(char *str)
           break;
 
         case 54:
-          if (!p->prevent_resize)
+          if (!p->prevent_resize || !p->interp_was_called)
             {
+              /*
+               * In floating window managers, there is always a paint event before a user-generated resize event. Thus,
+               * in floating windows managers the first interpretation of the display list always initializes the
+               * wswindow (`p->prevent_resize` is `0`). In tiling window managers, the first user-generated resize event
+               * is queued before the first paint event (the wm fits the window into a tile). In this case, wswindow
+               * would never be set. Therefore, always initialize wswindow if this is the first interpretation of a
+               * display list.
+               */
               p->window[0] = f_arr_1[0];
               p->window[1] = f_arr_1[1];
               p->window[2] = f_arr_2[0];
@@ -1593,6 +1602,8 @@ static void interp(char *str)
     }
 
   memmove(gkss, &saved_gkss, sizeof(gks_state_list_t));
+
+  p->interp_was_called = 1;
 }
 
 static void initialize_data()
@@ -1617,6 +1628,7 @@ static void initialize_data()
 
   p->empty = 1;
   p->prevent_resize = 0;
+  p->interp_was_called = 0;
   p->window[0] = 0.0;
   p->window[1] = 1.0;
   p->window[2] = 0.0;
