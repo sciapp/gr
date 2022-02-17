@@ -1,7 +1,7 @@
 #!/bin/bash
 
 EXCLUDED_ROOT_DIRECTORIES=( "3rdparty" "apps" )
-PREFERRED_CLANG_FORMAT_VERSION="9"
+PREFERRED_CLANG_FORMAT_VERSION="13"
 
 is_in_excluded_directory () {
     local file directory
