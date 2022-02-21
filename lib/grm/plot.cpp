@@ -5327,6 +5327,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   gr_setlinewidth(1);
   diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
+
   ticksize = 0.0075 * diag;
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
