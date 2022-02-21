@@ -11,6 +11,9 @@ PNGCFLAGS += -DPNG_ARM_NEON_OPT=0
 endif
 endif
 endif
+ifeq ($(shell arch),aarch64)
+PNGCFLAGS += -DPNG_ARM_NEON_OPT=0
+endif
       OBJS = \
 	png.o \
 	pngerror.o \
