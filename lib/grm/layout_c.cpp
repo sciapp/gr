@@ -24,15 +24,20 @@ void grid_print(const grid_t *a_grid)
   grid->printGrid();
 }
 
-// void grid_setElement(int row, int col, element_t *a_element, grid_t *a_grid)
-//{
-//
-//  Grid *grid = reinterpret_cast<Grid *>(a_grid);
-//  GridElement *element = reinterpret_cast<GridElement *>(a_element);
-//  grid->setElement(row, col, element);
-//}
+void grid_setElement(int row, int col, element_t *a_element, grid_t *a_grid)
+{
+  Grid *grid = reinterpret_cast<Grid *>(a_grid);
+  GridElement *element = reinterpret_cast<GridElement *>(a_element);
+  grid->setElement(row, col, element);
+}
 
-void grid_setElement(int rowStart, int rowStop, int colStart, int colStop, element_t *a_element, grid_t *a_grid)
+void grid_setElementArgs(int row, int col, grm_args_t *subplot_args, grid_t *a_grid)
+{
+  Grid *grid = reinterpret_cast<Grid *>(a_grid);
+  grid->setElement(row, col, subplot_args);
+}
+
+void grid_setElementSlice(int rowStart, int rowStop, int colStart, int colStop, element_t *a_element, grid_t *a_grid)
 {
   Grid *grid = reinterpret_cast<Grid *>(a_grid);
   GridElement *element = reinterpret_cast<GridElement *>(a_element);

@@ -1,4 +1,6 @@
 #include <iostream>
+#include <limits>
+#include <sstream>
 #include "layout.hpp"
 
 double epsilon = std::numeric_limits<double>::epsilon();
@@ -239,6 +241,11 @@ void GridElement::finalizeSubplot()
         }
     }
 
+  if (subplot_args != nullptr)
+    {
+      grm_args_push(subplot_args, "subplot", "nD", 4, subplot);
+    }
+
   finalized = 1;
 }
 
@@ -309,6 +316,25 @@ void Grid::setElement(int row, int col, GridElement *element)
   elementToPosition[element] = newSlice;
 }
 
+void Grid::setElement(int row, int col, grm_args_t *subplot_args)
+{
+  GridElement *element = nullptr;
+  const char *grid_element_address = nullptr;
+  if (args_values(subplot_args, "grid_element", "s", &grid_element_address))
+    {
+      element = reinterpret_cast<GridElement *>(std::stoi(grid_element_address));
+    }
+  else
+    {
+      element = new GridElement();
+      element->subplot_args = subplot_args;
+    }
+  setElement(row, col, element);
+  std::stringstream address_stream;
+  address_stream << element;
+  grm_args_push(subplot_args, "grid_element", "s", address_stream.str().c_str());
+}
+
 void Grid::setElement(Slice *slice, GridElement *element)
 {
   int nrowsToAllocate, ncolsToAllocate;
@@ -341,6 +367,25 @@ void Grid::setElement(Slice *slice, GridElement *element)
     }
   Slice *newSlice = slice->copy();
   elementToPosition[element] = newSlice;
+}
+
+void Grid::setElement(Slice *slice, grm_args_t *subplot_args)
+{
+  GridElement *element = nullptr;
+  const char *grid_element_address = nullptr;
+  if (args_values(subplot_args, "grid_element", "s", &grid_element_address))
+    {
+      element = reinterpret_cast<GridElement *>(std::stoi(grid_element_address));
+    }
+  else
+    {
+      element = new GridElement();
+      element->subplot_args = subplot_args;
+    }
+  setElement(slice, element);
+  std::stringstream address_stream;
+  address_stream << element;
+  grm_args_push(subplot_args, "grid_element", "s", address_stream.str().c_str());
 }
 
 void Grid::printGrid() const

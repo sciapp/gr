@@ -4,6 +4,8 @@
 #include <vector>
 #include <unordered_map>
 
+#include "args_int.h"
+
 class Slice
 {
 public:
@@ -50,6 +52,8 @@ public:
   int subplotSet = 0;
 
   int finalized = 0;
+
+  grm_args_t *subplot_args = nullptr;
 };
 
 class Grid : public GridElement
@@ -58,7 +62,9 @@ public:
   Grid(int nrows, int ncols);
   ~Grid();
   void setElement(int row, int col, GridElement *element);
+  void setElement(int row, int col, grm_args_t *args);
   void setElement(Slice *slice, GridElement *element);
+  void setElement(Slice *slice, grm_args_t *args);
   GridElement *getElement(int row, int col) const;
   void printGrid() const;
   virtual void finalizeSubplot();
