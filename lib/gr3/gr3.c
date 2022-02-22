@@ -1801,6 +1801,10 @@ GR3API int gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int wid
   switch (drawable_type)
     {
     case GR3_DRAWABLE_OPENGL:
+      if (context_struct_.use_software_renderer == 1)
+        {
+          RETURN_ERROR(GR3_ERROR_INVALID_VALUE);
+        }
       return gr3_drawimage_opengl_(xmin, xmax, ymin, ymax, width, height);
     case GR3_DRAWABLE_GKS:
       return gr3_drawimage_gks_(xmin, xmax, ymin, ymax, width, height);
