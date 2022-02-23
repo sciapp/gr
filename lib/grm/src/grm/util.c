@@ -36,8 +36,8 @@ void bin_data(unsigned int n, double *x, unsigned int num_bins, double *bins, do
 
   for (i = 0; i < n; ++i)
     {
-      x_min = min(x[i], x_min);
-      x_max = max(x[i], x_max);
+      x_min = grm_min(x[i], x_min);
+      x_max = grm_max(x[i], x_max);
     }
   memset(bins, 0, num_bins * sizeof(double));
   for (i = 0; i < n; ++i)

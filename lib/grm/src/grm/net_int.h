@@ -1,6 +1,10 @@
 #ifndef GRM_NET_INT_H_INCLUDED
 #define GRM_NET_INT_H_INCLUDED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* ######################### includes ############################################################################### */
 
 #include "error_int.h"
@@ -30,11 +34,11 @@
 struct _net_handle_t;
 typedef struct _net_handle_t net_handle_t;
 
-typedef error_t (*recv_callback_t)(net_handle_t *);
-typedef error_t (*send_callback_t)(net_handle_t *);
+typedef err_t (*recv_callback_t)(net_handle_t *);
+typedef err_t (*send_callback_t)(net_handle_t *);
 typedef const char *(*custom_recv_callback_t)(const char *, unsigned int);
 typedef int (*custom_send_callback_t)(const char *, unsigned int, const char *);
-typedef error_t (*finalize_callback_t)(net_handle_t *);
+typedef err_t (*finalize_callback_t)(net_handle_t *);
 
 struct _net_handle_t
 {
@@ -88,24 +92,27 @@ struct _net_handle_t
 
 /* ------------------------- receiver ------------------------------------------------------------------------------- */
 
-static error_t receiver_init_for_socket(net_handle_t *handle, const char *hostname, unsigned int port);
-static error_t receiver_init_for_custom(net_handle_t *handle, const char *name, unsigned int id,
-                                        const char *(*custom_recv)(const char *, unsigned int));
-static error_t receiver_finalize_for_socket(net_handle_t *handle);
-static error_t receiver_finalize_for_custom(net_handle_t *handle);
-static error_t receiver_recv_for_socket(net_handle_t *handle);
-static error_t receiver_recv_for_custom(net_handle_t *handle);
+static err_t receiver_init_for_socket(net_handle_t *handle, const char *hostname, unsigned int port);
+static err_t receiver_init_for_custom(net_handle_t *handle, const char *name, unsigned int id,
+                                      const char *(*custom_recv)(const char *, unsigned int));
+static err_t receiver_finalize_for_socket(net_handle_t *handle);
+static err_t receiver_finalize_for_custom(net_handle_t *handle);
+static err_t receiver_recv_for_socket(net_handle_t *handle);
+static err_t receiver_recv_for_custom(net_handle_t *handle);
 
 
 /* ------------------------- sender --------------------------------------------------------------------------------- */
 
-static error_t sender_init_for_socket(net_handle_t *handle, const char *hostname, unsigned int port);
-static error_t sender_init_for_custom(net_handle_t *handle, const char *name, unsigned int id,
-                                      int (*custom_send)(const char *, unsigned int, const char *));
-static error_t sender_finalize_for_socket(net_handle_t *handle);
-static error_t sender_finalize_for_custom(net_handle_t *handle);
-static error_t sender_send_for_socket(net_handle_t *handle);
-static error_t sender_send_for_custom(net_handle_t *handle);
+static err_t sender_init_for_socket(net_handle_t *handle, const char *hostname, unsigned int port);
+static err_t sender_init_for_custom(net_handle_t *handle, const char *name, unsigned int id,
+                                    int (*custom_send)(const char *, unsigned int, const char *));
+static err_t sender_finalize_for_socket(net_handle_t *handle);
+static err_t sender_finalize_for_custom(net_handle_t *handle);
+static err_t sender_send_for_socket(net_handle_t *handle);
+static err_t sender_send_for_custom(net_handle_t *handle);
 
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* ifndef GRM_NET_INT_H_INCLUDED */

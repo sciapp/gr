@@ -42,5 +42,4 @@ EXPORT grm_tooltip_info_t *grm_get_tooltip(const int, const int);
 #ifdef __cplusplus
 }
 #endif
-
 #endif /* ifndef GRM_INTERACTION_H_INCLUDED */

@@ -1,6 +1,10 @@
 #ifndef GRM_ERROR_INT_H_INCLUDED
 #define GRM_ERROR_INT_H_INCLUDED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef __unix__
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200112L
@@ -137,7 +141,7 @@ typedef enum
   ENUM_VALUE(NO_ERROR, 0)
 #endif
       ENUM_ELEMENTS(ENUM_VALUE, ENUM_LAST_VALUE)
-} error_t;
+} err_t;
 
 /* ######################### public implementatin ################################################################### */
 
@@ -157,4 +161,7 @@ void debug_printf(const char *format, ...);
 #endif
 
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* ifndef GRM_ERROR_INT_H_INCLUDED */

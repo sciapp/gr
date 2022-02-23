@@ -25,6 +25,9 @@ else
     OPTS += -s ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=2
 endif
  DEFINES = -DEMSCRIPTEN -D__SVR4 -DGRDIR=\"\" -DNO_GL -DNO_THREADS
+  CFLAGS = $(DEFINES) $(OPTS) $(EXTRA_CFLAGS)
+CXXFLAGS = $(DEFINES) $(OPTS) -std=c++17 $(EXTRA_CXXFLAGS)
+ LDFLAGS = $(DEFINES) $(OPTS) $(EXTRA_LDFLAGS)
  JPEGDIR = ../3rdparty/jpeg
   PNGDIR = ../3rdparty/libpng16
  ZLIBDIR = ../3rdparty/zlib
@@ -110,7 +113,7 @@ INCLUDES = -I$(THIRDPARTYDIR)/include/ \
 .PHONY: default clean .SECONDARY .FORCE
 
 .SUFFIXES:
-.SUFFIXES: .c .o
+.SUFFIXES: .c .cxx .o
 
 .SECONDARY:
 
@@ -146,10 +149,13 @@ $(FTDIR)/libfreetype.a:
 $(GRDIR)/gr.o: ../lib/gr/gr_version.h
 
 %.o: %.c $(LIBS)
-	$(CC) -c $(OPTS) $(DEFINES) -o $@ $< $(INCLUDES)
+	$(CC) -c $(CFLAGS) -o $@ $< $(INCLUDES)
+
+%.o: %.cxx $(LIBS)
+	$(CXX) -c $(CXXFLAGS) -o $@ $< $(INCLUDES)
 
 libGR.js: $(OBJS) $(LIBS) library.js fonts
-	$(CC) $(OPTS) $(DEFINES) \
+	$(CXX) $(LDFLAGS) \
 	--embed-file fonts/gksfont.dat --embed-file fonts/CMUSerif-Math.ttf --embed-file fonts/DejaVuSans.ttf --embed-file fonts/mathtex2_offsets.bin \
 	--js-library library.js \
 	-o $@ $(OBJS) $(LIBS) \

@@ -65,7 +65,7 @@ DECLARE_LIST_METHODS(dynamic_args_array)
 
 DEFINE_LIST_METHODS(args)
 
-error_t args_list_entry_copy(args_list_entry_t *copy, args_list_const_entry_t entry)
+err_t args_list_entry_copy(args_list_entry_t *copy, args_list_const_entry_t entry)
 {
   args_list_entry_t _copy;
 
@@ -79,7 +79,7 @@ error_t args_list_entry_copy(args_list_entry_t *copy, args_list_const_entry_t en
   return NO_ERROR;
 }
 
-error_t args_list_entry_delete(args_list_entry_t entry)
+err_t args_list_entry_delete(args_list_entry_t entry)
 {
   grm_args_delete(entry);
   return NO_ERROR;
@@ -90,15 +90,15 @@ error_t args_list_entry_delete(args_list_entry_t entry)
 
 DEFINE_LIST_METHODS(dynamic_args_array)
 
-error_t dynamic_args_array_list_entry_copy(dynamic_args_array_list_entry_t *copy,
-                                           dynamic_args_array_list_const_entry_t entry)
+err_t dynamic_args_array_list_entry_copy(dynamic_args_array_list_entry_t *copy,
+                                         dynamic_args_array_list_const_entry_t entry)
 {
   /* TODO: create a copy of the object! Otherwise code will segfault on list deletion for a non-ref list */
   *copy = (dynamic_args_array_list_entry_t)entry;
   return NO_ERROR;
 }
 
-error_t dynamic_args_array_list_entry_delete(dynamic_args_array_list_entry_t entry)
+err_t dynamic_args_array_list_entry_delete(dynamic_args_array_list_entry_t entry)
 {
   dynamic_args_array_delete(entry);
   return NO_ERROR;
@@ -113,8 +113,8 @@ error_t dynamic_args_array_list_entry_delete(dynamic_args_array_list_entry_t ent
 
 /* ------------------------- receiver ------------------------------------------------------------------------------- */
 
-error_t receiver_init_for_custom(net_handle_t *handle, const char *name, unsigned int id,
-                                 const char *(*custom_recv)(const char *, unsigned int))
+err_t receiver_init_for_custom(net_handle_t *handle, const char *name, unsigned int id,
+                               const char *(*custom_recv)(const char *, unsigned int))
 {
   handle->sender_receiver.receiver.comm.custom.recv = custom_recv;
   handle->sender_receiver.receiver.comm.custom.name = name;
@@ -131,7 +131,7 @@ error_t receiver_init_for_custom(net_handle_t *handle, const char *name, unsigne
   return NO_ERROR;
 }
 
-error_t receiver_init_for_socket(net_handle_t *handle, const char *hostname, unsigned int port)
+err_t receiver_init_for_socket(net_handle_t *handle, const char *hostname, unsigned int port)
 {
   char port_str[PORT_MAX_STRING_LENGTH];
   struct addrinfo *addr_result = NULL, addr_hints;
@@ -249,16 +249,16 @@ error_t receiver_init_for_socket(net_handle_t *handle, const char *hostname, uns
   return NO_ERROR;
 }
 
-error_t receiver_finalize_for_custom(net_handle_t *handle)
+err_t receiver_finalize_for_custom(net_handle_t *handle)
 {
   memwriter_delete(handle->sender_receiver.receiver.memwriter);
 
   return NO_ERROR;
 }
 
-error_t receiver_finalize_for_socket(net_handle_t *handle)
+err_t receiver_finalize_for_socket(net_handle_t *handle)
 {
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   memwriter_delete(handle->sender_receiver.receiver.memwriter);
 #ifdef _WIN32
@@ -305,12 +305,12 @@ error_t receiver_finalize_for_socket(net_handle_t *handle)
   return error;
 }
 
-error_t receiver_recv_for_socket(net_handle_t *handle)
+err_t receiver_recv_for_socket(net_handle_t *handle)
 {
   int search_start_index = 0;
   char *end_ptr;
   static char recv_buf[SOCKET_RECV_BUF_SIZE];
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   while ((end_ptr = memchr(memwriter_buf(handle->sender_receiver.receiver.memwriter) + search_start_index, ETB,
                            memwriter_size(handle->sender_receiver.receiver.memwriter) - search_start_index)) == NULL)
@@ -340,11 +340,11 @@ error_t receiver_recv_for_socket(net_handle_t *handle)
   return error;
 }
 
-error_t receiver_recv_for_custom(net_handle_t *handle)
+err_t receiver_recv_for_custom(net_handle_t *handle)
 {
   /* TODO: is it really necessary to copy the memory? */
   const char *recv_buf;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   recv_buf = handle->sender_receiver.receiver.comm.custom.recv(handle->sender_receiver.receiver.comm.custom.name,
                                                                handle->sender_receiver.receiver.comm.custom.id);
@@ -365,8 +365,8 @@ error_t receiver_recv_for_custom(net_handle_t *handle)
 
 /* ------------------------- sender --------------------------------------------------------------------------------- */
 
-error_t sender_init_for_custom(net_handle_t *handle, const char *name, unsigned int id,
-                               int (*custom_send)(const char *, unsigned int, const char *))
+err_t sender_init_for_custom(net_handle_t *handle, const char *name, unsigned int id,
+                             int (*custom_send)(const char *, unsigned int, const char *))
 {
   handle->sender_receiver.sender.comm.custom.send = custom_send;
   handle->sender_receiver.sender.comm.custom.name = name;
@@ -382,7 +382,7 @@ error_t sender_init_for_custom(net_handle_t *handle, const char *name, unsigned 
   return NO_ERROR;
 }
 
-error_t sender_init_for_socket(net_handle_t *handle, const char *hostname, unsigned int port)
+err_t sender_init_for_socket(net_handle_t *handle, const char *hostname, unsigned int port)
 {
   char port_str[PORT_MAX_STRING_LENGTH];
   struct addrinfo *addr_result = NULL, *addr_ptr = NULL, addr_hints;
@@ -482,16 +482,16 @@ error_t sender_init_for_socket(net_handle_t *handle, const char *hostname, unsig
   return NO_ERROR;
 }
 
-error_t sender_finalize_for_custom(net_handle_t *handle)
+err_t sender_finalize_for_custom(net_handle_t *handle)
 {
   memwriter_delete(handle->sender_receiver.sender.memwriter);
 
   return NO_ERROR;
 }
 
-error_t sender_finalize_for_socket(net_handle_t *handle)
+err_t sender_finalize_for_socket(net_handle_t *handle)
 {
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   memwriter_delete(handle->sender_receiver.sender.memwriter);
 #ifdef _WIN32
@@ -522,12 +522,12 @@ error_t sender_finalize_for_socket(net_handle_t *handle)
   return error;
 }
 
-error_t sender_send_for_socket(net_handle_t *handle)
+err_t sender_send_for_socket(net_handle_t *handle)
 {
   const char *buf;
   size_t buf_size;
   int bytes_left;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   if ((error = memwriter_putc(handle->sender_receiver.sender.memwriter, ETB)) != NO_ERROR)
     {
@@ -554,10 +554,10 @@ error_t sender_send_for_socket(net_handle_t *handle)
   return error;
 }
 
-error_t sender_send_for_custom(net_handle_t *handle)
+err_t sender_send_for_custom(net_handle_t *handle)
 {
   const char *buf;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   buf = memwriter_buf(handle->sender_receiver.sender.memwriter);
   if (!handle->sender_receiver.sender.comm.custom.send(handle->sender_receiver.sender.comm.custom.name,
@@ -583,7 +583,7 @@ void *grm_open(int is_receiver, const char *name, unsigned int id,
                int (*custom_send)(const char *, unsigned int, const char *))
 {
   net_handle_t *handle;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   handle = malloc(sizeof(net_handle_t));
   if (handle == NULL)
@@ -687,7 +687,7 @@ int grm_send(const void *p, const char *data_desc, ...)
 {
   net_handle_t *handle = (net_handle_t *)p;
   va_list vl;
-  error_t error;
+  err_t error;
 
   va_start(vl, data_desc);
   error = tojson_write_vl(handle->sender_receiver.sender.memwriter, data_desc, &vl);
@@ -703,7 +703,7 @@ int grm_send(const void *p, const char *data_desc, ...)
 int grm_send_buf(const void *p, const char *data_desc, const void *buffer, int apply_padding)
 {
   net_handle_t *handle = (net_handle_t *)p;
-  error_t error;
+  err_t error;
 
   error = tojson_write_buf(handle->sender_receiver.sender.memwriter, data_desc, buffer, apply_padding);
   if (error == NO_ERROR && tojson_is_complete() && handle->sender_receiver.sender.send != NULL)
@@ -724,7 +724,7 @@ int grm_send_ref(const void *p, const char *key, char format, const void *ref, i
   char *_key = NULL;
   net_handle_t *handle = (net_handle_t *)p;
   char format_string[SEND_REF_FORMAT_MAX_LENGTH];
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   if (tojson_struct_nested_level() == 0)
     {
@@ -975,7 +975,7 @@ int grm_send_ref(const void *p, const char *key, char format, const void *ref, i
 int grm_send_args(const void *p, const grm_args_t *args)
 {
   net_handle_t *handle = (net_handle_t *)p;
-  error_t error;
+  err_t error;
 
   error = tojson_write_args(handle->sender_receiver.sender.memwriter, args);
   if (error == NO_ERROR && tojson_is_complete() && handle->sender_receiver.sender.send != NULL)

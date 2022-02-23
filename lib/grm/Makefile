@@ -34,14 +34,16 @@ UNAME := $(shell uname)
                -I../gr3 \
                -I$(THIRDPARTYDIR)/include
           CC = cc
-      CFLAGS = $(DEFINES) -O3 -Wall -fPIC -fvisibility=hidden $(EXTRA_CFLAGS)
+      CFLAGS = $(DEFINES) -std=c90 -O3 -Wall -fPIC -fvisibility=hidden $(EXTRA_CFLAGS)
+    CXXFLAGS = $(DEFINES) -std=c++17 -O3 -Wall -fPIC -fvisibility=hidden $(EXTRA_CXXFLAGS)
          AR ?= ar
      RANLIB ?= ar ts
 ifeq ($(UNAME), Darwin)
 GR_SHARED_LIBRARY_SUFFIX ?= .dylib
-     CFLAGS += -mmacosx-version-min=10.11
+     CFLAGS += -mmacosx-version-min=10.14
+   CXXFLAGS += -mmacosx-version-min=10.14
 INSTALL_NAME = -Wl,-install_name,@rpath/libGRM${GR_SHARED_LIBRARY_SUFFIX}
-     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.11
+     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.14
      SOFLAGS = -dynamiclib
 else
 GR_SHARED_LIBRARY_SUFFIX ?= .so
@@ -55,6 +57,9 @@ endif
 
 .c.o:
 	$(CC) -o $@ -c $(INCLUDES) $(CFLAGS) $<
+
+.cxx.o:
+	$(CXX) -o $@ -c $(INCLUDES) $(CXXFLAGS) $<
 
 default:
 	$(MAKE) -C ../.. Makedefs
@@ -78,7 +83,7 @@ libGRM.a: $(GRMOBJS)
 	$(RANLIB) $@
 
 libGRM${GR_SHARED_LIBRARY_SUFFIX}: $(GRMOBJS) libGR libGR3
-	$(CC) -o $@ $(SOFLAGS) $(GRMOBJS) $(LIBS) $(LDFLAGS) $(INSTALL_NAME)
+	$(CXX) -o $@ $(SOFLAGS) $(GRMOBJS) $(LIBS) $(LDFLAGS) $(INSTALL_NAME)
 
 install:
 	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
@@ -96,3 +101,5 @@ clean:
 	      *${GR_SHARED_LIBRARY_SUFFIX}
 
 .PHONY: all targets install clean prerequisites libGR libGR3
+.SUFFIXES:  # Delete the default suffixes
+.SUFFIXES: .c .cxx .o  # List all suffixes for suffix rules explicitly

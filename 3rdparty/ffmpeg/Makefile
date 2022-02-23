@@ -5,7 +5,7 @@ endif
 VERSION = 4.2.1
 FFMPEG_EXTRA_CONFIGURE_FLAGS ?=
 ifeq ($(shell uname),Darwin)
-FFMPEG_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-mmacosx-version-min=10.11
+FFMPEG_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-mmacosx-version-min=10.14
 endif
 
 ifeq ($(DOWNLOAD_CMD),)

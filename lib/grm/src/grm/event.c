@@ -46,7 +46,7 @@ int process_events(void)
 
 DEFINE_LIST_METHODS(event)
 
-error_t event_list_entry_copy(event_list_entry_t *copy, event_list_const_entry_t entry)
+err_t event_list_entry_copy(event_list_entry_t *copy, event_list_const_entry_t entry)
 {
   event_list_entry_t _copy;
 
@@ -62,7 +62,7 @@ error_t event_list_entry_copy(event_list_entry_t *copy, event_list_const_entry_t
   return NO_ERROR;
 }
 
-error_t event_list_entry_delete(event_list_entry_t entry)
+err_t event_list_entry_delete(event_list_entry_t entry)
 {
   free(entry);
   return NO_ERROR;
@@ -152,10 +152,10 @@ int event_queue_process_all(event_queue_t *queue)
   return 1;
 }
 
-error_t event_queue_enqueue_new_plot_event(event_queue_t *queue, int plot_id)
+err_t event_queue_enqueue_new_plot_event(event_queue_t *queue, int plot_id)
 {
   grm_new_plot_event_t *new_plot_event = NULL;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   new_plot_event = malloc(sizeof(grm_new_plot_event_t));
   error_cleanup_and_set_error_if(new_plot_event == NULL, ERROR_MALLOC);
@@ -176,10 +176,10 @@ error_cleanup:
   return error;
 }
 
-error_t event_queue_enqueue_update_plot_event(event_queue_t *queue, int plot_id)
+err_t event_queue_enqueue_update_plot_event(event_queue_t *queue, int plot_id)
 {
   grm_update_plot_event_t *update_plot_event = NULL;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   update_plot_event = malloc(sizeof(grm_update_plot_event_t));
   error_cleanup_and_set_error_if(update_plot_event == NULL, ERROR_MALLOC);
@@ -200,10 +200,10 @@ error_cleanup:
   return error;
 }
 
-error_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int width, int height)
+err_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int width, int height)
 {
   grm_size_event_t *size_event = NULL;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   size_event = malloc(sizeof(grm_size_event_t));
   error_cleanup_and_set_error_if(size_event == NULL, ERROR_MALLOC);
@@ -226,10 +226,10 @@ error_cleanup:
   return error;
 }
 
-error_t event_queue_enqueue_merge_end_event(event_queue_t *queue, const char *identificator)
+err_t event_queue_enqueue_merge_end_event(event_queue_t *queue, const char *identificator)
 {
   grm_merge_end_event_t *merge_end_event = NULL;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   merge_end_event = malloc(sizeof(grm_merge_end_event_t));
   error_cleanup_and_set_error_if(merge_end_event == NULL, ERROR_MALLOC);

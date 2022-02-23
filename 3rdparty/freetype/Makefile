@@ -9,7 +9,7 @@ FTINCLUDES = -Isrc -Iinclude
   FTCFLAGS = -O -fPIC -fno-common $(FTINCLUDES) $(FTDEFINES) $(ARCHS)
 
 ifeq ($(shell uname -s),Darwin)
- FTCFLAGS += -mmacosx-version-min=10.11
+ FTCFLAGS += -mmacosx-version-min=10.14
 endif
 
       OBJS = \

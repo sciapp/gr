@@ -1,8 +1,6 @@
-#ifdef __unix__
-#define _POSIX_C_SOURCE 200112L
-#endif
-
 /* ######################### includes ############################################################################### */
+
+extern "C" {
 
 #include <ctype.h>
 #include <float.h>
@@ -365,9 +363,9 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ general ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-error_t plot_init_static_variables(void)
+err_t plot_init_static_variables(void)
 {
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   if (!plot_static_variables_initialized)
     {
@@ -449,8 +447,8 @@ error_cleanup:
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-error_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char **hierarchy_name_ptr,
-                        uint_map_t *hierarchy_to_id, int hold_always)
+err_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char **hierarchy_name_ptr,
+                      uint_map_t *hierarchy_to_id, int hold_always)
 {
   static args_set_map_t *key_to_cleared_args = NULL;
   static int recursion_level = -1;
@@ -462,7 +460,7 @@ error_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const ch
   const char **current_hierarchy_name_ptr;
   grm_args_t **args_array, **merge_args_array, *current_args;
   unsigned int i;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   ++recursion_level;
   if (hierarchy_name_ptr == NULL)
@@ -723,12 +721,12 @@ cleanup:
   return error;
 }
 
-error_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, unsigned int next_hierarchy_level_max_id)
+err_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, unsigned int next_hierarchy_level_max_id)
 {
   grm_args_t **args_array = NULL;
   unsigned int args_old_array_length;
   unsigned int i;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   logger((stderr, "Init plot args structure for hierarchy: \"%s\"\n", *hierarchy_name_ptr));
 
@@ -763,13 +761,13 @@ error_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, uns
   return NO_ERROR;
 }
 
-error_t plot_init_args_structure(grm_args_t *args, const char **hierarchy_name_ptr,
-                                 unsigned int next_hierarchy_level_max_id)
+err_t plot_init_args_structure(grm_args_t *args, const char **hierarchy_name_ptr,
+                               unsigned int next_hierarchy_level_max_id)
 {
   arg_t *arg = NULL;
   grm_args_t **args_array = NULL;
   unsigned int i;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   logger((stderr, "Init plot args structure for hierarchy: \"%s\"\n", *hierarchy_name_ptr));
 
@@ -781,7 +779,7 @@ error_t plot_init_args_structure(grm_args_t *args, const char **hierarchy_name_p
   arg = args_at(args, *hierarchy_name_ptr);
   if (arg == NULL)
     {
-      args_array = calloc(next_hierarchy_level_max_id, sizeof(grm_args_t *));
+      args_array = static_cast<grm_args_t **>(calloc(next_hierarchy_level_max_id, sizeof(grm_args_t *)));
       error_cleanup_and_set_error_if(args_array == NULL, ERROR_MALLOC);
       for (i = 0; i < next_hierarchy_level_max_id; ++i)
         {
@@ -1007,11 +1005,11 @@ void plot_process_wswindow_wsviewport(grm_args_t *plot_args)
       (stderr, "Stored wsviewport (%lf, %lf, %lf, %lf)\n", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]));
 }
 
-error_t plot_pre_subplot(grm_args_t *subplot_args)
+err_t plot_pre_subplot(grm_args_t *subplot_args)
 {
   const char *kind;
   double alpha;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   logger((stderr, "Pre subplot processing\n"));
 
@@ -1035,7 +1033,7 @@ error_t plot_pre_subplot(grm_args_t *subplot_args)
       plot_draw_axes(subplot_args, 1);
     }
 
-  gr_uselinespec(" ");
+  gr_uselinespec(const_cast<char *>(" "));
 
   gr_savestate();
   if (args_values(subplot_args, "alpha", "d", &alpha))
@@ -1111,8 +1109,8 @@ static void legend_size(grm_args_t *subplot_args, double *w, double *h)
       for (current_label = labels; *current_label != NULL; ++current_label)
         {
           gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
-          *w = max(*w, tbx[2] - tbx[0]);
-          *h += max(tby[2] - tby[0], 0.03);
+          *w = grm_max(*w, tbx[2] - tbx[0]);
+          *h += grm_max(tby[2] - tby[0], 0.03);
         }
     }
 }
@@ -1167,7 +1165,7 @@ void plot_process_viewport(grm_args_t *subplot_args)
     {
       double extent;
 
-      extent = min(vp[1] - vp[0], vp[3] - vp[2]);
+      extent = grm_min(vp[1] - vp[0], vp[3] - vp[2]);
       vp0 = 0.5 * (vp[0] + vp[1] - extent);
       vp1 = 0.5 * (vp[0] + vp[1] + extent);
       vp2 = 0.5 * (vp[2] + vp[3] - extent);
@@ -1245,7 +1243,7 @@ void plot_process_viewport(grm_args_t *subplot_args)
 
       x_center = 0.5 * (viewport[0] + viewport[1]);
       y_center = 0.5 * (viewport[2] + viewport[3]);
-      r = 0.45 * min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
+      r = 0.45 * grm_min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
       if (grm_args_contains(subplot_args, "title"))
         {
           r *= 0.975;
@@ -1528,7 +1526,7 @@ void plot_process_window(grm_args_t *subplot_args)
   gr_setscale(scale);
 }
 
-error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
+err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
 {
   const char *kind;
   const char *style = "";
@@ -1549,7 +1547,7 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
       range_keys[] = {{"xlim", "xrange"}, {"ylim", "yrange"}, {"zlim", "zrange"}, {"clim", "crange"}};
   double *bins = NULL;
   unsigned int i;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   logger((stderr, "Storing coordinate ranges\n"));
 
@@ -1563,7 +1561,7 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
 
   args_values(subplot_args, "kind", "s", &kind);
   args_values(subplot_args, "style", "s", &style);
-  cleanup_and_set_error_if(!string_map_at(fmt_map, kind, (char **)&fmt), ERROR_PLOT_UNKNOWN_KIND);
+  cleanup_and_set_error_if(!string_map_at(fmt_map, kind, static_cast<const char **>(&fmt)), ERROR_PLOT_UNKNOWN_KIND);
   if (!str_equals_any(kind, 2, "pie", "polar_histogram"))
     {
       current_component_name = data_component_names;
@@ -1615,8 +1613,8 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                                 {
                                   if (!is_nan(current_component[i]))
                                     {
-                                      current_min_component = min(current_component[i], current_min_component);
-                                      current_max_component = max(current_component[i], current_max_component);
+                                      current_min_component = grm_min(current_component[i], current_min_component);
+                                      current_max_component = grm_max(current_component[i], current_max_component);
                                     }
                                 }
                             }
@@ -1625,7 +1623,7 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                                str_equals_any(*current_component_name, 2, "x", "y"))
                         {
                           /* in this case `x` or `y` (or both) are missing
-                           * -> set the current min/max_component to the dimensions of `z`
+                           * -> set the current grm_min/max_component to the dimensions of `z`
                            *    (shifted by half a unit to center color blocks) */
                           const char *other_component_name = (strcmp(*current_component_name, "x") == 0) ? "y" : "x";
                           double *other_component;
@@ -1677,8 +1675,8 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                                             }
                                         }
                                     }
-                                  max_component = max(current_max_component, max_component);
-                                  min_component = min(current_min_component, min_component);
+                                  max_component = grm_max(current_max_component, max_component);
+                                  min_component = grm_min(current_min_component, min_component);
                                 }
                               inner_series++;
                             }
@@ -1689,8 +1687,8 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                       grm_args_push(*current_series, current_range_keys->series, "dd", current_min_component,
                                     current_max_component);
                     }
-                  min_component = min(current_min_component, min_component);
-                  max_component = max(current_max_component, max_component);
+                  min_component = grm_min(current_min_component, min_component);
+                  max_component = grm_max(current_max_component, max_component);
                   ++current_series;
                 }
             }
@@ -1710,7 +1708,7 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                 }
               else if (strcmp(kind, "quiver") == 0)
                 {
-                  step = max(find_max_step(current_point_count, current_component), step);
+                  step = grm_max(find_max_step(current_point_count, current_component), step);
                   if (step > 0.0)
                     {
                       min_component -= step;
@@ -1748,14 +1746,14 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                   for (i = 0; i < u_length; i++)
                     {
                       double z = u[i] * u[i] + v[i] * v[i];
-                      current_min_component = min(z, current_min_component);
-                      current_max_component = max(z, current_max_component);
+                      current_min_component = grm_min(z, current_min_component);
+                      current_max_component = grm_max(z, current_max_component);
                     }
                   current_min_component = sqrt(current_min_component);
                   current_max_component = sqrt(current_max_component);
                 }
-              min_component = min(current_min_component, min_component);
-              max_component = max(current_max_component, max_component);
+              min_component = grm_min(current_min_component, min_component);
+              max_component = grm_max(current_max_component, max_component);
               ++current_series;
             }
         }
@@ -1790,7 +1788,7 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                 {
                   double *y;
                   args_first_value(*current_series, "y", "D", &y, &current_point_count);
-                  x_max = max(current_point_count + 1, x_max);
+                  x_max = grm_max(current_point_count + 1, x_max);
                   ++current_series;
                 }
             }
@@ -1823,20 +1821,20 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                     {
                       num_bins = (int)(3.3 * log10(current_point_count) + 0.5) + 1;
                     }
-                  bins = malloc(num_bins * sizeof(double));
+                  bins = static_cast<double *>(malloc(num_bins * sizeof(double)));
                   cleanup_and_set_error_if(bins == NULL, ERROR_MALLOC);
                   bin_data(current_point_count, x, num_bins, bins, weights);
                   for (i = 0; i < num_bins; i++)
                     {
-                      current_y_min = min(current_y_min, bins[i]);
-                      current_y_max = max(current_y_max, bins[i]);
+                      current_y_min = grm_min(current_y_min, bins[i]);
+                      current_y_max = grm_max(current_y_max, bins[i]);
                     }
                   grm_args_push(*current_series, "bins", "nD", num_bins, bins);
                   free(bins);
                   bins = NULL;
                 }
-              y_min = min(current_y_min, y_min);
-              y_max = max(current_y_max, y_max);
+              y_min = grm_min(current_y_min, y_min);
+              y_max = grm_max(current_y_max, y_max);
               current_series++;
             }
           grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
@@ -1907,9 +1905,9 @@ void plot_post_subplot(grm_args_t *subplot_args)
     }
 }
 
-error_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name_start_ptr, const char *key,
-                                   uint_map_t *hierarchy_to_id, const grm_args_t **found_args,
-                                   const char ***found_hierarchy_name_ptr)
+err_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name_start_ptr, const char *key,
+                                 uint_map_t *hierarchy_to_id, const grm_args_t **found_args,
+                                 const char ***found_hierarchy_name_ptr)
 {
   const char *key_hierarchy_name, **current_hierarchy_name_ptr;
   grm_args_t *current_args, **args_array;
@@ -1917,7 +1915,8 @@ error_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name
   unsigned int args_array_length, current_id;
 
   logger((stderr, "Check hierarchy level for key \"%s\"...\n", key));
-  return_error_if(!string_map_at(plot_valid_keys_map, key, (char **)&key_hierarchy_name), ERROR_PLOT_UNKNOWN_KEY);
+  return_error_if(!string_map_at(plot_valid_keys_map, key, static_cast<const char **>(&key_hierarchy_name)),
+                  ERROR_PLOT_UNKNOWN_KEY);
   logger((stderr, "... got hierarchy \"%s\"\n", key_hierarchy_name));
   current_hierarchy_name_ptr = hierarchy_name_start_ptr;
   current_args = args;
@@ -1955,7 +1954,7 @@ error_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name
           if (strcmp(*current_hierarchy_name_ptr, "plots") == 0)
             {
               int in_use;
-              error_t error = NO_ERROR;
+              err_t error = NO_ERROR;
               args_values(current_args, "in_use", "i", &in_use);
               if (in_use)
                 {
@@ -1990,13 +1989,12 @@ error_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plotting ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-error_t plot_line(grm_args_t *subplot_args)
+err_t plot_line(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
-  error_t error;
-  char *kind, *orientation;
+  err_t error;
+  const char *kind, *orientation;
 
-  kind = "line";
   args_values(subplot_args, "series", "A", &current_series);
   args_values(subplot_args, "kind", "s", &kind);
   args_values(subplot_args, "orientation", "s", &orientation);
@@ -2041,7 +2039,7 @@ error_t plot_line(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
-error_t plot_step(grm_args_t *subplot_args)
+err_t plot_step(grm_args_t *subplot_args)
 {
   /*
    * Parameters:
@@ -2057,7 +2055,7 @@ error_t plot_step(grm_args_t *subplot_args)
   double xmin, xmax, ymin, ymax;
   double *y = NULL, *xi = NULL;
   int is_vertical;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   args_values(subplot_args, "series", "A", &current_series);
   args_values(subplot_args, "kind", "s", &kind);
@@ -2083,23 +2081,24 @@ error_t plot_step(grm_args_t *subplot_args)
           args_values(subplot_args, "_zlim", "dd", &c_min, &c_max);
           args_first_value(*current_series, "z", "D", &plot, &n);
 
-          y = malloc((is_vertical ? y_length : x_length) * sizeof(double));
+          y = static_cast<double *>(malloc((is_vertical ? y_length : x_length) * sizeof(double)));
           cleanup_and_set_error_if(y == NULL, ERROR_MALLOC);
-          xi = malloc((is_vertical ? y_length : x_length) * sizeof(double));
+          xi = static_cast<double *>(malloc((is_vertical ? y_length : x_length) * sizeof(double)));
           cleanup_and_set_error_if(xi == NULL, ERROR_MALLOC);
           for (i = 0; i < (is_vertical ? y_length : x_length); i++)
             {
               if (is_vertical)
                 {
                   y[(is_vertical ? y_length : x_length) - i - 1] =
-                      isnan(plot[xind + i * x_length]) ? 0 : plot[xind + i * x_length];
-                  y_max = max(y_max, y[(is_vertical ? y_length : x_length) - i - 1]);
+                      grm_isnan(plot[xind + i * x_length]) ? 0 : plot[xind + i * x_length];
+                  y_max = grm_max(y_max, y[(is_vertical ? y_length : x_length) - i - 1]);
                 }
               else
                 {
-                  y[i] = isnan(plot[x_length * (y_length - 1 - yind) + i]) ? 0
-                                                                           : plot[x_length * (y_length - 1 - yind) + i];
-                  y_max = max(y_max, y[i]);
+                  y[i] = grm_isnan(plot[x_length * (y_length - 1 - yind) + i])
+                             ? 0
+                             : plot[x_length * (y_length - 1 - yind) + i];
+                  y_max = grm_max(y_max, y[i]);
                 }
             }
           for (i = 0; i < (is_vertical ? y_length : x_length); i++)
@@ -2123,9 +2122,9 @@ error_t plot_step(grm_args_t *subplot_args)
               double x_pos, y_pos;
               unsigned int len = is_vertical ? y_length : x_length;
 
-              x_step_boundaries = calloc(2 * len, sizeof(double));
+              x_step_boundaries = static_cast<double *>(calloc(2 * len, sizeof(double)));
               cleanup_and_set_error_if(x_step_boundaries == NULL, ERROR_MALLOC);
-              y_step_values = calloc(2 * len, sizeof(double));
+              y_step_values = static_cast<double *>(calloc(2 * len, sizeof(double)));
               cleanup_and_set_error_if(y_step_values == NULL, ERROR_MALLOC);
               x_step_boundaries[0] = is_vertical ? ymin : xmin;
               for (i = 2; i < 2 * len; i += 2)
@@ -2163,9 +2162,9 @@ error_t plot_step(grm_args_t *subplot_args)
             }
           else if (strcmp(where, "pre") == 0)
             {
-              x_step_boundaries = calloc(2 * x_length - 1, sizeof(double));
+              x_step_boundaries = static_cast<double *>(calloc(2 * x_length - 1, sizeof(double)));
               cleanup_and_set_error_if(x_step_boundaries == NULL, ERROR_MALLOC);
-              y_step_values = calloc(2 * x_length - 1, sizeof(double));
+              y_step_values = static_cast<double *>(calloc(2 * x_length - 1, sizeof(double)));
               cleanup_and_set_error_if(y_step_values == NULL, ERROR_MALLOC);
               x_step_boundaries[0] = x[0];
               for (i = 1; i < 2 * x_length - 2; i += 2)
@@ -2189,9 +2188,9 @@ error_t plot_step(grm_args_t *subplot_args)
             }
           else if (strcmp(where, "post") == 0)
             {
-              x_step_boundaries = calloc(2 * x_length - 1, sizeof(double));
+              x_step_boundaries = static_cast<double *>(calloc(2 * x_length - 1, sizeof(double)));
               cleanup_and_set_error_if(x_step_boundaries == NULL, ERROR_MALLOC);
-              y_step_values = calloc(2 * x_length - 1, sizeof(double));
+              y_step_values = static_cast<double *>(calloc(2 * x_length - 1, sizeof(double)));
               cleanup_and_set_error_if(y_step_values == NULL, ERROR_MALLOC);
               for (i = 0; i < 2 * x_length - 2; i += 2)
                 {
@@ -2215,9 +2214,9 @@ error_t plot_step(grm_args_t *subplot_args)
             }
           else if (strcmp(where, "mid") == 0)
             {
-              x_step_boundaries = calloc(2 * x_length, sizeof(double));
+              x_step_boundaries = static_cast<double *>(calloc(2 * x_length, sizeof(double)));
               cleanup_and_set_error_if(x_step_boundaries == NULL, ERROR_MALLOC);
-              y_step_values = calloc(2 * x_length, sizeof(double));
+              y_step_values = static_cast<double *>(calloc(2 * x_length, sizeof(double)));
               cleanup_and_set_error_if(y_step_values == NULL, ERROR_MALLOC);
               x_step_boundaries[0] = x[0];
               for (i = 1; i < 2 * x_length - 2; i += 2)
@@ -2274,7 +2273,7 @@ cleanup:
   return error;
 }
 
-error_t plot_scatter(grm_args_t *subplot_args)
+err_t plot_scatter(grm_args_t *subplot_args)
 {
   /*
    * Parameters:
@@ -2285,7 +2284,7 @@ error_t plot_scatter(grm_args_t *subplot_args)
    * optional `markertype` as integer (see: [Marker types](https://gr-framework.org/markertypes.html?highlight=marker))
    */
   grm_args_t **current_series;
-  error_t error;
+  err_t error;
   char *kind;
   int *previous_marker_type = plot_scatter_markertypes;
   args_values(subplot_args, "series", "A", &current_series);
@@ -2379,10 +2378,10 @@ error_t plot_scatter(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
-error_t plot_quiver(grm_args_t *subplot_args)
+err_t plot_quiver(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
@@ -2405,7 +2404,7 @@ error_t plot_quiver(grm_args_t *subplot_args)
   return error;
 }
 
-error_t plot_stem(grm_args_t *subplot_args)
+err_t plot_stem(grm_args_t *subplot_args)
 {
   const double *window;
   double base_line_y[2] = {0.0, 0.0};
@@ -2440,14 +2439,14 @@ error_t plot_stem(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
-error_t plot_hist(grm_args_t *subplot_args)
+err_t plot_hist(grm_args_t *subplot_args)
 {
   char *kind;
   grm_args_t **current_series;
   double *bar_centers = NULL;
   int bar_color_index = 989, i, xind, yind;
   double bar_color_rgb[3] = {-1};
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   args_values(subplot_args, "kind", "s", &kind);
   args_values(subplot_args, "series", "A", &current_series);
@@ -2534,7 +2533,7 @@ error_t plot_hist(grm_args_t *subplot_args)
         }
       if (grm_args_contains(*current_series, "error"))
         {
-          bar_centers = malloc(num_bins * sizeof(double));
+          bar_centers = static_cast<double *>(malloc(num_bins * sizeof(double)));
           cleanup_and_set_error_if(bar_centers == NULL, ERROR_MALLOC);
           linspace(x_min + 0.5 * bar_width, x_max - 0.5 * bar_width, num_bins, bar_centers);
           error = plot_draw_errorbars(*current_series, bar_centers, num_bins, bins, kind);
@@ -2551,7 +2550,7 @@ cleanup:
   return error;
 }
 
-error_t plot_barplot(grm_args_t *subplot_args)
+err_t plot_barplot(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
   grm_args_t **inner_series;
@@ -2584,7 +2583,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
   int change_edge_color = 0;
   int change_edge_width = 0;
   unsigned int i;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
   double *y_lightness = NULL;
 
   gr_settextalign(2, 3);
@@ -2615,14 +2614,14 @@ error_t plot_barplot(grm_args_t *subplot_args)
               ERROR_PLOT_MISSING_DATA);
           y_length = inner_series_length;
         }
-      fixed_y_length = max(y_length, fixed_y_length);
+      fixed_y_length = grm_max(y_length, fixed_y_length);
       ++current_series;
     }
 
   /* ind_bar_color */
   if (args_values(subplot_args, "ind_bar_color", "A", &ind_bar_color))
     {
-      pos_ind_bar_color = malloc(3 * fixed_y_length * sizeof(double));
+      pos_ind_bar_color = static_cast<double(*)[3]>(malloc(3 * fixed_y_length * sizeof(double)));
       cleanup_and_set_error_if(pos_ind_bar_color == NULL, ERROR_MALLOC);
       change_bar_color = 1;
       for (i = 0; i < fixed_y_length; ++i)
@@ -2670,7 +2669,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
   /* ind_edge_color */
   if (args_values(subplot_args, "ind_edge_color", "A", &ind_edge_color))
     {
-      pos_ind_edge_color = malloc(3 * fixed_y_length * sizeof(double));
+      pos_ind_edge_color = static_cast<double(*)[3]>(malloc(3 * fixed_y_length * sizeof(double)));
       cleanup_and_set_error_if(pos_ind_edge_color == NULL, ERROR_MALLOC);
       change_edge_color = 1;
       for (i = 0; i < fixed_y_length; ++i)
@@ -2718,7 +2717,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
   /* ind_edge_width */
   if (args_values(subplot_args, "ind_edge_width", "A", &ind_edge_width))
     {
-      pos_ind_edge_width = malloc(sizeof(double) * fixed_y_length);
+      pos_ind_edge_width = static_cast<double *>(malloc(sizeof(double) * fixed_y_length));
       cleanup_and_set_error_if(pos_ind_edge_width == NULL, ERROR_MALLOC);
       for (i = 0; i < fixed_y_length; ++i)
         {
@@ -2821,7 +2820,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
         }
       if (ylabels != NULL)
         {
-          y_lightness = (double *)malloc(sizeof(double) * y_lightness_to_get);
+          y_lightness = static_cast<double *>(malloc(sizeof(double) * y_lightness_to_get));
           use_y_notations_from_inner_series = 0;
         }
 
@@ -3096,7 +3095,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
               args_first_value(inner_series[inner_series_index], "ylabels", "nS", &ylabels, &ylabels_length);
               ylabels_left = ylabels_length;
               y_lightness_to_get = ylabels_length;
-              y_lightness = (double *)malloc(sizeof(double) * y_lightness_to_get);
+              y_lightness = static_cast<double *>(malloc(sizeof(double) * y_lightness_to_get));
             }
           for (i = 0; i < y_length; i++)
             {
@@ -3292,7 +3291,7 @@ cleanup:
   return error;
 }
 
-error_t plot_contour(grm_args_t *subplot_args)
+err_t plot_contour(grm_args_t *subplot_args)
 {
   double z_min, z_max;
   int num_levels;
@@ -3300,13 +3299,13 @@ error_t plot_contour(grm_args_t *subplot_args)
   double *gridit_x = NULL, *gridit_y = NULL, *gridit_z = NULL;
   grm_args_t **current_series;
   int i;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
   gr_setprojectiontype(0);
   gr_setspace(z_min, z_max, 0, 90);
   args_values(subplot_args, "levels", "i", &num_levels);
-  h = malloc(num_levels * sizeof(double));
+  h = static_cast<double *>(malloc(num_levels * sizeof(double)));
   if (h == NULL)
     {
       debug_print_malloc_error();
@@ -3325,9 +3324,9 @@ error_t plot_contour(grm_args_t *subplot_args)
         {
           if (gridit_x == NULL)
             {
-              gridit_x = malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double));
-              gridit_y = malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double));
-              gridit_z = malloc(PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N * sizeof(double));
+              gridit_x = static_cast<double *>(malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double)));
+              gridit_y = static_cast<double *>(malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double)));
+              gridit_z = static_cast<double *>(malloc(PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N * sizeof(double)));
               if (gridit_x == NULL || gridit_y == NULL || gridit_z == NULL)
                 {
                   debug_print_malloc_error();
@@ -3338,8 +3337,8 @@ error_t plot_contour(grm_args_t *subplot_args)
           gr_gridit(x_length, x, y, z, PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, gridit_x, gridit_y, gridit_z);
           for (i = 0; i < PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N; i++)
             {
-              z_min = min(gridit_z[i], z_min);
-              z_max = max(gridit_z[i], z_max);
+              z_min = grm_min(gridit_z[i], z_min);
+              z_max = grm_max(gridit_z[i], z_max);
             }
           for (i = 0; i < num_levels; ++i)
             {
@@ -3376,7 +3375,7 @@ cleanup:
   return error;
 }
 
-error_t plot_contourf(grm_args_t *subplot_args)
+err_t plot_contourf(grm_args_t *subplot_args)
 {
   double z_min, z_max;
   int num_levels, scale;
@@ -3384,13 +3383,13 @@ error_t plot_contourf(grm_args_t *subplot_args)
   double *gridit_x = NULL, *gridit_y = NULL, *gridit_z = NULL;
   grm_args_t **current_series;
   int i;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
   gr_setprojectiontype(0);
   gr_setspace(z_min, z_max, 0, 90);
   args_values(subplot_args, "levels", "i", &num_levels);
-  h = malloc(num_levels * sizeof(double));
+  h = static_cast<double *>(malloc(num_levels * sizeof(double)));
   if (h == NULL)
     {
       debug_print_malloc_error();
@@ -3416,9 +3415,9 @@ error_t plot_contourf(grm_args_t *subplot_args)
         {
           if (gridit_x == NULL)
             {
-              gridit_x = malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double));
-              gridit_y = malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double));
-              gridit_z = malloc(PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N * sizeof(double));
+              gridit_x = static_cast<double *>(malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double)));
+              gridit_y = static_cast<double *>(malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double)));
+              gridit_z = static_cast<double *>(malloc(PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N * sizeof(double)));
               if (gridit_x == NULL || gridit_y == NULL || gridit_z == NULL)
                 {
                   debug_print_malloc_error();
@@ -3429,8 +3428,8 @@ error_t plot_contourf(grm_args_t *subplot_args)
           gr_gridit(x_length, x, y, z, PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, gridit_x, gridit_y, gridit_z);
           for (i = 0; i < PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N; i++)
             {
-              z_min = min(gridit_z[i], z_min);
-              z_max = max(gridit_z[i], z_max);
+              z_min = grm_min(gridit_z[i], z_min);
+              z_max = grm_max(gridit_z[i], z_max);
             }
           for (i = 0; i < num_levels; ++i)
             {
@@ -3463,7 +3462,7 @@ cleanup:
   return error;
 }
 
-error_t plot_hexbin(grm_args_t *subplot_args)
+err_t plot_hexbin(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
 
@@ -3490,14 +3489,14 @@ error_t plot_hexbin(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
-error_t plot_heatmap(grm_args_t *subplot_args)
+err_t plot_heatmap(grm_args_t *subplot_args)
 {
   const char *kind = NULL;
   grm_args_t **current_series;
   int icmap[256], *rgba = NULL, *data = NULL, zlog = 0;
   unsigned int i, cols, rows, z_length;
   double *x = NULL, *y = NULL, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   args_values(subplot_args, "series", "A", &current_series);
   args_values(subplot_args, "kind", "s", &kind);
@@ -3567,7 +3566,7 @@ error_t plot_heatmap(grm_args_t *subplot_args)
           gr_inqcolor(1000 + i, icmap + i);
         }
 
-      data = malloc(rows * cols * sizeof(int));
+      data = static_cast<int *>(malloc(rows * cols * sizeof(int)));
       cleanup_and_set_error_if(data == NULL, ERROR_MALLOC);
       if (z_max > z_min)
         {
@@ -3582,7 +3581,7 @@ error_t plot_heatmap(grm_args_t *subplot_args)
                   zv = z[i];
                 }
 
-              if (zv > z_max || zv < z_min || isnan(zv))
+              if (zv > z_max || zv < z_min || grm_isnan(zv))
                 {
                   data[i] = -1;
                 }
@@ -3607,7 +3606,7 @@ error_t plot_heatmap(grm_args_t *subplot_args)
               data[i] = 0;
             }
         }
-      rgba = malloc(rows * cols * sizeof(int));
+      rgba = static_cast<int *>(malloc(rows * cols * sizeof(int)));
       cleanup_and_set_error_if(rgba == NULL, ERROR_MALLOC);
       if (is_uniform_heatmap)
         {
@@ -3660,7 +3659,7 @@ cleanup:
   return error;
 }
 
-error_t plot_marginalheatmap(grm_args_t *subplot_args)
+err_t plot_marginalheatmap(grm_args_t *subplot_args)
 {
   const double *viewport;
   double c_min, c_max;
@@ -3671,7 +3670,7 @@ error_t plot_marginalheatmap(grm_args_t *subplot_args)
   double *bins = NULL;
   unsigned int num_bins_x = 0, num_bins_y = 0, n = 0;
   double *xi, *yi, *plot;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   plot_heatmap(subplot_args);
 
@@ -3702,7 +3701,7 @@ error_t plot_marginalheatmap(grm_args_t *subplot_args)
         {
           unsigned int x_len = num_bins_x, y_len = num_bins_y;
 
-          bins = malloc(((k == 0) ? num_bins_y : num_bins_x) * sizeof(double));
+          bins = static_cast<double *>(malloc(((k == 0) ? num_bins_y : num_bins_x) * sizeof(double)));
           cleanup_and_set_error_if(bins == NULL, ERROR_MALLOC);
           grm_args_push(subplot_args, "kind", "s", "hist");
 
@@ -3714,7 +3713,7 @@ error_t plot_marginalheatmap(grm_args_t *subplot_args)
             {
               for (j = 0; j < x_len; j++)
                 {
-                  value = (isnan(plot[(num_bins_y - 1 - i) * num_bins_x + j]))
+                  value = (grm_isnan(plot[(num_bins_y - 1 - i) * num_bins_x + j]))
                               ? 0
                               : plot[(num_bins_y - 1 - i) * num_bins_x + j];
                   if (strcmp(algorithm, "sum") == 0)
@@ -3723,19 +3722,19 @@ error_t plot_marginalheatmap(grm_args_t *subplot_args)
                     }
                   else if (strcmp(algorithm, "max") == 0)
                     {
-                      bins[(k == 0) ? i : j] = max(bins[(k == 0) ? i : j], value);
+                      bins[(k == 0) ? i : j] = grm_max(bins[(k == 0) ? i : j], value);
                     }
                 }
               if (k == 0)
                 {
-                  bin_max = max(bin_max, bins[i]);
+                  bin_max = grm_max(bin_max, bins[i]);
                 }
             }
           if (k == 1)
             {
               for (i = 0; i < x_len; i++)
                 {
-                  bin_max = max(bin_max, bins[i]);
+                  bin_max = grm_max(bin_max, bins[i]);
                 }
             }
           for (i = 0; i < ((k == 0) ? y_len : x_len); i++)
@@ -3778,7 +3777,7 @@ error_t plot_marginalheatmap(grm_args_t *subplot_args)
       else
         {
           gr_setwindow(x_min, x_max, 0.0, c_max / 10);
-          gr_setviewport(viewport[0], viewport[1], viewport[3] + 0.02, min(viewport[3] + 0.12, 1));
+          gr_setviewport(viewport[0], viewport[1], viewport[3] + 0.02, grm_min(viewport[3] + 0.12, 1));
 
           grm_args_push(subplot_args, "orientation", "s", "horizontal");
         }
@@ -3802,11 +3801,11 @@ cleanup:
   return error;
 }
 
-error_t plot_wireframe(grm_args_t *subplot_args)
+err_t plot_wireframe(grm_args_t *subplot_args)
 {
   double *gridit_x = NULL, *gridit_y = NULL, *gridit_z = NULL;
   grm_args_t **current_series;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
@@ -3821,9 +3820,10 @@ error_t plot_wireframe(grm_args_t *subplot_args)
         {
           if (gridit_x == NULL)
             {
-              gridit_x = malloc(PLOT_WIREFRAME_GRIDIT_N * sizeof(double));
-              gridit_y = malloc(PLOT_WIREFRAME_GRIDIT_N * sizeof(double));
-              gridit_z = malloc(PLOT_WIREFRAME_GRIDIT_N * PLOT_WIREFRAME_GRIDIT_N * sizeof(double));
+              gridit_x = static_cast<double *>(malloc(PLOT_WIREFRAME_GRIDIT_N * sizeof(double)));
+              gridit_y = static_cast<double *>(malloc(PLOT_WIREFRAME_GRIDIT_N * sizeof(double)));
+              gridit_z =
+                  static_cast<double *>(malloc(PLOT_WIREFRAME_GRIDIT_N * PLOT_WIREFRAME_GRIDIT_N * sizeof(double)));
               if (gridit_x == NULL || gridit_y == NULL || gridit_z == NULL)
                 {
                   debug_print_malloc_error();
@@ -3856,11 +3856,11 @@ cleanup:
   return error;
 }
 
-error_t plot_surface(grm_args_t *subplot_args)
+err_t plot_surface(grm_args_t *subplot_args)
 {
   double *gridit_x = NULL, *gridit_y = NULL, *gridit_z = NULL;
   grm_args_t **current_series;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
@@ -3875,9 +3875,9 @@ error_t plot_surface(grm_args_t *subplot_args)
         {
           if (gridit_x == NULL)
             {
-              gridit_x = malloc(PLOT_SURFACE_GRIDIT_N * sizeof(double));
-              gridit_y = malloc(PLOT_SURFACE_GRIDIT_N * sizeof(double));
-              gridit_z = malloc(PLOT_SURFACE_GRIDIT_N * PLOT_SURFACE_GRIDIT_N * sizeof(double));
+              gridit_x = static_cast<double *>(malloc(PLOT_SURFACE_GRIDIT_N * sizeof(double)));
+              gridit_y = static_cast<double *>(malloc(PLOT_SURFACE_GRIDIT_N * sizeof(double)));
+              gridit_z = static_cast<double *>(malloc(PLOT_SURFACE_GRIDIT_N * PLOT_SURFACE_GRIDIT_N * sizeof(double)));
               if (gridit_x == NULL || gridit_y == NULL || gridit_z == NULL)
                 {
                   debug_print_malloc_error();
@@ -3911,7 +3911,7 @@ cleanup:
   return error;
 }
 
-error_t plot_plot3(grm_args_t *subplot_args)
+err_t plot_plot3(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
 
@@ -3932,7 +3932,7 @@ error_t plot_plot3(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
-error_t plot_scatter3(grm_args_t *subplot_args)
+err_t plot_scatter3(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
   double c_min, c_max;
@@ -3978,7 +3978,7 @@ error_t plot_scatter3(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
-error_t plot_imshow(grm_args_t *subplot_args)
+err_t plot_imshow(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
   double *c_data;
@@ -4002,7 +4002,7 @@ error_t plot_imshow(grm_args_t *subplot_args)
       rows = shape[0];
       cols = shape[1];
 
-      img_data = malloc(sizeof(int) * c_data_length);
+      img_data = static_cast<int *>(malloc(sizeof(int) * c_data_length));
       if (img_data == NULL)
         {
           debug_print_malloc_error();
@@ -4015,14 +4015,14 @@ error_t plot_imshow(grm_args_t *subplot_args)
       for (j = 0; j < rows; ++j)
         for (i = 0; i < cols; ++i)
           {
-            img_data[k++] = 1000 + (int)round((1.0 * c_data[i * rows + j] - c_min) / (c_max - c_min) * 255);
+            img_data[k++] = 1000 + (int)grm_round((1.0 * c_data[i * rows + j] - c_min) / (c_max - c_min) * 255);
           }
 
       if (cols * (vp[3] - vp[2]) < rows * (vp[1] - vp[0]))
         {
           w = (double)cols / (double)rows * (vp[3] - vp[2]);
-          x_min = max(0.5 * (vp[0] + vp[1] - w), vp[0]);
-          x_max = min(0.5 * (vp[0] + vp[1] + w), vp[1]);
+          x_min = grm_max(0.5 * (vp[0] + vp[1] - w), vp[0]);
+          x_max = grm_min(0.5 * (vp[0] + vp[1] + w), vp[1]);
           y_min = vp[2];
           y_max = vp[3];
         }
@@ -4031,8 +4031,8 @@ error_t plot_imshow(grm_args_t *subplot_args)
           h = (double)rows / (double)cols * (vp[1] - vp[0]);
           x_min = vp[0];
           x_max = vp[1];
-          y_min = max(0.5 * (vp[3] + vp[2] - h), vp[2]);
-          y_max = min(0.5 * (vp[3] + vp[2] + h), vp[3]);
+          y_min = grm_max(0.5 * (vp[3] + vp[2] - h), vp[2]);
+          y_max = grm_min(0.5 * (vp[3] + vp[2] + h), vp[3]);
         }
 
       gr_selntran(0);
@@ -4076,7 +4076,7 @@ void gr3_mc_dtype_test_(void)
     }
 }
 
-error_t plot_isosurface(grm_args_t *subplot_args)
+err_t plot_isosurface(grm_args_t *subplot_args)
 {
   /*
    * Possible arguments to pass:
@@ -4121,8 +4121,8 @@ error_t plot_isosurface(grm_args_t *subplot_args)
   y_max = viewport[3];
 
   get_figure_size(NULL, &fig_width, &fig_height, NULL, NULL);
-  subplot_width = (int)(max(fig_width, fig_height) * (x_max - x_min));
-  subplot_height = (int)(max(fig_width, fig_height) * (y_max - y_min));
+  subplot_width = (int)(grm_max(fig_width, fig_height) * (x_max - x_min));
+  subplot_height = (int)(grm_max(fig_width, fig_height) * (y_max - y_min));
 
   logger((stderr, "viewport: (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
   logger((stderr, "viewport ratio: %lf\n", (x_min - x_max) / (y_min - y_max)));
@@ -4161,11 +4161,11 @@ error_t plot_isosurface(grm_args_t *subplot_args)
         {
           if (isfinite(orig_data[i]))
             {
-              if (isnan(c_min) || c_min > orig_data[i])
+              if (grm_isnan(c_min) || c_min > orig_data[i])
                 {
                   c_min = orig_data[i];
                 }
-              if (isnan(c_max) || c_max < orig_data[i])
+              if (grm_isnan(c_max) || c_max < orig_data[i])
                 {
                   c_max = orig_data[i];
                 }
@@ -4177,7 +4177,7 @@ error_t plot_isosurface(grm_args_t *subplot_args)
       isovalue_int = (unsigned short)((isovalue - c_min) / (c_max - c_min) * USHRT_MAX);
 
       logger((stderr, "c_min %lf c_max %lf isovalue_int %hu\n ", c_min, c_max, isovalue_int));
-      conv_data = malloc(sizeof(unsigned short) * data_length);
+      conv_data = static_cast<unsigned short *>(malloc(sizeof(unsigned short) * data_length));
       if (conv_data == NULL)
         {
           debug_print_malloc_error();
@@ -4187,7 +4187,7 @@ error_t plot_isosurface(grm_args_t *subplot_args)
 
       for (i = 0; i < data_length; ++i)
         {
-          if (isnan(orig_data[i]) || orig_data[i] < c_min)
+          if (grm_isnan(orig_data[i]) || orig_data[i] < c_min)
             {
               conv_data[i] = 0;
             }
@@ -4259,12 +4259,12 @@ error_t plot_isosurface(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
-error_t plot_volume(grm_args_t *subplot_args)
+err_t plot_volume(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
   const char *kind;
   double dlim[2] = {INFINITY, -INFINITY};
-  error_t error;
+  err_t error;
 
   args_values(subplot_args, "series", "A", &current_series);
   args_values(subplot_args, "kind", "s", &kind);
@@ -4327,8 +4327,8 @@ error_t plot_volume(grm_args_t *subplot_args)
       gr_setpicturesizeforvolume((int)width * device_pixel_ratio, (int)height * device_pixel_ratio);
       gr_volume(shape[0], shape[1], shape[2], (double *)c, algorithm, &dmin, &dmax);
 
-      dlim[0] = min(dlim[0], dmin);
-      dlim[1] = max(dlim[1], dmax);
+      dlim[0] = grm_min(dlim[0], dmin);
+      dlim[1] = grm_max(dlim[1], dmax);
 
       ++current_series;
     }
@@ -4344,7 +4344,7 @@ error_t plot_volume(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
-error_t plot_polar(grm_args_t *subplot_args)
+err_t plot_polar(grm_args_t *subplot_args)
 {
   const double *window;
   double r_min, r_max, tick;
@@ -4367,8 +4367,8 @@ error_t plot_polar(grm_args_t *subplot_args)
       return_error_if(!args_first_value(*current_series, "x", "D", &theta, &theta_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!args_first_value(*current_series, "y", "D", &rho, &rho_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(rho_length != theta_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      x = malloc(rho_length * sizeof(double));
-      y = malloc(rho_length * sizeof(double));
+      x = static_cast<double *>(malloc(rho_length * sizeof(double)));
+      y = static_cast<double *>(malloc(rho_length * sizeof(double)));
       if (x == NULL || y == NULL)
         {
           debug_print_malloc_error();
@@ -4459,7 +4459,7 @@ error_t plot_polar(grm_args_t *subplot_args)
  *            The default value is 1.
  *
  * */
-error_t plot_polar_histogram(grm_args_t *subplot_args)
+err_t plot_polar_histogram(grm_args_t *subplot_args)
 {
   unsigned int num_bins;
   double *classes = NULL;
@@ -4474,7 +4474,7 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
   double *liste2 = NULL;
   double *mlist = NULL;
   double *rectlist = NULL;
-  char *norm = NULL;
+  const char *norm = NULL;
   double bin_width = -1.0;
   double *bin_edges = NULL;
   unsigned int num_bin_edges;
@@ -4510,7 +4510,7 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
   int freeable_bin_widths = 0;
   int freeable_bin_edges = 0;
   int freeable_angles = 0;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   gr_inqresamplemethod(&resample);
   gr_setresamplemethod(0x2020202);
@@ -4584,7 +4584,7 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
       /* no bin_edges */
       else if (num_bin_edges == 0)
         {
-          mlist = (double *)malloc(num_bins * 4 * sizeof(double));
+          mlist = static_cast<double *>(malloc(num_bins * 4 * sizeof(double)));
           cleanup_and_set_error_if(mlist == NULL, ERROR_MALLOC);
           if (stairs != 0)
             {
@@ -4593,7 +4593,7 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
         }
       else
         {
-          rectlist = (double *)malloc(num_bins * sizeof(double));
+          rectlist = static_cast<double *>(malloc(num_bins * sizeof(double)));
           cleanup_and_set_error_if(rectlist == NULL, ERROR_MALLOC);
         }
     }
@@ -4605,7 +4605,7 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
   else
     {
       /* TODO: Potential memory leak, s. `malloc` in line 3788 */
-      mlist = (double *)malloc((num_bins + 1) * 4 * sizeof(double));
+      mlist = static_cast<double *>(malloc((num_bins + 1) * 4 * sizeof(double)));
       cleanup_and_set_error_if(mlist == NULL, ERROR_MALLOC);
       if (rlim[0] > rlim[1])
         {
@@ -4666,10 +4666,10 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
           double max_radius;
 
 
-          lineardata = (int *)calloc(image_size * image_size, sizeof(int));
+          lineardata = static_cast<int *>(calloc(image_size * image_size, sizeof(int)));
           cleanup_and_set_error_if(lineardata == NULL, ERROR_MALLOC);
 
-          bin_counts = (int *)malloc(num_bins * sizeof(int));
+          bin_counts = static_cast<int *>(malloc(num_bins * sizeof(int)));
           cleanup_and_set_error_if(bin_counts == NULL, ERROR_MALLOC);
 
           colormap = create_colormap(xcolormap, ycolormap, colormap_size);
@@ -4677,7 +4677,7 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
 
           if (num_bin_edges == 0)
             {
-              angles = (double *)malloc((num_bins + 1) * sizeof(double));
+              angles = static_cast<double *>(malloc((num_bins + 1) * sizeof(double)));
               cleanup_and_set_error_if(angles == NULL, ERROR_MALLOC);
               freeable_angles = 1;
               linspace(0, M_PI * 2, num_bins + 1, angles);
@@ -4760,14 +4760,13 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
                               norm_factor = bin_widths[q];
                             }
 
-                          if ((round(radius * 100) / 100) <=
-                                  (round((count * 1.0 / norm_factor / max * center) * 100) / 100) &&
+                          if ((grm_round(radius * 100) / 100) <=
+                                  (grm_round((count * 1.0 / norm_factor / max * center) * 100) / 100) &&
                               radius <= r_max && radius > r_min)
                             {
-                              lineardata[y * image_size + x] =
-                                  colormap[(int)(radius / (center * pow(2, 0.5)) * (colormap_size - 1)) *
-                                               colormap_size +
-                                           max(min((int)(angle / (2 * M_PI) * colormap_size), colormap_size - 1), 0)];
+                              lineardata[y * image_size + x] = colormap
+                                  [(int)(radius / (center * pow(2, 0.5)) * (colormap_size - 1)) * colormap_size +
+                                   grm_max(grm_min((int)(angle / (2 * M_PI) * colormap_size), colormap_size - 1), 0)];
                             }
 
                         } /* end angle check */
@@ -4795,9 +4794,9 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
     {
       double *temp = NULL;
       double *temp2 = NULL;
-      temp = malloc(num_bin_edges * sizeof(double));
+      temp = static_cast<double *>(malloc(num_bin_edges * sizeof(double)));
       cleanup_and_set_error_if(temp == NULL, ERROR_MALLOC);
-      temp2 = malloc(num_bins * sizeof(double));
+      temp2 = static_cast<double *>(malloc(num_bins * sizeof(double)));
       cleanup_and_set_error_if(temp2 == NULL, ERROR_MALLOC);
       int u;
       for (u = 0; u < num_bin_edges; u++)
@@ -4960,11 +4959,11 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
                       diff_angle = end_angle - start_angle;
                       num_angle = (int)(diff_angle / (0.2 / convert));
 
-                      phi_array = (double *)malloc(num_angle * sizeof(double));
+                      phi_array = static_cast<double *>(malloc(num_angle * sizeof(double)));
                       cleanup_and_set_error_if(phi_array == NULL, ERROR_MALLOC);
                       linspace(start_angle, end_angle, num_angle, phi_array);
 
-                      f1 = (double *)malloc((4 + 2 * num_angle) * sizeof(double));
+                      f1 = static_cast<double *>(malloc((4 + 2 * num_angle) * sizeof(double)));
                       cleanup_and_set_error_if(f1 == NULL, ERROR_MALLOC);
                       /* line_1_x[0] and [1]*/
                       f1[0] = r_min_list[0];
@@ -4984,7 +4983,7 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
                       free(arc_2_x);
                       arc_2_x = NULL;
 
-                      f2 = (double *)malloc((4 + 2 * num_angle) * sizeof(double));
+                      f2 = static_cast<double *>(malloc((4 + 2 * num_angle) * sizeof(double)));
                       cleanup_and_set_error_if(f2 == NULL, ERROR_MALLOC);
                       /* line_1_y[0] and [1] */
                       f2[0] = r_min_list[1];
@@ -5065,20 +5064,20 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
 
                       diff_angle = end_angle - start_angle;
                       num_angle = (int)(diff_angle / (0.2 / convert));
-                      phi_array = (double *)malloc(num_angle * sizeof(double));
+                      phi_array = static_cast<double *>(malloc(num_angle * sizeof(double)));
                       cleanup_and_set_error_if(phi_array == NULL, ERROR_MALLOC);
                       linspace(start_angle, end_angle, num_angle, phi_array);
 
-                      f1 = (double *)malloc((4 + 2 * num_angle) * sizeof(double));
+                      f1 = static_cast<double *>(malloc((4 + 2 * num_angle) * sizeof(double)));
                       cleanup_and_set_error_if(f1 == NULL, ERROR_MALLOC);
                       /* line_1_x[0] and [1]*/
                       f1[0] = cos(bin_edges[x]) * r_min;
-                      f1[1] = min(rect, r_max) * cos(bin_edges[x]);
+                      f1[1] = grm_min(rect, r_max) * cos(bin_edges[x]);
                       /*arc_1_x */
                       listcomprehension(r, cos, phi_array, num_angle, 2, f1);
                       /* reversed line_2_x [0] and [1] */
                       f1[2 + num_angle + 1] = cos(bin_edges[x + 1]) * r_min;
-                      f1[2 + num_angle] = min(rect, r_max) * cos(bin_edges[x + 1]);
+                      f1[2 + num_angle] = grm_min(rect, r_max) * cos(bin_edges[x + 1]);
                       /* reversed arc_2_x */
                       arc_2_x = listcomprehension(r_min, cos, phi_array, num_angle, 0, NULL);
                       cleanup_and_set_error_if(arc_2_x == NULL, ERROR_MALLOC);
@@ -5089,16 +5088,16 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
                       free(arc_2_x);
                       arc_2_x = NULL;
 
-                      f2 = (double *)malloc((4 + 2 * num_angle) * sizeof(double));
+                      f2 = static_cast<double *>(malloc((4 + 2 * num_angle) * sizeof(double)));
                       cleanup_and_set_error_if(f2 == NULL, ERROR_MALLOC);
                       /* line_1_y[0] and [1] */
                       f2[0] = r_min * sin(bin_edges[x]);
-                      f2[1] = min(rect, r_max) * sin(bin_edges[x]);
+                      f2[1] = grm_min(rect, r_max) * sin(bin_edges[x]);
                       /*arc_1_y */
                       listcomprehension(r, sin, phi_array, num_angle, 2, f2);
                       /* reversed line_2_y [0] and [1] */
                       f2[2 + num_angle + 1] = r_min * sin(bin_edges[x + 1]);
-                      f2[2 + num_angle] = min(rect, r_max) * sin(bin_edges[x + 1]);
+                      f2[2 + num_angle] = grm_min(rect, r_max) * sin(bin_edges[x + 1]);
                       /* reversed arc_2_y */
                       arc_2_y = listcomprehension(r_min, sin, phi_array, num_angle, 0, NULL);
                       cleanup_and_set_error_if(arc_2_y == NULL, ERROR_MALLOC);
@@ -5183,8 +5182,8 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
 
                       if (rect > r_min)
                         {
-                          gr_drawarc(-min(rect, r_max), min(rect, r_max), -min(rect, r_max), min(rect, r_max),
-                                     x * (360.0 / num_bins), (x + 1) * 360.0 / num_bins);
+                          gr_drawarc(-grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max),
+                                     grm_min(rect, r_max), x * (360.0 / num_bins), (x + 1) * 360.0 / num_bins);
 
                           gr_drawarc(-r_min, r_min, -r_min, r_min, x * (360.0 / num_bins),
                                      (x + 1) * (360.0 / num_bins));
@@ -5217,8 +5216,8 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
 
                       if (rect > r_min)
                         {
-                          gr_drawarc(-min(rect, r_max), min(rect, r_max), -min(rect, r_max), min(rect, r_max),
-                                     bin_edges[x] * convert, bin_edges[x + 1] * convert);
+                          gr_drawarc(-grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max),
+                                     grm_min(rect, r_max), bin_edges[x] * convert, bin_edges[x + 1] * convert);
 
                           gr_drawarc(-r_min, r_min, -r_min, r_min, bin_edges[x] * convert, bin_edges[x + 1] * convert);
                         }
@@ -5302,10 +5301,10 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
                       gr_polyline(2, line_x, line_y);
                     }
                 }
-              line_x[0] = mlist[(num_bins - 1) * 4 + 2] = max(mlist[(num_bins - 1) * 4 + 2], r_min * cos(0));
-              line_y[0] = mlist[(num_bins - 1) * 4 + 3] = max(mlist[(num_bins - 1) * 4 + 3], r_min * sin(0));
-              line_x[1] = mlist[0] = max(mlist[0], r_min * cos(0));
-              line_y[1] = mlist[1] = max(mlist[1], r_min * sin(0));
+              line_x[0] = mlist[(num_bins - 1) * 4 + 2] = grm_max(mlist[(num_bins - 1) * 4 + 2], r_min * cos(0));
+              line_y[0] = mlist[(num_bins - 1) * 4 + 3] = grm_max(mlist[(num_bins - 1) * 4 + 3], r_min * sin(0));
+              line_x[1] = mlist[0] = grm_max(mlist[0], r_min * cos(0));
+              line_y[1] = mlist[1] = grm_max(mlist[1], r_min * sin(0));
 
               gr_polyline(2, line_x, line_y);
             }
@@ -5353,8 +5352,8 @@ error_t plot_polar_histogram(grm_args_t *subplot_args)
           /* stairs with bin_edges and rlim */
           else if (rectlist != NULL && rlim != NULL)
             {
-              double startx = max(rectlist[0] * cos(bin_edges[0]), r_min * cos(bin_edges[0]));
-              double starty = max(rectlist[0] * sin(bin_edges[0]), r_min * sin(bin_edges[0]));
+              double startx = grm_max(rectlist[0] * cos(bin_edges[0]), r_min * cos(bin_edges[0]));
+              double starty = grm_max(rectlist[0] * sin(bin_edges[0]), r_min * sin(bin_edges[0]));
 
               double line_x[2];
               double line_y[2];
@@ -5445,7 +5444,7 @@ cleanup:
   return error;
 }
 
-error_t plot_pie(grm_args_t *subplot_args)
+err_t plot_pie(grm_args_t *subplot_args)
 {
   grm_args_t *series;
   double *x;
@@ -5459,7 +5458,7 @@ error_t plot_pie(grm_args_t *subplot_args)
   char text[80];
   const char *title;
   unsigned int i;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   args_values(subplot_args, "series", "a", &series); /* series exists always */
 
@@ -5516,7 +5515,7 @@ cleanup:
   return error;
 }
 
-error_t plot_trisurf(grm_args_t *subplot_args)
+err_t plot_trisurf(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
 
@@ -5538,7 +5537,7 @@ error_t plot_trisurf(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
-error_t plot_tricont(grm_args_t *subplot_args)
+err_t plot_tricont(grm_args_t *subplot_args)
 {
   double z_min, z_max;
   double *levels;
@@ -5548,7 +5547,7 @@ error_t plot_tricont(grm_args_t *subplot_args)
 
   args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
   args_values(subplot_args, "levels", "i", &num_levels);
-  levels = malloc(num_levels * sizeof(double));
+  levels = static_cast<double *>(malloc(num_levels * sizeof(double)));
   if (levels == NULL)
     {
       debug_print_malloc_error();
@@ -5577,7 +5576,7 @@ error_t plot_tricont(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
-error_t plot_shade(grm_args_t *subplot_args)
+err_t plot_shade(grm_args_t *subplot_args)
 {
   grm_args_t **current_shader;
   const char *data_component_names[] = {"x", "y", NULL};
@@ -5612,11 +5611,11 @@ error_t plot_shade(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
-error_t plot_raw(grm_args_t *plot_args)
+err_t plot_raw(grm_args_t *plot_args)
 {
   const char *base64_data = NULL;
   char *graphics_data = NULL;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   cleanup_and_set_error_if(!args_values(plot_args, "raw", "s", &base64_data), ERROR_PLOT_MISSING_DATA);
   graphics_data = base64_decode(NULL, base64_data, NULL, &error);
@@ -5636,7 +5635,7 @@ cleanup:
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ auxiliary drawing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
+err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 {
   const char *kind = NULL;
   const double *viewport, *vp;
@@ -5677,7 +5676,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   ticksize = 0.0075 * diag;
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
-      charheight = max(0.024 * diag, 0.012);
+      charheight = grm_max(0.024 * diag, 0.012);
       gr_setcharheight(charheight);
       args_values(args, "ztick", "d", &z_tick);
       args_values(args, "zorg", "dd", &z_org_low, &z_org_high);
@@ -5696,7 +5695,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     }
   else
     {
-      charheight = max(0.018 * diag, 0.012);
+      charheight = grm_max(0.018 * diag, 0.012);
       gr_setcharheight(charheight);
       if (str_equals_any(kind, 3, "heatmap", "shade", "marginalheatmap"))
         {
@@ -5787,7 +5786,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   return NO_ERROR;
 }
 
-error_t plot_draw_polar_axes(grm_args_t *args)
+err_t plot_draw_polar_axes(grm_args_t *args)
 {
   const double *window, *viewport, *vp;
   double diag;
@@ -5809,7 +5808,7 @@ error_t plot_draw_polar_axes(grm_args_t *args)
   args_values(args, "vp", "D", &vp);
   diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
-  charheight = max(0.018 * diag, 0.012);
+  charheight = grm_max(0.018 * diag, 0.012);
 
   args_values(args, "window", "D", &window);
   r_min = window[2];
@@ -5913,14 +5912,14 @@ error_t plot_draw_polar_axes(grm_args_t *args)
       gr_wctondc(x, y);
       if (phiflip == 0)
         {
-          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", (int)round(alpha));
+          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", (int)grm_round(alpha));
         }
       else
         {
           if (alpha == 0.0)
             snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 0);
           else
-            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 330 - (int)round(alpha - interval));
+            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 330 - (int)grm_round(alpha - interval));
         }
       gr_text(x[0], y[0], text_buffer);
     }
@@ -5937,7 +5936,7 @@ error_t plot_draw_polar_axes(grm_args_t *args)
   return NO_ERROR;
 }
 
-error_t plot_draw_legend(grm_args_t *subplot_args)
+err_t plot_draw_legend(grm_args_t *subplot_args)
 {
   const char **labels, **current_label;
   unsigned int num_labels, num_series;
@@ -6004,7 +6003,7 @@ error_t plot_draw_legend(grm_args_t *subplot_args)
   gr_setlinewidth(1);
   gr_drawrect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
   i = 1;
-  gr_uselinespec(" ");
+  gr_uselinespec(const_cast<char *>(" "));
   current_label = labels;
   while (*current_series != NULL)
     {
@@ -6015,7 +6014,7 @@ error_t plot_draw_legend(grm_args_t *subplot_args)
       if (i <= num_labels)
         {
           gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
-          dy = max((tby[2] - tby[0]) - 0.03, 0);
+          dy = grm_max((tby[2] - tby[0]) - 0.03, 0);
           py -= 0.5 * dy;
         }
       gr_savestate();
@@ -6055,7 +6054,7 @@ error_t plot_draw_legend(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
-error_t plot_draw_pie_legend(grm_args_t *subplot_args)
+err_t plot_draw_pie_legend(grm_args_t *subplot_args)
 {
   grm_args_t *series;
   const char **labels, **current_label;
@@ -6077,7 +6076,7 @@ error_t plot_draw_pie_legend(grm_args_t *subplot_args)
     {
       gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
       w += tbx[2] - tbx[0];
-      h = max(h, tby[2] - tby[0]);
+      h = grm_max(h, tby[2] - tby[0]);
     }
   w += num_labels * 0.03 + (num_labels - 1) * 0.02;
 
@@ -6092,7 +6091,7 @@ error_t plot_draw_pie_legend(grm_args_t *subplot_args)
   gr_setlinewidth(1);
   gr_drawrect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
   gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-  gr_uselinespec(" ");
+  gr_uselinespec(const_cast<char *>(" "));
   set_next_color(series, "c", GR_COLOR_FILL);
   for (current_label = labels; *current_label != NULL; ++current_label)
     {
@@ -6111,7 +6110,7 @@ error_t plot_draw_pie_legend(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
-error_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colors)
+err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colors)
 {
   const double *viewport;
   double c_min, c_max;
@@ -6119,20 +6118,19 @@ error_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int co
   double diag, charheight;
   int scale, flip, options;
   unsigned int i;
-  error_t error;
+  err_t error;
 
   gr_savestate();
   args_values(subplot_args, "viewport", "D", &viewport);
   /* TODO: What to do, if there is a `_clim` and a `_zlim`? Merge both together? */
   if (!args_values(subplot_args, "_clim", "dd", &c_min, &c_max))
     {
-      error = args_values(subplot_args, "_zlim", "dd", &c_min, &c_max);
-      if (!error)
+      if (!args_values(subplot_args, "_zlim", "dd", &c_min, &c_max))
         {
-          return error;
+          return ERROR_PLOT_MISSING_DATA;
         }
     }
-  data = malloc(colors * sizeof(int));
+  data = static_cast<int *>(malloc(colors * sizeof(int)));
   if (data == NULL)
     {
       debug_print_malloc_error();
@@ -6163,7 +6161,7 @@ error_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int co
   gr_cellarray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, data);
   diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
-  charheight = max(0.016 * diag, 0.012);
+  charheight = grm_max(0.016 * diag, 0.012);
   gr_setcharheight(charheight);
   args_values(subplot_args, "scale", "i", &scale);
   if (scale & GR_OPTION_Z_LOG)
@@ -6182,9 +6180,9 @@ error_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int co
   return NO_ERROR;
 }
 
-error_t extract_multi_type_argument(grm_args_t *error_container, const char *key, unsigned int x_length,
-                                    unsigned int *downwards_length, unsigned int *upwards_length, double **downwards,
-                                    double **upwards, double *downwards_flt, double *upwards_flt)
+err_t extract_multi_type_argument(grm_args_t *error_container, const char *key, unsigned int x_length,
+                                  unsigned int *downwards_length, unsigned int *upwards_length, double **downwards,
+                                  double **upwards, double *downwards_flt, double *upwards_flt)
 {
   arg_t *arg_ptr;
   args_value_iterator_t *value_it;
@@ -6240,11 +6238,11 @@ error_t extract_multi_type_argument(grm_args_t *error_container, const char *key
   return NO_ERROR;
 }
 
-error_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_length, double *y, char *kind)
+err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_length, double *y, const char *kind)
 {
   grm_args_t *error_container;
   arg_t *arg_ptr;
-  error_t error;
+  err_t error;
 
   double *absolute_upwards, *absolute_downwards, *relative_upwards, *relative_downwards;
   double absolute_upwards_flt, relative_upwards_flt, absolute_downwards_flt, relative_downwards_flt;
@@ -6384,7 +6382,7 @@ double find_max_step(unsigned int n, const double *x)
     }
   for (i = 1; i < n; ++i)
     {
-      max_step = max(x[i] - x[i - 1], max_step);
+      max_step = grm_max(x[i] - x[i - 1], max_step);
     }
 
   return max_step;
@@ -6409,7 +6407,7 @@ double *normalize(unsigned int n, const double *x)
       sum += x[i];
     }
 
-  normalized_x = malloc(n * sizeof(double));
+  normalized_x = static_cast<double *>(malloc(n * sizeof(double)));
   if (normalized_x == NULL)
     {
       debug_print_malloc_error();
@@ -6451,7 +6449,7 @@ unsigned int *normalize_int(unsigned int n, const double *x, unsigned int sum)
       sum_x += x[i];
     }
 
-  normalized_x = malloc(n * sizeof(unsigned int));
+  normalized_x = static_cast<unsigned int *>(malloc(n * sizeof(unsigned int)));
   if (normalized_x == NULL)
     {
       debug_print_malloc_error();
@@ -6503,7 +6501,7 @@ const char *next_fmt_key(const char *kind)
 
   if (kind != NULL)
     {
-      string_map_at(fmt_map, kind, (char **)&saved_fmt);
+      string_map_at(fmt_map, kind, static_cast<const char **>(&saved_fmt));
     }
   if (saved_fmt == NULL)
     {
@@ -6680,7 +6678,7 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
     {
       for (i = 0; i < 2; ++i)
         {
-          pixel_size[i] = (int)round(tmp_size_d[i] * dpi[i]);
+          pixel_size[i] = (int)grm_round(tmp_size_d[i] * dpi[i]);
           metric_size[i] = tmp_size_d[i] / 0.0254;
         }
     }
@@ -6690,7 +6688,7 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
 
       for (i = 0; i < 2; ++i)
         {
-          pixel_size[i] = (int)round(tmp_size_d[i]);
+          pixel_size[i] = (int)grm_round(tmp_size_d[i]);
           metric_size[i] = tmp_size_d[i] / dpm[i];
         }
     }
@@ -6735,7 +6733,7 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
               /* If no value is given, fall back to default value */
               return 0;
             }
-          pixel_size[i] = (int)round(tmp_size_d[i]);
+          pixel_size[i] = (int)grm_round(tmp_size_d[i]);
           metric_size[i] = tmp_size_d[i] / dpm[i];
         }
     }
@@ -6779,7 +6777,7 @@ int get_focus_and_factor(const int x1, const int y1, const int x2, const int y2,
   int width, height, max_width_height;
 
   get_figure_size(NULL, &width, &height, NULL, NULL);
-  max_width_height = max(width, height);
+  max_width_height = grm_max(width, height);
 
   if (x1 <= x2)
     {
@@ -6883,7 +6881,7 @@ grm_args_t *get_subplot_from_ndc_points(unsigned int n, const double *x, const d
 
 double *moivre(double r, int x, int n)
 {
-  double *result = (double *)malloc(2 * sizeof(double));
+  double *result = static_cast<double *>(malloc(2 * sizeof(double)));
   if (result != NULL)
     {
       if (n != 0)
@@ -6909,7 +6907,7 @@ double *listcomprehension(double factor, double (*pFunction)(double), double *li
   int i;
   if (result == NULL)
     {
-      result = (double *)malloc(num * sizeof(double));
+      result = static_cast<double *>(malloc(num * sizeof(double)));
       if (result == NULL)
         {
           return NULL;
@@ -6941,7 +6939,7 @@ int *create_colormap(int x, int y, int size)
       return NULL;
     }
 
-  colormap = malloc(size * size * sizeof(int));
+  colormap = static_cast<int *>(malloc(size * size * sizeof(int)));
   if (colormap == NULL)
     {
       debug_print_malloc_error();
@@ -7017,12 +7015,12 @@ int *create_colormap(int x, int y, int size)
 /*
  * Calculates the classes for polar histogram
  * */
-error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
+err_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
 {
   unsigned int num_bins;
   double *theta = NULL;
   unsigned int length;
-  char *norm;
+  const char *norm;
   double *classes = NULL;
 
   double interval;
@@ -7042,7 +7040,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
   int is_bin_counts;
   int *bin_counts = NULL;
 
-  double false = -1;
+  double false_ = -1;
 
   double *philim = NULL;
   unsigned int dummy;
@@ -7052,7 +7050,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
 
   grm_args_t **series;
 
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
 
   args_values(subplot_args, "series", "A", &series);
@@ -7074,7 +7072,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
 
   if (args_first_value(*series, "philim", "D", &philim, &dummy) == 0)
     {
-      philim = &false;
+      philim = &false_;
     }
   else
     {
@@ -7107,14 +7105,14 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
     {
       if (args_values(*series, "nbins", "i", &num_bins) == 0)
         {
-          num_bins = min(12, (int)(length * 1.0 / 2) - 1);
+          num_bins = grm_min(12, (int)(length * 1.0 / 2) - 1);
           grm_args_push(*series, "nbins", "i", num_bins);
         }
       else
         {
           if (num_bins <= 0 || num_bins > 200)
             {
-              num_bins = min(12, (int)(length * 1.0 / 2) - 1);
+              num_bins = grm_min(12, (int)(length * 1.0 / 2) - 1);
               grm_args_push(*series, "nbins", "i", num_bins);
             }
         }
@@ -7122,7 +7120,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
         num_bin_edges = 0;
       else
         {
-          bin_edges = bin_edges_buf = (double *)malloc((num_bins + 1) * sizeof(double));
+          bin_edges = bin_edges_buf = static_cast<double *>(malloc((num_bins + 1) * sizeof(double)));
           cleanup_and_set_error_if(bin_edges == NULL, ERROR_MALLOC);
           linspace(philim[0], philim[1], num_bins + 1, bin_edges);
           num_bin_edges = num_bins + 1;
@@ -7139,7 +7137,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
           /* filter bin_edges */
           int temp = 0;
           int i;
-          new_edges = malloc(num_bin_edges * sizeof(double));
+          new_edges = static_cast<double *>(malloc(num_bin_edges * sizeof(double)));
           cleanup_and_set_error_if(new_edges == NULL, ERROR_MALLOC);
 
           for (i = 0; i < num_bin_edges; ++i)
@@ -7173,7 +7171,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
         {
           /* filter bin_edges */
           int temp = 0;
-          new_edges = malloc(num_bin_edges * sizeof(double));
+          new_edges = static_cast<double *>(malloc(num_bin_edges * sizeof(double)));
           cleanup_and_set_error_if(new_edges == NULL, ERROR_MALLOC);
 
           int i;
@@ -7231,7 +7229,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
       if (num_bin_edges > 0)
         {
           int i;
-          bin_widths = (double *)malloc((num_bins + 1) * sizeof(double));
+          bin_widths = static_cast<double *>(malloc((num_bins + 1) * sizeof(double)));
           cleanup_and_set_error_if(bin_widths == NULL, ERROR_MALLOC);
 
           for (i = 1; i <= num_bin_edges - 1; ++i)
@@ -7258,7 +7256,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
           logger((stderr, "bin_width is not compatible with bin_edges\n"));
           cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
 
-          bin_widths = (double *)malloc(num_bins * sizeof(double));
+          bin_widths = static_cast<double *>(malloc(num_bins * sizeof(double)));
           cleanup_and_set_error_if(bin_widths == NULL, ERROR_MALLOC);
 
           for (i = 1; i <= num_bin_edges - 1; ++i)
@@ -7294,7 +7292,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
                     }
                   n = num_bins;
                 }
-              bin_edges = bin_edges_buf = (double *)malloc((n + 1) * sizeof(double));
+              bin_edges = bin_edges_buf = static_cast<double *>(malloc((n + 1) * sizeof(double)));
               cleanup_and_set_error_if(bin_edges == NULL, ERROR_MALLOC);
 
               linspace(philim[0], n * bin_width, n + 1, bin_edges);
@@ -7324,7 +7322,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
                 }
               n = num_bins;
             }
-          bin_edges = bin_edges_buf = (double *)malloc((n + 1) * sizeof(double));
+          bin_edges = bin_edges_buf = static_cast<double *>(malloc((n + 1) * sizeof(double)));
           cleanup_and_set_error_if(bin_edges == NULL, ERROR_MALLOC);
 
           linspace(0, n * bin_width, n + 1, bin_edges);
@@ -7334,7 +7332,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
       num_bins = n;
       grm_args_push(*series, "bin_edges", "nD", num_bin_edges, bin_edges);
       grm_args_push(*series, "bin_width", "d", bin_width);
-      bin_widths = malloc(num_bins * sizeof(double));
+      bin_widths = static_cast<double *>(malloc(num_bins * sizeof(double)));
       cleanup_and_set_error_if(bin_widths == NULL, ERROR_MALLOC);
 
       for (temp = 0; temp < num_bins; ++temp)
@@ -7390,7 +7388,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
         }
 
       /* double classes[num_bins][total]; */
-      classes = (double *)malloc((num_bins * total) * sizeof(double));
+      classes = static_cast<double *>(malloc((num_bins * total) * sizeof(double)));
       cleanup_and_set_error_if(classes == NULL, ERROR_MALLOC);
 
       length = (int)temp_max_bc;
@@ -7451,7 +7449,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
           if (str_equals_any(norm, 4, "count", "pdf", "countdensity", "probability"))
             {
               /*double classes[num_bins][length];*/
-              classes = (double *)malloc(num_bins * length * sizeof(double));
+              classes = static_cast<double *>(malloc(num_bins * length * sizeof(double)));
               cleanup_and_set_error_if(classes == NULL, ERROR_MALLOC);
               p = classes;
               int i;
@@ -7482,7 +7480,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
           else if (str_equals_any(norm, 2, "cdf", "cumcount"))
             {
               /*double classes[num_bins][length];*/
-              classes = (double *)malloc(num_bins * length * sizeof(double));
+              classes = static_cast<double *>(malloc(num_bins * length * sizeof(double)));
               cleanup_and_set_error_if(classes == NULL, ERROR_MALLOC);
               int i;
               int prev;
@@ -7544,7 +7542,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
           int temp = 0;
           double bin_min = *bin_edges;
           double bin_max = bin_edges[num_bin_edges - 1];
-          new_theta = (double *)malloc(length * sizeof(double));
+          new_theta = static_cast<double *>(malloc(length * sizeof(double)));
           cleanup_and_set_error_if(new_theta == NULL, ERROR_MALLOC);
           for (filter = 0; filter < length; ++filter)
             {
@@ -7562,7 +7560,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
             {
               int a;
               /* double classes[num_bins][length]; */
-              classes = (double *)malloc(num_bins * length * sizeof(double));
+              classes = static_cast<double *>(malloc(num_bins * length * sizeof(double)));
               cleanup_and_set_error_if(classes == NULL, ERROR_MALLOC);
               p = classes;
               for (a = 0; a < (num_bins * length); ++a)
@@ -7606,7 +7604,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
               int c;
               int prev;
               int d;
-              classes = (double *)malloc(num_bins * length * sizeof(double));
+              classes = static_cast<double *>(malloc(num_bins * length * sizeof(double)));
               cleanup_and_set_error_if(classes == NULL, ERROR_MALLOC);
               p = classes;
               for (c = 0; c < (num_bins * length); ++c)
@@ -8126,4 +8124,5 @@ int grm_switch(unsigned int id)
   active_plot_args = args_array[id];
 
   return 1;
+}
 }

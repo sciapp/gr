@@ -4,6 +4,7 @@ endif
 
   DEFINES = -DGRDIR=\"$(GRDIR)\" -DNO_GS -DNO_X11 -D_WIN32_WINNT=0x0600 -DBUILDING_DLL
    CFLAGS = $(DEFINES) -std=c90
+ CXXFLAGS = $(DEFINES) -std=c++17
  INCLUDES = -I./include \
             -I./src \
             -I../gks \
@@ -36,8 +37,6 @@ endif
             src/grm/datatype/uint_map.o
 
 
-.SUFFIXES: .o .c
-
 default: all
 
 all: libGRM.dll libGRM.lib
@@ -45,11 +44,14 @@ all: libGRM.dll libGRM.lib
 .c.o:
 	$(CC) -o $@ -c $(INCLUDES) $(CFLAGS) $<
 
+.cxx.o:
+	$(CXX) -o $@ -c $(INCLUDES) $(CXXFLAGS) $<
+
 libGRM.lib: $(OBJS)
 	$(AR) crs $@ $?
 
 libGRM.dll: $(OBJS)
-	$(CC) -shared -o $@ $^ $(LIBS) $(LDFLAGS)
+	$(CXX) -shared -o $@ $^ $(LIBS) $(LDFLAGS)
 
 grm.c: grm.h
 
@@ -60,3 +62,5 @@ clean:
 	      src/grm/datatype/*.o
 
 .PHONY: default all clean
+.SUFFIXES:  # Delete the default suffixes
+.SUFFIXES: .c .cxx .o  # List all suffixes for suffix rules explicitly
