@@ -5,7 +5,7 @@ endif
 VERSION = 0.40.0
 PIXMAN_EXTRA_CONFIGURE_FLAGS ?=
 ifeq ($(shell uname),Darwin)
-PIXMAN_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.11
+PIXMAN_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.14
 endif
 
 ifeq ($(DOWNLOAD_CMD),)

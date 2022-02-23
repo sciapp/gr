@@ -1,6 +1,10 @@
 #ifndef GRM_INTERACTION_INT_H_INCLUDED
 #define GRM_INTERACTION_INT_H_INCLUDED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* ######################### includes ############################################################################### */
 
 #include "interaction.h"
@@ -16,4 +20,7 @@
 #define INPUT_DEFAULT_KEEP_ASPECT_RATIO 1
 
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* ifndef GRM_INTERACTION_INT_H_INCLUDED */

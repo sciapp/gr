@@ -1,6 +1,10 @@
 #ifndef GRM_EVENT_INT_H_INCLUDED
 #define GRM_EVENT_INT_H_INCLUDED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* ######################### includes ############################################################################### */
 
 #include "datatype/template/list_int.h"
@@ -46,13 +50,16 @@ void event_queue_unregister(event_queue_t *queue, grm_event_type_t type);
 int event_queue_process_next(event_queue_t *queue);
 int event_queue_process_all(event_queue_t *queue);
 
-error_t event_queue_enqueue_new_plot_event(event_queue_t *queue, int plot_id);
-error_t event_queue_enqueue_update_plot_event(event_queue_t *queue, int plot_id);
-error_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int width, int height);
-error_t event_queue_enqueue_merge_end_event(event_queue_t *queue, const char *identificator);
+err_t event_queue_enqueue_new_plot_event(event_queue_t *queue, int plot_id);
+err_t event_queue_enqueue_update_plot_event(event_queue_t *queue, int plot_id);
+err_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int width, int height);
+err_t event_queue_enqueue_merge_end_event(event_queue_t *queue, const char *identificator);
 
 
 #undef DECLARE_LIST_METHODS
 
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* ifndef GRM_EVENT_INT_H_INCLUDED */

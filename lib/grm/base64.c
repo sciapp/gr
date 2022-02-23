@@ -41,7 +41,7 @@ static const char base64_encode_table[64] = {
 static const char padding_char = '=';
 
 
-error_t block_decode(char dst[3], const char src[4], int block_len, int *decoded_block_len)
+err_t block_decode(char dst[3], const char src[4], int block_len, int *decoded_block_len)
 {
   /*
    * Transform the four input characters with the `base64_decode_table` and interpret the result as four 6-bit values.
@@ -52,7 +52,7 @@ error_t block_decode(char dst[3], const char src[4], int block_len, int *decoded
   int i;
 
   /* The C standard does not require that a char has 8 bits (but almost all systems have 8 bit chars). */
-  static_assert(CHAR_BIT == 8, "A char must consist of 8 bits for this code to work.");
+  grm_static_assert(CHAR_BIT == 8, "A char must consist of 8 bits for this code to work.");
 
   /* Ignore padding characters */
   while (src[block_len - 1] == padding_char && block_len > 0)
@@ -133,12 +133,12 @@ error_t block_decode(char dst[3], const char src[4], int block_len, int *decoded
 }
 
 
-error_t block_encode(char dst[4], const char src[3], int block_len)
+err_t block_encode(char dst[4], const char src[3], int block_len)
 {
   /* Interpret three 8-bit characters as four 6-bit indices for the `base64_encode_table` */
 
   /* The C standard does not require that a char has 8 bits (but almost all systems have 8 bit chars). */
-  static_assert(CHAR_BIT == 8, "A char must consist of 8 bits for this code to work.");
+  grm_static_assert(CHAR_BIT == 8, "A char must consist of 8 bits for this code to work.");
 
   if (block_len < 1)
     {
@@ -198,12 +198,12 @@ error_t block_encode(char dst[4], const char src[3], int block_len)
 }
 
 
-char *base64_decode(char *dst, const char *src, size_t *dst_len, error_t *error)
+char *base64_decode(char *dst, const char *src, size_t *dst_len, err_t *error)
 {
   size_t src_len, max_dst_len;
   size_t dst_index = 0, src_index;
   int decoded_block_len;
-  error_t _error = NO_ERROR;
+  err_t _error = NO_ERROR;
 
   src_len = strlen(src);
 
@@ -225,7 +225,7 @@ char *base64_decode(char *dst, const char *src, size_t *dst_len, error_t *error)
 
   for (dst_index = 0, src_index = 0; src_index < src_len; dst_index += decoded_block_len, src_index += 4)
     {
-      _error = block_decode(dst + dst_index, src + src_index, min(src_len - src_index, 4), &decoded_block_len);
+      _error = block_decode(dst + dst_index, src + src_index, grm_min(src_len - src_index, 4), &decoded_block_len);
       if (_error != NO_ERROR)
         {
           break;
@@ -250,11 +250,11 @@ finally:
 }
 
 
-char *base64_encode(char *dst, const char *src, size_t src_len, error_t *error)
+char *base64_encode(char *dst, const char *src, size_t src_len, err_t *error)
 {
   size_t dst_len;
   size_t dst_index = 0, src_index;
-  error_t _error = NO_ERROR;
+  err_t _error = NO_ERROR;
 
   /* Always round up to multiple of 4 */
   dst_len = (4 * src_len) / 3;
@@ -274,7 +274,7 @@ char *base64_encode(char *dst, const char *src, size_t src_len, error_t *error)
 
   for (dst_index = 0, src_index = 0; src_index < src_len; dst_index += 4, src_index += 3)
     {
-      _error = block_encode(dst + dst_index, src + src_index, min(src_len - src_index, 3));
+      _error = block_encode(dst + dst_index, src + src_index, grm_min(src_len - src_index, 3));
       if (_error != NO_ERROR)
         {
           break;

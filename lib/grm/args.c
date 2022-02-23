@@ -1029,7 +1029,7 @@ args_value_iterator_t *arg_value_iter(const arg_t *arg)
   return args_value_iterator_new(arg);
 }
 
-error_t arg_increase_array(arg_t *arg, size_t increment)
+err_t arg_increase_array(arg_t *arg, size_t increment)
 {
   size_t *current_size_ptr, new_size;
   void ***current_buffer_ptr, **new_buffer;
@@ -1490,8 +1490,8 @@ cleanup:
   return args;
 }
 
-error_t args_push_common(grm_args_t *args, const char *key, const char *value_format, const void *buffer, va_list *vl,
-                         int apply_padding)
+err_t args_push_common(grm_args_t *args, const char *key, const char *value_format, const void *buffer, va_list *vl,
+                       int apply_padding)
 {
   arg_t *arg;
   args_node_t *args_node;
@@ -1536,15 +1536,15 @@ error_t args_push_common(grm_args_t *args, const char *key, const char *value_fo
   return NO_ERROR;
 }
 
-error_t args_push_vl(grm_args_t *args, const char *key, const char *value_format, va_list *vl)
+err_t args_push_vl(grm_args_t *args, const char *key, const char *value_format, va_list *vl)
 {
   return args_push_common(args, key, value_format, NULL, vl, 0);
 }
 
-error_t args_push_arg(grm_args_t *args, arg_t *arg)
+err_t args_push_arg(grm_args_t *args, arg_t *arg)
 {
   args_node_t *args_node = NULL, *previous_node_by_keyword = NULL;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   ++(arg->priv->reference_count);
   args_node = malloc(sizeof(args_node_t));
@@ -1600,12 +1600,12 @@ error_cleanup:
   return error;
 }
 
-error_t args_update_many(grm_args_t *args, const grm_args_t *update_args)
+err_t args_update_many(grm_args_t *args, const grm_args_t *update_args)
 {
   return args_merge(args, update_args, NULL);
 }
 
-error_t args_merge(grm_args_t *args, const grm_args_t *merge_args, const char *const *merge_keys)
+err_t args_merge(grm_args_t *args, const grm_args_t *merge_args, const char *const *merge_keys)
 {
   args_iterator_t *it = NULL;
   args_value_iterator_t *value_it = NULL, *merge_value_it = NULL;
@@ -1614,7 +1614,7 @@ error_t args_merge(grm_args_t *args, const grm_args_t *merge_args, const char *c
   const char *const *current_key_ptr;
   int merge;
   unsigned int i;
-  error_t error = NO_ERROR;
+  err_t error = NO_ERROR;
 
   it = args_iter(merge_args);
   cleanup_and_set_error_if(it == NULL, ERROR_MALLOC);
@@ -1690,8 +1690,8 @@ cleanup:
   return error;
 }
 
-error_t args_setdefault_common(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
-                               va_list *vl, int apply_padding)
+err_t args_setdefault_common(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
+                             va_list *vl, int apply_padding)
 {
   if (!grm_args_contains(args, key))
     {
@@ -1700,9 +1700,9 @@ error_t args_setdefault_common(grm_args_t *args, const char *key, const char *va
   return NO_ERROR;
 }
 
-error_t args_setdefault(grm_args_t *args, const char *key, const char *value_format, ...)
+err_t args_setdefault(grm_args_t *args, const char *key, const char *value_format, ...)
 {
-  error_t error;
+  err_t error;
   va_list vl;
   va_start(vl, value_format);
 
@@ -1713,13 +1713,13 @@ error_t args_setdefault(grm_args_t *args, const char *key, const char *value_for
   return error;
 }
 
-error_t args_setdefault_buf(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
-                            int apply_padding)
+err_t args_setdefault_buf(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
+                          int apply_padding)
 {
   return args_setdefault_common(args, key, value_format, buffer, NULL, apply_padding);
 }
 
-error_t args_setdefault_vl(grm_args_t *args, const char *key, const char *value_format, va_list *vl)
+err_t args_setdefault_vl(grm_args_t *args, const char *key, const char *value_format, va_list *vl)
 {
   return args_setdefault_common(args, key, value_format, NULL, vl, 0);
 }
@@ -1764,7 +1764,7 @@ void args_clear(grm_args_t *args, const char **exclude_keys)
     }
 }
 
-error_t args_increase_array(grm_args_t *args, const char *key, size_t increment)
+err_t args_increase_array(grm_args_t *args, const char *key, size_t increment)
 {
   arg_t *arg;
 
@@ -2077,7 +2077,7 @@ void grm_args_delete(grm_args_t *args)
 int grm_args_push(grm_args_t *args, const char *key, const char *value_format, ...)
 {
   va_list vl;
-  error_t error;
+  err_t error;
 
   va_start(vl, value_format);
 
@@ -2091,7 +2091,7 @@ int grm_args_push(grm_args_t *args, const char *key, const char *value_format, .
 int grm_args_push_buf(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
                       int apply_padding)
 {
-  error_t error;
+  err_t error;
 
   error = args_push_common(args, key, value_format, buffer, NULL, apply_padding);
 

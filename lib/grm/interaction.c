@@ -49,7 +49,7 @@ int grm_input(const grm_args_t *input_args)
   logger((stderr, "Processing input\n"));
 
   get_figure_size(NULL, &width, &height, NULL, NULL);
-  max_width_height = max(width, height);
+  max_width_height = grm_max(width, height);
   logger((stderr, "Using size (%d, %d)\n", width, height));
 
   if (args_values(input_args, "x", "i", &x) && args_values(input_args, "y", "i", &y))
@@ -233,7 +233,7 @@ int grm_is3d(const int x, const int y)
   const char *kind;
 
   get_figure_size(NULL, &width, &height, NULL, NULL);
-  max_width_height = max(width, height);
+  max_width_height = grm_max(width, height);
   ndc_x = (double)x / max_width_height;
   ndc_y = (double)y / max_width_height;
 
@@ -259,7 +259,7 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   const double *viewport, *wswindow;
   grm_args_t *subplot_args;
   get_figure_size(NULL, &width, &height, NULL, NULL);
-  max_width_height = max(width, height);
+  max_width_height = grm_max(width, height);
   if (!get_focus_and_factor(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x, &focus_y, &subplot_args))
     {
       return 0;
@@ -268,12 +268,12 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   args_values(subplot_args, "viewport", "D", &viewport);
   viewport_mid_x = (viewport[1] + viewport[0]) / 2.0;
   viewport_mid_y = (viewport[3] + viewport[2]) / 2.0;
-  *w = (int)round(factor_x * width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0]));
-  *h = (int)round(factor_y * height * (viewport[3] - viewport[2]) / (wswindow[3] - wswindow[2]));
-  *x = (int)round(((viewport_mid_x + focus_x) - ((viewport_mid_x + focus_x) - viewport[0]) * factor_x) *
-                  max_width_height);
-  *y = (int)round(height - ((viewport_mid_y + focus_y) - ((viewport_mid_y + focus_y) - viewport[3]) * factor_y) *
-                               max_width_height);
+  *w = (int)grm_round(factor_x * width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0]));
+  *h = (int)grm_round(factor_y * height * (viewport[3] - viewport[2]) / (wswindow[3] - wswindow[2]));
+  *x = (int)grm_round(((viewport_mid_x + focus_x) - ((viewport_mid_x + focus_x) - viewport[0]) * factor_x) *
+                      max_width_height);
+  *y = (int)grm_round(height - ((viewport_mid_y + focus_y) - ((viewport_mid_y + focus_y) - viewport[3]) * factor_y) *
+                                   max_width_height);
   return 1;
 }
 
@@ -289,7 +289,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   unsigned int x_length, y_length, series_i = 0, i;
 
   get_figure_size(NULL, &width, &height, NULL, NULL);
-  max_width_height = max(width, height);
+  max_width_height = grm_max(width, height);
   x = (double)mouse_x / max_width_height;
   y = (double)(height - mouse_y) / max_width_height;
 

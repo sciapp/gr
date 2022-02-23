@@ -465,7 +465,7 @@ set(GRM_SOURCES
     lib/grm/logging.c
     lib/grm/memwriter.c
     lib/grm/net.c
-    lib/grm/plot.c
+    lib/grm/plot.cpp
     lib/grm/util.c
     lib/grm/datatype/double_map.c
     lib/grm/datatype/string_array_map.c
@@ -505,15 +505,21 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
   endif()
   target_include_directories(
     ${LIBRARY}
-    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/>
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/>
+           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/gr-dom-render/include>
+           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/gr-dom-render/gr-graphics-tree-interface/include>
            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
+  target_compile_definitions(${LIBRARY} PRIVATE BUILDING_GR)
   target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     ${LIBRARY}
     PROPERTIES C_STANDARD 90
                C_EXTENSIONS OFF
                C_STANDARD_REQUIRED ON
+               CXX_STANDARD 17
+               CXX_EXTENSIONS OFF
+               CXX_STANDARD_REQUIRED ON
                POSITION_INDEPENDENT_CODE ON
                C_VISIBILITY_PRESET hidden
                INSTALL_RPATH "${INSTALL_RPATH}"

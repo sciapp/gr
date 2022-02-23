@@ -70,7 +70,7 @@ typedef SSIZE_T ssize_t;
                                                                                                                   \
     /* Use the power of 2 which is equal or greater than 2*capacity as the set capacity */                        \
     power2_capacity = next_or_equal_power2(2 * capacity);                                                         \
-    set = malloc(sizeof(prefix##_set_t));                                                                         \
+    set = (prefix##_set_t *)malloc(sizeof(prefix##_set_t));                                                       \
     if (set == NULL)                                                                                              \
       {                                                                                                           \
         debug_print_malloc_error();                                                                               \
@@ -78,13 +78,13 @@ typedef SSIZE_T ssize_t;
       }                                                                                                           \
     set->set = NULL;                                                                                              \
     set->used = NULL;                                                                                             \
-    set->set = malloc(power2_capacity * sizeof(prefix##_set_entry_t));                                            \
+    set->set = (prefix##_set_entry_t *)malloc(power2_capacity * sizeof(prefix##_set_entry_t));                    \
     if (set->set == NULL)                                                                                         \
       {                                                                                                           \
         debug_print_malloc_error();                                                                               \
         goto error_cleanup;                                                                                       \
       }                                                                                                           \
-    set->used = calloc(power2_capacity, sizeof(unsigned char));                                                   \
+    set->used = (unsigned char *)calloc(power2_capacity, sizeof(unsigned char));                                  \
     if (set->used == NULL)                                                                                        \
       {                                                                                                           \
         debug_print_malloc_error();                                                                               \

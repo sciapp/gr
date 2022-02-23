@@ -1,6 +1,10 @@
 #ifndef GRM_LOGGING_INT_H_INCLUDED
 #define GRM_LOGGING_INT_H_INCLUDED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* ######################### includes ############################################################################### */
 
 #include <stdio.h>
@@ -36,4 +40,7 @@ void logger2_(FILE *stream, const char *format, ...);
 #endif
 
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* ifndef GRM_LOGGING_INT_H_INCLUDED */

@@ -1,6 +1,10 @@
 #ifndef GRM_PLOT_INT_H_INCLUDED
 #define GRM_PLOT_INT_H_INCLUDED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* ######################### includes ############################################################################### */
 
 #include "args_int.h"
@@ -94,7 +98,7 @@ extern const char *plot_clear_exclude_keys[];
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-typedef error_t (*plot_func_t)(grm_args_t *args);
+typedef err_t (*plot_func_t)(grm_args_t *args);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ options ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -135,73 +139,73 @@ typedef enum
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ general ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-error_t plot_init_static_variables(void);
+err_t plot_init_static_variables(void);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-error_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char **hierarchy_name_ptr,
-                        uint_map_t *hierarchy_to_id, int hold_always);
-error_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, unsigned int next_hierarchy_level_max_id);
-error_t plot_init_args_structure(grm_args_t *args, const char **hierarchy_name_ptr,
-                                 unsigned int next_hierarchy_level_max_id);
+err_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char **hierarchy_name_ptr,
+                      uint_map_t *hierarchy_to_id, int hold_always);
+err_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, unsigned int next_hierarchy_level_max_id);
+err_t plot_init_args_structure(grm_args_t *args, const char **hierarchy_name_ptr,
+                               unsigned int next_hierarchy_level_max_id);
 void plot_set_flag_defaults(void);
 void plot_set_attribute_defaults(grm_args_t *subplot_args);
 void plot_pre_plot(grm_args_t *plot_args);
 void plot_set_text_encoding(void);
 void plot_process_wswindow_wsviewport(grm_args_t *plot_args);
-error_t plot_pre_subplot(grm_args_t *subplot_args);
+err_t plot_pre_subplot(grm_args_t *subplot_args);
 void plot_process_colormap(grm_args_t *subplot_args);
 void plot_process_font(grm_args_t *subplot_args);
 void plot_process_resample_method(grm_args_t *subplot_args);
 void plot_process_viewport(grm_args_t *subplot_args);
 void plot_process_window(grm_args_t *subplot_args);
-error_t plot_store_coordinate_ranges(grm_args_t *subplot_args);
+err_t plot_store_coordinate_ranges(grm_args_t *subplot_args);
 void plot_post_plot(grm_args_t *plot_args);
 void plot_restore_text_encoding(void);
 void plot_post_subplot(grm_args_t *subplot_args);
-error_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name_start_ptr, const char *key,
-                                   uint_map_t *hierarchy_to_id, const grm_args_t **found_args,
-                                   const char ***found_hierarchy_ptr);
+err_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name_start_ptr, const char *key,
+                                 uint_map_t *hierarchy_to_id, const grm_args_t **found_args,
+                                 const char ***found_hierarchy_ptr);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plotting ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-error_t plot_line(grm_args_t *subplot_args);
-error_t plot_step(grm_args_t *subplot_args);
-error_t plot_scatter(grm_args_t *subplot_args);
-error_t plot_quiver(grm_args_t *subplot_args);
-error_t plot_stem(grm_args_t *subplot_args);
-error_t plot_hist(grm_args_t *subplot_args);
-error_t plot_barplot(grm_args_t *subplot_args);
-error_t plot_contour(grm_args_t *subplot_args);
-error_t plot_contourf(grm_args_t *subplot_args);
-error_t plot_hexbin(grm_args_t *subplot_args);
-error_t plot_heatmap(grm_args_t *subplot_args);
-error_t plot_wireframe(grm_args_t *subplot_args);
-error_t plot_surface(grm_args_t *subplot_args);
-error_t plot_plot3(grm_args_t *subplot_args);
-error_t plot_scatter3(grm_args_t *subplot_args);
-error_t plot_imshow(grm_args_t *subplot_args);
-error_t plot_isosurface(grm_args_t *subplot_args);
-error_t plot_volume(grm_args_t *subplot_args);
-error_t plot_polar(grm_args_t *subplot_args);
-error_t plot_polar_histogram(grm_args_t *subplot_args);
-error_t plot_pie(grm_args_t *subplot_args);
-error_t plot_trisurf(grm_args_t *subplot_args);
-error_t plot_tricont(grm_args_t *subplot_args);
-error_t plot_shade(grm_args_t *subplot_args);
-error_t plot_raw(grm_args_t *subplot_args);
+err_t plot_line(grm_args_t *subplot_args);
+err_t plot_step(grm_args_t *subplot_args);
+err_t plot_scatter(grm_args_t *subplot_args);
+err_t plot_quiver(grm_args_t *subplot_args);
+err_t plot_stem(grm_args_t *subplot_args);
+err_t plot_hist(grm_args_t *subplot_args);
+err_t plot_barplot(grm_args_t *subplot_args);
+err_t plot_contour(grm_args_t *subplot_args);
+err_t plot_contourf(grm_args_t *subplot_args);
+err_t plot_hexbin(grm_args_t *subplot_args);
+err_t plot_heatmap(grm_args_t *subplot_args);
+err_t plot_wireframe(grm_args_t *subplot_args);
+err_t plot_surface(grm_args_t *subplot_args);
+err_t plot_plot3(grm_args_t *subplot_args);
+err_t plot_scatter3(grm_args_t *subplot_args);
+err_t plot_imshow(grm_args_t *subplot_args);
+err_t plot_isosurface(grm_args_t *subplot_args);
+err_t plot_volume(grm_args_t *subplot_args);
+err_t plot_polar(grm_args_t *subplot_args);
+err_t plot_polar_histogram(grm_args_t *subplot_args);
+err_t plot_pie(grm_args_t *subplot_args);
+err_t plot_trisurf(grm_args_t *subplot_args);
+err_t plot_tricont(grm_args_t *subplot_args);
+err_t plot_shade(grm_args_t *subplot_args);
+err_t plot_raw(grm_args_t *subplot_args);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ auxiliary drawing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-error_t plot_draw_axes(grm_args_t *args, unsigned int pass);
-error_t plot_draw_polar_axes(grm_args_t *args);
-error_t plot_draw_legend(grm_args_t *args);
-error_t plot_draw_pie_legend(grm_args_t *args);
-error_t plot_draw_colorbar(grm_args_t *args, double off, unsigned int colors);
-error_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_length, double *y, char *kind);
+err_t plot_draw_axes(grm_args_t *args, unsigned int pass);
+err_t plot_draw_polar_axes(grm_args_t *args);
+err_t plot_draw_legend(grm_args_t *args);
+err_t plot_draw_pie_legend(grm_args_t *args);
+err_t plot_draw_colorbar(grm_args_t *args, double off, unsigned int colors);
+err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_length, double *y, const char *kind);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -223,11 +227,14 @@ double *moivre(double r, int x, int n);
 double *listcomprehension(double count, double (*pFunction)(double), double *pDouble, int num, int start,
                           double *result);
 int *create_colormap(int x, int y, int size);
-error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max);
+err_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max);
 double get_lightness_from_rbg(double r, double g, double b);
 void set_text_color_for_background(double r, double g, double b);
 void draw_xticklabel(double x1, double x2, const char *label, double available_width);
 void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type);
 
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* ifndef GRM_PLOT_INT_H_INCLUDED */

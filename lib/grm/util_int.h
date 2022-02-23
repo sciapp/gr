@@ -1,6 +1,10 @@
 #ifndef GRM_UTIL_INT_H_INCLUDED
 #define GRM_UTIL_INT_H_INCLUDED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* ######################### includes ############################################################################### */
 
 #include <stdlib.h>
@@ -22,29 +26,15 @@
 #define array_size(a) ((sizeof(a) / sizeof(*(a))))
 #endif
 
-#ifndef isnan
-#define isnan(x) ((x) != (x))
-#endif
-
 #ifndef INFINITY
 #define INFINITY (1.0 / 0.0)
 #endif
 
-#ifndef min
-#define min(x, y) (((x) < (y)) ? (x) : (y))
-#endif
-
-#ifndef max
-#define max(x, y) (((x) > (y)) ? (x) : (y))
-#endif
-
-#ifndef round
-#define round(x) (((x) < 0) ? ceil((x)-.5) : floor((x) + .5))
-#endif
-
-#ifndef static_assert /* defined in C11 */
-#define static_assert(cond, message) ((void)sizeof(char[(cond) ? 1 : -1]))
-#endif
+#define grm_isnan(x) ((x) != (x))
+#define grm_min(x, y) (((x) < (y)) ? (x) : (y))
+#define grm_max(x, y) (((x) > (y)) ? (x) : (y))
+#define grm_round(x) (((x) < 0) ? ceil((x)-.5) : floor((x) + .5))
+#define grm_static_assert(cond, message) ((void)sizeof(char[(cond) ? 1 : -1]))
 
 /* test macros which can be used like `assert` */
 #define return_error_if(condition, error_value)                                                    \
@@ -142,4 +132,7 @@ int is_homogenous_string_of_char(const char *str, char c);
 const char *private_name(const char *public_name);
 unsigned long next_or_equal_power2(unsigned long num);
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* ifndef GRM_UTIL_INT_H_INCLUDED */

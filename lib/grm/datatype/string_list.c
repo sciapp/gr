@@ -16,7 +16,7 @@
 
 DEFINE_LIST_METHODS(string)
 
-error_t string_list_entry_copy(string_list_entry_t *copy, const string_list_const_entry_t entry)
+err_t string_list_entry_copy(string_list_entry_t *copy, const string_list_const_entry_t entry)
 {
   string_list_entry_t _copy;
 
@@ -30,7 +30,7 @@ error_t string_list_entry_copy(string_list_entry_t *copy, const string_list_cons
   return NO_ERROR;
 }
 
-error_t string_list_entry_delete(string_list_entry_t entry)
+err_t string_list_entry_delete(string_list_entry_t entry)
 {
   free(entry);
   return NO_ERROR;

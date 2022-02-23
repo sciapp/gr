@@ -136,56 +136,56 @@ void grm_dump(const grm_args_t *args, FILE *f)
     }                                                                                                            \
   while (0)
 
-#define print_values(value_type, format_string, color_code)                                                        \
-  do                                                                                                               \
-    {                                                                                                              \
-      int print_last_element = 0;                                                                                  \
-      fputc('[', f);                                                                                               \
-      cursor_xpos += strlen(arg->key) + 3;                                                                         \
-      for (i = 0; i < min(value_it->array_length, array_print_elements_count); i++)                                \
-        {                                                                                                          \
-          if (print_last_element)                                                                                  \
-            {                                                                                                      \
-              i = value_it->array_length - 1;                                                                      \
-            }                                                                                                      \
-          if (array_print_elements_count >= value_it->array_length || i != array_print_elements_count - 2)         \
-            {                                                                                                      \
-              if (use_color_codes)                                                                                 \
-                {                                                                                                  \
-                  count_characters =                                                                               \
-                      snprintf(buffer, BUFFER_LEN,                                                                 \
-                               "\033[38;5;%dm" format_string "\033[0m"                                             \
-                               "%s",                                                                               \
-                               color_code, (*((value_type **)value_it->value_ptr))[i],                             \
-                               (i < min(value_it->array_length, array_print_elements_count) - 1) ? ", " : "]");    \
-                  count_characters -= (color_code >= 100) ? 15 : ((color_code >= 10) ? 14 : 13);                   \
-                }                                                                                                  \
-              else                                                                                                 \
-                {                                                                                                  \
-                  count_characters =                                                                               \
-                      snprintf(buffer, BUFFER_LEN, format_string "%s", (*((value_type **)value_it->value_ptr))[i], \
-                               (i < min(value_it->array_length, array_print_elements_count) - 1) ? ", " : "]");    \
-                }                                                                                                  \
-            }                                                                                                      \
-          else                                                                                                     \
-            {                                                                                                      \
-              count_characters = snprintf(buffer, BUFFER_LEN, "..., ");                                            \
-              print_last_element = 1;                                                                              \
-            }                                                                                                      \
-          if (cursor_xpos + count_characters > columns)                                                            \
-            {                                                                                                      \
-              fputc('\n', f);                                                                                      \
-              print_indent;                                                                                        \
-              cursor_xpos = INDENT * recursion_level + fprintf(f, "%*s", (int)strlen(arg->key) + 3, "") - 1;       \
-            }                                                                                                      \
-          fputs(buffer, f);                                                                                        \
-          cursor_xpos += count_characters;                                                                         \
-        }                                                                                                          \
-      if (value_it->array_length == 0)                                                                             \
-        {                                                                                                          \
-          fputc(']', f);                                                                                           \
-        }                                                                                                          \
-    }                                                                                                              \
+#define print_values(value_type, format_string, color_code)                                                         \
+  do                                                                                                                \
+    {                                                                                                               \
+      int print_last_element = 0;                                                                                   \
+      fputc('[', f);                                                                                                \
+      cursor_xpos += strlen(arg->key) + 3;                                                                          \
+      for (i = 0; i < grm_min(value_it->array_length, array_print_elements_count); i++)                             \
+        {                                                                                                           \
+          if (print_last_element)                                                                                   \
+            {                                                                                                       \
+              i = value_it->array_length - 1;                                                                       \
+            }                                                                                                       \
+          if (array_print_elements_count >= value_it->array_length || i != array_print_elements_count - 2)          \
+            {                                                                                                       \
+              if (use_color_codes)                                                                                  \
+                {                                                                                                   \
+                  count_characters =                                                                                \
+                      snprintf(buffer, BUFFER_LEN,                                                                  \
+                               "\033[38;5;%dm" format_string "\033[0m"                                              \
+                               "%s",                                                                                \
+                               color_code, (*((value_type **)value_it->value_ptr))[i],                              \
+                               (i < grm_min(value_it->array_length, array_print_elements_count) - 1) ? ", " : "]"); \
+                  count_characters -= (color_code >= 100) ? 15 : ((color_code >= 10) ? 14 : 13);                    \
+                }                                                                                                   \
+              else                                                                                                  \
+                {                                                                                                   \
+                  count_characters =                                                                                \
+                      snprintf(buffer, BUFFER_LEN, format_string "%s", (*((value_type **)value_it->value_ptr))[i],  \
+                               (i < grm_min(value_it->array_length, array_print_elements_count) - 1) ? ", " : "]"); \
+                }                                                                                                   \
+            }                                                                                                       \
+          else                                                                                                      \
+            {                                                                                                       \
+              count_characters = snprintf(buffer, BUFFER_LEN, "..., ");                                             \
+              print_last_element = 1;                                                                               \
+            }                                                                                                       \
+          if (cursor_xpos + count_characters > columns)                                                             \
+            {                                                                                                       \
+              fputc('\n', f);                                                                                       \
+              print_indent;                                                                                         \
+              cursor_xpos = INDENT * recursion_level + fprintf(f, "%*s", (int)strlen(arg->key) + 3, "") - 1;        \
+            }                                                                                                       \
+          fputs(buffer, f);                                                                                         \
+          cursor_xpos += count_characters;                                                                          \
+        }                                                                                                           \
+      if (value_it->array_length == 0)                                                                              \
+        {                                                                                                           \
+          fputc(']', f);                                                                                            \
+        }                                                                                                           \
+    }                                                                                                               \
   while (0)
 
 #define print_type(value_type, format_string, color_code)      \

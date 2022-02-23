@@ -13,9 +13,9 @@ endif
     SOFLAGS = -shared
     LDFLAGS = $(EXTRA_LDFLAGS)
 ifeq ($(UNAME),Darwin)
-	 CFLAGS += -mmacosx-version-min=10.11
-   CXXFLAGS += -mmacosx-version-min=10.11
-	 LDFLAGS += -mmacosx-version-min=10.11
+	 CFLAGS += -mmacosx-version-min=10.14
+   CXXFLAGS += -mmacosx-version-min=10.14
+	 LDFLAGS += -mmacosx-version-min=10.14
 endif
   WX_CONFIG = false
      WXDEFS =
@@ -29,7 +29,7 @@ ifneq ($(QT4_QMAKE),false)
      QT4LIBS = -L$(QT4LIBDIR) -lQtGui -lQtCore
 ifeq ($(UNAME),Darwin)
 ifneq ($(QT4INC),)
-     QT4INC += -mmacosx-version-min=10.11
+     QT4INC += -mmacosx-version-min=10.14
 endif
 else
 	EXTRA_LDFLAGS_QT4="-Wl,-rpath=$(QT4LIBDIR)"
