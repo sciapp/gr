@@ -71,14 +71,14 @@ const char *gr3_error_file_ = "";
   {                                                                                                                   \
     GR3_InitStruct_INITIALIZER, 0, 0, 0, NULL, 0, NULL, not_initialized_, NULL, NULL, 0, 0, {{0}}, 0, 0, 0, NAN, NAN, \
         NAN, NAN, 0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0, 0, 0, 4, 0, {0}, {0}, {0},   \
-        {0}, 0, 0, 0, 0, {0}, {0.2, 0.8, 128, 0.7}, NAN, NAN, NAN, NAN, NAN, NAN                                      \
+        {0}, 0, 0, 0, 0, {0}, {0.2, 0.8, 128, 0.7}, 1, NAN, NAN, NAN, NAN, NAN, NAN                                   \
   }
 #else
 #define GR3_ContextStruct_INITIALIZER                                                                                 \
   {                                                                                                                   \
     GR3_InitStruct_INITIALIZER, 0, 0, 0, NULL, 0, NULL, not_initialized_, NULL, NULL, 0, 0, {{0}}, 0, 0, 0, NAN, NAN, \
         NAN, NAN, 0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0, 0, 0, -1, 0, {0}, {0}, {0},  \
-        0, 0, 0, {0}, {0.2, 0.8, 128, 0.7}, NAN, NAN, NAN, NAN, NAN, NAN                                              \
+        0, 0, 0, {0}, {0.2, 0.8, 128, 0.7}, 1, NAN, NAN, NAN, NAN, NAN, NAN                                           \
   }
 #endif
 GR3_ContextStruct_t_ context_struct_ = GR3_ContextStruct_INITIALIZER;
@@ -2900,6 +2900,7 @@ void gr3_setlightparameters(float ambient, float diffuse, float specular, float 
   context_struct_.light_parameters.diffuse = diffuse;
   context_struct_.light_parameters.specular = specular;
   context_struct_.light_parameters.specular_exponent = specular_power;
+  context_struct_.use_default_light_parameters = 0;
 }
 
 void gr3_getlightparameters(float *ambient, float *diffuse, float *specular, float *specular_power)
@@ -2930,6 +2931,7 @@ void gr3_setdefaultlightparameters()
   context_struct_.light_parameters.diffuse = 0.8;
   context_struct_.light_parameters.specular_exponent = 128;
   context_struct_.light_parameters.specular = 0.7;
+  context_struct_.use_default_light_parameters = 1;
 }
 
 GR3API void gr3_setclipping(float xmin, float xmax, float ymin, float ymax, float zmin, float zmax)
