@@ -669,14 +669,12 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
   int i, j;
   int projection_type;
   gr_inqprojectiontype(&projection_type);
-
   if (projection_type == GR_PROJECTION_DEFAULT)
     {
       gr3_setprojectiontype(GR3_PROJECTION_PARALLEL);
       if (gr3_geterror(0, NULL, NULL)) return;
       gr3_setcameraprojectionparameters(90.0f, 1.0f, 200.0f);
       if (gr3_geterror(0, NULL, NULL)) return;
-      gr3_setlightdirection(0.0f, -1.0f, 0.0f);
     }
   else if (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC)
     {
@@ -698,7 +696,6 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
                                         (GLfloat)zfar);
         }
       if (gr3_geterror(0, NULL, NULL)) return;
-      gr3_setlightdirection(-ups[0], -ups[1], -ups[2]);
     }
   if (gr3_geterror(0, NULL, NULL)) return;
 
@@ -823,6 +820,10 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
       int previous_option = context_struct_.option;
       context_struct_.option = option;
       surfaceoption = GR3_SURFACE_GRTRANSFORM;
+      if (option == OPTION_Z_SHADED_MESH || option == OPTION_COLORED_MESH)
+        {
+          surfaceoption |= GR3_SURFACE_NORMALS;
+        }
       if (option == OPTION_Z_SHADED_MESH)
         {
           surfaceoption |= GR3_SURFACE_GRZSHADED;
@@ -864,6 +865,11 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
       height *= device_pixel_ratio;
       gr_inqviewport(&vpxmin, &vpxmax, &vpymin, &vpymax);
       aspect = fabs((vpxmax - vpxmin) / (vpymax - vpymin));
+      if (context_struct_.use_default_light_parameters)
+        {
+          gr3_setlightparameters(0.8, 0.2, 0.1, 10.0);
+          context_struct_.use_default_light_parameters = 1;
+        }
       gr_inqprojectiontype(&projection_type);
       if (projection_type == GR_PROJECTION_DEFAULT)
         {
@@ -885,6 +891,10 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
         }
       context_struct_.option = previous_option;
       context_struct_.aspect_override = 0;
+      if (context_struct_.use_default_light_parameters)
+        {
+          gr3_setdefaultlightparameters();
+        }
       if (gr3_geterror(0, NULL, NULL)) return;
     }
   else
@@ -1034,13 +1044,47 @@ GR3API int gr3_createsurface3dmesh(int *mesh, int ncols, int nrows, float *px, f
                   vertices[offset + k * 3 + 1] = gr3_transform_(z, tz);
                   vertices[offset + k * 3 + 2] = gr3_transform_(y, ty);
                 }
-              normals[offset + k * 3 + 0] = 0;
-              normals[offset + k * 3 + 1] = 1;
-              normals[offset + k * 3 + 2] = 0;
               colors[offset + k * 3 + 0] = red;
               colors[offset + k * 3 + 1] = green;
               colors[offset + k * 3 + 2] = blue;
             }
+          {
+            float normal[3];
+            int corner_indices[4][3] = {{0, 1, 2}, {2, 0, 5}, {1, 5, 0}, {5, 2, 1}};
+            for (k = 0; k < 4; k++)
+              {
+                float corner_normal[3];
+                float a[3];
+                float b[3];
+                a[0] =
+                    vertices[offset + corner_indices[k][1] * 3 + 0] - vertices[offset + corner_indices[k][0] * 3 + 0];
+                a[1] =
+                    vertices[offset + corner_indices[k][1] * 3 + 1] - vertices[offset + corner_indices[k][0] * 3 + 1];
+                a[2] =
+                    vertices[offset + corner_indices[k][1] * 3 + 2] - vertices[offset + corner_indices[k][0] * 3 + 2];
+                b[0] =
+                    vertices[offset + corner_indices[k][2] * 3 + 0] - vertices[offset + corner_indices[k][0] * 3 + 0];
+                b[1] =
+                    vertices[offset + corner_indices[k][2] * 3 + 1] - vertices[offset + corner_indices[k][0] * 3 + 1];
+                b[2] =
+                    vertices[offset + corner_indices[k][2] * 3 + 2] - vertices[offset + corner_indices[k][0] * 3 + 2];
+                gr3_normalize_(a);
+                gr3_normalize_(b);
+                gr3_crossprod_(corner_normal, a, b);
+                gr3_normalize_(corner_normal);
+                normal[0] += corner_normal[0];
+                normal[1] += corner_normal[1];
+                normal[2] += corner_normal[2];
+              }
+            gr3_normalize_(normal);
+            for (k = 0; k < 6; k++)
+              {
+
+                normals[offset + k * 3 + 0] = normal[0];
+                normals[offset + k * 3 + 1] = normal[1];
+                normals[offset + k * 3 + 2] = normal[2];
+              }
+          }
         }
     }
   result = gr3_createmesh(mesh, num_vertices, vertices, normals, colors);
@@ -1109,14 +1153,27 @@ GR3API void gr3_drawtrianglesurface(int n, const float *positions)
   assert(colors);
   for (i = 0; i < n; i++)
     {
+      float normal[3];
+      float a[3];
+      float b[3];
+      a[0] = positions[(i * 3 + 1) * 3 + 0] - positions[(i * 3 + 0) * 3 + 0];
+      a[1] = positions[(i * 3 + 1) * 3 + 1] - positions[(i * 3 + 0) * 3 + 1];
+      a[2] = positions[(i * 3 + 1) * 3 + 2] - positions[(i * 3 + 0) * 3 + 2];
+      b[0] = positions[(i * 3 + 2) * 3 + 0] - positions[(i * 3 + 0) * 3 + 0];
+      b[1] = positions[(i * 3 + 2) * 3 + 1] - positions[(i * 3 + 0) * 3 + 1];
+      b[2] = positions[(i * 3 + 2) * 3 + 2] - positions[(i * 3 + 0) * 3 + 2];
+      gr3_normalize_(a);
+      gr3_normalize_(b);
+      gr3_crossprod_(normal, a, b);
+      gr3_normalize_(normal);
       for (j = 0; j < 3; j++)
         {
           int color;
           int rgb;
           /* light direction in gr3_drawmesh_grlike() is fixed to (0, 1, 0) */
-          normals[(i * 3 + j) * 3 + 0] = 0;
-          normals[(i * 3 + j) * 3 + 1] = 1;
-          normals[(i * 3 + j) * 3 + 2] = 0;
+          normals[(i * 3 + j) * 3 + 0] = normal[0];
+          normals[(i * 3 + j) * 3 + 1] = normal[1];
+          normals[(i * 3 + j) * 3 + 2] = normal[2];
           color = 1000 + 255 * (positions[(i * 3 + j) * 3 + 2] - z_min) / (z_max - z_min);
           gr_inqcolor(color, &rgb);
           colors[(i * 3 + j) * 3 + 0] = (float)(rgb & 0xff) / 255;
@@ -1153,9 +1210,18 @@ GR3API void gr3_drawtrianglesurface(int n, const float *positions)
   gr_inqvpsize(&width, &height, &device_pixel_ratio);
   width *= device_pixel_ratio;
   height *= device_pixel_ratio;
+  if (context_struct_.use_default_light_parameters)
+    {
+      gr3_setlightparameters(0.8, 0.2, 0.1, 10.0);
+      context_struct_.use_default_light_parameters = 1;
+    }
 
   gr3_drawimage((float)window.x_min, (float)window.x_max, (float)window.y_min, (float)window.y_max, width, height,
                 GR3_DRAWABLE_GKS);
+  if (context_struct_.use_default_light_parameters)
+    {
+      gr3_setdefaultlightparameters();
+    }
   if (gr3_geterror(0, NULL, NULL)) return;
 }
 
