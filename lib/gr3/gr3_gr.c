@@ -467,39 +467,48 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               int k = j * nx + i;
               float *v = vertices + 3 * k;
               float *n = normals + 3 * k;
-              float dx, dy;
+              float a[3];
+              float b[3];
 
               if (i == 0)
                 {
-                  dx = (v[dirx + 1] - v[1]) / (v[dirx + 0] - v[0]);
+                  a[0] = v[dirx + 0] - v[0];
+                  a[1] = v[dirx + 1] - v[1];
+                  a[2] = v[dirx + 2] - v[2];
                 }
               else if (i == nx - 1)
                 {
-                  dx = (v[1] - v[-dirx + 1]) / (v[0] - v[-dirx + 0]);
+                  a[0] = v[0] - v[0 - dirx];
+                  a[1] = v[1] - v[1 - dirx];
+                  a[2] = v[2] - v[2 - dirx];
                 }
               else
                 {
-                  dx = ((v[1] - v[-dirx + 1]) / (v[0] - v[-dirx + 0]) + (v[dirx + 1] - v[1]) / (v[dirx + 0] - v[0])) /
-                       2.0f;
+                  a[0] = (v[dirx + 0] - v[0 - dirx]) * 0.5;
+                  a[1] = (v[dirx + 1] - v[1 - dirx]) * 0.5;
+                  a[2] = (v[dirx + 2] - v[2 - dirx]) * 0.5;
                 }
 
               if (j == 0)
                 {
-                  dy = (v[diry + 1] - v[1]) / (v[diry + 2] - v[2]);
+                  b[0] = v[diry + 0] - v[0];
+                  b[1] = v[diry + 1] - v[1];
+                  b[2] = v[diry + 2] - v[2];
                 }
               else if (j == ny - 1)
                 {
-                  dy = (v[1] - v[-diry + 1]) / (v[2] - v[-diry + 2]);
+                  b[0] = v[0] - v[0 - diry];
+                  b[1] = v[1] - v[1 - diry];
+                  b[2] = v[2] - v[2 - diry];
                 }
               else
                 {
-                  dy = ((v[1] - v[-diry + 1]) / (v[2] - v[-diry + 2]) + (v[diry + 1] - v[1]) / (v[diry + 2] - v[2])) /
-                       2.0f;
+                  b[0] = (v[diry + 0] - v[0 - diry]) * 0.5;
+                  b[1] = (v[diry + 1] - v[1 - diry]) * 0.5;
+                  b[2] = (v[diry + 2] - v[2 - diry]) * 0.5;
                 }
 
-              n[0] = -dx;
-              n[1] = 1.0f;
-              n[2] = -dy;
+              gr3_crossprod_(n, a, b);
               gr3_normalize_(n);
             }
         }
