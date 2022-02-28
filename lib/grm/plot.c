@@ -2354,6 +2354,8 @@ error_t plot_barplot(grm_args_t *subplot_args)
   grm_args_t **inner_series;
   unsigned int inner_series_length;
 
+  gr_savestate();
+
   /* Default */
   int bar_color = 989, edge_color = 1;
   double bar_color_rgb[3] = {-1};
@@ -2761,6 +2763,8 @@ error_t plot_barplot(grm_args_t *subplot_args)
 
       pos_vertical_change = 0;
       neg_vertical_change = 0;
+      double width, height, available_width, available_height, x_text, y_text;
+      double tbx[4], tby[4];
       /* Draw ylabels */
       if (ylabels != NULL)
         {
@@ -2801,9 +2805,12 @@ error_t plot_barplot(grm_args_t *subplot_args)
 
               if (ylabels_left > 0)
                 {
-                  x1 = (x1 + x2) / 2;
-                  x2 = (y1 + y2) / 2;
-                  gr_wctondc(&x1, &x2);
+                  gr_wctondc(&x1, &y1);
+                  gr_wctondc(&x2, &y2);
+                  available_width = x2 - x1;
+                  available_height = y2 - y1;
+                  x_text = (x1 + x2) / 2;
+                  y_text = (y1 + y2) / 2;
                   if (y_lightness[i] < 0.4)
                     {
                       gr_settextcolorind(0);
@@ -2812,7 +2819,28 @@ error_t plot_barplot(grm_args_t *subplot_args)
                     {
                       gr_settextcolorind(1);
                     }
-                  gr_text(x1, x2, ylabels[i]);
+                  gr_settextalign(2, 3);
+                  gr_setcharup(0.0, 1.0);
+                  gr_inqtextext(x_text, y_text, ylabels[i], tbx, tby);
+                  logger((stderr, "ylabel: \"%s\", textext_x: (%lf, %lf, %lf, %lf), textext_y: (%lf, %lf, %lf, %lf)\n",
+                          ylabels[i], tbx[0], tbx[1], tbx[2], tbx[3], tby[0], tby[1], tby[2], tby[3]));
+                  gr_wctondc(&tbx[0], &tby[0]);
+                  gr_wctondc(&tbx[2], &tby[2]);
+                  width = tbx[2] - tbx[0];
+                  height = tby[2] - tby[0];
+                  logger((stderr, "width: %lf, available_width: %lf\n", width, available_width));
+                  logger((stderr, "height: %lf, available_height: %lf\n", height, available_height));
+                  if (width < available_width && height < available_height)
+                    {
+                      gr_setcharup(0.0, 1.0);
+                      gr_text(x_text, y_text, ylabels[i]);
+                    }
+                  else if (height < available_width && width < available_height)
+                    {
+                      gr_setcharup(-1.0, 0.0);
+                      gr_text(x_text, y_text, ylabels[i]);
+                      gr_setcharup(0.0, 1.0);
+                    }
                   --ylabels_left;
                 }
             }
@@ -2975,8 +3003,12 @@ error_t plot_barplot(grm_args_t *subplot_args)
 
                   if (ylabels_left > 0)
                     {
-                      x1 = (x1 + x2) / 2;
-                      x2 = (y1 + y2) / 2;
+                      gr_wctondc(&x1, &y1);
+                      gr_wctondc(&x2, &y2);
+                      available_width = x2 - x1;
+                      available_height = y2 - y1;
+                      x_text = (x1 + x2) / 2;
+                      y_text = (y1 + y2) / 2;
                       gr_wctondc(&x1, &x2);
                       if (y_lightness[ylabels_length - ylabels_left] < 0.4)
                         {
@@ -2986,7 +3018,30 @@ error_t plot_barplot(grm_args_t *subplot_args)
                         {
                           gr_settextcolorind(1);
                         }
-                      gr_text(x1, x2, ylabels[ylabels_length - ylabels_left]);
+                      gr_settextalign(2, 3);
+                      gr_setcharup(0.0, 1.0);
+                      gr_inqtextext(x_text, y_text, ylabels[ylabels_length - ylabels_left], tbx, tby);
+                      logger((stderr,
+                              "ylabel: \"%s\", textext_x: (%lf, %lf, %lf, %lf), textext_y: (%lf, %lf, %lf, %lf)\n",
+                              ylabels[ylabels_length - ylabels_left], tbx[0], tbx[1], tbx[2], tbx[3], tby[0], tby[1],
+                              tby[2], tby[3]));
+                      gr_wctondc(&tbx[0], &tby[0]);
+                      gr_wctondc(&tbx[2], &tby[2]);
+                      width = tbx[2] - tbx[0];
+                      height = tby[2] - tby[0];
+                      logger((stderr, "width: %lf, available_width: %lf\n", width, available_width));
+                      logger((stderr, "height: %lf, available_height: %lf\n", height, available_height));
+                      if (width < available_width && height < available_height)
+                        {
+                          gr_setcharup(0.0, 1.0);
+                          gr_text(x_text, y_text, ylabels[ylabels_length - ylabels_left]);
+                        }
+                      else if (height < available_width && width < available_height)
+                        {
+                          gr_setcharup(-1.0, 0.0);
+                          gr_text(x_text, y_text, ylabels[ylabels_length - ylabels_left]);
+                          gr_setcharup(0.0, 1.0);
+                        }
                       --ylabels_left;
                     }
                 }
@@ -3030,7 +3085,7 @@ cleanup:
     {
       free(y_lightness);
     }
-
+  gr_restorestate();
   return error;
 }
 
