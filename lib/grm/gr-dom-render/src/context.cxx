@@ -1,101 +1,234 @@
+#include <utility>
+#include <vector>
+
+#include "NotFoundError.h"
+#include "TypeError.hxx"
 #include "context.hxx"
-#include "string"
 
 
-std::string Context::insertIntoDoubleTable(const std::string &keyName, const std::vector<double> &data)
+GR::Context::Context() = default; /*! default constructor for GR::Context*/
+
+GR::Context::Inner::Inner(Context &context, std::string key) : context(&context), key(std::move(key))
 {
   /*!
-   * Inserts a key_name with a unique ID into the doubleTable as the key with data as its value
+   * The non const constructor for GR::Context::Inner
+   *
+   * \param[in] context The GR::Context it belongs to
+   * \param[in] key The assigned key for Inner
    */
-  std::string newKey = keyName + std::to_string(this->idDouble);
-  this->idDouble++;
-  this->tableDouble.insert(std::make_pair(newKey, data));
-  return newKey;
+}
+GR::Context::Inner::Inner(const Context &context, std::string key)
+    : context(&const_cast<Context &>(context)), key(std::move(key))
+{
+  /*!
+   * The const construtor for GR::Context::Inner
+   *
+   * \param[in] context A const GR::Context it belongs to
+   * \param[in] key The assigned key for Inner
+   */
 }
 
-std::string Context::insertIntoIntTable(const std::string &keyName, const std::vector<int> &data)
+bool GR::Context::Inner::intUsed()
 {
-  std::string newKey = keyName + std::to_string(this->idInt);
-  this->idInt++;
-  this->tableInt.insert(std::make_pair(newKey, data));
-  return newKey;
+  /*!
+   * This function is used for checking if the tableInt map of GR::Context contains a value for GR::Context::Inner's key
+   *
+   * \returns a bool indicating the usage of GR::Context::Inner::key by GR::Context::tableInt
+   */
+  return context->tableInt.find(key) != context->tableInt.end();
 }
 
-void Context::clearDoubleTable()
+bool GR::Context::Inner::doubleUsed()
 {
-  this->tableDouble.clear();
+  /*!
+   * This function is used for checking if the tableDouble map of GR::Context contains a value for GR::Context::Inner's
+   * key
+   *
+   * \returns a bool indicating the usage of GR::Context::Inner::key by GR::Context::tableDouble
+   */
+  return context->tableDouble.find(key) != context->tableDouble.end();
 }
 
-void Context::clearIntTable()
-{
-  this->tableInt.clear();
-}
 
-void Context::removeFromDoubleTable(const std::string &key)
+GR::Context::Inner &GR::Context::Inner::operator=(std::vector<double> vec)
 {
-  if (this->doubleTableHasKey(key))
+  /*!
+   * Overloaded operator= for GR::Context::Inner assigning std::vector<double>
+   * Stores the vector in GR::Context::tableDouble with GR::Context::Inner's key
+   * Throws a TypeError if the GR::Context::Inner key is already used by GR::Context::tableInt
+   */
+  if (intUsed())
     {
-      this->tableDouble.erase(key);
+      throw TypeError("Wrong Type: std::vector<int> expected\n");
     }
   else
     {
-      // todo: Error?
+      context->tableDouble[key] = std::move(vec);
+      return *this;
     }
 }
 
-void Context::removeFromIntTable(const std::string &key)
+GR::Context::Inner &GR::Context::Inner::operator=(std::vector<int> vec)
 {
-  if (this->intTableHasKey(key))
+  /*!
+   * Overloaded operator= for GR::Context::Inner assigning std::vector<int>
+   * Stores the vector in GR::Context::tableInt with GR::Context::Inner's key
+   * Throws a TypeError if the GR::Context::Inner key is already used by GR::Context::tableDouble
+   */
+  if (doubleUsed())
     {
-      this->tableInt.erase(key);
+      throw TypeError("Wrong type: std::vector<double> expected\n");
     }
   else
     {
-      // todo: exception?
+      context->tableInt[key] = std::move(vec);
+      return *this;
     }
 }
 
-void Context::replaceInDoubleTable(const std::string &key, const std::vector<double> &data, bool force)
+
+GR::Context::Inner::operator std::vector<int> &()
 {
-  if (force || this->doubleTableHasKey(key))
+  /*!
+   * Overloaded operator std::vector<int>& used for converting GR::Context::Inner to std::vector
+   * This operator is used in GR::get
+   *
+   * Throws a NotFoundError if there is no vector found in tableInt with Inner's key
+   */
+  if (context->tableInt.find(key) != context->tableInt.end())
     {
-      this->tableDouble[key] = data;
+      return context->tableInt[key];
     }
+  throw NotFoundError("No integer value found for given key");
 }
 
-void Context::replaceInIntTable(const std::string &key, const std::vector<int> &data, bool force)
+GR::Context::Inner::operator const std::vector<int> &() const
 {
-  if (force || this->intTableHasKey(key))
+  /*!
+   * The const overloaded operator std::vector<int>& used for converting GR::Context::Inner to const std::vector
+   * This operator is used in GR::get
+   *
+   * Throws a NotFoundError if there is no vector found in tableInt with Inner's key
+   */
+  if (context->tableInt.find(key) != context->tableInt.end())
     {
-      this->tableInt[key] = data;
+      return context->tableInt[key];
     }
+  throw NotFoundError("No integer value found for given key");
 }
 
-bool Context::doubleTableHasKey(const std::string &key)
+GR::Context::Inner::operator std::vector<double> &()
 {
-  if (this->tableDouble.find(key) == this->tableDouble.end()) return false;
-  return true;
+  /*!
+   * Overloaded operator std::vector<double>& used for converting GR::Context::Inner to std::vector
+   * This operator is used in GR::get
+   *
+   * Throws a NotFoundError if there is no vector found in tableDouble with Inner's key
+   */
+  if (context->tableDouble.find(key) != context->tableDouble.end())
+    {
+      return context->tableDouble[key];
+    }
+  throw NotFoundError("No double value found for given key");
 }
 
-bool Context::intTableHasKey(const std::string &key)
+GR::Context::Inner::operator const std::vector<double> &() const
 {
-  if (this->tableInt.find(key) == this->tableInt.end()) return false;
-  return true;
+  /*!
+   * The const overloaded operator std::vector<double>& used for converting GR::Context::Inner to std::vector
+   * This operator is used in GR::get
+   *
+   * Throws a NotFoundError if there is no vector found in tableDouble with Inner's key
+   */
+  if (context->tableDouble.find(key) != context->tableDouble.end())
+    {
+      return context->tableDouble[key];
+    }
+  throw NotFoundError("No double value found for given key");
 }
 
-std::vector<double> &Context::getFromDoubleTable(const std::string &key)
+
+GR::Context::Inner::operator std::vector<int> *()
 {
-  if (this->doubleTableHasKey(key)) return this->tableDouble[key];
-  // todo: else exception?
+  /*!
+   * Overloaded operator std::vector<int>* used for converting GR::Context::Inner to a std::vector pointer
+   * This operator is used in GR::get_if
+   *
+   * Throws a NotFoundError if there is no vector found in tableInt with Inner's key
+   */
+  if (context->tableInt.find(key) != context->tableInt.end())
+    {
+      return &context->tableInt[key];
+    }
+  return nullptr;
 }
 
-std::vector<int> &Context::getFromIntTable(const std::string &key)
+GR::Context::Inner::operator const std::vector<int> *() const
 {
-  if (this->intTableHasKey(key)) return this->tableInt[key];
+  /*!
+   * The const overloaded operator std::vector<int>* used for converting GR::Context::Inner to a std::vector pointer
+   * This operator is used in GR::get_if
+   *
+   * Throws a NotFoundError if there is no vector found in tableInt with Inner's key
+   */
+  if (context->tableInt.find(key) != context->tableInt.end())
+    {
+      return &context->tableInt[key];
+    }
+  return nullptr;
 }
-// todo: or get int etc pointers
 
-int *Context::getFromIntTablePointer(const std::string &key)
+
+GR::Context::Inner::operator std::vector<double> *()
 {
-  if (this->intTableHasKey(key)) return &(this->tableInt[key][0]);
+  /*!
+   * Overloaded operator std::vector<double>* used for converting GR::Context::Inner to a std::vector pointer
+   * This operator is used in GR::get_if
+   *
+   * Throws a NotFoundError if there is no vector found in tableDouble with Inner's key
+   */
+  if (context->tableDouble.find(key) != context->tableDouble.end())
+    {
+      return &context->tableDouble[key];
+    }
+  return nullptr;
+}
+
+GR::Context::Inner::operator const std::vector<double> *() const
+{
+  /*!
+   * The const overloaded operator std::vector<double>* used for converting GR::Context::Inner to a std::vector pointer
+   * This operator is used in GR::get_if
+   *
+   * Throws a NotFoundError if there is no vector found in tableDouble with Inner's key
+   */
+  if (context->tableDouble.find(key) != context->tableDouble.end())
+    {
+      return &context->tableDouble[key];
+    }
+  return nullptr;
+}
+
+
+GR::Context::Inner GR::Context::operator[](const std::string &str)
+{
+  /*!
+   * Overloaded operator[] of GR::Context. This is used to mimic std::map's usage syntax
+   *
+   * \param[in] str A std::string used as the key for GR::Context::Inner
+   * \returns GR::Context::Inner containing access to this GR::Context object and str as key
+   */
+  return Inner(*this, str);
+}
+
+
+const GR::Context::Inner GR::Context::operator[](const std::string &str) const
+{
+  /*!
+   * The const overloaded operator[] of GR::Context. This is used to mimic std::map's usage syntax
+   *
+   * \param[in] str A std::string used as the key for GR::Context::Inner
+   * \returns const GR::Context::Inner containing access to this GR::Context object and str as key
+   */
+  return Inner(*this, str);
 }

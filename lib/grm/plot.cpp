@@ -144,7 +144,7 @@ static grm_args_t *global_root_args = NULL;
 grm_args_t *active_plot_args = NULL;
 static unsigned int active_plot_index = 0;
 grid_t *global_grid = NULL;
-static std::shared_ptr<Render> global_render;
+static std::shared_ptr<GR::Render> global_render;
 static std::shared_ptr<GR::Element> global_root;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ event handling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -438,7 +438,7 @@ err_t plot_init_static_variables(void)
       plot_set_flag_defaults();
       error_cleanup_and_set_error_if(!args_values(global_root_args, "plots", "a", &active_plot_args), ERROR_INTERNAL);
       active_plot_index = 1;
-      global_render = Render::createRender();
+      global_render = GR::Render::createRender();
       meters_per_unit_map = double_map_new_with_data(array_size(symbol_to_meters_per_unit), symbol_to_meters_per_unit);
       error_cleanup_and_set_error_if(meters_per_unit_map == NULL, ERROR_MALLOC);
       fmt_map = string_map_new_with_data(array_size(kind_to_fmt), kind_to_fmt);
@@ -2190,7 +2190,10 @@ err_t plot_line(grm_args_t *subplot_args)
         {
           int current_line_colorind;
           gr_inqlinecolorind(&current_line_colorind);
-          auto element = global_render->createPolyline(x_length, x_vec, y_vec);
+          int id = static_cast<int>(global_root->getAttribute("id"));
+          std::string str = std::to_string(id);
+          auto element = global_render->createPolyline(x_length, str + "x", x_vec, str + "y", y_vec);
+          global_root->setAttribute("id", ++id);
           element->setAttribute("linecolorind", current_line_colorind);
           global_root->append(element);
         }
@@ -2198,7 +2201,10 @@ err_t plot_line(grm_args_t *subplot_args)
         {
           int current_marker_colorind;
           gr_inqmarkercolorind(&current_marker_colorind);
-          auto element = global_render->createPolymarker(x_length, x_vec, y_vec);
+          int id = static_cast<int>(global_root->getAttribute("id"));
+          std::string str = std::to_string(id);
+          auto element = global_render->createPolymarker(x_length, str + "x", x_vec, str + "y", y_vec);
+          global_root->setAttribute("id", ++id);
           element->setAttribute("markercolorind", current_marker_colorind);
           global_root->append(element);
         }
@@ -2254,7 +2260,15 @@ err_t plot_step(grm_args_t *subplot_args)
                 {
                   y_step_values[i] = y_step_values[i + 1] = y[i / 2 + 1];
                 }
-              gr_polyline(2 * x_length - 1, x_step_boundaries, y_step_values);
+              int id = static_cast<int>(global_root->getAttribute("id"));
+              std::string str = std::to_string(id);
+              std::vector<double> x_vec(x_step_boundaries, x_step_boundaries + 2 * x_length - 1);
+              std::vector<double> y_vec(y_step_values, y_step_values + 2 * x_length - 1);
+              auto element = global_render->createPolyline(2 * x_length - 1, str + "x", x_vec, str + "y", y_vec);
+              global_root->setAttribute("id", ++id);
+              global_root->append(element);
+
+              //              gr_polyline(2 * x_length - 1, x_step_boundaries, y_step_values);
             }
           else if (strcmp(where, "post") == 0)
             {
@@ -2271,7 +2285,15 @@ err_t plot_step(grm_args_t *subplot_args)
                   y_step_values[i] = y_step_values[i + 1] = y[i / 2];
                 }
               y_step_values[2 * x_length - 2] = y[x_length - 1];
-              gr_polyline(2 * x_length - 1, x_step_boundaries, y_step_values);
+              int id = static_cast<int>(global_root->getAttribute("id"));
+              std::string str = std::to_string(id);
+              std::vector<double> x_vec(x_step_boundaries, x_step_boundaries + 2 * x_length - 1);
+              std::vector<double> y_vec(y_step_values, y_step_values + 2 * x_length - 1);
+              auto element = global_render->createPolyline(2 * x_length - 1, str + "x", x_vec, str + "y", y_vec);
+              global_root->setAttribute("id", ++id);
+              global_root->append(element);
+
+              //              gr_polyline(2 * x_length - 1, x_step_boundaries, y_step_values);
             }
           else if (strcmp(where, "mid") == 0)
             {
@@ -2287,14 +2309,29 @@ err_t plot_step(grm_args_t *subplot_args)
                 {
                   y_step_values[i] = y_step_values[i + 1] = y[i / 2];
                 }
-              gr_polyline(2 * x_length, x_step_boundaries, y_step_values);
+              int id = static_cast<int>(global_root->getAttribute("id"));
+              std::string str = std::to_string(id);
+              std::vector<double> x_vec(x_step_boundaries, x_step_boundaries + 2 * x_length - 1);
+              std::vector<double> y_vec(y_step_values, y_step_values + 2 * x_length - 1);
+              auto element = global_render->createPolyline(2 * x_length - 1, str + "x", x_vec, str + "y", y_vec);
+              global_root->setAttribute("id", ++id);
+              global_root->append(element);
+
+              //              gr_polyline(2 * x_length, x_step_boundaries, y_step_values);
             }
           free(x_step_boundaries);
           free(y_step_values);
         }
       if (mask & 2)
         {
-          gr_polymarker(x_length, x, y);
+          std::vector<double> x_vec(x, x + x_length);
+          std::vector<double> y_vec(y, y + y_length);
+
+          int id = static_cast<int>(global_root->getAttribute("id"));
+          std::string str = std::to_string(id);
+          auto element = global_render->createPolymarker(x_length, str + "x", x_vec, str + "y", y_vec);
+          global_root->setAttribute("id", ++id);
+          global_root->append(element);
         }
       ++current_series;
     }
@@ -7913,6 +7950,7 @@ int grm_plot(const grm_args_t *args)
     {
       global_root = global_render->createElement("root");
       global_render->replaceChildren(global_root);
+      global_root->setAttribute("id", 0);
 
       plot_set_attribute_defaults(active_plot_args);
       if (plot_process_grid_arguments(active_plot_args) != ERROR_NONE)

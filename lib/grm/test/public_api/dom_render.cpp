@@ -17,7 +17,7 @@
 
 static void test_dom_render(void)
 {
-  double plots[2][2][1000];
+  double plots[2][2][100];
   int n = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
   const char *labels[] = {"sin", "cos"};
   grm_args_t *args, *series[2];
@@ -46,7 +46,7 @@ static void test_dom_render(void)
   args = grm_args_new();
   grm_args_push(args, "series", "nA", 2, series);
   grm_args_push(args, "labels", "nS", 2, labels);
-  grm_args_push(args, "kind", "s", "line");
+  grm_args_push(args, "kind", "s", "step");
 
   printf("plotting data...\n");
 
@@ -57,6 +57,8 @@ static void test_dom_render(void)
 
   printf("Press any key to continue...\n");
   getchar();
+
+  //! ---------
 
   int color_ind = 983;
   for (auto elem : root->querySelectorsAll("polyline"))
