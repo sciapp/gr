@@ -22,6 +22,7 @@ class GridElement
 public:
   GridElement();
   virtual void finalizeSubplot();
+  virtual bool isGrid();
   void setSubplot(double x1, double x2, double y1, double y2);
   void setAbsHeight(double height);
   void setAbsHeightPxl(int height);
@@ -65,9 +66,12 @@ public:
   void setElement(int row, int col, grm_args_t *args);
   void setElement(Slice *slice, GridElement *element);
   void setElement(Slice *slice, grm_args_t *args);
+  void ensureCellIsGrid(int row, int col);
+  void ensureCellsAreGrid(Slice *slice);
   GridElement *getElement(int row, int col) const;
   void printGrid() const;
   virtual void finalizeSubplot();
+  bool isGrid() override;
   void trim();
   int getColSpan(GridElement *element);
   int getRowSpan(GridElement *element);

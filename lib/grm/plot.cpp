@@ -2,6 +2,7 @@
 
 extern "C" {
 
+#include "layout.h"
 #include <ctype.h>
 #include <float.h>
 #include <limits.h>
@@ -131,6 +132,7 @@ static int plot_scatter_markertypes[] = {
 static grm_args_t *global_root_args = NULL;
 grm_args_t *active_plot_args = NULL;
 static unsigned int active_plot_index = 0;
+grid_t *global_grid = NULL;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ event handling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -232,6 +234,8 @@ const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "backgroundcolor",
                                     "bar_color",
                                     "bar_width",
+                                    "col",
+                                    "colspan",
                                     "colormap",
                                     "font",
                                     "font_precision",
@@ -251,6 +255,8 @@ const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "reset_ranges",
                                     "rings",
                                     "rotation",
+                                    "row",
+                                    "rowspan",
                                     "series",
                                     "style",
                                     "subplot",
@@ -314,6 +320,8 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"c", "D|I"},
                                               {"c_dims", "I"},
                                               {"crange", "D"},
+                                              {"col", "i|I"},
+                                              {"colspan", "i|I"},
                                               {"colormap", "i"},
                                               {"dmin", "d"},
                                               {"dmax", "d"},
@@ -342,6 +350,8 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"resample_method", "s|i"},
                                               {"reset_ranges", "i"},
                                               {"rotation", "d"},
+                                              {"row", "i|I"},
+                                              {"rowspan", "i|I"},
                                               {"size", "D|A"},
                                               {"spec", "s"},
                                               {"step_where", "s"},
@@ -1075,6 +1085,93 @@ void plot_process_font(grm_args_t *subplot_args)
       gr_settextfontprec(font, font_precision);
     }
   /* TODO: Implement other datatypes for `font` and `font_precision` */
+}
+
+void plot_process_grid_arguments(const grm_args_t *args)
+{
+  int current_nesting_degree, nesting_degree;
+  int row, col;
+  int *rows, *cols;
+  unsigned int rows_length, cols_length;
+  int rowspan, colspan;
+  int *rowspans, *colspans;
+  unsigned int rowspans_length, colspans_length;
+  int rowstart, rowstop, colstart, colstop;
+  grm_args_t **current_subplot_args;
+
+  global_grid = grid_new(1, 1);
+  args_values(active_plot_args, "subplots", "A", &current_subplot_args);
+  while (*current_subplot_args != NULL)
+    {
+      rows = NULL, cols = NULL;
+      rowspans = NULL, colspans = NULL;
+      rowspan = 1, colspan = 1;
+
+      args_values(*current_subplot_args, "row", "i", &row);
+      args_values(*current_subplot_args, "col", "i", &col);
+
+      args_first_value(*current_subplot_args, "row", "I", &rows, &rows_length);
+      args_first_value(*current_subplot_args, "col", "I", &cols, &cols_length);
+
+      if (rows == NULL)
+        {
+          rows = &row;
+          rows_length = 1;
+        }
+      if (cols == NULL)
+        {
+          cols = &col;
+          cols_length = 1;
+        }
+      /*
+       * TODO: remove compiler error because of error label used in the makro
+       * cleanup_and_set_error_if(rows_length != col_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+       */
+
+      args_values(*current_subplot_args, "rowspan", "i", &rowspan);
+      args_values(*current_subplot_args, "colspan", "i", &colspan);
+
+      args_first_value(*current_subplot_args, "rowspan", "I", &rowspans, &rowspans_length);
+      args_first_value(*current_subplot_args, "colspan", "I", &colspans, &colspans_length);
+
+      if (rowspans == NULL)
+        {
+          rowspans = &rowspan;
+          rowspans_length = 1;
+        }
+      if (colspans == NULL)
+        {
+          colspans = &colspan;
+          colspans_length = 1;
+        }
+
+      nesting_degree = rows_length - 1;
+      element_t *current_grid = global_grid;
+      for (current_nesting_degree = 0; current_nesting_degree <= nesting_degree; ++current_nesting_degree)
+        {
+
+          rowstart = rows[current_nesting_degree];
+          rowstop =
+              (current_nesting_degree >= rowspans_length) ? rowstart + 1 : rowstart + rowspans[current_nesting_degree];
+          colstart = cols[current_nesting_degree];
+          colstop =
+              (current_nesting_degree >= colspans_length) ? colstart + 1 : colstart + colspans[current_nesting_degree];
+
+          if (nesting_degree == current_nesting_degree)
+            {
+              grid_setElementArgsSlice(rowstart, rowstop, colstart, colstop, *current_subplot_args, current_grid);
+            }
+          else
+            {
+              grid_ensureCellsAreGrid(rowstart, rowstop, colstart, colstop, current_grid);
+              current_grid = gird_getElement(rowstart, rowstop, current_grid);
+            }
+        }
+
+      ++current_subplot_args;
+    }
+
+  grid_finalize(global_grid);
 }
 
 void plot_process_resample_method(grm_args_t *subplot_args)
@@ -7632,6 +7729,8 @@ void grm_finalize(void)
       string_array_map_delete(type_map);
       type_map = NULL;
       plot_static_variables_initialized = 0;
+      grid_delete(global_grid);
+      global_grid = NULL;
     }
 }
 
@@ -7714,6 +7813,8 @@ int grm_plot(const grm_args_t *args)
     }
   else
     {
+      plot_process_grid_arguments(args);
+
       plot_set_attribute_defaults(active_plot_args);
       plot_pre_plot(active_plot_args);
       args_values(active_plot_args, "subplots", "A", &current_subplot_args);

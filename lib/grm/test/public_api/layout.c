@@ -27,7 +27,7 @@ void visualize(element_t **elements, int nelems)
   gr_clearws();
 }
 
-void test_dynamic_grid(void)
+void test_grid(void)
 {
   int i, nelems = 6;
 
@@ -88,7 +88,7 @@ void test_dynamic_grid(void)
   grid_delete(grid1);
 }
 
-void test_grid_with_args(void)
+void test_grid_with_grm(void)
 {
   double plots[4][2][1000];
   int n = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
@@ -139,10 +139,69 @@ void test_grid_with_args(void)
   grm_args_delete(args);
   grid_delete(grid);
 }
+
+void test_grid_with_grm_args(void)
+{
+  double plots[4][2][1000];
+  int n = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
+  grm_args_t *args, *subplots[5];
+  int i, j;
+
+  printf("filling argument container...\n");
+
+  for (i = 0; i < 2; ++i)
+    {
+      for (j = 0; j < n; ++j)
+        {
+          plots[i][0][j] = j * 2 * M_PI / n;
+          plots[i][1][j] = sin((j * (i + 1) * 2) * M_PI / n);
+        }
+    }
+  for (i = 0; i < 2; ++i)
+    {
+      for (j = 0; j < n; ++j)
+        {
+          plots[2 + i][0][j] = j * 2 * M_PI / n;
+          plots[2 + i][1][j] = cos((j * (i + 1) * 2) * M_PI / n);
+        }
+    }
+
+  for (i = 0; i < 4; ++i)
+    {
+      subplots[i] = grm_args_new();
+      grm_args_push(subplots[i], "x", "nD", n, plots[i][0]);
+      grm_args_push(subplots[i], "y", "nD", n, plots[i][1]);
+
+      if (i == 0)
+        {
+          grm_args_push(subplots[i], "row", "i", 0);
+          grm_args_push(subplots[i], "col", "i", 0);
+        }
+      else
+        {
+          grm_args_push(subplots[i], "row", "ii", 0, (i - 1) / 2);
+          grm_args_push(subplots[i], "col", "ii", 1, (i - 1) % 2);
+          grm_args_push(subplots[i], "colspan", "i", 2);
+        }
+    }
+
+  args = grm_args_new();
+  grm_args_push(args, "subplots", "nA", 4, subplots);
+
+  printf("plotting data...\n");
+
+  grm_plot(args);
+  printf("Press any key to continue...\n");
+  getchar();
+
+  grm_args_delete(args);
+}
+
 int main(void)
 {
-  /* test_dynamic_grid(); */
-  test_grid_with_args();
+  /* test_grid(); */
+  /* test_grid_with_grm(); */
+  test_grid_with_grm_args();
   grm_finalize();
 
   return 0;

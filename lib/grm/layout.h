@@ -31,6 +31,11 @@ void grid_print(const grid_t *grid);
 void grid_setElement(int row, int col, element_t *a_element, grid_t *a_grid);
 void grid_setElementArgs(int row, int col, grm_args_t *subplot_args, grid_t *a_grid);
 void grid_setElementSlice(int rowStart, int rowStop, int colStart, int colStop, element_t *a_element, grid_t *a_grid);
+void grid_setElementArgsSlice(int rowStart, int rowStop, int colStart, int colStop, grm_args_t *subplot_args,
+                              grid_t *a_grid);
+element_t *gird_getElement(int row, int col, grid_t *a_grid);
+void grid_ensureCellIsGrid(int row, int col, grid_t *a_grid);
+void grid_ensureCellsAreGrid(int rowStart, int rowStop, int colStart, int colStop, grid_t *a_grid);
 void grid_finalize(grid_t *a_grid);
 void grid_delete(const grid_t *grid);
 void trim(grid_t *a_grid);

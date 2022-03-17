@@ -264,6 +264,11 @@ void GridElement::setFitParentsWidth(bool fitParentsWidth)
   this->fitParentsWidth = fitParentsWidth;
 }
 
+bool GridElement::isGrid()
+{
+  return false;
+}
+
 Grid::Grid(int nrows, int ncols) : GridElement(), nrows(nrows), ncols(ncols)
 {
   int i;
@@ -276,6 +281,7 @@ Grid::Grid(int nrows, int ncols) : GridElement(), nrows(nrows), ncols(ncols)
 
 Grid::~Grid()
 {
+  /* TODO: Delete elements */
   for (auto const &x : this->elementToPosition)
     {
       /* delete allocated slices */
@@ -311,6 +317,7 @@ void Grid::setElement(int row, int col, GridElement *element)
     {
     };
 
+  /* TODO: memory leak for old element and its slice? */
   rows.at(row).at(col) = element;
   Slice *newSlice = new Slice(row, row, col, col);
   elementToPosition[element] = newSlice;
@@ -362,6 +369,7 @@ void Grid::setElement(Slice *slice, GridElement *element)
     {
       for (int col = slice->colStart; col < slice->colStop; ++col)
         {
+          /* TODO: memory leak for old element and its slice? */
           rows.at(row).at(col) = element;
         }
     }
@@ -630,4 +638,48 @@ int Grid::getRowSpan(GridElement *element)
 {
   Slice *slice = elementToPosition.at(element);
   return slice->rowStop - slice->rowStart;
+}
+
+void Grid::ensureCellIsGrid(int row, int col)
+{
+  this->upsize(row + 1, col + 1);
+  GridElement *element = this->getElement(row, col);
+  if (element == nullptr || !element->isGrid())
+    {
+      Grid *grid = new Grid(1, 1);
+      this->setElement(row, col, grid);
+    }
+}
+
+void Grid::ensureCellsAreGrid(Slice *slice)
+{
+  Grid *firstGridFound;
+  GridElement *currentElement;
+  int row, col;
+  int nrowsToAllocate = slice->rowStop;
+  int ncolsToAllocate = slice->colStop;
+
+  this->upsize(nrowsToAllocate, ncolsToAllocate);
+
+  for (row = slice->rowStart; row < slice->rowStop; ++row)
+    {
+      for (col = slice->colStart; col < slice->colStop; ++col)
+        {
+          currentElement = this->getElement(row, col);
+          if (currentElement != nullptr && currentElement->isGrid())
+            {
+              firstGridFound = dynamic_cast<Grid *>(currentElement);
+              this->setElement(slice, firstGridFound);
+              return;
+            }
+        }
+    }
+
+  Grid *grid = new Grid(1, 1);
+  this->setElement(slice, grid);
+}
+
+bool Grid::isGrid()
+{
+  return true;
 }

@@ -45,6 +45,34 @@ void grid_setElementSlice(int rowStart, int rowStop, int colStart, int colStop, 
   grid->setElement(&slice, element);
 }
 
+void grid_setElementArgsSlice(int rowStart, int rowStop, int colStart, int colStop, grm_args_t *subplot_args,
+                              grid_t *a_grid)
+{
+  Grid *grid = reinterpret_cast<Grid *>(a_grid);
+  Slice slice(rowStart, rowStop, colStart, colStop);
+  grid->setElement(&slice, subplot_args);
+}
+
+void grid_ensureCellIsGrid(int row, int col, grid_t *a_grid)
+{
+  Grid *grid = reinterpret_cast<Grid *>(a_grid);
+  grid->ensureCellIsGrid(row, col);
+}
+
+void grid_ensureCellsAreGrid(int rowStart, int rowStop, int colStart, int colStop, grid_t *a_grid)
+{
+  Grid *grid = reinterpret_cast<Grid *>(a_grid);
+  Slice slice(rowStart, rowStop, colStart, colStop);
+  grid->ensureCellsAreGrid(&slice);
+}
+
+element_t *gird_getElement(int row, int col, grid_t *a_grid)
+{
+  Grid *grid = reinterpret_cast<Grid *>(a_grid);
+  GridElement *element = grid->getElement(row, col);
+  return reinterpret_cast<element_t *>(element);
+}
+
 void grid_delete(const grid_t *a_grid)
 {
   const Grid *grid = reinterpret_cast<const Grid *>(a_grid);
