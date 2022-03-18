@@ -2292,8 +2292,6 @@ err_t plot_step(grm_args_t *subplot_args)
               auto element = global_render->createPolyline(2 * x_length - 1, str + "x", x_vec, str + "y", y_vec);
               global_root->setAttribute("id", ++id);
               global_root->append(element);
-
-              //              gr_polyline(2 * x_length - 1, x_step_boundaries, y_step_values);
             }
           else if (strcmp(where, "mid") == 0)
             {
@@ -2316,8 +2314,6 @@ err_t plot_step(grm_args_t *subplot_args)
               auto element = global_render->createPolyline(2 * x_length - 1, str + "x", x_vec, str + "y", y_vec);
               global_root->setAttribute("id", ++id);
               global_root->append(element);
-
-              //              gr_polyline(2 * x_length, x_step_boundaries, y_step_values);
             }
           free(x_step_boundaries);
           free(y_step_values);
@@ -2357,6 +2353,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
   args_values(subplot_args, "kind", "s", &kind);
   while (*current_series != NULL)
     {
+      auto parent_element = global_render->createElement("polymarker");
       double *x = NULL, *y = NULL, *z = NULL, *c = NULL, c_min, c_max;
       unsigned int x_length, y_length, z_length, c_length;
       int i, c_index = -1, markertype;
@@ -2369,10 +2366,12 @@ err_t plot_scatter(grm_args_t *subplot_args)
         }
       if (args_values(*current_series, "markertype", "i", &markertype))
         {
+          parent_element->setAttribute("markertype", markertype);
           gr_setmarkertype(markertype);
         }
       else
         {
+          parent_element->setAttribute("markertype", *previous_marker_type);
           gr_setmarkertype(*previous_marker_type++);
           if (*previous_marker_type == INT_MAX)
             {
@@ -2396,16 +2395,21 @@ err_t plot_scatter(grm_args_t *subplot_args)
       if (z != NULL || c != NULL)
         {
           args_values(subplot_args, "_clim", "dd", &c_min, &c_max);
+          auto group = global_render->createGroup();
+          global_root->append(group);
           for (i = 0; i < x_length; i++)
             {
+              auto element = global_render->createElement("polymarker");
               if (z != NULL)
                 {
                   if (i < z_length)
                     {
+                      element->setAttribute("markersize", z[i] / 100.0);
                       gr_setmarkersize(z[i] / 100.0);
                     }
                   else
                     {
+                      element->setAttribute("markersize", 2.0);
                       gr_setmarkersize(2.0);
                     }
                 }
@@ -2423,18 +2427,48 @@ err_t plot_scatter(grm_args_t *subplot_args)
                     {
                       c_index = 989;
                     }
+                  element->setAttribute("markercolorind", c_index);
                   gr_setmarkercolorind(c_index);
                 }
               else if (c_index != -1)
                 {
+                  element->setAttribute("markercolorind", 1000 + c_index);
                   gr_setmarkercolorind(1000 + c_index);
                 }
-              gr_polymarker(1, &x[i], &y[i]);
+
+              auto attrs = parent_element->getAttributeNames();
+              for (auto const &attr : attrs)
+                {
+                  element->setAttribute(attr, parent_element->getAttribute(attr));
+                }
+              element->setAttribute("x", x[i]);
+              element->setAttribute("y", y[i]);
+              element->setAttribute("n", 1);
+              group->append(element);
+              //              global_root->append(element);
+              //! TODO: Test multi color!
+              //              gr_polymarker(1, &x[i], &y[i]);
             }
         }
       else
         {
-          gr_polymarker(x_length, x, y);
+          //! TODO: else block creates new polymarker-> should use old one but still with new vectors. Implement and use
+          //! copy element constructor
+          std::vector<double> x_vec(x, x + x_length);
+          std::vector<double> y_vec(y, y + y_length);
+
+          int id = static_cast<int>(global_root->getAttribute("id"));
+          std::string str = std::to_string(id);
+          auto polymarker = global_render->createPolymarker(x_length, str + "x", x_vec, str + "y", y_vec);
+          //! Copy attributes from element into polymarker
+          auto attrs = parent_element->getAttributeNames();
+          for (auto const &attr : attrs)
+            {
+              polymarker->setAttribute(attr, parent_element->getAttribute(attr));
+            }
+          global_root->setAttribute("id", ++id);
+          global_root->append(polymarker);
+          //          gr_polymarker(x_length, x, y);
         }
       error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
       return_if_error;
@@ -2485,9 +2519,15 @@ err_t plot_stem(grm_args_t *subplot_args)
       unsigned int x_length, y_length;
       char *spec;
       unsigned int i;
+      auto group = global_render->createGroup();
       return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+
+
+      //! TODO: Single polyline between two points. In GRender no option without using context...
+      auto line1 = global_render->createElement("polyline");
+      //      line1->setAttribute("x", )
       gr_polyline(2, (double *)window, base_line_y);
       gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_CIRCLE);
       args_values(*current_series, "spec", "s", &spec);

@@ -31,3 +31,4 @@ lib/gks/qt/gksqt
 moc_*.cpp
 moc_*.h
 qrc_*.cpp
+clion-build/
