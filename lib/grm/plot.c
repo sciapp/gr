@@ -1117,7 +1117,7 @@ static void legend_size(grm_args_t *subplot_args, double *w, double *h)
       for (current_label = labels; *current_label != NULL; ++current_label)
         {
           gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
-          *w = max(*w, tbx[2]);
+          *w = max(*w, tbx[2] - tbx[0]);
           *h += max(tby[2] - tby[0], 0.03);
         }
     }
@@ -5728,8 +5728,8 @@ error_t plot_draw_pie_legend(grm_args_t *subplot_args)
   for (current_label = labels; *current_label != NULL; ++current_label)
     {
       gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
-      w += tbx[2];
-      h = max(h, tby[2]);
+      w += tbx[2] - tbx[0];
+      h = max(h, tby[2] - tby[0]);
     }
   w += num_labels * 0.03 + (num_labels - 1) * 0.02;
 
@@ -5753,7 +5753,7 @@ error_t plot_draw_pie_legend(grm_args_t *subplot_args)
       gr_drawrect(px, px + 0.02, py - 0.01, py + 0.01);
       gr_text(px + 0.03, py, (char *)*current_label);
       gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
-      px += tbx[2] + 0.05;
+      px += tbx[2] - tbx[0] + 0.05;
       set_next_color(NULL, NULL, GR_COLOR_FILL);
     }
   set_next_color(NULL, NULL, GR_COLOR_RESET);
@@ -7394,8 +7394,8 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
           new_label[i] = '\0';
           gr_inqtext(x1, x2, new_label + cur_start, tbx, tby);
           gr_wctondc(&tbx[0], &tby[0]);
-          gr_wctondc(&tbx[1], &tby[1]);
-          width = tbx[1] - tbx[0];
+          gr_wctondc(&tbx[2], &tby[2]);
+          width = tbx[2] - tbx[0];
           new_label[i] = ' ';
 
           /* add possible breakpoint */
