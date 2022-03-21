@@ -281,9 +281,10 @@ Grid::Grid(int nrows, int ncols) : GridElement(), nrows(nrows), ncols(ncols)
 
 Grid::~Grid()
 {
-  /* TODO: Delete elements */
   for (auto const &x : this->elementToPosition)
     {
+      /* delete allocated elements */
+      delete x.first;
       /* delete allocated slices */
       delete x.second;
     }
@@ -298,6 +299,7 @@ void Grid::setElement(int row, int col, GridElement *element)
 {
   int nrowsToAllocate, ncolsToAllocate;
   Slice *oldSlice;
+  GridElement *oldElement;
 
   nrowsToAllocate = row + 1;
   ncolsToAllocate = col + 1;
@@ -317,7 +319,16 @@ void Grid::setElement(int row, int col, GridElement *element)
     {
     };
 
-  /* TODO: memory leak for old element and its slice? */
+  /* Delete old element and it`s Slice */
+  oldElement = this->getElement(row, col);
+  if (oldElement != nullptr)
+    {
+      delete elementToPosition.at(oldElement);
+      elementToPosition.erase(oldElement);
+      delete oldElement;
+    }
+
+
   rows.at(row).at(col) = element;
   Slice *newSlice = new Slice(row, row, col, col);
   elementToPosition[element] = newSlice;
@@ -346,6 +357,7 @@ void Grid::setElement(Slice *slice, GridElement *element)
 {
   int nrowsToAllocate, ncolsToAllocate;
   Slice *oldSlice;
+  std::vector<GridElement *> oldElements;
 
   nrowsToAllocate = slice->rowStop;
   ncolsToAllocate = slice->colStop;
@@ -369,12 +381,21 @@ void Grid::setElement(Slice *slice, GridElement *element)
     {
       for (int col = slice->colStart; col < slice->colStop; ++col)
         {
-          /* TODO: memory leak for old element and its slice? */
+          oldElements.push_back(this->getElement(row, col));
           rows.at(row).at(col) = element;
         }
     }
   Slice *newSlice = slice->copy();
   elementToPosition[element] = newSlice;
+
+  /* Delete old elements */
+  for (auto &oldElement : oldElements)
+    {
+      if (elementToPosition.count(oldElement) == 0)
+        {
+          delete oldElement;
+        }
+    }
 }
 
 void Grid::setElement(Slice *slice, grm_args_t *subplot_args)

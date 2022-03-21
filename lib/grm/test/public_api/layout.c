@@ -177,6 +177,12 @@ void test_grid_with_grm_args(void)
           grm_args_push(subplots[i], "row", "i", 0);
           grm_args_push(subplots[i], "col", "i", 0);
         }
+      else if (i == 3)
+        {
+          grm_args_push(subplots[i], "row", "ii", 0, (i - 1) / 2);
+          grm_args_push(subplots[i], "col", "ii", 1, (i - 1) % 2);
+          grm_args_push(subplots[i], "colspan", "ii", 2, 2);
+        }
       else
         {
           grm_args_push(subplots[i], "row", "ii", 0, (i - 1) / 2);

@@ -7813,9 +7813,8 @@ int grm_plot(const grm_args_t *args)
     }
   else
     {
-      plot_process_grid_arguments(args);
-
       plot_set_attribute_defaults(active_plot_args);
+      plot_process_grid_arguments(active_plot_args);
       plot_pre_plot(active_plot_args);
       args_values(active_plot_args, "subplots", "A", &current_subplot_args);
       while (*current_subplot_args != NULL)
