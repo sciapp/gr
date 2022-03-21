@@ -19,7 +19,7 @@ static void test_dom_render(void)
 {
   double plots[2][2][20];
   int n = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
-  int markertypes[n];
+  double markertypes[n];
   int markercolorinds[n];
   double markersizes[n];
   double markercolordoubs[n];
@@ -42,7 +42,7 @@ static void test_dom_render(void)
 
   for (i = 0; i < n; ++i)
     {
-      markertypes[i] = rand() % (6 - 1 + 1) + 1;
+      markertypes[i] = rand() % 6 + (-32);
       markercolorinds[i] = rand() % (255);
       markercolordoubs[i] = rand() % 255 * 1.0;
     }
@@ -53,6 +53,7 @@ static void test_dom_render(void)
       grm_args_push(series[i], "x", "nD", n, plots[i][0]);
       grm_args_push(series[i], "y", "nD", n, plots[i][1]);
       grm_args_push(series[i], "c", "nD", n, markercolordoubs);
+      grm_args_push(series[i], "markertype", "nD", n, markertypes);
     }
 
 

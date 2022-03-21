@@ -368,7 +368,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"labels", "S"},
                                               {"levels", "i"},
                                               {"location", "i"},
-                                              {"markertype", "i"},
+                                              {"markertype", "i|D"},
                                               {"nbins", "i"},
                                               {"panzoom", "D"},
                                               {"raw", "s"},
@@ -2267,8 +2267,6 @@ err_t plot_step(grm_args_t *subplot_args)
               auto element = global_render->createPolyline(2 * x_length - 1, str + "x", x_vec, str + "y", y_vec);
               global_root->setAttribute("id", ++id);
               global_root->append(element);
-
-              //              gr_polyline(2 * x_length - 1, x_step_boundaries, y_step_values);
             }
           else if (strcmp(where, "post") == 0)
             {
@@ -2355,7 +2353,8 @@ err_t plot_scatter(grm_args_t *subplot_args)
     {
       auto parent_element = global_render->createElement("polymarker");
       double *x = NULL, *y = NULL, *z = NULL, *c = NULL, c_min, c_max;
-      unsigned int x_length, y_length, z_length, c_length;
+      double *markertypes = NULL;
+      unsigned int x_length, y_length, z_length, c_length, markertypes_length;
       int i, c_index = -1, markertype;
       return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
@@ -2369,7 +2368,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
           parent_element->setAttribute("markertype", markertype);
           gr_setmarkertype(markertype);
         }
-      else
+      else if (!args_first_value(*current_series, "markertype", "D", &markertypes, &markertypes_length))
         {
           parent_element->setAttribute("markertype", *previous_marker_type);
           gr_setmarkertype(*previous_marker_type++);
@@ -2392,7 +2391,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
               c_index = 255;
             }
         }
-      if (z != NULL || c != NULL)
+      if (z != NULL || c != NULL || markertypes != NULL)
         {
           args_values(subplot_args, "_clim", "dd", &c_min, &c_max);
           auto group = global_render->createGroup();
@@ -2405,12 +2404,10 @@ err_t plot_scatter(grm_args_t *subplot_args)
                   if (i < z_length)
                     {
                       element->setAttribute("markersize", z[i] / 100.0);
-                      gr_setmarkersize(z[i] / 100.0);
                     }
                   else
                     {
                       element->setAttribute("markersize", 2.0);
-                      gr_setmarkersize(2.0);
                     }
                 }
               if (c != NULL)
@@ -2428,12 +2425,26 @@ err_t plot_scatter(grm_args_t *subplot_args)
                       c_index = 989;
                     }
                   element->setAttribute("markercolorind", c_index);
-                  gr_setmarkercolorind(c_index);
                 }
               else if (c_index != -1)
                 {
                   element->setAttribute("markercolorind", 1000 + c_index);
-                  gr_setmarkercolorind(1000 + c_index);
+                }
+
+              if (markertypes != NULL)
+                {
+                  if (i < markertypes_length)
+                    {
+                      element->setAttribute("markertype", (int)markertypes[i]);
+                    }
+                  else
+                    {
+                      element->setAttribute("markertype", (int)markertypes[markertypes_length - 1]);
+                    }
+                }
+              else
+                {
+                  element->setAttribute("markertype", *previous_marker_type);
                 }
 
               auto attrs = parent_element->getAttributeNames();
@@ -2445,21 +2456,21 @@ err_t plot_scatter(grm_args_t *subplot_args)
               element->setAttribute("y", y[i]);
               element->setAttribute("n", 1);
               group->append(element);
-              //              global_root->append(element);
-              //! TODO: Test multi color!
-              //              gr_polymarker(1, &x[i], &y[i]);
+            }
+          if (markertypes == NULL)
+            {
+              previous_marker_type++;
             }
         }
       else
         {
-          //! TODO: else block creates new polymarker-> should use old one but still with new vectors. Implement and use
-          //! copy element constructor
           std::vector<double> x_vec(x, x + x_length);
           std::vector<double> y_vec(y, y + y_length);
 
           int id = static_cast<int>(global_root->getAttribute("id"));
           std::string str = std::to_string(id);
           auto polymarker = global_render->createPolymarker(x_length, str + "x", x_vec, str + "y", y_vec);
+
           //! Copy attributes from element into polymarker
           auto attrs = parent_element->getAttributeNames();
           for (auto const &attr : attrs)
@@ -2468,7 +2479,6 @@ err_t plot_scatter(grm_args_t *subplot_args)
             }
           global_root->setAttribute("id", ++id);
           global_root->append(polymarker);
-          //          gr_polymarker(x_length, x, y);
         }
       error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
       return_if_error;
