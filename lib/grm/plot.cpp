@@ -1309,6 +1309,7 @@ static void legend_size(grm_args_t *subplot_args, double *w, double *h)
 
 void plot_process_viewport(grm_args_t *subplot_args)
 {
+  //! TODO: Make dom compatible
   const char *kind;
   const double *subplot;
   int keep_aspect_ratio;
@@ -1440,7 +1441,8 @@ void plot_process_viewport(grm_args_t *subplot_args)
       viewport[3] = y_center + r;
     }
 
-  gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+  global_render->setViewport(global_root->lastChildElement(), viewport[0], viewport[1], viewport[2], viewport[3]);
+  //  gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 
   grm_args_push(subplot_args, "vp", "dddd", vp[0], vp[1], vp[2], vp[3]);
   grm_args_push(subplot_args, "viewport", "dddd", viewport[0], viewport[1], viewport[2], viewport[3]);
@@ -1472,6 +1474,7 @@ double auto_tick(double amin, double amax)
 
 void plot_process_window(grm_args_t *subplot_args)
 {
+  //! TODO: dom render integration
   int scale = 0;
   const char *kind;
   int xlog, ylog, zlog;
@@ -1555,7 +1558,9 @@ void plot_process_window(grm_args_t *subplot_args)
       /* Ensure the correct window is set in GR */
       if (args_values(subplot_args, "window", "D", &stored_window))
         {
-          gr_setwindow(stored_window[0], stored_window[1], stored_window[2], stored_window[3]);
+          global_render->setWindow(global_root->lastChildElement(), stored_window[0], stored_window[1],
+                                   stored_window[2], stored_window[3]);
+          //          gr_setwindow(stored_window[0], stored_window[1], stored_window[2], stored_window[3]);
           logger((stderr, "Window before `gr_panzoom` (%lf, %lf, %lf, %lf)\n", stored_window[0], stored_window[1],
                   stored_window[2], stored_window[3]));
         }
@@ -1656,7 +1661,8 @@ void plot_process_window(grm_args_t *subplot_args)
   grm_args_push(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
   if (!str_equals_any(kind, 2, "polar", "polar_histogram"))
     {
-      gr_setwindow(x_min, x_max, y_min, y_max);
+      global_render->setWindow(global_root->lastChildElement(), x_min, x_max, y_min, y_max);
+      //      gr_setwindow(x_min, x_max, y_min, y_max);
     }
   else
     {
@@ -2195,7 +2201,7 @@ err_t plot_line(grm_args_t *subplot_args)
           auto element = global_render->createPolyline(x_length, str + "x", x_vec, str + "y", y_vec);
           global_root->setAttribute("id", ++id);
           element->setAttribute("linecolorind", current_line_colorind);
-          global_root->append(element);
+          global_root->lastChildElement()->append(element);
         }
       if (mask & 2)
         {
@@ -2206,7 +2212,7 @@ err_t plot_line(grm_args_t *subplot_args)
           auto element = global_render->createPolymarker(x_length, str + "x", x_vec, str + "y", y_vec);
           global_root->setAttribute("id", ++id);
           element->setAttribute("markercolorind", current_marker_colorind);
-          global_root->append(element);
+          global_root->lastChildElement()->append(element);
         }
       /*
        * error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
@@ -2470,15 +2476,14 @@ err_t plot_scatter(grm_args_t *subplot_args)
           int id = static_cast<int>(global_root->getAttribute("id"));
           std::string str = std::to_string(id);
           auto polymarker = global_render->createPolymarker(x_length, str + "x", x_vec, str + "y", y_vec);
+          global_root->setAttribute("id", ++id);
 
-          //! Copy attributes from element into polymarker
+          //! Copy attributes from parent element into polymarker
           auto attrs = parent_element->getAttributeNames();
           for (auto const &attr : attrs)
             {
               polymarker->setAttribute(attr, parent_element->getAttribute(attr));
             }
-          global_root->setAttribute("id", ++id);
-          global_root->append(polymarker);
         }
       error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
       return_if_error;
@@ -2530,25 +2535,29 @@ err_t plot_stem(grm_args_t *subplot_args)
       char *spec;
       unsigned int i;
       auto group = global_render->createGroup();
+      global_root->append(group);
       return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
 
-
-      //! TODO: Single polyline between two points. In GRender no option without using context...
-      auto line1 = global_render->createElement("polyline");
-      //      line1->setAttribute("x", )
-      gr_polyline(2, (double *)window, base_line_y);
-      gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_CIRCLE);
+      group->append(global_render->createPolyline(window[0], window[1], base_line_y[0], base_line_y[1]));
       args_values(*current_series, "spec", "s", &spec);
-      gr_uselinespec(spec);
+      auto subGroup = global_render->createGroup();
+      group->append(subGroup);
+      global_render->setLineSpec(subGroup, spec);
       for (i = 0; i < x_length; ++i)
         {
           stem_x[0] = stem_x[1] = x[i];
           stem_y[1] = y[i];
-          gr_polyline(2, stem_x, stem_y);
+          subGroup->append(global_render->createPolyline(stem_x[0], stem_x[1], stem_y[0], stem_y[1]));
         }
-      gr_polymarker(x_length, x, y);
+      std::vector<double> x_vec(x, x + x_length);
+      std::vector<double> y_vec(y, y + x_length);
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      group->append(global_render->createPolymarker(x_length, "x" + str, x_vec, "y" + str, y_vec, nullptr,
+                                                    GKS_K_MARKERTYPE_SOLID_CIRCLE));
+      global_root->setAttribute("id", ++id);
       ++current_series;
     }
 
@@ -5593,6 +5602,9 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   char *title;
   char *x_label, *y_label, *z_label;
 
+  auto group = global_render->createGroup("draw_axes");
+  global_root->lastChildElement()->append(group);
+
   args_values(args, "kind", "s", &kind);
   args_values(args, "viewport", "D", &viewport);
   args_values(args, "vp", "D", &vp);
@@ -5605,8 +5617,11 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   args_values(args, "ymajor", "i", &y_major_count);
   args_values(args, "ygrid", "i", &y_grid);
 
-  gr_setlinecolorind(1);
-  gr_setlinewidth(1);
+  global_render->setLineColorInd(group, 1);
+  global_render->setLineWidth(group, 1);
+
+  //  gr_setlinecolorind(1);
+  //  gr_setlinewidth(1);
   diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
 
@@ -5642,19 +5657,25 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         {
           if (pass == 1 || strcmp(kind, "barplot") != 0)
             {
-              gr_grid(x_grid ? x_tick : 0, y_grid ? y_tick : 0, 0, 0, x_major_count, y_major_count);
+              group->append(global_render->createGrid(x_grid ? x_tick : 0, y_grid ? y_tick : 0, 0, 0, x_major_count,
+                                                      y_major_count));
             }
         }
-      gr_axes(x_tick, y_tick, x_org_low, y_org_low, x_major_count, y_major_count, ticksize);
-      gr_axes(x_tick, y_tick, x_org_high, y_org_high, -x_major_count, -y_major_count, -ticksize);
+      group->append(
+          global_render->createAxes(x_tick, y_tick, x_org_low, y_org_low, x_major_count, y_major_count, ticksize));
+      group->append(
+          global_render->createAxes(x_tick, y_tick, x_org_low, y_org_low, x_major_count, y_major_count, -ticksize));
     }
 
   if (args_values(args, "title", "s", &title))
     {
-      gr_savestate();
-      gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-      gr_text(0.5 * (viewport[0] + viewport[1]), vp[3], title);
-      gr_restorestate();
+      auto text = global_render->createText(0.5 * (viewport[0] + viewport[1]), vp[3], title);
+      global_render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+      group->append(text);
+      //      gr_savestate();
+      //      gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+      //      gr_text(0.5 * (viewport[0] + viewport[1]), vp[3], title);
+      //      gr_restorestate();
     }
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
@@ -5669,20 +5690,29 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     {
       if (args_values(args, "xlabel", "s", &x_label))
         {
-          gr_savestate();
-          gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
-          gr_text(0.5 * (viewport[0] + viewport[1]), vp[2] + 0.5 * charheight, x_label);
-          gr_restorestate();
+          auto text = global_render->createText(0.5 * (viewport[0] + viewport[1]), vp[2] + 0.5 * charheight, x_label);
+          global_render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
+          group->append(text);
+          //          gr_savestate();
+          //          gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
+          //          gr_text(0.5 * (viewport[0] + viewport[1]), vp[2] + 0.5 * charheight, x_label);
+          //          gr_restorestate();
         }
       if (args_values(args, "ylabel", "s", &y_label))
         {
-          gr_savestate();
-          gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-          gr_setcharup(-1, 0);
-          gr_text(vp[0] + 0.5 * charheight, 0.5 * (viewport[2] + viewport[3]), y_label);
-          gr_restorestate();
+          auto text = global_render->createText(vp[0] + 0.5 * charheight, 0.5 * (viewport[2] + viewport[3]), y_label);
+          global_render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          global_render->setCharUp(text, -1, 0);
+          group->append(text);
+          //          gr_savestate();
+          //          gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          //          gr_setcharup(-1, 0);
+          //          gr_text(vp[0] + 0.5 * charheight, 0.5 * (viewport[2] + viewport[3]), y_label);
+          //          gr_restorestate();
         }
     }
+
+  //! TODO: Barplot dom render
   if (strcmp("barplot", kind) == 0 && pass == 2)
     {
       /* xticklabels */
@@ -8011,12 +8041,14 @@ int grm_plot(const grm_args_t *args)
       args_values(active_plot_args, "subplots", "A", &current_subplot_args);
       while (*current_subplot_args != NULL)
         {
+          global_root->append(global_render->createGroup("subplot"));
           if (plot_pre_subplot(*current_subplot_args) != ERROR_NONE)
             {
               return 0;
             }
           args_values(*current_subplot_args, "kind", "s", &kind);
           logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
+          printf("Got keyword \"kind\" with value \"%s\"\n", kind);
           if (!plot_func_map_at(plot_func_map, kind, &plot_func))
             {
               return 0;

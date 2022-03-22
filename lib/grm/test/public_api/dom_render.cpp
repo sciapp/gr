@@ -52,15 +52,15 @@ static void test_dom_render(void)
       series[i] = grm_args_new();
       grm_args_push(series[i], "x", "nD", n, plots[i][0]);
       grm_args_push(series[i], "y", "nD", n, plots[i][1]);
-      grm_args_push(series[i], "c", "nD", n, markercolordoubs);
-      grm_args_push(series[i], "markertype", "nD", n, markertypes);
+      //      grm_args_push(series[i], "c", "nD", n, markercolordoubs);
+      //      grm_args_push(series[i], "markertype", "nD", n, markertypes);
     }
 
 
   args = grm_args_new();
   grm_args_push(args, "series", "nA", 2, series);
   grm_args_push(args, "labels", "nS", 2, labels);
-  grm_args_push(args, "kind", "s", "scatter");
+  grm_args_push(args, "kind", "s", "stem");
 
   printf("plotting data...\n");
 
@@ -100,10 +100,71 @@ static void test_dom_render(void)
   grm_args_delete(args);
 }
 
+static void test_subplots(void)
+{
+  double plots[4][2][1000];
+  int n = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
+  grm_args_t *args, *subplots[4];
+  int i, j;
+
+  printf("filling argument container...\n");
+
+  for (i = 0; i < 2; ++i)
+    {
+      for (j = 0; j < n; ++j)
+        {
+          plots[i][0][j] = j * 2 * M_PI / n;
+          plots[i][1][j] = sin((j * (i + 1) * 2) * M_PI / n);
+        }
+    }
+  for (i = 0; i < 2; ++i)
+    {
+      for (j = 0; j < n; ++j)
+        {
+          plots[2 + i][0][j] = j * 2 * M_PI / n;
+          plots[2 + i][1][j] = cos((j * (i + 1) * 2) * M_PI / n);
+        }
+    }
+
+  for (i = 0; i < 4; ++i)
+    {
+      subplots[i] = grm_args_new();
+      grm_args_push(subplots[i], "x", "nD", n, plots[i][0]);
+      grm_args_push(subplots[i], "y", "nD", n, plots[i][1]);
+      grm_args_push(subplots[i], "subplot", "dddd", 0.5 * (i % 2), 0.5 * (i % 2 + 1), 0.5 * (i / 2), 0.5 * (i / 2 + 1));
+    }
+
+  args = grm_args_new();
+  grm_args_push(args, "subplots", "nA", 4, subplots);
+
+  printf("plotting data...\n");
+
+  grm_plot(args);
+  printf("Press any key to continue...\n");
+  auto root = grm_get_document_root();
+  std::cout << toXML(root) << std::endl;
+
+  getchar();
+
+
+  grm_plot(args);
+  printf("Press any key to continue...\n");
+  getchar();
+
+  grm_args_delete(args);
+}
+
+static void test_plot(void)
+{
+  test_subplots();
+  grm_finalize();
+}
+
 
 int main(void)
 {
-  test_dom_render();
+  //  test_dom_render();
+  test_plot();
   grm_finalize();
 
   return 0;
