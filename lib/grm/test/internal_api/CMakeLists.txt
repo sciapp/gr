@@ -6,7 +6,7 @@ project(
   LANGUAGES C
 )
 
-set(EXECUTABLE_SOURCES get_compatible_format.c datatype/string_array_map.c)
+set(EXECUTABLE_SOURCES args_automatic_array_conversion.c get_compatible_format.c datatype/string_array_map.c)
 
 foreach(executable_source ${EXECUTABLE_SOURCES})
   get_filename_component(executable "${executable_source}" NAME_WE)
