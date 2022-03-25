@@ -123,6 +123,10 @@ extern "C" {
 #define GKS_K_TEXT_PRECISION_STROKE 2
 #define GKS_K_TEXT_PRECISION_OUTLINE 3
 
+/* maximum text size */
+
+#define GKS_K_TEXT_MAX_SIZE 500
+
 /* workstation category */
 
 #define GKS_K_WSCAT_OUTPUT 0
