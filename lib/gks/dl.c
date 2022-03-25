@@ -90,7 +90,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
                        double *f_arr_1, int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr,
                        gks_state_list_t *gkss)
 {
-  char s[132], *t = NULL;
+  char s[GKS_K_TEXT_MAX_SIZE], *t = NULL;
   int len = -1, slen, tp = 0;
 
   GKS_UNUSED(len_f_arr_1);
@@ -169,19 +169,19 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
       if (d->state == GKS_K_WS_ACTIVE)
         {
-          len = 3 * sizeof(int) + 2 * sizeof(double) + 132;
+          len = 3 * sizeof(int) + 2 * sizeof(double) + GKS_K_TEXT_MAX_SIZE;
           if (d->nbytes + len > d->size) reallocate(d, len);
 
-          memset((void *)s, 0, 132);
+          memset((void *)s, 0, GKS_K_TEXT_MAX_SIZE);
           slen = strlen(c_arr);
-          memcpy(s, c_arr, slen < 132 ? slen : 131);
+          memcpy(s, c_arr, slen < GKS_K_TEXT_MAX_SIZE ? slen : GKS_K_TEXT_MAX_SIZE - 1);
 
           COPY(&len, sizeof(int));
           COPY(&fctid, sizeof(int));
           COPY(f_arr_1, sizeof(double));
           COPY(f_arr_2, sizeof(double));
           COPY(&slen, sizeof(int));
-          COPY(s, 132);
+          COPY(s, GKS_K_TEXT_MAX_SIZE);
 
           d->empty = 0;
         }
