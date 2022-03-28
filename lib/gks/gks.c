@@ -1169,13 +1169,14 @@ void gks_text(double px, double py, char *str)
           /* ignore empty strings */
           return;
         }
-      else if (strlen(str) < 132)
+      else if (strlen(str) < GKS_K_TEXT_MAX_SIZE)
         {
           if (s->txprec != GKS_K_TEXT_PRECISION_OUTLINE)
             {
-              /* double the string length as the longest utf8 representation of any latin1 character is two bytes long
+              /* double the output string size as the longest utf8 representation of any latin1 character is two bytes
+               * long
                */
-              char utf8_str[2 * 131 + 1];
+              char utf8_str[2 * (GKS_K_TEXT_MAX_SIZE - 1) + 1];
               gks_input2utf8(str, utf8_str, s->input_encoding);
 
               f_arr_1[0] = px;

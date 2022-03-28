@@ -55,7 +55,7 @@ static void reallocate(int len)
 static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_1, double *f_arr_1, int len_farr_2,
                        double *f_arr_2, int len_c_arr, char *c_arr)
 {
-  char s[132];
+  char s[GKS_K_TEXT_MAX_SIZE];
   int len = -1, slen, tp;
   GKS_UNUSED(len_farr_1);
   GKS_UNUSED(len_farr_2);
@@ -79,19 +79,19 @@ static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_
 
     case 14: /* text */
 
-      len = 3 * sizeof(int) + 2 * sizeof(double) + 132;
+      len = 3 * sizeof(int) + 2 * sizeof(double) + GKS_K_TEXT_MAX_SIZE;
       if (p->nbytes + len > p->size) reallocate(len);
 
-      memset((void *)s, 0, 132);
+      memset((void *)s, 0, GKS_K_TEXT_MAX_SIZE);
       slen = strlen(c_arr);
-      memcpy(s, c_arr, slen < 132 ? slen : 131);
+      memcpy(s, c_arr, slen < GKS_K_TEXT_MAX_SIZE ? slen : GKS_K_TEXT_MAX_SIZE - 1);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
       COPY(f_arr_1, sizeof(double));
       COPY(f_arr_2, sizeof(double));
       COPY(&slen, sizeof(int));
-      COPY(s, 132);
+      COPY(s, GKS_K_TEXT_MAX_SIZE);
       break;
 
     case 16:  /* cell array */
@@ -505,7 +505,7 @@ static void interp(char *str)
           RESOLVE(f_arr_1, double, sizeof(double));
           RESOLVE(f_arr_2, double, sizeof(double));
           RESOLVE(len_c_arr, int, sizeof(int));
-          RESOLVE(c_arr, char, 132);
+          RESOLVE(c_arr, char, GKS_K_TEXT_MAX_SIZE);
           break;
 
         case 16:  /* cell array */

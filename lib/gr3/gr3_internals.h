@@ -295,6 +295,7 @@ typedef struct _GR3_ContextStruct_t_
   int num_lights;
   GR3_LightSource_t_ light_sources[MAX_NUM_LIGHTS];
   GR3_LightParameter_t_ light_parameters;
+  int use_default_light_parameters;
   float clip_xmin;
   float clip_xmax;
   float clip_ymin;

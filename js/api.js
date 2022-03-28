@@ -532,12 +532,14 @@ gr_text = function(x, y, string) {
 gr_inqtext_c = Module.cwrap('gr_inqtext', '', ['number', 'number', 'number', 'number', 'number', ]);
 gr_inqtext = function(x, y, string) {
     var _string = uint8array(string);
-    var _tbx = Module._malloc(8);
-    var _tby = Module._malloc(8);
+    var _tbx = Module._malloc(8*4);
+    var _tby = Module._malloc(8*4);
     gr_inqtext_c(x, y, _string, _tbx, _tby);
     var result = new Array(2);
-    result[0] = Module.HEAPF64.subarray(_tbx / 8, _tbx / 8 + 1)[0];
-    result[1] = Module.HEAPF64.subarray(_tby / 8, _tby / 8 + 1)[0];
+    result[0] = Module.HEAPF64.subarray(_tbx / 8, _tbx / 8 + 4);
+    result[0] = Array.prototype.slice.call(result[0]);
+    result[1] = Module.HEAPF64.subarray(_tby / 8, _tby / 8 + 4);
+    result[1] = Array.prototype.slice.call(result[1]);
     freearray(_string);
     freearray(_tbx);
     freearray(_tby);

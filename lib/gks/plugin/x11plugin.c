@@ -1498,8 +1498,7 @@ static void wait_for_expose(void)
 
   if (p->new_win)
     {
-      do
-        XWindowEvent(p->dpy, p->win, StructureNotifyMask, &event);
+      do XWindowEvent(p->dpy, p->win, StructureNotifyMask, &event);
       while (event.xany.type != MapNotify && event.xany.type != ConfigureNotify);
       while (XCheckTypedWindowEvent(p->dpy, p->win, Expose, &event))
         ;

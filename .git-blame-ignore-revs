@@ -9,3 +9,5 @@
 97151f7590c1c2e7893e6e3282cb01e8c1c62e7b
 # Commit which applied updated coding style guidelines for `extern "C"` blocks
 e9e9f129c8a87161b9727a5b94d3414d0e33a47c
+# Commit which applied new code formatting by upgrading to `clang-format` 13
+c9a848ed891ef494e2251fb289824d04cab4ed66

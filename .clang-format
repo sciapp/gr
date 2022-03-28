@@ -18,6 +18,7 @@ BraceWrapping:
   AfterExternBlock: false
   BeforeCatch: true
   BeforeElse: true
+  BeforeWhile: true
   IndentBraces: true
   SplitEmptyFunction: true
   SplitEmptyRecord: true

@@ -1286,7 +1286,7 @@ static void interp(char *str)
           RESOLVE(f_arr_1, double, sizeof(double));
           RESOLVE(f_arr_2, double, sizeof(double));
           RESOLVE(len_c_arr, int, sizeof(int));
-          RESOLVE(c_arr, char, 132);
+          RESOLVE(c_arr, char, GKS_K_TEXT_MAX_SIZE);
           break;
 
         case 16:  /* cell array */

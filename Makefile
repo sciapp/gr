@@ -7,7 +7,7 @@ PKGCONFIGDIR = $(LIBDIR)/pkgconfig
 
 UNAME := $(shell uname)
 
-PREFERRED_CLANG_FORMAT_VERSION="9"
+PREFERRED_CLANG_FORMAT_VERSION="13"
 ifeq ($(shell command -v "clang-format-$(PREFERRED_CLANG_FORMAT_VERSION)"),)
   CLANG_FORMAT="clang-format"
 else

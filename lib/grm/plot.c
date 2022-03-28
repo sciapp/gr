@@ -1117,7 +1117,7 @@ static void legend_size(grm_args_t *subplot_args, double *w, double *h)
       for (current_label = labels; *current_label != NULL; ++current_label)
         {
           gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
-          *w = max(*w, tbx[2]);
+          *w = max(*w, tbx[2] - tbx[0]);
           *h += max(tby[2] - tby[0], 0.03);
         }
     }
@@ -2354,6 +2354,8 @@ error_t plot_barplot(grm_args_t *subplot_args)
   grm_args_t **inner_series;
   unsigned int inner_series_length;
 
+  gr_savestate();
+
   /* Default */
   int bar_color = 989, edge_color = 1;
   double bar_color_rgb[3] = {-1};
@@ -2761,6 +2763,8 @@ error_t plot_barplot(grm_args_t *subplot_args)
 
       pos_vertical_change = 0;
       neg_vertical_change = 0;
+      double width, height, available_width, available_height, x_text, y_text;
+      double tbx[4], tby[4];
       /* Draw ylabels */
       if (ylabels != NULL)
         {
@@ -2801,9 +2805,12 @@ error_t plot_barplot(grm_args_t *subplot_args)
 
               if (ylabels_left > 0)
                 {
-                  x1 = (x1 + x2) / 2;
-                  x2 = (y1 + y2) / 2;
-                  gr_wctondc(&x1, &x2);
+                  gr_wctondc(&x1, &y1);
+                  gr_wctondc(&x2, &y2);
+                  available_width = x2 - x1;
+                  available_height = y2 - y1;
+                  x_text = (x1 + x2) / 2;
+                  y_text = (y1 + y2) / 2;
                   if (y_lightness[i] < 0.4)
                     {
                       gr_settextcolorind(0);
@@ -2812,7 +2819,28 @@ error_t plot_barplot(grm_args_t *subplot_args)
                     {
                       gr_settextcolorind(1);
                     }
-                  gr_text(x1, x2, ylabels[i]);
+                  gr_settextalign(2, 3);
+                  gr_setcharup(0.0, 1.0);
+                  gr_inqtextext(x_text, y_text, ylabels[i], tbx, tby);
+                  logger((stderr, "ylabel: \"%s\", textext_x: (%lf, %lf, %lf, %lf), textext_y: (%lf, %lf, %lf, %lf)\n",
+                          ylabels[i], tbx[0], tbx[1], tbx[2], tbx[3], tby[0], tby[1], tby[2], tby[3]));
+                  gr_wctondc(&tbx[0], &tby[0]);
+                  gr_wctondc(&tbx[2], &tby[2]);
+                  width = tbx[2] - tbx[0];
+                  height = tby[2] - tby[0];
+                  logger((stderr, "width: %lf, available_width: %lf\n", width, available_width));
+                  logger((stderr, "height: %lf, available_height: %lf\n", height, available_height));
+                  if (width < available_width && height < available_height)
+                    {
+                      gr_setcharup(0.0, 1.0);
+                      gr_text(x_text, y_text, ylabels[i]);
+                    }
+                  else if (height < available_width && width < available_height)
+                    {
+                      gr_setcharup(-1.0, 0.0);
+                      gr_text(x_text, y_text, ylabels[i]);
+                      gr_setcharup(0.0, 1.0);
+                    }
                   --ylabels_left;
                 }
             }
@@ -2975,8 +3003,12 @@ error_t plot_barplot(grm_args_t *subplot_args)
 
                   if (ylabels_left > 0)
                     {
-                      x1 = (x1 + x2) / 2;
-                      x2 = (y1 + y2) / 2;
+                      gr_wctondc(&x1, &y1);
+                      gr_wctondc(&x2, &y2);
+                      available_width = x2 - x1;
+                      available_height = y2 - y1;
+                      x_text = (x1 + x2) / 2;
+                      y_text = (y1 + y2) / 2;
                       gr_wctondc(&x1, &x2);
                       if (y_lightness[ylabels_length - ylabels_left] < 0.4)
                         {
@@ -2986,7 +3018,30 @@ error_t plot_barplot(grm_args_t *subplot_args)
                         {
                           gr_settextcolorind(1);
                         }
-                      gr_text(x1, x2, ylabels[ylabels_length - ylabels_left]);
+                      gr_settextalign(2, 3);
+                      gr_setcharup(0.0, 1.0);
+                      gr_inqtextext(x_text, y_text, ylabels[ylabels_length - ylabels_left], tbx, tby);
+                      logger((stderr,
+                              "ylabel: \"%s\", textext_x: (%lf, %lf, %lf, %lf), textext_y: (%lf, %lf, %lf, %lf)\n",
+                              ylabels[ylabels_length - ylabels_left], tbx[0], tbx[1], tbx[2], tbx[3], tby[0], tby[1],
+                              tby[2], tby[3]));
+                      gr_wctondc(&tbx[0], &tby[0]);
+                      gr_wctondc(&tbx[2], &tby[2]);
+                      width = tbx[2] - tbx[0];
+                      height = tby[2] - tby[0];
+                      logger((stderr, "width: %lf, available_width: %lf\n", width, available_width));
+                      logger((stderr, "height: %lf, available_height: %lf\n", height, available_height));
+                      if (width < available_width && height < available_height)
+                        {
+                          gr_setcharup(0.0, 1.0);
+                          gr_text(x_text, y_text, ylabels[ylabels_length - ylabels_left]);
+                        }
+                      else if (height < available_width && width < available_height)
+                        {
+                          gr_setcharup(-1.0, 0.0);
+                          gr_text(x_text, y_text, ylabels[ylabels_length - ylabels_left]);
+                          gr_setcharup(0.0, 1.0);
+                        }
                       --ylabels_left;
                     }
                 }
@@ -3030,7 +3085,7 @@ cleanup:
     {
       free(y_lightness);
     }
-
+  gr_restorestate();
   return error;
 }
 
@@ -5673,8 +5728,8 @@ error_t plot_draw_pie_legend(grm_args_t *subplot_args)
   for (current_label = labels; *current_label != NULL; ++current_label)
     {
       gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
-      w += tbx[2];
-      h = max(h, tby[2]);
+      w += tbx[2] - tbx[0];
+      h = max(h, tby[2] - tby[0]);
     }
   w += num_labels * 0.03 + (num_labels - 1) * 0.02;
 
@@ -5698,7 +5753,7 @@ error_t plot_draw_pie_legend(grm_args_t *subplot_args)
       gr_drawrect(px, px + 0.02, py - 0.01, py + 0.01);
       gr_text(px + 0.03, py, (char *)*current_label);
       gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
-      px += tbx[2] + 0.05;
+      px += tbx[2] - tbx[0] + 0.05;
       set_next_color(NULL, NULL, GR_COLOR_FILL);
     }
   set_next_color(NULL, NULL, GR_COLOR_RESET);
@@ -7339,8 +7394,8 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
           new_label[i] = '\0';
           gr_inqtext(x1, x2, new_label + cur_start, tbx, tby);
           gr_wctondc(&tbx[0], &tby[0]);
-          gr_wctondc(&tbx[1], &tby[1]);
-          width = tbx[1] - tbx[0];
+          gr_wctondc(&tbx[2], &tby[2]);
+          width = tbx[2] - tbx[0];
           new_label[i] = ' ';
 
           /* add possible breakpoint */
