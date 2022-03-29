@@ -11356,6 +11356,11 @@ double gr_precision(void)
   return gks_precision();
 }
 
+int gr_text_maxsize(void)
+{
+  return gks_text_maxsize();
+}
+
 void gr_setregenflags(int flags)
 {
   check_autoinit;

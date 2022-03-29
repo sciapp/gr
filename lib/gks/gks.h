@@ -671,6 +671,7 @@ DLLEXPORT void gks_inq_bbox(int *errind, double *xmin, double *xmax, double *ymi
 DLLEXPORT void gks_inq_text_slant(int *errind, double *slant);
 
 DLLEXPORT double gks_precision(void);
+DLLEXPORT int gks_text_maxsize(void);
 
 DLLEXPORT void gks_set_border_color_index(int coli);
 DLLEXPORT void gks_inq_border_color_index(int *errind, int *coli);
