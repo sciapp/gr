@@ -304,9 +304,9 @@ static int read_socket(int s, char *buf, int size)
   int read, n = 0;
   for (read = 0; read < size; read += n)
     {
-      if ((n = recv(s, buf + read, size - read, 0)) == -1)
+      if ((n = recv(s, buf + read, size - read, 0)) <= 0)
         {
-          perror("read");
+          if (n != 0) perror("read");
           is_running = 0;
           return -1;
         }
@@ -325,6 +325,36 @@ static int close_socket(int s)
   WSACleanup();
 #endif
   return 0;
+}
+
+static int check_socket_connection(ws_state_list *wss)
+{
+  if (wss->s != -1 && wss->wstype == 411)
+    {
+      char request_type = SOCKET_FUNCTION_IS_ALIVE;
+      char reply;
+      if (!(send_socket(wss->s, &request_type, sizeof(request_type)) == sizeof(request_type) &&
+            read_socket(wss->s, &reply, sizeof(reply)) == sizeof(reply) && reply == SOCKET_FUNCTION_IS_ALIVE))
+        {
+          is_running = 0;
+        }
+    }
+  if (!is_running)
+    {
+      close_socket(wss->s);
+      wss->s = open_socket(wss->wstype);
+      if (wss->s != -1 && wss->wstype == 411)
+        {
+          /* workstation information was already read during OPEN_WS */
+          int nbytes;
+          if (read_socket(wss->s, (char *)&nbytes, sizeof(int)) == sizeof(int))
+            {
+              char *buf = gks_malloc(nbytes - (int)sizeof(int));
+              read_socket(wss->s, buf, nbytes - (int)sizeof(int));
+              gks_free(buf);
+            }
+        }
+    }
 }
 
 void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
@@ -405,22 +435,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
     case 8:
       if (ia[1] & GKS_K_PERFORM_FLAG)
         {
-          if (!is_running)
-            {
-              close_socket(wss->s);
-              wss->s = open_socket(wss->wstype);
-              if (wss->s != -1 && wss->wstype == 411)
-                {
-                  /* workstation information was already read during OPEN_WS */
-                  int nbytes;
-                  if (read_socket(wss->s, (char *)&nbytes, sizeof(int)) == sizeof(int))
-                    {
-                      char *buf = gks_malloc(nbytes - (int)sizeof(int));
-                      read_socket(wss->s, buf, nbytes - (int)sizeof(int));
-                      gks_free(buf);
-                    }
-                }
-            }
+          check_socket_connection(wss);
           request_type = SOCKET_FUNCTION_DRAW;
           if (wss->wstype == 411)
             {
@@ -436,6 +451,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
       break;
 
     case 209: /* inq_ws_state */
+      check_socket_connection(wss);
       if (wss->wstype == 411)
         {
           char reply[1 + sizeof(gks_ws_state_t)];
