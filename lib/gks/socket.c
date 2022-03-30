@@ -306,7 +306,15 @@ static int read_socket(int s, char *buf, int size)
     {
       if ((n = recv(s, buf + read, size - read, 0)) <= 0)
         {
-          if (n != 0) perror("read");
+#ifdef _WIN32
+          int errno = WSAGetLastError();
+          if (n != 0 && errno != WSAECONNRESET && errno != WSAEINTR)
+#else
+          if (n != 0)
+#endif
+            {
+              perror("read");
+            }
           is_running = 0;
           return -1;
         }
