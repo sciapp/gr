@@ -283,7 +283,18 @@ static int open_socket(int wstype)
   return s;
 }
 
-static int send_socket(int s, char *buf, int size)
+#ifdef _WIN32
+static void win_perror(char *text)
+{
+  wchar_t *s = NULL;
+  FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+                 WSAGetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&s, 0, NULL);
+  fprintf(stderr, "%s: %S\n", text, s);
+  LocalFree(s);
+}
+#endif
+
+static int send_socket(int s, char *buf, int size, int ignore_error)
 {
   int sent, n = 0;
 
@@ -291,7 +302,14 @@ static int send_socket(int s, char *buf, int size)
     {
       if ((n = send(s, buf + sent, size - sent, 0)) == -1)
         {
-          perror("send");
+          if (!ignore_error)
+            {
+#ifdef _WIN32
+              win_perror("send");
+#else
+              perror("send");
+#endif
+            }
           is_running = 0;
           return -1;
         }
@@ -299,14 +317,21 @@ static int send_socket(int s, char *buf, int size)
   return sent;
 }
 
-static int read_socket(int s, char *buf, int size)
+static int read_socket(int s, char *buf, int size, int ignore_error)
 {
   int read, n = 0;
   for (read = 0; read < size; read += n)
     {
-      if ((n = recv(s, buf + read, size - read, 0)) == -1)
+      if ((n = recv(s, buf + read, size - read, 0)) <= 0)
         {
-          perror("read");
+          if (n != 0 && !ignore_error)
+            {
+#ifdef _WIN32
+              win_perror("read");
+#else
+              perror("read");
+#endif
+            }
           is_running = 0;
           return -1;
         }
@@ -325,6 +350,36 @@ static int close_socket(int s)
   WSACleanup();
 #endif
   return 0;
+}
+
+static int check_socket_connection(ws_state_list *wss)
+{
+  if (wss->s != -1 && wss->wstype == 411)
+    {
+      char request_type = SOCKET_FUNCTION_IS_ALIVE;
+      char reply;
+      if (!(send_socket(wss->s, &request_type, sizeof(request_type), 1) == sizeof(request_type) &&
+            read_socket(wss->s, &reply, sizeof(reply), 1) == sizeof(reply) && reply == SOCKET_FUNCTION_IS_ALIVE))
+        {
+          is_running = 0;
+        }
+    }
+  if (!is_running)
+    {
+      close_socket(wss->s);
+      wss->s = open_socket(wss->wstype);
+      if (wss->s != -1 && wss->wstype == 411)
+        {
+          /* workstation information was already read during OPEN_WS */
+          int nbytes;
+          if (read_socket(wss->s, (char *)&nbytes, sizeof(int), 0) == sizeof(int))
+            {
+              char *buf = gks_malloc(nbytes - (int)sizeof(int));
+              read_socket(wss->s, buf, nbytes - (int)sizeof(int), 0);
+              gks_free(buf);
+            }
+        }
+    }
 }
 
 void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
@@ -368,10 +423,10 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
                 int height;
                 char name[6];
               } workstation_information = {sizeof(workstation_information), 0, 0, 0, 0, ""};
-              if (read_socket(wss->s, (char *)&nbytes, sizeof(int)) == sizeof(int) &&
+              if (read_socket(wss->s, (char *)&nbytes, sizeof(int), 0) == sizeof(int) &&
                   nbytes == workstation_information.nbytes)
                 {
-                  read_socket(wss->s, (char *)&workstation_information + sizeof(int), nbytes - (int)sizeof(int));
+                  read_socket(wss->s, (char *)&workstation_information + sizeof(int), nbytes - (int)sizeof(int), 0);
                   ia[0] = workstation_information.width;
                   ia[1] = workstation_information.height;
                   r1[0] = workstation_information.mwidth;
@@ -382,7 +437,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
           /*
            * TODO: Send `CREATE_WINDOW` on open workstation or implicit window creation?
            * request_type = SOCKET_FUNCTION_CREATE_WINDOW;
-           * send_socket(wss->s, &request_type, 1);
+           * send_socket(wss->s, &request_type, 1, 0);
            */
         }
       break;
@@ -391,7 +446,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
       if (wss->wstype == 411)
         {
           request_type = SOCKET_FUNCTION_CLOSE_WINDOW;
-          send_socket(wss->s, &request_type, 1);
+          send_socket(wss->s, &request_type, 1, 0);
         }
       close_socket(wss->s);
       if (wss->dl.buffer)
@@ -405,29 +460,14 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
     case 8:
       if (ia[1] & GKS_K_PERFORM_FLAG)
         {
-          if (!is_running)
-            {
-              close_socket(wss->s);
-              wss->s = open_socket(wss->wstype);
-              if (wss->s != -1 && wss->wstype == 411)
-                {
-                  /* workstation information was already read during OPEN_WS */
-                  int nbytes;
-                  if (read_socket(wss->s, (char *)&nbytes, sizeof(int)) == sizeof(int))
-                    {
-                      char *buf = gks_malloc(nbytes - (int)sizeof(int));
-                      read_socket(wss->s, buf, nbytes - (int)sizeof(int));
-                      gks_free(buf);
-                    }
-                }
-            }
+          check_socket_connection(wss);
           request_type = SOCKET_FUNCTION_DRAW;
           if (wss->wstype == 411)
             {
-              send_socket(wss->s, &request_type, 1);
+              send_socket(wss->s, &request_type, 1, 0);
             }
-          send_socket(wss->s, (char *)&wss->dl.nbytes, sizeof(int));
-          send_socket(wss->s, wss->dl.buffer, wss->dl.nbytes);
+          send_socket(wss->s, (char *)&wss->dl.nbytes, sizeof(int), 0);
+          send_socket(wss->s, wss->dl.buffer, wss->dl.nbytes, 0);
         }
       break;
 
@@ -436,15 +476,16 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
       break;
 
     case 209: /* inq_ws_state */
+      check_socket_connection(wss);
       if (wss->wstype == 411)
         {
           char reply[1 + sizeof(gks_ws_state_t)];
           request_type = SOCKET_FUNCTION_INQ_WS_STATE;
-          if (send_socket(wss->s, &request_type, 1) <= 0)
+          if (send_socket(wss->s, &request_type, 1, 0) <= 0)
             {
               break;
             }
-          if (read_socket(wss->s, reply, sizeof(reply)) <= 0)
+          if (read_socket(wss->s, reply, sizeof(reply), 0) <= 0)
             {
               break;
             }
