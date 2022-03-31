@@ -69,7 +69,7 @@ GKSConnection::~GKSConnection()
 
 void GKSConnection::readClient()
 {
-  while (socket->bytesAvailable() > 0 || socket_function == SocketFunction::inq_ws_state)
+  while (socket->bytesAvailable() > 0 || socket_function != SocketFunction::unknown)
     {
       switch (socket_function)
         {
@@ -104,6 +104,14 @@ void GKSConnection::readClient()
           dl_size = 0;
           socket_function = SocketFunction::unknown;
           break;
+        case SocketFunction::is_alive:
+          {
+            char reply[1]{static_cast<char>(SocketFunction::is_alive)};
+            socket->write(reply, sizeof(reply));
+            socket->flush();
+            socket_function = SocketFunction::unknown;
+          }
+          break;
         case SocketFunction::close_window:
           if (widget != NULL)
             {
@@ -112,37 +120,39 @@ void GKSConnection::readClient()
           socket_function = SocketFunction::unknown;
           break;
         case SocketFunction::inq_ws_state:
-          char reply[1 + sizeof(gks_ws_state_t)];
-          if (widget != NULL)
-            {
-              reply[0] = static_cast<char>(SocketFunction::inq_ws_state);
-              double device_pixel_ratio = (
+          {
+            char reply[1 + sizeof(gks_ws_state_t)];
+            if (widget != NULL)
+              {
+                reply[0] = static_cast<char>(SocketFunction::inq_ws_state);
+                double device_pixel_ratio = (
 #if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
-                  widget->devicePixelRatioF()
+                    widget->devicePixelRatioF()
 #elif QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-                  widget->devicePixelRatio()
+                    widget->devicePixelRatio()
 #else
-                  1.0
+                    1.0
 #endif
-              );
-              *reinterpret_cast<gks_ws_state_t *>(&reply[1]) =
-                  gks_ws_state_t{widget->width(), widget->height(), device_pixel_ratio};
-            }
-          else
-            {
-              /* If no widget exists, send back default size and device pixel ratio of primary screen */
-              double device_pixel_ratio = (
+                );
+                *reinterpret_cast<gks_ws_state_t *>(&reply[1]) =
+                    gks_ws_state_t{widget->width(), widget->height(), device_pixel_ratio};
+              }
+            else
+              {
+                /* If no widget exists, send back default size and device pixel ratio of primary screen */
+                double device_pixel_ratio = (
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-                  QGuiApplication::primaryScreen()->devicePixelRatio()
+                    QGuiApplication::primaryScreen()->devicePixelRatio()
 #else
-                  1.0
+                    1.0
 #endif
-              );
-              reply[0] = static_cast<char>(SocketFunction::inq_ws_state);
-              *reinterpret_cast<gks_ws_state_t *>(&reply[1]) = gks_ws_state_t{0, 0, device_pixel_ratio};
-            }
-          socket->write(reply, sizeof(reply));
-          socket_function = SocketFunction::unknown;
+                );
+                reply[0] = static_cast<char>(SocketFunction::inq_ws_state);
+                *reinterpret_cast<gks_ws_state_t *>(&reply[1]) = gks_ws_state_t{0, 0, device_pixel_ratio};
+              }
+            socket->write(reply, sizeof(reply));
+            socket_function = SocketFunction::unknown;
+          }
           break;
         default:
           break;

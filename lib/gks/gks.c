@@ -4213,6 +4213,11 @@ double gks_precision(void)
   return FEPS;
 }
 
+int gks_text_maxsize(void)
+{
+  return GKS_K_TEXT_MAX_SIZE;
+}
+
 /*!
  * Set the resample method for up and downscaling. The default method is nearest neighbour.
  *
