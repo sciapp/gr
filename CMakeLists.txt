@@ -474,6 +474,14 @@ set(GRM_SOURCES
     lib/grm/datatype/string_list.c
     lib/grm/datatype/string_map.c
     lib/grm/datatype/uint_map.c
+    lib/grm/gr-dom-render/src/context.cxx
+    lib/grm/gr-dom-render/src/render.cxx
+    lib/grm/gr-dom-render/gr-graphics-tree-interface/src/Comment.cxx
+    lib/grm/gr-dom-render/gr-graphics-tree-interface/src/Document.cxx
+    lib/grm/gr-dom-render/gr-graphics-tree-interface/src/Element.cxx
+    lib/grm/gr-dom-render/gr-graphics-tree-interface/src/Node.cxx
+    lib/grm/gr-dom-render/gr-graphics-tree-interface/src/Value.cxx
+    lib/grm/gr-dom-render/gr-graphics-tree-interface/src/util.cxx
 )
 
 set(GRM_SUBDIR_HEADERS
@@ -1224,6 +1232,12 @@ if(GR_INSTALL)
   endif()
   install(FILES lib/gr/gr.h lib/gks/gks.h lib/gr3/gr3.h lib/grm/grm.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
   install(FILES ${GRM_SUBDIR_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grm/)
+  install(FILES lib/grm/gr-dom-render/include/context.hxx lib/grm/gr-dom-render/include/render.hxx
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grm/
+  )
+  install(DIRECTORY lib/grm/gr-dom-render/gr-graphics-tree-interface/include/GR
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grm/
+  )
   if(TARGET qt4gr
      OR TARGET qt5gr
      OR TARGET qt6gr

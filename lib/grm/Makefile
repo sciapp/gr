@@ -28,10 +28,33 @@ UNAME := $(shell uname)
                datatype/string_array_map.o \
                datatype/string_list.o \
                datatype/string_map.o \
-               datatype/uint_map.o
-  GRMHEADERS = args.h dump.h event.h interaction.h net.h plot.h util.h
+               datatype/uint_map.o \
+               gr-dom-render/src/context.o \
+               gr-dom-render/src/render.o \
+               gr-dom-render/gr-graphics-tree-interface/src/Comment.o \
+               gr-dom-render/gr-graphics-tree-interface/src/Document.o \
+               gr-dom-render/gr-graphics-tree-interface/src/Element.o \
+               gr-dom-render/gr-graphics-tree-interface/src/Node.o \
+               gr-dom-render/gr-graphics-tree-interface/src/Value.o \
+               gr-dom-render/gr-graphics-tree-interface/src/util.o
+  GRMHEADERS = args.h \
+               dump.h \
+               event.h \
+               interaction.h \
+               net.h \
+               plot.h \
+               util.h \
+               gr-dom-render/include/context.hxx \
+               gr-dom-render/include/render.hxx \
+               gr-dom-render/gr-graphics-tree-interface/include/GR
      DEFINES = -DBUILDING_GR
-    INCLUDES = -I. -I../gks -I../gr -I../gr3 -I$(THIRDPARTYDIR)/include
+    INCLUDES = -I. \
+               -I./gr-dom-render/include \
+               -I./gr-dom-render/gr-graphics-tree-interface/include \
+               -I../gks \
+               -I../gr \
+               -I../gr3 \
+               -I$(THIRDPARTYDIR)/include
           CC = cc
       CFLAGS = $(DEFINES) -std=c90 -O3 -Wall -fPIC -fvisibility=hidden $(EXTRA_CFLAGS)
     CXXFLAGS = $(DEFINES) -std=c++17 -O3 -Wall -fPIC -fvisibility=hidden $(EXTRA_CXXFLAGS)
@@ -94,10 +117,16 @@ install:
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p grm.h $(INCDIR)
 	@if [ ! -d $(GRMINCDIR) ]; then mkdir -m 755 $(GRMINCDIR); fi
-	cp -p $(GRMHEADERS) $(GRMINCDIR)
+	cp -pr $(GRMHEADERS) $(GRMINCDIR)
 
 clean:
-	rm -f *.so *.a *.o datatype/*.o *${GR_SHARED_LIBRARY_SUFFIX}
+	rm -f *.so \
+	      *.a \
+	      *.o \
+	      datatype/*.o \
+	      gr-dom-render/src/*.o \
+	      gr-dom-render/gr-graphics-tree-interface/src/*.o \
+	      *${GR_SHARED_LIBRARY_SUFFIX}
 
 .PHONY: all targets install clean prerequisites libGR libGR3
 .SUFFIXES:  # Delete the default suffixes
