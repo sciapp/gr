@@ -141,6 +141,43 @@ char *str_ftoa(char *result, double value, double reference)
 
       if (scientific_notation)
         {
+          if (strstr(result, "0.") == result)
+            {
+              if (strlen(result) == 3)
+                {
+                  strcpy(str, result + 2);
+                  strcpy(result, str);
+                }
+              else
+                {
+                  str[0] = result[2];
+                  str[1] = '.';
+                  str[2] = '\0';
+                  strcat(str, result + 3);
+                  strcpy(result, str);
+                }
+              exponent -= 1;
+            }
+          else if (strstr(result, "-0.") == result)
+            {
+              if (strlen(result) == 4)
+                {
+                  strcpy(str, "-");
+                  strcat(str, result + 3);
+                  strcpy(result, str);
+                }
+              else
+                {
+                  str[0] = '-';
+                  str[1] = result[3];
+                  str[2] = '.';
+                  str[3] = '\0';
+                  strcat(str, result + 4);
+                  strcpy(result, str);
+                }
+              exponent -= 1;
+            }
+
           strcat(result, "E");
 #ifdef _MSC_VER
           sprintf(str, "%lld", exponent + 1);
