@@ -1,7 +1,11 @@
 .*
-!.git-blame-ignore-rev
-!.githooks
+!.clang-format
+!.cmake-format.py
+!.git-blame-ignore-revs
+!.githooks/
 !.gitignore
+!.gitlab-ci.yml
+!.setup_cmakeformat.sh
 *.a
 *.app
 *.dylib
