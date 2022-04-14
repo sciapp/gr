@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
@@ -16,13 +15,90 @@ typedef __int64 int64_t;
 
 #include "strlib.h"
 
-#define STR_MAX 31
-
+/*
+ * Maximum number of decimal digits: 15
+ * Maximum length of the exponent: 4
+ * Other symbols needed: 4 (-: value and exponent, decimal point, E)
+ */
+#define STR_MAX 24
 /*
  * maximum number of digits to be used in standard notation
  */
-#define NDIGITS 14
+#if !defined(LENGTH_DIGITS)
+#define LENGTH_DIGITS 14
+#endif
 
+#if !defined(SCIENTIFIC_EXP_LOW)
+#define SCIENTIFIC_EXP_LOW -14
+#endif
+
+#if !defined(SCIENTIFIC_EXP_HIGH)
+#define SCIENTIFIC_EXP_HIGH 14
+#endif
+
+#ifndef isnan
+#define isnan(x) ((x) != (x))
+#endif
+#ifndef isinf
+#define isinf(x) (!isnan(x) && isnan((x) - (x)))
+#endif
+#ifndef round
+#define round(x) (((x) < 0) ? ceil((x)-.5) : floor((x) + .5))
+#endif
+
+format_reference_t *str_get_format_reference(format_reference_t *result, double origin, double min, double max,
+                                             double tick_width, int major)
+
+/*
+ * str_get_reference - Checks for each value between min and max (step-size: tick_width) if there is one value which
+ *                      needs scientific notation. Also counts the maximum number of decimal places.
+ *                      Both values are stored in the result reference
+ */
+
+{
+  int i, steps;
+  int64_t exponent;
+
+  result->decimal_digits = 0;
+  result->scientific = 0;
+
+  if (major != 0)
+    {
+      tick_width = major * tick_width;
+    }
+
+  steps = round((max - min) / tick_width);
+
+  /* Check if there is one value between min and max which needs scientific notation */
+  for (i = 0; i <= steps; i++)
+    {
+      double current = min + i * tick_width;
+      if (current != origin || origin == min || origin == max)
+        {
+          if (current != 0)
+            {
+              exponent = (int64_t)floor(log10(fabs(current)));
+              if (exponent <= SCIENTIFIC_EXP_LOW || exponent >= SCIENTIFIC_EXP_HIGH)
+                {
+                  result->scientific = 1;
+                  break;
+                }
+            }
+        }
+    }
+  /* Count number of decimal digits */
+  if (!result->scientific)
+    {
+      double tick_width_multiplied = tick_width;
+      while (tick_width_multiplied - (int64_t)(tick_width_multiplied + 1e-14) > 0 &&
+             result->decimal_digits < LENGTH_DIGITS)
+        {
+          result->decimal_digits++;
+          tick_width_multiplied = tick_width * pow(10.0, result->decimal_digits);
+        }
+    }
+  return result;
+}
 
 char *str_remove(char *str, char ch)
 
@@ -59,159 +135,164 @@ char *str_pad(char *str, char fill, int size)
 }
 
 
-char *str_ftoa(char *result, double value, double reference)
+static char *str_write_decimal(char *result, int64_t mantissa, int decimal_point, int decimal_digits)
 
 /*
- *  str_ftoa - convert real value to floating equivalent
+ * str_write_decimal - Writes the decimal number (mantissa split by the decimal point) into result.
  */
 
 {
-  static char *digit = "0123456789";
-  char format[STR_MAX];
+  int i;
+  char *end = NULL;
 
-  double abs_val;
-  char str[STR_MAX], *fcp, *cp;
-  int64_t count, exponent, factor, mantissa;
-  int64_t fdigits, digits, scientific_notation;
-
-  if (value != 0)
+  /* skip non-significant digits */
+  for (i = 0; i < decimal_point; i++)
     {
-      abs_val = fabs(value);
-
-      exponent = (int64_t)(log10(abs_val) + pow(10.0, -NDIGITS));
-      if (exponent < 0) exponent--;
-
-      factor = (NDIGITS - 1) - exponent;
-      mantissa = (int64_t)(abs_val * pow(10.0, factor) + 0.5);
-
-      strcpy(result, "");
-
-      count = 0;
-      fdigits = digits = 0;
-
-      do
+      if (mantissa % 10 != 0 || decimal_point - i <= decimal_digits)
         {
-          count++;
-
-          strcpy(str, result);
-          result[0] = digit[mantissa % 10];
-          result[1] = '\0';
-          strcat(result, str);
-
-          if (count == factor)
-            {
-              strcpy(str, result);
-              strcpy(result, ".");
-              strcat(result, str);
-            }
-
-          mantissa = mantissa / 10;
+          end = &result[LENGTH_DIGITS - i + 1];
+          break;
         }
-      while (count != NDIGITS);
+      mantissa /= 10;
+    }
 
-      scientific_notation = (exponent <= 1 - NDIGITS) || (exponent >= NDIGITS);
+  /* write or skip decimal point */
+  if (end)
+    {
+      result[LENGTH_DIGITS - decimal_point] = '.';
+    }
+  else
+    {
+      end = &result[LENGTH_DIGITS - decimal_point];
+    }
 
-      if (scientific_notation || exponent < 0)
+  /* write significant digits */
+  for (; i < LENGTH_DIGITS + 1; i++)
+    {
+      if (i == decimal_point)
         {
-          if (!scientific_notation)
-            {
-              strcpy(str, "");
-              str_pad(str, '0', -exponent - 1);
-              strcat(str, result);
-              strcpy(result, str);
-            }
+          /* decimal point was handled already */
+          continue;
+        }
+      result[LENGTH_DIGITS - i] = '0' + mantissa % 10;
+      mantissa /= 10;
+    }
 
-          strcpy(str, "0.");
-          strcat(str, result);
-          strcpy(result, str);
+  /* end string with null byte */
+  end[0] = '\0';
+
+  return end;
+}
+
+
+char *str_ftoa(char *result, double value, format_reference_t *reference)
+
+/*
+ * str_ftoa - Convert a real value to string in scientific notation. The reference is used to specify the number of
+ *            decimal places and the usage of scientific notation.
+ */
+
+{
+  char *mantissa_str = result;
+  double abs_value = fabs(value);
+
+  int64_t exponent, decimal_places, mantissa;
+
+  format_reference_t local_reference;
+
+  if (value == 0)
+    {
+      result[0] = '0';
+      result[1] = '\0';
+    }
+  else if (isnan(value))
+    {
+      result[0] = 'n';
+      result[1] = 'a';
+      result[2] = 'n';
+      result[3] = '\0';
+    }
+  else if (isinf(abs_value))
+    {
+      char *inf_str = result;
+      if (value < 0)
+        {
+          result[0] = '-';
+          inf_str = &result[1];
+        }
+      inf_str[0] = 'i';
+      inf_str[1] = 'n';
+      inf_str[2] = 'f';
+      inf_str[3] = '\0';
+    }
+  else
+    {
+
+      exponent = (int64_t)(floor(log10(abs_value)));
+      decimal_places = (LENGTH_DIGITS - 1) - exponent;
+
+      /* When reference is null check wether scientific notation is needed or not */
+      if (!reference)
+        {
+          local_reference.scientific = (exponent <= SCIENTIFIC_EXP_LOW || exponent >= SCIENTIFIC_EXP_HIGH);
+          local_reference.decimal_digits = 0;
+          reference = &local_reference;
+        }
+
+      if (exponent < 0 && !reference->scientific)
+        {
+          mantissa = (int64_t)(round(abs_value * pow(10.0, LENGTH_DIGITS - 1)));
+        }
+      else
+        {
+          mantissa = (int64_t)(round(abs_value * pow(10.0, decimal_places)));
         }
 
       if (value < 0)
         {
-          strcpy(str, "-");
-          strcat(str, result);
-          strcpy(result, str);
+          result[0] = '-';
+          mantissa_str = &result[1];
         }
 
-      if (strchr(result, '.') != 0)
+      if (reference->scientific)
         {
-          str_remove(result, '0');
-          str_remove(result, '.');
-        }
+          char *exponent_str = NULL;
+          int64_t exponent_abs = exponent;
+          int exponent_length;
+          int i = 0;
 
-      if (scientific_notation)
-        {
-          if (strstr(result, "0.") == result)
+          exponent_str = str_write_decimal(mantissa_str, mantissa, LENGTH_DIGITS - 1, reference->decimal_digits);
+
+          exponent_str[0] = 'E';
+
+          if (exponent < 0)
             {
-              if (strlen(result) == 3)
-                {
-                  strcpy(str, result + 2);
-                  strcpy(result, str);
-                }
-              else
-                {
-                  str[0] = result[2];
-                  str[1] = '.';
-                  str[2] = '\0';
-                  strcat(str, result + 3);
-                  strcpy(result, str);
-                }
-              exponent -= 1;
-            }
-          else if (strstr(result, "-0.") == result)
-            {
-              if (strlen(result) == 4)
-                {
-                  strcpy(str, "-");
-                  strcat(str, result + 3);
-                  strcpy(result, str);
-                }
-              else
-                {
-                  str[0] = '-';
-                  str[1] = result[3];
-                  str[2] = '.';
-                  str[3] = '\0';
-                  strcat(str, result + 4);
-                  strcpy(result, str);
-                }
-              exponent -= 1;
+              exponent_abs *= -1;
+              exponent_str[1] = '-';
+              exponent_str = &exponent_str[1];
             }
 
-          strcat(result, "E");
-#ifdef _MSC_VER
-          sprintf(str, "%lld", exponent + 1);
-#else
-          sprintf(str, "%" PRId64, exponent + 1);
-#endif
-          strcat(result, str);
+          exponent_length = log10(exponent_abs) + 1;
+
+          exponent_str[exponent_length + 1] = '\0';
+          for (i = exponent_length; i > 0; i--)
+            {
+              exponent_str[i] = ('0' + exponent_abs % 10);
+              exponent_abs /= 10;
+            }
         }
       else
         {
-          sprintf(format, "%g", reference);
-
-          if (strchr(format, 'E') == 0)
-
-            if ((fcp = strchr(format, '.')) != 0)
-              {
-                fdigits = strlen(format) - (int64_t)(fcp - format) - 1;
-
-                if ((cp = strchr(result, '.')) != 0)
-                  {
-                    digits = strlen(result) - (int64_t)(cp - result) - 1;
-
-                    if (fdigits > digits) strncat(result, "00000000000000", fdigits - digits);
-                  }
-                else
-                  {
-                    strcat(result, ".");
-                    strncat(result, "00000000000000", fdigits);
-                  }
-              }
+          if (exponent >= 0)
+            {
+              str_write_decimal(mantissa_str, mantissa, decimal_places, reference->decimal_digits);
+            }
+          else
+            {
+              str_write_decimal(mantissa_str, mantissa, LENGTH_DIGITS - 1, reference->decimal_digits);
+            }
         }
     }
-  else
-    strcpy(result, "0");
 
   return result;
 }
