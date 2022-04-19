@@ -38,6 +38,7 @@ DLLEXPORT void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_
 #ifndef NO_QT
 
 #define MAX_POINTS 2048
+#define MAX_POINTS_PERFORMANCE_THRESHOLD 500
 #define MAX_POLYGON 32
 #define MAX_SELECTIONS 100
 #define PATTERNS 120
@@ -376,12 +377,24 @@ static void polyline(int n, double *px, double *py)
       p->max_points = n;
     }
   ln_type = gkss->asf[0] ? gkss->ltype : gkss->lindex;
-  ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
-
-  ln_width *= p->nominal_size;
-  if (ln_width < 1) ln_width = 1;
   if (ln_color < 0 || ln_color >= MAX_COLOR) ln_color = 1;
+  if (n <= MAX_POINTS_PERFORMANCE_THRESHOLD)
+    {
+      ln_width = gkss->asf[1] ? gkss->lwidth : 1;
+
+      ln_width *= p->nominal_size;
+      if (ln_width < 1) ln_width = 1;
+    }
+  else
+    {
+      /*
+       * Qt is slow on calculating line joins for a large list of points.
+       * A line with `ln_width == 0` is always one pixel wide and eliminates the need for line joins.
+       * => Set `ln_width = 0` if the number of points in this polyline exceeds a given threshold.
+       */
+      ln_width = 0;
+    }
 
   p->pixmap->save();
   p->pixmap->setRenderHint(QPainter::Antialiasing);
