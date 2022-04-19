@@ -1246,6 +1246,7 @@ deploy-to-aur:
     - develop@Scientific-IT-Systems/gr
     - tags@Scientific-IT-Systems/gr
   script:
+  - git config --global --add safe.directory "$(pwd)"
   - mkdir --mode=700 ~/.ssh/
   - (umask 0377 && echo "$AUR_GR_PRIVATE_KEY" > ~/.ssh/id_rsa
                 && echo "aur.archlinux.org $AUR_HOST_KEY" >> ~/.ssh/known_hosts)
