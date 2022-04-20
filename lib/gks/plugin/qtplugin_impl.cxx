@@ -362,7 +362,18 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
     }
   if (linetype == 0) (*p->points)[p->npoints++] = QPointF(x0, y0);
 
-  p->pixmap->drawPolyline(p->points->constData(), p->npoints);
+  if (p->npoints > MAX_POINTS_PERFORMANCE_THRESHOLD)
+    {
+      /*
+       * Qt drawPolyline() is slow on calculating line joins for a large list of points.
+       * Drawing each of the line segments using drawLine() does remove the problem.
+       */
+      for (i = 1; i < p->npoints; i++) p->pixmap->drawLine((*p->points)[i - 1], (*p->points)[i]);
+    }
+  else
+    {
+      p->pixmap->drawPolyline(p->points->constData(), p->npoints);
+    }
 }
 
 static void polyline(int n, double *px, double *py)
@@ -379,22 +390,10 @@ static void polyline(int n, double *px, double *py)
   ln_type = gkss->asf[0] ? gkss->ltype : gkss->lindex;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
   if (ln_color < 0 || ln_color >= MAX_COLOR) ln_color = 1;
-  if (n <= MAX_POINTS_PERFORMANCE_THRESHOLD)
-    {
-      ln_width = gkss->asf[1] ? gkss->lwidth : 1;
+  ln_width = gkss->asf[1] ? gkss->lwidth : 1;
 
-      ln_width *= p->nominal_size;
-      if (ln_width < 1) ln_width = 1;
-    }
-  else
-    {
-      /*
-       * Qt is slow on calculating line joins for a large list of points.
-       * A line with `ln_width == 0` is always one pixel wide and eliminates the need for line joins.
-       * => Set `ln_width = 0` if the number of points in this polyline exceeds a given threshold.
-       */
-      ln_width = 0;
-    }
+  ln_width *= p->nominal_size;
+  if (ln_width < 1) ln_width = 1;
 
   p->pixmap->save();
   p->pixmap->setRenderHint(QPainter::Antialiasing);
