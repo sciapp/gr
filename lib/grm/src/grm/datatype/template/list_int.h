@@ -173,7 +173,7 @@
   err_t prefix##_list_push_front(prefix##_list_t *list, prefix##_list_const_entry_t entry)                             \
   {                                                                                                                    \
     prefix##_list_node_t *new_list_node;                                                                               \
-    err_t error = NO_ERROR;                                                                                            \
+    err_t error = ERROR_NONE;                                                                                          \
                                                                                                                        \
     new_list_node = malloc(sizeof(prefix##_list_node_t));                                                              \
     error_cleanup_and_set_error_if(new_list_node == NULL, ERROR_MALLOC);                                               \
@@ -187,7 +187,7 @@
       }                                                                                                                \
     ++(list->size);                                                                                                    \
                                                                                                                        \
-    return NO_ERROR;                                                                                                   \
+    return ERROR_NONE;                                                                                                 \
                                                                                                                        \
   error_cleanup:                                                                                                       \
     free(new_list_node);                                                                                               \
@@ -197,7 +197,7 @@
   err_t prefix##_list_push_back(prefix##_list_t *list, prefix##_list_const_entry_t entry)                              \
   {                                                                                                                    \
     prefix##_list_node_t *new_list_node;                                                                               \
-    err_t error = NO_ERROR;                                                                                            \
+    err_t error = ERROR_NONE;                                                                                          \
                                                                                                                        \
     new_list_node = malloc(sizeof(prefix##_list_node_t));                                                              \
     error_cleanup_and_set_error_if(new_list_node == NULL, ERROR_MALLOC);                                               \
@@ -215,7 +215,7 @@
     list->tail = new_list_node;                                                                                        \
     ++(list->size);                                                                                                    \
                                                                                                                        \
-    return NO_ERROR;                                                                                                   \
+    return ERROR_NONE;                                                                                                 \
                                                                                                                        \
   error_cleanup:                                                                                                       \
     free(new_list_node);                                                                                               \
@@ -394,7 +394,7 @@
   err_t prefix##_reflist_entry_copy(prefix##_reflist_entry_t *copy, prefix##_reflist_entry_t entry)                    \
   {                                                                                                                    \
     *copy = entry;                                                                                                     \
-    return NO_ERROR;                                                                                                   \
+    return ERROR_NONE;                                                                                                 \
   }                                                                                                                    \
                                                                                                                        \
-  err_t prefix##_reflist_entry_delete(prefix##_reflist_entry_t entry UNUSED) { return NO_ERROR; }
+  err_t prefix##_reflist_entry_delete(prefix##_reflist_entry_t entry UNUSED) { return ERROR_NONE; }

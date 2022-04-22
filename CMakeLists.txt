@@ -500,6 +500,9 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/src/> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
   target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    target_compile_options(${LIBRARY} PRIVATE /permissive-)
+  endif()
   set_target_properties(
     ${LIBRARY}
     PROPERTIES C_STANDARD 90

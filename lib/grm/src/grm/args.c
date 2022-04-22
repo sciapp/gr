@@ -1060,7 +1060,7 @@ err_t arg_increase_array(arg_t *arg, size_t increment)
   *current_size_ptr = new_size;
   *current_buffer_ptr = new_buffer;
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 int(arg_first_value)(const arg_t *arg, const char *first_value_format, void *first_value, unsigned int *array_length)
@@ -1533,7 +1533,7 @@ err_t args_push_common(grm_args_t *args, const char *key, const char *value_form
       ++(args->count);
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t args_push_vl(grm_args_t *args, const char *key, const char *value_format, va_list *vl)
@@ -1544,7 +1544,7 @@ err_t args_push_vl(grm_args_t *args, const char *key, const char *value_format, 
 err_t args_push_arg(grm_args_t *args, arg_t *arg)
 {
   args_node_t *args_node = NULL, *previous_node_by_keyword = NULL;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   ++(arg->priv->reference_count);
   args_node = malloc(sizeof(args_node_t));
@@ -1590,7 +1590,7 @@ err_t args_push_arg(grm_args_t *args, arg_t *arg)
       ++(args->count);
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 
 error_cleanup:
   if (args_node != NULL)
@@ -1614,7 +1614,7 @@ err_t args_merge(grm_args_t *args, const grm_args_t *merge_args, const char *con
   const char *const *current_key_ptr;
   int merge;
   unsigned int i;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   it = args_iter(merge_args);
   cleanup_and_set_error_if(it == NULL, ERROR_MALLOC);
@@ -1697,7 +1697,7 @@ err_t args_setdefault_common(grm_args_t *args, const char *key, const char *valu
     {
       return args_push_common(args, key, value_format, buffer, vl, apply_padding);
     }
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t args_setdefault(grm_args_t *args, const char *key, const char *value_format, ...)
@@ -2085,7 +2085,7 @@ int grm_args_push(grm_args_t *args, const char *key, const char *value_format, .
 
   va_end(vl);
 
-  return error == NO_ERROR;
+  return error == ERROR_NONE;
 }
 
 int grm_args_push_buf(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
@@ -2095,7 +2095,7 @@ int grm_args_push_buf(grm_args_t *args, const char *key, const char *value_forma
 
   error = args_push_common(args, key, value_format, buffer, NULL, apply_padding);
 
-  return error == NO_ERROR;
+  return error == ERROR_NONE;
 }
 
 int grm_args_contains(const grm_args_t *args, const char *keyword)

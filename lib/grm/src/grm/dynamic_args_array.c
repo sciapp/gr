@@ -62,5 +62,5 @@ err_t dynamic_args_array_push_back(dynamic_args_array_t *args_array, grm_args_t 
   args_array->buf[args_array->size] = args;
   ++args_array->size;
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
