@@ -288,7 +288,7 @@ set(GR_SOURCES
     lib/gr/image.c
     lib/gr/import.c
     lib/gr/interp2.c
-    lib/gr/io.c
+    lib/gr/stream.c
     lib/gr/md5.c
     lib/gr/shade.c
     lib/gr/spline.c

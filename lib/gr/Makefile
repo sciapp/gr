@@ -9,7 +9,7 @@ endif
 
 UNAME := $(shell uname)
 
-      GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
+      GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o stream.o image.o \
                delaunay.o interp2.o md5.o import.o shade.o grforbnd.o \
                contourf.o boundary.o mathtex2.o mathtex2_kerning.o mathtex2.tab.o threadpool.o
       GSDEFS =
@@ -110,7 +110,7 @@ clean:
 	rm -f so_locations demo *.so *.a *.o *.bak *~ gr_version.h *${GR_SHARED_LIBRARY_SUFFIX}
 
 depend:
-	makedepend -Y -- gr.c text.c contour.c spline.c gridit.c strlib.c io.c \
+	makedepend -Y -- gr.c text.c contour.c spline.c gridit.c strlib.c stream.c \
 	image.c delaunay.c interp2.c md5.c import.c shade.c grforbnd.c \
     threadpool.c    2> /dev/null
 
@@ -120,13 +120,13 @@ depend:
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
-gr.o: gr.h text.h spline.h gridit.h contour.h strlib.h io.h md5.h cm.h
+gr.o: gr.h text.h spline.h gridit.h contour.h strlib.h stream.h md5.h cm.h
 contour.o: gr.h contour.h
 contourf.o: gr.h contourf.h
 spline.o: spline.h
 gridit.o: gridit.h
 strlib.o: strlib.h
-io.o: gr.h io.h
+io.o: gr.h stream.h
 image.o: gr.h
 delaunay.o: gr.h
 interp2.o: gr.h

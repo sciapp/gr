@@ -38,7 +38,7 @@ INCLUDES = -I$(THIRDPARTYDIR)/include/ -I$(GRMDIR) -I$(GR3DIR) -I$(GRDIR) -I$(GK
            -I$(ZLIBDIR) -I$(QHULLDIR) -I$(FTDIR)
  GKSOBJS = jsplugin.o $(GKSDIR)/gks.o $(GKSDIR)/font.o $(GKSDIR)/afm.o $(GKSDIR)/util.o \
            $(GKSDIR)/malloc.o $(GKSDIR)/error.o $(GKSDIR)/wiss.o $(GKSDIR)/io.o $(GKSDIR)/ft.o
-  GROBJS = $(GRDIR)/gr.o $(GRDIR)/io.o $(GRDIR)/text.o $(GRDIR)/gridit.o \
+  GROBJS = $(GRDIR)/gr.o $(GRDIR)/stream.o $(GRDIR)/text.o $(GRDIR)/gridit.o \
            $(GRDIR)/strlib.o $(GRDIR)/contour.o $(GRDIR)/spline.o \
            $(GRDIR)/import.o $(GRDIR)/grforbnd.o $(GRDIR)/md5.o \
            $(GRDIR)/interp2.o $(GRDIR)/shade.o $(GRDIR)/delaunay.o \
