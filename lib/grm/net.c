@@ -76,13 +76,13 @@ err_t args_list_entry_copy(args_list_entry_t *copy, args_list_const_entry_t entr
     }
   *copy = _copy;
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t args_list_entry_delete(args_list_entry_t entry)
 {
   grm_args_delete(entry);
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 
@@ -95,13 +95,13 @@ err_t dynamic_args_array_list_entry_copy(dynamic_args_array_list_entry_t *copy,
 {
   /* TODO: create a copy of the object! Otherwise code will segfault on list deletion for a non-ref list */
   *copy = (dynamic_args_array_list_entry_t)entry;
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t dynamic_args_array_list_entry_delete(dynamic_args_array_list_entry_t entry)
 {
   dynamic_args_array_delete(entry);
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 
@@ -128,7 +128,7 @@ err_t receiver_init_for_custom(net_handle_t *handle, const char *name, unsigned 
       return ERROR_MALLOC;
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t receiver_init_for_socket(net_handle_t *handle, const char *hostname, unsigned int port)
@@ -246,19 +246,19 @@ err_t receiver_init_for_socket(net_handle_t *handle, const char *hostname, unsig
       return ERROR_MALLOC;
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t receiver_finalize_for_custom(net_handle_t *handle)
 {
   memwriter_delete(handle->sender_receiver.receiver.memwriter);
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t receiver_finalize_for_socket(net_handle_t *handle)
 {
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   memwriter_delete(handle->sender_receiver.receiver.memwriter);
 #ifdef _WIN32
@@ -310,7 +310,7 @@ err_t receiver_recv_for_socket(net_handle_t *handle)
   int search_start_index = 0;
   char *end_ptr;
   static char recv_buf[SOCKET_RECV_BUF_SIZE];
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   while ((end_ptr = memchr(memwriter_buf(handle->sender_receiver.receiver.memwriter) + search_start_index, ETB,
                            memwriter_size(handle->sender_receiver.receiver.memwriter) - search_start_index)) == NULL)
@@ -329,7 +329,7 @@ err_t receiver_recv_for_socket(net_handle_t *handle)
           return ERROR_NETWORK_RECV_CONNECTION_SHUTDOWN;
         }
       if ((error = memwriter_printf(handle->sender_receiver.receiver.memwriter, "%.*s", bytes_received, recv_buf)) !=
-          NO_ERROR)
+          ERROR_NONE)
         {
           return error;
         }
@@ -344,7 +344,7 @@ err_t receiver_recv_for_custom(net_handle_t *handle)
 {
   /* TODO: is it really necessary to copy the memory? */
   const char *recv_buf;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   recv_buf = handle->sender_receiver.receiver.comm.custom.recv(handle->sender_receiver.receiver.comm.custom.name,
                                                                handle->sender_receiver.receiver.comm.custom.id);
@@ -353,7 +353,7 @@ err_t receiver_recv_for_custom(net_handle_t *handle)
       return ERROR_CUSTOM_RECV;
     }
   memwriter_clear(handle->sender_receiver.receiver.memwriter);
-  if ((error = memwriter_puts(handle->sender_receiver.receiver.memwriter, recv_buf)) != NO_ERROR)
+  if ((error = memwriter_puts(handle->sender_receiver.receiver.memwriter, recv_buf)) != ERROR_NONE)
     {
       return error;
     }
@@ -379,7 +379,7 @@ err_t sender_init_for_custom(net_handle_t *handle, const char *name, unsigned in
       return ERROR_MALLOC;
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t sender_init_for_socket(net_handle_t *handle, const char *hostname, unsigned int port)
@@ -479,19 +479,19 @@ err_t sender_init_for_socket(net_handle_t *handle, const char *hostname, unsigne
       return ERROR_MALLOC;
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t sender_finalize_for_custom(net_handle_t *handle)
 {
   memwriter_delete(handle->sender_receiver.sender.memwriter);
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t sender_finalize_for_socket(net_handle_t *handle)
 {
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   memwriter_delete(handle->sender_receiver.sender.memwriter);
 #ifdef _WIN32
@@ -527,9 +527,9 @@ err_t sender_send_for_socket(net_handle_t *handle)
   const char *buf, *send_ptr;
   size_t buf_size;
   int bytes_left;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
-  if ((error = memwriter_putc(handle->sender_receiver.sender.memwriter, ETB)) != NO_ERROR)
+  if ((error = memwriter_putc(handle->sender_receiver.sender.memwriter, ETB)) != ERROR_NONE)
     {
       return error;
     }
@@ -559,7 +559,7 @@ err_t sender_send_for_socket(net_handle_t *handle)
 err_t sender_send_for_custom(net_handle_t *handle)
 {
   const char *buf;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   buf = memwriter_buf(handle->sender_receiver.sender.memwriter);
   if (!handle->sender_receiver.sender.comm.custom.send(handle->sender_receiver.sender.comm.custom.name,
@@ -585,7 +585,7 @@ void *grm_open(int is_receiver, const char *name, unsigned int id,
                int (*custom_send)(const char *, unsigned int, const char *))
 {
   net_handle_t *handle;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   handle = malloc(sizeof(net_handle_t));
   if (handle == NULL)
@@ -617,7 +617,7 @@ void *grm_open(int is_receiver, const char *name, unsigned int id,
         }
     }
 
-  if (error != NO_ERROR)
+  if (error != ERROR_NONE)
     {
       if (error != ERROR_NETWORK_WINSOCK_INIT)
         {
@@ -656,17 +656,17 @@ grm_args_t *grm_recv(const void *p, grm_args_t *args)
       created_args = 1;
     }
 
-  if (handle->sender_receiver.receiver.recv(handle) != NO_ERROR)
+  if (handle->sender_receiver.receiver.recv(handle) != ERROR_NONE)
     {
       goto error_cleanup;
     }
-  if (fromjson_read(args, memwriter_buf(handle->sender_receiver.receiver.memwriter)) != NO_ERROR)
+  if (fromjson_read(args, memwriter_buf(handle->sender_receiver.receiver.memwriter)) != ERROR_NONE)
     {
       goto error_cleanup;
     }
 
   if (memwriter_erase(handle->sender_receiver.receiver.memwriter, 0,
-                      handle->sender_receiver.receiver.message_size + 1) != NO_ERROR)
+                      handle->sender_receiver.receiver.message_size + 1) != ERROR_NONE)
     {
       goto error_cleanup;
     }
@@ -693,13 +693,13 @@ int grm_send(const void *p, const char *data_desc, ...)
 
   va_start(vl, data_desc);
   error = tojson_write_vl(handle->sender_receiver.sender.memwriter, data_desc, &vl);
-  if (error == NO_ERROR && tojson_is_complete() && handle->sender_receiver.sender.send != NULL)
+  if (error == ERROR_NONE && tojson_is_complete() && handle->sender_receiver.sender.send != NULL)
     {
       error = handle->sender_receiver.sender.send(handle);
     }
   va_end(vl);
 
-  return error == NO_ERROR;
+  return error == ERROR_NONE;
 }
 
 int grm_send_buf(const void *p, const char *data_desc, const void *buffer, int apply_padding)
@@ -708,12 +708,12 @@ int grm_send_buf(const void *p, const char *data_desc, const void *buffer, int a
   err_t error;
 
   error = tojson_write_buf(handle->sender_receiver.sender.memwriter, data_desc, buffer, apply_padding);
-  if (error == NO_ERROR && tojson_is_complete() && handle->sender_receiver.sender.send != NULL)
+  if (error == ERROR_NONE && tojson_is_complete() && handle->sender_receiver.sender.send != NULL)
     {
       error = handle->sender_receiver.sender.send(handle);
     }
 
-  return error == NO_ERROR;
+  return error == ERROR_NONE;
 }
 
 int grm_send_ref(const void *p, const char *key, char format, const void *ref, int len)
@@ -726,7 +726,7 @@ int grm_send_ref(const void *p, const char *key, char format, const void *ref, i
   char *_key = NULL;
   net_handle_t *handle = (net_handle_t *)p;
   char format_string[SEND_REF_FORMAT_MAX_LENGTH];
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   if (tojson_struct_nested_level() == 0)
     {
@@ -810,11 +810,11 @@ int grm_send_ref(const void *p, const char *key, char format, const void *ref, i
                           break;
                         }
                     }
-                  if ((error = args_reflist_push(args_stack, current_args)) != NO_ERROR)
+                  if ((error = args_reflist_push(args_stack, current_args)) != ERROR_NONE)
                     {
                       break;
                     }
-                  if ((error = string_list_push(key_stack, key)) != NO_ERROR)
+                  if ((error = string_list_push(key_stack, key)) != ERROR_NONE)
                     {
                       break;
                     }
@@ -865,7 +865,7 @@ int grm_send_ref(const void *p, const char *key, char format, const void *ref, i
                           break;
                         }
                     }
-                  if ((error = dynamic_args_array_reflist_push(args_array_stack, current_args_array)) != NO_ERROR)
+                  if ((error = dynamic_args_array_reflist_push(args_array_stack, current_args_array)) != ERROR_NONE)
                     {
                       break;
                     }
@@ -881,7 +881,7 @@ int grm_send_ref(const void *p, const char *key, char format, const void *ref, i
                           break;
                         }
                     }
-                  if ((error = args_reflist_push(args_stack, current_args)) != NO_ERROR)
+                  if ((error = args_reflist_push(args_stack, current_args)) != ERROR_NONE)
                     {
                       break;
                     }
@@ -895,7 +895,7 @@ int grm_send_ref(const void *p, const char *key, char format, const void *ref, i
                       break;
                     }
                 }
-              if ((error = string_list_push(key_stack, key)) != NO_ERROR)
+              if ((error = string_list_push(key_stack, key)) != ERROR_NONE)
                 {
                   break;
                 }
@@ -911,7 +911,7 @@ int grm_send_ref(const void *p, const char *key, char format, const void *ref, i
                   error = ERROR_MALLOC;
                   break;
                 }
-              if ((error = dynamic_args_array_push_back(current_args_array, current_args)) != NO_ERROR)
+              if ((error = dynamic_args_array_push_back(current_args_array, current_args)) != ERROR_NONE)
                 {
                   break;
                 }
@@ -925,7 +925,7 @@ int grm_send_ref(const void *p, const char *key, char format, const void *ref, i
                   break;
                 }
               assert(current_args_array != NULL);
-              if ((error = dynamic_args_array_push_back(current_args_array, current_args)) != NO_ERROR)
+              if ((error = dynamic_args_array_push_back(current_args_array, current_args)) != ERROR_NONE)
                 {
                   break;
                 }
@@ -971,7 +971,7 @@ int grm_send_ref(const void *p, const char *key, char format, const void *ref, i
 
   free((void *)_key);
 
-  return error == NO_ERROR;
+  return error == ERROR_NONE;
 }
 
 int grm_send_args(const void *p, const grm_args_t *args)
@@ -980,10 +980,10 @@ int grm_send_args(const void *p, const grm_args_t *args)
   err_t error;
 
   error = tojson_write_args(handle->sender_receiver.sender.memwriter, args);
-  if (error == NO_ERROR && tojson_is_complete() && handle->sender_receiver.sender.send != NULL)
+  if (error == ERROR_NONE && tojson_is_complete() && handle->sender_receiver.sender.send != NULL)
     {
       error = handle->sender_receiver.sender.send(handle);
     }
 
-  return error == NO_ERROR;
+  return error == ERROR_NONE;
 }

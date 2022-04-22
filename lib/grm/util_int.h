@@ -47,7 +47,7 @@ extern "C" {
         }                                                                                          \
     }                                                                                              \
   while (0)
-#define return_if_error return_error_if((error) != NO_ERROR, (error))
+#define return_if_error return_error_if((error) != ERROR_NONE, (error))
 #define goto_if(condition, goto_label) \
   do                                   \
     {                                  \
@@ -62,7 +62,7 @@ extern "C" {
 #define goto_if_error(goto_label)                                                          \
   do                                                                                       \
     {                                                                                      \
-      if ((error) != NO_ERROR)                                                             \
+      if ((error) != ERROR_NONE)                                                           \
         {                                                                                  \
           logger((stderr, "Got error \"%d\" (\"%s\")!\n", (error), error_names[(error)])); \
           goto goto_label;                                                                 \

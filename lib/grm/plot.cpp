@@ -386,7 +386,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
 
 err_t plot_init_static_variables(void)
 {
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   if (!plot_static_variables_initialized)
     {
@@ -429,7 +429,7 @@ err_t plot_init_static_variables(void)
       error_cleanup_and_set_error_if(type_map == NULL, ERROR_MALLOC);
       plot_static_variables_initialized = 1;
     }
-  return NO_ERROR;
+  return ERROR_NONE;
 
 error_cleanup:
   if (global_root_args != NULL)
@@ -481,7 +481,7 @@ err_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char
   const char **current_hierarchy_name_ptr;
   grm_args_t **args_array, **merge_args_array, *current_args;
   unsigned int i;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   ++recursion_level;
   if (hierarchy_name_ptr == NULL)
@@ -747,19 +747,19 @@ err_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, unsig
   grm_args_t **args_array = NULL;
   unsigned int args_old_array_length;
   unsigned int i;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   logger((stderr, "Init plot args structure for hierarchy: \"%s\"\n", *hierarchy_name_ptr));
 
   ++hierarchy_name_ptr;
   if (*hierarchy_name_ptr == NULL)
     {
-      return NO_ERROR;
+      return ERROR_NONE;
     }
   arg_first_value(arg, "A", NULL, &args_old_array_length);
   if (next_hierarchy_level_max_id <= args_old_array_length)
     {
-      return NO_ERROR;
+      return ERROR_NONE;
     }
   logger((stderr, "Increase array for key \"%s\" from %d to %d\n", *hierarchy_name_ptr, args_old_array_length,
           next_hierarchy_level_max_id));
@@ -779,7 +779,7 @@ err_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, unsig
         }
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_init_args_structure(grm_args_t *args, const char **hierarchy_name_ptr,
@@ -788,14 +788,14 @@ err_t plot_init_args_structure(grm_args_t *args, const char **hierarchy_name_ptr
   arg_t *arg = NULL;
   grm_args_t **args_array = NULL;
   unsigned int i;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   logger((stderr, "Init plot args structure for hierarchy: \"%s\"\n", *hierarchy_name_ptr));
 
   ++hierarchy_name_ptr;
   if (*hierarchy_name_ptr == NULL)
     {
-      return NO_ERROR;
+      return ERROR_NONE;
     }
   arg = args_at(args, *hierarchy_name_ptr);
   if (arg == NULL)
@@ -824,7 +824,7 @@ err_t plot_init_args_structure(grm_args_t *args, const char **hierarchy_name_ptr
       error_cleanup_if_error;
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 
 error_cleanup:
   if (args_array != NULL)
@@ -1015,7 +1015,7 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
 {
   const char *kind;
   double alpha;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   logger((stderr, "Pre subplot processing\n"));
 
@@ -1047,7 +1047,7 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
       gr_settransparency(alpha);
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 void plot_process_colormap(grm_args_t *subplot_args)
@@ -1546,7 +1546,7 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
       range_keys[] = {{"xlim", "xrange"}, {"ylim", "yrange"}, {"zlim", "zrange"}, {"clim", "crange"}};
   double *bins = NULL;
   unsigned int i;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   logger((stderr, "Storing coordinate ranges\n"));
 
@@ -1555,7 +1555,7 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
   if (grm_args_contains(subplot_args, "_original_xlim"))
     {
       logger((stderr, "Panzoom active, do not modify limits...\n"));
-      return NO_ERROR;
+      return ERROR_NONE;
     }
 
   args_values(subplot_args, "kind", "s", &kind);
@@ -1944,7 +1944,7 @@ err_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name_s
           if (strcmp(*current_hierarchy_name_ptr, "plots") == 0)
             {
               int in_use;
-              err_t error = NO_ERROR;
+              err_t error = ERROR_NONE;
               args_values(current_args, "in_use", "i", &in_use);
               if (in_use)
                 {
@@ -1973,7 +1973,7 @@ err_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name_s
       *found_hierarchy_name_ptr = current_hierarchy_name_ptr;
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 
@@ -2012,7 +2012,7 @@ err_t plot_line(grm_args_t *subplot_args)
       ++current_series;
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_step(grm_args_t *subplot_args)
@@ -2102,7 +2102,7 @@ err_t plot_step(grm_args_t *subplot_args)
       ++current_series;
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_scatter(grm_args_t *subplot_args)
@@ -2207,13 +2207,13 @@ err_t plot_scatter(grm_args_t *subplot_args)
       ++current_series;
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_quiver(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
@@ -2268,7 +2268,7 @@ err_t plot_stem(grm_args_t *subplot_args)
       ++current_series;
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_hist(grm_args_t *subplot_args)
@@ -2278,7 +2278,7 @@ err_t plot_hist(grm_args_t *subplot_args)
   double *bar_centers = NULL;
   int bar_color_index = 989, i;
   double bar_color_rgb[3] = {-1};
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   args_values(subplot_args, "kind", "s", &kind);
   args_values(subplot_args, "series", "A", &current_series);
@@ -2380,7 +2380,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
   int change_edge_color = 0;
   int change_edge_width = 0;
   unsigned int i;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
   double *y_lightness = NULL;
 
   gr_settextalign(2, 3);
@@ -3096,7 +3096,7 @@ err_t plot_contour(grm_args_t *subplot_args)
   double *gridit_x = NULL, *gridit_y = NULL, *gridit_z = NULL;
   grm_args_t **current_series;
   int i;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
   gr_setprojectiontype(0);
@@ -3158,7 +3158,7 @@ err_t plot_contour(grm_args_t *subplot_args)
         }
       ++current_series;
     }
-  if ((error = plot_draw_colorbar(subplot_args, 0.0, num_levels)) != NO_ERROR)
+  if ((error = plot_draw_colorbar(subplot_args, 0.0, num_levels)) != ERROR_NONE)
     {
       goto cleanup;
     }
@@ -3180,7 +3180,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
   double *gridit_x = NULL, *gridit_y = NULL, *gridit_z = NULL;
   grm_args_t **current_series;
   int i;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
   gr_setprojectiontype(0);
@@ -3203,7 +3203,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
       args_first_value(*current_series, "x", "D", &x, &x_length);
       args_first_value(*current_series, "y", "D", &y, &y_length);
       args_first_value(*current_series, "z", "D", &z, &z_length);
-      if ((error = plot_draw_colorbar(subplot_args, 0.0, num_levels)) != NO_ERROR)
+      if ((error = plot_draw_colorbar(subplot_args, 0.0, num_levels)) != ERROR_NONE)
         {
           goto cleanup;
         }
@@ -3283,7 +3283,7 @@ err_t plot_hexbin(grm_args_t *subplot_args)
       ++current_series;
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_heatmap(grm_args_t *subplot_args)
@@ -3293,7 +3293,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   int icmap[256], *rgba = NULL, *data = NULL, zlog = 0;
   unsigned int i, cols, rows, z_length;
   double *x = NULL, *y = NULL, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   args_values(subplot_args, "series", "A", &current_series);
   args_values(subplot_args, "kind", "s", &kind);
@@ -3457,7 +3457,7 @@ err_t plot_wireframe(grm_args_t *subplot_args)
 {
   double *gridit_x = NULL, *gridit_y = NULL, *gridit_z = NULL;
   grm_args_t **current_series;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
@@ -3512,7 +3512,7 @@ err_t plot_surface(grm_args_t *subplot_args)
 {
   double *gridit_x = NULL, *gridit_y = NULL, *gridit_z = NULL;
   grm_args_t **current_series;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
@@ -3581,7 +3581,7 @@ err_t plot_plot3(grm_args_t *subplot_args)
     }
   plot_draw_axes(subplot_args, 2);
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_scatter3(grm_args_t *subplot_args)
@@ -3627,7 +3627,7 @@ err_t plot_scatter3(grm_args_t *subplot_args)
     }
   plot_draw_axes(subplot_args, 2);
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_imshow(grm_args_t *subplot_args)
@@ -3712,7 +3712,7 @@ err_t plot_imshow(grm_args_t *subplot_args)
       ++current_series;
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 /*
@@ -3908,7 +3908,7 @@ err_t plot_isosurface(grm_args_t *subplot_args)
       ++current_series;
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_volume(grm_args_t *subplot_args)
@@ -3993,7 +3993,7 @@ err_t plot_volume(grm_args_t *subplot_args)
   error = plot_draw_colorbar(subplot_args, 0.0, 256);
   return_if_error;
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_polar(grm_args_t *subplot_args)
@@ -4042,7 +4042,7 @@ err_t plot_polar(grm_args_t *subplot_args)
       ++current_series;
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 
@@ -4162,7 +4162,7 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   int freeable_bin_widths = 0;
   int freeable_bin_edges = 0;
   int freeable_angles = 0;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   gr_inqresamplemethod(&resample);
   gr_setresamplemethod(0x2020202);
@@ -5110,7 +5110,7 @@ err_t plot_pie(grm_args_t *subplot_args)
   char text[80];
   const char *title;
   unsigned int i;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   args_values(subplot_args, "series", "a", &series); /* series exists always */
 
@@ -5186,7 +5186,7 @@ err_t plot_trisurf(grm_args_t *subplot_args)
   plot_draw_axes(subplot_args, 2);
   plot_draw_colorbar(subplot_args, 0.05, 256);
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_tricont(grm_args_t *subplot_args)
@@ -5225,7 +5225,7 @@ err_t plot_tricont(grm_args_t *subplot_args)
   plot_draw_colorbar(subplot_args, 0.05, 256);
   free(levels);
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_shade(grm_args_t *subplot_args)
@@ -5260,14 +5260,14 @@ err_t plot_shade(grm_args_t *subplot_args)
     }
   gr_shadepoints(point_count, components[0], components[1], xform, xbins, ybins);
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_raw(grm_args_t *plot_args)
 {
   const char *base64_data = NULL;
   char *graphics_data = NULL;
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   cleanup_and_set_error_if(!args_values(plot_args, "raw", "s", &base64_data), ERROR_PLOT_MISSING_DATA);
   graphics_data = base64_decode(NULL, base64_data, NULL, &error);
@@ -5435,7 +5435,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         }
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_draw_polar_axes(grm_args_t *args)
@@ -5585,7 +5585,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
       gr_restorestate();
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_draw_legend(grm_args_t *subplot_args)
@@ -5703,7 +5703,7 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
   gr_selntran(1);
   gr_restorestate();
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_draw_pie_legend(grm_args_t *subplot_args)
@@ -5759,7 +5759,7 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
   gr_selntran(1);
   gr_restorestate();
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colors)
@@ -5829,7 +5829,7 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
   free(data);
   gr_restorestate();
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t extract_multi_type_argument(grm_args_t *error_container, const char *key, unsigned int x_length,
@@ -5844,7 +5844,7 @@ err_t extract_multi_type_argument(grm_args_t *error_container, const char *key, 
   arg_ptr = args_at(error_container, key);
   if (!arg_ptr)
     {
-      return NO_ERROR;
+      return ERROR_NONE;
     }
   if (strcmp(arg_ptr->value_format, "nDnD") == 0)
     {
@@ -5865,7 +5865,7 @@ err_t extract_multi_type_argument(grm_args_t *error_container, const char *key, 
           *downwards_flt = *upwards_flt = **downwards;
           *downwards = NULL;
           *downwards_length = 0;
-          return NO_ERROR;
+          return ERROR_NONE;
         }
       return_error_if(*downwards_length != x_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       *upwards = *downwards;
@@ -5887,7 +5887,7 @@ err_t extract_multi_type_argument(grm_args_t *error_container, const char *key, 
       return_error_if(!args_values(error_container, key, "i", &i), ERROR_INTERNAL);
       *upwards_flt = *downwards_flt = (double)i;
     }
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_length, double *y, const char *kind)
@@ -5911,7 +5911,7 @@ err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_len
   arg_ptr = args_at(series_args, "error");
   if (!arg_ptr)
     {
-      return NO_ERROR;
+      return ERROR_NONE;
     }
   error_container = NULL;
   if (strcmp(arg_ptr->value_format, "a") == 0 || strcmp(arg_ptr->value_format, "nA") == 0)
@@ -6017,7 +6017,7 @@ err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_len
     }
   gr_restorestate();
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 
@@ -6702,7 +6702,7 @@ err_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
 
   grm_args_t **series;
 
-  err_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
 
   args_values(subplot_args, "series", "A", &series);
@@ -7634,12 +7634,12 @@ void grm_finalize(void)
 
 int grm_clear(void)
 {
-  if (plot_init_static_variables() != NO_ERROR)
+  if (plot_init_static_variables() != ERROR_NONE)
     {
       return 0;
     }
   grm_args_clear(active_plot_args);
-  if (plot_init_args_structure(active_plot_args, plot_hierarchy_names + 1, 1) != NO_ERROR)
+  if (plot_init_args_structure(active_plot_args, plot_hierarchy_names + 1, 1) != ERROR_NONE)
     {
       return 0;
     }
@@ -7666,13 +7666,13 @@ int grm_merge(const grm_args_t *args)
 
 int grm_merge_extended(const grm_args_t *args, int hold, const char *identificator)
 {
-  if (plot_init_static_variables() != NO_ERROR)
+  if (plot_init_static_variables() != ERROR_NONE)
     {
       return 0;
     }
   if (args != NULL)
     {
-      if (plot_merge_args(global_root_args, args, NULL, NULL, hold) != NO_ERROR)
+      if (plot_merge_args(global_root_args, args, NULL, NULL, hold) != ERROR_NONE)
         {
           return 0;
         }
@@ -7716,7 +7716,7 @@ int grm_plot(const grm_args_t *args)
       args_values(active_plot_args, "subplots", "A", &current_subplot_args);
       while (*current_subplot_args != NULL)
         {
-          if (plot_pre_subplot(*current_subplot_args) != NO_ERROR)
+          if (plot_pre_subplot(*current_subplot_args) != ERROR_NONE)
             {
               return 0;
             }
@@ -7726,7 +7726,7 @@ int grm_plot(const grm_args_t *args)
             {
               return 0;
             }
-          if (plot_func(*current_subplot_args) != NO_ERROR)
+          if (plot_func(*current_subplot_args) != ERROR_NONE)
             {
               return 0;
             };
@@ -7754,12 +7754,12 @@ int grm_switch(unsigned int id)
   grm_args_t **args_array = NULL;
   unsigned int args_array_length = 0;
 
-  if (plot_init_static_variables() != NO_ERROR)
+  if (plot_init_static_variables() != ERROR_NONE)
     {
       return 0;
     }
 
-  if (plot_init_args_structure(global_root_args, plot_hierarchy_names, id + 1) != NO_ERROR)
+  if (plot_init_args_structure(global_root_args, plot_hierarchy_names, id + 1) != ERROR_NONE)
     {
       return 0;
     }

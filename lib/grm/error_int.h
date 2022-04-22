@@ -80,6 +80,7 @@ extern "C" {
 /* ------------------------- error handling ------------------------------------------------------------------------- */
 
 #define ENUM_ELEMENTS(X, Y)                           \
+  X(ERROR_NONE, 0)                                    \
   X(ERROR_UNSPECIFIED, 1)                             \
   X(ERROR_INTERNAL, 2)                                \
   X(ERROR_MALLOC, 3)                                  \
@@ -137,10 +138,7 @@ extern "C" {
 
 typedef enum
 {
-#ifndef _WIN32 /* Windows uses `NO_ERROR` (= 0) for its own error codes */
-  ENUM_VALUE(NO_ERROR, 0)
-#endif
-      ENUM_ELEMENTS(ENUM_VALUE, ENUM_LAST_VALUE)
+  ENUM_ELEMENTS(ENUM_VALUE, ENUM_LAST_VALUE)
 } err_t;
 
 /* ######################### public implementatin ################################################################### */

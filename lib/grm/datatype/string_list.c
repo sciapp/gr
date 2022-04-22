@@ -27,13 +27,13 @@ err_t string_list_entry_copy(string_list_entry_t *copy, const string_list_const_
     }
   *copy = _copy;
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 err_t string_list_entry_delete(string_list_entry_t entry)
 {
   free(entry);
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 

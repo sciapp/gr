@@ -129,7 +129,7 @@ err_t block_decode(char dst[3], const char src[4], int block_len, int *decoded_b
       *decoded_block_len = block_len - 1;
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 
@@ -194,7 +194,7 @@ err_t block_encode(char dst[4], const char src[3], int block_len)
         }
     }
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 
@@ -203,7 +203,7 @@ char *base64_decode(char *dst, const char *src, size_t *dst_len, err_t *error)
   size_t src_len, max_dst_len;
   size_t dst_index = 0, src_index;
   int decoded_block_len;
-  err_t _error = NO_ERROR;
+  err_t _error = ERROR_NONE;
 
   src_len = strlen(src);
 
@@ -226,7 +226,7 @@ char *base64_decode(char *dst, const char *src, size_t *dst_len, err_t *error)
   for (dst_index = 0, src_index = 0; src_index < src_len; dst_index += decoded_block_len, src_index += 4)
     {
       _error = block_decode(dst + dst_index, src + src_index, grm_min(src_len - src_index, 4), &decoded_block_len);
-      if (_error != NO_ERROR)
+      if (_error != ERROR_NONE)
         {
           break;
         }
@@ -254,7 +254,7 @@ char *base64_encode(char *dst, const char *src, size_t src_len, err_t *error)
 {
   size_t dst_len;
   size_t dst_index = 0, src_index;
-  err_t _error = NO_ERROR;
+  err_t _error = ERROR_NONE;
 
   /* Always round up to multiple of 4 */
   dst_len = (4 * src_len) / 3;
@@ -275,7 +275,7 @@ char *base64_encode(char *dst, const char *src, size_t src_len, err_t *error)
   for (dst_index = 0, src_index = 0; src_index < src_len; dst_index += 4, src_index += 3)
     {
       _error = block_encode(dst + dst_index, src + src_index, grm_min(src_len - src_index, 3));
-      if (_error != NO_ERROR)
+      if (_error != ERROR_NONE)
         {
           break;
         }

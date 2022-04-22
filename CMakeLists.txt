@@ -512,6 +512,9 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
   )
   target_compile_definitions(${LIBRARY} PRIVATE BUILDING_GR)
   target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    target_compile_options(${LIBRARY} PRIVATE /permissive-)
+  endif()
   set_target_properties(
     ${LIBRARY}
     PROPERTIES C_STANDARD 90
