@@ -288,7 +288,9 @@ void gks_adjust_cellarray(double *qx, double *qy, double *rx, double *ry, int *s
 
 DLLEXPORT void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dimx, int *ia, int lr1,
                                  double *r1, int lr2, double *r2, int lc, char *c, gks_state_list_t *gkss);
-
+DLLEXPORT int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
+                               void (*fn)(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2,
+                                          double *r2, int lc, char *chars, void **ptr));
 void gks_wiss_dispatch(int fctid, int wkid, int segn);
 
 #ifndef EMSCRIPTEN

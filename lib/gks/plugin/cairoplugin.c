@@ -168,7 +168,7 @@ typedef struct ws_state_list_t
 #endif
   double mw, mh;
   int w, h, dpi;
-  char *path;
+  char *path, mem_format;
   void *mem;
   int mem_resizable;
   double a, b, c, d;
@@ -1364,27 +1364,38 @@ static void write_page(void)
             {
               for (i = 0; i < width; i++)
                 {
-                  /* Reverse alpha pre-multiplication */
-                  double alpha = data[j * stride + i * 4 + 3];
-                  double red = data[j * stride + i * 4 + 2] * 255.0 / alpha;
-                  double green = data[j * stride + i * 4 + 1] * 255.0 / alpha;
-                  double blue = data[j * stride + i * 4 + 0] * 255.0 / alpha;
-                  if (red > 255)
+                  if (p->mem_format == 'a')
                     {
-                      red = 255;
+                      /* Reverse alpha pre-multiplication */
+                      double alpha = data[j * stride + i * 4 + 3];
+                      double red = data[j * stride + i * 4 + 2] * 255.0 / alpha;
+                      double green = data[j * stride + i * 4 + 1] * 255.0 / alpha;
+                      double blue = data[j * stride + i * 4 + 0] * 255.0 / alpha;
+                      if (red > 255)
+                        {
+                          red = 255;
+                        }
+                      if (green > 255)
+                        {
+                          green = 255;
+                        }
+                      if (blue > 255)
+                        {
+                          blue = 255;
+                        }
+                      mem[j * width * 4 + i * 4 + 0] = (unsigned char)red;
+                      mem[j * width * 4 + i * 4 + 1] = (unsigned char)green;
+                      mem[j * width * 4 + i * 4 + 2] = (unsigned char)blue;
+                      mem[j * width * 4 + i * 4 + 3] = (unsigned char)alpha;
                     }
-                  if (green > 255)
+                  else if (p->mem_format == 'r')
                     {
-                      green = 255;
+                      memcpy(mem + (j * width + i) * 4, data + j * stride + i * 4, 4);
                     }
-                  if (blue > 255)
+                  else
                     {
-                      blue = 255;
+                      fprintf(stderr, "GKS: Invalid memory format %c\n", p->mem_format);
                     }
-                  mem[j * width * 4 + i * 4 + 0] = (unsigned char)red;
-                  mem[j * width * 4 + i * 4 + 1] = (unsigned char)green;
-                  mem[j * width * 4 + i * 4 + 2] = (unsigned char)blue;
-                  mem[j * width * 4 + i * 4 + 3] = (unsigned char)alpha;
                 }
             }
         }
@@ -2223,6 +2234,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           int characters_read = 0;
           void *mem_ptr = NULL;
           char *path = p->path;
+          p->mem_format = 'a';
 
           if (!path)
             {
@@ -2230,7 +2242,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
               exit(1);
             }
           symbols_read = sscanf(path, "!resizable@%p.mem%n", &mem_ptr, &characters_read);
-          if (symbols_read == 1 && path[characters_read] == 0 && mem_ptr != NULL)
+          if (symbols_read == 1 && (path[characters_read] == 0 || path[characters_read] == ':') && mem_ptr != NULL)
             {
               p->mem_resizable = 1;
               width = ((int *)mem_ptr)[0];
@@ -2247,11 +2259,23 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
             {
               p->mem_resizable = 0;
               symbols_read = sscanf(path, "!%dx%d@%p.mem%n", &width, &height, &mem_ptr, &characters_read);
-              if (symbols_read != 3 || path[characters_read] != 0 || width <= 0 || height <= 0 || mem_ptr == NULL)
+              if (symbols_read != 3 || (path[characters_read] != 0 && path[characters_read] != ':') || width <= 0 ||
+                  height <= 0 || mem_ptr == NULL)
                 {
                   fprintf(stderr, "Failed to parse mem path. Expected !<width>x<height>@<pointer>.mem, but found %s\n",
                           p->path);
                   exit(1);
+                }
+            }
+          if (path[characters_read] == ':')
+            {
+              if (path[characters_read + 1] != 0 && path[characters_read + 2] == 0)
+                {
+                  p->mem_format = path[characters_read + 1];
+                }
+              else
+                {
+                  fprintf(stderr, "Failed to parse mem format.\n");
                 }
             }
           p->mem = (unsigned char *)mem_ptr;

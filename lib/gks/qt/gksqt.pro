@@ -11,6 +11,7 @@ exists( ../libGKS.a ) {
 } else {
   LIBS               += $$GRDIR/lib/libGKS.a
 }
+LIBS += -ldl
 mac:ICON              = gksqt.icns
 win32:RC_ICONS        = gksqt.ico
 win32:QMAKE_CXXFLAGS += -D_CRT_SECURE_NO_WARNINGS -D_ALLOW_MSC_VER_MISMATCH
