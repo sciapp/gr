@@ -177,17 +177,15 @@ void test_grid_with_grm_args(void)
           grm_args_push(subplots[i], "row", "i", 0);
           grm_args_push(subplots[i], "col", "i", 0);
         }
-      else if (i == 3)
-        {
-          grm_args_push(subplots[i], "row", "ii", 0, (i - 1) / 2);
-          grm_args_push(subplots[i], "col", "ii", 1, (i - 1) % 2);
-          grm_args_push(subplots[i], "colspan", "ii", 2, 2);
-        }
       else
         {
           grm_args_push(subplots[i], "row", "ii", 0, (i - 1) / 2);
           grm_args_push(subplots[i], "col", "ii", 1, (i - 1) % 2);
           grm_args_push(subplots[i], "colspan", "i", 2);
+        }
+      if (i == 3)
+        {
+          grm_args_push(subplots[i], "colspan", "ii", 2, 2);
         }
     }
 
@@ -203,12 +201,107 @@ void test_grid_with_grm_args(void)
   grm_args_delete(args);
 }
 
+void test_grid_with_grm_args_and_width_parameters(void)
+{
+  double plots[6][2][1000];
+  int n = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
+  grm_args_t *args, *subplots[6];
+  int i, j;
+
+  printf("filling argument container...\n");
+
+  for (i = 0; i < 2; ++i)
+    {
+      for (j = 0; j < n; ++j)
+        {
+          plots[i][0][j] = j * 2 * M_PI / n;
+          plots[i][1][j] = sin((j * (i + 1) * 2) * M_PI / n);
+        }
+    }
+  for (i = 0; i < 4; ++i)
+    {
+      for (j = 0; j < n; ++j)
+        {
+          plots[2 + i][0][j] = j * 2 * M_PI / n;
+          plots[2 + i][1][j] = cos((j * (i + 1) * 2) * M_PI / n);
+        }
+    }
+
+  for (i = 0; i < 6; ++i)
+    {
+      subplots[i] = grm_args_new();
+      grm_args_push(subplots[i], "x", "nD", n, plots[i][0]);
+      grm_args_push(subplots[i], "y", "nD", n, plots[i][1]);
+    }
+
+
+  for (i = 0; i < 3; ++i)
+    {
+      grm_args_push(subplots[i], "row", "i", i / 2);
+      grm_args_push(subplots[i], "col", "i", i % 2);
+    }
+  for (i = 0; i < 3; ++i)
+    {
+      grm_args_push(subplots[i + 3], "row", "i", i % 2);
+      grm_args_push(subplots[i + 3], "col", "i", 2 + i / 2);
+    }
+
+  grm_args_push(subplots[2], "colspan", "i", 2);
+  grm_args_push(subplots[5], "rowspan", "i", 2);
+
+  args = grm_args_new();
+  grm_args_push(args, "subplots", "nA", 6, subplots);
+
+  grm_plot(args);
+  printf("Lets give the lower left subplot an absolute height...\n");
+  getchar();
+
+  grm_args_push(subplots[2], "abs_height", "d", 0.15);
+
+  grm_plot(args);
+  printf("There is alot of whitespace now so lets set the fit_parents_height parameter of the lower left plot to true "
+         "so that the grid is aware of its height...\n");
+  getchar();
+
+  grm_args_push(subplots[2], "fit_parents_height", "i", 1);
+
+  grm_plot(args);
+  printf("On the left side of the layout the available space is now better distributed however this also effected the "
+         "right side of the layout so lets put these subplots in a seperate grid...\n");
+  getchar();
+
+  for (i = 0; i < 3; ++i)
+    {
+      grm_args_push(subplots[i + 3], "row", "ii", 0, i % 2);
+      grm_args_push(subplots[i + 3], "col", "ii", 2, i / 2);
+      grm_args_push(subplots[i + 3], "colspan", "i", 2);
+      if (i == 2)
+        {
+          grm_args_push(subplots[i + 3], "rowspan", "ii", 2, 2);
+        }
+    }
+
+  grm_plot(args);
+  printf("Now we want to change some attributes of the subplot on the right side...\n");
+  getchar();
+
+  grm_args_push(subplots[5], "abs_width", "dd", -1.0, 0.1);
+  grm_args_push(subplots[5], "rel_height", "dd", -1.0, 2 / 3.0);
+
+  grm_plot(args);
+  printf("Next...\n");
+  getchar();
+
+  grm_args_delete(args);
+}
+
 int main(void)
 {
-  /* test_grid(); */
+  test_grid();
   /* test_grid_with_grm(); */
-  test_grid_with_grm_args();
-  grm_finalize();
+  /* test_grid_with_grm_args(); */
+  /* test_grid_with_grm_args_and_width_parameters(); */
+  /* grm_finalize(); */
 
   return 0;
 }

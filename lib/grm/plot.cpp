@@ -226,17 +226,22 @@ static int pre_plot_text_encoding = -1;
 const char *valid_root_keys[] = {"plots", "append_plots", "hold_plots", NULL};
 const char *valid_plot_keys[] = {"clear", "figsize", "raw", "size", "subplots", "update", NULL};
 
-const char *valid_subplot_keys[] = {"adjust_xlim",
+const char *valid_subplot_keys[] = {"abs_height",
+                                    "abs_width",
+                                    "adjust_xlim",
                                     "adjust_ylim",
                                     "adjust_zlim",
                                     "alpha",
                                     "angle_ticks",
+                                    "aspect_ratio",
                                     "backgroundcolor",
                                     "bar_color",
                                     "bar_width",
                                     "col",
                                     "colspan",
                                     "colormap",
+                                    "fit_parents_height",
+                                    "fit_parents_width",
                                     "font",
                                     "font_precision",
                                     "grid_element",
@@ -251,6 +256,8 @@ const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "normalization",
                                     "panzoom",
                                     "phiflip",
+                                    "rel_height",
+                                    "rel_width",
                                     "resample_method",
                                     "reset_ranges",
                                     "rings",
@@ -309,11 +316,14 @@ const char *valid_series_keys[] = {"a",          "algorithm",
  * Example: "i|s" for supporting both integer and strings */
 /* TODO: type for format "s"? */
 static string_map_entry_t key_to_formats[] = {{"a", "A"},
+                                              {"abs_height", "d"},
+                                              {"abs_width", "d"},
                                               {"algorithm", "i|s"},
                                               {"adjust_xlim", "i"},
                                               {"adjust_ylim", "i"},
                                               {"adjust_zlim", "i"},
                                               {"alpha", "d"},
+                                              {"aspect_ratio", "d"},
                                               {"append_plots", "i"},
                                               {"backgroundcolor", "i"},
                                               {"bar_color", "D|i"},
@@ -329,6 +339,8 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"edge_width", "d"},
                                               {"error", "a"},
                                               {"fig_size", "D"},
+                                              {"fit_parents_height", "i"},
+                                              {"fit_parents_width", "i"},
                                               {"font", "i"},
                                               {"font_precision", "i"},
                                               {"foreground_color", "D"},
@@ -347,6 +359,8 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"nbins", "i"},
                                               {"panzoom", "D"},
                                               {"raw", "s"},
+                                              {"rel_height", "d"},
+                                              {"rel_width", "d"},
                                               {"resample_method", "s|i"},
                                               {"reset_ranges", "i"},
                                               {"rotation", "d"},
@@ -1087,10 +1101,9 @@ void plot_process_font(grm_args_t *subplot_args)
   /* TODO: Implement other datatypes for `font` and `font_precision` */
 }
 
-void plot_process_grid_arguments(const grm_args_t *args)
+err_t plot_process_grid_arguments(const grm_args_t *args)
 {
   int current_nesting_degree, nesting_degree;
-  int row, col;
   int *rows, *cols;
   unsigned int rows_length, cols_length;
   int rowspan, colspan;
@@ -1098,7 +1111,18 @@ void plot_process_grid_arguments(const grm_args_t *args)
   unsigned int rowspans_length, colspans_length;
   int rowstart, rowstop, colstart, colstop;
   grm_args_t **current_subplot_args;
+  grid_t *current_grid;
+  element_t *current_element;
 
+  double *rel_heights, *rel_widths, *abs_heights, *abs_widths, *aspect_ratios;
+  int *fit_parents_heights, *fit_parents_widths;
+  unsigned int rel_heights_length, rel_widths_length, abs_heights_length, abs_widths_length, aspect_ratios_length,
+      fit_parents_heights_length, fit_parents_widths_length;
+
+  if (global_grid != NULL)
+    {
+      grid_delete(global_grid);
+    }
   global_grid = grid_new(1, 1);
   args_values(active_plot_args, "subplots", "A", &current_subplot_args);
   while (*current_subplot_args != NULL)
@@ -1106,30 +1130,24 @@ void plot_process_grid_arguments(const grm_args_t *args)
       rows = NULL, cols = NULL;
       rowspans = NULL, colspans = NULL;
       rowspan = 1, colspan = 1;
-
-      args_values(*current_subplot_args, "row", "i", &row);
-      args_values(*current_subplot_args, "col", "i", &col);
+      rel_heights = NULL, rel_widths = NULL;
+      abs_heights = NULL, abs_widths = NULL;
+      aspect_ratios = NULL;
+      fit_parents_heights = NULL, fit_parents_widths = NULL;
 
       args_first_value(*current_subplot_args, "row", "I", &rows, &rows_length);
       args_first_value(*current_subplot_args, "col", "I", &cols, &cols_length);
 
-      if (rows == NULL)
+      if (rows == NULL || cols == NULL)
         {
-          rows = &row;
-          rows_length = 1;
+          rows_length = 0;
+          cols_length = 0;
         }
-      if (cols == NULL)
-        {
-          cols = &col;
-          cols_length = 1;
-        }
-      /*
-       * TODO: remove compiler error because of error label used in the makro
-       * cleanup_and_set_error_if(rows_length != col_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-       */
 
-      args_values(*current_subplot_args, "rowspan", "i", &rowspan);
-      args_values(*current_subplot_args, "colspan", "i", &colspan);
+      if (rows_length != cols_length)
+        {
+          return ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
+        }
 
       args_first_value(*current_subplot_args, "rowspan", "I", &rowspans, &rowspans_length);
       args_first_value(*current_subplot_args, "colspan", "I", &colspans, &colspans_length);
@@ -1145,8 +1163,18 @@ void plot_process_grid_arguments(const grm_args_t *args)
           colspans_length = 1;
         }
 
+      args_first_value(*current_subplot_args, "rel_height", "D", &rel_heights, &rel_heights_length);
+      args_first_value(*current_subplot_args, "rel_width", "D", &rel_widths, &rel_widths_length);
+      args_first_value(*current_subplot_args, "abs_height", "D", &abs_heights, &abs_heights_length);
+      args_first_value(*current_subplot_args, "abs_width", "D", &abs_widths, &abs_widths_length);
+      args_first_value(*current_subplot_args, "aspect_ratio", "D", &aspect_ratios, &aspect_ratios_length);
+      args_first_value(*current_subplot_args, "fit_parents_height", "I", &fit_parents_heights,
+                       &fit_parents_heights_length);
+      args_first_value(*current_subplot_args, "fit_parents_width", "I", &fit_parents_widths,
+                       &fit_parents_widths_length);
+
       nesting_degree = rows_length - 1;
-      element_t *current_grid = global_grid;
+      current_grid = global_grid;
       for (current_nesting_degree = 0; current_nesting_degree <= nesting_degree; ++current_nesting_degree)
         {
 
@@ -1157,14 +1185,57 @@ void plot_process_grid_arguments(const grm_args_t *args)
           colstop =
               (current_nesting_degree >= colspans_length) ? colstart + 1 : colstart + colspans[current_nesting_degree];
 
+          if (rowstart - rowstop == 0 || colstart - colstop == 0)
+            {
+              break;
+            }
+
           if (nesting_degree == current_nesting_degree)
             {
               grid_setElementArgsSlice(rowstart, rowstop, colstart, colstop, *current_subplot_args, current_grid);
+              current_element = gird_getElement(rowstart, colstart, current_grid);
             }
           else
             {
               grid_ensureCellsAreGrid(rowstart, rowstop, colstart, colstop, current_grid);
-              current_grid = gird_getElement(rowstart, rowstop, current_grid);
+              current_element = gird_getElement(rowstart, colstart, current_grid);
+              current_grid = reinterpret_cast<grid_t *>(current_element);
+            }
+
+          if (rel_heights != NULL && rel_heights_length > current_nesting_degree &&
+              rel_heights[current_nesting_degree] != -1)
+            {
+              element_setRelativeHeight(current_element, rel_heights[current_nesting_degree]);
+            }
+          if (rel_widths != NULL && rel_widths_length > current_nesting_degree &&
+              rel_widths[current_nesting_degree] != -1)
+            {
+              element_setRelativeWidth(current_element, rel_widths[current_nesting_degree]);
+            }
+          if (abs_heights != NULL && abs_heights_length > current_nesting_degree &&
+              abs_heights[current_nesting_degree] != -1)
+            {
+              element_setAbsHeight(current_element, abs_heights[current_nesting_degree]);
+            }
+          if (abs_widths != NULL && abs_widths_length > current_nesting_degree &&
+              abs_widths[current_nesting_degree] != -1)
+            {
+              element_setAbsWidth(current_element, abs_widths[current_nesting_degree]);
+            }
+          if (aspect_ratios != NULL && aspect_ratios_length > current_nesting_degree &&
+              aspect_ratios[current_nesting_degree] != -1)
+            {
+              element_setAspectRatio(current_element, aspect_ratios[current_nesting_degree]);
+            }
+          if (fit_parents_heights != NULL && fit_parents_heights_length > current_nesting_degree &&
+              fit_parents_heights[current_nesting_degree] != -1)
+            {
+              element_setFitParentsHeight(current_element, fit_parents_heights[current_nesting_degree]);
+            }
+          if (fit_parents_widths != NULL && fit_parents_widths_length > current_nesting_degree &&
+              fit_parents_widths[current_nesting_degree] != -1)
+            {
+              element_setFitParentsWidth(current_element, fit_parents_widths[current_nesting_degree]);
             }
         }
 
@@ -1172,6 +1243,8 @@ void plot_process_grid_arguments(const grm_args_t *args)
     }
 
   grid_finalize(global_grid);
+
+  return ERROR_NONE;
 }
 
 void plot_process_resample_method(grm_args_t *subplot_args)
@@ -7814,7 +7887,10 @@ int grm_plot(const grm_args_t *args)
   else
     {
       plot_set_attribute_defaults(active_plot_args);
-      plot_process_grid_arguments(active_plot_args);
+      if (plot_process_grid_arguments(active_plot_args) != ERROR_NONE)
+        {
+          return 0;
+        }
       plot_pre_plot(active_plot_args);
       args_values(active_plot_args, "subplots", "A", &current_subplot_args);
       while (*current_subplot_args != NULL)

@@ -157,7 +157,7 @@ void plot_process_wswindow_wsviewport(grm_args_t *plot_args);
 err_t plot_pre_subplot(grm_args_t *subplot_args);
 void plot_process_colormap(grm_args_t *subplot_args);
 void plot_process_font(grm_args_t *subplot_args);
-void plot_process_grid_arguments(const grm_args_t *args);
+err_t plot_process_grid_arguments(const grm_args_t *args);
 void plot_process_resample_method(grm_args_t *subplot_args);
 void plot_process_viewport(grm_args_t *subplot_args);
 void plot_process_window(grm_args_t *subplot_args);
