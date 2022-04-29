@@ -66,14 +66,31 @@ if [ `uname` = "Darwin" ]; then
     EXTRA_LDFLAGS="-L${extra_root}/lib"
   fi
 fi
+
+create_extradef () {
+    local var_name value extradef
+
+    var_name="$1"
+    shift
+    extradef=""
+    for value in "$@"; do
+        if [ -z "${extradef}" ]; then
+            extradef="${var_name}=${value}"
+        else
+            extradef="${extradef} ${var_name}+=${value}"
+        fi
+    done
+    echo "${extradef}"
+}
+
 if [ ! -z "${EXTRA_CFLAGS}" ]; then
-  extradefs="EXTRA_CFLAGS=$EXTRA_CFLAGS"
+  extradefs="$(create_extradef EXTRA_CFLAGS $EXTRA_CFLAGS)"
 fi
 if [ ! -z "${EXTRA_CXXFLAGS}" ]; then
- extradefs="$extradefs EXTRA_CXXFLAGS=$EXTRA_CXXFLAGS"
+  extradefs="$extradefs $(create_extradef EXTRA_CXXFLAGS $EXTRA_CXXFLAGS)"
 fi
 if [ ! -z "${EXTRA_LDFLAGS}" ]; then
-  extradefs="$extradefs EXTRA_LDFLAGS=$EXTRA_LDFLAGS"
+  extradefs="$extradefs $(create_extradef EXTRA_LDFLAGS $EXTRA_LDFLAGS)"
 fi
 ret=0
 
