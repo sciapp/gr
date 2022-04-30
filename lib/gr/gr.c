@@ -4684,7 +4684,7 @@ static char *replace_minus_sign(char *string)
   return string;
 }
 
-static char *gr_ftoa(char *string, double value, double reference)
+static char *gr_ftoa(char *string, double value, format_reference_t *reference)
 {
   char *s;
 
@@ -4747,6 +4747,8 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
   int64_t i;
   int decade, exponent;
   char string[256];
+
+  format_reference_t format_reference;
 
   if (x_tick < 0 || y_tick < 0)
     {
@@ -4844,7 +4846,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                                 text2dlbl(x_label, yi, replace_minus_sign(string), yi, fpy);
                               }
                             else
-                              text2dlbl(x_label, yi, gr_ftoa(string, yi, 0.), yi, fpy);
+                              text2dlbl(x_label, yi, gr_ftoa(string, yi, NULL), yi, fpy);
                           }
                       }
                 }
@@ -4884,6 +4886,8 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           start_pline(x_org, y_min);
 
+          str_get_format_reference(&format_reference, x_org, y_min, y_max, y_tick, major_y);
+
           while (yi <= y_max + feps)
             {
               pline(x_org, yi);
@@ -4894,7 +4898,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                     {
                       xi = major_tick;
                       if (yi != y_org || y_org == y_min || y_org == y_max)
-                        if (major_y > 0) text2dlbl(x_label, yi, gr_ftoa(string, yi, y_tick * major_y), yi, fpy);
+                        if (major_y > 0) text2dlbl(x_label, yi, gr_ftoa(string, yi, &format_reference), yi, fpy);
                     }
                   else
                     xi = minor_tick;
@@ -4966,11 +4970,10 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                             if (x_tick > 1)
                               {
                                 exponent = iround(blog(lx.basex, xi));
-                                sprintf(string, "%s^{%d}", lx.basex_s, exponent);
                                 text2dlbl(xi, y_label, replace_minus_sign(string), xi, fpx);
                               }
                             else
-                              text2dlbl(xi, y_label, gr_ftoa(string, xi, 0.), xi, fpx);
+                              text2dlbl(xi, y_label, gr_ftoa(string, xi, NULL), xi, fpx);
                           }
                       }
                 }
@@ -5006,6 +5009,8 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
 
+          str_get_format_reference(&format_reference, x_org, x_min, x_max, x_tick, major_x);
+
           /* draw X-axis */
 
           start_pline(x_min, y_org);
@@ -5020,7 +5025,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                     {
                       yi = major_tick;
                       if (xi != x_org || x_org == x_min || x_org == x_max)
-                        if (major_x > 0) text2dlbl(xi, y_label, gr_ftoa(string, xi, x_tick * major_x), xi, fpx);
+                        if (major_x > 0) text2dlbl(xi, y_label, gr_ftoa(string, xi, &format_reference), xi, fpx);
                     }
                   else
                     yi = minor_tick;
@@ -6420,6 +6425,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   int decade, exponent;
   char string[256];
 
+  format_reference_t format_reference;
+
   if (x_tick < 0 || y_tick < 0 || z_tick < 0)
     {
       fprintf(stderr, "invalid interval length for major tick-marks\n");
@@ -6606,7 +6613,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                             text3d(x_label, y_label, zi, replace_minus_sign(string), 0);
                           }
                         else
-                          text3d(x_label, y_label, zi, gr_ftoa(string, zi, 0.), 0);
+                          text3d(x_label, y_label, zi, gr_ftoa(string, zi, NULL), 0);
                       }
                 }
 
@@ -6639,9 +6646,12 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(z_min / z_tick);
           zi = i * z_tick;
 
+          str_get_format_reference(&format_reference, z_org, z_min, z_max, z_tick, major_z);
+
           /* draw Z-axis */
 
           start_pline3d(x_org, y_org, z_min);
+
 
           while (zi <= z_max)
             {
@@ -6652,7 +6662,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   xi = x_major_tick;
                   yi = y_major_tick;
                   if ((zi != z_org) && (major_z > 0))
-                    text3d(x_label, y_label, zi, gr_ftoa(string, zi, z_tick * major_z),
+                    text3d(x_label, y_label, zi, gr_ftoa(string, zi, &format_reference),
                            modern_projection_type ? axis : 0);
                 }
               else
@@ -6768,7 +6778,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                             text3d(x_label, yi, z_label, replace_minus_sign(string), 0);
                           }
                         else
-                          text3d(x_label, yi, z_label, gr_ftoa(string, yi, 0.), 0);
+                          text3d(x_label, yi, z_label, gr_ftoa(string, yi, NULL), 0);
                       }
                 }
 
@@ -6801,6 +6811,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(y_min / y_tick);
           yi = i * y_tick;
 
+          str_get_format_reference(&format_reference, y_org, y_min, y_max, y_tick, major_y);
+
           /* draw Y-axis */
 
           start_pline3d(x_org, y_min, z_org);
@@ -6814,7 +6826,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   xi = x_major_tick;
                   zi = z_major_tick;
                   if ((yi != y_org) && (major_y > 0))
-                    text3d(x_label, yi, z_label, gr_ftoa(string, yi, y_tick * major_y),
+                    text3d(x_label, yi, z_label, gr_ftoa(string, yi, &format_reference),
                            modern_projection_type ? axis : 0);
                 }
               else
@@ -6930,7 +6942,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                             text3d(xi, y_label, z_label, replace_minus_sign(string), 0);
                           }
                         else
-                          text3d(xi, y_label, z_label, gr_ftoa(string, xi, 0.), 0);
+                          text3d(xi, y_label, z_label, gr_ftoa(string, xi, NULL), 0);
                       }
                 }
 
@@ -6963,6 +6975,9 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
 
+
+          str_get_format_reference(&format_reference, x_org, x_min, x_max, x_tick, major_x);
+
           /* draw X-axis */
 
           start_pline3d(x_min, y_org, z_org);
@@ -6976,7 +6991,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   yi = y_major_tick;
                   zi = z_major_tick;
                   if ((xi != x_org) && (major_x > 0))
-                    text3d(xi, y_label, z_label, gr_ftoa(string, xi, x_tick * major_x),
+                    text3d(xi, y_label, z_label, gr_ftoa(string, xi, &format_reference),
                            modern_projection_type ? axis : 0);
                 }
               else
@@ -9165,6 +9180,7 @@ void gr_colorbar(void)
   int i, nz, ci, cells;
   double x, y, z, dy, dz;
   char text[256];
+  format_reference_t format_reference;
 
   check_autoinit;
 
@@ -9204,11 +9220,13 @@ void gr_colorbar(void)
   gks_set_clipping(GKS_K_NOCLIP);
 
   x = xmax + 0.01 * (xmax - xmin) / (vp[1] - vp[0]);
+  str_get_format_reference(&format_reference, 0, zmin, zmax, dz, 0);
+
   for (i = 0; i <= nz; i++)
     {
       y = ymin + i * dy;
       z = zmin + i * dz;
-      text2d(x, y, gr_ftoa(text, z, dz));
+      text2d(x, y, gr_ftoa(text, z, &format_reference));
     }
 
   /* restore text alignment and clipping indicator */
