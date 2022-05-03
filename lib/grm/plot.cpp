@@ -1442,7 +1442,6 @@ void plot_process_viewport(grm_args_t *subplot_args)
     }
 
   global_render->setViewport(global_root->lastChildElement(), viewport[0], viewport[1], viewport[2], viewport[3]);
-  //  gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 
   grm_args_push(subplot_args, "vp", "dddd", vp[0], vp[1], vp[2], vp[3]);
   grm_args_push(subplot_args, "viewport", "dddd", viewport[0], viewport[1], viewport[2], viewport[3]);
@@ -1561,7 +1560,6 @@ void plot_process_window(grm_args_t *subplot_args)
       if (args_values(subplot_args, "window", "D", &stored_window))
         {
           global_render->setWindow(group, stored_window[0], stored_window[1], stored_window[2], stored_window[3]);
-          //          gr_setwindow(stored_window[0], stored_window[1], stored_window[2], stored_window[3]);
           logger((stderr, "Window before `gr_panzoom` (%lf, %lf, %lf, %lf)\n", stored_window[0], stored_window[1],
                   stored_window[2], stored_window[3]));
         }
@@ -1712,20 +1710,15 @@ void plot_process_window(grm_args_t *subplot_args)
       args_values(subplot_args, "tilt", "d", &tilt);
 
       global_render->setWindow3d(group, x_min, x_max, y_min, y_max, z_min, z_max);
-      //      gr_setwindow3d(x_min, x_max, y_min, y_max, z_min, z_max);
       global_render->setSpace3d(group, -rotation, tilt, 30, 0);
-      //      gr_setspace3d(-rotation, tilt, 30, 0);
     }
 
   grm_args_push(subplot_args, "scale", "i", scale);
   global_render->setScale(global_root->lastChildElement(), scale);
-  //  gr_setscale(scale);
 }
 
 err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
 {
-  // TODO: dom render integration
-
   const char *kind;
   const char *style = "";
   const char *fmt;
@@ -2721,11 +2714,9 @@ err_t plot_barplot(grm_args_t *subplot_args)
   auto group = global_root->lastChildElement();
   group->setAttribute("name", "bar");
 
-  //  gr_settextalign(2, 3);
   global_render->setTextAlign(group, 2, 3);
 
   global_render->selectClipXForm(group, 1);
-  //  gr_selectclipxform(1);
 
   args_values(subplot_args, "series", "A", &current_series);
   args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]);
@@ -2967,16 +2958,12 @@ err_t plot_barplot(grm_args_t *subplot_args)
 
       global_render->setFillIntStyle(subGroup, 1);
       global_render->setFillColorInd(subGroup, 1);
-      //      gr_setfillintstyle(1);
-      //      gr_setfillcolorind(bar_color);
 
       if (bar_color_rgb[0] != -1)
         {
           global_render->setColorRep(subGroup, color_save_spot, bar_color_rgb[0], bar_color_rgb[1], bar_color_rgb[2]);
-          //          gr_setcolorrep(color_save_spot, bar_color_rgb[0], bar_color_rgb[1], bar_color_rgb[2]);
           bar_color = color_save_spot;
           global_render->setFillColorInd(subGroup, bar_color);
-          //          gr_setfillcolorind(bar_color);
         }
       /* Draw Bar */
       for (i = 0; i < y_length; i++)
@@ -3021,19 +3008,15 @@ err_t plot_barplot(grm_args_t *subplot_args)
             {
               int color_index = i % len_std_colors;
               global_render->setFillColorInd(temp, std_colors[color_index]);
-              //              gr_setfillcolorind(std_colors[color_index]);
             }
           if (c != NULL)
             {
               global_render->setFillColorInd(temp, c[i]);
-              //              gr_setfillcolorind(c[i]);
             }
           else if (c_rgb != NULL)
             {
               global_render->setColorRep(temp, color_save_spot, c_rgb[i * 3], c_rgb[i * 3 + 1], c_rgb[i * 3 + 2]);
-              //              gr_setcolorrep(color_save_spot, c_rgb[i * 3], c_rgb[i * 3 + 1], c_rgb[i * 3 + 2]);
               global_render->setFillColorInd(temp, color_save_spot);
-              //              gr_setfillcolorind(color_save_spot);
             }
           else if (change_bar_color)
             {
@@ -3041,15 +3024,11 @@ err_t plot_barplot(grm_args_t *subplot_args)
                 {
                   global_render->setColorRep(temp, color_save_spot, pos_ind_bar_color[i][0], pos_ind_bar_color[i][1],
                                              pos_ind_bar_color[i][2]);
-                  //                  gr_setcolorrep(color_save_spot, pos_ind_bar_color[i][0], pos_ind_bar_color[i][1],
-                  //                                 pos_ind_bar_color[i][2]);
                   global_render->setFillColorInd(temp, color_save_spot);
-                  //                  gr_setfillcolorind(color_save_spot);
                 }
             }
           if (y_lightness_to_get > 0 && y_lightness != NULL)
             {
-              //              gr_inqfillcolorind(&color);
               if (temp->hasAttribute("fillcolorind"))
                 {
                   color = (int)temp->getAttribute("fillcolorind");
@@ -3064,7 +3043,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
               y_lightness[i] = 116 * pow(Y / 100, 1.0 / 3) - 16;
               --y_lightness_to_get;
             }
-          //          gr_fillrect(x1, x2, y1, y2);
         }
 
       pos_vertical_change = 0;
@@ -3109,39 +3087,30 @@ err_t plot_barplot(grm_args_t *subplot_args)
           subGroup->append(temp);
 
           global_render->setLineWidth(temp, edge_width);
-          //          gr_setlinewidth(edge_width);
           if (change_edge_width)
             {
               if (pos_ind_edge_width[i] != -1)
                 {
                   double width = pos_ind_edge_width[i];
                   global_render->setLineWidth(temp, width);
-                  //                  gr_setlinewidth(width);
                 }
             }
           if (edge_color_rgb[0] != -1)
             {
               global_render->setColorRep(temp, color_save_spot, edge_color_rgb[0], edge_color_rgb[1],
                                          edge_color_rgb[2]);
-              //              gr_setcolorrep(color_save_spot, edge_color_rgb[0], edge_color_rgb[1], edge_color_rgb[2]);
               edge_color = color_save_spot;
             }
           global_render->setLineColorInd(temp, edge_color);
-          //          gr_setlinecolorind(edge_color);
           if (change_edge_color)
             {
               if (*pos_ind_edge_color[i] != -1)
                 {
                   global_render->setColorRep(temp, color_save_spot, pos_ind_edge_color[i][0], pos_ind_edge_color[i][1],
                                              pos_ind_edge_color[i][2]);
-                  //                  gr_setcolorrep(color_save_spot, pos_ind_edge_color[i][0],
-                  //                  pos_ind_edge_color[i][1],
-                  //                                 pos_ind_edge_color[i][2]);
                   global_render->setLineColorInd(temp, color_save_spot);
-                  //                  gr_setlinecolorind(color_save_spot);
                 }
             }
-          //          gr_drawrect(x1, x2, y1, y2);
         }
 
       pos_vertical_change = 0;
@@ -3252,23 +3221,17 @@ err_t plot_barplot(grm_args_t *subplot_args)
           subGroup->append(inner_group);
 
           global_render->setFillColorInd(inner_group, std_colors[inner_series_index % len_std_colors]);
-          //          gr_setfillcolorind(std_colors[inner_series_index % len_std_colors]);
           args_first_value(inner_series[inner_series_index], "y", "D", &y, &y_length);
           bar_width = wfac / fixed_y_length;
           if (c != NULL)
             {
               global_render->setFillColorInd(inner_group, c[inner_series_index]);
-              //              gr_setfillcolorind(c[inner_series_index]);
             }
           else if (c_rgb != NULL)
             {
               global_render->setColorRep(inner_group, color_save_spot, c_rgb[inner_series_index * 3],
                                          c_rgb[inner_series_index * 3 + 1], c_rgb[inner_series_index * 3 + 2]);
-              //              gr_setcolorrep(color_save_spot, c_rgb[inner_series_index * 3], c_rgb[inner_series_index *
-              //              3 + 1],
-              //                             c_rgb[inner_series_index * 3 + 2]);
               global_render->setFillColorInd(inner_group, color_save_spot);
-              //              gr_setfillcolorind(color_save_spot);
             }
           else if (change_bar_color)
             {
@@ -3277,11 +3240,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
                   global_render->setColorRep(inner_group, color_save_spot, pos_ind_bar_color[inner_series_index][0],
                                              pos_ind_bar_color[inner_series_index][1],
                                              pos_ind_bar_color[inner_series_index][2]);
-                  //                  gr_setcolorrep(color_save_spot, pos_ind_bar_color[inner_series_index][0],
-                  //                                 pos_ind_bar_color[inner_series_index][1],
-                  //                                 pos_ind_bar_color[inner_series_index][2]);
                   global_render->setFillColorInd(inner_group, color_save_spot);
-                  //                  gr_setfillcolorind(color_save_spot);
                 }
             }
           if (args_first_value(inner_series[inner_series_index], "c", "I", &inner_c, &inner_c_length))
@@ -3325,21 +3284,16 @@ err_t plot_barplot(grm_args_t *subplot_args)
               if (inner_c != NULL)
                 {
                   global_render->setFillColorInd(temp, inner_c[i]);
-                  //                  gr_setfillcolorind(inner_c[i]);
                 }
               if (inner_c_rgb != NULL)
                 {
                   global_render->setColorRep(temp, color_save_spot, inner_c_rgb[i * 3], inner_c_rgb[i * 3 + 1],
                                              inner_c_rgb[i * 3 + 2]);
-                  //                  gr_setcolorrep(color_save_spot, inner_c_rgb[i * 3], inner_c_rgb[i * 3 + 1],
-                  //                  inner_c_rgb[i * 3 + 2]);
                   global_render->setFillColorInd(temp, color_save_spot);
-                  //                  gr_setfillcolorind(color_save_spot);
                 }
 
               if (y_lightness_to_get > 0 && y_lightness != NULL)
                 {
-                  //                  gr_inqfillcolorind(&color);
                   if (temp->hasAttribute("fillcolorind"))
                     {
                       color = (int)temp->getAttribute("fillcolorind");
@@ -3353,7 +3307,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
                   y_lightness[ylabels_length - y_lightness_to_get] = 116 * pow(Y / 100, 1.0 / 3) - 16;
                   --y_lightness_to_get;
                 }
-              //              gr_fillrect(x1, x2, y1, y2);
             }
           pos_vertical_change = 0;
           neg_vertical_change = 0;
@@ -3364,25 +3317,21 @@ err_t plot_barplot(grm_args_t *subplot_args)
 
           /* Draw edges from inner_series */
           global_render->setLineWidth(inner_edges, edge_width);
-          //          gr_setlinewidth(edge_width);
           if (change_edge_width)
             {
               if (pos_ind_edge_width[inner_series_index] != -1)
                 {
                   double width = pos_ind_edge_width[inner_series_index];
                   global_render->setLineWidth(inner_edges, width);
-                  //                  gr_setlinewidth(width);
                 }
             }
           if (edge_color_rgb[0] != -1)
             {
               global_render->setColorRep(inner_edges, color_save_spot, edge_color_rgb[0], edge_color_rgb[1],
                                          edge_color_rgb[2]);
-              //              gr_setcolorrep(color_save_spot, edge_color_rgb[0], edge_color_rgb[1], edge_color_rgb[2]);
               edge_color = color_save_spot;
             }
           global_render->setLineColorInd(inner_edges, edge_color);
-          //          gr_setlinecolorind(edge_color);
           if (change_edge_color)
             {
               if (*pos_ind_edge_color[inner_series_index] != -1)
@@ -3390,17 +3339,12 @@ err_t plot_barplot(grm_args_t *subplot_args)
                   global_render->setColorRep(inner_edges, color_save_spot, pos_ind_edge_color[inner_series_index][0],
                                              pos_ind_edge_color[inner_series_index][1],
                                              pos_ind_edge_color[inner_series_index][2]);
-                  //                  gr_setcolorrep(color_save_spot, pos_ind_edge_color[inner_series_index][0],
-                  //                                 pos_ind_edge_color[inner_series_index][1],
-                  //                                 pos_ind_edge_color[inner_series_index][2]);
                   global_render->setLineColorInd(inner_edges, color_save_spot);
-                  //                  gr_setlinecolorind(color_save_spot);
                 }
             }
 
           for (i = 0; i < y_length; i++)
             {
-              //              gr_setfillcolorind(std_colors[inner_series_index % len_std_colors]);
               x1 = series_index + 1 - 0.5 * wfac + bar_width * inner_series_index;
               x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * inner_series_index;
               if (y[i] > 0)
@@ -3418,7 +3362,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
               auto temp = global_render->createDrawRect(x1, x2, y1, y2);
               inner_edges->append(temp);
               global_render->setFillColorInd(temp, std_colors[inner_series_index % len_std_colors]);
-              //              gr_drawrect(x1, x2, y1, y2);
             }
           pos_vertical_change = 0;
           neg_vertical_change = 0;
@@ -3459,12 +3402,10 @@ err_t plot_barplot(grm_args_t *subplot_args)
                         {
 
                           global_render->setTextColorInd(temp, 0);
-                          //                          gr_settextcolorind(0);
                         }
                       else
                         {
                           global_render->setTextColorInd(temp, 1);
-                          //                          gr_settextcolorind(1);
                         }
                       // TODO: Respect `textalign` and `charup` in the graphics tree
                       gr_settextalign(2, 3);
@@ -3618,8 +3559,6 @@ err_t plot_contour(grm_args_t *subplot_args)
           auto contour = global_render->createContour("px" + str, px_vec, "py" + str, py_vec, "h" + str, h_vec,
                                                       "pz" + str, pz_vec, 1000);
           subGroup->append(contour);
-          //          gr_contour(PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, num_levels, gridit_x, gridit_y, h,
-          //          gridit_z, 1000);
         }
       else
         {
@@ -3645,7 +3584,6 @@ err_t plot_contour(grm_args_t *subplot_args)
           auto contour = global_render->createContour("px" + str, px_vec, "py" + str, py_vec, "h" + str, h_vec,
                                                       "pz" + str, pz_vec, 1000);
           subGroup->append(contour);
-          //          gr_contour(x_length, y_length, num_levels, x, y, h, z, 1000);
         }
       ++current_series;
     }
@@ -3688,7 +3626,6 @@ err_t plot_contourf(grm_args_t *subplot_args)
     }
   args_values(subplot_args, "scale", "i", &scale);
   global_render->setScale(group, scale);
-  //  gr_setscale(scale);
   args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
@@ -3704,7 +3641,6 @@ err_t plot_contourf(grm_args_t *subplot_args)
           goto cleanup;
         }
       global_render->setLineColorInd(subGroup, 1);
-      //      gr_setlinecolorind(1);
       if (x_length == y_length && x_length == z_length)
         {
           if (gridit_x == NULL)
@@ -3742,9 +3678,6 @@ err_t plot_contourf(grm_args_t *subplot_args)
           auto contour = global_render->createContourf("px" + str, px_vec, "py" + str, py_vec, "h" + str, h_vec,
                                                        "pz" + str, pz_vec, 1000);
           subGroup->append(contour);
-
-          //          gr_contourf(PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, num_levels, gridit_x, gridit_y, h,
-          //          gridit_z, 1000);
         }
       else
         {
@@ -3769,7 +3702,6 @@ err_t plot_contourf(grm_args_t *subplot_args)
           auto contour = global_render->createContourf("px" + str, px_vec, "py" + str, py_vec, "h" + str, h_vec,
                                                        "pz" + str, pz_vec, 1000);
           subGroup->append(contour);
-          //          gr_contourf(x_length, y_length, num_levels, x, y, h, z, 1000);
         }
       ++current_series;
     }
@@ -3983,7 +3915,6 @@ err_t plot_heatmap(grm_args_t *subplot_args)
           auto nuca = global_render->createNonUniformCellArray("x" + str, x_vec, "y" + str, y_vec, cols, rows, 1, 1,
                                                                cols, rows, "color" + str, color_vec);
           subGroup->append(nuca);
-          //          gr_nonuniformcellarray(x, y, cols, rows, 1, 1, cols, rows, rgba);
         }
 
       free(rgba);
@@ -4026,7 +3957,6 @@ err_t plot_wireframe(grm_args_t *subplot_args)
       args_first_value(*current_series, "z", "D", &z, &z_length);
 
       global_render->setFillColorInd(subGroup, 0);
-      //      gr_setfillcolorind(0);
       if (x_length == y_length && x_length == z_length)
         {
           if (gridit_x == NULL)
@@ -4053,8 +3983,6 @@ err_t plot_wireframe(grm_args_t *subplot_args)
           auto temp = global_render->createSurface("x" + id, grid_x_vec, "y" + id, grid_y_vec, "z" + id, grid_z_vec,
                                                    GR_OPTION_FILLED_MESH);
           subGroup->append(temp);
-          //          gr_surface(PLOT_WIREFRAME_GRIDIT_N, PLOT_WIREFRAME_GRIDIT_N, gridit_x, gridit_y, gridit_z,
-          //                     GR_OPTION_FILLED_MESH);
         }
       else
         {
@@ -4073,7 +4001,6 @@ err_t plot_wireframe(grm_args_t *subplot_args)
           auto temp =
               global_render->createSurface("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec, GR_OPTION_FILLED_MESH);
           subGroup->append(temp);
-          //          gr_surface(x_length, y_length, x, y, z, GR_OPTION_FILLED_MESH);
         }
       ++current_series;
     }
@@ -4193,7 +4120,6 @@ err_t plot_plot3(grm_args_t *subplot_args)
       auto temp = global_render->createPolyline3d("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec);
 
       subGroup->append(temp);
-      //      gr_polyline3d(x_length, x, y, z);
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
@@ -4219,7 +4145,6 @@ err_t plot_scatter3(grm_args_t *subplot_args)
       return_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       global_render->setMarkerType(subGroup, GKS_K_MARKERTYPE_SOLID_CIRCLE);
-      //      gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_CIRCLE);
       if (args_first_value(*current_series, "c", "D", &c, &c_length))
         {
           args_values(subplot_args, "_clim", "dd", &c_min, &c_max);
@@ -4234,7 +4159,6 @@ err_t plot_scatter3(grm_args_t *subplot_args)
                   c_index = 989;
                 }
               global_render->setMarkerColorInd(subGroup, c_index);
-              //              gr_setmarkercolorind(c_index);
               gr_polymarker3d(1, x + i, y + i, z + i);
             }
         }
@@ -4243,7 +4167,6 @@ err_t plot_scatter3(grm_args_t *subplot_args)
           if (args_values(*current_series, "c", "i", &c_index))
             {
               global_render->setMarkerColorInd(subGroup, c_index);
-              //              gr_setmarkercolorind(c_index);
             }
           std::vector<double> x_vec = std::vector<double>(x, x + x_length);
           std::vector<double> y_vec = std::vector<double>(y, y + y_length);
@@ -4254,7 +4177,6 @@ err_t plot_scatter3(grm_args_t *subplot_args)
 
           auto temp = global_render->createPolymarker3d("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec);
           subGroup->append(temp);
-          //          gr_polymarker3d(x_length, x, y, z);
         }
       ++current_series;
     }
@@ -4324,10 +4246,8 @@ err_t plot_imshow(grm_args_t *subplot_args)
           y_max = grm_min(0.5 * (vp[3] + vp[2] + h), vp[3]);
         }
 
-      //      gr_selntran(0);
       global_render->setSelntran(subGroup, 0);
       global_render->setScale(subGroup, 0);
-      //      gr_setscale(0);
       args_values(subplot_args, "xflip", "i", &xflip);
       if (xflip)
         {
@@ -4351,9 +4271,7 @@ err_t plot_imshow(grm_args_t *subplot_args)
       auto temp = global_render->createCellArray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows,
                                                  "img_data" + id, img_vec);
       subGroup->append(temp);
-      //      gr_cellarray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, img_data);
 
-      //      gr_selntran(1);
 
       free(img_data);
 
@@ -4508,7 +4426,6 @@ err_t plot_isosurface(grm_args_t *subplot_args)
         }
 
       global_render->setSelntran(subGroup, 0);
-      //      gr_selntran(0);
       gr3_clear();
       error = gr3_createisosurfacemesh(&mesh, conv_data, isovalue_int,
 
@@ -4531,7 +4448,6 @@ err_t plot_isosurface(grm_args_t *subplot_args)
       return_error_if(error != GR3_ERROR_NONE, ERROR_INTERNAL);
 
       global_render->setGR3BackgroundColor(subGroup, 1.0f, 1.0f, 1.0f, 0.0f);
-      //      gr3_setbackgroundcolor(1.0f, 1.0f, 1.0f, 0.0f);
 
       positions[0] = 0.0f;
       positions[1] = 0.0f;
@@ -4552,31 +4468,13 @@ err_t plot_isosurface(grm_args_t *subplot_args)
       auto c_vec = std::vector<double>(foreground_colors, foreground_colors + data_length);
       auto s_vec = std::vector<double>(scales, scales + data_length);
 
-      //      auto temp = global_render->createGR3DrawMesh(mesh, 1, p_vec, d_vec, u_vec, c_vec, s_vec);
-      //      subGroup->append(temp);
-      //      gr3_drawmesh(mesh, 1, positions, directions, ups, foreground_colors, scales);
-
       r = 2.5;
       ups[0] = 0.0f;
       ups[1] = (tilt == 0 ? 0.0f : 1.0f);
       ups[2] = (tilt == 0 ? 1.0f : 0.0f);
 
-      //      temp = global_render->createGR3DrawImage(x_min, x_max, y_min, y_max, subplot_width, subplot_height,
-      //      GR3_DRAWABLE_GKS);
+      // ToDo: Dom render
 
-      //      logger((stderr, "gr3_drawimage returned %i\n",
-      //                         gr3_drawimage(x_min, x_max, y_min, y_max, subplot_width, subplot_height,
-      //                         GR3_DRAWABLE_GKS)));
-
-
-      //      global_render->setGR3CameraLookAt(temp, (float)(r * sin(tilt) * sin(rotation)), (float)(r * cos(tilt)),
-      //                                        (float)(r * sin(tilt) * cos(rotation)), 0.0f, 0.0f, 0.0f, ups[0],
-      //                                        ups[1], ups[2]);
-
-      //      gr3_cameralookat((float)(r * sin(tilt) * sin(rotation)), (float)(r * cos(tilt)),
-      //                       (float)(r * sin(tilt) * cos(rotation)), 0.0f, 0.0f, 0.0f, ups[0], ups[1], ups[2]);
-
-      //      subGroup->append(global_render->createDeleteMesh(mesh));
       gr3_deletemesh(mesh);
 
       gr_selntran(1);
@@ -4725,8 +4623,6 @@ err_t plot_polar(grm_args_t *subplot_args)
 
       std::vector<double> x_vec(x, x + rho_length), y_vec(y, y + rho_length);
 
-      //      gr_uselinespec(spec);
-      //      gr_polyline(rho_length, x, y);
       auto temp = global_render->createPolyline("x" + std::to_string(id), x_vec, "y" + std::to_string(id), y_vec);
       subGroup->append(temp);
       free(x);
@@ -5140,7 +5036,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
           temp_elem =
               global_render->createDrawImage(-1.0, 1.0, -1.0, 1.0, image_size, image_size, "data" + str, l_vec, 0);
           group->append(temp_elem);
-          //          gr_drawimage(-1.0, 1.0, -1.0, 1.0, image_size, image_size, lineardata, 0);
           free(lineardata);
           free(bin_counts);
           lineardata = NULL;
@@ -5376,20 +5271,12 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                           group->append(temp_elem);
                           global_render->setFillColorInd(temp_elem, face_color);
                           global_render->setFillIntStyle(temp_elem, 1);
-                          //                          gr_setfillcolorind(face_color);
-                          //                          gr_setfillintstyle(1);
-                          //                          gr_fillarea(4 + 2 * num_angle, f1, f2);
                         }
 
                       temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
                       group->append(temp_elem);
                       global_render->setFillColorInd(temp_elem, edge_color);
                       global_render->setFillIntStyle(temp_elem, 0);
-
-                      //                      gr_setfillintstyle(0);
-                      //                      gr_setfillcolorind(edge_color);
-                      //
-                      //                      gr_fillarea(4 + 2 * num_angle, f1, f2);
 
                       free(f1);
                       f1 = NULL;
@@ -5409,10 +5296,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
                           global_render->setFillIntStyle(temp_elem, 1);
                           global_render->setFillColorInd(temp_elem, 1);
-                          //                          gr_setfillintstyle(1);
-                          //                          gr_setfillcolorind(face_color);
-                          //                          gr_fillarc(-rect, rect, -rect, rect, x * (360.0 / num_bins), (x +
-                          //                          1) * (360.0 / num_bins));
                         }
 
                       temp_elem = global_render->createFillArc(-rect, rect, -rect, rect, x * (360.0 / num_bins),
@@ -5421,12 +5304,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
                       global_render->setFillIntStyle(temp_elem, 0);
                       global_render->setFillColorInd(temp_elem, edge_color);
-
-                      //                      gr_setfillintstyle(0);
-                      //                      gr_setfillcolorind(edge_color);
-                      //
-                      //                      gr_fillarc(-rect, rect, -rect, rect, x * (360.0 / num_bins), (x + 1) *
-                      //                      (360.0 / num_bins));
                     }
                 }
               /* bin_egdes */
@@ -5511,10 +5388,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                           group->append(temp_elem);
                           global_render->setFillColorInd(temp_elem, face_color);
                           global_render->setFillIntStyle(temp_elem, 1);
-
-                          //                          gr_setfillintstyle(1);
-                          //                          gr_setfillcolorind(face_color);
-                          //                          gr_fillarea(4 + 2 * num_angle, f1, f2);
                         }
 
                       temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
@@ -5522,10 +5395,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                       global_render->setFillColorInd(temp_elem, edge_color);
                       global_render->setFillIntStyle(temp_elem, 0);
 
-                      //                      gr_setfillintstyle(0);
-                      //                      gr_setfillcolorind(edge_color);
-                      //
-                      //                      gr_fillarea(4 + 2 * num_angle, f1, f2);
 
                       free(f1);
                       f1 = NULL;
@@ -5545,11 +5414,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
                           global_render->setFillIntStyle(temp_elem, 1);
                           global_render->setFillColorInd(temp_elem, face_color);
-
-                          //                          gr_setfillintstyle(1);
-                          //                          gr_setfillcolorind(face_color);
-                          //                          gr_fillarc(-rect, rect, -rect, rect, bin_edges[x] * convert,
-                          //                          bin_edges[x + 1] * convert);
                         }
                       temp_elem = global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[x] * convert,
                                                                bin_edges[x + 1] * convert);
@@ -5557,12 +5421,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
                       global_render->setFillIntStyle(temp_elem, 0);
                       global_render->setFillColorInd(temp_elem, edge_color);
-
-                      //                      gr_setfillintstyle(0);
-                      //                      gr_setfillcolorind(edge_color);
-                      //
-                      //                      gr_fillarc(-rect, rect, -rect, rect, bin_edges[x] * convert, bin_edges[x +
-                      //                      1] * convert);
                     }
                 }
             } /* end no stairs condition */
@@ -5575,10 +5433,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
               global_render->setFillColorInd(stairs_group, 0);
               global_render->setLineColorInd(stairs_group, edge_color);
               global_render->setLineWidth(stairs_group, 2.3);
-
-              //              gr_setfillcolorind(0);
-              //              gr_setlinecolorind(edge_color);
-              //              gr_setlinewidth(2.3);
 
               r = pow((count / max), (num_bins * 2));
               liste = moivre(r, (2 * x), num_bins * 2);
@@ -5618,13 +5472,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
                           stairs_group->append(global_render->createDrawArc(
                               -r_min, r_min, -r_min, r_min, x * (360.0 / num_bins), (x + 1) * (360.0 / num_bins)));
-
-                          //                          gr_drawarc(-min(rect, r_max), min(rect, r_max), -min(rect, r_max),
-                          //                          min(rect, r_max),
-                          //                                     x * (360.0 / num_bins), (x + 1) * 360.0 / num_bins);
-                          //
-                          //                          gr_drawarc(-r_min, r_min, -r_min, r_min, x * (360.0 / num_bins),
-                          //                                     (x + 1) * (360.0 / num_bins));
                         }
                     }
                   /* no rlim */
@@ -5632,8 +5479,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                     {
                       stairs_group->append(global_render->createDrawArc(
                           -rect, rect, -rect, rect, x * (360.0 / num_bins), (x + 1) * (360.0 / num_bins)));
-                      //                      gr_drawarc(-rect, rect, -rect, rect, x * (360.0 / num_bins), (x + 1) *
-                      //                      (360.0 / num_bins));
                     }
                 }
               /* with bin_edges */
@@ -5664,13 +5509,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
                           stairs_group->append(global_render->createDrawArc(
                               -r_min, r_min, -r_min, r_min, bin_edges[x] * convert, bin_edges[x + 1] * convert));
-
-                          //                          gr_drawarc(-min(rect, r_max), min(rect, r_max), -min(rect, r_max),
-                          //                          min(rect, r_max),
-                          //                                     bin_edges[x] * convert, bin_edges[x + 1] * convert);
-                          //
-                          //                          gr_drawarc(-r_min, r_min, -r_min, r_min, bin_edges[x] * convert,
-                          //                          bin_edges[x + 1] * convert);
                         }
                     }
                   /* no rlim */
@@ -5683,9 +5521,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                         }
                       stairs_group->append(global_render->createDrawArc(
                           -rect, rect, -rect, rect, *(bin_edges + x) * convert, *(bin_edges + x + 1) * convert));
-
-                      //                      gr_drawarc(-rect, rect, -rect, rect, *(bin_edges + x) * convert,
-                      //                      *(bin_edges + x + 1) * convert);
                     }
                 }
             }
@@ -5715,8 +5550,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                       line_y[0] = *(mlist + s + 1);
                       line_y[1] = *(mlist + s - 1);
                       group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-
-                      //                      gr_polyline(2, line_x, line_y);
                     }
                 }
               line_x[0] = *(mlist);
@@ -5724,8 +5557,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
               line_y[0] = *(mlist + 1);
               line_y[1] = *(mlist + (num_bins - 1) * 4 + 3);
               group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-
-              //              gr_polyline(2, line_x, line_y);
             }
 
           /* stairs without bin_edges with rlim*/
@@ -5764,8 +5595,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
               line_y[1] = mlist[1] = grm_max(mlist[1], r_min * sin(0));
 
               group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-
-              //              gr_polyline(2, line_x, line_y);
             }
 
           /* stairs with binedges without rlim */
@@ -5787,8 +5616,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                   if (!(*bin_edges == 0.0 && *(bin_edges + num_bin_edges - 1) > 1.96 * M_PI) || x > 0)
                     {
                       group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-
-                      //                      gr_polyline(2, line_x, line_y);
                     }
                 }
 
@@ -5799,8 +5626,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                   line_y[0] = *rectlist * sin(*bin_edges);
                   line_y[1] = starty;
                   group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-
-                  //                  gr_polyline(2, line_x, line_y);
                 }
               else
                 {
@@ -5809,8 +5634,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                   line_y[0] = *(rectlist + num_bin_edges - 2) * sin(*(bin_edges + num_bin_edges - 1));
                   line_y[1] = 0.0;
                   group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-
-                  //                  gr_polyline(2, line_x, line_y);
                 }
             }
 
@@ -5842,8 +5665,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                        x > 0))
                     {
                       group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-
-                      //                      gr_polyline(2, line_x, line_y);
                     }
                 }
 
@@ -5854,8 +5675,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                   *line_y = *rectlist * sin(*bin_edges);
                   *(line_y + 1) = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
                   group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-
-                  //                  gr_polyline(2, line_x, line_y);
                 }
               else
                 {
@@ -5866,7 +5685,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
                   group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
 
-                  //                  gr_polyline(2, line_x, line_y);
 
                   line_x[0] = r_min * cos(bin_edges[0]);
                   line_x[1] = rectlist[0] * cos(bin_edges[0]);
@@ -5874,8 +5692,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                   line_y[1] = rectlist[0] * sin(bin_edges[0]);
 
                   group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-
-                  //                  gr_polyline(2, line_x, line_y);
                 }
             }
         }
@@ -5942,9 +5758,7 @@ err_t plot_pie(grm_args_t *subplot_args)
   gr_savestate();
   global_render->setFillIntStyle(group, GKS_K_INTSTYLE_SOLID);
 
-  //  gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
   global_render->setTextAlign(group, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
-  //  gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
 
   cleanup_and_set_error_if(!args_first_value(series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
   normalized_x = normalize(x_length, x);
@@ -5965,7 +5779,6 @@ err_t plot_pie(grm_args_t *subplot_args)
 
       end_angle = start_angle - normalized_x[i] * 360.0;
 
-      //      gr_fillarc(-1.0, 1.0, -1.0, 1.0, start_angle, end_angle);
       middle_angle = (start_angle + end_angle) / 2.0;
 
       text_pos[0] = 0.7 * cos(middle_angle * M_PI / 180.0);
@@ -5981,13 +5794,11 @@ err_t plot_pie(grm_args_t *subplot_args)
 
       snprintf(text, 80, "%.2lf\n%.1lf %%", x[i], normalized_x_int[i] / 10.0);
 
-      //      gr_text(text_pos[0], text_pos[1], text);
       start_angle = end_angle;
       if (start_angle < 0)
         {
           start_angle += 360.0;
         }
-      //      set_next_color(NULL, NULL, GR_COLOR_FILL);
     }
   set_next_color(NULL, NULL, GR_COLOR_RESET, group);
 
@@ -6001,9 +5812,6 @@ err_t plot_pie(grm_args_t *subplot_args)
       global_render->setTextColorInd(tx, 1);
       global_render->setTextAlign(tx, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
       group->append(tx);
-      //      gr_settextcolorind(1);
-      //      gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-      //      gr_text(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, (char *)title);
     }
 
 cleanup:
@@ -6038,7 +5846,6 @@ err_t plot_trisurf(grm_args_t *subplot_args)
       std::vector<double> x_vec(x, x + x_length), y_vec(y, y + x_length), z_vec(z, z + x_length);
       auto temp = global_render->createTriSurface("px" + str, x_vec, "py" + str, y_vec, "pz" + str, z_vec);
       subGroup->append(temp);
-      //      gr_trisurface(x_length, x, y, z);
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
@@ -6091,7 +5898,6 @@ err_t plot_tricont(grm_args_t *subplot_args)
                                                   "levels" + str, l_vec);
 
       subGroup->append(temp);
-      //      gr_tricontour(x_length, x, y, z, num_levels, levels);
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
@@ -6286,7 +6092,6 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         }
     }
 
-  //! TODO: Barplot dom render
   if (strcmp("barplot", kind) == 0 && pass == 2)
     {
       /* xticklabels */
@@ -6307,9 +6112,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           available_width = x_right - x_left;
           args_values(args, "window", "D", &window);
           global_render->setCharHeight(group, charheight);
-          //          gr_setcharheight(charheight);
           global_render->setTextAlign(group, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-          //          gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
           for (i = 1; i <= xticklabels_length; i++)
             {
               x1 = i;
@@ -6323,7 +6126,6 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
       if (y_org_low < 0)
         {
           group->append(global_render->createPolyline(x[0], x[1], y[0], y[1]));
-          //          gr_polyline(2, x, y);
         }
     }
 
@@ -6370,11 +6172,6 @@ err_t plot_draw_polar_axes(grm_args_t *args)
     }
 
   args_values(args, "kind", "s", &kind);
-
-
-  //  gr_savestate();
-  //  gr_setcharheight(charheight);
-  //  gr_setlinetype(GKS_K_LINETYPE_SOLID);
 
   global_render->setCharHeight(group, charheight);
   global_render->setLineType(group, GKS_K_LINETYPE_SOLID);
@@ -6423,8 +6220,6 @@ err_t plot_draw_polar_axes(grm_args_t *args)
       double r = r_min + i * tick / (r_max - r_min);
       if (i % 2 == 0)
         {
-          //          global_render->setLineColorInd(group, 88);
-          //          gr_setlinecolorind(88);
           if (i > 0)
             {
               auto temp = global_render->createDrawArc(-r, r, -r, r, 0, 180);
@@ -6434,25 +6229,17 @@ err_t plot_draw_polar_axes(grm_args_t *args)
               temp = global_render->createDrawArc(-r, r, -r, r, 180, 360);
               group->append(temp);
               global_render->setLineColorInd(temp, 88);
-
-              //              group->append(global_render->createDrawArc(-r, r, -r, r, 0, 180));
-              //              group->append(global_render->createDrawArc(-r, r, -r, r, 180, 360));
-              //              gr_drawarc(-r, r, -r, r, 0, 180);
-              //              gr_drawarc(-r, r, -r, r, 180, 360);
             }
           global_render->setTextAlign(group, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
 
-          //          gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
           x[0] = 0.05;
           y[0] = r;
           gr_wctondc(x, y);
           snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + i * tick);
           group->append(global_render->createText(x[0], y[0], text_buffer));
-          //          gr_text(x[0], y[0], text_buffer);
         }
       else
         {
-          //          gr_setlinecolorind(90);
           auto temp = global_render->createDrawArc(-r, r, -r, r, 0, 180);
           group->append(temp);
           global_render->setLineColorInd(temp, 90);
@@ -6460,9 +6247,6 @@ err_t plot_draw_polar_axes(grm_args_t *args)
           temp = global_render->createDrawArc(-r, r, -r, r, 180, 360);
           group->append(temp);
           global_render->setLineColorInd(temp, 90);
-
-          //          gr_drawarc(-r, r, -r, r, 0, 180);
-          //          gr_drawarc(-r, r, -r, r, 180, 360);
         }
     }
   if (strcmp(kind, "polar_histogram") == 0)
@@ -6479,8 +6263,6 @@ err_t plot_draw_polar_axes(grm_args_t *args)
 
       group->append(global_render->createPolyline(x[0], x[1], y[0], y[1]));
 
-      //      gr_polyline(2, x, y);
-      //      gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
       x[0] *= 1.1;
       y[0] *= 1.1;
       gr_wctondc(x, y);
@@ -6498,19 +6280,13 @@ err_t plot_draw_polar_axes(grm_args_t *args)
       auto temp = global_render->createText(x[0], y[0], text_buffer);
       group->append(temp);
       global_render->setTextAlign(temp, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
-      //      gr_text(x[0], y[0], text_buffer);
     }
-  //  gr_restorestate();
 
   if (args_values(args, "title", "s", &title))
     {
-      //      gr_savestate();
-      //      gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
       auto temp = global_render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
       group->append(temp);
       global_render->setTextAlign(temp, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-      //      gr_text(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
-      //      gr_restorestate();
     }
 
   return ERROR_NONE;
@@ -6693,7 +6469,6 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
 err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colors)
 {
 
-  // TODO: dom render
   const double *viewport;
   double c_min, c_max;
   int *data;
@@ -6730,25 +6505,20 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
   if (args_values(subplot_args, "xflip", "i", &flip) && flip)
     {
       options = (options | GR_OPTION_FLIP_Y) & ~GR_OPTION_FLIP_X;
-      //      gr_setscale(options);
       global_render->setScale(subGroup, options);
     }
   else if (args_values(subplot_args, "yflip", "i", &flip) && flip)
     {
       options = options & ~GR_OPTION_FLIP_Y & ~GR_OPTION_FLIP_X;
       global_render->setScale(subGroup, options);
-      //      gr_setscale(options);
     }
   else
     {
       options = options & ~GR_OPTION_FLIP_X;
       global_render->setScale(subGroup, options);
-      //      gr_setscale(options);
     }
   global_render->setWindow(subGroup, 0.0, 1.0, c_min, c_max);
   global_render->setViewport(subGroup, viewport[1] + 0.02 + off, viewport[1] + 0.05 + off, viewport[2], viewport[3]);
-  //  gr_setwindow(0.0, 1.0, c_min, c_max);
-  //  gr_setviewport(viewport[1] + 0.02 + off, viewport[1] + 0.05 + off, viewport[2], viewport[3]);
 
   std::vector<int> data_vec = std::vector<int>(data, data + colors);
   int id = (int)global_root->getAttribute("id");
@@ -6759,7 +6529,6 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
       global_render->createCellArray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, "data" + str, data_vec);
   subGroup->append(cellArray);
 
-  //  gr_cellarray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, data);
   diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
   charheight = grm_max(0.016 * diag, 0.012);
@@ -6767,16 +6536,13 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
   args_values(subplot_args, "scale", "i", &scale);
   if (scale & GR_OPTION_Z_LOG)
     {
-      //      gr_setscale(GR_OPTION_Y_LOG);
       global_render->setScale(subGroup, GR_OPTION_Y_LOG);
       subGroup->append(global_render->createAxes(0, 2, 1, c_min, 0, 1, 0.005));
-      //      gr_axes(0, 2, 1, c_min, 0, 1, 0.005);
     }
   else
     {
       double c_tick = auto_tick(c_min, c_max);
       subGroup->append(global_render->createAxes(0, c_tick, 1, c_min, 0, 1, 0.005));
-      //      gr_axes(0, c_tick, 1, c_min, 0, 1, 0.005);
     }
   free(data);
   gr_restorestate();
@@ -6948,8 +6714,6 @@ err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_len
         {
           line_y[0] = e_upwards;
           line_y[1] = e_upwards;
-          //          gr_setlinecolorind(color_upwardscap);
-          //          gr_polyline(2, line_x, line_y);
           group->append(
               global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, color_upwardscap));
         }
@@ -6958,8 +6722,6 @@ err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_len
         {
           line_y[0] = e_downwards;
           line_y[1] = e_downwards;
-          //          gr_setlinecolorind(color_downwardscap);
-          //          gr_polyline(2, line_x, line_y);
           group->append(
               global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, color_downwardscap));
         }
@@ -6970,8 +6732,6 @@ err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_len
           line_x[1] = x_value;
           line_y[0] = e_upwards != FLT_MAX ? e_upwards : y[i];
           line_y[1] = e_downwards != FLT_MAX ? e_downwards : y[i];
-          //          gr_setlinecolorind(color_errorbar);
-          //          gr_polyline(2, line_x, line_y);
           group->append(
               global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, color_errorbar));
         }
@@ -8771,12 +8531,10 @@ void set_text_color_for_background(double r, double g, double b, const std::shar
   if (color_lightness < 0.4)
     {
       global_render->setTextColorInd(element, 0);
-      //    gr_settextcolorind(0);
     }
   else
     {
       global_render->setTextColorInd(element, 1);
-      //    gr_settextcolorind(1);
     }
 }
 
@@ -8867,27 +8625,22 @@ void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t col
   if (color_type & GR_COLOR_LINE)
     {
       global_render->setLineColorInd(element, color_index);
-      //    gr_setlinecolorind(color_index);
     }
   if (color_type & GR_COLOR_MARKER)
     {
       global_render->setMarkerColorInd(element, color_index);
-      //    gr_setmarkercolorind(color_index);
     }
   if (color_type & GR_COLOR_FILL)
     {
       global_render->setFillColorInd(element, color_index);
-      //    gr_setfillcolorind(color_index);
     }
   if (color_type & GR_COLOR_TEXT)
     {
       global_render->setTextColorInd(element, color_index);
-      //    gr_settextcolorind(color_index);
     }
   if (color_type & GR_COLOR_BORDER)
     {
       global_render->setBorderColorInd(element, color_index);
-      //    gr_setbordercolorind(color_index);
     }
 }
 
@@ -8942,7 +8695,6 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
                 {
                   new_label[i] = '\0';
                   element->append(global_render->createText(x1, x2, new_label + cur_start));
-                  //                  gr_text(x1, x2, new_label + cur_start);
 
                   cur_start = i + 1;
                   cur_num_breakpoints = 0;
@@ -8953,8 +8705,6 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
                   /* break label at last breakpoint that still allowed the text to fit */
                   new_label[breakpoint_positions[cur_num_breakpoints - 2]] = '\0';
                   element->append(global_render->createText(x1, x2, new_label + cur_start));
-
-                  //                  gr_text(x1, x2, new_label + cur_start);
 
                   cur_start = breakpoint_positions[cur_num_breakpoints - 2] + 1;
                   breakpoint_positions[0] = breakpoint_positions[cur_num_breakpoints - 1];
@@ -8974,8 +8724,6 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
 
   /* draw the rest */
   element->append(global_render->createText(x1, x2, new_label + cur_start));
-
-  //  gr_text(x1, x2, new_label + cur_start);
 }
 
 
