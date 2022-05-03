@@ -416,7 +416,7 @@ void Grid::finalizeSubplot()
   GridElement::finalizeSubplot();
 
   /* calculate height of each row */
-  double rowHeights[nrows];
+  std::vector<double> rowHeights(nrows);
   double totalHeightLeft = subplot[3] - subplot[2];
   int numRowsWithFlexibleHeight = 0;
   for (y = 0; y < nrows; y++)
@@ -460,7 +460,7 @@ void Grid::finalizeSubplot()
 
   /* calculate width of each column */
   double totalWidthLeft = subplot[1] - subplot[0];
-  double colWidths[ncols];
+  std::vector<double> colWidths(ncols);
   int numColsWithFlexibleWidth = 0;
   for (x = 0; x < ncols; x++)
     {
