@@ -8625,13 +8625,16 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
   scale_options = lx.scale_options;
   if (scale_options != 0)
     {
+      setscale(scale_options & ~(OPTION_FLIP_X | OPTION_FLIP_Y));
+
       x = (double *)xcalloc(nx, sizeof(double));
       for (i = 0; i < nx; i++) x[i] = x_lin(px[i]);
 
       y = (double *)xcalloc(ny, sizeof(double));
       for (i = 0; i < ny; i++) y[i] = y_lin(py[i]);
 
-      setscale(0);
+      setscale(scale_options &
+               ~(OPTION_X_LOG | OPTION_Y_LOG | OPTION_X_LOG2 | OPTION_Y_LOG2 | OPTION_X_LN | OPTION_Y_LN));
     }
   else
     {

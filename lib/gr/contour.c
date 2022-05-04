@@ -47,6 +47,7 @@ typedef struct
   double scale_factor, aspect_ratio, vp[4], wn[4];
   double xmin, ymin, dx, dy;
   double zmin, zmax;
+  int scale_options;
   int start_index;
   int end_index;
   double *gradient_mag;
@@ -522,8 +523,24 @@ static void label_line(int n, double *xpts, double *ypts, double *zpts, char *la
       x_up_val = (ytpt1 - ytpt2) * contour_vars.aspect_ratio;
       y_up_val = xtpt2 - xtpt1;
 
-      x_text_pos = xpts[k] - contour_vars.wn[0];
-      y_text_pos = ypts[k] - contour_vars.wn[2];
+      if (contour_vars.scale_options & (1 << 3)) /* OPTION_X_FLIP */
+        {
+          x_text_pos = contour_vars.wn[1] - xpts[k];
+          x_up_val = -x_up_val;
+        }
+      else
+        {
+          x_text_pos = xpts[k] - contour_vars.wn[0];
+        }
+      if (contour_vars.scale_options & (1 << 4)) /* OPTION_Y_FLIP */
+        {
+          y_text_pos = contour_vars.wn[3] - ypts[k];
+          y_up_val = -y_up_val;
+        }
+      else
+        {
+          y_text_pos = ypts[k] - contour_vars.wn[2];
+        }
 
       if (y_up_val < 0.0)
         {
@@ -1196,6 +1213,7 @@ void gr_draw_contours(int nx, int ny, int nh, double *px, double *py, double *h,
   /* Don't label any lines if a 3D-transformation */
   /* or if any scale options are in effect.       */
 
+  gr_inqscale(&contour_vars.scale_options);
   gr_inqspace(&contour_vars.zmin, &contour_vars.zmax, &rotation, &tilt);
 
   if ((rotation == 0) && (tilt == 90) && (contour_vars.lblmjh > 0))
