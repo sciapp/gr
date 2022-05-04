@@ -8595,6 +8595,8 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
   double chux, chuy;
   int nxq, nyq;
   double *xq = NULL, *yq = NULL, *zq = NULL;
+  int scale_options;
+  double *x = NULL, *y = NULL;
 
   if ((nx <= 0) || (ny <= 0))
     {
@@ -8620,7 +8622,25 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
 
   check_autoinit;
 
-  setscale(lx.scale_options);
+  scale_options = lx.scale_options;
+  if (scale_options != 0)
+    {
+      setscale(scale_options & ~(OPTION_FLIP_X | OPTION_FLIP_Y));
+
+      x = (double *)xcalloc(nx, sizeof(double));
+      for (i = 0; i < nx; i++) x[i] = x_lin(px[i]);
+
+      y = (double *)xcalloc(ny, sizeof(double));
+      for (i = 0; i < ny; i++) y[i] = y_lin(py[i]);
+
+      setscale(scale_options &
+               ~(OPTION_X_LOG | OPTION_Y_LOG | OPTION_X_LOG2 | OPTION_Y_LOG2 | OPTION_X_LN | OPTION_Y_LN));
+    }
+  else
+    {
+      x = px;
+      y = py;
+    }
 
   /* save linetype, line color, text alignment and character-up vector */
 
@@ -8631,9 +8651,9 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
 
   gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
 
-  if (!islinspace(nx, px) || !islinspace(ny, py))
+  if (!islinspace(nx, x) || !islinspace(ny, y))
     {
-      rebin(nx, ny, px, py, pz, &nxq, &nyq, &xq, &yq, &zq);
+      rebin(nx, ny, x, y, pz, &nxq, &nyq, &xq, &yq, &zq);
 
       gr_draw_contours(nxq, nyq, nh, xq, yq, h, zq, major_h);
 
@@ -8642,10 +8662,17 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
       free(xq);
     }
   else
-    gr_draw_contours(nx, ny, nh, px, py, h, pz, major_h);
+    gr_draw_contours(nx, ny, nh, x, y, h, pz, major_h);
 
-  /* restore linetype, line color, character-up vector and text alignment */
+  if (x != px) free(x);
+  if (y != py) free(y);
 
+  /* restore scale options, linetype, line color, character-up vector and text alignment */
+
+  if (scale_options != 0)
+    {
+      setscale(scale_options);
+    }
   gks_set_pline_linetype(ltype);
   gks_set_pline_color_index(color);
   gks_set_text_align(halign, valign);
