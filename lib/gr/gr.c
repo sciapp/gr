@@ -4886,7 +4886,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           start_pline(x_org, y_min);
 
-          str_get_format_reference(&format_reference, x_org, y_min, y_max, y_tick, major_y);
+          str_get_format_reference(&format_reference, y_org, y_min, y_max, y_tick, major_y);
 
           while (yi <= y_max + feps)
             {
@@ -4970,6 +4970,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                             if (x_tick > 1)
                               {
                                 exponent = iround(blog(lx.basex, xi));
+                                sprintf(string, "%s^{%d}", lx.basex_s, exponent);
                                 text2dlbl(xi, y_label, replace_minus_sign(string), xi, fpx);
                               }
                             else
