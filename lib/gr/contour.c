@@ -421,6 +421,7 @@ static void label_line(int n, double *xpts, double *ypts, double *zpts, char *la
   double x_up_val, y_up_val;
   double x_text_pos, y_text_pos;
   double d, e;
+  int colorind;
 
   /*--------------------------------------------------------------------------
   / Find out how large the label is so we will know how much room to leave
@@ -538,6 +539,12 @@ static void label_line(int n, double *xpts, double *ypts, double *zpts, char *la
       gks_text(x_text_pos, y_text_pos, label);
       gks_select_xform(contour_vars.tnr);
 
+      if (contour_vars.use_color)
+        {
+          colorind = (int)(1000 + (zpts[j - 1] - contour_vars.zmin) / (contour_vars.zmax - contour_vars.zmin) * 255);
+          gr_setlinecolorind(colorind);
+        }
+
       /*---------------------------------------------------------------------/
       / Draw the contour line leaving a gap for the text.
       /---------------------------------------------------------------------*/
@@ -566,6 +573,11 @@ static void label_line(int n, double *xpts, double *ypts, double *zpts, char *la
     }
   else
     {
+      if (contour_vars.use_color)
+        {
+          colorind = (int)(1000 + (zpts[0] - contour_vars.zmin) / (contour_vars.zmax - contour_vars.zmin) * 255);
+          gr_setlinecolorind(colorind);
+        }
       n_pts = n;
       gr_polyline3d(n_pts, xpts, ypts, zpts);
     }
