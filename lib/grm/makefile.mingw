@@ -5,7 +5,13 @@ endif
   DEFINES = -DGRDIR=\"$(GRDIR)\" -DNO_GS -DNO_X11 -D_WIN32_WINNT=0x0600 -DBUILDING_DLL
    CFLAGS = $(DEFINES) -std=c90
  CXXFLAGS = $(DEFINES) -std=c++17
- INCLUDES = -I. -I../gks -I../gr -I../gr3 -I$(THIRDPARTYDIR)/include
+ INCLUDES = -I. \
+            -I./gr-dom-render/include \
+            -I./gr-dom-render/gr-graphics-tree-interface/include \
+            -I../gks \
+            -I../gr \
+            -I../gr3 \
+            -I$(THIRDPARTYDIR)/include
   GKSLIBS = -L ../gks/ -lGKS
    GRLIBS = -L ../gr/ -lGR
   GR3LIBS = -L ../gr3/ -lGR3
@@ -31,7 +37,15 @@ endif
             datatype/string_array_map.o \
             datatype/string_list.o \
             datatype/string_map.o \
-            datatype/uint_map.o
+            datatype/uint_map.o \
+            gr-dom-render/src/context.o \
+            gr-dom-render/src/render.o \
+            gr-dom-render/gr-graphics-tree-interface/src/Comment.o \
+            gr-dom-render/gr-graphics-tree-interface/src/Document.o \
+            gr-dom-render/gr-graphics-tree-interface/src/Element.o \
+            gr-dom-render/gr-graphics-tree-interface/src/Node.o \
+            gr-dom-render/gr-graphics-tree-interface/src/Value.o \
+            gr-dom-render/gr-graphics-tree-interface/src/util.o
 
 
 .SUFFIXES: .o .c .cpp

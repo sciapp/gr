@@ -11,7 +11,17 @@ extern "C" {
 #include "datatype/uint_map_int.h"
 #include "error_int.h"
 #include "event_int.h"
+
+#ifdef __cplusplus
+}
+
+#include "GR/Element.hxx"
+
 #include "plot.h"
+extern "C" {
+#else
+#include "plot.h"
+#endif
 
 
 /* ######################### internal interface ##################################################################### */
@@ -237,5 +247,12 @@ void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t col
 
 #ifdef __cplusplus
 }
+void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type,
+                    const std::shared_ptr<GR::Element> &element);
+void set_text_color_for_background(double r, double g, double b, const std::shared_ptr<GR::Element> &element);
+void draw_xticklabel(double x1, double x2, const char *label, double available_width,
+                     const std::shared_ptr<GR::Element> &element);
+
+
 #endif
 #endif /* ifndef GRM_PLOT_INT_H_INCLUDED */
