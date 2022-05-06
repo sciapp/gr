@@ -14,6 +14,7 @@
 #include INCLUDE_PATH(dump.h)
 #include INCLUDE_PATH(event.h)
 #include INCLUDE_PATH(interaction.h)
+#include INCLUDE_PATH(layout.h)
 #include INCLUDE_PATH(net.h)
 #include INCLUDE_PATH(plot.h)
 #include INCLUDE_PATH(util.h)

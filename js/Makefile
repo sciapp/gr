@@ -37,22 +37,72 @@ QHULLDIR = ../3rdparty/qhull
    GRDIR = ../lib/gr
   GR3DIR = ../lib/gr3
   GRMDIR = ../lib/grm
-INCLUDES = -I$(THIRDPARTYDIR)/include/ -I$(GRMDIR) -I$(GR3DIR) -I$(GRDIR) -I$(GKSDIR) -I$(JPEGDIR) -I$(PNGDIR) \
-           -I$(ZLIBDIR) -I$(QHULLDIR) -I$(FTDIR)
- GKSOBJS = jsplugin.o $(GKSDIR)/gks.o $(GKSDIR)/font.o $(GKSDIR)/afm.o $(GKSDIR)/util.o \
-           $(GKSDIR)/malloc.o $(GKSDIR)/error.o $(GKSDIR)/wiss.o $(GKSDIR)/io.o $(GKSDIR)/ft.o
-  GROBJS = $(GRDIR)/gr.o $(GRDIR)/stream.o $(GRDIR)/text.o $(GRDIR)/gridit.o \
-           $(GRDIR)/strlib.o $(GRDIR)/contour.o $(GRDIR)/spline.o \
-           $(GRDIR)/import.o $(GRDIR)/grforbnd.o $(GRDIR)/md5.o \
-           $(GRDIR)/interp2.o $(GRDIR)/shade.o $(GRDIR)/delaunay.o \
-           $(GRDIR)/contourf.o $(GRDIR)/image.o $(GRDIR)/mathtex2.o $(GRDIR)/mathtex2_kerning.o $(GRDIR)/mathtex2.tab.o
- GR3OBJS = $(GR3DIR)/gr3.o $(GR3DIR)/gr3_convenience.o \
-           $(GR3DIR)/gr3_html.o $(GR3DIR)/gr3_povray.o $(GR3DIR)/gr3_png.o \
-           $(GR3DIR)/gr3_jpeg.o $(GR3DIR)/gr3_gr.o $(GR3DIR)/gr3_mc.o $(GR3DIR)/gr3_sr.o
- GRMOBJS = $(GRMDIR)/args.o $(GRMDIR)/base64.o $(GRMDIR)/dump.o $(GRMDIR)/dynamic_args_array.o $(GRMDIR)/error.o \
-           $(GRMDIR)/event.o $(GRMDIR)/interaction.o $(GRMDIR)/json.o $(GRMDIR)/logging.o $(GRMDIR)/memwriter.o \
-           $(GRMDIR)/net.o $(GRMDIR)/plot.o $(GRMDIR)/util.o $(GRMDIR)/datatype/double_map.o \
-           $(GRMDIR)/datatype/string_array_map.o $(GRMDIR)/datatype/string_list.o $(GRMDIR)/datatype/string_map.o \
+INCLUDES = -I$(THIRDPARTYDIR)/include/ \
+           -I$(GRMDIR) \
+           -I$(GR3DIR) \
+           -I$(GRDIR) \
+           -I$(GKSDIR) \
+           -I$(JPEGDIR) \
+           -I$(PNGDIR) \
+           -I$(ZLIBDIR) \
+           -I$(QHULLDIR) \
+           -I$(FTDIR)
+ GKSOBJS = jsplugin.o \
+           $(GKSDIR)/afm.o \
+           $(GKSDIR)/error.o \
+           $(GKSDIR)/font.o \
+           $(GKSDIR)/ft.o \
+           $(GKSDIR)/gks.o \
+           $(GKSDIR)/io.o \
+           $(GKSDIR)/malloc.o \
+           $(GKSDIR)/util.o \
+           $(GKSDIR)/wiss.o
+  GROBJS = $(GRDIR)/contour.o \
+           $(GRDIR)/contourf.o \
+           $(GRDIR)/delaunay.o \
+           $(GRDIR)/gr.o \
+           $(GRDIR)/grforbnd.o \
+           $(GRDIR)/gridit.o \
+           $(GRDIR)/image.o \
+           $(GRDIR)/import.o \
+           $(GRDIR)/interp2.o \
+           $(GRDIR)/mathtex2.o \
+           $(GRDIR)/mathtex2.tab.o \
+           $(GRDIR)/mathtex2_kerning.o \
+           $(GRDIR)/md5.o \
+           $(GRDIR)/shade.o \
+           $(GRDIR)/spline.o \
+           $(GRDIR)/stream.o \
+           $(GRDIR)/strlib.o \
+           $(GRDIR)/text.o
+ GR3OBJS = $(GR3DIR)/gr3.o \
+           $(GR3DIR)/gr3_convenience.o \
+           $(GR3DIR)/gr3_gr.o \
+           $(GR3DIR)/gr3_html.o \
+           $(GR3DIR)/gr3_jpeg.o \
+           $(GR3DIR)/gr3_mc.o \
+           $(GR3DIR)/gr3_png.o \
+           $(GR3DIR)/gr3_povray.o \
+           $(GR3DIR)/gr3_sr.o
+ GRMOBJS = $(GRMDIR)/args.o \
+           $(GRMDIR)/base64.o \
+           $(GRMDIR)/dump.o \
+           $(GRMDIR)/dynamic_args_array.o \
+           $(GRMDIR)/error.o \
+           $(GRMDIR)/event.o \
+           $(GRMDIR)/interaction.o \
+           $(GRMDIR)/json.o \
+           $(GRMDIR)/layout.o \
+           $(GRMDIR)/layout_c.o \
+           $(GRMDIR)/logging.o \
+           $(GRMDIR)/memwriter.o \
+           $(GRMDIR)/net.o \
+           $(GRMDIR)/plot.o \
+           $(GRMDIR)/util.o \
+           $(GRMDIR)/datatype/double_map.o \
+           $(GRMDIR)/datatype/string_array_map.o \
+           $(GRMDIR)/datatype/string_list.o \
+           $(GRMDIR)/datatype/string_map.o \
            $(GRMDIR)/datatype/uint_map.o
     OBJS = $(GRMOBJS) $(GR3OBJS) $(GROBJS) $(GKSOBJS)
     LIBS = $(JPEGDIR)/libjpeg.a $(PNGDIR)/libpng.a $(ZLIBDIR)/libz.a $(QHULLDIR)/libqhull.a $(FTDIR)/libfreetype.a

@@ -17,6 +17,7 @@ set(EXECUTABLE_SOURCES
     hold_append.c
     imshow.c
     isosurface.c
+    layout.c
     line_errorbar.c
     merge_args.c
     multi_plot.c
