@@ -5,6 +5,7 @@
 #include "include/render.hxx"
 #include "gr.h"
 #include "context.hxx"
+#include "GR/util.hxx"
 
 void testGetGetif()
 {
@@ -68,7 +69,7 @@ void testPolymarker()
   std::vector<double> x = {0.1, 0.2, 0.8};
   std::vector<double> y = {0.9, 0.2, 0.8};
 
-  auto element = doc->createPolymarker(3, "x_key", x, "y_key", y);
+  auto element = doc->createPolymarker("x_key", x, "y_key", y);
   root->append(element);
   doc->render();
 
@@ -90,7 +91,7 @@ void markerlist()
   std::vector<double> markersizes = {0.4, 2.3, 8.0};
   std::vector<int> colorinds = {2, 17, 323};
 
-  auto element = doc->createPolymarker(3, "x_key", x, "y_key", y);
+  auto element = doc->createPolymarker("x_key", x, "y_key", y);
   doc->setMarkerType(element, "markertypes", markertypes);
   doc->setMarkerSize(element, "markersizes", markersizes);
   doc->setMarkerColorInd(element, "colorinds", colorinds);
@@ -114,7 +115,7 @@ void markerWindow()
   std::vector<double> x = {0.1, 0.2, 0.8};
   std::vector<double> y = {0.9, 0.2, 0.8};
 
-  auto element = doc->createPolymarker(3, "x_key", x, "y_key", y);
+  auto element = doc->createPolymarker("x_key", x, "y_key", y);
   element->setAttribute("window", "true");
   element->setAttribute("window_xmin", 0.2);
   element->setAttribute("window_xmax", 0.8);
@@ -144,7 +145,7 @@ void polylinelist()
   std::vector<int> colorinds = {42, 3};
 
 
-  auto element = doc->createPolyline(3, "x_key", x, "y_key", y);
+  auto element = doc->createPolyline("x_key", x, "y_key", y);
   doc->setLineType(element, "linetypes", linetypes);
   doc->setLineWidth(element, "widths", widths);
   doc->setLineColorInd(element, "colorinds", colorinds);
@@ -187,7 +188,7 @@ void testPlotPolymarker()
   root->append(element);
   std::vector<double> x = {0.1, 0.2, 0.8};
 
-  element = doc->createPolymarker(3, "x_key", x, "y_key", x);
+  element = doc->createPolymarker("x_key", x, "y_key", x);
   root->firstChildElement()->append(element);
 
   doc->render();
@@ -203,17 +204,16 @@ void testSubPlot()
   doc->append(root);
 
   std::vector<double> x = {0.1, 0.2, 0.8};
-  auto element = doc->createPolymarker(3, "x_key", x, "y_key", x);
+  auto element = doc->createPolymarker("x_key", x, "y_key", x);
   doc->setViewport(element, 0.0, 0.5, 0.0, 1.0);
   root->append(element);
 
   auto group = doc->createGroup();
   doc->setViewport(group, 0.5, 1.0, 0.0, 1.0);
 
-  //    std::vector<double> x2 = {0.1, 0.2, 0.8};
-  element = doc->createPolymarker(3, "x_key", std::nullopt, "y_key", std::nullopt);
+  element = doc->createPolymarker("x_key", std::nullopt, "y_key", std::nullopt);
   group->append(element);
-  element = doc->createPolyline(3, "x", x, "y", x);
+  element = doc->createPolyline("x", x, "y", x);
   group->append(element);
 
   root->append(group);
@@ -234,9 +234,9 @@ void testOnePlot()
   std::vector<double> x = {0.1, 0.2, 0.8};
   std::vector<double> x2 = {0.1, 0.2, 0.8};
 
-  auto element = doc->createPolymarker(3, "x_key2", x2, "y_key2", x2);
+  auto element = doc->createPolymarker("x_key2", x2, "y_key2", x2);
   root->append(element);
-  element = doc->createPolyline(3, "x", x, "y", x);
+  element = doc->createPolyline("x", x, "y", x);
   root->append(element);
 
 
@@ -245,11 +245,97 @@ void testOnePlot()
   std::cin.get();
 }
 
+
+void testGroup()
+{
+  gr_initgr();
+  auto doc = GR::Render::createRender();
+  std::shared_ptr<GR::Element> root = doc->createElement("root");
+  doc->append(root);
+
+  auto group = doc->createGroup();
+  root->append(group);
+  for (int i = 0; i < 3; ++i)
+    {
+      std::vector<double> x = {0.1, 0.2, 0.8};
+      std::vector<double> x2 = {0.1, 0.2, 0.8};
+      auto element = doc->createPolymarker("x", x, "y", x2);
+      group->append(element);
+    }
+
+  doc->render();
+  std::cout << "\n test group with polymarkers";
+  std::cin.get();
+}
+
+void testPolymarkerDoubles()
+{
+  gr_initgr();
+  auto doc = GR::Render::createRender();
+  std::shared_ptr<GR::Element> root = doc->createElement("root");
+  doc->append(root);
+
+  auto element = doc->createElement("polymarker");
+  element->setAttribute("x", 1.0);
+  element->setAttribute("y", 1.0);
+  root->append(element);
+  doc->render();
+  std::cout << "\n test group double ";
+  std::cin.get();
+}
+
+
+void testFillRect()
+{
+  gr_initgr();
+  auto doc = GR::Render::createRender();
+  std::shared_ptr<GR::Element> root = doc->createElement("root");
+  doc->append(root);
+
+  //  gr_setfillintstyle(1);
+  //  gr_fillrect(0.0, 0.5, 0.0, 0.5);
+  auto element = doc->createFillRect(0.0, 0.5, 0.0, 0.5, 1, 0);
+  //  doc->setFillColorInd(element, 1000);
+
+  root->append(element);
+  std::cout << toXML(root) << "\n";
+  doc->render();
+  std::cout << "\n test fill rect ";
+  std::cin.get();
+}
+
+
+void testColorRep()
+{
+  gr_initgr();
+  auto doc = GR::Render::createRender();
+  std::shared_ptr<GR::Element> root = doc->createElement("root");
+  doc->append(root);
+
+  //  gr_setfillintstyle(1);
+  //  gr_fillrect(0.0, 0.5, 0.0, 0.5);
+  auto element = doc->createFillRect(0.0, 0.5, 0.0, 0.5, 1, 0);
+  doc->setColorRep(element, 1042, 1.0, 0.5, 0.2);
+
+
+  doc->setFillColorInd(element, 1042);
+
+  root->append(element);
+  //  std::cout << toXML(root) << "\n";
+  doc->render();
+  std::cout << "\n test fill rect ";
+  std::cin.get();
+}
+
 int main()
 {
+  //  testFillRect();
+  testColorRep();
   //    testGetGetif();
   //    testPlotPolymarker();
-  testSubPlot();
+  //    testSubPlot();
+  //  testGroup();
+  //  testPolymarkerDoubles();
   //    testOnePlot();
   //    textExample();
   //    markerlist();

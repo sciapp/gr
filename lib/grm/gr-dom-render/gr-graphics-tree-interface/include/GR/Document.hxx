@@ -85,9 +85,10 @@ public:
   // virtual functions
   std::string nodeName() const override;
 
-private:
+protected:
   Document();
 
+private:
   std::shared_ptr<Node> cloneIndividualNode() override;
 
   std::shared_ptr<Document> shared();

@@ -13,23 +13,6 @@
 namespace GR
 {
 
-//    template <typename T>
-//    struct invalid_conversion_type
-//    {
-//        /*!
-//         * This struct is used for invalid conversion errors during building.
-//         */
-//        static constexpr bool error = false;
-//    };
-//
-//    template <typename T>
-//    struct invalid_assignment_type
-//    {
-//        /*!
-//         * This struct is used for invalid assignment errors during building
-//         */
-//         static constexpr bool error = false;
-//    };
 
 class Context
 {
@@ -67,29 +50,15 @@ public:
     Inner(Context &context, std::string key);
     Inner(const Context &context, std::string key);
 
-    //            template<class T>
-    //            Inner &operator=(T vec){
-    //                static_assert(invalid_assignment_type<T>::error, "This assignment does not exist!");
-    //            };
     Inner &operator=(std::vector<int> vec);
     Inner &operator=(std::vector<double> vec);
 
-
-    //            template<class T>
-    //            explicit operator std::vector<T>*(){
-    //                static_assert(invalid_conversion_type<T>::error, "This overload does not exist!");
-    //            };
     explicit operator std::vector<int> &();
     explicit operator const std::vector<int> &() const;
 
     explicit operator std::vector<double> &();
     explicit operator const std::vector<double> &() const;
 
-
-    //            template<class T>
-    //            explicit operator std::vector<T>&(){
-    //                static_assert(invalid_conversion_type<T>::error, "This overload does not exist!");
-    //            }
     explicit operator std::vector<int> *();
     explicit operator const std::vector<int> *() const;
 
