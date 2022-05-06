@@ -1,3 +1,12 @@
+#ifdef _WIN32
+/*
+ * Headers on Windows can define `min` and `max` as macros which causes
+ * problem when using `std::min` and `std::max`
+ * -> Define `NOMINMAX` to prevent the definition of these macros
+ */
+#define NOMINMAX
+#endif
+
 #include "GR/Element.hxx"
 #include "GR/Document.hxx"
 #include "GR/Value.hxx"
