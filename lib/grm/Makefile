@@ -41,6 +41,7 @@ UNAME := $(shell uname)
                dump.h \
                event.h \
                interaction.h \
+               layout.h \
                net.h \
                plot.h \
                util.h \
