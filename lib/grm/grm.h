@@ -7,7 +7,9 @@
 #ifdef BUILDING_GR
 #define INCLUDE_PATH(filename) QUOTE(filename)
 #else
-#define INCLUDE_PATH(filename) QUOTE(grm / filename)
+/* clang-format off */
+#define INCLUDE_PATH(filename) QUOTE(grm/filename)
+/* clang-format on */
 #endif
 
 #include INCLUDE_PATH(args.h)
