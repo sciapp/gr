@@ -1429,7 +1429,7 @@ std::shared_ptr<GR::Element> GR::Render::createAxes(double x_tick, double y_tick
   auto element = createElement("axes");
   element->setAttribute("x_tick", x_tick);
   element->setAttribute("y_tick", y_tick);
-  element->setAttribute("x_ord", x_org);
+  element->setAttribute("x_org", x_org);
   element->setAttribute("y_org", y_org);
   element->setAttribute("major_x", major_x);
   element->setAttribute("major_y", major_y);
@@ -1444,7 +1444,7 @@ std::shared_ptr<GR::Element> GR::Render::createGrid(double x_tick, double y_tick
   auto element = createElement("grid");
   element->setAttribute("x_tick", x_tick);
   element->setAttribute("y_tick", y_tick);
-  element->setAttribute("x_ord", x_org);
+  element->setAttribute("x_org", x_org);
   element->setAttribute("y_org", y_org);
   element->setAttribute("major_x", major_x);
   element->setAttribute("major_y", major_y);
