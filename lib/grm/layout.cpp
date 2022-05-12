@@ -1,6 +1,7 @@
 #include <iostream>
 #include <limits>
 #include <sstream>
+#include "args_int.h"
 #include "layout.hpp"
 
 double epsilon = std::numeric_limits<double>::epsilon();
