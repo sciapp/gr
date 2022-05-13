@@ -7,8 +7,8 @@
 
 #include "gr.h"
 #include "context.hxx"
-#include "GR/Element.hxx"
-#include "GR/Document.hxx"
+#include "graphics_tree/Element.hxx"
+#include "graphics_tree/Document.hxx"
 
 
 namespace GR

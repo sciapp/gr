@@ -39,8 +39,6 @@ QHULLDIR = ../3rdparty/qhull
   GRMDIR = ../lib/grm
 INCLUDES = -I$(THIRDPARTYDIR)/include/ \
            -I$(GRMDIR) \
-           -I$(GRMDIR)/gr-dom-render/include \
-           -I$(GRMDIR)/gr-dom-render/gr-graphics-tree-interface/include \
            -I$(GR3DIR) \
            -I$(GRDIR) \
            -I$(GKSDIR) \
@@ -106,14 +104,14 @@ INCLUDES = -I$(THIRDPARTYDIR)/include/ \
            $(GRMDIR)/datatype/string_list.o \
            $(GRMDIR)/datatype/string_map.o \
            $(GRMDIR)/datatype/uint_map.o \
-           $(GRMDIR)/gr-dom-render/src/context.o \
-           $(GRMDIR)/gr-dom-render/src/render.o \
-           $(GRMDIR)/gr-dom-render/gr-graphics-tree-interface/src/Comment.o \
-           $(GRMDIR)/gr-dom-render/gr-graphics-tree-interface/src/Document.o \
-           $(GRMDIR)/gr-dom-render/gr-graphics-tree-interface/src/Element.o \
-           $(GRMDIR)/gr-dom-render/gr-graphics-tree-interface/src/Node.o \
-           $(GRMDIR)/gr-dom-render/gr-graphics-tree-interface/src/Value.o \
-           $(GRMDIR)/gr-dom-render/gr-graphics-tree-interface/src/util.o
+           $(GRMDIR)/dom_render/context.o \
+           $(GRMDIR)/dom_render/render.o \
+           $(GRMDIR)/dom_render/graphics_tree/Comment.o \
+           $(GRMDIR)/dom_render/graphics_tree/Document.o \
+           $(GRMDIR)/dom_render/graphics_tree/Element.o \
+           $(GRMDIR)/dom_render/graphics_tree/Node.o \
+           $(GRMDIR)/dom_render/graphics_tree/Value.o \
+           $(GRMDIR)/dom_render/graphics_tree/util.o
     OBJS = $(GRMOBJS) $(GR3OBJS) $(GROBJS) $(GKSOBJS)
     LIBS = $(JPEGDIR)/libjpeg.a \
            $(PNGDIR)/libpng.a \

@@ -1,7 +1,7 @@
-#include "GR/Element.hxx"
-#include "GR/Document.hxx"
-#include "GR/util.hxx"
-#include "GR/HierarchyRequestError.hxx"
+#include "Element.hxx"
+#include "Document.hxx"
+#include "util.hxx"
+#include "HierarchyRequestError.hxx"
 #include <iterator>
 
 GR::Element::Element(std::string local_name, const std::shared_ptr<GR::Document> &owner_document)

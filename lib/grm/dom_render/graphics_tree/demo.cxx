@@ -1,8 +1,8 @@
 #include <iostream>
-#include "GR/Document.hxx"
-#include "GR/Element.hxx"
-#include "GR/Comment.hxx"
-#include "GR/util.hxx"
+#include "Document.hxx"
+#include "Element.hxx"
+#include "Comment.hxx"
+#include "util.hxx"
 
 int main()
 {

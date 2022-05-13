@@ -7,10 +7,10 @@
 #define NOMINMAX
 #endif
 
-#include "GR/Element.hxx"
-#include "GR/Document.hxx"
-#include "GR/Value.hxx"
-#include "GR/util.hxx"
+#include "graphics_tree/Element.hxx"
+#include "graphics_tree/Document.hxx"
+#include "graphics_tree/Value.hxx"
+#include "graphics_tree/util.hxx"
 #include "gr.h"
 #include "gr3.h"
 #include "render.hxx"

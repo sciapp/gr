@@ -1,8 +1,8 @@
 #include <catch2/catch.hpp>
-#include "GR/Element.hxx"
-#include "GR/Document.hxx"
-#include "GR/Comment.hxx"
-#include "GR/HierarchyRequestError.hxx"
+#include "Element.hxx"
+#include "Document.hxx"
+#include "Comment.hxx"
+#include "HierarchyRequestError.hxx"
 
 using GR::Comment;
 using GR::Document;

@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include "GR/Value.hxx"
+#include "Value.hxx"
 
 using GR::Value;
 

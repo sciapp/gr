@@ -1,8 +1,8 @@
-#include "GR/util.hxx"
-#include "GR/Document.hxx"
-#include "GR/Comment.hxx"
-#include "GR/Element.hxx"
-#include "GR/TypeError.hxx"
+#include "util.hxx"
+#include "Document.hxx"
+#include "Comment.hxx"
+#include "Element.hxx"
+#include "TypeError.hxx"
 #include <sstream>
 #include <algorithm>
 

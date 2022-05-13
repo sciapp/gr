@@ -1,11 +1,11 @@
 #include <catch2/catch.hpp>
-#include "GR/Node.hxx"
-#include "GR/Comment.hxx"
-#include "GR/Document.hxx"
-#include "GR/Element.hxx"
-#include "GR/NotFoundError.hxx"
-#include "GR/HierarchyRequestError.hxx"
-#include "GR/TypeError.hxx"
+#include "Node.hxx"
+#include "Comment.hxx"
+#include "Document.hxx"
+#include "Element.hxx"
+#include "NotFoundError.hxx"
+#include "HierarchyRequestError.hxx"
+#include "TypeError.hxx"
 
 using GR::Comment;
 using GR::Document;

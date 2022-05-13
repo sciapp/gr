@@ -1,4 +1,4 @@
-#include "GR/Value.hxx"
+#include "Value.hxx"
 #include <stdexcept>
 #include <limits>
 

@@ -13,8 +13,8 @@ extern "C" {
 #ifdef __cplusplus
 }
 
-#include "GR/Element.hxx"
-#include "render.hxx"
+#include "dom_render/graphics_tree/Element.hxx"
+#include "dom_render/render.hxx"
 
 extern "C" {
 #endif

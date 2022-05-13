@@ -1,5 +1,5 @@
-#include "GR/Comment.hxx"
-#include "GR/IndexSizeError.hxx"
+#include "Comment.hxx"
+#include "IndexSizeError.hxx"
 
 GR::Comment::Comment(std::string data, const std::shared_ptr<GR::Document> &owner_document)
     : GR::Node(GR::Node::Type::COMMENT_NODE, owner_document), m_data(std::move(data))
