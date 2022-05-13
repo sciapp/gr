@@ -8371,6 +8371,12 @@ int grm_clear(void)
   return 1;
 }
 
+void grm_dump_graphics_tree(FILE *f)
+{
+  const unsigned int indent = 2;
+  fprintf(f, "%s\n", toXML(global_root, GR::SerializerOptions{std::string(indent, ' ')}).c_str());
+}
+
 unsigned int grm_max_plotid(void)
 {
   unsigned int args_array_length = 0;
@@ -8381,6 +8387,14 @@ unsigned int grm_max_plotid(void)
     }
 
   return args_array_length;
+}
+
+char *grm_dump_graphics_tree_str(void)
+{
+  std::string graphics_tree_str = toXML(global_root);
+  char *graphics_tree_cstr = new char[graphics_tree_str.length() + 1];
+  strcpy(graphics_tree_cstr, graphics_tree_str.c_str());
+  return graphics_tree_cstr;
 }
 
 int grm_merge(const grm_args_t *args)
@@ -8479,10 +8493,16 @@ int grm_plot(const grm_args_t *args)
   if (logger_enabled())
     {
       grm_dump(global_root_args, stderr);
+      grm_dump_graphics_tree(stderr);
     }
 #endif
 
   return 1;
+}
+
+void grm_render(void)
+{
+  global_render->render();
 }
 
 int grm_switch(unsigned int id)
@@ -8514,6 +8534,12 @@ int grm_switch(unsigned int id)
   return 1;
 }
 }
+
+std::shared_ptr<GR::Element> grm_get_document_root(void)
+{
+  return global_root;
+}
+
 
 /*!
  * Set the text color either to black or white depending on the given background color.
@@ -8724,15 +8750,4 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
 
   /* draw the rest */
   element->append(global_render->createText(x1, x2, new_label + cur_start));
-}
-
-
-std::shared_ptr<GR::Element> grm_get_document_root(void)
-{
-  return global_root;
-}
-
-void grm_render(void)
-{
-  global_render->render();
 }
