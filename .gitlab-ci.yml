@@ -66,8 +66,8 @@ ubuntu-self-contained:
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/base64.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h
+       lib/grm/util.h artifacts/include/grm/
   - mv artifacts artifacts-ubuntu2004
   artifacts:
     expire_in: 1 week
@@ -196,8 +196,8 @@ debian-self-contained:
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/base64.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h
+       lib/grm/util.h artifacts/include/grm/
   - mv artifacts artifacts-debian10
   artifacts:
     expire_in: 1 week
@@ -266,8 +266,8 @@ debian-self-contained-armhf:
     - mkdir artifacts/include/
     - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
     - mkdir artifacts/include/grm/
-    - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-         artifacts/include/grm/
+    - cp lib/grm/args.h lib/grm/base64.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h
+         lib/grm/plot.h lib/grm/util.h artifacts/include/grm/
     - mv artifacts artifacts-debian10-armhf
   artifacts:
     expire_in: 1 week
@@ -315,8 +315,8 @@ debian-self-contained-aarch64:
     - mkdir artifacts/include/
     - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
     - mkdir artifacts/include/grm/
-    - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-      artifacts/include/grm/
+    - cp lib/grm/args.h lib/grm/base64.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h
+         lib/grm/plot.h lib/grm/util.h artifacts/include/grm/
     - mv artifacts artifacts-debian10-aarch64
   artifacts:
     expire_in: 1 week
@@ -443,8 +443,8 @@ centos7-self-contained:
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/base64.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h
+       lib/grm/util.h artifacts/include/grm/
   - mv artifacts artifacts-centos7
   artifacts:
     expire_in: 1 week
@@ -517,8 +517,8 @@ centos7-32bit-self-contained:
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/base64.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h
+       lib/grm/util.h artifacts/include/grm/
   - mv artifacts artifacts-centos7-32bit
   artifacts:
     expire_in: 1 week
@@ -588,8 +588,8 @@ arch-self-contained:
     - mkdir artifacts/include/
     - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
     - mkdir artifacts/include/grm/
-    - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-         artifacts/include/grm/
+    - cp lib/grm/args.h lib/grm/base64.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h
+         lib/grm/plot.h lib/grm/util.h artifacts/include/grm/
     - mv artifacts artifacts-arch
   artifacts:
     expire_in: 1 week
@@ -651,8 +651,8 @@ freebsd-self-contained:
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/base64.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h
+       lib/grm/util.h artifacts/include/grm/
   - mv artifacts artifacts-freebsd13
   artifacts:
     expire_in: 1 week
@@ -705,8 +705,8 @@ windows-32bit-cross:
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/base64.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h
+       lib/grm/util.h artifacts/include/grm/
   - mv artifacts artifacts-windows32
   artifacts:
     expire_in: 1 week
@@ -803,8 +803,8 @@ windows-64bit-cross:
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/base64.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h
+       lib/grm/util.h artifacts/include/grm/
   - mv artifacts artifacts-windows64
   artifacts:
     expire_in: 1 week
@@ -905,8 +905,8 @@ darwin-self-contained-iff1600:
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/base64.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h
+       lib/grm/util.h artifacts/include/grm/
   - mkdir artifacts/Applications/
   - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
   - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
@@ -948,8 +948,8 @@ darwin-self-contained:
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/base64.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h
+       lib/grm/util.h artifacts/include/grm/
   - mkdir artifacts/Applications/
   - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
   - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
@@ -991,8 +991,8 @@ darwin-self-contained-iff1605:
     - mkdir artifacts/include/
     - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
     - mkdir artifacts/include/grm/
-    - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-      artifacts/include/grm/
+    - cp lib/grm/args.h lib/grm/base64.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h
+         lib/grm/plot.h lib/grm/util.h artifacts/include/grm/
     - mkdir artifacts/Applications/
     - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
     - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app

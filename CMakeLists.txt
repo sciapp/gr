@@ -486,6 +486,7 @@ set(GRM_SOURCES
 
 set(GRM_SUBDIR_HEADERS
     lib/grm/args.h
+    lib/grm/base64.h
     lib/grm/dump.h
     lib/grm/event.h
     lib/grm/interaction.h
