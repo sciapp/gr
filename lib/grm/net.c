@@ -121,6 +121,7 @@ err_t receiver_init_for_custom(net_handle_t *handle, const char *name, unsigned 
   handle->sender_receiver.receiver.comm.custom.id = id;
   handle->sender_receiver.receiver.message_size = 0;
   handle->sender_receiver.receiver.recv = receiver_recv_for_custom;
+  handle->sender_receiver.receiver.send = NULL;
   handle->finalize = receiver_finalize_for_custom;
   handle->sender_receiver.receiver.memwriter = memwriter_new();
   if (handle->sender_receiver.receiver.memwriter == NULL)
@@ -151,7 +152,9 @@ err_t receiver_init_for_socket(net_handle_t *handle, const char *hostname, unsig
   handle->sender_receiver.receiver.memwriter = NULL;
   handle->sender_receiver.receiver.comm.socket.server_socket = -1;
   handle->sender_receiver.receiver.comm.socket.client_socket = -1;
+  handle->sender_receiver.receiver.message_size = 0;
   handle->sender_receiver.receiver.recv = receiver_recv_for_socket;
+  handle->sender_receiver.receiver.send = sender_send_for_socket;
   handle->finalize = receiver_finalize_for_socket;
 
 #ifdef _WIN32
@@ -371,6 +374,8 @@ err_t sender_init_for_custom(net_handle_t *handle, const char *name, unsigned in
   handle->sender_receiver.sender.comm.custom.send = custom_send;
   handle->sender_receiver.sender.comm.custom.name = name;
   handle->sender_receiver.sender.comm.custom.id = id;
+  handle->sender_receiver.sender.message_size = 0;
+  handle->sender_receiver.sender.recv = NULL;
   handle->sender_receiver.sender.send = sender_send_for_custom;
   handle->finalize = sender_finalize_for_custom;
   handle->sender_receiver.sender.memwriter = memwriter_new();
@@ -396,6 +401,8 @@ err_t sender_init_for_socket(net_handle_t *handle, const char *hostname, unsigne
 
   handle->sender_receiver.sender.memwriter = NULL;
   handle->sender_receiver.sender.comm.socket.client_socket = -1;
+  handle->sender_receiver.sender.message_size = 0;
+  handle->sender_receiver.sender.recv = receiver_recv_for_socket;
   handle->sender_receiver.sender.send = sender_send_for_socket;
   handle->finalize = sender_finalize_for_socket;
 
@@ -646,6 +653,12 @@ grm_args_t *grm_recv(const void *p, grm_args_t *args)
   net_handle_t *handle = (net_handle_t *)p;
   int created_args = 0;
 
+  if (handle->sender_receiver.receiver.recv == NULL)
+    {
+      /* Return NULL if receiving is unsupported (for example on an unidirectional connection */
+      return NULL;
+    }
+
   if (args == NULL)
     {
       args = grm_args_new();
@@ -692,10 +705,18 @@ int grm_send(const void *p, const char *data_desc, ...)
   err_t error;
 
   va_start(vl, data_desc);
-  error = tojson_write_vl(handle->sender_receiver.sender.memwriter, data_desc, &vl);
-  if (error == ERROR_NONE && tojson_is_complete() && handle->sender_receiver.sender.send != NULL)
+  if (handle->sender_receiver.sender.send != NULL)
     {
-      error = handle->sender_receiver.sender.send(handle);
+      error = tojson_write_vl(handle->sender_receiver.sender.memwriter, data_desc, &vl);
+      if (error == ERROR_NONE && tojson_is_complete() && handle->sender_receiver.sender.send != NULL)
+        {
+          error = handle->sender_receiver.sender.send(handle);
+        }
+    }
+  else
+    {
+      /* Send can be unsupported, if sending is requested on an unidirectional receiver */
+      error = ERROR_NETWORK_SEND_UNSUPPORTED;
     }
   va_end(vl);
 
