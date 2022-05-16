@@ -83,6 +83,10 @@ void gks_lookup_font(int fd, int version, int font, int chr, stroke_data_t *s)
                     sharp_s = 1;
                 }
             }
+          if (chr == 215)
+            {
+              chr = 'x';
+            }
         }
       if (chr < ' ' || chr >= 127) chr = ' ';
 

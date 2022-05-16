@@ -109,6 +109,7 @@ DLLEXPORT int gr_setscale(int);
 DLLEXPORT void gr_inqscale(int *);
 DLLEXPORT int gr_textext(double, double, char *);
 DLLEXPORT void gr_inqtextext(double, double, char *, double *, double *);
+DLLEXPORT void gr_setscientificformat(int);
 DLLEXPORT void gr_axes(double, double, double, double, int, int, double);
 DLLEXPORT void gr_axeslbl(double, double, double, double, int, int, double,
                           void (*)(double, double, const char *, double),
