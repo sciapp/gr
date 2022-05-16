@@ -882,6 +882,25 @@ error_cleanup:
   return error;
 }
 
+int plot_check_for_request(const grm_args_t *args, err_t *error)
+{
+  const char *request;
+  int is_request = 0;
+
+  *error = ERROR_NONE;
+  if (args_values(args, "request", "s", &request))
+    {
+      is_request = 1;
+      *error = event_queue_enqueue_request_event(event_queue, request);
+    }
+  else
+    {
+      *error = ERROR_PLOT_INVALID_REQUEST;
+    }
+
+  return is_request;
+}
+
 void plot_set_flag_defaults(void)
 {
   /* Use a standalone function for initializing flags instead of `plot_set_attribute_defaults` to guarantee the flags
@@ -8404,12 +8423,20 @@ int grm_merge(const grm_args_t *args)
 
 int grm_merge_extended(const grm_args_t *args, int hold, const char *identificator)
 {
+  err_t error = ERROR_NONE;
+
   if (plot_init_static_variables() != ERROR_NONE)
     {
       return 0;
     }
   if (args != NULL)
     {
+      if (plot_check_for_request(args, &error))
+        {
+          // If this is a request, do not process the argument container further
+          process_events();
+          return error == ERROR_NONE;
+        }
       if (plot_merge_args(global_root_args, args, NULL, NULL, hold) != ERROR_NONE)
         {
           return 0;
@@ -8469,7 +8496,6 @@ int grm_plot(const grm_args_t *args)
             }
           args_values(*current_subplot_args, "kind", "s", &kind);
           logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-          printf("Got keyword \"kind\" with value \"%s\"\n", kind);
           if (!plot_func_map_at(plot_func_map, kind, &plot_func))
             {
               return 0;

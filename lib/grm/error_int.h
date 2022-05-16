@@ -129,9 +129,10 @@ extern "C" {
   X(ERROR_PLOT_INVALID_ID, 46)                        \
   X(ERROR_PLOT_OUT_OF_RANGE, 47)                      \
   X(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS, 48)            \
-  X(ERROR_BASE64_BLOCK_TOO_SHORT, 49)                 \
-  X(ERROR_BASE64_INVALID_CHARACTER, 50)               \
-  Y(ERROR_NOT_IMPLEMENTED, 51)
+  X(ERROR_PLOT_INVALID_REQUEST, 49)                   \
+  X(ERROR_BASE64_BLOCK_TOO_SHORT, 50)                 \
+  X(ERROR_BASE64_INVALID_CHARACTER, 51)               \
+  Y(ERROR_NOT_IMPLEMENTED, 52)
 
 #define ENUM_VALUE(name, value) name = value,
 #define ENUM_LAST_VALUE(name, value) name = value
