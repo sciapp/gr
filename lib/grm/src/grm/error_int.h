@@ -132,7 +132,11 @@ extern "C" {
   X(ERROR_PLOT_INVALID_REQUEST, 49)                   \
   X(ERROR_BASE64_BLOCK_TOO_SHORT, 50)                 \
   X(ERROR_BASE64_INVALID_CHARACTER, 51)               \
-  Y(ERROR_NOT_IMPLEMENTED, 52)
+  X(ERROR_LAYOUT_INVALID_INDEX, 52)                   \
+  X(ERROR_LAYOUT_CONTRADICTING_ATTRIBUTES, 53)        \
+  X(ERROR_LAYOUT_INVALID_ARGUMENT_RANGE, 54)          \
+  X(ERROR_LAYOUT_COMPONENT_LENGTH_MISMATCH, 55)       \
+  Y(ERROR_NOT_IMPLEMENTED, 56)
 
 #define ENUM_VALUE(name, value) name = value,
 #define ENUM_LAST_VALUE(name, value) name = value

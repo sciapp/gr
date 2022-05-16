@@ -465,6 +465,7 @@ set(GRM_SOURCES
     lib/grm/src/grm/json.c
     lib/grm/src/grm/layout_c.cxx
     lib/grm/src/grm/layout.cxx
+    lib/grm/src/grm/layout_error.cxx
     lib/grm/src/grm/logging.c
     lib/grm/src/grm/memwriter.c
     lib/grm/src/grm/net.c
