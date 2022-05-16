@@ -47,15 +47,12 @@ int test_send_ref(void)
 
   response_args = grm_args_new();
   grm_recv(handle, response_args);
-  printf("\nreceived graphics tree:\n");
+  printf("\nreceived graphics tree (JSON object):\n");
   grm_dump(response_args, stderr);
-  /*
-   * TODO: Decode graphics tree when `args_values` is public (or an equivalent function)
-   * args_values(response_args, "data", "s", &graphics_tree_str_encoded);
-   * grm_base64_decode(NULL, graphics_tree_str_encoded, NULL, NULL);
-   * printf("received graphics tree:\n%s\n", graphics_tree_str);
-   * free(graphics_tree_str);
-   */
+  grm_args_values(response_args, "data", "s", &graphics_tree_str_encoded);
+  graphics_tree_str = grm_base64_decode(NULL, graphics_tree_str_encoded, NULL, NULL);
+  printf("\nreceived graphics tree (decoded):\n%s\n", graphics_tree_str);
+  free(graphics_tree_str);
 
   grm_args_delete(response_args);
 
