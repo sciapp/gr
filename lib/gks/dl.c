@@ -13,6 +13,9 @@
 #define PAD(n)                         \
   memset(d->buffer + d->nbytes, 0, n); \
   d->nbytes += n
+#define RESOLVE(arg, type, nbytes) \
+  arg = (type *)(s + sp);          \
+  sp += nbytes
 
 #ifndef GKS_UNUSED
 #define GKS_UNUSED(x) (void)(x)
@@ -351,4 +354,239 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
       memset(d->buffer + d->nbytes, 0, 4);
     }
+}
+
+
+int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
+                     void (*fn)(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2,
+                                int lc, char *chars, void **ptr))
+{
+  int sp = 0;
+  int null_val = 0, i;
+  char *s = dl;
+  int *ia = NULL, *tmp;
+  double *r1 = NULL, *r2 = NULL;
+  char *chars = NULL;
+  gks_state_list_t *sl;
+  int *fctid, *dx = &null_val, *dy = &null_val, *dimx = &null_val, *lc = &null_val;
+
+  RESOLVE(fctid, int, sizeof(int));
+  switch (*fctid)
+    {
+    case 2: /* open workstation */
+      RESOLVE(sl, gks_state_list_t, sizeof(gks_state_list_t));
+      memcpy(*gkss, sl, sizeof(gks_state_list_t));
+      break;
+
+    case 6: /* clear workstation */
+      RESOLVE(sl, gks_state_list_t, sizeof(gks_state_list_t));
+      memcpy(*gkss, sl, sizeof(gks_state_list_t));
+      break;
+
+    case 12: /* polyline */
+    case 13: /* polymarker */
+    case 15: /* fill area */
+      RESOLVE(ia, int, sizeof(int));
+      RESOLVE(r1, double, ia[0] * sizeof(double));
+      RESOLVE(r2, double, ia[0] * sizeof(double));
+      break;
+
+    case 14: /* text */
+      RESOLVE(r1, double, sizeof(double));
+      RESOLVE(r2, double, sizeof(double));
+      RESOLVE(lc, int, sizeof(int));
+      RESOLVE(chars, char, GKS_K_TEXT_MAX_SIZE);
+      break;
+
+    case 16:  /* cell array */
+    case 201: /* draw image */
+      RESOLVE(r1, double, 2 * sizeof(double));
+      RESOLVE(r2, double, 2 * sizeof(double));
+      RESOLVE(dx, int, sizeof(int));
+      RESOLVE(dy, int, sizeof(int));
+      RESOLVE(dimx, int, sizeof(int));
+      RESOLVE(ia, int, (*dimx * (*dy - 1) + *dx) * sizeof(int));
+      sp += (*dimx - *dx) * sizeof(int); /* undo PAD */
+      break;
+
+    case 17: /* GDP */
+      tmp = (int *)(s + sp);
+      RESOLVE(ia, int, (3 + tmp[2]) * sizeof(int));
+      RESOLVE(r1, double, tmp[0] * sizeof(double));
+      RESOLVE(r2, double, tmp[0] * sizeof(double));
+      break;
+
+    case 19:  /* set linetype */
+    case 21:  /* set polyline color index */
+    case 23:  /* set markertype */
+    case 25:  /* set polymarker color index */
+    case 30:  /* set text color index */
+    case 33:  /* set text path */
+    case 36:  /* set fillarea interior style */
+    case 37:  /* set fillarea style index */
+    case 38:  /* set fillarea color index */
+    case 52:  /* select normalization transformation */
+    case 53:  /* set clipping indicator */
+    case 108: /* set resample method */
+    case 207: /* set border color index */
+    case 208: /* select clipping transformation */
+      RESOLVE(ia, int, sizeof(int));
+      break;
+
+    case 27: /* set text font and precision */
+    case 34: /* set text alignment */
+      RESOLVE(ia, int, 2 * sizeof(int));
+      break;
+
+    case 20:  /* set linewidth scale factor */
+    case 24:  /* set marker size scale factor */
+    case 28:  /* set character expansion factor */
+    case 29:  /* set character spacing */
+    case 31:  /* set character height */
+    case 200: /* set text slant */
+    case 203: /* set transparency */
+    case 206: /* set border width */
+      RESOLVE(r1, double, sizeof(double));
+      break;
+
+    case 32: /* set character up vector */
+      RESOLVE(r1, double, sizeof(double));
+      RESOLVE(r2, double, sizeof(double));
+      break;
+
+    case 41: /* set aspect source flags */
+      RESOLVE(ia, int, 13 * sizeof(int));
+      break;
+
+    case 48: /* set color representation */
+      sp -= sizeof(int);
+      RESOLVE(ia, int, 2 * sizeof(int));
+      RESOLVE(r1, double, 3 * sizeof(double));
+      break;
+
+    case 49: /* set window */
+    case 50: /* set viewport */
+    case 54: /* set workstation window */
+    case 55: /* set workstation viewport */
+      RESOLVE(ia, int, sizeof(int));
+      RESOLVE(r1, double, 2 * sizeof(double));
+      RESOLVE(r2, double, 2 * sizeof(double));
+      break;
+
+    case 202: /* set shadow */
+      RESOLVE(r1, double, 3 * sizeof(double));
+      break;
+
+    case 204: /* set coord xform */
+      RESOLVE(r1, double, 6 * sizeof(double));
+      break;
+    }
+
+  switch (*fctid)
+    {
+    case 19:
+      (*gkss)->ltype = ia[0];
+      break;
+    case 20:
+      (*gkss)->lwidth = r1[0];
+      break;
+    case 21:
+      (*gkss)->plcoli = ia[0];
+      break;
+    case 23:
+      (*gkss)->mtype = ia[0];
+      break;
+    case 24:
+      (*gkss)->mszsc = r1[0];
+      break;
+    case 25:
+      (*gkss)->pmcoli = ia[0];
+      break;
+    case 27:
+      (*gkss)->txfont = ia[0];
+      (*gkss)->txprec = ia[1];
+      break;
+    case 28:
+      (*gkss)->chxp = r1[0];
+      break;
+    case 29:
+      (*gkss)->chsp = r1[0];
+      break;
+    case 30:
+      (*gkss)->txcoli = ia[0];
+      break;
+    case 31:
+      (*gkss)->chh = r1[0];
+      break;
+    case 32:
+      (*gkss)->chup[0] = r1[0];
+      (*gkss)->chup[1] = r2[0];
+      break;
+    case 33:
+      (*gkss)->txp = ia[0];
+      break;
+    case 34:
+      (*gkss)->txal[0] = ia[0];
+      (*gkss)->txal[1] = ia[1];
+      break;
+    case 36:
+      (*gkss)->ints = ia[0];
+      break;
+    case 37:
+      (*gkss)->styli = ia[0];
+      break;
+    case 38:
+      (*gkss)->facoli = ia[0];
+      break;
+    case 41:
+      for (i = 0; i < 13; i++) (*gkss)->asf[i] = ia[i];
+      break;
+    case 49:
+      (*gkss)->window[ia[0]][0] = r1[0];
+      (*gkss)->window[ia[0]][1] = r1[1];
+      (*gkss)->window[ia[0]][2] = r2[0];
+      (*gkss)->window[ia[0]][3] = r2[1];
+      break;
+    case 50:
+      (*gkss)->viewport[ia[0]][0] = r1[0];
+      (*gkss)->viewport[ia[0]][1] = r1[1];
+      (*gkss)->viewport[ia[0]][2] = r2[0];
+      (*gkss)->viewport[ia[0]][3] = r2[1];
+      break;
+    case 52:
+      (*gkss)->cntnr = ia[0];
+      break;
+    case 53:
+      (*gkss)->clip = ia[0];
+      break;
+    case 54:
+      (*gkss)->aspect_ratio = (r1[1] - r1[0]) / (r2[1] - r2[0]);
+      break;
+    case 108:
+      (*gkss)->resample_method = ia[0];
+      break;
+    case 200:
+      (*gkss)->txslant = r1[0];
+      break;
+    case 202:
+      (*gkss)->shoff[0] = r1[0];
+      (*gkss)->shoff[1] = r1[1];
+      (*gkss)->blur = r1[2];
+      break;
+    case 203:
+      (*gkss)->alpha = r1[0];
+      break;
+    case 206:
+      (*gkss)->bwidth = r1[0];
+      break;
+    case 207:
+      (*gkss)->bcoli = ia[0];
+      break;
+    case 208:
+      (*gkss)->clip_tnr = ia[0];
+      break;
+    }
+
+  fn(*fctid, *dx, *dy, *dimx, ia, 0, r1, 0, r2, *lc, chars, (void **)gkss);
+  return sp;
 }

@@ -115,6 +115,10 @@ typedef struct ws_state_list_t
   bool empty;
   bool prevent_resize_by_dl;
   bool interp_was_called;
+  bool cairo_initialised;
+  void *cairo_ws_state_list;
+  int *mem;
+  char *mem_path;
 } ws_state_list;
 
 static ws_state_list p_, *p = &p_;
@@ -157,8 +161,6 @@ static int predef_prec[] = {0, 1, 2, 2, 2, 2};
 static int predef_ints[] = {0, 1, 3, 3, 3};
 
 static int predef_styli[] = {1, 1, 1, 2, 3};
-
-static int unused_variable = 0;
 
 static void set_norm_xform(int tnr, double *wn, double *vp)
 {
@@ -1262,359 +1264,267 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
     }
 }
 
-static void interp(char *str)
+static void cairo_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2,
+                            int lc, char *chars, void **ptr)
 {
-  char *s;
-  gks_state_list_t *sl = NULL, saved_gkss;
-  int sp = 0, *len, *f;
-  int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr = NULL;
-  int *n = NULL, *primid = NULL, *ldr = NULL;
-  double *f_arr_1 = NULL, *f_arr_2 = NULL;
-  char *c_arr = NULL;
-  int i, true_color = 0;
+  double ratio, w, h;
+  double vp_size[4] = {0};
+  int cairo_init_ia[3];
 
-  s = str;
-
-  RESOLVE(len, int, sizeof(int));
-  while (*len)
+  switch (fctid)
     {
-      RESOLVE(f, int, sizeof(int));
+    case 2:
+      ratio = (p->window[1] - p->window[0]) / (p->window[3] - p->window[2]);
 
-      switch (*f)
+      if (p->width > p->height * ratio)
         {
-        case 2: /* open workstation */
-          RESOLVE(sl, gks_state_list_t, sizeof(gks_state_list_t));
-          break;
-
-        case 12: /* polyline */
-        case 13: /* polymarker */
-        case 15: /* fill area */
-          RESOLVE(i_arr, int, sizeof(int));
-          RESOLVE(f_arr_1, double, i_arr[0] * sizeof(double));
-          RESOLVE(f_arr_2, double, i_arr[0] * sizeof(double));
-          break;
-
-        case 14: /* text */
-          RESOLVE(f_arr_1, double, sizeof(double));
-          RESOLVE(f_arr_2, double, sizeof(double));
-          RESOLVE(len_c_arr, int, sizeof(int));
-          RESOLVE(c_arr, char, GKS_K_TEXT_MAX_SIZE);
-          break;
-
-        case 16:  /* cell array */
-        case 201: /* draw image */
-          RESOLVE(f_arr_1, double, 2 * sizeof(double));
-          RESOLVE(f_arr_2, double, 2 * sizeof(double));
-          RESOLVE(dx, int, sizeof(int));
-          RESOLVE(dy, int, sizeof(int));
-          RESOLVE(dimx, int, sizeof(int));
-          RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
-          break;
-
-        case 17: /* GDP */
-          RESOLVE(n, int, sizeof(int));
-          RESOLVE(primid, int, sizeof(int));
-          RESOLVE(ldr, int, sizeof(int));
-          RESOLVE(i_arr, int, *ldr * sizeof(int));
-          RESOLVE(f_arr_1, double, *n * sizeof(double));
-          RESOLVE(f_arr_2, double, *n * sizeof(double));
-          break;
-
-        case 19:  /* set linetype */
-        case 21:  /* set polyline color index */
-        case 23:  /* set markertype */
-        case 25:  /* set polymarker color index */
-        case 30:  /* set text color index */
-        case 33:  /* set text path */
-        case 36:  /* set fillarea interior style */
-        case 37:  /* set fillarea style index */
-        case 38:  /* set fillarea color index */
-        case 52:  /* select normalization transformation */
-        case 53:  /* set clipping indicator */
-        case 108: /* set resample method */
-        case 207: /* set border color index */
-        case 208: /* select clipping transformation */
-          RESOLVE(i_arr, int, sizeof(int));
-          break;
-
-        case 27: /* set text font and precision */
-        case 34: /* set text alignment */
-          RESOLVE(i_arr, int, 2 * sizeof(int));
-          break;
-
-        case 20:  /* set linewidth scale factor */
-        case 24:  /* set marker size scale factor */
-        case 28:  /* set character expansion factor */
-        case 29:  /* set character spacing */
-        case 31:  /* set character height */
-        case 200: /* set text slant */
-        case 203: /* set transparency */
-        case 206: /* set border width */
-
-          RESOLVE(f_arr_1, double, sizeof(double));
-          break;
-
-        case 32: /* set character up vector */
-          RESOLVE(f_arr_1, double, sizeof(double));
-          RESOLVE(f_arr_2, double, sizeof(double));
-          break;
-
-        case 41: /* set aspect source flags */
-          RESOLVE(i_arr, int, 13 * sizeof(int));
-          break;
-
-        case 48: /* set color representation */
-          RESOLVE(i_arr, int, sizeof(int));
-          RESOLVE(f_arr_1, double, 3 * sizeof(double));
-          break;
-
-        case 49: /* set window */
-        case 50: /* set viewport */
-        case 54: /* set workstation window */
-        case 55: /* set workstation viewport */
-          RESOLVE(i_arr, int, sizeof(int));
-          RESOLVE(f_arr_1, double, 2 * sizeof(double));
-          RESOLVE(f_arr_2, double, 2 * sizeof(double));
-          break;
-
-        case 202: /* set shadow */
-          RESOLVE(f_arr_1, double, 3 * sizeof(double));
-          break;
-
-        case 204: /* set coord xform */
-          RESOLVE(f_arr_1, double, 6 * sizeof(double));
-          break;
-
-        default:
-          gks_perror("display list corrupted (len=%d, fctid=%d)", *len, *f);
-          exit(1);
+          w = p->height * ratio;
+          h = p->height;
         }
-
-      switch (*f)
+      else
         {
-        case 2:
-          memmove(&saved_gkss, gkss, sizeof(gks_state_list_t));
-          memmove(gkss, sl, sizeof(gks_state_list_t));
-
-          gkss->fontfile = saved_gkss.fontfile;
-
+          w = p->width;
+          h = p->width / ratio;
+        }
+      if (!p->cairo_initialised)
+        {
           if (!p->prevent_resize_by_dl)
             {
               p->window[0] = p->window[2] = 0.0;
               p->window[1] = p->window[3] = 1.0;
             }
 
-          p->viewport[0] = p->viewport[2] = 0.0;
-          p->viewport[1] = p->mwidth;
-          p->viewport[3] = p->mheight;
+          p->mem_path = (char *)gks_malloc(1024);
+          p->mem = (int *)gks_malloc(3 * sizeof(int) + sizeof(unsigned char *));
 
-          set_xform();
-          init_norm_xform();
-          init_colors();
+          p->mem[0] = w;
+          p->mem[1] = h;
+          p->mem[2] = p->device_dpi_x * p->device_pixel_ratio;
+          *((unsigned char **)(p->mem + 3)) = NULL;
 
-          gks_init_core(gkss);
-          break;
+          sprintf(p->mem_path, "!resizable@%p.mem:r", (void *)p->mem);
+          chars = p->mem_path;
+          /* set wstype for cairo png in memory */
 
-        case 12:
-          polyline(i_arr[0], f_arr_1, f_arr_2);
-          break;
+          cairo_init_ia[2] = 143;
+          p->cairo_initialised = true;
+          p->cairo_ws_state_list = *ptr;
+          gks_cairo_plugin(fctid, 0, 0, 3, cairo_init_ia, 0, NULL, 0, NULL, strlen(chars), chars,
+                           (&p->cairo_ws_state_list));
+          /* activate cairo workstation */
+          gks_cairo_plugin(4, 0, 0, 0, NULL, 0, NULL, 0, NULL, 0, NULL, (&p->cairo_ws_state_list));
+        }
+      else
+        {
+          /* clear cairo workstation */
+          gks_cairo_plugin(6, 0, 0, 0, NULL, 0, NULL, 0, NULL, 0, NULL, (&p->cairo_ws_state_list));
+          /* resize cairo workstation to Qt window */
+          vp_size[1] = w * 2.54 / 100 / p->device_dpi_x;
+          vp_size[3] = h * 2.54 / 100 / p->device_dpi_y;
+          gks_cairo_plugin(55, 0, 0, 0, NULL, 0, vp_size, 0, vp_size + 2, 0, NULL, (void **)(&p->cairo_ws_state_list));
+        }
+      return;
 
-        case 13:
-          polymarker(i_arr[0], f_arr_1, f_arr_2);
-          break;
+    case 54:
+      if (!p->prevent_resize_by_dl || !p->interp_was_called)
+        {
+          p->window[0] = r1[0];
+          p->window[1] = r1[1];
+          p->window[2] = r2[0];
+          p->window[3] = r2[1];
+          gks_cairo_plugin(fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, (&p->cairo_ws_state_list));
+        }
+      break;
+    case 55:
+      if (!p->prevent_resize_by_dl)
+        {
+          p->viewport[0] = r1[0];
+          p->viewport[1] = r1[1];
+          p->viewport[2] = r2[0];
+          p->viewport[3] = r2[1];
+          gks_cairo_plugin(fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, (&p->cairo_ws_state_list));
+        }
+      break;
 
-        case 14:
-          unused_variable = *len_c_arr;
-          text(f_arr_1[0], f_arr_2[0], strlen(c_arr), c_arr);
-          break;
+    default:
+      if (p->cairo_initialised)
+        {
+          gks_cairo_plugin(fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, (&p->cairo_ws_state_list));
+        }
+      break;
+    }
+}
 
-        case 15:
-          fillarea(i_arr[0], f_arr_1, f_arr_2);
-          break;
+static void gks_cairo_write_page()
+{
+  int width, height;
+  unsigned char *mem;
+  int ia[2] = {0, GKS_K_WRITE_PAGE_FLAG};
+  gks_cairo_plugin(8, 0, 0, 0, ia, 0, NULL, 0, NULL, 0, NULL, (void **)(&p->cairo_ws_state_list));
 
-        case 16:
-        case 201:
-          true_color = *f == DRAW_IMAGE;
-          cellarray(f_arr_1[0], f_arr_1[1], f_arr_2[0], f_arr_2[1], *dx, *dy, *dimx, i_arr, true_color);
-          break;
+  width = p->mem[0];
+  height = p->mem[1];
+  mem = *((unsigned char **)(p->mem + 3));
 
-        case 17:
-          gdp(*n, f_arr_1, f_arr_2, *primid, *ldr, i_arr);
-          break;
+  QImage img = QImage(mem, width, height, QImage::Format_ARGB32_Premultiplied);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
+  img.setDevicePixelRatio(p->device_pixel_ratio);
+#endif
+  width /= p->device_pixel_ratio;
+  height /= p->device_pixel_ratio;
 
-        case 19:
-          gkss->ltype = i_arr[0];
-          break;
+  p->pixmap->drawPixmap((p->width - width) / 2, (p->height - height) / 2, QPixmap::fromImage(img));
+}
 
-        case 20:
-          gkss->lwidth = f_arr_1[0];
-          break;
+static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                         char *chars, void **ptr)
+{
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(lc);
+  static gks_state_list_t saved_gkss;
+  int true_color;
 
-        case 21:
-          gkss->plcoli = i_arr[0];
-          break;
+  switch (fctid)
+    {
+    case 2:
+      memmove(&saved_gkss, gkss, sizeof(gks_state_list_t));
+      memmove(gkss, *ptr, sizeof(gks_state_list_t));
 
-        case 23:
-          gkss->mtype = i_arr[0];
-          break;
+      gkss->fontfile = saved_gkss.fontfile;
 
-        case 24:
-          gkss->mszsc = f_arr_1[0];
-          break;
-
-        case 25:
-          gkss->pmcoli = i_arr[0];
-          break;
-
-        case 27:
-          gkss->txfont = i_arr[0];
-          gkss->txprec = i_arr[1];
-          break;
-
-        case 28:
-          gkss->chxp = f_arr_1[0];
-          break;
-
-        case 29:
-          gkss->chsp = f_arr_1[0];
-          break;
-
-        case 30:
-          gkss->txcoli = i_arr[0];
-          break;
-
-        case 31:
-          gkss->chh = f_arr_1[0];
-          break;
-
-        case 32:
-          gkss->chup[0] = f_arr_1[0];
-          gkss->chup[1] = f_arr_2[0];
-          break;
-
-        case 33:
-          gkss->txp = i_arr[0];
-          break;
-
-        case 34:
-          gkss->txal[0] = i_arr[0];
-          gkss->txal[1] = i_arr[1];
-          break;
-
-        case 36:
-          gkss->ints = i_arr[0];
-          break;
-
-        case 37:
-          gkss->styli = i_arr[0];
-          break;
-
-        case 38:
-          gkss->facoli = i_arr[0];
-          break;
-
-        case 41:
-          for (i = 0; i < 13; i++) gkss->asf[i] = i_arr[i];
-          break;
-
-        case 48:
-          set_color_rep(i_arr[0], f_arr_1[0], f_arr_1[1], f_arr_1[2]);
-          break;
-
-        case 49:
-          gkss->window[*i_arr][0] = f_arr_1[0];
-          gkss->window[*i_arr][1] = f_arr_1[1];
-          gkss->window[*i_arr][2] = f_arr_2[0];
-          gkss->window[*i_arr][3] = f_arr_2[1];
-          set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
-          gks_set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
-          break;
-
-        case 50:
-          gkss->viewport[*i_arr][0] = f_arr_1[0];
-          gkss->viewport[*i_arr][1] = f_arr_1[1];
-          gkss->viewport[*i_arr][2] = f_arr_2[0];
-          gkss->viewport[*i_arr][3] = f_arr_2[1];
-          set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
-          gks_set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
-
-          if (*i_arr == gkss->cntnr) set_clip_rect(*i_arr);
-          break;
-
-        case 52:
-          gkss->cntnr = i_arr[0];
-          set_clip_rect(gkss->cntnr);
-          break;
-
-        case 53:
-          gkss->clip = i_arr[0];
-          set_clip_rect(gkss->cntnr);
-          break;
-
-        case 54:
-          if (!p->prevent_resize_by_dl || !p->interp_was_called)
-            {
-              /*
-               * In floating window managers, there is always a paint event before a user-generated resize event. Thus,
-               * in floating windows managers the first interpretation of the display list always initializes the
-               * wswindow (`p->prevent_resize_by_dl` is `false`). In tiling window managers, the first user-generated
-               * resize event is queued before the first paint event (the wm fits the window into a tile). In this case,
-               * wswindow would never be set. Therefore, always initialize wswindow if this is the first interpretation
-               * of a display list.
-               */
-              p->window[0] = f_arr_1[0];
-              p->window[1] = f_arr_1[1];
-              p->window[2] = f_arr_2[0];
-              p->window[3] = f_arr_2[1];
-            }
-
-          set_xform();
-          init_norm_xform();
-          break;
-
-        case 55:
-          if (!p->prevent_resize_by_dl)
-            {
-              p->viewport[0] = f_arr_1[0];
-              p->viewport[1] = f_arr_1[1];
-              p->viewport[2] = f_arr_2[0];
-              p->viewport[3] = f_arr_2[1];
-            }
-
-          resize_window();
-          set_xform();
-          init_norm_xform();
-          break;
-
-        case 108:
-          gkss->resample_method = i_arr[0];
-          break;
-
-        case 200:
-          gkss->txslant = f_arr_1[0];
-          break;
-
-        case 203:
-          p->transparency = (int)(f_arr_1[0] * 255);
-          break;
-
-        case 206:
-          gkss->bwidth = f_arr_1[0];
-          break;
-
-        case 207:
-          gkss->bcoli = i_arr[0];
-          break;
-
-        case 208:
-          gkss->clip_tnr = i_arr[0];
-          break;
+      if (!p->prevent_resize_by_dl)
+        {
+          p->window[0] = p->window[2] = 0.0;
+          p->window[1] = p->window[3] = 1.0;
         }
 
+      p->viewport[0] = p->viewport[2] = 0.0;
+      p->viewport[1] = p->mwidth;
+      p->viewport[3] = p->mheight;
+
+      set_xform();
+      init_norm_xform();
+      init_colors();
+
+      gks_init_core(gkss);
+      break;
+
+    case 12:
+      polyline(ia[0], r1, r2);
+      break;
+
+    case 13:
+      polymarker(ia[0], r1, r2);
+      break;
+
+    case 14:
+      text(r1[0], r2[0], strlen(chars), chars);
+      break;
+
+    case 15:
+      fillarea(ia[0], r1, r2);
+      break;
+
+    case 16:
+    case 201:
+      true_color = fctid == DRAW_IMAGE;
+      cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
+      break;
+
+    case 17:
+      gdp(ia[0], r1, r2, ia[1], ia[2], ia + 3);
+      break;
+
+    case 48:
+      set_color_rep(ia[1], r1[0], r1[1], r1[2]);
+      break;
+
+    case 49:
+      set_norm_xform(*ia, gkss->window[*ia], gkss->viewport[*ia]);
+      gks_set_norm_xform(*ia, gkss->window[*ia], gkss->viewport[*ia]);
+      break;
+
+    case 50:
+      set_norm_xform(*ia, gkss->window[*ia], gkss->viewport[*ia]);
+      gks_set_norm_xform(*ia, gkss->window[*ia], gkss->viewport[*ia]);
+
+      if (*ia == gkss->cntnr) set_clip_rect(*ia);
+      break;
+
+    case 52:
+      set_clip_rect(gkss->cntnr);
+      break;
+
+    case 53:
+      set_clip_rect(gkss->cntnr);
+      break;
+
+    case 54:
+      if (!p->prevent_resize_by_dl || !p->interp_was_called)
+        {
+          /*
+           * In floating window managers, there is always a paint event before a user-generated resize event. Thus,
+           * in floating windows managers the first interpretation of the display list always initializes the
+           * wswindow (`p->prevent_resize_by_dl` is `false`). In tiling window managers, the first user-generated
+           * resize event is queued before the first paint event (the wm fits the window into a tile). In this case,
+           * wswindow would never be set. Therefore, always initialize wswindow if this is the first interpretation
+           * of a display list.
+           */
+          p->window[0] = r1[0];
+          p->window[1] = r1[1];
+          p->window[2] = r2[0];
+          p->window[3] = r2[1];
+        }
+
+      set_xform();
+      init_norm_xform();
+      break;
+
+    case 55:
+      if (!p->prevent_resize_by_dl)
+        {
+          p->viewport[0] = r1[0];
+          p->viewport[1] = r1[1];
+          p->viewport[2] = r2[0];
+          p->viewport[3] = r2[1];
+        }
+
+      resize_window();
+      set_xform();
+      init_norm_xform();
+      break;
+
+    case 203:
+      p->transparency = (int)(r1[0] * 255);
+      break;
+    }
+}
+
+static void interp(char *str)
+{
+  char *s;
+  int sp = 0, *len;
+  s = str;
+
+  RESOLVE(len, int, sizeof(int));
+  while (*len)
+    {
+      if (getenv("GKS_QT_USE_CAIRO"))
+        {
+          sp += gks_dl_read_item(s + sp, &gkss, cairo_dl_render);
+        }
+      else
+        {
+          sp += gks_dl_read_item(s + sp, &gkss, qt_dl_render);
+        }
       RESOLVE(len, int, sizeof(int));
     }
 
-  memmove(gkss, &saved_gkss, sizeof(gks_state_list_t));
+  if (p->cairo_initialised)
+    {
+      gks_cairo_write_page();
+    }
 
   p->interp_was_called = true;
 }

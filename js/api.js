@@ -83,6 +83,7 @@ function GR(canvas_id) {
     this.inqspace = gr_inqspace;
     this.textext = gr_textext;
     this.inqtextext = gr_inqtextext;
+    this.setscientificformat = gr_setscientificformat;
     this.axes = gr_axes;
     this.grid = gr_grid;
     this.verrorbars = gr_verrorbars;
@@ -149,6 +150,7 @@ function GR(canvas_id) {
     this.inqbordercolorind = gr_inqbordercolorind;
     this.selectclipxform = gr_selectclipxform;
     this.inqclipxform = gr_inqclipxform;
+    this.settextencoding = gr_settextencoding;
 
     // set canvas and context
     Module.set_canvas(canvas_id);
@@ -337,6 +339,10 @@ function GR(canvas_id) {
     this.FONT_PALATINO_BOLDITALIC = 129;
     this.FONT_ZAPFCHANCERY_MEDIUMITALIC = 130;
     this.FONT_ZAPFDINGBATS = 131;
+
+    this.SCIENTIFIC_FORMAT_OPTION_E = 1;
+    this.SCIENTIFIC_FORMAT_OPTION_TEXTEX = 2;
+    this.SCIENTIFIC_FORMAT_OPTION_MATHTEX = 3;
 
     // gr.beginprint types;
     this.PRINT_PS = "ps";
@@ -805,6 +811,8 @@ gr_inqtextext = function(x, y, string) {
     freearray(_tby);
     return result;
 };
+
+gr_setscientificformat = Module.cwrap('gr_setscientificformat', '', ['number', ]);
 
 gr_axes = Module.cwrap('gr_axes', '', ['number', 'number', 'number', 'number', 'number', 'number', 'number', ]);
 
@@ -1374,6 +1382,8 @@ gr_inqclipxform = function() {
     freearray(_tnr);
     return result;
 };
+
+gr_settextencoding = Module.cwrap('gr_settextencoding', '', ['number', ]);
 
 grm_get_box_c = Module.cwrap('grm_get_box', 'number', ['number', 'number', 'number', 'number', 'number']);
 grm_get_box = function(top, right, bottom, left, keepAspectRatio) {

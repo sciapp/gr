@@ -18,9 +18,11 @@ typedef __int64 int64_t;
 /*
  * Maximum number of decimal digits: 15
  * Maximum length of the exponent: 4
- * Other symbols needed: 4 (-: value and exponent, decimal point, E)
+ * Mathtex symbols: 11 \times10^{}
+ * Negative signs: 2
  */
-#define STR_MAX 24
+#define STR_MAX 32
+
 /*
  * maximum number of digits to be used in standard notation
  */
@@ -185,7 +187,7 @@ static char *str_write_decimal(char *result, int64_t mantissa, int decimal_point
 }
 
 
-char *str_ftoa(char *result, double value, format_reference_t *reference)
+char *str_ftoa(char *result, double value, format_reference_t *reference, int format_option)
 
 /*
  * str_ftoa - Convert a real value to string in scientific notation. The reference is used to specify the number of
@@ -263,7 +265,34 @@ char *str_ftoa(char *result, double value, format_reference_t *reference)
 
           exponent_str = str_write_decimal(mantissa_str, mantissa, LENGTH_DIGITS - 1, reference->decimal_digits);
 
-          exponent_str[0] = 'E';
+          if (format_option == SCIENTIFIC_FORMAT_OPTION_E)
+            {
+              exponent_str[0] = 'E';
+            }
+          else
+            {
+              if (format_option == SCIENTIFIC_FORMAT_OPTION_TEXTEX)
+                {
+                  exponent_str[0] = 0xC3;
+                  exponent_str[1] = 0x97;
+                  exponent_str = &exponent_str[2];
+                }
+              else if (format_option == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
+                {
+                  exponent_str[0] = '\\';
+                  exponent_str[1] = 't';
+                  exponent_str[2] = 'i';
+                  exponent_str[3] = 'm';
+                  exponent_str[4] = 'e';
+                  exponent_str[5] = 's';
+                  exponent_str = &exponent_str[6];
+                }
+              exponent_str[0] = '1';
+              exponent_str[1] = '0';
+              exponent_str[2] = '^';
+              exponent_str[3] = '{';
+              exponent_str = &exponent_str[3];
+            }
 
           if (exponent < 0)
             {
@@ -274,11 +303,21 @@ char *str_ftoa(char *result, double value, format_reference_t *reference)
 
           exponent_length = log10(exponent_abs) + 1;
 
-          exponent_str[exponent_length + 1] = '\0';
+
           for (i = exponent_length; i > 0; i--)
             {
               exponent_str[i] = ('0' + exponent_abs % 10);
               exponent_abs /= 10;
+            }
+
+          if (format_option == SCIENTIFIC_FORMAT_OPTION_TEXTEX || format_option == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
+            {
+              exponent_str[exponent_length + 1] = '}';
+              exponent_str[exponent_length + 2] = '\0';
+            }
+          else
+            {
+              exponent_str[exponent_length + 1] = '\0';
             }
         }
       else

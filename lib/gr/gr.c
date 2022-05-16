@@ -259,6 +259,8 @@ static int flag_printing = 0, flag_graphics = 0;
 
 static text_node_t *text, *head;
 
+static int scientific_format = SCIENTIFIC_FORMAT_OPTION_E;
+
 #define DEFAULT_FIRST_COLOR 8
 #define DEFAULT_LAST_COLOR 79
 
@@ -4620,8 +4622,40 @@ void gr_inqtextext(double x, double y, char *string, double *tbx, double *tby)
     }
 }
 
-static void text2dlbl(double x, double y, const char *chars, double value,
-                      void (*fp)(double, double, const char *, double))
+
+/*!
+ * Specify the format to be used when scientific notation is used.
+ *
+ * \param[in] format_option Scientific format
+ *
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * The available options are:
+ *
+ * +----------------------------------+---+
+ * |SCIENTIFIC_FORMAT_OPTION_E        |  1|
+ * +----------------------------------+---+
+ * |SCIENTIFIC_FORMAT_OPTION_TEXTEX   |  2|
+ * +----------------------------------+---+
+ * |SCIENTIFIC_FORMAT_OPTION_MATHTEX  |  3|
+ * +----------------------------------+---+
+ *
+ * \endverbatim
+ */
+void gr_setscientificformat(int format_option)
+{
+  check_autoinit;
+
+  if (format_option >= SCIENTIFIC_FORMAT_OPTION_E && format_option <= SCIENTIFIC_FORMAT_OPTION_MATHTEX)
+    {
+      scientific_format = format_option;
+    }
+
+  if (flag_graphics) gr_writestream("<setscientificformat option=>\n", format_option);
+}
+
+static void text2dlbl(double x, double y, char *chars, double value, void (*fp)(double, double, const char *, double))
 {
   int errind, tnr;
 
@@ -4640,14 +4674,23 @@ static void text2dlbl(double x, double y, const char *chars, double value,
     }
 
   if (fp == NULL)
-    gr_textex(x, y, chars, 0, NULL, NULL);
+    {
+      if (scientific_format == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
+        {
+          gr_mathtex(x, y, chars);
+        }
+      else
+        {
+          gr_textex(x, y, chars, 0, NULL, NULL);
+        }
+    }
   else
     fp(x, y, chars, value);
 
   if (tnr != NDC) gks_select_xform(tnr);
 }
 
-static void text2d(double x, double y, const char *chars)
+static void text2d(double x, double y, char *chars)
 {
   /* 42. dummy value will not be interpreted until last argument fp != NULL */
   text2dlbl(x, y, chars, 42., NULL);
@@ -4688,7 +4731,7 @@ static char *gr_ftoa(char *string, double value, format_reference_t *reference)
 {
   char *s;
 
-  s = str_ftoa(string, value, reference);
+  s = str_ftoa(string, value, reference, scientific_format);
 
   return replace_minus_sign(s);
 }
@@ -6122,7 +6165,14 @@ static void text3d(double x, double y, double z, char *chars, int axis)
           gks_select_xform(NDC);
         }
 
-      gr_textex(p_x, p_y, chars, 0, NULL, NULL);
+      if (scientific_format == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
+        {
+          gr_mathtex(p_x, p_y, chars);
+        }
+      else
+        {
+          gr_textex(p_x, p_y, chars, 0, NULL, NULL);
+        }
 
       if (tnr != NDC) gks_select_xform(tnr);
     }
