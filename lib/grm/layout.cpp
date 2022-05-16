@@ -339,7 +339,7 @@ void Grid::setElement(int row, int col, grm_args_t *subplot_args)
 {
   GridElement *element = nullptr;
   const char *grid_element_address = nullptr;
-  if (args_values(subplot_args, "grid_element", "s", &grid_element_address))
+  if (grm_args_values(subplot_args, "grid_element", "s", &grid_element_address))
     {
       element = reinterpret_cast<GridElement *>(std::stoi(grid_element_address));
     }
@@ -403,7 +403,7 @@ void Grid::setElement(Slice *slice, grm_args_t *subplot_args)
 {
   GridElement *element = nullptr;
   const char *grid_element_address = nullptr;
-  if (args_values(subplot_args, "grid_element", "s", &grid_element_address))
+  if (grm_args_values(subplot_args, "grid_element", "s", &grid_element_address))
     {
       element = reinterpret_cast<GridElement *>(std::stoi(grid_element_address));
     }
