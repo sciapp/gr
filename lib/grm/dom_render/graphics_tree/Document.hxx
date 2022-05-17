@@ -1,10 +1,23 @@
 #ifndef GR_GRAPHICS_TREE_INTERFACE_DOCUMENT_HXX
 #define GR_GRAPHICS_TREE_INTERFACE_DOCUMENT_HXX
 
+#ifndef GRM_INCLUDE_PATH_
+#define GRM_QUOTE_(x) #x
+#ifdef BUILDING_GR
+#define GRM_INCLUDE_PATH_(filename) GRM_QUOTE_(filename)
+#else
+/* clang-format off */
+#define GRM_INCLUDE_PATH_(filename) GRM_QUOTE_(grm/filename)
+/* clang-format on */
+#endif
+#endif
+
 #include <memory>
 #include <string>
 
-#include "Node.hxx"
+/* clang-format off */
+#include GRM_INCLUDE_PATH_(dom_render/graphics_tree/Node.hxx)
+/* clang-format on */
 
 namespace GR
 {

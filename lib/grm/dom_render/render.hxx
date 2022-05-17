@@ -1,14 +1,26 @@
 #ifndef RENDER_HXX
 #define RENDER_HXX
 
+#ifndef GRM_INCLUDE_PATH_
+#define GRM_QUOTE_(x) #x
+#ifdef BUILDING_GR
+#define GRM_INCLUDE_PATH_(filename) GRM_QUOTE_(filename)
+#else
+/* clang-format off */
+#define GRM_INCLUDE_PATH_(filename) GRM_QUOTE_(grm/filename)
+/* clang-format on */
+#endif
+#endif
 
 #include <iostream>
 #include <optional>
 
+/* clang-format off */
+#include GRM_INCLUDE_PATH_(dom_render/context.hxx)
+#include GRM_INCLUDE_PATH_(dom_render/graphics_tree/Element.hxx)
+#include GRM_INCLUDE_PATH_(dom_render/graphics_tree/Document.hxx)
+/* clang-format on */
 #include "gr.h"
-#include "context.hxx"
-#include "graphics_tree/Element.hxx"
-#include "graphics_tree/Document.hxx"
 
 
 namespace GR

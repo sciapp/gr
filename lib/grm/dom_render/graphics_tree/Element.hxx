@@ -1,10 +1,24 @@
 #ifndef GR_GRAPHICS_TREE_INTERFACE_ELEMENT_HXX
 #define GR_GRAPHICS_TREE_INTERFACE_ELEMENT_HXX
+
+#ifndef GRM_INCLUDE_PATH_
+#define GRM_QUOTE_(x) #x
+#ifdef BUILDING_GR
+#define GRM_INCLUDE_PATH_(filename) GRM_QUOTE_(filename)
+#else
+/* clang-format off */
+#define GRM_INCLUDE_PATH_(filename) GRM_QUOTE_(grm/filename)
+/* clang-format on */
+#endif
+#endif
+
 #include <unordered_map>
 #include <unordered_set>
 
-#include "Node.hxx"
-#include "Value.hxx"
+/* clang-format off */
+#include GRM_INCLUDE_PATH_(dom_render/graphics_tree/Node.hxx)
+#include GRM_INCLUDE_PATH_(dom_render/graphics_tree/Value.hxx)
+/* clang-format on */
 
 namespace GR
 {

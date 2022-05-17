@@ -3,25 +3,24 @@
 
 /* This is a convenience header which includes all public header files of the GRM library. */
 
-#define QUOTE(x) #x
+#ifndef GRM_INCLUDE_PATH_
+#define GRM_QUOTE_(x) #x
 #ifdef BUILDING_GR
-#define INCLUDE_PATH(filename) QUOTE(filename)
+#define GRM_INCLUDE_PATH_(filename) GRM_QUOTE_(filename)
 #else
 /* clang-format off */
-#define INCLUDE_PATH(filename) QUOTE(grm/filename)
+#define GRM_INCLUDE_PATH_(filename) GRM_QUOTE_(grm/filename)
 /* clang-format on */
 #endif
+#endif
 
-#include INCLUDE_PATH(args.h)
-#include INCLUDE_PATH(dump.h)
-#include INCLUDE_PATH(event.h)
-#include INCLUDE_PATH(interaction.h)
-#include INCLUDE_PATH(layout.h)
-#include INCLUDE_PATH(net.h)
-#include INCLUDE_PATH(plot.h)
-#include INCLUDE_PATH(util.h)
-
-#undef QUOTE
-#undef INCLUDE_PATH
+#include GRM_INCLUDE_PATH_(args.h)
+#include GRM_INCLUDE_PATH_(dump.h)
+#include GRM_INCLUDE_PATH_(event.h)
+#include GRM_INCLUDE_PATH_(interaction.h)
+#include GRM_INCLUDE_PATH_(layout.h)
+#include GRM_INCLUDE_PATH_(net.h)
+#include GRM_INCLUDE_PATH_(plot.h)
+#include GRM_INCLUDE_PATH_(util.h)
 
 #endif /* ifndef GRM_H_INCLUDED */
