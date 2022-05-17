@@ -347,3 +347,39 @@ int str_casecmp(char *s1, char *s2)
 
   return tolower(*(unsigned char *)s1) - tolower(*(unsigned char *)s2);
 }
+
+
+int str_utf8_to_unicode(const unsigned char *utf8_str, int *length)
+{
+  int codepoint;
+
+  if ((utf8_str[0] & 0x80U) == 0x00U)
+    {
+      *length = 1;
+      codepoint = utf8_str[0U];
+    }
+  else if ((utf8_str[0] & 0xe0U) == 0xc0U && (utf8_str[1] & 0xc0U) == 0x80U)
+    {
+      *length = 2;
+      codepoint = ((utf8_str[0] & 0x1fU) << 6U) + (utf8_str[1] & 0x3fU);
+    }
+  else if ((utf8_str[0] & 0xf0U) == 0xe0U && (utf8_str[1] & 0xc0U) == 0x80U && (utf8_str[2] & 0xc0U) == 0x80U)
+    {
+      *length = 3;
+      codepoint = ((utf8_str[0] & 0xfU) << 12U) + ((utf8_str[1] & 0x3fU) << 6U) + (utf8_str[2] & 0x3fU);
+    }
+  else if ((utf8_str[0] & 0xf8U) == 0xf0U && (utf8_str[1] & 0xc0U) == 0x80U && (utf8_str[2] & 0xc0U) == 0x80U &&
+           (utf8_str[3] & 0xc0U) == 0x80U)
+    {
+      *length = 4;
+      codepoint = ((utf8_str[0] & 0x7U) << 18U) + ((utf8_str[1] & 0x3fU) << 12U) + ((utf8_str[2] & 0x3fU) << 6U) +
+                  (utf8_str[3] & 0x3fU);
+    }
+  else
+    {
+      /* invalid byte combination */
+      *length = 1;
+      codepoint = (unsigned int)'?';
+    }
+  return codepoint;
+}

@@ -10,6 +10,7 @@
 
 %{
 #include "mathtex2.h"
+#include "strlib.h"
 
 
 #ifndef NAN
@@ -725,7 +726,8 @@ int ignore_whitespace;
 int yylex(void) {
   yylval.index = 0;
   for (; *cursor != 0 || state == INSIDE_SYMBOL; cursor++) {
-    int c = *cursor;
+    int c_bytes = 1;
+    int c = str_utf8_to_unicode((const unsigned char*)cursor, &c_bytes);
     if (c == ' ' && ignore_whitespace) {
         ignore_whitespace = 0;
         continue;
@@ -745,9 +747,9 @@ int yylex(void) {
             break;
         }
         yylval.source = cursor;
-        yylval.length = 1;
+        yylval.length = c_bytes;
         yylval.type = NT_TERMINAL_SYMBOL;
-        cursor += 1;
+        cursor += c_bytes;
         return SINGLE_SYMBOL;
       } else if (strchr("()[]<>./{}|", c) != NULL) {
           yylval.source = cursor;
