@@ -1157,7 +1157,6 @@ static size_t make_char(unsigned int codepoint)
       bm_node.u.character.depth = 0.0;
       bm_node.u.character.advance = 0.0;
       bm_node.u.character.bearing = 0.0;
-      fprintf(stderr, "Missing character %c / %u\n", codepoint, codepoint);
     }
   bm_node.u.character.shift_amount = 0.0;
   return copy_box_model_node(bm_node);
@@ -1848,7 +1847,7 @@ static unsigned int symbol_to_codepoint(const unsigned char *utf8_str, size_t le
     {
       codepoint = 0x2212;
     }
-  if (codepoint < 128 || codepoint == 0x2212)
+  if (codepoint <= 0x1ffff)
     {
       return codepoint;
     }
