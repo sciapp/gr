@@ -1162,6 +1162,8 @@ void gks_ft_gdp(int n, double *px, double *py, int primid, int ldr, int *datrec)
 
 void gks_text(double px, double py, char *str)
 {
+  char *utf8_str = NULL;
+
   if (state >= GKS_K_WSAC)
     {
       if (strlen(str) == 0)
@@ -1176,7 +1178,7 @@ void gks_text(double px, double py, char *str)
               /* double the output string size as the longest utf8 representation of any latin1 character is two bytes
                * long
                */
-              char utf8_str[2 * (GKS_K_TEXT_MAX_SIZE - 1) + 1];
+              utf8_str = gks_malloc(2 * (GKS_K_TEXT_MAX_SIZE - 1) + 1);
               gks_input2utf8(str, utf8_str, s->input_encoding);
 
               f_arr_1[0] = px;
@@ -1184,19 +1186,22 @@ void gks_text(double px, double py, char *str)
 
               /* call the device driver link routine */
               gks_ddlk(TEXT, 0, 0, 0, i_arr, 1, f_arr_1, 1, f_arr_2, 1, utf8_str, NULL);
+              gks_free(utf8_str);
             }
           else
             {
               if (s->input_encoding == ENCODING_LATIN1)
                 {
-                  char *utf8_str = gks_malloc(strlen(str) * 2 + 1);
+                  utf8_str = gks_malloc(strlen(str) * 2 + 1);
                   gks_input2utf8(str, utf8_str, ENCODING_LATIN1);
 
                   gks_ft_text(px, py, utf8_str, s, gks_ft_gdp);
                   gks_free(utf8_str);
                 }
               else
-                gks_ft_text(px, py, str, s, gks_ft_gdp);
+                {
+                  gks_ft_text(px, py, str, s, gks_ft_gdp);
+                }
             }
         }
       else
