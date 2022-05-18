@@ -108,28 +108,31 @@ extern "C" {
   X(ERROR_NETWORK_HOSTNAME_RESOLUTION, 25)            \
   X(ERROR_NETWORK_CONNECT, 26)                        \
   X(ERROR_NETWORK_RECV, 27)                           \
-  X(ERROR_NETWORK_RECV_CONNECTION_SHUTDOWN, 28)       \
-  X(ERROR_NETWORK_SEND, 29)                           \
-  X(ERROR_NETWORK_SOCKET_CLOSE, 30)                   \
-  X(ERROR_NETWORK_WINSOCK_CLEANUP, 31)                \
-  X(ERROR_CUSTOM_RECV, 32)                            \
-  X(ERROR_CUSTOM_SEND, 33)                            \
-  X(ERROR_PLOT_COLORMAP, 34)                          \
-  X(ERROR_PLOT_NORMALIZATION, 35)                     \
-  X(ERROR_PLOT_UNKNOWN_KEY, 36)                       \
-  X(ERROR_PLOT_UNKNOWN_ALGORITHM, 37)                 \
-  X(ERROR_PLOT_MISSING_ALGORITHM, 38)                 \
-  X(ERROR_PLOT_UNKNOWN_KIND, 39)                      \
-  X(ERROR_PLOT_MISSING_DATA, 40)                      \
-  X(ERROR_PLOT_COMPONENT_LENGTH_MISMATCH, 41)         \
-  X(ERROR_PLOT_MISSING_DIMENSIONS, 42)                \
-  X(ERROR_PLOT_MISSING_LABELS, 43)                    \
-  X(ERROR_PLOT_INVALID_ID, 44)                        \
-  X(ERROR_PLOT_OUT_OF_RANGE, 45)                      \
-  X(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS, 46)            \
-  X(ERROR_BASE64_BLOCK_TOO_SHORT, 47)                 \
-  X(ERROR_BASE64_INVALID_CHARACTER, 48)               \
-  Y(ERROR_NOT_IMPLEMENTED, 49)
+  X(ERROR_NETWORK_RECV_UNSUPPORTED, 28)               \
+  X(ERROR_NETWORK_RECV_CONNECTION_SHUTDOWN, 29)       \
+  X(ERROR_NETWORK_SEND, 30)                           \
+  X(ERROR_NETWORK_SEND_UNSUPPORTED, 31)               \
+  X(ERROR_NETWORK_SOCKET_CLOSE, 32)                   \
+  X(ERROR_NETWORK_WINSOCK_CLEANUP, 33)                \
+  X(ERROR_CUSTOM_RECV, 34)                            \
+  X(ERROR_CUSTOM_SEND, 35)                            \
+  X(ERROR_PLOT_COLORMAP, 36)                          \
+  X(ERROR_PLOT_NORMALIZATION, 37)                     \
+  X(ERROR_PLOT_UNKNOWN_KEY, 38)                       \
+  X(ERROR_PLOT_UNKNOWN_ALGORITHM, 39)                 \
+  X(ERROR_PLOT_MISSING_ALGORITHM, 40)                 \
+  X(ERROR_PLOT_UNKNOWN_KIND, 41)                      \
+  X(ERROR_PLOT_MISSING_DATA, 42)                      \
+  X(ERROR_PLOT_COMPONENT_LENGTH_MISMATCH, 43)         \
+  X(ERROR_PLOT_MISSING_DIMENSIONS, 44)                \
+  X(ERROR_PLOT_MISSING_LABELS, 45)                    \
+  X(ERROR_PLOT_INVALID_ID, 46)                        \
+  X(ERROR_PLOT_OUT_OF_RANGE, 47)                      \
+  X(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS, 48)            \
+  X(ERROR_PLOT_INVALID_REQUEST, 49)                   \
+  X(ERROR_BASE64_BLOCK_TOO_SHORT, 50)                 \
+  X(ERROR_BASE64_INVALID_CHARACTER, 51)               \
+  Y(ERROR_NOT_IMPLEMENTED, 52)
 
 #define ENUM_VALUE(name, value) name = value,
 #define ENUM_LAST_VALUE(name, value) name = value

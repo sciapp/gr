@@ -15,6 +15,7 @@
 #endif
 
 #include GRM_INCLUDE_PATH_(args.h)
+#include GRM_INCLUDE_PATH_(base64.h)
 #include GRM_INCLUDE_PATH_(dump.h)
 #include GRM_INCLUDE_PATH_(event.h)
 #include GRM_INCLUDE_PATH_(interaction.h)

@@ -52,7 +52,7 @@ int grm_input(const grm_args_t *input_args)
   max_width_height = grm_max(width, height);
   logger((stderr, "Using size (%d, %d)\n", width, height));
 
-  if (args_values(input_args, "x", "i", &x) && args_values(input_args, "y", "i", &y))
+  if (grm_args_values(input_args, "x", "i", &x) && grm_args_values(input_args, "y", "i", &y))
     {
       double ndc_x, ndc_y;
       char *key;
@@ -63,7 +63,7 @@ int grm_input(const grm_args_t *input_args)
 
       subplot_args = get_subplot_from_ndc_point(ndc_x, ndc_y);
 
-      if (args_values(input_args, "key", "s", &key))
+      if (grm_args_values(input_args, "key", "s", &key))
         {
           logger((stderr, "Got key \"%s\"\n", key));
 
@@ -78,7 +78,7 @@ int grm_input(const grm_args_t *input_args)
                 {
                   grm_args_t **subplot_args_ptr;
                   logger((stderr, "Reset all subplot coordinate ranges\n"));
-                  args_values(active_plot_args, "subplots", "A", &subplot_args_ptr);
+                  grm_args_values(active_plot_args, "subplots", "A", &subplot_args_ptr);
                   while (*subplot_args_ptr != NULL)
                     {
                       grm_args_push(*subplot_args_ptr, "reset_ranges", "i", 1);
@@ -95,13 +95,13 @@ int grm_input(const grm_args_t *input_args)
           double angle_delta, factor;
           int xshift, yshift;
           const char *kind;
-          args_values(subplot_args, "viewport", "D", &viewport);
+          grm_args_values(subplot_args, "viewport", "D", &viewport);
 
-          if (args_values(input_args, "angle_delta", "d", &angle_delta))
+          if (grm_args_values(input_args, "angle_delta", "d", &angle_delta))
             {
               double focus_x, focus_y;
 
-              args_values(subplot_args, "kind", "s", &kind);
+              grm_args_values(subplot_args, "kind", "s", &kind);
               if (str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
                                  "isosurface"))
                 {
@@ -123,11 +123,11 @@ int grm_input(const grm_args_t *input_args)
 
               return 1;
             }
-          else if (args_values(input_args, "factor", "d", &factor))
+          else if (grm_args_values(input_args, "factor", "d", &factor))
             {
               double focus_x, focus_y;
 
-              args_values(subplot_args, "kind", "s", &kind);
+              grm_args_values(subplot_args, "kind", "s", &kind);
               if (str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
                                  "isosurface"))
                 {
@@ -148,18 +148,19 @@ int grm_input(const grm_args_t *input_args)
               return 1;
             }
 
-          if (args_values(input_args, "xshift", "i", &xshift) && args_values(input_args, "yshift", "i", &yshift))
+          if (grm_args_values(input_args, "xshift", "i", &xshift) &&
+              grm_args_values(input_args, "yshift", "i", &yshift))
             {
               double ndc_xshift, ndc_yshift, rotation, tilt;
               int shift_pressed;
               const char *kind;
 
-              args_values(subplot_args, "kind", "s", &kind);
+              grm_args_values(subplot_args, "kind", "s", &kind);
 
               if (str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
                                  "isosurface"))
                 {
-                  if (args_values(input_args, "shift_pressed", "i", &shift_pressed) && shift_pressed)
+                  if (grm_args_values(input_args, "shift_pressed", "i", &shift_pressed) && shift_pressed)
                     {
                       /*
                        * TODO Translate in 3D
@@ -167,8 +168,8 @@ int grm_input(const grm_args_t *input_args)
                     }
                   else
                     {
-                      args_values(subplot_args, "rotation", "d", &rotation);
-                      args_values(subplot_args, "tilt", "d", &tilt);
+                      grm_args_values(subplot_args, "rotation", "d", &rotation);
+                      grm_args_values(subplot_args, "tilt", "d", &tilt);
 
                       rotation += xshift * 0.2;
                       tilt -= yshift * 0.2;
@@ -198,13 +199,13 @@ int grm_input(const grm_args_t *input_args)
         }
     }
 
-  if (args_values(input_args, "x1", "i", &x1) && args_values(input_args, "x2", "i", &x2) &&
-      args_values(input_args, "y1", "i", &y1) && args_values(input_args, "y2", "i", &y2))
+  if (grm_args_values(input_args, "x1", "i", &x1) && grm_args_values(input_args, "x2", "i", &x2) &&
+      grm_args_values(input_args, "y1", "i", &y1) && grm_args_values(input_args, "y2", "i", &y2))
     {
       double focus_x, focus_y, factor_x, factor_y;
       int keep_aspect_ratio = INPUT_DEFAULT_KEEP_ASPECT_RATIO;
 
-      args_values(input_args, "keep_aspect_ratio", "i", &keep_aspect_ratio);
+      grm_args_values(input_args, "keep_aspect_ratio", "i", &keep_aspect_ratio);
 
       if (!get_focus_and_factor(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x, &focus_y,
                                 &subplot_args))
@@ -239,7 +240,7 @@ int grm_is3d(const int x, const int y)
 
   subplot_args = get_subplot_from_ndc_points(1, &ndc_x, &ndc_y);
 
-  if (subplot_args && args_values(subplot_args, "kind", "s", &kind) &&
+  if (subplot_args && grm_args_values(subplot_args, "kind", "s", &kind) &&
       str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume", "isosurface"))
     {
       return 1;
@@ -264,8 +265,8 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
     {
       return 0;
     }
-  args_values(active_plot_args, "wswindow", "D", &wswindow);
-  args_values(subplot_args, "viewport", "D", &viewport);
+  grm_args_values(active_plot_args, "wswindow", "D", &wswindow);
+  grm_args_values(subplot_args, "viewport", "D", &viewport);
   viewport_mid_x = (viewport[1] + viewport[0]) / 2.0;
   viewport_mid_y = (viewport[3] + viewport[2]) / 2.0;
   *w = (int)grm_round(factor_x * width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0]));
@@ -296,7 +297,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   subplot_args = get_subplot_from_ndc_points(1, &x, &y);
   if (subplot_args != NULL)
     {
-      args_values(subplot_args, "kind", "s", &kind);
+      grm_args_values(subplot_args, "kind", "s", &kind);
     }
   if (subplot_args == NULL || !str_equals_any(kind, 4, "line", "scatter", "stem", "step"))
     {
@@ -313,11 +314,11 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   plot_process_window(subplot_args);
 
   gr_ndctowc(&x, &y);
-  if (!args_values(subplot_args, "xlabel", "s", &info->xlabel))
+  if (!grm_args_values(subplot_args, "xlabel", "s", &info->xlabel))
     {
       info->xlabel = "x";
     }
-  if (!args_values(subplot_args, "ylabel", "s", &info->ylabel))
+  if (!grm_args_values(subplot_args, "ylabel", "s", &info->ylabel))
     {
       info->ylabel = "y";
     }
@@ -329,19 +330,19 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   gr_ndctowc(&x_range_min, &y_range_min);
   gr_ndctowc(&x_range_max, &y_range_max);
 
-  args_values(subplot_args, "series", "A", &current_series);
-  args_values(subplot_args, "_xlim", "dd", &x_min, &x_max);
-  args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
+  grm_args_values(subplot_args, "series", "A", &current_series);
+  grm_args_values(subplot_args, "_xlim", "dd", &x_min, &x_max);
+  grm_args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
 
   x_range_min = (x_min > x_range_min) ? x_min : x_range_min;
   y_range_min = (y_min > y_range_min) ? y_min : y_range_min;
   x_range_max = (x_max < x_range_max) ? x_max : x_range_max;
   y_range_max = (y_max < y_range_max) ? y_max : y_range_max;
-  args_first_value(subplot_args, "labels", "S", &labels, &num_labels);
+  grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels);
   while (*current_series != NULL)
     {
-      args_first_value(*current_series, "x", "D", &x_series, &x_length);
-      args_first_value(*current_series, "y", "D", &y_series, &y_length);
+      grm_args_first_value(*current_series, "x", "D", &x_series, &x_length);
+      grm_args_first_value(*current_series, "y", "D", &y_series, &y_length);
       for (i = 0; i < x_length; i++)
         {
           if (x_series[i] < x_range_min || x_series[i] > x_range_max || y_series[i] < y_range_min ||

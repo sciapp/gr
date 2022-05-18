@@ -159,6 +159,7 @@ err_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char
 err_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, unsigned int next_hierarchy_level_max_id);
 err_t plot_init_args_structure(grm_args_t *args, const char **hierarchy_name_ptr,
                                unsigned int next_hierarchy_level_max_id);
+int plot_check_for_request(const grm_args_t *args, err_t *error);
 void plot_set_flag_defaults(void);
 void plot_set_attribute_defaults(grm_args_t *subplot_args);
 void plot_pre_plot(grm_args_t *plot_args);

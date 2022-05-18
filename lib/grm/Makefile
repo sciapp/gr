@@ -38,6 +38,7 @@ UNAME := $(shell uname)
                dom_render/graphics_tree/Value.o \
                dom_render/graphics_tree/util.o
   GRMHEADERS = args.h \
+               base64.h \
                dump.h \
                event.h \
                interaction.h \

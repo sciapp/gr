@@ -249,6 +249,28 @@ error_cleanup:
   return error;
 }
 
+err_t event_queue_enqueue_request_event(event_queue_t *queue, const char *request_string)
+{
+  grm_request_event_t *request_event = NULL;
+  err_t error = ERROR_NONE;
+
+  request_event = malloc(sizeof(grm_request_event_t));
+  error_cleanup_and_set_error_if(request_event == NULL, ERROR_MALLOC);
+  request_event->type = GRM_EVENT_REQUEST;
+  request_event->request_string = request_string;
+  error = event_reflist_enqueue(queue->queue, (grm_event_t *)request_event);
+  error_cleanup_if_error;
+
+  return ERROR_NONE;
+
+error_cleanup:
+  if (request_event != NULL)
+    {
+      free(request_event);
+    }
+
+  return error;
+}
 
 #undef DEFINE_LIST_METHODS
 

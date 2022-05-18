@@ -35,34 +35,34 @@ void test(void)
   assert(strcmp(arg->value_format, "nS") == 0);
   args_iterator_delete(it);
 
-  assert(args_first_value(args, "int_value", "I", &int_ptr, &int_array_length));
+  assert(grm_args_first_value(args, "int_value", "I", &int_ptr, &int_array_length));
   assert(int_array_length == 1);
   assert(*int_ptr == int_value);
 
-  assert(args_first_value(args, "str_value", "S", &str_ptr, &str_array_length));
+  assert(grm_args_first_value(args, "str_value", "S", &str_ptr, &str_array_length));
   assert(str_array_length == 1);
   assert(strcmp(*str_ptr, str_values[0]) == 0);
   assert(str_ptr[1] == NULL); /* arrays of pointer types must be terminated by a NULL value */
 
-  assert(args_first_value(args, "str_array", "S", &str_ptr, &str_array_length));
+  assert(grm_args_first_value(args, "str_array", "S", &str_ptr, &str_array_length));
   assert(str_array_length == 2);
   assert(strcmp(str_ptr[0], str_values[0]) == 0);
   assert(strcmp(str_ptr[1], str_values[1]) == 0);
   assert(str_ptr[2] == NULL); /* arrays of pointer types must be terminated by a NULL value */
 
-  assert(args_values(args, "int_value", "I", &int_ptr));
+  assert(grm_args_values(args, "int_value", "I", &int_ptr));
   assert(*int_ptr == int_value);
 
-  assert(args_values(args, "str_value", "S", &str_ptr));
+  assert(grm_args_values(args, "str_value", "S", &str_ptr));
   assert(strcmp(*str_ptr, str_values[0]) == 0);
   assert(str_ptr[1] == NULL); /* arrays of pointer types must be terminated by a NULL value */
 
-  assert(args_values(args, "str_array", "S", &str_ptr));
+  assert(grm_args_values(args, "str_array", "S", &str_ptr));
   assert(strcmp(str_ptr[0], str_values[0]) == 0);
   assert(strcmp(str_ptr[1], str_values[1]) == 0);
   assert(str_ptr[2] == NULL); /* arrays of pointer types must be terminated by a NULL value */
 
-  assert(args_values(args, "str_array", "ss", &str1, &str2));
+  assert(grm_args_values(args, "str_array", "ss", &str1, &str2));
   assert(strcmp(str1, str_values[0]) == 0);
   assert(strcmp(str2, str_values[1]) == 0);
 
