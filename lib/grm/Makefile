@@ -29,14 +29,14 @@ UNAME := $(shell uname)
                datatype/string_list.o \
                datatype/string_map.o \
                datatype/uint_map.o \
-               gr-dom-render/src/context.o \
-               gr-dom-render/src/render.o \
-               gr-dom-render/gr-graphics-tree-interface/src/Comment.o \
-               gr-dom-render/gr-graphics-tree-interface/src/Document.o \
-               gr-dom-render/gr-graphics-tree-interface/src/Element.o \
-               gr-dom-render/gr-graphics-tree-interface/src/Node.o \
-               gr-dom-render/gr-graphics-tree-interface/src/Value.o \
-               gr-dom-render/gr-graphics-tree-interface/src/util.o
+               dom_render/context.o \
+               dom_render/render.o \
+               dom_render/graphics_tree/Comment.o \
+               dom_render/graphics_tree/Document.o \
+               dom_render/graphics_tree/Element.o \
+               dom_render/graphics_tree/Node.o \
+               dom_render/graphics_tree/Value.o \
+               dom_render/graphics_tree/util.o
   GRMHEADERS = args.h \
                dump.h \
                event.h \
@@ -45,9 +45,21 @@ UNAME := $(shell uname)
                net.h \
                plot.h \
                util.h \
-               gr-dom-render/include/context.hxx \
-               gr-dom-render/include/render.hxx \
-               gr-dom-render/gr-graphics-tree-interface/include/GR
+               dom_render/NotFoundError.h \
+               dom_render/TypeError.hxx \
+               dom_render/context.hxx \
+               dom_render/render.hxx \
+               dom_render/graphics_tree/Comment.hxx \
+               dom_render/graphics_tree/Document.hxx \
+               dom_render/graphics_tree/Element.hxx \
+               dom_render/graphics_tree/HierarchyRequestError.hxx \
+               dom_render/graphics_tree/IndexSizeError.hxx \
+               dom_render/graphics_tree/Node.hxx \
+               dom_render/graphics_tree/NotFoundError.hxx \
+               dom_render/graphics_tree/NotSupportedError.hxx \
+               dom_render/graphics_tree/TypeError.hxx \
+               dom_render/graphics_tree/Value.hxx \
+               dom_render/graphics_tree/util.hxx
      DEFINES = -DBUILDING_GR
     INCLUDES = -I. \
                -I./gr-dom-render/include \
@@ -118,7 +130,11 @@ install:
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p grm.h $(INCDIR)
 	@if [ ! -d $(GRMINCDIR) ]; then mkdir -m 755 $(GRMINCDIR); fi
-	cp -pr $(GRMHEADERS) $(GRMINCDIR)
+	@for header in $(GRMHEADERS); do \
+	  header_directory="$(GRMINCDIR)/$$(dirname "$${header}")"; \
+	  if [ ! -d "$${header_directory}" ]; then mkdir -m 755 -p "$${header_directory}"; fi; \
+	  cp -p "$${header}" "$${header_directory}"; \
+	done
 
 clean:
 	rm -f *.so \

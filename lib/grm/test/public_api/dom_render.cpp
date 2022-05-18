@@ -9,7 +9,7 @@
 #include <random>
 
 #include "grm.h"
-#include "GR/util.hxx"
+#include "dom_render/graphics_tree/util.hxx"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846

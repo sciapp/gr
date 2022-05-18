@@ -2,12 +2,10 @@ ifeq ($(strip $(THIRDPARTYDIR)),)
 override THIRDPARTYDIR = $(abspath $(CURDIR)/../../3rdparty/build)
 endif
 
-  DEFINES = -DGRDIR=\"$(GRDIR)\" -DNO_GS -DNO_X11 -D_WIN32_WINNT=0x0600 -DBUILDING_DLL
+  DEFINES = -DGRDIR=\"$(GRDIR)\" -DNO_GS -DNO_X11 -D_WIN32_WINNT=0x0600 -DBUILDING_DLL -DBUILDING_GR
    CFLAGS = $(DEFINES) -std=c90
  CXXFLAGS = $(DEFINES) -std=c++17
  INCLUDES = -I. \
-            -I./gr-dom-render/include \
-            -I./gr-dom-render/gr-graphics-tree-interface/include \
             -I../gks \
             -I../gr \
             -I../gr3 \
@@ -38,14 +36,14 @@ endif
             datatype/string_list.o \
             datatype/string_map.o \
             datatype/uint_map.o \
-            gr-dom-render/src/context.o \
-            gr-dom-render/src/render.o \
-            gr-dom-render/gr-graphics-tree-interface/src/Comment.o \
-            gr-dom-render/gr-graphics-tree-interface/src/Document.o \
-            gr-dom-render/gr-graphics-tree-interface/src/Element.o \
-            gr-dom-render/gr-graphics-tree-interface/src/Node.o \
-            gr-dom-render/gr-graphics-tree-interface/src/Value.o \
-            gr-dom-render/gr-graphics-tree-interface/src/util.o
+            dom_render/context.o \
+            dom_render/render.o \
+            dom_render/graphics_tree/Comment.o \
+            dom_render/graphics_tree/Document.o \
+            dom_render/graphics_tree/Element.o \
+            dom_render/graphics_tree/Node.o \
+            dom_render/graphics_tree/Value.o \
+            dom_render/graphics_tree/util.o
 
 
 .SUFFIXES: .o .c .cpp

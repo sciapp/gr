@@ -1,10 +1,10 @@
 /* ######################### includes ############################################################################### */
 
-#include "GR/Document.hxx"
-#include "GR/Element.hxx"
-#include "GR/Comment.hxx"
-#include "GR/util.hxx"
-#include "render.hxx"
+#include "dom_render/graphics_tree/Document.hxx"
+#include "dom_render/graphics_tree/Element.hxx"
+#include "dom_render/graphics_tree/Comment.hxx"
+#include "dom_render/graphics_tree/util.hxx"
+#include "dom_render/render.hxx"
 
 extern "C" {
 

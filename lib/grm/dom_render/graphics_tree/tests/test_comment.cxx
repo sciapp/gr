@@ -1,8 +1,8 @@
 #include <catch2/catch.hpp>
-#include "GR/Comment.hxx"
-#include "GR/Element.hxx"
-#include "GR/Document.hxx"
-#include "GR/IndexSizeError.hxx"
+#include "Comment.hxx"
+#include "Element.hxx"
+#include "Document.hxx"
+#include "IndexSizeError.hxx"
 
 using GR::Comment;
 using GR::Document;

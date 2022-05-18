@@ -1,9 +1,9 @@
-#include "GR/Document.hxx"
-#include "GR/Element.hxx"
-#include "GR/util.hxx"
-#include "GR/Comment.hxx"
-#include "GR/HierarchyRequestError.hxx"
-#include "GR/NotSupportedError.hxx"
+#include "Document.hxx"
+#include "Element.hxx"
+#include "util.hxx"
+#include "Comment.hxx"
+#include "HierarchyRequestError.hxx"
+#include "NotSupportedError.hxx"
 
 GR::Document::Document() : GR::Node(GR::Node::Type::DOCUMENT_NODE, nullptr) {}
 

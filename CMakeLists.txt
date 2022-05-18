@@ -474,14 +474,14 @@ set(GRM_SOURCES
     lib/grm/datatype/string_list.c
     lib/grm/datatype/string_map.c
     lib/grm/datatype/uint_map.c
-    lib/grm/gr-dom-render/src/context.cxx
-    lib/grm/gr-dom-render/src/render.cxx
-    lib/grm/gr-dom-render/gr-graphics-tree-interface/src/Comment.cxx
-    lib/grm/gr-dom-render/gr-graphics-tree-interface/src/Document.cxx
-    lib/grm/gr-dom-render/gr-graphics-tree-interface/src/Element.cxx
-    lib/grm/gr-dom-render/gr-graphics-tree-interface/src/Node.cxx
-    lib/grm/gr-dom-render/gr-graphics-tree-interface/src/Value.cxx
-    lib/grm/gr-dom-render/gr-graphics-tree-interface/src/util.cxx
+    lib/grm/dom_render/context.cxx
+    lib/grm/dom_render/render.cxx
+    lib/grm/dom_render/graphics_tree/Comment.cxx
+    lib/grm/dom_render/graphics_tree/Document.cxx
+    lib/grm/dom_render/graphics_tree/Element.cxx
+    lib/grm/dom_render/graphics_tree/Node.cxx
+    lib/grm/dom_render/graphics_tree/Value.cxx
+    lib/grm/dom_render/graphics_tree/util.cxx
 )
 
 set(GRM_SUBDIR_HEADERS
@@ -516,11 +516,8 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
     target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} ws2_32)
   endif()
   target_include_directories(
-    ${LIBRARY}
-    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/>
-           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/gr-dom-render/include>
-           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/gr-dom-render/gr-graphics-tree-interface/include>
-           $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    ${LIBRARY} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/>
+                      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
   target_compile_definitions(${LIBRARY} PRIVATE BUILDING_GR)
   target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
@@ -1232,11 +1229,22 @@ if(GR_INSTALL)
   endif()
   install(FILES lib/gr/gr.h lib/gks/gks.h lib/gr3/gr3.h lib/grm/grm.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
   install(FILES ${GRM_SUBDIR_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grm/)
-  install(FILES lib/grm/gr-dom-render/include/context.hxx lib/grm/gr-dom-render/include/render.hxx
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grm/
+  install(FILES lib/grm/dom_render/NotFoundError.h lib/grm/dom_render/TypeError.hxx lib/grm/dom_render/context.hxx
+                lib/grm/dom_render/render.hxx DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grm/dom_render/
   )
-  install(DIRECTORY lib/grm/gr-dom-render/gr-graphics-tree-interface/include/GR
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grm/
+  install(
+    FILES lib/grm/dom_render/graphics_tree/Comment.hxx
+          lib/grm/dom_render/graphics_tree/Document.hxx
+          lib/grm/dom_render/graphics_tree/Element.hxx
+          lib/grm/dom_render/graphics_tree/HierarchyRequestError.hxx
+          lib/grm/dom_render/graphics_tree/IndexSizeError.hxx
+          lib/grm/dom_render/graphics_tree/Node.hxx
+          lib/grm/dom_render/graphics_tree/NotFoundError.hxx
+          lib/grm/dom_render/graphics_tree/NotSupportedError.hxx
+          lib/grm/dom_render/graphics_tree/TypeError.hxx
+          lib/grm/dom_render/graphics_tree/Value.hxx
+          lib/grm/dom_render/graphics_tree/util.hxx
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grm/dom_render/graphics_tree/
   )
   if(TARGET qt4gr
      OR TARGET qt5gr

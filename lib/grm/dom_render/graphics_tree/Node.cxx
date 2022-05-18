@@ -1,10 +1,10 @@
-#include "GR/Node.hxx"
-#include "GR/Element.hxx"
-#include "GR/Document.hxx"
-#include "GR/NotFoundError.hxx"
-#include "GR/HierarchyRequestError.hxx"
-#include "GR/TypeError.hxx"
-#include "GR/util.hxx"
+#include "Node.hxx"
+#include "Element.hxx"
+#include "Document.hxx"
+#include "NotFoundError.hxx"
+#include "HierarchyRequestError.hxx"
+#include "TypeError.hxx"
+#include "util.hxx"
 #include <algorithm>
 #include <map>
 #include <tuple>

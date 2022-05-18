@@ -1,9 +1,9 @@
 #include <catch2/catch.hpp>
-#include "GR/util.hxx"
-#include "GR/Document.hxx"
-#include "GR/Element.hxx"
-#include "GR/Comment.hxx"
-#include "GR/TypeError.hxx"
+#include "util.hxx"
+#include "Document.hxx"
+#include "Element.hxx"
+#include "Comment.hxx"
+#include "TypeError.hxx"
 
 using GR::Comment;
 using GR::Document;

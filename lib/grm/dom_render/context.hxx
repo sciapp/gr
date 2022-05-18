@@ -1,14 +1,27 @@
 #ifndef CONTEXT_HXX
 #define CONTEXT_HXX
 
+#ifndef GRM_INCLUDE_PATH_
+#define GRM_QUOTE_(x) #x
+#ifdef BUILDING_GR
+#define GRM_INCLUDE_PATH_(filename) GRM_QUOTE_(filename)
+#else
+/* clang-format off */
+#define GRM_INCLUDE_PATH_(filename) GRM_QUOTE_(grm/filename)
+/* clang-format on */
+#endif
+#endif
+
 #include <map>
 #include <vector>
 #include <iostream>
 #include <string>
 #include <type_traits>
 
-#include "NotFoundError.h"
-#include "TypeError.hxx"
+/* clang-format off */
+#include GRM_INCLUDE_PATH_(dom_render/NotFoundError.h)
+#include GRM_INCLUDE_PATH_(dom_render/TypeError.hxx)
+/* clang-format on */
 
 namespace GR
 {

@@ -1,6 +1,17 @@
 #ifndef GRM_PLOT_H_INCLUDED
 #define GRM_PLOT_H_INCLUDED
 
+#ifndef GRM_INCLUDE_PATH_
+#define GRM_QUOTE_(x) #x
+#ifdef BUILDING_GR
+#define GRM_INCLUDE_PATH_(filename) GRM_QUOTE_(filename)
+#else
+/* clang-format off */
+#define GRM_INCLUDE_PATH_(filename) GRM_QUOTE_(grm/filename)
+/* clang-format on */
+#endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -13,8 +24,10 @@ extern "C" {
 #ifdef __cplusplus
 }
 
-#include "GR/Element.hxx"
-#include "render.hxx"
+/* clang-format off */
+#include GRM_INCLUDE_PATH_(dom_render/graphics_tree/Element.hxx)
+#include GRM_INCLUDE_PATH_(dom_render/render.hxx)
+/* clang-format on */
 
 extern "C" {
 #endif
