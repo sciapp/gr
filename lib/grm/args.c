@@ -111,9 +111,16 @@ void *argparse_read_params(const char *format, const void *buffer, va_list *vl, 
 
   /* Reset the save buffer since it was shifted during the parsing process */
   state.save_buffer = save_buffer;
-  if (state.dataslot_count > 1 && islower(first_format_char) && new_format != NULL)
+  if (islower(first_format_char))
     {
-      *new_format = argparse_convert_to_array(&state);
+      if (state.dataslot_count > 1 && new_format != NULL)
+        {
+          *new_format = argparse_convert_to_array(&state);
+        }
+      else if (argparse_format_has_array_terminator[(unsigned char)state.current_format])
+        {
+          ((void **)state.save_buffer)[state.dataslot_count] = NULL;
+        }
     }
 
   /* cleanup */
@@ -439,7 +446,7 @@ size_t argparse_calculate_needed_buffer_size(const char *format, int apply_paddi
 
   needed_size = 0;
   is_array = 0;
-  if (strlen(format) > 1 && argparse_format_has_array_terminator[(unsigned char)*format])
+  if (argparse_format_has_array_terminator[(unsigned char)*format])
     {
       /* Add size for a NULL pointer terminator in the buffer itself because it will be converted to an array buffer
        * later (-> see `argparse_convert_to_array`) */
@@ -887,8 +894,8 @@ int args_check_format_compatibility(const arg_t *arg, const char *compatible_for
   free(compatible_format_for_arg);
 
   /* Otherwise, check if the format is compatible */
-  /* Compatibility is only possible for single array types -> the original format string (ignoring `n`!) must not be
-   * longer than 1 */
+  /* Compatibility is only possible if a single scalar or a single array is stored in the argument
+   * -> the original format string (ignoring `n`!) must not be longer than 1 */
   dataslot_count = 0;
   current_format_ptr = arg->value_format;
   while (*current_format_ptr != '\0' && dataslot_count < 2)
@@ -907,15 +914,29 @@ int args_check_format_compatibility(const arg_t *arg, const char *compatible_for
     {
       return 0;
     }
-  /* Check if the single format character is an uppercase version of the given compatible format */
-  if (first_value_format_char != toupper(first_compatible_format_char))
+  /* Check if the first format types are identical (scalar and arrays of same type are considered compatible) */
+  if (tolower(first_value_format_char) != tolower(first_compatible_format_char))
     {
       return 0;
     }
-  /* Check if the compatible format is not longer than the stored array */
-  if (len_compatible_format > *(size_t *)arg->value_ptr)
+  /* Check if the stored value is a scalar */
+  if (first_value_format_char == tolower(first_value_format_char))
     {
-      return 0;
+      /* Check if the compatible format has the length 1 since single scalar values can only be converted to one array
+       */
+      if (len_compatible_format != 1)
+        {
+          return 0;
+        }
+    }
+  /* Otherwise, it must be an array */
+  else
+    {
+      /* Check if the compatible format is not longer than the stored array */
+      if (len_compatible_format > *(size_t *)arg->value_ptr)
+        {
+          return 0;
+        }
     }
 
   return 1;
@@ -1044,29 +1065,39 @@ error_t arg_increase_array(arg_t *arg, size_t increment)
 
 int(arg_first_value)(const arg_t *arg, const char *first_value_format, void *first_value, unsigned int *array_length)
 {
-  char *transformed_first_value_format;
+  char *transformed_first_value_format = NULL;
+  size_t transformed_first_value_format_length;
+  int array_requested;
   char first_value_type;
-  size_t *size_t_typed_value_ptr;
   void *value_ptr;
+  size_t *size_t_typed_value_ptr;
+  int was_successful = 0;
 
   transformed_first_value_format = malloc(2 * strlen(first_value_format) + 1);
   if (transformed_first_value_format == NULL)
     {
       debug_print_malloc_error();
-      return 0;
+      goto cleanup;
     }
   args_copy_format_string_for_arg(transformed_first_value_format, first_value_format);
-  /* check if value_format does not start with the transformed first_value_format */
-  if (strncmp(arg->value_format, transformed_first_value_format, strlen(transformed_first_value_format)) != 0)
+  transformed_first_value_format_length = strlen(transformed_first_value_format);
+  array_requested = (transformed_first_value_format_length == 2 && transformed_first_value_format[0] == 'n');
+  /* if value_format does not start with the transformed first_value_format, the value cannot be read, so return here */
+  if (strncmp(arg->value_format, transformed_first_value_format, transformed_first_value_format_length) != 0)
     {
-      free(transformed_first_value_format);
-      return 0;
+      /* One exception: If the stored value format is a scalar value (e.g. `i`) and an array of same type shall be read
+       * (in this case `nI`), then allow this (will return a pointer to the internal buffer to emulate an array) */
+      cleanup_if(!(array_requested && strlen(arg->value_format) == 1 &&
+                   arg->value_format[0] == tolower(transformed_first_value_format[1])));
     }
-  free(transformed_first_value_format);
   first_value_type = (arg->value_format[0] != 'n') ? arg->value_format[0] : arg->value_format[1];
   if (islower(first_value_type))
     {
       value_ptr = arg->value_ptr;
+      if (array_length != NULL)
+        {
+          *array_length = 1;
+        }
     }
   else
     {
@@ -1081,9 +1112,14 @@ int(arg_first_value)(const arg_t *arg, const char *first_value_format, void *fir
     {
       if (isupper(first_value_type))
         {
-          /* if the first value is an array simple store the pointer; the type the pointer is pointing to is unimportant
+          /* if the first value is an array simply store the pointer; the type the pointer is pointing to is unimportant
            * in this case so use a void pointer conversion to shorten the code */
           *(void **)first_value = *(void **)value_ptr;
+        }
+      else if (array_requested)
+        {
+          /* if the first value is a scalar but an array is requested simply store the pointer to the internal buffer */
+          *(void **)first_value = value_ptr;
         }
       else
         {
@@ -1105,11 +1141,16 @@ int(arg_first_value)(const arg_t *arg, const char *first_value_format, void *fir
               *(grm_args_t **)first_value = *(grm_args_t **)value_ptr;
               break;
             default:
-              return 0;
+              goto cleanup;
             }
         }
     }
-  return 1;
+  was_successful = 1;
+
+cleanup:
+  free(transformed_first_value_format);
+
+  return was_successful;
 }
 
 int arg_values(const arg_t *arg, const char *expected_format, ...)
@@ -1150,11 +1191,20 @@ int arg_values_vl(const arg_t *arg, const char *expected_format, va_list *vl)
     {
       void *current_value_ptr;
       current_value_ptr = va_arg(*vl, void *);
-      if (value_it->is_array && isupper(*current_va_format))
+      if (isupper(*current_va_format))
         {
-          /* If an array is stored and an array format is given by the user, simply assign a pointer to the data. The
-           * datatype itself is unimportant in this case. */
-          *(void **)current_value_ptr = *(void **)value_it->value_ptr;
+          if (value_it->is_array)
+            {
+              /* If an array is stored and an array format is given by the user, simply assign a pointer to the data.
+               * The datatype itself is unimportant in this case. */
+              *(void **)current_value_ptr = *(void **)value_it->value_ptr;
+            }
+          else
+            {
+              /* Otherwise, a scalar is stored but an array format given. Reuse the internal buffer as an array in this
+               * case. */
+              *(void **)current_value_ptr = value_it->value_ptr;
+            }
         }
       else
         {

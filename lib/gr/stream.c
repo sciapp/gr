@@ -18,7 +18,7 @@
 #define PORT 0x1234
 
 #include "gr.h"
-#include "io.h"
+#include "stream.h"
 #include "gkscore.h"
 
 static int status = EXIT_SUCCESS;

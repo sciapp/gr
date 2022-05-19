@@ -57,7 +57,7 @@ typedef __int64 int64_t;
 #include "contour.h"
 #include "contourf.h"
 #include "strlib.h"
-#include "io.h"
+#include "stream.h"
 #include "md5.h"
 #include "cm.h"
 #include "boundary.h"
@@ -258,6 +258,8 @@ static double arrow_size = 1;
 static int flag_printing = 0, flag_graphics = 0;
 
 static text_node_t *text, *head;
+
+static int scientific_format = SCIENTIFIC_FORMAT_OPTION_E;
 
 #define DEFAULT_FIRST_COLOR 8
 #define DEFAULT_LAST_COLOR 79
@@ -4620,8 +4622,40 @@ void gr_inqtextext(double x, double y, char *string, double *tbx, double *tby)
     }
 }
 
-static void text2dlbl(double x, double y, const char *chars, double value,
-                      void (*fp)(double, double, const char *, double))
+
+/*!
+ * Specify the format to be used when scientific notation is used.
+ *
+ * \param[in] format_option Scientific format
+ *
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * The available options are:
+ *
+ * +----------------------------------+---+
+ * |SCIENTIFIC_FORMAT_OPTION_E        |  1|
+ * +----------------------------------+---+
+ * |SCIENTIFIC_FORMAT_OPTION_TEXTEX   |  2|
+ * +----------------------------------+---+
+ * |SCIENTIFIC_FORMAT_OPTION_MATHTEX  |  3|
+ * +----------------------------------+---+
+ *
+ * \endverbatim
+ */
+void gr_setscientificformat(int format_option)
+{
+  check_autoinit;
+
+  if (format_option >= SCIENTIFIC_FORMAT_OPTION_E && format_option <= SCIENTIFIC_FORMAT_OPTION_MATHTEX)
+    {
+      scientific_format = format_option;
+    }
+
+  if (flag_graphics) gr_writestream("<setscientificformat option=>\n", format_option);
+}
+
+static void text2dlbl(double x, double y, char *chars, double value, void (*fp)(double, double, const char *, double))
 {
   int errind, tnr;
 
@@ -4640,14 +4674,23 @@ static void text2dlbl(double x, double y, const char *chars, double value,
     }
 
   if (fp == NULL)
-    gr_textex(x, y, chars, 0, NULL, NULL);
+    {
+      if (scientific_format == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
+        {
+          gr_mathtex(x, y, chars);
+        }
+      else
+        {
+          gr_textex(x, y, chars, 0, NULL, NULL);
+        }
+    }
   else
     fp(x, y, chars, value);
 
   if (tnr != NDC) gks_select_xform(tnr);
 }
 
-static void text2d(double x, double y, const char *chars)
+static void text2d(double x, double y, char *chars)
 {
   /* 42. dummy value will not be interpreted until last argument fp != NULL */
   text2dlbl(x, y, chars, 42., NULL);
@@ -4684,11 +4727,11 @@ static char *replace_minus_sign(char *string)
   return string;
 }
 
-static char *gr_ftoa(char *string, double value, double reference)
+static char *gr_ftoa(char *string, double value, format_reference_t *reference)
 {
   char *s;
 
-  s = str_ftoa(string, value, reference);
+  s = str_ftoa(string, value, reference, scientific_format);
 
   return replace_minus_sign(s);
 }
@@ -4747,6 +4790,8 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
   int64_t i;
   int decade, exponent;
   char string[256];
+
+  format_reference_t format_reference;
 
   if (x_tick < 0 || y_tick < 0)
     {
@@ -4844,7 +4889,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                                 text2dlbl(x_label, yi, replace_minus_sign(string), yi, fpy);
                               }
                             else
-                              text2dlbl(x_label, yi, gr_ftoa(string, yi, 0.), yi, fpy);
+                              text2dlbl(x_label, yi, gr_ftoa(string, yi, NULL), yi, fpy);
                           }
                       }
                 }
@@ -4884,6 +4929,8 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           start_pline(x_org, y_min);
 
+          str_get_format_reference(&format_reference, y_org, y_min, y_max, y_tick, major_y);
+
           while (yi <= y_max + feps)
             {
               pline(x_org, yi);
@@ -4894,7 +4941,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                     {
                       xi = major_tick;
                       if (yi != y_org || y_org == y_min || y_org == y_max)
-                        if (major_y > 0) text2dlbl(x_label, yi, gr_ftoa(string, yi, y_tick * major_y), yi, fpy);
+                        if (major_y > 0) text2dlbl(x_label, yi, gr_ftoa(string, yi, &format_reference), yi, fpy);
                     }
                   else
                     xi = minor_tick;
@@ -4970,7 +5017,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                                 text2dlbl(xi, y_label, replace_minus_sign(string), xi, fpx);
                               }
                             else
-                              text2dlbl(xi, y_label, gr_ftoa(string, xi, 0.), xi, fpx);
+                              text2dlbl(xi, y_label, gr_ftoa(string, xi, NULL), xi, fpx);
                           }
                       }
                 }
@@ -5006,6 +5053,8 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
 
+          str_get_format_reference(&format_reference, x_org, x_min, x_max, x_tick, major_x);
+
           /* draw X-axis */
 
           start_pline(x_min, y_org);
@@ -5020,7 +5069,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                     {
                       yi = major_tick;
                       if (xi != x_org || x_org == x_min || x_org == x_max)
-                        if (major_x > 0) text2dlbl(xi, y_label, gr_ftoa(string, xi, x_tick * major_x), xi, fpx);
+                        if (major_x > 0) text2dlbl(xi, y_label, gr_ftoa(string, xi, &format_reference), xi, fpx);
                     }
                   else
                     yi = minor_tick;
@@ -6116,7 +6165,14 @@ static void text3d(double x, double y, double z, char *chars, int axis)
           gks_select_xform(NDC);
         }
 
-      gr_textex(p_x, p_y, chars, 0, NULL, NULL);
+      if (scientific_format == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
+        {
+          gr_mathtex(p_x, p_y, chars);
+        }
+      else
+        {
+          gr_textex(p_x, p_y, chars, 0, NULL, NULL);
+        }
 
       if (tnr != NDC) gks_select_xform(tnr);
     }
@@ -6420,6 +6476,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   int decade, exponent;
   char string[256];
 
+  format_reference_t format_reference;
+
   if (x_tick < 0 || y_tick < 0 || z_tick < 0)
     {
       fprintf(stderr, "invalid interval length for major tick-marks\n");
@@ -6606,7 +6664,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                             text3d(x_label, y_label, zi, replace_minus_sign(string), 0);
                           }
                         else
-                          text3d(x_label, y_label, zi, gr_ftoa(string, zi, 0.), 0);
+                          text3d(x_label, y_label, zi, gr_ftoa(string, zi, NULL), 0);
                       }
                 }
 
@@ -6639,9 +6697,12 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(z_min / z_tick);
           zi = i * z_tick;
 
+          str_get_format_reference(&format_reference, z_org, z_min, z_max, z_tick, major_z);
+
           /* draw Z-axis */
 
           start_pline3d(x_org, y_org, z_min);
+
 
           while (zi <= z_max)
             {
@@ -6652,7 +6713,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   xi = x_major_tick;
                   yi = y_major_tick;
                   if ((zi != z_org) && (major_z > 0))
-                    text3d(x_label, y_label, zi, gr_ftoa(string, zi, z_tick * major_z),
+                    text3d(x_label, y_label, zi, gr_ftoa(string, zi, &format_reference),
                            modern_projection_type ? axis : 0);
                 }
               else
@@ -6768,7 +6829,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                             text3d(x_label, yi, z_label, replace_minus_sign(string), 0);
                           }
                         else
-                          text3d(x_label, yi, z_label, gr_ftoa(string, yi, 0.), 0);
+                          text3d(x_label, yi, z_label, gr_ftoa(string, yi, NULL), 0);
                       }
                 }
 
@@ -6801,6 +6862,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(y_min / y_tick);
           yi = i * y_tick;
 
+          str_get_format_reference(&format_reference, y_org, y_min, y_max, y_tick, major_y);
+
           /* draw Y-axis */
 
           start_pline3d(x_org, y_min, z_org);
@@ -6814,7 +6877,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   xi = x_major_tick;
                   zi = z_major_tick;
                   if ((yi != y_org) && (major_y > 0))
-                    text3d(x_label, yi, z_label, gr_ftoa(string, yi, y_tick * major_y),
+                    text3d(x_label, yi, z_label, gr_ftoa(string, yi, &format_reference),
                            modern_projection_type ? axis : 0);
                 }
               else
@@ -6930,7 +6993,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                             text3d(xi, y_label, z_label, replace_minus_sign(string), 0);
                           }
                         else
-                          text3d(xi, y_label, z_label, gr_ftoa(string, xi, 0.), 0);
+                          text3d(xi, y_label, z_label, gr_ftoa(string, xi, NULL), 0);
                       }
                 }
 
@@ -6963,6 +7026,9 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
 
+
+          str_get_format_reference(&format_reference, x_org, x_min, x_max, x_tick, major_x);
+
           /* draw X-axis */
 
           start_pline3d(x_min, y_org, z_org);
@@ -6976,7 +7042,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   yi = y_major_tick;
                   zi = z_major_tick;
                   if ((xi != x_org) && (major_x > 0))
-                    text3d(xi, y_label, z_label, gr_ftoa(string, xi, x_tick * major_x),
+                    text3d(xi, y_label, z_label, gr_ftoa(string, xi, &format_reference),
                            modern_projection_type ? axis : 0);
                 }
               else
@@ -8579,6 +8645,8 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
   double chux, chuy;
   int nxq, nyq;
   double *xq = NULL, *yq = NULL, *zq = NULL;
+  int scale_options;
+  double *x = NULL, *y = NULL;
 
   if ((nx <= 0) || (ny <= 0))
     {
@@ -8604,7 +8672,25 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
 
   check_autoinit;
 
-  setscale(lx.scale_options);
+  scale_options = lx.scale_options;
+  if (scale_options != 0)
+    {
+      setscale(scale_options & ~(OPTION_FLIP_X | OPTION_FLIP_Y));
+
+      x = (double *)xcalloc(nx, sizeof(double));
+      for (i = 0; i < nx; i++) x[i] = x_lin(px[i]);
+
+      y = (double *)xcalloc(ny, sizeof(double));
+      for (i = 0; i < ny; i++) y[i] = y_lin(py[i]);
+
+      setscale(scale_options &
+               ~(OPTION_X_LOG | OPTION_Y_LOG | OPTION_X_LOG2 | OPTION_Y_LOG2 | OPTION_X_LN | OPTION_Y_LN));
+    }
+  else
+    {
+      x = px;
+      y = py;
+    }
 
   /* save linetype, line color, text alignment and character-up vector */
 
@@ -8615,9 +8701,9 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
 
   gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
 
-  if (!islinspace(nx, px) || !islinspace(ny, py))
+  if (!islinspace(nx, x) || !islinspace(ny, y))
     {
-      rebin(nx, ny, px, py, pz, &nxq, &nyq, &xq, &yq, &zq);
+      rebin(nx, ny, x, y, pz, &nxq, &nyq, &xq, &yq, &zq);
 
       gr_draw_contours(nxq, nyq, nh, xq, yq, h, zq, major_h);
 
@@ -8626,10 +8712,17 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
       free(xq);
     }
   else
-    gr_draw_contours(nx, ny, nh, px, py, h, pz, major_h);
+    gr_draw_contours(nx, ny, nh, x, y, h, pz, major_h);
 
-  /* restore linetype, line color, character-up vector and text alignment */
+  if (x != px) free(x);
+  if (y != py) free(y);
 
+  /* restore scale options, linetype, line color, character-up vector and text alignment */
+
+  if (scale_options != 0)
+    {
+      setscale(scale_options);
+    }
   gks_set_pline_linetype(ltype);
   gks_set_pline_color_index(color);
   gks_set_text_align(halign, valign);
@@ -9165,6 +9258,7 @@ void gr_colorbar(void)
   int i, nz, ci, cells;
   double x, y, z, dy, dz;
   char text[256];
+  format_reference_t format_reference;
 
   check_autoinit;
 
@@ -9204,11 +9298,13 @@ void gr_colorbar(void)
   gks_set_clipping(GKS_K_NOCLIP);
 
   x = xmax + 0.01 * (xmax - xmin) / (vp[1] - vp[0]);
+  str_get_format_reference(&format_reference, 0, zmin, zmax, dz, 0);
+
   for (i = 0; i <= nz; i++)
     {
       y = ymin + i * dy;
       z = zmin + i * dz;
-      text2d(x, y, gr_ftoa(text, z, dz));
+      text2d(x, y, gr_ftoa(text, z, &format_reference));
     }
 
   /* restore text alignment and clipping indicator */

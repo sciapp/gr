@@ -1272,8 +1272,7 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
             }
           pgf_printf(p->stream, "\\definecolor{mycolor}{RGB}{%d,%d,%d}\n", (rgba & 0xff), ((rgba >> 8) & 0xff),
                      ((rgba >> 16) & 0xff));
-          pgf_printf(p->stream,
-                     "\\draw[color=mycolor, line caps=round, line width=%fpt, opacity=%f] (%f,%f) -- (%f,%f)",
+          pgf_printf(p->stream, "\\draw[color=mycolor, line cap=round, line width=%fpt, opacity=%f] (%f,%f) -- (%f,%f)",
                      line_width, p->transparency, xim1, yim1, xi, yi);
         }
       prev_rgba = rgba;
@@ -1342,7 +1341,7 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
 
       pgf_printf(p->stream, "\\definecolor{mycolor}{RGB}{%d,%d,%d}\n", red, green, blue);
       pgf_printf(p->stream,
-                 "\\draw[color=mycolor, line caps=round, line width=%fpt, opacity=%f] "
+                 "\\draw[color=mycolor, line cap=round, line width=%fpt, opacity=%f] "
                  "(%f,%f) -- (%f,%f) -- (%f,%f) --cycle;\n",
                  gkss->lwidth * p->nominal_size, p->transparency, triangle[0].x, triangle[0].y, triangle[1].x,
                  triangle[1].y, triangle[2].x, triangle[2].y);

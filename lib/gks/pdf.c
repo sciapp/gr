@@ -415,7 +415,7 @@ static void pdf_close(PDF *p)
   int mask_id, filter_id, i;
   stroke_data_t s;
 
-  pdf_printf(p->stream, "%%PDF-1.%d\n", p->compress ? 2 : 0);
+  pdf_printf(p->stream, "%%PDF-1.4\n");
   pdf_printf(p->stream, "%%\344\343\317\322\n");
 
   time(&timer);

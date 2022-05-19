@@ -45,7 +45,7 @@ export PATH=${PATH}:${extras}/bin
 
 ${MAKE} -C 3rdparty
 ${MAKE} -C 3rdparty extras
-${MAKE} EXTRA_CFLAGS=-I${extras}/include \
-     EXTRA_CXXFLAGS=-I${extras}/include \
-     EXTRA_LDFLAGS=-L${extras_lib} \
+${MAKE} EXTRA_CFLAGS="${EXTRA_CFLAGS} -I${extras}/include" \
+     EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS} -I${extras}/include" \
+     EXTRA_LDFLAGS="${EXTRA_LDFLAGS} -L${extras_lib}" \
      ${opts} install
