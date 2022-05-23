@@ -5,66 +5,40 @@ endif
        GRDIR = /usr/local/gr
       LIBDIR = $(DESTDIR)$(GRDIR)/lib
       INCDIR = $(DESTDIR)$(GRDIR)/include
-   GRMINCDIR = $(INCDIR)/grm
 
 UNAME := $(shell uname)
 
-     GRMOBJS = args.o \
-               base64.o \
-               dump.o \
-               dynamic_args_array.o \
-               error.o \
-               event.o \
-               interaction.o \
-               json.o \
-               layout.o \
-               layout_c.o \
-               logging.o \
-               memwriter.o \
-               net.o \
-               plot.o \
-               util.o \
-               datatype/double_map.o \
-               datatype/string_array_map.o \
-               datatype/string_list.o \
-               datatype/string_map.o \
-               datatype/uint_map.o \
-               dom_render/context.o \
-               dom_render/render.o \
-               dom_render/graphics_tree/Comment.o \
-               dom_render/graphics_tree/Document.o \
-               dom_render/graphics_tree/Element.o \
-               dom_render/graphics_tree/Node.o \
-               dom_render/graphics_tree/Value.o \
-               dom_render/graphics_tree/util.o
-  GRMHEADERS = args.h \
-               base64.h \
-               dump.h \
-               event.h \
-               interaction.h \
-               layout.h \
-               net.h \
-               plot.h \
-               util.h \
-               dom_render/NotFoundError.h \
-               dom_render/TypeError.hxx \
-               dom_render/context.hxx \
-               dom_render/render.hxx \
-               dom_render/graphics_tree/Comment.hxx \
-               dom_render/graphics_tree/Document.hxx \
-               dom_render/graphics_tree/Element.hxx \
-               dom_render/graphics_tree/HierarchyRequestError.hxx \
-               dom_render/graphics_tree/IndexSizeError.hxx \
-               dom_render/graphics_tree/Node.hxx \
-               dom_render/graphics_tree/NotFoundError.hxx \
-               dom_render/graphics_tree/NotSupportedError.hxx \
-               dom_render/graphics_tree/TypeError.hxx \
-               dom_render/graphics_tree/Value.hxx \
-               dom_render/graphics_tree/util.hxx
+     GRMOBJS = src/grm/args.o \
+               src/grm/base64.o \
+               src/grm/dump.o \
+               src/grm/dynamic_args_array.o \
+               src/grm/error.o \
+               src/grm/event.o \
+               src/grm/interaction.o \
+               src/grm/json.o \
+               src/grm/layout.o \
+               src/grm/layout_c.o \
+               src/grm/logging.o \
+               src/grm/memwriter.o \
+               src/grm/net.o \
+               src/grm/plot.o \
+               src/grm/util.o \
+               src/grm/datatype/double_map.o \
+               src/grm/datatype/string_array_map.o \
+               src/grm/datatype/string_list.o \
+               src/grm/datatype/string_map.o \
+               src/grm/datatype/uint_map.o \
+               src/grm/dom_render/context.o \
+               src/grm/dom_render/render.o \
+               src/grm/dom_render/graphics_tree/Comment.o \
+               src/grm/dom_render/graphics_tree/Document.o \
+               src/grm/dom_render/graphics_tree/Element.o \
+               src/grm/dom_render/graphics_tree/Node.o \
+               src/grm/dom_render/graphics_tree/Value.o \
+               src/grm/dom_render/graphics_tree/util.o
      DEFINES = -DBUILDING_GR
-    INCLUDES = -I. \
-               -I./gr-dom-render/include \
-               -I./gr-dom-render/gr-graphics-tree-interface/include \
+    INCLUDES = -I./include \
+               -I./src \
                -I../gks \
                -I../gr \
                -I../gr3 \
@@ -129,21 +103,16 @@ install:
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	cp -p libGRM.* $(LIBDIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
-	cp -p grm.h $(INCDIR)
-	@if [ ! -d $(GRMINCDIR) ]; then mkdir -m 755 $(GRMINCDIR); fi
-	@for header in $(GRMHEADERS); do \
-	  header_directory="$(GRMINCDIR)/$$(dirname "$${header}")"; \
-	  if [ ! -d "$${header_directory}" ]; then mkdir -m 755 -p "$${header_directory}"; fi; \
-	  cp -p "$${header}" "$${header_directory}"; \
-	done
+	cp -p include/grm.h $(INCDIR)
+	cp -rp include/grm $(INCDIR)/
 
 clean:
 	rm -f *.so \
 	      *.a \
-	      *.o \
-	      datatype/*.o \
-	      gr-dom-render/src/*.o \
-	      gr-dom-render/gr-graphics-tree-interface/src/*.o \
+	      src/grm/*.o \
+	      src/grm/datatype/*.o \
+	      src/grm/dom_render/*.o \
+	      src/grm/dom_render/graphics_tree/*.o \
 	      *${GR_SHARED_LIBRARY_SUFFIX}
 
 .PHONY: all targets install clean prerequisites libGR libGR3
