@@ -1505,12 +1505,15 @@ static void interp(char *str)
 {
   char *s;
   int sp = 0, *len;
+  char *use_cairo;
+
+  use_cairo = (char *)gks_getenv("GKS_QT_USE_CAIRO");
   s = str;
 
   RESOLVE(len, int, sizeof(int));
   while (*len)
     {
-      if (getenv("GKS_QT_USE_CAIRO"))
+      if (use_cairo)
         {
           sp += gks_dl_read_item(s + sp, &gkss, cairo_dl_render);
         }
@@ -1521,7 +1524,7 @@ static void interp(char *str)
       RESOLVE(len, int, sizeof(int));
     }
 
-  if (p->cairo_initialised)
+  if (use_cairo && p->cairo_initialised)
     {
       gks_cairo_write_page();
     }
@@ -1550,8 +1553,11 @@ static void initialize_data()
     }
 
   p->empty = true;
+
+  p->cairo_initialised = false;
   p->prevent_resize_by_dl = false;
   p->interp_was_called = false;
+
   p->window[0] = 0.0;
   p->window[1] = 1.0;
   p->window[2] = 0.0;
