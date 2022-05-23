@@ -11,7 +11,7 @@ set(EXECUTABLE_SOURCES
     barplot.c
     custom_receiver.c
     custom_sender.c
-    dom_render.cpp
+    dom_render.cxx
     event_handling.c
     heatmap.c
     histogram.c
@@ -43,7 +43,7 @@ foreach(executable_source ${EXECUTABLE_SOURCES})
   target_link_libraries("${PROJECT_NAME}_${executable}" PRIVATE gr_shared)
   target_link_libraries("${PROJECT_NAME}_${executable}" PRIVATE gks_shared)
   target_link_libraries("${PROJECT_NAME}_${executable}" PRIVATE m)
-  if("${ext}" STREQUAL ".cpp")
+  if("${ext}" STREQUAL ".cxx")
     target_link_libraries("${PROJECT_NAME}_${executable}" PRIVATE GRender)
     target_link_libraries("${PROJECT_NAME}_${executable}" PRIVATE gr_graphics_tree_interface)
   endif()

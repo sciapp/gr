@@ -462,12 +462,12 @@ set(GRM_SOURCES
     lib/grm/src/grm/event.c
     lib/grm/src/grm/interaction.c
     lib/grm/src/grm/json.c
-    lib/grm/src/grm/layout_c.cpp
-    lib/grm/src/grm/layout.cpp
+    lib/grm/src/grm/layout_c.cxx
+    lib/grm/src/grm/layout.cxx
     lib/grm/src/grm/logging.c
     lib/grm/src/grm/memwriter.c
     lib/grm/src/grm/net.c
-    lib/grm/src/grm/plot.cpp
+    lib/grm/src/grm/plot.cxx
     lib/grm/src/grm/util.c
     lib/grm/src/grm/datatype/double_map.c
     lib/grm/src/grm/datatype/string_array_map.c

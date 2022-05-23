@@ -68,9 +68,6 @@ endif
 .c.o:
 	$(CC) -o $@ -c $(INCLUDES) $(CFLAGS) $<
 
-.cpp.o:
-	$(CXX) -o $@ -c $(INCLUDES) $(CXXFLAGS) $<
-
 .cxx.o:
 	$(CXX) -o $@ -c $(INCLUDES) $(CXXFLAGS) $<
 
@@ -117,4 +114,4 @@ clean:
 
 .PHONY: all targets install clean prerequisites libGR libGR3
 .SUFFIXES:  # Delete the default suffixes
-.SUFFIXES: .c .cpp .cxx .o  # List all suffixes for suffix rules explicitly
+.SUFFIXES: .c .cxx .o  # List all suffixes for suffix rules explicitly

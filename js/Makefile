@@ -161,9 +161,6 @@ $(GRDIR)/gr.o: ../lib/gr/gr_version.h
 %.o: %.c $(LIBS)
 	$(CC) -c $(CFLAGS) -o $@ $< $(INCLUDES)
 
-%.o: %.cpp $(LIBS)
-	$(CXX) -c $(CXXFLAGS) -o $@ $< $(INCLUDES)
-
 %.o: %.cxx $(LIBS)
 	$(CXX) -c $(CXXFLAGS) -o $@ $< $(INCLUDES)
 

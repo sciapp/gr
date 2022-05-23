@@ -47,17 +47,12 @@ endif
             src/grm/dom_render/graphics_tree/util.o
 
 
-.SUFFIXES: .o .c .cpp
-
 default: all
 
 all: libGRM.dll libGRM.lib
 
 .c.o:
 	$(CC) -o $@ -c $(INCLUDES) $(CFLAGS) $<
-
-.cpp.o:
-	$(CXX) -o $@ -c $(INCLUDES) $(CXXFLAGS) $<
 
 .cxx.o:
 	$(CXX) -o $@ -c $(INCLUDES) $(CXXFLAGS) $<
@@ -80,4 +75,4 @@ clean:
 
 .PHONY: default all clean
 .SUFFIXES:  # Delete the default suffixes
-.SUFFIXES: .c .cpp .cxx .o  # List all suffixes for suffix rules explicitly
+.SUFFIXES: .c .cxx .o  # List all suffixes for suffix rules explicitly

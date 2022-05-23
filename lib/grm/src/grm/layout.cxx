@@ -2,7 +2,7 @@
 #include <limits>
 #include <sstream>
 #include "args_int.h"
-#include <grm/layout.hpp>
+#include <grm/layout.hxx>
 
 double epsilon = std::numeric_limits<double>::epsilon();
 

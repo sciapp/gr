@@ -1,5 +1,5 @@
-#ifndef LAYOUT_HPP_INCLUDED
-#define LAYOUT_HPP_INCLUDED
+#ifndef LAYOUT_HXX_INCLUDED
+#define LAYOUT_HXX_INCLUDED
 
 #include <vector>
 #include <unordered_map>
@@ -84,4 +84,4 @@ private:
   void upsize(int nrows, int ncols);
 };
 
-#endif /* ifndef LAYOUT_HPP_INCLUDED */
+#endif /* ifndef LAYOUT_HXX_INCLUDED */
