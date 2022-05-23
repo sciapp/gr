@@ -38,7 +38,8 @@ QHULLDIR = ../3rdparty/qhull
   GR3DIR = ../lib/gr3
   GRMDIR = ../lib/grm
 INCLUDES = -I$(THIRDPARTYDIR)/include/ \
-           -I$(GRMDIR) \
+           -I$(GRMDIR)/include \
+           -I$(GRMDIR)/src \
            -I$(GR3DIR) \
            -I$(GRDIR) \
            -I$(GKSDIR) \
@@ -84,34 +85,34 @@ INCLUDES = -I$(THIRDPARTYDIR)/include/ \
            $(GR3DIR)/gr3_png.o \
            $(GR3DIR)/gr3_povray.o \
            $(GR3DIR)/gr3_sr.o
- GRMOBJS = $(GRMDIR)/args.o \
-           $(GRMDIR)/base64.o \
-           $(GRMDIR)/dump.o \
-           $(GRMDIR)/dynamic_args_array.o \
-           $(GRMDIR)/error.o \
-           $(GRMDIR)/event.o \
-           $(GRMDIR)/interaction.o \
-           $(GRMDIR)/json.o \
-           $(GRMDIR)/layout.o \
-           $(GRMDIR)/layout_c.o \
-           $(GRMDIR)/logging.o \
-           $(GRMDIR)/memwriter.o \
-           $(GRMDIR)/net.o \
-           $(GRMDIR)/plot.o \
-           $(GRMDIR)/util.o \
-           $(GRMDIR)/datatype/double_map.o \
-           $(GRMDIR)/datatype/string_array_map.o \
-           $(GRMDIR)/datatype/string_list.o \
-           $(GRMDIR)/datatype/string_map.o \
-           $(GRMDIR)/datatype/uint_map.o \
-           $(GRMDIR)/dom_render/context.o \
-           $(GRMDIR)/dom_render/render.o \
-           $(GRMDIR)/dom_render/graphics_tree/Comment.o \
-           $(GRMDIR)/dom_render/graphics_tree/Document.o \
-           $(GRMDIR)/dom_render/graphics_tree/Element.o \
-           $(GRMDIR)/dom_render/graphics_tree/Node.o \
-           $(GRMDIR)/dom_render/graphics_tree/Value.o \
-           $(GRMDIR)/dom_render/graphics_tree/util.o
+ GRMOBJS = $(GRMDIR)/src/grm/args.o \
+           $(GRMDIR)/src/grm/base64.o \
+           $(GRMDIR)/src/grm/dump.o \
+           $(GRMDIR)/src/grm/dynamic_args_array.o \
+           $(GRMDIR)/src/grm/error.o \
+           $(GRMDIR)/src/grm/event.o \
+           $(GRMDIR)/src/grm/interaction.o \
+           $(GRMDIR)/src/grm/json.o \
+           $(GRMDIR)/src/grm/layout.o \
+           $(GRMDIR)/src/grm/layout_c.o \
+           $(GRMDIR)/src/grm/logging.o \
+           $(GRMDIR)/src/grm/memwriter.o \
+           $(GRMDIR)/src/grm/net.o \
+           $(GRMDIR)/src/grm/plot.o \
+           $(GRMDIR)/src/grm/util.o \
+           $(GRMDIR)/src/grm/datatype/double_map.o \
+           $(GRMDIR)/src/grm/datatype/string_array_map.o \
+           $(GRMDIR)/src/grm/datatype/string_list.o \
+           $(GRMDIR)/src/grm/datatype/string_map.o \
+           $(GRMDIR)/src/grm/datatype/uint_map.o \
+           $(GRMDIR)/src/grm/dom_render/context.o \
+           $(GRMDIR)/src/grm/dom_render/render.o \
+           $(GRMDIR)/src/grm/dom_render/graphics_tree/Comment.o \
+           $(GRMDIR)/src/grm/dom_render/graphics_tree/Document.o \
+           $(GRMDIR)/src/grm/dom_render/graphics_tree/Element.o \
+           $(GRMDIR)/src/grm/dom_render/graphics_tree/Node.o \
+           $(GRMDIR)/src/grm/dom_render/graphics_tree/Value.o \
+           $(GRMDIR)/src/grm/dom_render/graphics_tree/util.o
     OBJS = $(GRMOBJS) $(GR3OBJS) $(GROBJS) $(GKSOBJS)
     LIBS = $(JPEGDIR)/libjpeg.a \
            $(PNGDIR)/libpng.a \
@@ -159,9 +160,6 @@ $(GRDIR)/gr.o: ../lib/gr/gr_version.h
 
 %.o: %.c $(LIBS)
 	$(CC) -c $(CFLAGS) -o $@ $< $(INCLUDES)
-
-%.o: %.cpp $(LIBS)
-	$(CXX) -c $(CXXFLAGS) -o $@ $< $(INCLUDES)
 
 %.o: %.cxx $(LIBS)
 	$(CXX) -c $(CXXFLAGS) -o $@ $< $(INCLUDES)
