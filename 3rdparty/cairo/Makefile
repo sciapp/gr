@@ -34,7 +34,7 @@ $(PREFIX)/src/cairo-$(VERSION)/configure: $(PREFIX)/src/cairo-$(VERSION).tar.xz
 
 $(PREFIX)/src/cairo-$(VERSION)/Makefile: $(PREFIX)/src/cairo-$(VERSION)/configure $(PREFIX)/lib/libz.a $(PREFIX)/lib/libpng.a $(PREFIX)/lib/libfreetype.a $(PREFIX)/lib/libpixman-1.a
 	cd $(PREFIX)/src/cairo-$(VERSION) && \
-	export CFLAGS=-O && \
+	export CFLAGS="-O -fPIC" && \
 	export LIBS=$(PREFIX)/lib/libz.a && \
 	export png_REQUIRES=libpng16 && \
 	export png_CFLAGS=-I$(PREFIX)/include && \
@@ -76,7 +76,7 @@ $(PREFIX)/src/cairo-$(VERSION)/Makefile: $(PREFIX)/src/cairo-$(VERSION)/configur
 	touch $@
 
 $(PREFIX)/lib/libcairo.a: $(PREFIX)/src/cairo-$(VERSION)/Makefile
-	export CFLAGS=-O && \
+	export CFLAGS="-O -fPIC" && \
 	export LIBS=$(PREFIX)/lib/libz.a && \
 	export png_REQUIRES=libpng16 && \
 	export png_CFLAGS=-I$(PREFIX)/include && \
