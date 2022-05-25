@@ -9552,10 +9552,12 @@ static int gks_wstype(char *type)
     wstype = 390;
   else if (!str_casecmp(type, "pgf"))
     wstype = 314;
+  else if (!str_casecmp(type, "ppm"))
+    wstype = 170;
   else
     {
       fprintf(stderr, "%s: unrecognized file type\nAvailable formats: \
-bmp, eps, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff or wmf\n",
+bmp, eps, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff, wmf or ppm\n",
               type);
       wstype = -1;
     }
@@ -9563,10 +9565,14 @@ bmp, eps, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff or wmf\n",
   if (wstype == 145 && gks_getenv("GKS_USE_GS_BMP") != NULL) wstype = 320;
 
   if (wstype == 144 && gks_getenv("GKS_USE_GS_JPG") != NULL) wstype = 321;
+  if (wstype == 144 && gks_getenv("GKS_USE_AGG_JPG") != NULL) wstype = 172;
 
   if (wstype == 140 && gks_getenv("GKS_USE_GS_PNG") != NULL) wstype = 322;
+  if (wstype == 140 && gks_getenv("GKS_USE_AGG_PNG") != NULL) wstype = 171;
 
   if (wstype == 146 && gks_getenv("GKS_USE_GS_TIF") != NULL) wstype = 323;
+
+  if (wstype == 143 && gks_getenv("GKS_USE_AGG_MEM") != NULL) wstype = 173;
 
   return wstype;
 }
