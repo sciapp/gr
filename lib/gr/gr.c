@@ -11174,25 +11174,26 @@ static void text_impl(double x, double y, char *string, int inline_math, int inq
             }
 
           yy = textP->y - y;
-          if (inline_math) yy -= charHeight * 0.2;
-
           if (!textP->math && baseLine != NULL)
             {
               yy += *baseLine + 0.5 * charHeight;
             }
           switch (vAlign)
             {
+            case 1:
+              yy += -totalHeight * 0.1;
+              break;
             case 2:
-              yy += charHeight * 0.2;
+              yy += 0;
               break;
             case 3:
               yy += 0.5 * totalHeight;
               break;
             case 4:
-              yy += totalHeight - charHeight * 0.2;
+              yy += totalHeight;
               break;
             case 5:
-              yy += totalHeight;
+              yy += totalHeight * 1.1;
               break;
             default:
               break;
@@ -11226,6 +11227,10 @@ static void text_impl(double x, double y, char *string, int inline_math, int inq
       yy = y;
       switch (vAlign)
         {
+        case 1:
+          yy += -totalHeight * 0.1;
+        case 2:
+          break;
         case 3:
           yy += 0.5 * totalHeight;
           break;
@@ -11233,7 +11238,7 @@ static void text_impl(double x, double y, char *string, int inline_math, int inq
           yy += totalHeight;
           break;
         case 5:
-          yy += totalHeight;
+          yy += totalHeight * 1.1;
           break;
         default:
           break;
