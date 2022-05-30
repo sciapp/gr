@@ -3573,8 +3573,10 @@ static void calculate_alignment_offsets(int horizontal_alignment, int vertical_a
     case GKS_K_TEXT_VALIGN_BOTTOM:
       *y_offset = 0.1 * canvas_height / window_height;
       break;
-    case GKS_K_TEXT_VALIGN_NORMAL:
     case GKS_K_TEXT_VALIGN_BASE:
+      *y_offset = 0;
+      break;
+    case GKS_K_TEXT_VALIGN_NORMAL:
     default:
       *y_offset = -canvas_depth / window_height;
       break;
