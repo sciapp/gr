@@ -431,8 +431,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                 svg_printf(p->stream,
                            "x2=\"%g\" y2=\"%g\" "
                            "style=\"stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g\"/>\n",
-                           x - xr, y + yr, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2], p->linewidth,
-                           p->transparency);
+                           x - xr, y + yr, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2],
+                           gkss->bwidth * p->nominal_size, p->transparency);
             }
           pc += 4;
           break;
@@ -442,8 +442,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                      "<polyline clip-path=\"url(#clip%02d%d)\" "
                      "style=\"stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g; fill:none\" "
                      "points=\"\n  ",
-                     path_id, p->rect_index, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2], p->linewidth,
-                     p->transparency);
+                     path_id, p->rect_index, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2],
+                     gkss->bwidth * p->nominal_size, p->transparency);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -487,8 +487,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                      "<circle clip-path=\"url(#clip%02d%d)\" "
                      "style=\"fill:none; stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g\" "
                      "cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
-                     path_id, p->rect_index, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2], p->linewidth,
-                     p->transparency, x, y, r);
+                     path_id, p->rect_index, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2],
+                     gkss->bwidth * p->nominal_size, p->transparency, x, y, r);
           break;
 
         case 7: /* filled arc */
@@ -751,7 +751,7 @@ static void fillarea(int n, double *px, double *py)
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
       p->color = fl_color;
-      p->linewidth = p->nominal_size;
+      p->linewidth = gkss->bwidth * p->nominal_size;
       line_routine(n, px, py, DrawBorder, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)

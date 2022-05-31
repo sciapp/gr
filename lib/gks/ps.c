@@ -942,10 +942,10 @@ static void ps_init(int *pages)
       packb("/dt {xy np fg x y s 0 360 arc fi} def");
       packb("/pl {sxy np x y m fg -24 0 srl 48 0 srl\
  -24 0 srl 0 24 srl 0 -48 srl sk gr} def");
-      packb("/as {np x y m 0 24 srm 14 -43.4 srl\
- -36.8 26.8 srl 45.6 0 srl -36.8 -26.8 srl");
-      packb("14 43.4 srl 14 -43.4 srl} def");
-      packb("/fas {sxy fg as fill fg as csk gr} def");
+      packb("/as {np x y m 0.0 22.5 srm 5.0 -17.5 srl 17.5 2.5 srl -15.0 -10.0\
+ srl 7.5 -17.5 srl -15.0 12.5 srl -15.0 -12.5 srl 7.5 17.5 srl -15.0 10.0 srl\
+ 17.5 -2.5 srl 5.0 17.5 srl} def");
+      packb("/fas {sxy as cp gs fg fill gr bc sk gr} def");
       packb("/dc {sxy np x y m fg -24 24 srl 48 -48 srl\
  -24 24 srl -24 -24 srl 48 48 srl");
       packb("sk gr} def");
@@ -978,53 +978,58 @@ static void ps_init(int *pages)
  -13.85 -8.425 srl -3.825 15.75 srl -3.825 -15.75 srl -13.85 8.425 srl\
  8.425 -13.85 srl -15.75 -3.825 srl 15.75 -3.825 srl -8.425 -13.85 srl\
  13.85 8.425 srl} def");
-      packb("/ed5 {sxy fg e5 fill fg e5 csk gr} def");
-      packb("/ed6 {sxy fg e6 fill fg e6 csk gr} def");
-      packb("/ed7 {sxy fg e7 fill fg e7 csk gr} def");
-      packb("/ed8 {sxy fg e8 fill fg e8 csk gr} def");
-      packb("/st4 {sxy fg s4 fill fg s4 csk gr} def");
-      packb("/st5 {sxy fg s5 fill fg s5 csk gr} def");
-      packb("/st6 {sxy fg s6 fill fg s6 csk gr} def");
-      packb("/st7 {sxy fg s7 fill fg s7 csk gr} def");
-      packb("/st8 {sxy fg s8 fill fg s8 csk gr} def");
+      packb("/ed5 {sxy e5 cp gs fg fill gr bc sk gr} def");
+      packb("/ed6 {sxy e6 cp gs fg fill gr bc sk gr} def");
+      packb("/ed7 {sxy e7 cp gs fg fill gr bc sk gr} def");
+      packb("/ed8 {sxy e8 cp gs fg fill gr bc sk gr} def");
+      packb("/st4 {sxy s4 cp gs fg fill gr bc sk gr} def");
+      packb("/st5 {sxy s5 cp gs fg fill gr bc sk gr} def");
+      packb("/st6 {sxy s6 cp gs fg fill gr bc sk gr} def");
+      packb("/st7 {sxy s7 cp gs fg fill gr bc sk gr} def");
+      packb("/st8 {sxy s8 cp gs fg fill gr bc sk gr} def");
       packb("/sq {np x y m 0 24 srm 24 0 srl 0 -48 srl\
  -48 0 srl 0 48 srl 24 0 srl} def");
       packb("/nsq {sxy bg sq fi fg sq csk gr} def");
-      packb("/fsq {sxy fg sq fi fg sq csk gr} def");
+      packb("/fsq {sxy sq cp gs fg fill gr bc sk gr} def");
       packb("/ci {np x y 24 s mul 0 360 arc} def");
       packb("/nci {xy bg ci fi fg ci sk} def");
-      packb("/fci {xy fg ci fi fg ci sk} def");
-      packb("/tu {np x y m 0 28 srm -24 -42 srl 48 0 srl -24 42 srl} def");
+      packb("/fci {sxy ci cp gs fg fill gr bc sk gr} def");
+      packb("/tu {np x y m 0 24 srm -24 -48 srl 48 0 srl -24 48 srl} def");
       packb("/ntu {sxy bg tu fi fg tu csk gr} def");
-      packb("/ftu {sxy fg tu fi fg tu csk gr} def");
-      packb("/td {np x y m 0 -28 srm -24 42 srl 48 0 srl -24 -42 srl} def");
+      packb("/ftu {sxy tu cp gs fg fill gr bc sk gr} def");
+      packb("/td {np x y m 0 -24 srm -24 48 srl 48 0 srl -24 -48 srl} def");
       packb("/ntd {sxy bg td fi fg td csk gr} def");
-      packb("/ftd {sxy fg td fi fg td csk gr} def");
+      packb("/ftd {sxy td cp gs fg fill gr bc sk gr} def");
       packb("/dm {np x y m 0 24 srm -24 -24 srl\
  24 -24 srl 24 24 srl -24 24 srl} def");
       packb("/ndm {sxy bg dm fi fg dm csk gr} def");
-      packb("/fdm {sxy fg dm fi fg dm csk gr} def");
+      packb("/fdm {sxy dm cp gs fg fill gr bc sk gr} def");
       packb("/bt {np x y m -30 24 srl 0 -48 srl\
  60 48 srl 0 -48 srl -30 24 srl} def");
       packb("/nbt {sxy bg bt fi fg bt csk gr} def");
-      packb("/fbt {sxy fg bt fi fg bt csk gr} def");
+      packb("/fbt {sxy bt cp gs fg fill gr bc sk gr} def");
       packb("/hg {np x y m -24 30 srl 48 0 srl\
  -48 -60 srl 48 0 srl -24 30 srl} def");
       packb("/nhg {sxy bg hg fi fg hg csk gr} def");
-      packb("/fhg {sxy fg hg fi fg hg csk gr} def");
+      packb("/fhg {sxy hg cp gs fg fill gr bc sk gr} def");
       packb("/st {sxy bg as fi fg as csk gr} def");
       packb("/fst {fas} def");
-      packb("/tud {sxy bg tu fi bg td fi fg tu csk fg td csk gr} def");
+      packb("/ast {sxy np x y m fg 0 25 srl sk np x y m 25 7.5 srl sk\
+ np x y m 15 -25 srl sk np x y m -15 -25 srl sk\
+ np x y m -25 7.5 srl sk} def");
+      packb("/tus {np x y m 0 28 srm -24 -42 srl 48 0 srl -24 42 srl} def");
+      packb("/tds {np x y m 0 -28 srm -24 42 srl 48 0 srl -24 -42 srl} def");
+      packb("/tud {sxy bg tus fi bg tds fi fg tus csk fg tds csk gr} def");
       packb("/tl {np x y m -14 0 srm 42 -24 srl 0 48 srl -42 -24 srl} def");
-      packb("/ftl {sxy fg tl fi fg tl csk gr} def");
+      packb("/ftl {sxy tl cp gs fg fill gr bc sk gr} def");
       packb("/tr {np x y m 28 0 srm -42 -24 srl 0 48 srl 42 -24 srl} def");
-      packb("/ftr {sxy fg tr fi fg tr csk gr} def");
+      packb("/ftr {sxy tr cp gs fg fill gr bc sk gr} def");
       packb("/opl {np x y m 0 24 srm 8 0 srl\
  0 -16 srl 16 0 srl 0 -16 srl -16 0 srl");
       packb("0 -16 srl -16 0 srl 0 16 srl -16 0 srl\
  0 16 srl 16 0 srl 0 16 srl 8 0 srl} def");
       packb("/npl {sxy bg opl fi fg opl csk gr} def");
-      packb("/fpl {sxy fg opl fi fg opl csk gr} def");
+      packb("/fpl {sxy opl cp gs fg fill gr bc sk gr} def");
       packb("/om {np x y m 0 24 srm 16 0 srl\
  8 -8 srl 0 -32 srl -8 -8 srl -32 0 srl");
       packb("-8 8 srl 0 32 srl 8 8 srl 16 0 srl} def");
@@ -1249,7 +1254,7 @@ static void marker_routine(double x, double y, int marker)
   static const char *macro[] = {"nom", " hl", " vl", "st8", "st7", "st6", "st5", "st4", "ed8", "ed7",
                                 "ed6", "ed5", "fpl", "npl", "ftl", "ftr", "tud", "fst", " st", "fdm",
                                 "ndm", "fhg", "nhg", "fbt", "nbt", "fsq", "nsq", "ftd", "ntd", "ftu",
-                                "ntu", "fci", " dt", " dt", " pl", "fas", "nci", " dc"};
+                                "ntu", "fci", " dt", " dt", " pl", "ast", "nci", " dc"};
 
   NDC_to_DC(x, y, dx, dy);
 
@@ -1724,6 +1729,23 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
   packb("0 setlinecap");
 }
 
+static void set_bordercolor(int wtype)
+{
+  char buffer[50];
+
+  if (wtype % 2)
+    {
+      sprintf(buffer, "/bc {%.4g sg} def",
+              0.3 * p->red[gkss->bcoli] + 0.59 * p->green[gkss->bcoli] + 0.11 * p->blue[gkss->bcoli]);
+    }
+  else
+    {
+      sprintf(buffer, "/bc {%.4g %.4g %.4g sc} def", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
+    }
+
+  packb(buffer);
+}
+
 static void draw_markers(int n, double *px, double *py, int *attributes)
 {
   int i, j = 0, rgba;
@@ -1731,6 +1753,8 @@ static void draw_markers(int n, double *px, double *py, int *attributes)
   double mk_size, x, y;
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
+
+  set_bordercolor(p->wtype);
 
   for (i = 0; i < n; i++)
     {
@@ -1987,7 +2011,6 @@ void gks_drv_ps(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r
           set_markersize(size);
           angle = -atan2(x, y) * 180.0 / M_PI;
           set_markerangle(angle);
-          set_linewidth(1.0);
           color = gkss->asf[5] ? gkss->pmcoli : 1;
           set_foreground(color, p->wtype);
           if (gkss->clip_tnr != 0)
@@ -1995,7 +2018,11 @@ void gks_drv_ps(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r
               packb("gsave");
               set_clip(gkss->viewport[gkss->clip_tnr]);
             }
+          set_linewidth(gkss->bwidth);
+          set_bordercolor(p->wtype);
+          packb("0 setlinejoin");
           gks_emul_polymarker(ia[0], r1, r2, marker_routine);
+          packb("1 setlinejoin");
           if (gkss->clip_tnr != 0)
             {
               packb("grestore");
