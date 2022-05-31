@@ -142,6 +142,18 @@ public:
                                         std::optional<std::vector<double>> data, int algorithm, double dmin,
                                         double dmax, const std::shared_ptr<Context> &extContext = nullptr);
 
+  std::shared_ptr<Element> createVolume(int nx, int ny, int nz, const std::string &data_key,
+                                        std::optional<std::vector<double>> data, int algorithm,
+                                        const std::string &dmin_key, double dmin, const std::string &dmax_key,
+                                        double dmax, const std::shared_ptr<Context> &extContext = nullptr);
+
+  std::shared_ptr<Element> createClearWS();
+
+  std::shared_ptr<Element> createUpdateWS();
+
+  std::shared_ptr<Element> createDrawGraphics(const std::string &data_key, std::optional<std::vector<int>> data,
+                                              const std::shared_ptr<Context> &extContext = nullptr);
+
   std::shared_ptr<Element> createTriSurface(const std::string &px_key, std::optional<std::vector<double>> px,
                                             const std::string &py_key, std::optional<std::vector<double>> py,
                                             const std::string &pz_key, std::optional<std::vector<double>> pz,
@@ -152,6 +164,24 @@ public:
                                             const std::string &pz_key, std::optional<std::vector<double>> pz,
                                             const std::string &levels_key, std::optional<std::vector<double>> levels,
                                             const std::shared_ptr<Context> &extContext = nullptr);
+
+  std::shared_ptr<Element> createGR3Clear();
+
+  std::shared_ptr<Element> createGR3DeleteMesh(int mesh);
+
+  //  std::shared_ptr<Element> createGR3DeleteMesh(std::shared_ptr<Element> &element);
+
+  std::shared_ptr<Element> createGR3DrawImage(double xmin, double xmax, double ymin, double ymax, int width, int height,
+                                              int drawable_type);
+
+  //  std::shared_ptr<Element> createGR3IsoSurfaceMesh(const std::string& data_key, std::optional<std::vector<int>>
+  //  *data, int isolevel, unsigned int dim_x, unsigned int dim_y, unsigned int dim_z, unsigned int stride_x, unsigned
+  //  int stride_y, unsigned int stride_z, double step_x, double step_y, double step_z, double offset_x, double
+  //  offset_y, double offset_z);
+
+  std::shared_ptr<Element> createShadePoints(const std::string &x_key, std::optional<std::vector<double>> x,
+                                             const std::string &y_key, std::optional<std::vector<double>> y, int xform,
+                                             int w, int h, const std::shared_ptr<Context> &extContext = nullptr);
 
   //! Modifierfunctions
   void setViewport(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
@@ -228,6 +258,12 @@ public:
   void selectClipXForm(const std::shared_ptr<Element> &element, int form);
 
   void setCharHeight(const std::shared_ptr<Element> &element, double height);
+
+  void setTransparency(const std::shared_ptr<Element> &element, double alpha);
+
+  void setResampleMethod(const std::shared_ptr<Element> &element, int resample);
+
+  void setTextEncoding(const std::shared_ptr<Element> &element, int encoding);
 
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context

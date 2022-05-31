@@ -89,9 +89,20 @@ static void markerHelper(const std::shared_ptr<GR::Element> &element, const std:
 
   auto x = static_cast<std::string>(element->getAttribute("x"));
   auto y = static_cast<std::string>(element->getAttribute("y"));
+  std::string z;
+  if (element->hasAttribute("z"))
+    {
+      z = static_cast<std::string>(element->getAttribute("z"));
+    }
 
   std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
   std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
+  std::vector<double> z_vec;
+  if (auto z_ptr = GR::get_if<std::vector<double>>((*context)[z]))
+    {
+      z_vec = *z_ptr;
+    }
+
 
   int n = std::min(x_vec.size(), y_vec.size());
 
@@ -113,10 +124,18 @@ static void markerHelper(const std::shared_ptr<GR::Element> &element, const std:
         {
           if (colorind.size() > i)
             {
+              if (colorind[i] == 0)
+                {
+                  continue;
+                }
               gr_setmarkercolorind(colorind[i]);
             }
           else
             {
+              if (colorind.back() == 0)
+                {
+                  continue;
+                }
               gr_setmarkercolorind(colorind.back());
             }
         }
@@ -135,6 +154,10 @@ static void markerHelper(const std::shared_ptr<GR::Element> &element, const std:
       if (str == "polymarker")
         {
           gr_polymarker(1, (double *)&(x_vec[i]), (double *)&(y_vec[i]));
+        }
+      else if (str == "polymarker3d")
+        {
+          gr_polymarker3d(1, (double *)&(x_vec[i]), (double *)&(y_vec[i]), (double *)&(z_vec[i]));
         }
     }
 }
@@ -201,9 +224,20 @@ static void lineHelper(const std::shared_ptr<GR::Element> &element, const std::s
 
   auto x = static_cast<std::string>(element->getAttribute("x"));
   auto y = static_cast<std::string>(element->getAttribute("y"));
+  std::string z;
+  if (element->hasAttribute("z"))
+    {
+      z = static_cast<std::string>(element->getAttribute("z"));
+    }
 
   std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
   std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
+  std::vector<double> z_vec;
+
+  if (auto z_ptr = GR::get_if<std::vector<double>>((*context)[z]))
+    {
+      z_vec = *z_ptr;
+    }
 
   int n = std::min(x_vec.size(), y_vec.size());
   for (int i = 0; i < n; ++i)
@@ -244,6 +278,10 @@ static void lineHelper(const std::shared_ptr<GR::Element> &element, const std::s
       if (str == "polyline")
         {
           gr_polyline(2, (double *)&(x_vec[i]), (double *)&(y_vec[i]));
+        }
+      else if (str == "polyline3d")
+        {
+          gr_polyline3d(2, (double *)&(x_vec[i]), (double *)&(y_vec[i]), (double *)&(z_vec[i]));
         }
     }
 }
@@ -735,8 +773,19 @@ static void polyline3d(const std::shared_ptr<GR::Element> &element, const std::s
   double *x_p = &(x_vec[0]);
   double *y_p = &(y_vec[0]);
   double *z_p = &(z_vec[0]);
+  auto group = element->parentElement();
 
-  gr_polyline3d(x_vec.size(), x_p, y_p, z_p);
+  if ((element->hasAttribute("linetypes") || element->hasAttribute("linewidths") ||
+       element->hasAttribute("linecolorinds")) ||
+      ((parentTypes.count(group->localName())) &&
+       (group->hasAttribute("linetypes") || group->hasAttribute("linewidths") || group->hasAttribute("linecolorinds"))))
+    {
+      lineHelper(element, context, "polyline3d");
+    }
+  else
+    {
+      gr_polyline3d(x_vec.size(), x_p, y_p, z_p);
+    }
 }
 
 
@@ -761,7 +810,19 @@ static void polymarker3d(const std::shared_ptr<GR::Element> &element, const std:
   double *y_p = &(y_vec[0]);
   double *z_p = &(z_vec[0]);
 
-  gr_polymarker3d(x_vec.size(), x_p, y_p, z_p);
+  auto group = element->parentElement();
+  if ((element->hasAttribute("markertypes") || element->hasAttribute("markersizes") ||
+       element->hasAttribute("markercolorinds")) ||
+      (parentTypes.count(group->localName()) &&
+       (group->hasAttribute("markertypes") || group->hasAttribute("markersizes") ||
+        group->hasAttribute("markercolorinds"))))
+    {
+      markerHelper(element, context, "polymarker3d");
+    }
+  else
+    {
+      gr_polymarker3d(x_vec.size(), x_p, y_p, z_p);
+    }
 }
 
 static void gr3DrawMesh(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
@@ -808,6 +869,7 @@ static void gr3DrawMesh(const std::shared_ptr<GR::Element> &element, const std::
 static void volume(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   int nx, ny, nz, algorithm;
+  std::string dmin_key, dmax_key;
   double dmin, dmax;
 
   auto data = static_cast<std::string>(element->getAttribute("data"));
@@ -815,8 +877,11 @@ static void volume(const std::shared_ptr<GR::Element> &element, const std::share
   ny = (int)element->getAttribute("ny");
   nz = (int)element->getAttribute("nz");
   algorithm = (int)element->getAttribute("algorithm");
-  dmin = (double)element->getAttribute("dmin");
-  dmax = (double)element->getAttribute("dmax");
+  dmin_key = (std::string)element->getAttribute("dmin");
+  dmax_key = (std::string)element->getAttribute("dmax");
+
+  auto dmin_vec = GR::get<std::vector<double>>((*context)[dmin_key]);
+
 
   std::vector<double> data_vec = GR::get<std::vector<double>>((*context)[data]);
 
@@ -879,6 +944,84 @@ static void triContour(const std::shared_ptr<GR::Element> &element, const std::s
   gr_tricontour(nx, px_p, py_p, pz_p, nl, l_p);
 }
 
+static void gr3Clear(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  gr3_clear();
+}
+
+static void gr3DeleteMesh(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  int mesh = static_cast<int>(element->getAttribute("mesh"));
+  gr3_deletemesh(mesh);
+}
+
+
+static void gr3DrawImage(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  double xmin, xmax, ymin, ymax;
+  int width, height, drawable_type;
+
+  xmin = (double)element->getAttribute("xmin");
+  xmax = (double)element->getAttribute("xmax");
+  ymin = (double)element->getAttribute("ymin");
+  ymax = (double)element->getAttribute("ymax");
+  width = (int)element->getAttribute("width");
+  height = (int)element->getAttribute("height");
+  drawable_type = (int)element->getAttribute("drawable_type");
+
+
+  logger((stderr, "gr3_drawimage returned %i\n", gr3_drawimage(xmin, xmax, ymin, ymax, width, height, drawable_type)));
+}
+
+
+static void shadePoints(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  int xform, w, h, n;
+  std::string xx, yy;
+  double *x, *y;
+
+  xform = (int)element->getAttribute("xform");
+  w = (int)element->getAttribute("w");
+  h = (int)element->getAttribute("h");
+  xx = (std::string)element->getAttribute("x");
+  yy = (std::string)element->getAttribute("y");
+
+  auto x_vec = GR::get<std::vector<double>>((*context)[xx]);
+  auto y_vec = GR::get<std::vector<double>>((*context)[yy]);
+
+  x = &(x_vec[0]);
+  y = &(y_vec[0]);
+  n = std::min(x_vec.size(), y_vec.size());
+
+  gr_shadepoints(n, x, y, xform, w, h);
+}
+
+static void clearWS(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  gr_clearws();
+}
+
+static void updateWS(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  gr_updatews();
+}
+
+
+static void drawGraphics(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  auto key = (std::string)element->getAttribute("data");
+  auto data_vec = GR::get<std::vector<int>>((*context)[key]);
+
+  std::vector<char> char_vec;
+  char_vec.reserve(data_vec.size());
+  for (int i : data_vec)
+    {
+      char_vec.push_back((char)i);
+    }
+  char *data_p = &(char_vec[0]);
+
+  gr_drawgraphics(data_p);
+}
 
 static void processColorRep(const std::shared_ptr<GR::Element> &elem)
 {
@@ -1052,12 +1195,21 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
          gr_settextalign((int)elem->getAttribute("textalign_horizontal"),
                          (int)elem->getAttribute("textalign_vertical"));
        }},
+      {std::string("textencoding"),
+       [](const std::shared_ptr<GR::Element> &elem) { gr_settextencoding((int)elem->getAttribute("textencoding")); }},
+      {std::string("transparency"),
+       [](const std::shared_ptr<GR::Element> &elem) {
+         gr_settransparency((double)elem->getAttribute("transparency"));
+       }},
       {std::string("linespec"),
        [](const std::shared_ptr<GR::Element> &elem) {
          gr_uselinespec(((std::string)elem->getAttribute("linespec")).data());
        }},
       {std::string("window"), processWindow},
       {std::string("window3d"), processWindow3d},
+      {std::string("resamplemethod"),
+       [](const std::shared_ptr<GR::Element>
+              &elem) { gr_setresamplemethod((int)elem->getAttribute("resamplemethod")); }},
       {std::string("space3d"), processSpace3d},
       {std::string("viewport"), processViewport},
       {std::string("scale"),
@@ -1065,7 +1217,7 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
       {std::string("selntran"),
        [](const std::shared_ptr<GR::Element> &elem) { gr_selntran((int)elem->getAttribute("selntran")); }},
       {std::string("gr3cameralookat"), processGR3CameraLookAt},
-      {std::string("gr3setbackgroundcolor"), processGR3BackgroundColor},
+      {std::string("gr3backgroundcolor"), processGR3BackgroundColor},
       {std::string("bordercolorind"),
        [](const std::shared_ptr<GR::Element>
               &elem) { gr_setbordercolorind((int)elem->getAttribute("bordercolorind")); }},
@@ -1134,7 +1286,14 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
                        {std::string("gr3drawmesh"), gr3DrawMesh},
                        {std::string("volume"), volume},
                        {std::string("trisurface"), triSurface},
-                       {std::string("tricontour"), triContour}
+                       {std::string("tricontour"), triContour},
+                       {std::string("gr3clear"), gr3Clear},
+                       {std::string("gr3deletemesh"), gr3DeleteMesh},
+                       {std::string("gr3drawimage"), gr3DrawImage},
+                       {std::string("shadepoints"), shadePoints},
+                       {std::string("clearws"), clearWS},
+                       {std::string("updatews"), updateWS},
+                       {std::string("drawgraphics"), drawGraphics}
 
       };
 
@@ -1154,7 +1313,7 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
               elemStringToFunc[element->localName()];
           f(element, context);
         }
-      catch (std::bad_function_call &e)
+      catch (std::__1::bad_function_call &e)
         {
           throw NotFoundError("No dom render function found for element with local name: " + element->localName());
         }
@@ -1963,6 +2122,51 @@ std::shared_ptr<GR::Element> GR::Render::createVolume(int nx, int ny, int nz, co
   return element;
 }
 
+std::shared_ptr<GR::Element> GR::Render::createVolume(int nx, int ny, int nz, const std::string &data_key,
+                                                      std::optional<std::vector<double>> data, int algorithm,
+                                                      const std::string &dmin_key, double dmin,
+                                                      const std::string &dmax_key, double dmax,
+                                                      const std::shared_ptr<GR::Context> &extContext)
+{
+  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+
+  auto element = createElement("volume");
+  element->setAttribute("data", data_key);
+  element->setAttribute("nx", nx);
+  element->setAttribute("ny", ny);
+  element->setAttribute("nz", nz);
+  element->setAttribute("algorithm", algorithm);
+  element->setAttribute("dmin", dmin_key);
+  element->setAttribute("dmax", dmax_key);
+
+
+  if (auto dmin_ptr = GR::get_if<std::vector<double>>((*useContext)[dmin_key]))
+    {
+      dmin_ptr->push_back(dmin);
+    }
+  else
+    {
+      std::vector<double> dmin_vec{dmin};
+      (*useContext)[dmin_key] = dmin_vec;
+    }
+  if (auto dmax_ptr = GR::get_if<std::vector<double>>((*useContext)[dmax_key]))
+    {
+      dmax_ptr->push_back(dmax);
+    }
+  else
+    {
+      std::vector<double> dmax_vec{dmax};
+      (*useContext)[dmax_key] = dmax_vec;
+    }
+
+  if (data != std::nullopt)
+    {
+      (*useContext)[data_key] = *data;
+    }
+
+
+  return element;
+}
 
 std::shared_ptr<GR::Element>
 GR::Render::createTriSurface(const std::string &px_key, std::optional<std::vector<double>> px,
@@ -2025,6 +2229,93 @@ GR::Render::createTriContour(const std::string &px_key, std::optional<std::vecto
 
   return element;
 }
+
+
+std::shared_ptr<GR::Element> GR::Render::createGR3Clear()
+{
+  auto element = createElement("gr3clear");
+  return element;
+}
+
+std::shared_ptr<GR::Element> GR::Render::createGR3DeleteMesh(int mesh)
+{
+  auto element = createElement("gr3deletemesh");
+  element->setAttribute("mesh", mesh);
+  return element;
+}
+
+std::shared_ptr<GR::Element> GR::Render::createGR3DrawImage(double xmin, double xmax, double ymin, double ymax,
+                                                            int width, int height, int drawable_type)
+{
+  auto element = createElement("gr3drawimage");
+  element->setAttribute("xmin", xmin);
+  element->setAttribute("xmax", xmax);
+  element->setAttribute("ymin", ymin);
+  element->setAttribute("ymax", ymax);
+  element->setAttribute("width", width);
+  element->setAttribute("height", height);
+  element->setAttribute("drawable_type", drawable_type);
+  return element;
+}
+
+std::shared_ptr<GR::Element> GR::Render::createShadePoints(const std::string &x_key,
+                                                           std::optional<std::vector<double>> x,
+                                                           const std::string &y_key,
+                                                           std::optional<std::vector<double>> y, int xform, int w,
+                                                           int h, const std::shared_ptr<GR::Context> &extContext)
+{
+  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  auto element = createElement("shadepoints");
+  if (x != std::nullopt)
+    {
+      (*useContext)[x_key] = *x;
+    }
+  element->setAttribute("x", x_key);
+  if (y != std::nullopt)
+    {
+      (*useContext)[y_key] = *y;
+    }
+  element->setAttribute("y", y_key);
+  element->setAttribute("xform", xform);
+  element->setAttribute("w", w);
+  element->setAttribute("h", h);
+  return element;
+}
+
+
+std::shared_ptr<GR::Element> GR::Render::createClearWS()
+{
+  auto element = createElement("clearws");
+  return element;
+}
+
+std::shared_ptr<GR::Element> GR::Render::createUpdateWS()
+{
+  return createElement("updatews");
+}
+
+std::shared_ptr<GR::Element> GR::Render::createDrawGraphics(const std::string &data_key,
+                                                            std::optional<std::vector<int>> data,
+                                                            const std::shared_ptr<GR::Context> &extContext)
+{
+
+  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+
+  auto element = createElement("drawgraphics");
+
+  if (data != std::nullopt)
+    {
+      (*useContext)[data_key] = *data;
+    }
+  element->setAttribute("data", data_key);
+  return element;
+}
+
+
+// std::shared_ptr<GR::Element> GR::Render::createGR3IsoSurfaceMesh(int* mesh, GR3_MC_DTYPE *data, GR3_MC_DTYPE
+// isolevel, unsigned int dim_x, unsigned int dim_y, unsigned int dim_z, unsigned int stride_x, unsigned int stride_y,
+// unsigned int stride_z, double step_x, double step_y, double step_z, double offset_x, double offset_y, double
+// offset_z);
 
 
 //! Modifierfunctions
@@ -2268,8 +2559,8 @@ void GR::Render::setCharUp(const std::shared_ptr<Element> &element, double ux, d
    * \param[in] uy  y coordinate of the text up vector
    */
   element->setAttribute("charup", true);
-  element->setAttribute("charup_x", ux);
-  element->setAttribute("charup_y", uy);
+  element->setAttribute("charup_ux", ux);
+  element->setAttribute("charup_uy", uy);
 }
 
 void GR::Render::setTextAlign(const std::shared_ptr<Element> &element, int horizontal, int vertical)
@@ -2498,7 +2789,7 @@ void GR::Render::selectClipXForm(const std::shared_ptr<GR::Element> &element, in
 {
   /*!
    * This function can be used to set the clipxform of a GR::Element
-   * \param[in] element ent A GR::Element
+   * \param[in] element A GR::Element
    * \param[in] form the clipxform
    */
   element->setAttribute("clipxform", form);
@@ -2508,10 +2799,43 @@ void GR::Render::setCharHeight(const std::shared_ptr<GR::Element> &element, doub
 {
   /*!
    * This function can be used to set the charheight of a GR::Element
-   * \param[in] element ent A GR::Element
+   * \param[in] element A GR::Element
    * \param[in] height the charheight
    */
   element->setAttribute("charheight", height);
+}
+
+
+void GR::Render::setTransparency(const std::shared_ptr<GR::Element> &element, double alpha)
+{
+  /*!
+   * This function can be used to set the transparency of a GR::Element
+   * \param[in] element A GR::Element
+   * \param[in] alpha The alpha
+   */
+  element->setAttribute("transparency", alpha);
+}
+
+void GR::Render::setResampleMethod(const std::shared_ptr<GR::Element> &element, int resample)
+{
+  /*!
+   * This function can be used to set the resamplemethod of a GR::Element
+   * \param[in] element A GR::Element
+   * \param[in] resample The resample method
+   */
+
+  element->setAttribute("resamplemethod", resample);
+}
+
+
+void GR::Render::setTextEncoding(const std::shared_ptr<Element> &element, int encoding)
+{
+  /*!
+   * This function can be used to set the textencoding of a GR::Element
+   * \param[in] element A GR::Element
+   * \param[in] encoding The textencoding
+   */
+  element->setAttribute("textencoding", encoding);
 }
 
 

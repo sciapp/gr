@@ -1018,15 +1018,15 @@ void plot_pre_plot(grm_args_t *plot_args)
   logger((stderr, "Got keyword \"clear\" with value %d\n", clear));
   if (clear)
     {
-      gr_clearws();
+      global_root->append(global_render->createClearWS());
     }
   plot_process_wswindow_wsviewport(plot_args);
 }
 
 void plot_set_text_encoding(void)
 {
-  gr_inqtextencoding(&pre_plot_text_encoding);
-  gr_settextencoding(ENCODING_UTF8);
+  //  gr_inqtextencoding(&pre_plot_text_encoding);
+  global_render->setTextEncoding(global_root, ENCODING_UTF8);
 }
 
 void plot_process_wswindow_wsviewport(grm_args_t *plot_args)
@@ -1475,6 +1475,7 @@ void plot_process_viewport(grm_args_t *subplot_args)
     }
 
   global_render->setViewport(global_root->lastChildElement(), viewport[0], viewport[1], viewport[2], viewport[3]);
+  gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 
   grm_args_push(subplot_args, "vp", "dddd", vp[0], vp[1], vp[2], vp[3]);
   grm_args_push(subplot_args, "viewport", "dddd", viewport[0], viewport[1], viewport[2], viewport[3]);
@@ -1506,7 +1507,6 @@ double auto_tick(double amin, double amax)
 
 void plot_process_window(grm_args_t *subplot_args)
 {
-  //! TODO: dom render integration
   int scale = 0;
   const char *kind;
   int xlog, ylog, zlog;
@@ -1696,6 +1696,7 @@ void plot_process_window(grm_args_t *subplot_args)
   grm_args_push(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
   if (!str_equals_any(kind, 2, "polar", "polar_histogram"))
     {
+      gr_setwindow(x_min, x_max, y_min, y_max);
       global_render->setWindow(group, x_min, x_max, y_min, y_max);
     }
   else
@@ -2104,6 +2105,7 @@ void plot_post_subplot(grm_args_t *subplot_args)
 
   gr_restorestate();
   grm_args_values(subplot_args, "kind", "s", &kind);
+  args_values(subplot_args, "kind", "s", &kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   if (grm_args_contains(subplot_args, "labels"))
     {
@@ -2254,10 +2256,10 @@ err_t plot_line(grm_args_t *subplot_args)
           element->setAttribute("markercolorind", current_marker_colorind);
           subGroup->append(element);
         }
-      /*
-       * error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
-       * return_if_error;
-       */
+
+      error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
+      return_if_error;
+
       ++current_series;
     }
 
@@ -2450,19 +2452,20 @@ err_t plot_scatter(grm_args_t *subplot_args)
       if (z != NULL || c != NULL || markertypes != NULL)
         {
           grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max);
+          std::vector<int> markerTypesVec, markerColorIndsVec;
+          std::vector<double> markerSizesVec;
+
           for (i = 0; i < x_length; i++)
             {
-              auto element = global_render->createElement("polymarker");
-              subGroup->append(element);
               if (z != NULL)
                 {
                   if (i < z_length)
                     {
-                      element->setAttribute("markersize", z[i] / 100.0);
+                      markerSizesVec.push_back(z[i] / 100.0);
                     }
                   else
                     {
-                      element->setAttribute("markersize", 2.0);
+                      markerSizesVec.push_back(2.0);
                     }
                 }
               if (c != NULL)
@@ -2472,6 +2475,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
                       c_index = 1000 + (int)(255 * (c[i] - c_min) / (c_max - c_min));
                       if (c_index < 1000 || c_index > 1255)
                         {
+                          markerColorIndsVec.push_back(0);
                           continue;
                         }
                     }
@@ -2479,38 +2483,50 @@ err_t plot_scatter(grm_args_t *subplot_args)
                     {
                       c_index = 989;
                     }
-                  element->setAttribute("markercolorind", c_index);
+                  markerColorIndsVec.push_back(c_index);
                 }
               else if (c_index != -1)
                 {
-                  element->setAttribute("markercolorind", 1000 + c_index);
+                  markerColorIndsVec.push_back(1000 + c_index);
                 }
 
               if (markertypes != NULL)
                 {
                   if (i < markertypes_length)
                     {
-                      element->setAttribute("markertype", (int)markertypes[i]);
+                      markerTypesVec.push_back((int)markertypes[i]);
                     }
                   else
                     {
-                      element->setAttribute("markertype", (int)markertypes[markertypes_length - 1]);
+                      markerTypesVec.push_back((int)markertypes[markertypes_length - 1]);
                     }
                 }
               else
                 {
-                  element->setAttribute("markertype", *previous_marker_type);
+                  markerTypesVec.push_back(*previous_marker_type);
                 }
-
-              auto attrs = parent_element->getAttributeNames();
-              for (auto const &attr : attrs)
-                {
-                  element->setAttribute(attr, parent_element->getAttribute(attr));
-                }
-              element->setAttribute("x", x[i]);
-              element->setAttribute("y", y[i]);
-              element->setAttribute("n", 1);
             }
+          int id = (int)global_root->getAttribute("id");
+          global_root->setAttribute("id", id + 1);
+          std::string str = std::to_string(id);
+
+          auto element = global_render->createPolymarker(x[i], y[i]);
+          subGroup->append(element);
+
+          if (markerTypesVec.size())
+            {
+              global_render->setMarkerType(element, "markertypes" + str, markerTypesVec);
+            }
+          if (markerSizesVec.size())
+            {
+              global_render->setMarkerSize(element, "markersizes" + str, markerSizesVec);
+            }
+          if (markerColorIndsVec.size())
+            {
+              global_render->setMarkerColorInd(element, "markercolorinds" + str, markerColorIndsVec);
+            }
+
+
           if (markertypes == NULL)
             {
               previous_marker_type++;
@@ -2716,8 +2732,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
   grm_args_t **inner_series;
   unsigned int inner_series_length;
 
-  gr_savestate();
-
   /* Default */
   int bar_color = 989, edge_color = 1;
   double bar_color_rgb[3] = {-1};
@@ -2747,11 +2761,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
   double *y_lightness = NULL;
 
   auto group = global_root->lastChildElement();
-  group->setAttribute("name", "bar");
-
-  global_render->setTextAlign(group, 2, 3);
-
-  global_render->selectClipXForm(group, 1);
+  group->setAttribute("name", "barplot");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]);
@@ -2950,6 +2960,9 @@ err_t plot_barplot(grm_args_t *subplot_args)
 
       grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
       grm_args_values(*current_series, "edge_color", "i", &edge_color);
+      global_render->setTextAlign(subGroup, 2, 3);
+      global_render->selectClipXForm(subGroup, 1);
+
       if (edge_color_rgb[0] != -1)
         {
           for (i = 0; i < 3; i++)
@@ -2992,7 +3005,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
         }
 
       global_render->setFillIntStyle(subGroup, 1);
-      global_render->setFillColorInd(subGroup, 1);
+      global_render->setFillColorInd(subGroup, bar_color);
 
       if (bar_color_rgb[0] != -1)
         {
@@ -3199,7 +3212,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
                   available_height = y2 - y1;
                   x_text = (x1 + x2) / 2;
                   y_text = (y1 + y2) / 2;
-                  // TODO: Respect `textalign` and `charup` in the graphics tree
                   gr_settextalign(2, 3);
                   gr_setcharup(0.0, 1.0);
                   gr_inqtextext(x_text, y_text, ylabels[i], tbx, tby);
@@ -3214,21 +3226,15 @@ err_t plot_barplot(grm_args_t *subplot_args)
                   std::shared_ptr<GR::Element> temp;
                   if (width < available_width && height < available_height)
                     {
-                      /*
-                       * TODO: Respect `charup` in the graphics tree
-                       * gr_setcharup(0.0, 1.0);
-                       */
                       temp = global_render->createText(x_text, y_text, ylabels[i]);
+                      global_render->setCharUp(temp, 0.0, 1.0);
+                      global_render->setTextAlign(temp, 2, 3);
                     }
                   else if (height < available_width && width < available_height)
                     {
-                      /*
-                       * TODO: Respect `charup` in the graphics tree
-                       * gr_setcharup(-1.0, 0.0);
-                       */
                       temp = global_render->createText(x_text, y_text, ylabels[i]);
-                      // TODO: Remove the following line when `charup` is implemented in the graphics tree
-                      gr_setcharup(0.0, 1.0);
+                      global_render->setCharUp(temp, -1.0, 0.0);
+                      global_render->setTextAlign(temp, 2, 3);
                     }
                   if (y_lightness[i] < 0.4)
                     {
@@ -3519,7 +3525,6 @@ cleanup:
     {
       free(y_lightness);
     }
-  gr_restorestate();
   return error;
 }
 
@@ -4179,6 +4184,7 @@ err_t plot_scatter3(grm_args_t *subplot_args)
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
+      std::vector<int> markerCVec;
       return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       global_render->setMarkerType(subGroup, GKS_K_MARKERTYPE_SOLID_CIRCLE);
       if (grm_args_first_value(*current_series, "c", "D", &c, &c_length))
@@ -4194,22 +4200,26 @@ err_t plot_scatter3(grm_args_t *subplot_args)
                 {
                   c_index = 989;
                 }
-              global_render->setMarkerColorInd(subGroup, c_index);
-              gr_polymarker3d(1, x + i, y + i, z + i);
+              markerCVec.push_back(c_index);
             }
         }
       else
         {
-          if (grm_args_values(*current_series, "c", "i", &c_index))
-            {
-              global_render->setMarkerColorInd(subGroup, c_index);
-            }
           std::vector<double> x_vec = std::vector<double>(x, x + x_length);
           std::vector<double> y_vec = std::vector<double>(y, y + y_length);
           std::vector<double> z_vec = std::vector<double>(z, z + z_length);
           int id_int = static_cast<int>(global_root->getAttribute("id"));
           global_root->setAttribute("id", ++id_int);
           std::string id = std::to_string(id_int);
+
+          if (markerCVec.size() > 0)
+            {
+              global_render->setMarkerColorInd(subGroup, "markercolorinds" + id, markerCVec);
+            }
+          else if (grm_args_values(*current_series, "c", "i", &c_index))
+            {
+              global_render->setMarkerColorInd(subGroup, c_index);
+            }
 
           auto temp = global_render->createPolymarker3d("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec);
           subGroup->append(temp);
@@ -4464,7 +4474,9 @@ err_t plot_isosurface(grm_args_t *subplot_args)
         }
 
       global_render->setSelntran(subGroup, 0);
-      gr3_clear();
+      subGroup->append(global_render->createGR3Clear());
+
+      // TODO: gr3createisosurfacemesh dom render... how to deal with the mesh reference?
       error = gr3_createisosurfacemesh(&mesh, conv_data, isovalue_int,
 
                                        /* dim_x */ shape[0],
@@ -4482,6 +4494,7 @@ err_t plot_isosurface(grm_args_t *subplot_args)
                                        /* offset_x */ -1.f,
                                        /* offset_y */ -1.f,
                                        /* offset_z */ -1.f);
+
       return_error_if(error == GR3_ERROR_OUT_OF_MEM, ERROR_MALLOC);
       return_error_if(error != GR3_ERROR_NONE, ERROR_INTERNAL);
 
@@ -4506,16 +4519,36 @@ err_t plot_isosurface(grm_args_t *subplot_args)
       auto c_vec = std::vector<double>(foreground_colors, foreground_colors + data_length);
       auto s_vec = std::vector<double>(scales, scales + data_length);
 
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      global_root->setAttribute("id", id + 1);
+      std::string str = std::to_string(id);
+
+
+      auto drawMesh =
+          global_render->createGR3DrawMesh(mesh, 1, "positions" + str, p_vec, "directions" + str, d_vec, "ups" + str,
+                                           u_vec, "foregroundcolors" + str, c_vec, "scales" + str, s_vec);
+      subGroup->append(drawMesh);
+
       r = 2.5;
       ups[0] = 0.0f;
       ups[1] = (tilt == 0 ? 0.0f : 1.0f);
       ups[2] = (tilt == 0 ? 1.0f : 0.0f);
 
-      // ToDo: Dom render
+      auto drawImage = global_render->createGR3DrawImage(x_min, x_max, y_min, y_max, subplot_width, subplot_height,
+                                                         GR3_DRAWABLE_GKS);
+      subGroup->append(drawImage);
 
-      gr3_deletemesh(mesh);
+      global_render->setGR3CameraLookAt(drawImage, (float)(r * sin(tilt) * sin(rotation)), (float)(r * cos(tilt)),
+                                        (float)(r * sin(tilt) * cos(rotation)), 0.0f, 0.0f, 0.0f, ups[0], ups[1],
+                                        ups[2]);
 
-      gr_selntran(1);
+
+      logger((stderr, "gr3_drawimage returned %i\n",
+              gr3_drawimage(x_min, x_max, y_min, y_max, subplot_width, subplot_height, GR3_DRAWABLE_GKS)));
+
+
+      auto deleteMesh = global_render->createGR3DeleteMesh(mesh);
+      subGroup->append(deleteMesh);
 
       free(conv_data);
       ++current_series;
@@ -4590,6 +4623,11 @@ err_t plot_volume(grm_args_t *subplot_args)
 
       gr_inqvpsize(&width, &height, &device_pixel_ratio);
       gr_setpicturesizeforvolume((int)width * device_pixel_ratio, (int)height * device_pixel_ratio);
+
+
+      // TODO: In & out parameters dmin and dmax... Use Context to save dmin and dmax as vectors. The next loop should
+      // use a reference to these vectors and use the last dmin and dmax
+      // TODO: Question: what about dlim... Other functions use dlims from subplot_args...
       gr_volume(shape[0], shape[1], shape[2], (double *)c, algorithm, &dmin, &dmax);
 
       dlim[0] = grm_min(dlim[0], dmin);
@@ -4799,7 +4837,8 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   gr_inqresamplemethod(&resample);
 
   // ToDo:
-  gr_setresamplemethod(0x2020202);
+  global_render->setResampleMethod(group, 0x2020202);
+  //  gr_setresamplemethod(0x2020202);
 
   grm_args_values(subplot_args, "series", "A", &series);
 
@@ -4824,7 +4863,8 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
     }
 
   // ToDo:
-  gr_settransparency(face_alpha);
+  global_render->setTransparency(group, face_alpha);
+  //  gr_settransparency(face_alpha);
 
   grm_args_values(*series, "nbins", "i", &num_bins);
 
@@ -5304,18 +5344,30 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                           int id = (int)global_root->getAttribute("id");
                           global_root->setAttribute("id", id + 1);
                           std::vector<double> f1_vec(f1, f1 + 4 + 2 * num_angle), f2_vec(f2, f2 + 4 + 2 * num_angle);
-                          std::string str = std::to_string(id);
+                          str = std::to_string(id);
 
                           temp_elem = global_render->createFillArea("x" + str, f1_vec, "y" + str, f2_vec);
                           group->append(temp_elem);
                           global_render->setFillColorInd(temp_elem, face_color);
                           global_render->setFillIntStyle(temp_elem, 1);
-                        }
 
-                      temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
-                      group->append(temp_elem);
-                      global_render->setFillColorInd(temp_elem, edge_color);
-                      global_render->setFillIntStyle(temp_elem, 0);
+                          temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
+                          group->append(temp_elem);
+                          global_render->setFillColorInd(temp_elem, edge_color);
+                          global_render->setFillIntStyle(temp_elem, 0);
+                        }
+                      else
+                        {
+                          int id = (int)global_root->getAttribute("id");
+                          global_root->setAttribute("id", id + 1);
+                          std::vector<double> f1_vec(f1, f1 + 4 + 2 * num_angle), f2_vec(f2, f2 + 4 + 2 * num_angle);
+                          str = std::to_string(id);
+
+                          temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
+                          group->append(temp_elem);
+                          global_render->setFillColorInd(temp_elem, edge_color);
+                          global_render->setFillIntStyle(temp_elem, 0);
+                        }
 
                       free(f1);
                       f1 = NULL;
@@ -5334,7 +5386,7 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                           group->append(temp_elem);
 
                           global_render->setFillIntStyle(temp_elem, 1);
-                          global_render->setFillColorInd(temp_elem, 1);
+                          global_render->setFillColorInd(temp_elem, face_color);
                         }
 
                       temp_elem = global_render->createFillArc(-rect, rect, -rect, rect, x * (360.0 / num_bins),
@@ -5421,18 +5473,36 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                           int id = (int)global_root->getAttribute("id");
                           global_root->setAttribute("id", id + 1);
                           std::vector<double> f1_vec(f1, f1 + 4 + 2 * num_angle), f2_vec(f2, f2 + 4 + 2 * num_angle);
-                          std::string str = std::to_string(id);
+                          str = std::to_string(id);
 
                           temp_elem = global_render->createFillArea("x" + str, f1_vec, "y" + str, f2_vec);
                           group->append(temp_elem);
                           global_render->setFillColorInd(temp_elem, face_color);
                           global_render->setFillIntStyle(temp_elem, 1);
+
+                          temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
+                          group->append(temp_elem);
+                          global_render->setFillColorInd(temp_elem, edge_color);
+                          global_render->setFillIntStyle(temp_elem, 0);
+                        }
+                      else
+                        {
+                          int id = (int)global_root->getAttribute("id");
+                          global_root->setAttribute("id", id + 1);
+                          std::vector<double> f1_vec(f1, f1 + 4 + 2 * num_angle), f2_vec(f2, f2 + 4 + 2 * num_angle);
+                          str = std::to_string(id);
+
+                          temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
+                          group->append(temp_elem);
+                          global_render->setFillColorInd(temp_elem, edge_color);
+                          global_render->setFillIntStyle(temp_elem, 0);
                         }
 
-                      temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
-                      group->append(temp_elem);
-                      global_render->setFillColorInd(temp_elem, edge_color);
-                      global_render->setFillIntStyle(temp_elem, 0);
+
+                      //                      temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" +
+                      //                      str, std::nullopt); group->append(temp_elem);
+                      //                      global_render->setFillColorInd(temp_elem, edge_color);
+                      //                      global_render->setFillIntStyle(temp_elem, 0);
 
 
                       free(f1);
@@ -5466,12 +5536,9 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
           /* stairs without draw_edges (not compatible) */
           else if (draw_edges == 0 && colormap == NULL)
             {
-              auto stairs_group = global_render->createGroup("polarhistogram_stairs");
-              group->append(stairs_group);
-
-              global_render->setFillColorInd(stairs_group, 0);
-              global_render->setLineColorInd(stairs_group, edge_color);
-              global_render->setLineWidth(stairs_group, 2.3);
+              global_render->setFillColorInd(group, 0);
+              global_render->setLineColorInd(group, edge_color);
+              global_render->setLineWidth(group, 2.3);
 
               r = pow((count / max), (num_bins * 2));
               liste = moivre(r, (2 * x), num_bins * 2);
@@ -5505,19 +5572,19 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
                       if (rect > r_min)
                         {
-                          stairs_group->append(global_render->createDrawArc(
+                          group->append(global_render->createDrawArc(
                               -grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max), grm_min(rect, r_max),
                               x * (360.0 / num_bins), (x + 1) * 360.0 / num_bins));
 
-                          stairs_group->append(global_render->createDrawArc(
+                          group->append(global_render->createDrawArc(
                               -r_min, r_min, -r_min, r_min, x * (360.0 / num_bins), (x + 1) * (360.0 / num_bins)));
                         }
                     }
                   /* no rlim */
                   else
                     {
-                      stairs_group->append(global_render->createDrawArc(
-                          -rect, rect, -rect, rect, x * (360.0 / num_bins), (x + 1) * (360.0 / num_bins)));
+                      group->append(global_render->createDrawArc(-rect, rect, -rect, rect, x * (360.0 / num_bins),
+                                                                 (x + 1) * (360.0 / num_bins)));
                     }
                 }
               /* with bin_edges */
@@ -5542,11 +5609,11 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                       if (rect > r_min)
                         {
 
-                          stairs_group->append(global_render->createDrawArc(
+                          group->append(global_render->createDrawArc(
                               -grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max), grm_min(rect, r_max),
                               bin_edges[x] * convert, bin_edges[x + 1] * convert));
 
-                          stairs_group->append(global_render->createDrawArc(
+                          group->append(global_render->createDrawArc(
                               -r_min, r_min, -r_min, r_min, bin_edges[x] * convert, bin_edges[x + 1] * convert));
                         }
                     }
@@ -5558,8 +5625,8 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                         {
                           break;
                         }
-                      stairs_group->append(global_render->createDrawArc(
-                          -rect, rect, -rect, rect, *(bin_edges + x) * convert, *(bin_edges + x + 1) * convert));
+                      group->append(global_render->createDrawArc(-rect, rect, -rect, rect, *(bin_edges + x) * convert,
+                                                                 *(bin_edges + x + 1) * convert));
                     }
                 }
             }
@@ -5853,7 +5920,6 @@ err_t plot_pie(grm_args_t *subplot_args)
     }
 
 cleanup:
-  gr_restorestate();
   free(normalized_x);
   free(normalized_x_int);
 
@@ -5955,6 +6021,8 @@ err_t plot_shade(grm_args_t *subplot_args)
   double **current_component = components;
   const char **current_component_name = data_component_names;
   unsigned int point_count;
+  auto group = global_root->lastChildElement();
+  group->setAttribute("name", "shade");
 
   grm_args_values(subplot_args, "series", "A", &current_shader);
   while (*current_component_name != NULL)
@@ -5975,8 +6043,16 @@ err_t plot_shade(grm_args_t *subplot_args)
     {
       ybins = 100;
     }
-  gr_shadepoints(point_count, components[0], components[1], xform, xbins, ybins);
 
+  int id = (int)global_root->getAttribute("id");
+  global_root->setAttribute("id", id + 1);
+  auto str = std::to_string(id);
+
+  std::vector<double> c0(components[0], components[0] + point_count);
+  std::vector<double> c1(components[1], components[1] + point_count);
+
+  auto temp = global_render->createShadePoints("x" + str, c0, "y" + str, c1, xform, xbins, ybins);
+  group->append(temp);
   return ERROR_NONE;
 }
 
@@ -5985,13 +6061,16 @@ err_t plot_raw(grm_args_t *plot_args)
   const char *base64_data = NULL;
   char *graphics_data = NULL;
   err_t error = ERROR_NONE;
+  std::vector<int> data_vec;
 
   cleanup_and_set_error_if(!grm_args_values(plot_args, "raw", "s", &base64_data), ERROR_PLOT_MISSING_DATA);
   graphics_data = base64_decode(NULL, base64_data, NULL, &error);
   cleanup_if_error;
-  gr_clearws();
-  gr_drawgraphics(graphics_data);
-  gr_updatews();
+
+  global_root->append(global_render->createClearWS());
+  data_vec = std::vector<int>(graphics_data, graphics_data + strlen(graphics_data));
+  global_root->append(global_render->createDrawGraphics("graphics", data_vec));
+  global_root->append(global_render->createUpdateWS());
 
 cleanup:
   if (graphics_data != NULL)
@@ -6079,7 +6158,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   else
     {
       charheight = grm_max(0.018 * diag, 0.012);
-      group->setAttribute("charheight", charheight);
+      global_render->setCharHeight(group, charheight);
       if (str_equals_any(kind, 2, "heatmap", "shade"))
         {
           ticksize = -ticksize;
@@ -6095,7 +6174,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
       group->append(
           global_render->createAxes(x_tick, y_tick, x_org_low, y_org_low, x_major_count, y_major_count, ticksize));
       group->append(
-          global_render->createAxes(x_tick, y_tick, x_org_low, y_org_low, -x_major_count, -y_major_count, -ticksize));
+          global_render->createAxes(x_tick, y_tick, x_org_high, y_org_high, -x_major_count, -y_major_count, -ticksize));
     }
 
   if (grm_args_values(args, "title", "s", &title))
@@ -6144,19 +6223,24 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           double x_left = 0, x_right = 1, null;
           double available_width;
           const double *window;
+          auto xtick_group = global_render->createGroup("barplot_xtick");
+
+          group->append(xtick_group);
+
           /* calculate width available for xticknotations */
           gr_wctondc(&x_left, &null);
           gr_wctondc(&x_right, &null);
           available_width = x_right - x_left;
           grm_args_values(args, "window", "D", &window);
-          global_render->setCharHeight(group, charheight);
-          global_render->setTextAlign(group, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          global_render->setCharHeight(xtick_group, charheight);
+          global_render->setTextAlign(xtick_group, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
           for (i = 1; i <= xticklabels_length; i++)
             {
               x1 = i;
               gr_wctondc(&x1, &x2);
+              std::cout << "wctondc \t" << x1 << "\n";
               x2 = viewport[2] - 0.5 * charheight;
-              draw_xticklabel(x1, x2, xticklabels[i - 1], available_width, group);
+              draw_xticklabel(x1, x2, xticklabels[i - 1], available_width, xtick_group);
             }
         }
 
@@ -6299,7 +6383,9 @@ err_t plot_draw_polar_axes(grm_args_t *args)
       x[1] = 0.0;
       y[1] = 0.0;
 
-      group->append(global_render->createPolyline(x[0], x[1], y[0], y[1]));
+      auto temp = global_render->createPolyline(x[0], x[1], y[0], y[1]);
+      group->append(temp);
+      global_render->setLineColorInd(temp, 90 - i % 2 * 2);
 
       x[0] *= 1.1;
       y[0] *= 1.1;
@@ -6315,7 +6401,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
           else
             snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 330 - (int)grm_round(alpha - interval));
         }
-      auto temp = global_render->createText(x[0], y[0], text_buffer);
+      temp = global_render->createText(x[0], y[0], text_buffer);
       group->append(temp);
       global_render->setTextAlign(temp, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
     }
@@ -8548,16 +8634,16 @@ int grm_plot(const grm_args_t *args)
       return 0;
     }
 
+  global_root = global_render->createElement("root");
+  global_render->replaceChildren(global_root);
+  global_root->setAttribute("id", 0);
   if (grm_args_values(active_plot_args, "raw", "s", &current_subplot_args))
     {
       plot_raw(active_plot_args);
+      global_render->render();
     }
   else
     {
-      global_root = global_render->createElement("root");
-      global_render->replaceChildren(global_root);
-      global_root->setAttribute("id", 0);
-
       plot_set_attribute_defaults(active_plot_args);
       if (plot_process_grid_arguments(active_plot_args) != ERROR_NONE)
         {
@@ -8799,9 +8885,7 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
   double width;
   double charheight;
 
-  gr_inqcharheight(&charheight);
-  // TODO: inq from dom
-
+  charheight = (double)element->getAttribute("charheight");
 
   for (i = 0; i == 0 || label[i - 1] != '\0'; ++i)
     {
@@ -8853,5 +8937,5 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
   new_label[i] = '\0';
 
   /* draw the rest */
-  element->append(global_render->createText(x1, x2, new_label + cur_start));
+  element->append(global_render->createText(x1, x2, std::string(new_label + cur_start)));
 }
