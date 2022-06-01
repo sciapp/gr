@@ -98,6 +98,12 @@ ifdef USE_STATIC_CAIRO_LIBS
 else
   CAIROLIBS = -lcairo -lpixman-1 -lpthread
 endif
+  AGGDEFS = -std=c++11
+ifdef USE_STATIC_AGG_LIBS
+  AGGLIBS = $(THIRDPARTYDIR)/lib/libagg.a
+else
+  AGGLIBS = -lagg
+endif
     SSLLIBS = -lssl -lcrypto
     X11DEFS =
 ifeq ($(UNAME), Darwin)
@@ -138,7 +144,7 @@ all: targets
 targets: prerequisites \
          x11plugin.so wxplugin.so qtplugin.so qt5plugin.so qt6plugin.so \
          svgplugin.so gtkplugin.so gsplugin.so wmfplugin.so glplugin.so \
-         zmqplugin.so pgfplugin.so cairoplugin.so videoplugin.so
+         zmqplugin.so pgfplugin.so cairoplugin.so videoplugin.so aggplugin.so
 
 ifeq ($(UNAME),Darwin)
 targets: quartzplugin.so
@@ -158,6 +164,9 @@ qt5plugin.o: qt5plugin.cxx
 
 qt6plugin.o: qt6plugin.cxx
 	$(CXX) -o $@ -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT6DEFS) $(QT6INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
+
+aggplugin.o: aggplugin.cxx
+	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(CXXFLAGS) $(INCLUDES) $(FTDEFS) $(FTINC) $(AGGDEFS) $<
 
 x11plugin.so: x11plugin.o $(GKSLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(FTLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
@@ -207,6 +216,9 @@ cairoplugin.so: cairoplugin.o $(GKSLIBS) $(PNGLIBS)
 
 videoplugin.so: videoplugin.o vc.o gif.o $(GKSLIBS)
 	$(CXX) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(AVLIBS) $(FTLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
+
+aggplugin.so: aggplugin.o $(GKSLIBS) $(PNGLIBS)
+	$(CXX) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(AGGLIBS) $(FTLIBS) $(JPEGLIBS) $(PNGLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)

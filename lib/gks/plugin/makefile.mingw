@@ -8,6 +8,7 @@ PNGLIB = $(THIRDPARTYDIR)/lib/libpng.a
 JPEGLIB = $(THIRDPARTYDIR)/lib/libjpeg.a
 PIXMANLIB = $(THIRDPARTYDIR)/lib/libpixman-1.a
 CAIROLIB = $(THIRDPARTYDIR)/lib/libcairo.a
+AGGLIB = $(THIRDPARTYDIR)/lib/libagg.a
 FTLIB = $(THIRDPARTYDIR)/lib/libfreetype.a
 AVLIBS = -lavformat -lavcodec -lswscale -lavutil -lvpx -ltheora -logg -lopenh264
 INCLUDES = -I../ -I$(THIRDPARTYDIR)/include -I/usr/local/include
@@ -17,7 +18,7 @@ GDILIB = -lgdi32
 GKSLIB = ../libGKS.lib
 TIFFLIB = $(THIRDPARTYDIR)/lib/libtiff.a
 
-all: x11plugin.dll svgplugin.dll pgfplugin.dll cairoplugin.dll wxplugin.dll qtplugin.dll qt5plugin.dll qt6plugin.dll gtkplugin.dll gsplugin.dll wmfplugin.dll glplugin.dll zmqplugin.dll videoplugin.dll
+all: x11plugin.dll svgplugin.dll pgfplugin.dll cairoplugin.dll wxplugin.dll qtplugin.dll qt5plugin.dll qt6plugin.dll gtkplugin.dll gsplugin.dll wmfplugin.dll glplugin.dll zmqplugin.dll videoplugin.dll aggplugin.dll
 
 .SUFFIXES: .c .cxx .o
 
@@ -72,6 +73,9 @@ glplugin.dll: glplugin.o $(GKSLIB)
 
 zmqplugin.dll: zmqplugin.o $(GKSLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+
+aggplugin.dll: aggplugin.o $(GKSLIB) $(AGGLIB) $(PNGLIB) $(ZLIB) $(FTLIB) $(JPEGLIB)
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 clean:
 	$(RM) *.dll

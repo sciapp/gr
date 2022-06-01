@@ -88,6 +88,7 @@ find_package(Glfw)
 find_package(Zeromq)
 find_package(Cairo)
 find_package(X11)
+find_package(Agg)
 find_package(Fontconfig)
 find_package(OpenGL OPTIONAL_COMPONENTS OpenGL)
 find_package(Gs)
@@ -572,6 +573,27 @@ set_target_properties(
   PROPERTIES C_STANDARD 90
              C_EXTENSIONS OFF
              C_STANDARD_REQUIRED ON
+             PREFIX ""
+             SUFFIX "${GR_PLUGIN_SUFFIX}"
+)
+
+add_library(aggplugin SHARED lib/gks/plugin/aggplugin.cxx)
+target_link_libraries(aggplugin PUBLIC gks_static)
+if(Agg_FOUND)
+  target_link_libraries(aggplugin PRIVATE Agg::Agg)
+  target_link_libraries(aggplugin PRIVATE Jpeg::Jpeg)
+  target_link_libraries(aggplugin PRIVATE Libpng::Libpng)
+  string(APPEND GR_REPORT "- aggplugin: Yes\n")
+  target_compile_options(aggplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+else()
+  target_compile_definitions(aggplugin PRIVATE NO_AGG)
+  string(APPEND GR_REPORT "- aggplugin: No (Agg not found)\n")
+endif()
+set_target_properties(
+  aggplugin
+  PROPERTIES CXX_STANDARD 11
+             CXX_EXTENSIONS OFF
+             CXX_STANDARD_REQUIRED ON
              PREFIX ""
              SUFFIX "${GR_PLUGIN_SUFFIX}"
 )
