@@ -1580,6 +1580,8 @@ void plot_process_window(grm_args_t *subplot_args)
       if (grm_args_values(subplot_args, "window", "D", &stored_window))
         {
           global_render->setWindow(group, stored_window[0], stored_window[1], stored_window[2], stored_window[3]);
+          //! TODO: Write a new gr_panzoom method that uses the dom-tree and not the internal gr attributes
+          gr_setwindow(stored_window[0], stored_window[1], stored_window[2], stored_window[3]);
           logger((stderr, "Window before `gr_panzoom` (%lf, %lf, %lf, %lf)\n", stored_window[0], stored_window[1],
                   stored_window[2], stored_window[3]));
         }
