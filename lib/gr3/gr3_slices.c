@@ -212,15 +212,18 @@ GR3API void gr3_drawxslicemesh(const GR3_MC_DTYPE *data, unsigned int ix, unsign
                                double step_x, double step_y, double step_z, double offset_x, double offset_y,
                                double offset_z)
 {
-  int mesh = 0;
+  int alpha_mode, mesh = 0;
   float position[3] = {0, 0, 0};
   float direction[3] = {0, 0, 1};
   float up[3] = {0, 1, 0};
   float color[3] = {1, 1, 1};
   float scales[3] = {1, 1, 1};
+  gr3_getalphamode(&alpha_mode);
   gr3_createxslicemesh(&mesh, data, ix, dim_x, dim_y, dim_z, stride_x, stride_y, stride_z, step_x, step_y, step_z,
                        offset_x, offset_y, offset_z);
+  gr3_setalphamode(GR3_TRANSPARENCY_OPAQUE);
   gr3_drawmesh(mesh, 1, position, direction, up, color, scales);
+  gr3_setalphamode(alpha_mode);
   gr3_deletemesh(mesh);
 }
 
@@ -229,15 +232,18 @@ GR3API void gr3_drawyslicemesh(const GR3_MC_DTYPE *data, unsigned int iy, unsign
                                double step_x, double step_y, double step_z, double offset_x, double offset_y,
                                double offset_z)
 {
-  int mesh = 0;
+  int alpha_mode, mesh = 0;
   float position[3] = {0, 0, 0};
   float direction[3] = {0, 0, 1};
   float up[3] = {0, 1, 0};
   float color[3] = {1, 1, 1};
   float scales[3] = {1, 1, 1};
+  gr3_getalphamode(&alpha_mode);
   gr3_createyslicemesh(&mesh, data, iy, dim_x, dim_y, dim_z, stride_x, stride_y, stride_z, step_x, step_y, step_z,
                        offset_x, offset_y, offset_z);
+  gr3_setalphamode(GR3_TRANSPARENCY_OPAQUE);
   gr3_drawmesh(mesh, 1, position, direction, up, color, scales);
+  gr3_setalphamode(alpha_mode);
   gr3_deletemesh(mesh);
 }
 
@@ -246,14 +252,17 @@ GR3API void gr3_drawzslicemesh(const GR3_MC_DTYPE *data, unsigned int iz, unsign
                                double step_x, double step_y, double step_z, double offset_x, double offset_y,
                                double offset_z)
 {
-  int mesh = 0;
+  int alpha_mode, mesh = 0;
   float position[3] = {0, 0, 0};
   float direction[3] = {0, 0, 1};
   float up[3] = {0, 1, 0};
   float color[3] = {1, 1, 1};
   float scales[3] = {1, 1, 1};
+  gr3_getalphamode(&alpha_mode);
   gr3_createzslicemesh(&mesh, data, iz, dim_x, dim_y, dim_z, stride_x, stride_y, stride_z, step_x, step_y, step_z,
                        offset_x, offset_y, offset_z);
+  gr3_setalphamode(GR3_TRANSPARENCY_OPAQUE);
   gr3_drawmesh(mesh, 1, position, direction, up, color, scales);
+  gr3_setalphamode(alpha_mode);
   gr3_deletemesh(mesh);
 }

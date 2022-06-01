@@ -186,9 +186,29 @@ typedef struct _GR3_DrawList_t_
                       for one mesh to be drawn. */
   int n;             /*!< The number of meshes to be drawn. */
   int object_id;
+  int alpha_mode;
   vertex_fp **vertices_fp;
+  float *alphas;
   struct _GR3_DrawList_t_ *next; /*!< The pointer to the next GR3_DrawList_t_. */
 } GR3_DrawList_t_;
+
+typedef struct _TransparencyObject
+{
+  float r;
+  float g;
+  float b;
+  float tr;
+  float tg;
+  float tb;
+  float depth;
+} _TransparencyObject;
+
+typedef struct TransparencyVector
+{
+  int size;
+  int max_size;
+  _TransparencyObject *obj;
+} TransparencyVector;
 
 /*!
  * This struct holds all context data. All data that is dependent on gr3 to
@@ -285,6 +305,7 @@ typedef struct _GR3_ContextStruct_t_
   int software_renderer_pixmaps_initalised;
   unsigned char *pixmaps[MAX_NUM_THREADS]; /* pixels to be drawn created by the Software Renderer */
   float *depth_buffers[MAX_NUM_THREADS];
+  TransparencyVector *transparency_buffer[MAX_NUM_THREADS];
 #ifndef NO_THREADS
   pthread_t threads[MAX_NUM_THREADS];
 #endif
@@ -302,6 +323,9 @@ typedef struct _GR3_ContextStruct_t_
   float clip_ymax;
   float clip_zmin;
   float clip_zmax;
+  int alpha_mode; /*Shows the mode used to calculate transparency. 0 means there are no alpha value and everythings
+                   * opaque, 1 means there is one alpha value and 2 means there is one alpha value per colorchannel*/
+  int use_transparency;
 } GR3_ContextStruct_t_;
 
 extern GR3_ContextStruct_t_ context_struct_;
