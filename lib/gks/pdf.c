@@ -1061,7 +1061,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 2: /* line */
-          set_linewidth(1.0);
+          set_linewidth(gkss->bwidth * p->nominal_size);
           set_color(mcolor);
           for (i = 0; i < 2; i++)
             {
@@ -1078,7 +1078,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 3: /* polyline */
-          set_linewidth(1.0);
+          set_linewidth(gkss->bwidth * p->nominal_size);
           set_color(mcolor);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
@@ -1101,7 +1101,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               set_fillcolor(mcolor);
               if (gkss->bcoli != gkss->pmcoli)
                 {
-                  set_linewidth(gkss->bwidth);
+                  set_linewidth(gkss->bwidth * p->nominal_size);
                   set_color(gkss->bcoli);
                 }
             }
@@ -1129,7 +1129,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           xr = 0;
           yr = -r;
           seg_xform_rel(&xr, &yr);
-          set_linewidth(1.0);
+          set_linewidth(gkss->bwidth * p->nominal_size);
           set_color(mcolor);
           pdf_moveto(p, x - xr, y - yr);
           for (curve = 0; curve < 4; curve++)
@@ -1153,7 +1153,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               set_fillcolor(mcolor);
               if (gkss->bcoli != gkss->pmcoli)
                 {
-                  set_linewidth(gkss->bwidth);
+                  set_linewidth(gkss->bwidth * p->nominal_size);
                   set_color(gkss->bcoli);
                 }
             }
@@ -1439,7 +1439,7 @@ static void fillarea(int n, double *px, double *py)
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
       set_linetype(GKS_K_LINETYPE_SOLID, 1.0);
-      set_linewidth(1.0);
+      set_linewidth(gkss->bwidth * p->nominal_size);
       set_transparency(p->alpha);
       set_color(fl_color);
 
@@ -1681,7 +1681,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
   GKS_UNUSED(n);
 
-  set_linewidth(gkss->bwidth);
+  set_linewidth(gkss->bwidth * p->nominal_size);
   set_transparency(p->alpha);
 
   pdf_setrgbcolor(p, p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);

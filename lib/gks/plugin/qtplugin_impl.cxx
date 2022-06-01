@@ -469,7 +469,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               seg_xform_rel(&xr, &yr);
               (*p->points)[i] = QPointF(x - xr, y + yr);
             }
-          p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
+          p->pixmap->setPen(QPen(marker_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawPolyline(p->points->constData(), 2);
           pc += 4;
           break;
@@ -483,7 +483,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               seg_xform_rel(&xr, &yr);
               (*points)[i] = QPointF(x - xr, y + yr);
             }
-          p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
+          p->pixmap->setPen(
+              QPen(marker_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
           p->pixmap->drawPolyline(points->constData(), marker[mtype][pc + 1]);
           pc += 1 + 2 * marker[mtype][pc + 1];
           delete points;
@@ -516,7 +517,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 6: /* arc */
-          p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
+          p->pixmap->setPen(QPen(marker_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawArc(x - r, y - r, d, d, 0, 360 * 16);
           break;
 
@@ -759,7 +760,8 @@ static void fillarea(int n, double *px, double *py)
 
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
-      p->pixmap->setPen(QPen(transparent_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
+      p->pixmap->setPen(
+          QPen(transparent_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
       line_routine(n, px, py, DrawBorder, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)

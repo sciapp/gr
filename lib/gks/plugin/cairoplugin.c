@@ -348,7 +348,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           seg_xform_rel(&x2, &y2);
 
           cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
-          set_line_width(p->nominal_size);
+          set_line_width(gkss->bwidth * p->nominal_size);
           set_color(mcolor);
           cairo_move_to(p->cr, x - x1, y - y1);
           cairo_line_to(p->cr, x - x2, y - y2);
@@ -365,7 +365,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
           cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
           cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
-          set_line_width(p->nominal_size);
+          set_line_width(gkss->bwidth * p->nominal_size);
           set_color(mcolor);
           cairo_move_to(p->cr, x - xr, y + yr);
           for (i = 1; i < marker[mtype][pc + 1]; i++)
@@ -434,8 +434,6 @@ static void polymarker(int n, double *px, double *py)
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
-
-  p->linewidth = p->nominal_size;
 
   for (i = 0; i < n; i++)
     {
