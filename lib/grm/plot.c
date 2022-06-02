@@ -5524,7 +5524,7 @@ error_t plot_draw_polar_axes(grm_args_t *args)
   if (args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
   for (i = 0; i <= n; i++)
     {
-      double r = r_min + i * tick / (r_max - r_min);
+      double r = 2.0 / 3 * (r_min + i * tick) / r_max;
       if (i % 2 == 0)
         {
           gr_setlinecolorind(88);
