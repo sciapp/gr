@@ -105,7 +105,7 @@ struct ws_state_list
   pix_fmt_t pix_fmt;
   renderer_base_t renderer;
   unsigned char *image_buffer{};
-  rasterizer_t rasterizer;
+  rasterizer_t rasterizer{1 << 14};
   scanline_p8_t scanline;
   renderer_aa_t renderer_aa;
   path_t path;

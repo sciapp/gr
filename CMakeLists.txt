@@ -1165,6 +1165,7 @@ if(GR_INSTALL)
             gr_static
             gr3_static
             grm_static
+            aggplugin
             cairoplugin
             glplugin
             gsplugin
