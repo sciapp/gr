@@ -4929,7 +4929,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           start_pline(x_org, y_min);
 
-          str_get_format_reference(&format_reference, y_org, y_min, y_max, y_tick, major_y);
+          str_get_format_reference(&format_reference, y_org, yi, y_max, y_tick, major_y);
 
           while (yi <= y_max + feps)
             {
@@ -5053,7 +5053,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
 
-          str_get_format_reference(&format_reference, x_org, x_min, x_max, x_tick, major_x);
+          str_get_format_reference(&format_reference, x_org, xi, x_max, x_tick, major_x);
 
           /* draw X-axis */
 
@@ -6697,7 +6697,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(z_min / z_tick);
           zi = i * z_tick;
 
-          str_get_format_reference(&format_reference, z_org, z_min, z_max, z_tick, major_z);
+          str_get_format_reference(&format_reference, z_org, zi, z_max, z_tick, major_z);
 
           /* draw Z-axis */
 
@@ -6862,7 +6862,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(y_min / y_tick);
           yi = i * y_tick;
 
-          str_get_format_reference(&format_reference, y_org, y_min, y_max, y_tick, major_y);
+          str_get_format_reference(&format_reference, y_org, yi, y_max, y_tick, major_y);
 
           /* draw Y-axis */
 
@@ -7027,7 +7027,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           xi = i * x_tick;
 
 
-          str_get_format_reference(&format_reference, x_org, x_min, x_max, x_tick, major_x);
+          str_get_format_reference(&format_reference, x_org, xi, x_max, x_tick, major_x);
 
           /* draw X-axis */
 
