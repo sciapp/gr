@@ -285,7 +285,6 @@ static void open_page()
 {
   set_xform();
   init_norm_xform();
-  init_colors();
 
   p->image_buffer = new unsigned char[p->width * p->height * pix_fmt_t::pix_width];
   p->render_buffer = agg::rendering_buffer(p->image_buffer, p->width, p->height, p->width * pix_fmt_t::pix_width);
@@ -1410,6 +1409,7 @@ void gks_aggplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_ar
       p->viewport[3] = (double)p->height * p->mh / p->h;
       p->nominal_size = min(p->width, p->height) / 500.0;
 
+      init_colors();
       open_page();
 
       *ptr = p;
