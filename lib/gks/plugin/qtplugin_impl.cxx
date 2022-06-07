@@ -115,10 +115,13 @@ typedef struct ws_state_list_t
   bool empty;
   bool prevent_resize_by_dl;
   bool interp_was_called;
-  bool cairo_initialised;
-  void *cairo_ws_state_list;
-  int *mem;
-  char *mem_path;
+
+  void (*memory_plugin)(int, int, int, int, int *, int, double *, int, double *, int, char *, void **);
+  bool memory_plugin_initialised;
+  int memory_plugin_wstype;
+  void *memory_plugin_ws_state_list;
+  int *memory_plugin_mem_ptr;
+  char *memory_plugin_mem_path;
 } ws_state_list;
 
 static ws_state_list p_, *p = &p_;
@@ -469,7 +472,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               seg_xform_rel(&xr, &yr);
               (*p->points)[i] = QPointF(x - xr, y + yr);
             }
-          p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
+          p->pixmap->setPen(QPen(marker_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawPolyline(p->points->constData(), 2);
           pc += 4;
           break;
@@ -483,7 +486,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               seg_xform_rel(&xr, &yr);
               (*points)[i] = QPointF(x - xr, y + yr);
             }
-          p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
+          p->pixmap->setPen(
+              QPen(marker_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
           p->pixmap->drawPolyline(points->constData(), marker[mtype][pc + 1]);
           pc += 1 + 2 * marker[mtype][pc + 1];
           delete points;
@@ -516,7 +520,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 6: /* arc */
-          p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
+          p->pixmap->setPen(QPen(marker_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawArc(x - r, y - r, d, d, 0, 360 * 16);
           break;
 
@@ -759,7 +763,8 @@ static void fillarea(int n, double *px, double *py)
 
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
-      p->pixmap->setPen(QPen(transparent_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
+      p->pixmap->setPen(
+          QPen(transparent_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
       line_routine(n, px, py, DrawBorder, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
@@ -1264,12 +1269,10 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
     }
 }
 
-static void cairo_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2,
-                            int lc, char *chars, void **ptr)
+static void memory_plugin_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2,
+                                    double *r2, int lc, char *chars, void **ptr)
 {
   double ratio, w, h;
-  double vp_size[4] = {0};
-  int cairo_init_ia[3];
 
   switch (fctid)
     {
@@ -1286,42 +1289,44 @@ static void cairo_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr
           w = p->width;
           h = p->width / ratio;
         }
-      if (!p->cairo_initialised)
+      if (!p->memory_plugin_initialised)
         {
+          int memory_plugin_init_ia[3];
           if (!p->prevent_resize_by_dl)
             {
               p->window[0] = p->window[2] = 0.0;
               p->window[1] = p->window[3] = 1.0;
             }
 
-          p->mem_path = (char *)gks_malloc(1024);
-          p->mem = (int *)gks_malloc(3 * sizeof(int) + sizeof(unsigned char *));
+          p->memory_plugin_mem_path = (char *)gks_malloc(1024);
+          p->memory_plugin_mem_ptr = (int *)gks_malloc(3 * sizeof(int) + sizeof(unsigned char *));
 
-          p->mem[0] = w;
-          p->mem[1] = h;
-          p->mem[2] = p->device_dpi_x * p->device_pixel_ratio;
-          *((unsigned char **)(p->mem + 3)) = NULL;
+          p->memory_plugin_mem_ptr[0] = w;
+          p->memory_plugin_mem_ptr[1] = h;
+          p->memory_plugin_mem_ptr[2] = p->device_dpi_x * p->device_pixel_ratio;
+          *((unsigned char **)(p->memory_plugin_mem_ptr + 3)) = NULL;
 
-          sprintf(p->mem_path, "!resizable@%p.mem:r", (void *)p->mem);
-          chars = p->mem_path;
-          /* set wstype for cairo png in memory */
-
-          cairo_init_ia[2] = 143;
-          p->cairo_initialised = true;
-          p->cairo_ws_state_list = *ptr;
-          gks_cairo_plugin(fctid, 0, 0, 3, cairo_init_ia, 0, NULL, 0, NULL, strlen(chars), chars,
-                           (&p->cairo_ws_state_list));
-          /* activate cairo workstation */
-          gks_cairo_plugin(4, 0, 0, 0, NULL, 0, NULL, 0, NULL, 0, NULL, (&p->cairo_ws_state_list));
+          sprintf(p->memory_plugin_mem_path, "!resizable@%p.mem:r", (void *)p->memory_plugin_mem_ptr);
+          chars = p->memory_plugin_mem_path;
+          /* set wstype for cairo or agg png in memory */
+          memory_plugin_init_ia[2] = p->memory_plugin_wstype;
+          p->memory_plugin_initialised = true;
+          p->memory_plugin_ws_state_list = *ptr;
+          p->memory_plugin(fctid, 0, 0, 3, memory_plugin_init_ia, 0, NULL, 0, NULL, strlen(chars), chars,
+                           (&p->memory_plugin_ws_state_list));
+          /* activate cairo or agg workstation */
+          p->memory_plugin(4, 0, 0, 0, NULL, 0, NULL, 0, NULL, 0, NULL, (&p->memory_plugin_ws_state_list));
         }
       else
         {
-          /* clear cairo workstation */
-          gks_cairo_plugin(6, 0, 0, 0, NULL, 0, NULL, 0, NULL, 0, NULL, (&p->cairo_ws_state_list));
-          /* resize cairo workstation to Qt window */
+          double vp_size[4] = {0};
+          /* clear cairo or agg workstation */
+          p->memory_plugin(6, 0, 0, 0, NULL, 0, NULL, 0, NULL, 0, NULL, (&p->memory_plugin_ws_state_list));
+          /* resize cairo or agg workstation to Qt window */
           vp_size[1] = w * 2.54 / 100 / p->device_dpi_x;
           vp_size[3] = h * 2.54 / 100 / p->device_dpi_y;
-          gks_cairo_plugin(55, 0, 0, 0, NULL, 0, vp_size, 0, vp_size + 2, 0, NULL, (void **)(&p->cairo_ws_state_list));
+          p->memory_plugin(55, 0, 0, 0, NULL, 0, vp_size, 0, vp_size + 2, 0, NULL,
+                           (void **)(&p->memory_plugin_ws_state_list));
         }
       return;
 
@@ -1332,7 +1337,7 @@ static void cairo_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr
           p->window[1] = r1[1];
           p->window[2] = r2[0];
           p->window[3] = r2[1];
-          gks_cairo_plugin(fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, (&p->cairo_ws_state_list));
+          p->memory_plugin(fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, (&p->memory_plugin_ws_state_list));
         }
       break;
     case 55:
@@ -1342,29 +1347,29 @@ static void cairo_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr
           p->viewport[1] = r1[1];
           p->viewport[2] = r2[0];
           p->viewport[3] = r2[1];
-          gks_cairo_plugin(fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, (&p->cairo_ws_state_list));
+          p->memory_plugin(fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, (&p->memory_plugin_ws_state_list));
         }
       break;
 
     default:
-      if (p->cairo_initialised)
+      if (p->memory_plugin_initialised)
         {
-          gks_cairo_plugin(fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, (&p->cairo_ws_state_list));
+          p->memory_plugin(fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, (&p->memory_plugin_ws_state_list));
         }
       break;
     }
 }
 
-static void gks_cairo_write_page()
+static void gks_memory_plugin_write_page()
 {
   int width, height;
   unsigned char *mem;
   int ia[2] = {0, GKS_K_WRITE_PAGE_FLAG};
-  gks_cairo_plugin(8, 0, 0, 0, ia, 0, NULL, 0, NULL, 0, NULL, (void **)(&p->cairo_ws_state_list));
+  p->memory_plugin(8, 0, 0, 0, ia, 0, NULL, 0, NULL, 0, NULL, (void **)(&p->memory_plugin_ws_state_list));
 
-  width = p->mem[0];
-  height = p->mem[1];
-  mem = *((unsigned char **)(p->mem + 3));
+  width = p->memory_plugin_mem_ptr[0];
+  height = p->memory_plugin_mem_ptr[1];
+  mem = *((unsigned char **)(p->memory_plugin_mem_ptr + 3));
 
   QImage img = QImage(mem, width, height, QImage::Format_ARGB32_Premultiplied);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
@@ -1505,14 +1510,30 @@ static void interp(char *str)
 {
   char *s;
   int sp = 0, *len;
+
   s = str;
+
+  if (getenv("GKS_QT_USE_CAIRO"))
+    {
+      p->memory_plugin = gks_cairo_plugin;
+      p->memory_plugin_wstype = 143;
+    }
+  else if (getenv("GKS_QT_USE_AGG"))
+    {
+      p->memory_plugin = gks_agg_plugin;
+      p->memory_plugin_wstype = 173;
+    }
+  else
+    {
+      p->memory_plugin_wstype = 0;
+    }
 
   RESOLVE(len, int, sizeof(int));
   while (*len)
     {
-      if (getenv("GKS_QT_USE_CAIRO"))
+      if (p->memory_plugin_wstype)
         {
-          sp += gks_dl_read_item(s + sp, &gkss, cairo_dl_render);
+          sp += gks_dl_read_item(s + sp, &gkss, memory_plugin_dl_render);
         }
       else
         {
@@ -1521,9 +1542,9 @@ static void interp(char *str)
       RESOLVE(len, int, sizeof(int));
     }
 
-  if (p->cairo_initialised)
+  if (p->memory_plugin_wstype && p->memory_plugin_initialised)
     {
-      gks_cairo_write_page();
+      gks_memory_plugin_write_page();
     }
 
   p->interp_was_called = true;
@@ -1550,8 +1571,11 @@ static void initialize_data()
     }
 
   p->empty = true;
+
+  p->memory_plugin_initialised = false;
   p->prevent_resize_by_dl = false;
   p->interp_was_called = false;
+
   p->window[0] = 0.0;
   p->window[1] = 1.0;
   p->window[2] = 0.0;

@@ -69,6 +69,10 @@ static ws_descr_t ws_types[] = {{2, GKS_K_METERS, 1.00000, 1.00000, 65536, 65536
                                 {160, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "mp4", NULL},
                                 {161, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "webm", NULL},
                                 {162, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "ogg", NULL},
+                                {170, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ppm", NULL},
+                                {171, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "png", NULL},
+                                {172, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "jpg", NULL},
+                                {173, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL},
                                 {210, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, NULL, NULL},
                                 {211, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 2, NULL, NULL},
                                 {212, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 2, NULL, NULL},
@@ -301,6 +305,14 @@ static void gks_ddlk(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_
             case 162:
               gks_video_plugin(fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
                                ptr);
+              break;
+
+            case 170:
+            case 171:
+            case 172:
+            case 173:
+              gks_agg_plugin(fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
+                             ptr);
               break;
 
             case 314:

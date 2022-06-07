@@ -4929,7 +4929,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           start_pline(x_org, y_min);
 
-          str_get_format_reference(&format_reference, y_org, y_min, y_max, y_tick, major_y);
+          str_get_format_reference(&format_reference, y_org, yi, y_max, y_tick, major_y);
 
           while (yi <= y_max + feps)
             {
@@ -5053,7 +5053,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
 
-          str_get_format_reference(&format_reference, x_org, x_min, x_max, x_tick, major_x);
+          str_get_format_reference(&format_reference, x_org, xi, x_max, x_tick, major_x);
 
           /* draw X-axis */
 
@@ -6697,7 +6697,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(z_min / z_tick);
           zi = i * z_tick;
 
-          str_get_format_reference(&format_reference, z_org, z_min, z_max, z_tick, major_z);
+          str_get_format_reference(&format_reference, z_org, zi, z_max, z_tick, major_z);
 
           /* draw Z-axis */
 
@@ -6862,7 +6862,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(y_min / y_tick);
           yi = i * y_tick;
 
-          str_get_format_reference(&format_reference, y_org, y_min, y_max, y_tick, major_y);
+          str_get_format_reference(&format_reference, y_org, yi, y_max, y_tick, major_y);
 
           /* draw Y-axis */
 
@@ -7027,7 +7027,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           xi = i * x_tick;
 
 
-          str_get_format_reference(&format_reference, x_org, x_min, x_max, x_tick, major_x);
+          str_get_format_reference(&format_reference, x_org, xi, x_max, x_tick, major_x);
 
           /* draw X-axis */
 
@@ -9552,10 +9552,12 @@ static int gks_wstype(char *type)
     wstype = 390;
   else if (!str_casecmp(type, "pgf"))
     wstype = 314;
+  else if (!str_casecmp(type, "ppm"))
+    wstype = 170;
   else
     {
       fprintf(stderr, "%s: unrecognized file type\nAvailable formats: \
-bmp, eps, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff or wmf\n",
+bmp, eps, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff, wmf or ppm\n",
               type);
       wstype = -1;
     }
@@ -9563,10 +9565,14 @@ bmp, eps, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff or wmf\n",
   if (wstype == 145 && gks_getenv("GKS_USE_GS_BMP") != NULL) wstype = 320;
 
   if (wstype == 144 && gks_getenv("GKS_USE_GS_JPG") != NULL) wstype = 321;
+  if (wstype == 144 && gks_getenv("GKS_USE_AGG_JPG") != NULL) wstype = 172;
 
   if (wstype == 140 && gks_getenv("GKS_USE_GS_PNG") != NULL) wstype = 322;
+  if (wstype == 140 && gks_getenv("GKS_USE_AGG_PNG") != NULL) wstype = 171;
 
   if (wstype == 146 && gks_getenv("GKS_USE_GS_TIF") != NULL) wstype = 323;
+
+  if (wstype == 143 && gks_getenv("GKS_USE_AGG_MEM") != NULL) wstype = 173;
 
   return wstype;
 }
@@ -11174,25 +11180,26 @@ static void text_impl(double x, double y, char *string, int inline_math, int inq
             }
 
           yy = textP->y - y;
-          if (inline_math) yy -= charHeight * 0.2;
-
           if (!textP->math && baseLine != NULL)
             {
               yy += *baseLine + 0.5 * charHeight;
             }
           switch (vAlign)
             {
+            case 1:
+              yy += -totalHeight * 0.1;
+              break;
             case 2:
-              yy += charHeight * 0.2;
+              yy += 0;
               break;
             case 3:
               yy += 0.5 * totalHeight;
               break;
             case 4:
-              yy += totalHeight - charHeight * 0.2;
+              yy += totalHeight;
               break;
             case 5:
-              yy += totalHeight;
+              yy += totalHeight * 1.1;
               break;
             default:
               break;
@@ -11226,6 +11233,10 @@ static void text_impl(double x, double y, char *string, int inline_math, int inq
       yy = y;
       switch (vAlign)
         {
+        case 1:
+          yy += -totalHeight * 0.1;
+        case 2:
+          break;
         case 3:
           yy += 0.5 * totalHeight;
           break;
@@ -11233,7 +11244,7 @@ static void text_impl(double x, double y, char *string, int inline_math, int inq
           yy += totalHeight;
           break;
         case 5:
-          yy += totalHeight;
+          yy += totalHeight * 1.1;
           break;
         default:
           break;

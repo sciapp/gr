@@ -1247,7 +1247,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
           CGContextBeginPath(context);
           CGContextSetLineCap(context, kCGLineCapButt);
           CGContextSetLineJoin(context, kCGLineJoinRound);
-          CGContextSetLineWidth(context, p->nominal_size);
+          CGContextSetLineWidth(context, gkss->bwidth * p->nominal_size);
           CGContextSetStrokeColor(context, marker_color);
           for (i = 0; i < 2; i++)
             {
@@ -1267,7 +1267,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
           CGContextBeginPath(context);
           CGContextSetLineCap(context, kCGLineCapButt);
           CGContextSetLineJoin(context, kCGLineJoinRound);
-          CGContextSetLineWidth(context, p->nominal_size);
+          CGContextSetLineWidth(context, gkss->bwidth * p->nominal_size);
           CGContextSetStrokeColor(context, marker_color);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
@@ -1320,7 +1320,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
         case 6: // arc
           CGContextBeginPath(context);
-          CGContextSetLineWidth(context, p->nominal_size);
+          CGContextSetLineWidth(context, gkss->bwidth * p->nominal_size);
           CGContextSetStrokeColor(context, marker_color);
           CGContextAddArc(context, x, y, r, 0.0, 2 * M_PI, 0);
           CGContextDrawPath(context, kCGPathStroke);
@@ -1339,7 +1339,10 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
                 }
             }
           else
-            CGContextSetStrokeColor(context, background_color);
+            {
+              CGContextSetFillColor(context, background_color);
+              CGContextSetStrokeColor(context, background_color);
+            }
           CGContextAddArc(context, x, y, r, 0.0, 2 * M_PI, 0);
           if (op == 7 && gkss->bcoli != gkss->pmcoli)
             CGContextDrawPath(context, kCGPathFillStroke);
@@ -1527,7 +1530,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
       begin_context(context);
       CGContextBeginPath(context);
       CGContextSetLineJoin(context, kCGLineJoinRound);
-      CGContextSetLineWidth(context, p->nominal_size);
+      CGContextSetLineWidth(context, gkss->bwidth * p->nominal_size);
       CGContextAddLines(context, points, n);
       CGContextClosePath(context);
       CGContextDrawPath(context, kCGPathStroke);

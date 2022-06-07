@@ -92,11 +92,12 @@ format_reference_t *str_get_format_reference(format_reference_t *result, double 
   if (!result->scientific)
     {
       double tick_width_multiplied = tick_width;
-      while (tick_width_multiplied - (int64_t)(tick_width_multiplied + 1e-14) > 0 &&
+      while ((int64_t)tick_width_multiplied < tick_width_multiplied &&
+             log10(tick_width_multiplied - (int64_t)tick_width_multiplied) >= result->decimal_digits - LENGTH_DIGITS &&
              result->decimal_digits < LENGTH_DIGITS)
         {
           result->decimal_digits++;
-          tick_width_multiplied = tick_width * pow(10.0, result->decimal_digits);
+          tick_width_multiplied = (tick_width + 1e-15) * pow(10.0, result->decimal_digits);
         }
     }
   return result;
@@ -301,15 +302,19 @@ char *str_ftoa(char *result, double value, format_reference_t *reference, int fo
               exponent_str = &exponent_str[1];
             }
 
-          exponent_length = log10(exponent_abs) + 1;
-
-
+          if (exponent_abs == 0)
+            {
+              exponent_length = 1;
+            }
+          else
+            {
+              exponent_length = log10(exponent_abs) + 1;
+            }
           for (i = exponent_length; i > 0; i--)
             {
               exponent_str[i] = ('0' + exponent_abs % 10);
               exponent_abs /= 10;
             }
-
           if (format_option == SCIENTIFIC_FORMAT_OPTION_TEXTEX || format_option == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
             {
               exponent_str[exponent_length + 1] = '}';

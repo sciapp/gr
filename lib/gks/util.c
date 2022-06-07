@@ -84,7 +84,7 @@ static struct wstypes_t wstypes[] = {
     {"pgf", 314},    {"bmp", 145},      {"jpeg", 144},     {"jpg", 144},      {"png", 140},      {"tiff", 146},
     {"tif", 146},    {"gtk", 142},      {"wx", 380},       {"qt", 381},       {"svg", 382},      {"wmf", 390},
     {"quartz", 400}, {"socket", 410},   {"sock", 410},     {"gksqt", 411},    {"zmq", 415},      {"gl", 420},
-    {"opengl", 420}};
+    {"opengl", 420}, {"ppm", 170}};
 
 static int num_wstypes = sizeof(wstypes) / sizeof(wstypes[0]);
 
@@ -1795,14 +1795,28 @@ int gks_get_ws_type(void)
           wstype = 320;
         }
 
-      if ((!strcmp(env, "jpg") || !strcmp(env, "jpeg")) && gks_getenv("GKS_USE_GS_JPG") != NULL)
+      if ((!strcmp(env, "jpg") || !strcmp(env, "jpeg")))
         {
-          wstype = 321;
+          if (gks_getenv("GKS_USE_GS_JPG") != NULL)
+            {
+              wstype = 321;
+            }
+          else if (gks_getenv("GKS_USE_AGG_JPG") != NULL)
+            {
+              wstype = 172;
+            }
         }
 
-      if (!strcmp(env, "png") && gks_getenv("GKS_USE_GS_PNG") != NULL)
+      if (!strcmp(env, "png"))
         {
-          wstype = 322;
+          if (gks_getenv("GKS_USE_GS_PNG") != NULL)
+            {
+              wstype = 322;
+            }
+          else if (gks_getenv("GKS_USE_AGG_PNG") != NULL)
+            {
+              wstype = 171;
+            }
         }
 
       if ((!strcmp(env, "tif") || !strcmp(env, "tiff")) && gks_getenv("GKS_USE_GS_TIF") != NULL)

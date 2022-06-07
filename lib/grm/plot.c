@@ -5133,10 +5133,10 @@ error_t plot_pie(grm_args_t *subplot_args)
       gr_inqcolor(color_ind, (int *)color_rgb);
       set_text_color_for_background(color_rgb[0] / 255.0, color_rgb[1] / 255.0, color_rgb[2] / 255.0);
       end_angle = start_angle - normalized_x[i] * 360.0;
-      gr_fillarc(-1.0, 1.0, -1.0, 1.0, start_angle, end_angle);
+      gr_fillarc(0.05, 0.95, 0.05, 0.95, start_angle, end_angle);
       middle_angle = (start_angle + end_angle) / 2.0;
-      text_pos[0] = 0.7 * cos(middle_angle * M_PI / 180.0);
-      text_pos[1] = 0.7 * sin(middle_angle * M_PI / 180.0);
+      text_pos[0] = 0.5 + 0.25 * cos(middle_angle * M_PI / 180.0);
+      text_pos[1] = 0.5 + 0.25 * sin(middle_angle * M_PI / 180.0);
       gr_wctondc(&text_pos[0], &text_pos[1]);
       snprintf(text, 80, "%.2lf\n%.1lf %%", x[i], normalized_x_int[i] / 10.0);
       gr_text(text_pos[0], text_pos[1], text);
@@ -5524,7 +5524,7 @@ error_t plot_draw_polar_axes(grm_args_t *args)
   if (args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
   for (i = 0; i <= n; i++)
     {
-      double r = r_min + i * tick / (r_max - r_min);
+      double r = 2.0 / 3 * (r_min + i * tick) / r_max;
       if (i % 2 == 0)
         {
           gr_setlinecolorind(88);

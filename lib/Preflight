@@ -667,5 +667,42 @@ fi
 printf "%12s: %s\n" "libtiff" "$info" >&2
 rm -f $tmpsrc $tmpout $tmpver
 
+if [ "$agg" != "no" ]
+then
+  tmpout=`mktemp /tmp/a.out.XXXXX`
+  tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+  tmpver=`mktemp /tmp/a$$XXXXX.txt`
+  cat >$tmpsrc << eof
+#include <stdio.h>
+#include <agg_pixfmt_rgba.h>
+#include <agg_renderer_base.h>
+
+typedef agg::pixfmt_alpha_blend_rgba<agg::blender_rgba<agg::rgba8, agg::order_bgra>, agg::rendering_buffer> pix_fmt;
+typedef agg::renderer_base<pix_fmt> renderer_base;
+
+int main() {
+    renderer_base renderer;
+    return 0;
+}
+eof
+  libs="-lm"
+  cmd="${CXX} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lagg"
+  $cmd $libs >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    aggdefs="AGGDEFS=-DNO_AGG AGGLIBS="
+    info="${red} no${normal} [agg not found]"
+    ret=1
+  else
+    $tmpout >$tmpver 2>&1
+    info="${green}yes${normal}"
+  fi
+else
+  info="${yellow} no${normal} [disabled]"
+  aggdefs="AGGDEFS=-DNO_AGG AGGLIBS="
+  ret=1
+fi
+printf "%12s: %s\n" "agg" "$info" >&2
+rm -f $tmpsrc $tmpout $tmpver
+
 echo "" >&2
-echo $target $wxdefs $qt4defs $qt5defs $qt6defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $gldefs $zmqdefs $avdefs $cairodefs $tiffdefs $extradefs
+echo $target $wxdefs $qt4defs $qt5defs $qt6defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $gldefs $zmqdefs $avdefs $cairodefs $tiffdefs $aggdefs $extradefs
