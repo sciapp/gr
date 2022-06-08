@@ -381,6 +381,11 @@ static void text(const std::shared_ptr<GR::Element> &element, const std::shared_
   auto x = static_cast<double>(element->getAttribute("x"));
   auto y = static_cast<double>(element->getAttribute("y"));
   auto str = static_cast<std::string>(element->getAttribute("text"));
+  CoordinateSpace space = static_cast<CoordinateSpace>(static_cast<int>(element->getAttribute("space")));
+  if (space == WC)
+    {
+      gr_wctondc(&x, &y);
+    }
   gr_text(x, y, &str[0]);
 }
 
@@ -1462,7 +1467,7 @@ std::shared_ptr<GR::Element> GR::Render::createPolyline(const std::string &x_key
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createText(double x, double y, const std::string &text)
+std::shared_ptr<GR::Element> GR::Render::createText(double x, double y, const std::string &text, CoordinateSpace space)
 {
   /*!
    * This function can be used to create a Text GR::Element
@@ -1470,11 +1475,14 @@ std::shared_ptr<GR::Element> GR::Render::createText(double x, double y, const st
    * \param[in] x A double value representing the x coordinate
    * \param[in] y A double value representing the y coordinate
    * \param[in] text A string
+   * \param[in] space the coordinate space (WC or NDC) for x and y, default NDC
    */
+
   auto element = createElement("text");
   element->setAttribute("x", x);
   element->setAttribute("y", y);
   element->setAttribute("text", text);
+  element->setAttribute("space", space);
   return element;
 }
 

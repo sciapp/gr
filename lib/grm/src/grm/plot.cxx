@@ -2105,7 +2105,7 @@ void plot_post_subplot(grm_args_t *subplot_args)
 
   gr_restorestate();
   grm_args_values(subplot_args, "kind", "s", &kind);
-  args_values(subplot_args, "kind", "s", &kind);
+  grm_args_values(subplot_args, "kind", "s", &kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   if (grm_args_contains(subplot_args, "labels"))
     {

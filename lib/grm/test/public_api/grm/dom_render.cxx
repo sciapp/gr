@@ -69,9 +69,9 @@ static void test_dom_render(void)
       grm_args_push(series[i], "x", "nD", n, plots[i][0]);
       grm_args_push(series[i], "y", "nD", n, plots[i][1]);
 
-      //      grm_args_push(series[i], "c", "nD", n, markercolordoubs);
-      //      grm_args_push(series[i], "markertype", "nD", n, markertypes);
-      //      grm_args_push(series[i], "z", "nD", n, markersizes);
+      //            grm_args_push(series[i], "c", "nD", n, markercolordoubs);
+      //            grm_args_push(series[i], "markertype", "nD", n, markertypes);
+      //            grm_args_push(series[i], "z", "nD", n, markersizes);
     }
 
 
@@ -98,9 +98,10 @@ static void test_dom_render(void)
   for (const auto &elem : root->querySelectorsAll("polymarker"))
     {
       elem->setAttribute("markertype", 2);
-      //      std::vector<double> v(markersizes, markersizes + sizeof markersizes / sizeof markersizes[0]);
-      //      render->setMarkerSize(elem, "sizes", v, context);
-      //      break;
+      break;
+      //            std::vector<double> v(markersizes, markersizes + sizeof markersizes / sizeof markersizes[0]);
+      //            render->setMarkerSize(elem, "sizes", v, context);
+      //            break;
     }
 
   std::cout << toXML(root) << std::endl;
@@ -696,7 +697,7 @@ static void test_shade(void)
 int main(void)
 {
 
-  //    test_dom_render();
+  test_dom_render();
   // test_wireframe();
   // test_plot3();
   //  testTrisurf();
@@ -704,7 +705,7 @@ int main(void)
   //  test_shade();
   //  test_hist();
   //  test_contour();
-  testBar();
+  //  testBar();
   grm_finalize();
 
   return 0;

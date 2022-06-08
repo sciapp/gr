@@ -8,6 +8,7 @@
 #include <grm/dom_render/graphics_tree/Element.hxx>
 #include <grm/dom_render/graphics_tree/Document.hxx>
 #include "gr.h"
+#include <grm/util_int.h>
 
 
 namespace GR
@@ -40,7 +41,7 @@ public:
   std::shared_ptr<Element> createPolyline(double x1, double x2, double y1, double y2, int line_type = 0,
                                           double line_width = 0.0, int line_colorind = 0);
 
-  std::shared_ptr<Element> createText(double x, double y, const std::string &text);
+  std::shared_ptr<Element> createText(double x, double y, const std::string &text, CoordinateSpace space = NDC);
 
   std::shared_ptr<Element> createFillArea(const std::string &x_key, std::optional<std::vector<double>> x,
                                           const std::string &y_key, std::optional<std::vector<double>> y,

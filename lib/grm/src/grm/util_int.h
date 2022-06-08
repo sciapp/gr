@@ -132,6 +132,12 @@ int is_homogenous_string_of_char(const char *str, char c);
 const char *private_name(const char *public_name);
 unsigned long next_or_equal_power2(unsigned long num);
 
+enum CoordinateSpace
+{
+  WC,
+  NDC
+};
+
 #ifdef __cplusplus
 }
 #endif
