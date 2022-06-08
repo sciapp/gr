@@ -697,7 +697,7 @@ static void test_shade(void)
 int main(void)
 {
 
-  test_dom_render();
+  //  test_dom_render();
   // test_wireframe();
   // test_plot3();
   //  testTrisurf();
@@ -705,7 +705,7 @@ int main(void)
   //  test_shade();
   //  test_hist();
   //  test_contour();
-  //  testBar();
+  testBar();
   grm_finalize();
 
   return 0;

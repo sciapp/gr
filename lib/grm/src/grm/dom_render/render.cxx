@@ -1318,7 +1318,7 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
               elemStringToFunc[element->localName()];
           f(element, context);
         }
-      catch (std::__1::bad_function_call &e)
+      catch (std::bad_function_call &e)
         {
           throw NotFoundError("No dom render function found for element with local name: " + element->localName());
         }
