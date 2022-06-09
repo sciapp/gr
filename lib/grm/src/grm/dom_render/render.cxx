@@ -949,6 +949,21 @@ static void triContour(const std::shared_ptr<GR::Element> &element, const std::s
   gr_tricontour(nx, px_p, py_p, pz_p, nl, l_p);
 }
 
+static void titles3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for titles3d
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  std::string x, y, z;
+  x = static_cast<std::string>(element->getAttribute("x"));
+  y = static_cast<std::string>(element->getAttribute("y"));
+  z = static_cast<std::string>(element->getAttribute("z"));
+  gr_titles3d(x.data(), y.data(), z.data());
+}
+
 static void gr3Clear(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   gr3_clear();
@@ -1089,6 +1104,12 @@ static void processWindow3d(const std::shared_ptr<GR::Element> &elem)
   gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
 }
 
+static void processProjectionType(const std::shared_ptr<GR::Element> &elem)
+{
+  int type = (int)elem->getAttribute("projectiontype");
+  gr_setprojectiontype(type);
+}
+
 static void processSpace3d(const std::shared_ptr<GR::Element> &elem)
 {
   double phi, theta, fov, camera_distance;
@@ -1100,6 +1121,18 @@ static void processSpace3d(const std::shared_ptr<GR::Element> &elem)
   gr_setspace3d(phi, theta, fov, camera_distance);
 }
 
+
+static void processSpace(const std::shared_ptr<GR::Element> &elem)
+{
+  double zmin, zmax;
+  int rotation, tilt;
+  zmin = (double)elem->getAttribute("space_zmin");
+  zmax = (double)elem->getAttribute("space_zmax");
+  rotation = (int)elem->getAttribute("space_rotation");
+  tilt = (int)elem->getAttribute("space_tilt");
+
+  gr_setspace(zmin, zmax, rotation, tilt);
+}
 
 static void processViewport(const std::shared_ptr<GR::Element> &elem)
 {
@@ -1215,7 +1248,9 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
       {std::string("resamplemethod"),
        [](const std::shared_ptr<GR::Element>
               &elem) { gr_setresamplemethod((int)elem->getAttribute("resamplemethod")); }},
+      {std::string("projectiontype"), processProjectionType},
       {std::string("space3d"), processSpace3d},
+      {std::string("space"), processSpace},
       {std::string("viewport"), processViewport},
       {std::string("scale"),
        [](const std::shared_ptr<GR::Element> &elem) { gr_setscale((int)elem->getAttribute("scale")); }},
@@ -1292,6 +1327,7 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
                        {std::string("volume"), volume},
                        {std::string("trisurface"), triSurface},
                        {std::string("tricontour"), triContour},
+                       {std::string("titles3d"), titles3d},
                        {std::string("gr3clear"), gr3Clear},
                        {std::string("gr3deletemesh"), gr3DeleteMesh},
                        {std::string("gr3drawimage"), gr3DrawImage},
@@ -2238,6 +2274,17 @@ GR::Render::createTriContour(const std::string &px_key, std::optional<std::vecto
   return element;
 }
 
+std::shared_ptr<GR::Element> GR::Render::createTitles3d(const std::string &x, const std::string &y,
+                                                        const std::string &z)
+{
+  auto element = createElement("titles3d");
+  element->setAttribute("x", x);
+  element->setAttribute("y", y);
+  element->setAttribute("z", z);
+
+  return element;
+}
+
 
 std::shared_ptr<GR::Element> GR::Render::createGR3Clear()
 {
@@ -2718,7 +2765,7 @@ void GR::Render::setWindow3d(const std::shared_ptr<GR::Element> &element, double
 void GR::Render::setSpace3d(const std::shared_ptr<GR::Element> &element, double phi, double theta, double fov,
                             double camera_distance)
 {
-  /*! This function can be used to set the window3d of a GR::Element
+  /*! This function can be used to set the space3d of a GR::Element
    *
    * \param[in] element A GR::Element
    * \param[in] phi: azimuthal angle of the spherical coordinates
@@ -2733,6 +2780,25 @@ void GR::Render::setSpace3d(const std::shared_ptr<GR::Element> &element, double 
   element->setAttribute("space3d_theta", theta);
   element->setAttribute("space3d_fov", fov);
   element->setAttribute("space3d_camera-distance", camera_distance);
+}
+
+void GR::Render::setSpace(const std::shared_ptr<Element> &element, double zmin, double zmax, int rotation, int tilt)
+{
+  /*!
+   * This function can be used to set the space of a GR::Element
+   *
+   * \param[in] element A GR::Element
+   * \param[in] zmin
+   * \param[in] zmax
+   * \param[in] rotation
+   * \param[in] tilt
+   */
+
+  element->setAttribute("space", true);
+  element->setAttribute("space_zmin", zmin);
+  element->setAttribute("space_zmax", zmax);
+  element->setAttribute("space_rotation", rotation);
+  element->setAttribute("space_tilt", tilt);
 }
 
 void GR::Render::setSelntran(const std::shared_ptr<Element> &element, int transform)
@@ -2833,6 +2899,16 @@ void GR::Render::setCharHeight(const std::shared_ptr<GR::Element> &element, doub
   element->setAttribute("charheight", height);
 }
 
+void GR::Render::setProjectionType(const std::shared_ptr<GR::Element> &element, int type)
+{
+  /*!
+   * This function can be used to set the projectiontype of a GR::Element
+   *
+   * \param[in] element A GR::Element
+   * \param[in] type The projectiontype
+   */
+  element->setAttribute("projectiontype", type);
+}
 
 void GR::Render::setTransparency(const std::shared_ptr<GR::Element> &element, double alpha)
 {

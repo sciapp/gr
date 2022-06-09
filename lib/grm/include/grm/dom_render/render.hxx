@@ -166,6 +166,8 @@ public:
                                             const std::string &levels_key, std::optional<std::vector<double>> levels,
                                             const std::shared_ptr<Context> &extContext = nullptr);
 
+  std::shared_ptr<Element> createTitles3d(const std::string &x, const std::string &y, const std::string &z);
+
   std::shared_ptr<Element> createGR3Clear();
 
   std::shared_ptr<Element> createGR3DeleteMesh(int mesh);
@@ -245,6 +247,8 @@ public:
   void setSpace3d(const std::shared_ptr<Element> &element, double phi, double theta, double fov,
                   double camera_distance);
 
+  void setSpace(const std::shared_ptr<Element> &element, double zmin, double zmax, int rotation, int tilt);
+
   void setSelntran(const std::shared_ptr<Element> &element, int transform);
 
   void setGR3BackgroundColor(const std::shared_ptr<Element> &element, double red, double green, double blue,
@@ -266,6 +270,8 @@ public:
   void setResampleMethod(const std::shared_ptr<Element> &element, int resample);
 
   void setTextEncoding(const std::shared_ptr<Element> &element, int encoding);
+
+  void setProjectionType(const std::shared_ptr<Element> &element, int type);
 
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context

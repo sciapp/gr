@@ -2766,6 +2766,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
   double *y_lightness = NULL;
 
   auto group = global_root->lastChildElement();
+  gr_savestate();
   group->setAttribute("name", "barplot");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -3511,6 +3512,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
       series_index++;
       ++current_series;
     }
+  gr_restorestate();
 
 
 cleanup:
@@ -3659,8 +3661,8 @@ err_t plot_contourf(grm_args_t *subplot_args)
   group->setAttribute("name", "contourf");
 
   grm_args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
-  gr_setprojectiontype(0);
-  gr_setspace(z_min, z_max, 0, 90);
+  global_render->setProjectionType(group, 0);
+  global_render->setSpace(group, z_min, z_max, 0, 90);
   grm_args_values(subplot_args, "levels", "i", &num_levels);
   h = static_cast<double *>(malloc(num_levels * sizeof(double)));
   if (h == NULL)
@@ -4481,7 +4483,6 @@ err_t plot_isosurface(grm_args_t *subplot_args)
       global_render->setSelntran(subGroup, 0);
       subGroup->append(global_render->createGR3Clear());
 
-      // TODO: gr3createisosurfacemesh dom render... how to deal with the mesh reference?
       error = gr3_createisosurfacemesh(&mesh, conv_data, isovalue_int,
 
                                        /* dim_x */ shape[0],
@@ -4836,14 +4837,13 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   auto group = global_root->lastChildElement();
   group->setAttribute("name", "polarhistogram");
 
+  gr_savestate();
   std::shared_ptr<GR::Element> temp_elem;
   std::string str;
 
   gr_inqresamplemethod(&resample);
 
-  // ToDo:
   global_render->setResampleMethod(group, 0x2020202);
-  //  gr_setresamplemethod(0x2020202);
 
   grm_args_values(subplot_args, "series", "A", &series);
 
@@ -4867,9 +4867,7 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
       face_alpha = 0.75;
     }
 
-  // ToDo:
   global_render->setTransparency(group, face_alpha);
-  //  gr_settransparency(face_alpha);
 
   grm_args_values(*series, "nbins", "i", &num_bins);
 
@@ -5697,7 +5695,7 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                       line_x[1] = mlist[(x - 1) * 4 + 2];
                       line_y[0] = mlist[x * 4 + 1];
                       line_y[1] = mlist[(x - 1) * 4 + 3];
-                      gr_polyline(2, line_x, line_y);
+                      group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
                     }
                 }
               line_x[0] = mlist[(num_bins - 1) * 4 + 2] = grm_max(mlist[(num_bins - 1) * 4 + 2], r_min * cos(0));
@@ -5811,6 +5809,9 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
   gr_updatews();
   gr_updategks();
+  gr_restorestate();
+
+  // TODO: gr_restorestate() restores resamplemethod?
   gr_setresamplemethod(resample);
 
 cleanup:
@@ -5891,13 +5892,13 @@ err_t plot_pie(grm_args_t *subplot_args)
       end_angle = start_angle - normalized_x[i] * 360.0;
       middle_angle = (start_angle + end_angle) / 2.0;
 
-      text_pos[0] = 0.5 + 0.25 * cos(middle_angle * M_PI / 180.0);
-      text_pos[1] = 0.5 + 0.25 * sin(middle_angle * M_PI / 180.0);
-      gr_wctondc(&text_pos[0], &text_pos[1]);
+      text_pos[0] = 0.7 * cos(middle_angle * M_PI / 180.0);
+      text_pos[1] = 0.7 * sin(middle_angle * M_PI / 180.0);
 
-      auto text_elem = global_render->createText(text_pos[0], text_pos[1], text);
+      auto text_elem = global_render->createText(text_pos[0], text_pos[1], text, WC);
       group->append(text_elem);
 
+      // ToDo: inq from dom?
       gr_inqfillcolorind(&color_ind);
       gr_inqcolor(color_ind, (int *)color_rgb);
       set_text_color_for_background(color_rgb[0] / 255.0, color_rgb[1] / 255.0, color_rgb[2] / 255.0, text_elem);
@@ -6194,7 +6195,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
       if (grm_args_values(args, "xlabel", "s", &x_label) && grm_args_values(args, "ylabel", "s", &y_label) &&
           grm_args_values(args, "zlabel", "s", &z_label))
         {
-          gr_titles3d(x_label, y_label, z_label);
+          group->append(global_render->createTitles3d(x_label, y_label, z_label));
         }
     }
   else
@@ -6243,7 +6244,6 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
             {
               x1 = i;
               gr_wctondc(&x1, &x2);
-              std::cout << "wctondc \t" << x1 << "\n";
               x2 = viewport[2] - 0.5 * charheight;
               draw_xticklabel(x1, x2, xticklabels[i - 1], available_width, xtick_group);
             }
@@ -6433,14 +6433,19 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
   double legend_symbol_x[2], legend_symbol_y[2];
   int i;
 
+  auto group = global_root->lastChildElement();
+  auto subGroup = global_render->createGroup("legend");
+  group->append(subGroup);
+
   return_error_if(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   logger((stderr, "Draw a legend with %d labels\n", num_labels));
   grm_args_first_value(subplot_args, "series", "A", &current_series, &num_series);
   grm_args_values(subplot_args, "viewport", "D", &viewport);
   grm_args_values(subplot_args, "location", "i", &location);
+  global_render->setSelntran(subGroup, 0);
+  global_render->setScale(subGroup, 0);
+
   gr_savestate();
-  gr_selntran(0);
-  gr_setscale(0);
   legend_size(subplot_args, &w, &h);
 
   if (int_equals_any(location, 3, 11, 12, 13))
@@ -6480,15 +6485,22 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
       py = viewport[3] - 0.06;
     }
 
-  gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
-  gr_setfillcolorind(0);
-  gr_fillrect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
-  gr_setlinetype(GKS_K_INTSTYLE_SOLID);
-  gr_setlinecolorind(1);
-  gr_setlinewidth(1);
-  gr_drawrect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
+  auto fr = global_render->createFillRect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
+  subGroup->append(fr);
+
+  global_render->setFillIntStyle(subGroup, GKS_K_INTSTYLE_SOLID);
+  global_render->setFillColorInd(subGroup, 0);
+
+  auto dr = global_render->createDrawRect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
+  subGroup->append(dr);
+
+  global_render->setLineType(dr, GKS_K_INTSTYLE_SOLID);
+  global_render->setLineColorInd(dr, 1);
+  global_render->setLineWidth(dr, 1);
+
   i = 1;
-  gr_uselinespec(const_cast<char *>(" "));
+  global_render->setLineSpec(subGroup, const_cast<char *>(" "));
+
   current_label = labels;
   while (*current_series != NULL)
     {
@@ -6511,7 +6523,10 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
           legend_symbol_x[1] = px - 0.01;
           legend_symbol_y[0] = py;
           legend_symbol_y[1] = py;
-          gr_polyline(2, legend_symbol_x, legend_symbol_y);
+          auto pl = global_render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                  legend_symbol_y[1]);
+          subGroup->append(pl);
+          global_render->setLineSpec(pl, spec);
         }
       if (mask & 2)
         {
@@ -6519,13 +6534,17 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
           legend_symbol_x[1] = px - 0.02;
           legend_symbol_y[0] = py;
           legend_symbol_y[1] = py;
-          gr_polymarker(2, legend_symbol_x, legend_symbol_y);
+          auto pl = global_render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                  legend_symbol_y[1]);
+          subGroup->append(pl);
+          global_render->setLineSpec(pl, spec);
         }
       gr_restorestate();
-      gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
       if (i <= num_labels && *current_label != NULL)
         {
-          gr_text(px, py, (char *)*current_label);
+          auto tx = global_render->createText(px, py, (char *)*current_label);
+          subGroup->append(tx);
+          global_render->setTextAlign(tx, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
           py -= 0.5 * dy;
           i += 1;
           ++current_label;
@@ -6533,7 +6552,9 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
       py -= 0.03;
       ++current_series;
     }
-  gr_selntran(1);
+  auto resetGroup = global_render->createGroup("reset_selntran");
+  global_render->setSelntran(resetGroup, 1);
+  group->append(resetGroup);
   gr_restorestate();
 
   return ERROR_NONE;
