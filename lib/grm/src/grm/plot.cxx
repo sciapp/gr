@@ -6569,13 +6569,17 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
   double px, py, w, h;
   double tbx[4], tby[4];
 
+  auto group = global_root->lastChildElement();
+  auto subGroup = global_render->createGroup("pie_legend");
+  group->append(subGroup);
+
   return_error_if(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   logger((stderr, "Draw a pie legend with %d labels\n", num_labels));
   grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
   grm_args_values(subplot_args, "viewport", "D", &viewport);
   gr_savestate();
-  gr_selntran(0);
-  gr_setscale(0);
+  global_render->setSelntran(subGroup, 0);
+  global_render->setScale(subGroup, 0);
   w = 0;
   h = 0;
   for (current_label = labels; *current_label != NULL; ++current_label)
@@ -6589,28 +6593,45 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
   px = 0.5 * (viewport[0] + viewport[1] - w);
   py = viewport[2] - 0.75 * h;
 
-  gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
-  gr_setfillcolorind(0);
-  gr_fillrect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
-  gr_setlinetype(GKS_K_INTSTYLE_SOLID);
-  gr_setlinecolorind(1);
-  gr_setlinewidth(1);
-  gr_drawrect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
-  gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-  gr_uselinespec(const_cast<char *>(" "));
-  set_next_color(series, "c", GR_COLOR_FILL);
+  auto fr = global_render->createFillRect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
+  subGroup->append(fr);
+  global_render->setFillIntStyle(subGroup, GKS_K_INTSTYLE_SOLID);
+  global_render->setFillColorInd(subGroup, 0);
+  auto dr = global_render->createDrawRect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
+  subGroup->append(dr);
+  global_render->setLineType(subGroup, GKS_K_INTSTYLE_SOLID);
+  global_render->setLineColorInd(subGroup, 1);
+  global_render->setLineWidth(subGroup, 1);
+
+  auto subsubGroup = global_render->createGroup("labels_group");
+  subGroup->append(subsubGroup);
+  global_render->setLineSpec(subsubGroup, const_cast<char *>(" "));
+  global_render->setTextAlign(subsubGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+
+  auto colorGroup = global_render->createGroup("color_group");
+  subsubGroup->append(colorGroup);
+  set_next_color(series, "c", GR_COLOR_FILL, colorGroup);
+  global_render->setLineColorInd(colorGroup, 1);
+
   for (current_label = labels; *current_label != NULL; ++current_label)
     {
-      gr_fillrect(px, px + 0.02, py - 0.01, py + 0.01);
-      gr_setlinecolorind(1);
-      gr_drawrect(px, px + 0.02, py - 0.01, py + 0.01);
-      gr_text(px + 0.03, py, (char *)*current_label);
+
+      colorGroup->append(global_render->createFillRect(px, px + 0.02, py - 0.01, py + 0.01));
+      colorGroup->append(global_render->createDrawRect(px, px + 0.02, py - 0.01, py + 0.01));
+      colorGroup->append(global_render->createText(px + 0.03, py, (char *)*current_label));
+
       gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
       px += tbx[2] - tbx[0] + 0.05;
-      set_next_color(NULL, NULL, GR_COLOR_FILL);
+      if (*(current_label + 1) != NULL)
+        {
+          colorGroup = global_render->createGroup("color_group");
+          subsubGroup->append(colorGroup);
+          set_next_color(NULL, NULL, GR_COLOR_FILL, colorGroup);
+        }
     }
-  set_next_color(NULL, NULL, GR_COLOR_RESET);
-  gr_selntran(1);
+  auto reset_group = global_render->createGroup("reset_group");
+  global_render->setSelntran(reset_group, 1);
+  group->append(reset_group);
   gr_restorestate();
 
   return ERROR_NONE;

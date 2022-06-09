@@ -60,7 +60,7 @@ static void test_dom_render(void)
       markertypes[i] = rand() % 6 + (-32);
       markercolorinds[i] = rand() % (255);
       markercolordoubs[i] = rand() % 255 * 1.0;
-      markersizes[i] = rand() % 25 * 1.0;
+      markersizes[i] = rand() % 25 * 10.0;
     }
 
   for (i = 0; i < 2; ++i)
@@ -69,9 +69,9 @@ static void test_dom_render(void)
       grm_args_push(series[i], "x", "nD", n, plots[i][0]);
       grm_args_push(series[i], "y", "nD", n, plots[i][1]);
 
-      //      grm_args_push(series[i], "c", "nD", n, markercolordoubs);
-      //      grm_args_push(series[i], "markertype", "nD", n, markertypes);
-      //      grm_args_push(series[i], "z", "nD", n, markersizes);
+      grm_args_push(series[i], "c", "nD", n, markercolordoubs);
+      grm_args_push(series[i], "markertype", "nD", n, markertypes);
+      grm_args_push(series[i], "z", "nD", n, markersizes);
     }
 
 
