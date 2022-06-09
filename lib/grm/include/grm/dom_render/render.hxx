@@ -192,30 +192,31 @@ public:
   void setMarkerType(const std::shared_ptr<Element> &element, int type);
 
   void setMarkerType(const std::shared_ptr<Element> &element, const std::string &types_key,
-                     const std::vector<int> &types, const std::shared_ptr<Context> &extContext = nullptr);
+                     std::optional<std::vector<int>> types, const std::shared_ptr<Context> &extContext = nullptr);
 
   void setMarkerSize(const std::shared_ptr<Element> &element, const std::string &sizes_key,
-                     const std::vector<double> &sizes, const std::shared_ptr<Context> &extContext = nullptr);
+                     std::optional<std::vector<double>> sizes, const std::shared_ptr<Context> &extContext = nullptr);
 
   void setMarkerSize(const std::shared_ptr<Element> &element, double size);
 
   void setMarkerColorInd(const std::shared_ptr<Element> &element, const std::string &colorinds_key,
-                         const std::vector<int> &colorinds, const std::shared_ptr<Context> &extContext = nullptr);
+                         std::optional<std::vector<int>> colorinds,
+                         const std::shared_ptr<Context> &extContext = nullptr);
 
   void setMarkerColorInd(const std::shared_ptr<Element> &element, int color);
 
-  void setLineType(const std::shared_ptr<Element> &element, const std::string &types_key, const std::vector<int> &types,
-                   const std::shared_ptr<Context> &extContext = nullptr);
+  void setLineType(const std::shared_ptr<Element> &element, const std::string &types_key,
+                   std::optional<std::vector<int>> types, const std::shared_ptr<Context> &extContext = nullptr);
 
   void setLineType(const std::shared_ptr<Element> &element, int type);
 
   void setLineWidth(const std::shared_ptr<Element> &element, const std::string &widths_key,
-                    const std::vector<double> &widths, const std::shared_ptr<Context> &extContext = nullptr);
+                    std::optional<std::vector<double>> widths, const std::shared_ptr<Context> &extContext = nullptr);
 
   void setLineWidth(const std::shared_ptr<Element> &element, double width);
 
   void setLineColorInd(const std::shared_ptr<Element> &element, const std::string &colorinds_key,
-                       const std::vector<int> &colorinds, const std::shared_ptr<Context> &extContext = nullptr);
+                       std::optional<std::vector<int>> colorinds, const std::shared_ptr<Context> &extContext = nullptr);
 
   void setLineColorInd(const std::shared_ptr<Element> &element, int color);
 

@@ -2416,6 +2416,9 @@ err_t plot_scatter(grm_args_t *subplot_args)
       double *markertypes = NULL;
       unsigned int x_length, y_length, z_length, c_length, markertypes_length;
       int i, c_index = -1, markertype;
+      std::vector<int> markerTypesVec, markerColorIndsVec;
+      std::vector<double> markerSizesVec;
+
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
@@ -2452,8 +2455,6 @@ err_t plot_scatter(grm_args_t *subplot_args)
       if (z != NULL || c != NULL || markertypes != NULL)
         {
           grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max);
-          std::vector<int> markerTypesVec, markerColorIndsVec;
-          std::vector<double> markerSizesVec;
 
           for (i = 0; i < x_length; i++)
             {
@@ -2476,6 +2477,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
                       if (c_index < 1000 || c_index > 1255)
                         {
                           markerColorIndsVec.push_back(0);
+                          // ToDo: Originally this marker should be skipped...
                           continue;
                         }
                     }
@@ -2506,22 +2508,25 @@ err_t plot_scatter(grm_args_t *subplot_args)
                   markerTypesVec.push_back(*previous_marker_type);
                 }
             }
-          int id = (int)global_root->getAttribute("id");
-          global_root->setAttribute("id", id + 1);
+
+          std::vector<double> x_vec(x, x + x_length);
+          std::vector<double> y_vec(y, y + y_length);
+
+          int id = static_cast<int>(global_root->getAttribute("id"));
           std::string str = std::to_string(id);
+          global_root->setAttribute("id", ++id);
 
-          auto element = global_render->createPolymarker(x[i], y[i]);
+          auto element = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
           subGroup->append(element);
-
-          if (markerTypesVec.size())
+          if (!markerTypesVec.empty())
             {
               global_render->setMarkerType(element, "markertypes" + str, markerTypesVec);
             }
-          if (markerSizesVec.size())
+          if (!markerSizesVec.empty())
             {
               global_render->setMarkerSize(element, "markersizes" + str, markerSizesVec);
             }
-          if (markerColorIndsVec.size())
+          if (!markerColorIndsVec.empty())
             {
               global_render->setMarkerColorInd(element, "markercolorinds" + str, markerColorIndsVec);
             }
@@ -2539,8 +2544,8 @@ err_t plot_scatter(grm_args_t *subplot_args)
 
           int id = static_cast<int>(global_root->getAttribute("id"));
           std::string str = std::to_string(id);
-          auto polymarker = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
-          subGroup->append(polymarker);
+          auto element = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
+          subGroup->append(element);
           global_root->setAttribute("id", ++id);
         }
       error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
@@ -8728,6 +8733,11 @@ int grm_switch(unsigned int id)
 std::shared_ptr<GR::Element> grm_get_document_root(void)
 {
   return global_root;
+}
+
+std::shared_ptr<GR::Render> grm_get_render(void)
+{
+  return global_render;
 }
 
 

@@ -2381,7 +2381,7 @@ void GR::Render::setMarkerType(const std::shared_ptr<Element> &element, int type
 
 
 void GR::Render::setMarkerType(const std::shared_ptr<Element> &element, const std::string &types_key,
-                               const std::vector<int> &types, const std::shared_ptr<GR::Context> &extContext)
+                               std::optional<std::vector<int>> types, const std::shared_ptr<GR::Context> &extContext)
 {
   /*!
    * This function can be used to set a vector of MarkerTypes of a GR::Element
@@ -2393,7 +2393,10 @@ void GR::Render::setMarkerType(const std::shared_ptr<Element> &element, const st
    * an external GR::Context can be used
    */
   std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
-  (*useContext)[types_key] = types;
+  if (types != std::nullopt)
+    {
+      (*useContext)[types_key] = *types;
+    }
   element->setAttribute("markertypes", types_key);
 }
 
@@ -2410,7 +2413,7 @@ void GR::Render::setMarkerSize(const std::shared_ptr<Element> &element, double s
 }
 
 void GR::Render::setMarkerSize(const std::shared_ptr<Element> &element, const std::string &sizes_key,
-                               const std::vector<double> &sizes, const std::shared_ptr<GR::Context> &extContext)
+                               std::optional<std::vector<double>> sizes, const std::shared_ptr<GR::Context> &extContext)
 {
   /*!
    * This function can be used to set a vector of MarkerTypes of a GR::Element
@@ -2422,7 +2425,10 @@ void GR::Render::setMarkerSize(const std::shared_ptr<Element> &element, const st
    * an external GR::Context can be used
    */
   std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
-  (*useContext)[sizes_key] = sizes;
+  if (sizes != std::nullopt)
+    {
+      (*useContext)[sizes_key] = *sizes;
+    }
   element->setAttribute("markersizes", sizes_key);
 }
 void GR::Render::setMarkerColorInd(const std::shared_ptr<Element> &element, int color)
@@ -2437,7 +2443,8 @@ void GR::Render::setMarkerColorInd(const std::shared_ptr<Element> &element, int 
 }
 
 void GR::Render::setMarkerColorInd(const std::shared_ptr<Element> &element, const std::string &colorinds_key,
-                                   const std::vector<int> &colorinds, const std::shared_ptr<GR::Context> &extContext)
+                                   std::optional<std::vector<int>> colorinds,
+                                   const std::shared_ptr<GR::Context> &extContext)
 {
   /*!
    * This function can be used to set a vector of MarkerColorInds of a GR::Element
@@ -2449,13 +2456,16 @@ void GR::Render::setMarkerColorInd(const std::shared_ptr<Element> &element, cons
    * but an external GR::Context can be used
    */
   std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
-  (*useContext)[colorinds_key] = colorinds;
+  if (colorinds != std::nullopt)
+    {
+      (*useContext)[colorinds_key] = *colorinds;
+    }
   element->setAttribute("markercolorinds", colorinds_key);
 }
 
 
 void GR::Render::setLineType(const std::shared_ptr<Element> &element, const std::string &types_key,
-                             const std::vector<int> &types, const std::shared_ptr<GR::Context> &extContext)
+                             std::optional<std::vector<int>> types, const std::shared_ptr<GR::Context> &extContext)
 {
   /*!
    * This function can be used to set a vector of LineTypes of a GR::Element
@@ -2467,7 +2477,10 @@ void GR::Render::setLineType(const std::shared_ptr<Element> &element, const std:
    * an external GR::Context can be used
    */
   std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
-  (*useContext)[types_key] = types;
+  if (types != std::nullopt)
+    {
+      (*useContext)[types_key] = *types;
+    }
   element->setAttribute("linetypes", types_key);
 }
 
@@ -2484,7 +2497,7 @@ void GR::Render::setLineType(const std::shared_ptr<Element> &element, int type)
 
 
 void GR::Render::setLineWidth(const std::shared_ptr<Element> &element, const std::string &widths_key,
-                              const std::vector<double> &widths, const std::shared_ptr<GR::Context> &extContext)
+                              std::optional<std::vector<double>> widths, const std::shared_ptr<GR::Context> &extContext)
 {
   /*!
    * This function can be used to set a vector of LineWidths of a GR::Element
@@ -2496,7 +2509,10 @@ void GR::Render::setLineWidth(const std::shared_ptr<Element> &element, const std
    * an external GR::Context can be used
    */
   std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
-  (*useContext)[widths_key] = widths;
+  if (widths != std::nullopt)
+    {
+      (*useContext)[widths_key] = *widths;
+    }
   element->setAttribute("linewidths", widths_key);
 }
 
@@ -2514,7 +2530,8 @@ void GR::Render::setLineWidth(const std::shared_ptr<Element> &element, double wi
 
 
 void GR::Render::setLineColorInd(const std::shared_ptr<Element> &element, const std::string &colorinds_key,
-                                 const std::vector<int> &colorinds, const std::shared_ptr<GR::Context> &extContext)
+                                 std::optional<std::vector<int>> colorinds,
+                                 const std::shared_ptr<GR::Context> &extContext)
 {
   /*!
    * This funciton can be used to set a vector of LineColorInds of a GR::Element
@@ -2526,7 +2543,10 @@ void GR::Render::setLineColorInd(const std::shared_ptr<Element> &element, const 
    * but an external GR::Context can be used
    */
   std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
-  (*useContext)[colorinds_key] = colorinds;
+  if (colorinds != std::nullopt)
+    {
+      (*useContext)[colorinds_key] = *colorinds;
+    }
   element->setAttribute("linecolorinds", colorinds_key);
 }
 
@@ -2705,7 +2725,7 @@ void GR::Render::setSpace3d(const std::shared_ptr<GR::Element> &element, double 
    * \param[in] theta: polar angle of the spherical coordinates
    * \param[in] fov: vertical field of view(0 or NaN for orthographic projection)
    * \param[in] camera_distance: distance between the camera and the focus point (in arbitrary units, 0 or NaN for the
-   * radius of the object’s smallest bounding sphere)
+   * radius of the object's smallest bounding sphere)
    */
 
   element->setAttribute("space3d", true);
