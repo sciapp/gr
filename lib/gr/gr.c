@@ -5959,7 +5959,6 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
         {
           clip3d(&x0, &x1, &y0, &y1, &z0, &z1, &visible);
         }
-      visible = 1;
       if (visible)
         {
           if (clip)
