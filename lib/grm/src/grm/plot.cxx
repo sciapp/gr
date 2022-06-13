@@ -3242,6 +3242,10 @@ err_t plot_barplot(grm_args_t *subplot_args)
                       global_render->setCharUp(temp, -1.0, 0.0);
                       global_render->setTextAlign(temp, 2, 3);
                     }
+                  else
+                    {
+                      continue;
+                    }
                   if (y_lightness[i] < 0.4)
                     {
                       global_render->setTextColorInd(temp, 0);
@@ -6361,9 +6365,8 @@ err_t plot_draw_polar_axes(grm_args_t *args)
 
           x[0] = 0.05;
           y[0] = r;
-          gr_wctondc(x, y);
           snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + i * tick);
-          group->append(global_render->createText(x[0], y[0], text_buffer));
+          group->append(global_render->createText(x[0], y[0], text_buffer, WC));
         }
       else
         {
@@ -6394,7 +6397,6 @@ err_t plot_draw_polar_axes(grm_args_t *args)
 
       x[0] *= 1.1;
       y[0] *= 1.1;
-      gr_wctondc(x, y);
       if (phiflip == 0)
         {
           snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", (int)grm_round(alpha));
@@ -6406,7 +6408,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
           else
             snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 330 - (int)grm_round(alpha - interval));
         }
-      temp = global_render->createText(x[0], y[0], text_buffer);
+      temp = global_render->createText(x[0], y[0], text_buffer, WC);
       group->append(temp);
       global_render->setTextAlign(temp, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
     }
