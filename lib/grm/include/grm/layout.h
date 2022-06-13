@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 #include "args.h"
-#include "error_int.h"
+#include "error.h"
 
 /* ######################### public interface ####################################################################### */
 

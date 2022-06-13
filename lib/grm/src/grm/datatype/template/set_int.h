@@ -10,7 +10,7 @@
 typedef SSIZE_T ssize_t;
 #endif
 
-#include <grm/error_int.h>
+#include <grm/error.h>
 #include <grm/logging_int.h>
 #include <grm/util_int.h>
 

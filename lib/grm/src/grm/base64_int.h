@@ -9,7 +9,7 @@ extern "C" {
 
 #include <stdlib.h>
 
-#include "error_int.h"
+#include "grm/error.h"
 #include <grm/base64.h>
 
 

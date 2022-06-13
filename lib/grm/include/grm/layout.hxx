@@ -6,7 +6,7 @@
 #include <string>
 
 #include "args.h"
-#include "error_int.h"
+#include "error.h"
 
 namespace grm
 {

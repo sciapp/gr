@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include <grm/error_int.h>
+#include <grm/error.h>
 #include <grm/util_int.h>
 
 

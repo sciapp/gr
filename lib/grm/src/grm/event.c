@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#include "error_int.h"
+#include "grm/error.h"
 #include "event_int.h"
 #include "plot_int.h"
 

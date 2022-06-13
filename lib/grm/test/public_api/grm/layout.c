@@ -2,7 +2,6 @@
 #define _XOPEN_SOURCE 500
 #endif
 #include <math.h>
-#include <layout.h>
 #include "grm.h"
 #include "gr.h"
 

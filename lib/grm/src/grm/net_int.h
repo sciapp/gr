@@ -7,7 +7,7 @@ extern "C" {
 
 /* ######################### includes ############################################################################### */
 
-#include "error_int.h"
+#include "grm/error.h"
 #include "memwriter_int.h"
 #include <grm/net.h>
 

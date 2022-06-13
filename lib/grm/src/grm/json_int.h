@@ -10,7 +10,7 @@ extern "C" {
 #include <stdarg.h>
 
 #include <grm/args.h>
-#include "error_int.h"
+#include "grm/error.h"
 #include "memwriter_int.h"
 
 

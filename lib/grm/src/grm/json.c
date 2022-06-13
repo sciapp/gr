@@ -10,7 +10,7 @@
 #include <math.h>
 #include <stdio.h>
 
-#include "error_int.h"
+#include "grm/error.h"
 #include "json_int.h"
 #include "plot_int.h"
 

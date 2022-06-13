@@ -13,7 +13,7 @@
 
 #include "gkscore.h"
 
-#include "error_int.h"
+#include "grm/error.h"
 #include "json_int.h"
 #include "util_int.h"
 
