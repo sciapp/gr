@@ -1763,7 +1763,7 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
 
-      line_width = 0.01 * attributes[j++];
+      line_width = 0.001 * attributes[j++];
       rgba = attributes[j++];
       p->red[ln_color] = (rgba & 0xff) / 255.0;
       p->green[ln_color] = ((rgba >> 8) & 0xff) / 255.0;
@@ -1812,7 +1812,7 @@ static void draw_markers(int n, double *px, double *py, int *attributes)
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
       seg_xform(&x, &y);
 
-      mk_size = 0.01 * attributes[j++];
+      mk_size = 0.001 * attributes[j++];
       rgba = attributes[j++];
       p->red[mk_color] = (rgba & 0xff) / 255.0;
       p->green[mk_color] = ((rgba >> 8) & 0xff) / 255.0;

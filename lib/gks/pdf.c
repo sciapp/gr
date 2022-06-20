@@ -1023,8 +1023,8 @@ static void polyline(int n, double *px, double *py)
 
 static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
-  int r, curve, i;
-  double scale, x, y, xr, yr;
+  int curve, i;
+  double r, scale, x, y, xr, yr;
   int pc, op;
 
 #include "marker.h"
@@ -1034,13 +1034,13 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
   static double cy[4][3] = {{-1, -0.5523, 0}, {0.5523, 1, 1}, {1, 0.5523, 0}, {-0.5523, -1, -1}};
 
   mscale *= p->nominal_size;
-  r = (int)(3 * mscale);
+  r = 3 * mscale;
   scale = 0.01 * mscale / 3.0;
 
   xr = r;
   yr = 0;
   seg_xform_rel(&xr, &yr);
-  r = nint(sqrt(xr * xr + yr * yr));
+  r = sqrt(xr * xr + yr * yr);
 
   NDC_to_DC(xn, yn, x, y);
 
@@ -1846,7 +1846,7 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
 
-      line_width = 0.01 * attributes[j++];
+      line_width = 0.001 * attributes[j++];
       rgba = attributes[j++];
       p->red[ln_color] = (rgba & 0xff) / 255.0;
       p->green[ln_color] = ((rgba >> 8) & 0xff) / 255.0;
@@ -1872,7 +1872,7 @@ static void draw_markers(int n, double *px, double *py, int *attributes)
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
       seg_xform(&x, &y);
 
-      mk_size = 0.01 * attributes[j++];
+      mk_size = 0.001 * attributes[j++];
       rgba = attributes[j++];
       p->red[mk_color] = (rgba & 0xff) / 255.0;
       p->green[mk_color] = ((rgba >> 8) & 0xff) / 255.0;
