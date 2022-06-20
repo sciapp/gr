@@ -1208,8 +1208,8 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
                    :(const CGFloat *)color
 {
   double x, y;
-  int r, i;
-  double scale, xr, yr;
+  int i;
+  double r, scale, xr, yr;
   int pc, op;
   const CGFloat *marker_color, *border_color, *background_color;
 
@@ -1220,13 +1220,13 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   background_color = CGColorGetComponents(p->rgb[0]);
 
   mscale *= p->nominal_size;
-  r = (int)(3 * mscale);
+  r = 3 * mscale;
   scale = 0.01 * mscale / 3.0;
 
   xr = r;
   yr = 0;
   seg_xform_rel(&xr, &yr);
-  r = nint(sqrt(xr * xr + yr * yr));
+  r = sqrt(xr * xr + yr * yr);
 
   NDC_to_DC(xn, yn, x, y);
 
@@ -1775,7 +1775,7 @@ static void to_DC(int n, double *x, double *y)
       CGContextBeginPath(context);
       CGContextSetLineCap(context, kCGLineCapRound);
       CGContextSetLineJoin(context, kCGLineJoinRound);
-      line_width = 0.01 * attributes[j++];
+      line_width = 0.001 * attributes[j++];
       CGContextSetLineWidth(context, line_width * p->nominal_size);
 
       rgba = attributes[j++];
@@ -1824,7 +1824,7 @@ static void to_DC(int n, double *x, double *y)
       else
         draw = 1;
 
-      mk_size = 0.01 * attributes[j++];
+      mk_size = 0.001 * attributes[j++];
       rgba = attributes[j++];
       color[0] = (rgba & 0xff) / 255.0;
       color[1] = ((rgba >> 8) & 0xff) / 255.0;

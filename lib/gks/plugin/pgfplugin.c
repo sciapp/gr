@@ -261,18 +261,19 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
 {
   double x, y;
   double scale, xr, yr, x1, x2, y1, y2;
-  int pc, op, r, i;
+  int pc, op, i;
+  double r;
 
 #include "marker.h"
 
   mscale *= p->nominal_size;
-  r = (int)(3 * mscale);
+  r = 3 * mscale;
   scale = 0.01 * mscale / 3.0;
 
   xr = r;
   yr = 0;
   seg_xform_rel(&xr, &yr);
-  r = nint(sqrt(xr * xr + yr * yr));
+  r = sqrt(xr * xr + yr * yr);
 
   NDC_to_DC(xn, yn, x, y);
 
@@ -1257,7 +1258,7 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
 
-      line_width = 0.01 * attributes[j++];
+      line_width = 0.001 * attributes[j++];
       rgba = attributes[j++];
       if (line_width == prev_line_width && rgba == prev_rgba)
         {
@@ -1293,7 +1294,7 @@ static void draw_markers(int n, double *px, double *py, int *attributes)
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
       seg_xform(&x, &y);
 
-      mk_size = 0.01 * attributes[j++];
+      mk_size = 0.001 * attributes[j++];
       rgba = attributes[j++];
 
       pgf_printf(p->stream, "\\definecolor{mycolor}{RGB}{%d,%d,%d}\n", (rgba & 0xff), ((rgba >> 8) & 0xff),

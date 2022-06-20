@@ -426,9 +426,9 @@ static void polyline(int n, double *px, double *py)
 static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
   double x, y;
-  int r, d, i;
+  int i;
   int pc, op;
-  double scale, xr, yr;
+  double r, d, scale, xr, yr;
   QPolygonF *points;
 
 #include "marker.h"
@@ -439,19 +439,19 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
   border_color.setAlpha(p->transparency);
 
   mscale *= p->nominal_size;
-  r = (int)(3 * mscale);
+  r = 3 * mscale;
   d = 2 * r;
   scale = 0.01 * mscale / 3.0;
 
   xr = r;
   yr = 0;
   seg_xform_rel(&xr, &yr);
-  r = nint(sqrt(xr * xr + yr * yr));
+  r = sqrt(xr * xr + yr * yr);
 
   NDC_to_DC(xn, yn, x, y);
 
   pc = 0;
-  mtype = (d > 1) ? mtype + marker_off : marker_off + 1;
+  mtype = (d > 0) ? mtype + marker_off : marker_off + 1;
 
   do
     {
@@ -521,7 +521,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
         case 6: /* arc */
           p->pixmap->setPen(QPen(marker_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
-          p->pixmap->drawArc(x - r, y - r, d, d, 0, 360 * 16);
+          p->pixmap->drawArc(QRectF(x - r, y - r, d, d), 0, 360 * 16);
           break;
 
         case 7: /* filled arc */
@@ -536,7 +536,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
             }
           else
             set_color(0);
-          p->pixmap->drawChord(x - r, y - r, d, d, 0, 360 * 16);
+          p->pixmap->drawChord(QRectF(x - r, y - r, d, d), 0, 360 * 16);
           break;
         }
       pc++;
@@ -1084,7 +1084,7 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
 
-      line_width = 0.01 * attributes[j++];
+      line_width = 0.001 * attributes[j++];
       rgba = attributes[j++];
       red = rgba & 0xff;
       green = (rgba >> 8) & 0xff;
@@ -1121,7 +1121,7 @@ static void draw_markers(int n, double *px, double *py, int *attributes)
       else
         draw = 1;
 
-      mk_size = 0.01 * attributes[j++];
+      mk_size = 0.001 * attributes[j++];
       rgba = attributes[j++];
       red = rgba & 0xff;
       green = (rgba >> 8) & 0xff;
