@@ -7147,26 +7147,51 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
       setscale(lx.scale_options);
     }
 
-  if (modern_projection_type || wx.phi != 0 || wx.delta != 90)
+  if (modern_projection_type)
     {
-      if (modern_projection_type)
+      x_min = ix.xmin;
+      x_max = ix.xmax;
+      y_min = ix.ymin;
+      y_max = ix.ymax;
+      z_min = ix.zmin;
+      z_max = ix.zmax;
+
+      if (*x_title)
         {
-          x_min = ix.xmin;
-          x_max = ix.xmax;
-          y_min = ix.ymin;
-          y_max = ix.ymax;
-          z_min = ix.zmin;
-          z_max = ix.zmin;
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          x = x_log(0.5 * (x_lin(x_min) + x_lin(x_max)));
+          y = y_log(y_lin(y_min) - 0.2 * (y_lin(y_max) - y_lin(y_min)));
+          z = z_min;
+          text3d(x, y, z, x_title, 2);
         }
-      else
+
+      if (*y_title)
         {
-          x_min = wn[0];
-          x_max = wn[1];
-          y_min = wn[2];
-          y_max = wn[3];
-          z_min = wx.zmin;
-          z_max = wx.zmax;
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          x = x_log(x_lin(x_max) + 0.2 * (x_lin(x_max) - x_lin(x_min)));
+          y = y_log(0.5 * (y_lin(y_min) + y_lin(y_max)));
+          z = z_min;
+          text3d(x, y, z, y_title, 1);
         }
+
+      if (*z_title)
+        {
+          gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BOTTOM);
+          x = x_min;
+          y = y_min;
+          z = z_max;
+          text3d(x, y, z, z_title, 3);
+        }
+    }
+  else if (wx.phi != 0 || wx.delta != 90)
+    {
+      x_min = wn[0];
+      x_max = wn[1];
+      y_min = wn[2];
+      y_max = wn[3];
+      z_min = wx.zmin;
+      z_max = wx.zmax;
+
       r = (x_max - x_min) / (y_max - y_min) * (vp[3] - vp[2]) / (vp[1] - vp[0]);
 
       alpha = atan_2(r * wx.c1, wx.a1);
