@@ -247,6 +247,11 @@ extern "C" {
 #define GKS_K_GDP_DRAW_TRIANGLES 4
 #define GKS_K_GDP_FILL_POLYGONS 5
 
+/* resize behaviour flag */
+
+#define GKS_K_NO_RESIZE 0
+#define GKS_K_RESIZE 1
+
 /* GKS error codes */
 
 #define GKS_K_NO_ERROR 0
@@ -687,6 +692,10 @@ DLLEXPORT void gks_inq_resample_method(unsigned int *flag);
 
 DLLEXPORT void gks_ft_gdp(int n, double *px, double *py, int primid, int ldr, int *datrec);
 DLLEXPORT void *gks_state(void);
+
+DLLEXPORT void gks_set_resize_behaviour(int flag);
+DLLEXPORT void gks_inq_resize_behaviour(int *flag);
+
 
 /* Entry point definitions */
 

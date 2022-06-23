@@ -241,6 +241,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
     case 52:  /* select normalization transformation */
     case 53:  /* set clipping indicator */
     case 108: /* set resample method */
+    case 109: /* set resize behaviour */
     case 207: /* set border color index */
     case 208: /* select clipping transformation */
 
@@ -428,6 +429,7 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
     case 52:  /* select normalization transformation */
     case 53:  /* set clipping indicator */
     case 108: /* set resample method */
+    case 109: /* set resize behaviour */
     case 207: /* set border color index */
     case 208: /* select clipping transformation */
       RESOLVE(ia, int, sizeof(int));
@@ -564,6 +566,9 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
       break;
     case 108:
       (*gkss)->resample_method = ia[0];
+      break;
+    case 109:
+      (*gkss)->resize_behaviour = ia[0];
       break;
     case 200:
       (*gkss)->txslant = r1[0];

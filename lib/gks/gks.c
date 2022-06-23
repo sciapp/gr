@@ -521,9 +521,11 @@ void gks_init_gks(void)
       s->shoff[1] = 0;
       s->blur = 0;
       s->alpha = 1;
+      s->resample_method = 0;
       s->bwidth = 1;
       s->bcoli = 0;
       s->clip_tnr = 0;
+      s->resize_behaviour = GKS_K_RESIZE;
       s->aspect_ratio = 1;
 
       s->callback = NULL;
@@ -4370,4 +4372,25 @@ void gks_inq_clip_xform(int *errind, int *tnr)
 void *gks_state(void)
 {
   return (void *)s;
+}
+
+void gks_set_resize_behaviour(int flag)
+{
+  if (state >= GKS_K_GKOP)
+    {
+      s->resize_behaviour = flag;
+      i_arr[0] = flag;
+
+      /* call the device driver link routine */
+      gks_ddlk(SET_RESIZE_BEHAVIOUR, 1, 1, 1, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+    }
+  else
+    {
+      gks_report_error(SET_RESIZE_BEHAVIOUR, 8);
+    }
+}
+
+void gks_inq_resize_behaviour(int *flag)
+{
+  *flag = s->resize_behaviour;
 }
