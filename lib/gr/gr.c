@@ -3410,6 +3410,11 @@ void gr_setcharheight(double height)
   if (flag_graphics) gr_writestream("<setcharheight height=\"%g\"/>\n", height);
 }
 
+void gr_setwscharheight(double chh, double height)
+{
+  gr_setcharheight(gks_inq_ws_text_height(chh, height));
+}
+
 /*!
  * Gets the current character height..
  *
