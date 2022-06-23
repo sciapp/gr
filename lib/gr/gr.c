@@ -4881,8 +4881,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                     if (decade % major_y == 0)
                       {
                         xi = major_tick;
-                        if (yi != y_org || x_min == x_org || x_max == x_org ||
-                            ((y_org == start_y || y_org == y_max) && (x_min == x_org || x_max == x_org)))
+                        if (yi != y_org || x_min == x_org || x_max == x_org)
                           {
                             if (y_tick > 1)
                               {
@@ -4943,9 +4942,10 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                   if (i % major_y == 0)
                     {
                       xi = major_tick;
-                      if (yi != y_org || x_min == x_org || x_max == x_org ||
-                          ((y_org == start_y || y_org == y_max) && (x_min == x_org || x_max == x_org)))
-                        if (major_y > 0) text2dlbl(x_label, yi, gr_ftoa(string, yi, &format_reference), yi, fpy);
+                      if (yi != y_org || x_min == x_org || x_max == x_org)
+                        {
+                          if (major_y > 0) text2dlbl(x_label, yi, gr_ftoa(string, yi, &format_reference), yi, fpy);
+                        }
                     }
                   else
                     xi = minor_tick;
@@ -5013,8 +5013,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                     if (decade % major_x == 0)
                       {
                         yi = major_tick;
-                        if (xi != x_org || y_org == y_min || y_org == y_max ||
-                            ((x_org == start_x || x_org == x_max) && (y_org == y_min || y_org == y_max)))
+                        if (xi != x_org || y_org == y_min || y_org == y_max)
                           {
                             if (x_tick > 1)
                               {
@@ -5075,9 +5074,10 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                   if (i % major_x == 0)
                     {
                       yi = major_tick;
-                      if (xi != x_org || y_org == y_min || y_org == y_max ||
-                          ((x_org == start_x || x_org == x_max) && (y_org == y_min || y_org == y_max)))
-                        if (major_x > 0) text2dlbl(xi, y_label, gr_ftoa(string, xi, &format_reference), xi, fpx);
+                      if (xi != x_org || y_org == y_min || y_org == y_max)
+                        {
+                          if (major_x > 0) text2dlbl(xi, y_label, gr_ftoa(string, xi, &format_reference), xi, fpx);
+                        }
                     }
                   else
                     yi = minor_tick;
