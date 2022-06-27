@@ -398,7 +398,8 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
 
   ln_width *= p->nominal_size;
-  if (ln_width < 1) ln_width = 1;
+  /* line widths < 0.1 no longer provide meaningful results */
+  if (ln_width < 0.1) ln_width = 0.1;
 
   p->pixmap->save();
   p->pixmap->setRenderHint(QPainter::Antialiasing);
