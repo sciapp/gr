@@ -158,6 +158,7 @@ static void write_item(int sgnum, int fctid, int dx, int dy, int dimx, int *i_ar
     case 52:  /* select normalization transformation */
     case 53:  /* set clipping indicator */
     case 108: /* set resample method */
+    case 109: /* set resize behaviour */
     case 207: /* set border color index */
     case 208: /* select clipping transformation */
 
@@ -396,6 +397,7 @@ void gks_drv_wiss(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_
     case 54:
     case 55:
     case 108:
+    case 109:
     case 200:
     case 201:
     case 202:
@@ -523,6 +525,7 @@ static void interp(char *str, int segn)
         case 52:  /* select normalization transformation */
         case 53:  /* set clipping indicator */
         case 108: /* set resample method */
+        case 109: /* set resample method */
         case 207: /* set border color index */
         case 208: /* select clipping transformation */
 
@@ -699,6 +702,9 @@ static void interp(char *str, int segn)
 
             case 108:
               gks_set_resample_method(i_arr[0]);
+              break;
+            case 109:
+              gks_set_resize_behaviour(i_arr[0]);
               break;
             case 200:
               gks_set_text_slant(f_arr_1[0]);
