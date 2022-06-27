@@ -580,6 +580,7 @@ DLLEXPORT void gks_set_text_expfac(double chxp);
 DLLEXPORT void gks_set_text_spacing(double chsp);
 DLLEXPORT void gks_set_text_color_index(int coli);
 DLLEXPORT void gks_set_text_height(double chh);
+DLLEXPORT double gks_inq_ws_text_height(double chh, double height);
 DLLEXPORT void gks_set_text_upvec(double chux, double chuy);
 DLLEXPORT void gks_set_text_path(int txp);
 DLLEXPORT void gks_set_text_align(int txalh, int txalv);

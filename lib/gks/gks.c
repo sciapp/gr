@@ -1642,6 +1642,12 @@ void gks_set_text_height(double chh)
     gks_report_error(SET_TEXT_HEIGHT, 8);
 }
 
+double gks_inq_ws_text_height(double chh, double height)
+{
+  if (s->aspect_ratio > 1) chh /= s->aspect_ratio;
+  return chh * 500 / height;
+}
+
 void gks_set_text_upvec(double chux, double chuy)
 {
   if (state >= GKS_K_GKOP)
