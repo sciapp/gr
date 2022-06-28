@@ -204,7 +204,10 @@ static void resize_window(void)
       p->height = 2;
       p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
     }
-  p->nominal_size = min(p->width, p->height) / 500.0;
+  if (gkss->resize_behaviour == GKS_K_RESIZE)
+    {
+      p->nominal_size = min(p->width, p->height) / 500.0;
+    }
 
   if (p->pm)
     {
@@ -252,7 +255,10 @@ static void set_xform(void)
   p->c = h / (p->window[2] - p->window[3]);
   p->d = y + p->window[2] * p->c;
 
-  p->nominal_size = min(p->width, p->height) / 500.0;
+  if (gkss->resize_behaviour == GKS_K_RESIZE)
+    {
+      p->nominal_size = min(p->width, p->height) / 500.0;
+    }
 }
 
 static void seg_xform(double *x, double *y)
@@ -1670,7 +1676,10 @@ static int get_pixmap(void)
   p->device_dpi_y = device->physicalDpiY();
   p->mwidth = (double)p->width / p->device_dpi_x * 0.0254;
   p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
-  p->nominal_size = min(p->width, p->height) / 500.0;
+  if (gkss->resize_behaviour == GKS_K_RESIZE)
+    {
+      p->nominal_size = min(p->width, p->height) / 500.0;
+    }
 
   return 0;
 }

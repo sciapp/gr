@@ -1640,7 +1640,10 @@ void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
 
           p->width = p->viewport[1] * WIDTH / MWIDTH;
           p->height = p->viewport[3] * HEIGHT / MHEIGHT;
-          p->nominal_size = min(p->width, p->height) / 500.0;
+          if (gkss->resize_behaviour == GKS_K_RESIZE)
+            {
+              p->nominal_size = min(p->width, p->height) / 500.0;
+            }
 
           set_xform();
           init_norm_xform();
