@@ -321,6 +321,7 @@ static void seg_xform_rel(double *x, double *y) {}
         case 52:  /* select normalization transformation */
         case 53:  /* set clipping indicator */
         case 108: /* set resample method */
+        case 109: /* set resize behaviour */
         case 207: /* set border color index */
         case 208: /* select clipping transformation */
           RESOLVE(i_arr, int, sizeof(int));
@@ -581,6 +582,10 @@ static void seg_xform_rel(double *x, double *y) {}
 
         case 108:
           gkss->resample_method = i_arr[0];
+          break;
+
+        case 109:
+          gkss->resize_behaviour = i_arr[0];
           break;
 
         case 200:

@@ -79,6 +79,7 @@ static char *format[] = {
     "setperspectiveprojection:fff",
     "setpicturesizeforvolume:ii",
     "setprojectiontype:i",
+    "setresizebehaviour:i",
     "setscale:i",
     "setscalefactors3d: fff",
     "setspace:ffii",
@@ -466,91 +467,94 @@ static void gr(int id)
       gr_setprojectiontype(i_arg[0]);
       break;
     case 59:
-      gr_setscale(i_arg[0]);
+      gr_setresizebehaviour(i_arg[0]);
       break;
     case 60:
-      gr_setscalefactors3d(f_arg[0], f_arg[1], f_arg[2]);
+      gr_setscale(i_arg[0]);
       break;
     case 61:
-      gr_setspace(f_arg[0], f_arg[1], i_arg[0], i_arg[1]);
+      gr_setscalefactors3d(f_arg[0], f_arg[1], f_arg[2]);
       break;
     case 62:
-      gr_settextalign(i_arg[0], i_arg[1]);
+      gr_setspace(f_arg[0], f_arg[1], i_arg[0], i_arg[1]);
       break;
     case 63:
-      gr_settextcolorind(i_arg[0]);
+      gr_settextalign(i_arg[0], i_arg[1]);
       break;
     case 64:
-      gr_settextencoding(i_arg[0]);
+      gr_settextcolorind(i_arg[0]);
       break;
     case 65:
-      gr_settextfontprec(i_arg[0], i_arg[1]);
+      gr_settextencoding(i_arg[0]);
       break;
     case 66:
-      gr_settextpath(i_arg[0]);
+      gr_settextfontprec(i_arg[0], i_arg[1]);
       break;
     case 67:
-      gr_setthreadnumber(i_arg[0]);
+      gr_settextpath(i_arg[0]);
       break;
     case 68:
+      gr_setthreadnumber(i_arg[0]);
+      break;
+    case 69:
       gr_settransformationparameters(f_arg[0], f_arg[1], f_arg[2], f_arg[3], f_arg[4], f_arg[5], f_arg[6], f_arg[7],
                                      f_arg[8]);
       break;
-    case 69:
+    case 70:
       gr_settransparency(f_arg[0]);
       break;
-    case 70:
+    case 71:
       gr_setviewport(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
       break;
-    case 71:
+    case 72:
       gr_setvolumebordercalculation(i_arg[0]);
       break;
-    case 72:
+    case 73:
       gr_setwindow(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
       break;
-    case 73:
+    case 74:
       gr_setwindow3d(f_arg[0], f_arg[1], f_arg[2], f_arg[3], f_arg[4], f_arg[5]);
       break;
-    case 74:
+    case 75:
       gr_setwsviewport(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
       break;
-    case 75:
+    case 76:
       gr_setwswindow(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
       break;
-    case 76:
+    case 77:
       gr_shadelines(i_arg[0], f_arr[0], f_arr[1], i_arg[1], i_arg[2], i_arg[3]);
       break;
-    case 77:
+    case 78:
       gr_shadepoints(i_arg[0], f_arr[0], f_arr[1], i_arg[1], i_arg[2], i_arg[3]);
       break;
-    case 78:
+    case 79:
       gr_spline(i_arg[0], f_arr[0], f_arr[1], i_arg[1], i_arg[2]);
       break;
-    case 79:
+    case 80:
       gr_surface(i_arg[0], i_arg[1], f_arr[0], f_arr[1], f_arr[2], i_arg[2]);
       break;
-    case 80:
+    case 81:
       gr_text(f_arg[0], f_arg[1], s_arg[0]);
       break;
-    case 81:
+    case 82:
       gr_textext(f_arg[0], f_arg[1], s_arg[0]);
       break;
-    case 82:
+    case 83:
       gr_textx(f_arg[0], f_arg[1], s_arg[0], i_arg[0]);
       break;
-    case 83:
+    case 84:
       gr_titles3d(s_arg[0], s_arg[1], s_arg[2]);
       break;
-    case 84:
+    case 85:
       gr_tricontour(i_arg[0], f_arr[0], f_arr[1], f_arr[2], i_arg[2], f_arr[3]);
       break;
-    case 85:
+    case 86:
       gr_trisurface(i_arg[0], f_arr[0], f_arr[1], f_arr[2]);
       break;
-    case 86:
+    case 87:
       gr_uselinespec(s_arg[0]);
       break;
-    case 87:
+    case 88:
       gr_verrorbars(i_arg[0], f_arr[0], f_arr[1], f_arr[2], f_arr[3]);
       break;
     }

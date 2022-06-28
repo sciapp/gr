@@ -167,6 +167,7 @@ typedef struct
   double bwidth;
   int bcoli;
   int clip_tnr;
+  int resize_behaviour;
 } state_list;
 
 typedef struct
@@ -3654,6 +3655,23 @@ void gr_inqfillcolorind(int *color)
   check_autoinit;
 
   gks_inq_fill_color_index(&errind, color);
+}
+
+void gr_setresizebehaviour(int flag)
+{
+  check_autoinit;
+
+  gks_set_resize_behaviour(flag);
+  if (ctx) ctx->resize_behaviour = flag;
+
+  if (flag_graphics) gr_writestream("<setresizebehaviour=\"%d\"/>\n", flag);
+}
+
+void gr_inqresizebehaviour(int *flag)
+{
+  check_autoinit;
+
+  gks_inq_resize_behaviour(flag);
 }
 
 static void setcolor(int workstation_id, color_t *color)
@@ -11559,6 +11577,7 @@ void gr_savestate(void)
       gks_inq_border_width(&errind, &s->bwidth);
       gks_inq_border_color_index(&errind, &s->bcoli);
       gks_inq_clip_xform(&errind, &s->clip_tnr);
+      gks_inq_resize_behaviour(&s->resize_behaviour);
     }
   else
     fprintf(stderr, "attempt to save state beyond implementation limit\n");
@@ -11604,6 +11623,7 @@ void gr_restorestate(void)
       gks_set_border_width(s->bwidth);
       gks_set_border_color_index(s->bcoli);
       gks_select_clip_xform(s->clip_tnr);
+      gks_set_resize_behaviour(s->resize_behaviour);
     }
   else
     fprintf(stderr, "attempt to restore unsaved state\n");
@@ -11657,6 +11677,7 @@ void gr_selectcontext(int context)
           ctx->bwidth = 1;
           ctx->bcoli = 1;
           ctx->clip_tnr = 0;
+          ctx->resize_behaviour = GKS_K_RESIZE;
         }
       else
         {
@@ -11690,6 +11711,7 @@ void gr_selectcontext(int context)
       gks_set_border_width(ctx->bwidth);
       gks_set_border_color_index(ctx->bcoli);
       gks_select_clip_xform(ctx->clip_tnr);
+      gks_set_resize_behaviour(ctx->resize_behaviour);
     }
   else
     {
