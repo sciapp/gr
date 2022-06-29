@@ -377,7 +377,10 @@ static void resize_window(void)
 {
   p->width = nint((p->viewport[1] - p->viewport[0]) / MWIDTH * WIDTH);
   p->height = nint((p->viewport[3] - p->viewport[2]) / MHEIGHT * HEIGHT);
-  p->nominal_size = min(p->width, p->height) / 500.0;
+  if (gkss->resize_behaviour == GKS_K_RESIZE)
+    {
+      p->nominal_size = min(p->width, p->height) / 500.0;
+    }
 }
 
 static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)

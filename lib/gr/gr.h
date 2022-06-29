@@ -87,6 +87,8 @@ DLLEXPORT void gr_setfillstyle(int);
 DLLEXPORT void gr_inqfillstyle(int *);
 DLLEXPORT void gr_setfillcolorind(int);
 DLLEXPORT void gr_inqfillcolorind(int *);
+DLLEXPORT void gr_setresizebehaviour(int);
+DLLEXPORT void gr_inqresizebehaviour(int *);
 DLLEXPORT void gr_setcolorrep(int, double, double, double);
 DLLEXPORT void gr_setwindow(double, double, double, double);
 DLLEXPORT void gr_inqwindow(double *, double *, double *, double *);

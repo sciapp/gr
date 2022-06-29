@@ -766,7 +766,10 @@ static void set_xform(void)
 
   p->width = nint(p->a * (p->window[1] - p->window[0]));
   p->height = nint(p->c * (p->window[3] - p->window[2]));
-  p->nominal_size = min(p->width, p->height) / 500.0;
+  if (gkss->resize_behaviour == GKS_K_RESIZE)
+    {
+      p->nominal_size = min(p->width, p->height) / 500.0;
+    }
 }
 
 static void seg_xform(double *x, double *y)
@@ -2014,9 +2017,10 @@ void gks_drv_js(
   switch (fctid)
     {
     case 2:
+      gkss = (gks_state_list_t *)*ptr;
+
       /* open workstation */
       open_ws(ia[1], ia[2]);
-      gkss = (gks_state_list_t *)*ptr;
 
       init_norm_xform();
       init_colors();
