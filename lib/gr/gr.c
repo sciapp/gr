@@ -4219,30 +4219,13 @@ void gr_inqprojectiontype(int *projection_type)
   *projection_type = gpx.projection_type;
 }
 
-/*!
- * Method to set the camera position, the upward facing direction and the focus point of the shown
- * volume
- *
- * \param camera_pos_x x component of the cameraposition in world coordinates
- * \param camera_pos_y y component of the cameraposition in world coordinates
- * \param camera_pos_z z component of the cameraposition in world coordinates
- * \param up_x x component of the up vector
- * \param up_y y component of the up vector
- * \param up_z z component of the up vector
- * \param focus_point_x x component of focus-point inside volume
- * \param focus_point_y y component of focus-point inside volume
- * \param focus_point_z z component of focus-point inside volume
- *
- */
-void gr_settransformationparameters(double camera_pos_x, double camera_pos_y, double camera_pos_z, double up_x,
-                                    double up_y, double up_z, double focus_point_x, double focus_point_y,
-                                    double focus_point_z)
+void settransformationparameters(double camera_pos_x, double camera_pos_y, double camera_pos_z, double up_x,
+                                 double up_y, double up_z, double focus_point_x, double focus_point_y,
+                                 double focus_point_z)
 {
   int i;
   double F[3], f[3], up[3], s_deri[3], s[3], u[3], u_deri[3];
   double norm_func, norm_up, s_norm, norm_u;
-
-  check_autoinit;
 
   tx.camera_pos_x = camera_pos_x;
   tx.camera_pos_y = camera_pos_y;
@@ -4291,6 +4274,31 @@ void gr_settransformationparameters(double camera_pos_x, double camera_pos_y, do
   tx.x_axis_scale = 1;
   tx.y_axis_scale = 1;
   tx.z_axis_scale = 1;
+}
+
+/*!
+ * Method to set the camera position, the upward facing direction and the focus point of the shown
+ * volume
+ *
+ * \param camera_pos_x x component of the cameraposition in world coordinates
+ * \param camera_pos_y y component of the cameraposition in world coordinates
+ * \param camera_pos_z z component of the cameraposition in world coordinates
+ * \param up_x x component of the up vector
+ * \param up_y y component of the up vector
+ * \param up_z z component of the up vector
+ * \param focus_point_x x component of focus-point inside volume
+ * \param focus_point_y y component of focus-point inside volume
+ * \param focus_point_z z component of focus-point inside volume
+ *
+ */
+void gr_settransformationparameters(double camera_pos_x, double camera_pos_y, double camera_pos_z, double up_x,
+                                    double up_y, double up_z, double focus_point_x, double focus_point_y,
+                                    double focus_point_z)
+{
+  check_autoinit;
+
+  settransformationparameters(camera_pos_x, camera_pos_y, camera_pos_z, up_x, up_y, up_z, focus_point_x, focus_point_y,
+                              focus_point_z);
 
   if (flag_graphics)
     gr_writestream("<settransformationparameters camera_pos_x=\"%g\" camera_pos_y=\"%g\" camera_pos_z=\"%g\" "
@@ -4300,20 +4308,8 @@ void gr_settransformationparameters(double camera_pos_x, double camera_pos_y, do
                    focus_point_z);
 }
 
-/*!
- * Set the far and near clipping plane for perspective projection and the vertical field ov view
- *
- * \param near_plane distance to near clipping plane
- * \param far_plane distance to far clipping plane
- * \param fov vertical field of view, input must be between 0 and 180 degrees
- *
- * Switches projection type to perspective
- */
-void gr_setperspectiveprojection(double near_plane, double far_plane, double fov)
+static void setperspectiveprojection(double near_plane, double far_plane, double fov)
 {
-
-  check_autoinit;
-
   gpx.near_plane = near_plane;
   gpx.far_plane = far_plane;
 
@@ -4327,9 +4323,39 @@ void gr_setperspectiveprojection(double near_plane, double far_plane, double fov
     }
 
   gpx.projection_type = GR_PROJECTION_PERSPECTIVE;
+}
+
+/*!
+ * Set the far and near clipping plane for perspective projection and the vertical field ov view
+ *
+ * \param near_plane distance to near clipping plane
+ * \param far_plane distance to far clipping plane
+ * \param fov vertical field of view, input must be between 0 and 180 degrees
+ *
+ * Switches projection type to perspective
+ */
+void gr_setperspectiveprojection(double near_plane, double far_plane, double fov)
+{
+  check_autoinit;
+
+  setperspectiveprojection(near_plane, far_plane, fov);
+
   if (flag_graphics)
     gr_writestream("<setperspectiveprojection near_plane=\"%g\" far_plane=\"%g\" fov=\"%g\"/>\n", near_plane, far_plane,
                    fov);
+}
+
+static void setorthographicprojection(double left, double right, double bottom, double top, double near_plane,
+                                      double far_plane)
+{
+  gpx.left = left;
+  gpx.right = right;
+  gpx.bottom = bottom;
+  gpx.top = top;
+  gpx.near_plane = near_plane;
+  gpx.far_plane = far_plane;
+
+  gpx.projection_type = GR_PROJECTION_ORTHOGRAPHIC;
 }
 
 /*!
@@ -4349,14 +4375,8 @@ void gr_setorthographicprojection(double left, double right, double bottom, doub
 {
   check_autoinit;
 
-  gpx.left = left;
-  gpx.right = right;
-  gpx.bottom = bottom;
-  gpx.top = top;
-  gpx.near_plane = near_plane;
-  gpx.far_plane = far_plane;
+  setorthographicprojection(left, right, bottom, top, near_plane, far_plane);
 
-  gpx.projection_type = GR_PROJECTION_ORTHOGRAPHIC;
   if (flag_graphics)
     gr_writestream("<setorthographicprojection left=\"%g\" right=\"%g\" bottom=\"%g\" top=\"%g\" near_plane=\"%g\" "
                    "far_plane=\"%g\"/>\n",
@@ -6533,6 +6553,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (modern_projection_type)
     {
+      gks_select_xform(WC);
       gks_inq_xform(WC, &errind, wn, vp);
 
       gks_set_window(WC, -1, 1, -1, 1);
@@ -6599,12 +6620,10 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   while (wx.delta > *anglep++) which_rep++;
   anglep = angle;
   while (wx.phi > *anglep++) which_rep += 4;
-  if (modern_projection_type)
-    tick_size /= text3d_get_height(); /* Adjust tick_size to match text units / scale properly with viewports */
   if (z_tick != 0)
     {
       if (modern_projection_type)
-        tick = tick_size / tx.y_axis_scale;
+        tick = tick_size / tx.y_axis_scale / text3d_get_height();
       else
         tick = tick_size * (y_max - y_min) / (vp[3] - vp[2]);
 
@@ -6636,7 +6655,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
         }
       else
         {
-          tick = tick_size / tx.x_axis_scale;
+          tick = tick_size / tx.x_axis_scale / text3d_get_height();
 
           x_minor_tick = x_log(x_lin(x_org) + tick);
           x_major_tick = x_log(x_lin(x_org) + 2. * tick);
@@ -6768,7 +6787,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   if (y_tick != 0)
     {
       if (modern_projection_type)
-        tick = tick_size / tx.x_axis_scale;
+        tick = tick_size / tx.x_axis_scale / text3d_get_height();
       else
         tick = tick_size * (x_max - x_min) / (vp[1] - vp[0]);
 
@@ -6800,7 +6819,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
         }
       else
         {
-          tick = tick_size / tx.z_axis_scale;
+          tick = tick_size / tx.z_axis_scale / text3d_get_height();
 
           z_minor_tick = z_log(z_lin(z_org) + tick);
           z_major_tick = z_log(z_lin(z_org) + 2. * tick);
@@ -6932,7 +6951,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   if (x_tick != 0)
     {
       if (modern_projection_type)
-        tick = tick_size / tx.y_axis_scale;
+        tick = tick_size / tx.y_axis_scale / text3d_get_height();
       else
         tick = tick_size * (y_max - y_min) / (vp[3] - vp[2]);
 
@@ -6964,7 +6983,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
         }
       else
         {
-          tick = tick_size / tx.z_axis_scale;
+          tick = tick_size / tx.z_axis_scale / text3d_get_height();
 
           z_minor_tick = z_log(z_lin(z_org) + tick);
           z_major_tick = z_log(z_lin(z_org) + 2. * tick);
@@ -12781,6 +12800,13 @@ void gr_setwindow3d(double xmin, double xmax, double ymin, double ymax, double z
                    xmax, ymin, ymax, zmin, zmax);
 }
 
+static void setscalefactors3d(double x_axis_scale, double y_axis_scale, double z_axis_scale)
+{
+  tx.x_axis_scale = x_axis_scale;
+  tx.y_axis_scale = y_axis_scale;
+  tx.z_axis_scale = z_axis_scale;
+}
+
 /*!
  * Set the scale factor for each axis.
  *
@@ -12800,9 +12826,7 @@ void gr_setscalefactors3d(double x_axis_scale, double y_axis_scale, double z_axi
       return;
     }
 
-  tx.x_axis_scale = x_axis_scale;
-  tx.y_axis_scale = y_axis_scale;
-  tx.z_axis_scale = z_axis_scale;
+  setscalefactors3d(x_axis_scale, y_axis_scale, z_axis_scale);
 
   if (flag_graphics)
     gr_writestream("<setscalefactors3d x_axis_scale=\"%g\" y_axis_scale=\"%g\" z_axis_scale=\"%g\"/>\n", x_axis_scale,
@@ -12900,14 +12924,14 @@ void gr_inqclipxform(int *tnr)
  * \param phi azimuthal angle of the spherical coordinates
  * \param theta polar angle of the spherical coordinates
  * \param fov vertical field of view(0 or NaN for orthographic projection)
- * \param camera_distance distance between the camera and the focus point (in
+ * \param cam distance between the camera and the focus point (in
  * arbitrary units, 0 or NaN for the radius of the object's smallest bounding
  * sphere)
  */
-void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
+void gr_setspace3d(double phi, double theta, double fov, double cam)
 {
   double scale_factor_x, scale_factor_y, scale_factor_z;
-  double bounding_sphere_radius;
+  double camera_distance = cam, bounding_sphere_radius;
   double eps = 1e-6;
 
   tx.focus_point_x = (ix.xmax + ix.xmin) / 2;
@@ -12921,8 +12945,8 @@ void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
         {
           camera_distance = bounding_sphere_radius;
         }
-      gr_setorthographicprojection(-camera_distance, camera_distance, -camera_distance, camera_distance,
-                                   -camera_distance * 2, camera_distance * 2);
+      setorthographicprojection(-camera_distance, camera_distance, -camera_distance, camera_distance,
+                                -camera_distance * 2, camera_distance * 2);
     }
   else
     {
@@ -12930,16 +12954,15 @@ void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
         {
           camera_distance = fabs(bounding_sphere_radius / sin((fov * M_PI / 180) / 2));
         }
-      gr_setperspectiveprojection(max(eps, camera_distance - bounding_sphere_radius * 1.01),
-                                  camera_distance + bounding_sphere_radius * 2, fov);
+      setperspectiveprojection(max(eps, camera_distance - bounding_sphere_radius * 1.01),
+                               camera_distance + bounding_sphere_radius * 2, fov);
     }
 
   scale_factor_x = 2.0 / (ix.xmax - ix.xmin);
   scale_factor_y = 2.0 / (ix.ymax - ix.ymin);
   scale_factor_z = 2.0 / (ix.zmax - ix.zmin);
 
-
-  gr_settransformationparameters(
+  settransformationparameters(
       camera_distance * sin(theta * M_PI / 180) * cos(phi * M_PI / 180) + tx.focus_point_x * scale_factor_x,
       camera_distance * sin(theta * M_PI / 180) * sin(phi * M_PI / 180) + tx.focus_point_y * scale_factor_y,
       camera_distance * cos(theta * M_PI / 180) + tx.focus_point_z * scale_factor_z,
@@ -12947,7 +12970,10 @@ void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
       sin(theta * M_PI / 180), tx.focus_point_x * scale_factor_x, tx.focus_point_y * scale_factor_y,
       tx.focus_point_z * scale_factor_z);
 
-  gr_setscalefactors3d(scale_factor_x, scale_factor_y, scale_factor_z);
+  setscalefactors3d(scale_factor_x, scale_factor_y, scale_factor_z);
+
+  if (flag_graphics)
+    gr_writestream("<setspace3d phi=\"%g\" theta=\"%g\" fov=\"%g\" cam=\"%g\"/>\n", phi, theta, fov, cam);
 }
 
 void gr_settextencoding(int encoding)
