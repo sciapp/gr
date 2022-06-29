@@ -84,12 +84,17 @@ BuildRequires:		wxGTK-devel
 BuildRequires:		wxWidgets-devel
 %endif
 
-# Qt5 BuildRequires for Fedora
+# Qt5 BuildRequires
 %if 0%{?fedora_version} >= 23 || 0%{?rhel} >= 8
 %define qmake_qt5 qmake-qt5
 BuildRequires:		qt5-qtbase-devel
 %endif
 
+# Qt6 BuildRequires
+%if 0%{?fedora_version} >= 34 || 0%{?rhel} >= 9
+%define qmake_qt6 qmake6
+BuildRequires:		qt6-qtbase-devel
+%endif
 
 %description
 GR, a universal framework for visualization applications
@@ -124,9 +129,11 @@ make GRDIR=%{grdir} \
      EXTRA_LDFLAGS=-L`pwd`/%{THIRDPARTY_LIB} \
      EXTRA_LDFLAGS_QT4= \
      EXTRA_LDFLAGS_QT5= \
+     EXTRA_LDFLAGS_QT6= \
      THIRDPARTYDIR=`pwd`/%{THIRDPARTY} \
      %{?qmake_qt4:QT4_QMAKE=%{qmake_qt4}} \
-     %{?qmake_qt5:QT5_QMAKE=%{qmake_qt5}}
+     %{?qmake_qt5:QT5_QMAKE=%{qmake_qt5}} \
+     %{?qmake_qt6:QT6_QMAKE=%{qmake_qt6}}
 
 %install
 %{__install} -m 755 -d $RPM_BUILD_ROOT%{grdir}
