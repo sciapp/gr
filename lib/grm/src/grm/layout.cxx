@@ -668,6 +668,16 @@ int Grid::getRowSpan(GridElement *element)
   return slice->rowStop - slice->rowStart;
 }
 
+int Grid::getNRows() const
+{
+  return this->nrows;
+}
+
+int Grid::getNCols() const
+{
+  return this->ncols;
+}
+
 void Grid::ensureCellIsGrid(int row, int col)
 {
   this->upsize(row + 1, col + 1);
@@ -710,4 +720,9 @@ void Grid::ensureCellsAreGrid(Slice *slice)
 bool Grid::isGrid()
 {
   return true;
+}
+
+bool Grid::isRowsEmpty() const
+{
+  return this->rows.empty();
 }

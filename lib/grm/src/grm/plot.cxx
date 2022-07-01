@@ -30,6 +30,7 @@ extern "C" {
 }
 
 #include "plot_int.h"
+#include "grm/layout.hxx"
 
 extern "C" {
 
@@ -150,6 +151,7 @@ static unsigned int active_plot_index = 0;
 grid_t *global_grid = NULL;
 static std::shared_ptr<GR::Render> global_render;
 static std::shared_ptr<GR::Element> global_root;
+static std::shared_ptr<GR::Element> currentDomElement;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ event handling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -1474,7 +1476,14 @@ void plot_process_viewport(grm_args_t *subplot_args)
       viewport[3] = y_center + r;
     }
 
-  global_render->setViewport(global_root->lastChildElement(), viewport[0], viewport[1], viewport[2], viewport[3]);
+  if (!currentDomElement)
+    {
+      global_render->setViewport(global_root->lastChildElement(), viewport[0], viewport[1], viewport[2], viewport[3]);
+    }
+  else
+    {
+      global_render->setViewport(currentDomElement, viewport[0], viewport[1], viewport[2], viewport[3]);
+    }
   gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 
   grm_args_push(subplot_args, "vp", "dddd", vp[0], vp[1], vp[2], vp[3]);
@@ -2216,7 +2225,15 @@ err_t plot_line(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
-  auto group = global_root->lastChildElement();
+  std::shared_ptr<GR::Element> group;
+  if (!currentDomElement)
+    {
+      group = global_root->lastChildElement();
+    }
+  else
+    {
+      group = currentDomElement;
+    }
   group->setAttribute("name", "line");
 
   while (*current_series != NULL)
@@ -6117,9 +6134,16 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   char *title;
   char *x_label, *y_label, *z_label;
 
-  auto group = global_render->createGroup("draw_axes");
-  global_root->lastChildElement()->append(group);
 
+  auto group = global_render->createGroup("draw_axes");
+  if (!currentDomElement)
+    {
+      global_root->lastChildElement()->append(group);
+    }
+  else
+    {
+      currentDomElement->append(group);
+    }
   grm_args_values(args, "kind", "s", &kind);
   grm_args_values(args, "viewport", "D", &viewport);
   grm_args_values(args, "vp", "D", &vp);
@@ -8676,6 +8700,7 @@ int grm_merge_named(const grm_args_t *args, const char *identificator)
 int grm_plot(const grm_args_t *args)
 {
   grm_args_t **current_subplot_args;
+  Grid *currentGrid;
   plot_func_t plot_func;
   const char *kind = NULL;
   if (!grm_merge(args))
@@ -8698,29 +8723,63 @@ int grm_plot(const grm_args_t *args)
         {
           return 0;
         }
+      currentGrid = reinterpret_cast<Grid *>(global_grid);
+      int nrows = currentGrid->getNRows();
+      int ncols = currentGrid->getNCols();
+      std::cout << nrows << "\t " << ncols << "\n";
+      //      grid_print(global_grid);
+
       plot_pre_plot(active_plot_args);
       grm_args_values(active_plot_args, "subplots", "A", &current_subplot_args);
-      while (*current_subplot_args != NULL)
+      if (currentGrid != nullptr)
         {
-          global_root->append(global_render->createGroup("subplot"));
-          if (plot_pre_subplot(*current_subplot_args) != ERROR_NONE)
+
+          if (!(nrows == 1 && ncols == 1 && currentGrid->getElement(0, 0) == nullptr)) // No Grid arguments in container
             {
-              return 0;
+
+              auto gridDomElement = global_render->createLayoutGrid(*currentGrid);
+              global_root->append(gridDomElement);
+
+              for (int r = 0; r < nrows; ++r)
+                {
+                  for (int c = 0; c < ncols; ++c)
+                    {
+                      if (!grm_plot_helper(currentGrid->getElement(r, c), gridDomElement))
+                        {
+                          return 0;
+                        }
+                    }
+                }
             }
-          grm_args_values(*current_subplot_args, "kind", "s", &kind);
-          logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-          if (!plot_func_map_at(plot_func_map, kind, &plot_func))
+          else
             {
-              return 0;
+              std::cout << "no grid elements";
+              while (*current_subplot_args != NULL)
+                {
+                  grm_args_values(*current_subplot_args, "kind", "s", &kind);
+                  std::cout << kind << "\n";
+                  global_root->append(global_render->createGroup("subplot"));
+                  if (plot_pre_subplot(*current_subplot_args) != ERROR_NONE)
+                    {
+                      return 0;
+                    }
+                  grm_args_values(*current_subplot_args, "kind", "s", &kind);
+                  logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
+                  if (!plot_func_map_at(plot_func_map, kind, &plot_func))
+                    {
+                      return 0;
+                    }
+                  if (plot_func(*current_subplot_args) != ERROR_NONE)
+                    {
+                      return 0;
+                    };
+                  plot_post_subplot(*current_subplot_args);
+                  ++current_subplot_args;
+                }
             }
-          if (plot_func(*current_subplot_args) != ERROR_NONE)
-            {
-              return 0;
-            };
-          plot_post_subplot(*current_subplot_args);
-          ++current_subplot_args;
         }
 
+      std::cout << toXML(global_root);
       global_render->render();
       plot_post_plot(active_plot_args);
     }
@@ -8738,6 +8797,7 @@ int grm_plot(const grm_args_t *args)
 
   return 1;
 }
+
 
 void grm_render(void)
 {
@@ -8772,6 +8832,62 @@ int grm_switch(unsigned int id)
 
   return 1;
 }
+}
+
+
+int grm_plot_helper(GridElement *gridElement, const std::shared_ptr<GR::Element> &parentDomElement)
+{
+  plot_func_t plot_func;
+  const char *kind = NULL;
+
+  if (gridElement == NULL)
+    {
+      std::cout << "Error: gridElement is NULL\n";
+      return 0;
+    }
+
+  if (!gridElement->isGrid())
+    {
+      grm_args_t **current_subplot_args = &gridElement->subplot_args;
+      auto subplotGroup = global_render->createGroup("subplot");
+      currentDomElement = subplotGroup;
+      parentDomElement->append(subplotGroup);
+
+      if (plot_pre_subplot(*current_subplot_args) != ERROR_NONE)
+        {
+          return 0;
+        }
+      grm_args_values(*current_subplot_args, "kind", "s", &kind);
+      logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
+      if (!plot_func_map_at(plot_func_map, kind, &plot_func))
+        {
+          return 0;
+        }
+      if (plot_func(*current_subplot_args) != ERROR_NONE)
+        {
+          return 0;
+        };
+      plot_post_subplot(*current_subplot_args);
+    }
+  else
+    {
+      // if isGrid
+      Grid *currentGrid = reinterpret_cast<Grid *>(gridElement);
+
+      auto gridDomElement = global_render->createLayoutGrid(*currentGrid);
+      parentDomElement->append(gridDomElement);
+
+      int nrows = currentGrid->getNRows();
+      int ncols = currentGrid->getNCols();
+
+      for (int r = 0; r < nrows; ++r)
+        {
+          for (int c = 0; c < ncols; ++c)
+            {
+              grm_plot_helper(currentGrid->getElement(r, c), gridDomElement);
+            }
+        }
+    }
 }
 
 std::shared_ptr<GR::Element> grm_get_document_root(void)

@@ -23,9 +23,7 @@
 
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
-static std::set<std::string> parentTypes = {
-    "group",
-};
+static std::set<std::string> parentTypes = {"group", "layout-grid"};
 
 static void markerHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context,
                          const std::string &str)
@@ -1043,6 +1041,28 @@ static void drawGraphics(const std::shared_ptr<GR::Element> &element, const std:
   gr_drawgraphics(data_p);
 }
 
+static void layoutGrid(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  double xmin, xmax, ymin, ymax;
+  xmin = (double)element->getAttribute("subplot_xmin");
+  xmax = (double)element->getAttribute("subplot_xmax");
+  ymin = (double)element->getAttribute("subplot_ymin");
+  ymax = (double)element->getAttribute("subplot_ymax");
+
+  gr_setviewport(xmin, xmax, ymin, ymax);
+}
+
+static void layoutGridElement(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  double xmin, xmax, ymin, ymax;
+  xmin = (double)element->getAttribute("subplot_xmin");
+  xmax = (double)element->getAttribute("subplot_xmax");
+  ymin = (double)element->getAttribute("subplot_ymin");
+  ymax = (double)element->getAttribute("subplot_ymax");
+
+  gr_setviewport(xmin, xmax, ymin, ymax);
+}
+
 static void processColorRep(const std::shared_ptr<GR::Element> &elem)
 {
   int index, hex_int;
@@ -1334,7 +1354,10 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
                        {std::string("shadepoints"), shadePoints},
                        {std::string("clearws"), clearWS},
                        {std::string("updatews"), updateWS},
-                       {std::string("drawgraphics"), drawGraphics}
+                       {std::string("drawgraphics"), drawGraphics},
+                       {std::string("layout-grid"), layoutGrid},
+                       {std::string("layout-gridElement"), layoutGridElement}
+
 
       };
 
@@ -2373,6 +2396,58 @@ std::shared_ptr<GR::Element> GR::Render::createDrawGraphics(const std::string &d
 // offset_z);
 
 
+std::shared_ptr<GR::Element> GR::Render::createLayoutGrid(const Grid &grid)
+{
+  auto element = createElement("layout-grid");
+
+  element->setAttribute("absHeight", grid.absHeight);
+  element->setAttribute("absWidth", grid.absWidth);
+  element->setAttribute("absHeightPxl", grid.absHeightPxl);
+  element->setAttribute("absWidthPxl", grid.absWidthPxl);
+  element->setAttribute("fitParentsHeight", grid.fitParentsHeight);
+  element->setAttribute("fitParentsWidth", grid.fitParentsWidth);
+  element->setAttribute("relativeHeight", grid.relativeHeight);
+  element->setAttribute("relativeWidth", grid.relativeWidth);
+  element->setAttribute("aspectRatio", grid.aspectRatio);
+  element->setAttribute("widthSet", grid.widthSet);
+  element->setAttribute("heightSet", grid.heightSet);
+  element->setAttribute("arSet", grid.arSet);
+  element->setAttribute("subplotSet", grid.subplotSet);
+  element->setAttribute("finalizes", grid.finalized);
+  element->setAttribute("nrows", grid.getNRows());
+  element->setAttribute("ncols", grid.getNCols());
+  // TODO: subplot -> separate Attributes or context vector?
+  // TODO: subplot_args??? Is it needed? Probably not...
+
+  return element;
+}
+
+
+std::shared_ptr<GR::Element> GR::Render::createLayoutGridElement(const GridElement &gridElement)
+{
+  auto element = createElement("layout-gridelement");
+
+  element->setAttribute("absHeight", gridElement.absHeight);
+  element->setAttribute("absWidth", gridElement.absWidth);
+  element->setAttribute("absHeightPxl", gridElement.absHeightPxl);
+  element->setAttribute("absWidthPxl", gridElement.absWidthPxl);
+  element->setAttribute("fitParentsHeight", gridElement.fitParentsHeight);
+  element->setAttribute("fitParentsWidth", gridElement.fitParentsWidth);
+  element->setAttribute("relativeHeight", gridElement.relativeHeight);
+  element->setAttribute("relativeWidth", gridElement.relativeWidth);
+  element->setAttribute("aspectRatio", gridElement.aspectRatio);
+  element->setAttribute("widthSet", gridElement.widthSet);
+  element->setAttribute("heightSet", gridElement.heightSet);
+  element->setAttribute("arSet", gridElement.arSet);
+  element->setAttribute("subplotSet", gridElement.subplotSet);
+  element->setAttribute("finalizes", gridElement.finalized);
+
+  double *subplot = gridElement.subplot;
+  GR::Render::setSubplot(element, subplot[0], subplot[1], subplot[2], subplot[3]);
+
+  return element;
+}
+
 //! Modifierfunctions
 
 void GR::Render::setViewport(const std::shared_ptr<GR::Element> &element, double xmin, double xmax, double ymin,
@@ -2942,6 +3017,16 @@ void GR::Render::setTextEncoding(const std::shared_ptr<Element> &element, int en
   element->setAttribute("textencoding", encoding);
 }
 
+
+void GR::Render::setSubplot(const std::shared_ptr<GR::Element> &element, double xmin, double xmax, double ymin,
+                            double ymax)
+{
+  element->setAttribute("subplot", true);
+  element->setAttribute("subplot_xmin", xmin);
+  element->setAttribute("subplot_xmax", xmax);
+  element->setAttribute("subplot_ymin", ymin);
+  element->setAttribute("subplot_ymax", ymax);
+}
 
 //! Render functions
 static void renderHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)

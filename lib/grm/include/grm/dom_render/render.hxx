@@ -8,6 +8,7 @@
 #include <grm/dom_render/graphics_tree/Element.hxx>
 #include <grm/dom_render/graphics_tree/Document.hxx>
 #include "gr.h"
+#include "grm/layout.hxx"
 #include <grm/util_int.h>
 
 
@@ -186,6 +187,11 @@ public:
                                              const std::string &y_key, std::optional<std::vector<double>> y, int xform,
                                              int w, int h, const std::shared_ptr<Context> &extContext = nullptr);
 
+
+  std::shared_ptr<Element> createLayoutGrid(const Grid &grid);
+
+  std::shared_ptr<Element> createLayoutGridElement(const GridElement &gridElement);
+
   //! Modifierfunctions
   void setViewport(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
@@ -272,6 +278,9 @@ public:
   void setTextEncoding(const std::shared_ptr<Element> &element, int encoding);
 
   void setProjectionType(const std::shared_ptr<Element> &element, int type);
+
+  void setSubplot(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
+
 
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context

@@ -70,8 +70,11 @@ private:
   friend class Grid;
 };
 
+class Render;
+
 class Grid : public GridElement
 {
+
 public:
   Grid(int nrows, int ncols);
   ~Grid();
@@ -88,6 +91,9 @@ public:
   void trim();
   int getColSpan(GridElement *element);
   int getRowSpan(GridElement *element);
+  int getNRows() const;
+  int getNCols() const;
+  bool isRowsEmpty() const;
 
 private:
   std::vector<std::vector<GridElement *>> rows;
