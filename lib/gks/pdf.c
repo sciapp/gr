@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200112L
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -253,15 +254,15 @@ static const char *pdf_double(double f)
 
   if (fabs(f) < 0.00001) return "0";
 
-  sprintf(buf, "%.4g", f);
+  snprintf(buf, 20, "%.4g", f);
   if (strchr(buf, 'e'))
     {
       if (fabs(f) < 1)
-        sprintf(buf, "%1.5f", f);
+        snprintf(buf, 20, "%1.5f", f);
       else if (fabs(f) < 1000)
-        sprintf(buf, "%1.2f", f);
+        snprintf(buf, 20, "%1.2f", f);
       else
-        sprintf(buf, "%1.0f", f);
+        snprintf(buf, 20, "%1.0f", f);
     }
 
   return buf;
@@ -307,7 +308,7 @@ static void pdf_printf(PDF_stream *p, const char *args, ...)
   strcpy(fmt, args);
 
   va_start(ap, args);
-  vsprintf(s, fmt, ap);
+  vsnprintf(s, BUFSIZ, fmt, ap);
   va_end(ap);
 
   pdf_memcpy(p, s, strlen(s));
@@ -826,7 +827,7 @@ static void create_patterns(void)
       gks_inq_pattern_array(pattern, parray);
       for (j = 0, k = 1; j < 16; j += 2)
         {
-          sprintf(bitmap[i] + j, "%02x", parray[k]);
+          snprintf(bitmap[i] + j, 17, "%02x", parray[k]);
           if (++k > *parray) k = 1;
         }
       bitmap[i][16] = '\0';

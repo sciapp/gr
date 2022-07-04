@@ -1313,7 +1313,7 @@ static void memory_plugin_dl_render(int fctid, int dx, int dy, int dimx, int *ia
           p->memory_plugin_mem_ptr[2] = p->device_dpi_x * p->device_pixel_ratio;
           *((unsigned char **)(p->memory_plugin_mem_ptr + 3)) = NULL;
 
-          sprintf(p->memory_plugin_mem_path, "!resizable@%p.mem:r", (void *)p->memory_plugin_mem_ptr);
+          snprintf(p->memory_plugin_mem_path, 1024, "!resizable@%p.mem:r", (void *)p->memory_plugin_mem_ptr);
           chars = p->memory_plugin_mem_path;
           /* set wstype for cairo or agg png in memory */
           memory_plugin_init_ia[2] = p->memory_plugin_wstype;

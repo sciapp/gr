@@ -1,5 +1,5 @@
 #ifdef __unix__
-#define _POSIX_C_SOURCE 199506L
+#define _POSIX_C_SOURCE 200112L
 #endif
 
 #include <stdio.h>
@@ -500,7 +500,7 @@ static int handler(Display *dpy, XErrorEvent *event)
       XGetErrorText(dpy, event->error_code, str, sizeof(str));
       fprintf(stderr, "X Protocol error detected by server: %s\n", str);
 
-      sprintf(request, "XRequest.%d", event->request_code);
+      snprintf(request, 40, "XRequest.%d", event->request_code);
       XGetErrorDatabaseText(dpy, "", request, "unknown", str, sizeof(str));
       fprintf(stderr, "Failed request major op code %d (%s)\n", event->request_code, str);
 
@@ -692,7 +692,7 @@ static Display *open_display(void)
                     }
 #ifdef _WIN32
                   if (*env == ':')
-                    sprintf(s, "localhost%s", env);
+                    snprintf(s, 80, "localhost%s", env);
                   else
                     strcpy(s, env);
 #else
@@ -711,7 +711,7 @@ static Display *open_display(void)
             {
 #ifdef _WIN32
               if (*env == ':')
-                sprintf(s, "localhost%s", env);
+                snprintf(s, 80, "localhost%s", env);
               else
                 strcpy(s, env);
 #else
@@ -1077,7 +1077,7 @@ static void create_window(int win)
                                       icon_height, XBlackPixelOfScreen(p->screen), XWhitePixelOfScreen(p->screen), 1);
 
       if (p->conid)
-        sprintf(icon_name, "GKSwk %d", p->conid);
+        snprintf(icon_name, 40, "GKSwk %d", p->conid);
       else
         strcpy(icon_name, "GKSterm");
 
@@ -2256,7 +2256,7 @@ static void text_routine(double x, double y, int nchars, char *chars)
 #endif
 
 
-static void try_load_font(int font, int size, char *fontname)
+static void try_load_font(int font, int size, char *fontname, size_t fontname_size)
 {
   int f;
 #ifndef NO_XFT
@@ -2266,14 +2266,14 @@ static void try_load_font(int font, int size, char *fontname)
   XftResult match_result;
 #endif
 
-  sprintf(fontname, urw_fonts[font], size, p->dpi, p->dpi);
+  snprintf(fontname, fontname_size, urw_fonts[font], size, p->dpi, p->dpi);
   p->fstr[font][size] = load_font(p->dpy, fontname);
 
   if (p->fstr[font][size] == NULL)
     {
       for (f = 0; f < n_foundries; f++)
         {
-          sprintf(fontname, fonts[font], foundry[f], size, p->dpi, p->dpi);
+          snprintf(fontname, fontname_size, fonts[font], foundry[f], size, p->dpi, p->dpi);
           p->fstr[font][size] = load_font(p->dpy, fontname);
 
           if (p->fstr[font][size] != NULL) break;
@@ -2317,7 +2317,7 @@ static void verify_font_capabilities(void)
   unsigned int s32[1];
 #endif
 
-  try_load_font(font, size, fontname);
+  try_load_font(font, size, fontname, 256);
 
   p->scalable_fonts = p->fstr[font][size] != NULL;
 
@@ -2326,7 +2326,7 @@ static void verify_font_capabilities(void)
     {
       for (font = 0; font < n_font; font++)
         {
-          if (p->fstr[font][size] == NULL) try_load_font(font, size, fontname);
+          if (p->fstr[font][size] == NULL) try_load_font(font, size, fontname, 256);
 
           if (p->fstr[font][size] != NULL)
             {
@@ -2415,7 +2415,7 @@ static void set_font(int font)
 
   if (p->fstr[font][size] == NULL)
     {
-      try_load_font(font, size, fontname);
+      try_load_font(font, size, fontname, 256);
 
       if (p->fstr[font][size] == NULL)
         {
@@ -3052,7 +3052,7 @@ static void set_frame_header(int frame)
 {
   char header[32];
 
-  sprintf(header, "Frame #%d\n", frame);
+  snprintf(header, 32, "Frame #%d\n", frame);
   XStoreName(p->dpy, p->win, header);
 }
 
@@ -3547,7 +3547,7 @@ static void display_cursor(int x, int y)
       break;
 
     case TypeDigital:
-      sprintf(str, "(%d %d)", x, y);
+      snprintf(str, 16, "(%d %d)", x, y);
       x_draw_string(p->dpy, p->win, p->invert, p->px, p->py, str, strlen(str));
       break;
 

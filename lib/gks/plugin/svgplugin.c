@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200112L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -186,7 +188,7 @@ static void svg_printf(SVG_stream *p, const char *args, ...)
   strcpy(fmt, args);
 
   va_start(ap, args);
-  vsprintf(s, fmt, ap);
+  vsnprintf(s, BUFSIZ, fmt, ap);
   va_end(ap);
 
   svg_memcpy(p, s, strlen(s));
@@ -600,7 +602,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
       *s = '\0';
       for (i = 1; i <= len; i++)
         {
-          sprintf(buf, "%d%s", dash_list[i], i < len ? ", " : "");
+          snprintf(buf, 20, "%d%s", dash_list[i], i < len ? ", " : "");
           strcat(s, buf);
         }
       svg_printf(p->stream, "stroke-dasharray=\"%s\" ", s);
@@ -1524,15 +1526,15 @@ static void write_page(void)
 
   if (fd >= 0)
     {
-      sprintf(buf,
-              "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-              "<svg xmlns=\"http://www.w3.org/2000/svg\" "
-              "xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
-              "width=\"%g\" height=\"%g\" viewBox=\"0 0 %d %d\">\n",
-              p->width / 4.0, p->height / 4.0, p->width, p->height);
+      snprintf(buf, 256,
+               "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+               "<svg xmlns=\"http://www.w3.org/2000/svg\" "
+               "xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
+               "width=\"%g\" height=\"%g\" viewBox=\"0 0 %d %d\">\n",
+               p->width / 4.0, p->height / 4.0, p->width, p->height);
       gks_write_file(fd, buf, strlen(buf));
       gks_write_file(fd, p->stream->buffer, p->stream->length);
-      sprintf(buf, "</svg>\n");
+      snprintf(buf, 256, "</svg>\n");
       gks_write_file(fd, buf, strlen(buf));
       if (fd != p->conid) gks_close_file(fd);
 
