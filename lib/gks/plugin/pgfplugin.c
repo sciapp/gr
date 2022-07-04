@@ -104,7 +104,8 @@ typedef struct ws_state_list_t
   double transparency;
   int width, height;
   double nominal_size;
-  int color, linewidth;
+  int color;
+  double linewidth;
   double alpha, angle;
   int family, capheight;
   int pattern, have_pattern[PATTERNS];
@@ -260,18 +261,19 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
 {
   double x, y;
   double scale, xr, yr, x1, x2, y1, y2;
-  int pc, op, r, i;
+  int pc, op, i;
+  double r;
 
 #include "marker.h"
 
   mscale *= p->nominal_size;
-  r = (int)(3 * mscale);
+  r = 3 * mscale;
   scale = 0.01 * mscale / 3.0;
 
   xr = r;
   yr = 0;
   seg_xform_rel(&xr, &yr);
-  r = nint(sqrt(xr * xr + yr * yr));
+  r = sqrt(xr * xr + yr * yr);
 
   NDC_to_DC(xn, yn, x, y);
 
@@ -287,9 +289,9 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
         {
         case 1: /* point */
           pgf_printf(p->stream,
-                     "\\draw[color=mycolor, line width=%dpt, opacity=%f] (%f,%f)"
+                     "\\draw[color=mycolor, line width=%fpt, opacity=%f] (%f,%f)"
                      " rectangle (%f,%f);\n",
-                     p->linewidth, p->transparency, x, y, x + 1.0, y + 1.0);
+                     p->nominal_size, p->transparency, x, y, x + 1.0, y + 1.0);
           break;
 
         case 2: /* line */
@@ -303,9 +305,9 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
 
           pgf_printf(p->stream,
                      "\\begin{scope}[yscale=-1, yshift=-%f]\n"
-                     "\\draw[color=mycolor, line width=%dpt, opacity=%f] (%f,%f) -- (%f,%f);\n"
+                     "\\draw[color=mycolor, line width=%fpt, opacity=%f] (%f,%f) -- (%f,%f);\n"
                      "\\end{scope}\n",
-                     2 * y, p->linewidth, p->transparency, x - x1, y - y1, x - x2, y - y2);
+                     2 * y, gkss->bwidth * p->nominal_size, p->transparency, x - x1, y - y1, x - x2, y - y2);
 
           pc += 4;
           break;
@@ -322,19 +324,19 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
               if (gkss->bcoli != gkss->pmcoli)
                 {
                   pgf_printf(p->stream, "\\definecolor{bcoli}{HTML}{%s}\n", p->rgb[gkss->bcoli]);
-                  pgf_printf(p->stream, "\\filldraw[color=bcoli, fill=mycolor, line width=%dpt, opacity=%f]",
-                             p->linewidth, p->transparency);
+                  pgf_printf(p->stream, "\\filldraw[color=bcoli, fill=mycolor, line width=%fpt, opacity=%f]",
+                             gkss->bwidth * p->nominal_size, p->transparency);
                 }
               else
                 {
-                  pgf_printf(p->stream, "\\fill[color=mycolor, line width=%dpt, opacity=%f]", p->linewidth,
-                             p->transparency);
+                  pgf_printf(p->stream, "\\fill[color=mycolor, line width=%fpt, opacity=%f]",
+                             gkss->bwidth * p->nominal_size, p->transparency);
                 }
             }
           else
             {
-              pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt, opacity=%f]", p->linewidth,
-                         p->transparency);
+              pgf_printf(p->stream, "\\draw[color=mycolor, line width=%fpt, opacity=%f]",
+                         gkss->bwidth * p->nominal_size, p->transparency);
             }
 
           pgf_printf(p->stream, " (%f,%f)", x - xr, y - yr);
@@ -361,19 +363,19 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
               if (gkss->bcoli != gkss->pmcoli)
                 {
                   pgf_printf(p->stream, "\\definecolor{bcoli}{HTML}{%s}\n", p->rgb[gkss->bcoli]);
-                  pgf_printf(p->stream, "\\filldraw[color=bcoli, fill=mycolor, line width=%dpt, opacity=%f]",
-                             p->linewidth, p->transparency);
+                  pgf_printf(p->stream, "\\filldraw[color=bcoli, fill=mycolor, line width=%fpt, opacity=%f]",
+                             gkss->bwidth * p->nominal_size, p->transparency);
                 }
               else
                 {
-                  pgf_printf(p->stream, "\\fill[color=mycolor, line width=%dpt, opacity=%f]", p->linewidth,
-                             p->transparency);
+                  pgf_printf(p->stream, "\\fill[color=mycolor, line width=%fpt, opacity=%f]",
+                             gkss->bwidth * p->nominal_size, p->transparency);
                 }
             }
           else
             {
-              pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt, opacity=%f]", p->linewidth,
-                         p->transparency);
+              pgf_printf(p->stream, "\\draw[color=mycolor, line width=%fpt, opacity=%f]",
+                         gkss->bwidth * p->nominal_size, p->transparency);
             }
 
           pgf_printf(p->stream, " (%f, %f) arc (0:360:%d);\n", x + r, y, r);
@@ -398,8 +400,6 @@ static void polymarker(int n, double *px, double *py)
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  p->linewidth = nint(p->nominal_size);
-
   pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[mk_color]);
 
   for (i = 0; i < n; i++)
@@ -415,7 +415,7 @@ static void stroke(void)
 {
   int i;
 
-  pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt, opacity=%f] (%f,%f)", p->linewidth, p->transparency,
+  pgf_printf(p->stream, "\\draw[color=mycolor, line width=%fpt, opacity=%f] (%f,%f)", p->linewidth, p->transparency,
              p->points[0].x, p->points[0].y);
 
   for (i = 1; i < p->npoints; i++)
@@ -451,7 +451,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   seg_xform(&x, &y);
   NDC_to_DC(x, y, x0, y0);
 
-  pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt, opacity=%f] (%f,%f)", p->linewidth, p->transparency, x0,
+  pgf_printf(p->stream, "\\draw[color=mycolor, line width=%fpt, opacity=%f] (%f,%f)", p->linewidth, p->transparency, x0,
              y0);
 
   for (i = 1; i < n; i++)
@@ -490,17 +490,17 @@ static void fill_routine(int n, double *px, double *py, int tnr)
         }
       pgf_printf(p->stream,
                  "\\fill[pattern=mypattern%d, pattern color=mycolor, "
-                 "thickness=%dpt, opacity=%f] (%f,%f)",
+                 "thickness=%fpt, opacity=%f] (%f,%f)",
                  fl_style, p->linewidth, p->transparency, ix, iy);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
     {
-      pgf_printf(p->stream, "\\fill[color=mycolor, line width=%dpt, even odd rule, opacity=%f] (%f,%f)", p->linewidth,
+      pgf_printf(p->stream, "\\fill[color=mycolor, line width=%fpt, even odd rule, opacity=%f] (%f,%f)", p->linewidth,
                  p->transparency, ix, iy);
     }
   else
     {
-      pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt, opacity=%f] (%f,%f)", p->linewidth, p->transparency,
+      pgf_printf(p->stream, "\\draw[color=mycolor, line width=%fpt, opacity=%f] (%f,%f)", p->linewidth, p->transparency,
                  ix, iy);
     }
 
@@ -570,7 +570,7 @@ static void fillarea(int n, double *px, double *py)
   int fl_color;
 
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
-  p->linewidth = nint(p->nominal_size);
+  p->linewidth = p->nominal_size;
 
   pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[fl_color]);
 
@@ -1194,7 +1194,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           break;
         case 's': /* close and stroke */
           pgf_printf(buf, "-- cycle;\n");
-          pgf_printf(p->stream, "\\draw[color=pathstroke, line width=%dpt, opacity=%f] ", line_width, p->transparency);
+          pgf_printf(p->stream, "\\draw[color=pathstroke, line width=%fpt, opacity=%f] ", line_width, p->transparency);
           pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
           pgf_clear_stream(buf);
           cur_x = start_x;
@@ -1202,13 +1202,13 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           break;
         case 'S': /* stroke */
           pgf_printf(buf, ";\n");
-          pgf_printf(p->stream, "\\draw[color=pathstroke, line width=%dpt, opacity=%f] ", line_width, p->transparency);
+          pgf_printf(p->stream, "\\draw[color=pathstroke, line width=%fpt, opacity=%f] ", line_width, p->transparency);
           pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
           pgf_clear_stream(buf);
           break;
         case 'F': /* fill and stroke */
           pgf_printf(buf, "-- cycle;\n");
-          pgf_printf(p->stream, "\\filldraw[color=pathstroke, fill=pathfill, line width=%dpt, opacity=%f] ", line_width,
+          pgf_printf(p->stream, "\\filldraw[color=pathstroke, fill=pathfill, line width=%fpt, opacity=%f] ", line_width,
                      p->transparency);
           pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
           pgf_clear_stream(buf);
@@ -1258,7 +1258,7 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
 
-      line_width = 0.01 * attributes[j++];
+      line_width = 0.001 * attributes[j++];
       rgba = attributes[j++];
       if (line_width == prev_line_width && rgba == prev_rgba)
         {
@@ -1294,7 +1294,7 @@ static void draw_markers(int n, double *px, double *py, int *attributes)
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
       seg_xform(&x, &y);
 
-      mk_size = 0.01 * attributes[j++];
+      mk_size = 0.001 * attributes[j++];
       rgba = attributes[j++];
 
       pgf_printf(p->stream, "\\definecolor{mycolor}{RGB}{%d,%d,%d}\n", (rgba & 0xff), ((rgba >> 8) & 0xff),
@@ -1640,7 +1640,10 @@ void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
 
           p->width = p->viewport[1] * WIDTH / MWIDTH;
           p->height = p->viewport[3] * HEIGHT / MHEIGHT;
-          p->nominal_size = min(p->width, p->height) / 500.0;
+          if (gkss->resize_behaviour == GKS_K_RESIZE)
+            {
+              p->nominal_size = min(p->width, p->height) / 500.0;
+            }
 
           set_xform();
           init_norm_xform();

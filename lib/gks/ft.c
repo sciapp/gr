@@ -1434,7 +1434,7 @@ static double get_capheight(FT_Face face)
 static void process_glyphs(FT_Face face, double x, double y, char *text, double phi, gks_state_list_t *gkss,
                            void (*gdp)(int, double *, double *, int, int, int *), double *bBoxX, double *bBoxY)
 {
-  FT_UInt unicode_string[256];
+  FT_UInt unicode_string[GKS_K_TEXT_MAX_SIZE * 4];
   FT_UInt length = strlen(text);
   unsigned int i, j;
   double xj, yj, cos_f, sin_f, shear_x, shear_y;
@@ -1588,7 +1588,7 @@ static void process_glyphs3d(FT_Face face, double x, double y, double z, char *t
                              void (*gdp)(int, double *, double *, int, int, int *),
                              void (*wc3towc)(double *, double *, double *), double *bBoxX, double *bBoxY)
 {
-  FT_UInt unicode_string[256];
+  FT_UInt unicode_string[GKS_K_TEXT_MAX_SIZE * 4];
   FT_UInt length = strlen(text);
   unsigned int i, j;
   double xj, yj, zj, cos_f, sin_f, shear_x, shear_y;

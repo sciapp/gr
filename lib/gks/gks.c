@@ -69,6 +69,10 @@ static ws_descr_t ws_types[] = {{2, GKS_K_METERS, 1.00000, 1.00000, 65536, 65536
                                 {160, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "mp4", NULL},
                                 {161, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "webm", NULL},
                                 {162, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "ogg", NULL},
+                                {170, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ppm", NULL},
+                                {171, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "png", NULL},
+                                {172, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "jpg", NULL},
+                                {173, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL},
                                 {210, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, NULL, NULL},
                                 {211, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 2, NULL, NULL},
                                 {212, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 2, NULL, NULL},
@@ -303,6 +307,14 @@ static void gks_ddlk(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_
                                ptr);
               break;
 
+            case 170:
+            case 171:
+            case 172:
+            case 173:
+              gks_agg_plugin(fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
+                             ptr);
+              break;
+
             case 314:
               gks_pgf_plugin(fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
                              ptr);
@@ -509,9 +521,11 @@ void gks_init_gks(void)
       s->shoff[1] = 0;
       s->blur = 0;
       s->alpha = 1;
+      s->resample_method = 0;
       s->bwidth = 1;
       s->bcoli = 0;
       s->clip_tnr = 0;
+      s->resize_behaviour = GKS_K_RESIZE;
       s->aspect_ratio = 1;
 
       s->callback = NULL;
@@ -1162,6 +1176,8 @@ void gks_ft_gdp(int n, double *px, double *py, int primid, int ldr, int *datrec)
 
 void gks_text(double px, double py, char *str)
 {
+  char *utf8_str = NULL;
+
   if (state >= GKS_K_WSAC)
     {
       if (strlen(str) == 0)
@@ -1176,7 +1192,7 @@ void gks_text(double px, double py, char *str)
               /* double the output string size as the longest utf8 representation of any latin1 character is two bytes
                * long
                */
-              char utf8_str[2 * (GKS_K_TEXT_MAX_SIZE - 1) + 1];
+              utf8_str = gks_malloc(2 * (GKS_K_TEXT_MAX_SIZE - 1) + 1);
               gks_input2utf8(str, utf8_str, s->input_encoding);
 
               f_arr_1[0] = px;
@@ -1184,19 +1200,22 @@ void gks_text(double px, double py, char *str)
 
               /* call the device driver link routine */
               gks_ddlk(TEXT, 0, 0, 0, i_arr, 1, f_arr_1, 1, f_arr_2, 1, utf8_str, NULL);
+              gks_free(utf8_str);
             }
           else
             {
               if (s->input_encoding == ENCODING_LATIN1)
                 {
-                  char *utf8_str = gks_malloc(strlen(str) * 2 + 1);
+                  utf8_str = gks_malloc(strlen(str) * 2 + 1);
                   gks_input2utf8(str, utf8_str, ENCODING_LATIN1);
 
                   gks_ft_text(px, py, utf8_str, s, gks_ft_gdp);
                   gks_free(utf8_str);
                 }
               else
-                gks_ft_text(px, py, str, s, gks_ft_gdp);
+                {
+                  gks_ft_text(px, py, str, s, gks_ft_gdp);
+                }
             }
         }
       else
@@ -1623,6 +1642,12 @@ void gks_set_text_height(double chh)
     /* GKS not in proper state. GKS must be in one of the states
        GKOP, WSOP, WSAC or SGOP */
     gks_report_error(SET_TEXT_HEIGHT, 8);
+}
+
+double gks_inq_ws_text_height(double chh, double height)
+{
+  if (s->aspect_ratio > 1) chh /= s->aspect_ratio;
+  return chh * 500 / height;
 }
 
 void gks_set_text_upvec(double chux, double chuy)
@@ -4347,4 +4372,25 @@ void gks_inq_clip_xform(int *errind, int *tnr)
 void *gks_state(void)
 {
   return (void *)s;
+}
+
+void gks_set_resize_behaviour(int flag)
+{
+  if (state >= GKS_K_GKOP)
+    {
+      s->resize_behaviour = flag;
+      i_arr[0] = flag;
+
+      /* call the device driver link routine */
+      gks_ddlk(SET_RESIZE_BEHAVIOUR, 1, 1, 1, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+    }
+  else
+    {
+      gks_report_error(SET_RESIZE_BEHAVIOUR, 8);
+    }
+}
+
+void gks_inq_resize_behaviour(int *flag)
+{
+  *flag = s->resize_behaviour;
 }

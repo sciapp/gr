@@ -92,11 +92,12 @@ format_reference_t *str_get_format_reference(format_reference_t *result, double 
   if (!result->scientific)
     {
       double tick_width_multiplied = tick_width;
-      while (tick_width_multiplied - (int64_t)(tick_width_multiplied + 1e-14) > 0 &&
+      while ((int64_t)tick_width_multiplied < tick_width_multiplied &&
+             log10(tick_width_multiplied - (int64_t)tick_width_multiplied) >= result->decimal_digits - LENGTH_DIGITS &&
              result->decimal_digits < LENGTH_DIGITS)
         {
           result->decimal_digits++;
-          tick_width_multiplied = tick_width * pow(10.0, result->decimal_digits);
+          tick_width_multiplied = (tick_width + 1e-15) * pow(10.0, result->decimal_digits);
         }
     }
   return result;
@@ -301,15 +302,19 @@ char *str_ftoa(char *result, double value, format_reference_t *reference, int fo
               exponent_str = &exponent_str[1];
             }
 
-          exponent_length = log10(exponent_abs) + 1;
-
-
+          if (exponent_abs == 0)
+            {
+              exponent_length = 1;
+            }
+          else
+            {
+              exponent_length = log10(exponent_abs) + 1;
+            }
           for (i = exponent_length; i > 0; i--)
             {
               exponent_str[i] = ('0' + exponent_abs % 10);
               exponent_abs /= 10;
             }
-
           if (format_option == SCIENTIFIC_FORMAT_OPTION_TEXTEX || format_option == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
             {
               exponent_str[exponent_length + 1] = '}';
@@ -346,4 +351,40 @@ int str_casecmp(char *s1, char *s2)
     }
 
   return tolower(*(unsigned char *)s1) - tolower(*(unsigned char *)s2);
+}
+
+
+int str_utf8_to_unicode(const unsigned char *utf8_str, int *length)
+{
+  int codepoint;
+
+  if ((utf8_str[0] & 0x80U) == 0x00U)
+    {
+      *length = 1;
+      codepoint = utf8_str[0U];
+    }
+  else if ((utf8_str[0] & 0xe0U) == 0xc0U && (utf8_str[1] & 0xc0U) == 0x80U)
+    {
+      *length = 2;
+      codepoint = ((utf8_str[0] & 0x1fU) << 6U) + (utf8_str[1] & 0x3fU);
+    }
+  else if ((utf8_str[0] & 0xf0U) == 0xe0U && (utf8_str[1] & 0xc0U) == 0x80U && (utf8_str[2] & 0xc0U) == 0x80U)
+    {
+      *length = 3;
+      codepoint = ((utf8_str[0] & 0xfU) << 12U) + ((utf8_str[1] & 0x3fU) << 6U) + (utf8_str[2] & 0x3fU);
+    }
+  else if ((utf8_str[0] & 0xf8U) == 0xf0U && (utf8_str[1] & 0xc0U) == 0x80U && (utf8_str[2] & 0xc0U) == 0x80U &&
+           (utf8_str[3] & 0xc0U) == 0x80U)
+    {
+      *length = 4;
+      codepoint = ((utf8_str[0] & 0x7U) << 18U) + ((utf8_str[1] & 0x3fU) << 12U) + ((utf8_str[2] & 0x3fU) << 6U) +
+                  (utf8_str[3] & 0x3fU);
+    }
+  else
+    {
+      /* invalid byte combination */
+      *length = 1;
+      codepoint = (unsigned int)'?';
+    }
+  return codepoint;
 }

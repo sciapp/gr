@@ -305,18 +305,19 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 {
   double x, y;
   double scale, xr, yr, x1, x2, y1, y2;
-  int pc, op, r, i;
+  int pc, op, i;
+  double r;
 
 #include "marker.h"
 
   mscale *= p->nominal_size;
-  r = (int)(3 * mscale);
+  r = 3 * mscale;
   scale = 0.01 * mscale / 3.0;
 
   xr = r;
   yr = 0;
   seg_xform_rel(&xr, &yr);
-  r = nint(sqrt(xr * xr + yr * yr));
+  r = sqrt(xr * xr + yr * yr);
 
   NDC_to_DC(xn, yn, x, y);
 
@@ -348,7 +349,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           seg_xform_rel(&x2, &y2);
 
           cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
-          set_line_width(p->nominal_size);
+          set_line_width(gkss->bwidth * p->nominal_size);
           set_color(mcolor);
           cairo_move_to(p->cr, x - x1, y - y1);
           cairo_line_to(p->cr, x - x2, y - y2);
@@ -365,7 +366,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
           cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
           cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
-          set_line_width(p->nominal_size);
+          set_line_width(gkss->bwidth * p->nominal_size);
           set_color(mcolor);
           cairo_move_to(p->cr, x - xr, y + yr);
           for (i = 1; i < marker[mtype][pc + 1]; i++)
@@ -399,7 +400,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
         case 6: /* arc */
         case 7: /* filled arc */
         case 8: /* hollow arc */
-          cairo_arc(p->cr, x, y, r * 1.0, 0, 2 * M_PI);
+          cairo_arc(p->cr, x, y, r, 0, 2 * M_PI);
 
           set_color(mcolor);
           if (op == 7)
@@ -434,8 +435,6 @@ static void polymarker(int n, double *px, double *py)
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
-
-  p->linewidth = p->nominal_size;
 
   for (i = 0; i < n; i++)
     {
@@ -1973,7 +1972,7 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
       NDC_to_DC(x, y, xi, yi);
 
       cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_ROUND);
-      line_width = 0.01 * attributes[j++];
+      line_width = 0.001 * attributes[j++];
       set_line_width(line_width * p->nominal_size);
       rgba = attributes[j++];
       p->rgb[line_color][0] = (rgba & 0xff) / 255.0;
@@ -2001,7 +2000,7 @@ static void draw_markers(int n, double *px, double *py, int *attributes)
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
       seg_xform(&x, &y);
 
-      mk_size = 0.01 * attributes[j++];
+      mk_size = 0.001 * attributes[j++];
       rgba = attributes[j++];
       p->rgb[mk_color][0] = (rgba & 0xff) / 255.0;
       p->rgb[mk_color][1] = ((rgba >> 8) & 0xff) / 255.0;
@@ -2284,7 +2283,14 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->mw = p->w * 2.54 / 100 / p->dpi;
           p->mh = p->h * 2.54 / 100 / p->dpi;
           resize(width, height);
-          p->nominal_size = min(width, height) / 500.0;
+          if (gkss->resize_behaviour == GKS_K_RESIZE)
+            {
+              p->nominal_size = min(p->width, p->height) / 500.0;
+            }
+          else
+            {
+              p->nominal_size = 2400 / 500.0;
+            }
         }
       else if (p->wtype == 150)
         {
@@ -2539,7 +2545,10 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
             {
               p->width = p->viewport[1] * p->w / p->mw;
               p->height = p->viewport[3] * p->h / p->mh;
-              p->nominal_size = min(p->width, p->height) / 500.0;
+              if (gkss->resize_behaviour == GKS_K_RESIZE)
+                {
+                  p->nominal_size = min(p->width, p->height) / 500.0;
+                }
             }
           close_page();
           open_page();

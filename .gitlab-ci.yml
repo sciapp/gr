@@ -651,7 +651,7 @@ windows-32bit-cross:
   - tar xf cmake-3.23.0-linux-x86_64.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
-    EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo"
+    EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo agg"
     HOST=i686-w64-mingw32
     ARCHITECTURE=i686
     OS=w64_x86-cross-mingw32
@@ -708,7 +708,7 @@ windows-32bit-cmake-cross:
     - tar xf cmake-3.23.0-linux-x86_64.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
     - make -C 3rdparty default extras
-      EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo"
+      EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo agg"
       HOST=i686-w64-mingw32
       ARCHITECTURE=i686
       OS=w64_x86-cross-mingw32
@@ -747,7 +747,7 @@ windows-64bit-cross:
   - tar xf cmake-3.23.0-linux-x86_64.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
-    EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo"
+    EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo agg"
     HOST=x86_64-w64-mingw32
     ARCHITECTURE=x86_64
     OS=w64_amd64-cross-mingw32
@@ -804,7 +804,7 @@ windows-64bit-cmake-cross:
     - tar xf cmake-3.23.0-linux-x86_64.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
     - make -C 3rdparty default extras
-      EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo"
+      EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo agg"
       HOST=x86_64-w64-mingw32
       ARCHITECTURE=x86_64
       OS=w64_amd64-cross-mingw32

@@ -764,6 +764,7 @@ static const unsigned int symbol_codepoints[] = {
 #include "gr.h"
 #include "gks.h"
 #include "gkscore.h"
+#include "strlib.h"
 
 #ifndef isnan
 #define isnan(x) ((x) != (x))
@@ -1156,7 +1157,6 @@ static size_t make_char(unsigned int codepoint)
       bm_node.u.character.depth = 0.0;
       bm_node.u.character.advance = 0.0;
       bm_node.u.character.bearing = 0.0;
-      fprintf(stderr, "Missing character %c / %u\n", codepoint, codepoint);
     }
   bm_node.u.character.shift_amount = 0.0;
   return copy_box_model_node(bm_node);
@@ -1811,6 +1811,7 @@ static size_t find_in_sorted_string_list(const char *string, size_t string_lengt
 static unsigned int symbol_to_codepoint(const unsigned char *utf8_str, size_t length)
 {
   unsigned int codepoint = 0;
+  int found_length = 0;
   if (utf8_str[0] == '\\' && length != 1)
     {
       {
@@ -1836,51 +1837,17 @@ static unsigned int symbol_to_codepoint(const unsigned char *utf8_str, size_t le
       return (unsigned int)'?';
     }
 
-  if ((utf8_str[0] & 0x80U) == 0x00U)
+  codepoint = str_utf8_to_unicode(utf8_str, &found_length);
+  if ((int)length != found_length)
     {
-      if (length != 1)
-        {
-          return (unsigned int)'?';
-        }
-      codepoint = utf8_str[0U];
-    }
-  else if ((utf8_str[0] & 0xe0U) == 0xc0U && (utf8_str[1] & 0xc0U) == 0x80U)
-    {
-      if (length != 2)
-        {
-          return (unsigned int)'?';
-        }
-      codepoint = ((utf8_str[0] & 0x1fU) << 6U) + (utf8_str[1] & 0x3fU);
-    }
-  else if ((utf8_str[0] & 0xf0U) == 0xe0U && (utf8_str[1] & 0xc0U) == 0x80U && (utf8_str[2] & 0xc0U) == 0x80U)
-    {
-      if (length != 3)
-        {
-          return (unsigned int)'?';
-        }
-      codepoint = ((utf8_str[0] & 0xfU) << 12U) + ((utf8_str[1] & 0x3fU) << 6U) + (utf8_str[1] & 0x3fU);
-    }
-  else if ((utf8_str[0] & 0xf8U) == 0xf0U && (utf8_str[1] & 0xc0U) == 0x80U && (utf8_str[2] & 0xc0U) == 0x80U &&
-           (utf8_str[3] & 0xc0U) == 0x80U)
-    {
-      if (length != 4)
-        {
-          return (unsigned int)'?';
-        }
-      codepoint = ((utf8_str[0] & 0x7U) << 18U) + ((utf8_str[1] & 0x3fU) << 12U) + ((utf8_str[2] & 0x3fU) << 6U) +
-                  (utf8_str[3] & 0x3fU);
-    }
-  else
-    {
-      /* invalid byte combination */
       return (unsigned int)'?';
     }
 
   if (codepoint == '-')
     {
-      return 0x2212;
+      codepoint = 0x2212;
     }
-  if (codepoint < 128)
+  if (codepoint <= 0x1ffff)
     {
       return codepoint;
     }
@@ -3606,8 +3573,10 @@ static void calculate_alignment_offsets(int horizontal_alignment, int vertical_a
     case GKS_K_TEXT_VALIGN_BOTTOM:
       *y_offset = 0.1 * canvas_height / window_height;
       break;
-    case GKS_K_TEXT_VALIGN_NORMAL:
     case GKS_K_TEXT_VALIGN_BASE:
+      *y_offset = 0;
+      break;
+    case GKS_K_TEXT_VALIGN_NORMAL:
     default:
       *y_offset = -canvas_depth / window_height;
       break;

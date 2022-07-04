@@ -1030,7 +1030,7 @@ void plot_process_wswindow_wsviewport(grm_args_t *plot_args)
   int pixel_width, pixel_height;
   int previous_pixel_width, previous_pixel_height;
   double metric_width, metric_height;
-  double aspect_ratio_ws;
+  double aspect_ratio_ws_pixel, aspect_ratio_ws_metric;
   double wsviewport[4] = {0.0, 0.0, 0.0, 0.0};
   double wswindow[4] = {0.0, 0.0, 0.0, 0.0};
 
@@ -1043,19 +1043,20 @@ void plot_process_wswindow_wsviewport(grm_args_t *plot_args)
       event_queue_enqueue_size_event(event_queue, active_plot_index - 1, pixel_width, pixel_height);
     }
 
-  aspect_ratio_ws = metric_width / metric_height;
-  if (aspect_ratio_ws > 1)
+  aspect_ratio_ws_pixel = (double)pixel_width / pixel_height;
+  aspect_ratio_ws_metric = metric_width / metric_height;
+  if (aspect_ratio_ws_pixel > 1)
     {
       wsviewport[1] = metric_width;
-      wsviewport[3] = metric_width / aspect_ratio_ws;
+      wsviewport[3] = metric_width / aspect_ratio_ws_metric;
       wswindow[1] = 1.0;
-      wswindow[3] = 1.0 / aspect_ratio_ws;
+      wswindow[3] = 1.0 / (aspect_ratio_ws_pixel);
     }
   else
     {
-      wsviewport[1] = metric_height * aspect_ratio_ws;
+      wsviewport[1] = metric_height * aspect_ratio_ws_metric;
       wsviewport[3] = metric_height;
-      wswindow[1] = aspect_ratio_ws;
+      wswindow[1] = aspect_ratio_ws_pixel;
       wswindow[3] = 1.0;
     }
 
@@ -1333,7 +1334,7 @@ void plot_process_viewport(grm_args_t *subplot_args)
   const char *kind;
   const double *subplot;
   int keep_aspect_ratio;
-  double metric_width, metric_height;
+  int pixel_width, pixel_height;
   double aspect_ratio_ws;
   double vp[4];
   double vp0, vp1, vp2, vp3;
@@ -1347,9 +1348,9 @@ void plot_process_viewport(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "keep_aspect_ratio", "i", &keep_aspect_ratio);
   logger((stderr, "Using subplot: %lf, %lf, %lf, %lf\n", subplot[0], subplot[1], subplot[2], subplot[3]));
 
-  get_figure_size(NULL, NULL, NULL, &metric_width, &metric_height);
+  get_figure_size(NULL, &pixel_width, &pixel_height, NULL, NULL);
 
-  aspect_ratio_ws = metric_width / metric_height;
+  aspect_ratio_ws = (double)pixel_width / pixel_height;
   memcpy(vp, subplot, sizeof(vp));
   if (aspect_ratio_ws > 1)
     {
@@ -5796,7 +5797,7 @@ err_t plot_pie(grm_args_t *subplot_args)
   start_angle = 90;
   for (i = 0; i < x_length; ++i)
     {
-      auto temp = global_render->createFillArc(-1.0, 1.0, -1.0, 1.0, start_angle, end_angle);
+      auto temp = global_render->createFillArc(0.05, 0.95, 0.05, 0.95, start_angle, end_angle);
       group->append(temp);
       if (i > 0)
         {
@@ -5804,11 +5805,10 @@ err_t plot_pie(grm_args_t *subplot_args)
         }
 
       end_angle = start_angle - normalized_x[i] * 360.0;
-
       middle_angle = (start_angle + end_angle) / 2.0;
 
-      text_pos[0] = 0.7 * cos(middle_angle * M_PI / 180.0);
-      text_pos[1] = 0.7 * sin(middle_angle * M_PI / 180.0);
+      text_pos[0] = 0.5 + 0.25 * cos(middle_angle * M_PI / 180.0);
+      text_pos[1] = 0.5 + 0.25 * sin(middle_angle * M_PI / 180.0);
       gr_wctondc(&text_pos[0], &text_pos[1]);
 
       auto text_elem = global_render->createText(text_pos[0], text_pos[1], text);
@@ -6243,7 +6243,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   if (grm_args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
   for (i = 0; i <= n; i++)
     {
-      double r = r_min + i * tick / (r_max - r_min);
+      double r = 2.0 / 3 * (r_min + i * tick) / r_max;
       if (i % 2 == 0)
         {
           if (i > 0)
