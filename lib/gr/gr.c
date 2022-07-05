@@ -4929,7 +4929,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                             if (y_tick > 1)
                               {
                                 exponent = iround(blog(lx.basey, yi));
-                                sprintf(string, "%s^{%d}", lx.basey_s, exponent);
+                                snprintf(string, 256, "%s^{%d}", lx.basey_s, exponent);
                                 text2dlbl(x_label, yi, replace_minus_sign(string), yi, fpy);
                               }
                             else
@@ -5061,7 +5061,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                             if (x_tick > 1)
                               {
                                 exponent = iround(blog(lx.basex, xi));
-                                sprintf(string, "%s^{%d}", lx.basex_s, exponent);
+                                snprintf(string, 256, "%s^{%d}", lx.basex_s, exponent);
                                 text2dlbl(xi, y_label, replace_minus_sign(string), xi, fpx);
                               }
                             else
@@ -6709,7 +6709,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                         if (z_tick > 1)
                           {
                             exponent = iround(blog(lx.basez, zi));
-                            sprintf(string, "%s^{%d}", lx.basez_s, exponent);
+                            snprintf(string, 256, "%s^{%d}", lx.basez_s, exponent);
                             text3d(x_label, y_label, zi, replace_minus_sign(string), 0);
                           }
                         else
@@ -6874,7 +6874,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                         if (y_tick > 1)
                           {
                             exponent = iround(blog(lx.basey, yi));
-                            sprintf(string, "%s^{%d}", lx.basey_s, exponent);
+                            snprintf(string, 256, "%s^{%d}", lx.basey_s, exponent);
                             text3d(x_label, yi, z_label, replace_minus_sign(string), 0);
                           }
                         else
@@ -7038,7 +7038,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                         if (x_tick > 1)
                           {
                             exponent = iround(blog(lx.basex, xi));
-                            sprintf(string, "%s^{%d}", lx.basex_s, exponent);
+                            snprintf(string, 256, "%s^{%d}", lx.basex_s, exponent);
                             text3d(xi, y_label, z_label, replace_minus_sign(string), 0);
                           }
                         else
@@ -10713,8 +10713,8 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
 #endif
 
   color = ((int)(rgb[0] * 255)) + ((int)(rgb[1] * 255) << 8) + ((int)(rgb[2] * 255) << 16) + (255 << 24);
-  sprintf(s, "%d%x%s", pointSize, color, string);
-  md5(s, cache);
+  snprintf(s, FILENAME_MAX, "%d%x%s", pointSize, color, string);
+  md5(s, cache, FILENAME_MAX);
   if (temp == NULL)
     {
 #ifdef _WIN32
@@ -10724,7 +10724,7 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
 #endif
       if (temp == NULL) temp = TMPDIR;
     }
-  sprintf(path, "%s%sgr-cache-%s.png", temp, DIRDELIM, cache);
+  snprintf(path, FILENAME_MAX, "%s%sgr-cache-%s.png", temp, DIRDELIM, cache);
 
 #ifdef _WIN32
   MultiByteToWideChar(CP_UTF8, 0, path, strlen(path) + 1, w_path, MAX_PATH);
@@ -10734,9 +10734,9 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
 #endif
     {
       math = strstr(string, "\\(") == NULL;
-      sprintf(tex, "%s%s%s.tex", temp, DIRDELIM, cache);
-      sprintf(dvi, "%s%s%s.dvi", temp, DIRDELIM, cache);
-      sprintf(png, "%s%s%s.png", temp, DIRDELIM, cache);
+      snprintf(tex, FILENAME_MAX, "%s%s%s.tex", temp, DIRDELIM, cache);
+      snprintf(dvi, FILENAME_MAX, "%s%s%s.dvi", temp, DIRDELIM, cache);
+      snprintf(png, FILENAME_MAX, "%s%s%s.png", temp, DIRDELIM, cache);
 #ifdef _WIN32
       null = "NUL";
       MultiByteToWideChar(CP_UTF8, 0, tex, strlen(tex) + 1, w_path, MAX_PATH);
@@ -10779,7 +10779,8 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
       fprintf(stream, "\\end{document}");
       fclose(stream);
 
-      sprintf(cmd, "latex -interaction=batchmode -halt-on-error -output-directory=%s %s >%s", temp, tex, null);
+      snprintf(cmd, 2 * FILENAME_MAX + 200, "latex -interaction=batchmode -halt-on-error -output-directory=%s %s >%s",
+               temp, tex, null);
       ret = system(cmd);
 
 #ifdef _WIN32
@@ -10789,7 +10790,8 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
       if (ret == 0 && access(dvi, R_OK) == 0)
 #endif
         {
-          sprintf(cmd, "dvipng -bg transparent -q -T tight -x %d %s -o %s >%s", pointSize * 100, dvi, png, null);
+          snprintf(cmd, 2 * FILENAME_MAX + 200, "dvipng -bg transparent -q -T tight -x %d %s -o %s >%s",
+                   pointSize * 100, dvi, png, null);
           ret = system(cmd);
           if (ret == 0)
             {

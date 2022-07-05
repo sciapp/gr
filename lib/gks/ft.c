@@ -1,3 +1,6 @@
+#define _POSIX_C_SOURCE 200112L
+
+#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #if defined(_WIN32)
@@ -167,7 +170,7 @@ static FT_Long ft_max(FT_Long a, FT_Long b)
   return a > b ? a : b;
 }
 
-static int ft_join_path(char *result, const char *first, const char *second)
+static int ft_join_path(char *result, size_t size, const char *first, const char *second)
 {
 #if defined(_WIN32)
   const char delim = '\\';
@@ -179,7 +182,7 @@ static int ft_join_path(char *result, const char *first, const char *second)
       return 0;
     }
 
-  sprintf(result, "%s%c%s", first, delim, second);
+  snprintf(result, size, "%s%c%s", first, delim, second);
   return 1;
 }
 
@@ -213,7 +216,7 @@ static int ft_search_file_in_dir(const char *base_dir, const char *filename, cha
   WIN32_FIND_DATA file;
   HANDLE handle = NULL;
 
-  if (!ft_join_path(path, base_dir, "*.*") || (handle = FindFirstFile(path, &file)) == INVALID_HANDLE_VALUE)
+  if (!ft_join_path(path, MAXPATHLEN, base_dir, "*.*") || (handle = FindFirstFile(path, &file)) == INVALID_HANDLE_VALUE)
     {
       return 0;
     }
@@ -221,7 +224,7 @@ static int ft_search_file_in_dir(const char *base_dir, const char *filename, cha
   do
     {
       if (strcmp(file.cFileName, ".") == 0 || strcmp(file.cFileName, "..") == 0 ||
-          !ft_join_path(path, base_dir, file.cFileName))
+          !ft_join_path(path, MAXPATHLEN, base_dir, file.cFileName))
         {
           continue;
         }
@@ -260,7 +263,7 @@ static int ft_search_file_in_dir(const char *base_dir, const char *filename, cha
   while ((entry = readdir(dir)) != NULL)
     {
       if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 ||
-          !ft_join_path(path, base_dir, entry->d_name))
+          !ft_join_path(path, MAXPATHLEN, base_dir, entry->d_name))
         {
           continue;
         }
@@ -320,7 +323,7 @@ static int ft_find_font(const char *filename, char *result)
     {
       for (font_directory = user_font_directories; *font_directory; font_directory++)
         {
-          if (!ft_join_path(abspath, user_home, *font_directory))
+          if (!ft_join_path(abspath, MAXPATHLEN, user_home, *font_directory))
             {
               continue;
             }
@@ -363,7 +366,7 @@ static int ft_find_font(const char *filename, char *result)
         }
       for (font_directory = system_font_directories; *font_directory; font_directory++)
         {
-          if (!ft_join_path(abspath, windir, *font_directory))
+          if (!ft_join_path(abspath, MAXPATHLEN, windir, *font_directory))
             {
               continue;
             }

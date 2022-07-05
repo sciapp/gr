@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200112L
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,14 +42,14 @@ static void *load_library(const char *name)
 #endif
   void *entry = NULL;
 
-  sprintf(pathname, "%s.%s", name, EXTENSION);
+  snprintf(pathname, MAXPATHLEN, "%s.%s", name, EXTENSION);
 #ifdef _WIN32
   handle = LoadLibrary(pathname);
   if (handle == NULL)
     {
       grdir = gks_getenv("GRDIR");
       if (grdir == NULL) grdir = GRDIR;
-      sprintf(grbin, "%s/bin", grdir);
+      snprintf(grbin, MAXPATHLEN, "%s/bin", grdir);
       SetDllDirectory(grbin);
       handle = LoadLibrary(pathname);
     }
@@ -56,21 +57,21 @@ static void *load_library(const char *name)
   handle = dlopen(pathname, RTLD_LAZY);
   if (handle == NULL)
     {
-      sprintf(pathname, "%s/%s.%s", "./", name, EXTENSION);
+      snprintf(pathname, MAXPATHLEN, "%s/%s.%s", "./", name, EXTENSION);
       handle = dlopen(pathname, RTLD_LAZY);
     }
   if (handle == NULL)
     {
       grdir = gks_getenv("GRDIR");
       if (grdir == NULL) grdir = GRDIR;
-      sprintf(pathname, "%s/lib/%s.%s", grdir, name, EXTENSION);
+      snprintf(pathname, MAXPATHLEN, "%s/lib/%s.%s", grdir, name, EXTENSION);
       handle = dlopen(pathname, RTLD_LAZY);
     }
 #endif
 
   if (handle != NULL)
     {
-      sprintf(symbol, "gks_%s", name);
+      snprintf(symbol, 255, "gks_%s", name);
 #ifdef _WIN32
       entry = (void *)GetProcAddress(handle, symbol);
 #else

@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200112L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -165,7 +167,7 @@ static void pgf_printf(PGF_stream *p, const char *args, ...)
   strcpy(fmt, args);
 
   va_start(ap, args);
-  vsprintf(s, fmt, ap);
+  vsnprintf(s, BUFSIZ, fmt, ap);
   va_end(ap);
 
   pgf_memcpy(p, s, strlen(s));
@@ -241,7 +243,7 @@ static void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
     {
-      sprintf(p->rgb[color], "%02X%02X%02X", (int)(red * 255), (int)(green * 255), (int)(blue * 255));
+      snprintf(p->rgb[color], 7, "%02X%02X%02X", (int)(red * 255), (int)(green * 255), (int)(blue * 255));
     }
 }
 
@@ -932,27 +934,31 @@ static void open_page(void)
       p->tex_file = fd;
       if (gks_getenv("GKS_PGF_ONLY_CONTENT") == NULL)
         {
-          sprintf(buf, "\\documentclass[tikz]{standalone}\n"
-                       "\\usetikzlibrary{patterns}\n"
-                       "\\usepackage{pifont}\n\n"
-                       "\\begin{document}\n\\pagenumbering{gobble}\n\\centering\n");
+          snprintf(buf, 256,
+                   "\\documentclass[tikz]{standalone}\n"
+                   "\\usetikzlibrary{patterns}\n"
+                   "\\usepackage{pifont}\n\n"
+                   "\\begin{document}\n\\pagenumbering{gobble}\n\\centering\n");
           gks_write_file(fd, buf, strlen(buf));
         }
-      sprintf(buf, "\\pgfsetxvec{\\pgfpoint{1pt}{0pt}}\n"
-                   "\\pgfsetyvec{\\pgfpoint{0pt}{-1pt}}\n");
+      snprintf(buf, 256,
+               "\\pgfsetxvec{\\pgfpoint{1pt}{0pt}}\n"
+               "\\pgfsetyvec{\\pgfpoint{0pt}{-1pt}}\n");
       gks_write_file(fd, buf, strlen(buf));
-      sprintf(buf, "\\newdimen\\thickness\n\\tikzset{\n"
-                   "thickness/.code={\\thickness=#1},\n"
-                   "thickness=1pt\n}\n");
+      snprintf(buf, 256,
+               "\\newdimen\\thickness\n\\tikzset{\n"
+               "thickness/.code={\\thickness=#1},\n"
+               "thickness=1pt\n}\n");
       gks_write_file(fd, buf, strlen(buf));
-      sprintf(buf, "\\makeatletter\n"
-                   "\\@ifundefined{providepgfdeclarepatternformonly}{\n"
-                   "\\newcommand{\\providepgfdeclarepatternformonly}[6][]{"
-                   "\\pgfutil@ifundefined{pgf@pattern@name@#2}{"
-                   "\\pgfdeclarepatternformonly[#1]{#2}{#3}{#4}{#5}{#6}"
-                   "}{}}\n"
-                   "}{}\n"
-                   "\\makeatother\n");
+      snprintf(buf, 256,
+               "\\makeatletter\n"
+               "\\@ifundefined{providepgfdeclarepatternformonly}{\n"
+               "\\newcommand{\\providepgfdeclarepatternformonly}[6][]{"
+               "\\pgfutil@ifundefined{pgf@pattern@name@#2}{"
+               "\\pgfdeclarepatternformonly[#1]{#2}{#3}{#4}{#5}{#6}"
+               "}{}}\n"
+               "}{}\n"
+               "\\makeatother\n");
       gks_write_file(fd, buf, strlen(buf));
     }
   else
@@ -971,22 +977,22 @@ static void write_page(void)
       p->png_counter = 0;
       gks_write_file(p->tex_file, p->patternstream->buffer, p->patternstream->length);
       pgf_clear_stream(p->patternstream);
-      sprintf(buf,
-              "\\begin{tikzpicture}[yscale=-1, "
-              "every node/.style={inner sep=0pt, outer sep=1pt, anchor=base west}, line cap=butt, line join=round]\n"
-              "\\pgfsetyvec{\\pgfpoint{0pt}{1pt}}\n\\clip (0,0) rectangle (%d,%d);\\node at (0,0) {}; \\node at "
-              "(%d,%d) {};\n",
-              p->width, p->height, p->width, p->height);
+      snprintf(buf, 256,
+               "\\begin{tikzpicture}[yscale=-1, "
+               "every node/.style={inner sep=0pt, outer sep=1pt, anchor=base west}, line cap=butt, line join=round]\n"
+               "\\pgfsetyvec{\\pgfpoint{0pt}{1pt}}\n\\clip (0,0) rectangle (%d,%d);\\node at (0,0) {}; \\node at "
+               "(%d,%d) {};\n",
+               p->width, p->height, p->width, p->height);
       gks_write_file(p->tex_file, buf, strlen(buf));
       gks_write_file(p->tex_file, p->stream->buffer, p->stream->length);
       if (p->scoped)
         {
-          sprintf(buf, "\\end{scope}\n\\end{tikzpicture}\n");
+          snprintf(buf, 256, "\\end{scope}\n\\end{tikzpicture}\n");
           p->scoped = 0;
         }
       else
         {
-          sprintf(buf, "\\end{tikzpicture}\n");
+          snprintf(buf, 256, "\\end{tikzpicture}\n");
         }
       gks_write_file(p->tex_file, buf, strlen(buf));
       pgf_clear_stream(p->stream);

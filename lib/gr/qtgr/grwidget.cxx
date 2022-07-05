@@ -58,10 +58,10 @@ void GRWidget::paintEvent(QPaintEvent *event)
   char buf[100];
 
 #ifdef _WIN32
-  sprintf(buf, "GKS_CONID=%p!%p", this, &painter);
+  snprintf(buf, 100, "GKS_CONID=%p!%p", this, &painter);
   putenv(buf);
 #else
-  sprintf(buf, "%p!%p", this, &painter);
+  snprintf(buf, 100, "%p!%p", this, &painter);
   setenv("GKS_CONID", buf, 1);
 #endif
 
@@ -109,10 +109,10 @@ void InteractiveGRWidget::paintEvent(QPaintEvent *event)
   double mwidth, mheight;
 
 #ifdef _WIN32
-  sprintf(buf, "GKS_CONID=%p!%p", this, &painter);
+  snprintf(buf, 100, "GKS_CONID=%p!%p", this, &painter);
   putenv(buf);
 #else
-  sprintf(buf, "%p!%p", this, &painter);
+  snprintf(buf, 100, "%p!%p", this, &painter);
   setenv("GKS_CONID", buf, 1);
 #endif
 

@@ -535,11 +535,11 @@ static void bounding_box(int landscape, double magstep)
     p->ytrans = -ix2;
   p->res = (ix2 - ix1) + (iy2 - iy1);
 
-  sprintf(buffer, "%%%%BoundingBox: %d %d %d %d", ix1, iy1, ix2, iy2);
+  snprintf(buffer, 50, "%%%%BoundingBox: %d %d %d %d", ix1, iy1, ix2, iy2);
   packb(buffer);
   if (gkss->version > 4)
     {
-      sprintf(buffer, "%%%%Orientation: %s", landscape ? "Landscape" : "Portrait");
+      snprintf(buffer, 50, "%%%%Orientation: %s", landscape ? "Landscape" : "Portrait");
       packb(buffer);
     }
 }
@@ -556,7 +556,7 @@ static void move(double x, double y)
       packb("sk");
       p->stroke = 0;
     }
-  sprintf(buffer, "np %d %d m", p->ix, p->iy);
+  snprintf(buffer, 50, "np %d %d m", p->ix, p->iy);
   packb(buffer);
   p->np = 1;
 }
@@ -577,7 +577,7 @@ static void draw(double x, double y)
       ry = p->iy - jy;
       if (abs(rx) > 1 || abs(ry) > 1)
         {
-          sprintf(buffer, "%d %d rl", rx, ry);
+          snprintf(buffer, 50, "%d %d rl", rx, ry);
           packb(buffer);
         }
       else
@@ -590,7 +590,7 @@ static void draw(double x, double y)
             {
               packb("sk");
               p->stroke = 0;
-              sprintf(buffer, "%d %d m", p->ix, p->iy);
+              snprintf(buffer, 50, "%d %d m", p->ix, p->iy);
               packb(buffer);
               p->np = 1;
             }
@@ -607,7 +607,7 @@ static void moveto(double x, double y)
   p->ix = NINT(x);
   p->iy = NINT(y);
 
-  sprintf(buffer, "%d %d m", p->ix, p->iy);
+  snprintf(buffer, 20, "%d %d m", p->ix, p->iy);
   packb(buffer);
 }
 
@@ -618,7 +618,7 @@ static void amoveto(double angle, double x, double y)
   p->ix = NINT(x);
   p->iy = NINT(y);
 
-  sprintf(buffer, "%.4g %d %d am", angle, p->ix, p->iy);
+  snprintf(buffer, 30, "%.4g %d %d am", angle, p->ix, p->iy);
   packb(buffer);
 }
 
@@ -630,7 +630,7 @@ static void set_linetype(int ltype, double lwidth)
     {
       p->ltype = ltype;
       gks_get_dash(ltype, lwidth * 8, dash);
-      sprintf(buffer, "%s 0 setdash", dash);
+      snprintf(buffer, 100, "%s 0 setdash", dash);
       packb(buffer);
     }
 }
@@ -642,7 +642,7 @@ static void set_linewidth(double width)
   if (fabs(width - p->cwidth) > FEPS)
     {
       p->cwidth = fabs(width);
-      sprintf(buffer, "%.4g lw", p->cwidth * 600 / 72 * p->nominal_size);
+      snprintf(buffer, 20, "%.4g lw", p->cwidth * 600 / 72 * p->nominal_size);
       packb(buffer);
     }
 }
@@ -654,7 +654,7 @@ static void set_markersize(double size)
   if (fabs(size - p->csize) > FEPS)
     {
       p->csize = fabs(size);
-      sprintf(buffer, "%.4g ms", p->csize * p->nominal_size);
+      snprintf(buffer, 20, "%.4g ms", p->csize * p->nominal_size);
       packb(buffer);
     }
 }
@@ -666,12 +666,12 @@ static void set_markerangle(double angle)
   if (fabs(angle - p->cangle) > FEPS)
     {
       p->cangle = fabs(angle);
-      sprintf(buffer, "%.4g ma", p->cangle);
+      snprintf(buffer, 20, "%.4g ma", p->cangle);
       packb(buffer);
     }
 }
 
-static void gkinfo(int *nchars, char *chars)
+static void gkinfo(int *nchars, char *chars, size_t size)
 {
   char *date, host[100];
   const char *user;
@@ -718,7 +718,7 @@ static void gkinfo(int *nchars, char *chars)
   strtok(date, "\n");
   strtok(host, ".");
 
-  sprintf(chars, "%s  by user  %s @ %s", date, user, host);
+  snprintf(chars, size, "%s  by user  %s @ %s", date, user, host);
   *nchars = strlen(chars);
 }
 
@@ -727,22 +727,22 @@ static void ps_header(void)
   int nchars;
   char info[150], buffer[200];
 
-  gkinfo(&nchars, info);
+  gkinfo(&nchars, info, 150);
   packb("%!PS-Adobe-2.0");
   if (nchars > 0)
     {
-      sprintf(buffer, "\
+      snprintf(buffer, 200, "\
 %%%%Creator: %s, GKS 5 PostScript Device Handler",
-              info + 35);
+               info + 35);
       packb(buffer);
       info[24] = '\0';
-      sprintf(buffer, "%%%%+CreationDate: %s", info);
+      snprintf(buffer, 200, "%%%%+CreationDate: %s", info);
       packb(buffer);
     }
   else
     packb("%%Creator: GKS 5 PostScript Device Handler");
   packb("%%+Copyright @ 1993-2007, J.Heinen");
-  sprintf(buffer, "%%%%Pages: 1");
+  snprintf(buffer, 200, "%%%%Pages: 1");
   packb(buffer);
 }
 
@@ -765,12 +765,12 @@ static void set_color(int color, int wtype)
           if (wtype % 2)
             {
               grey = 0.3 * p->red[index] + 0.59 * p->green[index] + 0.11 * p->blue[index];
-              sprintf(buffer, "%.4g sg", grey);
+              snprintf(buffer, 50, "%.4g sg", grey);
               packb(buffer);
             }
           else
             {
-              sprintf(buffer, "%.4g %.4g %.4g sc", p->red[index], p->green[index], p->blue[index]);
+              snprintf(buffer, 50, "%.4g %.4g %.4g sc", p->red[index], p->green[index], p->blue[index]);
               packb(buffer);
             }
           p->color = index;
@@ -792,12 +792,12 @@ static void set_foreground(int color, int wtype)
           if (wtype % 2)
             {
               grey = 0.3 * p->red[index] + 0.59 * p->green[index] + 0.11 * p->blue[index];
-              sprintf(buffer, "/fg {%.4g sg} def", grey);
+              snprintf(buffer, 50, "/fg {%.4g sg} def", grey);
               packb(buffer);
             }
           else
             {
-              sprintf(buffer, "/fg {%.4g %.4g %.4g sc} def", p->red[index], p->green[index], p->blue[index]);
+              snprintf(buffer, 50, "/fg {%.4g %.4g %.4g sc} def", p->red[index], p->green[index], p->blue[index]);
               packb(buffer);
             }
           p->fcol = index;
@@ -819,12 +819,12 @@ static void set_background(int wtype)
   if (wtype % 2)
     {
       grey = 0.3 * p->red[0] + 0.59 * p->green[0] + 0.11 * p->blue[0];
-      sprintf(buffer, "/bg {%.4g sg} def", grey);
+      snprintf(buffer, 50, "/bg {%.4g sg} def", grey);
       packb(buffer);
     }
   else
     {
-      sprintf(buffer, "/bg {%.4g %.4g %.4g sc} def", p->red[0], p->green[0], p->blue[0]);
+      snprintf(buffer, 50, "/bg {%.4g %.4g %.4g sc} def", p->red[0], p->green[0], p->blue[0]);
       packb(buffer);
     }
 }
@@ -856,7 +856,7 @@ static void set_clip(double *clrt)
   ix2 = NINT(cx2) + 2;
   iy2 = NINT(cy2) + 2;
 
-  sprintf(buffer, "np %d %d m %d %d l %d %d l %d %d l cp clip", ix1, iy1, ix1, iy2, ix2, iy2, ix2, iy1);
+  snprintf(buffer, 120, "np %d %d m %d %d l %d %d l %d %d l cp clip", ix1, iy1, ix1, iy2, ix2, iy2, ix2, iy1);
   packb(buffer);
 }
 
@@ -895,16 +895,16 @@ static void set_font(int font)
 
       if (font != 12 && font != 29 && font != 30)
         {
-          sprintf(buffer, "gsave /%s_ ISOLatin1Encoding", fonts[font]);
+          snprintf(buffer, 200, "gsave /%s_ ISOLatin1Encoding", fonts[font]);
           packb(buffer);
-          sprintf(buffer, "/%s encodefont pop grestore", fonts[font]);
+          snprintf(buffer, 200, "/%s encodefont pop grestore", fonts[font]);
           packb(buffer);
-          sprintf(buffer, "/%s_ findfont %d scalefont setfont", fonts[font], size);
+          snprintf(buffer, 200, "/%s_ findfont %d scalefont setfont", fonts[font], size);
           packb(buffer);
         }
       else
         {
-          sprintf(buffer, "/%s findfont %d scalefont setfont", fonts[font], size);
+          snprintf(buffer, 200, "/%s findfont %d scalefont setfont", fonts[font], size);
           packb(buffer);
         }
     }
@@ -1099,15 +1099,15 @@ static void ps_init(int *pages)
             }
           for (k = 0, j = 1; j < 9; j++, k += 2)
             {
-              sprintf(str + k, "%02x", pa[j]);
+              snprintf(str + k, 17, "%02x", pa[j]);
             }
-          sprintf(buffer, "/pat%d << /PaintType 2 /PatternType 1 /TilingType 1\
+          snprintf(buffer, 100, "/pat%d << /PaintType 2 /PatternType 1 /TilingType 1\
  /BBox [0 0 1 1] /XStep 1",
-                  i);
+                   i);
           packb(buffer);
-          sprintf(buffer, "/YStep 1 /PaintProc {pop 8 8 false [8 0 0 8 0 0] \
+          snprintf(buffer, 100, "/YStep 1 /PaintProc {pop 8 8 false [8 0 0 8 0 0] \
 {<%s>} imagemask}",
-                  str);
+                   str);
           packb(buffer);
           packb(">> [0 8 -8 0 0 0] makepattern def");
         }
@@ -1159,7 +1159,7 @@ static void ps_init(int *pages)
     }
 
   (*pages)++;
-  sprintf(buffer, "%%%%Page: %d %d", *pages, *pages);
+  snprintf(buffer, 100, "%%%%Page: %d %d", *pages, *pages);
   packb(buffer);
 
   packb("%%BeginPageSetup");
@@ -1168,19 +1168,19 @@ static void ps_init(int *pages)
   if (landscape)
     {
       if (gkss->version < 5)
-        sprintf(buffer, "%d %d translate -90 rotate", LLX, p->ytrans);
+        snprintf(buffer, 100, "%d %d translate -90 rotate", LLX, p->ytrans);
       else
-        sprintf(buffer, "90 rotate %d %d translate", LLX, p->ytrans);
+        snprintf(buffer, 100, "90 rotate %d %d translate", LLX, p->ytrans);
       packb(buffer);
     }
   else
     {
-      sprintf(buffer, "%d %d translate", LLX, LLY);
+      snprintf(buffer, 100, "%d %d translate", LLX, LLY);
       packb(buffer);
     }
   if (fabs(p->magstep) > FEPS)
     {
-      sprintf(buffer, "%.4g 1 in 600 div mul dup scale", pow(1.2, p->magstep));
+      snprintf(buffer, 100, "%.4g 1 in 600 div mul dup scale", pow(1.2, p->magstep));
       packb(buffer);
     }
   else
@@ -1202,7 +1202,7 @@ static void end_page(int pages)
 {
   char buffer[30];
 
-  sprintf(buffer, "%%%%EndPage: %d %d", pages, pages);
+  snprintf(buffer, 30, "%%%%EndPage: %d %d", pages, pages);
   packb(buffer);
 }
 
@@ -1318,7 +1318,7 @@ static void marker_routine(double x, double y, int marker)
 
   p->ix = NINT(dx);
   p->iy = NINT(dy);
-  sprintf(buffer, "%d %d %s", p->ix, p->iy, macro[marker + 32]);
+  snprintf(buffer, 50, "%d %d %s", p->ix, p->iy, macro[marker + 32]);
   packb(buffer);
 }
 
@@ -1356,13 +1356,13 @@ static void cell_array(double xmin, double xmax, double ymin, double ymax, int d
   packb("/RawData currentfile /ASCII85Decode filter def");
   packb("/Data RawData << >> /LZWDecode filter def");
 
-  sprintf(buffer, "%d %d translate", x, y);
+  snprintf(buffer, 100, "%d %d translate", x, y);
   packb(buffer);
 
-  sprintf(buffer, "%d %d scale", w, h);
+  snprintf(buffer, 100, "%d %d scale", w, h);
   packb(buffer);
 
-  sprintf(buffer, "/Device%s setcolorspace", wtype % 2 == 0 ? "RGB" : "Gray");
+  snprintf(buffer, 100, "/Device%s setcolorspace", wtype % 2 == 0 ? "RGB" : "Gray");
   packb(buffer);
 
   if (x1 > x2) swap = 1;
@@ -1370,19 +1370,19 @@ static void cell_array(double xmin, double xmax, double ymin, double ymax, int d
 
   packb("{ << /ImageType 1");
 
-  sprintf(buffer, "/Width %d /Height %d", dx, dy);
+  snprintf(buffer, 100, "/Width %d /Height %d", dx, dy);
   packb(buffer);
   if (swap == 0)
-    sprintf(buffer, "/ImageMatrix [%d 0 0 -%d 0 %d]", dx, dy, dy);
+    snprintf(buffer, 100, "/ImageMatrix [%d 0 0 -%d 0 %d]", dx, dy, dy);
   else if (swap == 1)
-    sprintf(buffer, "/ImageMatrix [-%d 0 0 -%d %d %d]", dx, dy, dx, dy);
+    snprintf(buffer, 100, "/ImageMatrix [-%d 0 0 -%d %d %d]", dx, dy, dx, dy);
   else if (swap == 2)
-    sprintf(buffer, "/ImageMatrix [%d 0 0 %d 0 0]", dx, dy);
+    snprintf(buffer, 100, "/ImageMatrix [%d 0 0 %d 0 0]", dx, dy);
   else
-    sprintf(buffer, "/ImageMatrix [-%d 0 %d %d 0 0]", dx, dx, dy);
+    snprintf(buffer, 100, "/ImageMatrix [-%d 0 %d %d 0 0]", dx, dx, dy);
   packb(buffer);
 
-  sprintf(buffer, "/DataSource Data /BitsPerComponent 8 /Decode [0 1%s]", wtype % 2 == 0 ? " 0 1 0 1" : "");
+  snprintf(buffer, 100, "/DataSource Data /BitsPerComponent 8 /Decode [0 1%s]", wtype % 2 == 0 ? " 0 1 0 1" : "");
   packb(buffer);
 
   packb(">> image Data closefile RawData flushfile } exec");
@@ -1457,12 +1457,12 @@ static void text_routine(double *x, double *y, int nchars, char *chars)
         }
       else
         {
-          sprintf(str + j, "\\%03o", ic);
+          snprintf(str + j, 500, "\\%03o", ic);
           j += 4;
         }
       str[j] = '\0';
     }
-  sprintf(buffer, "(%s) %s", str, show[alh + GKS_K_TEXT_HALIGN_NORMAL]);
+  snprintf(buffer, 510, "(%s) %s", str, show[alh + GKS_K_TEXT_HALIGN_NORMAL]);
   packb(buffer);
   if (fabs(angle) > FEPS) packb("gr");
 
@@ -1482,7 +1482,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   WC_to_NDC(px[0], py[0], tnr, x, y);
   NDC_to_DC(x, y, p->ix, p->iy);
 
-  sprintf(buffer, "np %d %d m", p->ix, p->iy);
+  snprintf(buffer, 50, "np %d %d m", p->ix, p->iy);
   packb(buffer);
   p->np = 1;
 
@@ -1506,12 +1506,12 @@ static void fill_routine(int n, double *px, double *py, int tnr)
                 }
               if (nan_found)
                 {
-                  sprintf(buffer, "%d %d m", p->ix, p->iy);
+                  snprintf(buffer, 50, "%d %d m", p->ix, p->iy);
                   nan_found = 0;
                 }
               else
                 {
-                  sprintf(buffer, "%d %d rl", rx, ry);
+                  snprintf(buffer, 50, "%d %d rl", rx, ry);
                 }
               packb(buffer);
             }
@@ -1530,8 +1530,8 @@ static void fillpattern_routine(int n, double *px, double *py, int tnr, int patt
 {
   char buffer[100];
 
-  sprintf(buffer, "gs [/Pattern /Device%s] setcolorspace %.4g %.4g %.4g pat%d setcolor",
-          p->wtype % 2 == 0 ? "RGB" : "Gray", p->red[p->color], p->green[p->color], p->blue[p->color], pattern);
+  snprintf(buffer, 100, "gs [/Pattern /Device%s] setcolorspace %.4g %.4g %.4g pat%d setcolor",
+           p->wtype % 2 == 0 ? "RGB" : "Gray", p->red[p->color], p->green[p->color], p->blue[p->color], pattern);
   packb(buffer);
 
   fill_routine(n, px, py, tnr);
@@ -1571,7 +1571,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   double x1, y1, x2, y2;
   GKS_UNUSED(n);
 
-  sprintf(buffer, "np ");
+  snprintf(buffer, 100, "np ");
   packb(buffer);
   np = 0;
 
@@ -1592,7 +1592,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           start_x = cur_x = x[0];
           start_y = cur_y = y[0];
           to_DC(1, x, y);
-          sprintf(buffer, "%s%.2f %.2f m", np ? "np " : "", x[0], y[0]);
+          snprintf(buffer, 100, "%s%.2f %.2f m", np ? "np " : "", x[0], y[0]);
           packb(buffer);
           np = 0;
           j += 1;
@@ -1609,7 +1609,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           cur_x = x[0];
           cur_y = y[0];
           to_DC(1, x, y);
-          sprintf(buffer, "%.2f %.2f l", x[0], y[0]);
+          snprintf(buffer, 100, "%.2f %.2f l", x[0], y[0]);
           packb(buffer);
           j += 1;
           break;
@@ -1638,7 +1638,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           y1 = y[2] + (2.0 / 3.0) * (y[0] - y[2]);
           x2 = x[1] + (2.0 / 3.0) * (x[0] - x[1]);
           y2 = y[1] + (2.0 / 3.0) * (y[0] - y[1]);
-          sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f c", x1, y1, x2, y2, x[1], y[1]);
+          snprintf(buffer, 100, "%.2f %.2f %.2f %.2f %.2f %.2f c", x1, y1, x2, y2, x[1], y[1]);
           packb(buffer);
           j += 2;
           break;
@@ -1668,7 +1668,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           cur_x = x[2];
           cur_y = y[2];
           to_DC(3, x, y);
-          sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f c", x[0], y[0], x[1], y[1], x[2], y[2]);
+          snprintf(buffer, 100, "%.2f %.2f %.2f %.2f %.2f %.2f c", x[0], y[0], x[1], y[1], x[2], y[2]);
           packb(buffer);
           j += 3;
           break;
@@ -1696,47 +1696,50 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           a2 *= 180 / M_PI;
           if (a2 < a1)
             {
-              sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f eln", x[0], y[0], w, h, a1, a2);
+              snprintf(buffer, 100, "%.2f %.2f %.2f %.2f %.2f %.2f eln", x[0], y[0], w, h, a1, a2);
             }
           else
             {
-              sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f el", x[0], y[0], w, h, a1, a2);
+              snprintf(buffer, 100, "%.2f %.2f %.2f %.2f %.2f %.2f el", x[0], y[0], w, h, a1, a2);
             }
           packb(buffer);
           j += 3;
           break;
         case 's':
-          sprintf(buffer, "cp");
+          snprintf(buffer, 100, "cp");
           cur_x = start_x;
           cur_y = start_y;
           packb(buffer);
           /* fall through */
         case 'S':
           set_linewidth(gkss->bwidth);
-          sprintf(buffer, "%.4g %.4g %.4g sc sk", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
+          snprintf(buffer, 100, "%.4g %.4g %.4g sc sk", p->red[gkss->bcoli], p->green[gkss->bcoli],
+                   p->blue[gkss->bcoli]);
           packb(buffer);
           np = 1;
           break;
         case 'f':
-          sprintf(buffer, "%.4g %.4g %.4g sc fi", p->red[gkss->facoli], p->green[gkss->facoli], p->blue[gkss->facoli]);
+          snprintf(buffer, 100, "%.4g %.4g %.4g sc fi", p->red[gkss->facoli], p->green[gkss->facoli],
+                   p->blue[gkss->facoli]);
           cur_x = start_x;
           cur_y = start_y;
           packb(buffer);
           np = 1;
           break;
         case 'F':
-          sprintf(buffer, "gs %.4g %.4g %.4g sc fi gr", p->red[gkss->facoli], p->green[gkss->facoli],
-                  p->blue[gkss->facoli]);
+          snprintf(buffer, 100, "gs %.4g %.4g %.4g sc fi gr", p->red[gkss->facoli], p->green[gkss->facoli],
+                   p->blue[gkss->facoli]);
           packb(buffer);
           set_linewidth(gkss->bwidth);
-          sprintf(buffer, "%.4g %.4g %.4g sc csk", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
+          snprintf(buffer, 100, "%.4g %.4g %.4g sc csk", p->red[gkss->bcoli], p->green[gkss->bcoli],
+                   p->blue[gkss->bcoli]);
           cur_x = start_x;
           cur_y = start_y;
           packb(buffer);
           np = 1;
           break;
         case 'Z':
-          sprintf(buffer, "cp");
+          snprintf(buffer, 100, "cp");
           cur_x = start_x;
           cur_y = start_y;
           np = 0;
@@ -1780,7 +1783,7 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
       set_linewidth(line_width);
       set_color(-ln_color, p->wtype);
 
-      sprintf(buffer, "%d %d m %d %d l sk", xim1, yim1, xi, yi);
+      snprintf(buffer, 50, "%d %d m %d %d l sk", xim1, yim1, xi, yi);
       packb(buffer);
     }
 
@@ -1793,12 +1796,13 @@ static void set_bordercolor(int wtype)
 
   if (wtype % 2)
     {
-      sprintf(buffer, "/bc {%.4g sg} def",
-              0.3 * p->red[gkss->bcoli] + 0.59 * p->green[gkss->bcoli] + 0.11 * p->blue[gkss->bcoli]);
+      snprintf(buffer, 50, "/bc {%.4g sg} def",
+               0.3 * p->red[gkss->bcoli] + 0.59 * p->green[gkss->bcoli] + 0.11 * p->blue[gkss->bcoli]);
     }
   else
     {
-      sprintf(buffer, "/bc {%.4g %.4g %.4g sc} def", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
+      snprintf(buffer, 50, "/bc {%.4g %.4g %.4g sc} def", p->red[gkss->bcoli], p->green[gkss->bcoli],
+               p->blue[gkss->bcoli]);
     }
 
   packb(buffer);
@@ -1860,8 +1864,8 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
       set_linewidth(gkss->lwidth);
       set_color(-ln_color, p->wtype);
 
-      sprintf(buffer, "%.2f %.2f m %.2f %.2f l %.2f %.2f l csk", tri_x[0], tri_y[0], tri_x[1], tri_y[1], tri_x[2],
-              tri_y[2]);
+      snprintf(buffer, 200, "%.2f %.2f m %.2f %.2f l %.2f %.2f l csk", tri_x[0], tri_y[0], tri_x[1], tri_y[1], tri_x[2],
+               tri_y[2]);
       packb(buffer);
     }
 }
@@ -1889,11 +1893,11 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
 
           if (k == 0)
             {
-              sprintf(buffer, "%.2f %.2f m", xd, yd);
+              snprintf(buffer, 50, "%.2f %.2f m", xd, yd);
             }
           else
             {
-              sprintf(buffer, "%.2f %.2f l", xd, yd);
+              snprintf(buffer, 50, "%.2f %.2f l", xd, yd);
             }
           packb(buffer);
         }
@@ -1907,7 +1911,7 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
       set_color(-fl_color, p->wtype);
       packb("fi gr");
 
-      sprintf(buffer, "%.4g %.4g %.4g sc", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
+      snprintf(buffer, 50, "%.4g %.4g %.4g sc", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
       packb(buffer);
       set_linewidth(gkss->bwidth);
       packb("sk");
@@ -2014,18 +2018,18 @@ static void init_arguments(void)
     }
 
 #ifdef _WIN32
-  sprintf(p->gs_argv[0], "gswin32c");
+  snprintf(p->gs_argv[0], MAXPATHLEN * sizeof(char), "gswin32c");
 #else
-  sprintf(p->gs_argv[0], "gs");
+  snprintf(p->gs_argv[0], MAXPATHLEN * sizeof(char), "gs");
 #endif
-  sprintf(p->gs_argv[1], "-sDEVICE=%s", device);
-  sprintf(p->gs_argv[2], "-g%dx%d", (int)(p->viewpt[1] * 100.0 * 600.0 / 2.54),
-          (int)(p->viewpt[3] * 100.0 * 600.0 / 2.54));
-  sprintf(p->gs_argv[3], "-r600x600");
-  sprintf(p->gs_argv[4], "-sOutputFile=%s", path);
-  sprintf(p->gs_argv[5], "-dGraphicsAlphaBits=4");
-  sprintf(p->gs_argv[6], "-dTextAlphaBits=4");
-  sprintf(p->gs_argv[7], "-");
+  snprintf(p->gs_argv[1], MAXPATHLEN * sizeof(char), "-sDEVICE=%s", device);
+  snprintf(p->gs_argv[2], MAXPATHLEN * sizeof(char), "-g%dx%d", (int)(p->viewpt[1] * 100.0 * 600.0 / 2.54),
+           (int)(p->viewpt[3] * 100.0 * 600.0 / 2.54));
+  snprintf(p->gs_argv[3], MAXPATHLEN * sizeof(char), "-r600x600");
+  snprintf(p->gs_argv[4], MAXPATHLEN * sizeof(char), "-sOutputFile=%s", path);
+  snprintf(p->gs_argv[5], MAXPATHLEN * sizeof(char), "-dGraphicsAlphaBits=4");
+  snprintf(p->gs_argv[6], MAXPATHLEN * sizeof(char), "-dTextAlphaBits=4");
+  snprintf(p->gs_argv[7], MAXPATHLEN * sizeof(char), "-");
 }
 
 static void free_arguments(void)

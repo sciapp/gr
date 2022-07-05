@@ -238,12 +238,12 @@ static int open_socket(int wstype)
           cmd = (char *)gks_malloc(MAXPATHLEN);
 #ifndef _WIN32
 #ifdef __APPLE__
-          sprintf(cmd, "%s/Applications/gksqt.app/Contents/MacOS/gksqt", env);
+          snprintf(cmd, MAXPATHLEN, "%s/Applications/gksqt.app/Contents/MacOS/gksqt", env);
 #else
-          sprintf(cmd, "%s/bin/gksqt", env);
+          snprintf(cmd, MAXPATHLEN, "%s/bin/gksqt", env);
 #endif
 #else
-          sprintf(cmd, "%s\\bin\\gksqt.exe", env);
+          snprintf(cmd, MAXPATHLEN, "%s\\bin\\gksqt.exe", env);
 #endif
           command = cmd;
         }
