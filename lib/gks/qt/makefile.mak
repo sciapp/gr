@@ -34,5 +34,6 @@ endif
 clean:
 	@if [ -f QMakefile ]; then make -f QMakefile distclean; \
 	rm -f QMakefile; fi
+	@if [ -f Makefile ]; then make distclean; fi
 
 .PHONY: default install clean
