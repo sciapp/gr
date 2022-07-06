@@ -496,6 +496,7 @@ static void interp(char *str)
         case 2:
 
           RESOLVE(gkss, gks_state_list_t, sizeof(gks_state_list_t));
+          sp += 3 * sizeof(int); /* ignore workstation type */
           break;
 
         case 12: /* polyline */

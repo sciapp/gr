@@ -37,6 +37,7 @@ public slots:
   void readClient();
   void destroyedWidget();
   void disconnectedSocket();
+  void updateWindowTitle(QString renderer = "");
 
 signals:
   void data(char *);
@@ -45,6 +46,7 @@ signals:
 
 private:
   static unsigned int index;
+  unsigned int widget_index;
   static const int window_shift;
   QTcpSocket *socket;
   GKSWidget *widget;

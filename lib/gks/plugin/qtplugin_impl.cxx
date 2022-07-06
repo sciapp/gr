@@ -1402,7 +1402,6 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
     case 2:
       memmove(&saved_gkss, gkss, sizeof(gks_state_list_t));
       memmove(gkss, *ptr, sizeof(gks_state_list_t));
-
       gkss->fontfile = saved_gkss.fontfile;
 
       if (!p->prevent_resize_by_dl)
@@ -1513,6 +1512,36 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
     }
 }
 
+static void dl_render_function(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2,
+                               int lc, char *chars, void **ptr)
+{
+  if (fctid == 2)
+    {
+      if (ia[2] == 412)
+        {
+          p->memory_plugin_wstype = 143;
+          p->memory_plugin = gks_cairo_plugin;
+        }
+      else if (ia[2] == 413)
+        {
+          p->memory_plugin_wstype = 173;
+          p->memory_plugin = gks_agg_plugin;
+        }
+      else
+        {
+          p->memory_plugin_wstype = 0;
+        }
+    }
+  if (p->memory_plugin_wstype)
+    {
+      memory_plugin_dl_render(fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, ptr);
+    }
+  else
+    {
+      qt_dl_render(fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, ptr);
+    }
+}
+
 static void interp(char *str)
 {
   char *s;
@@ -1520,32 +1549,10 @@ static void interp(char *str)
 
   s = str;
 
-  if (getenv("GKS_QT_USE_CAIRO"))
-    {
-      p->memory_plugin = gks_cairo_plugin;
-      p->memory_plugin_wstype = 143;
-    }
-  else if (getenv("GKS_QT_USE_AGG"))
-    {
-      p->memory_plugin = gks_agg_plugin;
-      p->memory_plugin_wstype = 173;
-    }
-  else
-    {
-      p->memory_plugin_wstype = 0;
-    }
-
   RESOLVE(len, int, sizeof(int));
   while (*len)
     {
-      if (p->memory_plugin_wstype)
-        {
-          sp += gks_dl_read_item(s + sp, &gkss, memory_plugin_dl_render);
-        }
-      else
-        {
-          sp += gks_dl_read_item(s + sp, &gkss, qt_dl_render);
-        }
+      sp += gks_dl_read_item(s + sp, &gkss, dl_render_function);
       RESOLVE(len, int, sizeof(int));
     }
 

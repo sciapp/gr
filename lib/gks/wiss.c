@@ -474,6 +474,7 @@ static void interp(char *str, int segn)
 
           RESOLVE(gkss, gks_state_list_t, sizeof(gks_state_list_t));
           unused_variable = gkss->ltype;
+          sp += 3 * sizeof(int); /* ignore workstation type */
           break;
 
         case 12: /* polyline */
