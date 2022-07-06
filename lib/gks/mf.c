@@ -38,25 +38,28 @@ typedef struct ws_state_list_struct
   int size, nbytes, position;
 } ws_state_list;
 
-
 static ws_state_list *p;
 static gks_state_list_t *gkss;
 static int wkid = 1;
 static int unused_variable = 0;
-
 
 static void reallocate(int len)
 {
   while (p->nbytes + len > p->size) p->size += SEGM_SIZE;
 
   p->buffer = (char *)gks_realloc(p->buffer, p->size + 1);
+  if (p->buffer == NULL)
+    {
+      gks_perror("memory allocation failed");
+      exit(1);
+    }
 }
 
 static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_1, double *f_arr_1, int len_farr_2,
                        double *f_arr_2, int len_c_arr, char *c_arr)
 {
   char s[GKS_K_TEXT_MAX_SIZE];
-  int len = -1, slen, tp;
+  int len = -1, slen, tp = 0;
   GKS_UNUSED(len_farr_1);
   GKS_UNUSED(len_farr_2);
   GKS_UNUSED(len_c_arr);
@@ -84,7 +87,7 @@ static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_
 
       memset((void *)s, 0, GKS_K_TEXT_MAX_SIZE);
       slen = strlen(c_arr);
-      memcpy(s, c_arr, slen < GKS_K_TEXT_MAX_SIZE ? slen : GKS_K_TEXT_MAX_SIZE - 1);
+      memcpy(s, c_arr, slen < GKS_K_TEXT_MAX_SIZE ? slen : GKS_K_TEXT_MAX_SIZE);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
@@ -225,7 +228,7 @@ static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_
     case 202: /* set shadow */
 
       len = 2 * sizeof(int) + 3 * sizeof(double);
-      if (p->nbytes + len >= p->size) reallocate(len);
+      if (p->nbytes + len > p->size) reallocate(len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
@@ -235,7 +238,7 @@ static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_
     case 204: /* set coord xform */
 
       len = 2 * sizeof(int) + 6 * sizeof(double);
-      if (p->nbytes + len >= p->size) reallocate(len);
+      if (p->nbytes + len > p->size) reallocate(len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
@@ -326,6 +329,7 @@ void gks_drv_mo(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_1,
 
       p->nbytes = p->position = 0;
       p->empty = 1;
+      memset(p->buffer, 0, p->size);
       break;
 
     case 8: /* update workstation */
@@ -412,9 +416,10 @@ static char *readfile(int fd)
 
       fstat(fd, &buf);
       size = (buf.st_size > 0) ? buf.st_size : 1000000;
-      s = (char *)gks_malloc(size + 1);
+      s = (char *)gks_malloc(size + 2 * sizeof(int));
 
       if ((cc = read(fd, s, size)) != -1) s[cc] = '\0';
+      memset(s + cc, 0, 2 * sizeof(int));
     }
   else
     gks_perror("invalid file descriptor (%d)", fd);
@@ -818,10 +823,10 @@ void gks_drv_mi(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_1,
       s = c_arr;
 
       len = *(int *)(p->buffer + p->position);
-      if (len < i_arr[2] * 80)
+      if (len < i_arr[2] * 80 - 2 * sizeof(int))
         {
           memmove(s, p->buffer + p->position, len);
-          s[len] = '\0';
+          memset(s + len, 0, 2 * sizeof(int));
         }
       else
         {

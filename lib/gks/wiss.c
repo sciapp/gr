@@ -104,7 +104,7 @@ static void write_item(int sgnum, int fctid, int dx, int dy, int dimx, int *i_ar
 
       memset((void *)s, 0, GKS_K_TEXT_MAX_SIZE);
       slen = strlen(c_arr);
-      memcpy(s, c_arr, slen < GKS_K_TEXT_MAX_SIZE ? slen : GKS_K_TEXT_MAX_SIZE - 1);
+      memcpy(s, c_arr, slen < GKS_K_TEXT_MAX_SIZE ? slen : GKS_K_TEXT_MAX_SIZE);
 
       COPY(&len, sizeof(int));
       COPY(&sgnum, sizeof(int));
