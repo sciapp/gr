@@ -17,9 +17,11 @@ endif
 endif
 QMAKE ?= $(TMP_QMAKE)
 
-default:
-	@if [ "$(QMAKE)" != "" ]; then $(QMAKE) -o QMakefile; \
-	$(MAKE) -f QMakefile; fi
+QMakefile:
+	@if [ "$(QMAKE)" != "" ]; then $(QMAKE) -o QMakefile; fi
+
+default: QMakefile
+	@if [ "$(QMAKE)" != "" ]; then $(MAKE) -f QMakefile; fi
 
 install: default
 ifeq ($(UNAME), Darwin)
