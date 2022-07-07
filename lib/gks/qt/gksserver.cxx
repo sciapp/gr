@@ -175,16 +175,30 @@ void GKSConnection::disconnectedSocket()
     }
 }
 
-void GKSConnection::newWidget()
+void GKSConnection::updateWindowTitle(QString renderer)
 {
   std::stringstream window_title_stream;
   window_title_stream << "GKS QtTerm";
-  if (index > 1)
+  if (widget_index > 1 && !renderer.isEmpty())
     {
-      window_title_stream << " (" << index << ")";
+      window_title_stream << " (" << widget_index << ", " << renderer.toStdString() << ")";
     }
-  widget = new GKSWidget();
+  else if (widget_index > 1)
+    {
+      window_title_stream << " (" << widget_index << ")";
+    }
+  else if (!renderer.isEmpty())
+    {
+      window_title_stream << " (" << renderer.toStdString() << ")";
+    }
   widget->setWindowTitle(window_title_stream.str().c_str());
+}
+
+void GKSConnection::newWidget()
+{
+  widget = new GKSWidget();
+  widget_index = index;
+  updateWindowTitle();
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
   QRect screen_geometry = QGuiApplication::primaryScreen()->availableGeometry();
 #else
@@ -211,6 +225,7 @@ void GKSConnection::newWidget()
   widget->setAttribute(Qt::WA_QuitOnClose, false);
   widget->setAttribute(Qt::WA_DeleteOnClose);
   connect(widget, SIGNAL(destroyed(QObject *)), this, SLOT(destroyedWidget()));
+  connect(widget, SIGNAL(rendererChanged(QString)), this, SLOT(updateWindowTitle(QString)));
 }
 
 GKSServer::GKSServer(QObject *parent) : QTcpServer(parent)

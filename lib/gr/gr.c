@@ -1443,7 +1443,8 @@ static void initgks(void)
   gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
   if (!double_buf)
     {
-      double_buf = wtype == 380 || wtype == 381 || wtype == 400 || wtype == 410 || wtype == 411;
+      double_buf =
+          wtype == 380 || wtype == 381 || wtype == 400 || wtype == 410 || wtype == 411 || wtype == 412 || wtype == 413;
     }
 
   if (display)
