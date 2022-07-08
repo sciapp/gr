@@ -1,5 +1,7 @@
 #ifdef __unix__
+#ifndef __FreeBSD__
 #define _POSIX_C_SOURCE 200112L
+#endif
 #define _XOPEN_SOURCE
 #endif
 
