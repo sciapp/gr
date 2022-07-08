@@ -1,4 +1,5 @@
 #ifdef __unix__
+#define _POSIX_C_SOURCE 200112L
 #define _XOPEN_SOURCE
 #endif
 
@@ -56,16 +57,16 @@ void STDCALL GOPWK(int *wkid, int *conid, int *wtype)
 
   if (*wtype >= 210 && *wtype <= 212 && (unsigned int)*conid >= 100 + 100)
     {
-      sprintf(s, "GKS_CONID=%p", (void *)conid);
+      snprintf(s, 32, "GKS_CONID=%p", (void *)conid);
       putenv(s);
 
       gks_open_ws(*wkid, GKS_K_CONID_DEFAULT, 213);
     }
   else if (*wtype < 301 && *conid != 0)
     {
-      sprintf(s, "GKS_CONID=");
+      snprintf(s, 32, "GKS_CONID=");
       putenv(s);
-      sprintf(s, "!%d", *conid);
+      snprintf(s, 32, "!%d", *conid);
 
       gks_open_ws(*wkid, s, *wtype);
     }

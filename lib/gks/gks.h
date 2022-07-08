@@ -247,6 +247,11 @@ extern "C" {
 #define GKS_K_GDP_DRAW_TRIANGLES 4
 #define GKS_K_GDP_FILL_POLYGONS 5
 
+/* resize behaviour flag */
+
+#define GKS_K_NO_RESIZE 0
+#define GKS_K_RESIZE 1
+
 /* GKS error codes */
 
 #define GKS_K_NO_ERROR 0
@@ -580,6 +585,7 @@ DLLEXPORT void gks_set_text_expfac(double chxp);
 DLLEXPORT void gks_set_text_spacing(double chsp);
 DLLEXPORT void gks_set_text_color_index(int coli);
 DLLEXPORT void gks_set_text_height(double chh);
+DLLEXPORT double gks_inq_ws_text_height(double chh, double height);
 DLLEXPORT void gks_set_text_upvec(double chux, double chuy);
 DLLEXPORT void gks_set_text_path(int txp);
 DLLEXPORT void gks_set_text_align(int txalh, int txalv);
@@ -686,6 +692,10 @@ DLLEXPORT void gks_inq_resample_method(unsigned int *flag);
 
 DLLEXPORT void gks_ft_gdp(int n, double *px, double *py, int primid, int ldr, int *datrec);
 DLLEXPORT void *gks_state(void);
+
+DLLEXPORT void gks_set_resize_behaviour(int flag);
+DLLEXPORT void gks_inq_resize_behaviour(int *flag);
+
 
 /* Entry point definitions */
 

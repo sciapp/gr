@@ -110,11 +110,12 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
       d->nbytes = d->position = 0;
       d->empty = 1;
 
-      len = 2 * sizeof(int) + sizeof(gks_state_list_t);
+      len = 2 * sizeof(int) + sizeof(gks_state_list_t) + 3 * sizeof(int);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
       COPY(gkss, sizeof(gks_state_list_t));
+      COPY(i_arr, 3 * sizeof(int));
       break;
 
     case 3: /* close workstation */
@@ -139,12 +140,13 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
       tp = purge(d, t);
       d->nbytes = d->position = 0;
 
-      len = 2 * sizeof(int) + sizeof(gks_state_list_t);
+      len = 2 * sizeof(int) + sizeof(gks_state_list_t) + 3 * sizeof(int);
       fctid = 2;
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
       COPY(gkss, sizeof(gks_state_list_t));
+      COPY(i_arr, 3 * sizeof(int));
 
       COPY(t, tp);
       free(t);
@@ -241,6 +243,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
     case 52:  /* select normalization transformation */
     case 53:  /* set clipping indicator */
     case 108: /* set resample method */
+    case 109: /* set resize behaviour */
     case 207: /* set border color index */
     case 208: /* select clipping transformation */
 
@@ -376,6 +379,7 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
     case 2: /* open workstation */
       RESOLVE(sl, gks_state_list_t, sizeof(gks_state_list_t));
       memcpy(*gkss, sl, sizeof(gks_state_list_t));
+      RESOLVE(ia, int, 3 * sizeof(int));
       break;
 
     case 6: /* clear workstation */
@@ -428,6 +432,7 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
     case 52:  /* select normalization transformation */
     case 53:  /* set clipping indicator */
     case 108: /* set resample method */
+    case 109: /* set resize behaviour */
     case 207: /* set border color index */
     case 208: /* select clipping transformation */
       RESOLVE(ia, int, sizeof(int));
@@ -564,6 +569,9 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
       break;
     case 108:
       (*gkss)->resample_method = ia[0];
+      break;
+    case 109:
+      (*gkss)->resize_behaviour = ia[0];
       break;
     case 200:
       (*gkss)->txslant = r1[0];

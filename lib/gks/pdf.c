@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200112L
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -253,15 +254,15 @@ static const char *pdf_double(double f)
 
   if (fabs(f) < 0.00001) return "0";
 
-  sprintf(buf, "%.4g", f);
+  snprintf(buf, 20, "%.4g", f);
   if (strchr(buf, 'e'))
     {
       if (fabs(f) < 1)
-        sprintf(buf, "%1.5f", f);
+        snprintf(buf, 20, "%1.5f", f);
       else if (fabs(f) < 1000)
-        sprintf(buf, "%1.2f", f);
+        snprintf(buf, 20, "%1.2f", f);
       else
-        sprintf(buf, "%1.0f", f);
+        snprintf(buf, 20, "%1.0f", f);
     }
 
   return buf;
@@ -307,7 +308,7 @@ static void pdf_printf(PDF_stream *p, const char *args, ...)
   strcpy(fmt, args);
 
   va_start(ap, args);
-  vsprintf(s, fmt, ap);
+  vsnprintf(s, BUFSIZ, fmt, ap);
   va_end(ap);
 
   pdf_memcpy(p, s, strlen(s));
@@ -766,7 +767,10 @@ static void set_xform(void)
 
   p->width = nint(p->a * (p->window[1] - p->window[0]));
   p->height = nint(p->c * (p->window[3] - p->window[2]));
-  p->nominal_size = min(p->width, p->height) / 500.0;
+  if (gkss->resize_behaviour == GKS_K_RESIZE)
+    {
+      p->nominal_size = min(p->width, p->height) / 500.0;
+    }
 }
 
 static void seg_xform(double *x, double *y)
@@ -823,7 +827,7 @@ static void create_patterns(void)
       gks_inq_pattern_array(pattern, parray);
       for (j = 0, k = 1; j < 16; j += 2)
         {
-          sprintf(bitmap[i] + j, "%02x", parray[k]);
+          snprintf(bitmap[i] + j, 17, "%02x", parray[k]);
           if (++k > *parray) k = 1;
         }
       bitmap[i][16] = '\0';
@@ -1023,8 +1027,8 @@ static void polyline(int n, double *px, double *py)
 
 static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
-  int r, curve, i;
-  double scale, x, y, xr, yr;
+  int curve, i;
+  double r, scale, x, y, xr, yr;
   int pc, op;
 
 #include "marker.h"
@@ -1034,13 +1038,13 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
   static double cy[4][3] = {{-1, -0.5523, 0}, {0.5523, 1, 1}, {1, 0.5523, 0}, {-0.5523, -1, -1}};
 
   mscale *= p->nominal_size;
-  r = (int)(3 * mscale);
+  r = 3 * mscale;
   scale = 0.01 * mscale / 3.0;
 
   xr = r;
   yr = 0;
   seg_xform_rel(&xr, &yr);
-  r = nint(sqrt(xr * xr + yr * yr));
+  r = sqrt(xr * xr + yr * yr);
 
   NDC_to_DC(xn, yn, x, y);
 
@@ -1846,7 +1850,7 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
 
-      line_width = 0.01 * attributes[j++];
+      line_width = 0.001 * attributes[j++];
       rgba = attributes[j++];
       p->red[ln_color] = (rgba & 0xff) / 255.0;
       p->green[ln_color] = ((rgba >> 8) & 0xff) / 255.0;
@@ -1872,7 +1876,7 @@ static void draw_markers(int n, double *px, double *py, int *attributes)
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
       seg_xform(&x, &y);
 
-      mk_size = 0.01 * attributes[j++];
+      mk_size = 0.001 * attributes[j++];
       rgba = attributes[j++];
       p->red[mk_color] = (rgba & 0xff) / 255.0;
       p->green[mk_color] = ((rgba >> 8) & 0xff) / 255.0;
@@ -2014,9 +2018,10 @@ void gks_drv_js(
   switch (fctid)
     {
     case 2:
+      gkss = (gks_state_list_t *)*ptr;
+
       /* open workstation */
       open_ws(ia[1], ia[2]);
-      gkss = (gks_state_list_t *)*ptr;
 
       init_norm_xform();
       init_colors();

@@ -972,7 +972,7 @@ void plot_process_wswindow_wsviewport(grm_args_t *plot_args)
   int pixel_width, pixel_height;
   int previous_pixel_width, previous_pixel_height;
   double metric_width, metric_height;
-  double aspect_ratio_ws;
+  double aspect_ratio_ws_pixel, aspect_ratio_ws_metric;
   double wsviewport[4] = {0.0, 0.0, 0.0, 0.0};
   double wswindow[4] = {0.0, 0.0, 0.0, 0.0};
 
@@ -985,19 +985,20 @@ void plot_process_wswindow_wsviewport(grm_args_t *plot_args)
       event_queue_enqueue_size_event(event_queue, active_plot_index - 1, pixel_width, pixel_height);
     }
 
-  aspect_ratio_ws = metric_width / metric_height;
-  if (aspect_ratio_ws > 1)
+  aspect_ratio_ws_pixel = (double)pixel_width / pixel_height;
+  aspect_ratio_ws_metric = metric_width / metric_height;
+  if (aspect_ratio_ws_pixel > 1)
     {
       wsviewport[1] = metric_width;
-      wsviewport[3] = metric_width / aspect_ratio_ws;
+      wsviewport[3] = metric_width / aspect_ratio_ws_metric;
       wswindow[1] = 1.0;
-      wswindow[3] = 1.0 / aspect_ratio_ws;
+      wswindow[3] = 1.0 / (aspect_ratio_ws_pixel);
     }
   else
     {
-      wsviewport[1] = metric_height * aspect_ratio_ws;
+      wsviewport[1] = metric_height * aspect_ratio_ws_metric;
       wsviewport[3] = metric_height;
-      wswindow[1] = aspect_ratio_ws;
+      wswindow[1] = aspect_ratio_ws_pixel;
       wswindow[3] = 1.0;
     }
 
@@ -1128,7 +1129,7 @@ void plot_process_viewport(grm_args_t *subplot_args)
   const char *kind;
   const double *subplot;
   int keep_aspect_ratio;
-  double metric_width, metric_height;
+  int pixel_width, pixel_height;
   double aspect_ratio_ws;
   double vp[4];
   double vp0, vp1, vp2, vp3;
@@ -1142,9 +1143,9 @@ void plot_process_viewport(grm_args_t *subplot_args)
   args_values(subplot_args, "keep_aspect_ratio", "i", &keep_aspect_ratio);
   logger((stderr, "Using subplot: %lf, %lf, %lf, %lf\n", subplot[0], subplot[1], subplot[2], subplot[3]));
 
-  get_figure_size(NULL, NULL, NULL, &metric_width, &metric_height);
+  get_figure_size(NULL, &pixel_width, &pixel_height, NULL, NULL);
 
-  aspect_ratio_ws = metric_width / metric_height;
+  aspect_ratio_ws = (double)pixel_width / pixel_height;
   memcpy(vp, subplot, sizeof(vp));
   if (aspect_ratio_ws > 1)
     {

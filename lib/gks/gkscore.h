@@ -101,6 +101,7 @@ extern "C" {
 #define SET_ENCODING 106
 #define INQ_ENCODING 107
 #define SET_RESAMPLE_METHOD 108
+#define SET_RESIZE_BEHAVIOUR 109
 
 #define SET_TEXT_SLANT 200
 #define DRAW_IMAGE 201
@@ -163,6 +164,7 @@ typedef struct
   double bwidth;
   int bcoli;
   int clip_tnr;
+  int resize_behaviour;
   double aspect_ratio;
   char *(*callback)(const char *);
 } gks_state_list_t;

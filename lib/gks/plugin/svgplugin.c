@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200112L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -186,7 +188,7 @@ static void svg_printf(SVG_stream *p, const char *args, ...)
   strcpy(fmt, args);
 
   va_start(ap, args);
-  vsprintf(s, fmt, ap);
+  vsnprintf(s, BUFSIZ, fmt, ap);
   va_end(ap);
 
   svg_memcpy(p, s, strlen(s));
@@ -377,25 +379,28 @@ static void resize_window(void)
 {
   p->width = nint((p->viewport[1] - p->viewport[0]) / MWIDTH * WIDTH);
   p->height = nint((p->viewport[3] - p->viewport[2]) / MHEIGHT * HEIGHT);
-  p->nominal_size = min(p->width, p->height) / 500.0;
+  if (gkss->resize_behaviour == GKS_K_RESIZE)
+    {
+      p->nominal_size = min(p->width, p->height) / 500.0;
+    }
 }
 
 static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
-  int r, i;
-  double scale, x, y, xr, yr;
+  int i;
+  double r, scale, x, y, xr, yr;
   int pc, op, color;
 
 #include "marker.h"
 
   mscale *= p->nominal_size;
-  r = (int)(3 * mscale);
+  r = 3 * mscale;
   scale = 0.01 * mscale / 3.0;
 
   xr = r;
   yr = 0;
   seg_xform_rel(&xr, &yr);
-  r = nint(sqrt(xr * xr + yr * yr));
+  r = sqrt(xr * xr + yr * yr);
 
   NDC_to_DC(xn, yn, x, y);
 
@@ -411,9 +416,9 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           svg_printf(p->stream,
                      "<circle clip-path=\"url(#clip%02d%d)\" "
                      "style=\"fill:#%02x%02x%02x; stroke:none; fill-opacity:%g\" "
-                     "cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
+                     "cx=\"%g\" cy=\"%g\" r=\"%g\"/>\n",
                      path_id, p->rect_index, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2], p->transparency,
-                     x, y, NOMINAL_POINTSIZE / 2);
+                     x, y, NOMINAL_POINTSIZE / 2.0);
           break;
 
         case 2: /* line */
@@ -486,7 +491,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           svg_printf(p->stream,
                      "<circle clip-path=\"url(#clip%02d%d)\" "
                      "style=\"fill:none; stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g\" "
-                     "cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
+                     "cx=\"%g\" cy=\"%g\" r=\"%g\"/>\n",
                      path_id, p->rect_index, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2],
                      gkss->bwidth * p->nominal_size, p->transparency, x, y, r);
           break;
@@ -496,7 +501,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           color = op == 7 ? mcolor : 0;
           svg_printf(p->stream,
                      "<circle clip-path=\"url(#clip%02d%d)\" "
-                     "cx=\"%g\" cy=\"%g\" r=\"%d\"",
+                     "cx=\"%g\" cy=\"%g\" r=\"%g\"",
                      path_id, p->rect_index, x, y, r);
           svg_printf(p->stream, " fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" ", p->rgb[color][0],
                      p->rgb[color][1], p->rgb[color][2], p->transparency);
@@ -597,7 +602,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
       *s = '\0';
       for (i = 1; i <= len; i++)
         {
-          sprintf(buf, "%d%s", dash_list[i], i < len ? ", " : "");
+          snprintf(buf, 20, "%d%s", dash_list[i], i < len ? ", " : "");
           strcat(s, buf);
         }
       svg_printf(p->stream, "stroke-dasharray=\"%s\" ", s);
@@ -1288,7 +1293,7 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
 
-      line_width = 0.01 * attributes[j++];
+      line_width = 0.001 * attributes[j++];
       rgba = attributes[j++];
       red = rgba & 0xff;
       green = (rgba >> 8) & 0xff;
@@ -1316,7 +1321,7 @@ static void draw_markers(int n, double *px, double *py, int *attributes)
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
       seg_xform(&x, &y);
 
-      mk_size = 0.01 * attributes[j++];
+      mk_size = 0.001 * attributes[j++];
       rgba = attributes[j++];
       p->rgb[mk_color][0] = rgba & 0xff;
       p->rgb[mk_color][1] = (rgba >> 8) & 0xff;
@@ -1521,15 +1526,15 @@ static void write_page(void)
 
   if (fd >= 0)
     {
-      sprintf(buf,
-              "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-              "<svg xmlns=\"http://www.w3.org/2000/svg\" "
-              "xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
-              "width=\"%g\" height=\"%g\" viewBox=\"0 0 %d %d\">\n",
-              p->width / 4.0, p->height / 4.0, p->width, p->height);
+      snprintf(buf, 256,
+               "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+               "<svg xmlns=\"http://www.w3.org/2000/svg\" "
+               "xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
+               "width=\"%g\" height=\"%g\" viewBox=\"0 0 %d %d\">\n",
+               p->width / 4.0, p->height / 4.0, p->width, p->height);
       gks_write_file(fd, buf, strlen(buf));
       gks_write_file(fd, p->stream->buffer, p->stream->length);
-      sprintf(buf, "</svg>\n");
+      snprintf(buf, 256, "</svg>\n");
       gks_write_file(fd, buf, strlen(buf));
       if (fd != p->conid) gks_close_file(fd);
 

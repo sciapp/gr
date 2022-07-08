@@ -724,18 +724,19 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 {
   double x, y;
   double scale, xr, yr, x1, x2, y1, y2;
-  int pc, op, r, i;
+  int pc, op, i;
+  double r;
 
 #include "marker.h"
 
   mscale *= p->nominal_size;
-  r = (int)(3 * mscale);
+  r = 3 * mscale;
   scale = 0.01 * mscale / 3.0;
 
   xr = r;
   yr = 0;
   seg_xform_rel(xr, yr);
-  r = (int)(sqrt(xr * xr + yr * yr) + 0.5);
+  r = sqrt(xr * xr + yr * yr);
   NDC_to_DC(xn, yn, x, y);
 
   pc = 0;
@@ -1159,7 +1160,7 @@ static void draw_lines(int n, const double *px, const double *py, const int *att
       NDC_to_DC(x, y, xi, yi);
 
       p->stroke.line_cap(agg::round_cap);
-      p->stroke.width(0.01 * attributes[j++] * p->nominal_size);
+      p->stroke.width(0.001 * attributes[j++] * p->nominal_size);
       rgba = attributes[j++];
       p->rgb[line_color][0] = (rgba & 0xff) / 255.0;
       p->rgb[line_color][1] = ((rgba >> 8) & 0xff) / 255.0;
@@ -1187,7 +1188,7 @@ static void draw_markers(int n, const double *px, const double *py, const int *a
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
       seg_xform(x, y);
 
-      mk_size = 0.01 * attributes[j++];
+      mk_size = 0.001 * attributes[j++];
       rgba = attributes[j++];
       p->rgb[mk_color][0] = (rgba & 0xff) / 255.0;
       p->rgb[mk_color][1] = ((rgba >> 8) & 0xff) / 255.0;
@@ -1407,7 +1408,14 @@ void gks_aggplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_ar
       p->viewport[0] = p->viewport[2] = 0;
       p->viewport[1] = (double)p->width * p->mw / p->w;
       p->viewport[3] = (double)p->height * p->mh / p->h;
-      p->nominal_size = min(p->width, p->height) / 500.0;
+      if (gkss->resize_behaviour == GKS_K_RESIZE)
+        {
+          p->nominal_size = min(p->width, p->height) / 500.0;
+        }
+      else
+        {
+          p->nominal_size = p->dpi / 100;
+        }
 
       init_colors();
       open_page();
@@ -1556,7 +1564,10 @@ void gks_aggplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_ar
 
           p->width = (int)(p->viewport[1] * p->w / p->mw);
           p->height = (int)(p->viewport[3] * p->h / p->mh);
-          p->nominal_size = min(p->width, p->height) / 500.0;
+          if (gkss->resize_behaviour == GKS_K_RESIZE)
+            {
+              p->nominal_size = min(p->width, p->height) / 500.0;
+            }
 
           close_page();
           open_page();

@@ -273,6 +273,7 @@ static void seg_xform_rel(double *x, double *y) {}
         {
         case 2:
           RESOLVE(sl, gks_state_list_t, sizeof(gks_state_list_t));
+          sp += 3 * sizeof(int); /* ignore workstation type */
           break;
 
         case 12: /* polyline */
@@ -321,6 +322,7 @@ static void seg_xform_rel(double *x, double *y) {}
         case 52:  /* select normalization transformation */
         case 53:  /* set clipping indicator */
         case 108: /* set resample method */
+        case 109: /* set resize behaviour */
         case 207: /* set border color index */
         case 208: /* select clipping transformation */
           RESOLVE(i_arr, int, sizeof(int));
@@ -388,7 +390,15 @@ static void seg_xform_rel(double *x, double *y) {}
 
           p->width = [self bounds].size.width;
           p->height = [self bounds].size.height;
-          p->nominal_size = min(p->width, p->height) / 500.0;
+          if (gkss->resize_behaviour == GKS_K_RESIZE)
+            {
+              p->nominal_size = min(p->width, p->height) / 500.0;
+            }
+          else
+            {
+              p->nominal_size = 1;
+            }
+
           p->swidth = NSMaxX([[[NSScreen screens] objectAtIndex:0] frame]);
           p->sheight = NSMaxY([[[NSScreen screens] objectAtIndex:0] frame]);
 
@@ -573,6 +583,10 @@ static void seg_xform_rel(double *x, double *y) {}
 
         case 108:
           gkss->resample_method = i_arr[0];
+          break;
+
+        case 109:
+          gkss->resize_behaviour = i_arr[0];
           break;
 
         case 200:
@@ -1085,7 +1099,10 @@ static void seg_xform_rel(double *x, double *y) {}
 
       p->width = width;
       p->height = height;
-      p->nominal_size = min(p->width, p->height) / 500.0;
+      if (gkss->resize_behaviour == GKS_K_RESIZE)
+        {
+          p->nominal_size = min(p->width, p->height) / 500.0;
+        }
 
       [self setNeedsDisplay:YES];
       [[self window] setFrame:rect display:YES];
@@ -1208,8 +1225,8 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
                    :(const CGFloat *)color
 {
   double x, y;
-  int r, i;
-  double scale, xr, yr;
+  int i;
+  double r, scale, xr, yr;
   int pc, op;
   const CGFloat *marker_color, *border_color, *background_color;
 
@@ -1220,13 +1237,13 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   background_color = CGColorGetComponents(p->rgb[0]);
 
   mscale *= p->nominal_size;
-  r = (int)(3 * mscale);
+  r = 3 * mscale;
   scale = 0.01 * mscale / 3.0;
 
   xr = r;
   yr = 0;
   seg_xform_rel(&xr, &yr);
-  r = nint(sqrt(xr * xr + yr * yr));
+  r = sqrt(xr * xr + yr * yr);
 
   NDC_to_DC(xn, yn, x, y);
 
@@ -1406,8 +1423,16 @@ static void drawPatternCell(void *info, CGContextRef context)
 
 static void draw_pattern(int index, int coli, CGPathRef shape, CGContextRef context)
 {
-  double scale = 0.125 * (int)(p->c + p->a) / 125;
+  double scale;
 
+  if (gkss->resize_behaviour == GKS_K_RESIZE)
+    {
+      scale = 0.125 * (int)(p->c + p->a) / 125;
+    }
+  else
+    {
+      scale = 1;
+    }
   gks_inq_pattern_array(index, patArray);
   double patHeight = patArray[0] * scale;
   double patWidth = patHeight;
@@ -1775,7 +1800,7 @@ static void to_DC(int n, double *x, double *y)
       CGContextBeginPath(context);
       CGContextSetLineCap(context, kCGLineCapRound);
       CGContextSetLineJoin(context, kCGLineJoinRound);
-      line_width = 0.01 * attributes[j++];
+      line_width = 0.001 * attributes[j++];
       CGContextSetLineWidth(context, line_width * p->nominal_size);
 
       rgba = attributes[j++];
@@ -1824,7 +1849,7 @@ static void to_DC(int n, double *x, double *y)
       else
         draw = 1;
 
-      mk_size = 0.01 * attributes[j++];
+      mk_size = 0.001 * attributes[j++];
       rgba = attributes[j++];
       color[0] = (rgba & 0xff) / 255.0;
       color[1] = ((rgba >> 8) & 0xff) / 255.0;

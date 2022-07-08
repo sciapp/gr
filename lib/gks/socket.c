@@ -227,7 +227,7 @@ static int open_socket(int wstype)
   char *cmd = NULL;
   int s;
 
-  if (wstype == 411)
+  if (wstype >= 411 && wstype <= 413)
     {
       command = gks_getenv("GKS_QT");
       if (command == NULL)
@@ -238,12 +238,12 @@ static int open_socket(int wstype)
           cmd = (char *)gks_malloc(MAXPATHLEN);
 #ifndef _WIN32
 #ifdef __APPLE__
-          sprintf(cmd, "%s/Applications/gksqt.app/Contents/MacOS/gksqt", env);
+          snprintf(cmd, MAXPATHLEN, "%s/Applications/gksqt.app/Contents/MacOS/gksqt", env);
 #else
-          sprintf(cmd, "%s/bin/gksqt", env);
+          snprintf(cmd, MAXPATHLEN, "%s/bin/gksqt", env);
 #endif
 #else
-          sprintf(cmd, "%s\\bin\\gksqt.exe", env);
+          snprintf(cmd, MAXPATHLEN, "%s\\bin\\gksqt.exe", env);
 #endif
           command = cmd;
         }
@@ -354,7 +354,7 @@ static int close_socket(int s)
 
 static int check_socket_connection(ws_state_list *wss)
 {
-  if (wss->s != -1 && wss->wstype == 411)
+  if (wss->s != -1 && wss->wstype >= 411 && wss->wstype <= 413)
     {
       char request_type = SOCKET_FUNCTION_IS_ALIVE;
       char reply;
@@ -368,7 +368,7 @@ static int check_socket_connection(ws_state_list *wss)
     {
       close_socket(wss->s);
       wss->s = open_socket(wss->wstype);
-      if (wss->s != -1 && wss->wstype == 411)
+      if (wss->s != -1 && wss->wstype >= 411 && wss->wstype <= 413)
         {
           /* workstation information was already read during OPEN_WS */
           int nbytes;
@@ -410,7 +410,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
       else
         {
           *ptr = wss;
-          if (wss->wstype == 411)
+          if (wss->wstype >= 411 && wss->wstype <= 413)
             {
               /* get workstation information */
               int nbytes;
@@ -443,7 +443,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
       break;
 
     case 3:
-      if (wss->wstype == 411)
+      if (wss->wstype >= 411 && wss->wstype <= 413)
         {
           request_type = SOCKET_FUNCTION_CLOSE_WINDOW;
           send_socket(wss->s, &request_type, 1, 0);
@@ -462,7 +462,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
         {
           check_socket_connection(wss);
           request_type = SOCKET_FUNCTION_DRAW;
-          if (wss->wstype == 411)
+          if (wss->wstype >= 411 && wss->wstype <= 413)
             {
               send_socket(wss->s, &request_type, 1, 0);
             }
@@ -477,7 +477,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
 
     case 209: /* inq_ws_state */
       check_socket_connection(wss);
-      if (wss->wstype == 411)
+      if (wss->wstype >= 411 && wss->wstype <= 413)
         {
           char reply[1 + sizeof(gks_ws_state_t)];
           request_type = SOCKET_FUNCTION_INQ_WS_STATE;

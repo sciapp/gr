@@ -167,6 +167,7 @@ typedef struct
   double bwidth;
   int bcoli;
   int clip_tnr;
+  int resize_behaviour;
 } state_list;
 
 typedef struct
@@ -1442,7 +1443,8 @@ static void initgks(void)
   gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
   if (!double_buf)
     {
-      double_buf = wtype == 380 || wtype == 381 || wtype == 400 || wtype == 410 || wtype == 411;
+      double_buf =
+          wtype == 380 || wtype == 381 || wtype == 400 || wtype == 410 || wtype == 411 || wtype == 412 || wtype == 413;
     }
 
   if (display)
@@ -3410,6 +3412,11 @@ void gr_setcharheight(double height)
   if (flag_graphics) gr_writestream("<setcharheight height=\"%g\"/>\n", height);
 }
 
+void gr_setwscharheight(double chh, double height)
+{
+  gr_setcharheight(gks_inq_ws_text_height(chh, height));
+}
+
 /*!
  * Gets the current character height..
  *
@@ -3649,6 +3656,23 @@ void gr_inqfillcolorind(int *color)
   check_autoinit;
 
   gks_inq_fill_color_index(&errind, color);
+}
+
+void gr_setresizebehaviour(int flag)
+{
+  check_autoinit;
+
+  gks_set_resize_behaviour(flag);
+  if (ctx) ctx->resize_behaviour = flag;
+
+  if (flag_graphics) gr_writestream("<setresizebehaviour=\"%d\"/>\n", flag);
+}
+
+void gr_inqresizebehaviour(int *flag)
+{
+  check_autoinit;
+
+  gks_inq_resize_behaviour(flag);
 }
 
 static void setcolor(int workstation_id, color_t *color)
@@ -4196,30 +4220,13 @@ void gr_inqprojectiontype(int *projection_type)
   *projection_type = gpx.projection_type;
 }
 
-/*!
- * Method to set the camera position, the upward facing direction and the focus point of the shown
- * volume
- *
- * \param camera_pos_x x component of the cameraposition in world coordinates
- * \param camera_pos_y y component of the cameraposition in world coordinates
- * \param camera_pos_z z component of the cameraposition in world coordinates
- * \param up_x x component of the up vector
- * \param up_y y component of the up vector
- * \param up_z z component of the up vector
- * \param focus_point_x x component of focus-point inside volume
- * \param focus_point_y y component of focus-point inside volume
- * \param focus_point_z z component of focus-point inside volume
- *
- */
-void gr_settransformationparameters(double camera_pos_x, double camera_pos_y, double camera_pos_z, double up_x,
-                                    double up_y, double up_z, double focus_point_x, double focus_point_y,
-                                    double focus_point_z)
+void settransformationparameters(double camera_pos_x, double camera_pos_y, double camera_pos_z, double up_x,
+                                 double up_y, double up_z, double focus_point_x, double focus_point_y,
+                                 double focus_point_z)
 {
   int i;
   double F[3], f[3], up[3], s_deri[3], s[3], u[3], u_deri[3];
   double norm_func, norm_up, s_norm, norm_u;
-
-  check_autoinit;
 
   tx.camera_pos_x = camera_pos_x;
   tx.camera_pos_y = camera_pos_y;
@@ -4268,6 +4275,31 @@ void gr_settransformationparameters(double camera_pos_x, double camera_pos_y, do
   tx.x_axis_scale = 1;
   tx.y_axis_scale = 1;
   tx.z_axis_scale = 1;
+}
+
+/*!
+ * Method to set the camera position, the upward facing direction and the focus point of the shown
+ * volume
+ *
+ * \param camera_pos_x x component of the cameraposition in world coordinates
+ * \param camera_pos_y y component of the cameraposition in world coordinates
+ * \param camera_pos_z z component of the cameraposition in world coordinates
+ * \param up_x x component of the up vector
+ * \param up_y y component of the up vector
+ * \param up_z z component of the up vector
+ * \param focus_point_x x component of focus-point inside volume
+ * \param focus_point_y y component of focus-point inside volume
+ * \param focus_point_z z component of focus-point inside volume
+ *
+ */
+void gr_settransformationparameters(double camera_pos_x, double camera_pos_y, double camera_pos_z, double up_x,
+                                    double up_y, double up_z, double focus_point_x, double focus_point_y,
+                                    double focus_point_z)
+{
+  check_autoinit;
+
+  settransformationparameters(camera_pos_x, camera_pos_y, camera_pos_z, up_x, up_y, up_z, focus_point_x, focus_point_y,
+                              focus_point_z);
 
   if (flag_graphics)
     gr_writestream("<settransformationparameters camera_pos_x=\"%g\" camera_pos_y=\"%g\" camera_pos_z=\"%g\" "
@@ -4277,20 +4309,8 @@ void gr_settransformationparameters(double camera_pos_x, double camera_pos_y, do
                    focus_point_z);
 }
 
-/*!
- * Set the far and near clipping plane for perspective projection and the vertical field ov view
- *
- * \param near_plane distance to near clipping plane
- * \param far_plane distance to far clipping plane
- * \param fov vertical field of view, input must be between 0 and 180 degrees
- *
- * Switches projection type to perspective
- */
-void gr_setperspectiveprojection(double near_plane, double far_plane, double fov)
+static void setperspectiveprojection(double near_plane, double far_plane, double fov)
 {
-
-  check_autoinit;
-
   gpx.near_plane = near_plane;
   gpx.far_plane = far_plane;
 
@@ -4304,9 +4324,39 @@ void gr_setperspectiveprojection(double near_plane, double far_plane, double fov
     }
 
   gpx.projection_type = GR_PROJECTION_PERSPECTIVE;
+}
+
+/*!
+ * Set the far and near clipping plane for perspective projection and the vertical field ov view
+ *
+ * \param near_plane distance to near clipping plane
+ * \param far_plane distance to far clipping plane
+ * \param fov vertical field of view, input must be between 0 and 180 degrees
+ *
+ * Switches projection type to perspective
+ */
+void gr_setperspectiveprojection(double near_plane, double far_plane, double fov)
+{
+  check_autoinit;
+
+  setperspectiveprojection(near_plane, far_plane, fov);
+
   if (flag_graphics)
     gr_writestream("<setperspectiveprojection near_plane=\"%g\" far_plane=\"%g\" fov=\"%g\"/>\n", near_plane, far_plane,
                    fov);
+}
+
+static void setorthographicprojection(double left, double right, double bottom, double top, double near_plane,
+                                      double far_plane)
+{
+  gpx.left = left;
+  gpx.right = right;
+  gpx.bottom = bottom;
+  gpx.top = top;
+  gpx.near_plane = near_plane;
+  gpx.far_plane = far_plane;
+
+  gpx.projection_type = GR_PROJECTION_ORTHOGRAPHIC;
 }
 
 /*!
@@ -4326,14 +4376,8 @@ void gr_setorthographicprojection(double left, double right, double bottom, doub
 {
   check_autoinit;
 
-  gpx.left = left;
-  gpx.right = right;
-  gpx.bottom = bottom;
-  gpx.top = top;
-  gpx.near_plane = near_plane;
-  gpx.far_plane = far_plane;
+  setorthographicprojection(left, right, bottom, top, near_plane, far_plane);
 
-  gpx.projection_type = GR_PROJECTION_ORTHOGRAPHIC;
   if (flag_graphics)
     gr_writestream("<setorthographicprojection left=\"%g\" right=\"%g\" bottom=\"%g\" top=\"%g\" near_plane=\"%g\" "
                    "far_plane=\"%g\"/>\n",
@@ -4786,7 +4830,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
   double clrt[4], wn[4], vp[4];
   double x_min, x_max, y_min, y_max, feps;
 
-  double tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi;
+  double tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi, start_x, start_y;
   int64_t i;
   int decade, exponent;
   char string[256];
@@ -4863,6 +4907,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = ipred(y_min / y0);
           yi = y0 + i * y0;
+          start_y = yi;
           decade = igauss(blog(lx.basey, y_min / y_org));
 
           /* draw Y-axis */
@@ -4880,12 +4925,12 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                     if (decade % major_y == 0)
                       {
                         xi = major_tick;
-                        if (yi != y_org || y_org == y_min || y_org == y_max)
+                        if (yi != y_org || x_min == x_org || x_max == x_org)
                           {
                             if (y_tick > 1)
                               {
                                 exponent = iround(blog(lx.basey, yi));
-                                sprintf(string, "%s^{%d}", lx.basey_s, exponent);
+                                snprintf(string, 256, "%s^{%d}", lx.basey_s, exponent);
                                 text2dlbl(x_label, yi, replace_minus_sign(string), yi, fpy);
                               }
                             else
@@ -4924,6 +4969,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = isucc(y_min / y_tick);
           yi = i * y_tick;
+          start_y = yi;
 
           /* draw Y-axis */
 
@@ -4940,8 +4986,10 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                   if (i % major_y == 0)
                     {
                       xi = major_tick;
-                      if (yi != y_org || y_org == y_min || y_org == y_max)
-                        if (major_y > 0) text2dlbl(x_label, yi, gr_ftoa(string, yi, &format_reference), yi, fpy);
+                      if (yi != y_org || x_min == x_org || x_max == x_org)
+                        {
+                          if (major_y > 0) text2dlbl(x_label, yi, gr_ftoa(string, yi, &format_reference), yi, fpy);
+                        }
                     }
                   else
                     xi = minor_tick;
@@ -4991,6 +5039,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = ipred(x_min / x0);
           xi = x0 + i * x0;
+          start_x = xi;
           decade = igauss(blog(lx.basex, x_min / x_org));
 
           /* draw X-axis */
@@ -5008,12 +5057,12 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                     if (decade % major_x == 0)
                       {
                         yi = major_tick;
-                        if (xi != x_org || x_org == x_min || x_org == x_max)
+                        if (xi != x_org || y_org == y_min || y_org == y_max)
                           {
                             if (x_tick > 1)
                               {
                                 exponent = iround(blog(lx.basex, xi));
-                                sprintf(string, "%s^{%d}", lx.basex_s, exponent);
+                                snprintf(string, 256, "%s^{%d}", lx.basex_s, exponent);
                                 text2dlbl(xi, y_label, replace_minus_sign(string), xi, fpx);
                               }
                             else
@@ -5052,6 +5101,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
+          start_x = xi;
 
           str_get_format_reference(&format_reference, x_org, xi, x_max, x_tick, major_x);
 
@@ -5068,8 +5118,10 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                   if (i % major_x == 0)
                     {
                       yi = major_tick;
-                      if (xi != x_org || x_org == x_min || x_org == x_max)
-                        if (major_x > 0) text2dlbl(xi, y_label, gr_ftoa(string, xi, &format_reference), xi, fpx);
+                      if (xi != x_org || y_org == y_min || y_org == y_max)
+                        {
+                          if (major_x > 0) text2dlbl(xi, y_label, gr_ftoa(string, xi, &format_reference), xi, fpx);
+                        }
                     }
                   else
                     yi = minor_tick;
@@ -5959,7 +6011,6 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
         {
           clip3d(&x0, &x1, &y0, &y1, &z0, &z1, &visible);
         }
-      visible = 1;
       if (visible)
         {
           if (clip)
@@ -6503,6 +6554,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (modern_projection_type)
     {
+      gks_select_xform(WC);
       gks_inq_xform(WC, &errind, wn, vp);
 
       gks_set_window(WC, -1, 1, -1, 1);
@@ -6569,12 +6621,10 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   while (wx.delta > *anglep++) which_rep++;
   anglep = angle;
   while (wx.phi > *anglep++) which_rep += 4;
-  if (modern_projection_type)
-    tick_size /= text3d_get_height(); /* Adjust tick_size to match text units / scale properly with viewports */
   if (z_tick != 0)
     {
       if (modern_projection_type)
-        tick = tick_size / tx.y_axis_scale;
+        tick = tick_size / tx.y_axis_scale / text3d_get_height();
       else
         tick = tick_size * (y_max - y_min) / (vp[3] - vp[2]);
 
@@ -6606,7 +6656,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
         }
       else
         {
-          tick = tick_size / tx.x_axis_scale;
+          tick = tick_size / tx.x_axis_scale / text3d_get_height();
 
           x_minor_tick = x_log(x_lin(x_org) + tick);
           x_major_tick = x_log(x_lin(x_org) + 2. * tick);
@@ -6660,7 +6710,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                         if (z_tick > 1)
                           {
                             exponent = iround(blog(lx.basez, zi));
-                            sprintf(string, "%s^{%d}", lx.basez_s, exponent);
+                            snprintf(string, 256, "%s^{%d}", lx.basez_s, exponent);
                             text3d(x_label, y_label, zi, replace_minus_sign(string), 0);
                           }
                         else
@@ -6738,7 +6788,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   if (y_tick != 0)
     {
       if (modern_projection_type)
-        tick = tick_size / tx.x_axis_scale;
+        tick = tick_size / tx.x_axis_scale / text3d_get_height();
       else
         tick = tick_size * (x_max - x_min) / (vp[1] - vp[0]);
 
@@ -6770,7 +6820,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
         }
       else
         {
-          tick = tick_size / tx.z_axis_scale;
+          tick = tick_size / tx.z_axis_scale / text3d_get_height();
 
           z_minor_tick = z_log(z_lin(z_org) + tick);
           z_major_tick = z_log(z_lin(z_org) + 2. * tick);
@@ -6825,7 +6875,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                         if (y_tick > 1)
                           {
                             exponent = iround(blog(lx.basey, yi));
-                            sprintf(string, "%s^{%d}", lx.basey_s, exponent);
+                            snprintf(string, 256, "%s^{%d}", lx.basey_s, exponent);
                             text3d(x_label, yi, z_label, replace_minus_sign(string), 0);
                           }
                         else
@@ -6902,7 +6952,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   if (x_tick != 0)
     {
       if (modern_projection_type)
-        tick = tick_size / tx.y_axis_scale;
+        tick = tick_size / tx.y_axis_scale / text3d_get_height();
       else
         tick = tick_size * (y_max - y_min) / (vp[3] - vp[2]);
 
@@ -6934,7 +6984,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
         }
       else
         {
-          tick = tick_size / tx.z_axis_scale;
+          tick = tick_size / tx.z_axis_scale / text3d_get_height();
 
           z_minor_tick = z_log(z_lin(z_org) + tick);
           z_major_tick = z_log(z_lin(z_org) + 2. * tick);
@@ -6989,7 +7039,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                         if (x_tick > 1)
                           {
                             exponent = iround(blog(lx.basex, xi));
-                            sprintf(string, "%s^{%d}", lx.basex_s, exponent);
+                            snprintf(string, 256, "%s^{%d}", lx.basex_s, exponent);
                             text3d(xi, y_label, z_label, replace_minus_sign(string), 0);
                           }
                         else
@@ -7140,26 +7190,51 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
       setscale(lx.scale_options);
     }
 
-  if (modern_projection_type || wx.phi != 0 || wx.delta != 90)
+  if (modern_projection_type)
     {
-      if (modern_projection_type)
+      x_min = ix.xmin;
+      x_max = ix.xmax;
+      y_min = ix.ymin;
+      y_max = ix.ymax;
+      z_min = ix.zmin;
+      z_max = ix.zmax;
+
+      if (*x_title)
         {
-          x_min = ix.xmin;
-          x_max = ix.xmax;
-          y_min = ix.ymin;
-          y_max = ix.ymax;
-          z_min = ix.zmin;
-          z_max = ix.zmin;
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          x = x_log(0.5 * (x_lin(x_min) + x_lin(x_max)));
+          y = y_log(y_lin(y_min) - 0.2 * (y_lin(y_max) - y_lin(y_min)));
+          z = z_min;
+          text3d(x, y, z, x_title, 2);
         }
-      else
+
+      if (*y_title)
         {
-          x_min = wn[0];
-          x_max = wn[1];
-          y_min = wn[2];
-          y_max = wn[3];
-          z_min = wx.zmin;
-          z_max = wx.zmax;
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          x = x_log(x_lin(x_max) + 0.2 * (x_lin(x_max) - x_lin(x_min)));
+          y = y_log(0.5 * (y_lin(y_min) + y_lin(y_max)));
+          z = z_min;
+          text3d(x, y, z, y_title, 1);
         }
+
+      if (*z_title)
+        {
+          gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BOTTOM);
+          x = x_min;
+          y = y_min;
+          z = z_max;
+          text3d(x, y, z, z_title, 3);
+        }
+    }
+  else if (wx.phi != 0 || wx.delta != 90)
+    {
+      x_min = wn[0];
+      x_max = wn[1];
+      y_min = wn[2];
+      y_max = wn[3];
+      z_min = wx.zmin;
+      z_max = wx.zmax;
+
       r = (x_max - x_min) / (y_max - y_min) * (vp[3] - vp[2]) / (vp[1] - vp[0]);
 
       alpha = atan_2(r * wx.c1, wx.a1);
@@ -10639,8 +10714,8 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
 #endif
 
   color = ((int)(rgb[0] * 255)) + ((int)(rgb[1] * 255) << 8) + ((int)(rgb[2] * 255) << 16) + (255 << 24);
-  sprintf(s, "%d%x%s", pointSize, color, string);
-  md5(s, cache);
+  snprintf(s, FILENAME_MAX, "%d%x%s", pointSize, color, string);
+  md5(s, cache, FILENAME_MAX);
   if (temp == NULL)
     {
 #ifdef _WIN32
@@ -10650,7 +10725,7 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
 #endif
       if (temp == NULL) temp = TMPDIR;
     }
-  sprintf(path, "%s%sgr-cache-%s.png", temp, DIRDELIM, cache);
+  snprintf(path, FILENAME_MAX, "%s%sgr-cache-%s.png", temp, DIRDELIM, cache);
 
 #ifdef _WIN32
   MultiByteToWideChar(CP_UTF8, 0, path, strlen(path) + 1, w_path, MAX_PATH);
@@ -10660,9 +10735,9 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
 #endif
     {
       math = strstr(string, "\\(") == NULL;
-      sprintf(tex, "%s%s%s.tex", temp, DIRDELIM, cache);
-      sprintf(dvi, "%s%s%s.dvi", temp, DIRDELIM, cache);
-      sprintf(png, "%s%s%s.png", temp, DIRDELIM, cache);
+      snprintf(tex, FILENAME_MAX, "%s%s%s.tex", temp, DIRDELIM, cache);
+      snprintf(dvi, FILENAME_MAX, "%s%s%s.dvi", temp, DIRDELIM, cache);
+      snprintf(png, FILENAME_MAX, "%s%s%s.png", temp, DIRDELIM, cache);
 #ifdef _WIN32
       null = "NUL";
       MultiByteToWideChar(CP_UTF8, 0, tex, strlen(tex) + 1, w_path, MAX_PATH);
@@ -10705,7 +10780,8 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
       fprintf(stream, "\\end{document}");
       fclose(stream);
 
-      sprintf(cmd, "latex -interaction=batchmode -halt-on-error -output-directory=%s %s >%s", temp, tex, null);
+      snprintf(cmd, 2 * FILENAME_MAX + 200, "latex -interaction=batchmode -halt-on-error -output-directory=%s %s >%s",
+               temp, tex, null);
       ret = system(cmd);
 
 #ifdef _WIN32
@@ -10715,7 +10791,8 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
       if (ret == 0 && access(dvi, R_OK) == 0)
 #endif
         {
-          sprintf(cmd, "dvipng -bg transparent -q -T tight -x %d %s -o %s >%s", pointSize * 100, dvi, png, null);
+          snprintf(cmd, 2 * FILENAME_MAX + 200, "dvipng -bg transparent -q -T tight -x %d %s -o %s >%s",
+                   pointSize * 100, dvi, png, null);
           ret = system(cmd);
           if (ret == 0)
             {
@@ -11522,6 +11599,7 @@ void gr_savestate(void)
       gks_inq_border_width(&errind, &s->bwidth);
       gks_inq_border_color_index(&errind, &s->bcoli);
       gks_inq_clip_xform(&errind, &s->clip_tnr);
+      gks_inq_resize_behaviour(&s->resize_behaviour);
     }
   else
     fprintf(stderr, "attempt to save state beyond implementation limit\n");
@@ -11567,6 +11645,7 @@ void gr_restorestate(void)
       gks_set_border_width(s->bwidth);
       gks_set_border_color_index(s->bcoli);
       gks_select_clip_xform(s->clip_tnr);
+      gks_set_resize_behaviour(s->resize_behaviour);
     }
   else
     fprintf(stderr, "attempt to restore unsaved state\n");
@@ -11620,6 +11699,7 @@ void gr_selectcontext(int context)
           ctx->bwidth = 1;
           ctx->bcoli = 1;
           ctx->clip_tnr = 0;
+          ctx->resize_behaviour = GKS_K_RESIZE;
         }
       else
         {
@@ -11653,6 +11733,7 @@ void gr_selectcontext(int context)
       gks_set_border_width(ctx->bwidth);
       gks_set_border_color_index(ctx->bcoli);
       gks_select_clip_xform(ctx->clip_tnr);
+      gks_set_resize_behaviour(ctx->resize_behaviour);
     }
   else
     {
@@ -12722,6 +12803,13 @@ void gr_setwindow3d(double xmin, double xmax, double ymin, double ymax, double z
                    xmax, ymin, ymax, zmin, zmax);
 }
 
+static void setscalefactors3d(double x_axis_scale, double y_axis_scale, double z_axis_scale)
+{
+  tx.x_axis_scale = x_axis_scale;
+  tx.y_axis_scale = y_axis_scale;
+  tx.z_axis_scale = z_axis_scale;
+}
+
 /*!
  * Set the scale factor for each axis.
  *
@@ -12741,9 +12829,7 @@ void gr_setscalefactors3d(double x_axis_scale, double y_axis_scale, double z_axi
       return;
     }
 
-  tx.x_axis_scale = x_axis_scale;
-  tx.y_axis_scale = y_axis_scale;
-  tx.z_axis_scale = z_axis_scale;
+  setscalefactors3d(x_axis_scale, y_axis_scale, z_axis_scale);
 
   if (flag_graphics)
     gr_writestream("<setscalefactors3d x_axis_scale=\"%g\" y_axis_scale=\"%g\" z_axis_scale=\"%g\"/>\n", x_axis_scale,
@@ -12841,14 +12927,14 @@ void gr_inqclipxform(int *tnr)
  * \param phi azimuthal angle of the spherical coordinates
  * \param theta polar angle of the spherical coordinates
  * \param fov vertical field of view(0 or NaN for orthographic projection)
- * \param camera_distance distance between the camera and the focus point (in
+ * \param cam distance between the camera and the focus point (in
  * arbitrary units, 0 or NaN for the radius of the object's smallest bounding
  * sphere)
  */
-void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
+void gr_setspace3d(double phi, double theta, double fov, double cam)
 {
   double scale_factor_x, scale_factor_y, scale_factor_z;
-  double bounding_sphere_radius;
+  double camera_distance = cam, bounding_sphere_radius;
   double eps = 1e-6;
 
   tx.focus_point_x = (ix.xmax + ix.xmin) / 2;
@@ -12862,8 +12948,8 @@ void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
         {
           camera_distance = bounding_sphere_radius;
         }
-      gr_setorthographicprojection(-camera_distance, camera_distance, -camera_distance, camera_distance,
-                                   -camera_distance * 2, camera_distance * 2);
+      setorthographicprojection(-camera_distance, camera_distance, -camera_distance, camera_distance,
+                                -camera_distance * 2, camera_distance * 2);
     }
   else
     {
@@ -12871,16 +12957,15 @@ void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
         {
           camera_distance = fabs(bounding_sphere_radius / sin((fov * M_PI / 180) / 2));
         }
-      gr_setperspectiveprojection(max(eps, camera_distance - bounding_sphere_radius * 1.01),
-                                  camera_distance + bounding_sphere_radius * 2, fov);
+      setperspectiveprojection(max(eps, camera_distance - bounding_sphere_radius * 1.01),
+                               camera_distance + bounding_sphere_radius * 2, fov);
     }
 
   scale_factor_x = 2.0 / (ix.xmax - ix.xmin);
   scale_factor_y = 2.0 / (ix.ymax - ix.ymin);
   scale_factor_z = 2.0 / (ix.zmax - ix.zmin);
 
-
-  gr_settransformationparameters(
+  settransformationparameters(
       camera_distance * sin(theta * M_PI / 180) * cos(phi * M_PI / 180) + tx.focus_point_x * scale_factor_x,
       camera_distance * sin(theta * M_PI / 180) * sin(phi * M_PI / 180) + tx.focus_point_y * scale_factor_y,
       camera_distance * cos(theta * M_PI / 180) + tx.focus_point_z * scale_factor_z,
@@ -12888,7 +12973,10 @@ void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
       sin(theta * M_PI / 180), tx.focus_point_x * scale_factor_x, tx.focus_point_y * scale_factor_y,
       tx.focus_point_z * scale_factor_z);
 
-  gr_setscalefactors3d(scale_factor_x, scale_factor_y, scale_factor_z);
+  setscalefactors3d(scale_factor_x, scale_factor_y, scale_factor_z);
+
+  if (flag_graphics)
+    gr_writestream("<setspace3d phi=\"%g\" theta=\"%g\" fov=\"%g\" cam=\"%g\"/>\n", phi, theta, fov, cam);
 }
 
 void gr_settextencoding(int encoding)

@@ -3,7 +3,7 @@
 %define THIRDPARTY_INC %{THIRDPARTY}/include
 %define THIRDPARTY_LIB %{THIRDPARTY}/lib
 
-%if 0%{?__jcns} || 0%{?mlz}
+%if 0%{?mlz}
 %define fixedversion %{version}
 %else
 # use fixedversion for builds on build.opensuse.org - needed for deb builds.
@@ -38,18 +38,8 @@ BuildRequires:		libX11-devel
 BuildRequires:		libXt-devel
 BuildRequires:		libXft-devel
 BuildRequires:		gtk2-devel
-%if 0%{?__jcns}
-%define debug_package %{nil}
-%define qmake_qt4 %{_prefix}/qt4/bin/qmake
-%define qmake_qt5 %{_prefix}/qt5/bin/qmake
-BuildRequires: qt4-local
-BuildRequires: qt5-local
-BuildRequires: gcc-local
-BuildRequires: cmake-local
-%else
 %if 0%{?rhel} < 8
 BuildRequires: qt-devel
-%endif
 %endif
 
 %if 0%{?suse_version}
@@ -94,12 +84,17 @@ BuildRequires:		wxGTK-devel
 BuildRequires:		wxWidgets-devel
 %endif
 
-# Qt5 BuildRequires for Fedora
+# Qt5 BuildRequires
 %if 0%{?fedora_version} >= 23 || 0%{?rhel} >= 8
 %define qmake_qt5 qmake-qt5
 BuildRequires:		qt5-qtbase-devel
 %endif
 
+# Qt6 BuildRequires
+%if 0%{?fedora_version} >= 34 || 0%{?rhel} >= 9
+%define qmake_qt6 qmake6
+BuildRequires:		qt6-qtbase-devel
+%endif
 
 %description
 GR, a universal framework for visualization applications
@@ -128,19 +123,17 @@ export PATH=`pwd`/%{THIRDPARTY}/cmake-3.6.3-Linux-x86_64/bin:$PATH
 %endif
 make -C 3rdparty GRDIR=%{grdir} DIR=`pwd`/%{THIRDPARTY}
 make -C 3rdparty extras GRDIR=%{grdir} DIR=`pwd`/%{THIRDPARTY}
-%if 0%{?__jcns}
-export CC=/usr/local/gcc/bin/gcc74
-export CXX=/usr/local/gcc/bin/g++74
-%endif
 make GRDIR=%{grdir} \
      EXTRA_CFLAGS=-I`pwd`/%{THIRDPARTY_INC} \
      EXTRA_CXXFLAGS=-I`pwd`/%{THIRDPARTY_INC} \
      EXTRA_LDFLAGS=-L`pwd`/%{THIRDPARTY_LIB} \
      EXTRA_LDFLAGS_QT4= \
      EXTRA_LDFLAGS_QT5= \
+     EXTRA_LDFLAGS_QT6= \
      THIRDPARTYDIR=`pwd`/%{THIRDPARTY} \
      %{?qmake_qt4:QT4_QMAKE=%{qmake_qt4}} \
-     %{?qmake_qt5:QT5_QMAKE=%{qmake_qt5}}
+     %{?qmake_qt5:QT5_QMAKE=%{qmake_qt5}} \
+     %{?qmake_qt6:QT6_QMAKE=%{qmake_qt6}}
 
 %install
 %{__install} -m 755 -d $RPM_BUILD_ROOT%{grdir}

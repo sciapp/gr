@@ -1,5 +1,7 @@
 #if !defined(NO_AV) && !defined(NO_CAIRO)
 
+#define _POSIX_C_SOURCE 200112L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -245,7 +247,7 @@ void gks_videoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->mem[2] = 144;
       *((unsigned char **)(p->mem + 3)) = NULL;
 
-      sprintf(p->mem_path, "!resizable@%p.mem", (void *)p->mem);
+      snprintf(p->mem_path, MAXPATHLEN, "!resizable@%p.mem", (void *)p->mem);
       chars = p->mem_path;
       /* set wstype for cairo png in memory */
       ia[2] = 143;

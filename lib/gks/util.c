@@ -1,6 +1,6 @@
 #ifdef __unix__
 /* Needed for popen function */
-#define _POSIX_C_SOURCE 2
+#define _POSIX_C_SOURCE 200112L
 #endif
 
 #include <stdio.h>
@@ -83,8 +83,8 @@ static struct wstypes_t wstypes[] = {
     {"six", 150},    {"iterm", 151},    {"mp4", 160},      {"webm", 161},     {"ogg", 162},      {"x11", 211},
     {"pgf", 314},    {"bmp", 145},      {"jpeg", 144},     {"jpg", 144},      {"png", 140},      {"tiff", 146},
     {"tif", 146},    {"gtk", 142},      {"wx", 380},       {"qt", 381},       {"svg", 382},      {"wmf", 390},
-    {"quartz", 400}, {"socket", 410},   {"sock", 410},     {"gksqt", 411},    {"zmq", 415},      {"gl", 420},
-    {"opengl", 420}, {"ppm", 170}};
+    {"quartz", 400}, {"socket", 410},   {"sock", 410},     {"gksqt", 411},    {"qtcairo", 412},  {"qtagg", 413},
+    {"zmq", 415},    {"gl", 420},       {"opengl", 420},   {"ppm", 170}};
 
 static int num_wstypes = sizeof(wstypes) / sizeof(wstypes[0]);
 
@@ -860,7 +860,7 @@ void gks_get_dash(int ltype, double scale, char *dash)
   for (i = 1; i <= len; i++)
     {
       value = 0.1 * floor(dash_table[ltype + 30][i] * scale * 10 + 0.5);
-      sprintf(buf, "%g%s", value, i < len ? " " : "");
+      snprintf(buf, 20, "%g%s", value, i < len ? " " : "");
       strcat(dash, buf);
     }
   strcat(dash, "]");
@@ -1584,12 +1584,12 @@ static int have_gksqt(void)
       path = (char *)gks_malloc(MAXPATHLEN);
 #ifndef _WIN32
 #ifdef __APPLE__
-      sprintf(path, "%s/Applications/gksqt.app/Contents/MacOS/gksqt", env);
+      snprintf(path, MAXPATHLEN, "%s/Applications/gksqt.app/Contents/MacOS/gksqt", env);
 #else
-      sprintf(path, "%s/bin/gksqt", env);
+      snprintf(path, MAXPATHLEN, "%s/bin/gksqt", env);
 #endif
 #else
-      sprintf(path, "%s\\bin\\gksqt.exe", env);
+      snprintf(path, MAXPATHLEN, "%s\\bin\\gksqt.exe", env);
 #endif
     }
   else
@@ -1831,6 +1831,15 @@ int gks_get_ws_type(void)
     }
 
   if (wstype == 0) wstype = get_default_ws_type();
+
+  if (wstype == 411 && getenv("GKS_QT_USE_CAIRO") && *getenv("GKS_QT_USE_CAIRO"))
+    {
+      wstype = 412;
+    }
+  else if (wstype == 411 && getenv("GKS_QT_USE_AGG") && *getenv("GKS_QT_USE_AGG"))
+    {
+      wstype = 413;
+    }
 
   return wstype;
 }
@@ -2252,13 +2261,13 @@ void gks_filepath(char *path, char *defpath, const char *type, int page, int ind
   if (page > 1 && !gks_getenv("GKS_DISABLE_PAGE_SUFFIX"))
     {
       strcat(path, "-");
-      sprintf(number, "%d", page);
+      snprintf(number, 20, "%d", page);
       strcat(path, number);
     }
   if (index != 0)
     {
       strcat(path, "_");
-      sprintf(number, "%d", index);
+      snprintf(number, 20, "%d", index);
       strcat(path, number);
     }
   strcat(path, ".");

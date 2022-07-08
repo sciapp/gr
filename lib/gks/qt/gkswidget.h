@@ -9,6 +9,8 @@
 #endif
 #include <QtCore/QMutex>
 
+struct ws_state_list_t;
+
 class GKSWidget : public QWidget
 {
   Q_OBJECT
@@ -23,6 +25,9 @@ public:
 public slots:
   void interpret(char *dl);
 
+signals:
+  void rendererChanged(QString renderer_string);
+
 protected:
   void paintEvent(QPaintEvent *event);
   void resizeEvent(QResizeEvent *event);
@@ -33,6 +38,8 @@ private:
   bool resize_requested_by_application;
   char *dl;
   static QSize frame_decoration_size_;
+  QString renderer_string;
+  ws_state_list_t *widget_state_list;
 };
 
 #endif

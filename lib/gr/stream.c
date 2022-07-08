@@ -1,3 +1,6 @@
+#if defined(__unix__) && !defined(__FreeBSD__)
+#define _POSIX_C_SOURCE 200112L
+#endif
 
 #include <stdio.h>
 #include <string.h>
@@ -231,7 +234,7 @@ void gr_writestream(char *string, ...)
   char s[BUFSIZ];
 
   va_start(ap, string);
-  vsprintf(s, string, ap);
+  vsnprintf(s, BUFSIZ, string, ap);
   va_end(ap);
 
   if (stream != stdout)
