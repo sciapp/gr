@@ -1099,7 +1099,7 @@ static void ps_init(int *pages)
             }
           for (k = 0, j = 1; j < 9; j++, k += 2)
             {
-              snprintf(str + k, 17, "%02x", pa[j]);
+              snprintf(str + k, 17 - k, "%02x", pa[j]);
             }
           snprintf(buffer, 100, "/pat%d << /PaintType 2 /PatternType 1 /TilingType 1\
  /BBox [0 0 1 1] /XStep 1",
@@ -1457,7 +1457,7 @@ static void text_routine(double *x, double *y, int nchars, char *chars)
         }
       else
         {
-          snprintf(str + j, 500, "\\%03o", ic);
+          snprintf(str + j, 500 - j, "\\%03o", ic);
           j += 4;
         }
       str[j] = '\0';
