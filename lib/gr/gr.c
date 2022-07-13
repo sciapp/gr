@@ -4830,7 +4830,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
   double clrt[4], wn[4], vp[4];
   double x_min, x_max, y_min, y_max, feps;
 
-  double tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi, start_x, start_y;
+  double tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi;
   int64_t i;
   int decade, exponent;
   char string[256];
@@ -4907,7 +4907,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = ipred(y_min / y0);
           yi = y0 + i * y0;
-          start_y = yi;
           decade = igauss(blog(lx.basey, y_min / y_org));
 
           /* draw Y-axis */
@@ -4969,7 +4968,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = isucc(y_min / y_tick);
           yi = i * y_tick;
-          start_y = yi;
 
           /* draw Y-axis */
 
@@ -5039,7 +5037,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = ipred(x_min / x0);
           xi = x0 + i * x0;
-          start_x = xi;
           decade = igauss(blog(lx.basex, x_min / x_org));
 
           /* draw X-axis */
@@ -5101,7 +5098,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
-          start_x = xi;
 
           str_get_format_reference(&format_reference, x_org, xi, x_max, x_tick, major_x);
 

@@ -824,7 +824,7 @@ void gks_drv_mi(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_1,
       s = c_arr;
 
       len = *(int *)(p->buffer + p->position);
-      if (len < i_arr[2] * 80 - 2 * sizeof(int))
+      if (len < i_arr[2] * 80 - 2 * (int)sizeof(int))
         {
           memmove(s, p->buffer + p->position, len);
           memset(s + len, 0, 2 * sizeof(int));
