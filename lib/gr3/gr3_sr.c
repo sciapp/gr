@@ -45,7 +45,6 @@ static matrix get_projection(int width, int height, float fovy, float zNear, flo
 static matrix matrix_perspective_proj(float left, float right, float bottom, float top, float zNear, float zFar);
 static matrix matrix_ortho_proj(float left, float right, float bottom, float top, float nearVal, float farVal);
 static matrix matrix_viewport_trafo(int width, int height);
-static matrix mat_mul_4x4(matrix *a, matrix *b);
 static matrix3x3 mat_mul_3x3(matrix3x3 *a, matrix3x3 *b);
 static void mat_vec_mul_4x1(matrix *a, vertex_fp *b);
 static void mat_vec_mul_3x1(matrix3x3 *a, vector *b);
@@ -492,31 +491,6 @@ static matrix matrix_viewport_trafo(int width, int height)
   res.mat[10] = 1 / 2.0;
   res.mat[11] = 1 / 2.0;
   res.mat[15] = 1;
-  return res;
-}
-
-/*!
- * This method multiplies two matrices sized 4x4.
- */
-static matrix mat_mul_4x4(matrix *a, matrix *b)
-{
-  matrix res = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
-  float sum = 0.0;
-  int c;
-  int d;
-  int k;
-  for (c = 0; c < 4; c++)
-    {
-      for (d = 0; d < 4; d++)
-        {
-          for (k = 0; k < 4; k++)
-            {
-              sum = sum + a->mat[c * 4 + k] * b->mat[k * 4 + d];
-            }
-          res.mat[c * 4 + d] = sum;
-          sum = 0;
-        }
-    }
   return res;
 }
 
@@ -1540,7 +1514,7 @@ static color calc_colors(color_float col_one, color_float col_two, color_float c
    * (https://github.com/ssloy/tinyrenderer/wiki/Technical-difficulties:-linear-interpolation-with-perspective-deformations)
    */
   int i;
-  float sum, dot_light_norm, diff;
+  float sum, diff;
   float ambient = ambient_str;
   /*set strength of specular highlight*/
   float specular_strength = specular_str;
@@ -1608,7 +1582,6 @@ static color calc_colors(color_float col_one, color_float col_two, color_float c
       light_dir.y = light_sources[i].y;
       light_dir.z = light_sources[i].z;
       normalize_vector(&light_dir);
-      dot_light_norm = dot_vector(&light_dir, &norm);
       /*Calculate halfway vector for blinn-phong-illumination model*/
       vector halfway;
       halfway.x = view_dir.x - light_dir.x;
@@ -1885,7 +1858,7 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
                                       GR3_DrawList_t_ *draw, int draw_id)
 {
   int thread_idx, i, j, numtri, tri_per_thread, index_start_end[MAX_NUM_THREADS + 1], rest, rest_distributed;
-  matrix model_mat, view_mat, view_model, perspective, perspective_view_model, viewport;
+  matrix model_mat, view_mat, perspective, viewport;
   matrix3x3 model_mat_3x3, view_mat_3x3, model_view_mat_3x3;
   color_float c_tmp;
   vertex_fp *vertices_fp;
@@ -1899,10 +1872,8 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
           view_mat.mat[i * 4 + j] = view[j * 4 + i];
         }
     }
-  view_model = mat_mul_4x4(&view_mat, &model_mat);
   perspective = get_projection(width, height, context_struct_.vertical_field_of_view, context_struct_.zNear,
                                context_struct_.zFar, context_struct_.projection_type);
-  perspective_view_model = mat_mul_4x4(&perspective, &view_model);
   viewport = matrix_viewport_trafo(width, height);
   for (i = 0; i < 3; i++)
     {

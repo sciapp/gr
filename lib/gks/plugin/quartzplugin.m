@@ -16,6 +16,10 @@
 #define MAXPATHLEN 1024
 #endif
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -143,6 +147,7 @@ static bool gksterm_is_running()
   @try
     {
       gksterm_communicate(request, request_len, GKSTERM_IS_RUNNING_TIMEOUT, NO, ^(char *reply, size_t reply_len) {
+        GKS_UNUSED(reply);
         assert(reply_len == 0);
       });
     }
@@ -163,6 +168,7 @@ static bool gksterm_is_alive(int window)
 
   __block bool result = NO;
   gksterm_communicate(request, request_len, GKSTERM_DEFAULT_TIMEOUT, YES, ^(char *reply, size_t reply_len) {
+    GKS_UNUSED(reply);
     assert(reply_len == 1);
     result = (reply[0] == 1);
   });
@@ -191,6 +197,7 @@ static void gksterm_close_window(int window)
   *(int *)(request + 1) = window;
 
   gksterm_communicate(request, request_len, GKSTERM_DEFAULT_TIMEOUT, YES, ^(char *reply, size_t reply_len) {
+    GKS_UNUSED(reply);
     assert(reply_len == 0);
   });
 }
@@ -208,6 +215,7 @@ static void gksterm_draw(int window, void *displaylist, size_t displaylist_len)
   @try
     {
       gksterm_communicate(request, request_len, GKSTERM_DEFAULT_TIMEOUT, YES, ^(char *reply, size_t reply_len) {
+        GKS_UNUSED(reply);
         assert(reply_len == 0);
       });
     }
