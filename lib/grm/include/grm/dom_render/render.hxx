@@ -190,7 +190,7 @@ public:
 
   std::shared_ptr<Element> createLayoutGrid(const Grid &grid);
 
-  std::shared_ptr<Element> createLayoutGridElement(const GridElement &gridElement);
+  std::shared_ptr<Element> createLayoutGridElement(const GridElement &gridElement, const Slice &slice);
 
   //! Modifierfunctions
   void setViewport(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);

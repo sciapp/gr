@@ -726,3 +726,8 @@ bool Grid::isRowsEmpty() const
 {
   return this->rows.empty();
 }
+
+std::unordered_map<GridElement *, Slice *> Grid::getElementToPosition()
+{
+  return this->elementToPosition;
+}

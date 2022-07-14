@@ -23,7 +23,7 @@
 
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
-static std::set<std::string> parentTypes = {"group", "layout-grid"};
+static std::set<std::string> parentTypes = {"group", "layout-grid", "layout-gridelement"};
 
 static void markerHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context,
                          const std::string &str)
@@ -1356,7 +1356,7 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
                        {std::string("updatews"), updateWS},
                        {std::string("drawgraphics"), drawGraphics},
                        {std::string("layout-grid"), layoutGrid},
-                       {std::string("layout-gridElement"), layoutGridElement}
+                       {std::string("layout-gridelement"), layoutGridElement}
 
 
       };
@@ -2423,7 +2423,7 @@ std::shared_ptr<GR::Element> GR::Render::createLayoutGrid(const Grid &grid)
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createLayoutGridElement(const GridElement &gridElement)
+std::shared_ptr<GR::Element> GR::Render::createLayoutGridElement(const GridElement &gridElement, const Slice &slice)
 {
   auto element = createElement("layout-gridelement");
 
@@ -2441,6 +2441,11 @@ std::shared_ptr<GR::Element> GR::Render::createLayoutGridElement(const GridEleme
   element->setAttribute("arSet", gridElement.arSet);
   element->setAttribute("subplotSet", gridElement.subplotSet);
   element->setAttribute("finalizes", gridElement.finalized);
+  element->setAttribute("rowStart", slice.rowStart);
+  element->setAttribute("rowStop", slice.rowStop);
+  element->setAttribute("colStart", slice.colStart);
+  element->setAttribute("colStop", slice.colStop);
+
 
   double *subplot = gridElement.subplot;
   GR::Render::setSubplot(element, subplot[0], subplot[1], subplot[2], subplot[3]);

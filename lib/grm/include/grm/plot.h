@@ -51,6 +51,7 @@ EXPORT void grm_load_graphics_tree(FILE *file);
 
 EXPORT std::shared_ptr<GR::Element> grm_get_document_root(void);
 EXPORT std::shared_ptr<GR::Render> grm_get_render(void);
-EXPORT int grm_plot_helper(GridElement *gridElement, const std::shared_ptr<GR::Element> &parentDomElement);
+EXPORT int grm_plot_helper(GridElement *gridElement, Slice *slice,
+                           const std::shared_ptr<GR::Element> &parentDomElement);
 #endif
 #endif /* ifndef GRM_PLOT_H_INCLUDED */

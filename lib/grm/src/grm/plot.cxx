@@ -8747,20 +8747,15 @@ int grm_plot(const grm_args_t *args)
       plot_pre_plot(active_plot_args);
       grm_args_values(active_plot_args, "subplots", "A", &current_subplot_args);
 
-      if (!(nrows == 1 && ncols == 1 && currentGrid->getElement(0, 0) == nullptr)) // No Grid arguments in container
+      if (!(nrows == 1 && ncols == 1 &&
+            currentGrid->getElement(0, 0) == nullptr)) // Check if Grid arguments in container
         {
           auto gridDomElement = global_render->createLayoutGrid(*currentGrid);
           global_root->append(gridDomElement);
 
-          for (int r = 0; r < nrows; ++r)
+          for (auto const &elementToSlice : currentGrid->getElementToPosition())
             {
-              for (int c = 0; c < ncols; ++c)
-                {
-                  if (!grm_plot_helper(currentGrid->getElement(r, c), gridDomElement))
-                    {
-                      return 0;
-                    }
-                }
+              grm_plot_helper(elementToSlice.first, elementToSlice.second, gridDomElement);
             }
         }
       else
@@ -8844,7 +8839,7 @@ int grm_switch(unsigned int id)
 }
 
 
-int grm_plot_helper(GridElement *gridElement, const std::shared_ptr<GR::Element> &parentDomElement)
+int grm_plot_helper(GridElement *gridElement, Slice *slice, const std::shared_ptr<GR::Element> &parentDomElement)
 {
   plot_func_t plot_func;
   const char *kind = NULL;
@@ -8858,7 +8853,7 @@ int grm_plot_helper(GridElement *gridElement, const std::shared_ptr<GR::Element>
   if (!gridElement->isGrid())
     {
       grm_args_t **current_subplot_args = &gridElement->subplot_args;
-      auto subplotGroup = global_render->createGroup("subplot");
+      auto subplotGroup = global_render->createLayoutGridElement(*gridElement, *slice);
       currentDomElement = subplotGroup;
       parentDomElement->append(subplotGroup);
 
@@ -8886,15 +8881,9 @@ int grm_plot_helper(GridElement *gridElement, const std::shared_ptr<GR::Element>
       auto gridDomElement = global_render->createLayoutGrid(*currentGrid);
       parentDomElement->append(gridDomElement);
 
-      int nrows = currentGrid->getNRows();
-      int ncols = currentGrid->getNCols();
-
-      for (int r = 0; r < nrows; ++r)
+      for (auto const &elementToSlice : currentGrid->getElementToPosition())
         {
-          for (int c = 0; c < ncols; ++c)
-            {
-              grm_plot_helper(currentGrid->getElement(r, c), gridDomElement);
-            }
+          grm_plot_helper(elementToSlice.first, elementToSlice.second, gridDomElement);
         }
     }
 }

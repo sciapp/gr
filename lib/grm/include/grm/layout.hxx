@@ -94,6 +94,7 @@ public:
   int getNRows() const;
   int getNCols() const;
   bool isRowsEmpty() const;
+  std::unordered_map<GridElement *, Slice *> getElementToPosition();
 
 private:
   std::vector<std::vector<GridElement *>> rows;
