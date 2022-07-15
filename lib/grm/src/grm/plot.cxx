@@ -1291,8 +1291,6 @@ err_t plot_process_grid_arguments(const grm_args_t *args)
       ++current_subplot_args;
     }
 
-  grid_finalize(global_grid);
-
   return ERROR_NONE;
 }
 
@@ -8801,7 +8799,6 @@ int grm_plot(const grm_args_t *args)
 
   return 1;
 }
-
 
 void grm_render(void)
 {

@@ -2,10 +2,11 @@
 #include <limits>
 #include <sstream>
 #include "args_int.h"
-#include <grm/layout.hxx>
 #include <grm/layout_error.hxx>
+#include "grm/layout.hxx"
 
 using namespace grm;
+//#include "grm/dom_render/render.hxx"
 
 double epsilon = std::numeric_limits<double>::epsilon();
 
@@ -56,6 +57,15 @@ GridElement::GridElement()
 {
   subplot = new double[4];
 };
+
+GridElement::GridElement(double absHeight, double absWidth, int absHeightPxl, int absWidthPxl, int fitParentsHeight,
+                         int fitParentsWidth, double relativeHeight, double relativeWidth, double aspectRatio)
+    : absHeight(absHeight), absWidth(absWidth), absHeightPxl(absHeightPxl), absWidthPxl(absWidthPxl),
+      fitParentsHeight(fitParentsHeight), fitParentsWidth(fitParentsWidth), relativeHeight(relativeHeight),
+      relativeWidth(relativeWidth), aspectRatio(aspectRatio)
+{
+  subplot = new double[4];
+}
 
 void GridElement::setSubplot(double x1, double x2, double y1, double y2)
 {
@@ -282,6 +292,15 @@ void GridElement::finalizeSubplot()
       grm_args_push(subplot_args, "subplot", "nD", 4, subplot);
     }
 
+  if (elementInDOM != nullptr)
+    {
+      elementInDOM->setAttribute("subplot", true);
+      elementInDOM->setAttribute("subplot_xmin", subplot[0]);
+      elementInDOM->setAttribute("subplot_xmax", subplot[1]);
+      elementInDOM->setAttribute("subplot_ymin", subplot[2]);
+      elementInDOM->setAttribute("subplot_ymax", subplot[3]);
+    }
+
   finalized = 1;
 }
 
@@ -305,7 +324,13 @@ bool GridElement::isGrid()
   return false;
 }
 
-Grid::Grid(int nrows, int ncols) : GridElement(), nrows(nrows), ncols(ncols)
+Grid::Grid(int nrows, int ncols) : Grid(nrows, ncols, -1, -1, -1, -1, 0, 1, -1, -1, -1) {}
+
+Grid::Grid(int nrows, int ncols, double absHeight, double absWidth, int absHeightPxl, int absWidthPxl,
+           int fitParentsHeight, int fitParentsWidth, double relativeHeight, double relativeWidth, double aspectRatio)
+    : GridElement(absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight, fitParentsWidth, relativeHeight,
+                  relativeWidth, aspectRatio),
+      nrows(nrows), ncols(ncols)
 {
   if (nrows < 1 || ncols < 1)
     {

@@ -20,6 +20,7 @@
 #include <grm/dom_render/context.hxx>
 #include "gr.h"
 #include "gr3.h"
+#include "grm/layout.hxx"
 
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
@@ -1141,7 +1142,6 @@ static void processSpace3d(const std::shared_ptr<GR::Element> &elem)
   gr_setspace3d(phi, theta, fov, camera_distance);
 }
 
-
 static void processSpace(const std::shared_ptr<GR::Element> &elem)
 {
   double zmin, zmax;
@@ -1168,7 +1168,6 @@ static void processViewport(const std::shared_ptr<GR::Element> &elem)
   ymax = (double)elem->getAttribute("viewport_ymax");
   gr_setviewport(xmin, xmax, ymin, ymax);
 }
-
 
 static void processGR3CameraLookAt(const std::shared_ptr<GR::Element> &elem)
 {
@@ -1197,7 +1196,6 @@ static void processGR3BackgroundColor(const std::shared_ptr<GR::Element> &elem)
 
   gr3_setbackgroundcolor(r, g, b, a);
 }
-
 
 static void processAttributes(const std::shared_ptr<GR::Element> &element)
 {
@@ -1308,7 +1306,6 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
     }
 }
 
-
 static void processElement(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
@@ -1362,14 +1359,13 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
       };
 
   /*! Modifier */
-  if (parentTypes.count(element->localName()))
+  if (element->localName() == "group")
     {
       processAttributes(element);
     }
   else
     {
       /*! Drawnodes */
-      gr_savestate();
       processAttributes(element);
       try
         {
@@ -1381,7 +1377,6 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
         {
           throw NotFoundError("No dom render function found for element with local name: " + element->localName());
         }
-      gr_restorestate();
     }
 }
 
@@ -2412,12 +2407,8 @@ std::shared_ptr<GR::Element> GR::Render::createLayoutGrid(const Grid &grid)
   element->setAttribute("widthSet", grid.widthSet);
   element->setAttribute("heightSet", grid.heightSet);
   element->setAttribute("arSet", grid.arSet);
-  element->setAttribute("subplotSet", grid.subplotSet);
-  element->setAttribute("finalizes", grid.finalized);
   element->setAttribute("nrows", grid.getNRows());
   element->setAttribute("ncols", grid.getNCols());
-  // TODO: subplot -> separate Attributes or context vector?
-  // TODO: subplot_args??? Is it needed? Probably not...
 
   return element;
 }
@@ -2436,16 +2427,10 @@ std::shared_ptr<GR::Element> GR::Render::createLayoutGridElement(const GridEleme
   element->setAttribute("relativeHeight", gridElement.relativeHeight);
   element->setAttribute("relativeWidth", gridElement.relativeWidth);
   element->setAttribute("aspectRatio", gridElement.aspectRatio);
-  element->setAttribute("widthSet", gridElement.widthSet);
-  element->setAttribute("heightSet", gridElement.heightSet);
-  element->setAttribute("arSet", gridElement.arSet);
-  element->setAttribute("subplotSet", gridElement.subplotSet);
-  element->setAttribute("finalizes", gridElement.finalized);
   element->setAttribute("rowStart", slice.rowStart);
   element->setAttribute("rowStop", slice.rowStop);
   element->setAttribute("colStart", slice.colStart);
   element->setAttribute("colStop", slice.colStop);
-
 
   double *subplot = gridElement.subplot;
   GR::Render::setSubplot(element, subplot[0], subplot[1], subplot[2], subplot[3]);
@@ -3056,6 +3041,81 @@ static void renderHelper(const std::shared_ptr<GR::Element> &element, const std:
     }
 }
 
+static void initializeGridElements(const std::shared_ptr<GR::Element> &element, Grid *grid)
+{
+  if (element->hasChildNodes())
+    {
+      for (const auto &child : element->children())
+        {
+          if (child->localName() != "layout-gridelement" && child->localName() != "layout-grid")
+            {
+              return;
+            }
+
+          double absHeight = static_cast<double>(child->getAttribute("absHeight"));
+          double absWidth = static_cast<double>(child->getAttribute("absWidth"));
+          int absHeightPxl = static_cast<int>(child->getAttribute("absHeightPxl"));
+          int absWidthPxl = static_cast<int>(child->getAttribute("absWidthPxl"));
+          int fitParentsHeight = static_cast<int>(child->getAttribute("fitParentsHeight"));
+          int fitParentsWidth = static_cast<int>(child->getAttribute("fitParentsWidth"));
+          double relativeHeight = static_cast<double>(child->getAttribute("relativeHeight"));
+          double relativeWidth = static_cast<double>(child->getAttribute("relativeWidth"));
+          double aspectRatio = static_cast<double>(child->getAttribute("aspectRatio"));
+          int rowStart = static_cast<int>(child->getAttribute("rowStart"));
+          int rowStop = static_cast<int>(child->getAttribute("rowStop"));
+          int colStart = static_cast<int>(child->getAttribute("colStart"));
+          int colStop = static_cast<int>(child->getAttribute("colStop"));
+          Slice *slice = new Slice(rowStart, rowStop, colStart, colStop);
+
+          if (child->localName() == "layout-gridelement")
+            {
+              GridElement *curGridElement =
+                  new GridElement(absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight, fitParentsWidth,
+                                  relativeHeight, relativeWidth, aspectRatio);
+              curGridElement->elementInDOM = child;
+              grid->setElement(slice, curGridElement);
+            }
+
+          if (child->localName() == "layout-grid")
+            {
+              int nrows = static_cast<int>(child->getAttribute("nrows"));
+              int ncols = static_cast<int>(child->getAttribute("ncols"));
+
+              Grid *curGrid = new Grid(nrows, ncols, absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight,
+                                       fitParentsWidth, relativeHeight, relativeWidth, aspectRatio);
+              curGrid->elementInDOM = child;
+              grid->setElement(slice, curGrid);
+              initializeGridElements(child, curGrid);
+            }
+        }
+    }
+}
+
+static void finalizeGrid(const std::shared_ptr<GR::Element> &root)
+{
+  Grid *rootGrid = nullptr;
+  if (root->hasChildNodes())
+    {
+      for (const auto &child : root->children())
+        {
+          if (child->localName() == "layout-grid")
+            {
+              int nrows = static_cast<int>(child->getAttribute("nrows"));
+              int ncols = static_cast<int>(child->getAttribute("ncols"));
+              rootGrid = new Grid(nrows, ncols);
+              child->setAttribute("subplot", true);
+              child->setAttribute("subplot_xmin", 0);
+              child->setAttribute("subplot_xmax", 1);
+              child->setAttribute("subplot_ymin", 0);
+              child->setAttribute("subplot_ymax", 1);
+
+              initializeGridElements(child, rootGrid);
+              rootGrid->finalizeSubplot();
+              break;
+            }
+        }
+    }
+}
 
 void GR::Render::render(const std::shared_ptr<GR::Document> &document, const std::shared_ptr<GR::Context> &extContext)
 {
@@ -3125,6 +3185,7 @@ void GR::Render::render()
   auto root = this->firstChildElement();
   if (root->hasChildNodes())
     {
+      finalizeGrid(root);
       for (const auto &child : root->children())
         {
           gr_savestate();
@@ -3132,6 +3193,7 @@ void GR::Render::render()
           gr_restorestate();
         }
     }
+  std::cout << toXML(root) << "\n";
 }
 
 
