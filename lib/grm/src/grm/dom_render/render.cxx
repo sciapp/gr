@@ -22,6 +22,7 @@
 #include "gr3.h"
 #include "grm/layout.hxx"
 
+std::shared_ptr<GR::Element> global_root;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {"group", "layout-grid", "layout-gridelement"};
@@ -1061,7 +1062,7 @@ static void layoutGridElement(const std::shared_ptr<GR::Element> &element, const
   ymin = (double)element->getAttribute("subplot_ymin");
   ymax = (double)element->getAttribute("subplot_ymax");
 
-  gr_setviewport(xmin, xmax, ymin, ymax);
+  //  gr_setviewport(xmin, xmax, ymin, ymax);
 }
 
 static void processColorRep(const std::shared_ptr<GR::Element> &elem)
@@ -1166,7 +1167,237 @@ static void processViewport(const std::shared_ptr<GR::Element> &elem)
   xmax = (double)elem->getAttribute("viewport_xmax");
   ymin = (double)elem->getAttribute("viewport_ymin");
   ymax = (double)elem->getAttribute("viewport_ymax");
-  gr_setviewport(xmin, xmax, ymin, ymax);
+  //  gr_setviewport(xmin, xmax, ymin, ymax);
+}
+
+static void legend_size(const std::shared_ptr<GR::Element> &elem, double *w, double *h)
+{
+  double tbx[4], tby[4];
+  const char **labels, **current_label;
+  int labelsExist;
+  unsigned int num_labels;
+
+  *w = 0;
+  *h = 0;
+  /* TODO: Get labels from tree */
+  /* labels = (std::string)elem->getAttribute("labels"); */
+  if (labelsExist)
+    {
+      for (current_label = labels; *current_label != NULL; ++current_label)
+        {
+          gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
+          *w = grm_max(*w, tbx[2] - tbx[0]);
+          *h += grm_max(tby[2] - tby[0], 0.03);
+        }
+    }
+}
+
+static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height)
+{
+  double display_metric_width, display_metric_height;
+  int display_pixel_width, display_pixel_height;
+  double dpm[2], dpi[2];
+  int tmp_size_i[2], pixel_size[2];
+  double tmp_size_d[2], metric_size[2];
+  grm_args_ptr_t tmp_size_a[2];
+  const char *tmp_size_s[2];
+  int i;
+
+  /* TODO: Change static methods to class functions to get access to root */
+  std::shared_ptr<GR::Element> root = global_root;
+
+
+#ifdef __EMSCRIPTEN__
+  display_metric_width = 0.16384;
+  display_metric_height = 0.12288;
+  display_pixel_width = 640;
+  display_pixel_height = 480;
+#else
+  gr_inqdspsize(&display_metric_width, &display_metric_height, &display_pixel_width, &display_pixel_height);
+#endif
+  dpm[0] = display_pixel_width / display_metric_width;
+  dpm[1] = display_pixel_height / display_metric_height;
+  dpi[0] = dpm[0] * 0.0254;
+  dpi[1] = dpm[1] * 0.0254;
+
+  /* TODO: Overwork this calculation */
+  /* TODO: Size can have different types/units in grm_args_container */
+  if (root->hasAttribute("figsize"))
+    {
+      tmp_size_d[0] = (double)root->getAttribute("figsize_x");
+      tmp_size_d[1] = (double)root->getAttribute("figsize_y");
+      for (i = 0; i < 2; ++i)
+        {
+          pixel_size[i] = (int)grm_round(tmp_size_d[i] * dpi[i]);
+          metric_size[i] = tmp_size_d[i] / 0.0254;
+        }
+    }
+  else if (root->hasAttribute("size"))
+    {
+      tmp_size_d[0] = (double)root->getAttribute("size_x");
+      tmp_size_d[1] = (double)root->getAttribute("size_y");
+      {
+        for (i = 0; i < 2; ++i)
+          {
+            pixel_size[i] = (int)grm_round(tmp_size_d[i]);
+            metric_size[i] = tmp_size_d[i] / dpm[i];
+          }
+      }
+    }
+  /* TODO: Should default values that are set in the grm be set in the renderer as well? */
+  /* TODO: Implement Exception */
+  else
+    {
+      /* If this branch is executed, there is an internal error (size has a default value if not set by the user) */
+      throw std::exception();
+    }
+
+  if (pixel_width != NULL)
+    {
+      *pixel_width = pixel_size[0];
+    }
+  if (pixel_height != NULL)
+    {
+      *pixel_height = pixel_size[1];
+    }
+  if (metric_width != NULL)
+    {
+      *metric_width = metric_size[0];
+    }
+  if (metric_height != NULL)
+    {
+      *metric_height = metric_size[1];
+    }
+}
+
+static void processSubplot(const std::shared_ptr<GR::Element> &elem)
+{
+  /*!
+   * Procesing function for the subplot
+   *
+   * \param[in] element The GR::Element that contains the attributes
+   */
+  std::string kind, y_label, x_label, title;
+  double subplot[4];
+  int keep_aspect_ratio;
+  double metric_width, metric_height;
+  double aspect_ratio_ws;
+  double vp[4];
+  double vp0, vp1, vp2, vp3;
+  double left_margin, right_margin, bottom_margin, top_margin;
+  double viewport[4] = {0.0, 0.0, 0.0, 0.0};
+  int background_color_index;
+
+  subplot[0] = (double)elem->getAttribute("subplot_xmin");
+  subplot[1] = (double)elem->getAttribute("subplot_xmax");
+  subplot[2] = (double)elem->getAttribute("subplot_ymin");
+  subplot[3] = (double)elem->getAttribute("subplot_ymax");
+  kind = (std::string)elem->getAttribute("kind");
+  y_label = (std::string)elem->getAttribute("ylabel");
+  x_label = (std::string)elem->getAttribute("xlabel");
+  title = (std::string)elem->getAttribute("title");
+
+  get_figure_size(nullptr, nullptr, &metric_width, &metric_height);
+
+  aspect_ratio_ws = metric_width / metric_height;
+  memcpy(vp, subplot, sizeof(vp));
+  if (aspect_ratio_ws > 1)
+    {
+      vp[2] /= aspect_ratio_ws;
+      vp[3] /= aspect_ratio_ws;
+      if (keep_aspect_ratio)
+        {
+          double border = 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws);
+          vp[0] += border;
+          vp[1] -= border;
+        }
+    }
+  else
+    {
+      vp[0] *= aspect_ratio_ws;
+      vp[1] *= aspect_ratio_ws;
+      if (keep_aspect_ratio)
+        {
+          double border = 0.5 * (vp[3] - vp[2]) * (1.0 - aspect_ratio_ws);
+          vp[2] += border;
+          vp[3] -= border;
+        }
+    }
+
+  if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
+    {
+      double extent;
+
+      extent = grm_min(vp[1] - vp[0], vp[3] - vp[2]);
+      vp0 = 0.5 * (vp[0] + vp[1] - extent);
+      vp1 = 0.5 * (vp[0] + vp[1] + extent);
+      vp2 = 0.5 * (vp[2] + vp[3] - extent);
+      vp3 = 0.5 * (vp[2] + vp[3] + extent);
+    }
+  else
+    {
+      vp0 = vp[0];
+      vp1 = vp[1];
+      vp2 = vp[2];
+      vp3 = vp[3];
+    }
+
+  left_margin = y_label.empty() ? 0 : 0.05;
+  if (str_equals_any(kind.c_str(), 8, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface",
+                     "trisurf", "volume"))
+    {
+      right_margin = (vp1 - vp0) * 0.1;
+    }
+  else
+    {
+      right_margin = 0;
+    }
+  bottom_margin = x_label.empty() ? 0 : 0.05;
+  top_margin = title.empty() ? 0 : 0.075;
+  viewport[0] = vp0 + (0.075 + left_margin) * (vp1 - vp0);
+  viewport[1] = vp0 + (0.95 - right_margin) * (vp1 - vp0);
+  viewport[2] = vp2 + (0.075 + bottom_margin) * (vp3 - vp2);
+  viewport[3] = vp2 + (0.975 - top_margin) * (vp3 - vp2);
+
+  if (str_equals_any(kind.c_str(), 4, "line", "stairs", "scatter", "stem"))
+    {
+      double w, h;
+      int location;
+      GR::Value locationValue = elem->getAttribute("location");
+
+      if (!locationValue.isUndefined())
+        {
+          location = (int)locationValue;
+          if (location == 11 || location == 12 || location == 13)
+            {
+              legend_size(elem, &w, &h);
+              viewport[1] -= w + 0.1;
+            }
+        }
+    }
+
+  if (str_equals_any(kind.c_str(), 3, "pie", "polar", "polar_histogram"))
+    {
+      double x_center, y_center, r;
+
+      x_center = 0.5 * (viewport[0] + viewport[1]);
+      y_center = 0.5 * (viewport[2] + viewport[3]);
+      r = 0.45 * grm_min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
+      if (!title.empty())
+        {
+          r *= 0.975;
+          y_center -= 0.025 * r;
+        }
+      viewport[0] = x_center - r;
+      viewport[1] = x_center + r;
+      viewport[2] = y_center - r;
+      viewport[3] = y_center + r;
+
+
+      gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    }
+
+  gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 }
 
 static void processGR3CameraLookAt(const std::shared_ptr<GR::Element> &elem)
@@ -1270,6 +1501,7 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
       {std::string("space3d"), processSpace3d},
       {std::string("space"), processSpace},
       {std::string("viewport"), processViewport},
+      {std::string("subplot"), processSubplot},
       {std::string("scale"),
        [](const std::shared_ptr<GR::Element> &elem) { gr_setscale((int)elem->getAttribute("scale")); }},
       {std::string("selntran"),
@@ -1353,11 +1585,7 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
                        {std::string("updatews"), updateWS},
                        {std::string("drawgraphics"), drawGraphics},
                        {std::string("layout-grid"), layoutGrid},
-                       {std::string("layout-gridelement"), layoutGridElement}
-
-
-      };
-
+                       {std::string("layout-gridelement"), layoutGridElement}};
   /*! Modifier */
   if (element->localName() == "group")
     {
@@ -3183,6 +3411,7 @@ void GR::Render::render()
    * GR::Render::render uses both instance's document and context
    */
   auto root = this->firstChildElement();
+  global_root = root;
   if (root->hasChildNodes())
     {
       finalizeGrid(root);

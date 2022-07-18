@@ -9,8 +9,6 @@
 #include "args.h"
 #include "error.h"
 
-namespace grm
-{
 
 class Slice
 {
@@ -47,6 +45,8 @@ public:
   void setFitParentsHeight(bool fitParentsHeight);
   void setFitParentsWidth(bool fitParentsWidth);
   double *getSubplot();
+  grm_args_t *subplot_args = nullptr;
+
 
 private:
   double *subplot;
@@ -68,13 +68,10 @@ private:
 
   int finalized = 0;
 
-  grm_args_t *subplot_args = nullptr;
 
   friend class Grid;
   std::shared_ptr<GR::Element> elementInDOM = nullptr;
 };
-
-class Render;
 
 class Grid : public GridElement
 {
@@ -109,6 +106,5 @@ private:
   int ncols;
   void upsize(int nrows, int ncols);
 };
-} // namespace grm
 
 #endif /* ifndef LAYOUT_HPP_INCLUDED */

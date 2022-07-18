@@ -5,7 +5,6 @@
 #include <grm/layout_error.hxx>
 #include "grm/layout.hxx"
 
-using namespace grm;
 //#include "grm/dom_render/render.hxx"
 
 double epsilon = std::numeric_limits<double>::epsilon();

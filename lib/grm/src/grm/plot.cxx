@@ -1088,6 +1088,7 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "kind", "s", &kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
+  /* TODO: Can be removed because the vp is calculated in the renderer however removing it results in no axes showing */
   plot_process_viewport(subplot_args);
   error = plot_store_coordinate_ranges(subplot_args);
   return_if_error;
@@ -8712,12 +8713,68 @@ int grm_merge_named(const grm_args_t *args, const char *identificator)
   return grm_merge_extended(args, 0, identificator);
 }
 
+int plot_process_subplot_args(grm_args_t *subplot_args, const std::shared_ptr<GR::Element> &group)
+{
+  plot_func_t plot_func;
+  char *ylabel, *xlabel, *title, *kind = NULL;
+  int keep_aspect_ratio, location;
+  double *subplot;
+
+  group->setAttribute("kind", kind);
+  if (grm_args_values(subplot_args, "ylabel", "s", &ylabel))
+    {
+      group->setAttribute("ylabel", ylabel);
+    }
+  if (grm_args_values(subplot_args, "xlabel", "s", &xlabel))
+    {
+      group->setAttribute("xlabel", xlabel);
+    }
+  if (grm_args_values(subplot_args, "title", "s", &title))
+    {
+      group->setAttribute("title", title);
+    }
+  if (grm_args_values(subplot_args, "keep_aspec_ratio", "i", &keep_aspect_ratio))
+    {
+      group->setAttribute("keep_aspect_ratio", keep_aspect_ratio);
+    }
+  if (grm_args_values(subplot_args, "location", "i", &location))
+    {
+      group->setAttribute("location", location);
+    }
+  if (grm_args_values(subplot_args, "subplot", "D", &subplot))
+    {
+      group->setAttribute("subplot", true);
+      group->setAttribute("subplot_xmin", subplot[0]);
+      group->setAttribute("subplot_xmax", subplot[1]);
+      group->setAttribute("subplot_ymin", subplot[2]);
+      group->setAttribute("subplot_ymax", subplot[3]);
+    }
+
+  if (plot_pre_subplot(subplot_args) != ERROR_NONE)
+    {
+      return 0;
+    }
+  grm_args_values(subplot_args, "kind", "s", &kind);
+  logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
+  if (!plot_func_map_at(plot_func_map, kind, &plot_func))
+    {
+      return 0;
+    }
+  if (plot_func(subplot_args) != ERROR_NONE)
+    {
+      return 0;
+    };
+  plot_post_subplot(subplot_args);
+}
+
 int grm_plot(const grm_args_t *args)
 {
   grm_args_t **current_subplot_args;
   Grid *currentGrid;
   plot_func_t plot_func;
   const char *kind = NULL;
+  int figsize_x, figsize_y, tmp_size_i[2];
+  double tmp_size_d[2];
   if (!grm_merge(args))
     {
       return 0;
@@ -8726,6 +8783,7 @@ int grm_plot(const grm_args_t *args)
   global_root = global_render->createElement("root");
   global_render->replaceChildren(global_root);
   global_root->setAttribute("id", 0);
+
   if (grm_args_values(active_plot_args, "raw", "s", &current_subplot_args))
     {
       plot_raw(active_plot_args);
@@ -8734,6 +8792,21 @@ int grm_plot(const grm_args_t *args)
   else
     {
       plot_set_attribute_defaults(active_plot_args);
+
+      if (grm_args_values(active_plot_args, "size", "dd", &tmp_size_d[0], &tmp_size_d[1]))
+        {
+          global_root->setAttribute("size", true);
+          global_root->setAttribute("size_x", tmp_size_d[0]);
+          global_root->setAttribute("size_y", tmp_size_d[1]);
+        }
+
+      if (grm_args_values(active_plot_args, "figsize", "dd", &figsize_x, &figsize_y))
+        {
+          global_root->setAttribute("figsize", true);
+          global_root->setAttribute("figsize_x", figsize_x);
+          global_root->setAttribute("figsize_y", figsize_y);
+        }
+
       if (plot_process_grid_arguments(active_plot_args) != ERROR_NONE)
         {
           return 0;
@@ -8761,23 +8834,15 @@ int grm_plot(const grm_args_t *args)
           std::cout << "no grid elements";
           while (*current_subplot_args != NULL)
             {
+              char *ylabel, *xlabel, *title;
+              int keep_aspect_ratio, location;
+              double *subplot;
+
               grm_args_values(*current_subplot_args, "kind", "s", &kind);
-              global_root->append(global_render->createGroup("subplot"));
-              if (plot_pre_subplot(*current_subplot_args) != ERROR_NONE)
-                {
-                  return 0;
-                }
-              grm_args_values(*current_subplot_args, "kind", "s", &kind);
-              logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-              if (!plot_func_map_at(plot_func_map, kind, &plot_func))
-                {
-                  return 0;
-                }
-              if (plot_func(*current_subplot_args) != ERROR_NONE)
-                {
-                  return 0;
-                };
-              plot_post_subplot(*current_subplot_args);
+              auto group = global_render->createGroup(kind);
+              global_root->append(group);
+              // TODO: Error Handling
+              plot_process_subplot_args(*current_subplot_args, group);
               ++current_subplot_args;
             }
         }
@@ -8834,7 +8899,6 @@ int grm_switch(unsigned int id)
   return 1;
 }
 }
-
 
 int grm_plot_helper(GridElement *gridElement, Slice *slice, const std::shared_ptr<GR::Element> &parentDomElement)
 {
