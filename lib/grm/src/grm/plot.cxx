@@ -23,6 +23,10 @@ extern "C" {
 #include "gr.h"
 #include "gr3.h"
 #include "logging_int.h"
+
+#ifndef NO_EXPAT
+#include <expat.h>
+#endif
 }
 
 #include "plot_int.h"
@@ -8422,6 +8426,65 @@ char *grm_dump_graphics_tree_str(void)
   strcpy(graphics_tree_cstr, graphics_tree_str.c_str());
   return graphics_tree_cstr;
 }
+
+#ifndef NO_EXPAT
+static void xml_parse_start_handler(void *data, const XML_Char *tagName, const XML_Char **attr)
+{
+  std::shared_ptr<GR::Element> *insertionParent = (std::shared_ptr<GR::Element> *)data;
+  if (strcmp(tagName, "root") == 0)
+    {
+      global_root = global_render->createElement("root");
+      global_render->replaceChildren(global_root);
+      if (attr[0])
+        {
+          global_root->setAttribute(attr[0], attr[1]);
+        }
+      (*insertionParent) = global_root;
+    }
+  else
+    {
+      std::shared_ptr<GR::Element> child = global_render->createElement(tagName);
+      for (int i = 0; attr[i]; i += 2)
+        {
+          child->setAttribute(attr[i], attr[i + 1]);
+        }
+
+      (*insertionParent)->appendChild(child);
+      *insertionParent = child;
+    }
+}
+
+static void xml_parse_end_handler(void *data, const char *tagName)
+{
+  auto currentNode = (std::shared_ptr<GR::Element> *)data;
+  *((std::shared_ptr<GR::Element> *)data) = (*currentNode)->parentElement();
+}
+
+void grm_load_graphics_tree(FILE *file)
+{
+  std::string xmlstring;
+  XML_Parser parser = XML_ParserCreate(NULL);
+  std::shared_ptr<GR::Element> parentNode;
+
+  std::fseek(file, 0, SEEK_END);
+  xmlstring.resize(std::ftell(file));
+  std::rewind(file);
+  std::fread(&xmlstring[0], 1, xmlstring.size(), file);
+
+  plot_init_static_variables();
+
+  XML_SetUserData(parser, &parentNode);
+  XML_SetElementHandler(parser, xml_parse_start_handler, xml_parse_end_handler);
+
+  if (XML_Parse(parser, xmlstring.c_str(), xmlstring.length(), XML_TRUE) == XML_STATUS_ERROR)
+    {
+      logger((stderr, "Cannot parse XML-String\n"));
+      return;
+    }
+
+  XML_ParserFree(parser);
+}
+#endif
 
 int grm_merge(const grm_args_t *args)
 {
