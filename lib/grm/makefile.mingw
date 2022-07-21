@@ -11,11 +11,12 @@ endif
             -I../gr \
             -I../gr3 \
             -I$(THIRDPARTYDIR)/include
+EXPATLIBS = $(THIRDPARTYDIR)/lib/libexpat.a
   GKSLIBS = -L ../gks/ -lGKS
    GRLIBS = -L ../gr/ -lGR
   GR3LIBS = -L ../gr3/ -lGR3
   LDFLAGS = -Wl,--out-implib,$(@:.dll=.a)
-     LIBS = $(GR3LIBS) $(GRLIBS) $(GKSLIBS) -lm -lws2_32 -lmsimg32 -lgdi32
+     LIBS = $(GR3LIBS) $(GRLIBS) $(GKSLIBS) $(EXPATLIBS) -lm -lws2_32 -lmsimg32 -lgdi32
 
      OBJS = src/grm/args.o \
             src/grm/base64.o \

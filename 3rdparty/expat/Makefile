@@ -48,6 +48,12 @@ $(PREFIX)/lib/libexpat.a: $(PREFIX)/src/expat-$(VERSION)/Makefile
 	$(MAKE) -C $(PREFIX)/src/expat-$(VERSION) -j4 && \
 	$(MAKE) -C $(PREFIX)/src/expat-$(VERSION) install
 
+libexpat.a: $(PREFIX)/lib/libexpat.a
+	cp $(PREFIX)/lib/libexpat.a libexpat.a
+
+clean:
+	rm -f libexpat.a
+
 install: $(PREFIX)/lib/libexpat.a
 
-.PHONY: default install
+.PHONY: default clean install
