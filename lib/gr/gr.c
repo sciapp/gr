@@ -7563,7 +7563,7 @@ static void init_hlr(void)
 
       for (i = 0; i < 3; i++) apply_world_xform(x + i, y + i, z + i);
 
-      if (hlr.xmax > hlr.xmin)
+      if (hlr.xmax != hlr.xmin)
         {
           a = RESOLUTION_X / (hlr.xmax - hlr.xmin);
           b = -(hlr.xmin * a);
@@ -7630,7 +7630,7 @@ static void pline_hlr(int n, double *x, double *y, double *z)
   saved_scale_options = lx.scale_options;
   lx.scale_options = 0;
 
-  if (hlr.xmax > hlr.xmin)
+  if (hlr.xmax != hlr.xmin)
     {
       a = RESOLUTION_X / (hlr.xmax - hlr.xmin);
       b = -(hlr.xmin * a);
