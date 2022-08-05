@@ -37,7 +37,13 @@ UNAME := $(shell uname)
                src/grm/dom_render/graphics_tree/Node.o \
                src/grm/dom_render/graphics_tree/Value.o \
                src/grm/dom_render/graphics_tree/util.o
-     DEFINES = -DBUILDING_GR
+   EXPATDEFS =
+ifdef USE_STATIC_EXPAT_LIBS
+   EXPATLIBS = $(THIRDPARTYDIR)/lib/libexpat.a
+else
+   EXPATLIBS = -lexpat
+endif
+     DEFINES = -DBUILDING_GR $(EXPATDEFS)
     INCLUDES = -I./include \
                -I./src \
                -I../gks \
@@ -64,7 +70,7 @@ INSTALL_NAME =
 endif
       GRLIBS = -L ../gr/ -lGR
      GR3LIBS = -L ../gr3/ -lGR3
-        LIBS = $(GRLIBS) $(GR3LIBS) -lm
+        LIBS = $(GRLIBS) $(GR3LIBS) $(EXPATLIBS) -lm
 
 .c.o:
 	$(CC) -o $@ -c $(INCLUDES) $(CFLAGS) $<

@@ -704,5 +704,40 @@ fi
 printf "%12s: %s\n" "agg" "$info" >&2
 rm -f $tmpsrc $tmpout $tmpver
 
+if [ "$expat" != "no" ]
+then
+  tmpout=`mktemp /tmp/a.out.XXXXX`
+  tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+  tmpver=`mktemp /tmp/a$$XXXXX.txt`
+  cat >$tmpsrc << eof
+#include <stdio.h>
+#include <expat.h>
+
+int main(void) {
+    XML_Expat_Version version_info;
+    version_info = XML_ExpatVersionInfo();
+    printf("%d.%d.%d\n", version_info.major, version_info.minor, version_info.micro);
+    return 0;
+}
+eof
+  libs=""
+  cmd="${CXX} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lexpat"
+  $cmd $libs >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    expatdefs="EXPATDEFS=-DNO_EXPAT EXPATLIBS="
+    info="${red} no${normal} [expat not found]"
+    ret=1
+  else
+    $tmpout >$tmpver 2>&1
+    info="${green}yes${normal} [version `cat $tmpver`]"
+  fi
+else
+  info="${yellow} no${normal} [disabled]"
+  expatdefs="EXPATDEFS=-DNO_EXPAT EXPATLIBS="
+  ret=1
+fi
+printf "%12s: %s\n" "expat" "$info" >&2
+rm -f $tmpsrc $tmpout $tmpver
+
 echo "" >&2
-echo $target $wxdefs $qt4defs $qt5defs $qt6defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $gldefs $zmqdefs $avdefs $cairodefs $tiffdefs $aggdefs $extradefs
+echo $target $wxdefs $qt4defs $qt5defs $qt6defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $gldefs $zmqdefs $avdefs $cairodefs $tiffdefs $aggdefs $expatdefs $extradefs

@@ -42,6 +42,10 @@ EXPORT int grm_plot(const grm_args_t *args);
 EXPORT void grm_render(void);
 EXPORT int grm_switch(unsigned int id);
 
+#ifndef NO_EXPAT
+EXPORT void grm_load_graphics_tree(FILE *file);
+#endif
+
 #ifdef __cplusplus
 }
 

@@ -33,6 +33,7 @@ CXXFLAGS = $(DEFINES) $(OPTS) -std=c++17 $(EXTRA_CXXFLAGS)
  ZLIBDIR = ../3rdparty/zlib
 QHULLDIR = ../3rdparty/qhull
    FTDIR = ../3rdparty/freetype
+EXPATDIR = ../3rdparty/expat
   GKSDIR = ../lib/gks
    GRDIR = ../lib/gr
   GR3DIR = ../lib/gr3
@@ -47,7 +48,8 @@ INCLUDES = -I$(THIRDPARTYDIR)/include/ \
            -I$(PNGDIR) \
            -I$(ZLIBDIR) \
            -I$(QHULLDIR) \
-           -I$(FTDIR)
+           -I$(FTDIR) \
+           -I$(EXPATDIR)
  GKSOBJS = jsplugin.o \
            $(GKSDIR)/afm.o \
            $(GKSDIR)/error.o \
@@ -118,7 +120,8 @@ INCLUDES = -I$(THIRDPARTYDIR)/include/ \
            $(PNGDIR)/libpng.a \
            $(ZLIBDIR)/libz.a \
            $(QHULLDIR)/libqhull.a \
-           $(FTDIR)/libfreetype.a
+           $(FTDIR)/libfreetype.a \
+           $(EXPATDIR)/libexpat.a
 
 .PHONY: default clean .SECONDARY .FORCE
 
@@ -156,6 +159,9 @@ $(QHULLDIR)/libqhull.a:
 $(FTDIR)/libfreetype.a:
 	$(MAKE) -C $(FTDIR)
 
+$(EXPATDIR)/libexpat.a:
+	$(MAKE) -C $(EXPATDIR) libexpat.a
+
 $(GRDIR)/gr.o: ../lib/gr/gr_version.h
 
 %.o: %.c $(LIBS)
@@ -179,4 +185,5 @@ clean:
 	cd $(ZLIBDIR) && make clean
 	cd $(QHULLDIR) && make clean
 	cd $(FTDIR) && make clean
+	cd $(EXPATDIR) && make clean
 	rm -rf $(OBJS)
