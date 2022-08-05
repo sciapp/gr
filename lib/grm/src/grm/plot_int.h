@@ -9,7 +9,7 @@ extern "C" {
 
 #include "args_int.h"
 #include "datatype/uint_map_int.h"
-#include "error_int.h"
+#include "grm/error.h"
 #include "event_int.h"
 
 #ifdef __cplusplus

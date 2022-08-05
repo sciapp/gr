@@ -3,18 +3,53 @@
 #include <sstream>
 #include "args_int.h"
 #include <grm/layout.hxx>
+#include <grm/layout_error.hxx>
+
+using namespace grm;
 
 double epsilon = std::numeric_limits<double>::epsilon();
 
 Slice::Slice(int rowStart, int rowStop, int colStart, int colStop)
     : rowStart(rowStart), rowStop(rowStop), colStart(colStart), colStop(colStop)
 {
+  if (!this->isPositive())
+    {
+      throw InvalidIndex("Indices must be positive values");
+    }
+  if (!this->isForward())
+    {
+      throw InvalidIndex("Start value can`t be bigger than stop value");
+    }
 }
 
 Slice *Slice::copy()
 {
   Slice *copy = new Slice(this->rowStart, this->rowStop, this->colStart, this->colStop);
   return copy;
+}
+
+bool Slice::isPositive()
+{
+  if (rowStart < 0 || rowStop < 0 || colStart < 0 || colStop < 0)
+    {
+      return false;
+    }
+  else
+    {
+      return true;
+    }
+}
+
+bool Slice::isForward()
+{
+  if (rowStart > rowStop || colStart > colStop)
+    {
+      return false;
+    }
+  else
+    {
+      return true;
+    }
 }
 
 GridElement::GridElement()
@@ -51,7 +86,7 @@ void GridElement::setAbsHeight(double height)
 {
   if (heightSet)
     {
-      throw std::invalid_argument("Can only set one height attribute");
+      throw ContradictingAttributes("Can only set one height attribute");
     }
   if (height <= 0 || height > 1)
     {
@@ -59,7 +94,7 @@ void GridElement::setAbsHeight(double height)
     }
   if (arSet and widthSet)
     {
-      throw std::invalid_argument("You cant restrict the height on a plot with fixed width and aspect ratio");
+      throw ContradictingAttributes("You cant restrict the height on a plot with fixed width and aspect ratio");
     }
   absHeight = height;
   heightSet = 1;
@@ -69,15 +104,15 @@ void GridElement::setAbsHeightPxl(int height)
 {
   if (heightSet)
     {
-      throw std::invalid_argument("Can only set one height attribute");
+      throw ContradictingAttributes("Can only set one height attribute");
     }
   if (height <= 0)
     {
-      throw std::invalid_argument("Pixel height has to be an positive integer");
+      throw InvalidArgumentRange("Pixel height has to be an positive integer");
     }
   if (arSet and widthSet)
     {
-      throw std::invalid_argument("You cant restrict the height on a plot with fixed width and aspect ratio");
+      throw ContradictingAttributes("You cant restrict the height on a plot with fixed width and aspect ratio");
     }
   absHeightPxl = height;
   heightSet = 1;
@@ -87,15 +122,15 @@ void GridElement::setRelativeHeight(double height)
 {
   if (heightSet)
     {
-      throw std::invalid_argument("Can only set one height attribute");
+      throw ContradictingAttributes("Can only set one height attribute");
     }
   if (height <= 0 || height > 1)
     {
-      throw std::invalid_argument("Height has to be between 0 and 1");
+      throw InvalidArgumentRange("Height has to be between 0 and 1");
     }
   if (arSet and widthSet)
     {
-      throw std::invalid_argument("You cant restrict the height on a plot with fixed width and aspect ratio");
+      throw ContradictingAttributes("You cant restrict the height on a plot with fixed width and aspect ratio");
     }
   relativeHeight = height;
   heightSet = 1;
@@ -105,15 +140,15 @@ void GridElement::setAbsWidth(double width)
 {
   if (widthSet)
     {
-      throw std::invalid_argument("Can only set one width attribute");
+      throw ContradictingAttributes("Can only set one width attribute");
     }
   if (width <= 0 || width > 1)
     {
-      throw std::invalid_argument("Width has to be between 0 and 1");
+      throw InvalidArgumentRange("Width has to be between 0 and 1");
     }
   if (arSet and heightSet)
     {
-      throw std::invalid_argument("You cant restrict the width on a plot with fixed height and aspect ratio");
+      throw ContradictingAttributes("You cant restrict the width on a plot with fixed height and aspect ratio");
     }
   absWidth = width;
   widthSet = 1;
@@ -123,15 +158,15 @@ void GridElement::setAbsWidthPxl(int width)
 {
   if (widthSet)
     {
-      throw std::invalid_argument("Can only set one width attribute");
+      throw ContradictingAttributes("Can only set one width attribute");
     }
   if (width <= 0)
     {
-      throw std::invalid_argument("Pixel Width has to be an positive integer");
+      throw InvalidArgumentRange("Pixel Width has to be an positive integer");
     }
   if (arSet and heightSet)
     {
-      throw std::invalid_argument("You cant restrict the width on a plot with fixed height and aspect ratio");
+      throw ContradictingAttributes("You cant restrict the width on a plot with fixed height and aspect ratio");
     }
   absWidthPxl = width;
   widthSet = 1;
@@ -141,15 +176,15 @@ void GridElement::setRelativeWidth(double width)
 {
   if (widthSet)
     {
-      throw std::invalid_argument("Can only set one width attribute");
+      throw ContradictingAttributes("Can only set one width attribute");
     }
   if (width <= 0 || width > 1)
     {
-      throw std::invalid_argument("Width has to be between 0 and 1");
+      throw InvalidArgumentRange("Width has to be between 0 and 1");
     }
   if (arSet and heightSet)
     {
-      throw std::invalid_argument("You cant restrict the width on a plot with fixed height and aspect ratio");
+      throw ContradictingAttributes("You cant restrict the width on a plot with fixed height and aspect ratio");
     }
   relativeWidth = width;
   widthSet = 1;
@@ -159,11 +194,11 @@ void GridElement::setAspectRatio(double ar)
 {
   if (ar <= 0)
     {
-      throw std::invalid_argument("Aspect ration has to be bigger than 0");
+      throw InvalidArgumentRange("Aspect ration has to be bigger than 0");
     }
   if (widthSet && heightSet)
     {
-      throw std::invalid_argument("You cant restrict the aspect ratio on a plot with fixed sides");
+      throw ContradictingAttributes("You cant restrict the aspect ratio on a plot with fixed sides");
     }
   aspectRatio = ar;
   arSet = 1;
@@ -181,7 +216,7 @@ void GridElement::finalizeSubplot()
       double availableHeight = subplot[3] - subplot[2];
       if (absHeight > availableHeight + epsilon)
         {
-          throw std::invalid_argument("Absolute height is bigger than available height");
+          throw ContradictingAttributes("Absolute height is bigger than available height");
         }
       double middle = subplot[2] + availableHeight / 2;
       subplot[2] = middle - absHeight / 2;
@@ -193,7 +228,7 @@ void GridElement::finalizeSubplot()
       double availableWidth = subplot[1] - subplot[0];
       if (absWidth > availableWidth + epsilon)
         {
-          throw std::invalid_argument("Absolute width is bigger than available width");
+          throw ContradictingAttributes("Absolute width is bigger than available width");
         }
       double middle = subplot[0] + availableWidth / 2;
       subplot[0] = middle - absWidth / 2;
@@ -272,6 +307,10 @@ bool GridElement::isGrid()
 
 Grid::Grid(int nrows, int ncols) : GridElement(), nrows(nrows), ncols(ncols)
 {
+  if (nrows < 1 || ncols < 1)
+    {
+      throw InvalidArgumentRange("The number of rows and cols in a grid must be bigger than 0");
+    }
   int i;
   for (i = 0; i < nrows; ++i)
     {
@@ -293,65 +332,26 @@ Grid::~Grid()
 
 GridElement *Grid::getElement(int row, int col) const
 {
-  return rows.at(row).at(col);
+  try
+    {
+      return rows.at(row).at(col);
+    }
+  catch (const std::out_of_range &e)
+    {
+      throw InvalidIndex("There is no element at the specified position");
+    }
 };
 
 void Grid::setElement(int row, int col, GridElement *element)
 {
-  int nrowsToAllocate, ncolsToAllocate;
-  Slice *oldSlice;
-  GridElement *oldElement;
-
-  nrowsToAllocate = row + 1;
-  ncolsToAllocate = col + 1;
-
-  /* Resize the container if necessary */
-  upsize(nrowsToAllocate, ncolsToAllocate);
-
-  /* Delete element from grid if it already exists */
-  try
-    {
-      oldSlice = elementToPosition.at(element);
-      rows.at(oldSlice->rowStart).at(oldSlice->colStart) = nullptr;
-      elementToPosition.erase(element);
-      delete (oldSlice);
-    }
-  catch (const std::out_of_range &e)
-    {
-    };
-
-  /* Delete old element and it`s Slice */
-  oldElement = this->getElement(row, col);
-  if (oldElement != nullptr)
-    {
-      delete elementToPosition.at(oldElement);
-      elementToPosition.erase(oldElement);
-      delete oldElement;
-    }
-
-
-  rows.at(row).at(col) = element;
-  Slice *newSlice = new Slice(row, row, col, col);
-  elementToPosition[element] = newSlice;
+  Slice newSlice(row, row + 1, col, col + 1);
+  setElement(&newSlice, element);
 }
 
 void Grid::setElement(int row, int col, grm_args_t *subplot_args)
 {
-  GridElement *element = nullptr;
-  const char *grid_element_address = nullptr;
-  if (grm_args_values(subplot_args, "grid_element", "s", &grid_element_address))
-    {
-      element = reinterpret_cast<GridElement *>(std::stoi(grid_element_address));
-    }
-  else
-    {
-      element = new GridElement();
-      element->subplot_args = subplot_args;
-    }
-  setElement(row, col, element);
-  std::stringstream address_stream;
-  address_stream << element;
-  grm_args_push(subplot_args, "grid_element", "s", address_stream.str().c_str());
+  Slice newSlice(row, row + 1, col, col + 1);
+  setElement(&newSlice, subplot_args);
 }
 
 void Grid::setElement(Slice *slice, GridElement *element)
@@ -370,7 +370,13 @@ void Grid::setElement(Slice *slice, GridElement *element)
   try
     {
       oldSlice = elementToPosition.at(element);
-      rows.at(oldSlice->rowStart).at(oldSlice->colStart) = nullptr;
+      for (int row = oldSlice->rowStart; row < oldSlice->rowStop; ++row)
+        {
+          for (int col = oldSlice->colStart; col < oldSlice->colStop; ++col)
+            {
+              rows.at(row).at(col) = nullptr;
+            }
+        }
       elementToPosition.erase(element);
       delete (oldSlice);
     }
@@ -412,10 +418,10 @@ void Grid::setElement(Slice *slice, grm_args_t *subplot_args)
       element = new GridElement();
       element->subplot_args = subplot_args;
     }
-  setElement(slice, element);
   std::stringstream address_stream;
   address_stream << element;
   grm_args_push(subplot_args, "grid_element", "s", address_stream.str().c_str());
+  setElement(slice, element);
 }
 
 void Grid::printGrid() const
@@ -477,7 +483,7 @@ void Grid::finalizeSubplot()
     }
   if (totalHeightLeft + epsilon < 0)
     {
-      throw std::invalid_argument("Not enough vertical space for the rows");
+      throw ContradictingAttributes("Not enough vertical space for the rows");
     }
   if (numRowsWithFlexibleHeight == 0)
     {
@@ -520,7 +526,7 @@ void Grid::finalizeSubplot()
     }
   if (totalWidthLeft + epsilon < 0)
     {
-      throw std::invalid_argument("Not enough horizontal space for the cols");
+      throw ContradictingAttributes("Not enough horizontal space for the cols");
     }
   if (numColsWithFlexibleWidth == 0)
     {

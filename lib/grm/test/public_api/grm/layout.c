@@ -18,7 +18,7 @@ void visualize(element_t **elements, int nelems)
 
   for (i = 0; i < nelems; i++)
     {
-      subplot = element_getSubplot(elements[i]);
+      element_getSubplot(elements[i], &subplot);
       gr_setfillcolorind(STD_COLORS[i]);
       gr_fillrect(subplot[0], subplot[1], subplot[2], subplot[3]);
       /*        printf("[%f %f %f %f]\n", subplot[0], subplot[1], subplot[2], subplot[3]); */
@@ -31,13 +31,14 @@ void test_grid(void)
 {
   int i, nelems = 6;
 
-  grid_t *grid1 = grid_new(1, 1);
+  grid_t *grid1;
+  grid_new(1, 1, &grid1);
 
   element_t *elements[nelems];
 
   for (i = 0; i < nelems; i++)
     {
-      elements[i] = element_new();
+      element_new(&elements[i]);
     }
 
   grid_setElementSlice(0, 1, 0, 1, elements[0], grid1);
@@ -76,7 +77,8 @@ void test_grid(void)
 
   visualize(elements, nelems);
 
-  grid_t *grid2 = grid_new(2, 1);
+  grid_t *grid2;
+  grid_new(2, 1, &grid2);
   grid_setElementSlice(0, 1, 0, 1, elements[3], grid2);
   grid_setElementSlice(1, 2, 0, 1, elements[4], grid2);
   grid_setElementSlice(0, 2, 2, 3, grid2, grid1);
@@ -116,7 +118,7 @@ void test_grid_with_grm(void)
         }
     }
 
-  grid = grid_new(2, 2);
+  grid_new(2, 2, &grid);
   for (i = 0; i < 4; ++i)
     {
       subplots[i] = grm_args_new();
@@ -134,7 +136,6 @@ void test_grid_with_grm(void)
   grm_plot(args);
   printf("Press any key to continue...\n");
   getchar();
-
 
   grm_args_delete(args);
   grid_delete(grid);
@@ -297,11 +298,11 @@ void test_grid_with_grm_args_and_width_parameters(void)
 
 int main(void)
 {
-  test_grid();
+  /* test_grid(); */
   /* test_grid_with_grm(); */
   /* test_grid_with_grm_args(); */
-  /* test_grid_with_grm_args_and_width_parameters(); */
-  /* grm_finalize(); */
+  test_grid_with_grm_args_and_width_parameters();
+  grm_finalize();
 
   return 0;
 }

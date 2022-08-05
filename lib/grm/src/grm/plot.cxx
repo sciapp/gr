@@ -1153,12 +1153,14 @@ err_t plot_process_grid_arguments(const grm_args_t *args)
   int *fit_parents_heights, *fit_parents_widths;
   unsigned int rel_heights_length, rel_widths_length, abs_heights_length, abs_widths_length, aspect_ratios_length,
       fit_parents_heights_length, fit_parents_widths_length;
+  err_t error = ERROR_NONE;
 
   if (global_grid != NULL)
     {
       grid_delete(global_grid);
     }
-  global_grid = grid_new(1, 1);
+  error = grid_new(1, 1, &global_grid);
+  return_if_error;
   grm_args_values(active_plot_args, "subplots", "A", &current_subplot_args);
   while (*current_subplot_args != NULL)
     {
@@ -1181,7 +1183,7 @@ err_t plot_process_grid_arguments(const grm_args_t *args)
 
       if (rows_length != cols_length)
         {
-          return ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
+          return ERROR_LAYOUT_COMPONENT_LENGTH_MISMATCH;
         }
 
       grm_args_first_value(*current_subplot_args, "rowspan", "I", &rowspans, &rowspans_length);
@@ -1227,40 +1229,45 @@ err_t plot_process_grid_arguments(const grm_args_t *args)
 
           if (nesting_degree == current_nesting_degree)
             {
-              grid_setElementArgsSlice(rowstart, rowstop, colstart, colstop, *current_subplot_args, current_grid);
-              current_element = gird_getElement(rowstart, colstart, current_grid);
+              error =
+                  grid_setElementArgsSlice(rowstart, rowstop, colstart, colstop, *current_subplot_args, current_grid);
+              return_if_error;
+              error = grid_getElement(rowstart, colstart, current_grid, &current_element);
+              return_if_error;
             }
           else
             {
-              grid_ensureCellsAreGrid(rowstart, rowstop, colstart, colstop, current_grid);
-              current_element = gird_getElement(rowstart, colstart, current_grid);
-              current_grid = reinterpret_cast<grid_t *>(current_element);
+              error = grid_ensureCellsAreGrid(rowstart, rowstop, colstart, colstop, current_grid);
+              return_if_error;
+              error = grid_getElement(rowstart, colstart, current_grid, (element_t **)&current_grid);
+              return_if_error;
+              current_element = (element_t *)current_grid;
             }
 
           if (rel_heights != NULL && rel_heights_length > current_nesting_degree &&
               rel_heights[current_nesting_degree] != -1)
             {
-              element_setRelativeHeight(current_element, rel_heights[current_nesting_degree]);
+              error = element_setRelativeHeight(current_element, rel_heights[current_nesting_degree]);
             }
           if (rel_widths != NULL && rel_widths_length > current_nesting_degree &&
               rel_widths[current_nesting_degree] != -1)
             {
-              element_setRelativeWidth(current_element, rel_widths[current_nesting_degree]);
+              error = element_setRelativeWidth(current_element, rel_widths[current_nesting_degree]);
             }
           if (abs_heights != NULL && abs_heights_length > current_nesting_degree &&
               abs_heights[current_nesting_degree] != -1)
             {
-              element_setAbsHeight(current_element, abs_heights[current_nesting_degree]);
+              error = element_setAbsHeight(current_element, abs_heights[current_nesting_degree]);
             }
           if (abs_widths != NULL && abs_widths_length > current_nesting_degree &&
               abs_widths[current_nesting_degree] != -1)
             {
-              element_setAbsWidth(current_element, abs_widths[current_nesting_degree]);
+              error = element_setAbsWidth(current_element, abs_widths[current_nesting_degree]);
             }
           if (aspect_ratios != NULL && aspect_ratios_length > current_nesting_degree &&
               aspect_ratios[current_nesting_degree] != -1)
             {
-              element_setAspectRatio(current_element, aspect_ratios[current_nesting_degree]);
+              error = element_setAspectRatio(current_element, aspect_ratios[current_nesting_degree]);
             }
           if (fit_parents_heights != NULL && fit_parents_heights_length > current_nesting_degree &&
               fit_parents_heights[current_nesting_degree] != -1)
@@ -1272,6 +1279,7 @@ err_t plot_process_grid_arguments(const grm_args_t *args)
             {
               element_setFitParentsWidth(current_element, fit_parents_widths[current_nesting_degree]);
             }
+          return_if_error;
         }
 
       ++current_subplot_args;

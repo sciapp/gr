@@ -18,6 +18,7 @@ UNAME := $(shell uname)
                src/grm/json.o \
                src/grm/layout.o \
                src/grm/layout_c.o \
+               src/grm/layout_error.o \
                src/grm/logging.o \
                src/grm/memwriter.o \
                src/grm/net.o \

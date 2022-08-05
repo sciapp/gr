@@ -2,7 +2,7 @@
 
 #include <grm/layout.h>
 #include <grm/layout.hxx>
-
+#include <grm/layout_error.hxx>
 
 /* ######################### public implementation ################################################################## */
 
@@ -10,11 +10,24 @@
 
 /* ------------------------- grid ----------------------------------------------------------------------------------- */
 
-grid_t *grid_new(int nrows, int ncols)
-{
-  Grid *grid = new Grid(nrows, ncols);
+using namespace grm;
 
-  return reinterpret_cast<grid_t *>(grid);
+err_t grid_new(int nrows, int ncols, grid_t **a_grid)
+{
+  try
+    {
+      Grid *grid = new Grid(nrows, ncols);
+      *a_grid = reinterpret_cast<grid_t *>(grid);
+    }
+  catch (std::bad_alloc)
+    {
+      return ERROR_MALLOC;
+    }
+  catch (const InvalidArgument &e)
+    {
+      return e.getErrorNumber();
+    }
+  return ERROR_NONE;
 }
 
 void grid_print(const grid_t *a_grid)
@@ -24,53 +37,109 @@ void grid_print(const grid_t *a_grid)
   grid->printGrid();
 }
 
-void grid_setElement(int row, int col, element_t *a_element, grid_t *a_grid)
+err_t grid_setElement(int row, int col, element_t *a_element, grid_t *a_grid)
 {
   Grid *grid = reinterpret_cast<Grid *>(a_grid);
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
-  grid->setElement(row, col, element);
+  try
+    {
+      grid->setElement(row, col, element);
+    }
+  catch (const InvalidArgument &e)
+    {
+      return e.getErrorNumber();
+    }
+  return ERROR_NONE;
 }
 
-void grid_setElementArgs(int row, int col, grm_args_t *subplot_args, grid_t *a_grid)
+err_t grid_setElementArgs(int row, int col, grm_args_t *subplot_args, grid_t *a_grid)
 {
   Grid *grid = reinterpret_cast<Grid *>(a_grid);
-  grid->setElement(row, col, subplot_args);
+  try
+    {
+      grid->setElement(row, col, subplot_args);
+    }
+  catch (const InvalidArgument &e)
+    {
+      return e.getErrorNumber();
+    }
+  return ERROR_NONE;
 }
 
-void grid_setElementSlice(int rowStart, int rowStop, int colStart, int colStop, element_t *a_element, grid_t *a_grid)
+err_t grid_setElementSlice(int rowStart, int rowStop, int colStart, int colStop, element_t *a_element, grid_t *a_grid)
 {
   Grid *grid = reinterpret_cast<Grid *>(a_grid);
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
-  Slice slice(rowStart, rowStop, colStart, colStop);
-  grid->setElement(&slice, element);
+  try
+    {
+      Slice slice(rowStart, rowStop, colStart, colStop);
+      grid->setElement(&slice, element);
+    }
+  catch (const InvalidArgument &e)
+    {
+      return e.getErrorNumber();
+    }
+  return ERROR_NONE;
 }
 
-void grid_setElementArgsSlice(int rowStart, int rowStop, int colStart, int colStop, grm_args_t *subplot_args,
-                              grid_t *a_grid)
+err_t grid_setElementArgsSlice(int rowStart, int rowStop, int colStart, int colStop, grm_args_t *subplot_args,
+                               grid_t *a_grid)
 {
   Grid *grid = reinterpret_cast<Grid *>(a_grid);
-  Slice slice(rowStart, rowStop, colStart, colStop);
-  grid->setElement(&slice, subplot_args);
+  try
+    {
+      Slice slice(rowStart, rowStop, colStart, colStop);
+      grid->setElement(&slice, subplot_args);
+    }
+  catch (const InvalidArgument &e)
+    {
+      return e.getErrorNumber();
+    }
+  return ERROR_NONE;
 }
 
-void grid_ensureCellIsGrid(int row, int col, grid_t *a_grid)
+err_t grid_ensureCellIsGrid(int row, int col, grid_t *a_grid)
 {
   Grid *grid = reinterpret_cast<Grid *>(a_grid);
-  grid->ensureCellIsGrid(row, col);
+  try
+    {
+      grid->ensureCellIsGrid(row, col);
+    }
+  catch (const InvalidArgument &e)
+    {
+      return e.getErrorNumber();
+    }
+  return ERROR_NONE;
 }
 
-void grid_ensureCellsAreGrid(int rowStart, int rowStop, int colStart, int colStop, grid_t *a_grid)
+err_t grid_ensureCellsAreGrid(int rowStart, int rowStop, int colStart, int colStop, grid_t *a_grid)
 {
   Grid *grid = reinterpret_cast<Grid *>(a_grid);
-  Slice slice(rowStart, rowStop, colStart, colStop);
-  grid->ensureCellsAreGrid(&slice);
+  try
+    {
+      Slice slice(rowStart, rowStop, colStart, colStop);
+      grid->ensureCellsAreGrid(&slice);
+    }
+  catch (const InvalidArgument &e)
+    {
+      return e.getErrorNumber();
+    }
+  return ERROR_NONE;
 }
 
-element_t *gird_getElement(int row, int col, grid_t *a_grid)
+err_t grid_getElement(int row, int col, grid_t *a_grid, element_t **a_element)
 {
   Grid *grid = reinterpret_cast<Grid *>(a_grid);
-  GridElement *element = grid->getElement(row, col);
-  return reinterpret_cast<element_t *>(element);
+  try
+    {
+      GridElement *element = grid->getElement(row, col);
+      *a_element = reinterpret_cast<element_t *>(element);
+    }
+  catch (const InvalidArgument &e)
+    {
+      return e.getErrorNumber();
+    }
+  return ERROR_NONE;
 }
 
 void grid_delete(const grid_t *a_grid)
@@ -95,60 +164,118 @@ void trim(grid_t *a_grid)
 
 /* ------------------------- element -------------------------------------------------------------------------------- */
 
-element_t *element_new()
+err_t element_new(element_t **a_element)
 {
-  GridElement *element = new GridElement();
+  GridElement *element;
+  try
+    {
+      element = new GridElement();
+    }
+  catch (std::bad_alloc)
+    {
+      return ERROR_MALLOC;
+    }
+  *a_element = reinterpret_cast<element_t *>(element);
 
-  return reinterpret_cast<element_t *>(element);
+  return ERROR_NONE;
 }
 
-void element_setAbsHeight(element_t *a_element, double height)
+err_t element_setAbsHeight(element_t *a_element, double height)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
-
-  element->setAbsHeight(height);
+  try
+    {
+      element->setAbsHeight(height);
+    }
+  catch (const InvalidArgument &e)
+    {
+      return e.getErrorNumber();
+    }
+  return ERROR_NONE;
 }
 
-void element_setAbsHeightPxl(element_t *a_element, int height)
+err_t element_setAbsHeightPxl(element_t *a_element, int height)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
-
-  element->setAbsHeightPxl(height);
+  try
+    {
+      element->setAbsHeightPxl(height);
+    }
+  catch (const InvalidArgument &e)
+    {
+      return e.getErrorNumber();
+    }
+  return ERROR_NONE;
 }
 
-void element_setRelativeHeight(element_t *a_element, double height)
+err_t element_setRelativeHeight(element_t *a_element, double height)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
-
-  element->setRelativeHeight(height);
+  try
+    {
+      element->setRelativeHeight(height);
+    }
+  catch (const InvalidArgument &e)
+    {
+      return e.getErrorNumber();
+    }
+  return ERROR_NONE;
 }
 
-void element_setAbsWidth(element_t *a_element, double width)
+err_t element_setAbsWidth(element_t *a_element, double width)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
-
-  element->setAbsWidth(width);
+  try
+    {
+      element->setAbsWidth(width);
+    }
+  catch (const InvalidArgument &e)
+    {
+      return e.getErrorNumber();
+    }
+  return ERROR_NONE;
 }
 
-void element_setAbsWidthPxl(element_t *a_element, int width)
+err_t element_setAbsWidthPxl(element_t *a_element, int width)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
-
-  element->setAbsWidthPxl(width);
+  try
+    {
+      element->setAbsWidthPxl(width);
+    }
+  catch (const InvalidArgument &e)
+    {
+      return e.getErrorNumber();
+    }
+  return ERROR_NONE;
 }
 
-void element_setRelativeWidth(element_t *a_element, double width)
+err_t element_setRelativeWidth(element_t *a_element, double width)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
-
-  element->setRelativeWidth(width);
+  try
+    {
+      element->setRelativeWidth(width);
+    }
+  catch (const InvalidArgument &e)
+    {
+      return e.getErrorNumber();
+    }
+  return ERROR_NONE;
 }
 
-void element_setAspectRatio(element_t *a_element, double ar)
+err_t element_setAspectRatio(element_t *a_element, double ar)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
-
-  element->setAspectRatio(ar);
+  try
+    {
+      element->setAspectRatio(ar);
+    }
+  catch (const InvalidArgument &e)
+    {
+      return e.getErrorNumber();
+    }
+  return ERROR_NONE;
 }
 
 void element_setFitParentsHeight(element_t *a_element, int fitParentsHeight)
@@ -165,9 +292,8 @@ void element_setFitParentsWidth(element_t *a_element, int fitParentsWidth)
   element->setFitParentsWidth(fitParentsWidth);
 }
 
-double *element_getSubplot(element_t *a_element)
+void element_getSubplot(element_t *a_element, double **subplot)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
-
-  return element->getSubplot();
+  *subplot = element->getSubplot();
 }

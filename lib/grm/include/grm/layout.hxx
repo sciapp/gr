@@ -3,18 +3,28 @@
 
 #include <vector>
 #include <unordered_map>
+#include <string>
 
 #include "args.h"
+#include "error.h"
+
+namespace grm
+{
 
 class Slice
 {
 public:
   Slice(int rowStart, int rowStop, int colStart, int colStop);
+  Slice *copy();
+  bool isPositive();
+  bool isForward();
+
+private:
   int rowStart;
   int rowStop;
   int colStart;
   int colStop;
-  Slice *copy();
+  friend class Grid;
 };
 
 class GridElement
@@ -35,6 +45,7 @@ public:
   void setFitParentsWidth(bool fitParentsWidth);
   double *getSubplot();
 
+private:
   double *subplot;
 
   double absHeight = -1;
@@ -55,6 +66,8 @@ public:
   int finalized = 0;
 
   grm_args_t *subplot_args = nullptr;
+
+  friend class Grid;
 };
 
 class Grid : public GridElement
@@ -70,7 +83,7 @@ public:
   void ensureCellsAreGrid(Slice *slice);
   GridElement *getElement(int row, int col) const;
   void printGrid() const;
-  virtual void finalizeSubplot();
+  virtual void finalizeSubplot() override;
   bool isGrid() override;
   void trim();
   int getColSpan(GridElement *element);
@@ -83,5 +96,6 @@ private:
   int ncols;
   void upsize(int nrows, int ncols);
 };
+} // namespace grm
 
-#endif /* ifndef LAYOUT_HXX_INCLUDED */
+#endif /* ifndef LAYOUT_HPP_INCLUDED */

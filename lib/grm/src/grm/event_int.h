@@ -8,7 +8,7 @@ extern "C" {
 /* ######################### includes ############################################################################### */
 
 #include "datatype/template/list_int.h"
-#include "error_int.h"
+#include "grm/error.h"
 #include <grm/event.h>
 
 
