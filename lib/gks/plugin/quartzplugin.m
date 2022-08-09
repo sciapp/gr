@@ -254,7 +254,7 @@ static void gksterm_get_state(gks_ws_state_t *state, int window)
   while (!didDie && wss != NULL)
     {
       [mutex lock];
-      if (wss->inactivity_counter == 3)
+      if (wss->inactivity_counter == 300)
         {
           @try
             {
@@ -315,7 +315,7 @@ static void gksterm_get_state(gks_ws_state_t *state, int window)
         {
           break;
         }
-      usleep(100000);
+      usleep(1000);
     }
   [pool drain];
 }
@@ -446,7 +446,7 @@ void gks_quartzplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, dou
       while (wss->thread_alive)
         {
           [mutex unlock];
-          usleep(100000);
+          usleep(1000);
           [mutex lock];
         }
       [mutex unlock];
