@@ -1804,33 +1804,26 @@ static void primitive(char *name, int n, double *x, double *y)
 
 static void polyline(int n, double *x, double *y)
 {
-  int npoints = n;
-  double *px = x, *py = y;
-  int i;
+  int i, npoints;
 
-  if (lx.scale_options)
+  if (n >= maxpath) reallocate(n);
+
+  npoints = 0;
+  for (i = 0; i < n; i++)
     {
-      if (npoints >= maxpath) reallocate(npoints);
-
-      px = xpoint;
-      py = ypoint;
-      npoints = 0;
-      for (i = 0; i < n; i++)
+      xpoint[npoints] = x_lin(x[i]);
+      ypoint[npoints] = y_lin(y[i]);
+      if (is_nan(xpoint[npoints]) || is_nan(ypoint[npoints]))
         {
-          px[npoints] = x_lin(x[i]);
-          py[npoints] = y_lin(y[i]);
-          if (is_nan(px[npoints]) || is_nan(py[npoints]))
-            {
-              if (npoints >= 2) gks_polyline(npoints, px, py);
+          if (npoints >= 2) gks_polyline(npoints, xpoint, ypoint);
 
-              npoints = 0;
-            }
-          else
-            npoints++;
+          npoints = 0;
         }
+      else
+        npoints++;
     }
 
-  if (npoints != 0) gks_polyline(npoints, px, py);
+  if (npoints != 0) gks_polyline(npoints, xpoint, ypoint);
 }
 
 /*!
@@ -1856,33 +1849,26 @@ void gr_polyline(int n, double *x, double *y)
 
 static void polymarker(int n, double *x, double *y)
 {
-  int npoints = n;
-  double *px = x, *py = y;
-  int i;
+  int i, npoints;
 
-  if (lx.scale_options)
+  if (n >= maxpath) reallocate(n);
+
+  npoints = 0;
+  for (i = 0; i < n; i++)
     {
-      if (npoints >= maxpath) reallocate(npoints);
-
-      px = xpoint;
-      py = ypoint;
-      npoints = 0;
-      for (i = 0; i < n; i++)
+      xpoint[npoints] = x_lin(x[i]);
+      ypoint[npoints] = y_lin(y[i]);
+      if (is_nan(xpoint[npoints]) || is_nan(ypoint[npoints]))
         {
-          px[npoints] = x_lin(x[i]);
-          py[npoints] = y_lin(y[i]);
-          if (is_nan(px[npoints]) || is_nan(py[npoints]))
-            {
-              if (npoints >= 1) gks_polymarker(npoints, px, py);
+          if (npoints >= 1) gks_polymarker(npoints, xpoint, ypoint);
 
-              npoints = 0;
-            }
-          else
-            npoints++;
+          npoints = 0;
         }
+      else
+        npoints++;
     }
 
-  if (npoints != 0) gks_polymarker(npoints, px, py);
+  if (npoints != 0) gks_polymarker(npoints, xpoint, ypoint);
 }
 
 /*!
