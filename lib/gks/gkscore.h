@@ -102,6 +102,7 @@ extern "C" {
 #define INQ_ENCODING 107
 #define SET_RESAMPLE_METHOD 108
 #define SET_RESIZE_BEHAVIOUR 109
+#define INQ_TEXT 110
 
 #define SET_TEXT_SLANT 200
 #define DRAW_IMAGE 201
