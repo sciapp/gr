@@ -6321,6 +6321,19 @@ static void axes3d_get_params(int axis, int *tick_axis, double x_org, double y_o
   yi = (y_max + y_min) / 2;
   zi = (z_max + z_min) / 2;
 
+  if (lx.scale_options & OPTION_FLIP_X)
+    {
+      x_org = -x_org + x_min + x_max;
+    }
+  if (lx.scale_options & OPTION_FLIP_Y)
+    {
+      y_org = -y_org + y_min + y_max;
+    }
+  if (lx.scale_options & OPTION_FLIP_Z)
+    {
+      z_org = -z_org + z_min + z_max;
+    }
+
   if (axis == 0)
     {
       gr_inqtext3d(xi, y_org, z_org, "A", axes[1], bBoxX, bBoxY);
