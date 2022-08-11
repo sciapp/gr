@@ -392,6 +392,18 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               v[0] = px[i];
               zvalue = pz[k];
               v[1] = py[j];
+              if (scale & OPTION_FLIP_X)
+                {
+                  v[0] = -v[0] + xmin + xmax;
+                }
+              if (scale & OPTION_FLIP_Y)
+                {
+                  v[1] = -v[1] + ymin + ymax;
+                }
+              if (scale & OPTION_FLIP_Z)
+                {
+                  zvalue = zvalue + zmin + zmax;
+                }
             }
           else
             {
