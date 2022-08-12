@@ -2961,38 +2961,45 @@ void gks_inq_text_extent(int wkid, double px, double py, char *str, int *errind,
 
   if (gks_list_find(open_ws, wkid) != NULL && strlen(str) != 0)
     {
-      if (s->txprec != GKS_K_TEXT_PRECISION_OUTLINE)
+      if (strlen(str) < GKS_K_TEXT_MAX_SIZE)
         {
-          /* double the string length as the longest utf8 representation of any latin1 character is two bytes long */
-          char *utf8_str = gks_malloc(strlen(str) * 2 + 1);
-          gks_input2utf8(str, utf8_str, s->input_encoding);
-
-          gks_util_inq_text_extent(px, py, utf8_str, strlen(utf8_str), cpx, cpy, tx, ty);
-
-          gks_free(utf8_str);
-        }
-      else
-        {
-          if (s->input_encoding == ENCODING_LATIN1)
+          if (s->txprec != GKS_K_TEXT_PRECISION_OUTLINE)
             {
+              /* double the string length as the longest utf8 representation of any latin1 character is two bytes long
+               */
               char *utf8_str = gks_malloc(strlen(str) * 2 + 1);
-              gks_input2utf8(str, utf8_str, ENCODING_LATIN1);
+              gks_input2utf8(str, utf8_str, s->input_encoding);
 
-              gks_ft_inq_text_extent(px, py, utf8_str, s, gks_ft_gdp, bx, by);
+              gks_util_inq_text_extent(px, py, utf8_str, strlen(utf8_str), cpx, cpy, tx, ty);
+
               gks_free(utf8_str);
             }
           else
-            gks_ft_inq_text_extent(px, py, str, s, gks_ft_gdp, bx, by);
-
-          for (i = 0; i < 4; i++)
             {
-              tx[i] = bx[i];
-              ty[i] = by[i];
+              if (s->input_encoding == ENCODING_LATIN1)
+                {
+                  char *utf8_str = gks_malloc(strlen(str) * 2 + 1);
+                  gks_input2utf8(str, utf8_str, ENCODING_LATIN1);
+
+                  gks_ft_inq_text_extent(px, py, utf8_str, s, gks_ft_gdp, bx, by);
+                  gks_free(utf8_str);
+                }
+              else
+                gks_ft_inq_text_extent(px, py, str, s, gks_ft_gdp, bx, by);
+
+              for (i = 0; i < 4; i++)
+                {
+                  tx[i] = bx[i];
+                  ty[i] = by[i];
+                }
+              *cpx = bx[8];
+              *cpy = by[8];
             }
-          *cpx = bx[8];
-          *cpy = by[8];
+          *errind = GKS_K_NO_ERROR;
         }
-      *errind = GKS_K_NO_ERROR;
+      else
+        /* string is too long */
+        gks_report_error(INQ_TEXT, 403);
     }
   else
     *errind = GKS_K_ERROR;

@@ -1804,33 +1804,26 @@ static void primitive(char *name, int n, double *x, double *y)
 
 static void polyline(int n, double *x, double *y)
 {
-  int npoints = n;
-  double *px = x, *py = y;
-  int i;
+  int i, npoints;
 
-  if (lx.scale_options)
+  if (n >= maxpath) reallocate(n);
+
+  npoints = 0;
+  for (i = 0; i < n; i++)
     {
-      if (npoints >= maxpath) reallocate(npoints);
-
-      px = xpoint;
-      py = ypoint;
-      npoints = 0;
-      for (i = 0; i < n; i++)
+      xpoint[npoints] = x_lin(x[i]);
+      ypoint[npoints] = y_lin(y[i]);
+      if (is_nan(xpoint[npoints]) || is_nan(ypoint[npoints]))
         {
-          px[npoints] = x_lin(x[i]);
-          py[npoints] = y_lin(y[i]);
-          if (is_nan(px[npoints]) || is_nan(py[npoints]))
-            {
-              if (npoints >= 2) gks_polyline(npoints, px, py);
+          if (npoints >= 2) gks_polyline(npoints, xpoint, ypoint);
 
-              npoints = 0;
-            }
-          else
-            npoints++;
+          npoints = 0;
         }
+      else
+        npoints++;
     }
 
-  if (npoints != 0) gks_polyline(npoints, px, py);
+  if (npoints != 0) gks_polyline(npoints, xpoint, ypoint);
 }
 
 /*!
@@ -1856,33 +1849,26 @@ void gr_polyline(int n, double *x, double *y)
 
 static void polymarker(int n, double *x, double *y)
 {
-  int npoints = n;
-  double *px = x, *py = y;
-  int i;
+  int i, npoints;
 
-  if (lx.scale_options)
+  if (n >= maxpath) reallocate(n);
+
+  npoints = 0;
+  for (i = 0; i < n; i++)
     {
-      if (npoints >= maxpath) reallocate(npoints);
-
-      px = xpoint;
-      py = ypoint;
-      npoints = 0;
-      for (i = 0; i < n; i++)
+      xpoint[npoints] = x_lin(x[i]);
+      ypoint[npoints] = y_lin(y[i]);
+      if (is_nan(xpoint[npoints]) || is_nan(ypoint[npoints]))
         {
-          px[npoints] = x_lin(x[i]);
-          py[npoints] = y_lin(y[i]);
-          if (is_nan(px[npoints]) || is_nan(py[npoints]))
-            {
-              if (npoints >= 1) gks_polymarker(npoints, px, py);
+          if (npoints >= 1) gks_polymarker(npoints, xpoint, ypoint);
 
-              npoints = 0;
-            }
-          else
-            npoints++;
+          npoints = 0;
         }
+      else
+        npoints++;
     }
 
-  if (npoints != 0) gks_polymarker(npoints, px, py);
+  if (npoints != 0) gks_polymarker(npoints, xpoint, ypoint);
 }
 
 /*!
@@ -4830,7 +4816,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
   double clrt[4], wn[4], vp[4];
   double x_min, x_max, y_min, y_max, feps;
 
-  double tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi, start_x, start_y;
+  double tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi;
   int64_t i;
   int decade, exponent;
   char string[256];
@@ -4907,7 +4893,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = ipred(y_min / y0);
           yi = y0 + i * y0;
-          start_y = yi;
           decade = igauss(blog(lx.basey, y_min / y_org));
 
           /* draw Y-axis */
@@ -4969,7 +4954,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = isucc(y_min / y_tick);
           yi = i * y_tick;
-          start_y = yi;
 
           /* draw Y-axis */
 
@@ -5039,7 +5023,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = ipred(x_min / x0);
           xi = x0 + i * x0;
-          start_x = xi;
           decade = igauss(blog(lx.basex, x_min / x_org));
 
           /* draw X-axis */
@@ -5101,7 +5084,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
-          start_x = xi;
 
           str_get_format_reference(&format_reference, x_org, xi, x_max, x_tick, major_x);
 
@@ -5475,6 +5457,12 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
 
       x_min = ix.xmin;
       x_max = ix.xmax;
@@ -5965,6 +5953,12 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
     }
 
   if (clsw == GKS_K_CLIP)
@@ -6102,6 +6096,12 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
     }
 
   m = 0;
@@ -6320,6 +6320,19 @@ static void axes3d_get_params(int axis, int *tick_axis, double x_org, double y_o
   xi = (x_max + x_min) / 2;
   yi = (y_max + y_min) / 2;
   zi = (z_max + z_min) / 2;
+
+  if (lx.scale_options & OPTION_FLIP_X)
+    {
+      x_org = -x_org + x_min + x_max;
+    }
+  if (lx.scale_options & OPTION_FLIP_Y)
+    {
+      y_org = -y_org + y_min + y_max;
+    }
+  if (lx.scale_options & OPTION_FLIP_Z)
+    {
+      z_org = -z_org + z_min + z_max;
+    }
 
   if (axis == 0)
     {
@@ -6559,6 +6572,12 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
 
       x_min = ix.xmin;
       x_max = ix.xmax;
@@ -7188,6 +7207,12 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
     }
 
   if (modern_projection_type)
@@ -7567,7 +7592,7 @@ static void init_hlr(void)
 
       for (i = 0; i < 3; i++) apply_world_xform(x + i, y + i, z + i);
 
-      if (hlr.xmax > hlr.xmin)
+      if (hlr.xmax != hlr.xmin)
         {
           a = RESOLUTION_X / (hlr.xmax - hlr.xmin);
           b = -(hlr.xmin * a);
@@ -7634,7 +7659,7 @@ static void pline_hlr(int n, double *x, double *y, double *z)
   saved_scale_options = lx.scale_options;
   lx.scale_options = 0;
 
-  if (hlr.xmax > hlr.xmin)
+  if (hlr.xmax != hlr.xmin)
     {
       a = RESOLUTION_X / (hlr.xmax - hlr.xmin);
       b = -(hlr.xmin * a);
@@ -7954,6 +7979,12 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
     }
 
 #define Z(x, y) pz[(x) + nx * (y)]
@@ -8382,6 +8413,12 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
     }
 
   /* save fill area interior style and color index */

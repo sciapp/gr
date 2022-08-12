@@ -577,6 +577,27 @@ static void stroke(void)
   p->npoints = 0;
 }
 
+/*
+  Using single-precision floats, SVG viewers are not expected to correctly draw differences
+  between two values finer than 1/4,000,000 of the larger number. This leads to problems with
+  mid-sized numbers when you zoom in to coordinates with large values but small differences
+  between them. As a workaround, we therefore apply the fix_ccordinates macro() here.
+ */
+
+#define SVG_MAX 4194304 /* 2^22 */
+
+#define fix_coordinates(x, y) \
+  {                           \
+    if ((x) < -SVG_MAX)       \
+      (x) = -SVG_MAX;         \
+    else if ((x) > SVG_MAX)   \
+      (x) = SVG_MAX;          \
+    if ((y) < -SVG_MAX)       \
+      (y) = -SVG_MAX;         \
+    else if ((y) > SVG_MAX)   \
+      (y) = SVG_MAX;          \
+  }
+
 static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x, y;
@@ -611,11 +632,14 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
   xim1 = x0;
   yim1 = y0;
+  fix_coordinates(x0, y0);
+
   for (i = 1; i < n; i++)
     {
       WC_to_NDC(px[i], py[i], tnr, x, y);
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
+      fix_coordinates(xi, yi);
 
       if (i == 1 || xi != xim1 || yi != yim1)
         {

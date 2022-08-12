@@ -474,7 +474,6 @@ static void interp(char *str, int segn)
 
           RESOLVE(gkss, gks_state_list_t, sizeof(gks_state_list_t));
           unused_variable = gkss->ltype;
-          sp += 3 * sizeof(int); /* ignore workstation type */
           break;
 
         case 12: /* polyline */
@@ -526,7 +525,7 @@ static void interp(char *str, int segn)
         case 52:  /* select normalization transformation */
         case 53:  /* set clipping indicator */
         case 108: /* set resample method */
-        case 109: /* set resample method */
+        case 109: /* set resize behaviour */
         case 207: /* set border color index */
         case 208: /* select clipping transformation */
 

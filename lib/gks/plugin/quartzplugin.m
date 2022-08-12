@@ -16,6 +16,10 @@
 #define MAXPATHLEN 1024
 #endif
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -143,6 +147,7 @@ static bool gksterm_is_running()
   @try
     {
       gksterm_communicate(request, request_len, GKSTERM_IS_RUNNING_TIMEOUT, NO, ^(char *reply, size_t reply_len) {
+        GKS_UNUSED(reply);
         assert(reply_len == 0);
       });
     }
@@ -163,6 +168,7 @@ static bool gksterm_is_alive(int window)
 
   __block bool result = NO;
   gksterm_communicate(request, request_len, GKSTERM_DEFAULT_TIMEOUT, YES, ^(char *reply, size_t reply_len) {
+    GKS_UNUSED(reply);
     assert(reply_len == 1);
     result = (reply[0] == 1);
   });
@@ -191,6 +197,7 @@ static void gksterm_close_window(int window)
   *(int *)(request + 1) = window;
 
   gksterm_communicate(request, request_len, GKSTERM_DEFAULT_TIMEOUT, YES, ^(char *reply, size_t reply_len) {
+    GKS_UNUSED(reply);
     assert(reply_len == 0);
   });
 }
@@ -208,6 +215,7 @@ static void gksterm_draw(int window, void *displaylist, size_t displaylist_len)
   @try
     {
       gksterm_communicate(request, request_len, GKSTERM_DEFAULT_TIMEOUT, YES, ^(char *reply, size_t reply_len) {
+        GKS_UNUSED(reply);
         assert(reply_len == 0);
       });
     }
@@ -246,7 +254,7 @@ static void gksterm_get_state(gks_ws_state_t *state, int window)
   while (!didDie && wss != NULL)
     {
       [mutex lock];
-      if (wss->inactivity_counter == 3)
+      if (wss->inactivity_counter == 300)
         {
           @try
             {
@@ -307,7 +315,7 @@ static void gksterm_get_state(gks_ws_state_t *state, int window)
         {
           break;
         }
-      usleep(100000);
+      usleep(1000);
     }
   [pool drain];
 }
@@ -438,7 +446,7 @@ void gks_quartzplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, dou
       while (wss->thread_alive)
         {
           [mutex unlock];
-          usleep(100000);
+          usleep(1000);
           [mutex lock];
         }
       [mutex unlock];

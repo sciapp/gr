@@ -352,7 +352,7 @@ static int close_socket(int s)
   return 0;
 }
 
-static int check_socket_connection(ws_state_list *wss)
+static void check_socket_connection(ws_state_list *wss)
 {
   if (wss->s != -1 && wss->wstype >= 411 && wss->wstype <= 413)
     {
