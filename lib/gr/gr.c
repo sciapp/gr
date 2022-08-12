@@ -5457,6 +5457,12 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
 
       x_min = ix.xmin;
       x_max = ix.xmax;
@@ -5947,6 +5953,12 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
     }
 
   if (clsw == GKS_K_CLIP)
@@ -6084,6 +6096,12 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
     }
 
   m = 0;
@@ -6302,6 +6320,19 @@ static void axes3d_get_params(int axis, int *tick_axis, double x_org, double y_o
   xi = (x_max + x_min) / 2;
   yi = (y_max + y_min) / 2;
   zi = (z_max + z_min) / 2;
+
+  if (lx.scale_options & OPTION_FLIP_X)
+    {
+      x_org = -x_org + x_min + x_max;
+    }
+  if (lx.scale_options & OPTION_FLIP_Y)
+    {
+      y_org = -y_org + y_min + y_max;
+    }
+  if (lx.scale_options & OPTION_FLIP_Z)
+    {
+      z_org = -z_org + z_min + z_max;
+    }
 
   if (axis == 0)
     {
@@ -6541,6 +6572,12 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
 
       x_min = ix.xmin;
       x_max = ix.xmax;
@@ -7170,6 +7207,12 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
     }
 
   if (modern_projection_type)
@@ -7936,6 +7979,12 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
     }
 
 #define Z(x, y) pz[(x) + nx * (y)]
@@ -8364,6 +8413,12 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
     }
 
   /* save fill area interior style and color index */
