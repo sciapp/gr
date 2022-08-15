@@ -402,7 +402,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
                 }
               if (scale & OPTION_FLIP_Z)
                 {
-                  zvalue = zvalue + zmin + zmax;
+                  zvalue = -zvalue + zmin + zmax;
                 }
             }
           else
