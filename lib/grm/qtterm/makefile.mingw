@@ -1,0 +1,27 @@
+GRMLIB = ../libGRM.dll
+GRLIB = ../../gr/libGR.dll
+
+default: qtterm.exe
+
+$(GRLIB):
+	$(MAKE) -C ../../gr ../../gr/libGR.dll
+$(GRMLIB):
+	$(MAKE) -C .. ../libGRM.dll
+
+qtterm.exe: main.cpp main_window.cpp grm_args_t_wrapper.cpp receiver_thread.cpp tooltip.cpp
+	wget https://gr-framework.org/downloads/3rdparty/qt5-runtime-Windows-$(ARCHITECTURE).tar.gz
+	tar xzf qt5-runtime-Windows-$(ARCHITECTURE).tar.gz
+	moc -DGRDIR=\"$(GRDIR)\" -Iinclude main_window.h -o moc_main_window.cpp
+	moc -DGRDIR=\"$(GRDIR)\" -Iinclude grm_args_t_wrapper.h -o moc_grm_args_t_wrapper.cpp
+	moc -DGRDIR=\"$(GRDIR)\" -Iinclude receiver_thread.h -o moc_receiver_thread.cpp
+	moc -DGRDIR=\"$(GRDIR)\" -Iinclude tooltip.h -o moc_tooltip.cpp
+	rcc -o qrc_main.cpp resources/resources.qrc
+	$(CXX) -fno-exceptions -Wl,--subsystem,windows -mwindows -std=c++11 -DGRDIR=\"$(GRDIR)\" -Iinclude -Iinclude/QtCore -Iinclude/QtGui -Iinclude/QtNetwork -Iinclude/QtWidgets -I../ -I../../ -I../../gr/ -o $@ moc_main_window.cpp moc_grm_args_t_wrapper.cpp moc_receiver_thread.cpp moc_tooltip.cpp qrc_main.cpp Qt5Core.dll Qt5Gui.dll Qt5Widgets.dll Qt5Network.dll ../libGRM.dll ../../gr/libGR.dll $^
+
+clean:
+	$(RM) include
+	$(RM) *.dll
+	$(RM) moc_*.cxx
+	$(RM) qrc_*.cxx
+	$(RM) qtterm.exe
+	$(RM) qt5-runtime-Windows-$(ARCHITECTURE).tar.gz

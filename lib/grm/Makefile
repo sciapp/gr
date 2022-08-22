@@ -62,7 +62,7 @@ default:
 
 all: targets
 
-targets: prerequisites libGRM.a libGRM${GR_SHARED_LIBRARY_SUFFIX}
+targets: prerequisites libGRM.a libGRM${GR_SHARED_LIBRARY_SUFFIX} qtterm
 
 prerequisites:
 	$(MAKE) -C ../../3rdparty/ PREFIX=$(THIRDPARTYDIR)
@@ -80,6 +80,9 @@ libGRM.a: $(GRMOBJS)
 libGRM${GR_SHARED_LIBRARY_SUFFIX}: $(GRMOBJS) libGR libGR3
 	$(CC) -o $@ $(SOFLAGS) $(GRMOBJS) $(LIBS) $(LDFLAGS) $(INSTALL_NAME)
 
+qtterm: libGRM.a
+	$(MAKE) -C qtterm -f makefile.mak GRDIR=$(GRDIR)
+
 install:
 	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
@@ -87,6 +90,7 @@ install:
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p include/grm.h $(INCDIR)
 	cp -rp include/grm $(INCDIR)/
+	$(MAKE) -C qtterm -f makefile.mak install
 
 clean:
 	rm -f *.so \
@@ -94,5 +98,6 @@ clean:
 	      src/grm/*.o \
 	      src/grm/datatype/*.o \
 	      *${GR_SHARED_LIBRARY_SUFFIX}
+	$(MAKE) -C qtterm -f makefile.mak clean
 
 .PHONY: all targets install clean prerequisites libGR libGR3

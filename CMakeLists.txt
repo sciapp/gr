@@ -1078,6 +1078,134 @@ else()
   string(APPEND GR_REPORT "- gksqt: No (Qt4 / Qt5 / Qt6 not found)\n")
 endif()
 
+if((Qt5Widgets_FOUND
+    AND Qt5Core_FOUND
+    AND Qt5Network_FOUND
+   )
+   OR (Qt6Widgets_FOUND
+       AND Qt6Core_FOUND
+       AND Qt6Network_FOUND
+      )
+)
+
+  add_executable(
+    qtterm WIN32 MACOSX_BUNDLE
+    lib/grm/qtterm/grm_args_t_wrapper.cpp
+    lib/grm/qtterm/main.cpp
+    lib/grm/qtterm/main_window.cpp
+    lib/grm/qtterm/receiver_thread.cpp
+    lib/grm/qtterm/tooltip.cpp
+  )
+  target_link_libraries(qtterm PUBLIC gr_shared)
+  target_link_libraries(qtterm PUBLIC grm_shared)
+
+  if(Qt6Widgets_FOUND
+     AND Qt6Core_FOUND
+     AND Qt6Network_FOUND
+  )
+    set_target_properties(qtterm PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
+    target_link_libraries(qtterm PUBLIC Qt6::Widgets Qt6::Core Qt6::Network)
+  elseif(
+    Qt5Widgets_FOUND
+    AND Qt5Core_FOUND
+    AND Qt5Network_FOUND
+  )
+    set_target_properties(qtterm PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
+    target_link_libraries(qtterm PUBLIC Qt5::Widgets Qt5::Core Qt5::Network)
+  endif()
+  if(MINGW)
+    target_compile_options(qtterm PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
+  endif()
+  target_compile_options(qtterm PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  if(GR_MANUAL_MOC_AND_RCC)
+    set_target_properties(qtterm PROPERTIES AUTOMOC OFF AUTORCC OFF)
+    if(Qt6Widgets_FOUND
+       AND Qt6Core_FOUND
+       AND Qt6Network_FOUND
+    )
+      set(MOC_INCLUDE_FLAGS ${QT6_MOC_INCLUDE_FLAGS})
+    elseif(
+      Qt5Widgets_FOUND
+      AND Qt5Core_FOUND
+      AND Qt5Network_FOUND
+    )
+      set(MOC_INCLUDE_FLAGS ${QT5_MOC_INCLUDE_FLAGS})
+    endif()
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/main.cpp
+      COMMAND ${QT_RCC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/qtterm/resources/resources.qrc -o
+              ${CMAKE_CURRENT_BINARY_DIR}/main.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/qtterm/resources/resources.qrc
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_main_window.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/qtterm/main_window.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_main_window.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/qtterm/main_window.h
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/qtterm/grm_args_t_wrapper.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/qtterm/grm_args_t_wrapper.h
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/qtterm/receiver_thread.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/qtterm/receiver_thread.h
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_tooltip.cpp
+      COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/qtterm/tooltip.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_tooltip.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/qtterm/tooltip.h
+    )
+    target_sources(
+      qtterm
+      PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/main.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_main_window.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_tooltip.cpp
+    )
+  else()
+    set_target_properties(qtterm PROPERTIES AUTOMOC ON AUTORCC ON)
+    target_sources(
+      qtterm
+      PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/qtterm/main_window.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/qtterm/grm_args_t_wrapper.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/qtterm/receiver_thread.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/qtterm/tooltip.cpp
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/qtterm/main.cpp
+    )
+  endif()
+  if(APPLE)
+    target_sources(qtterm PRIVATE lib/grm/qtterm/resources/qtterm.icns)
+    set_source_files_properties(
+      lib/grm/qtterm/resources/qtterm.icns PROPERTIES MACOSX_PACKAGE_LOCATION lib/grm/qtterm/resources/
+    )
+    set_target_properties(
+      qtterm
+      PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${PROJECT_SOURCE_DIR}/lib/grm/qtterm/resources/info.template.plist
+                 MACOSX_BUNDLE_BUNDLE_NAME "qtterm"
+                 MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.qtterm"
+                 MACOSX_BUNDLE_ICON_FILE "qtterm.icns"
+                 MACOSX_BUNDLE_BUNDLE_VERSION "${GR_VERSION}"
+    )
+    set(qtterm_MACOSX_BUNDLE_SIGNATURE "qtterm")
+    set(qtterm_MACOSX_MAIN_NIB_FILE "")
+  endif()
+  string(APPEND GR_REPORT "- qtterm: Yes\n")
+else()
+  string(APPEND GR_REPORT "- qtterm: No (Qt5 / Qt6 not found)\n")
+endif()
+
 if(GR_BUILD_DEMOS)
   add_executable(gksdemo lib/gks/demo.c)
   target_link_libraries(gksdemo PUBLIC gks_static)
@@ -1219,6 +1347,13 @@ if(GR_INSTALL)
   if(TARGET gksqt)
     install(
       TARGETS gksqt
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      BUNDLE DESTINATION Applications
+    )
+  endif()
+  if(TARGET qtterm)
+    install(
+      TARGETS qtterm
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
       BUNDLE DESTINATION Applications
     )
