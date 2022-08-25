@@ -25,6 +25,7 @@
 #   If false, do not try to use Ffmpeg.
 
 find_package(BZip2)
+find_package(Zlib)
 
 if(NOT FFMPEG_INCLUDE_DIR)
   find_path(FFMPEG_INCLUDE_DIR libavcodec/avcodec.h)
@@ -94,7 +95,7 @@ if(FFMPEG_INCLUDE_DIR
    AND FFMPEG_LIBRARY_SWSCALE
 )
   set(FFMPEG_LIBRARIES
-      "${FFMPEG_LIBRARY_AVFORMAT};${FFMPEG_LIBRARY_AVCODEC};${FFMPEG_LIBRARY_SWSCALE};${FFMPEG_LIBRARY_AVUTIL};m;pthread"
+      "${FFMPEG_LIBRARY_AVFORMAT};${FFMPEG_LIBRARY_AVCODEC};${FFMPEG_LIBRARY_SWSCALE};${FFMPEG_LIBRARY_AVUTIL};m;pthread;Zlib::Zlib"
   )
   if(APPLE)
     list(
