@@ -1070,7 +1070,7 @@ GR3API int gr3_createsurface3dmesh(int *mesh, int ncols, int nrows, float *px, f
               colors[offset + k * 3 + 2] = blue;
             }
           {
-            float normal[3];
+            float normal[3] = {0, 0, 0};
             int corner_indices[4][3] = {{0, 1, 2}, {2, 0, 5}, {1, 5, 0}, {5, 2, 1}};
             for (k = 0; k < 4; k++)
               {
