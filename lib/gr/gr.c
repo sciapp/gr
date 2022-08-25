@@ -4,6 +4,9 @@
 
 #ifdef _MSC_VER
 #define NO_THREADS 1
+#define GR_INLINE
+#else
+#define GR_INLINE __inline__
 #endif
 
 #include <stdio.h>
@@ -20,6 +23,10 @@ typedef __int64 int64_t;
 
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
+#endif
+
+#ifndef NO_THREADS
+#include <pthread.h>
 #endif
 
 #ifdef _WIN32
@@ -215,6 +222,27 @@ typedef struct text_node
   double width, height;
   double baseline[2];
 } text_node_t;
+
+typedef struct
+{
+  int px_width, px_height;
+  const data_point3d_t *start, *end;
+  kernel_f callback;
+  const void **extra_data;
+  double radius;
+  radius_f radius_callback;
+  double *pixels;
+  const point3d_t *ray_dir_init;
+  const point3d_t *ray_dir_x;
+  const point3d_t *ray_dir_y;
+  const point3d_t *ray_from_init;
+  const point3d_t *ray_from_x;
+  const point3d_t *ray_from_y;
+  double x_factor, y_factor;
+} volume_nogrid_data_struct;
+
+gauss_t interp_gauss_data = {1, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+tri_linear_t interp_tri_linear_data = {1, 1, 1};
 
 static volume_t vt = {1, 0, 1.25, 1000, 1000, NULL, 1};
 
@@ -4391,6 +4419,15 @@ void gr_inqtransformationparameters(double *camera_pos_x, double *camera_pos_y, 
   *focus_point_x = tx.focus_point_x;
   *focus_point_y = tx.focus_point_y;
   *focus_point_z = tx.focus_point_z;
+}
+void gr_inqtransformationparameters2(double *s_x, double *s_y, double *s_z)
+{
+
+  check_autoinit;
+
+  *s_x = tx.s_x;
+  *s_y = tx.s_y;
+  *s_z = tx.s_z;
 }
 
 /*!
@@ -13050,7 +13087,7 @@ static void bilinear_interpolation(double c00, double c10, double c01, double c1
 
 /*!
  * Set the number of threads which can run parallel. The default value is the number of threads the cpu has.
- * The only ussage right now is inside gr_cpubasedvolume.
+ * The only ussage right now is inside `gr_cpubasedvolume` and `gr_volume_nogrid`.
  *
  * \param[in] num number of threads
  */
@@ -13065,7 +13102,7 @@ void gr_setthreadnumber(int num)
 }
 
 /*!
- * Set the width and height of the resulting picture. These values are only used for gr_volume and gr_cpubasedvolume.
+ * Set the width and height of the resulting picture. These values are only used for the volume rendering methods.
  * The default values are 1000 for both.
  *
  * \param[in] width  width of the resulting image
@@ -13859,6 +13896,19 @@ static void ray_casting_thread(void *arg)
     }
 }
 
+static int system_processor_count()
+{
+#ifdef _WIN32
+#ifndef _SC_NPROCESSORS_ONLN
+  SYSTEM_INFO info;
+  GetSystemInfo(&info);
+#define sysconf(a) info.dwNumberOfProcessors
+#define _SC_NPROCESSORS_ONLN
+#endif
+#endif
+  return (int)sysconf(_SC_NPROCESSORS_ONLN);
+}
+
 /*!
  * Draw volume data with raycasting using the given algorithm and apply the current GR colormap.
  *
@@ -13970,15 +14020,7 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
       fprintf(stderr, "can't allocate memory");
       return;
     }
-#ifdef _WIN32
-#ifndef _SC_NPROCESSORS_ONLN
-  SYSTEM_INFO info;
-  GetSystemInfo(&info);
-#define sysconf(a) info.dwNumberOfProcessors
-#define _SC_NPROCESSORS_ONLN
-#endif
-#endif
-  threadnum = ((int)sysconf(_SC_NPROCESSORS_ONLN) - 1) < 256 ? (int)sysconf(_SC_NPROCESSORS_ONLN) - 1 : 256;
+  threadnum = (system_processor_count() - 1) < 256 ? system_processor_count() - 1 : 256;
   if (vt.max_threads > 0)
     {
       threadnum = vt.max_threads;
@@ -14164,4 +14206,876 @@ void gr_polygonmesh3d(int num_points, const double *px, const double *py, const 
       print_int_array("colors", num_connections, (int *)colors);
       gr_writestream("/>\n");
     }
+}
+
+GR_INLINE static void pt_scale(point3d_t *self, double const other)
+{
+  self->x *= other;
+  self->y *= other;
+  self->z *= other;
+}
+
+GR_INLINE static void pt_mad(point3d_t *self, double const fac, point3d_t const *b)
+{
+  /* self <- self + fac * b */
+  self->x += fac * b->x;
+  self->y += fac * b->y;
+  self->z += fac * b->z;
+}
+
+GR_INLINE static double pt_dot(point3d_t const *self, point3d_t const *other)
+{
+  return self->x * other->x + self->y * other->y + self->z * other->z;
+}
+
+
+GR_INLINE static double pt_length(point3d_t const *self)
+{
+  return sqrt(self->x * self->x + self->y * self->y + self->z * self->z);
+}
+
+GR_INLINE static double pt_smallest_mult(point3d_t const *self, point3d_t const *vec)
+{
+  double low = 1e15;
+  double _x = vec->x / self->x;
+  double _y = vec->y / self->y;
+  double _z = vec->z / self->z;
+  if (fabs(self->x) >= 1e-12)
+    {
+      low = _x;
+    }
+  if (fabs(self->y) >= 1e-12 && low > _y)
+    {
+      low = _y;
+    }
+  if (fabs(self->z) >= 1e-12 && low > _z)
+    {
+      low = _z;
+    }
+  return low;
+}
+
+GR_INLINE static void pt_sub(point3d_t *self, point3d_t const *other)
+{
+  self->x -= other->x;
+  self->y -= other->y;
+  self->z -= other->z;
+}
+
+GR_INLINE static double pt_biggest_mult(point3d_t const *self, point3d_t const *vec)
+{
+  double max = -1e15;
+  double _x = vec->x / self->x;
+  double _y = vec->y / self->y;
+  double _z = vec->z / self->z;
+  if (fabs(self->x) >= 1e-12)
+    {
+      max = _x;
+    }
+  if (fabs(self->y) >= 1e-12 && max < _y)
+    {
+      max = _y;
+    }
+  if (fabs(self->z) >= 1e-12 && max < _z)
+    {
+      max = _z;
+    }
+  return max;
+}
+
+GR_INLINE static void pt_matmul(point3d_t *self, point3d_t const *for_x, point3d_t const *for_y, point3d_t const *for_z)
+{
+  double tmp_x = self->x * for_x->x + self->y * for_y->x + self->z * for_z->x;
+  double tmp_y = self->x * for_x->y + self->y * for_y->y + self->z * for_z->y;
+  double tmp_z = self->x * for_x->z + self->y * for_y->z + self->z * for_z->z;
+  self->x = tmp_x;
+  self->y = tmp_y;
+  self->z = tmp_z;
+}
+
+GR_INLINE static void pt_unitize(point3d_t *pt)
+{
+  double l = pt_length(pt);
+  pt->x /= l;
+  pt->y /= l;
+  pt->z /= l;
+}
+
+/*!
+ * Initializes default parameters for interpolation using the gaussian multivariate distribution.
+ *
+ * if \f$\Sigma\f$ is the covariance matrice:
+ *
+ * \param[in]       determinant   \f$\left|\Sigma\right|\f$
+ * \param[in]       mat           \f$\Sigma^{-\frac{1}{2}}\f$
+ */
+void gr_volume_interp_gauss_init(double determinant, double *mat)
+{
+  interp_gauss_data.sqrt_det = sqrt(determinant);
+  interp_gauss_data.gauss_sig_1.x = mat[0];
+  interp_gauss_data.gauss_sig_2.x = mat[3];
+  interp_gauss_data.gauss_sig_3.x = mat[6];
+  interp_gauss_data.gauss_sig_1.y = mat[1];
+  interp_gauss_data.gauss_sig_2.y = mat[4];
+  interp_gauss_data.gauss_sig_3.y = mat[7];
+  interp_gauss_data.gauss_sig_1.z = mat[2];
+  interp_gauss_data.gauss_sig_2.z = mat[5];
+  interp_gauss_data.gauss_sig_3.z = mat[8];
+}
+
+/*!
+ * Integrates the given ray through a gaussian multivariate distribution.
+ *
+ * The parameters of the distribution are set using either `gr_volume_interp_gauss_init` or `extra_data` (as `gauss_t`)
+ *
+ * \param[in]       dt_pt   The data point with associated intensity and optional distribution parameters
+ * \param[in]       extra_data  Optional extra data for data point
+ * \param[in]       from    Start point of ray
+ * \param[in]       len     The direction and length of ray
+ * \returns                 The integrated density
+ */
+double gr_volume_interp_gauss(const data_point3d_t *dt_pt, const void *extra_data, const point3d_t *from,
+                              const point3d_t *len)
+{
+  point3d_t rfrom = *from, dir = *len;
+  point3d_t y_0, b;
+  const gauss_t *d = extra_data == NULL ? &interp_gauss_data : (const gauss_t *)extra_data;
+  double f, y_0b, ex;
+  pt_sub(&rfrom, &dt_pt->pt);
+
+  y_0 = rfrom;
+  b = dir;
+  pt_unitize(&b);
+
+  pt_matmul(&y_0, &d->gauss_sig_1, &d->gauss_sig_2, &d->gauss_sig_3);
+  pt_matmul(&b, &d->gauss_sig_1, &d->gauss_sig_2, &d->gauss_sig_3);
+
+  f = 1. / pt_length(&b);
+  pt_scale(&b, f);
+
+  y_0b = pt_dot(&y_0, &b);
+  ex = 0.5 * (y_0b * y_0b - pt_dot(&y_0, &y_0));
+
+  return 2 * M_PI * d->sqrt_det * f * dt_pt->data * exp(ex);
+}
+
+/*!
+ * Initializes default parameters for trilinear interpolation.
+ *
+ * \param[in]       grid_x   The extent of density
+ * \param[in]       grid_y   The extent of density
+ * \param[in]       grid_z   The extent of density
+ */
+void gr_volume_interp_tri_linear_init(double grid_x, double grid_y, double grid_z)
+{
+  interp_tri_linear_data.grid_x_re = 1. / grid_x;
+  interp_tri_linear_data.grid_y_re = 1. / grid_y;
+  interp_tri_linear_data.grid_z_re = 1. / grid_z;
+}
+
+/*!
+ * Integrates the given ray through a axis-aligned trilinear interpolation density.
+ *
+ * The parameters of the density are set using either `gr_volume_interp_tri_linear_init` or `extra_data` (as
+ * `tri_linear_t`)
+ *
+ * \param[in]       dt_pt       The data point with associated intensity and optional density parameters
+ * \param[in]       extra_data  Optional extra data for data point
+ * \param[in]       from        Start point of ray
+ * \param[in]       len         The direction and length of ray
+ * \returns                 The integrated density
+ */
+double gr_volume_interp_tri_linear(const data_point3d_t *dt_pt, const void *extra_data, const point3d_t *from,
+                                   const point3d_t *len)
+{
+  point3d_t rfrom = *from, dir = *len;
+
+  const tri_linear_t *d = extra_data == NULL ? &interp_tri_linear_data : (const tri_linear_t *)extra_data;
+
+  double dirlen = 0.5 * sqrt((dir.x * tx.x_axis_scale) * (dir.x * tx.x_axis_scale) +
+                             (dir.y * tx.y_axis_scale) * (dir.y * tx.y_axis_scale) +
+                             (dir.z * tx.z_axis_scale) * (dir.z * tx.z_axis_scale));
+  int i;
+  double low, high;
+  int current = 0;
+  double val = 0;
+
+  double steps[5] = {0., 0., 0., 0., 0.};
+
+  /* convert ray to model space */
+  pt_sub(&rfrom, &dt_pt->pt);
+
+  if (dir.x < 0)
+    {
+      dir.x *= -d->grid_x_re;
+      rfrom.x *= -d->grid_x_re;
+    }
+  else
+    {
+      dir.x *= d->grid_x_re;
+      rfrom.x *= d->grid_x_re;
+    }
+
+  if (dir.y < 0)
+    {
+      dir.y *= -d->grid_y_re;
+      rfrom.y *= -d->grid_y_re;
+    }
+  else
+    {
+      dir.y *= d->grid_y_re;
+      rfrom.y *= d->grid_y_re;
+    }
+
+  if (dir.z < 0)
+    {
+      dir.z *= -d->grid_z_re;
+      rfrom.z *= -d->grid_z_re;
+    }
+  else
+    {
+      dir.z *= d->grid_z_re;
+      rfrom.z *= d->grid_z_re;
+    }
+
+  {
+    point3d_t high_pt = {1, 1, 1};
+    point3d_t low_pt = {-1, -1, -1};
+    pt_sub(&high_pt, &rfrom);
+    pt_sub(&low_pt, &rfrom);
+    high = pt_smallest_mult(&dir, &high_pt);
+    low = pt_biggest_mult(&dir, &low_pt);
+  }
+
+  /* check if ray even intersects density */
+  if (low > high) return -1;
+
+  {
+    point3d_t middle = rfrom;
+    pt_mad(&middle, 0.5 * (low + high), &dir);
+    if (!((-1 <= middle.x && middle.x <= 1) && (-1 <= middle.y && middle.y <= 1) && (-1 <= middle.z && middle.z <= 1)))
+      {
+        return -1;
+      }
+  }
+
+  {
+    /* Find relevant segments along ray */
+    point3d_t middir;
+    middir.x = -rfrom.x / dir.x;
+    middir.y = -rfrom.y / dir.y;
+    middir.z = -rfrom.z / dir.z;
+
+    steps[current++] = low;
+
+    if (fabs(dir.x) >= 1e-12)
+      {
+        if (middir.x > low && middir.x < high) steps[current++] = middir.x;
+      }
+
+    if (fabs(dir.y) >= 1e-12)
+      {
+        if (middir.y > low && middir.y < high) steps[current++] = middir.y;
+      }
+
+    if (fabs(dir.z) >= 1e-12)
+      {
+        if (middir.z > low && middir.z < high) steps[current++] = middir.z;
+      }
+
+    if (current > 3 && steps[2] > steps[3])
+      {
+        float v = steps[3];
+        steps[3] = steps[2];
+        steps[2] = v;
+      }
+    if (current > 2 && steps[1] > steps[2])
+      {
+        float v = steps[2];
+        steps[2] = steps[1];
+        steps[1] = v;
+      }
+    if (current > 3 && steps[2] > steps[3])
+      {
+        float v = steps[3];
+        steps[3] = steps[2];
+        steps[2] = v;
+      }
+
+    steps[current] = high;
+  }
+
+  /* Integrate each segment */
+  for (i = 0; i < current; ++i)
+    {
+      double l_from_seg = steps[i];
+      double l_to_seg = steps[i + 1];
+      double half;
+      if (l_to_seg - l_from_seg < 1e-10) continue;
+      half = 0.5 * (l_from_seg + l_to_seg);
+
+      if (rfrom.x + half * dir.x < 0)
+        {
+          rfrom.x *= -1;
+          dir.x *= -1;
+        }
+      if (rfrom.y + half * dir.y < 0)
+        {
+          rfrom.y *= -1;
+          dir.y *= -1;
+        }
+      if (rfrom.z + half * dir.z < 0)
+        {
+          rfrom.z *= -1;
+          dir.z *= -1;
+        }
+
+      {
+        double a = 1 - rfrom.x - rfrom.y - rfrom.z + rfrom.x * rfrom.y + rfrom.x * rfrom.z + rfrom.y * rfrom.z -
+                   rfrom.x * rfrom.y * rfrom.z;
+        double b = -dir.x - dir.y - dir.z + dir.x * rfrom.y + rfrom.x * dir.y + dir.x * rfrom.z + rfrom.x * dir.z +
+                   dir.y * rfrom.z + rfrom.y * dir.z - dir.x * rfrom.y * rfrom.z - rfrom.x * dir.y * rfrom.z -
+                   rfrom.x * rfrom.y * dir.z;
+        double c = dir.x * dir.y * (1 - rfrom.z) + dir.x * dir.z * (1 - rfrom.y) + dir.y * dir.z * (1 - rfrom.x);
+        double d = -dir.x * dir.y * dir.z;
+        double s_s_2 = l_from_seg * l_from_seg;
+        double s_s_3 = s_s_2 * l_from_seg;
+        double s_s_4 = s_s_3 * l_from_seg;
+        double s_e_2 = l_to_seg * l_to_seg;
+        double s_e_3 = s_e_2 * l_to_seg;
+        double s_e_4 = s_e_3 * l_to_seg;
+        val += 0.25 * d * (s_e_4 - s_s_4) + (1. / 3.) * c * (s_e_3 - s_s_3) + 0.5 * b * (s_e_2 - s_s_2) +
+               a * (l_to_seg - l_from_seg);
+      }
+    }
+
+  return dt_pt->data * val * dirlen;
+}
+
+void *volume_nogrid_worker(void *data)
+{
+  volume_nogrid_data_struct *d = (volume_nogrid_data_struct *)data;
+  int px_width = d->px_width, px_height = d->px_height;
+  point3d_t ray_dir_init = *(d->ray_dir_init);
+  point3d_t ray_dir_x = *(d->ray_dir_x);
+  point3d_t ray_dir_y = *(d->ray_dir_y);
+  point3d_t ray_from_init = *(d->ray_from_init);
+  point3d_t ray_from_x = *(d->ray_from_x);
+  point3d_t ray_from_y = *(d->ray_from_y);
+  double *pixels = d->pixels;
+  double x_factor = d->x_factor, y_factor = d->y_factor;
+  kernel_f callback = d->callback;
+  const data_point3d_t *curr_dt_pt = d->start;
+  const void **extra_data = d->extra_data;
+
+  /* Initialize pixel buffer */
+  int my_x, my_y;
+  for (my_y = 0; my_y < px_height; ++my_y)
+    {
+      for (my_x = 0; my_x < px_width; ++my_x)
+        {
+          pixels[my_x + my_y * px_width] = -1;
+        }
+    }
+
+  while (curr_dt_pt < d->end)
+    {
+      int y_start, y_fin;
+      double x, y, radius, x_radius, y_radius;
+      point3d_t _z;
+
+      /* Zero optimization */
+      if (curr_dt_pt->data == 0)
+        {
+          ++curr_dt_pt;
+          if (extra_data != NULL) ++extra_data;
+          continue;
+        }
+
+      /* Calculate extent on image */
+      radius = d->radius;
+      if (d->radius_callback != NULL)
+        {
+          radius = d->radius_callback(curr_dt_pt, (const void *)extra_data);
+        }
+
+      _z = curr_dt_pt->pt;
+      apply_world_xform(&_z.x, &_z.y, &_z.z);
+
+      x = (_z.x + 1) * px_width / 2;
+      y = (-_z.y + 1) * px_height / 2;
+
+      x_radius = radius / x_factor;
+      y_radius = radius / y_factor;
+
+      y_start = ceil(y - y_radius);
+      y_fin = ceil(y + y_radius);
+      if (y_start < 0)
+        {
+          y_start = 0;
+        }
+      if (y_fin > px_height)
+        {
+          y_fin = px_height;
+        }
+
+      for (my_y = y_start; my_y < y_fin; ++my_y)
+        {
+          double tmp = (my_y - y) / y_radius;
+          double x_len = x_radius * sqrt(1. - tmp * tmp);
+
+          int x_start = ceil(x - x_len);
+          int x_fin = ceil(x + x_len);
+          if (x_start < 0)
+            {
+              x_start = 0;
+            }
+          if (x_fin > px_width)
+            {
+              x_fin = px_width;
+            }
+          for (my_x = x_start; my_x < x_fin; ++my_x)
+            {
+              /* calculate ray and value */
+              point3d_t ray_from = ray_from_init;
+              point3d_t ray_dir = ray_dir_init;
+              double val;
+              int idx;
+              pt_mad(&ray_from, my_x, &ray_from_x);
+              pt_mad(&ray_dir, my_x, &ray_dir_x);
+              pt_mad(&ray_from, my_y, &ray_from_y);
+              pt_mad(&ray_dir, my_y, &ray_dir_y);
+
+              val = callback(curr_dt_pt, (const void *)extra_data, &ray_from, &ray_dir);
+              if (val < 0)
+                {
+                  continue;
+                }
+
+              idx = my_x + my_y * px_width;
+
+              if (pixels[idx] < 0)
+                {
+                  pixels[idx] = 0;
+                }
+              pixels[idx] += val;
+            }
+        }
+
+      ++curr_dt_pt;
+      if (extra_data != NULL) ++extra_data;
+    }
+  return 0;
+}
+
+point3d_t pt_rev_calc(double *view_inv, double *proj_inv, double x, double y, double z, double w)
+{
+  /* Reverses coordinates from normalised device space to world space */
+  double prj_x = proj_inv[0 * 4 + 0] * x + proj_inv[0 * 4 + 1] * y + proj_inv[0 * 4 + 2] * z + proj_inv[0 * 4 + 3] * w;
+  double prj_y = proj_inv[1 * 4 + 0] * x + proj_inv[1 * 4 + 1] * y + proj_inv[1 * 4 + 2] * z + proj_inv[1 * 4 + 3] * w;
+  double prj_z = proj_inv[2 * 4 + 0] * x + proj_inv[2 * 4 + 1] * y + proj_inv[2 * 4 + 2] * z + proj_inv[2 * 4 + 3] * w;
+  double prj_w = proj_inv[3 * 4 + 0] * x + proj_inv[3 * 4 + 1] * y + proj_inv[3 * 4 + 2] * z + proj_inv[3 * 4 + 3] * w;
+  point3d_t ret;
+  ret.x = view_inv[0 * 4 + 0] * prj_x + view_inv[0 * 4 + 1] * prj_y + view_inv[0 * 4 + 2] * prj_z +
+          view_inv[0 * 4 + 3] * prj_w;
+  ret.y = view_inv[1 * 4 + 0] * prj_x + view_inv[1 * 4 + 1] * prj_y + view_inv[1 * 4 + 2] * prj_z +
+          view_inv[1 * 4 + 3] * prj_w;
+  ret.z = view_inv[2 * 4 + 0] * prj_x + view_inv[2 * 4 + 1] * prj_y + view_inv[2 * 4 + 2] * prj_z +
+          view_inv[2 * 4 + 3] * prj_w;
+  w = view_inv[3 * 4 + 0] * prj_x + view_inv[3 * 4 + 1] * prj_y + view_inv[3 * 4 + 2] * prj_z +
+      view_inv[3 * 4 + 3] * prj_w;
+  if (fabs(w) >= 1e-12)
+    {
+      ret.x /= w;
+      ret.y /= w;
+      ret.z /= w;
+    }
+  /* w is now not needed */
+  ret.x /= tx.x_axis_scale;
+  ret.y /= tx.y_axis_scale;
+  ret.z /= tx.z_axis_scale;
+  return ret;
+}
+
+/*!
+ * Draws unstructured volume data using splatting, given volume rendering model and currently set GR colormap.
+ *
+ * Each data point is only calculated and drawn as far as `radius`/`radius_callback`.
+ * The used interpolation method can be given using `callback`
+ * `callback` is expected to integrate along a given ray for the given data point.
+ * For trilinear interpolation, you can use `gr_volume_interp_tri_linear`.
+ * For interpolation using the multivariate gaussian distribution, you can use `gr_volume_interp_gauss`.
+ *
+ * \param[in]       ndt_pt              Count of data points (`dt_pts`)
+ * \param[in]       dt_pts              The data points to draw
+ * \param[in]       extra_data          Optional extra data, one for each data point if specified
+ * \param[in]       algorithm           Selected algorithm to draw
+ * \param[in]       callback            Callback to use to integrate
+ * \param[in,out]   dmin_val            if set, will contain lower bound of pixel intensity
+ * \param[in,out]   dmax_val            if set, will contain upper bound of pixel intensity
+ * \param[in]       radius              the calculation radius of each data point in world coordinates
+ * \param[in]       radius_callback     if given, ignores radius and can return the calculation radius per data point
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * The supported volume rendering models are:
+ *
+ * +---------------------+---+-----------------------------+
+ * |GR_VOLUME_EMISSION   |  0|emission model               |
+ * +---------------------+---+-----------------------------+
+ * |GR_VOLUME_ABSORPTION |  1|absorption model             |
+ * +---------------------+---+-----------------------------+
+ *
+ * \endverbatim
+ */
+void gr_volume_nogrid(unsigned long ndt_pt, const data_point3d_t *dt_pts, const void *extra_data, int algorithm,
+                      kernel_f callback, double *dmin_val, double *dmax_val, double radius, radius_f radius_callback)
+{
+  point3d_t camera, up;
+  point3d_t ray_from_init, ray_from_x, ray_from_y;
+  point3d_t ray_dir_init, ray_dir_x, ray_dir_y;
+  double aspect, x_factor, y_factor;
+  double view_inv[16], proj_inv[16];
+  int i, x, y, thread_count;
+#ifndef NO_THREADS
+  pthread_t *threads;
+#endif
+  volume_nogrid_data_struct *data_structs;
+  double *pixels;
+
+  point3d_t ray_dir;
+  camera.x = tx.camera_pos_x;
+  camera.y = tx.camera_pos_y;
+  camera.z = tx.camera_pos_z;
+
+  up.x = tx.up_x;
+  up.y = tx.up_y;
+  up.z = tx.up_z;
+
+  ray_dir.x = tx.focus_point_x;
+  ray_dir.y = tx.focus_point_y;
+  ray_dir.z = tx.focus_point_z;
+
+  pt_sub(&ray_dir, &camera);
+  pt_unitize(&ray_dir);
+
+  /* Calculate inverse of view matrice */
+
+  aspect = (vxmax - vxmin) / (vymax - vymin);
+
+  view_inv[0 * 4 + 0] = tx.s_x;
+  view_inv[1 * 4 + 0] = tx.s_y;
+  view_inv[2 * 4 + 0] = tx.s_z;
+  view_inv[3 * 4 + 0] = 0;
+
+  view_inv[0 * 4 + 1] = up.x;
+  view_inv[1 * 4 + 1] = up.y;
+  view_inv[2 * 4 + 1] = up.z;
+  view_inv[3 * 4 + 1] = 0;
+
+  view_inv[0 * 4 + 2] = -ray_dir.x;
+  view_inv[1 * 4 + 2] = -ray_dir.y;
+  view_inv[2 * 4 + 2] = -ray_dir.z;
+  view_inv[3 * 4 + 2] = 0;
+
+  view_inv[0 * 4 + 3] = camera.x;
+  view_inv[1 * 4 + 3] = camera.y;
+  view_inv[2 * 4 + 3] = camera.z;
+  view_inv[3 * 4 + 3] = 1;
+
+  /* Calculate inverse of projection matrice */
+  if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+    {
+      double left = gpx.left, right = gpx.right, bottom = gpx.bottom, top = gpx.top;
+      if (aspect > 1)
+        {
+          right *= aspect;
+          left *= aspect;
+        }
+      else
+        {
+          top /= aspect;
+          bottom /= aspect;
+        }
+
+      proj_inv[0 * 4 + 0] = (right - left) / 2;
+      proj_inv[1 * 4 + 0] = 0;
+      proj_inv[2 * 4 + 0] = 0;
+      proj_inv[3 * 4 + 0] = 0;
+
+      proj_inv[0 * 4 + 1] = 0;
+      proj_inv[1 * 4 + 1] = (top - bottom) / 2;
+      proj_inv[2 * 4 + 1] = 0;
+      proj_inv[3 * 4 + 1] = 0;
+
+      proj_inv[0 * 4 + 2] = 0;
+      proj_inv[1 * 4 + 2] = 0;
+      proj_inv[2 * 4 + 2] = (gpx.far_plane - gpx.near_plane) / -2;
+      proj_inv[3 * 4 + 2] = 0;
+
+      proj_inv[0 * 4 + 3] = (left + right) / 2;
+      proj_inv[1 * 4 + 3] = (top + bottom) / 2;
+      proj_inv[2 * 4 + 3] = (gpx.far_plane + gpx.near_plane) / -2;
+      proj_inv[3 * 4 + 3] = 1;
+    }
+  else if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE)
+    {
+      double f = cos(gpx.fov * M_PI / 360) / sin(gpx.fov * M_PI / 360); /* cot alpha/2 */
+      double c = (gpx.far_plane + gpx.near_plane) / (gpx.near_plane - gpx.far_plane);
+      double d_inv = (gpx.near_plane - gpx.far_plane) / (2 * gpx.far_plane * gpx.near_plane);
+
+      if (aspect >= 1)
+        {
+          proj_inv[0 * 4 + 0] = aspect / f;
+        }
+      else
+        {
+          proj_inv[0 * 4 + 0] = 1. / f;
+        }
+      proj_inv[1 * 4 + 0] = 0;
+      proj_inv[2 * 4 + 0] = 0;
+      proj_inv[3 * 4 + 0] = 0;
+
+      proj_inv[0 * 4 + 1] = 0;
+      if (aspect >= 1)
+        {
+          proj_inv[1 * 4 + 1] = 1. / f;
+        }
+      else
+        {
+          proj_inv[1 * 4 + 1] = 1. / (f * aspect);
+        }
+      proj_inv[2 * 4 + 1] = 0;
+      proj_inv[3 * 4 + 1] = 0;
+
+      proj_inv[0 * 4 + 2] = 0;
+      proj_inv[1 * 4 + 2] = 0;
+      proj_inv[2 * 4 + 2] = 0;
+      proj_inv[3 * 4 + 2] = d_inv;
+
+      proj_inv[0 * 4 + 3] = 0;
+      proj_inv[1 * 4 + 3] = 0;
+      proj_inv[2 * 4 + 3] = -1;
+      proj_inv[3 * 4 + 3] = c * d_inv;
+    }
+
+  {
+    /* Calculate ray positions and directions */
+    double x_start = -1 + 0. / vt.picture_width;
+    double x_next = -1 + 2. / vt.picture_width;
+    double y_start = 1 - 0. / vt.picture_height;
+    double y_next = 1 - 2. / vt.picture_height;
+
+    ray_from_init = pt_rev_calc(view_inv, proj_inv, x_start, y_start, -1, 1);
+    ray_from_x = pt_rev_calc(view_inv, proj_inv, x_next, y_start, -1, 1);
+    pt_sub(&ray_from_x, &ray_from_init);
+    ray_from_y = pt_rev_calc(view_inv, proj_inv, x_start, y_next, -1, 1);
+    pt_sub(&ray_from_y, &ray_from_init);
+
+    ray_dir_init = pt_rev_calc(view_inv, proj_inv, x_start, y_start, 1, 1);
+    pt_sub(&ray_dir_init, &ray_from_init);
+    {
+      point3d_t temp = pt_rev_calc(view_inv, proj_inv, x_next, y_start, -1, 1);
+      ray_dir_x = pt_rev_calc(view_inv, proj_inv, x_next, y_start, 1, 1);
+      pt_sub(&ray_dir_x, &temp);
+      pt_sub(&ray_dir_x, &ray_dir_init);
+    }
+
+    {
+      point3d_t temp = pt_rev_calc(view_inv, proj_inv, x_start, y_next, -1, 1);
+      ray_dir_y = pt_rev_calc(view_inv, proj_inv, x_start, y_next, 1, 1);
+      pt_sub(&ray_dir_y, &temp);
+      pt_sub(&ray_dir_y, &ray_dir_init);
+    }
+  }
+
+  x_factor = pt_length(&ray_from_x);
+  y_factor = pt_length(&ray_from_y);
+
+  pixels = (double *)calloc(vt.picture_width * vt.picture_height, sizeof(double));
+
+#ifndef NO_THREADS
+  thread_count = (system_processor_count() - 1) < 256 ? system_processor_count() - 1 : 256;
+  if (vt.max_threads > 0)
+    {
+      thread_count = vt.max_threads;
+    }
+
+  if (ndt_pt < (unsigned long)thread_count)
+    {
+      thread_count = ndt_pt;
+    }
+
+  threads = (pthread_t *)calloc(thread_count, sizeof(pthread_t));
+#else
+  thread_count = 1;
+#endif
+  data_structs = (volume_nogrid_data_struct *)calloc(thread_count, sizeof(volume_nogrid_data_struct));
+
+  /* Calculate bounds and start threads */
+
+  for (i = 0; i < thread_count; ++i)
+    {
+      unsigned long start = i * ndt_pt / thread_count;
+      unsigned long end = (i + 1) * ndt_pt / thread_count;
+
+      if (i == thread_count - 1)
+        {
+          end = ndt_pt;
+        }
+
+      if (i == 0)
+        {
+          data_structs[i].pixels = pixels;
+        }
+      else
+        {
+          data_structs[i].pixels = (double *)calloc(vt.picture_width * vt.picture_height, sizeof(double));
+        }
+
+      data_structs[i].px_width = vt.picture_width;
+      data_structs[i].px_height = vt.picture_height;
+      data_structs[i].start = dt_pts + start;
+      data_structs[i].end = dt_pts + end;
+      data_structs[i].callback = callback;
+      if (extra_data == NULL)
+        {
+          data_structs[i].extra_data = NULL;
+        }
+      else
+        {
+          data_structs[i].extra_data = (const void **)extra_data + start;
+        }
+      data_structs[i].radius = radius;
+      data_structs[i].radius_callback = radius_callback;
+      data_structs[i].ray_dir_init = &ray_dir_init;
+      data_structs[i].ray_dir_x = &ray_dir_x;
+      data_structs[i].ray_dir_y = &ray_dir_y;
+      data_structs[i].ray_from_init = &ray_from_init;
+      data_structs[i].ray_from_x = &ray_from_x;
+      data_structs[i].ray_from_y = &ray_from_y;
+      data_structs[i].x_factor = x_factor;
+      data_structs[i].y_factor = y_factor;
+#ifndef NO_THREADS
+      pthread_create(threads + i, NULL, volume_nogrid_worker, (void *)(data_structs + i));
+#else
+      volume_nogrid_worker((void *)(data_structs + i));
+#endif
+    }
+
+
+#ifndef NO_THREADS
+  /* Wait for threads to end and reduce to one image buffer */
+  for (i = 0; i < thread_count; ++i)
+    {
+      pthread_join(threads[i], NULL);
+
+      if (i != 0)
+        {
+          double *px_t = data_structs[i].pixels;
+          for (y = 0; y < vt.picture_height; ++y)
+            {
+              for (x = 0; x < vt.picture_width; ++x)
+                {
+                  int idx = x + y * vt.picture_width;
+
+                  double v = px_t[idx];
+                  if (v >= 0)
+                    {
+                      double v2 = pixels[idx];
+                      if (v2 < 0)
+                        {
+                          pixels[idx] = v;
+                        }
+                      else
+                        {
+                          pixels[idx] = v2 + v;
+                        }
+                    }
+                }
+            }
+          free(data_structs[i].pixels);
+        }
+    }
+
+  free(threads);
+#endif
+  free(data_structs);
+
+  /* Next Step: convert to absorption model if necessary and calculate min and max */
+  {
+    double dmin = 1e15;
+    double dmax = -1;
+    int x, y;
+    int *ipixels, *colormap;
+    if (algorithm == GR_VOLUME_EMISSION)
+      {
+        for (y = 0; y < vt.picture_height; ++y)
+          {
+            for (x = 0; x < vt.picture_width; ++x)
+              {
+                double v = pixels[x + y * vt.picture_width];
+                if (v >= 0)
+                  {
+                    dmin = min(dmin, v);
+                    dmax = max(dmax, v);
+                  }
+              }
+          }
+      }
+    else
+      {
+        for (y = 0; y < vt.picture_height; ++y)
+          {
+            for (x = 0; x < vt.picture_width; ++x)
+              {
+                double v = pixels[x + y * vt.picture_width];
+                if (v >= 0)
+                  {
+                    v = pixels[x + y * vt.picture_width] = exp(-v);
+                    dmin = min(dmin, v);
+                    dmax = max(dmax, v);
+                  }
+              }
+          }
+      }
+    if (dmin_val != NULL)
+      {
+        *dmin_val = dmin;
+      }
+    if (dmax_val != NULL)
+      {
+        *dmax_val = dmax;
+      }
+
+    /* Convert double to color according to selected colormap, draw and cleanup */
+    ipixels = (int *)gks_malloc(vt.picture_width * vt.picture_height * sizeof(int));
+
+    colormap = (int *)gks_malloc((last_color - first_color + 1) * sizeof(int));
+    for (i = first_color; i <= last_color; i++)
+      {
+        gr_inqcolor(i, colormap + i - first_color);
+      }
+
+    for (i = 0; i < vt.picture_width * vt.picture_height; i++)
+      {
+        if (pixels[i] >= 0)
+          {
+            if (dmax == 0)
+              {
+                ipixels[i] = 0;
+              }
+            else
+              {
+                ipixels[i] = (255u << 24) + colormap[(int)(pixels[i] / dmax * (last_color - first_color))];
+              }
+          }
+      }
+    free(pixels);
+    free(colormap);
+
+    drawimage_calculation(lx.xmin, lx.xmax, lx.ymin, lx.ymax, vt.picture_width, vt.picture_height, ipixels, 0);
+
+    free(ipixels);
+  }
 }
