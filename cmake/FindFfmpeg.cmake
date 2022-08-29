@@ -24,7 +24,7 @@
 # ``Ffmpeg_FOUND``
 #   If false, do not try to use Ffmpeg.
 
-find_package(BZip2)
+find_package(Zlib)
 
 if(NOT FFMPEG_INCLUDE_DIR)
   find_path(FFMPEG_INCLUDE_DIR libavcodec/avcodec.h)
@@ -93,9 +93,49 @@ if(FFMPEG_INCLUDE_DIR
    AND FFMPEG_LIBRARY_AVUTIL
    AND FFMPEG_LIBRARY_SWSCALE
 )
-  set(FFMPEG_LIBRARIES
-      "${FFMPEG_LIBRARY_AVFORMAT};${FFMPEG_LIBRARY_AVCODEC};${FFMPEG_LIBRARY_SWSCALE};${FFMPEG_LIBRARY_AVUTIL};m;pthread"
-  )
+  if(NOT TARGET Ffmpeg::Avformat)
+    add_library(Ffmpeg::Avformat UNKNOWN IMPORTED)
+    set_target_properties(
+      Ffmpeg::Avformat
+      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_INCLUDE_DIRS}"
+                 IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+                 IMPORTED_LOCATION "${FFMPEG_LIBRARY_AVFORMAT}"
+                 INTERFACE_LINK_LIBRARIES "Zlib::Zlib"
+    )
+  endif()
+
+  if(NOT TARGET Ffmpeg::Avcodec)
+    add_library(Ffmpeg::Avcodec UNKNOWN IMPORTED)
+    set_target_properties(
+      Ffmpeg::Avcodec
+      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_INCLUDE_DIRS}"
+                 IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+                 IMPORTED_LOCATION "${FFMPEG_LIBRARY_AVCODEC}"
+                 INTERFACE_LINK_LIBRARIES "Zlib::Zlib"
+    )
+  endif()
+
+  if(NOT TARGET Ffmpeg::Swscale)
+    add_library(Ffmpeg::Swscale UNKNOWN IMPORTED)
+    set_target_properties(
+      Ffmpeg::Swscale
+      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_INCLUDE_DIRS}"
+                 IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+                 IMPORTED_LOCATION "${FFMPEG_LIBRARY_SWSCALE}"
+    )
+  endif()
+
+  if(NOT TARGET Ffmpeg::Avutil)
+    add_library(Ffmpeg::Avutil UNKNOWN IMPORTED)
+    set_target_properties(
+      Ffmpeg::Avutil
+      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_INCLUDE_DIRS}"
+                 IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+                 IMPORTED_LOCATION "${FFMPEG_LIBRARY_AVUTIL}"
+    )
+  endif()
+
+  set(FFMPEG_LIBRARIES "Ffmpeg::Avformat;Ffmpeg::Avcodec;Ffmpeg::Swscale;Ffmpeg::Avutil;m;pthread")
   if(APPLE)
     list(
       APPEND
@@ -103,6 +143,7 @@ if(FFMPEG_INCLUDE_DIR
       "-framework VideoToolbox;-framework CoreVideo;-framework CoreFoundation;-framework CoreServices;-framework CoreMedia"
     )
   endif()
+
   try_compile(
     FFMPEG_TEST_COMPILED ${CMAKE_CURRENT_BINARY_DIR}/ffmpeg_test ${CMAKE_CURRENT_LIST_DIR}/ffmpeg_test.cxx
     CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${FFMPEG_INCLUDE_DIR}"
@@ -115,9 +156,48 @@ if(FFMPEG_INCLUDE_DIR
      AND FFMPEG_LIBRARY_VPX
      AND FFMPEG_LIBRARY_OPENH264
   )
-    list(APPEND FFMPEG_LIBRARIES
-         "${FFMPEG_LIBRARY_THEORA};${FFMPEG_LIBRARY_OGG};${FFMPEG_LIBRARY_VPX};${FFMPEG_LIBRARY_OPENH264}"
-    )
+    if(NOT TARGET Ffmpeg::Theora)
+      add_library(Ffmpeg::Theora UNKNOWN IMPORTED)
+      set_target_properties(
+        Ffmpeg::Theora
+        PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_INCLUDE_DIRS}"
+                   IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+                   IMPORTED_LOCATION "${FFMPEG_LIBRARY_THEORA}"
+                   INTERFACE_LINK_LIBRARIES "Zlib::Zlib"
+      )
+    endif()
+
+    if(NOT TARGET Ffmpeg::Ogg)
+      add_library(Ffmpeg::Ogg UNKNOWN IMPORTED)
+      set_target_properties(
+        Ffmpeg::Ogg
+        PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_INCLUDE_DIRS}"
+                   IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+                   IMPORTED_LOCATION "${FFMPEG_LIBRARY_OGG}"
+      )
+    endif()
+
+    if(NOT TARGET Ffmpeg::Vpx)
+      add_library(Ffmpeg::Vpx UNKNOWN IMPORTED)
+      set_target_properties(
+        Ffmpeg::Vpx
+        PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_INCLUDE_DIRS}"
+                   IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+                   IMPORTED_LOCATION "${FFMPEG_LIBRARY_VPX}"
+      )
+    endif()
+
+    if(NOT TARGET Ffmpeg::OpenH264)
+      add_library(Ffmpeg::OpenH264 UNKNOWN IMPORTED)
+      set_target_properties(
+        Ffmpeg::OpenH264
+        PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_INCLUDE_DIRS}"
+                   IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+                   IMPORTED_LOCATION "${FFMPEG_LIBRARY_OPENH264}"
+      )
+    endif()
+
+    list(APPEND FFMPEG_LIBRARIES "Ffmpeg::Theora;Ffmpeg::Ogg;Ffmpeg::Vpx;Ffmpeg::OpenH264")
     try_compile(
       FFMPEG_TEST_COMPILED ${CMAKE_CURRENT_BINARY_DIR}/ffmpeg_test ${CMAKE_CURRENT_LIST_DIR}/ffmpeg_test.cxx
       CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${FFMPEG_INCLUDE_DIR}"
@@ -145,13 +225,10 @@ if(Ffmpeg_FOUND)
   set(FFMPEG_INCLUDE_DIRS "${FFMPEG_INCLUDE_DIR}")
 
   if(NOT TARGET Ffmpeg::Ffmpeg)
-    add_library(Ffmpeg::Ffmpeg UNKNOWN IMPORTED)
+    add_library(Ffmpeg::Ffmpeg INTERFACE IMPORTED)
     set_target_properties(
-      Ffmpeg::Ffmpeg
-      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_INCLUDE_DIRS}"
-                 IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
-                 IMPORTED_LOCATION "${FFMPEG_LIBRARY_AVFORMAT}"
-                 INTERFACE_LINK_LIBRARIES "${FFMPEG_LIBRARIES};BZip2::BZip2"
+      Ffmpeg::Ffmpeg PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_INCLUDE_DIRS}" INTERFACE_LINK_LIBRARIES
+                                                                                       "${FFMPEG_LIBRARIES}"
     )
   endif()
   if(APPLE)
