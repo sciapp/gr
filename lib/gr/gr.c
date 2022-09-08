@@ -4420,15 +4420,6 @@ void gr_inqtransformationparameters(double *camera_pos_x, double *camera_pos_y, 
   *focus_point_y = tx.focus_point_y;
   *focus_point_z = tx.focus_point_z;
 }
-void gr_inqtransformationparameters2(double *s_x, double *s_y, double *s_z)
-{
-
-  check_autoinit;
-
-  *s_x = tx.s_x;
-  *s_y = tx.s_y;
-  *s_z = tx.s_z;
-}
 
 /*!
  *  Return the parameters for the orthographic projection.
@@ -13087,7 +13078,7 @@ static void bilinear_interpolation(double c00, double c10, double c01, double c1
 
 /*!
  * Set the number of threads which can run parallel. The default value is the number of threads the cpu has.
- * The only ussage right now is inside `gr_cpubasedvolume` and `gr_volume_nogrid`.
+ * The only usage right now is inside `gr_cpubasedvolume` and `gr_volume_nogrid`.
  *
  * \param[in] num number of threads
  */
@@ -14552,7 +14543,7 @@ double gr_volume_interp_tri_linear(const data_point3d_t *dt_pt, const void *extr
   return dt_pt->data * val * dirlen;
 }
 
-void *volume_nogrid_worker(void *data)
+static void *volume_nogrid_worker(void *data)
 {
   volume_nogrid_data_struct *d = (volume_nogrid_data_struct *)data;
   int px_width = d->px_width, px_height = d->px_height;
@@ -14668,7 +14659,7 @@ void *volume_nogrid_worker(void *data)
   return 0;
 }
 
-point3d_t pt_rev_calc(double *view_inv, double *proj_inv, double x, double y, double z, double w)
+static point3d_t pt_rev_calc(double *view_inv, double *proj_inv, double x, double y, double z, double w)
 {
   /* Reverses coordinates from normalised device space to world space */
   double prj_x = proj_inv[0 * 4 + 0] * x + proj_inv[0 * 4 + 1] * y + proj_inv[0 * 4 + 2] * z + proj_inv[0 * 4 + 3] * w;
