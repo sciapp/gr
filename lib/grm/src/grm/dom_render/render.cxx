@@ -18,6 +18,7 @@
 #include <grm/dom_render/render.hxx>
 #include <grm/dom_render/NotFoundError.hxx>
 #include <grm/dom_render/context.hxx>
+#include "gks.h"
 #include "gr.h"
 #include "gr3.h"
 #include "grm/layout.hxx"
@@ -26,6 +27,11 @@ std::shared_ptr<GR::Element> global_root;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {"group", "layout-grid", "layout-gridelement"};
+
+static std::map<std::string, double> symbol_to_meters_per_unit{
+    {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
+    {"\"", 0.0254}, {"ft", 0.3048}, {"'", 0.0254}, {"pc", 0.0254 / 6.0}, {"pt", 0.0254 / 72.0},
+};
 
 static void markerHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context,
                          const std::string &str)
@@ -445,7 +451,25 @@ static void axes(const std::shared_ptr<GR::Element> &element, const std::shared_
   double y_org = static_cast<double>(element->getAttribute("y_org"));
   int major_x = static_cast<int>(element->getAttribute("major_x"));
   int major_y = static_cast<int>(element->getAttribute("major_y"));
-  double tick_size = static_cast<double>(element->getAttribute("tick_size"));
+  int tick_orientation = 1;
+  double tick_size;
+
+  if (element->hasAttribute("tick_orientation"))
+    {
+      tick_orientation = static_cast<int>(element->getAttribute("tick_orientation"));
+    }
+
+  if (element->hasAttribute("tick_size"))
+    {
+      tick_size = static_cast<double>(element->getAttribute("tick_size"));
+    }
+  else
+    {
+      auto subplot_element = element->parentElement()->parentElement();
+      tick_size = static_cast<double>(subplot_element->getAttribute("tick_size"));
+    }
+  tick_size *= tick_orientation;
+
   gr_axes(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size);
 }
 
@@ -752,7 +776,24 @@ static void axes3d(const std::shared_ptr<GR::Element> &element, const std::share
   int major_x = static_cast<int>(element->getAttribute("major_x"));
   int major_y = static_cast<int>(element->getAttribute("major_y"));
   int major_z = static_cast<int>(element->getAttribute("major_z"));
-  double tick_size = static_cast<double>(element->getAttribute("tick_size"));
+  int tick_orientation = 1;
+  double tick_size;
+
+  if (element->hasAttribute("tick_orientation"))
+    {
+      tick_orientation = static_cast<int>(element->getAttribute("tick_orientation"));
+    }
+
+  if (element->hasAttribute("tick_size"))
+    {
+      tick_size = static_cast<double>(element->getAttribute("tick_size"));
+    }
+  else
+    {
+      auto subplot_element = element->parentElement()->parentElement();
+      tick_size = static_cast<double>(subplot_element->getAttribute("tick_size"));
+    }
+  tick_size *= tick_orientation;
 
   gr_axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z, tick_size);
 }
@@ -1094,6 +1135,108 @@ static void processColorRep(const std::shared_ptr<GR::Element> &elem)
   gr_setcolorrep(index, red, green, blue);
 }
 
+static void processTitle(const std::shared_ptr<GR::Element> &elem)
+{
+  double viewport[4], vp[4];
+
+  auto subplot_element = elem->parentElement();
+
+  viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
+  viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
+  viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
+  viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
+  vp[0] = (double)subplot_element->getAttribute("vp_xmin");
+  vp[1] = (double)subplot_element->getAttribute("vp_xmax");
+  vp[2] = (double)subplot_element->getAttribute("vp_ymin");
+  vp[3] = (double)subplot_element->getAttribute("vp_ymax");
+
+  double x = 0.5 * (viewport[0] + viewport[1]);
+  double y = vp[3];
+  std::string title = (std::string)elem->getAttribute("title");
+
+  if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+    {
+      auto title_elem = render->createText(x, y, title);
+      render->setTextAlign(title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+      elem->appendChild(title_elem);
+    }
+}
+
+static void processXlabel(const std::shared_ptr<GR::Element> &elem)
+{
+  double viewport[4], vp[4], charheight;
+
+  auto subplot_element = elem->parentElement();
+
+  /* Manualy check if charheight is set on a lower level instead of using `gr_inqcharheight` to eliminate dependency of
+   * the order of attributes */
+  if (elem->hasAttribute("charheight"))
+    {
+      charheight = (double)elem->getAttribute("charheight");
+    }
+  else
+    {
+      charheight = (double)subplot_element->getAttribute("charheight");
+    }
+  viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
+  viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
+  viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
+  viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
+  vp[0] = (double)subplot_element->getAttribute("vp_xmin");
+  vp[1] = (double)subplot_element->getAttribute("vp_xmax");
+  vp[2] = (double)subplot_element->getAttribute("vp_ymin");
+  vp[3] = (double)subplot_element->getAttribute("vp_ymax");
+
+  double x = 0.5 * (viewport[0] + viewport[1]);
+  double y = vp[2] + 0.5 * charheight;
+  std::string x_label = (std::string)elem->getAttribute("xlabel");
+
+  if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+    {
+      auto text = render->createText(x, y, x_label);
+      render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
+      elem->appendChild(text);
+    }
+}
+
+static void processYlabel(const std::shared_ptr<GR::Element> &elem)
+{
+  double viewport[4], vp[4], charheight;
+
+  auto subplot_element = elem->parentElement();
+
+  /* Manualy check if charheight is set on a lower level instead of using `gr_inqcharheight` to eliminate dependency of
+   * the order of attributes */
+  if (elem->hasAttribute("charheight"))
+    {
+      charheight = (double)elem->getAttribute("charheight");
+    }
+  else
+    {
+      charheight = (double)subplot_element->getAttribute("charheight");
+    }
+  viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
+  viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
+  viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
+  viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
+  vp[0] = (double)subplot_element->getAttribute("vp_xmin");
+  vp[1] = (double)subplot_element->getAttribute("vp_xmax");
+  vp[2] = (double)subplot_element->getAttribute("vp_ymin");
+  vp[3] = (double)subplot_element->getAttribute("vp_ymax");
+
+  double x = vp[0] + 0.5 * charheight;
+  double y = 0.5 * (viewport[2] + viewport[3]);
+  std::string y_label = (std::string)elem->getAttribute("ylabel");
+
+  if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+    {
+      auto text = render->createText(x, y, y_label);
+      render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+      render->setCharUp(text, -1, 0);
+      elem->appendChild(text);
+    }
+}
+
 static void processWindow(const std::shared_ptr<GR::Element> &elem)
 {
   /*!
@@ -1162,19 +1305,45 @@ static void processViewport(const std::shared_ptr<GR::Element> &elem)
    *
    * \param[in] element The GR::Element that contains the attributes
    */
-  double xmin, xmax, ymin, ymax;
-  xmin = (double)elem->getAttribute("viewport_xmin");
-  xmax = (double)elem->getAttribute("viewport_xmax");
-  ymin = (double)elem->getAttribute("viewport_ymin");
-  ymax = (double)elem->getAttribute("viewport_ymax");
-  //  gr_setviewport(xmin, xmax, ymin, ymax);
+  double viewport[4];
+  double diag;
+  double charheight;
+  double ticksize;
+  std::string kind;
+
+  viewport[0] = (double)elem->getAttribute("viewport_xmin");
+  viewport[1] = (double)elem->getAttribute("viewport_xmax");
+  viewport[2] = (double)elem->getAttribute("viewport_ymin");
+  viewport[3] = (double)elem->getAttribute("viewport_ymax");
+  kind = (std::string)elem->getAttribute("kind");
+
+  diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
+              (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
+
+  ticksize = 0.0075 * diag;
+
+  if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
+    {
+      charheight = grm_max(0.024 * diag, 0.012);
+    }
+  else
+    {
+      charheight = grm_max(0.018 * diag, 0.012);
+      if (str_equals_any(kind.c_str(), 2, "heatmap", "shade"))
+        {
+          ticksize = -ticksize;
+        }
+    }
+  elem->setAttribute("charheight", charheight);
+  gr_setcharheight(charheight);
+  elem->setAttribute("tick_size", ticksize);
 }
 
 static void legend_size(const std::shared_ptr<GR::Element> &elem, double *w, double *h)
 {
   double tbx[4], tby[4];
   const char **labels, **current_label;
-  int labelsExist;
+  int labelsExist = 1;
   unsigned int num_labels;
 
   *w = 0;
@@ -1199,11 +1368,11 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
   double dpm[2], dpi[2];
   int tmp_size_i[2], pixel_size[2];
   double tmp_size_d[2], metric_size[2];
-  grm_args_ptr_t tmp_size_a[2];
-  const char *tmp_size_s[2];
   int i;
+  std::string size_unit, size_type;
+  std::string vars[2] = {"x", "y"};
 
-  /* TODO: Change static methods to class functions to get access to root */
+  /* TODO: Change static methods to class functions to get access to root */ /* access to global_root is given tho? */
   std::shared_ptr<GR::Element> root = global_root;
 
 
@@ -1221,7 +1390,7 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
   dpi[1] = dpm[1] * 0.0254;
 
   /* TODO: Overwork this calculation */
-  /* TODO: Size can have different types/units in grm_args_container */
+  /* TODO: Test if the size example still works */
   if (root->hasAttribute("figsize"))
     {
       tmp_size_d[0] = (double)root->getAttribute("figsize_x");
@@ -1234,21 +1403,46 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
     }
   else if (root->hasAttribute("size"))
     {
-      tmp_size_d[0] = (double)root->getAttribute("size_x");
-      tmp_size_d[1] = (double)root->getAttribute("size_y");
-      {
-        for (i = 0; i < 2; ++i)
-          {
-            pixel_size[i] = (int)grm_round(tmp_size_d[i]);
-            metric_size[i] = tmp_size_d[i] / dpm[i];
-          }
-      }
+      for (i = 0; i < 2; ++i)
+        {
+          size_unit = (std::string)root->getAttribute("size_unit_" + vars[i]);
+          size_type = (std::string)root->getAttribute("size_type_" + vars[i]);
+          if (size_unit.empty()) size_unit = "m";
+
+          auto meters_per_unit_iter = symbol_to_meters_per_unit.find(size_unit);
+          if (meters_per_unit_iter != symbol_to_meters_per_unit.end())
+            {
+              double meters_per_unit = meters_per_unit_iter->second;
+              double pixels_per_unit = meters_per_unit * dpm[i];
+
+              if (size_type == "double")
+                {
+                  tmp_size_d[i] = tmp_size_d[i] * pixels_per_unit;
+                }
+              else if (size_type == "int")
+                {
+                  tmp_size_d[i] = tmp_size_i[i] * pixels_per_unit;
+                }
+              else
+                {
+                  /* TODO: Throw error or set default value when there is an unknown or missing type */
+                  ;
+                }
+              pixel_size[i] = (int)grm_round(tmp_size_d[i]);
+              metric_size[i] = tmp_size_d[i] / dpm[i];
+            }
+          else
+            {
+              /* TODO: Throw error or set default value when there is an unknown or missing unit */
+              ;
+            }
+        }
     }
-  /* TODO: Should default values that are set in the grm be set in the renderer as well? */
-  /* TODO: Implement Exception */
   else
     {
+      /* TODO: Should default values that are set in the grm be set in the renderer as well? */
       /* If this branch is executed, there is an internal error (size has a default value if not set by the user) */
+      /* TODO: Implement Exception */
       throw std::exception();
     }
 
@@ -1277,7 +1471,8 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
    *
    * \param[in] element The GR::Element that contains the attributes
    */
-  std::string kind, y_label, x_label, title;
+  int y_label_margin, x_label_margin, title_margin;
+  std::string kind;
   double subplot[4];
   int keep_aspect_ratio;
   double metric_width, metric_height;
@@ -1293,9 +1488,10 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
   subplot[2] = (double)elem->getAttribute("subplot_ymin");
   subplot[3] = (double)elem->getAttribute("subplot_ymax");
   kind = (std::string)elem->getAttribute("kind");
-  y_label = (std::string)elem->getAttribute("ylabel");
-  x_label = (std::string)elem->getAttribute("xlabel");
-  title = (std::string)elem->getAttribute("title");
+  y_label_margin = (int)elem->getAttribute("ylabel_margin");
+  x_label_margin = (int)elem->getAttribute("xlabel_margin");
+  title_margin = (int)elem->getAttribute("title_margin");
+  keep_aspect_ratio = static_cast<int>(elem->getAttribute("keep_aspect_ratio"));
 
   get_figure_size(nullptr, nullptr, &metric_width, &metric_height);
 
@@ -1342,7 +1538,7 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
       vp3 = vp[3];
     }
 
-  left_margin = y_label.empty() ? 0 : 0.05;
+  left_margin = y_label_margin ? 0.05 : 0;
   if (str_equals_any(kind.c_str(), 8, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface",
                      "trisurf", "volume"))
     {
@@ -1352,8 +1548,8 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
     {
       right_margin = 0;
     }
-  bottom_margin = x_label.empty() ? 0 : 0.05;
-  top_margin = title.empty() ? 0 : 0.075;
+  bottom_margin = x_label_margin ? 0.05 : 0;
+  top_margin = title_margin ? 0.075 : 0;
   viewport[0] = vp0 + (0.075 + left_margin) * (vp1 - vp0);
   viewport[1] = vp0 + (0.95 - right_margin) * (vp1 - vp0);
   viewport[2] = vp2 + (0.075 + bottom_margin) * (vp3 - vp2);
@@ -1383,7 +1579,7 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
       x_center = 0.5 * (viewport[0] + viewport[1]);
       y_center = 0.5 * (viewport[2] + viewport[3]);
       r = 0.45 * grm_min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
-      if (!title.empty())
+      if (title_margin)
         {
           r *= 0.975;
           y_center -= 0.025 * r;
@@ -1398,6 +1594,17 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
     }
 
   gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+  elem->setAttribute("viewport", true);
+  elem->setAttribute("viewport_xmin", viewport[0]);
+  elem->setAttribute("viewport_xmax", viewport[1]);
+  elem->setAttribute("viewport_ymin", viewport[2]);
+  elem->setAttribute("viewport_ymax", viewport[3]);
+  elem->setAttribute("vp", true);
+  elem->setAttribute("vp_xmin", vp[0]);
+  elem->setAttribute("vp_xmax", vp[1]);
+  elem->setAttribute("vp_ymin", vp[2]);
+  elem->setAttribute("vp_ymax", vp[3]);
+  processViewport(elem);
 }
 
 static void processGR3CameraLookAt(const std::shared_ptr<GR::Element> &elem)
@@ -1484,6 +1691,7 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
        }},
       {std::string("textencoding"),
        [](const std::shared_ptr<GR::Element> &elem) { gr_settextencoding((int)elem->getAttribute("textencoding")); }},
+      {std::string("title"), processTitle},
       {std::string("transparency"),
        [](const std::shared_ptr<GR::Element> &elem) {
          gr_settransparency((double)elem->getAttribute("transparency"));
@@ -1512,9 +1720,9 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
        [](const std::shared_ptr<GR::Element>
               &elem) { gr_setbordercolorind((int)elem->getAttribute("bordercolorind")); }},
       {std::string("clipxform"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_selectclipxform((int)elem->getAttribute("clipxform")); }}
-
-  };
+       [](const std::shared_ptr<GR::Element> &elem) { gr_selectclipxform((int)elem->getAttribute("clipxform")); }},
+      {std::string("xlabel"), processXlabel},
+      {std::string("ylabel"), processYlabel}};
 
   for (auto &attribute : element->getAttributeNames())
     {
@@ -1748,6 +1956,31 @@ std::shared_ptr<GR::Element> GR::Render::createPolyline(const std::string &x_key
   return element;
 }
 
+std::shared_ptr<GR::Element> GR::Render::createXTickLabels(const std::string &key,
+                                                           std::optional<std::vector<std::string>> xticklabels,
+                                                           const std::shared_ptr<GR::Context> &extContext)
+{
+  /*!
+   * This function can be used to create a XTickLabel GR::Element
+   *
+   * \param[in] key A string used for storing the xticklabels in GR::Context
+   * \param[in] xticklabels A vector containing string values representing xticklabels
+   * \param[in] extContext A GR::Context that is used for storing the vectors. By default it uses GR::Render's
+   * GR::Context object but an external GR::Context can be used
+   */
+
+  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  auto element = createElement("polyline");
+  if (xticklabels != std::nullopt)
+    {
+      /* TODO: Change GR::Context to be able to save vectors of type string */
+      //      (*useContext)[key] = *xticklabels;
+    }
+  element->setAttribute("xticklabels", key);
+
+  return element;
+}
+
 
 std::shared_ptr<GR::Element> GR::Render::createText(double x, double y, const std::string &text, CoordinateSpace space)
 {
@@ -1862,7 +2095,7 @@ std::shared_ptr<GR::Element> GR::Render::createCellArray(double xmin, double xma
 }
 
 std::shared_ptr<GR::Element> GR::Render::createAxes(double x_tick, double y_tick, double x_org, double y_org,
-                                                    int major_x, int major_y, double tick_size)
+                                                    int major_x, int major_y, int tick_orientation)
 {
   /*!
    * This function can be used for creating an Axes GR::Element
@@ -1882,10 +2115,9 @@ std::shared_ptr<GR::Element> GR::Render::createAxes(double x_tick, double y_tick
   element->setAttribute("y_org", y_org);
   element->setAttribute("major_x", major_x);
   element->setAttribute("major_y", major_y);
-  element->setAttribute("tick_size", tick_size);
+  element->setAttribute("tick_orientation", tick_orientation);
   return element;
 }
-
 
 std::shared_ptr<GR::Element> GR::Render::createGrid(double x_tick, double y_tick, double x_org, double y_org,
                                                     int major_x, int major_y)
@@ -2267,7 +2499,7 @@ std::shared_ptr<GR::Element> GR::Render::createGrid3d(double x_tick, double y_ti
 
 std::shared_ptr<GR::Element> GR::Render::createAxes3d(double x_tick, double y_tick, double z_tick, double x_org,
                                                       double y_org, double z_org, int major_x, int major_y, int major_z,
-                                                      double tick_size)
+                                                      int tick_orientation)
 {
   auto element = createElement("axes3d");
   element->setAttribute("x_tick", x_tick);
@@ -2279,7 +2511,7 @@ std::shared_ptr<GR::Element> GR::Render::createAxes3d(double x_tick, double y_ti
   element->setAttribute("major_x", major_x);
   element->setAttribute("major_y", major_y);
   element->setAttribute("major_z", major_z);
-  element->setAttribute("tick_size", tick_size);
+  element->setAttribute("tick_orientation", tick_orientation);
   return element;
 }
 
@@ -3411,6 +3643,7 @@ void GR::Render::render()
    * GR::Render::render uses both instance's document and context
    */
   auto root = this->firstChildElement();
+  std::cout << toXML(root) << "\n\n\n";
   global_root = root;
   if (root->hasChildNodes())
     {

@@ -42,6 +42,10 @@ public:
   std::shared_ptr<Element> createPolyline(double x1, double x2, double y1, double y2, int line_type = 0,
                                           double line_width = 0.0, int line_colorind = 0);
 
+  std::shared_ptr<GR::Element> createXTickLabels(const std::string &key,
+                                                 std::optional<std::vector<std::string>> xticklabels,
+                                                 const std::shared_ptr<GR::Context> &extContext);
+
   std::shared_ptr<Element> createText(double x, double y, const std::string &text, CoordinateSpace space = NDC);
 
   std::shared_ptr<Element> createFillArea(const std::string &x_key, std::optional<std::vector<double>> x,
@@ -55,7 +59,7 @@ public:
                                            const std::shared_ptr<Context> &extContext = nullptr);
 
   std::shared_ptr<Element> createAxes(double x_tick, double y_tick, double x_org, double y_org, int major_x,
-                                      int major_y, double tick_size);
+                                      int major_y, int tick_orientation);
 
   std::shared_ptr<Element> createGrid(double x_tick, double y_tick, double x_org, double y_org, int major_x,
                                       int major_y);
@@ -121,7 +125,7 @@ public:
                                         double z_org, int major_x, int major_y, int major_z);
 
   std::shared_ptr<Element> createAxes3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org,
-                                        double z_org, int major_x, int major_y, int major_z, double tick_size);
+                                        double z_org, int major_x, int major_y, int major_z, int tick_orientation);
 
   std::shared_ptr<Element> createPolyline3d(const std::string &x_key, std::optional<std::vector<double>> x,
                                             const std::string &y_key, std::optional<std::vector<double>> y,

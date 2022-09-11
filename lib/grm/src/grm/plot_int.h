@@ -166,6 +166,7 @@ void plot_pre_plot(grm_args_t *plot_args);
 void plot_set_text_encoding(void);
 void plot_process_wswindow_wsviewport(grm_args_t *plot_args);
 err_t plot_pre_subplot(grm_args_t *subplot_args);
+int plot_process_subplot_args(grm_args_t *subplot_args);
 void plot_process_colormap(grm_args_t *subplot_args);
 void plot_process_font(grm_args_t *subplot_args);
 err_t plot_process_grid_arguments(const grm_args_t *args);

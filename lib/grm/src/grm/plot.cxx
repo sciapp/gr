@@ -1088,8 +1088,7 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "kind", "s", &kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-  /* TODO: Can be removed because the vp is calculated in the renderer however removing it results in no axes showing */
-  plot_process_viewport(subplot_args);
+  //  plot_process_viewport(subplot_args);
   error = plot_store_coordinate_ranges(subplot_args);
   return_if_error;
   plot_process_window(subplot_args);
@@ -1475,21 +1474,22 @@ void plot_process_viewport(grm_args_t *subplot_args)
       viewport[3] = y_center + r;
     }
 
-  if (!currentDomElement)
-    {
-      global_render->setViewport(global_root->lastChildElement(), viewport[0], viewport[1], viewport[2], viewport[3]);
-    }
-  else
-    {
-      global_render->setViewport(currentDomElement, viewport[0], viewport[1], viewport[2], viewport[3]);
-    }
-  gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-
-  grm_args_push(subplot_args, "vp", "dddd", vp[0], vp[1], vp[2], vp[3]);
-  grm_args_push(subplot_args, "viewport", "dddd", viewport[0], viewport[1], viewport[2], viewport[3]);
-
-  logger((stderr, "Stored vp (%lf, %lf, %lf, %lf)\n", vp[0], vp[1], vp[2], vp[3]));
-  logger((stderr, "Stored viewport (%lf, %lf, %lf, %lf)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
+  //  if (!currentDomElement)
+  //    {
+  //      global_render->setViewport(global_root->lastChildElement(), viewport[0], viewport[1], viewport[2],
+  //      viewport[3]);
+  //    }
+  //  else
+  //    {
+  //      global_render->setViewport(currentDomElement, viewport[0], viewport[1], viewport[2], viewport[3]);
+  //    }
+  //  gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+  //
+  //  grm_args_push(subplot_args, "vp", "dddd", vp[0], vp[1], vp[2], vp[3]);
+  //  grm_args_push(subplot_args, "viewport", "dddd", viewport[0], viewport[1], viewport[2], viewport[3]);
+  //
+  //  logger((stderr, "Stored vp (%lf, %lf, %lf, %lf)\n", vp[0], vp[1], vp[2], vp[3]));
+  //  logger((stderr, "Stored viewport (%lf, %lf, %lf, %lf)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
 }
 
 double auto_tick(double amin, double amax)
@@ -6115,6 +6115,8 @@ cleanup:
 err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 {
   // TODO: GR3 dom render integration and barplot
+  // TODO: Move calculations to dom render for char height etc. (charheight and ticksize is now calced in the renderer
+  // however some textpositions depend on charheight, vp and viewport)
 
   const char *kind = NULL;
   const double *viewport, *vp;
@@ -6130,11 +6132,10 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   double z_org_low, z_org_high;
   int z_major_count;
   int z_grid;
-  double diag;
   double charheight;
-  double ticksize;
   char *title;
   char *x_label, *y_label, *z_label;
+  int tick_orientation = 1;
 
 
   auto group = global_render->createGroup("draw_axes");
@@ -6147,8 +6148,6 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
       currentDomElement->append(group);
     }
   grm_args_values(args, "kind", "s", &kind);
-  grm_args_values(args, "viewport", "D", &viewport);
-  grm_args_values(args, "vp", "D", &vp);
   grm_args_values(args, "xtick", "d", &x_tick);
   grm_args_values(args, "xorg", "dd", &x_org_low, &x_org_high);
   grm_args_values(args, "xmajor", "i", &x_major_count);
@@ -6161,14 +6160,8 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   global_render->setLineColorInd(group, 1);
   global_render->setLineWidth(group, 1);
 
-  diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
-              (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
-
-  ticksize = 0.0075 * diag;
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
-      charheight = grm_max(0.024 * diag, 0.012);
-      group->setAttribute("charheight", charheight);
       grm_args_values(args, "ztick", "d", &z_tick);
       grm_args_values(args, "zorg", "dd", &z_org_low, &z_org_high);
       grm_args_values(args, "zmajor", "i", &z_major_count);
@@ -6184,20 +6177,18 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
       else
         {
           auto temp = global_render->createAxes3d(x_tick, 0, z_tick, x_org_low, y_org_low, z_org_low, x_major_count, 0,
-                                                  z_major_count, -ticksize);
+                                                  z_major_count, -tick_orientation);
           group->append(temp);
           temp = global_render->createAxes3d(0, y_tick, 0, x_org_high, y_org_low, z_org_low, 0, y_major_count, 0,
-                                             ticksize);
+                                             tick_orientation);
           group->append(temp);
         }
     }
   else
     {
-      charheight = grm_max(0.018 * diag, 0.012);
-      global_render->setCharHeight(group, charheight);
       if (str_equals_any(kind, 2, "heatmap", "shade"))
         {
-          ticksize = -ticksize;
+          tick_orientation = -1;
         }
       if (!str_equals_any(kind, 1, "shade"))
         {
@@ -6207,17 +6198,15 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                                                       y_major_count));
             }
         }
-      group->append(
-          global_render->createAxes(x_tick, y_tick, x_org_low, y_org_low, x_major_count, y_major_count, ticksize));
-      group->append(
-          global_render->createAxes(x_tick, y_tick, x_org_high, y_org_high, -x_major_count, -y_major_count, -ticksize));
+      group->append(global_render->createAxes(x_tick, y_tick, x_org_low, y_org_low, x_major_count, y_major_count,
+                                              tick_orientation));
+      group->append(global_render->createAxes(x_tick, y_tick, x_org_high, y_org_high, -x_major_count, -y_major_count,
+                                              -tick_orientation));
     }
 
   if (grm_args_values(args, "title", "s", &title))
     {
-      auto text = global_render->createText(0.5 * (viewport[0] + viewport[1]), vp[3], title);
-      global_render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-      group->append(text);
+      group->setAttribute("title", title);
     }
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
@@ -6232,21 +6221,17 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     {
       if (grm_args_values(args, "xlabel", "s", &x_label))
         {
-          auto text = global_render->createText(0.5 * (viewport[0] + viewport[1]), vp[2] + 0.5 * charheight, x_label);
-          global_render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
-          group->append(text);
+          group->setAttribute("xlabel", x_label);
         }
       if (grm_args_values(args, "ylabel", "s", &y_label))
         {
-          auto text = global_render->createText(vp[0] + 0.5 * charheight, 0.5 * (viewport[2] + viewport[3]), y_label);
-          global_render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-          global_render->setCharUp(text, -1, 0);
-          group->append(text);
+          group->setAttribute("ylabel", y_label);
         }
     }
 
   if (strcmp("barplot", kind) == 0 && pass == 2)
     {
+      /* TODO: Calc Position in renderer using `createXTickLabels` */
       /* xticklabels */
       char **xticklabels = NULL;
       unsigned int xticklabels_length;
@@ -6255,6 +6240,8 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
       double y[2] = {0, 0};
       if (grm_args_first_value(args, "xticklabels", "S", &xticklabels, &xticklabels_length))
         {
+          std::vector<std::string> xticklabels_vec(xticklabels, xticklabels + xticklabels_length);
+
           double x1, x2;
           double x_left = 0, x_right = 1, null;
           double available_width;
@@ -6315,7 +6302,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
       currentDomElement->append(group);
     }
 
-
+  /* TODO: Move calculations containing viewport to the renderer */
   grm_args_values(args, "viewport", "D", &viewport);
   grm_args_values(args, "vp", "D", &vp);
   diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
@@ -6743,12 +6730,16 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
   if (scale & GR_OPTION_Z_LOG)
     {
       global_render->setScale(subGroup, GR_OPTION_Y_LOG);
-      subGroup->append(global_render->createAxes(0, 2, 1, c_min, 0, 1, 0.005));
+      auto axes = global_render->createAxes(0, 2, 1, c_min, 0, 1, 1);
+      axes->setAttribute("tick_size", 0.005);
+      subGroup->append(axes);
     }
   else
     {
       double c_tick = auto_tick(c_min, c_max);
-      subGroup->append(global_render->createAxes(0, c_tick, 1, c_min, 0, 1, 0.005));
+      auto axes = global_render->createAxes(0, c_tick, 1, c_min, 0, 1, 1);
+      axes->setAttribute("tick_size", 0.005);
+      subGroup->append(axes);
     }
   free(data);
   gr_restorestate();
@@ -7270,8 +7261,6 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
     }
   else if (grm_args_values(plot_args, "size", "dd", &tmp_size_d[0], &tmp_size_d[1]))
     {
-
-
       for (i = 0; i < 2; ++i)
         {
           pixel_size[i] = (int)grm_round(tmp_size_d[i]);
@@ -8713,25 +8702,37 @@ int grm_merge_named(const grm_args_t *args, const char *identificator)
   return grm_merge_extended(args, 0, identificator);
 }
 
-int plot_process_subplot_args(grm_args_t *subplot_args, const std::shared_ptr<GR::Element> &group)
+int plot_process_subplot_args(grm_args_t *subplot_args)
 {
   plot_func_t plot_func;
-  char *ylabel, *xlabel, *title, *kind = NULL;
+  char *ylabel, *xlabel, *title, *kind;
   int keep_aspect_ratio, location;
   double *subplot;
 
+  if (plot_pre_subplot(subplot_args) != ERROR_NONE)
+    {
+      return 0;
+    }
+
+  grm_args_values(subplot_args, "kind", "s", &kind);
+  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("kind", kind);
+  logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
+
   if (grm_args_values(subplot_args, "ylabel", "s", &ylabel))
     {
-      group->setAttribute("ylabel", ylabel);
+      //      group->setAttribute("ylabel", ylabel);
+      group->setAttribute("ylabel_margin", 1);
     }
   if (grm_args_values(subplot_args, "xlabel", "s", &xlabel))
     {
-      group->setAttribute("xlabel", xlabel);
+      //      group->setAttribute("xlabel", xlabel);
+      group->setAttribute("xlabel_margin", 1);
     }
   if (grm_args_values(subplot_args, "title", "s", &title))
     {
-      group->setAttribute("title", title);
+      //      group->setAttribute("title", title);
+      group->setAttribute("title_margin", 1);
     }
   if (grm_args_values(subplot_args, "keep_aspec_ratio", "i", &keep_aspect_ratio))
     {
@@ -8750,12 +8751,6 @@ int plot_process_subplot_args(grm_args_t *subplot_args, const std::shared_ptr<GR
       group->setAttribute("subplot_ymax", subplot[3]);
     }
 
-  if (plot_pre_subplot(subplot_args) != ERROR_NONE)
-    {
-      return 0;
-    }
-  grm_args_values(subplot_args, "kind", "s", &kind);
-  logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   if (!plot_func_map_at(plot_func_map, kind, &plot_func))
     {
       return 0;
@@ -8765,6 +8760,7 @@ int plot_process_subplot_args(grm_args_t *subplot_args, const std::shared_ptr<GR
       return 0;
     };
   plot_post_subplot(subplot_args);
+  return 1;
 }
 
 int grm_plot(const grm_args_t *args)
@@ -8775,6 +8771,10 @@ int grm_plot(const grm_args_t *args)
   const char *kind = NULL;
   int figsize_x, figsize_y, tmp_size_i[2];
   double tmp_size_d[2];
+  grm_args_ptr_t tmp_size_a[2];
+  const char *tmp_size_s[2];
+  std::string vars[2] = {"x", "y"};
+  double default_size[2] = {PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT};
   if (!grm_merge(args))
     {
       return 0;
@@ -8796,21 +8796,66 @@ int grm_plot(const grm_args_t *args)
       if (grm_args_values(active_plot_args, "size", "dd", &tmp_size_d[0], &tmp_size_d[1]))
         {
           global_root->setAttribute("size", true);
-          global_root->setAttribute("size_x", tmp_size_d[0]);
-          global_root->setAttribute("size_y", tmp_size_d[1]);
+          for (int i = 0; i < 2; ++i)
+            {
+              global_root->setAttribute("size_" + vars[i], tmp_size_d[i]);
+              global_root->setAttribute("size_" + vars[i] + "_type", "double");
+              global_root->setAttribute("size_" + vars[i] + "_unit", "m");
+            }
         }
-
+      if (grm_args_values(active_plot_args, "size", "ii", &tmp_size_i[0], &tmp_size_i[1]))
+        {
+          global_root->setAttribute("size", true);
+          for (int i = 0; i < 2; ++i)
+            {
+              global_root->setAttribute("size_" + vars[i], tmp_size_i[i]);
+              global_root->setAttribute("size_" + vars[i] + "_type", "int");
+              global_root->setAttribute("size_" + vars[i] + "_unit", "m");
+            }
+        }
+      if (grm_args_values(active_plot_args, "size", "aa", &tmp_size_a[0], &tmp_size_a[1]))
+        {
+          global_root->setAttribute("size", true);
+          for (int i = 0; i < 2; ++i)
+            {
+              if (grm_args_values(tmp_size_a[i], "unit", "s", &tmp_size_s[i]))
+                {
+                  global_root->setAttribute("size_" + vars[i] + "_unit", tmp_size_s[i]);
+                }
+              if (grm_args_values(tmp_size_a[i], "value", "i", &tmp_size_i[i]))
+                {
+                  global_root->setAttribute("size_" + vars[i] + "_type", "int");
+                  global_root->setAttribute("size_" + vars[i], tmp_size_i[i]);
+                }
+              else if (grm_args_values(tmp_size_a[i], "value", "d", &tmp_size_d[i]))
+                {
+                  global_root->setAttribute("size_" + vars[i] + "_type", "double");
+                  global_root->setAttribute("size_" + vars[i], tmp_size_d[i]);
+                }
+              else
+                {
+                  /* If no value is given, fall back to default value */
+                  for (int i = 0; i < 2; ++i)
+                    {
+                      global_root->setAttribute("size_" + vars[i], default_size[i]);
+                      global_root->setAttribute("size_" + vars[i] + "_type", "double");
+                      global_root->setAttribute("size_" + vars[i] + "_unit", "m");
+                    }
+                  return 0;
+                }
+            }
+        }
       if (grm_args_values(active_plot_args, "figsize", "dd", &figsize_x, &figsize_y))
         {
           global_root->setAttribute("figsize", true);
           global_root->setAttribute("figsize_x", figsize_x);
           global_root->setAttribute("figsize_y", figsize_y);
         }
-
       if (plot_process_grid_arguments(active_plot_args) != ERROR_NONE)
         {
           return 0;
         }
+
       currentGrid = reinterpret_cast<Grid *>(global_grid);
       int nrows = currentGrid->getNRows();
       int ncols = currentGrid->getNCols();
@@ -8831,18 +8876,16 @@ int grm_plot(const grm_args_t *args)
         }
       else
         {
-          std::cout << "no grid elements";
+          std::cout << "no grid elements\n";
           while (*current_subplot_args != NULL)
             {
-              char *ylabel, *xlabel, *title;
-              int keep_aspect_ratio, location;
-              double *subplot;
-
-              grm_args_values(*current_subplot_args, "kind", "s", &kind);
-              auto group = global_render->createGroup(kind);
+              /* TODO: is the group name important? */
+              auto group = global_render->createGroup("");
               global_root->append(group);
-              // TODO: Error Handling
-              plot_process_subplot_args(*current_subplot_args, group);
+              if (!plot_process_subplot_args(*current_subplot_args))
+                {
+                  return 0;
+                }
               ++current_subplot_args;
             }
         }
@@ -8918,28 +8961,20 @@ int grm_plot_helper(GridElement *gridElement, Slice *slice, const std::shared_pt
       currentDomElement = subplotGroup;
       parentDomElement->append(subplotGroup);
 
-      if (plot_pre_subplot(*current_subplot_args) != ERROR_NONE)
+      if (!plot_process_subplot_args(*current_subplot_args))
         {
           return 0;
         }
-      grm_args_values(*current_subplot_args, "kind", "s", &kind);
-      logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-      if (!plot_func_map_at(plot_func_map, kind, &plot_func))
-        {
-          return 0;
-        }
-      if (plot_func(*current_subplot_args) != ERROR_NONE)
-        {
-          return 0;
-        };
-      plot_post_subplot(*current_subplot_args);
     }
   else
     {
-      // if isGrid
       Grid *currentGrid = reinterpret_cast<Grid *>(gridElement);
 
       auto gridDomElement = global_render->createLayoutGrid(*currentGrid);
+      gridDomElement->setAttribute("rowStart", slice->rowStart);
+      gridDomElement->setAttribute("rowStop", slice->rowStop);
+      gridDomElement->setAttribute("colStart", slice->colStart);
+      gridDomElement->setAttribute("colStop", slice->colStop);
       parentDomElement->append(gridDomElement);
 
       for (auto const &elementToSlice : currentGrid->getElementToPosition())
