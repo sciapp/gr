@@ -693,10 +693,23 @@ static void test_shade(void)
 }
 
 
+static void testContext()
+{
+  GR::Context context = GR::Context();
+  std::vector<std::string> vec = {"a", "b", "abc"};
+  context["vec"] = vec;
+
+  std::vector<std::string> res = GR::get<std::vector<std::string>>(context["vec"]);
+  for (auto elem : res)
+    {
+      std::cout << elem << "\t";
+    }
+}
+
 int main(void)
 {
 
-  test_dom_render();
+  //  test_dom_render();
   // test_wireframe();
   // test_plot3();
   //  testTrisurf();
@@ -705,7 +718,8 @@ int main(void)
   //  test_hist();
   //  test_contour();
   //  testBar();
-  grm_finalize();
+  testContext();
+  //  grm_finalize();
 
   return 0;
 }
