@@ -42,10 +42,6 @@ public:
   std::shared_ptr<Element> createPolyline(double x1, double x2, double y1, double y2, int line_type = 0,
                                           double line_width = 0.0, int line_colorind = 0);
 
-  std::shared_ptr<GR::Element> createXTickLabels(const std::string &key,
-                                                 std::optional<std::vector<std::string>> xticklabels,
-                                                 const std::shared_ptr<GR::Context> &extContext);
-
   std::shared_ptr<Element> createText(double x, double y, const std::string &text, CoordinateSpace space = NDC);
 
   std::shared_ptr<Element> createFillArea(const std::string &x_key, std::optional<std::vector<double>> x,
@@ -285,12 +281,18 @@ public:
 
   void setSubplot(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
+  void setXTickLabels(std::shared_ptr<GR::Element> group, const std::string &key,
+                      std::optional<std::vector<std::string>> xticklabels,
+                      const std::shared_ptr<GR::Context> &extContext = nullptr);
+
 
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context
   void render(const std::shared_ptr<Document> &document);  // external doc and render context
   static void render(const std::shared_ptr<Document> &document,
                      const std::shared_ptr<Context> &extContext); // external doc and external context; could be static
+
+  std::shared_ptr<Context> getContext();
 
 
 private:

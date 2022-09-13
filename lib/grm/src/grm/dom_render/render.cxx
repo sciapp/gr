@@ -1199,6 +1199,145 @@ static void processXlabel(const std::shared_ptr<GR::Element> &elem)
     }
 }
 
+/*!
+ * Draw an xticklabel at the specified position while trying to stay in the available space.
+ * Every space character (' ') is seen as a possible position to break the label into the next line.
+ * The label will not break into the next line when enough space is available.
+ * If a label or a part of it does not fit in the available space but doesnt have a space character to break it up
+ * it will get drawn anyway.
+ *
+ * \param[in] x1 The X coordinate of starting position of the label.
+ * \param[in] x2 The Y coordinate of starting position of the label.
+ * \param[in] label The label to be drawn.
+ * \param[in] available_width The available space in X direction around the starting position.
+ */
+void draw_xticklabel(double x1, double x2, const char *label, double available_width,
+                     const std::shared_ptr<GR::Element> &element, std::shared_ptr<GR::Render> global_render)
+{
+  char new_label[256];
+  int breakpoint_positions[128];
+  int cur_num_breakpoints = 0;
+  int i = 0;
+  int cur_start = 0;
+  double tbx[4], tby[4];
+  double width;
+  double charheight;
+
+  charheight = (double)element->getAttribute("charheight");
+
+  for (i = 0; i == 0 || label[i - 1] != '\0'; ++i)
+    {
+      if (label[i] == ' ' || label[i] == '\0')
+        {
+          /* calculate width of the next part of the label to be drawn */
+          new_label[i] = '\0';
+          gr_inqtext(x1, x2, new_label + cur_start, tbx, tby);
+          gr_wctondc(&tbx[0], &tby[0]);
+          gr_wctondc(&tbx[1], &tby[1]);
+          width = tbx[1] - tbx[0];
+          new_label[i] = ' ';
+
+          /* add possible breakpoint */
+          breakpoint_positions[cur_num_breakpoints++] = i;
+
+          if (width > available_width)
+            {
+              /* part is too big but doesnt have a breakpoint in it */
+              if (cur_num_breakpoints == 1)
+                {
+                  new_label[i] = '\0';
+                  element->append(global_render->createText(x1, x2, new_label + cur_start));
+
+                  cur_start = i + 1;
+                  cur_num_breakpoints = 0;
+                }
+              /* part is too big and has breakpoints in it */
+              else
+                {
+                  /* break label at last breakpoint that still allowed the text to fit */
+                  new_label[breakpoint_positions[cur_num_breakpoints - 2]] = '\0';
+                  element->append(global_render->createText(x1, x2, new_label + cur_start));
+
+                  cur_start = breakpoint_positions[cur_num_breakpoints - 2] + 1;
+                  breakpoint_positions[0] = breakpoint_positions[cur_num_breakpoints - 1];
+                  cur_num_breakpoints = 1;
+                }
+              x2 -= charheight * 1.5;
+            }
+        }
+      else
+        {
+          new_label[i] = label[i];
+        }
+    }
+
+  /* 0-terminate the new label */
+  new_label[i] = '\0';
+
+  /* draw the rest */
+  element->append(global_render->createText(x1, x2, std::string(new_label + cur_start)));
+}
+
+static void processXTickLabels(const std::shared_ptr<GR::Element> &elem)
+{
+  double viewport[4], vp[4], window[4], charheight;
+  std::vector<std::string> xticklabels;
+
+  auto subplot_element = elem->parentElement();
+
+  /* Manualy check if charheight is set on a lower level instead of using `gr_inqcharheight` to eliminate dependency of
+   * the order of attributes */
+  if (elem->hasAttribute("charheight"))
+    {
+      charheight = (double)elem->getAttribute("charheight");
+    }
+  else
+    {
+      charheight = (double)subplot_element->getAttribute("charheight");
+    }
+  viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
+  viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
+  viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
+  viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
+  vp[0] = (double)subplot_element->getAttribute("vp_xmin");
+  vp[1] = (double)subplot_element->getAttribute("vp_xmax");
+  vp[2] = (double)subplot_element->getAttribute("vp_ymin");
+  vp[3] = (double)subplot_element->getAttribute("vp_ymax");
+  window[0] = (double)subplot_element->getAttribute("window_xmin");
+  window[1] = (double)subplot_element->getAttribute("window_xmax");
+  window[2] = (double)subplot_element->getAttribute("window_ymin");
+  window[3] = (double)subplot_element->getAttribute("window_ymax");
+
+  if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+    {
+      std::shared_ptr<GR::Context> context = render->getContext();
+      std::string key = static_cast<std::string>(elem->getAttribute("xticklabels"));
+      xticklabels = GR::get<std::vector<std::string>>((*context)[key]);
+
+      double x1, x2;
+      double x_left = 0, x_right = 1, null;
+      double available_width;
+      const double *window;
+      auto xtick_group = render->createGroup("barplot_xtick");
+
+      elem->append(xtick_group);
+
+      /* calculate width available for xticknotations */
+      gr_wctondc(&x_left, &null);
+      gr_wctondc(&x_right, &null);
+      available_width = x_right - x_left;
+      render->setCharHeight(xtick_group, charheight);
+      render->setTextAlign(xtick_group, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+      for (int i = 1; i <= xticklabels.size(); i++)
+        {
+          x1 = i;
+          gr_wctondc(&x1, &x2);
+          x2 = viewport[2] - 0.5 * charheight;
+          draw_xticklabel(x1, x2, xticklabels[i - 1].c_str(), available_width, xtick_group, render);
+        }
+    }
+}
+
 static void processYlabel(const std::shared_ptr<GR::Element> &elem)
 {
   double viewport[4], vp[4], charheight;
@@ -1372,7 +1511,6 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
   std::string size_unit, size_type;
   std::string vars[2] = {"x", "y"};
 
-  /* TODO: Change static methods to class functions to get access to root */ /* access to global_root is given tho? */
   std::shared_ptr<GR::Element> root = global_root;
 
 
@@ -1390,7 +1528,6 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
   dpi[1] = dpm[1] * 0.0254;
 
   /* TODO: Overwork this calculation */
-  /* TODO: Test if the size example still works */
   if (root->hasAttribute("figsize"))
     {
       tmp_size_d[0] = (double)root->getAttribute("figsize_x");
@@ -1722,6 +1859,7 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
       {std::string("clipxform"),
        [](const std::shared_ptr<GR::Element> &elem) { gr_selectclipxform((int)elem->getAttribute("clipxform")); }},
       {std::string("xlabel"), processXlabel},
+      {std::string("xticklabels"), processXTickLabels},
       {std::string("ylabel"), processYlabel}};
 
   for (auto &attribute : element->getAttributeNames())
@@ -1953,31 +2091,6 @@ std::shared_ptr<GR::Element> GR::Render::createPolyline(const std::string &x_key
     {
       element->setAttribute("linecolorind", line_colorind);
     }
-  return element;
-}
-
-std::shared_ptr<GR::Element> GR::Render::createXTickLabels(const std::string &key,
-                                                           std::optional<std::vector<std::string>> xticklabels,
-                                                           const std::shared_ptr<GR::Context> &extContext)
-{
-  /*!
-   * This function can be used to create a XTickLabel GR::Element
-   *
-   * \param[in] key A string used for storing the xticklabels in GR::Context
-   * \param[in] xticklabels A vector containing string values representing xticklabels
-   * \param[in] extContext A GR::Context that is used for storing the vectors. By default it uses GR::Render's
-   * GR::Context object but an external GR::Context can be used
-   */
-
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
-  auto element = createElement("polyline");
-  if (xticklabels != std::nullopt)
-    {
-      /* TODO: Change GR::Context to be able to save vectors of type string */
-      //      (*useContext)[key] = *xticklabels;
-    }
-  element->setAttribute("xticklabels", key);
-
   return element;
 }
 
@@ -3478,6 +3591,27 @@ void GR::Render::setSubplot(const std::shared_ptr<GR::Element> &element, double 
   element->setAttribute("subplot_ymax", ymax);
 }
 
+void GR::Render::setXTickLabels(std::shared_ptr<GR::Element> group, const std::string &key,
+                                std::optional<std::vector<std::string>> xticklabels,
+                                const std::shared_ptr<GR::Context> &extContext)
+{
+  /*!
+   * This function can be used to create a XTickLabel GR::Element
+   *
+   * \param[in] key A string used for storing the xticklabels in GR::Context
+   * \param[in] xticklabels A vector containing string values representing xticklabels
+   * \param[in] extContext A GR::Context that is used for storing the vectors. By default it uses GR::Render's
+   * GR::Context object but an external GR::Context can be used
+   */
+
+  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  if (xticklabels != std::nullopt)
+    {
+      (*useContext)[key] = *xticklabels;
+    }
+  group->setAttribute("xticklabels", key);
+}
+
 //! Render functions
 static void renderHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
@@ -3643,7 +3777,6 @@ void GR::Render::render()
    * GR::Render::render uses both instance's document and context
    */
   auto root = this->firstChildElement();
-  std::cout << toXML(root) << "\n\n\n";
   global_root = root;
   if (root->hasChildNodes())
     {
@@ -3675,4 +3808,9 @@ GR::Render::Render()
    * This is the constructor for GR::Render
    */
   this->context = std::shared_ptr<GR::Context>(new Context());
+}
+
+std::shared_ptr<GR::Context> GR::Render::getContext()
+{
+  return context;
 }
