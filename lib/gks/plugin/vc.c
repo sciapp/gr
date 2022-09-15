@@ -68,6 +68,24 @@ void vc_movie_append_frame(movie_t movie, frame_t frame)
         }
     }
 
+  if (movie->frame && av_buffer_get_ref_count(movie->frame->buf[0]) > 1)
+    {
+      /* The 'apng' encoder requires access to the (ref-counted) last video frame for the inter-frame compression. This
+       * causes problems if the frame data pointers are re-used as it is possible with other codecs, therefore new
+       * buffers are created with `av_frame_get_buffer` and the old buffers are unreferenced. As `av_frame_unref` also
+       * resets metadata (width, height, ...) the relevant attributes are restored after unreferencing the buffers. */
+      int _format = movie->frame->format;
+      int _width = movie->frame->width;
+      int _height = movie->frame->height;
+      long _pts = movie->frame->pts;
+      av_frame_unref(movie->frame);
+      movie->frame->format = _format;
+      movie->frame->width = _width;
+      movie->frame->height = _height;
+      movie->frame->pts = _pts;
+      av_frame_get_buffer(movie->frame, 32);
+    }
+
   int src_stride[4] = {4 * frame->width, 0, 0, 0};
   const unsigned char *src_slice[4] = {frame->data, 0, 0, 0};
 
@@ -119,6 +137,11 @@ movie_t vc_movie_create(const char *path, int framerate, int bitrate, int width,
   if (strlen(path) >= 3 && strcmp(path + strlen(path) - 3, "mov") == 0)
     {
       format_name = "mov";
+    }
+
+  if (strlen(path) >= 3 && strcmp(path + strlen(path) - 3, "png") == 0)
+    {
+      format_name = "apng";
     }
 
   avformat_alloc_output_context2(&movie->fmt_ctx, NULL, format_name, path);
@@ -177,6 +200,10 @@ movie_t vc_movie_create(const char *path, int framerate, int bitrate, int width,
       movie->gif_palette = (unsigned char *)gks_malloc(AVPALETTE_SIZE);
       movie->gif_scaled_image = (unsigned char *)gks_malloc(width * height * 4);
       movie->gif_scaled_image_copy = (unsigned char *)gks_malloc(width * height * 4);
+    }
+  else if (movie->fmt_ctx->oformat->video_codec == AV_CODEC_ID_APNG)
+    {
+      movie->cdc_ctx->pix_fmt = AV_PIX_FMT_RGBA;
     }
   else
     {
@@ -266,6 +293,7 @@ void vc_movie_finish(movie_t movie)
   if (movie->frame)
     {
       /* drain encoder */
+      av_frame_unref(movie->frame);
       av_frame_free(&movie->frame);
       movie->frame = NULL;
       encode_frame(movie);

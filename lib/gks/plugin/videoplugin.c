@@ -65,7 +65,7 @@ static ws_state_list *p;
 
 static void close_page(void)
 {
-  if ((p->wtype == 120 || p->wtype == 121 || p->wtype == 130 || p->wtype == 160 || p->wtype == 161 ||
+  if ((p->wtype == 120 || p->wtype == 121 || p->wtype == 130 || p->wtype == 131 || p->wtype == 160 || p->wtype == 161 ||
        p->wtype == 162) &&
       p->movie)
     {
@@ -89,6 +89,10 @@ static void open_page()
   else if (p->wtype == 130)
     {
       gks_filepath(path, p->path, "gif", 0, 0);
+    }
+  else if (p->wtype == 131)
+    {
+      gks_filepath(path, p->path, "png", 0, 0);
     }
   else if (p->wtype == 160)
     {

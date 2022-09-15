@@ -18,6 +18,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/errno.h>
 #else
 #include <windows.h>
 #endif
@@ -57,7 +58,7 @@ static int is_running = 0;
 
 #define CMD_LINE_LEN 8192
 
-static DWORD WINAPI gksqt_tread(LPVOID parm)
+static DWORD WINAPI gksqt_thread(LPVOID parm)
 {
   char *cmd = (char *)parm;
   wchar_t *w_cmd;
@@ -92,8 +93,9 @@ static DWORD WINAPI gksqt_tread(LPVOID parm)
 
 #else
 
-static void *gksqt_tread(void *arg)
+static void *gksqt_thread(void *arg)
 {
+  int retstat = 0;
 #ifdef __APPLE__
   sigset_t blockMask, origMask;
   struct sigaction saIgnore, saOrigQuit, saOrigInt, saDefault;
@@ -109,13 +111,8 @@ static void *gksqt_tread(void *arg)
   sigaction(SIGINT, &saIgnore, &saOrigInt);
   sigaction(SIGQUIT, &saIgnore, &saOrigQuit);
 
-  pid = fork();
-  if (pid < 0)
-    {
-      fprintf(stderr, "Fork failed\n");
-      return NULL;
-    }
-  else if (pid == 0)
+  is_running = 1;
+  if ((pid = fork()) == 0)
     {
       saDefault.sa_handler = SIG_DFL;
       saDefault.sa_flags = 0;
@@ -126,23 +123,39 @@ static void *gksqt_tread(void *arg)
 
       sigprocmask(SIG_SETMASK, &origMask, NULL);
 
-      is_running = 1;
       execl("/bin/sh", "sh", "-c", (char *)arg, (char *)NULL);
-      is_running = 0;
 
-      exit(127);
+      _exit(127);
     }
+  if (pid == -1)
+    {
+      fprintf(stderr, "Fork failed\n");
+      retstat = -1;
+    }
+  else
+    {
+      int status;
+      while (waitpid(pid, &status, 0) == -1)
+        {
+          if (errno != EINTR)
+            {
+              retstat = WIFEXITED(status) != 0 ? WEXITSTATUS(status) : -1;
+              break;
+            }
+        }
+    }
+  is_running = 0;
 
   sigprocmask(SIG_SETMASK, &origMask, NULL);
   sigaction(SIGINT, &saOrigInt, NULL);
   sigaction(SIGQUIT, &saOrigQuit, NULL);
 #else
   is_running = 1;
-  system((char *)arg);
+  retstat = system((char *)arg);
   is_running = 0;
 #endif
 
-  return NULL;
+  return retstat == 0 ? arg : NULL;
 }
 
 #endif
@@ -152,11 +165,11 @@ static int start(const char *cmd)
 #ifdef _WIN32
   DWORD thread;
 
-  if (CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)gksqt_tread, (void *)cmd, 0, &thread) == NULL) return -1;
+  if (CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)gksqt_thread, (void *)cmd, 0, &thread) == NULL) return -1;
 #else
   pthread_t thread;
 
-  if (pthread_create(&thread, NULL, gksqt_tread, (void *)cmd)) return -1;
+  if (pthread_create(&thread, NULL, gksqt_thread, (void *)cmd)) return -1;
 #endif
   return 0;
 }
