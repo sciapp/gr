@@ -1608,7 +1608,7 @@ static void to_DC(int n, double *x, double *y)
 
   begin_context(context);
 
-  CGContextSetLineCap(context, kCGLineCapButt);
+  CGContextSetLineCap(context, kCGLineCapRound);
   CGContextSetLineJoin(context, kCGLineJoinRound);
   CGContextSetLineWidth(context, gkss->bwidth * p->nominal_size);
   [self set_stroke_color:gkss->bcoli:context];
@@ -1746,13 +1746,13 @@ static void to_DC(int n, double *x, double *y)
           CGContextClosePath(context);
           cur_x = start_x;
           cur_y = start_y;
-          CGContextDrawPath(context, kCGPathFill);
+          CGContextDrawPath(context, kCGPathEOFill);
           break;
         case 'F':
           CGContextClosePath(context);
           cur_x = start_x;
           cur_y = start_y;
-          CGContextDrawPath(context, kCGPathFillStroke);
+          CGContextDrawPath(context, kCGPathEOFillStroke);
           break;
         case 'Z':
           CGContextClosePath(context);
