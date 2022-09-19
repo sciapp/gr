@@ -6182,7 +6182,7 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
       zpoint[i] = point[i].z;
     }
 
-  if (m > 0) gr_polymarker(m, xpoint, ypoint);
+  if (m > 0) gks_polymarker(m, xpoint, ypoint);
 
   if (flag_graphics)
     {
