@@ -572,7 +572,7 @@ static void fillarea(int n, double *px, double *py)
   int fl_color;
 
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
-  p->linewidth = p->nominal_size;
+  p->linewidth = gkss->bwidth * p->nominal_size;
 
   pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[fl_color]);
 
