@@ -473,7 +473,9 @@ static void fill_path(agg::path_storage &path)
   p->rasterizer.reset();
   p->rasterizer.add_path(p->curve);
   p->renderer_aa.color(p->fill_col);
+  p->rasterizer.filling_rule(agg::fill_even_odd);
   agg::render_scanlines(p->rasterizer, p->scanline, p->renderer_aa);
+  p->rasterizer.filling_rule(agg::fill_non_zero);
   p->path.remove_all();
 }
 
@@ -496,7 +498,9 @@ static void fill_stroke_path(agg::path_storage &path)
   p->rasterizer.reset();
   p->rasterizer.add_path(p->curve);
   p->renderer_aa.color(p->fill_col);
+  p->rasterizer.filling_rule(agg::fill_even_odd);
   agg::render_scanlines(p->rasterizer, p->scanline, p->renderer_aa);
+  p->rasterizer.filling_rule(agg::fill_non_zero);
   p->rasterizer.reset();
   p->rasterizer.add_path(p->stroke);
   p->renderer_aa.color(p->stroke_col);
@@ -673,7 +677,10 @@ static void fill_routine(int n, double *px, double *py, int tnr)
     }
   else
     {
+      p->rasterizer.filling_rule(agg::fill_non_zero);
       p->stroke.width(p->linewidth);
+      p->stroke.line_cap(agg::round_cap);
+      p->stroke.line_join(agg::round_join);
       p->stroke_col = agg::rgba(p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency);
       stroke_path(p->path, true);
     }
@@ -864,7 +871,7 @@ static void polymarker(int n, const double *px, const double *py)
 
 static void fillarea(int n, double *px, double *py)
 {
-  p->linewidth = p->nominal_size;
+  p->linewidth = gkss->bwidth * p->nominal_size;
   p->color = gkss->asf[12] ? gkss->facoli : 1;
 
   p->rasterizer.filling_rule(agg::fill_even_odd);

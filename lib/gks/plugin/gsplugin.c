@@ -1188,7 +1188,7 @@ static void ps_init(int *pages)
 
   set_color(-1, p->wtype);
   set_foreground(-1, p->wtype);
-  packb("0 setlinecap 1 setlinejoin");
+  packb("1 setlinecap 1 setlinejoin");
   set_linewidth(-1.0);
   set_markersize(-1.0);
   packb("0 ma");
@@ -1779,15 +1779,12 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
       p->green[ln_color] = ((rgba >> 8) & 0xff) / 255.0;
       p->blue[ln_color] = ((rgba >> 16) & 0xff) / 255.0;
 
-      packb("np 1 setlinecap");
       set_linewidth(line_width);
       set_color(-ln_color, p->wtype);
 
       snprintf(buffer, 50, "%d %d m %d %d l sk", xim1, yim1, xi, yi);
       packb(buffer);
     }
-
-  packb("0 setlinecap");
 }
 
 static void set_bordercolor(int wtype)
@@ -2276,7 +2273,7 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
           style = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
           color = gkss->asf[12] ? gkss->facoli : 1;
           set_color(color, p->wtype);
-          set_linewidth(1.0);
+          set_linewidth(gkss->bwidth);
           if (gkss->clip_tnr != 0)
             {
               packb("gsave");

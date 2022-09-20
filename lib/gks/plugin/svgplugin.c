@@ -559,7 +559,7 @@ static void stroke(void)
 
   svg_printf(p->stream,
              "<polyline clip-path=\"url(#clip%02d%d)\" style=\""
-             "stroke:#%02x%02x%02x; stroke-linecap:butt; stroke-linejoin:round; stroke-width:%g; stroke-opacity:%g; "
+             "stroke:#%02x%02x%02x; stroke-linecap:round; stroke-linejoin:round; stroke-width:%g; stroke-opacity:%g; "
              "fill:none\" ",
              path_id, p->rect_index, p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->linewidth,
              p->transparency);
@@ -612,7 +612,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
   svg_printf(p->stream,
              "<polyline clip-path=\"url(#clip%02d%d)\" style=\""
-             "stroke:#%02x%02x%02x; stroke-linecap:butt; stroke-linejoin:round; stroke-width:%g; stroke-opacity:%g; "
+             "stroke:#%02x%02x%02x; stroke-linecap:round; stroke-linejoin:round; stroke-width:%g; stroke-opacity:%g; "
              "fill:none\" ",
              path_id, p->rect_index, p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->linewidth,
              p->transparency);
@@ -1252,7 +1252,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           break;
         case 'S': /* stroke */
           svg_printf(p->stream,
-                     "\" fill=\"none\" stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-linecap=\"butt\" "
+                     "\" fill=\"none\" stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-linecap=\"round\" "
                      "stroke-linejoin=\"round\" stroke-width=\"%g\" />",
                      p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
                      gkss->bwidth * p->nominal_size);
@@ -1260,7 +1260,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           break;
         case 's': /* close and stroke */
           svg_printf(p->stream,
-                     "Z\" fill=\"none\" stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-linecap=\"butt\" "
+                     "Z\" fill=\"none\" stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-linecap=\"round\" "
                      "stroke-linejoin=\"round\" stroke-width=\"%g\" />",
                      p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
                      gkss->bwidth * p->nominal_size);
@@ -1278,7 +1278,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
         case 'F': /* fill and stroke */
           svg_printf(p->stream,
                      "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" stroke=\"#%02x%02x%02x\" "
-                     "stroke-opacity=\"%g\" stroke-width=\"%g\" />",
+                     "stroke-opacity=\"%g\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"%g\" />",
                      p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency,
                      p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
                      gkss->bwidth * p->nominal_size);
