@@ -1328,7 +1328,7 @@ static void cell_array(double xmin, double xmax, double ymin, double ymax, int d
   else if (swap == 2)
     snprintf(buffer, 100, "/ImageMatrix [%d 0 0 %d 0 0]", dx, dy);
   else
-    snprintf(buffer, 100, "/ImageMatrix [-%d 0 %d %d 0 0]", dx, dx, dy);
+    snprintf(buffer, 100, "/ImageMatrix [-%d 0 0 %d %d 0]", dx, dy, dx);
   packb(buffer);
 
   snprintf(buffer, 100, "/DataSource Data /BitsPerComponent 8 /Decode [0 1%s]", wtype % 2 == 0 ? " 0 1 0 1" : "");
