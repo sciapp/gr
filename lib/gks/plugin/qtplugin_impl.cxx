@@ -423,7 +423,7 @@ static void polyline(int n, double *px, double *py)
       p->pixmap->setPen(pen);
     }
   else
-    p->pixmap->setPen(QPen(transparent_color, ln_width, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
+    p->pixmap->setPen(QPen(transparent_color, ln_width, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
 
   line_routine(n, px, py, ln_type, gkss->cntnr);
 
@@ -771,7 +771,7 @@ static void fillarea(int n, double *px, double *py)
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
       p->pixmap->setPen(
-          QPen(transparent_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
+          QPen(transparent_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
       line_routine(n, px, py, DrawBorder, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)

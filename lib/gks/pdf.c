@@ -87,7 +87,7 @@ typedef unsigned long uLong;
 #define pdf_curveto(p) pdf_printf(p->content, "c\n")
 #define pdf_setdash(p, dash) pdf_printf(p->content, "%s 0 d\n", dash)
 
-#define pdf_setlinewidth(p, width) pdf_printf(p->content, "0 J 1 j %s w\n", pdf_double(width))
+#define pdf_setlinewidth(p, width) pdf_printf(p->content, "1 J 1 j %s w\n", pdf_double(width))
 
 #define pdf_text(p, xorg, yorg, text) \
   pdf_printf(p->content, "BT\n/F%d %d Tf\n%.2f %.2f Td\n(%s) Tj\nET\n", p->font, p->pt, xorg, yorg, text)
