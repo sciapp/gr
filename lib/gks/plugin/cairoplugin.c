@@ -1784,8 +1784,9 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   GKS_UNUSED(n);
 
   cairo_new_path(p->cr);
-  cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
+  cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_ROUND);
   cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
+  cairo_set_fill_rule(p->cr, CAIRO_FILL_RULE_EVEN_ODD);
   set_line_width(gkss->bwidth * p->nominal_size);
 
   j = 0;

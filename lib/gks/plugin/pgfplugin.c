@@ -1075,11 +1075,11 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   int i, j;
   double x[3], y[3], w, h, a1, a2;
   double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
-  int line_width;
+  double line_width;
   PGF_stream *buf;
   GKS_UNUSED(n);
 
-  line_width = nint(gkss->bwidth);
+  line_width = gkss->bwidth * p->nominal_size;
   if (line_width < 1) line_width = 0;
 
   pgf_printf(p->stream, "\\definecolor{pathstroke}{HTML}{%s}\n", p->rgb[gkss->bcoli]);
@@ -1214,8 +1214,9 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           break;
         case 'F': /* fill and stroke */
           pgf_printf(buf, "-- cycle;\n");
-          pgf_printf(p->stream, "\\filldraw[color=pathstroke, fill=pathfill, line width=%fpt, opacity=%f] ", line_width,
-                     p->transparency);
+          pgf_printf(p->stream,
+                     "\\filldraw[color=pathstroke, fill=pathfill, even odd rule, line width=%fpt, opacity=%f] ",
+                     line_width, p->transparency);
           pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
           pgf_clear_stream(buf);
           cur_x = start_x;
@@ -1223,7 +1224,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           break;
         case 'f': /* fill */
           pgf_printf(buf, "-- cycle;\n");
-          pgf_printf(p->stream, "\\fill[fill=pathfill, opacity=%f] ", p->transparency);
+          pgf_printf(p->stream, "\\fill[fill=pathfill, even odd rule, opacity=%f] ", p->transparency);
           pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
           pgf_clear_stream(buf);
           cur_x = start_x;
