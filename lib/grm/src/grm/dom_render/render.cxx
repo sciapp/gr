@@ -22,6 +22,7 @@
 #include "gr.h"
 #include "gr3.h"
 #include "grm/layout.hxx"
+#include "grm/plot_int.h"
 
 std::shared_ptr<GR::Element> global_root;
 
@@ -895,7 +896,6 @@ static void gr3DrawMesh(const std::shared_ptr<GR::Element> &element, const std::
   std::vector<double> colors_vec = GR::get<std::vector<double>>((*context)[colors]);
   std::vector<double> scales_vec = GR::get<std::vector<double>>((*context)[scales]);
 
-  // TODO? : float workaround here -> support float in gr tree interface and GRender?
   std::vector<float> pf_vec(positions_vec.begin(), positions_vec.end());
   std::vector<float> df_vec(directions_vec.begin(), directions_vec.end());
   std::vector<float> uf_vec(ups_vec.begin(), ups_vec.end());
@@ -1566,25 +1566,27 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
                 }
               else
                 {
-                  /* TODO: Throw error or set default value when there is an unknown or missing type */
-                  ;
+                  tmp_size_d[0] = PLOT_DEFAULT_WIDTH;
+                  tmp_size_d[1] = PLOT_DEFAULT_WIDTH;
                 }
               pixel_size[i] = (int)grm_round(tmp_size_d[i]);
               metric_size[i] = tmp_size_d[i] / dpm[i];
             }
           else
             {
-              /* TODO: Throw error or set default value when there is an unknown or missing unit */
-              ;
+              pixel_size[0] = (int)grm_round(PLOT_DEFAULT_WIDTH);
+              pixel_size[1] = (int)grm_round(PLOT_DEFAULT_HEIGHT);
+              metric_size[0] = PLOT_DEFAULT_WIDTH / dpm[0];
+              metric_size[1] = PLOT_DEFAULT_HEIGHT / dpm[1];
             }
         }
     }
   else
     {
-      /* TODO: Should default values that are set in the grm be set in the renderer as well? */
-      /* If this branch is executed, there is an internal error (size has a default value if not set by the user) */
-      /* TODO: Implement Exception */
-      throw std::exception();
+      pixel_size[0] = (int)grm_round(PLOT_DEFAULT_WIDTH);
+      pixel_size[1] = (int)grm_round(PLOT_DEFAULT_HEIGHT);
+      metric_size[0] = PLOT_DEFAULT_WIDTH / dpm[0];
+      metric_size[1] = PLOT_DEFAULT_HEIGHT / dpm[1];
     }
 
   if (pixel_width != NULL)
