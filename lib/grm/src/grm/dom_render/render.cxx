@@ -1481,19 +1481,23 @@ static void processViewport(const std::shared_ptr<GR::Element> &elem)
 static void legend_size(const std::shared_ptr<GR::Element> &elem, double *w, double *h)
 {
   double tbx[4], tby[4];
-  const char **labels, **current_label;
   int labelsExist = 1;
   unsigned int num_labels;
-
+  std::vector<std::string> labels;
   *w = 0;
   *h = 0;
-  /* TODO: Get labels from tree */
-  /* labels = (std::string)elem->getAttribute("labels"); */
+
+  if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+    {
+      auto context = render->getContext();
+      std::string key = static_cast<std::string>(elem->getAttribute("labels"));
+      labels = GR::get<std::vector<std::string>>((*context)[key]);
+    }
   if (labelsExist)
     {
-      for (current_label = labels; *current_label != NULL; ++current_label)
+      for (auto current_label : labels)
         {
-          gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
+          gr_inqtext(0, 0, current_label.data(), tbx, tby);
           *w = grm_max(*w, tbx[2] - tbx[0]);
           *h += grm_max(tby[2] - tby[0], 0.03);
         }
