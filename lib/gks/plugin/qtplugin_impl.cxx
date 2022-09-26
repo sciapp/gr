@@ -719,7 +719,13 @@ static void text(double px, double py, int nchars, char *chars)
       text_routine(x, y, nchars, chars);
     }
   else
-    gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
+    {
+      if ((tx_prec == GKS_K_TEXT_PRECISION_STROKE || tx_prec == GKS_K_TEXT_PRECISION_CHAR) && gkss->fontfile == 0)
+        {
+          gkss->fontfile = gks_open_font();
+        }
+      gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
+    }
 
   p->pixmap->restore();
 }
@@ -1419,6 +1425,14 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       init_colors();
 
       gks_init_core(gkss);
+      break;
+
+    case 3:
+      if (gkss->fontfile > 0)
+        {
+          gks_close_font(gkss->fontfile);
+          gkss->fontfile = 0;
+        }
       break;
 
     case 12:
