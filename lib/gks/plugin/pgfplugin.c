@@ -643,14 +643,14 @@ static void text_routine(double x, double y, int nchars, char *chars)
 
   pgf_printf(p->stream,
              "\\begin{scope}[yscale=-1,yshift=-%f]\n"
-             "\\draw[mycolor, opacity=%f] (%f,%f) node[align=",
+             "\\draw[mycolor, opacity=%f] (%f,%f) node[anchor=",
              (ystart * 2), p->transparency, xstart, ystart);
   if (gkss->txal[0] == GKS_K_TEXT_HALIGN_RIGHT)
-    pgf_printf(p->stream, "right");
+    pgf_printf(p->stream, "south east");
   else if (gkss->txal[0] == GKS_K_TEXT_HALIGN_LEFT)
-    pgf_printf(p->stream, "left");
+    pgf_printf(p->stream, "south west");
   else
-    pgf_printf(p->stream, "center");
+    pgf_printf(p->stream, "south");
 
   if (p->angle != 0) pgf_printf(p->stream, ", rotate=%f", p->angle);
 
