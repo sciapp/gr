@@ -57,6 +57,16 @@ public:
   std::shared_ptr<Element> createAxes(double x_tick, double y_tick, double x_org, double y_org, int major_x,
                                       int major_y, int tick_orientation);
 
+  std::shared_ptr<Element> createDrawLegend(const std::string &labels_key,
+                                            std::optional<std::vector<std::string>> labels, int location,
+                                            const std::string &specs_key, std::optional<std::vector<std::string>> specs,
+                                            const std::shared_ptr<GR::Context> &extContext = nullptr);
+
+  std::shared_ptr<Element> createDrawPolarAxes(int angle_ticks, int rings, const std::string &kind, int phiflip,
+                                               double vp_xmin, double vp_xmax, double vp_ymin, double vp_ymax,
+                                               const std::string &title = "", const std::string &norm = "",
+                                               double r_max = -1.0);
+
   std::shared_ptr<Element> createGrid(double x_tick, double y_tick, double x_org, double y_org, int major_x,
                                       int major_y);
 

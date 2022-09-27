@@ -6262,7 +6262,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   const double *window, *viewport, *vp;
   double diag;
   double charheight;
-  double r_min, r_max;
+  double r_min, r_max = -1.0;
   double tick;
   double x[2], y[2];
   int i, n;
@@ -6273,26 +6273,14 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   int phiflip = 0;
   double interval;
   char *title;
-  auto group = global_render->createGroup("polar_axes");
-  if (!currentDomElement)
-    {
-      global_root->lastChildElement()->append(group);
-    }
-  else
-    {
-      currentDomElement->append(group);
-    }
+  char *norm;
 
   /* TODO: Move calculations containing viewport to the renderer */
-  grm_args_values(args, "viewport", "D", &viewport);
-  grm_args_values(args, "vp", "D", &vp);
-  diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
-              (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
-  charheight = grm_max(0.018 * diag, 0.012);
+  // TODO: Solve r_max issues. render order: polar axes then polar histogram. polar axes calcs r_max and stores it in
+  // TODO: the dom, so that polar histogram can access it.
 
-  grm_args_values(args, "window", "D", &window);
-  r_min = window[2];
-  r_max = window[3];
+  grm_args_values(args, "vp", "D", &vp);
+
 
   if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
     {
@@ -6305,12 +6293,8 @@ err_t plot_draw_polar_axes(grm_args_t *args)
 
   grm_args_values(args, "kind", "s", &kind);
 
-  global_render->setCharHeight(group, charheight);
-  global_render->setLineType(group, GKS_K_LINETYPE_SOLID);
-
   if (strcmp(kind, "polar_histogram") == 0)
     {
-      const char *norm;
       r_min = 0.0;
       if (grm_args_values(args, "normalization", "s", &norm) == 0)
         {
@@ -6318,114 +6302,33 @@ err_t plot_draw_polar_axes(grm_args_t *args)
         }
 
       grm_args_values(args, "r_max", "d", &r_max);
+    }
 
-      if (str_equals_any(norm, 2, "count", "cumcount"))
-        {
-          tick = 1.5 * auto_tick(r_min, r_max);
-        }
-      else if (str_equals_any(norm, 2, "pdf", "probability"))
-        {
-          tick = 1.5 * auto_tick(r_min, r_max);
-        }
-      else if (strcmp(norm, "countdensity") == 0)
-        {
-          tick = 1.5 * auto_tick(r_min, r_max);
-        }
-      else if (strcmp(norm, "cdf") == 0)
-        {
-          tick = 1.0 / rings;
-        }
-      else
-        {
-          tick = auto_tick(r_min, r_max);
-        }
+  if (grm_args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
+
+
+  if (!grm_args_values(args, "title", "s", &title))
+    {
+      title = "";
+    }
+
+  auto group = global_render->createDrawPolarAxes(angle_ticks, rings, kind, phiflip, vp[0], vp[1], vp[2], vp[3], title,
+                                                  norm, r_max);
+
+  if (!currentDomElement)
+    {
+      global_root->lastChildElement()->append(group);
     }
   else
     {
-      tick = auto_tick(r_min, r_max);
+      currentDomElement->append(group);
     }
-
-  n = rings;
-  if (grm_args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
-  for (i = 0; i <= n; i++)
-    {
-      double r = 2.0 / 3 * (r_min + i * tick) / r_max;
-      if (i % 2 == 0)
-        {
-          if (i > 0)
-            {
-              auto temp = global_render->createDrawArc(-r, r, -r, r, 0, 180);
-              group->append(temp);
-              global_render->setLineColorInd(temp, 88);
-
-              temp = global_render->createDrawArc(-r, r, -r, r, 180, 360);
-              group->append(temp);
-              global_render->setLineColorInd(temp, 88);
-            }
-          global_render->setTextAlign(group, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-
-          x[0] = 0.05;
-          y[0] = r;
-          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + i * tick);
-          group->append(global_render->createText(x[0], y[0], text_buffer, WC));
-        }
-      else
-        {
-          auto temp = global_render->createDrawArc(-r, r, -r, r, 0, 180);
-          group->append(temp);
-          global_render->setLineColorInd(temp, 90);
-
-          temp = global_render->createDrawArc(-r, r, -r, r, 180, 360);
-          group->append(temp);
-          global_render->setLineColorInd(temp, 90);
-        }
-    }
-  if (strcmp(kind, "polar_histogram") == 0)
-    {
-      grm_args_push(args, "r_max", "d", r_min + n * tick);
-    }
-  interval = 360.0 / angle_ticks;
-  for (alpha = 0.0; alpha < 360; alpha += interval)
-    {
-      x[0] = cos(alpha * M_PI / 180.0);
-      y[0] = sin(alpha * M_PI / 180.0);
-      x[1] = 0.0;
-      y[1] = 0.0;
-
-      auto temp = global_render->createPolyline(x[0], x[1], y[0], y[1]);
-      group->append(temp);
-      global_render->setLineColorInd(temp, 90 - i % 2 * 2);
-
-      x[0] *= 1.1;
-      y[0] *= 1.1;
-      if (phiflip == 0)
-        {
-          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", (int)grm_round(alpha));
-        }
-      else
-        {
-          if (alpha == 0.0)
-            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 0);
-          else
-            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 330 - (int)grm_round(alpha - interval));
-        }
-      temp = global_render->createText(x[0], y[0], text_buffer, WC);
-      group->append(temp);
-      global_render->setTextAlign(temp, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
-    }
-
-  if (grm_args_values(args, "title", "s", &title))
-    {
-      auto temp = global_render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
-      group->append(temp);
-      global_render->setTextAlign(temp, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-    }
-
   return ERROR_NONE;
 }
 
 err_t plot_draw_legend(grm_args_t *subplot_args)
 {
+  // TODO: Move viewport dependent calculations to renderer
   const char **labels, **current_label;
   unsigned int num_labels, num_series;
   grm_args_t **current_series;
@@ -6437,134 +6340,37 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
   int i;
 
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
-  auto subGroup = global_render->createGroup("legend");
-  group->append(subGroup);
 
   return_error_if(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   logger((stderr, "Draw a legend with %d labels\n", num_labels));
-  grm_args_first_value(subplot_args, "series", "A", &current_series, &num_series);
-  grm_args_values(subplot_args, "viewport", "D", &viewport);
   grm_args_values(subplot_args, "location", "i", &location);
-  global_render->setSelntran(subGroup, 0);
-  global_render->setScale(subGroup, 0);
+  grm_args_first_value(subplot_args, "series", "A", &current_series, &num_series);
 
-  gr_savestate();
-  legend_size(subplot_args, &w, &h);
+  int id = static_cast<int>(global_root->getAttribute("id"));
+  global_root->setAttribute("id", ++id);
 
-  if (int_equals_any(location, 3, 11, 12, 13))
-    {
-      px = viewport[1] + 0.11;
-    }
-  else if (int_equals_any(location, 3, 8, 9, 10))
-    {
-      px = 0.5 * (viewport[0] + viewport[1] - w + 0.05);
-    }
-  else if (int_equals_any(location, 3, 2, 3, 6))
-    {
-      px = viewport[0] + 0.11;
-    }
-  else
-    {
-      px = viewport[1] - 0.05 - w;
-    }
-  if (int_equals_any(location, 5, 5, 6, 7, 10, 12))
-    {
-      py = 0.5 * (viewport[2] + viewport[3] + h) - 0.03;
-    }
-  else if (location == 13)
-    {
-      py = viewport[2] + h;
-    }
-  else if (int_equals_any(location, 3, 3, 4, 8))
-    {
-      py = viewport[2] + h + 0.03;
-    }
-  else if (location == 11)
-    {
-      py = viewport[3] - 0.03;
-    }
-  else
-    {
-      py = viewport[3] - 0.06;
-    }
+  std::string labels_key = std::to_string(id) + "labels";
+  std::string specs_key = std::to_string(id) + "specs";
+  std::vector<std::string> labels_vec(labels, labels + num_labels);
 
-  auto fr = global_render->createFillRect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
-  subGroup->append(fr);
-
-  global_render->setFillIntStyle(subGroup, GKS_K_INTSTYLE_SOLID);
-  global_render->setFillColorInd(subGroup, 0);
-
-  auto dr = global_render->createDrawRect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
-  subGroup->append(dr);
-
-  global_render->setLineType(dr, GKS_K_INTSTYLE_SOLID);
-  global_render->setLineColorInd(dr, 1);
-  global_render->setLineWidth(dr, 1);
-
-  i = 1;
-  global_render->setLineSpec(subGroup, const_cast<char *>(" "));
-
-  current_label = labels;
+  std::vector<std::string> specs_vec;
   while (*current_series != NULL)
     {
       char *spec;
-      int mask;
-      double dy;
-
-      if (i <= num_labels)
-        {
-          gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
-          dy = grm_max((tby[2] - tby[0]) - 0.03, 0);
-          py -= 0.5 * dy;
-        }
-      gr_savestate();
       grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
-      mask = gr_uselinespec(spec);
-      if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
-        {
-          legend_symbol_x[0] = px - 0.07;
-          legend_symbol_x[1] = px - 0.01;
-          legend_symbol_y[0] = py;
-          legend_symbol_y[1] = py;
-          auto pl = global_render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
-                                                  legend_symbol_y[1]);
-          subGroup->append(pl);
-          global_render->setLineSpec(pl, spec);
-        }
-      if (mask & 2)
-        {
-          legend_symbol_x[0] = px - 0.06;
-          legend_symbol_x[1] = px - 0.02;
-          legend_symbol_y[0] = py;
-          legend_symbol_y[1] = py;
-          auto pl = global_render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
-                                                  legend_symbol_y[1]);
-          subGroup->append(pl);
-          global_render->setLineSpec(pl, spec);
-        }
-      gr_restorestate();
-      if (i <= num_labels && *current_label != NULL)
-        {
-          auto tx = global_render->createText(px, py, (char *)*current_label);
-          subGroup->append(tx);
-          global_render->setTextAlign(tx, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-          py -= 0.5 * dy;
-          i += 1;
-          ++current_label;
-        }
-      py -= 0.03;
+      specs_vec.push_back(std::string(spec));
       ++current_series;
     }
-  auto resetGroup = global_render->createGroup("reset_selntran");
-  global_render->setSelntran(resetGroup, 1);
-  group->append(resetGroup);
-  gr_restorestate();
+
+  auto subGroup = global_render->createDrawLegend(labels_key, labels_vec, location, specs_key, specs_vec);
+  group->append(subGroup);
 
   return ERROR_NONE;
 }
 
 err_t plot_draw_pie_legend(grm_args_t *subplot_args)
 {
+  // TODO: move viewport dependent calcs to render
   grm_args_t *series;
   const char **labels, **current_label;
   unsigned int num_labels;
@@ -6642,7 +6448,7 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
 
 err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colors)
 {
-
+  // TODO: move viewport dependent calcs to render
   const double *viewport;
   double c_min, c_max;
   int *data;

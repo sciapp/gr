@@ -18,7 +18,6 @@ public:
   bool isPositive();
   bool isForward();
 
-private:
   int rowStart;
   int rowStop;
   int colStart;
@@ -47,8 +46,6 @@ public:
   double *getSubplot();
   grm_args_t *subplot_args = nullptr;
 
-
-private:
   double *subplot;
 
   double absHeight = -1;

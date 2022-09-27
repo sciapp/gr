@@ -1,6 +1,7 @@
 #include "grm/layout_error.hxx"
 
-using namespace grm;
+// TODO: namespace grm?
+// using namespace grm;
 
 InvalidArgument::InvalidArgument(const std::string &msg) : std::invalid_argument(msg) {}
 

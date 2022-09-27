@@ -27,7 +27,7 @@
 std::shared_ptr<GR::Element> global_root;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
-static std::set<std::string> parentTypes = {"group", "layout-grid", "layout-gridelement"};
+static std::set<std::string> parentTypes = {"group", "layout-grid", "layout-gridelement", "draw-legend"};
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
@@ -1750,6 +1750,368 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
   processViewport(elem);
 }
 
+static void legend_size(std::vector<std::string> labels, double *w, double *h)
+{
+  double tbx[4], tby[4];
+  unsigned int num_labels;
+
+  *w = 0;
+  *h = 0;
+
+  if (!labels.empty())
+    {
+      for (std::string current_label : labels)
+        {
+          gr_inqtext(0, 0, current_label.data(), tbx, tby);
+          *w = grm_max(*w, tbx[2] - tbx[0]);
+          *h += grm_max(tby[2] - tby[0], 0.03);
+        }
+    }
+}
+
+static double auto_tick(double amin, double amax)
+{
+  double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
+  double scale, tick;
+  int i, n;
+
+  scale = pow(10.0, (int)(log10(amax - amin)));
+  tick = 1.0;
+  for (i = 0; i < 9; i++)
+    {
+      n = (amax - amin) / scale / tick_size[i];
+      if (n > 7)
+        {
+          tick = tick_size[i - 1];
+          break;
+        }
+    }
+  tick *= scale;
+  return tick;
+}
+
+static void drawLegend(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+{
+  double viewport[4];
+  int location;
+  double px, py, w, h;
+  double tbx[4], tby[4];
+  double legend_symbol_x[2], legend_symbol_y[2];
+  int i;
+  bool firstRun;
+  std::shared_ptr<GR::Render> render;
+
+  gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
+  auto labels_key = static_cast<std::string>(elem->getAttribute("labels"));
+  auto specs_key = static_cast<std::string>(elem->getAttribute("specs"));
+
+
+  if (render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+    {
+    }
+  else
+    {
+      // TODO: error?
+    }
+  std::vector<std::string> labels = GR::get<std::vector<std::string>>((*context)[labels_key]);
+  std::vector<std::string> specs = GR::get<std::vector<std::string>>((*context)[specs_key]);
+
+  location = static_cast<int>(elem->getAttribute("location"));
+
+
+  //  gr_savestate();
+  legend_size(labels, &w, &h);
+
+  if (int_equals_any(location, 3, 11, 12, 13))
+    {
+      px = viewport[1] + 0.11;
+    }
+  else if (int_equals_any(location, 3, 8, 9, 10))
+    {
+      px = 0.5 * (viewport[0] + viewport[1] - w + 0.05);
+    }
+  else if (int_equals_any(location, 3, 2, 3, 6))
+    {
+      px = viewport[0] + 0.11;
+    }
+  else
+    {
+      px = viewport[1] - 0.05 - w;
+    }
+  if (int_equals_any(location, 5, 5, 6, 7, 10, 12))
+    {
+      py = 0.5 * (viewport[2] + viewport[3] + h) - 0.03;
+    }
+  else if (location == 13)
+    {
+      py = viewport[2] + h;
+    }
+  else if (int_equals_any(location, 3, 3, 4, 8))
+    {
+      py = viewport[2] + h + 0.03;
+    }
+  else if (location == 11)
+    {
+      py = viewport[3] - 0.03;
+    }
+  else
+    {
+      py = viewport[3] - 0.06;
+    }
+
+  /* ToDo? if the node already has a child nodes from a previous run, the child node will be deleted and created again
+   but it is not always necessary to delete create again if there are no changes to the viewport. */
+
+  if (elem->hasChildNodes())
+    {
+      for (auto child : elem->children())
+        {
+          elem->removeChild(child);
+          child->remove();
+        }
+    }
+  auto newGroup = render->createGroup("groupCreatedDuringRender");
+  elem->append(newGroup);
+
+  render->setSelntran(newGroup, 0);
+  render->setScale(newGroup, 0);
+
+  auto fr = render->createFillRect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
+  newGroup->append(fr);
+
+  render->setFillIntStyle(newGroup, GKS_K_INTSTYLE_SOLID);
+  render->setFillColorInd(newGroup, 0);
+
+  auto dr = render->createDrawRect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
+  newGroup->append(dr);
+
+  render->setLineType(dr, GKS_K_INTSTYLE_SOLID);
+  render->setLineColorInd(dr, 1);
+  render->setLineWidth(dr, 1);
+
+  i = 0;
+  render->setLineSpec(newGroup, const_cast<char *>(" "));
+
+  //  current_label = labels;
+  for (std::string spec : specs)
+    //  while (*current_series != NULL)
+    {
+      int mask;
+      double dy;
+
+      if (i <= labels.size())
+        {
+          gr_inqtext(0, 0, labels[i].data(), tbx, tby);
+          dy = grm_max((tby[2] - tby[0]) - 0.03, 0);
+          py -= 0.5 * dy;
+        }
+
+      gr_savestate();
+      mask = gr_uselinespec(spec.data());
+      gr_restorestate();
+
+      if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
+        {
+          legend_symbol_x[0] = px - 0.07;
+          legend_symbol_x[1] = px - 0.01;
+          legend_symbol_y[0] = py;
+          legend_symbol_y[1] = py;
+          auto pl =
+              render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0], legend_symbol_y[1]);
+          newGroup->append(pl);
+          render->setLineSpec(pl, spec);
+        }
+      if (mask & 2)
+        {
+          legend_symbol_x[0] = px - 0.06;
+          legend_symbol_x[1] = px - 0.02;
+          legend_symbol_y[0] = py;
+          legend_symbol_y[1] = py;
+          auto pl =
+              render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0], legend_symbol_y[1]);
+          newGroup->append(pl);
+          render->setLineSpec(pl, spec);
+        }
+      if (i < labels.size())
+        {
+          auto tx = render->createText(px, py, labels[i].data());
+          newGroup->append(tx);
+          render->setTextAlign(tx, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+          py -= 0.5 * dy;
+          i += 1;
+        }
+      py -= 0.03;
+    }
+  auto resetGroup = render->createGroup("reset_selntran");
+  render->setSelntran(resetGroup, 1);
+  elem->append(resetGroup);
+  gr_restorestate();
+}
+
+static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+{
+  double window[4], viewport[4], vp[4];
+  double diag;
+  double charheight;
+  double r_min, r_max;
+  double tick;
+  double x[2], y[2];
+  int i, n;
+  double alpha;
+  char text_buffer[PLOT_POLAR_AXES_TEXT_BUFFER];
+  std::string kind;
+  int angle_ticks, rings;
+  int phiflip = 0;
+  double interval;
+  std::string title;
+  std::string norm;
+
+  std::shared_ptr<GR::Render> render;
+
+  gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
+  gr_inqwindow(&window[0], &window[1], &window[2], &window[3]);
+
+  if (render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+    {
+    }
+  else
+    {
+      // TODO: error?
+    }
+
+  auto newGroup = render->createGroup("groupCreatedDuringRender");
+  elem->append(newGroup);
+
+  vp[0] = static_cast<double>(elem->getAttribute("vp_xmin"));
+  vp[1] = static_cast<double>(elem->getAttribute("vp_xmax"));
+  vp[2] = static_cast<double>(elem->getAttribute("vp_ymin"));
+  vp[3] = static_cast<double>(elem->getAttribute("vp_ymax"));
+
+  diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
+              (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
+  charheight = grm_max(0.018 * diag, 0.012);
+
+  r_min = window[2];
+  r_max = window[3];
+
+  angle_ticks = static_cast<int>(elem->getAttribute("angle_ticks"));
+  rings = static_cast<int>(elem->getAttribute("rings"));
+
+  kind = static_cast<std::string>(elem->getAttribute("kind"));
+
+  render->setCharHeight(newGroup, charheight);
+  render->setLineType(newGroup, GKS_K_LINETYPE_SOLID);
+
+  if (kind == "polar_histogram")
+    {
+      r_min = 0.0;
+      norm = static_cast<std::string>(elem->getAttribute("norm"));
+      r_max = static_cast<double>(elem->getAttribute("r_max"));
+
+      if (norm == "count" || norm == "cumcount")
+        {
+          tick = 1.5 * auto_tick(r_min, r_max);
+        }
+      else if (norm == "pdf" || norm == "probability")
+        {
+          tick = 1.5 * auto_tick(r_min, r_max);
+        }
+      else if (norm == "countdensity")
+        {
+          tick = 1.5 * auto_tick(r_min, r_max);
+        }
+      else if (norm == "cdf")
+        {
+          tick = 1.0 / rings;
+        }
+      else
+        {
+          tick = auto_tick(r_min, r_max);
+        }
+    }
+  else
+    {
+      tick = auto_tick(r_min, r_max);
+    }
+
+  n = rings;
+  phiflip = static_cast<int>(elem->getAttribute("phiflip"));
+
+  for (i = 0; i <= n; i++)
+    {
+      double r = 2.0 / 3 * (r_min + i * tick) / r_max;
+      if (i % 2 == 0)
+        {
+          if (i > 0)
+            {
+              auto temp = render->createDrawArc(-r, r, -r, r, 0, 180);
+              newGroup->append(temp);
+              render->setLineColorInd(temp, 88);
+
+              temp = render->createDrawArc(-r, r, -r, r, 180, 360);
+              newGroup->append(temp);
+              render->setLineColorInd(temp, 88);
+            }
+          render->setTextAlign(newGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+
+          x[0] = 0.05;
+          y[0] = r;
+          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + i * tick);
+          newGroup->append(render->createText(x[0], y[0], text_buffer, WC));
+        }
+      else
+        {
+          auto temp = render->createDrawArc(-r, r, -r, r, 0, 180);
+          newGroup->append(temp);
+          render->setLineColorInd(temp, 90);
+
+          temp = render->createDrawArc(-r, r, -r, r, 180, 360);
+          newGroup->append(temp);
+          render->setLineColorInd(temp, 90);
+        }
+    }
+  if (kind == "polar_histogram")
+    {
+      // TODO: where to store r_max? parent node? WIP
+      elem->parentElement()->setAttribute("r_max", r_min + n * tick);
+    }
+  interval = 360.0 / angle_ticks;
+  for (alpha = 0.0; alpha < 360; alpha += interval)
+    {
+      x[0] = cos(alpha * M_PI / 180.0);
+      y[0] = sin(alpha * M_PI / 180.0);
+      x[1] = 0.0;
+      y[1] = 0.0;
+
+      auto temp = render->createPolyline(x[0], x[1], y[0], y[1]);
+      newGroup->append(temp);
+      render->setLineColorInd(temp, 90 - i % 2 * 2);
+
+      x[0] *= 1.1;
+      y[0] *= 1.1;
+      if (phiflip == 0)
+        {
+          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", (int)grm_round(alpha));
+        }
+      else
+        {
+          if (alpha == 0.0)
+            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 0);
+          else
+            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 330 - (int)grm_round(alpha - interval));
+        }
+      temp = render->createText(x[0], y[0], text_buffer, WC);
+      newGroup->append(temp);
+      render->setTextAlign(temp, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
+    }
+  title = static_cast<std::string>(elem->getAttribute("title"));
+  if (title != "")
+    {
+      auto temp = render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
+      newGroup->append(temp);
+      render->setTextAlign(temp, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+    }
+}
 static void processGR3CameraLookAt(const std::shared_ptr<GR::Element> &elem)
 {
   double camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z;
@@ -1937,7 +2299,9 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
                        {std::string("updatews"), updateWS},
                        {std::string("drawgraphics"), drawGraphics},
                        {std::string("layout-grid"), layoutGrid},
-                       {std::string("layout-gridelement"), layoutGridElement}};
+                       {std::string("layout-gridelement"), layoutGridElement},
+                       {std::string("draw-legend"), drawLegend},
+                       {std::string("draw-polar-axes"), drawPolarAxes}};
   /*! Modifier */
   if (element->localName() == "group")
     {
@@ -2237,6 +2601,74 @@ std::shared_ptr<GR::Element> GR::Render::createAxes(double x_tick, double y_tick
   element->setAttribute("tick_orientation", tick_orientation);
   return element;
 }
+
+std::shared_ptr<GR::Element> GR::Render::createDrawLegend(const std::string &labels_key,
+                                                          std::optional<std::vector<std::string>> labels, int location,
+                                                          const std::string &specs_key,
+                                                          std::optional<std::vector<std::string>> specs,
+                                                          const std::shared_ptr<GR::Context> &extContext)
+{
+  /*!
+   * This function can be used for creating a DrawLegend GR::Element
+   * This element is different compared to most of Render's GR::Element, the DrawLegend GR::Element will incorporate
+   * plot_draw_legend code from plot.cxx and will create new GR::Elements as child nodes in the render document
+   *
+   * \param[in] labels_key A std::string for the labels vector
+   * \param[in] labels May be an std::vector<std::string>> containing the labels
+   * \param[in] location An int value
+   * \param[in] spec An std::string
+   */
+
+  auto element = createElement("draw-legend");
+  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  element->setAttribute("location", location);
+  element->setAttribute("specs", specs_key);
+  element->setAttribute("labels", labels_key);
+
+  // attribute firstRun is used for determining if new elements should be created or not. Dependent on the run count
+  // when created it is always true.
+  element->setAttribute("firstRun", true);
+
+  if (labels != std::nullopt)
+    {
+      (*useContext)[labels_key] = *labels;
+    }
+  if (specs != std::nullopt)
+    {
+      (*useContext)[specs_key] = *specs;
+    }
+
+  return element;
+}
+
+
+std::shared_ptr<GR::Element> GR::Render::createDrawPolarAxes(int angle_ticks, int rings, const std::string &kind,
+                                                             int phiflip, double vp_xmin, double vp_xmax,
+                                                             double vp_ymin, double vp_ymax, const std::string &title,
+                                                             const std::string &norm, double r_max)
+{
+  auto element = createElement("draw-polar-axes");
+  if (title != "")
+    {
+      element->setAttribute("title", title);
+    }
+  if (norm != "")
+    {
+      element->setAttribute("norm", norm);
+    }
+  element->setAttribute("angle_ticks", angle_ticks);
+  element->setAttribute("rings", rings);
+  element->setAttribute("kind", kind);
+  element->setAttribute("phiflip", phiflip);
+  element->setAttribute("r_max", r_max);
+  element->setAttribute("vp_xmin", vp_xmin);
+  element->setAttribute("vp_xmax", vp_xmax);
+  element->setAttribute("vp_ymin", vp_ymin);
+  element->setAttribute("vp_ymax", vp_ymax);
+
+  return element;
+}
+
 
 std::shared_ptr<GR::Element> GR::Render::createGrid(double x_tick, double y_tick, double x_org, double y_org,
                                                     int major_x, int major_y)

@@ -709,7 +709,7 @@ static void testContext()
 int main(void)
 {
 
-  //  test_dom_render();
+  test_dom_render();
   // test_wireframe();
   // test_plot3();
   //  testTrisurf();
@@ -718,7 +718,7 @@ int main(void)
   //  test_hist();
   //  test_contour();
   //  testBar();
-  testContext();
+  //  testContext();
   //  grm_finalize();
 
   return 0;
