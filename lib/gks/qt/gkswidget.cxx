@@ -76,7 +76,6 @@ GKSWidget::GKSWidget(QWidget *parent)
 {
   widget_state_list = new ws_state_list;
   p = widget_state_list;
-  gkss->fontfile = gks_open_font();
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
   p->device_pixel_ratio = this->devicePixelRatioF();

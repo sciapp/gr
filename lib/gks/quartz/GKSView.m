@@ -418,7 +418,6 @@ static void seg_xform_rel(double *x, double *y) {}
               have_colors = 1;
             }
 
-          gkss->fontfile = fontfile;
           gks_init_core(gkss);
 
           [self set_clip_rect:gkss->cntnr];
@@ -473,6 +472,11 @@ static void seg_xform_rel(double *x, double *y) {}
           break;
 
         case 27:
+          if ((i_arr[1] == GKS_K_TEXT_PRECISION_STROKE || i_arr[1] == GKS_K_TEXT_PRECISION_CHAR) && fontfile == 0)
+            {
+              fontfile = gks_open_font();
+              gkss->fontfile = fontfile;
+            }
           gkss->txfont = i_arr[0];
           gkss->txprec = i_arr[1];
           break;
@@ -652,7 +656,6 @@ static void seg_xform_rel(double *x, double *y) {}
       size = 0;
       angle = 0;
       has_been_resized = 0;
-      fontfile = gks_open_font();
     }
   return self;
 }
@@ -788,7 +791,7 @@ static void seg_xform_rel(double *x, double *y) {}
       CGColorSpaceRelease(colorSpace);
       colorSpace = NULL;
     }
-  if (fontfile)
+  if (fontfile > 0)
     {
       gks_close_font(fontfile);
       fontfile = 0;

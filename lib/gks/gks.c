@@ -560,8 +560,8 @@ void gks_open_gks(int errfil)
       /* parse GKS environment variables */
       gks_parse_env();
 
-      /* open font database */
-      s->fontfile = gks_open_font();
+      /* postpone opening of the font database */
+      s->fontfile = 0;
 
       /* miscellaneous flags */
       s->wiss = 0;
@@ -593,8 +593,12 @@ void gks_close_gks(void)
       /* call the device driver link routine */
       gks_ddlk(CLOSE_GKS, 0, 0, 0, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
 
-      /* close font database */
-      gks_close_font(s->fontfile);
+      if (s->fontfile > 0)
+        {
+          /* close font database */
+          gks_close_font(s->fontfile);
+          s->fontfile = 0;
+        }
 
       gks_list_free(av_ws_types);
       gks_free((void *)s);
@@ -1543,6 +1547,12 @@ void gks_set_text_fontprec(int font, int prec)
         {
           if (font != s->txfont || prec != s->txprec)
             {
+              if ((prec == GKS_K_TEXT_PRECISION_STROKE || prec == GKS_K_TEXT_PRECISION_CHAR) && s->fontfile == 0)
+                {
+                  /* open font database */
+                  s->fontfile = gks_open_font();
+                }
+
               s->txfont = i_arr[0] = font;
               s->txprec = i_arr[1] = prec;
 
