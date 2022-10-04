@@ -4854,6 +4854,7 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   int freeable_angles = 0;
   err_t error = ERROR_NONE;
 
+  // TODO: Move viewport dependent calculations to render?
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "polarhistogram");
 
@@ -6328,7 +6329,6 @@ err_t plot_draw_polar_axes(grm_args_t *args)
 
 err_t plot_draw_legend(grm_args_t *subplot_args)
 {
-  // TODO: Move viewport dependent calculations to renderer
   const char **labels, **current_label;
   unsigned int num_labels, num_series;
   grm_args_t **current_series;

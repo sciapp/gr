@@ -27,7 +27,8 @@
 std::shared_ptr<GR::Element> global_root;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
-static std::set<std::string> parentTypes = {"group", "layout-grid", "layout-gridelement", "draw-legend"};
+static std::set<std::string> parentTypes = {"group", "layout-grid", "layout-gridelement", "draw-legend",
+                                            "draw-polar-axes"};
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
@@ -4219,6 +4220,7 @@ void GR::Render::render()
   if (root->hasChildNodes())
     {
       finalizeGrid(root);
+      int i = 0;
       for (const auto &child : root->children())
         {
           gr_savestate();
