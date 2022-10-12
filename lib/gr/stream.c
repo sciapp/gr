@@ -196,9 +196,7 @@ int gr_openstream(const char *path)
 
   if (path != NULL)
     {
-      if (strcmp(path, "-") == 0)
-        stream = stdout;
-      else if (*path == '\0')
+      if (*path == '\0')
         status = -1;
       else if (strchr(path, ':') == NULL)
         {
@@ -237,10 +235,15 @@ void gr_writestream(char *string, ...)
   vsnprintf(s, BUFSIZ, string, ap);
   va_end(ap);
 
-  if (stream != stdout)
-    append(s);
-  else
-    fprintf(stdout, "%s", s);
+  if (gr_debug())
+    {
+      if (*s == '<')
+        fprintf(stdout, "[DEBUG:GR] %s", s);
+      else
+        fprintf(stdout, "%s", s);
+    }
+
+  if (stream != NULL) append(s);
 }
 
 void gr_flushstream(int discard)
@@ -266,7 +269,7 @@ void gr_closestream(void)
   gr_flushstream(0);
 
   if (stream)
-    if (stream != stdout) fclose(stream);
+    if (stream != NULL) fclose(stream);
 
   free(buffer);
   buffer = NULL;
