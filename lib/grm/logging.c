@@ -91,7 +91,7 @@ void logger1_(FILE *stream, const char *filename, int line_number, const char *c
         }
       else
         {
-          fprintf(stream, "%s:%d(%s): ", __FILE__, __LINE__, CURRENT_FUNCTION);
+          fprintf(stream, "%s:%d(%s): ", filename, line_number, current_function);
         }
 #endif
     }
