@@ -276,6 +276,8 @@ static int autoinit = 1, double_buf = 0, state_saved = 0, def_color = 0;
 
 static const char *display = NULL;
 
+static const char *debug = NULL;
+
 static double vxmin = 0.2, vxmax = 0.9, vymin = 0.2, vymax = 0.9;
 
 static double cxl, cxr, cyf, cyb, czb, czt;
@@ -284,7 +286,7 @@ static int arrow_style = 0;
 
 static double arrow_size = 1;
 
-static int flag_printing = 0, flag_graphics = 0;
+static int flag_printing = 0, flag_stream = 0, flag_graphics = 0;
 
 static text_node_t *text, *head;
 
@@ -1411,6 +1413,9 @@ static void initialize(int state)
   if (display)
     if (*display == '\0') display = NULL;
 
+  debug = gks_getenv("GR_DEBUG");
+  flag_stream = flag_graphics || debug != NULL;
+
   setscale(options);
 }
 
@@ -1481,7 +1486,7 @@ static void initgks(void)
         {
           gr_writestream(XML_HEADER);
           gr_writestream(GR_HEADER);
-          flag_graphics = 1;
+          flag_stream = flag_graphics = 1;
         }
       else
         fprintf(stderr, "%s: open failed\n", display);
@@ -1512,6 +1517,11 @@ void gr_initgr(void)
 
       initialize(GKS_K_GKCL);
     }
+}
+
+int gr_debug()
+{
+  return debug != NULL;
 }
 
 void gr_opengks(void)
@@ -1691,7 +1701,7 @@ void gr_clearws(void)
 
   foreach_activews((void (*)(int, void *))clear, (void *)&clearflag);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream(GR_TRAILER);
       gr_flushstream(1);
@@ -1721,7 +1731,7 @@ void gr_updatews(void)
 
   foreach_openws((void (*)(int, void *))update, (void *)&regenflag);
 
-  if (flag_graphics)
+  if (flag_stream)
     if (display)
       {
         gr_writestream(GR_TRAILER);
@@ -1872,7 +1882,7 @@ void gr_polyline(int n, double *x, double *y)
 
   polyline(n, x, y);
 
-  if (flag_graphics) primitive("polyline", n, x, y);
+  if (flag_stream) primitive("polyline", n, x, y);
 }
 
 static void polymarker(int n, double *x, double *y)
@@ -1916,7 +1926,7 @@ void gr_polymarker(int n, double *x, double *y)
 
   polymarker(n, x, y);
 
-  if (flag_graphics) primitive("polymarker", n, x, y);
+  if (flag_stream) primitive("polymarker", n, x, y);
 }
 
 /*!
@@ -1933,7 +1943,7 @@ void gr_fillarea(int n, double *x, double *y)
 {
   fillarea(n, x, y);
 
-  if (flag_graphics) primitive("fillarea", n, x, y);
+  if (flag_stream) primitive("fillarea", n, x, y);
 }
 
 /*!
@@ -1963,7 +1973,7 @@ void gr_cellarray(double xmin, double xmax, double ymin, double ymax, int dimx, 
 
   gks_cellarray(x_lin(xmin), y_lin(ymax), x_lin(xmax), y_lin(ymin), dimx, dimy, scol, srow, ncol, nrow, color);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<cellarray xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
                      "dimx=\"%d\" dimy=\"%d\" scol=\"%d\" srow=\"%d\" "
@@ -2672,7 +2682,7 @@ void gr_gdp(int n, double *x, double *y, int primid, int ldr, int *datrec)
 
   gks_gdp(npoints, px, py, primid, ldr, datrec);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<gdp len=\"%d\"", n);
       print_float_array("x", n, x);
@@ -2813,7 +2823,7 @@ void gr_spline(int n, double *px, double *py, int m, int method)
   free(s);
   free(t);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<spline len=\"%d\"", n);
       print_float_array("x", n, px);
@@ -2936,7 +2946,7 @@ void gr_setlinetype(int type)
   gks_set_pline_linetype(type);
   if (ctx) ctx->ltype = type;
 
-  if (flag_graphics) gr_writestream("<setlinetype type=\"%d\"/>\n", type);
+  if (flag_stream) gr_writestream("<setlinetype type=\"%d\"/>\n", type);
 }
 
 void gr_inqlinetype(int *ltype)
@@ -2966,7 +2976,7 @@ void gr_setlinewidth(double width)
   gks_set_pline_linewidth(width);
   if (ctx) ctx->lwidth = width;
 
-  if (flag_graphics) gr_writestream("<setlinewidth width=\"%g\"/>\n", width);
+  if (flag_stream) gr_writestream("<setlinewidth width=\"%g\"/>\n", width);
 }
 
 void gr_inqlinewidth(double *width)
@@ -2990,7 +3000,7 @@ void gr_setlinecolorind(int color)
   gks_set_pline_color_index(color);
   if (ctx) ctx->plcoli = color;
 
-  if (flag_graphics) gr_writestream("<setlinecolorind color=\"%d\"/>\n", color);
+  if (flag_stream) gr_writestream("<setlinecolorind color=\"%d\"/>\n", color);
 }
 
 void gr_inqlinecolorind(int *coli)
@@ -3097,7 +3107,7 @@ void gr_setmarkertype(int type)
   gks_set_pmark_type(type);
   if (ctx) ctx->mtype = type;
 
-  if (flag_graphics) gr_writestream("<setmarkertype type=\"%d\"/>\n", type);
+  if (flag_stream) gr_writestream("<setmarkertype type=\"%d\"/>\n", type);
 }
 
 void gr_inqmarkertype(int *mtype)
@@ -3124,7 +3134,7 @@ void gr_setmarkersize(double size)
   gks_set_pmark_size(size);
   if (ctx) ctx->mszsc = size;
 
-  if (flag_graphics) gr_writestream("<setmarkersize size=\"%g\"/>\n", size);
+  if (flag_stream) gr_writestream("<setmarkersize size=\"%g\"/>\n", size);
 }
 
 /*!
@@ -3155,7 +3165,7 @@ void gr_setmarkercolorind(int color)
   gks_set_pmark_color_index(color);
   if (ctx) ctx->pmcoli = color;
 
-  if (flag_graphics) gr_writestream("<setmarkercolorind color=\"%d\"/>\n", color);
+  if (flag_stream) gr_writestream("<setmarkercolorind color=\"%d\"/>\n", color);
 }
 
 void gr_inqmarkercolorind(int *coli)
@@ -3278,7 +3288,7 @@ void gr_settextfontprec(int font, int precision)
       ctx->txprec = precision;
     }
 
-  if (flag_graphics) gr_writestream("<settextfontprec font=\"%d\" precision=\"%d\"/>\n", font, precision);
+  if (flag_stream) gr_writestream("<settextfontprec font=\"%d\" precision=\"%d\"/>\n", font, precision);
 }
 
 static int loadfont(char *name)
@@ -3341,7 +3351,7 @@ void gr_loadfont(char *filename, int *font)
     }
   if (*font > 0)
     {
-      if (flag_graphics) gr_writestream("<loadfont filename=\"%s\"/>\n", filename);
+      if (flag_stream) gr_writestream("<loadfont filename=\"%s\"/>\n", filename);
     }
 }
 
@@ -3363,7 +3373,7 @@ void gr_setcharexpan(double factor)
   gks_set_text_expfac(factor);
   if (ctx) ctx->chxp = factor;
 
-  if (flag_graphics) gr_writestream("<setcharexpan factor=\"%g\"/>\n", factor);
+  if (flag_stream) gr_writestream("<setcharexpan factor=\"%g\"/>\n", factor);
 }
 
 void gr_setcharspace(double spacing)
@@ -3373,7 +3383,7 @@ void gr_setcharspace(double spacing)
   gks_set_text_spacing(spacing);
   if (ctx) ctx->chsp = spacing;
 
-  if (flag_graphics) gr_writestream("<setcharspace spacingr=\"%g\"/>\n", spacing);
+  if (flag_stream) gr_writestream("<setcharspace spacingr=\"%g\"/>\n", spacing);
 }
 
 /*!
@@ -3391,7 +3401,7 @@ void gr_settextcolorind(int color)
   gks_set_text_color_index(color);
   if (ctx) ctx->txcoli = color;
 
-  if (flag_graphics) gr_writestream("<settextcolorind color=\"%d\"/>\n", color);
+  if (flag_stream) gr_writestream("<settextcolorind color=\"%d\"/>\n", color);
 }
 
 /*!
@@ -3423,7 +3433,7 @@ void gr_setcharheight(double height)
   gks_set_text_height(height);
   if (ctx) ctx->chh = height;
 
-  if (flag_graphics) gr_writestream("<setcharheight height=\"%g\"/>\n", height);
+  if (flag_stream) gr_writestream("<setcharheight height=\"%g\"/>\n", height);
 }
 
 void gr_setwscharheight(double chh, double height)
@@ -3466,7 +3476,7 @@ void gr_setcharup(double ux, double uy)
       ctx->chup[1] = uy;
     }
 
-  if (flag_graphics) gr_writestream("<setcharup x=\"%g\" y=\"%g\"/>\n", ux, uy);
+  if (flag_stream) gr_writestream("<setcharup x=\"%g\" y=\"%g\"/>\n", ux, uy);
 }
 
 /*!
@@ -3495,7 +3505,7 @@ void gr_settextpath(int path)
   gks_set_text_path(path);
   if (ctx) ctx->txp = path;
 
-  if (flag_graphics) gr_writestream("<settextpath path=\"%d\"/>\n", path);
+  if (flag_stream) gr_writestream("<settextpath path=\"%d\"/>\n", path);
 }
 
 /*!
@@ -3547,7 +3557,7 @@ void gr_settextalign(int horizontal, int vertical)
       ctx->txal[1] = vertical;
     }
 
-  if (flag_graphics) gr_writestream("<settextalign halign=\"%d\" valign=\"%d\"/>\n", horizontal, vertical);
+  if (flag_stream) gr_writestream("<settextalign halign=\"%d\" valign=\"%d\"/>\n", horizontal, vertical);
 }
 
 /*!
@@ -3580,7 +3590,7 @@ void gr_setfillintstyle(int style)
   gks_set_fill_int_style(style);
   if (ctx) ctx->ints = style;
 
-  if (flag_graphics) gr_writestream("<setfillintstyle intstyle=\"%d\"/>\n", style);
+  if (flag_stream) gr_writestream("<setfillintstyle intstyle=\"%d\"/>\n", style);
 }
 
 /*!
@@ -3618,7 +3628,7 @@ void gr_setfillstyle(int index)
   gks_set_fill_style_index(index);
   if (ctx) ctx->styli = index;
 
-  if (flag_graphics) gr_writestream("<setfillstyle style=\"%d\"/>\n", index);
+  if (flag_stream) gr_writestream("<setfillstyle style=\"%d\"/>\n", index);
 }
 
 /*!
@@ -3653,7 +3663,7 @@ void gr_setfillcolorind(int color)
   gks_set_fill_color_index(color);
   if (ctx) ctx->facoli = color;
 
-  if (flag_graphics) gr_writestream("<setfillcolorind color=\"%d\"/>\n", color);
+  if (flag_stream) gr_writestream("<setfillcolorind color=\"%d\"/>\n", color);
 }
 
 /*!
@@ -3679,7 +3689,7 @@ void gr_setresizebehaviour(int flag)
   gks_set_resize_behaviour(flag);
   if (ctx) ctx->resize_behaviour = flag;
 
-  if (flag_graphics) gr_writestream("<setresizebehaviour=\"%d\"/>\n", flag);
+  if (flag_stream) gr_writestream("<setresizebehaviour=\"%d\"/>\n", flag);
 }
 
 void gr_inqresizebehaviour(int *flag)
@@ -3726,7 +3736,7 @@ void gr_setcolorrep(int index, double red, double green, double blue)
 
   setcolorrep(index, red, green, blue);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setcolorrep index=\"%d\" red=\"%g\" green=\"%g\" blue=\"%g\"/>\n", index, red, green, blue);
 }
 
@@ -3785,7 +3795,7 @@ int gr_setscale(int options)
   result = setscale(options);
   if (ctx) ctx->scale_options = options;
 
-  if (flag_graphics) gr_writestream("<setscale scale=\"%d\"/>\n", options);
+  if (flag_stream) gr_writestream("<setscale scale=\"%d\"/>\n", options);
 
   return result;
 }
@@ -3832,7 +3842,7 @@ void gr_setwindow(double xmin, double xmax, double ymin, double ymax)
     }
   setscale(lx.scale_options);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setwindow xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
@@ -3903,7 +3913,7 @@ void gr_setviewport(double xmin, double xmax, double ymin, double ymax)
   vymin = ymin;
   vymax = ymax;
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setviewport xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
@@ -3939,7 +3949,7 @@ void gr_selntran(int transform)
 
   gks_select_xform(transform);
 
-  if (flag_graphics) gr_writestream("<selntran transform=\"%d\"/>\n", transform);
+  if (flag_stream) gr_writestream("<selntran transform=\"%d\"/>\n", transform);
 }
 
 /*!
@@ -3970,7 +3980,7 @@ void gr_setclip(int indicator)
 
   gks_set_clipping(indicator);
 
-  if (flag_graphics) gr_writestream("<setclip indicator=\"%d\"/>\n", indicator);
+  if (flag_stream) gr_writestream("<setclip indicator=\"%d\"/>\n", indicator);
 }
 
 static void wswindow(int workstation_id, rect_t *rect)
@@ -4012,7 +4022,7 @@ void gr_setwswindow(double xmin, double xmax, double ymin, double ymax)
 
   foreach_activews((void (*)(int, void *))wswindow, (void *)&rect);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setwswindow xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
@@ -4051,7 +4061,7 @@ void gr_setwsviewport(double xmin, double xmax, double ymin, double ymax)
 
   sizex = xmax - xmin;
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setwsviewport xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
@@ -4181,7 +4191,7 @@ int gr_setspace(double zmin, double zmax, int rotation, int tilt)
 
   setspace(zmin, zmax, rotation, tilt);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setspace zmin=\"%g\" zmax=\"%g\" rotation=\"%d\" tilt=\"%d\"/>\n", zmin, zmax, rotation, tilt);
 
   return 0;
@@ -4215,7 +4225,7 @@ void gr_setprojectiontype(int flag)
     {
       gpx.projection_type = flag;
 
-      if (flag_graphics) gr_writestream("<setprojectiontype flag=\"%i\"/>\n", flag);
+      if (flag_stream) gr_writestream("<setprojectiontype flag=\"%i\"/>\n", flag);
     }
   else
     {
@@ -4315,7 +4325,7 @@ void gr_settransformationparameters(double camera_pos_x, double camera_pos_y, do
   settransformationparameters(camera_pos_x, camera_pos_y, camera_pos_z, up_x, up_y, up_z, focus_point_x, focus_point_y,
                               focus_point_z);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<settransformationparameters camera_pos_x=\"%g\" camera_pos_y=\"%g\" camera_pos_z=\"%g\" "
                    "up_x=\"%g\" up_y=\"%g\" "
                    "up_z=\"%g\" focus_point_x=\"%g\" focus_point_y=\"%g\" focus_point_z=\"%g\"/>\n",
@@ -4355,7 +4365,7 @@ void gr_setperspectiveprojection(double near_plane, double far_plane, double fov
 
   setperspectiveprojection(near_plane, far_plane, fov);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setperspectiveprojection near_plane=\"%g\" far_plane=\"%g\" fov=\"%g\"/>\n", near_plane, far_plane,
                    fov);
 }
@@ -4392,7 +4402,7 @@ void gr_setorthographicprojection(double left, double right, double bottom, doub
 
   setorthographicprojection(left, right, bottom, top, near_plane, far_plane);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setorthographicprojection left=\"%g\" right=\"%g\" bottom=\"%g\" top=\"%g\" near_plane=\"%g\" "
                    "far_plane=\"%g\"/>\n",
                    left, right, bottom, top, near_plane, far_plane);
@@ -4646,7 +4656,7 @@ int gr_textext(double x, double y, char *string)
 
   if (tnr != NDC) gks_select_xform(tnr);
 
-  if (flag_graphics) gr_writestream("<textext x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+  if (flag_stream) gr_writestream("<textext x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
 
   return result;
 }
@@ -4710,7 +4720,7 @@ void gr_setscientificformat(int format_option)
       scientific_format = format_option;
     }
 
-  if (flag_graphics) gr_writestream("<setscientificformat option=>\n", format_option);
+  if (flag_stream) gr_writestream("<setscientificformat option=>\n", format_option);
 }
 
 static void text2dlbl(double x, double y, char *chars, double value, void (*fp)(double, double, const char *, double))
@@ -5160,7 +5170,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
   gks_set_text_upvec(chux, chuy);
   gks_set_clipping(clsw);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<axes xtick=\"%g\" ytick=\"%g\" xorg=\"%g\" yorg=\"%g\" "
                    "majorx=\"%d\" majory=\"%d\" ticksize=\"%g\"/>\n",
                    x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size);
@@ -5397,7 +5407,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
   gks_set_pline_color_index(color);
   gks_set_clipping(clsw);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<grid xtick=\"%g\" ytick=\"%g\" xorg=\"%g\" yorg=\"%g\" "
                    "majorx=\"%d\" majory=\"%d\"/>\n",
                    x_tick, y_tick, x_org, y_org, major_x, major_y);
@@ -5717,7 +5727,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
   gks_set_pline_color_index(color);
   gks_set_clipping(clsw);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<grid3d xtick=\"%g\" ytick=\"%g\" ztick=\"%g\" "
                    "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
                    "majorx=\"%d\" majory=\"%d\" majorz=\"%d\"/>\n",
@@ -5779,7 +5789,7 @@ void gr_verrorbars(int n, double *px, double *py, double *e1, double *e2)
 
   polymarker(n, px, py);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<verrorbars len=\"%d\"", n);
       print_float_array("x", n, px);
@@ -5839,7 +5849,7 @@ void gr_herrorbars(int n, double *px, double *py, double *e1, double *e2)
 
   polymarker(n, px, py);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<herrorbars len=\"%d\"", n);
       print_float_array("x", n, px);
@@ -6051,7 +6061,7 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
 
   end_pline();
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<polyline3d len=\"%d\"", n);
       print_float_array("x", n, px);
@@ -6184,7 +6194,7 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
 
   if (m > 0) gks_polymarker(m, xpoint, ypoint);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<polymarker3d len=\"%d\"", n);
       print_float_array("x", n, px);
@@ -6275,7 +6285,7 @@ void gr_text3d(double x, double y, double z, char *chars, int axis)
   scaleFactors[2] = tx.z_axis_scale;
   gks_ft_text3d(x, y, z, chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp, gr_wc3towc);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<text3d x=\"%g\" y=\"%g\" z=\"%g\" text=\"%s\" axis=\"%d\"/>\n", x, y, z, chars, axis);
 }
 
@@ -7171,7 +7181,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   gks_set_text_upvec(chux, chuy);
   gks_set_clipping(clsw);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<axes3d xtick=\"%g\" ytick=\"%g\" ztick=\"%g\" "
                    "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
                    "majorx=\"%d\" majory=\"%d\" majorz=\"%d\" ticksize=\"%g\"/>\n",
@@ -7564,8 +7574,7 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
       gks_set_text_upvec(chux, chuy);
     }
 
-  if (flag_graphics)
-    gr_writestream("<titles3d xtitle=\"%s\" ytitle=\"%s\" ztitle=\"%s\"/>\n", x_title, y_title, z_title);
+  if (flag_stream) gr_writestream("<titles3d xtitle=\"%s\" ytitle=\"%s\" ztitle=\"%s\"/>\n", x_title, y_title, z_title);
 
   if (modern_projection_type)
     {
@@ -8366,7 +8375,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
   gks_set_fill_int_style(int_style);
   gks_set_fill_color_index(coli);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<surface nx=\"%d\" ny=\"%d\"", nx, ny);
       print_float_array("x", nx, px);
@@ -8568,7 +8577,7 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
 
   free(triangles);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<trisurface len=\"%d\"", n);
       print_float_array("x", n, px);
@@ -8715,7 +8724,7 @@ void gr_quiver(int nx, int ny, double *x, double *y, double *u, double *v, int c
   gks_set_pline_color_index(linecolor);
   gks_set_fill_color_index(fillcolor);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<quiver nx=\"%d\" ny=\"%d\"", nx, ny);
       print_float_array("x", nx, x);
@@ -8868,7 +8877,7 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
   gks_set_text_align(halign, valign);
   gks_set_text_upvec(chux, chuy);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<contour nx=\"%d\" ny=\"%d\" nh=\"%d\"", nx, ny, nh);
       print_float_array("x", nx, px);
@@ -8963,7 +8972,7 @@ void gr_contourf(int nx, int ny, int nh, double *px, double *py, double *h, doub
   gks_set_fill_style_index(fillintstyle);
   gks_set_fill_color_index(fillcolorind);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<contourf nx=\"%d\" ny=\"%d\" nh=\"%d\"", nx, ny, nh);
       print_float_array("x", nx, px);
@@ -9011,7 +9020,7 @@ void gr_tricontour(int npoints, double *x, double *y, double *z, int nlevels, do
 
   free(colors);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<tricont npoints=\"%d\"", npoints);
       print_float_array("x", npoints, x);
@@ -9215,7 +9224,7 @@ int gr_hexbin(int n, double *x, double *y, int nbins)
   gks_set_fill_int_style(int_style);
   gks_set_fill_color_index(coli);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<hexbin len=\"%d\"", n);
       print_float_array("x", n, x);
@@ -9286,7 +9295,7 @@ void gr_setcolormap(int index)
       setcolorrep(1000 + i, r, g, b);
     }
 
-  if (flag_graphics) gr_writestream("<setcolormap index=\"%d\"/>\n", index);
+  if (flag_stream) gr_writestream("<setcolormap index=\"%d\"/>\n", index);
 }
 
 void gr_inqcolormap(int *index)
@@ -9452,7 +9461,7 @@ void gr_colorbar(void)
   gks_set_text_align(halign, valign);
   gks_set_clipping(clsw);
 
-  if (flag_graphics) gr_writestream("<colorbar/>\n");
+  if (flag_stream) gr_writestream("<colorbar/>\n");
 }
 
 void gr_inqcolor(int color, int *rgb)
@@ -10004,7 +10013,7 @@ void gr_drawrect(double xmin, double xmax, double ymin, double ymax)
       gks_gdp(4, x, y, GKS_K_GDP_DRAW_PATH, 5, codes);
     }
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<drawrect xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
@@ -10053,7 +10062,7 @@ void gr_fillrect(double xmin, double xmax, double ymin, double ymax)
       gks_gdp(4, x, y, GKS_K_GDP_DRAW_PATH, 5, codes);
     }
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<fillrect xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
@@ -10131,7 +10140,7 @@ void gr_drawarc(double xmin, double xmax, double ymin, double ymax, double a1, d
       gks_gdp(4, x, y, GKS_K_GDP_DRAW_PATH, 3, codes);
     }
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<drawarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
                      "a1=\"%g\" a2=\"%g\"/>\n",
@@ -10218,7 +10227,7 @@ void gr_fillarc(double xmin, double xmax, double ymin, double ymax, double a1, d
       gks_gdp(4, x, y, GKS_K_GDP_DRAW_PATH, 3, codes);
     }
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<fillarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
                      "a1=\"%g\" a2=\"%g\"/>\n",
@@ -10372,7 +10381,7 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
     }
   closepath(fill);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<drawpath len=\"%d\"", n);
       print_vertex_array("vertices", n, vertices);
@@ -10437,7 +10446,7 @@ void gr_setarrowstyle(int style)
 
   if (style >= 1 && style <= 18) arrow_style = style - 1;
 
-  if (flag_graphics) gr_writestream("<setarrowstyle style=\"%d\"/>\n", style);
+  if (flag_stream) gr_writestream("<setarrowstyle style=\"%d\"/>\n", style);
 }
 
 /*!
@@ -10454,7 +10463,7 @@ void gr_setarrowsize(double size)
 
   if (size > 0) arrow_size = size;
 
-  if (flag_graphics) gr_writestream("<setarrowsize size=\"%g\"/>\n", size);
+  if (flag_stream) gr_writestream("<setarrowsize size=\"%g\"/>\n", size);
 }
 
 /*!
@@ -10553,7 +10562,7 @@ void gr_drawarrow(double x1, double y1, double x2, double y2)
   gks_set_fill_int_style(intstyle);
   gks_set_pline_linetype(ltype);
 
-  if (flag_graphics) gr_writestream("<drawarrow x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\"/>\n", x1, y1, x2, y2);
+  if (flag_stream) gr_writestream("<drawarrow x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\"/>\n", x1, y1, x2, y2);
 }
 
 static void drawimage_calculation(double xmin, double xmax, double ymin, double ymax, int width, int height, int *data,
@@ -10676,7 +10685,7 @@ void gr_drawimage(double xmin, double xmax, double ymin, double ymax, int width,
 
   drawimage_calculation(xmin, xmax, ymin, ymax, width, height, data, model);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       n = width * height;
       gr_writestream("<drawimage xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
@@ -10747,7 +10756,7 @@ void gr_begingraphics(char *path)
         {
           gr_writestream(XML_HEADER);
           gr_writestream(GR_HEADER);
-          flag_graphics = 1;
+          flag_stream = flag_graphics = 1;
         }
       else
         fprintf(stderr, "%s: open failed\n", path);
@@ -10760,6 +10769,7 @@ void gr_endgraphics(void)
     {
       gr_writestream(GR_TRAILER);
       gr_closestream();
+      flag_stream = debug != NULL;
       flag_graphics = 0;
     }
 }
@@ -11099,7 +11109,7 @@ void gr_mathtex(double x, double y, char *string)
       mathtex(x, y, string, 0, NULL, NULL);
     }
 
-  if (flag_graphics) gr_writestream("<mathtex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+  if (flag_stream) gr_writestream("<mathtex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
 }
 
 void gr_inqmathtex(double x, double y, char *string, double *tbx, double *tby)
@@ -11449,7 +11459,7 @@ void gr_text(double x, double y, char *string)
 
   if (tnr != NDC) gks_select_xform(tnr);
 
-  if (flag_graphics) gr_writestream("<text x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+  if (flag_stream) gr_writestream("<text x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
 }
 
 /*!
@@ -11493,7 +11503,7 @@ void gr_textx(double x, double y, char *string, int opts)
 
   if (tnr != NDC) gks_select_xform(tnr);
 
-  if (flag_graphics) gr_writestream("<textx x=\"%g\" y=\"%g\" text=\"%s\" opts=\"%d\"/>\n", x, y, string, opts);
+  if (flag_stream) gr_writestream("<textx x=\"%g\" y=\"%g\" text=\"%s\" opts=\"%d\"/>\n", x, y, string, opts);
 }
 
 void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
@@ -11669,7 +11679,7 @@ void gr_savestate(void)
   else
     fprintf(stderr, "attempt to save state beyond implementation limit\n");
 
-  if (flag_graphics) gr_writestream("<savestate/>\n");
+  if (flag_stream) gr_writestream("<savestate/>\n");
 }
 
 void gr_restorestate(void)
@@ -11715,7 +11725,7 @@ void gr_restorestate(void)
   else
     fprintf(stderr, "attempt to restore unsaved state\n");
 
-  if (flag_graphics) gr_writestream("<restorestate/>\n");
+  if (flag_stream) gr_writestream("<restorestate/>\n");
 }
 
 void gr_selectcontext(int context)
@@ -11947,7 +11957,7 @@ int gr_uselinespec(char *linespec)
   gr_setlinecolorind(color);
   gr_setmarkercolorind(color);
 
-  if (flag_graphics) gr_writestream("<uselinespec linespec=\"%s\"/>\n", linespec);
+  if (flag_stream) gr_writestream("<uselinespec linespec=\"%s\"/>\n", linespec);
 
   return result;
 }
@@ -12134,7 +12144,7 @@ void gr_shadepoints(int n, double *x, double *y, int xform, int w, int h)
 
   free(bins);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<shadepoints len=\"%d\"", n);
       print_float_array("x", n, x);
@@ -12213,7 +12223,7 @@ void gr_shadelines(int n, double *x, double *y, int xform, int w, int h)
 
   free(bins);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<shadelines len=\"%d\"", n);
       print_float_array("x", n, x);
@@ -12833,7 +12843,7 @@ void gr_camerainteraction(double start_mouse_pos_x, double start_mouse_pos_y, do
       tx.s_z = sz;
     }
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<camerainteraction start_mouse_pos_x=\"%g\" start_mouse_pos_y=\"%g\" end_mouse_pos_x=\"%g\" "
                    "end_mouse_pos_y=\"%g\"/>\n",
                    start_mouse_pos_x, start_mouse_pos_y, end_mouse_pos_x, end_mouse_pos_y);
@@ -12863,7 +12873,7 @@ void gr_setwindow3d(double xmin, double xmax, double ymin, double ymax, double z
   wx.zmin = zmin;
   wx.zmax = zmax;
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setwindow3d xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" zmin=\"%g\" zmax=\"%g\"/>\n", xmin,
                    xmax, ymin, ymax, zmin, zmax);
 }
@@ -12896,7 +12906,7 @@ void gr_setscalefactors3d(double x_axis_scale, double y_axis_scale, double z_axi
 
   setscalefactors3d(x_axis_scale, y_axis_scale, z_axis_scale);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setscalefactors3d x_axis_scale=\"%g\" y_axis_scale=\"%g\" z_axis_scale=\"%g\"/>\n", x_axis_scale,
                    y_axis_scale, z_axis_scale);
 }
@@ -12923,7 +12933,7 @@ void gr_setborderwidth(double width)
   gks_set_border_width(width);
   if (ctx) ctx->bwidth = width;
 
-  if (flag_graphics) gr_writestream("<setborderwidth width=\"%g\"/>\n", width);
+  if (flag_stream) gr_writestream("<setborderwidth width=\"%g\"/>\n", width);
 }
 
 void gr_inqborderwidth(double *width)
@@ -12947,7 +12957,7 @@ void gr_setbordercolorind(int color)
   gks_set_border_color_index(color);
   if (ctx) ctx->bcoli = color;
 
-  if (flag_graphics) gr_writestream("<setbordercolorind color=\"%d\"/>\n", color);
+  if (flag_stream) gr_writestream("<setbordercolorind color=\"%d\"/>\n", color);
 }
 
 void gr_inqbordercolorind(int *coli)
@@ -12966,7 +12976,7 @@ void gr_selectclipxform(int tnr)
   gks_select_clip_xform(tnr);
   if (ctx) ctx->clip_tnr = tnr;
 
-  if (flag_graphics) gr_writestream("<selectclipxform tnr=\"%d\"/>\n", tnr);
+  if (flag_stream) gr_writestream("<selectclipxform tnr=\"%d\"/>\n", tnr);
 }
 
 void gr_inqclipxform(int *tnr)
@@ -13040,7 +13050,7 @@ void gr_setspace3d(double phi, double theta, double fov, double cam)
 
   setscalefactors3d(scale_factor_x, scale_factor_y, scale_factor_z);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setspace3d phi=\"%g\" theta=\"%g\" fov=\"%g\" cam=\"%g\"/>\n", phi, theta, fov, cam);
 }
 
@@ -13050,7 +13060,7 @@ void gr_settextencoding(int encoding)
 
   gks_set_encoding(encoding);
 
-  if (flag_graphics) gr_writestream("<settextencoding encoding=\"%d\"/>\n", encoding);
+  if (flag_stream) gr_writestream("<settextencoding encoding=\"%d\"/>\n", encoding);
 }
 
 void gr_inqtextencoding(int *encoding)
@@ -13089,7 +13099,7 @@ void gr_setthreadnumber(int num)
   vt.max_threads = max(1, num);
   vt.thread_size = 10 * (1.0 / (2.0 * num));
 
-  if (flag_graphics) gr_writestream("<setthreadnumber num=\"%i\"/>\n", num);
+  if (flag_stream) gr_writestream("<setthreadnumber num=\"%i\"/>\n", num);
 }
 
 /*!
@@ -13106,7 +13116,7 @@ void gr_setpicturesizeforvolume(int width, int height)
   vt.picture_height = height;
   vt.picture_width = width;
 
-  if (flag_graphics) gr_writestream("<setpicturesizeforvolume width=\"%i\" height=\"%i\"/>\n", width, height);
+  if (flag_stream) gr_writestream("<setpicturesizeforvolume width=\"%i\" height=\"%i\"/>\n", width, height);
 }
 
 /*!
@@ -13128,7 +13138,7 @@ void gr_setapproximativecalculation(int approximative_calculation)
       fprintf(stderr, "Invalid number for approximative_calculation. Valid numbers are 0 and 1.\n");
     }
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setapproximativecalculation approximative_calculation=\"%i\"", approximative_calculation);
 }
 
@@ -13163,7 +13173,7 @@ void gr_setvolumebordercalculation(int flag)
       fprintf(stderr, "Invalid gr_volume bordercalculation flag. Possible options are GR_VOLUME_WITHOUT_BORDER, "
                       "GR_VOLUME_WITH_BORDER \n");
     }
-  if (flag_graphics) gr_writestream("<setvolumebordercalculation flag=\"%i\"/>\n", flag);
+  if (flag_stream) gr_writestream("<setvolumebordercalculation flag=\"%i\"/>\n", flag);
 }
 
 /*!
@@ -14070,7 +14080,7 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
 
   free(pixels);
   free(jobs);
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<cpubasedvolume nx=\"%i\" ny=\"%i\" nz=\"%i\" />\n", nx, ny, nz);
       print_float_array("data", nx * ny * nz, data);
@@ -14185,7 +14195,7 @@ void gr_polygonmesh3d(int num_points, const double *px, const double *py, const 
   free(y);
   free(x);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<polygonmesh3d num_points=\"%d\"", num_points);
       print_float_array("x", num_points, (double *)px);

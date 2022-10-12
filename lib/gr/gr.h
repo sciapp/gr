@@ -64,6 +64,7 @@ typedef struct
 
 
 DLLEXPORT void gr_initgr(void);
+DLLEXPORT int gr_debug(void);
 DLLEXPORT void gr_opengks(void);
 DLLEXPORT void gr_closegks(void);
 DLLEXPORT void gr_inqdspsize(double *, double *, int *, int *);
