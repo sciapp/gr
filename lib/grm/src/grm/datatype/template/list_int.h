@@ -5,8 +5,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "error_int.h"
-#include "util_int.h"
+#include <grm/error_int.h>
+#include <grm/util_int.h>
 
 
 /* ######################### interface ############################################################################## */

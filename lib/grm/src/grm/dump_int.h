@@ -3,7 +3,7 @@
 
 /* ######################### includes ############################################################################### */
 
-#include "dump.h"
+#include <grm/dump.h>
 
 
 #endif /* ifndef GRM_DUMP_INT_H_INCLUDED */

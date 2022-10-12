@@ -5,7 +5,7 @@
 
 #include "error_int.h"
 #include "memwriter_int.h"
-#include "net.h"
+#include <grm/net.h>
 
 
 /* ######################### internal interface ##################################################################### */

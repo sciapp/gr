@@ -12,7 +12,7 @@
 
 #include "gkscore.h"
 #include "set_int.h"
-#include "util_int.h"
+#include <grm/util_int.h>
 
 
 /* ######################### interface ############################################################################## */

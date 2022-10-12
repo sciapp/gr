@@ -4,7 +4,7 @@
 
 #include "test.h"
 
-#include "datatype/string_array_map_int.h"
+#include <grm/datatype/string_array_map_int.h>
 
 
 static const string_map_entry_t test_data[] = {{"test", "abc|def|ghi"}};

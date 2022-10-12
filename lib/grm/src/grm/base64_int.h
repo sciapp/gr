@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "error_int.h"
+#include <grm/base64.h>
 
 
 error_t block_decode(char dst[3], const char src[4], int block_len, int *decoded_block_len);

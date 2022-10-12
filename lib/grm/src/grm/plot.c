@@ -12,7 +12,7 @@
 #include <cm.h>
 
 #include "base64_int.h"
-#include "dump.h"
+#include <grm/dump.h>
 #include "event_int.h"
 #include "gks.h"
 #include "gr.h"

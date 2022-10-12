@@ -5,7 +5,7 @@
 
 #include "datatype/template/list_int.h"
 #include "error_int.h"
-#include "event.h"
+#include <grm/event.h>
 
 
 /* ######################### internal interface ##################################################################### */

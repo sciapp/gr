@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include <sys/types.h>
 
-#include "args.h"
+#include <grm/args.h>
 #include "error_int.h"
 #include "util_int.h"
 

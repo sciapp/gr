@@ -6,7 +6,7 @@
 
 #include "test.h"
 
-#include "args_int.h"
+#include <grm/args_int.h>
 
 
 void test(void)

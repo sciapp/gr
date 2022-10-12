@@ -5,16 +5,34 @@ endif
        GRDIR = /usr/local/gr
       LIBDIR = $(DESTDIR)$(GRDIR)/lib
       INCDIR = $(DESTDIR)$(GRDIR)/include
-   GRMINCDIR = $(INCDIR)/grm
 
 UNAME := $(shell uname)
 
-     GRMOBJS = args.o base64.o dump.o dynamic_args_array.o error.o event.o interaction.o json.o logging.o memwriter.o \
-               net.o plot.o util.o datatype/double_map.o datatype/string_list.o datatype/string_array_map.o \
-               datatype/string_map.o datatype/uint_map.o
-  GRMHEADERS = args.h dump.h event.h interaction.h net.h plot.h util.h
+     GRMOBJS = src/grm/args.o \
+               src/grm/base64.o \
+               src/grm/dump.o \
+               src/grm/dynamic_args_array.o \
+               src/grm/error.o \
+               src/grm/event.o \
+               src/grm/interaction.o \
+               src/grm/json.o \
+               src/grm/logging.o \
+               src/grm/memwriter.o \
+               src/grm/net.o \
+               src/grm/plot.o \
+               src/grm/util.o \
+               src/grm/datatype/double_map.o \
+               src/grm/datatype/string_list.o \
+               src/grm/datatype/string_array_map.o \
+               src/grm/datatype/string_map.o \
+               src/grm/datatype/uint_map.o
      DEFINES =
-    INCLUDES = -I. -I../gks -I../gr -I../gr3 -I$(THIRDPARTYDIR)/include
+    INCLUDES = -I./include \
+               -I./src \
+               -I../gks \
+               -I../gr \
+               -I../gr3 \
+               -I$(THIRDPARTYDIR)/include
           CC = cc
       CFLAGS = $(DEFINES) -O3 -Wall -fPIC -fvisibility=hidden $(EXTRA_CFLAGS)
          AR ?= ar
@@ -67,11 +85,14 @@ install:
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	cp -p libGRM.* $(LIBDIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
-	cp -p grm.h $(INCDIR)
-	@if [ ! -d $(GRMINCDIR) ]; then mkdir -m 755 $(GRMINCDIR); fi
-	cp -p $(GRMHEADERS) $(GRMINCDIR)
+	cp -p include/grm.h $(INCDIR)
+	cp -rp include/grm $(INCDIR)/
 
 clean:
-	rm -f *.so *.a *.o datatype/*.o *${GR_SHARED_LIBRARY_SUFFIX}
+	rm -f *.so \
+	      *.a \
+	      src/grm/*.o \
+	      src/grm/datatype/*.o \
+	      *${GR_SHARED_LIBRARY_SUFFIX}
 
 .PHONY: all targets install clean prerequisites libGR libGR3
