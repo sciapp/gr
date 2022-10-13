@@ -10,8 +10,7 @@
 
 /* ------------------------- grid ----------------------------------------------------------------------------------- */
 
-// TODO namespace grm?
-// using namespace grm;
+using namespace grm;
 
 err_t grid_new(int nrows, int ncols, grid_t **a_grid)
 {

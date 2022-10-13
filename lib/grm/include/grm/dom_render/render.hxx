@@ -203,9 +203,9 @@ public:
                                              int w, int h, const std::shared_ptr<Context> &extContext = nullptr);
 
 
-  std::shared_ptr<Element> createLayoutGrid(const Grid &grid);
+  std::shared_ptr<Element> createLayoutGrid(const grm::Grid &grid);
 
-  std::shared_ptr<Element> createLayoutGridElement(const GridElement &gridElement, const Slice &slice);
+  std::shared_ptr<Element> createLayoutGridElement(const grm::GridElement &gridElement, const grm::Slice &slice);
 
   std::shared_ptr<Element> createPiePlotTitleRenderElement(std::string title);
 

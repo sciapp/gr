@@ -9,6 +9,8 @@
 #include "args.h"
 #include "error.h"
 
+namespace grm
+{
 
 class Slice
 {
@@ -103,5 +105,7 @@ private:
   int ncols;
   void upsize(int nrows, int ncols);
 };
+
+} // namespace grm
 
 #endif /* ifndef LAYOUT_HPP_INCLUDED */

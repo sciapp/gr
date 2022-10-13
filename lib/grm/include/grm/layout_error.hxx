@@ -5,9 +5,8 @@
 #include "grm/error.h"
 #include <stdexcept>
 
-// TODO: namespace grm?
-// namespace grm
-//{
+namespace grm
+{
 
 class InvalidArgument : public std::invalid_argument
 {
@@ -35,6 +34,6 @@ public:
   InvalidArgumentRange(const std::string &msg);
 };
 
-//} // namespace grm
+} // namespace grm
 
 #endif /* ifndef LAYOUT_ERROR_HPP_INCLUDED */

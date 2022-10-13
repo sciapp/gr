@@ -3729,7 +3729,7 @@ std::shared_ptr<GR::Element> GR::Render::createDrawGraphics(const std::string &d
 // offset_z);
 
 
-std::shared_ptr<GR::Element> GR::Render::createLayoutGrid(const Grid &grid)
+std::shared_ptr<GR::Element> GR::Render::createLayoutGrid(const grm::Grid &grid)
 {
   auto element = createElement("layout-grid");
 
@@ -3752,7 +3752,8 @@ std::shared_ptr<GR::Element> GR::Render::createLayoutGrid(const Grid &grid)
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createLayoutGridElement(const GridElement &gridElement, const Slice &slice)
+std::shared_ptr<GR::Element> GR::Render::createLayoutGridElement(const grm::GridElement &gridElement,
+                                                                 const grm::Slice &slice)
 {
   auto element = createElement("layout-gridelement");
 
@@ -4450,7 +4451,7 @@ static void renderHelper(const std::shared_ptr<GR::Element> &element, const std:
     }
 }
 
-static void initializeGridElements(const std::shared_ptr<GR::Element> &element, Grid *grid)
+static void initializeGridElements(const std::shared_ptr<GR::Element> &element, grm::Grid *grid)
 {
   if (element->hasChildNodes())
     {
@@ -4474,13 +4475,13 @@ static void initializeGridElements(const std::shared_ptr<GR::Element> &element, 
           int rowStop = static_cast<int>(child->getAttribute("rowStop"));
           int colStart = static_cast<int>(child->getAttribute("colStart"));
           int colStop = static_cast<int>(child->getAttribute("colStop"));
-          Slice *slice = new Slice(rowStart, rowStop, colStart, colStop);
+          grm::Slice *slice = new grm::Slice(rowStart, rowStop, colStart, colStop);
 
           if (child->localName() == "layout-gridelement")
             {
-              GridElement *curGridElement =
-                  new GridElement(absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight, fitParentsWidth,
-                                  relativeHeight, relativeWidth, aspectRatio);
+              grm::GridElement *curGridElement =
+                  new grm::GridElement(absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight,
+                                       fitParentsWidth, relativeHeight, relativeWidth, aspectRatio);
               curGridElement->elementInDOM = child;
               grid->setElement(slice, curGridElement);
             }
@@ -4490,8 +4491,9 @@ static void initializeGridElements(const std::shared_ptr<GR::Element> &element, 
               int nrows = static_cast<int>(child->getAttribute("nrows"));
               int ncols = static_cast<int>(child->getAttribute("ncols"));
 
-              Grid *curGrid = new Grid(nrows, ncols, absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight,
-                                       fitParentsWidth, relativeHeight, relativeWidth, aspectRatio);
+              grm::Grid *curGrid =
+                  new grm::Grid(nrows, ncols, absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight,
+                                fitParentsWidth, relativeHeight, relativeWidth, aspectRatio);
               curGrid->elementInDOM = child;
               grid->setElement(slice, curGrid);
               initializeGridElements(child, curGrid);
@@ -4502,7 +4504,7 @@ static void initializeGridElements(const std::shared_ptr<GR::Element> &element, 
 
 static void finalizeGrid(const std::shared_ptr<GR::Element> &root)
 {
-  Grid *rootGrid = nullptr;
+  grm::Grid *rootGrid = nullptr;
   if (root->hasChildNodes())
     {
       for (const auto &child : root->children())
@@ -4511,7 +4513,7 @@ static void finalizeGrid(const std::shared_ptr<GR::Element> &root)
             {
               int nrows = static_cast<int>(child->getAttribute("nrows"));
               int ncols = static_cast<int>(child->getAttribute("ncols"));
-              rootGrid = new Grid(nrows, ncols);
+              rootGrid = new grm::Grid(nrows, ncols);
               child->setAttribute("subplot", true);
               child->setAttribute("subplot_xmin", 0);
               child->setAttribute("subplot_xmax", 1);

@@ -8527,7 +8527,7 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
 int grm_plot(const grm_args_t *args)
 {
   grm_args_t **current_subplot_args;
-  Grid *currentGrid;
+  grm::Grid *currentGrid;
   plot_func_t plot_func;
   const char *kind = NULL;
   int figsize_x, figsize_y, tmp_size_i[2];
@@ -8617,7 +8617,7 @@ int grm_plot(const grm_args_t *args)
           return 0;
         }
 
-      currentGrid = reinterpret_cast<Grid *>(global_grid);
+      currentGrid = reinterpret_cast<grm::Grid *>(global_grid);
       int nrows = currentGrid->getNRows();
       int ncols = currentGrid->getNCols();
 
@@ -8704,7 +8704,8 @@ int grm_switch(unsigned int id)
 }
 }
 
-int grm_plot_helper(GridElement *gridElement, Slice *slice, const std::shared_ptr<GR::Element> &parentDomElement)
+int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
+                    const std::shared_ptr<GR::Element> &parentDomElement)
 {
   plot_func_t plot_func;
   const char *kind = NULL;
@@ -8729,7 +8730,7 @@ int grm_plot_helper(GridElement *gridElement, Slice *slice, const std::shared_pt
     }
   else
     {
-      Grid *currentGrid = reinterpret_cast<Grid *>(gridElement);
+      grm::Grid *currentGrid = reinterpret_cast<grm::Grid *>(gridElement);
 
       auto gridDomElement = global_render->createLayoutGrid(*currentGrid);
       gridDomElement->setAttribute("rowStart", slice->rowStart);
