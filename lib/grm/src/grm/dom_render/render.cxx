@@ -27,8 +27,8 @@
 std::shared_ptr<GR::Element> global_root;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
-static std::set<std::string> parentTypes = {"group", "layout-grid", "layout-gridelement", "draw-legend",
-                                            "draw-polar-axes"};
+static std::set<std::string> parentTypes = {"group",       "layout-grid",     "layout-gridelement",
+                                            "draw-legend", "draw-polar-axes", "pie-plot-title-render"};
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
@@ -1799,7 +1799,6 @@ static void drawLegend(const std::shared_ptr<GR::Element> &elem, const std::shar
   double tbx[4], tby[4];
   double legend_symbol_x[2], legend_symbol_y[2];
   int i;
-  bool firstRun;
   std::shared_ptr<GR::Render> render;
 
   gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
@@ -1865,7 +1864,7 @@ static void drawLegend(const std::shared_ptr<GR::Element> &elem, const std::shar
 
   if (elem->hasChildNodes())
     {
-      for (auto child : elem->children())
+      for (const auto &child : elem->children())
         {
           elem->removeChild(child);
           child->remove();
@@ -2113,6 +2112,164 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
       render->setTextAlign(temp, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
     }
 }
+
+static void drawPieLegend(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+{
+  grm_args_t *series;
+  unsigned int num_labels;
+  double viewport[4];
+  double px, py, w, h;
+  double tbx[4], tby[4];
+  std::string labels_key = static_cast<std::string>(elem->getAttribute("labels"));
+  auto labels = GR::get<std::vector<std::string>>((*context)[labels_key]);
+  std::shared_ptr<GR::Render> render;
+  std::string color_indices_key;
+  std::string color_rgb_values_key;
+
+  std::vector<int> color_indices_vec;
+  std::vector<double> color_rgb_values_vec;
+
+  gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
+
+  if (render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+    {
+    }
+  else
+    {
+      // TODO: error?
+    }
+
+  if (elem->hasChildNodes())
+    {
+      for (const auto &child : elem->children())
+        {
+          elem->removeChild(child);
+          child->remove();
+        }
+    }
+
+  if (element->hasAttribute("color_indices"))
+    {
+      // No fallback
+      color_indices_key = static_cast<std::string>(element->getAttribute(color_indices_key));
+      color_rgb_values_key = static_cast<std::string>(element->getAttribute(color_rgb_values_key));
+
+      color_indices_vec = GR::get<std::vector<int>>((*context)[color_indices_key]);
+      color_rgb_values_vec = GR::get<std::vector<double>>((*context)[color_rgb_values_vec]);
+    }
+
+  auto subGroup = render->createGroup("drawPieLegendSubGroup");
+  elem->append(subGroup);
+
+  render->setSelntran(subGroup, 0);
+  render->setScale(subGroup, 0);
+  w = 0;
+  h = 0;
+  for (auto current_label : labels)
+    {
+      gr_inqtext(0, 0, current_label.data(), tbx, tby);
+      w += tbx[2] - tbx[0];
+      h = grm_max(h, tby[2] - tby[0]);
+    }
+  w += num_labels * 0.03 + (num_labels - 1) * 0.02;
+
+  px = 0.5 * (viewport[0] + viewport[1] - w);
+  py = viewport[2] - 0.75 * h;
+
+  auto fr = render->createFillRect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
+  subGroup->append(fr);
+  render->setFillIntStyle(subGroup, GKS_K_INTSTYLE_SOLID);
+  render->setFillColorInd(subGroup, 0);
+  auto dr = render->createDrawRect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
+  subGroup->append(dr);
+  render->setLineType(subGroup, GKS_K_INTSTYLE_SOLID);
+  render->setLineColorInd(subGroup, 1);
+  render->setLineWidth(subGroup, 1);
+
+  auto subsubGroup = render->createGroup("labels_group");
+  subGroup->append(subsubGroup);
+  render->setLineSpec(subsubGroup, const_cast<char *>(" "));
+  render->setTextAlign(subsubGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+
+  auto colorGroup = render->createGroup("color_group");
+  subsubGroup->append(colorGroup);
+  set_next_color(series, "c", GR_COLOR_FILL, colorGroup);
+  render->setLineColorInd(colorGroup, 1);
+
+  for (auto &current_label : labels)
+    {
+
+      colorGroup->append(render->createFillRect(px, px + 0.02, py - 0.01, py + 0.01));
+      colorGroup->append(render->createDrawRect(px, px + 0.02, py - 0.01, py + 0.01));
+      colorGroup->append(render->createText(px + 0.03, py, current_label.data()));
+
+      gr_inqtext(0, 0, current_label.data(), tbx, tby);
+      px += tbx[2] - tbx[0] + 0.05;
+      if (current_label == labels.back())
+        {
+          colorGroup = render->createGroup("color_group");
+          subsubGroup->append(colorGroup);
+          set_next_color(NULL, NULL, GR_COLOR_FILL, colorGroup);
+        }
+    }
+  auto reset_group = render->createGroup("reset_group");
+  render->setSelntran(reset_group, 1);
+  elem->append(reset_group);
+  gr_restorestate();
+}
+
+static void piePlotTitleRender(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+{
+  double viewport[4], vp[4];
+  bool vp_found = false;
+  std::shared_ptr<GR::Render> render;
+  std::shared_ptr<GR::Element> ancestor = elem->parentElement();
+
+  gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
+
+  // Get vp from ancestor GR::element, usually the group with the name "pie"
+  while (ancestor != nullptr)
+    {
+      if (ancestor->hasAttribute("vp"))
+        {
+          vp[0] = static_cast<double>(elem->getAttribute("vp_xmin"));
+          vp[1] = static_cast<double>(elem->getAttribute("vp_xmax"));
+          vp[2] = static_cast<double>(elem->getAttribute("vp_ymin"));
+          vp[3] = static_cast<double>(elem->getAttribute("vp_ymax"));
+          vp_found = true;
+          break;
+        }
+      else
+        {
+          ancestor = elem->parentElement();
+        }
+    }
+  if (!vp_found)
+    {
+      // TODO: throw error when no vp is found within ancestors?
+    }
+  if (render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+    {
+    }
+  else
+    {
+      // TODO: error?
+    }
+  std::string title = static_cast<std::string>(elem->getAttribute("pie-plot-title"));
+  if (elem->hasChildNodes())
+    {
+      for (const auto &child : elem->children())
+        {
+          elem->removeChild(child);
+          child->remove();
+        }
+    }
+  auto tx = render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
+  render->setTextColorInd(tx, 1);
+  render->setTextAlign(tx, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+  elem->append(tx);
+}
+
 static void processGR3CameraLookAt(const std::shared_ptr<GR::Element> &elem)
 {
   double camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z;
@@ -2139,6 +2296,60 @@ static void processGR3BackgroundColor(const std::shared_ptr<GR::Element> &elem)
   a = (double)elem->getAttribute("gr3backgroundcolor_alpha");
 
   gr3_setbackgroundcolor(r, g, b, a);
+}
+
+static void setTextColorForBackground(const std::shared_ptr<GR::Element> &elem)
+/*  The set_text_volor_for_background function used in plot.cxx now as an attribute function
+    It is now possible to inquire colors during runtime -> No colors are given as parameters
+    The new color is set on `elem`
+    There are no params apart from elem
+    \param[in] elem The GR::Element the color should be set in. Also contains other attributes which may function as
+ parameters
+
+    Attributes as Parameters (with prefix "stcfb-"):
+    plot: for which plot it is used: right now only pie plot
+ */
+{
+  int color_ind;
+  int inq_color;
+  unsigned char color_rgb[4];
+  std::string plot = "pie";
+
+  if (elem->hasAttribute("stcfb-plot"))
+    {
+      plot = static_cast<std::string>(elem->getAttribute("stcfb-plot"));
+    }
+
+  if (plot == "pie")
+    {
+      double r, g, b;
+      double color_lightness;
+      std::shared_ptr<GR::Render> render;
+
+      if (render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+        {
+        }
+      else
+        {
+          // TODO: error?
+        }
+      gr_inqfillcolorind(&color_ind);
+      gr_inqcolor(color_ind, (int *)color_rgb);
+
+      r = color_rgb[0] / 255.0;
+      g = color_rgb[1] / 255.0;
+      b = color_rgb[2] / 255.0;
+
+      color_lightness = get_lightness_from_rbg(r, g, b);
+      if (color_lightness < 0.4)
+        {
+          render->setTextColorInd(elem, 0);
+        }
+      else
+        {
+          render->setTextColorInd(elem, 1);
+        }
+    }
 }
 
 static void processAttributes(const std::shared_ptr<GR::Element> &element)
@@ -2231,6 +2442,13 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
       {std::string("xticklabels"), processXTickLabels},
       {std::string("ylabel"), processYlabel}};
 
+
+  static std::map<std::string, std::function<void(const std::shared_ptr<GR::Element> &)>> attrStringToFuncPost{
+      /* This map contains functions for attributes that should be called after some attributes have been processed
+       * already. These functions can contain e.g. inquire function calls for colors.
+       * */
+      {std::string("set-text-color-for-background"), setTextColorForBackground}};
+
   for (auto &attribute : element->getAttributeNames())
     {
       auto start = 0U;
@@ -2249,6 +2467,17 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
             {
               attrStringToFunc[substr](element);
             }
+        }
+    }
+
+  for (auto &attribute : element->getAttributeNames())
+    /*
+     * Post process attribute run
+     */
+    {
+      if (attrStringToFuncPost.find(attribute) != attrStringToFuncPost.end())
+        {
+          attrStringToFuncPost[attribute](element);
         }
     }
 }
@@ -2302,7 +2531,9 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
                        {std::string("layout-grid"), layoutGrid},
                        {std::string("layout-gridelement"), layoutGridElement},
                        {std::string("draw-legend"), drawLegend},
-                       {std::string("draw-polar-axes"), drawPolarAxes}};
+                       {std::string("draw-polar-axes"), drawPolarAxes},
+                       {std::string("draw-pie-legend"), drawPieLegend},
+                       {std::string("pie-plot-title-render"), piePlotTitleRender}};
   /*! Modifier */
   if (element->localName() == "group")
     {
@@ -2626,10 +2857,6 @@ std::shared_ptr<GR::Element> GR::Render::createDrawLegend(const std::string &lab
   element->setAttribute("specs", specs_key);
   element->setAttribute("labels", labels_key);
 
-  // attribute firstRun is used for determining if new elements should be created or not. Dependent on the run count
-  // when created it is always true.
-  element->setAttribute("firstRun", true);
-
   if (labels != std::nullopt)
     {
       (*useContext)[labels_key] = *labels;
@@ -2667,6 +2894,28 @@ std::shared_ptr<GR::Element> GR::Render::createDrawPolarAxes(int angle_ticks, in
   element->setAttribute("vp_ymin", vp_ymin);
   element->setAttribute("vp_ymax", vp_ymax);
 
+  return element;
+}
+
+std::shared_ptr<GR::Element> GR::Render::createDrawPieLegend(const std::string &labels_key,
+                                                             std::optional<std::vector<std::string>> labels,
+                                                             const std::shared_ptr<GR::Context> &extContext)
+{
+  auto element = createElement("draw-pie-legend");
+  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  element->setAttribute("labels", labels_key);
+
+  if (labels != std::nullopt)
+    {
+      (*useContext)[labels_key] = *labels;
+    }
+  return element;
+}
+
+std::shared_ptr<GR::Element> GR::Render::createPiePlotTitleRenderElement(std::string title)
+{
+  auto element = createElement("pie-plot-title-render");
+  element->setAttribute("pie-plot-title", title);
   return element;
 }
 
@@ -4049,6 +4298,131 @@ void GR::Render::setXTickLabels(std::shared_ptr<GR::Element> group, const std::s
       (*useContext)[key] = *xticklabels;
     }
   group->setAttribute("xticklabels", key);
+}
+
+void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element, std::optional<std::string> color_indices_key,
+                              std::optional<std::vector<int>> color_indices,
+                              std::optional<std::string> color_rgb_values_key,
+                              std::optional<std::vector<double>> color_rgb_values, const char *key,
+                              gr_color_type_t color_type, const std::string &pass,
+                              const std::shared_ptr<GR::Context> &extContext)
+{
+  /*
+   * This function incorporates code from the `set_next_color` function used in plot.cxx and is used to set the next
+   * color on a given GR::Element
+   */
+
+  auto useContext = (extContext == nullptr) ? context : extContext;
+
+  const static int fallback_color_indices[] = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
+                                               991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
+  static double saved_color[3];
+  static int last_array_index = -1;
+
+  static unsigned int color_array_length = -1;
+  int current_array_index = last_array_index + 1;
+  int color_index = 0;
+  int reset = (color_type == GR_COLOR_RESET);
+  int gks_errind = GKS_K_NO_ERROR;
+
+  bool useFallback = true;
+
+  if (pass == "pre")
+    {
+      /*
+       * Pre pass is used to store the given vectors and keys inside GR::Element and GR::Context
+       * During pre pass vectors and keys always exist.
+       */
+      if (!(*color_indices).empty() && !(*color_rgb_values).empty())
+        {
+          (*useContext)[*color_indices_key] = (*color_indices);
+          (*useContext)[*color_rgb_values_key] = (*color_rgb_values);
+          element->setAttribute("color_indices", *color_indices_key);
+          element->setAttribute("color_rgb_values", *color_rgb_values_key);
+          useFallback = false;
+        }
+      return;
+    }
+
+  /*
+   * This is the non pre pass
+   */
+
+  if (reset || key != NULL)
+    {
+      if (last_array_index >= 0 && color_rgb_values != NULL)
+        {
+          setColorRep(element, PLOT_CUSTOM_COLOR_INDEX, saved_color[0], saved_color[1], saved_color[2]);
+        }
+      last_array_index = -1;
+      if (!reset && key != NULL)
+        {
+          if (color_indices_vec.empty() && color_rgb_values_vec.empty())
+            {
+              /* use fallback colors if `key` cannot be read from `args` */
+              logger((stderr, "Cannot read \"%s\" from args, falling back to default colors\n", key));
+              color_indices_vec =
+                  std::vector<int>(std::begin(fallback_color_indices), std::end(fallback_color_indices));
+              color_array_length = color_indices_vec.size();
+            }
+        }
+      else
+        {
+          color_indices = NULL;
+          color_rgb_values = NULL;
+          color_array_length = -1;
+
+          color_rgb_values_vec.clear();
+          color_indices_vec.clear();
+        }
+
+      if (reset)
+        {
+          return;
+        }
+    }
+
+  if (last_array_index < 0 && color_rgb_values != NULL)
+    {
+      gks_inq_color_rep(1, PLOT_CUSTOM_COLOR_INDEX, GKS_K_VALUE_SET, &gks_errind, &saved_color[0], &saved_color[1],
+                        &saved_color[2]);
+    }
+
+  current_array_index %= color_array_length;
+
+  if (color_indices != NULL)
+    {
+      color_index = color_indices[current_array_index];
+      last_array_index = current_array_index;
+    }
+  else if (color_rgb_values != NULL)
+    {
+      gr_setcolorrep(PLOT_CUSTOM_COLOR_INDEX, color_rgb_values[current_array_index],
+                     color_rgb_values[current_array_index + 1], color_rgb_values[current_array_index + 2]);
+      color_index = PLOT_CUSTOM_COLOR_INDEX;
+      last_array_index = current_array_index + 2;
+    }
+
+  if (color_type & GR_COLOR_LINE)
+    {
+      global_render->setLineColorInd(element, color_index);
+    }
+  if (color_type & GR_COLOR_MARKER)
+    {
+      global_render->setMarkerColorInd(element, color_index);
+    }
+  if (color_type & GR_COLOR_FILL)
+    {
+      global_render->setFillColorInd(element, color_index);
+    }
+  if (color_type & GR_COLOR_TEXT)
+    {
+      global_render->setTextColorInd(element, color_index);
+    }
+  if (color_type & GR_COLOR_BORDER)
+    {
+      global_render->setBorderColorInd(element, color_index);
+    }
 }
 
 //! Render functions

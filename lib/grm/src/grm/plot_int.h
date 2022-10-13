@@ -251,6 +251,9 @@ void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t col
 }
 void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type,
                     const std::shared_ptr<GR::Element> &element);
+void set_nect_color(std::optional<std::vector<int>> color_indices, std::optional<std::vector<double>> color_rgb_values,
+                    const std::string &key, gr_color_type_t color_type, const std::shared_ptr<GR::Element> &element);
+
 void set_text_color_for_background(double r, double g, double b, const std::shared_ptr<GR::Element> &element);
 void draw_xticklabel(double x1, double x2, const char *label, double available_width,
                      const std::shared_ptr<GR::Element> &element);

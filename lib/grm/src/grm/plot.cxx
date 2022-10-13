@@ -5919,10 +5919,12 @@ err_t plot_pie(grm_args_t *subplot_args)
       auto text_elem = global_render->createText(text_pos[0], text_pos[1], text, WC);
       group->append(text_elem);
 
-      // ToDo: inq from dom?
-      gr_inqfillcolorind(&color_ind);
-      gr_inqcolor(color_ind, (int *)color_rgb);
-      set_text_color_for_background(color_rgb[0] / 255.0, color_rgb[1] / 255.0, color_rgb[2] / 255.0, text_elem);
+      text_elem->setAttribute("set-color-for-background", true);
+
+      //      gr_inqfillcolorind(&color_ind);
+      //      gr_inqcolor(color_ind, (int *)color_rgb);
+      //      set_text_color_for_background(color_rgb[0] / 255.0, color_rgb[1] / 255.0, color_rgb[2] / 255.0,
+      //      text_elem);
 
       snprintf(text, 80, "%.2lf\n%.1lf %%", x[i], normalized_x_int[i] / 10.0);
 
@@ -5936,14 +5938,8 @@ err_t plot_pie(grm_args_t *subplot_args)
 
   if (grm_args_values(subplot_args, "title", "s", &title))
     {
-      const double *viewport, *vp;
-      grm_args_values(subplot_args, "viewport", "D", &viewport);
-      grm_args_values(subplot_args, "vp", "D", &vp);
-
-      auto tx = global_render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, (char *)title);
-      global_render->setTextColorInd(tx, 1);
-      global_render->setTextAlign(tx, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-      group->append(tx);
+      auto titleRenderElem = global_render->createPiePlotTitleRenderElement(title);
+      group->append(titleRenderElem);
     }
 
 cleanup:
@@ -6370,78 +6366,51 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
 
 err_t plot_draw_pie_legend(grm_args_t *subplot_args)
 {
-  // TODO: move viewport dependent calcs to render
-  grm_args_t *series;
-  const char **labels, **current_label;
+  const char **labels;
   unsigned int num_labels;
-  const double *viewport;
-  double px, py, w, h;
-  double tbx[4], tby[4];
+  grm_args_t *series;
+
+  static const int *color_indices = NULL;
+  static const double *color_rgb_values = NULL;
+  static unsigned int color_array_length = -1;
+  int useFallback = 0;
 
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
-  auto subGroup = global_render->createGroup("pie_legend");
-  group->append(subGroup);
 
   return_error_if(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
-  logger((stderr, "Draw a pie legend with %d labels\n", num_labels));
   grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
-  grm_args_values(subplot_args, "viewport", "D", &viewport);
-  gr_savestate();
-  global_render->setSelntran(subGroup, 0);
-  global_render->setScale(subGroup, 0);
-  w = 0;
-  h = 0;
-  for (current_label = labels; *current_label != NULL; ++current_label)
+
+  int id = static_cast<int>(global_root->getAttribute("id"));
+  global_root->setAttribute("id", id + 1);
+  std::string labels_key = "labels" + std::to_string(id);
+  std::vector<std::string> labels_vec(labels, labels + num_labels);
+
+
+  std::string color_indices_key;
+  std::string color_rgb_values_key;
+
+  std::vector<int> color_indices_vec;
+  std::vector<double> color_rgb_values_vec;
+
+  auto drawPieLegendElement = global_render->createDrawPieLegend(labels_key, labels_vec);
+  group->append(drawPieLegendElement);
+
+  if (grm_args_first_value(series, "c", "I", &color_indices, &color_array_length) &&
+      grm_args_first_value(series, "c", "D", &color_rgb_values, &color_array_length))
     {
-      gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
-      w += tbx[2] - tbx[0];
-      h = grm_max(h, tby[2] - tby[0]);
+      color_indices_key = "color_indices" + std::to_string(id);
+      color_rgb_values_key = "color_rgb_values" + std::to_string(id);
+
+      color_indices_vec = std::vector<int>(color_indices, color_indices + color_array_length);
+      color_rgb_values_vec = std::vector<double>(color_rgb_values, color_rgb_values + color_array_length);
+
+      global_render->setNextColor(drawPieLegendElement, color_indices_key, color_indices_vec, color_rgb_values_key,
+                                  color_rgb_values_vec, "", GR_COLOR_RESET, "pre");
     }
-  w += num_labels * 0.03 + (num_labels - 1) * 0.02;
-
-  px = 0.5 * (viewport[0] + viewport[1] - w);
-  py = viewport[2] - 0.75 * h;
-
-  auto fr = global_render->createFillRect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
-  subGroup->append(fr);
-  global_render->setFillIntStyle(subGroup, GKS_K_INTSTYLE_SOLID);
-  global_render->setFillColorInd(subGroup, 0);
-  auto dr = global_render->createDrawRect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
-  subGroup->append(dr);
-  global_render->setLineType(subGroup, GKS_K_INTSTYLE_SOLID);
-  global_render->setLineColorInd(subGroup, 1);
-  global_render->setLineWidth(subGroup, 1);
-
-  auto subsubGroup = global_render->createGroup("labels_group");
-  subGroup->append(subsubGroup);
-  global_render->setLineSpec(subsubGroup, const_cast<char *>(" "));
-  global_render->setTextAlign(subsubGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-
-  auto colorGroup = global_render->createGroup("color_group");
-  subsubGroup->append(colorGroup);
-  set_next_color(series, "c", GR_COLOR_FILL, colorGroup);
-  global_render->setLineColorInd(colorGroup, 1);
-
-  for (current_label = labels; *current_label != NULL; ++current_label)
+  else
     {
-
-      colorGroup->append(global_render->createFillRect(px, px + 0.02, py - 0.01, py + 0.01));
-      colorGroup->append(global_render->createDrawRect(px, px + 0.02, py - 0.01, py + 0.01));
-      colorGroup->append(global_render->createText(px + 0.03, py, (char *)*current_label));
-
-      gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
-      px += tbx[2] - tbx[0] + 0.05;
-      if (*(current_label + 1) != NULL)
-        {
-          colorGroup = global_render->createGroup("color_group");
-          subsubGroup->append(colorGroup);
-          set_next_color(NULL, NULL, GR_COLOR_FILL, colorGroup);
-        }
+      // No color arrays given. Nothing to do pre run
     }
-  auto reset_group = global_render->createGroup("reset_group");
-  global_render->setSelntran(reset_group, 1);
-  group->append(reset_group);
-  gr_restorestate();
 
   return ERROR_NONE;
 }
@@ -8807,7 +8776,7 @@ void set_text_color_for_background(double r, double g, double b, const std::shar
 
 
 /*!
- * \brief Set colors from color index or rgb arrays.
+ * \brief Set colors from color index or rgb arrays. The render version
  *
  * Call the function first with an argument container and a key. Afterwards, call the `set_next_color` with `NULL`
  * pointers to iterate through the color arrays. If `key` does not exist in `args`, the function falls back to default

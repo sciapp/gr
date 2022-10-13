@@ -706,10 +706,49 @@ static void testContext()
     }
 }
 
+
+static void test_polarhistogram_subplots(void)
+{
+  grm_args_t *args, *subplots[2];
+  int i, j;
+
+  double theta[] = {0.1, 1.1, 5.4, 3.4, 2.3, 4.5, 3.2, 3.4, 5.6, 2.3, 2.1, 3.5, 0.6, 6.1};
+  unsigned int theta_length = sizeof(theta) / sizeof(theta[0]);
+
+  printf("Polar histogram with minimal input...\n");
+
+  args = grm_args_new();
+
+  subplots[0] = grm_args_new();
+  subplots[1] = grm_args_new();
+
+  grm_args_push(subplots[0], "kind", "s", "polar_histogram");
+  grm_args_push(subplots[0], "x", "nD", theta_length, &theta);
+  i = 0;
+  grm_args_push(subplots[0], "subplot", "dddd", 0.5 * (i % 2), 0.5 * (i % 2 + 1), 0.5 * (i / 2), 0.5 * (i / 2 + 1));
+  i = 1;
+  grm_args_push(subplots[1], "kind", "s", "polar_histogram");
+  grm_args_push(subplots[1], "x", "nD", theta_length, &theta);
+  grm_args_push(subplots[i], "subplot", "dddd", 0.5 * (i % 2), 0.5 * (i % 2 + 1), 0.5 * (i / 2), 0.5 * (i / 2 + 1));
+
+  args = grm_args_new();
+  grm_args_push(args, "subplots", "nA", 2, subplots);
+
+  printf("plotting data...\n");
+
+  grm_plot(args);
+  printf("Press any key to continue...\n");
+  getchar();
+
+  grm_args_delete(args);
+}
+
+
 int main(void)
 {
 
   test_dom_render();
+  //  test_polarhistogram_subplots();
   // test_wireframe();
   // test_plot3();
   //  testTrisurf();

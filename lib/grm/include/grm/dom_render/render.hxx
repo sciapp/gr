@@ -9,6 +9,7 @@
 #include <grm/dom_render/graphics_tree/Document.hxx>
 #include "gr.h"
 #include "grm/layout.hxx"
+#include "grm/plot_int.h"
 #include <grm/util_int.h>
 
 
@@ -66,6 +67,11 @@ public:
                                                double vp_xmin, double vp_xmax, double vp_ymin, double vp_ymax,
                                                const std::string &title = "", const std::string &norm = "",
                                                double r_max = -1.0);
+
+  std::shared_ptr<Element> createDrawPieLegend(const std::string &labels_key,
+                                               std::optional<std::vector<std::string>> labels,
+                                               const std::shared_ptr<GR::Context> &extContext = nullptr);
+
 
   std::shared_ptr<Element> createGrid(double x_tick, double y_tick, double x_org, double y_org, int major_x,
                                       int major_y);
@@ -202,7 +208,15 @@ public:
 
   std::shared_ptr<Element> createLayoutGridElement(const GridElement &gridElement, const Slice &slice);
 
+  std::shared_ptr<Element> createPiePlotTitleRenderElement(std::string title);
+
   //! Modifierfunctions
+
+  void setNextColor(const std::shared_ptr<Element> &element, std::optional<std::string> color_indices_key,
+                    std::optional<std::vector<int>> color_indices, std::optional<std::string> color_rgb_values_key,
+                    std::optional<std::vector<double>> color_rgb_values, const char *key, gr_color_type_t color_type,
+                    const std::string &pass, const std::shared_ptr<Context> &extContext = nullptr);
+
   void setViewport(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
   void setWindow(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
