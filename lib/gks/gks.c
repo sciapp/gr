@@ -43,64 +43,65 @@ static int id = 0;
 
 static gks_list_t *open_ws = NULL, *active_ws = NULL, *av_ws_types = NULL;
 
-static ws_descr_t ws_types[] = {{2, GKS_K_METERS, 1.00000, 1.00000, 65536, 65536, 4, "mf", NULL},
-                                {3, GKS_K_METERS, 1.00000, 1.00000, 65536, 65536, 5, "mf", NULL},
-                                {5, GKS_K_METERS, 1.00000, 1.00000, 32767, 32767, 3, NULL, NULL},
-                                {41, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 2, NULL, NULL},
-                                {61, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL},
-                                {62, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL},
-                                {63, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL},
-                                {64, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL},
-                                {100, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL},
-                                {101, GKS_K_METERS, 0.28800, 0.19840, 810, 558, 0, "pdf", NULL},
-                                {102, GKS_K_METERS, 0.28800, 0.19840, 810, 558, 0, "pdf", NULL},
-                                {120, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "mov", NULL},
-                                {121, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "mov", NULL},
-                                {130, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "gif", NULL},
-                                {131, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "apng", NULL},
-                                {140, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "png", NULL},
-                                {141, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL},
-                                {142, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL},
-                                {143, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL},
-                                {144, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "jpg", NULL},
-                                {145, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "bmp", NULL},
-                                {146, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "tif", NULL},
-                                {150, GKS_K_METERS, 0.20320, 0.15240, 560, 420, 0, "six", NULL},
-                                {151, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "png", NULL},
-                                {160, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "mp4", NULL},
-                                {161, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "webm", NULL},
-                                {162, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "ogg", NULL},
-                                {170, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ppm", NULL},
-                                {171, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "png", NULL},
-                                {172, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "jpg", NULL},
-                                {173, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL},
-                                {210, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, NULL, NULL},
-                                {211, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 2, NULL, NULL},
-                                {212, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 2, NULL, NULL},
-                                {213, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 2, NULL, NULL},
-                                {214, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, "rf", "GKS_RF"},
-                                {215, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, "gif", "GKS_GIF"},
-                                {216, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, "uil", "GKS_UIL"},
-                                {217, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, NULL, NULL},
-                                {218, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, "gif", NULL},
-                                {301, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, NULL, NULL},
-                                {314, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, "tex", NULL},
-                                {320, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL},
-                                {321, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL},
-                                {322, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL},
-                                {323, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL},
-                                {371, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL},
-                                {380, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL},
-                                {381, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL},
-                                {382, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, "svg", NULL},
-                                {390, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, "wmf", NULL},
-                                {400, GKS_K_METERS, 0.28560, 0.17850, 1280, 800, 0, NULL, NULL},
-                                {410, GKS_K_METERS, 0.28560, 0.17850, 1280, 800, 0, NULL, NULL},
-                                {411, GKS_K_METERS, 0.28560, 0.17850, 1280, 800, 0, NULL, NULL},
-                                {412, GKS_K_METERS, 0.28560, 0.17850, 1280, 800, 0, NULL, NULL},
-                                {413, GKS_K_METERS, 0.28560, 0.17850, 1280, 800, 0, NULL, NULL},
-                                {415, GKS_K_METERS, 0.28560, 0.17850, 1280, 800, 0, NULL, NULL},
-                                {420, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL}};
+static ws_descr_t ws_types[] = {
+    {2, GKS_K_METERS, 1.00000, 1.00000, 65536, 65536, 4, "mf", NULL, "MO"},
+    {3, GKS_K_METERS, 1.00000, 1.00000, 65536, 65536, 5, "mf", NULL, "MI"},
+    {5, GKS_K_METERS, 1.00000, 1.00000, 32767, 32767, 3, NULL, NULL, "WISS"},
+    {41, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 2, NULL, NULL, "Windows GDI"},
+    {61, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL, "PostScript"},
+    {62, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL, "Color PostScript"},
+    {63, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL, "PostScript (landscape)"},
+    {64, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL, "Color PostScript (landscape)"},
+    {100, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL, "NULL"},
+    {101, GKS_K_METERS, 0.28800, 0.19840, 810, 558, 0, "pdf", NULL, "PDF"},
+    {102, GKS_K_METERS, 0.28800, 0.19840, 810, 558, 0, "pdf", NULL, "PDF"},
+    {120, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "mov", NULL, "QuickTime movie"},
+    {121, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "mov", NULL, "High DPI QuickTime movie"},
+    {130, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "gif", NULL, "GIF"},
+    {131, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "apng", NULL, "animated PNG"},
+    {140, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "png", NULL, "PNG"},
+    {141, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL, "Cairo X11"},
+    {142, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL, "Cairo Gtk"},
+    {143, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL, "Cairo pixmap"},
+    {144, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "jpg", NULL, "Cairo JPEG"},
+    {145, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "bmp", NULL, "Cairo BMP"},
+    {146, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "tif", NULL, "Cairo TIFF"},
+    {150, GKS_K_METERS, 0.20320, 0.15240, 560, 420, 0, "six", NULL, "Sixel"},
+    {151, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "png", NULL, "PNG"},
+    {160, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "mp4", NULL, "MPEG-4"},
+    {161, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "webm", NULL, "WEBM"},
+    {162, GKS_K_METERS, 0.25400, 0.19050, 1440, 1080, 0, "ogg", NULL, "OGG"},
+    {170, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ppm", NULL, "Anti-Grain PPM"},
+    {171, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "png", NULL, "Anti-Grain PNG"},
+    {172, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "jpg", NULL, "Anti-Grain JPEG"},
+    {173, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL, "Anti-Grain pixmap"},
+    {210, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, NULL, NULL, "X11"},
+    {211, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 2, NULL, NULL, "X11"},
+    {212, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 2, NULL, NULL, "X drawable"},
+    {213, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 2, NULL, NULL, "X widget"},
+    {214, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, "rf", "GKS_RF", "Sun rasterfile"},
+    {215, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, "gif", "GKS_GIF", "X GIF"},
+    {216, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, "uil", "GKS_UIL", "X UIL"},
+    {217, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, NULL, NULL, "X pixmap"},
+    {218, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, "gif", NULL, "GIF-89"},
+    {301, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 0, NULL, NULL, "plugin"},
+    {314, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, "tex", NULL, "PGF"},
+    {320, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL, "GhostScript BMP"},
+    {321, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL, "GhostScript JPEG"},
+    {322, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL, "GhostScript PNG"},
+    {323, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL, "GhostScript TIFF"},
+    {371, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL, "Gtk"},
+    {380, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL, "WxWidgets"},
+    {381, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL, "Qt"},
+    {382, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, "svg", NULL, "SVG"},
+    {390, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, "wmf", NULL, "WMF"},
+    {400, GKS_K_METERS, 0.28560, 0.17850, 1280, 800, 0, NULL, NULL, "Quartz"},
+    {410, GKS_K_METERS, 0.28560, 0.17850, 1280, 800, 0, NULL, NULL, "socket"},
+    {411, GKS_K_METERS, 0.28560, 0.17850, 1280, 800, 0, NULL, NULL, "Qt"},
+    {412, GKS_K_METERS, 0.28560, 0.17850, 1280, 800, 0, NULL, NULL, "Qt (Cairo)"},
+    {413, GKS_K_METERS, 0.28560, 0.17850, 1280, 800, 0, NULL, NULL, "Qt (Agg)"},
+    {415, GKS_K_METERS, 0.28560, 0.17850, 1280, 800, 0, NULL, NULL, "ZMQ"},
+    {420, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL, "OpenGL"}};
 
 static int num_ws_types = sizeof(ws_types) / sizeof(ws_types[0]);
 
@@ -179,6 +180,10 @@ static void gks_ddlk(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_
           ptr = &ws->ptr;
 
 #ifndef EMSCRIPTEN
+          if (s->debug)
+            fprintf(stdout, "[DEBUG:GKS] dispatch %s function to %s driver (wtype: %d)\n", gks_function_name(fctid),
+                    ws->name, ws->wtype);
+
           switch (ws->wtype)
             {
             case 2:
@@ -411,6 +416,8 @@ static void gks_parse_env(void)
     }
 
   if (gks_getenv("GKS_NO_EXIT_HANDLER") == NULL) atexit(gks_emergency_close);
+
+  if (gks_getenv("GKS_DEBUG") != NULL) s->debug = 1;
 }
 
 void gks_set_encoding(int encoding)
@@ -535,7 +542,15 @@ void gks_init_gks(void)
       s->aspect_ratio = 1;
 
       s->callback = NULL;
+      s->debug = 0;
     }
+}
+
+int gks_debug(void)
+{
+  if (s != NULL) return s->debug;
+
+  return 0;
 }
 
 void gks_open_gks(int errfil)
@@ -596,6 +611,8 @@ void gks_close_gks(void)
       if (s->fontfile > 0)
         {
           /* close font database */
+          if (s->debug) fprintf(stdout, "[DEBUG:GKS] close font database (fd=%d)\n", s->fontfile);
+
           gks_close_font(s->fontfile);
           s->fontfile = 0;
         }
@@ -620,7 +637,12 @@ static int open_file(char *name, int wtype)
       if (*name)
         {
           char *mode = wtype == GKS_K_WSTYPE_MI ? "r" : "w";
+
+          if (s->debug) fprintf(stdout, "[DEBUG:GKS] open file '%s' with mode '%c' ", name, *mode);
+
           fd = gks_open_file(name, mode);
+
+          if (s->debug) fprintf(stdout, "=> fd=%d\n", fd);
         }
       else
         fd = 1;
@@ -669,8 +691,10 @@ void gks_open_ws(int wkid, char *path, int wtype)
                         }
                       else
                         ws->path = gks_strdup(path);
+
                       ws->wtype = wtype;
                       ws->conid = 0;
+                      ws->name = descr->name;
 
                       if (descr->env)
                         {
@@ -757,7 +781,13 @@ void gks_open_ws(int wkid, char *path, int wtype)
                         {
                           if (ws->conid && ws->conid != 1)
                             if (ws->path)
-                              if (*ws->path != '!') gks_close_file(ws->conid);
+                              if (*ws->path != '!')
+                                {
+                                  if (s->debug)
+                                    fprintf(stdout, "[DEBUG:GKS] close file '%s' (fd=%d)\n", ws->path, ws->conid);
+
+                                  gks_close_file(ws->conid);
+                                }
 
                           if (ws->path) free(ws->path);
 
@@ -817,7 +847,12 @@ void gks_close_ws(int wkid)
 
                   if (ws->conid && ws->conid != 1)
                     if (ws->path)
-                      if (*ws->path != '!') gks_close_file(ws->conid);
+                      if (*ws->path != '!')
+                        {
+                          if (s->debug) fprintf(stdout, "[DEBUG:GKS] close file '%s' (fd=%d)\n", ws->path, ws->conid);
+
+                          gks_close_file(ws->conid);
+                        }
 
                   if (ws->path) free(ws->path);
 
@@ -1550,7 +1585,11 @@ void gks_set_text_fontprec(int font, int prec)
               if ((prec == GKS_K_TEXT_PRECISION_STROKE || prec == GKS_K_TEXT_PRECISION_CHAR) && s->fontfile == 0)
                 {
                   /* open font database */
+                  if (s->debug) fprintf(stdout, "[DEBUG:GKS] open font database ");
+
                   s->fontfile = gks_open_font();
+
+                  if (s->debug) fprintf(stdout, "=> fd=%d\n", s->fontfile);
                 }
 
               s->txfont = i_arr[0] = font;
