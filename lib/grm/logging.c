@@ -31,7 +31,7 @@ static void logger_init(void);
 
 /* ========================= macros ================================================================================= */
 
-#define ENABLE_LOGGING_ENV_KEY "GR_DEBUG"
+#define ENABLE_LOGGING_ENV_KEY "GRM_DEBUG"
 
 
 /* ========================= static variables ======================================================================= */
