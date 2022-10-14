@@ -71,16 +71,17 @@ void logger1_(FILE *stream, const char *filename, int line_number, const char *c
   if (logging_enabled)
     {
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
-      fprintf(stream, "%s:%d(%s): ", filename, line_number, current_function);
+      fprintf(stream, "[DEBUG:GRM] %s:%d(%s): ", filename, line_number, current_function);
 #else
       if (isatty(fileno(stream)))
         {
-          fprintf(stream, "\033[36m%s\033[0m:\033[33m%d\033[0m(\033[34m%s\033[0m): ", filename, line_number,
-                  current_function);
+          fprintf(stream,
+                  "\033[32;1m[DEBUG:GRM]\033[0m \033[36m%s\033[0m:\033[33m%d\033[0m(\033[34m%s\033[0m): ", filename,
+                  line_number, current_function);
         }
       else
         {
-          fprintf(stream, "%s:%d(%s): ", filename, line_number, current_function);
+          fprintf(stream, "[DEBUG:GRM] %s:%d(%s): ", filename, line_number, current_function);
         }
 #endif
     }
