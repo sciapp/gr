@@ -11,6 +11,7 @@
 #include <vector>
 #include <set>
 #include <sstream>
+#include <algorithm>
 #include <grm/dom_render/graphics_tree/Element.hxx>
 #include <grm/dom_render/graphics_tree/Document.hxx>
 #include <grm/dom_render/graphics_tree/Value.hxx>
@@ -388,9 +389,14 @@ static void text(const std::shared_ptr<GR::Element> &element, const std::shared_
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
    */
+  gr_savestate();
   auto x = static_cast<double>(element->getAttribute("x"));
   auto y = static_cast<double>(element->getAttribute("y"));
   auto str = static_cast<std::string>(element->getAttribute("text"));
+  auto available_width = static_cast<double>(element->getAttribute("width"));
+  auto available_height = static_cast<double>(element->getAttribute("height"));
+  double tbx[4], tby[4];
+  bool text_fits = true;
   CoordinateSpace space = static_cast<CoordinateSpace>(static_cast<int>(element->getAttribute("space")));
 
 
@@ -398,7 +404,39 @@ static void text(const std::shared_ptr<GR::Element> &element, const std::shared_
     {
       gr_wctondc(&x, &y);
     }
-  gr_text(x, y, &str[0]);
+  if (element->hasAttribute("width") && element->hasAttribute("height"))
+    {
+      gr_wctondc(&available_width, &available_height);
+      gr_inqtext(x, y, &str[0], tbx, tby);
+      auto minmax_x = std::minmax_element(std::begin(tbx), std::end(tbx));
+      auto minmax_y = std::minmax_element(std::begin(tby), std::end(tby));
+      double width = minmax_x.second - minmax_x.first;
+      double height = minmax_y.second - minmax_y.first;
+      if (width > available_width && height > available_height)
+        {
+          gr_setcharup(0.0, 1.0);
+          gr_settextalign(2, 3);
+          gr_inqtext(x, y, &str[0], tbx, tby);
+          width = tbx[2] - tbx[0];
+          height = tby[2] - tby[0];
+          if (width < available_width && height < available_height)
+            {
+              gr_setcharup(0.0, 1.0);
+              gr_settextalign(2, 3);
+            }
+          else if (height < available_width && width < available_height)
+            {
+              gr_setcharup(-1.0, 0.0);
+              gr_settextalign(2, 3);
+            }
+          else
+            {
+              text_fits = false;
+            }
+        }
+    }
+  if (text_fits) gr_text(x, y, &str[0]);
+  gr_restorestate();
 }
 
 static void fillArea(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
@@ -4054,6 +4092,19 @@ void GR::Render::setTextAlign(const std::shared_ptr<Element> &element, int horiz
   element->setAttribute("textalign", true);
   element->setAttribute("textalign_horizontal", horizontal);
   element->setAttribute("textalign_vertical", vertical);
+}
+
+void GR::Render::setTextWidthAndHeight(const std::shared_ptr<Element> &element, double width, double height)
+{
+  /*!
+   * This function can be used to set the width and height of a GR::Element
+   *
+   * \param[in] element A GR::Element
+   * \param[in] width Width of the Element
+   * \param[in] height Height of the Element
+   */
+  element->setAttribute("width", width);
+  element->setAttribute("height", height);
 }
 
 

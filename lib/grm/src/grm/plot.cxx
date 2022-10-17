@@ -3221,40 +3221,15 @@ err_t plot_barplot(grm_args_t *subplot_args)
 
               if (ylabels_left > 0)
                 {
-                  gr_wctondc(&x1, &y1);
-                  gr_wctondc(&x2, &y2);
                   available_width = x2 - x1;
                   available_height = y2 - y1;
                   x_text = (x1 + x2) / 2;
                   y_text = (y1 + y2) / 2;
                   gr_settextalign(2, 3);
                   gr_setcharup(0.0, 1.0);
-                  gr_inqtextext(x_text, y_text, ylabels[i], tbx, tby);
-                  logger((stderr, "ylabel: \"%s\", textext_x: (%lf, %lf, %lf, %lf), textext_y: (%lf, %lf, %lf, %lf)\n",
-                          ylabels[i], tbx[0], tbx[1], tbx[2], tbx[3], tby[0], tby[1], tby[2], tby[3]));
-                  gr_wctondc(&tbx[0], &tby[0]);
-                  gr_wctondc(&tbx[2], &tby[2]);
-                  width = tbx[2] - tbx[0];
-                  height = tby[2] - tby[0];
-                  logger((stderr, "width: %lf, available_width: %lf\n", width, available_width));
-                  logger((stderr, "height: %lf, available_height: %lf\n", height, available_height));
-                  std::shared_ptr<GR::Element> temp;
-                  if (width < available_width && height < available_height)
-                    {
-                      temp = global_render->createText(x_text, y_text, ylabels[i]);
-                      global_render->setCharUp(temp, 0.0, 1.0);
-                      global_render->setTextAlign(temp, 2, 3);
-                    }
-                  else if (height < available_width && width < available_height)
-                    {
-                      temp = global_render->createText(x_text, y_text, ylabels[i]);
-                      global_render->setCharUp(temp, -1.0, 0.0);
-                      global_render->setTextAlign(temp, 2, 3);
-                    }
-                  else
-                    {
-                      continue;
-                    }
+
+                  std::shared_ptr<GR::Element> temp = global_render->createText(x_text, y_text, ylabels[i], WC);
+                  global_render->setTextWidthAndHeight(temp, available_width, available_height);
                   if (y_lightness[i] < 0.4)
                     {
                       global_render->setTextColorInd(temp, 0);

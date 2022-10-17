@@ -272,6 +272,8 @@ public:
 
   void setTextAlign(const std::shared_ptr<Element> &element, int horizontal, int vertical);
 
+  void setTextWidthAndHeight(const std::shared_ptr<Element> &element, double width, double height);
+
   void setColorRep(const std::shared_ptr<Element> &element, int index, double red, double green, double blue);
 
 
