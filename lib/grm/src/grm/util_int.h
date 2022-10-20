@@ -5,9 +5,9 @@
 
 #include <stdlib.h>
 
-#include "args.h"
+#include <grm/args.h>
 #include "logging_int.h"
-#include "util.h"
+#include <grm/util.h>
 
 
 /* ######################### internal interface ##################################################################### */

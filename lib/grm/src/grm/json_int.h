@@ -5,7 +5,7 @@
 
 #include <stdarg.h>
 
-#include "args.h"
+#include <grm/args.h>
 #include "error_int.h"
 #include "memwriter_int.h"
 

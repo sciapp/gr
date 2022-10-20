@@ -4,7 +4,7 @@
 
 #include "test.h"
 
-#include "plot_int.h"
+#include <grm/plot_int.h>
 
 
 void test(void)

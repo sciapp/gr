@@ -7,7 +7,7 @@
 #include "datatype/uint_map_int.h"
 #include "error_int.h"
 #include "event_int.h"
-#include "plot.h"
+#include <grm/plot.h>
 
 
 /* ######################### internal interface ##################################################################### */
