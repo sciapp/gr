@@ -172,7 +172,7 @@ static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},          {"hexbin", 
                                            {"barplot", "y"},         {"isosurface", "c"},
                                            {"imshow", "c"},          {"nonuniformheatmap", "xyzc"},
                                            {"polar_histogram", "x"}, {"pie", "x"},
-                                           {"volume", "c"}};
+                                           {"volume", "c"},          {"marginalheatmap", "xyzc"}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -188,6 +188,7 @@ static plot_func_map_entry_t kind_to_func[] = {{"line", plot_line},
                                                {"contourf", plot_contourf},
                                                {"hexbin", plot_hexbin},
                                                {"heatmap", plot_heatmap},
+                                               {"marginalheatmap", plot_marginalheatmap},
                                                {"wireframe", plot_wireframe},
                                                {"surface", plot_surface},
                                                {"plot3", plot_plot3},
@@ -273,6 +274,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "levels",
                                     "location",
                                     "normalization",
+                                    "orientation",
                                     "panzoom",
                                     "phiflip",
                                     "rel_height",
@@ -288,6 +290,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "subplot",
                                     "tilt",
                                     "title",
+                                    "type",
                                     "xbins",
                                     "xflip",
                                     "xform",
@@ -295,6 +298,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "xlabel",
                                     "xlim",
                                     "xlog",
+                                    "xind",
                                     "xticklabels",
                                     "ybins",
                                     "yflip",
@@ -302,6 +306,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "ylabel",
                                     "ylim",
                                     "ylog",
+                                    "yind",
                                     "zflip",
                                     "zgrid",
                                     "zlim",
@@ -376,6 +381,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"location", "i"},
                                               {"markertype", "i|D"},
                                               {"nbins", "i"},
+                                              {"orientation", "s"},
                                               {"panzoom", "D"},
                                               {"raw", "s"},
                                               {"rel_height", "d"},
@@ -392,6 +398,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"subplot", "D"},
                                               {"tilt", "d"},
                                               {"title", "s"},
+                                              {"type", "s"},
                                               {"u", "D"},
                                               {"update", "i"},
                                               {"v", "D"},
@@ -403,6 +410,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"xgrid", "i"},
                                               {"xlabel", "s"},
                                               {"xlim", "D"},
+                                              {"xind", "i"},
                                               {"xrange", "D"},
                                               {"xlog", "i"},
                                               {"y", "D"},
@@ -413,6 +421,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"ygrid", "i"},
                                               {"ylabel", "s"},
                                               {"ylim", "D"},
+                                              {"yind", "i"},
                                               {"yrange", "D"},
                                               {"ylog", "i"},
                                               {"z", "D"},
@@ -954,7 +963,7 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
       args_setdefault(*current_subplot, "ygrid", "i", PLOT_DEFAULT_YGRID);
       args_setdefault(*current_subplot, "zgrid", "i", PLOT_DEFAULT_ZGRID);
       args_setdefault(*current_subplot, "resample_method", "i", PLOT_DEFAULT_RESAMPLE_METHOD);
-      if (strcmp(kind, "heatmap") == 0)
+      if (str_equals_any(kind, 2, "heatmap", "marginalheatmap"))
         {
           args_setdefault(*current_subplot, "adjust_xlim", "i", 0);
           args_setdefault(*current_subplot, "adjust_ylim", "i", 0);
@@ -986,6 +995,15 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
         {
           args_setdefault(*current_subplot, "levels", "i", PLOT_DEFAULT_TRICONT_LEVELS);
         }
+      else if (str_equals_any(kind, 2, "hist", "line"))
+        {
+          args_setdefault(*current_subplot, "orientation", "s", PLOT_DEFAULT_ORIENTATION);
+        }
+      else if (str_equals_any(kind, 2, "marginalheatmap", "hist"))
+        {
+          args_setdefault(*current_subplot, "xind", "i", -1);
+          args_setdefault(*current_subplot, "yind", "i", -1);
+        }
 
       grm_args_values(*current_subplot, "series", "A", &current_series);
       while (*current_series != NULL)
@@ -1002,6 +1020,11 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
           else if (strcmp(kind, "volume") == 0)
             {
               args_setdefault(*current_series, "algorithm", "i", PLOT_DEFAULT_VOLUME_ALGORITHM);
+            }
+          else if (strcmp(kind, "marginalheatmap") == 0)
+            {
+              args_setdefault(*current_series, "algorithm", "s", "sum");
+              args_setdefault(*current_series, "type", "s", "all");
             }
           ++current_series;
         }
@@ -1493,7 +1516,8 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
               continue;
             }
           /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
-          if (!grm_args_contains(subplot_args, current_range_keys->subplot) || strcmp(kind, "heatmap") == 0)
+          if (!grm_args_contains(subplot_args, current_range_keys->subplot) ||
+              str_equals_any(kind, 2, "heatmap", "marginalheatmap"))
             {
               grm_args_first_value(subplot_args, "series", "A", &current_series, &series_count);
               while (*current_series != NULL)
@@ -1530,7 +1554,8 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                                 }
                             }
                         }
-                      else if (strcmp(kind, "heatmap") == 0 && str_equals_any(*current_component_name, 2, "x", "y"))
+                      else if (str_equals_any(kind, 2, "heatmap", "marginalheatmap") &&
+                               str_equals_any(*current_component_name, 2, "x", "y"))
                         {
                           /* in this case `x` or `y` (or both) are missing
                            * -> set the current grm_min/max_component to the dimensions of `z`
@@ -1899,10 +1924,11 @@ err_t plot_line(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
   err_t error;
-  const char *kind;
+  const char *kind, *orientation;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
+  grm_args_values(subplot_args, "orientation", "s", &orientation);
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "line");
 
@@ -1927,7 +1953,15 @@ err_t plot_line(grm_args_t *subplot_args)
           gr_inqlinecolorind(&current_line_colorind);
           int id = static_cast<int>(global_root->getAttribute("id"));
           std::string str = std::to_string(id);
-          auto element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
+          std::shared_ptr<GR::Element> element;
+          if (strcmp(orientation, "horizontal") == 0)
+            {
+              element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
+            }
+          else
+            {
+              element = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
+            }
           global_root->setAttribute("id", ++id);
           element->setAttribute("linecolorind", current_line_colorind);
           subGroup->append(element);
@@ -1938,7 +1972,15 @@ err_t plot_line(grm_args_t *subplot_args)
           gr_inqmarkercolorind(&current_marker_colorind);
           int id = static_cast<int>(global_root->getAttribute("id"));
           std::string str = std::to_string(id);
-          auto element = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
+          std::shared_ptr<GR::Element> element;
+          if (strcmp(orientation, "horizontal") == 0)
+            {
+              element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
+            }
+          else
+            {
+              element = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
+            }
           global_root->setAttribute("id", ++id);
           element->setAttribute("markercolorind", current_marker_colorind);
           subGroup->append(element);
@@ -1963,14 +2005,26 @@ err_t plot_step(grm_args_t *subplot_args)
    * optional `spec`
    */
   grm_args_t **current_series;
+  char *kind, *orientation;
+  int xind, yind;
+  double *x_step_boundaries = NULL, *y_step_values = NULL;
+  double xmin, xmax, ymin, ymax;
+  double *y = NULL, *xi = NULL;
+  int is_vertical;
+  err_t error = ERROR_NONE;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "step");
 
+  grm_args_values(subplot_args, "kind", "s", &kind);
+  grm_args_values(subplot_args, "orientation", "s", &orientation);
+  grm_args_values(subplot_args, "xind", "i", &xind);
+  grm_args_values(subplot_args, "yind", "i", &yind);
+  is_vertical = strcmp(orientation, "vertical") == 0;
   while (*current_series != NULL)
     {
-      double *x, *y, *x_step_boundaries = NULL, *y_step_values = NULL;
+      double *x = NULL;
       unsigned int x_length, y_length, mask, i;
       char *spec;
       auto subGroup = global_render->createGroup("step_series");
@@ -1980,16 +2034,107 @@ err_t plot_step(grm_args_t *subplot_args)
                       ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      // TODO: marginalheatmap
       grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
+      cleanup_and_set_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length) && x_length < 1,
+                               ERROR_PLOT_MISSING_DATA);
+      cleanup_and_set_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
+      if (strcmp(kind, "marginalheatmap") == 0 && xind != -1 && yind != -1)
+        {
+          double y_max = 0, *plot, c_min, c_max;
+          unsigned int n = 0;
+
+          args_values(*current_series, "xrange", "dd", &xmin, &xmax);
+          args_values(*current_series, "yrange", "dd", &ymin, &ymax);
+          args_values(subplot_args, "_zlim", "dd", &c_min, &c_max);
+          args_first_value(*current_series, "z", "D", &plot, &n);
+
+          y = malloc((is_vertical ? y_length : x_length) * sizeof(double));
+          cleanup_and_set_error_if(y == NULL, ERROR_MALLOC);
+          xi = malloc((is_vertical ? y_length : x_length) * sizeof(double));
+          cleanup_and_set_error_if(xi == NULL, ERROR_MALLOC);
+          for (i = 0; i < (is_vertical ? y_length : x_length); i++)
+            {
+              if (is_vertical)
+                {
+                  y[(is_vertical ? y_length : x_length) - i - 1] =
+                      isnan(plot[xind + i * x_length]) ? 0 : plot[xind + i * x_length];
+                  y_max = max(y_max, y[(is_vertical ? y_length : x_length) - i - 1]);
+                }
+              else
+                {
+                  y[i] = isnan(plot[x_length * (y_length - 1 - yind) + i]) ? 0
+                                                                           : plot[x_length * (y_length - 1 - yind) + i];
+                  y_max = max(y_max, y[i]);
+                }
+            }
+          for (i = 0; i < (is_vertical ? y_length : x_length); i++)
+            {
+              y[i] = y[i] / y_max * (c_max / 15);
+              xi[i] = x[i] + (is_vertical ? ymin : xmin);
+            }
+        }
+      else
+        {
+          return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+        }
+      args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
+      // end todo
       mask = gr_uselinespec(spec);
       if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
         {
           const char *where;
           grm_args_values(*current_series, "step_where", "s", &where); /* `spec` is always set */
-          if (strcmp(where, "pre") == 0)
+          // todo marginalheatmap
+          if (strcmp(kind, "marginalheatmap") == 0)
+            {
+              double x_pos, y_pos;
+              unsigned int len = is_vertical ? y_length : x_length;
+
+              x_step_boundaries = calloc(2 * len, sizeof(double));
+              cleanup_and_set_error_if(x_step_boundaries == NULL, ERROR_MALLOC);
+              y_step_values = calloc(2 * len, sizeof(double));
+              cleanup_and_set_error_if(y_step_values == NULL, ERROR_MALLOC);
+              x_step_boundaries[0] = is_vertical ? ymin : xmin;
+              for (i = 2; i < 2 * len; i += 2)
+                {
+                  x_step_boundaries[i - 1] = x_step_boundaries[i] =
+                      x_step_boundaries[0] + (i / 2) * (is_vertical ? (ymax - ymin) : (xmax - xmin)) / len;
+                }
+              x_step_boundaries[2 * len - 1] = is_vertical ? ymax : xmax;
+              y_step_values[0] = y[0];
+              for (i = 2; i < 2 * len; i += 2)
+                {
+                  y_step_values[i - 1] = y[i / 2 - 1];
+                  y_step_values[i] = y[i / 2];
+                }
+              y_step_values[2 * len - 1] = y[len - 1];
+
+              gr_setlinecolorind(989);
+              gr_setmarkercolorind(2);
+              gr_setmarkertype(-1);
+              gr_setmarkersize(1.5 * (len / (is_vertical ? (ymax - ymin) : (xmax - xmin))));
+              if (is_vertical)
+                {
+                  gr_polyline(2 * len, y_step_values, x_step_boundaries);
+                  x_pos = (x_step_boundaries[yind * 2] + x_step_boundaries[yind * 2 + 1]) / 2;
+                  y_pos = y[yind];
+                  gr_polymarker(1, &y_pos, &x_pos);
+                }
+              else
+                {
+                  gr_polyline(2 * len, x_step_boundaries, y_step_values);
+                  x_pos = (x_step_boundaries[xind * 2] + x_step_boundaries[xind * 2 + 1]) / 2;
+                  y_pos = y[xind];
+                  gr_polymarker(1, &x_pos, &y_pos);
+                }
+            } // end todo
+          else if (strcmp(where, "pre") == 0)
             {
               x_step_boundaries = static_cast<double *>(calloc(2 * x_length - 1, sizeof(double)));
+              cleanup_and_set_error_if(x_step_boundaries == NULL, ERROR_MALLOC);
               y_step_values = static_cast<double *>(calloc(2 * x_length - 1, sizeof(double)));
+              cleanup_and_set_error_if(y_step_values == NULL, ERROR_MALLOC);
               x_step_boundaries[0] = x[0];
               for (i = 1; i < 2 * x_length - 2; i += 2)
                 {
@@ -2005,14 +2150,27 @@ err_t plot_step(grm_args_t *subplot_args)
               std::string str = std::to_string(id);
               std::vector<double> x_vec(x_step_boundaries, x_step_boundaries + 2 * x_length - 1);
               std::vector<double> y_vec(y_step_values, y_step_values + 2 * x_length - 1);
-              auto element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
+              std::shared_ptr<GR::Element> element;
+              // todo marginal heatmap polyliine
+              if (is_vertical)
+                {
+                  gr_polyline(2 * x_length - 1, y_step_values, x_step_boundaries);
+                  element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
+                }
+              else
+                {
+                  gr_polyline(2 * x_length - 1, x_step_boundaries, y_step_values);
+                  element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
+                }
               global_root->setAttribute("id", ++id);
               subGroup->append(element);
             }
           else if (strcmp(where, "post") == 0)
             {
               x_step_boundaries = static_cast<double *>(calloc(2 * x_length - 1, sizeof(double)));
+              cleanup_and_set_error_if(x_step_boundaries == NULL, ERROR_MALLOC);
               y_step_values = static_cast<double *>(calloc(2 * x_length - 1, sizeof(double)));
+              cleanup_and_set_error_if(y_step_values == NULL, ERROR_MALLOC);
               for (i = 0; i < 2 * x_length - 2; i += 2)
                 {
                   x_step_boundaries[i] = x[i / 2];
@@ -2028,6 +2186,14 @@ err_t plot_step(grm_args_t *subplot_args)
               std::string str = std::to_string(id);
               std::vector<double> x_vec(x_step_boundaries, x_step_boundaries + 2 * x_length - 1);
               std::vector<double> y_vec(y_step_values, y_step_values + 2 * x_length - 1);
+              if (is_vertical)
+                {
+                  gr_polyline(2 * x_length - 1, y_step_values, x_step_boundaries);
+                }
+              else
+                {
+                  gr_polyline(2 * x_length - 1, x_step_boundaries, y_step_values);
+                } // todo marginalheatmap
               auto element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
               global_root->setAttribute("id", ++id);
               subGroup->append(element);
@@ -2035,7 +2201,9 @@ err_t plot_step(grm_args_t *subplot_args)
           else if (strcmp(where, "mid") == 0)
             {
               x_step_boundaries = static_cast<double *>(calloc(2 * x_length, sizeof(double)));
+              cleanup_and_set_error_if(x_step_boundaries == NULL, ERROR_MALLOC);
               y_step_values = static_cast<double *>(calloc(2 * x_length, sizeof(double)));
+              cleanup_and_set_error_if(y_step_values == NULL, ERROR_MALLOC);
               x_step_boundaries[0] = x[0];
               for (i = 1; i < 2 * x_length - 2; i += 2)
                 {
@@ -2050,12 +2218,21 @@ err_t plot_step(grm_args_t *subplot_args)
               std::string str = std::to_string(id);
               std::vector<double> x_vec(x_step_boundaries, x_step_boundaries + 2 * x_length - 1);
               std::vector<double> y_vec(y_step_values, y_step_values + 2 * x_length - 1);
+              if (is_vertical)
+                {
+                  gr_polyline(2 * x_length, y_step_values, x_step_boundaries);
+                }
+              else
+                {
+                  gr_polyline(2 * x_length, x_step_boundaries, y_step_values);
+                } // todo marginalheatmap
               auto element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
               global_root->setAttribute("id", ++id);
               subGroup->append(element);
             }
           free(x_step_boundaries);
           free(y_step_values);
+          x_step_boundaries = y_step_values = NULL;
         }
       if (mask & 2)
         {
@@ -2064,14 +2241,38 @@ err_t plot_step(grm_args_t *subplot_args)
 
           int id = static_cast<int>(global_root->getAttribute("id"));
           std::string str = std::to_string(id);
+          if (is_vertical)
+            {
+              gr_polymarker(y_length, y, x);
+            }
+          else
+            {
+              gr_polymarker(x_length, x, y);
+            } // todo marginalheatmap
           auto element = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
           global_root->setAttribute("id", ++id);
           subGroup->append(element);
         }
       ++current_series;
+      if (strcmp(kind, "marginalheatmap") == 0 && xind != -1 && yind != -1)
+        {
+          free(y);
+          free(xi);
+          y = xi = NULL;
+        }
     }
 
-  return ERROR_NONE;
+//  return ERROR_NONE; ?
+cleanup:
+  if (strcmp(kind, "marginalheatmap") == 0 && xind != -1 && yind != -1)
+    {
+      free(y);
+      free(xi);
+    }
+  free(x_step_boundaries);
+  free(y_step_values);
+
+  return error;
 }
 
 err_t plot_scatter(grm_args_t *subplot_args)
@@ -2335,7 +2536,7 @@ err_t plot_hist(grm_args_t *subplot_args)
   char *kind;
   grm_args_t **current_series;
   double *bar_centers = NULL;
-  int bar_color_index = 989, i;
+  int bar_color_index = 989, i, xind, yind;
   double bar_color_rgb[3] = {-1};
   err_t error = ERROR_NONE;
 
@@ -2346,6 +2547,9 @@ err_t plot_hist(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]);
   grm_args_values(subplot_args, "bar_color", "i", &bar_color_index);
+  grm_args_values(subplot_args, "xind", "i", &xind);
+  grm_args_values(subplot_args, "yind", "i", &yind);
+
   if (bar_color_rgb[0] != -1)
     {
       for (i = 0; i < 3; i++)
@@ -2358,11 +2562,13 @@ err_t plot_hist(grm_args_t *subplot_args)
 
   while (*current_series != NULL)
     {
-      double edge_color_index = 1;
+      int edge_color_index = 1;
       double edge_color_rgb[3] = {-1};
       double x_min, x_max, bar_width;
       double *bins;
       unsigned int num_bins;
+      char *orientation;
+      int is_horizontal;
 
       auto subGroup = global_render->createGroup("hist_series");
       group->append(subGroup);
@@ -2383,6 +2589,18 @@ err_t plot_hist(grm_args_t *subplot_args)
       grm_args_first_value(*current_series, "bins", "D", &bins, &num_bins);
       grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
 
+      grm_args_first_value(*current_series, "bins", "D", &bins, &num_bins);
+      grm_args_values(subplot_args, "orientation", "s", &orientation);
+      is_horizontal = strcmp(orientation, "horizontal") == 0;
+      if (is_horizontal)
+        {
+          grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
+        }
+      else
+        {
+          grm_args_values(*current_series, "yrange", "dd", &x_min, &x_max);
+        }
+
       bar_width = (x_max - x_min) / num_bins;
       for (i = 1; i < num_bins + 1; ++i)
         {
@@ -2396,6 +2614,35 @@ err_t plot_hist(grm_args_t *subplot_args)
           global_render->setFillColorInd(fillRect2, edge_color_index);
           global_render->setFillIntStyle(fillRect2, GKS_K_INTSTYLE_HOLLOW);
           subGroup->append(fillRect2);
+          // todo marginalheatmap
+          gr_setfillcolorind(bar_color_index);
+          gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
+          if (is_horizontal)
+            {
+              if (i == xind + 1)
+                {
+                  gr_setfillcolorind(2);
+                }
+              gr_fillrect(x, x + bar_width, 0., bins[i - 1]);
+            }
+          else
+            {
+              if (i == yind + 1)
+                {
+                  gr_setfillcolorind(2);
+                }
+              gr_fillrect(0., bins[i - 1], x, x + bar_width);
+            }
+          gr_setfillcolorind(edge_color_index);
+          gr_setfillintstyle(GKS_K_INTSTYLE_HOLLOW);
+          if (is_horizontal)
+            {
+              gr_fillrect(x, x + bar_width, 0., bins[i - 1]);
+            }
+          else
+            {
+              gr_fillrect(0., bins[i - 1], x, x + bar_width);
+            } // end todo
         }
       if (grm_args_contains(*current_series, "error"))
         {
@@ -3605,7 +3852,10 @@ err_t plot_heatmap(grm_args_t *subplot_args)
       ++current_series;
     }
 
-  plot_draw_colorbar(subplot_args, 0.0, 256);
+  if (strcmp(kind, "marginalheatmap") != 0)
+    {
+      plot_draw_colorbar(subplot_args, 0.0, 256);
+    }
 
 cleanup:
   free(rgba);
@@ -3613,6 +3863,149 @@ cleanup:
 
   return error;
 }
+// todo marginalheatmap
+error_t plot_marginalheatmap(grm_args_t *subplot_args)
+{
+  const double *viewport;
+  double c_min, c_max;
+  int flip, options, xind, yind;
+  unsigned int i, j, k;
+  grm_args_t **current_series;
+  char *algorithm, *type;
+  double *bins = NULL;
+  unsigned int num_bins_x = 0, num_bins_y = 0, n = 0;
+  double *xi, *yi, *plot;
+  error_t error = NO_ERROR;
+
+  plot_heatmap(subplot_args);
+
+  args_values(subplot_args, "type", "s", &type);
+  args_values(subplot_args, "xind", "i", &xind);
+  args_values(subplot_args, "yind", "i", &yind);
+
+  for (k = 0; k < 2; k++)
+    {
+      double x_min, x_max, y_min, y_max, value, bin_max = 0;
+
+      gr_savestate();
+
+      args_values(subplot_args, "series", "A", &current_series);
+      args_values(*current_series, "algorithm", "s", &algorithm);
+      args_values(*current_series, "xrange", "dd", &x_min, &x_max);
+      args_values(*current_series, "yrange", "dd", &y_min, &y_max);
+      if (!args_values(subplot_args, "_clim", "dd", &c_min, &c_max))
+        {
+          cleanup_and_set_error_if(!args_values(subplot_args, "_zlim", "dd", &c_min, &c_max), ERROR_PLOT_MISSING_DATA);
+        }
+
+      args_first_value(*current_series, "x", "D", &xi, &num_bins_x);
+      args_first_value(*current_series, "y", "D", &yi, &num_bins_y);
+      args_first_value(*current_series, "z", "D", &plot, &n);
+
+      if (strcmp(type, "all") == 0)
+        {
+          unsigned int x_len = num_bins_x, y_len = num_bins_y;
+
+          bins = malloc(((k == 0) ? num_bins_y : num_bins_x) * sizeof(double));
+          cleanup_and_set_error_if(bins == NULL, ERROR_MALLOC);
+          grm_args_push(subplot_args, "kind", "s", "hist");
+
+          for (i = 0; i < ((k == 0) ? num_bins_y : num_bins_x); i++)
+            {
+              bins[i] = 0;
+            }
+          for (i = 0; i < y_len; i++)
+            {
+              for (j = 0; j < x_len; j++)
+                {
+                  value = (isnan(plot[(num_bins_y - 1 - i) * num_bins_x + j]))
+                              ? 0
+                              : plot[(num_bins_y - 1 - i) * num_bins_x + j];
+                  if (strcmp(algorithm, "sum") == 0)
+                    {
+                      bins[(k == 0) ? i : j] += value;
+                    }
+                  else if (strcmp(algorithm, "max") == 0)
+                    {
+                      bins[(k == 0) ? i : j] = max(bins[(k == 0) ? i : j], value);
+                    }
+                }
+              if (k == 0)
+                {
+                  bin_max = max(bin_max, bins[i]);
+                }
+            }
+          if (k == 1)
+            {
+              for (i = 0; i < x_len; i++)
+                {
+                  bin_max = max(bin_max, bins[i]);
+                }
+            }
+          for (i = 0; i < ((k == 0) ? y_len : x_len); i++)
+            {
+              bins[i] = (bin_max == 0) ? 0 : bins[i] / bin_max * (c_max / 15);
+            }
+
+          grm_args_push(*current_series, "bins", "nD", ((k == 0) ? num_bins_y : num_bins_x), bins);
+
+          free(bins);
+          bins = NULL;
+        }
+
+      args_values(subplot_args, "viewport", "D", &viewport);
+
+      gr_inqscale(&options);
+      if (args_values(subplot_args, "xflip", "i", &flip) && flip)
+        {
+          options = (options | GR_OPTION_FLIP_Y) & ~GR_OPTION_FLIP_X;
+          gr_setscale(options);
+        }
+      else if (args_values(subplot_args, "yflip", "i", &flip) && flip)
+        {
+          options = options & ~GR_OPTION_FLIP_Y & ~GR_OPTION_FLIP_X;
+          gr_setscale(options);
+        }
+      else
+        {
+          options = options & ~GR_OPTION_FLIP_X;
+          gr_setscale(options);
+        }
+
+      if (k == 0)
+        {
+          gr_setwindow(0.0, c_max / 10, y_min, y_max);
+          gr_setviewport(viewport[1] + 0.02 + 0.0, viewport[1] + 0.12 + 0.0, viewport[2], viewport[3]);
+
+          grm_args_push(subplot_args, "orientation", "s", "vertical");
+        }
+      else
+        {
+          gr_setwindow(x_min, x_max, 0.0, c_max / 10);
+          gr_setviewport(viewport[0], viewport[1], viewport[3] + 0.02, min(viewport[3] + 0.12, 1));
+
+          grm_args_push(subplot_args, "orientation", "s", "horizontal");
+        }
+
+      if (strcmp(type, "all") == 0)
+        {
+          plot_hist(subplot_args);
+        }
+      else if (strcmp(type, "line") == 0 && xind != -1 && yind != -1)
+        {
+          plot_step(subplot_args);
+        }
+
+      gr_restorestate();
+    }
+  grm_args_push(subplot_args, "kind", "s", "marginalheatmap");
+
+cleanup:
+  free(bins);
+
+  return error;
+}
+
 
 err_t plot_wireframe(grm_args_t *subplot_args)
 {
@@ -5741,7 +6134,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     }
   else
     {
-      if (str_equals_any(kind, 2, "heatmap", "shade"))
+      if (str_equals_any(kind, 3, "heatmap", "shade", "marginalheatmap"))
         {
           tick_orientation = -1;
         }
