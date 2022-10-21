@@ -25,10 +25,12 @@
 #include "grm/plot_int.h"
 
 std::shared_ptr<GR::Element> global_root;
+std::shared_ptr<GR::Render> global_render;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
-static std::set<std::string> parentTypes = {"group",       "layout-grid",     "layout-gridelement",
-                                            "draw-legend", "draw-polar-axes", "pie-plot-title-render"};
+static std::set<std::string> parentTypes = {"group",          "layout-grid",     "layout-gridelement",
+                                            "draw-legend",    "draw-polar-axes", "pie-plot-title-render",
+                                            "draw-pie-legend"};
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
@@ -390,6 +392,8 @@ static void text(const std::shared_ptr<GR::Element> &element, const std::shared_
   auto y = static_cast<double>(element->getAttribute("y"));
   auto str = static_cast<std::string>(element->getAttribute("text"));
   CoordinateSpace space = static_cast<CoordinateSpace>(static_cast<int>(element->getAttribute("space")));
+
+
   if (space == WC)
     {
       gr_wctondc(&x, &y);
@@ -1748,6 +1752,14 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
   elem->setAttribute("vp_xmax", vp[1]);
   elem->setAttribute("vp_ymin", vp[2]);
   elem->setAttribute("vp_ymax", vp[3]);
+
+  // TODO: set default window?
+  elem->setAttribute("window", true);
+  elem->setAttribute("window_xmin", 0.0);
+  elem->setAttribute("window_xmax", 1.0);
+  elem->setAttribute("window_ymin", 0.0);
+  elem->setAttribute("window_ymax", 1.0);
+
   processViewport(elem);
 }
 
@@ -2113,15 +2125,83 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
     }
 }
 
+
+static void setNextColor(gr_color_type_t color_type, std::vector<int> &color_indices,
+                         std::vector<double> &color_rgb_values, const std::shared_ptr<GR::Element> &elem)
+{
+  const static std::vector<int> fallback_color_indices{989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
+                                                       991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
+  static double saved_color[3];
+  static int last_array_index = -1;
+  static unsigned int color_array_length = -1;
+  int current_array_index = last_array_index + 1;
+  int color_index = 0;
+  int reset = (color_type == GR_COLOR_RESET);
+  int gks_errind = GKS_K_NO_ERROR;
+
+  if (reset)
+    {
+      last_array_index = -1;
+      color_array_length = -1;
+    }
+
+  if (color_indices.empty() && color_rgb_values.empty())
+    {
+      color_indices = fallback_color_indices;
+    }
+
+  if (last_array_index < 0 && !color_rgb_values.empty())
+    {
+      gks_inq_color_rep(1, PLOT_CUSTOM_COLOR_INDEX, GKS_K_VALUE_SET, &gks_errind, &saved_color[0], &saved_color[1],
+                        &saved_color[2]);
+    }
+
+  current_array_index %= color_array_length;
+
+  if (!color_indices.empty())
+    {
+      color_index = color_indices[current_array_index];
+      last_array_index = current_array_index;
+    }
+  else if (!color_rgb_values.empty())
+    {
+      color_index = PLOT_CUSTOM_COLOR_INDEX;
+      last_array_index = current_array_index + 2;
+      global_render->setColorRep(elem, PLOT_CUSTOM_COLOR_INDEX, color_rgb_values[current_array_index],
+                                 color_rgb_values[current_array_index + 1], color_rgb_values[current_array_index + 2]);
+    }
+
+  if (color_type & GR_COLOR_LINE)
+    {
+      global_render->setLineColorInd(elem, color_index);
+    }
+  if (color_type & GR_COLOR_MARKER)
+    {
+      global_render->setMarkerColorInd(elem, color_index);
+    }
+  if (color_type & GR_COLOR_FILL)
+    {
+      global_render->setFillColorInd(elem, color_index);
+    }
+  if (color_type & GR_COLOR_TEXT)
+    {
+      global_render->setTextColorInd(elem, color_index);
+    }
+  if (color_type & GR_COLOR_BORDER)
+    {
+      global_render->setBorderColorInd(elem, color_index);
+    }
+}
+
 static void drawPieLegend(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
 {
   grm_args_t *series;
-  unsigned int num_labels;
   double viewport[4];
   double px, py, w, h;
   double tbx[4], tby[4];
   std::string labels_key = static_cast<std::string>(elem->getAttribute("labels"));
   auto labels = GR::get<std::vector<std::string>>((*context)[labels_key]);
+  unsigned int num_labels = labels.size();
   std::shared_ptr<GR::Render> render;
   std::string color_indices_key;
   std::string color_rgb_values_key;
@@ -2148,14 +2228,15 @@ static void drawPieLegend(const std::shared_ptr<GR::Element> &elem, const std::s
         }
     }
 
-  if (element->hasAttribute("color_indices"))
+  if (elem->parentElement()->hasAttribute("color_indices"))
     {
-      // No fallback
-      color_indices_key = static_cast<std::string>(element->getAttribute(color_indices_key));
-      color_rgb_values_key = static_cast<std::string>(element->getAttribute(color_rgb_values_key));
-
+      color_indices_key = static_cast<std::string>(elem->parentElement()->getAttribute("color_indices"));
       color_indices_vec = GR::get<std::vector<int>>((*context)[color_indices_key]);
-      color_rgb_values_vec = GR::get<std::vector<double>>((*context)[color_rgb_values_vec]);
+    }
+  else if (elem->parentElement()->hasAttribute("color_rgb_values"))
+    {
+      color_rgb_values_key = static_cast<std::string>(elem->parentElement()->getAttribute("color_rgb_values"));
+      color_rgb_values_vec = GR::get<std::vector<double>>((*context)[color_rgb_values_key]);
     }
 
   auto subGroup = render->createGroup("drawPieLegendSubGroup");
@@ -2191,26 +2272,19 @@ static void drawPieLegend(const std::shared_ptr<GR::Element> &elem, const std::s
   render->setLineSpec(subsubGroup, const_cast<char *>(" "));
   render->setTextAlign(subsubGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
 
-  auto colorGroup = render->createGroup("color_group");
-  subsubGroup->append(colorGroup);
-  set_next_color(series, "c", GR_COLOR_FILL, colorGroup);
-  render->setLineColorInd(colorGroup, 1);
-
   for (auto &current_label : labels)
     {
+      auto labelGroup = render->createGroup("label");
+      subsubGroup->append(labelGroup);
+      render->setLineColorInd(labelGroup, 1);
+      setNextColor(GR_COLOR_FILL, color_indices_vec, color_rgb_values_vec, labelGroup);
 
-      colorGroup->append(render->createFillRect(px, px + 0.02, py - 0.01, py + 0.01));
-      colorGroup->append(render->createDrawRect(px, px + 0.02, py - 0.01, py + 0.01));
-      colorGroup->append(render->createText(px + 0.03, py, current_label.data()));
+      labelGroup->append(render->createFillRect(px, px + 0.02, py - 0.01, py + 0.01));
+      labelGroup->append(render->createDrawRect(px, px + 0.02, py - 0.01, py + 0.01));
+      labelGroup->append(render->createText(px + 0.03, py, current_label));
 
       gr_inqtext(0, 0, current_label.data(), tbx, tby);
       px += tbx[2] - tbx[0] + 0.05;
-      if (current_label == labels.back())
-        {
-          colorGroup = render->createGroup("color_group");
-          subsubGroup->append(colorGroup);
-          set_next_color(NULL, NULL, GR_COLOR_FILL, colorGroup);
-        }
     }
   auto reset_group = render->createGroup("reset_group");
   render->setSelntran(reset_group, 1);
@@ -2228,26 +2302,28 @@ static void piePlotTitleRender(const std::shared_ptr<GR::Element> &elem, const s
   gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
 
   // Get vp from ancestor GR::element, usually the group with the name "pie"
-  while (ancestor != nullptr)
+  while (ancestor->localName() != "root")
     {
       if (ancestor->hasAttribute("vp"))
         {
-          vp[0] = static_cast<double>(elem->getAttribute("vp_xmin"));
-          vp[1] = static_cast<double>(elem->getAttribute("vp_xmax"));
-          vp[2] = static_cast<double>(elem->getAttribute("vp_ymin"));
-          vp[3] = static_cast<double>(elem->getAttribute("vp_ymax"));
+          vp[0] = static_cast<double>(ancestor->getAttribute("vp_xmin"));
+          vp[1] = static_cast<double>(ancestor->getAttribute("vp_xmax"));
+          vp[2] = static_cast<double>(ancestor->getAttribute("vp_ymin"));
+          vp[3] = static_cast<double>(ancestor->getAttribute("vp_ymax"));
           vp_found = true;
           break;
         }
       else
         {
-          ancestor = elem->parentElement();
+          ancestor = ancestor->parentElement();
         }
     }
   if (!vp_found)
     {
+      throw NotFoundError("No vp was found within ancestors");
       // TODO: throw error when no vp is found within ancestors?
     }
+
   if (render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
     {
     }
@@ -2264,6 +2340,7 @@ static void piePlotTitleRender(const std::shared_ptr<GR::Element> &elem, const s
           child->remove();
         }
     }
+
   auto tx = render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
   render->setTextColorInd(tx, 1);
   render->setTextAlign(tx, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
@@ -2333,7 +2410,14 @@ static void setTextColorForBackground(const std::shared_ptr<GR::Element> &elem)
         {
           // TODO: error?
         }
-      gr_inqfillcolorind(&color_ind);
+      if (elem->hasAttribute("color_index"))
+        {
+          color_ind = static_cast<int>(elem->getAttribute("color_index"));
+        }
+      else
+        {
+          gr_inqfillcolorind(&color_ind);
+        }
       gr_inqcolor(color_ind, (int *)color_rgb);
 
       r = color_rgb[0] / 255.0;
@@ -2343,11 +2427,11 @@ static void setTextColorForBackground(const std::shared_ptr<GR::Element> &elem)
       color_lightness = get_lightness_from_rbg(r, g, b);
       if (color_lightness < 0.4)
         {
-          render->setTextColorInd(elem, 0);
+          gr_settextcolorind(0);
         }
       else
         {
-          render->setTextColorInd(elem, 1);
+          gr_settextcolorind(1);
         }
     }
 }
@@ -4300,131 +4384,56 @@ void GR::Render::setXTickLabels(std::shared_ptr<GR::Element> group, const std::s
   group->setAttribute("xticklabels", key);
 }
 
-void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element, std::optional<std::string> color_indices_key,
-                              std::optional<std::vector<int>> color_indices,
-                              std::optional<std::string> color_rgb_values_key,
-                              std::optional<std::vector<double>> color_rgb_values, const char *key,
-                              gr_color_type_t color_type, const std::string &pass,
-                              const std::shared_ptr<GR::Context> &extContext)
+
+void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element, const std::string &color_indices_key,
+                              const std::vector<int> &color_indices, const std::shared_ptr<GR::Context> &extContext)
 {
-  /*
-   * This function incorporates code from the `set_next_color` function used in plot.cxx and is used to set the next
-   * color on a given GR::Element
-   */
-
   auto useContext = (extContext == nullptr) ? context : extContext;
-
-  const static int fallback_color_indices[] = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
-                                               991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
-  static double saved_color[3];
-  static int last_array_index = -1;
-
-  static unsigned int color_array_length = -1;
-  int current_array_index = last_array_index + 1;
-  int color_index = 0;
-  int reset = (color_type == GR_COLOR_RESET);
-  int gks_errind = GKS_K_NO_ERROR;
-
-  bool useFallback = true;
-
-  if (pass == "pre")
+  element->setAttribute("setNextColor", 1);
+  if (!color_indices.empty())
     {
-      /*
-       * Pre pass is used to store the given vectors and keys inside GR::Element and GR::Context
-       * During pre pass vectors and keys always exist.
-       */
-      if (!(*color_indices).empty() && !(*color_rgb_values).empty())
-        {
-          (*useContext)[*color_indices_key] = (*color_indices);
-          (*useContext)[*color_rgb_values_key] = (*color_rgb_values);
-          element->setAttribute("color_indices", *color_indices_key);
-          element->setAttribute("color_rgb_values", *color_rgb_values_key);
-          useFallback = false;
-        }
-      return;
+      (*useContext)[color_indices_key] = color_indices;
+      element->setAttribute("color_indices", color_indices_key);
     }
-
-  /*
-   * This is the non pre pass
-   */
-
-  if (reset || key != NULL)
+  else
     {
-      if (last_array_index >= 0 && color_rgb_values != NULL)
-        {
-          setColorRep(element, PLOT_CUSTOM_COLOR_INDEX, saved_color[0], saved_color[1], saved_color[2]);
-        }
-      last_array_index = -1;
-      if (!reset && key != NULL)
-        {
-          if (color_indices_vec.empty() && color_rgb_values_vec.empty())
-            {
-              /* use fallback colors if `key` cannot be read from `args` */
-              logger((stderr, "Cannot read \"%s\" from args, falling back to default colors\n", key));
-              color_indices_vec =
-                  std::vector<int>(std::begin(fallback_color_indices), std::end(fallback_color_indices));
-              color_array_length = color_indices_vec.size();
-            }
-        }
-      else
-        {
-          color_indices = NULL;
-          color_rgb_values = NULL;
-          color_array_length = -1;
-
-          color_rgb_values_vec.clear();
-          color_indices_vec.clear();
-        }
-
-      if (reset)
-        {
-          return;
-        }
-    }
-
-  if (last_array_index < 0 && color_rgb_values != NULL)
-    {
-      gks_inq_color_rep(1, PLOT_CUSTOM_COLOR_INDEX, GKS_K_VALUE_SET, &gks_errind, &saved_color[0], &saved_color[1],
-                        &saved_color[2]);
-    }
-
-  current_array_index %= color_array_length;
-
-  if (color_indices != NULL)
-    {
-      color_index = color_indices[current_array_index];
-      last_array_index = current_array_index;
-    }
-  else if (color_rgb_values != NULL)
-    {
-      gr_setcolorrep(PLOT_CUSTOM_COLOR_INDEX, color_rgb_values[current_array_index],
-                     color_rgb_values[current_array_index + 1], color_rgb_values[current_array_index + 2]);
-      color_index = PLOT_CUSTOM_COLOR_INDEX;
-      last_array_index = current_array_index + 2;
-    }
-
-  if (color_type & GR_COLOR_LINE)
-    {
-      global_render->setLineColorInd(element, color_index);
-    }
-  if (color_type & GR_COLOR_MARKER)
-    {
-      global_render->setMarkerColorInd(element, color_index);
-    }
-  if (color_type & GR_COLOR_FILL)
-    {
-      global_render->setFillColorInd(element, color_index);
-    }
-  if (color_type & GR_COLOR_TEXT)
-    {
-      global_render->setTextColorInd(element, color_index);
-    }
-  if (color_type & GR_COLOR_BORDER)
-    {
-      global_render->setBorderColorInd(element, color_index);
+      // todo: error when vector is empty?
     }
 }
 
+void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element, const std::string &color_rgb_values_key,
+                              const std::vector<double> &color_rgb_values,
+                              const std::shared_ptr<GR::Context> &extContext)
+{
+  auto useContext = (extContext == nullptr) ? context : extContext;
+  element->setAttribute("setNextColor", true);
+  if (!color_rgb_values.empty())
+    {
+      (*useContext)[color_rgb_values_key] = color_rgb_values;
+      element->setAttribute("color_rgb_values", color_rgb_values_key);
+    }
+}
+
+void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element, std::optional<std::string> color_indices_key,
+                              std::optional<std::string> color_rgb_values_key)
+{
+  if (color_indices_key != std::nullopt)
+    {
+      element->setAttribute("color_indices", (*color_indices_key));
+      element->setAttribute("setNextColor", true);
+    }
+  else if (color_rgb_values_key != std::nullopt)
+    {
+      element->setAttribute("setNextColor", true);
+      element->setAttribute("color_rgb_values", (*color_rgb_values_key));
+    }
+}
+
+void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element)
+{
+  element->setAttribute("setNextColor", true);
+  element->setAttribute("snc-fallback", true);
+}
 //! Render functions
 static void renderHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {

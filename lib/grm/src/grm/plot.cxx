@@ -5873,7 +5873,7 @@ err_t plot_pie(grm_args_t *subplot_args)
   double *normalized_x = NULL;
   unsigned int *normalized_x_int = NULL;
   unsigned int x_length;
-  int color_ind;
+  int color_index;
   int inq_color;
   unsigned char color_rgb[4];
   double start_angle, middle_angle, end_angle;
@@ -5882,6 +5882,16 @@ err_t plot_pie(grm_args_t *subplot_args)
   const char *title;
   unsigned int i;
   err_t error = ERROR_NONE;
+
+  static unsigned int color_array_length = -1;
+  const int *color_indices = NULL;
+  const double *color_rgb_values = NULL;
+
+  std::string color_indices_key;
+  std::string color_rgb_values_key;
+
+  std::vector<int> color_indices_vec;
+  std::vector<double> color_rgb_values_vec;
 
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "pie");
@@ -5893,40 +5903,59 @@ err_t plot_pie(grm_args_t *subplot_args)
 
   global_render->setTextAlign(group, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
 
+  int id = static_cast<int>(global_root->getAttribute("id"));
+  global_root->setAttribute("id", id + 1);
+
   cleanup_and_set_error_if(!grm_args_first_value(series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
   normalized_x = normalize(x_length, x);
   cleanup_and_set_error_if(normalized_x == NULL, ERROR_MALLOC);
   normalized_x_int = normalize_int(x_length, x, 1000);
   cleanup_and_set_error_if(normalized_x_int == NULL, ERROR_MALLOC);
 
-  set_next_color(series, "c", GR_COLOR_FILL, group);
+
+  if (grm_args_first_value(series, "c", "I", &color_indices, &color_array_length))
+    {
+      color_indices_key = "color_indices" + std::to_string(id);
+      color_indices_vec = std::vector<int>(color_indices, color_indices + color_array_length);
+      global_render->setNextColor(group, color_indices_key, color_indices_vec);
+    }
+  else if (grm_args_first_value(series, "c", "D", &color_rgb_values, &color_array_length))
+    {
+      color_rgb_values_key = "color_rgb_values" + std::to_string(id);
+      color_rgb_values_vec = std::vector<double>(color_rgb_values, color_rgb_values + color_array_length);
+      global_render->setNextColor(group, color_rgb_values_key, color_rgb_values_vec);
+    }
+  else
+    {
+      // fallback case of setNextColor
+      global_render->setNextColor(group);
+    }
+
+  color_index = set_next_color(series, "c", GR_COLOR_FILL, group);
   start_angle = 90;
   for (i = 0; i < x_length; ++i)
     {
+      end_angle = start_angle - normalized_x[i] * 360.0;
       auto temp = global_render->createFillArc(0.05, 0.95, 0.05, 0.95, start_angle, end_angle);
       group->append(temp);
+
       if (i > 0)
         {
-          set_next_color(NULL, NULL, GR_COLOR_FILL, temp);
+          color_index = set_next_color(NULL, NULL, GR_COLOR_FILL, temp);
         }
 
-      end_angle = start_angle - normalized_x[i] * 360.0;
       middle_angle = (start_angle + end_angle) / 2.0;
 
-      text_pos[0] = 0.7 * cos(middle_angle * M_PI / 180.0);
-      text_pos[1] = 0.7 * sin(middle_angle * M_PI / 180.0);
-
-      auto text_elem = global_render->createText(text_pos[0], text_pos[1], text, WC);
-      group->append(text_elem);
-
-      text_elem->setAttribute("set-color-for-background", true);
-
-      //      gr_inqfillcolorind(&color_ind);
-      //      gr_inqcolor(color_ind, (int *)color_rgb);
-      //      set_text_color_for_background(color_rgb[0] / 255.0, color_rgb[1] / 255.0, color_rgb[2] / 255.0,
-      //      text_elem);
+      text_pos[0] = 0.5 + 0.25 * cos(middle_angle * M_PI / 180.0);
+      text_pos[1] = 0.5 + 0.25 * sin(middle_angle * M_PI / 180.0);
 
       snprintf(text, 80, "%.2lf\n%.1lf %%", x[i], normalized_x_int[i] / 10.0);
+
+      auto text_elem = global_render->createText(text_pos[0], text_pos[1], text, WC);
+      text_elem->setAttribute("color_index", color_index);
+      group->append(text_elem);
+
+      text_elem->setAttribute("set-text-color-for-background", true);
 
       start_angle = end_angle;
       if (start_angle < 0)
@@ -6385,32 +6414,8 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
   std::string labels_key = "labels" + std::to_string(id);
   std::vector<std::string> labels_vec(labels, labels + num_labels);
 
-
-  std::string color_indices_key;
-  std::string color_rgb_values_key;
-
-  std::vector<int> color_indices_vec;
-  std::vector<double> color_rgb_values_vec;
-
   auto drawPieLegendElement = global_render->createDrawPieLegend(labels_key, labels_vec);
   group->append(drawPieLegendElement);
-
-  if (grm_args_first_value(series, "c", "I", &color_indices, &color_array_length) &&
-      grm_args_first_value(series, "c", "D", &color_rgb_values, &color_array_length))
-    {
-      color_indices_key = "color_indices" + std::to_string(id);
-      color_rgb_values_key = "color_rgb_values" + std::to_string(id);
-
-      color_indices_vec = std::vector<int>(color_indices, color_indices + color_array_length);
-      color_rgb_values_vec = std::vector<double>(color_rgb_values, color_rgb_values + color_array_length);
-
-      global_render->setNextColor(drawPieLegendElement, color_indices_key, color_indices_vec, color_rgb_values_key,
-                                  color_rgb_values_vec, "", GR_COLOR_RESET, "pre");
-    }
-  else
-    {
-      // No color arrays given. Nothing to do pre run
-    }
 
   return ERROR_NONE;
 }
@@ -8791,8 +8796,8 @@ void set_text_color_for_background(double r, double g, double b, const std::shar
  *                   `GR_COLOR_TEXT`, `GR_COLOR_BORDER` or any combination of them (combined with OR). The special value
  *                   `GR_COLOR_RESET` resets all color modifications.
  */
-void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type,
-                    const std::shared_ptr<GR::Element> &element)
+int set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type,
+                   const std::shared_ptr<GR::Element> &element)
 {
   const static int fallback_color_indices[] = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
                                                991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
@@ -8833,7 +8838,7 @@ void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t col
 
       if (reset)
         {
-          return;
+          return 0;
         }
     }
 
@@ -8852,10 +8857,10 @@ void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t col
     }
   else if (color_rgb_values != NULL)
     {
-      gr_setcolorrep(PLOT_CUSTOM_COLOR_INDEX, color_rgb_values[current_array_index],
-                     color_rgb_values[current_array_index + 1], color_rgb_values[current_array_index + 2]);
       color_index = PLOT_CUSTOM_COLOR_INDEX;
       last_array_index = current_array_index + 2;
+      global_render->setColorRep(element, PLOT_CUSTOM_COLOR_INDEX, color_rgb_values[current_array_index],
+                                 color_rgb_values[current_array_index + 1], color_rgb_values[current_array_index + 2]);
     }
 
   if (color_type & GR_COLOR_LINE)
@@ -8878,4 +8883,5 @@ void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t col
     {
       global_render->setBorderColorInd(element, color_index);
     }
+  return color_index;
 }

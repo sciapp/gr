@@ -9,7 +9,6 @@
 #include <grm/dom_render/graphics_tree/Document.hxx>
 #include "gr.h"
 #include "grm/layout.hxx"
-#include "grm/plot_int.h"
 #include <grm/util_int.h>
 
 
@@ -212,10 +211,25 @@ public:
 
   //! Modifierfunctions
 
+  //! ToDo: obsolete Function remove safely!
+  //  void setNextColor(const std::shared_ptr<Element> &element, std::optional<std::string> color_indices_key,
+  //                    std::optional<std::vector<int>> color_indices, std::optional<std::string> color_rgb_values_key,
+  //                    std::optional<std::vector<double>> color_rgb_values,
+  //                    const std::shared_ptr<Context> &extContext = nullptr);
+
+  //! next 2 functions -> store color indices vec or color rgb values
+  void setNextColor(const std::shared_ptr<Element> &element, const std::string &color_indices_key,
+                    const std::vector<int> &color_indices, const std::shared_ptr<Context> &extContext = nullptr);
+
+  void setNextColor(const std::shared_ptr<Element> &element, const std::string &color_rgb_values_key,
+                    const std::vector<double> &color_rgb_values, const std::shared_ptr<Context> &extContext = nullptr);
+
+  //! only keys -> reusing stored context vectors
   void setNextColor(const std::shared_ptr<Element> &element, std::optional<std::string> color_indices_key,
-                    std::optional<std::vector<int>> color_indices, std::optional<std::string> color_rgb_values_key,
-                    std::optional<std::vector<double>> color_rgb_values, const char *key, gr_color_type_t color_type,
-                    const std::string &pass, const std::shared_ptr<Context> &extContext = nullptr);
+                    std::optional<std::string> color_rgb_values_key);
+
+  //! Use Fallback
+  void setNextColor(const std::shared_ptr<Element> &element);
 
   void setViewport(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
