@@ -94,7 +94,7 @@ ubuntu-cmake-self-contained:
 
 ubuntu-cmake-self-contained-test:
   stage: test
-  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing
+  image: iffregistry.fz-juelich.de/imeyer/gr-test/c-testing
   rules:
   - if: '$CI_MERGE_REQUEST_ID'
     when: never
@@ -115,7 +115,7 @@ ubuntu-cmake-self-contained-test:
 
 ubuntu-cmake-self-contained-rebuild-images:
   stage: test
-  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing:latest
+  image: iffregistry.fz-juelich.de/imeyer/gr-test/c-testing:latest
   rules:
   - if: '$CI_MERGE_REQUEST_ID'
     when: never
@@ -126,13 +126,15 @@ ubuntu-cmake-self-contained-rebuild-images:
   needs:
   - ubuntu-cmake-self-contained
   script:
+  - apt-get update && apt-get install -y python3-venv
   - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
 
   - mkdir -p ~/.ssh
   - cat $SSH_KEY | base64 -d > ~/.ssh/id_rsa
   - mv $SSH_KNOWN_HOSTS ~/.ssh/known_hosts
   - chmod 600 ~/.ssh/id_rsa
-  - git clone gitlab@iffgit.fz-juelich.de:Scientific-IT-Systems/gr-test.git
+  - python3 -m venv env && source env/bin/activate
+  - git clone gitlab@iffgit.fz-juelich.de:imeyer/gr-test.git
   - pip install -e gr-test/
   - cd gr-test
   - git checkout -b update-files/job-$CI_JOB_ID
