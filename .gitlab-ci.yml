@@ -59,6 +59,7 @@ ubuntu-self-contained:
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
+  - cp lib/grm/qtterm/qtterm artifacts/qtterm
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -185,6 +186,7 @@ debian-self-contained:
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
+  - cp lib/grm/qtterm/qtterm artifacts/qtterm
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -253,6 +255,7 @@ debian-self-contained-armhf:
     - mkdir artifacts
     - cp lib/gks/demo artifacts/gksdemo
     - cp lib/gks/qt/gksqt artifacts/gksqt
+    - cp lib/grm/qtterm/qtterm artifacts/qtterm
     - cp lib/gr/demo artifacts/grdemo
     - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
          lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -300,6 +303,7 @@ debian-self-contained-aarch64:
     - mkdir artifacts
     - cp lib/gks/demo artifacts/gksdemo
     - cp lib/gks/qt/gksqt artifacts/gksqt
+    - cp lib/grm/qtterm/qtterm artifacts/qtterm
     - cp lib/gr/demo artifacts/grdemo
     - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -425,6 +429,7 @@ centos7-self-contained:
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
+  - cp lib/grm/qtterm/qtterm artifacts/qtterm
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -492,6 +497,7 @@ centos7-32bit-self-contained:
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
+  - cp lib/grm/qtterm/qtterm artifacts/qtterm
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -556,6 +562,7 @@ arch-self-contained:
     - mkdir artifacts
     - cp lib/gks/demo artifacts/gksdemo
     - cp lib/gks/qt/gksqt artifacts/gksqt
+    - cp lib/grm/qtterm/qtterm artifacts/qtterm
     - cp lib/gr/demo artifacts/grdemo
     - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
          lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -617,6 +624,7 @@ freebsd-self-contained:
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
+  - cp lib/grm/qtterm/qtterm artifacts/qtterm
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -664,8 +672,15 @@ windows-32bit-cross:
     CXX=i686-w64-mingw32-g++
     AR=i686-w64-mingw32-ar
     ARCHITECTURE=i686
+  - MAKE="make -f makefile.mingw" make -f makefile.mingw -C lib/grm/qtterm
+    GRDIR=./
+    CC=i686-w64-mingw32-gcc
+    CXX=i686-w64-mingw32-g++
+    AR=i686-w64-mingw32-ar
+    ARCHITECTURE=i686
   - mkdir artifacts
   - cp lib/gks/qt/gksqt.exe artifacts/
+  - cp lib/grm/qtterm/qtterm.exe artifacts/
   - cp lib/gks/qt/*.dll artifacts/
   - cp -r lib/gks/qt/platforms artifacts/
   - cp lib/gks/libGKS.lib lib/gks/libGKS.dll lib/gks/libGKS.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libGR.lib
@@ -760,8 +775,15 @@ windows-64bit-cross:
     CXX=x86_64-w64-mingw32-g++
     AR=x86_64-w64-mingw32-ar
     ARCHITECTURE=x86_64
+  - MAKE="make -f makefile.mingw" make -f makefile.mingw -C lib/grm/qtterm
+    GRDIR=./
+    CC=x86_64-w64-mingw32-gcc
+    CXX=x86_64-w64-mingw32-g++
+    AR=x86_64-w64-mingw32-ar
+    ARCHITECTURE=x86_64
   - mkdir artifacts
   - cp lib/gks/qt/gksqt.exe artifacts/
+  - cp lib/grm/qtterm/qtterm.exe artifacts/
   - cp lib/gks/qt/*.dll artifacts/
   - cp -r lib/gks/qt/platforms artifacts/
   - cp lib/gks/libGKS.lib lib/gks/libGKS.dll lib/gks/libGKS.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libGR.lib
@@ -884,6 +906,17 @@ darwin-self-contained-iff1600:
         install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
       done;
     done
+  - cd ../..
+  - cp -r lib/grm/qtterm/qtterm.app artifacts/Applications/qtterm.app
+  - mkdir -p artifacts/Applications/qtterm.app/Contents/Frameworks
+  - mkdir -p artifacts/Applications/qtterm.app/Contents/plugins/platforms
+  - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/qtterm.app/Contents/plugins/platforms
+  - for BINARY in qtterm.app/Contents/plugins/platforms/libqcocoa.dylib qtterm.app/Contents/MacOS/qtterm; do
+      for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
+        rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework qtterm.app/Contents/Frameworks/;
+        install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
+      done;
+    done
   - cd ../../
   - mv artifacts artifacts-darwin-iff1600
   tags:
@@ -925,6 +958,18 @@ darwin-self-contained:
         install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
       done;
     done
+  - cd ../..
+  - cp -r lib/grm/qtterm/qtterm.app artifacts/Applications/qtterm.app
+  - mkdir -p artifacts/Applications/qtterm.app/Contents/Frameworks
+  - mkdir -p artifacts/Applications/qtterm.app/Contents/plugins/platforms
+  - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/qtterm.app/Contents/plugins/platforms
+  - cd artifacts/Applications
+  - for BINARY in qtterm.app/Contents/plugins/platforms/libqcocoa.dylib qtterm.app/Contents/MacOS/qtterm; do
+      for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
+        rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework qtterm.app/Contents/Frameworks/;
+        install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
+      done;
+    done
   - cd ../../
   - mv artifacts artifacts-darwin
   artifacts:
@@ -961,10 +1006,22 @@ darwin-self-contained-iff1605:
     - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/gksqt.app/Contents/plugins/platforms
     - cd artifacts/Applications
     - for BINARY in gksqt.app/Contents/plugins/platforms/libqcocoa.dylib gksqt.app/Contents/MacOS/gksqt; do
-      for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
-      rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework gksqt.app/Contents/Frameworks/;
-      install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
-      done;
+        for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
+          rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework gksqt.app/Contents/Frameworks/;
+          install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
+        done;
+      done
+    - cd ../..
+    - cp -r lib/grm/qtterm/qtterm.app artifacts/Applications/qtterm.app
+    - mkdir -p artifacts/Applications/qtterm.app/Contents/Frameworks
+    - mkdir -p artifacts/Applications/qtterm.app/Contents/plugins/platforms
+    - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/qtterm.app/Contents/plugins/platforms
+    - cd artifacts/Applications
+    - for BINARY in qtterm.app/Contents/plugins/platforms/libqcocoa.dylib qtterm.app/Contents/MacOS/qtterm; do
+        for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
+          rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework qtterm.app/Contents/Frameworks/;
+          install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
+        done;
       done
     - cd ../../
     - mv artifacts artifacts-darwin-aarch64
@@ -1000,6 +1057,7 @@ packages-tar:
   - mv artifacts-windows32/*.dll Windows-i686/gr/bin/
   - mv artifacts-windows32/*.lib Windows-i686/gr/bin/
   - mv artifacts-windows32/gksqt.exe Windows-i686/gr/bin/
+  - mv artifacts-windows32/qtterm.exe Windows-i686/gr/bin/
   - mv artifacts-windows32/platforms Windows-i686/gr/bin/
   - mv artifacts-windows32/fonts Windows-i686/gr/
   - mv artifacts-windows32/include Windows-i686/gr/
@@ -1010,6 +1068,7 @@ packages-tar:
   - mv artifacts-windows64/*.dll Windows-x86_64/gr/bin/
   - mv artifacts-windows64/*.lib Windows-x86_64/gr/bin/
   - mv artifacts-windows64/gksqt.exe Windows-x86_64/gr/bin/
+  - mv artifacts-windows64/qtterm.exe Windows-x86_64/gr/bin/
   - mv artifacts-windows64/platforms Windows-x86_64/gr/bin/
   - mv artifacts-windows64/fonts Windows-x86_64/gr/
   - mv artifacts-windows64/include Windows-x86_64/gr/
@@ -1021,6 +1080,7 @@ packages-tar:
   - mkdir -p Debian-x86_64/gr/lib
   - mv artifacts-debian9/*.so Debian-x86_64/gr/lib/
   - mv artifacts-debian9/gksqt Debian-x86_64/gr/bin/
+  - mv artifacts-debian9/qtterm Debian-x86_64/gr/bin/
   - mv artifacts-debian9/fonts Debian-x86_64/gr/
   - mv artifacts-debian9/include Debian-x86_64/gr/
   - cp artifacts-js/gr.js Debian-x86_64/gr/lib/
@@ -1029,6 +1089,7 @@ packages-tar:
   - mkdir -p Debian-armhf/gr/lib
   - mv artifacts-debian9-armhf/*.so Debian-armhf/gr/lib/
   - mv artifacts-debian9-armhf/gksqt Debian-armhf/gr/bin/
+  - mv artifacts-debian9-armhf/qtterm Debian-armhf/gr/bin/
   - mv artifacts-debian9-armhf/fonts Debian-armhf/gr/
   - mv artifacts-debian9-armhf/include Debian-armhf/gr/
   - cp artifacts-js/gr.js Debian-armhf/gr/lib/
@@ -1037,6 +1098,7 @@ packages-tar:
   - mkdir -p Debian-aarch64/gr/lib
   - mv artifacts-debian9-aarch64/*.so Debian-aarch64/gr/lib/
   - mv artifacts-debian9-aarch64/gksqt Debian-aarch64/gr/bin/
+  - mv artifacts-debian9-aarch64/qtterm Debian-aarch64/gr/bin/
   - mv artifacts-debian9-aarch64/fonts Debian-aarch64/gr/
   - mv artifacts-debian9-aarch64/include Debian-aarch64/gr/
   - cp artifacts-js/gr.js Debian-aarch64/gr/lib/
@@ -1045,6 +1107,7 @@ packages-tar:
   - mkdir -p Ubuntu-x86_64/gr/lib
   - mv artifacts-ubuntu1604/*.so Ubuntu-x86_64/gr/lib/
   - mv artifacts-ubuntu1604/gksqt Ubuntu-x86_64/gr/bin/
+  - mv artifacts-ubuntu1604/qtterm Ubuntu-x86_64/gr/bin/
   - mv artifacts-ubuntu1604/fonts Ubuntu-x86_64/gr/
   - mv artifacts-ubuntu1604/include Ubuntu-x86_64/gr/
   - cp artifacts-js/gr.js Ubuntu-x86_64/gr/lib/
@@ -1053,6 +1116,7 @@ packages-tar:
   - mkdir -p CentOS-x86_64/gr/lib
   - mv artifacts-centos7/*.so CentOS-x86_64/gr/lib/
   - mv artifacts-centos7/gksqt CentOS-x86_64/gr/bin/
+  - mv artifacts-centos7/qtterm CentOS-x86_64/gr/bin/
   - mv artifacts-centos7/fonts CentOS-x86_64/gr/
   - mv artifacts-centos7/include CentOS-x86_64/gr/
   - cp artifacts-js/gr.js CentOS-x86_64/gr/lib/
@@ -1062,6 +1126,7 @@ packages-tar:
   - mkdir -p Linux-i386/gr/lib
   - mv artifacts-centos7-32bit/*.so Linux-i386/gr/lib/
   - mv artifacts-centos7-32bit/gksqt Linux-i386/gr/bin/
+  - mv artifacts-centos7-32bit/qtterm Linux-i386/gr/bin/
   - mv artifacts-centos7-32bit/fonts Linux-i386/gr/
   - mv artifacts-centos7-32bit/include Linux-i386/gr/
   - cp artifacts-js/gr.js Linux-i386/gr/lib/
@@ -1070,6 +1135,7 @@ packages-tar:
   - mkdir -p ArchLinux-x86_64/gr/lib
   - mv artifacts-arch/*.so ArchLinux-x86_64/gr/lib/
   - mv artifacts-arch/gksqt ArchLinux-x86_64/gr/bin/
+  - mv artifacts-arch/qtterm ArchLinux-x86_64/gr/bin/
   - mv artifacts-arch/fonts ArchLinux-x86_64/gr/
   - mv artifacts-arch/include ArchLinux-x86_64/gr/
   - cp artifacts-js/gr.js ArchLinux-x86_64/gr/lib/
@@ -1078,6 +1144,7 @@ packages-tar:
   - mkdir -p FreeBSD-x86_64/gr/lib
   - mv artifacts-freebsd13/*.so FreeBSD-x86_64/gr/lib/
   - mv artifacts-freebsd13/gksqt FreeBSD-x86_64/gr/bin/
+  - mv artifacts-freebsd13/qtterm FreeBSD-x86_64/gr/bin/
   - mv artifacts-freebsd13/fonts FreeBSD-x86_64/gr/
   - mv artifacts-freebsd13/include FreeBSD-x86_64/gr/
   - cp artifacts-js/gr.js FreeBSD-x86_64/gr/lib/
