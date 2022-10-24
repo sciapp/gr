@@ -1753,13 +1753,6 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
   elem->setAttribute("vp_ymin", vp[2]);
   elem->setAttribute("vp_ymax", vp[3]);
 
-  // TODO: set default window?
-  elem->setAttribute("window", true);
-  elem->setAttribute("window_xmin", 0.0);
-  elem->setAttribute("window_xmax", 1.0);
-  elem->setAttribute("window_ymin", 0.0);
-  elem->setAttribute("window_ymax", 1.0);
-
   processViewport(elem);
 }
 
