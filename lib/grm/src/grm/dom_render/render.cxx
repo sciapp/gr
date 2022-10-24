@@ -534,7 +534,6 @@ static void grid(const std::shared_ptr<GR::Element> &element, const std::shared_
   gr_grid(x_tick, y_tick, x_org, y_org, major_x, major_y);
 }
 
-
 static void drawImage(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
@@ -675,7 +674,6 @@ static void contour(const std::shared_ptr<GR::Element> &element, const std::shar
   gr_contour(nx, ny, nh, px_p, py_p, h_p, pz_p, major_h);
 }
 
-
 static void contourf(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
@@ -802,7 +800,6 @@ static void grid3d(const std::shared_ptr<GR::Element> &element, const std::share
   gr_grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z);
 }
 
-
 static void axes3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
@@ -842,7 +839,6 @@ static void axes3d(const std::shared_ptr<GR::Element> &element, const std::share
   gr_axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z, tick_size);
 }
 
-
 static void polyline3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
@@ -877,7 +873,6 @@ static void polyline3d(const std::shared_ptr<GR::Element> &element, const std::s
       gr_polyline3d(x_vec.size(), x_p, y_p, z_p);
     }
 }
-
 
 static void polymarker3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
@@ -954,7 +949,6 @@ static void gr3DrawMesh(const std::shared_ptr<GR::Element> &element, const std::
   gr3_drawmesh(mesh, n, positions_p, directions_p, ups_p, colors_p, scales_p);
 }
 
-
 static void volume(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   int nx, ny, nz, algorithm;
@@ -1002,7 +996,6 @@ static void triSurface(const std::shared_ptr<GR::Element> &element, const std::s
 
   gr_trisurface(nx, px_p, py_p, pz_p);
 }
-
 
 static void triContour(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
@@ -1059,7 +1052,6 @@ static void gr3DeleteMesh(const std::shared_ptr<GR::Element> &element, const std
   gr3_deletemesh(mesh);
 }
 
-
 static void gr3DrawImage(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   double xmin, xmax, ymin, ymax;
@@ -1076,7 +1068,6 @@ static void gr3DrawImage(const std::shared_ptr<GR::Element> &element, const std:
 
   logger((stderr, "gr3_drawimage returned %i\n", gr3_drawimage(xmin, xmax, ymin, ymax, width, height, drawable_type)));
 }
-
 
 static void shadePoints(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
@@ -1109,7 +1100,6 @@ static void updateWS(const std::shared_ptr<GR::Element> &element, const std::sha
 {
   gr_updatews();
 }
-
 
 static void drawGraphics(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
@@ -1419,6 +1409,55 @@ static void processYlabel(const std::shared_ptr<GR::Element> &elem)
     }
 }
 
+static void processColorbarPosition(const std::shared_ptr<GR::Element> &elem)
+{
+  double viewport[4];
+
+  auto subplot_element = elem->parentElement();
+
+  double width = static_cast<double>(elem->getAttribute("width"));
+  double offset = static_cast<double>(elem->getAttribute("offset"));
+
+  if (!subplot_element->hasAttribute("viewport"))
+    {
+      /*TODO: implement exception for missing viewport*/
+      throw std::exception();
+    }
+
+  viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
+  viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_xmax"));
+  viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_ymin"));
+  viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_ymax"));
+
+  gr_setviewport(viewport[1] + offset, viewport[1] + offset + width, viewport[2], viewport[3]);
+}
+
+static void processRelativeCharHeight(const std::shared_ptr<GR::Element> &elem)
+{
+  double viewport[4];
+  auto subplot_element = elem->parentElement();
+  double charheight, diagFactor, maxCharHeight;
+
+  if (!subplot_element->hasAttribute("viewport"))
+    {
+      /* TODO: Implement `viewport missing` Exception */
+      throw std::exception();
+    }
+  viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
+  viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_xmax"));
+  viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_ymin"));
+  viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_ymax"));
+  diagFactor = static_cast<double>(elem->getAttribute("diag_factor"));
+  maxCharHeight = static_cast<double>(elem->getAttribute("max_charheight"));
+
+
+  double diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
+                     (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
+
+  charheight = std::max(diag * diagFactor, maxCharHeight);
+  gr_setcharheight(charheight);
+}
+
 static void processWindow(const std::shared_ptr<GR::Element> &elem)
 {
   /*!
@@ -1511,10 +1550,6 @@ static void processViewport(const std::shared_ptr<GR::Element> &elem)
   else
     {
       charheight = grm_max(0.018 * diag, 0.012);
-      if (str_equals_any(kind.c_str(), 2, "heatmap", "shade"))
-        {
-          ticksize = -ticksize;
-        }
     }
   elem->setAttribute("charheight", charheight);
   gr_setcharheight(charheight);
@@ -1610,7 +1645,7 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
               else
                 {
                   tmp_size_d[0] = PLOT_DEFAULT_WIDTH;
-                  tmp_size_d[1] = PLOT_DEFAULT_WIDTH;
+                  tmp_size_d[1] = PLOT_DEFAULT_HEIGHT;
                 }
               pixel_size[i] = (int)grm_round(tmp_size_d[i]);
               metric_size[i] = tmp_size_d[i] / dpm[i];
@@ -1662,6 +1697,7 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
   double subplot[4];
   int keep_aspect_ratio;
   double metric_width, metric_height;
+  int pixel_width, pixel_height;
   double aspect_ratio_ws;
   double vp[4];
   double vp0, vp1, vp2, vp3;
@@ -1679,9 +1715,9 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
   title_margin = (int)elem->getAttribute("title_margin");
   keep_aspect_ratio = static_cast<int>(elem->getAttribute("keep_aspect_ratio"));
 
-  get_figure_size(nullptr, nullptr, &metric_width, &metric_height);
+  get_figure_size(&pixel_width, &pixel_height, nullptr, nullptr);
 
-  aspect_ratio_ws = metric_width / metric_height;
+  aspect_ratio_ws = (double)pixel_width / pixel_height;
   memcpy(vp, subplot, sizeof(vp));
   if (aspect_ratio_ws > 1)
     {
@@ -2156,7 +2192,6 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
     }
 }
 
-
 static void setNextColor(gr_color_type_t color_type, std::vector<int> &color_indices,
                          std::vector<double> &color_rgb_values, const std::shared_ptr<GR::Element> &elem)
 {
@@ -2510,6 +2545,7 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
        [](const std::shared_ptr<GR::Element> &elem) { gr_settextcolorind((int)elem->getAttribute("textcolorind")); }},
       {std::string("charheight"),
        [](const std::shared_ptr<GR::Element> &elem) { gr_setcharheight((double)elem->getAttribute("charheight")); }},
+      {std::string("relative-charheight"), processRelativeCharHeight},
       {std::string("charup"),
        [](const std::shared_ptr<GR::Element> &elem) {
          gr_setcharup((double)elem->getAttribute("charup_ux"), (double)elem->getAttribute("charup_uy"));
@@ -2555,7 +2591,8 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
        [](const std::shared_ptr<GR::Element> &elem) { gr_selectclipxform((int)elem->getAttribute("clipxform")); }},
       {std::string("xlabel"), processXlabel},
       {std::string("xticklabels"), processXTickLabels},
-      {std::string("ylabel"), processYlabel}};
+      {std::string("ylabel"), processYlabel},
+      {std::string("colorbar-position"), processColorbarPosition}};
 
 
   static std::map<std::string, std::function<void(const std::shared_ptr<GR::Element> &)>> attrStringToFuncPost{

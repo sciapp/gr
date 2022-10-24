@@ -325,7 +325,6 @@ public:
                       std::optional<std::vector<std::string>> xticklabels,
                       const std::shared_ptr<GR::Context> &extContext = nullptr);
 
-
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context
   void render(const std::shared_ptr<Document> &document);  // external doc and render context

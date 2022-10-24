@@ -6398,20 +6398,16 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
 err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colors)
 {
   // TODO: move viewport dependent calcs to render
-  const double *viewport;
   double c_min, c_max;
   int *data;
-  double diag, charheight;
   int scale, flip, options;
   unsigned int i;
-  err_t error;
 
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
-  auto subGroup = global_render->createGroup("colorbar");
-  group->append(subGroup);
+  auto colorbar_group = global_render->createGroup("colorbar");
+  group->append(colorbar_group);
 
   gr_savestate();
-  grm_args_values(subplot_args, "viewport", "D", &viewport);
   /* TODO: What to do, if there is a `_clim` and a `_zlim`? Merge both together? */
   if (!grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max))
     {
@@ -6434,20 +6430,22 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
   if (grm_args_values(subplot_args, "xflip", "i", &flip) && flip)
     {
       options = (options | GR_OPTION_FLIP_Y) & ~GR_OPTION_FLIP_X;
-      global_render->setScale(subGroup, options);
+      global_render->setScale(colorbar_group, options);
     }
   else if (grm_args_values(subplot_args, "yflip", "i", &flip) && flip)
     {
       options = options & ~GR_OPTION_FLIP_Y & ~GR_OPTION_FLIP_X;
-      global_render->setScale(subGroup, options);
+      global_render->setScale(colorbar_group, options);
     }
   else
     {
       options = options & ~GR_OPTION_FLIP_X;
-      global_render->setScale(subGroup, options);
+      global_render->setScale(colorbar_group, options);
     }
-  global_render->setWindow(subGroup, 0.0, 1.0, c_min, c_max);
-  global_render->setViewport(subGroup, viewport[1] + 0.02 + off, viewport[1] + 0.05 + off, viewport[2], viewport[3]);
+  global_render->setWindow(colorbar_group, 0.0, 1.0, c_min, c_max);
+  colorbar_group->setAttribute("offset", off + 0.02);
+  colorbar_group->setAttribute("width", 0.03);
+  colorbar_group->setAttribute("colorbar-position", true);
 
   std::vector<int> data_vec = std::vector<int>(data, data + colors);
   int id = (int)global_root->getAttribute("id");
@@ -6456,26 +6454,25 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
 
   auto cellArray =
       global_render->createCellArray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, "data" + str, data_vec);
-  subGroup->append(cellArray);
+  colorbar_group->append(cellArray);
 
-  diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
-              (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
-  charheight = grm_max(0.016 * diag, 0.012);
-  subGroup->setAttribute("charheight", charheight);
+  colorbar_group->setAttribute("diag_factor", 0.016);
+  colorbar_group->setAttribute("max_charheight", 0.012);
+  colorbar_group->setAttribute("relative-charheight", true);
   grm_args_values(subplot_args, "scale", "i", &scale);
   if (scale & GR_OPTION_Z_LOG)
     {
-      global_render->setScale(subGroup, GR_OPTION_Y_LOG);
+      global_render->setScale(colorbar_group, GR_OPTION_Y_LOG);
       auto axes = global_render->createAxes(0, 2, 1, c_min, 0, 1, 1);
       axes->setAttribute("tick_size", 0.005);
-      subGroup->append(axes);
+      colorbar_group->append(axes);
     }
   else
     {
       double c_tick = auto_tick(c_min, c_max);
       auto axes = global_render->createAxes(0, c_tick, 1, c_min, 0, 1, 1);
       axes->setAttribute("tick_size", 0.005);
-      subGroup->append(axes);
+      colorbar_group->append(axes);
     }
   free(data);
   gr_restorestate();
