@@ -3947,8 +3947,8 @@ err_t plot_heatmap(grm_args_t *subplot_args)
           std::string str = std::to_string(id);
 
           std::vector<int> rgba_vec = std::vector<int>(rgba, rgba + cols * rows);
-          std::vector<double> x_vec = std::vector<double>(x, x + cols);
-          std::vector<double> y_vec = std::vector<double>(y, y + rows);
+          std::vector<double> x_vec = std::vector<double>(x, x + cols + 1);
+          std::vector<double> y_vec = std::vector<double>(y, y + rows + 1);
           std::vector<int> color_vec = std::vector<int>(rgba, rgba + cols * rows);
 
           auto nuca = global_render->createNonUniformCellArray("x" + str, x_vec, "y" + str, y_vec, cols, rows, 1, 1,
