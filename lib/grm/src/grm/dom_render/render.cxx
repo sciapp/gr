@@ -2413,6 +2413,34 @@ static void piePlotTitleRender(const std::shared_ptr<GR::Element> &elem, const s
   elem->append(tx);
 }
 
+static void isosurfaceRender(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+{
+  double viewport[4];
+  double x_min, x_max, y_min, y_max;
+  int fig_width, fig_height;
+  int subplot_width, subplot_height;
+  int drawable_type;
+
+  drawable_type = static_cast<int>(elem->getAttribute("drawable-type"));
+
+  gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
+
+  x_min = viewport[0];
+  x_max = viewport[1];
+  y_min = viewport[2];
+  y_max = viewport[3];
+
+  get_figure_size(NULL, &fig_width, &fig_height, NULL, NULL);
+  subplot_width = (int)(grm_max(fig_width, fig_height) * (x_max - x_min));
+  subplot_height = (int)(grm_max(fig_width, fig_height) * (y_max - y_min));
+  // TODO? logger stuff?
+  //  logger((stderr, "viewport: (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
+  //  logger((stderr, "viewport ratio: %lf\n", (x_min - x_max) / (y_min - y_max)));
+  //  logger((stderr, "subplot size: (%d, %d)\n", subplot_width, subplot_height));
+  //  logger((stderr, "subplot ratio: %lf\n", ((double)subplot_width / (double)subplot_height)));
+  gr3_drawimage(x_min, x_max, y_min, y_max, subplot_width, subplot_height, GR3_DRAWABLE_GKS);
+}
+
 static void processGR3CameraLookAt(const std::shared_ptr<GR::Element> &elem)
 {
   double camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z;
@@ -2685,7 +2713,8 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
                        {std::string("draw-legend"), drawLegend},
                        {std::string("draw-polar-axes"), drawPolarAxes},
                        {std::string("draw-pie-legend"), drawPieLegend},
-                       {std::string("pie-plot-title-render"), piePlotTitleRender}};
+                       {std::string("pie-plot-title-render"), piePlotTitleRender},
+                       {std::string("isosurface-render"), isosurfaceRender}};
   /*! Modifier */
   if (element->localName() == "group")
     {
@@ -3794,6 +3823,14 @@ std::shared_ptr<GR::Element> GR::Render::createDrawGraphics(const std::string &d
       (*useContext)[data_key] = *data;
     }
   element->setAttribute("data", data_key);
+  return element;
+}
+
+
+std::shared_ptr<GR::Element> GR::Render::createIsoSurfaceRenderElement(int drawable_type)
+{
+  auto element = createElement("isosurface-render");
+  element->setAttribute("drawable-type", drawable_type);
   return element;
 }
 

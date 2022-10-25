@@ -209,6 +209,8 @@ public:
 
   std::shared_ptr<Element> createPiePlotTitleRenderElement(std::string title);
 
+  std::shared_ptr<Element> createIsoSurfaceRenderElement(int drawable_type);
+
   //! Modifierfunctions
 
   //! ToDo: obsolete Function remove safely!

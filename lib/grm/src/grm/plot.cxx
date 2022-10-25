@@ -4374,7 +4374,6 @@ err_t plot_isosurface(grm_args_t *subplot_args)
   group->setAttribute("name", "isosurface");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  return_error_if(!grm_args_values(subplot_args, "viewport", "D", &viewport), ERROR_PLOT_MISSING_DATA);
 
   grm_args_values(subplot_args, "rotation", "d", &rotation);
   grm_args_values(subplot_args, "tilt", "d", &tilt);
@@ -4384,20 +4383,6 @@ err_t plot_isosurface(grm_args_t *subplot_args)
   rotation = fmod(rotation, 360.0) / 180.0 * M_PI;
   logger((stderr, "tilt %lf rotation %lf\n", tilt, rotation));
 
-  /* Calculate subplot pixel size */
-  x_min = viewport[0];
-  x_max = viewport[1];
-  y_min = viewport[2];
-  y_max = viewport[3];
-
-  get_figure_size(NULL, &fig_width, &fig_height, NULL, NULL);
-  subplot_width = (int)(grm_max(fig_width, fig_height) * (x_max - x_min));
-  subplot_height = (int)(grm_max(fig_width, fig_height) * (y_max - y_min));
-
-  logger((stderr, "viewport: (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
-  logger((stderr, "viewport ratio: %lf\n", (x_min - x_max) / (y_min - y_max)));
-  logger((stderr, "subplot size: (%d, %d)\n", subplot_width, subplot_height));
-  logger((stderr, "subplot ratio: %lf\n", ((double)subplot_width / (double)subplot_height)));
   while (*current_series != NULL)
     {
 
@@ -4524,7 +4509,6 @@ err_t plot_isosurface(grm_args_t *subplot_args)
       global_root->setAttribute("id", id + 1);
       std::string str = std::to_string(id);
 
-
       auto drawMesh =
           global_render->createGR3DrawMesh(mesh, 1, "positions" + str, p_vec, "directions" + str, d_vec, "ups" + str,
                                            u_vec, "foregroundcolors" + str, c_vec, "scales" + str, s_vec);
@@ -4535,18 +4519,12 @@ err_t plot_isosurface(grm_args_t *subplot_args)
       ups[1] = (tilt == 0 ? 0.0f : 1.0f);
       ups[2] = (tilt == 0 ? 1.0f : 0.0f);
 
-      auto drawImage = global_render->createGR3DrawImage(x_min, x_max, y_min, y_max, subplot_width, subplot_height,
-                                                         GR3_DRAWABLE_GKS);
-      subGroup->append(drawImage);
+      auto drawImageRenderElement = global_render->createIsoSurfaceRenderElement(GR3_DRAWABLE_GKS);
+      subGroup->append(drawImageRenderElement);
 
-      global_render->setGR3CameraLookAt(drawImage, (float)(r * sin(tilt) * sin(rotation)), (float)(r * cos(tilt)),
-                                        (float)(r * sin(tilt) * cos(rotation)), 0.0f, 0.0f, 0.0f, ups[0], ups[1],
-                                        ups[2]);
-
-
-      logger((stderr, "gr3_drawimage returned %i\n",
-              gr3_drawimage(x_min, x_max, y_min, y_max, subplot_width, subplot_height, GR3_DRAWABLE_GKS)));
-
+      global_render->setGR3CameraLookAt(drawImageRenderElement, (float)(r * sin(tilt) * sin(rotation)),
+                                        (float)(r * cos(tilt)), (float)(r * sin(tilt) * cos(rotation)), 0.0f, 0.0f,
+                                        0.0f, ups[0], ups[1], ups[2]);
 
       auto deleteMesh = global_render->createGR3DeleteMesh(mesh);
       subGroup->append(deleteMesh);
