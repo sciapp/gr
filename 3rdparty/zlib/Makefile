@@ -5,7 +5,7 @@ endif
 CFLAGS=-O -fPIC -DHAVE_HIDDEN $(ARCHS)
 ifeq ($(shell uname),Darwin)
 ifneq ($(notdir $(CC)),emcc)
-CFLAGS += -mmacosx-version-min=10.11
+CFLAGS += -mmacosx-version-min=10.14
 endif
 endif
 LIBS=libz.a

@@ -466,7 +466,7 @@ set(GRM_SOURCES
     lib/grm/src/grm/logging.c
     lib/grm/src/grm/memwriter.c
     lib/grm/src/grm/net.c
-    lib/grm/src/grm/plot.c
+    lib/grm/src/grm/plot.cxx
     lib/grm/src/grm/util.c
     lib/grm/src/grm/datatype/double_map.c
     lib/grm/src/grm/datatype/string_array_map.c
@@ -500,11 +500,17 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/src/> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
   target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    target_compile_options(${LIBRARY} PRIVATE /permissive-)
+  endif()
   set_target_properties(
     ${LIBRARY}
     PROPERTIES C_STANDARD 90
                C_EXTENSIONS OFF
                C_STANDARD_REQUIRED ON
+               CXX_STANDARD 17
+               CXX_EXTENSIONS OFF
+               CXX_STANDARD_REQUIRED ON
                POSITION_INDEPENDENT_CODE ON
                C_VISIBILITY_PRESET hidden
                INSTALL_RPATH "${INSTALL_RPATH}"

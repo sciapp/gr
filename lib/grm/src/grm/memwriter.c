@@ -55,13 +55,13 @@ void memwriter_clear(memwriter_t *memwriter)
   *memwriter->buf = '\0';
 }
 
-error_t memwriter_replace(memwriter_t *memwriter, int index, int count, const char *replacement_str)
+err_t memwriter_replace(memwriter_t *memwriter, int index, int count, const char *replacement_str)
 {
   int replacement_str_len = (replacement_str != NULL) ? strlen(replacement_str) : 0;
-  error_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   if ((replacement_str_len > count) &&
-      (error = memwriter_ensure_buf(memwriter, replacement_str_len - count)) != NO_ERROR)
+      (error = memwriter_ensure_buf(memwriter, replacement_str_len - count)) != ERROR_NONE)
     {
       return error;
     }
@@ -79,17 +79,17 @@ error_t memwriter_replace(memwriter_t *memwriter, int index, int count, const ch
   return error;
 }
 
-error_t memwriter_erase(memwriter_t *memwriter, int index, int count)
+err_t memwriter_erase(memwriter_t *memwriter, int index, int count)
 {
   return memwriter_replace(memwriter, index, count, NULL);
 }
 
-error_t memwriter_insert(memwriter_t *memwriter, int index, const char *str)
+err_t memwriter_insert(memwriter_t *memwriter, int index, const char *str)
 {
   return memwriter_replace(memwriter, index, 0, str);
 }
 
-error_t memwriter_enlarge_buf(memwriter_t *memwriter, size_t size_increment)
+err_t memwriter_enlarge_buf(memwriter_t *memwriter, size_t size_increment)
 {
   void *new_buf;
 
@@ -126,22 +126,22 @@ error_t memwriter_enlarge_buf(memwriter_t *memwriter, size_t size_increment)
   memwriter->buf = new_buf;
   memwriter->capacity += size_increment;
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
-error_t memwriter_ensure_buf(memwriter_t *memwriter, size_t needed_additional_size)
+err_t memwriter_ensure_buf(memwriter_t *memwriter, size_t needed_additional_size)
 {
   if (memwriter->size + needed_additional_size > memwriter->capacity)
     {
       return memwriter_enlarge_buf(memwriter, memwriter->size + needed_additional_size - memwriter->capacity);
     }
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
-error_t memwriter_printf(memwriter_t *memwriter, const char *format, ...)
+err_t memwriter_printf(memwriter_t *memwriter, const char *format, ...)
 {
   va_list vl;
-  error_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   while (1)
     {
@@ -159,7 +159,7 @@ error_t memwriter_printf(memwriter_t *memwriter, const char *format, ...)
           memwriter->size += chars_needed;
           break;
         }
-      if ((error = memwriter_ensure_buf(memwriter, chars_needed + 1)) != NO_ERROR)
+      if ((error = memwriter_ensure_buf(memwriter, chars_needed + 1)) != ERROR_NONE)
         {
           break;
         }
@@ -168,12 +168,12 @@ error_t memwriter_printf(memwriter_t *memwriter, const char *format, ...)
   return error;
 }
 
-error_t memwriter_puts(memwriter_t *memwriter, const char *s)
+err_t memwriter_puts(memwriter_t *memwriter, const char *s)
 {
   return memwriter_printf(memwriter, "%s", s);
 }
 
-error_t memwriter_putc(memwriter_t *memwriter, char c)
+err_t memwriter_putc(memwriter_t *memwriter, char c)
 {
   return memwriter_printf(memwriter, "%c", c);
 }

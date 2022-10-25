@@ -19,8 +19,8 @@
 #define DECLARE_LIST_TYPE(prefix, entry_type)                                                                          \
   typedef entry_type prefix##_list_entry_t;                                                                            \
   typedef const entry_type prefix##_list_const_entry_t;                                                                \
-  typedef error_t (*prefix##_list_entry_copy_func_t)(prefix##_list_entry_t *, prefix##_list_const_entry_t);            \
-  typedef error_t (*prefix##_list_entry_delete_func_t)(prefix##_list_entry_t);                                         \
+  typedef err_t (*prefix##_list_entry_copy_func_t)(prefix##_list_entry_t *, prefix##_list_const_entry_t);              \
+  typedef err_t (*prefix##_list_entry_delete_func_t)(prefix##_list_entry_t);                                           \
                                                                                                                        \
   typedef struct                                                                                                       \
   {                                                                                                                    \
@@ -45,8 +45,8 @@
   /* ~~~~~~~~~~~~~~~~~~~~~~~ ref list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */ \
                                                                                                                        \
   typedef entry_type prefix##_reflist_entry_t;                                                                         \
-  typedef error_t (*prefix##_reflist_entry_copy_func_t)(prefix##_reflist_entry_t *, prefix##_reflist_entry_t);         \
-  typedef error_t (*prefix##_reflist_entry_delete_func_t)(prefix##_reflist_entry_t);                                   \
+  typedef err_t (*prefix##_reflist_entry_copy_func_t)(prefix##_reflist_entry_t *, prefix##_reflist_entry_t);           \
+  typedef err_t (*prefix##_reflist_entry_delete_func_t)(prefix##_reflist_entry_t);                                     \
                                                                                                                        \
   typedef struct                                                                                                       \
   {                                                                                                                    \
@@ -78,22 +78,22 @@
   prefix##_list_t *prefix##_list_new(void);                                                                            \
   void prefix##_list_delete(prefix##_list_t *list);                                                                    \
                                                                                                                        \
-  error_t prefix##_list_push_front(prefix##_list_t *list, prefix##_list_const_entry_t entry);                          \
-  error_t prefix##_list_push_back(prefix##_list_t *list, prefix##_list_const_entry_t entry);                           \
+  err_t prefix##_list_push_front(prefix##_list_t *list, prefix##_list_const_entry_t entry);                            \
+  err_t prefix##_list_push_back(prefix##_list_t *list, prefix##_list_const_entry_t entry);                             \
                                                                                                                        \
   prefix##_list_entry_t prefix##_list_pop_front(prefix##_list_t *list);                                                \
   prefix##_list_entry_t prefix##_list_pop_back(prefix##_list_t *list);                                                 \
                                                                                                                        \
-  error_t prefix##_list_push(prefix##_list_t *list, prefix##_list_const_entry_t entry);                                \
+  err_t prefix##_list_push(prefix##_list_t *list, prefix##_list_const_entry_t entry);                                  \
   prefix##_list_entry_t prefix##_list_pop(prefix##_list_t *list);                                                      \
                                                                                                                        \
-  error_t prefix##_list_enqueue(prefix##_list_t *list, prefix##_list_const_entry_t entry);                             \
+  err_t prefix##_list_enqueue(prefix##_list_t *list, prefix##_list_const_entry_t entry);                               \
   prefix##_list_entry_t prefix##_list_dequeue(prefix##_list_t *list);                                                  \
                                                                                                                        \
   int prefix##_list_empty(prefix##_list_t *list);                                                                      \
                                                                                                                        \
-  error_t prefix##_list_entry_copy(prefix##_list_entry_t *copy, prefix##_list_const_entry_t entry);                    \
-  error_t prefix##_list_entry_delete(prefix##_list_entry_t entry);                                                     \
+  err_t prefix##_list_entry_copy(prefix##_list_entry_t *copy, prefix##_list_const_entry_t entry);                      \
+  err_t prefix##_list_entry_delete(prefix##_list_entry_t entry);                                                       \
                                                                                                                        \
   int prefix##_list_find_previous_node(const prefix##_list_t *list, const prefix##_list_node_t *node,                  \
                                        prefix##_list_node_t **previous_node);                                          \
@@ -104,22 +104,22 @@
   void prefix##_reflist_delete(prefix##_reflist_t *list) MAYBE_UNUSED;                                                 \
   void prefix##_reflist_delete_with_entries(prefix##_reflist_t *list) MAYBE_UNUSED;                                    \
                                                                                                                        \
-  error_t prefix##_reflist_push_front(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;          \
-  error_t prefix##_reflist_push_back(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;           \
+  err_t prefix##_reflist_push_front(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;            \
+  err_t prefix##_reflist_push_back(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;             \
                                                                                                                        \
   prefix##_reflist_entry_t prefix##_reflist_pop_front(prefix##_reflist_t *list) MAYBE_UNUSED;                          \
   prefix##_reflist_entry_t prefix##_reflist_pop_back(prefix##_reflist_t *list) MAYBE_UNUSED;                           \
                                                                                                                        \
-  error_t prefix##_reflist_push(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;                \
+  err_t prefix##_reflist_push(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;                  \
   prefix##_reflist_entry_t prefix##_reflist_pop(prefix##_reflist_t *list) MAYBE_UNUSED;                                \
                                                                                                                        \
-  error_t prefix##_reflist_enqueue(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;             \
+  err_t prefix##_reflist_enqueue(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;               \
   prefix##_reflist_entry_t prefix##_reflist_dequeue(prefix##_reflist_t *list) MAYBE_UNUSED;                            \
                                                                                                                        \
   int prefix##_reflist_empty(prefix##_reflist_t *list) MAYBE_UNUSED;                                                   \
                                                                                                                        \
-  error_t prefix##_reflist_entry_copy(prefix##_reflist_entry_t *copy, const prefix##_reflist_entry_t entry);           \
-  error_t prefix##_reflist_entry_delete(prefix##_reflist_entry_t entry);                                               \
+  err_t prefix##_reflist_entry_copy(prefix##_reflist_entry_t *copy, const prefix##_reflist_entry_t entry);             \
+  err_t prefix##_reflist_entry_delete(prefix##_reflist_entry_t entry);                                                 \
                                                                                                                        \
   int prefix##_reflist_find_previous_node(const prefix##_reflist_t *list, const prefix##_reflist_node_t *node,         \
                                           prefix##_reflist_node_t **previous_node) MAYBE_UNUSED;
@@ -170,10 +170,10 @@
     free(list);                                                                                                        \
   }                                                                                                                    \
                                                                                                                        \
-  error_t prefix##_list_push_front(prefix##_list_t *list, prefix##_list_const_entry_t entry)                           \
+  err_t prefix##_list_push_front(prefix##_list_t *list, prefix##_list_const_entry_t entry)                             \
   {                                                                                                                    \
     prefix##_list_node_t *new_list_node;                                                                               \
-    error_t error = NO_ERROR;                                                                                          \
+    err_t error = ERROR_NONE;                                                                                          \
                                                                                                                        \
     new_list_node = malloc(sizeof(prefix##_list_node_t));                                                              \
     error_cleanup_and_set_error_if(new_list_node == NULL, ERROR_MALLOC);                                               \
@@ -187,17 +187,17 @@
       }                                                                                                                \
     ++(list->size);                                                                                                    \
                                                                                                                        \
-    return NO_ERROR;                                                                                                   \
+    return ERROR_NONE;                                                                                                 \
                                                                                                                        \
   error_cleanup:                                                                                                       \
     free(new_list_node);                                                                                               \
     return error;                                                                                                      \
   }                                                                                                                    \
                                                                                                                        \
-  error_t prefix##_list_push_back(prefix##_list_t *list, prefix##_list_const_entry_t entry)                            \
+  err_t prefix##_list_push_back(prefix##_list_t *list, prefix##_list_const_entry_t entry)                              \
   {                                                                                                                    \
     prefix##_list_node_t *new_list_node;                                                                               \
-    error_t error = NO_ERROR;                                                                                          \
+    err_t error = ERROR_NONE;                                                                                          \
                                                                                                                        \
     new_list_node = malloc(sizeof(prefix##_list_node_t));                                                              \
     error_cleanup_and_set_error_if(new_list_node == NULL, ERROR_MALLOC);                                               \
@@ -215,7 +215,7 @@
     list->tail = new_list_node;                                                                                        \
     ++(list->size);                                                                                                    \
                                                                                                                        \
-    return NO_ERROR;                                                                                                   \
+    return ERROR_NONE;                                                                                                 \
                                                                                                                        \
   error_cleanup:                                                                                                       \
     free(new_list_node);                                                                                               \
@@ -266,14 +266,14 @@
     return last_entry;                                                                                                 \
   }                                                                                                                    \
                                                                                                                        \
-  error_t prefix##_list_push(prefix##_list_t *list, prefix##_list_const_entry_t entry)                                 \
+  err_t prefix##_list_push(prefix##_list_t *list, prefix##_list_const_entry_t entry)                                   \
   {                                                                                                                    \
     return prefix##_list_push_front(list, entry);                                                                      \
   }                                                                                                                    \
                                                                                                                        \
   prefix##_list_entry_t prefix##_list_pop(prefix##_list_t *list) { return prefix##_list_pop_front(list); }             \
                                                                                                                        \
-  error_t prefix##_list_enqueue(prefix##_list_t *list, prefix##_list_const_entry_t entry)                              \
+  err_t prefix##_list_enqueue(prefix##_list_t *list, prefix##_list_const_entry_t entry)                                \
   {                                                                                                                    \
     return prefix##_list_push_back(list, entry);                                                                       \
   }                                                                                                                    \
@@ -341,12 +341,12 @@
     free(list);                                                                                                        \
   }                                                                                                                    \
                                                                                                                        \
-  error_t prefix##_reflist_push_front(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                        \
+  err_t prefix##_reflist_push_front(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                          \
   {                                                                                                                    \
     return prefix##_list_push_front((prefix##_list_t *)list, (prefix##_list_entry_t)entry);                            \
   }                                                                                                                    \
                                                                                                                        \
-  error_t prefix##_reflist_push_back(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                         \
+  err_t prefix##_reflist_push_back(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                           \
   {                                                                                                                    \
     return prefix##_list_push_back((prefix##_list_t *)list, (prefix##_list_entry_t)entry);                             \
   }                                                                                                                    \
@@ -361,7 +361,7 @@
     return prefix##_list_pop_back((prefix##_list_t *)list);                                                            \
   }                                                                                                                    \
                                                                                                                        \
-  error_t prefix##_reflist_push(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                              \
+  err_t prefix##_reflist_push(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                                \
   {                                                                                                                    \
     return prefix##_list_push((prefix##_list_t *)list, (prefix##_list_entry_t)entry);                                  \
   }                                                                                                                    \
@@ -371,7 +371,7 @@
     return prefix##_list_pop((prefix##_list_t *)list);                                                                 \
   }                                                                                                                    \
                                                                                                                        \
-  error_t prefix##_reflist_enqueue(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                           \
+  err_t prefix##_reflist_enqueue(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                             \
   {                                                                                                                    \
     return prefix##_list_enqueue((prefix##_list_t *)list, (prefix##_list_entry_t)entry);                               \
   }                                                                                                                    \
@@ -391,10 +391,10 @@
                                             (prefix##_list_node_t **)previous_node);                                   \
   }                                                                                                                    \
                                                                                                                        \
-  error_t prefix##_reflist_entry_copy(prefix##_reflist_entry_t *copy, prefix##_reflist_entry_t entry)                  \
+  err_t prefix##_reflist_entry_copy(prefix##_reflist_entry_t *copy, prefix##_reflist_entry_t entry)                    \
   {                                                                                                                    \
     *copy = entry;                                                                                                     \
-    return NO_ERROR;                                                                                                   \
+    return ERROR_NONE;                                                                                                 \
   }                                                                                                                    \
                                                                                                                        \
-  error_t prefix##_reflist_entry_delete(prefix##_reflist_entry_t entry UNUSED) { return NO_ERROR; }
+  err_t prefix##_reflist_entry_delete(prefix##_reflist_entry_t entry UNUSED) { return ERROR_NONE; }

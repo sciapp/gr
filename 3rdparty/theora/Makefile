@@ -6,7 +6,7 @@ VERSION = 1.1.1
 THEORA_CONFIGURE ?= ./configure
 THEORA_EXTRA_CONFIGURE_FLAGS ?=
 ifeq ($(shell uname),Darwin)
-THEORA_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.11
+THEORA_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.14
 endif
 
 ifeq ($(DOWNLOAD_CMD),)

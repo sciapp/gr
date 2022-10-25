@@ -18,7 +18,7 @@
 
 DEFINE_MAP_METHODS(string)
 
-int string_map_value_copy(char **copy, const char *value)
+int string_map_value_copy(const char **copy, const char *value)
 {
   char *_copy;
 
@@ -32,9 +32,9 @@ int string_map_value_copy(char **copy, const char *value)
   return 1;
 }
 
-void string_map_value_delete(char *value)
+void string_map_value_delete(const char *value)
 {
-  free(value);
+  free((void *)value);
 }
 
 

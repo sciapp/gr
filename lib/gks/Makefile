@@ -29,9 +29,9 @@ UNAME := $(shell uname)
       RANLIB = ar ts
 ifeq ($(UNAME), Darwin)
 GR_SHARED_LIBRARY_SUFFIX ?= .dylib
-	 CFLAGS += -mmacosx-version-min=10.11
+	 CFLAGS += -mmacosx-version-min=10.14
 INSTALL_NAME = -Wl,-install_name,@rpath/libGKS${GR_SHARED_LIBRARY_SUFFIX}
-     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.11
+     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.14
      SOFLAGS = -dynamiclib
 else
 GR_SHARED_LIBRARY_SUFFIX ?= .so

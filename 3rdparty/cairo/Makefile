@@ -5,7 +5,7 @@ endif
 VERSION = 1.16.0
 CAIRO_EXTRA_CONFIGURE_FLAGS ?=
 ifeq ($(shell uname),Darwin)
-CAIRO_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.11
+CAIRO_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.14
 endif
 
 ifeq ($(DOWNLOAD_CMD),)

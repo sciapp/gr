@@ -1,6 +1,10 @@
 #ifndef GRM_ERROR_INT_H_INCLUDED
 #define GRM_ERROR_INT_H_INCLUDED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef __unix__
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200112L
@@ -76,6 +80,7 @@
 /* ------------------------- error handling ------------------------------------------------------------------------- */
 
 #define ENUM_ELEMENTS(X, Y)                           \
+  X(ERROR_NONE, 0)                                    \
   X(ERROR_UNSPECIFIED, 1)                             \
   X(ERROR_INTERNAL, 2)                                \
   X(ERROR_MALLOC, 3)                                  \
@@ -133,11 +138,8 @@
 
 typedef enum
 {
-#ifndef _WIN32 /* Windows uses `NO_ERROR` (= 0) for its own error codes */
-  ENUM_VALUE(NO_ERROR, 0)
-#endif
-      ENUM_ELEMENTS(ENUM_VALUE, ENUM_LAST_VALUE)
-} error_t;
+  ENUM_ELEMENTS(ENUM_VALUE, ENUM_LAST_VALUE)
+} err_t;
 
 /* ######################### public implementatin ################################################################### */
 
@@ -157,4 +159,7 @@ void debug_printf(const char *format, ...);
 #endif
 
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* ifndef GRM_ERROR_INT_H_INCLUDED */

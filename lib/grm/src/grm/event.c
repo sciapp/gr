@@ -46,7 +46,7 @@ int process_events(void)
 
 DEFINE_LIST_METHODS(event)
 
-error_t event_list_entry_copy(event_list_entry_t *copy, event_list_const_entry_t entry)
+err_t event_list_entry_copy(event_list_entry_t *copy, event_list_const_entry_t entry)
 {
   event_list_entry_t _copy;
 
@@ -59,13 +59,13 @@ error_t event_list_entry_copy(event_list_entry_t *copy, event_list_const_entry_t
   memcpy(_copy, entry, sizeof(grm_event_t));
   *copy = _copy;
 
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
-error_t event_list_entry_delete(event_list_entry_t entry)
+err_t event_list_entry_delete(event_list_entry_t entry)
 {
   free(entry);
-  return NO_ERROR;
+  return ERROR_NONE;
 }
 
 event_queue_t *event_queue_new(void)
@@ -152,10 +152,10 @@ int event_queue_process_all(event_queue_t *queue)
   return 1;
 }
 
-error_t event_queue_enqueue_new_plot_event(event_queue_t *queue, int plot_id)
+err_t event_queue_enqueue_new_plot_event(event_queue_t *queue, int plot_id)
 {
   grm_new_plot_event_t *new_plot_event = NULL;
-  error_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   new_plot_event = malloc(sizeof(grm_new_plot_event_t));
   error_cleanup_and_set_error_if(new_plot_event == NULL, ERROR_MALLOC);
@@ -165,7 +165,7 @@ error_t event_queue_enqueue_new_plot_event(event_queue_t *queue, int plot_id)
   error = event_reflist_enqueue(queue->queue, (grm_event_t *)new_plot_event);
   error_cleanup_if_error;
 
-  return NO_ERROR;
+  return ERROR_NONE;
 
 error_cleanup:
   if (new_plot_event != NULL)
@@ -176,10 +176,10 @@ error_cleanup:
   return error;
 }
 
-error_t event_queue_enqueue_update_plot_event(event_queue_t *queue, int plot_id)
+err_t event_queue_enqueue_update_plot_event(event_queue_t *queue, int plot_id)
 {
   grm_update_plot_event_t *update_plot_event = NULL;
-  error_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   update_plot_event = malloc(sizeof(grm_update_plot_event_t));
   error_cleanup_and_set_error_if(update_plot_event == NULL, ERROR_MALLOC);
@@ -189,7 +189,7 @@ error_t event_queue_enqueue_update_plot_event(event_queue_t *queue, int plot_id)
   error = event_reflist_enqueue(queue->queue, (grm_event_t *)update_plot_event);
   error_cleanup_if_error;
 
-  return NO_ERROR;
+  return ERROR_NONE;
 
 error_cleanup:
   if (update_plot_event != NULL)
@@ -200,10 +200,10 @@ error_cleanup:
   return error;
 }
 
-error_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int width, int height)
+err_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int width, int height)
 {
   grm_size_event_t *size_event = NULL;
-  error_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   size_event = malloc(sizeof(grm_size_event_t));
   error_cleanup_and_set_error_if(size_event == NULL, ERROR_MALLOC);
@@ -215,7 +215,7 @@ error_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int wi
   error = event_reflist_enqueue(queue->queue, (grm_event_t *)size_event);
   error_cleanup_if_error;
 
-  return NO_ERROR;
+  return ERROR_NONE;
 
 error_cleanup:
   if (size_event != NULL)
@@ -226,10 +226,10 @@ error_cleanup:
   return error;
 }
 
-error_t event_queue_enqueue_merge_end_event(event_queue_t *queue, const char *identificator)
+err_t event_queue_enqueue_merge_end_event(event_queue_t *queue, const char *identificator)
 {
   grm_merge_end_event_t *merge_end_event = NULL;
-  error_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   merge_end_event = malloc(sizeof(grm_merge_end_event_t));
   error_cleanup_and_set_error_if(merge_end_event == NULL, ERROR_MALLOC);
@@ -238,7 +238,7 @@ error_t event_queue_enqueue_merge_end_event(event_queue_t *queue, const char *id
   error = event_reflist_enqueue(queue->queue, (grm_event_t *)merge_end_event);
   error_cleanup_if_error;
 
-  return NO_ERROR;
+  return ERROR_NONE;
 
 error_cleanup:
   if (merge_end_event != NULL)
@@ -261,7 +261,7 @@ error_cleanup:
 
 int grm_register(grm_event_type_t type, grm_event_callback_t callback)
 {
-  if (plot_init_static_variables() != NO_ERROR)
+  if (plot_init_static_variables() != ERROR_NONE)
     {
       return 0;
     }
@@ -273,7 +273,7 @@ int grm_register(grm_event_type_t type, grm_event_callback_t callback)
 
 int grm_unregister(grm_event_type_t type)
 {
-  if (plot_init_static_variables() != NO_ERROR)
+  if (plot_init_static_variables() != ERROR_NONE)
     {
       return 0;
     }

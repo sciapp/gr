@@ -1,6 +1,10 @@
 #ifndef GRM_ARGS_INT_H_INCLUDED
 #define GRM_ARGS_INT_H_INCLUDED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* ######################### includes ############################################################################### */
 
 #include <stdarg.h>
@@ -124,7 +128,7 @@ void *copy_value(char format, void *value_ptr);
 
 args_value_iterator_t *arg_value_iter(const arg_t *arg);
 
-error_t arg_increase_array(arg_t *arg, size_t increment);
+err_t arg_increase_array(arg_t *arg, size_t increment);
 
 int arg_first_value(const arg_t *arg, const char *first_value_format, void *first_value, unsigned int *array_length);
 #define arg_first_value(arg, first_value_format, first_value, array_length) \
@@ -141,22 +145,22 @@ grm_args_t *args_flatcopy(const grm_args_t *args) UNUSED;
 grm_args_t *args_copy(const grm_args_t *copy_args);
 grm_args_t *args_copy_extended(const grm_args_t *copy_args, const char **keys_copy_as_array, const char **ignore_keys);
 
-error_t args_push_common(grm_args_t *args, const char *key, const char *value_format, const void *buffer, va_list *vl,
-                         int apply_padding);
-error_t args_push_vl(grm_args_t *args, const char *key, const char *value_format, va_list *vl);
-error_t args_push_arg(grm_args_t *args, arg_t *arg);
-error_t args_update_many(grm_args_t *args, const grm_args_t *update_args) UNUSED;
-error_t args_merge(grm_args_t *args, const grm_args_t *merge_args, const char *const *merge_keys);
-error_t args_setdefault_common(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
-                               va_list *vl, int apply_padding);
-error_t args_setdefault(grm_args_t *args, const char *key, const char *value_format, ...);
-error_t args_setdefault_buf(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
-                            int apply_padding) UNUSED;
-error_t args_setdefault_vl(grm_args_t *args, const char *key, const char *value_format, va_list *vl);
+err_t args_push_common(grm_args_t *args, const char *key, const char *value_format, const void *buffer, va_list *vl,
+                       int apply_padding);
+err_t args_push_vl(grm_args_t *args, const char *key, const char *value_format, va_list *vl);
+err_t args_push_arg(grm_args_t *args, arg_t *arg);
+err_t args_update_many(grm_args_t *args, const grm_args_t *update_args) UNUSED;
+err_t args_merge(grm_args_t *args, const grm_args_t *merge_args, const char *const *merge_keys);
+err_t args_setdefault_common(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
+                             va_list *vl, int apply_padding);
+err_t args_setdefault(grm_args_t *args, const char *key, const char *value_format, ...);
+err_t args_setdefault_buf(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
+                          int apply_padding) UNUSED;
+err_t args_setdefault_vl(grm_args_t *args, const char *key, const char *value_format, va_list *vl);
 
 void args_clear(grm_args_t *args, const char **exclude_keys);
 
-error_t args_increase_array(grm_args_t *args, const char *key, size_t increment) UNUSED;
+err_t args_increase_array(grm_args_t *args, const char *key, size_t increment) UNUSED;
 
 unsigned int args_count(const grm_args_t *args) UNUSED;
 
@@ -192,4 +196,7 @@ void args_value_iterator_finalize(args_value_iterator_t *args_value_iterator);
 void *args_value_iterator_next(args_value_iterator_t *args_value_iterator);
 
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* ifndef GRM_ARGS_INT_H_INCLUDED */
