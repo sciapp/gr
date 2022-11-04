@@ -230,12 +230,33 @@ static void create_queues_and_pixmaps(int width, int height)
   int i;
   for (i = 0; i < context_struct_.num_threads; i++)
     {
+      if (context_struct_.queues[i])
+        {
+          queue_destroy(context_struct_.queues[i]);
+        }
       context_struct_.queues[i] = queue_new();
       if (i != 0)
         {
-          context_struct_.pixmaps[i] = (unsigned char *)calloc(width * height * 4, sizeof(unsigned char));
+          if (context_struct_.pixmaps[i])
+            {
+              context_struct_.pixmaps[i] =
+                  (unsigned char *)realloc(context_struct_.pixmaps[i], width * height * 4 * sizeof(unsigned char));
+              memset(context_struct_.pixmaps[i], 0, width * height * 4 * sizeof(unsigned char));
+            }
+          else
+            {
+              context_struct_.pixmaps[i] = (unsigned char *)calloc(width * height * 4, sizeof(unsigned char));
+            }
         }
-      context_struct_.depth_buffers[i] = (float *)malloc(width * height * sizeof(float));
+      if (context_struct_.depth_buffers[i])
+        {
+          context_struct_.depth_buffers[i] =
+              (float *)realloc(context_struct_.depth_buffers[i], width * height * sizeof(float));
+        }
+      else
+        {
+          context_struct_.depth_buffers[i] = (float *)malloc(width * height * sizeof(float));
+        }
     }
   context_struct_.last_height = height;
   context_struct_.last_width = width;
