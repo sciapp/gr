@@ -14053,7 +14053,6 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
       y_start = 0;
     }
 #ifndef NO_THREADS
-  threadpool_add_work(tp, jobs + (i - 1) + (j - 1) * n_x);
   threadpool_destroy(tp);
 #endif
 
