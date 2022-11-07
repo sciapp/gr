@@ -571,7 +571,7 @@ static void gr(int id)
 int gr_drawgraphics(char *string)
 {
   char *s = string, *el, *fmt;
-  int i, id;
+  int i, id, clear_flag = 0;
 
   for (i = 0; i < 2; i++)
     {
@@ -602,10 +602,20 @@ int gr_drawgraphics(char *string)
                 {
                   fmt = format[id] + strlen(el) + 1;
                   s = xml(s, fmt);
+                  if (clear_flag)
+                    {
+                      gr_clearws();
+                      clear_flag = 0;
+                    }
                   gr(id);
                 }
               else if (strcmp(el, "gr") != 0)
                 fprintf(stderr, "%s: unknown XML element\n", el);
+              else
+                {
+                  gr_updatews();
+                  clear_flag = 1;
+                }
             }
         }
       while (*s && *s != '\n') s++;
