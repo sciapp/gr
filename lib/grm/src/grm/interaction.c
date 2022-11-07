@@ -310,7 +310,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       info->label = "";
       return info;
     }
-  plot_process_viewport(subplot_args);
+  /*  plot_process_viewport(subplot_args); */
   plot_process_window(subplot_args);
 
   gr_ndctowc(&x, &y);

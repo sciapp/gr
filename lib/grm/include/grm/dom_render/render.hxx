@@ -122,10 +122,6 @@ public:
                                                      const std::string &color_key,
                                                      std::optional<std::vector<int>> color,
                                                      const std::shared_ptr<Context> &extContext = nullptr);
-  //        std::shared_ptr<Element>
-  //        createGridIt(int nd, std::string& xd_key, std::optional<std::vector<double>> xd, std::string& yd_key,
-  //        std::optional<std::vector<double>> yd, std::string& zd_key, std::optional<std::vector<double>> zd, int nx,
-  //        int ny, )
 
   std::shared_ptr<Element> createSurface(const std::string &px_key, std::optional<std::vector<double>> px,
                                          const std::string py_key, std::optional<std::vector<double>> py,
@@ -188,20 +184,12 @@ public:
 
   std::shared_ptr<Element> createGR3DeleteMesh(int mesh);
 
-  //  std::shared_ptr<Element> createGR3DeleteMesh(std::shared_ptr<Element> &element);
-
   std::shared_ptr<Element> createGR3DrawImage(double xmin, double xmax, double ymin, double ymax, int width, int height,
                                               int drawable_type);
-
-  //  std::shared_ptr<Element> createGR3IsoSurfaceMesh(const std::string& data_key, std::optional<std::vector<int>>
-  //  *data, int isolevel, unsigned int dim_x, unsigned int dim_y, unsigned int dim_z, unsigned int stride_x, unsigned
-  //  int stride_y, unsigned int stride_z, double step_x, double step_y, double step_z, double offset_x, double
-  //  offset_y, double offset_z);
 
   std::shared_ptr<Element> createShadePoints(const std::string &x_key, std::optional<std::vector<double>> x,
                                              const std::string &y_key, std::optional<std::vector<double>> y, int xform,
                                              int w, int h, const std::shared_ptr<Context> &extContext = nullptr);
-
 
   std::shared_ptr<Element> createLayoutGrid(const grm::Grid &grid);
 

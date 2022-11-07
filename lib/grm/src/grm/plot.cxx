@@ -6061,8 +6061,9 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   int angle_ticks, rings;
   int phiflip = 0;
   double interval;
-  char *title;
-  char *norm;
+  char *char_title;
+  char *char_norm;
+  std::string norm, title;
 
   grm_args_values(args, "vp", "D", &vp);
   r_max = static_cast<double>(global_root->lastChildElement()->getAttribute("r_max"));
@@ -6081,9 +6082,13 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   if (strcmp(kind, "polar_histogram") == 0)
     {
       r_min = 0.0;
-      if (grm_args_values(args, "normalization", "s", &norm) == 0)
+      if (grm_args_values(args, "normalization", "s", &char_norm) == 0)
         {
           norm = "count";
+        }
+      else
+        {
+          norm = char_norm;
         }
 
       if (norm == "count" || norm == "cumcount")
@@ -6112,9 +6117,13 @@ err_t plot_draw_polar_axes(grm_args_t *args)
 
   if (grm_args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
 
-  if (!grm_args_values(args, "title", "s", &title))
+  if (!grm_args_values(args, "title", "s", &char_title))
     {
       title = "";
+    }
+  else
+    {
+      title = char_title;
     }
 
   auto group = global_render->createDrawPolarAxes(angle_ticks, rings, kind, phiflip, vp[0], vp[1], vp[2], vp[3], title,
