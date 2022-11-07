@@ -108,7 +108,7 @@ static char *format[] = {
     "textx:ffsi",
     "titles3d:sss",
     "tricont:iFFFiF",
-    "trisurf:iFFF",
+    "trisurface:iFFF",
     "uselinespec:s",
     "verrorbars:iFFFF",
 };
