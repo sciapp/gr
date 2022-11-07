@@ -9014,7 +9014,15 @@ void gr_tricontour(int npoints, double *x, double *y, double *z, int nlevels, do
   setscale(lx.scale_options);
 
   colors = (int *)xmalloc(nlevels * sizeof(int));
-  for (i = 0; i < nlevels; i++) colors[i] = (int)((double)i / (nlevels - 1) * (last_color - first_color)) + first_color;
+  if (nlevels > 1)
+    {
+      for (i = 0; i < nlevels; i++)
+        {
+          colors[i] = first_color + (int)((double)i / (nlevels - 1) * (last_color - first_color));
+        }
+    }
+  else
+    colors[0] = 1;
 
   gr_draw_tricont(npoints, x, y, z, nlevels, levels, colors);
 
