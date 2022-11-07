@@ -213,12 +213,6 @@ public:
 
   //! Modifierfunctions
 
-  //! ToDo: obsolete Function remove safely!
-  //  void setNextColor(const std::shared_ptr<Element> &element, std::optional<std::string> color_indices_key,
-  //                    std::optional<std::vector<int>> color_indices, std::optional<std::string> color_rgb_values_key,
-  //                    std::optional<std::vector<double>> color_rgb_values,
-  //                    const std::shared_ptr<Context> &extContext = nullptr);
-
   //! next 2 functions -> store color indices vec or color rgb values
   void setNextColor(const std::shared_ptr<Element> &element, const std::string &color_indices_key,
                     const std::vector<int> &color_indices, const std::shared_ptr<Context> &extContext = nullptr);

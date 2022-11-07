@@ -55,6 +55,7 @@ static void markerHelper(const std::shared_ptr<GR::Element> &element, const std:
 
   auto parent = element->parentElement();
   bool group = parentTypes.count(parent->localName());
+  int skipColorInd = -1000;
 
   auto attr = element->getAttribute("markertypes");
   if (attr.isString())
@@ -135,7 +136,7 @@ static void markerHelper(const std::shared_ptr<GR::Element> &element, const std:
         {
           if (colorind.size() > i)
             {
-              if (colorind[i] == 0)
+              if (colorind[i] == skipColorInd)
                 {
                   continue;
                 }
@@ -143,7 +144,7 @@ static void markerHelper(const std::shared_ptr<GR::Element> &element, const std:
             }
           else
             {
-              if (colorind.back() == 0)
+              if (colorind.back() == skipColorind)
                 {
                   continue;
                 }
@@ -1420,8 +1421,7 @@ static void processColorbarPosition(const std::shared_ptr<GR::Element> &elem)
 
   if (!subplot_element->hasAttribute("viewport"))
     {
-      /*TODO: implement exception for missing viewport*/
-      throw std::exception();
+      throw NotFoundError("Missing viewport\n");
     }
 
   viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
@@ -1440,8 +1440,7 @@ static void processRelativeCharHeight(const std::shared_ptr<GR::Element> &elem)
 
   if (!subplot_element->hasAttribute("viewport"))
     {
-      /* TODO: Implement `viewport missing` Exception */
-      throw std::exception();
+      throw NotFoundError("Viewport not found\n");
     }
   viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
   viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_xmax"));
@@ -1794,6 +1793,24 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
         }
     }
 
+  if (grm_args_values(subplot_args, "backgroundcolor", "i", &background_color_index))
+    {
+      gr_savestate();
+      gr_selntran(0);
+      gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
+      gr_setfillcolorind(background_color_index);
+      if (aspect_ratio_ws > 1)
+        {
+          gr_fillrect(subplot[0], subplot[1], subplot[2] / aspect_ratio_ws, subplot[3] / aspect_ratio_ws);
+        }
+      else
+        {
+          gr_fillrect(subplot[0] * aspect_ratio_ws, subplot[1] * aspect_ratio_ws, subplot[2], subplot[3]);
+        }
+      gr_selntran(1);
+      gr_restorestate();
+    }
+
   if (str_equals_any(kind.c_str(), 3, "pie", "polar", "polar_histogram"))
     {
       double x_center, y_center, r;
@@ -1884,21 +1901,16 @@ static void drawLegend(const std::shared_ptr<GR::Element> &elem, const std::shar
   auto labels_key = static_cast<std::string>(elem->getAttribute("labels"));
   auto specs_key = static_cast<std::string>(elem->getAttribute("specs"));
 
-
-  if (render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+  render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
+  if (!render)
     {
-    }
-  else
-    {
-      // TODO: error?
+      throw NotFoundError("No render-document found for element\n");
     }
   std::vector<std::string> labels = GR::get<std::vector<std::string>>((*context)[labels_key]);
   std::vector<std::string> specs = GR::get<std::vector<std::string>>((*context)[specs_key]);
 
   location = static_cast<int>(elem->getAttribute("location"));
 
-
-  //  gr_savestate();
   legend_size(labels, &w, &h);
 
   if (int_equals_any(location, 3, 11, 12, 13))
@@ -1937,9 +1949,6 @@ static void drawLegend(const std::shared_ptr<GR::Element> &elem, const std::shar
     {
       py = viewport[3] - 0.06;
     }
-
-  /* ToDo? if the node already has a child nodes from a previous run, the child node will be deleted and created again
-   but it is not always necessary to delete create again if there are no changes to the viewport. */
 
   if (elem->hasChildNodes())
     {
@@ -2050,12 +2059,10 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
   gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
   gr_inqwindow(&window[0], &window[1], &window[2], &window[3]);
 
-  if (render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+  render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
+  if (!render)
     {
-    }
-  else
-    {
-      // TODO: error?
+      throw NotFoundError("No render-document for element found\n");
     }
 
   auto newGroup = render->createGroup("groupCreatedDuringRender");
@@ -2086,6 +2093,8 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
       r_min = 0.0;
       norm = static_cast<std::string>(elem->getAttribute("norm"));
       r_max = static_cast<double>(elem->getAttribute("r_max"));
+
+      std::cout << "**** drawpolaraxes during render r_max " << r_max << "\n";
 
       if (norm == "count" || norm == "cumcount")
         {
@@ -2149,11 +2158,6 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
           render->setLineColorInd(temp, 90);
         }
     }
-  if (kind == "polar_histogram")
-    {
-      // TODO: where to store r_max? parent node? WIP
-      elem->parentElement()->setAttribute("r_max", r_min + n * tick);
-    }
   interval = 360.0 / angle_ticks;
   for (alpha = 0.0; alpha < 360; alpha += interval)
     {
@@ -2170,14 +2174,14 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
       y[0] *= 1.1;
       if (phiflip == 0)
         {
-          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", (int)grm_round(alpha));
+          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xb0", (int)grm_round(alpha));
         }
       else
         {
           if (alpha == 0.0)
-            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 0);
+            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xb0", 0);
           else
-            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 330 - (int)grm_round(alpha - interval));
+            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xb0", 330 - (int)grm_round(alpha - interval));
         }
       temp = render->createText(x[0], y[0], text_buffer, WC);
       newGroup->append(temp);
@@ -2277,12 +2281,10 @@ static void drawPieLegend(const std::shared_ptr<GR::Element> &elem, const std::s
 
   gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
 
-  if (render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+  render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
+  if (!render)
     {
-    }
-  else
-    {
-      // TODO: error?
+      throw NotFoundError("No render-document found for element\n");
     }
 
   if (elem->hasChildNodes())
@@ -2387,15 +2389,12 @@ static void piePlotTitleRender(const std::shared_ptr<GR::Element> &elem, const s
   if (!vp_found)
     {
       throw NotFoundError("No vp was found within ancestors");
-      // TODO: throw error when no vp is found within ancestors?
     }
 
-  if (render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+  render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
+  if (!render)
     {
-    }
-  else
-    {
-      // TODO: error?
+      throw NotFoundError("No render-document found for element\n");
     }
   std::string title = static_cast<std::string>(elem->getAttribute("pie-plot-title"));
   if (elem->hasChildNodes())
@@ -2433,11 +2432,12 @@ static void isosurfaceRender(const std::shared_ptr<GR::Element> &elem, const std
   get_figure_size(NULL, &fig_width, &fig_height, NULL, NULL);
   subplot_width = (int)(grm_max(fig_width, fig_height) * (x_max - x_min));
   subplot_height = (int)(grm_max(fig_width, fig_height) * (y_max - y_min));
-  // TODO? logger stuff?
-  //  logger((stderr, "viewport: (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
-  //  logger((stderr, "viewport ratio: %lf\n", (x_min - x_max) / (y_min - y_max)));
-  //  logger((stderr, "subplot size: (%d, %d)\n", subplot_width, subplot_height));
-  //  logger((stderr, "subplot ratio: %lf\n", ((double)subplot_width / (double)subplot_height)));
+
+  logger((stderr, "viewport: (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
+  logger((stderr, "viewport ratio: %lf\n", (x_min - x_max) / (y_min - y_max)));
+  logger((stderr, "subplot size: (%d, %d)\n", subplot_width, subplot_height));
+  logger((stderr, "subplot ratio: %lf\n", ((double)subplot_width / (double)subplot_height)));
+
   gr3_drawimage(x_min, x_max, y_min, y_max, subplot_width, subplot_height, GR3_DRAWABLE_GKS);
 }
 
@@ -2497,12 +2497,10 @@ static void setTextColorForBackground(const std::shared_ptr<GR::Element> &elem)
       double color_lightness;
       std::shared_ptr<GR::Render> render;
 
-      if (render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+      render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
+      if (!render)
         {
-        }
-      else
-        {
-          // TODO: error?
+          throw NotFoundError("Render-document not found for element\n");
         }
       if (elem->hasAttribute("color_index"))
         {
@@ -4516,7 +4514,7 @@ void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element, const
     }
   else
     {
-      // todo: error when vector is empty?
+      throw NotFoundError("Color indices are missing in vector\n");
     }
 }
 

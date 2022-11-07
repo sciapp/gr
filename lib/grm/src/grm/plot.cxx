@@ -1088,7 +1088,6 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "kind", "s", &kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-  //  plot_process_viewport(subplot_args);
   error = plot_store_coordinate_ranges(subplot_args);
   return_if_error;
   plot_process_window(subplot_args);
@@ -1340,158 +1339,6 @@ static void legend_size(grm_args_t *subplot_args, double *w, double *h)
     }
 }
 
-void plot_process_viewport(grm_args_t *subplot_args)
-{
-  //! TODO: Make dom compatible
-  const char *kind;
-  const double *subplot;
-  int keep_aspect_ratio;
-  int pixel_width, pixel_height;
-  double aspect_ratio_ws;
-  double vp[4];
-  double vp0, vp1, vp2, vp3;
-  double left_margin, right_margin, bottom_margin, top_margin;
-  char *x_label, *y_label, *title;
-  double viewport[4] = {0.0, 0.0, 0.0, 0.0};
-  int background_color_index;
-
-  grm_args_values(subplot_args, "kind", "s", &kind);
-  grm_args_values(subplot_args, "subplot", "D", &subplot);
-  grm_args_values(subplot_args, "keep_aspect_ratio", "i", &keep_aspect_ratio);
-  logger((stderr, "Using subplot: %lf, %lf, %lf, %lf\n", subplot[0], subplot[1], subplot[2], subplot[3]));
-
-  get_figure_size(NULL, &pixel_width, &pixel_height, NULL, NULL);
-
-  aspect_ratio_ws = (double)pixel_width / pixel_height;
-  memcpy(vp, subplot, sizeof(vp));
-  if (aspect_ratio_ws > 1)
-    {
-      vp[2] /= aspect_ratio_ws;
-      vp[3] /= aspect_ratio_ws;
-      if (keep_aspect_ratio)
-        {
-          double border = 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws);
-          vp[0] += border;
-          vp[1] -= border;
-        }
-    }
-  else
-    {
-      vp[0] *= aspect_ratio_ws;
-      vp[1] *= aspect_ratio_ws;
-      if (keep_aspect_ratio)
-        {
-          double border = 0.5 * (vp[3] - vp[2]) * (1.0 - aspect_ratio_ws);
-          vp[2] += border;
-          vp[3] -= border;
-        }
-    }
-
-  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
-    {
-      double extent;
-
-      extent = grm_min(vp[1] - vp[0], vp[3] - vp[2]);
-      vp0 = 0.5 * (vp[0] + vp[1] - extent);
-      vp1 = 0.5 * (vp[0] + vp[1] + extent);
-      vp2 = 0.5 * (vp[2] + vp[3] - extent);
-      vp3 = 0.5 * (vp[2] + vp[3] + extent);
-    }
-  else
-    {
-      vp0 = vp[0];
-      vp1 = vp[1];
-      vp2 = vp[2];
-      vp3 = vp[3];
-    }
-
-  left_margin = grm_args_values(subplot_args, "ylabel", "s", &y_label) ? 0.05 : 0;
-  if (str_equals_any(kind, 8, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface", "trisurf",
-                     "volume"))
-    {
-      right_margin = (vp1 - vp0) * 0.1;
-    }
-  else
-    {
-      right_margin = 0;
-    }
-  bottom_margin = grm_args_values(subplot_args, "xlabel", "s", &x_label) ? 0.05 : 0;
-  top_margin = grm_args_values(subplot_args, "title", "s", &title) ? 0.075 : 0;
-
-  viewport[0] = vp0 + (0.075 + left_margin) * (vp1 - vp0);
-  viewport[1] = vp0 + (0.95 - right_margin) * (vp1 - vp0);
-  viewport[2] = vp2 + (0.075 + bottom_margin) * (vp3 - vp2);
-  viewport[3] = vp2 + (0.975 - top_margin) * (vp3 - vp2);
-
-  if (str_equals_any(kind, 4, "line", "stairs", "scatter", "stem"))
-    {
-      int location;
-      double w, h;
-
-      if (grm_args_values(subplot_args, "location", "i", &location))
-        {
-          if (location == 11 || location == 12 || location == 13)
-            {
-              legend_size(subplot_args, &w, &h);
-              viewport[1] -= w + 0.1;
-            }
-        }
-    }
-
-  if (grm_args_values(subplot_args, "backgroundcolor", "i", &background_color_index))
-    {
-      gr_savestate();
-      gr_selntran(0);
-      gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
-      gr_setfillcolorind(background_color_index);
-      if (aspect_ratio_ws > 1)
-        {
-          gr_fillrect(subplot[0], subplot[1], subplot[2] / aspect_ratio_ws, subplot[3] / aspect_ratio_ws);
-        }
-      else
-        {
-          gr_fillrect(subplot[0] * aspect_ratio_ws, subplot[1] * aspect_ratio_ws, subplot[2], subplot[3]);
-        }
-      gr_selntran(1);
-      gr_restorestate();
-    }
-
-  if (str_equals_any(kind, 3, "pie", "polar", "polar_histogram"))
-    {
-      double x_center, y_center, r;
-
-      x_center = 0.5 * (viewport[0] + viewport[1]);
-      y_center = 0.5 * (viewport[2] + viewport[3]);
-      r = 0.45 * grm_min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
-      if (grm_args_contains(subplot_args, "title"))
-        {
-          r *= 0.975;
-          y_center -= 0.025 * r;
-        }
-      viewport[0] = x_center - r;
-      viewport[1] = x_center + r;
-      viewport[2] = y_center - r;
-      viewport[3] = y_center + r;
-    }
-
-  //  if (!currentDomElement)
-  //    {
-  //      global_render->setViewport(global_root->lastChildElement(), viewport[0], viewport[1], viewport[2],
-  //      viewport[3]);
-  //    }
-  //  else
-  //    {
-  //      global_render->setViewport(currentDomElement, viewport[0], viewport[1], viewport[2], viewport[3]);
-  //    }
-  //  gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-  //
-  //  grm_args_push(subplot_args, "vp", "dddd", vp[0], vp[1], vp[2], vp[3]);
-  //  grm_args_push(subplot_args, "viewport", "dddd", viewport[0], viewport[1], viewport[2], viewport[3]);
-  //
-  //  logger((stderr, "Stored vp (%lf, %lf, %lf, %lf)\n", vp[0], vp[1], vp[2], vp[3]));
-  //  logger((stderr, "Stored viewport (%lf, %lf, %lf, %lf)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
-}
-
 double auto_tick(double amin, double amax)
 {
   double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
@@ -1601,12 +1448,10 @@ void plot_process_window(grm_args_t *subplot_args)
       if (grm_args_values(subplot_args, "window", "D", &stored_window))
         {
           global_render->setWindow(group, stored_window[0], stored_window[1], stored_window[2], stored_window[3]);
-          //! TODO: Write a new gr_panzoom method that uses the dom-tree and not the internal gr attributes
           gr_setwindow(stored_window[0], stored_window[1], stored_window[2], stored_window[3]);
           logger((stderr, "Window before `gr_panzoom` (%lf, %lf, %lf, %lf)\n", stored_window[0], stored_window[1],
                   stored_window[2], stored_window[3]));
         }
-      //! TODO: dom render
       gr_panzoom(x, y, xzoom, yzoom, &x_min, &x_max, &y_min, &y_max);
       logger((stderr, "Window after `gr_panzoom` (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
       grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
@@ -2071,7 +1916,7 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
       double r_max;
       error = classes_polar_histogram(subplot_args, &r_max);
       cleanup_if_error;
-      grm_args_push(subplot_args, "r_max", "d", r_max);
+      global_root->lastChildElement()->setAttribute("r_max", r_max);
     }
 
 cleanup:
@@ -2484,8 +2329,8 @@ err_t plot_scatter(grm_args_t *subplot_args)
                       c_index = 1000 + (int)(255 * (c[i] - c_min) / (c_max - c_min));
                       if (c_index < 1000 || c_index > 1255)
                         {
-                          markerColorIndsVec.push_back(0);
-                          // ToDo: Originally this marker should be skipped...
+                          // colorind -1000 will be skipped
+                          markerColorIndsVec.push_back(-1000);
                           continue;
                         }
                     }
@@ -3225,10 +3070,9 @@ err_t plot_barplot(grm_args_t *subplot_args)
                   available_height = y2 - y1;
                   x_text = (x1 + x2) / 2;
                   y_text = (y1 + y2) / 2;
-                  gr_settextalign(2, 3);
-                  gr_setcharup(0.0, 1.0);
 
                   std::shared_ptr<GR::Element> temp = global_render->createText(x_text, y_text, ylabels[i], WC);
+                  global_render->setTextAlign(temp, 2, 3);
                   global_render->setTextWidthAndHeight(temp, available_width, available_height);
                   if (y_lightness[i] < 0.4)
                     {
@@ -3423,58 +3267,24 @@ err_t plot_barplot(grm_args_t *subplot_args)
 
                   if (ylabels_left > 0)
                     {
-                      gr_wctondc(&x1, &y1);
-                      gr_wctondc(&x2, &y2);
                       available_width = x2 - x1;
                       available_height = y2 - y1;
                       x_text = (x1 + x2) / 2;
                       y_text = (y1 + y2) / 2;
-                      gr_wctondc(&x1, &x2);
-                      auto temp = global_render->createText(x1, x2, ylabels[ylabels_length - ylabels_left]);
-                      inner_group->append(temp);
+
+                      auto label_elem =
+                          global_render->createText(x_text, y_text, ylabels[ylabels_length - ylabels_left], WC);
+                      global_render->setTextAlign(label_elem, 2, 3);
+                      global_render->setTextWidthAndHeight(label_elem, available_width, available_height);
+                      inner_group->append(label_elem);
 
                       if (y_lightness[ylabels_length - ylabels_left] < 0.4)
                         {
-
-                          global_render->setTextColorInd(temp, 0);
+                          global_render->setTextColorInd(label_elem, 0);
                         }
                       else
                         {
-                          global_render->setTextColorInd(temp, 1);
-                        }
-                      // TODO: Respect `textalign` and `charup` in the graphics tree
-                      gr_settextalign(2, 3);
-                      gr_setcharup(0.0, 1.0);
-                      gr_inqtextext(x_text, y_text, ylabels[ylabels_length - ylabels_left], tbx, tby);
-                      logger((stderr,
-                              "ylabel: \"%s\", textext_x: (%lf, %lf, %lf, %lf), textext_y: (%lf, %lf, %lf, %lf)\n",
-                              ylabels[ylabels_length - ylabels_left], tbx[0], tbx[1], tbx[2], tbx[3], tby[0], tby[1],
-                              tby[2], tby[3]));
-                      gr_wctondc(&tbx[0], &tby[0]);
-                      gr_wctondc(&tbx[2], &tby[2]);
-                      width = tbx[2] - tbx[0];
-                      height = tby[2] - tby[0];
-                      logger((stderr, "width: %lf, available_width: %lf\n", width, available_width));
-                      logger((stderr, "height: %lf, available_height: %lf\n", height, available_height));
-                      if (width < available_width && height < available_height)
-                        {
-                          /*
-                           * TODO: Respect `charup` in the graphics tree
-                           * gr_setcharup(0.0, 1.0);
-                           */
-                          auto temp = global_render->createText(x_text, y_text, ylabels[ylabels_length - ylabels_left]);
-                          subGroup->append(temp);
-                        }
-                      else if (height < available_width && width < available_height)
-                        {
-                          /*
-                           * TODO: Respect `charup` in the graphics tree
-                           * gr_setcharup(-1.0, 0.0);
-                           */
-                          auto temp = global_render->createText(x_text, y_text, ylabels[ylabels_length - ylabels_left]);
-                          subGroup->append(temp);
-                          // TODO: Remove the following line when `charup` is implemented in the graphics tree
-                          gr_setcharup(0.0, 1.0);
+                          global_render->setTextColorInd(label_elem, 1);
                         }
                       --ylabels_left;
                     }
@@ -3767,7 +3577,7 @@ err_t plot_hexbin(grm_args_t *subplot_args)
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       grm_args_values(*current_series, "nbins", "i", &nbins);
       cntmax = gr_hexbin(x_length, x, y, nbins);
-      // TODO: how to get cntmax with dom render?
+      // TODO: how to get cntmax with dom render? Dry Run gr_hexbin? Use hcell2xy?
 
       /* TODO: return an error in the else case? */
       if (cntmax > 0)
@@ -4538,6 +4348,7 @@ err_t plot_isosurface(grm_args_t *subplot_args)
 
 err_t plot_volume(grm_args_t *subplot_args)
 {
+  // ToDo: make dom compatible, see todo below for problems
   grm_args_t **current_series;
   const char *kind;
   double dlim[2] = {INFINITY, -INFINITY};
@@ -4807,7 +4618,7 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   int freeable_angles = 0;
   err_t error = ERROR_NONE;
 
-  // TODO: Move viewport dependent calculations to render?
+  // TODO: Some functions are broken, also broken in the classic develop
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "polarhistogram");
 
@@ -4845,7 +4656,11 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
   grm_args_values(*series, "nbins", "i", &num_bins);
 
-  grm_args_values(subplot_args, "r_max", "d", &max);
+  max = static_cast<double>(group->getAttribute("r_max"));
+
+  std::cout << "**** r_max in plot_polar histogram " << max << "\n";
+
+  //  grm_args_values(subplot_args, "r_max", "d", &max);
 
   if (grm_args_values(subplot_args, "phiflip", "i", &phiflip) == 0)
     {
@@ -5785,7 +5600,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   gr_updategks();
   gr_restorestate();
 
-  // TODO: gr_restorestate() restores resamplemethod?
   gr_setresamplemethod(resample);
 
 cleanup:
@@ -6093,10 +5907,6 @@ cleanup:
 
 err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 {
-  // TODO: GR3 dom render integration and barplot
-  // TODO: Move calculations to dom render for char height etc. (charheight and ticksize is now calced in the renderer
-  // however some textpositions depend on charheight, vp and viewport)
-
   const char *kind = NULL;
   const double *viewport, *vp;
   double x_tick;
@@ -6254,12 +6064,8 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   char *title;
   char *norm;
 
-  /* TODO: Move calculations containing viewport to the renderer */
-  // TODO: Solve r_max issues. render order: polar axes then polar histogram. polar axes calcs r_max and stores it in
-  // TODO: the dom, so that polar histogram can access it.
-
   grm_args_values(args, "vp", "D", &vp);
-
+  r_max = static_cast<double>(global_root->lastChildElement()->getAttribute("r_max"));
 
   if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
     {
@@ -6280,11 +6086,31 @@ err_t plot_draw_polar_axes(grm_args_t *args)
           norm = "count";
         }
 
-      grm_args_values(args, "r_max", "d", &r_max);
+      if (norm == "count" || norm == "cumcount")
+        {
+          tick = 1.5 * auto_tick(r_min, r_max);
+        }
+      else if (norm == "pdf" || norm == "probability")
+        {
+          tick = 1.5 * auto_tick(r_min, r_max);
+        }
+      else if (norm == "countdensity")
+        {
+          tick = 1.5 * auto_tick(r_min, r_max);
+        }
+      else if (norm == "cdf")
+        {
+          tick = 1.0 / rings;
+        }
+      else
+        {
+          tick = auto_tick(r_min, r_max);
+        }
+      // r_max for plot_polar_histogram
+      global_root->lastChildElement()->setAttribute("r_max", r_min + rings * tick);
     }
 
   if (grm_args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
-
 
   if (!grm_args_values(args, "title", "s", &title))
     {
@@ -6375,7 +6201,6 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
 
 err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colors)
 {
-  // TODO: move viewport dependent calcs to render
   double c_min, c_max;
   int *data;
   int scale, flip, options;
@@ -7944,6 +7769,7 @@ err_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
     {
       *r_max = max;
     }
+  std::cout << "**** Classes func r_max " << max << "\n";
 
 cleanup:
   free(bin_edges_buf);
@@ -8587,10 +8413,9 @@ int grm_plot(const grm_args_t *args)
         }
       else
         {
-          std::cout << "no grid elements\n";
+          std::cout << "No grid elements\n";
           while (*current_subplot_args != NULL)
             {
-              /* TODO: is the group name important? */
               auto group = global_render->createGroup("");
               global_root->append(group);
               if (!plot_process_subplot_args(*current_subplot_args))
