@@ -232,6 +232,13 @@ static void create_queues_and_pixmaps(int width, int height)
     {
       if (context_struct_.queues[i])
         {
+#ifndef NO_THREADS
+          args *arg = malloc_arg(i, 0, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL,
+                                 MAT3x3_INIT_NUL, NULL, NULL, 0, 0, 2, 0, 0, NULL, NULL, 0);
+          queue_enqueue(context_struct_.queues[i], arg);
+
+          pthread_join(context_struct_.threads[i], NULL);
+#endif
           queue_destroy(context_struct_.queues[i]);
         }
       context_struct_.queues[i] = queue_new();
@@ -2098,10 +2105,10 @@ GR3API void gr3_terminateSR_()
           free(context_struct_.pixmaps[i]);
         }
       free(context_struct_.depth_buffers[i]);
+#ifndef NO_THREADS
       arg = malloc_arg(i, 0, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT3x3_INIT_NUL, NULL,
                        NULL, 0, 0, 2, 0, 0, NULL, NULL, 0);
       queue_enqueue(context_struct_.queues[i], arg);
-#ifndef NO_THREADS
       pthread_join(context_struct_.threads[i], NULL);
 #endif
       queue_destroy(context_struct_.queues[i]);
