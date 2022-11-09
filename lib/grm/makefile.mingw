@@ -3,20 +3,39 @@ override THIRDPARTYDIR = $(abspath $(CURDIR)/../../3rdparty/build)
 endif
 
   DEFINES = -DGRDIR=\"$(GRDIR)\" -DNO_GS -DNO_X11 -D_WIN32_WINNT=0x0600 -DBUILDING_DLL
- INCLUDES = -I. -I../gks -I../gr -I../gr3 -I$(THIRDPARTYDIR)/include
-   CFLAGS = $(DEFINES) $(INCLUDES)
+   CFLAGS = $(DEFINES) -std=c90
+ CXXFLAGS = $(DEFINES) -std=c++17
+ INCLUDES = -I./include \
+            -I./src \
+            -I../gks \
+            -I../gr \
+            -I../gr3 \
+            -I$(THIRDPARTYDIR)/include
   GKSLIBS = -L ../gks/ -lGKS
    GRLIBS = -L ../gr/ -lGR
   GR3LIBS = -L ../gr3/ -lGR3
   LDFLAGS = -Wl,--out-implib,$(@:.dll=.a)
      LIBS = $(GR3LIBS) $(GRLIBS) $(GKSLIBS) -lm -lws2_32 -lmsimg32 -lgdi32
 
-OBJS = args.o base64.o datatype/double_map.o datatype/string_array_map.o datatype/string_list.o datatype/string_map.o \
-       datatype/uint_map.o dump.o dynamic_args_array.o error.o event.o interaction.o json.o logging.o memwriter.o \
-	   net.o plot.o util.o
+     OBJS = src/grm/args.o \
+            src/grm/base64.o \
+            src/grm/dump.o \
+            src/grm/dynamic_args_array.o \
+            src/grm/error.o \
+            src/grm/event.o \
+            src/grm/interaction.o \
+            src/grm/json.o \
+            src/grm/logging.o \
+            src/grm/memwriter.o \
+            src/grm/net.o \
+            src/grm/plot.o \
+            src/grm/util.o \
+            src/grm/datatype/double_map.o \
+            src/grm/datatype/string_array_map.o \
+            src/grm/datatype/string_list.o \
+            src/grm/datatype/string_map.o \
+            src/grm/datatype/uint_map.o
 
-
-.SUFFIXES: .o .c
 
 default: all
 
@@ -25,16 +44,23 @@ all: libGRM.dll libGRM.lib
 .c.o:
 	$(CC) -o $@ -c $(INCLUDES) $(CFLAGS) $<
 
+.cxx.o:
+	$(CXX) -o $@ -c $(INCLUDES) $(CXXFLAGS) $<
+
 libGRM.lib: $(OBJS)
 	$(AR) crs $@ $?
 
 libGRM.dll: $(OBJS)
-	$(CC) -shared -o $@ $^ $(LIBS) $(LDFLAGS)
+	$(CXX) -shared -o $@ $^ $(LIBS) $(LDFLAGS)
 
 grm.c: grm.h
 
 clean:
-	$(RM) libGRM.so
-	$(RM) *.o
+	$(RM) libGRM.lib \
+	      libGRM.dll \
+	      src/grm/*.o \
+	      src/grm/datatype/*.o
 
 .PHONY: default all clean
+.SUFFIXES:  # Delete the default suffixes
+.SUFFIXES: .c .cxx .o  # List all suffixes for suffix rules explicitly

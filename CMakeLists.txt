@@ -455,34 +455,24 @@ elseif(NOT OpenGL_FOUND)
 endif()
 
 set(GRM_SOURCES
-    lib/grm/args.c
-    lib/grm/base64.c
-    lib/grm/dump.c
-    lib/grm/dynamic_args_array.c
-    lib/grm/error.c
-    lib/grm/event.c
-    lib/grm/interaction.c
-    lib/grm/json.c
-    lib/grm/logging.c
-    lib/grm/memwriter.c
-    lib/grm/net.c
-    lib/grm/plot.c
-    lib/grm/util.c
-    lib/grm/datatype/double_map.c
-    lib/grm/datatype/string_array_map.c
-    lib/grm/datatype/string_list.c
-    lib/grm/datatype/string_map.c
-    lib/grm/datatype/uint_map.c
-)
-
-set(GRM_SUBDIR_HEADERS
-    lib/grm/args.h
-    lib/grm/dump.h
-    lib/grm/event.h
-    lib/grm/interaction.h
-    lib/grm/net.h
-    lib/grm/plot.h
-    lib/grm/util.h
+    lib/grm/src/grm/args.c
+    lib/grm/src/grm/base64.c
+    lib/grm/src/grm/dump.c
+    lib/grm/src/grm/dynamic_args_array.c
+    lib/grm/src/grm/error.c
+    lib/grm/src/grm/event.c
+    lib/grm/src/grm/interaction.c
+    lib/grm/src/grm/json.c
+    lib/grm/src/grm/logging.c
+    lib/grm/src/grm/memwriter.c
+    lib/grm/src/grm/net.c
+    lib/grm/src/grm/plot.cxx
+    lib/grm/src/grm/util.c
+    lib/grm/src/grm/datatype/double_map.c
+    lib/grm/src/grm/datatype/string_array_map.c
+    lib/grm/src/grm/datatype/string_list.c
+    lib/grm/src/grm/datatype/string_map.c
+    lib/grm/src/grm/datatype/uint_map.c
 )
 
 add_library(grm_static STATIC ${GRM_SOURCES})
@@ -506,15 +496,21 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
   endif()
   target_include_directories(
     ${LIBRARY}
-    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/>
-           $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/include/>
+           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/src/> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
   target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    target_compile_options(${LIBRARY} PRIVATE /permissive-)
+  endif()
   set_target_properties(
     ${LIBRARY}
     PROPERTIES C_STANDARD 90
                C_EXTENSIONS OFF
                C_STANDARD_REQUIRED ON
+               CXX_STANDARD 17
+               CXX_EXTENSIONS OFF
+               CXX_STANDARD_REQUIRED ON
                POSITION_INDEPENDENT_CODE ON
                C_VISIBILITY_PRESET hidden
                INSTALL_RPATH "${INSTALL_RPATH}"
@@ -1100,8 +1096,8 @@ if(GR_BUILD_DEMOS)
   target_compile_options(grdemo PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(grdemo PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
 
-  add_subdirectory(lib/grm/test/public_api grm_test_public_api)
-  add_subdirectory(lib/grm/test/internal_api grm_test_internal_api)
+  add_subdirectory(lib/grm/test/public_api/grm grm_test_public_api)
+  add_subdirectory(lib/grm/test/internal_api/grm grm_test_internal_api)
 endif()
 
 if(GR_INSTALL)
@@ -1233,8 +1229,8 @@ if(GR_INSTALL)
       BUNDLE DESTINATION Applications
     )
   endif()
-  install(FILES lib/gr/gr.h lib/gks/gks.h lib/gr3/gr3.h lib/grm/grm.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
-  install(FILES ${GRM_SUBDIR_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grm/)
+  install(FILES lib/gr/gr.h lib/gks/gks.h lib/gr3/gr3.h lib/grm/include/grm.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
+  install(DIRECTORY lib/grm/include/grm DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
   if(TARGET qt4gr
      OR TARGET qt5gr
      OR TARGET qt6gr

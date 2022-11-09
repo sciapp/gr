@@ -8,7 +8,7 @@ stages:
 
 tag-type-check:
   stage: prebuild
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/deploy
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/deploy
   only:
     - tags@Scientific-IT-Systems/gr
   script:
@@ -16,7 +16,7 @@ tag-type-check:
 
 code-style-check:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   script:
   - set +e
   - for file in $(git diff $(git describe --tags --abbrev=0) HEAD --name-only --diff-filter=ACMR); do
@@ -50,11 +50,11 @@ code-style-check:
 
 ubuntu-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   script:
-  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-  - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
+  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make self GRDIR=/usr/local/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
@@ -64,23 +64,21 @@ ubuntu-self-contained:
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
-  - mv artifacts artifacts-ubuntu1604
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp -r lib/grm/include/grm artifacts/include/
+  - mv artifacts artifacts-ubuntu2004
   artifacts:
     expire_in: 1 week
     paths:
-    - artifacts-ubuntu1604/
+    - artifacts-ubuntu2004/
 
 ubuntu-cmake-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/ubuntu-self-contained
   script:
-    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-    - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
+    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
     - make -C 3rdparty default extras
     - mkdir build
     - cd build
@@ -88,15 +86,15 @@ ubuntu-cmake-self-contained:
     - make
     - make install
     - cd ..
-    - mv install artifacts-ubuntu1604-cmake
+    - mv install artifacts-ubuntu2004-cmake
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-ubuntu1604-cmake/
+      - artifacts-ubuntu2004-cmake/
 
 ubuntu-cmake-self-contained-test:
   stage: test
-  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing
+  image: iffregistry.fz-juelich.de/imeyer/gr-test/c-testing
   rules:
   - if: '$CI_MERGE_REQUEST_ID'
     when: never
@@ -108,7 +106,7 @@ ubuntu-cmake-self-contained-test:
   needs:
   - ubuntu-cmake-self-contained
   script:
-  - export GRDIR=`pwd`/artifacts-ubuntu1604-cmake/
+  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
   - gr_test c `pwd`/test_result/
   artifacts:
     paths:
@@ -117,7 +115,7 @@ ubuntu-cmake-self-contained-test:
 
 ubuntu-cmake-self-contained-rebuild-images:
   stage: test
-  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing:latest
+  image: iffregistry.fz-juelich.de/imeyer/gr-test/c-testing:latest
   rules:
   - if: '$CI_MERGE_REQUEST_ID'
     when: never
@@ -128,13 +126,15 @@ ubuntu-cmake-self-contained-rebuild-images:
   needs:
   - ubuntu-cmake-self-contained
   script:
-  - export GRDIR=`pwd`/artifacts-ubuntu1604-cmake/
+  - apt-get update && apt-get install -y python3-venv
+  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
 
   - mkdir -p ~/.ssh
   - cat $SSH_KEY | base64 -d > ~/.ssh/id_rsa
   - mv $SSH_KNOWN_HOSTS ~/.ssh/known_hosts
   - chmod 600 ~/.ssh/id_rsa
-  - git clone gitlab@iffgit.fz-juelich.de:Scientific-IT-Systems/gr-test.git
+  - python3 -m venv env && source env/bin/activate
+  - git clone gitlab@iffgit.fz-juelich.de:imeyer/gr-test.git
   - pip install -e gr-test/
   - cd gr-test
   - git checkout -b update-files/job-$CI_JOB_ID
@@ -158,19 +158,19 @@ ubuntu-cmake-self-contained-rebuild-images:
 
 ubuntu-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   script:
   - make install GRDIR=/usr/local/gr
 
 ubuntu-cmake-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-system-dependencies
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/ubuntu-system-dependencies
   script:
     - apt-get update
-    - apt-get install -y libqhull-dev libbz2-dev libavdevice-dev libtheora-dev libogg-dev libvpx-dev libfreetype6-dev
-    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-    - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
+    - apt-get install -y libqhull-dev libbz2-dev libjpeg-turbo8-dev libavdevice-dev libtheora-dev libogg-dev libvpx-dev libfreetype6-dev
+    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
     - mkdir build
     - cd build
     - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
@@ -178,11 +178,11 @@ ubuntu-cmake-system-dependencies:
 
 debian-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   script:
-  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-  - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
+  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make self GRDIR=/usr/local/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
@@ -192,23 +192,21 @@ debian-self-contained:
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
-  - mv artifacts artifacts-debian9
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp -r lib/grm/include/grm artifacts/include/
+  - mv artifacts artifacts-debian10
   artifacts:
     expire_in: 1 week
     paths:
-    - artifacts-debian9/
+    - artifacts-debian10/
 
 debian-cmake-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/debian-self-contained
   script:
-    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-    - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
+    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
     - make -C 3rdparty default extras
     - mkdir build
     - cd build
@@ -216,15 +214,15 @@ debian-cmake-self-contained:
     - make
     - make install
     - cd ..
-    - mv install artifacts-debian9-cmake
+    - mv install artifacts-debian10-cmake
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-debian9-cmake/
+      - artifacts-debian10-cmake/
 
 debian-self-contained-armhf:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME-cross
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME-cross
   script:
     - make -C 3rdparty default extras \
       HOST=arm-linux-gnueabihf \
@@ -262,19 +260,17 @@ debian-self-contained-armhf:
          lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
     - cp -r lib/gks/fonts artifacts/
     - mkdir artifacts/include/
-    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-    - mkdir artifacts/include/grm/
-    - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-         artifacts/include/grm/
-    - mv artifacts artifacts-debian9-armhf
+    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+    - cp -r lib/grm/include/grm artifacts/include/
+    - mv artifacts artifacts-debian10-armhf
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-debian9-armhf/
+      - artifacts-debian10-armhf/
 
 debian-self-contained-aarch64:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained-aarch64
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/debian-self-contained-aarch64
   script:
     - make -C 3rdparty default extras \
       HOST=aarch64-linux-gnu \
@@ -311,19 +307,17 @@ debian-self-contained-aarch64:
       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
     - cp -r lib/gks/fonts artifacts/
     - mkdir artifacts/include/
-    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-    - mkdir artifacts/include/grm/
-    - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-      artifacts/include/grm/
-    - mv artifacts artifacts-debian9-aarch64
+    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+    - cp -r lib/grm/include/grm artifacts/include/
+    - mv artifacts artifacts-debian10-aarch64
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-debian9-aarch64/
+      - artifacts-debian10-aarch64/
 
 debian-cmake-self-contained-aarch64:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained-aarch64
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/debian-self-contained-aarch64
   script:
     - make -C 3rdparty default extras \
       HOST=aarch64-linux-gnu \
@@ -348,15 +342,15 @@ debian-cmake-self-contained-aarch64:
     - cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/aarch64-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
     - make install
-    - mv /usr/local/gr ${CI_PROJECT_DIR}/artifacts-debian9-cmake-aarch64
+    - mv /usr/local/gr ${CI_PROJECT_DIR}/artifacts-debian10-cmake-aarch64
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-debian9-cmake-aarch64/
+      - artifacts-debian10-cmake-aarch64/
 
 debian-cmake-self-contained-armhf:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained-armhf-cross
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/debian-self-contained-armhf-cross
   script:
     - make -C 3rdparty default extras \
       HOST=arm-linux-gnueabihf \
@@ -381,21 +375,21 @@ debian-cmake-self-contained-armhf:
     - cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/armhf-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
     - make install
-    - mv /usr/local/gr ${CI_PROJECT_DIR}/artifacts-debian9-cmake-armhf
+    - mv /usr/local/gr ${CI_PROJECT_DIR}/artifacts-debian10-cmake-armhf
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-debian9-cmake-armhf/
+      - artifacts-debian10-cmake-armhf/
 
 debian-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   script:
   - make install GRDIR=/usr/local/gr
 
 debian-system-dependencies-armhf:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME-cross
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME-cross
   script:
     - make install \
       CC=arm-linux-gnueabihf-gcc \
@@ -410,13 +404,13 @@ debian-system-dependencies-armhf:
 
 debian-cmake-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-system-dependencies
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/debian-system-dependencies
   script:
     - apt-get update
     - apt-get install -y libqhull-dev libbz2-dev libfreetype6-dev
-    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-    - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
+    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
     - mkdir build
     - cd build
     - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
@@ -424,11 +418,12 @@ debian-cmake-system-dependencies:
 
 centos7-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   script:
-  - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-  - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
+  - source /opt/rh/devtoolset-8/enable
+  - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make self GRDIR=/usr/local/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
@@ -438,10 +433,8 @@ centos7-self-contained:
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp -r lib/grm/include/grm artifacts/include/
   - mv artifacts artifacts-centos7
   artifacts:
     expire_in: 1 week
@@ -450,11 +443,12 @@ centos7-self-contained:
 
 centos7-cmake-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos7-self-contained
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/centos7-self-contained
   script:
-    - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-    - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
+    - source /opt/rh/devtoolset-8/enable
+    - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
     - make -C 3rdparty default extras
     - mkdir build
     - cd build
@@ -471,18 +465,20 @@ centos7-cmake-self-contained:
 
 centos7-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   script:
+  - source /opt/rh/devtoolset-8/enable
   - make install GRDIR=/usr/local/gr
 
 centos7-cmake-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos7-system-dependencies
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/centos7-system-dependencies
   script:
+    - source /opt/rh/devtoolset-8/enable
     - yum install -y libjpeg-turbo-devel libtiff-devel bzip2-devel
-    - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-    - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
+    - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
     - make -C 3rdparty default TARGETS="qhull"
     - mkdir build
     - cd build
@@ -491,13 +487,15 @@ centos7-cmake-system-dependencies:
 
 centos7-32bit-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   script:
-  - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-i386.tar.gz
-  - tar xf cmake-3.6.3-Linux-i386.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-i386/bin/cmake
+  - source /opt/gcc-8.5.0/enable
+  - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-i386.tar.gz
+  - tar xf cmake-3.23.0-linux-i386.tar.gz
+  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-i386/bin/cmake
   - THEORA_EXTRA_CONFIGURE_FLAGS=--disable-asm
     OPENH264_EXTRA_MAKE_FLAGS=ARCH=i386
+    EXTRA_LDFLAGS="-static-libstdc++ -static-libgcc"
     make self GRDIR=/usr/local/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
@@ -507,10 +505,9 @@ centos7-32bit-self-contained:
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp -r lib/grm/include/grm artifacts/include/
   - mv artifacts artifacts-centos7-32bit
   artifacts:
     expire_in: 1 week
@@ -519,17 +516,19 @@ centos7-32bit-self-contained:
 
 centos7-32bit-cmake-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos7-32bit-self-contained
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/centos7-32bit-self-contained
   script:
-    - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-i386.tar.gz
-    - tar xf cmake-3.6.3-Linux-i386.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-i386/bin/cmake
+    - source /opt/gcc-8.5.0/enable
+    - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-i386.tar.gz
+    - tar xf cmake-3.23.0-linux-i386.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-i386/bin/cmake
     - THEORA_EXTRA_CONFIGURE_FLAGS=--disable-asm
       OPENH264_EXTRA_MAKE_FLAGS=ARCH=i386
       make -C 3rdparty default extras
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
+    - LDFLAGS="-static-libstdc++ -static-libgcc"
+      $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
     - make install
     - cd ..
@@ -541,27 +540,31 @@ centos7-32bit-cmake-self-contained:
 
 centos7-32bit-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   script:
-  - make install GRDIR=/usr/local/gr
+  - source /opt/gcc-8.5.0/enable
+  - EXTRA_LDFLAGS="-static-libstdc++ -static-libgcc"
+    make install GRDIR=/usr/local/gr
 
 centos7-32bit-cmake-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos7-32bit-system-dependencies
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/centos7-32bit-system-dependencies
   script:
+    - source /opt/gcc-8.5.0/enable
     - yum install -y libtiff-devel bzip2-devel
-    - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-i386.tar.gz
-    - tar xf cmake-3.6.3-Linux-i386.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-i386/bin/cmake
+    - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-i386.tar.gz
+    - tar xf cmake-3.23.0-linux-i386.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-i386/bin/cmake
     - make -C 3rdparty default TARGETS="qhull"
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
+    - LDFLAGS="-static-libstdc++ -static-libgcc"
+      $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
 
 arch-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   script:
     - make self GRDIR=/usr/local/gr
     - mkdir artifacts
@@ -572,10 +575,8 @@ arch-self-contained:
          lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
     - cp -r lib/gks/fonts artifacts/
     - mkdir artifacts/include/
-    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-    - mkdir artifacts/include/grm/
-    - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-         artifacts/include/grm/
+    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+    - cp -r lib/grm/include/grm artifacts/include/
     - mv artifacts artifacts-arch
   artifacts:
     expire_in: 1 week
@@ -584,7 +585,7 @@ arch-self-contained:
 
 arch-cmake-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/arch-self-contained
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/arch-self-contained
   script:
     - make -C 3rdparty default extras
     - mkdir build
@@ -601,13 +602,13 @@ arch-cmake-self-contained:
 
 arch-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   script:
     - make install GRDIR=/usr/local/gr
 
 arch-cmake-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/arch-system-dependencies
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/arch-system-dependencies
   script:
     - pacman -Sy
     - pacman -S --noconfirm --needed qhull
@@ -635,10 +636,8 @@ freebsd-self-contained:
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp -r lib/grm/include/grm artifacts/include/
   - mv artifacts artifacts-freebsd13
   artifacts:
     expire_in: 1 week
@@ -647,11 +646,11 @@ freebsd-self-contained:
 
 windows-32bit-cross:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   script:
-  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-  - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
+  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
     EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo agg"
     HOST=i686-w64-mingw32
@@ -687,12 +686,10 @@ windows-32bit-cross:
        lib/gr/libGR.dll lib/gr/libGR.a lib/gr3/libGR3.dll lib/gr3/libGR3.a lib/grm/libGRM.dll lib/grm/libGRM.a
        artifacts/
   - cp -r lib/gks/fonts artifacts/
-  - cp /usr/lib/gcc/i686-w64-mingw32/6.3-win32/libgcc_s_sjlj-1.dll artifacts/
+  - cp /usr/lib/gcc/i686-w64-mingw32/8.3-win32/libgcc_s_sjlj-1.dll artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp -r lib/grm/include/grm artifacts/include/
   - mv artifacts artifacts-windows32
   artifacts:
     expire_in: 1 week
@@ -701,16 +698,16 @@ windows-32bit-cross:
 
 windows-32bit-cmake-cross:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/windows-32bit-cross
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/windows-32bit-cross
   script:
     - mkdir qt5-runtime-Windows-i686
     - cd qt5-runtime-Windows-i686
-    - wget https://gr-framework.org/downloads/3rdparty/qt5-runtime-Windows-i686.tar.gz
-    - tar xf qt5-runtime-Windows-i686.tar.gz
+    - wget https://gr-framework.org/downloads/3rdparty/qt5-runtime-Windows-i686-mingw81.tar.gz
+    - tar xf qt5-runtime-Windows-i686-mingw81.tar.gz
     - cd ..
-    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-    - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
+    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
     - make -C 3rdparty default extras
       EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo agg"
       HOST=i686-w64-mingw32
@@ -736,7 +733,7 @@ windows-32bit-cmake-cross:
     - cd ..
     - mv qt5-runtime-Windows-i686/*.dll install/bin/
     - mv qt5-runtime-Windows-i686/platforms install/bin/platforms
-    - cp /usr/lib/gcc/i686-w64-mingw32/6.3-win32/libgcc_s_sjlj-1.dll install/bin/
+    - cp /usr/lib/gcc/i686-w64-mingw32/8.3-win32/libgcc_s_sjlj-1.dll install/bin/
     - mv install artifacts-windows-32bit-cmake
   artifacts:
     expire_in: 1 week
@@ -745,11 +742,11 @@ windows-32bit-cmake-cross:
 
 windows-64bit-cross:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   script:
-  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-  - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
+  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
     EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo agg"
     HOST=x86_64-w64-mingw32
@@ -785,12 +782,10 @@ windows-64bit-cross:
        lib/gr/libGR.dll lib/gr/libGR.a lib/gr3/libGR3.dll lib/gr3/libGR3.a lib/grm/libGRM.dll lib/grm/libGRM.a
        artifacts/
   - cp -r lib/gks/fonts artifacts/
-  - cp /usr/lib/gcc/x86_64-w64-mingw32/6.3-win32/libgcc_s_seh-1.dll artifacts/
+  - cp /usr/lib/gcc/x86_64-w64-mingw32/8.3-win32/libgcc_s_seh-1.dll artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp -r lib/grm/include/grm artifacts/include/
   - mv artifacts artifacts-windows64
   artifacts:
     expire_in: 1 week
@@ -799,16 +794,16 @@ windows-64bit-cross:
 
 windows-64bit-cmake-cross:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/windows-64bit-cross
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/windows-64bit-cross
   script:
     - mkdir qt5-runtime-Windows-x86_64
     - cd qt5-runtime-Windows-x86_64
-    - wget https://gr-framework.org/downloads/3rdparty/qt5-runtime-Windows-x86_64.tar.gz
-    - tar xf qt5-runtime-Windows-x86_64.tar.gz
+    - wget https://gr-framework.org/downloads/3rdparty/qt5-runtime-Windows-x86_64-mingw81.tar.gz
+    - tar xf qt5-runtime-Windows-x86_64-mingw81.tar.gz
     - cd ..
-    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-    - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
+    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
     - make -C 3rdparty default extras
       EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo agg"
       HOST=x86_64-w64-mingw32
@@ -834,7 +829,7 @@ windows-64bit-cmake-cross:
     - cd ..
     - mv qt5-runtime-Windows-x86_64/*.dll install/bin/
     - mv qt5-runtime-Windows-x86_64/platforms install/bin/platforms
-    - cp /usr/lib/gcc/x86_64-w64-mingw32/6.3-win32/libgcc_s_seh-1.dll install/bin/
+    - cp /usr/lib/gcc/x86_64-w64-mingw32/8.3-win32/libgcc_s_seh-1.dll install/bin/
     - mv install artifacts-windows-64bit-cmake
   artifacts:
     expire_in: 1 week
@@ -843,26 +838,27 @@ windows-64bit-cmake-cross:
 
 windows-64bit-cmake-msvc:
   stage: build
-  image: windows:10-gr-build
+  image: windows_cpp17:10-gr-build
   tags:
     - libvirt
   script:
     - vcvars_cmd cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/c/gr -DGR_USE_BUNDLED_LIBRARIES=OFF
     - vcvars_cmd cmake --build build --config Release
     - vcvars_cmd cmake --install build --config Release
-    - cd /c/Qt/5.15.2/msvc2015_64/bin
+    - cd /c/Qt/5.15.2/msvc2019_64/bin
     - cp -v Qt5Core.dll Qt5Gui.dll Qt5Widgets.dll Qt5Network.dll /c/gr/bin/
     - cd -
     - cd /c/gr/bin
     - mkdir -p platforms
-    - cp -v /c/Qt/5.15.2/msvc2015_64/plugins/platforms/qwindows.dll platforms/
+    - cp -v /c/Qt/5.15.2/msvc2019_64/plugins/platforms/qwindows.dll platforms/
     - cd -
     - cd /c/local/bin
     - cp -v cairo.dll freetype.dll jpeg62.dll libpng16.dll pixman-1-0.dll qhull_r.dll tiff.dll tiffxx.dll turbojpeg.dll zlib.dll /c/gr/bin/
     - cd -
-    - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Redist/MSVC/14.28.29325/x64/Microsoft.VC142.CRT/vcruntime140.dll" /c/gr/bin/
-    - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Redist/MSVC/14.28.29325/x64/Microsoft.VC142.CRT/vcruntime140_1.dll" /c/gr/bin/
-    - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Redist/MSVC/14.28.29325/x64/Microsoft.VC142.CRT/msvcp140.dll" /c/gr/bin/
+    - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.31.31103/x64/Microsoft.VC143.CRT/vcruntime140.dll" /c/gr/bin/
+    - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.31.31103/x64/Microsoft.VC143.CRT/vcruntime140_1.dll" /c/gr/bin/
+    - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.31.31103/x64/Microsoft.VC143.CRT/msvcp140.dll" /c/gr/bin/
+    - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.31.31103/x64/Microsoft.VC143.CRT/msvcp140_1.dll" /c/gr/bin/
     - mv /c/gr artifacts-windows-64bit-cmake-msvc
   artifacts:
     expire_in: 1 week
@@ -875,10 +871,10 @@ darwin-self-contained-iff1600:
     - branches@Scientific-IT-Systems/gr
     - tags@Scientific-IT-Systems/gr
   script:
-  - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Darwin-x86_64.tar.gz
-  - tar xf cmake-3.6.3-Darwin-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.6.3-Darwin-x86_64/CMake.app/Contents/bin/cmake
-  - export MACOSX_DEPLOYMENT_TARGET=10.11
+  - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-macos-universal.tar.gz
+  - tar xf cmake-3.23.0-macos-universal.tar.gz
+  - export CMAKE_CMD=`pwd`/cmake-3.23.0-macos-universal/CMake.app/Contents/bin/cmake
+  - export MACOSX_DEPLOYMENT_TARGET=10.14
   - rm -rf /usr/local/gr/*
   - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake
   - mkdir artifacts
@@ -888,10 +884,8 @@ darwin-self-contained-iff1600:
        lib/grm/libGRM.a lib/grm/libGRM.dylib lib/gr/qtgr/*.dylib artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp -r lib/grm/include/grm artifacts/include/
   - mkdir artifacts/Applications/
   - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
   - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
@@ -920,7 +914,7 @@ darwin-self-contained:
   tags:
   - libvirt
   script:
-  - export MACOSX_DEPLOYMENT_TARGET=10.11
+  - export MACOSX_DEPLOYMENT_TARGET=10.14
   - sudo mkdir /usr/local/gr
   - sudo chown administrator:wheel /usr/local/gr
   - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake QT6_QMAKE=/usr/local/qt6/bin/qmake
@@ -931,10 +925,8 @@ darwin-self-contained:
       lib/grm/libGRM.a lib/grm/libGRM.dylib lib/gr/qtgr/*.dylib artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp -r lib/grm/include/grm artifacts/include/
   - mkdir artifacts/Applications/
   - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
   - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
@@ -961,9 +953,9 @@ darwin-self-contained-iff1605:
     - branches@Scientific-IT-Systems/gr
     - tags@Scientific-IT-Systems/gr
   script:
-    - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Darwin-x86_64.tar.gz
-    - tar xf cmake-3.6.3-Darwin-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.6.3-Darwin-x86_64/CMake.app/Contents/bin/cmake
+    - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-macos-universal.tar.gz
+    - tar xf cmake-3.23.0-macos-universal.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.23.0-macos-universal/CMake.app/Contents/bin/cmake
     - export MACOSX_DEPLOYMENT_TARGET=11.0
     - rm -rf /usr/local/gr/*
     - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake
@@ -974,10 +966,8 @@ darwin-self-contained-iff1605:
       lib/grm/libGRM.a lib/grm/libGRM.dylib lib/gr/qtgr/*.dylib artifacts/
     - cp -r lib/gks/fonts artifacts/
     - mkdir artifacts/include/
-    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-    - mkdir artifacts/include/grm/
-    - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-      artifacts/include/grm/
+    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+    - cp -r lib/grm/include/grm artifacts/include/
     - mkdir artifacts/Applications/
     - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
     - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
@@ -1002,7 +992,7 @@ darwin-self-contained-iff1605:
 
 emscripten:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   script:
   - source /emsdk/emsdk_env.sh
   - emmake make -C js
@@ -1016,7 +1006,7 @@ emscripten:
 
 packages-tar:
   stage: package
-  image: ubuntu:16.04
+  image: ubuntu:18.04
   variables:
     GIT_STRATEGY: none
   script:
@@ -1044,36 +1034,36 @@ packages-tar:
   - mv artifacts-windows-64bit-cmake-msvc Windows-x86_64-msvc/gr
   - mkdir -p Debian-x86_64/gr/bin
   - mkdir -p Debian-x86_64/gr/lib
-  - mv artifacts-debian9/*.so Debian-x86_64/gr/lib/
-  - mv artifacts-debian9/gksqt Debian-x86_64/gr/bin/
-  - mv artifacts-debian9/fonts Debian-x86_64/gr/
-  - mv artifacts-debian9/include Debian-x86_64/gr/
+  - mv artifacts-debian10/*.so Debian-x86_64/gr/lib/
+  - mv artifacts-debian10/gksqt Debian-x86_64/gr/bin/
+  - mv artifacts-debian10/fonts Debian-x86_64/gr/
+  - mv artifacts-debian10/include Debian-x86_64/gr/
   - cp artifacts-js/gr.js Debian-x86_64/gr/lib/
-  - rm -rf artifacts-debian9
+  - rm -rf artifacts-debian10
   - mkdir -p Debian-armhf/gr/bin
   - mkdir -p Debian-armhf/gr/lib
-  - mv artifacts-debian9-armhf/*.so Debian-armhf/gr/lib/
-  - mv artifacts-debian9-armhf/gksqt Debian-armhf/gr/bin/
-  - mv artifacts-debian9-armhf/fonts Debian-armhf/gr/
-  - mv artifacts-debian9-armhf/include Debian-armhf/gr/
+  - mv artifacts-debian10-armhf/*.so Debian-armhf/gr/lib/
+  - mv artifacts-debian10-armhf/gksqt Debian-armhf/gr/bin/
+  - mv artifacts-debian10-armhf/fonts Debian-armhf/gr/
+  - mv artifacts-debian10-armhf/include Debian-armhf/gr/
   - cp artifacts-js/gr.js Debian-armhf/gr/lib/
-  - rm -rf artifacts-debian9-armhf
+  - rm -rf artifacts-debian10-armhf
   - mkdir -p Debian-aarch64/gr/bin
   - mkdir -p Debian-aarch64/gr/lib
-  - mv artifacts-debian9-aarch64/*.so Debian-aarch64/gr/lib/
-  - mv artifacts-debian9-aarch64/gksqt Debian-aarch64/gr/bin/
-  - mv artifacts-debian9-aarch64/fonts Debian-aarch64/gr/
-  - mv artifacts-debian9-aarch64/include Debian-aarch64/gr/
+  - mv artifacts-debian10-aarch64/*.so Debian-aarch64/gr/lib/
+  - mv artifacts-debian10-aarch64/gksqt Debian-aarch64/gr/bin/
+  - mv artifacts-debian10-aarch64/fonts Debian-aarch64/gr/
+  - mv artifacts-debian10-aarch64/include Debian-aarch64/gr/
   - cp artifacts-js/gr.js Debian-aarch64/gr/lib/
-  - rm -rf artifacts-debian9-aarch64
+  - rm -rf artifacts-debian10-aarch64
   - mkdir -p Ubuntu-x86_64/gr/bin
   - mkdir -p Ubuntu-x86_64/gr/lib
-  - mv artifacts-ubuntu1604/*.so Ubuntu-x86_64/gr/lib/
-  - mv artifacts-ubuntu1604/gksqt Ubuntu-x86_64/gr/bin/
-  - mv artifacts-ubuntu1604/fonts Ubuntu-x86_64/gr/
-  - mv artifacts-ubuntu1604/include Ubuntu-x86_64/gr/
+  - mv artifacts-ubuntu2004/*.so Ubuntu-x86_64/gr/lib/
+  - mv artifacts-ubuntu2004/gksqt Ubuntu-x86_64/gr/bin/
+  - mv artifacts-ubuntu2004/fonts Ubuntu-x86_64/gr/
+  - mv artifacts-ubuntu2004/include Ubuntu-x86_64/gr/
   - cp artifacts-js/gr.js Ubuntu-x86_64/gr/lib/
-  - rm -rf artifacts-ubuntu1604
+  - rm -rf artifacts-ubuntu2004
   - mkdir -p CentOS-x86_64/gr/bin
   - mkdir -p CentOS-x86_64/gr/lib
   - mv artifacts-centos7/*.so CentOS-x86_64/gr/lib/
@@ -1198,7 +1188,7 @@ packages-tar:
 
 sync:
   stage: sync
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/deploy
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/deploy
   variables:
     GIT_STRATEGY: none
   only:
@@ -1222,7 +1212,7 @@ sync:
 
 deploy-to-obs:
   stage: deploy
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   only:
     - develop@Scientific-IT-Systems/gr
     - tags@Scientific-IT-Systems/gr
@@ -1249,7 +1239,7 @@ deploy-to-obs:
 
 deploy-to-aur:
   stage: deploy
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
   only:
     - develop@Scientific-IT-Systems/gr
     - tags@Scientific-IT-Systems/gr
