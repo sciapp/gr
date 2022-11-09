@@ -5,6 +5,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <strsafe.h>
 #else
 #include <dlfcn.h>
 #include <sys/param.h>
@@ -31,15 +32,15 @@
 
 static void *load_library(const char *name)
 {
-  char pathname[MAXPATHLEN], symbol[255];
+  char pathname[MAXPATHLEN];
 #ifdef _WIN32
+  wchar_t grdir[MAX_PATH], w_pathname[MAX_PATH];
   HINSTANCE handle;
-  LPCTSTR grdir;
-  char grbin[MAXPATHLEN];
 #else
-  void *handle;
   const char *grdir, *error;
+  void *handle;
 #endif
+  char symbol[255];
   void *entry = NULL;
 
   snprintf(pathname, MAXPATHLEN, "%s.%s", name, EXTENSION);
@@ -47,19 +48,12 @@ static void *load_library(const char *name)
   handle = LoadLibrary(pathname);
   if (handle == NULL)
     {
-      grdir = gks_getenv("GRDIR");
-      if (grdir == NULL) grdir = GRDIR;
-      snprintf(grbin, MAXPATHLEN, "%s/bin", grdir);
-      SetDllDirectory(grbin);
-      handle = LoadLibrary(pathname);
+      GetEnvironmentVariableW(L"GRDIR", grdir, MAX_PATH);
+      StringCbPrintfW(w_pathname, MAX_PATH, L"%ws\\bin\\%S.%S", grdir, name, EXTENSION);
+      handle = LoadLibraryExW(w_pathname, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
     }
 #else
   handle = dlopen(pathname, RTLD_LAZY);
-  if (handle == NULL)
-    {
-      snprintf(pathname, MAXPATHLEN, "%s/%s.%s", "./", name, EXTENSION);
-      handle = dlopen(pathname, RTLD_LAZY);
-    }
   if (handle == NULL)
     {
       grdir = gks_getenv("GRDIR");
