@@ -8,7 +8,7 @@ stages:
 
 tag-type-check:
   stage: prebuild
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/deploy
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/deploy
   only:
     - tags@Scientific-IT-Systems/gr
   script:
@@ -16,7 +16,7 @@ tag-type-check:
 
 code-style-check:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
   - set +e
   - for file in $(git diff $(git describe --tags --abbrev=0) HEAD --name-only --diff-filter=ACMR); do
@@ -50,7 +50,7 @@ code-style-check:
 
 ubuntu-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
   - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
   - tar xf cmake-3.23.0-linux-x86_64.tar.gz
@@ -74,7 +74,7 @@ ubuntu-self-contained:
 
 ubuntu-cmake-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/ubuntu-self-contained
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
   script:
     - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
     - tar xf cmake-3.23.0-linux-x86_64.tar.gz
@@ -94,7 +94,7 @@ ubuntu-cmake-self-contained:
 
 ubuntu-cmake-self-contained-test:
   stage: test
-  image: iffregistry.fz-juelich.de/imeyer/gr-test/c-testing
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing
   rules:
   - if: '$CI_MERGE_REQUEST_ID'
     when: never
@@ -115,7 +115,7 @@ ubuntu-cmake-self-contained-test:
 
 ubuntu-cmake-self-contained-rebuild-images:
   stage: test
-  image: iffregistry.fz-juelich.de/imeyer/gr-test/c-testing:latest
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing:latest
   rules:
   - if: '$CI_MERGE_REQUEST_ID'
     when: never
@@ -158,13 +158,13 @@ ubuntu-cmake-self-contained-rebuild-images:
 
 ubuntu-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
   - make install GRDIR=/usr/local/gr
 
 ubuntu-cmake-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/ubuntu-system-dependencies
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-system-dependencies
   script:
     - apt-get update
     - apt-get install -y libqhull-dev libbz2-dev libjpeg-turbo8-dev libavdevice-dev libtheora-dev libogg-dev libvpx-dev libfreetype6-dev
@@ -178,7 +178,7 @@ ubuntu-cmake-system-dependencies:
 
 debian-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
   - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
   - tar xf cmake-3.23.0-linux-x86_64.tar.gz
@@ -270,7 +270,7 @@ debian-self-contained-armhf:
 
 debian-self-contained-aarch64:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/debian-self-contained-aarch64
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained-aarch64
   script:
     - make -C 3rdparty default extras \
       HOST=aarch64-linux-gnu \
@@ -317,7 +317,7 @@ debian-self-contained-aarch64:
 
 debian-cmake-self-contained-aarch64:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/debian-self-contained-aarch64
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained-aarch64
   script:
     - make -C 3rdparty default extras \
       HOST=aarch64-linux-gnu \
@@ -350,7 +350,7 @@ debian-cmake-self-contained-aarch64:
 
 debian-cmake-self-contained-armhf:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/debian-self-contained-armhf-cross
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained-armhf-cross
   script:
     - make -C 3rdparty default extras \
       HOST=arm-linux-gnueabihf \
@@ -383,13 +383,13 @@ debian-cmake-self-contained-armhf:
 
 debian-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
   - make install GRDIR=/usr/local/gr
 
 debian-system-dependencies-armhf:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME-cross
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME-cross
   script:
     - make install \
       CC=arm-linux-gnueabihf-gcc \
@@ -404,7 +404,7 @@ debian-system-dependencies-armhf:
 
 debian-cmake-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/debian-system-dependencies
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-system-dependencies
   script:
     - apt-get update
     - apt-get install -y libqhull-dev libbz2-dev libfreetype6-dev
@@ -418,7 +418,7 @@ debian-cmake-system-dependencies:
 
 centos7-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
   - source /opt/rh/devtoolset-8/enable
   - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
@@ -443,7 +443,7 @@ centos7-self-contained:
 
 centos7-cmake-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/centos7-self-contained
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos7-self-contained
   script:
     - source /opt/rh/devtoolset-8/enable
     - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
@@ -465,14 +465,14 @@ centos7-cmake-self-contained:
 
 centos7-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
   - source /opt/rh/devtoolset-8/enable
   - make install GRDIR=/usr/local/gr
 
 centos7-cmake-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/centos7-system-dependencies
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos7-system-dependencies
   script:
     - source /opt/rh/devtoolset-8/enable
     - yum install -y libjpeg-turbo-devel libtiff-devel bzip2-devel
@@ -487,7 +487,7 @@ centos7-cmake-system-dependencies:
 
 centos7-32bit-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
   - source /opt/gcc-8.5.0/enable
   - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-i386.tar.gz
@@ -516,7 +516,7 @@ centos7-32bit-self-contained:
 
 centos7-32bit-cmake-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/centos7-32bit-self-contained
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos7-32bit-self-contained
   script:
     - source /opt/gcc-8.5.0/enable
     - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-i386.tar.gz
@@ -540,7 +540,7 @@ centos7-32bit-cmake-self-contained:
 
 centos7-32bit-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
   - source /opt/gcc-8.5.0/enable
   - EXTRA_LDFLAGS="-static-libstdc++ -static-libgcc"
@@ -548,7 +548,7 @@ centos7-32bit-system-dependencies:
 
 centos7-32bit-cmake-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/centos7-32bit-system-dependencies
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos7-32bit-system-dependencies
   script:
     - source /opt/gcc-8.5.0/enable
     - yum install -y libtiff-devel bzip2-devel
@@ -564,7 +564,7 @@ centos7-32bit-cmake-system-dependencies:
 
 arch-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
     - make self GRDIR=/usr/local/gr
     - mkdir artifacts
@@ -585,7 +585,7 @@ arch-self-contained:
 
 arch-cmake-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/arch-self-contained
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/arch-self-contained
   script:
     - make -C 3rdparty default extras
     - mkdir build
@@ -602,13 +602,13 @@ arch-cmake-self-contained:
 
 arch-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
     - make install GRDIR=/usr/local/gr
 
 arch-cmake-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/arch-system-dependencies
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/arch-system-dependencies
   script:
     - pacman -Sy
     - pacman -S --noconfirm --needed qhull
@@ -646,7 +646,7 @@ freebsd-self-contained:
 
 windows-32bit-cross:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
   - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
   - tar xf cmake-3.23.0-linux-x86_64.tar.gz
@@ -698,7 +698,7 @@ windows-32bit-cross:
 
 windows-32bit-cmake-cross:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/windows-32bit-cross
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/windows-32bit-cross
   script:
     - mkdir qt5-runtime-Windows-i686
     - cd qt5-runtime-Windows-i686
@@ -742,7 +742,7 @@ windows-32bit-cmake-cross:
 
 windows-64bit-cross:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
   - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
   - tar xf cmake-3.23.0-linux-x86_64.tar.gz
@@ -794,7 +794,7 @@ windows-64bit-cross:
 
 windows-64bit-cmake-cross:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/windows-64bit-cross
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/windows-64bit-cross
   script:
     - mkdir qt5-runtime-Windows-x86_64
     - cd qt5-runtime-Windows-x86_64
@@ -838,7 +838,7 @@ windows-64bit-cmake-cross:
 
 windows-64bit-cmake-msvc:
   stage: build
-  image: windows_cpp17:10-gr-build
+  image: windows:10-gr-build
   tags:
     - libvirt
   script:
@@ -992,7 +992,7 @@ darwin-self-contained-iff1605:
 
 emscripten:
   stage: build
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
   - source /emsdk/emsdk_env.sh
   - emmake make -C js
@@ -1188,7 +1188,7 @@ packages-tar:
 
 sync:
   stage: sync
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/deploy
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/deploy
   variables:
     GIT_STRATEGY: none
   only:
@@ -1212,7 +1212,7 @@ sync:
 
 deploy-to-obs:
   stage: deploy
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   only:
     - develop@Scientific-IT-Systems/gr
     - tags@Scientific-IT-Systems/gr
@@ -1239,7 +1239,7 @@ deploy-to-obs:
 
 deploy-to-aur:
   stage: deploy
-  image: iffregistry.fz-juelich.de/imeyer/gr-build-images/$CI_JOB_NAME
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   only:
     - develop@Scientific-IT-Systems/gr
     - tags@Scientific-IT-Systems/gr
