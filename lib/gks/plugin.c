@@ -53,11 +53,12 @@ static void *load_library(const char *name)
       handle = LoadLibraryExW(w_pathname, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
       if (handle == NULL)
         {
-          //Try loading with default search path if altered search path fails
-          //  This value is a combination of LOAD_LIBRARY_SEARCH_APPLICATION_DIR,
-          //  LOAD_LIBRARY_SEARCH_USER_DIRS, and LOAD_LIBRARY_SEARCH_SYSTEM32.
-          //  They are searched in that order.
-          // Use AddDllDirectory to add additional user directories to the search.
+          /* Try loading with default search path if altered search path fails
+             This value is a combination of LOAD_LIBRARY_SEARCH_APPLICATION_DIR,
+             LOAD_LIBRARY_SEARCH_USER_DIRS, and LOAD_LIBRARY_SEARCH_SYSTEM32.
+             They are searched in that order.
+             Use AddDllDirectory to add additional user directories to the search.
+           */
           handle = LoadLibraryExW(w_pathname, NULL, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
         }
     }
