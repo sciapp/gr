@@ -2097,28 +2097,48 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
       r_min = 0.0;
       norm = static_cast<std::string>(elem->getAttribute("norm"));
       r_max = static_cast<double>(elem->getAttribute("r_max"));
+      //      if (r_max >= 1.0)
+      //        {
+      //          r_max += static_cast<int>(r_max) % 2;
+      //        }
 
-      std::cout << "**** drawpolaraxes during render r_max " << r_max << "\n";
 
-      if (norm == "count" || norm == "cumcount")
+      while (true)
         {
-          tick = 1.5 * auto_tick(r_min, r_max);
-        }
-      else if (norm == "pdf" || norm == "probability")
-        {
-          tick = 1.5 * auto_tick(r_min, r_max);
-        }
-      else if (norm == "countdensity")
-        {
-          tick = 1.5 * auto_tick(r_min, r_max);
-        }
-      else if (norm == "cdf")
-        {
-          tick = 1.0 / rings;
-        }
-      else
-        {
-          tick = auto_tick(r_min, r_max);
+          if (r_max >= 1.0)
+            {
+              r_max += static_cast<int>(r_max) % 2;
+            }
+          std::cout << "**** drawpolaraxes during render r_max " << r_max << "\n";
+
+          if (norm == "count" || norm == "cumcount")
+            {
+              tick = 1.5 * auto_tick(r_min, r_max);
+            }
+          else if (norm == "pdf" || norm == "probability")
+            {
+              tick = 1.5 * auto_tick(r_min, r_max);
+            }
+          else if (norm == "countdensity")
+            {
+              tick = 1.5 * auto_tick(r_min, r_max);
+            }
+          else if (norm == "cdf")
+            {
+              tick = 1.0 / rings;
+            }
+          else
+            {
+              tick = auto_tick(r_min, r_max);
+            }
+          if (rings * tick < r_max)
+            {
+              ++r_max;
+            }
+          else
+            {
+              break;
+            }
         }
     }
   else
@@ -2126,12 +2146,17 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
       tick = auto_tick(r_min, r_max);
     }
 
+
   n = rings;
   phiflip = static_cast<int>(elem->getAttribute("phiflip"));
+  std::cout << "**** drawpolaraxes during render r_min + rings * tick " << r_min + n * tick << "\n";
 
   for (i = 0; i <= n; i++)
     {
-      double r = 2.0 / 3 * (r_min + i * tick) / r_max;
+      //      double r = 2.0 / 3 * r_max;
+      //      double r = 2.0 / 3 * (r_min + i * tick) / r_max;
+      //      std::cout << "**** double r in drawpolaraxe in render: " << r << "\n";
+      double r = 1.0 / n * i;
       if (i % 2 == 0)
         {
           if (i > 0)
@@ -2148,7 +2173,8 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
 
           x[0] = 0.05;
           y[0] = r;
-          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + i * tick);
+          //          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + i * tick);
+          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", tick * i);
           newGroup->append(render->createText(x[0], y[0], text_buffer, WC));
         }
       else

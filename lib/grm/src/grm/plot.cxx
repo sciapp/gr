@@ -1027,7 +1027,6 @@ void plot_pre_plot(grm_args_t *plot_args)
 
 void plot_set_text_encoding(void)
 {
-  //  gr_inqtextencoding(&pre_plot_text_encoding);
   global_render->setTextEncoding(global_root, ENCODING_UTF8);
 }
 
@@ -4658,10 +4657,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
   max = static_cast<double>(group->getAttribute("r_max"));
 
-  std::cout << "**** r_max in plot_polar histogram " << max << "\n";
-
-  //  grm_args_values(subplot_args, "r_max", "d", &max);
-
   if (grm_args_values(subplot_args, "phiflip", "i", &phiflip) == 0)
     {
       phiflip = 0;
@@ -5289,13 +5284,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
                           global_render->setFillColorInd(temp_elem, edge_color);
                           global_render->setFillIntStyle(temp_elem, 0);
                         }
-
-
-                      //                      temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" +
-                      //                      str, std::nullopt); group->append(temp_elem);
-                      //                      global_render->setFillColorInd(temp_elem, edge_color);
-                      //                      global_render->setFillIntStyle(temp_elem, 0);
-
 
                       free(f1);
                       f1 = NULL;
@@ -6082,6 +6070,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   if (strcmp(kind, "polar_histogram") == 0)
     {
       r_min = 0.0;
+      r_max += static_cast<int>(r_max) % 2;
       if (grm_args_values(args, "normalization", "s", &char_norm) == 0)
         {
           norm = "count";
@@ -6112,7 +6101,8 @@ err_t plot_draw_polar_axes(grm_args_t *args)
           tick = auto_tick(r_min, r_max);
         }
       // r_max for plot_polar_histogram
-      global_root->lastChildElement()->setAttribute("r_max", r_min + rings * tick);
+      //      global_root->lastChildElement()->setAttribute("r_max", r_max);
+      global_root->lastChildElement()->setAttribute("r_max", rings * tick);
     }
 
   if (grm_args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
@@ -7778,7 +7768,6 @@ err_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
     {
       *r_max = max;
     }
-  std::cout << "**** Classes func r_max " << max << "\n";
 
 cleanup:
   free(bin_edges_buf);
@@ -8267,17 +8256,14 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
 
   if (grm_args_values(subplot_args, "ylabel", "s", &ylabel))
     {
-      //      group->setAttribute("ylabel", ylabel);
       group->setAttribute("ylabel_margin", 1);
     }
   if (grm_args_values(subplot_args, "xlabel", "s", &xlabel))
     {
-      //      group->setAttribute("xlabel", xlabel);
       group->setAttribute("xlabel_margin", 1);
     }
   if (grm_args_values(subplot_args, "title", "s", &title))
     {
-      //      group->setAttribute("title", title);
       group->setAttribute("title_margin", 1);
     }
   if (grm_args_values(subplot_args, "keep_aspec_ratio", "i", &keep_aspect_ratio))

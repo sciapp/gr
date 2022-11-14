@@ -283,8 +283,8 @@ static void polar_histogram_title(void)
 
 static void test_plot(void)
 {
-  //  polar_histogram_minimal();
-  //  polar_histogram_phiflip();
+  polar_histogram_minimal();
+  polar_histogram_phiflip();
   polar_histogram_nbins();
   polar_histogram_bin_counts();
   polar_histogram_colormap();
