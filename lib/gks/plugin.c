@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #ifdef _WIN32
+#define __STRSAFE__NO_INLINE
 #include <windows.h>
 #include <strsafe.h>
 #else
