@@ -1365,14 +1365,8 @@ void plot_process_window(grm_args_t *subplot_args)
   const char *kind;
   int xlog, ylog, zlog;
   int xflip, yflip, zflip;
-  int major_count = 0, x_major_count, y_major_count;
-  const double *stored_window;
   double x_min, x_max, y_min, y_max, z_min, z_max;
-  double x, y, xzoom, yzoom;
-  int adjust_xlim, adjust_ylim, adjust_zlim;
-  double x_tick, y_tick;
-  double x_org_low, x_org_high, y_org_low, y_org_high;
-  int reset_ranges = 0;
+  double rotation, tilt;
 
   auto group = global_root->lastChildElement();
 
@@ -1396,208 +1390,20 @@ void plot_process_window(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "_xlim", "dd", &x_min, &x_max);
   grm_args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
-  if (grm_args_values(subplot_args, "reset_ranges", "i", &reset_ranges) && reset_ranges)
-    {
-      if (grm_args_values(subplot_args, "_original_xlim", "dd", &x_min, &x_max) &&
-          grm_args_values(subplot_args, "_original_ylim", "dd", &y_min, &y_max) &&
-          grm_args_values(subplot_args, "_original_adjust_xlim", "i", &adjust_xlim) &&
-          grm_args_values(subplot_args, "_original_adjust_ylim", "i", &adjust_ylim))
-        {
-          grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
-          grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
-          grm_args_push(subplot_args, "adjust_xlim", "i", adjust_xlim);
-          grm_args_push(subplot_args, "adjust_ylim", "i", adjust_ylim);
-          grm_args_remove(subplot_args, "_original_xlim");
-          grm_args_remove(subplot_args, "_original_ylim");
-          grm_args_remove(subplot_args, "_original_adjust_xlim");
-          grm_args_remove(subplot_args, "_original_adjust_ylim");
-        }
-      grm_args_remove(subplot_args, "reset_ranges");
-    }
-  if (grm_args_contains(subplot_args, "panzoom"))
-    {
-      if (!grm_args_contains(subplot_args, "_original_xlim"))
-        {
-          grm_args_push(subplot_args, "_original_xlim", "dd", x_min, x_max);
-          grm_args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
-          grm_args_push(subplot_args, "_original_adjust_xlim", "i", adjust_xlim);
-          grm_args_push(subplot_args, "adjust_xlim", "i", 0);
-        }
-      if (!grm_args_contains(subplot_args, "_original_ylim"))
-        {
-          grm_args_push(subplot_args, "_original_ylim", "dd", y_min, y_max);
-          grm_args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
-          grm_args_push(subplot_args, "_original_adjust_ylim", "i", adjust_ylim);
-          grm_args_push(subplot_args, "adjust_ylim", "i", 0);
-        }
-      if (!grm_args_values(subplot_args, "panzoom", "dddd", &x, &y, &xzoom, &yzoom))
-        {
-          if (grm_args_values(subplot_args, "panzoom", "ddd", &x, &y, &xzoom))
-            {
-              yzoom = xzoom;
-            }
-          else
-            {
-              /* TODO: Add error handling for type mismatch (-> next statement would fail) */
-              grm_args_values(subplot_args, "panzoom", "dd", &x, &y);
-              yzoom = xzoom = 0.0;
-            }
-        }
-      /* Ensure the correct window is set in GR */
-      if (grm_args_values(subplot_args, "window", "D", &stored_window))
-        {
-          global_render->setWindow(group, stored_window[0], stored_window[1], stored_window[2], stored_window[3]);
-          gr_setwindow(stored_window[0], stored_window[1], stored_window[2], stored_window[3]);
-          logger((stderr, "Window before `gr_panzoom` (%lf, %lf, %lf, %lf)\n", stored_window[0], stored_window[1],
-                  stored_window[2], stored_window[3]));
-        }
-      gr_panzoom(x, y, xzoom, yzoom, &x_min, &x_max, &y_min, &y_max);
-      logger((stderr, "Window after `gr_panzoom` (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
-      grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
-      grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
-      grm_args_remove(subplot_args, "panzoom");
-    }
-
-  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf"))
-    {
-      major_count = 2;
-    }
-  else
-    {
-      major_count = 5;
-    }
-
-  if (!(scale & GR_OPTION_X_LOG))
-    {
-      grm_args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
-      if (adjust_xlim)
-        {
-          logger((stderr, "_xlim before \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
-          gr_adjustlimits(&x_min, &x_max);
-          logger((stderr, "_xlim after \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
-        }
-      if (strcmp(kind, "barplot") == 0)
-        {
-          const char *xticklabels[5];
-          unsigned int xticklabels_length;
-          x_tick = 1;
-          if (grm_args_first_value(subplot_args, "xticklabels", "S", &xticklabels, &xticklabels_length))
-            {
-              x_major_count = 0;
-            }
-          else
-            {
-              x_major_count = 1;
-            }
-        }
-      else
-        {
-          x_major_count = major_count;
-          x_tick = auto_tick(x_min, x_max) / x_major_count;
-        }
-    }
-  else
-    {
-      x_tick = x_major_count = 1;
-    }
-  if (!(scale & GR_OPTION_FLIP_X))
-    {
-      x_org_low = x_min;
-      x_org_high = x_max;
-    }
-  else
-    {
-      x_org_low = x_max;
-      x_org_high = x_min;
-    }
-  grm_args_push(subplot_args, "xtick", "d", x_tick);
-  grm_args_push(subplot_args, "xorg", "dd", x_org_low, x_org_high);
-  grm_args_push(subplot_args, "xmajor", "i", x_major_count);
-
-  if (!(scale & GR_OPTION_Y_LOG))
-    {
-      grm_args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
-      if (adjust_ylim)
-        {
-          logger((stderr, "_ylim before \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
-          gr_adjustlimits(&y_min, &y_max);
-          logger((stderr, "_ylim after \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
-        }
-      y_major_count = major_count;
-      y_tick = auto_tick(y_min, y_max) / y_major_count;
-    }
-  else
-    {
-      y_tick = y_major_count = 1;
-    }
-  if (!(scale & GR_OPTION_FLIP_Y))
-    {
-      y_org_low = y_min;
-      y_org_high = y_max;
-    }
-  else
-    {
-      y_org_low = y_max;
-      y_org_high = y_min;
-    }
-  grm_args_push(subplot_args, "ytick", "d", y_tick);
-  grm_args_push(subplot_args, "yorg", "dd", y_org_low, y_org_high);
-  grm_args_push(subplot_args, "ymajor", "i", y_major_count);
-
-  logger((stderr, "Storing window (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
-  grm_args_push(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
-  if (!str_equals_any(kind, 2, "polar", "polar_histogram"))
-    {
-      gr_setwindow(x_min, x_max, y_min, y_max);
-      global_render->setWindow(group, x_min, x_max, y_min, y_max);
-    }
-  else
-    {
-      global_render->setWindow(group, -1, 1, -1, 1);
-    }
+  group->setAttribute("limits", true);
+  group->setAttribute("lim_xmin", x_min);
+  group->setAttribute("lim_xmax", x_max);
+  group->setAttribute("lim_ymin", y_min);
+  group->setAttribute("lim_ymax", y_max);
 
   if (str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume", "isosurface"))
     {
-      int z_major_count;
-      double z_tick;
-      double z_org_low, z_org_high;
-      double rotation, tilt;
-
       grm_args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
-      if (!(scale & GR_OPTION_Z_LOG))
-        {
-          grm_args_values(subplot_args, "adjust_zlim", "i", &adjust_zlim);
-          if (adjust_zlim)
-            {
-              logger((stderr, "_zlim before \"gr_adjustlimits\": (%lf, %lf)\n", z_min, z_max));
-              gr_adjustlimits(&z_min, &z_max);
-              logger((stderr, "_zlim after \"gr_adjustlimits\": (%lf, %lf)\n", z_min, z_max));
-            }
-          z_major_count = major_count;
-          z_tick = auto_tick(z_min, z_max) / z_major_count;
-        }
-      else
-        {
-          z_tick = z_major_count = 1;
-        }
-      if (!(scale & GR_OPTION_FLIP_Z))
-        {
-          z_org_low = z_min;
-          z_org_high = z_max;
-        }
-      else
-        {
-          z_org_low = z_max;
-          z_org_high = z_min;
-        }
-      grm_args_push(subplot_args, "ztick", "d", z_tick);
-      grm_args_push(subplot_args, "zorg", "dd", z_org_low, z_org_high);
-      grm_args_push(subplot_args, "zmajor", "i", z_major_count);
-
+      group->setAttribute("lim_zmin", z_min);
+      group->setAttribute("lim_zmax", z_max);
       grm_args_values(subplot_args, "rotation", "d", &rotation);
       grm_args_values(subplot_args, "tilt", "d", &tilt);
-
-      global_render->setWindow3d(group, x_min, x_max, y_min, y_max, z_min, z_max);
+      /* TODO: Doesn`t the renderer expect an space3d element? */
       global_render->setSpace3d(group, -rotation, tilt, 30, 0);
     }
 
@@ -5896,20 +5702,9 @@ cleanup:
 err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 {
   const char *kind = NULL;
-  const double *viewport, *vp;
-  double x_tick;
-  double x_org_low, x_org_high;
-  int x_major_count;
   int x_grid;
-  double y_tick;
-  double y_org_low, y_org_high;
-  int y_major_count;
   int y_grid;
-  double z_tick;
-  double z_org_low, z_org_high;
-  int z_major_count;
   int z_grid;
-  double charheight;
   char *title;
   char *x_label, *y_label, *z_label;
   int tick_orientation = 1;
@@ -5925,13 +5720,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
       currentDomElement->append(group);
     }
   grm_args_values(args, "kind", "s", &kind);
-  grm_args_values(args, "xtick", "d", &x_tick);
-  grm_args_values(args, "xorg", "dd", &x_org_low, &x_org_high);
-  grm_args_values(args, "xmajor", "i", &x_major_count);
   grm_args_values(args, "xgrid", "i", &x_grid);
-  grm_args_values(args, "ytick", "d", &y_tick);
-  grm_args_values(args, "yorg", "dd", &y_org_low, &y_org_high);
-  grm_args_values(args, "ymajor", "i", &y_major_count);
   grm_args_values(args, "ygrid", "i", &y_grid);
 
   global_render->setLineColorInd(group, 1);
@@ -5939,26 +5728,36 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
-      grm_args_values(args, "ztick", "d", &z_tick);
-      grm_args_values(args, "zorg", "dd", &z_org_low, &z_org_high);
-      grm_args_values(args, "zmajor", "i", &z_major_count);
       grm_args_values(args, "zgrid", "i", &z_grid);
       if (pass == 1)
         {
-          auto temp = global_render->createGrid3d(x_grid ? x_tick : 0, 0, z_grid ? z_tick : 0, x_org_low, y_org_high,
-                                                  z_org_low, 2, 0, 2);
-          group->append(temp);
-          temp = global_render->createGrid3d(0, y_grid ? y_tick : 0, 0, x_org_low, y_org_high, z_org_low, 0, 2, 0);
-          group->append(temp);
+          auto grid3d = global_render->createEmptyGrid3d(x_grid, false, z_grid);
+          global_render->setOriginPosition3d(grid3d, "low", "high", "low");
+          grid3d->setAttribute("x_major", 2);
+          grid3d->setAttribute("y_major", 0);
+          grid3d->setAttribute("z_major", 2);
+          group->append(grid3d);
+          grid3d = global_render->createEmptyGrid3d(false, y_grid, false);
+          global_render->setOriginPosition3d(grid3d, "low", "high", "low");
+          grid3d->setAttribute("x_major", 0);
+          grid3d->setAttribute("y_major", 2);
+          grid3d->setAttribute("z_major", 0);
+          group->append(grid3d);
         }
       else
         {
-          auto temp = global_render->createAxes3d(x_tick, 0, z_tick, x_org_low, y_org_low, z_org_low, x_major_count, 0,
-                                                  z_major_count, -tick_orientation);
-          group->append(temp);
-          temp = global_render->createAxes3d(0, y_tick, 0, x_org_high, y_org_low, z_org_low, 0, y_major_count, 0,
-                                             tick_orientation);
-          group->append(temp);
+          auto axes3d = global_render->createEmptyAxes3d(-tick_orientation);
+          global_render->setOriginPosition3d(axes3d, "low", "low", "low");
+          axes3d->setAttribute("y_tick", 0);
+          axes3d->setAttribute("y_major", 0);
+          group->append(axes3d);
+          axes3d = global_render->createEmptyAxes3d(tick_orientation);
+          global_render->setOriginPosition3d(axes3d, "high", "low", "low");
+          axes3d->setAttribute("x_tick", 0);
+          axes3d->setAttribute("z_tick", 0);
+          axes3d->setAttribute("x_major", 0);
+          axes3d->setAttribute("z_major", 0);
+          group->append(axes3d);
         }
     }
   else
@@ -5971,14 +5770,18 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         {
           if (pass == 1 || strcmp(kind, "barplot") != 0)
             {
-              group->append(global_render->createGrid(x_grid ? x_tick : 0, y_grid ? y_tick : 0, 0, 0, x_major_count,
-                                                      y_major_count));
+              auto grid = global_render->createEmptyGrid(x_grid, y_grid);
+              grid->setAttribute("x_org", 0);
+              grid->setAttribute("y_org", 0);
+              group->append(grid);
             }
         }
-      group->append(global_render->createAxes(x_tick, y_tick, x_org_low, y_org_low, x_major_count, y_major_count,
-                                              tick_orientation));
-      group->append(global_render->createAxes(x_tick, y_tick, x_org_high, y_org_high, -x_major_count, -y_major_count,
-                                              -tick_orientation));
+      auto axes = global_render->createEmptyAxes(tick_orientation);
+      global_render->setOriginPosition(axes, "low", "low");
+      group->append(axes);
+      axes = global_render->createEmptyAxes(-tick_orientation);
+      global_render->setOriginPosition(axes, "high", "high");
+      group->append(axes);
     }
 
   if (grm_args_values(args, "title", "s", &title))
@@ -6011,9 +5814,9 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
       /* xticklabels */
       char **xticklabels = NULL;
       unsigned int xticklabels_length;
-      int i;
-      double x[2] = {x_org_low, x_org_high};
-      double y[2] = {0, 0};
+      double y_min, y_max;
+
+      grm_args_values(args, "_ylim", "dd", &y_min, &y_max);
 
       if (grm_args_first_value(args, "xticklabels", "S", &xticklabels, &xticklabels_length))
         {
@@ -6025,9 +5828,9 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         }
 
       /* negative values */
-      if (y_org_low < 0)
+      if (y_min < 0)
         {
-          group->append(global_render->createPolyline(x[0], x[1], y[0], y[1]));
+          group->append(global_render->createYLine());
         }
     }
 
@@ -6951,6 +6754,7 @@ int get_focus_and_factor(const int x1, const int y1, const int x2, const int y2,
   *focus_y = (ndc_top - *factor_y * viewport[3]) / (1 - *factor_y) - (viewport[2] + viewport[3]) / 2.0;
   return 1;
 }
+
 grm_args_t *get_subplot_from_ndc_point(double x, double y)
 {
   grm_args_t **subplot_args;
@@ -8241,7 +8045,7 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
 {
   plot_func_t plot_func;
   char *ylabel, *xlabel, *title, *kind;
-  int keep_aspect_ratio, location;
+  int keep_aspect_ratio, location, adjust_xlim, adjust_ylim;
   double *subplot;
 
   if (plot_pre_subplot(subplot_args) != ERROR_NONE)
@@ -8281,6 +8085,14 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
       group->setAttribute("subplot_xmax", subplot[1]);
       group->setAttribute("subplot_ymin", subplot[2]);
       group->setAttribute("subplot_ymax", subplot[3]);
+    }
+  if (grm_args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim))
+    {
+      group->setAttribute("adjust_xlim", adjust_xlim);
+    }
+  if (grm_args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim))
+    {
+      group->setAttribute("adjust_ylim", adjust_ylim);
     }
 
   if (!plot_func_map_at(plot_func_map, kind, &plot_func))
@@ -8412,6 +8224,7 @@ int grm_plot(const grm_args_t *args)
           while (*current_subplot_args != NULL)
             {
               auto group = global_render->createGroup("");
+              group->setAttribute("subplotGroup", true);
               global_root->append(group);
               if (!plot_process_subplot_args(*current_subplot_args))
                 {
@@ -8472,7 +8285,11 @@ int grm_switch(unsigned int id)
 
   return 1;
 }
-}
+
+} /* end of extern "C" block */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ c++ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 
 int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
                     const std::shared_ptr<GR::Element> &parentDomElement)
@@ -8526,6 +8343,55 @@ std::shared_ptr<GR::Render> grm_get_render(void)
   return global_render;
 }
 
+std::shared_ptr<GR::Element> get_subplot_from_ndc_point_using_dom_helper(std::shared_ptr<GR::Element> element, double x,
+                                                                         double y)
+{
+  bool elementIsSubplotGroup =
+      (element->hasAttribute("subplotGroup") && static_cast<int>(element->getAttribute("subplotGroup")));
+
+  if (element->localName() == "layout-gridelement" || elementIsSubplotGroup)
+    {
+      double viewport[4];
+      viewport[0] = static_cast<double>(element->getAttribute("viewport_xmin"));
+      viewport[1] = static_cast<double>(element->getAttribute("viewport_xmax"));
+      viewport[2] = static_cast<double>(element->getAttribute("viewport_ymin"));
+      viewport[3] = static_cast<double>(element->getAttribute("viewport_ymax"));
+      if (viewport[0] <= x && x <= viewport[1] && viewport[2] <= y && y <= viewport[3])
+        {
+          return element;
+        }
+    }
+  if (element->localName() == "layout-grid")
+    {
+      for (const auto &child : element->children())
+        {
+          std::shared_ptr<GR::Element> subplot_element = get_subplot_from_ndc_point_using_dom_helper(child, x, y);
+          if (subplot_element != nullptr)
+            {
+              return subplot_element;
+            }
+        }
+    }
+
+  return nullptr;
+}
+
+std::shared_ptr<GR::Element> get_subplot_from_ndc_point_using_dom(double x, double y)
+{
+  if (global_root->hasChildNodes())
+    {
+      for (const auto &child : global_root->children())
+        {
+          std::shared_ptr<GR::Element> subplot_element = get_subplot_from_ndc_point_using_dom_helper(child, x, y);
+          if (subplot_element != nullptr)
+            {
+              return subplot_element;
+            }
+        }
+    }
+
+  return nullptr;
+}
 
 /*!
  * Set the text color either to black or white depending on the given background color.

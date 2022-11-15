@@ -42,6 +42,27 @@ static std::map<std::string, double> symbol_to_meters_per_unit{
     {"\"", 0.0254}, {"ft", 0.3048}, {"'", 0.0254}, {"pc", 0.0254 / 6.0}, {"pt", 0.0254 / 72.0},
 };
 
+double auto_tick(double amin, double amax)
+{
+    double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
+    double scale, tick;
+    int i, n;
+
+    scale = pow(10.0, (int)(log10(amax - amin)));
+    tick = 1.0;
+    for (i = 0; i < 9; i++)
+    {
+        n = (amax - amin) / scale / tick_size[i];
+        if (n > 7)
+        {
+            tick = tick_size[i - 1];
+            break;
+        }
+    }
+    tick *= scale;
+    return tick;
+}
+
 static void markerHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context,
                          const std::string &str)
 {
@@ -302,6 +323,263 @@ static void lineHelper(const std::shared_ptr<GR::Element> &element, const std::s
     }
 }
 
+static void getMajorCount(const std::shared_ptr<GR::Element> &element, const std::string kind, int &major_count){
+    if (element->hasAttribute("major"))
+    {
+        major_count = static_cast<int>(element->getAttribute("major"));
+    }
+    else
+    {
+        if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf"))
+        {
+            major_count = 2;
+        }
+        else
+        {
+            major_count = 5;
+        }
+    }
+}
+
+static void getAxesInformation(const std::shared_ptr<GR::Element> &element, double &x_tick, double &y_tick, double &x_org, double &y_org, int &x_major, int &y_major){
+    int x_org_low, x_org_high;
+    int y_org_low, y_org_high;
+    int major_count;
+    std::string x_org_pos, y_org_pos;
+
+    auto draw_axes_group = element->parentElement();
+    auto subplot_element = draw_axes_group->parentElement();
+    std::string kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
+    int scale = static_cast<int>(subplot_element->getAttribute("scale"));
+    double xmin = static_cast<double>(subplot_element->getAttribute("window_xmin"));
+    double xmax = static_cast<double>(subplot_element->getAttribute("window_xmax"));
+    double ymin = static_cast<double>(subplot_element->getAttribute("window_ymin"));
+    double ymax = static_cast<double>(subplot_element->getAttribute("window_ymax"));
+
+    if (element->hasAttribute("x_org_pos")){
+        x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
+    } else{
+        x_org_pos = "low";
+    }
+    if (element->hasAttribute("y_org_pos")){
+        y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
+    } else{
+        y_org_pos = "low";
+    }
+
+    getMajorCount(element, kind, major_count);
+
+    if (element->hasAttribute("x_major")){
+        x_major = static_cast<int>(element->getAttribute("x_major"));
+    }
+    else{
+        if (!(scale & GR_OPTION_X_LOG))
+        {
+            if (kind == "barplot")
+            {
+                if (draw_axes_group->hasAttribute("xticklabels"))
+                {
+                    x_major = 0;
+                }
+                else
+                {
+                    x_major = 1;
+                }
+            }
+            else
+            {
+                x_major = major_count;
+            }
+        }
+        else
+        {
+            x_major = 1;
+        }
+    }
+
+    if (element->hasAttribute("x_tick")){
+        x_tick = static_cast<double>(element->getAttribute("x_tick"));
+    }
+    else
+    {
+        if (!(scale & GR_OPTION_X_LOG))
+        {
+            if (kind == "barplot")
+            {
+                x_tick = 1;
+            }
+            else
+            {
+                if (x_major != 0){
+                    x_tick = auto_tick(xmin, xmax) / x_major;
+                } else{
+                    x_tick = 1;
+                }
+            }
+        }
+        else
+        {
+            x_tick = 1;
+        }
+    }
+
+    if (element->hasAttribute("x_org")){
+        x_org = static_cast<double>(element->getAttribute("x_org"));
+    } else{
+        if (!(scale & GR_OPTION_FLIP_X))
+        {
+            x_org_low = xmin;
+            x_org_high = xmax;
+        }
+        else
+        {
+            x_org_low = xmax;
+            x_org_high = xmin;
+        }
+        if (x_org_pos == "low"){
+            x_org = x_org_low;
+        } else{
+            x_org = x_org_high;
+            x_major = -x_major;
+        }
+    }
+
+
+    if (element->hasAttribute("y_major")){
+        y_major = static_cast<int>(element->getAttribute("y_major"));
+    }
+    else
+    {
+        if (!(scale & GR_OPTION_Y_LOG))
+        {
+            y_major = major_count;
+        }
+        else
+        {
+            y_major = 1;
+        }
+    }
+
+    if (element->hasAttribute("y_tick")){
+        y_tick = static_cast<double>(element->getAttribute("y_tick"));
+    }
+    else
+    {
+        if (!(scale & GR_OPTION_Y_LOG))
+        {
+            if (y_major != 0){
+                y_tick = auto_tick(ymin, ymax) / y_major;
+            } else{
+                y_tick = 1;
+            }
+        }
+        else
+        {
+            y_tick = 1;
+        }
+    }
+
+    if (element->hasAttribute("y_org")){
+        y_org = static_cast<double>(element->getAttribute("y_org"));
+    }
+    else
+    {
+        if (!(scale & GR_OPTION_FLIP_Y))
+        {
+            y_org_low = ymin;
+            y_org_high = ymax;
+        }
+        else
+        {
+            y_org_low = ymax;
+            y_org_high = ymin;
+        }
+        if (y_org_pos == "low"){
+            y_org = y_org_low;
+        } else{
+            y_org = y_org_high;
+            y_major = -y_major;
+        }
+    }
+}
+
+static void getAxes3dInformation(const std::shared_ptr<GR::Element> &element, double &x_tick, double &y_tick, double &z_tick, double &x_org, double &y_org, double &z_org, int &x_major, int &y_major, int &z_major){
+  getAxesInformation(element, x_tick, y_tick, x_org, y_org, x_major, y_major);
+
+  double z_org_low, z_org_high;
+  std::string z_org_pos;
+  int major_count;
+
+  auto draw_axes_group = element->parentElement();
+  auto subplot_element = draw_axes_group->parentElement();
+  std::string kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
+  int scale = static_cast<int>(subplot_element->getAttribute("scale"));
+  double zmin = static_cast<double>(subplot_element->getAttribute("window_zmin"));
+  double zmax = static_cast<double>(subplot_element->getAttribute("window_zmax"));
+
+  getMajorCount(element, kind, major_count);
+
+  if (element->hasAttribute("z_org_pos")){
+      z_org_pos = static_cast<std::string>(element->getAttribute("z_org_pos"));
+  } else{
+      z_org_pos = "low";
+  }
+
+  if (element->hasAttribute("z_major")){
+      z_major = static_cast<int>(element->getAttribute("z_major"));
+  }
+  else
+  {
+      if (!(scale & GR_OPTION_Z_LOG))
+        {
+          z_major = major_count;
+        }
+      else
+        {
+          z_major = 1;
+        }
+  }
+
+  if (element->hasAttribute("z_tick")){
+      z_tick = static_cast<double>(element->getAttribute("z_tick"));
+  }
+  else
+  {
+      if (!(scale & GR_OPTION_Z_LOG))
+      {
+          if (z_major != 0){
+              z_tick = auto_tick(zmin, zmax) / z_major;
+          } else{
+              z_tick = 1;
+          }
+      }
+      else
+      {
+          z_tick = 1;
+      }
+  }
+
+  if (element->hasAttribute("z_org")){
+      z_org = static_cast<double>(element->getAttribute("z_org"));
+  } else {
+      if (!(scale & GR_OPTION_FLIP_Z))
+      {
+          z_org_low = zmin;
+          z_org_high = zmax;
+      }
+      else
+      {
+          z_org_low = zmax;
+          z_org_high = zmin;
+      }
+      if (z_org_pos == "low"){
+          z_org = z_org_low;
+      } else{
+          z_org = z_org_high;
+          z_major = -z_major;
+      }
+  }
+}
 
 static void polymarker(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
@@ -494,14 +772,17 @@ static void axes(const std::shared_ptr<GR::Element> &element, const std::shared_
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
    */
-  double x_tick = static_cast<double>(element->getAttribute("x_tick"));
-  double y_tick = static_cast<double>(element->getAttribute("y_tick"));
-  double x_org = static_cast<double>(element->getAttribute("x_org"));
-  double y_org = static_cast<double>(element->getAttribute("y_org"));
-  int major_x = static_cast<int>(element->getAttribute("major_x"));
-  int major_y = static_cast<int>(element->getAttribute("major_y"));
+  double x_tick, x_org;
+  double y_tick, y_org;
+  int x_major;
+  int y_major;
   int tick_orientation = 1;
   double tick_size;
+
+  getAxesInformation(element, x_tick, y_tick, x_org, y_org, x_major, y_major);
+
+  auto draw_axes_group = element->parentElement();
+  auto subplot_element = draw_axes_group->parentElement();
 
   if (element->hasAttribute("tick_orientation"))
     {
@@ -514,12 +795,11 @@ static void axes(const std::shared_ptr<GR::Element> &element, const std::shared_
     }
   else
     {
-      auto subplot_element = element->parentElement()->parentElement();
       tick_size = static_cast<double>(subplot_element->getAttribute("tick_size"));
     }
   tick_size *= tick_orientation;
 
-  gr_axes(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size);
+  gr_axes(x_tick, y_tick, x_org, y_org, x_major, y_major, tick_size);
 }
 
 static void grid(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
@@ -530,13 +810,15 @@ static void grid(const std::shared_ptr<GR::Element> &element, const std::shared_
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
    */
-  double x_tick = static_cast<double>(element->getAttribute("x_tick"));
-  double y_tick = static_cast<double>(element->getAttribute("y_tick"));
-  double x_org = static_cast<double>(element->getAttribute("x_org"));
-  double y_org = static_cast<double>(element->getAttribute("y_org"));
-  int major_x = static_cast<int>(element->getAttribute("major_x"));
-  int major_y = static_cast<int>(element->getAttribute("major_y"));
-  gr_grid(x_tick, y_tick, x_org, y_org, major_x, major_y);
+  double x_tick, y_tick, x_org, y_org;
+  int x_major, y_major;
+  int x_grid = 1, y_grid = 1;
+  auto draw_axes_element = element->parentElement();
+  auto subplot_element = draw_axes_element->parentElement();
+
+  getAxesInformation(element, x_tick, y_tick, x_org, y_org, x_major, y_major);
+
+  gr_grid(x_tick, y_tick, x_org, y_org, x_major, y_major);
 }
 
 static void drawImage(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
@@ -793,16 +1075,15 @@ static void grid3d(const std::shared_ptr<GR::Element> &element, const std::share
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
    */
-  double x_tick = static_cast<double>(element->getAttribute("x_tick"));
-  double y_tick = static_cast<double>(element->getAttribute("y_tick"));
-  double z_tick = static_cast<double>(element->getAttribute("z_tick"));
-  double x_org = static_cast<double>(element->getAttribute("x_org"));
-  double y_org = static_cast<double>(element->getAttribute("y_org"));
-  double z_org = static_cast<double>(element->getAttribute("z_org"));
-  int major_x = static_cast<int>(element->getAttribute("major_x"));
-  int major_y = static_cast<int>(element->getAttribute("major_y"));
-  int major_z = static_cast<int>(element->getAttribute("major_z"));
-  gr_grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z);
+  double x_tick, x_org;
+  double y_tick, y_org;
+  double z_tick, z_org;
+  int x_major;
+  int y_major;
+  int z_major;
+  getAxes3dInformation(element, x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major);
+
+  gr_grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major);
 }
 
 static void axes3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
@@ -813,17 +1094,19 @@ static void axes3d(const std::shared_ptr<GR::Element> &element, const std::share
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
    */
-  double x_tick = static_cast<double>(element->getAttribute("x_tick"));
-  double y_tick = static_cast<double>(element->getAttribute("y_tick"));
-  double z_tick = static_cast<double>(element->getAttribute("z_tick"));
-  double x_org = static_cast<double>(element->getAttribute("x_org"));
-  double y_org = static_cast<double>(element->getAttribute("y_org"));
-  double z_org = static_cast<double>(element->getAttribute("z_org"));
-  int major_x = static_cast<int>(element->getAttribute("major_x"));
-  int major_y = static_cast<int>(element->getAttribute("major_y"));
-  int major_z = static_cast<int>(element->getAttribute("major_z"));
+  double x_tick, x_org;
+  double y_tick, y_org;
+  double z_tick, z_org;
+  int x_major;
+  int y_major;
+  int z_major;
   int tick_orientation = 1;
   double tick_size;
+
+  getAxes3dInformation(element, x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major);
+
+  auto draw_axes_group = element->parentElement();
+  auto subplot_element = draw_axes_group->parentElement();
 
   if (element->hasAttribute("tick_orientation"))
     {
@@ -836,12 +1119,11 @@ static void axes3d(const std::shared_ptr<GR::Element> &element, const std::share
     }
   else
     {
-      auto subplot_element = element->parentElement()->parentElement();
       tick_size = static_cast<double>(subplot_element->getAttribute("tick_size"));
     }
   tick_size *= tick_orientation;
 
-  gr_axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z, tick_size);
+  gr_axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major, tick_size);
 }
 
 static void polyline3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
@@ -1462,36 +1744,138 @@ static void processRelativeCharHeight(const std::shared_ptr<GR::Element> &elem)
   gr_setcharheight(charheight);
 }
 
-static void processWindow(const std::shared_ptr<GR::Element> &elem)
+static void processLimits(const std::shared_ptr<GR::Element> &elem)
 {
   /*!
    * Procestd::sing function for gr_window
    *
    * \param[in] element The GR::Element that contains the attributes
    */
-  double xmin, xmax, ymin, ymax;
-  xmin = (double)elem->getAttribute("window_xmin");
-  xmax = (double)elem->getAttribute("window_xmax");
-  ymin = (double)elem->getAttribute("window_ymin");
-  ymax = (double)elem->getAttribute("window_ymax");
-  gr_setwindow(xmin, xmax, ymin, ymax);
-}
+  int adjust_xlim, adjust_ylim;
+  std::string kind = static_cast<std::string>(elem->getAttribute("kind"));
 
-static void processWindow3d(const std::shared_ptr<GR::Element> &elem)
-{
-  /*!
-   * Procestd::sing function for gr_window3d
-   *
-   * \param[in] element The GR::Element that contains the attributes
-   */
-  double xmin, xmax, ymin, ymax, zmin, zmax;
-  xmin = (double)elem->getAttribute("window3d_xmin");
-  xmax = (double)elem->getAttribute("window3d_xmax");
-  ymin = (double)elem->getAttribute("window3d_ymin");
-  ymax = (double)elem->getAttribute("window3d_ymax");
-  zmin = (double)elem->getAttribute("window3d_zmin");
-  zmax = (double)elem->getAttribute("window3d_zmax");
-  gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
+  int scale = static_cast<int>(elem->getAttribute("scale"));
+
+  double xmin = static_cast<double>(elem->getAttribute("lim_xmin"));
+  double xmax = static_cast<double>(elem->getAttribute("lim_xmax"));
+  double ymin = static_cast<double>(elem->getAttribute("lim_ymin"));
+  double ymax = static_cast<double>(elem->getAttribute("lim_ymax"));
+
+  if (elem->hasAttribute("reset_ranges") && static_cast<int>(elem->getAttribute("reset_ranges"))){
+      if (elem->hasAttribute("_original_xmin") && elem->hasAttribute("_original_xmax") &&
+          elem->hasAttribute("_original_ymin") && elem->hasAttribute("_original_ymax") &&
+          elem->hasAttribute("_original_adjust_xlim") && elem->hasAttribute("_original_adjust_ylim"))
+      {
+          xmin = static_cast<double>(elem->getAttribute("_original_xmin"));
+          xmax = static_cast<double>(elem->getAttribute("_original_xmax"));
+          ymin = static_cast<double>(elem->getAttribute("_original_ymin"));
+          ymax = static_cast<double>(elem->getAttribute("_original_ymax"));
+          adjust_xlim = static_cast<int>(elem->getAttribute("_original_adjust_xlim"));
+          adjust_ylim = static_cast<int>(elem->getAttribute("_original_adjust_ylim"));
+          elem->setAttribute("adjust_xlim", adjust_xlim);
+          elem->setAttribute("adjust_ylim", adjust_ylim);
+          elem->removeAttribute("_original_xmin");
+          elem->removeAttribute("_original_xmax");
+          elem->removeAttribute("_original_ymin");
+          elem->removeAttribute("_original_ymax");
+          elem->removeAttribute("_original_adjust_xlim");
+          elem->removeAttribute("_original_adjust_ylim");
+      }
+      elem->removeAttribute("reset_ranges");
+  }
+
+  if (elem->hasAttribute("panzoom") && static_cast<int>(elem->getAttribute("panzoom"))){
+    if (!elem->hasAttribute("_original_xlim")){
+        elem->setAttribute("_original_xmin", xmin);
+        elem->setAttribute("_original_xmax", xmax);
+        elem->setAttribute("_original_xlim", true);
+        adjust_xlim = static_cast<int>(elem->getAttribute("adjust_xlim"));
+        elem->setAttribute("_original_adjust_xlim", adjust_xlim);
+        elem->setAttribute("adjust_xlim", 0);
+    }
+    if (!elem->hasAttribute("_original_ylim")){
+        elem->setAttribute("_original_ymin", ymin);
+        elem->setAttribute("_original_ymax", ymax);
+        elem->setAttribute("_original_ylim", true);
+        adjust_ylim = static_cast<int>(elem->getAttribute("adjust_ylim"));
+        elem->setAttribute("_original_adjust_ylim", adjust_ylim);
+        elem->setAttribute("adjust_ylim", 0);
+      }
+    auto panzoom_element = elem->getElementsByTagName("panzoom")[0];
+    double x = static_cast<double>(panzoom_element->getAttribute("x"));
+    double y = static_cast<double>(panzoom_element->getAttribute("y"));
+    double xzoom = static_cast<double>(panzoom_element->getAttribute("xzoom"));
+    double yzoom = static_cast<double>(panzoom_element->getAttribute("yzoom"));
+
+    /* Ensure the correct window is set in GR */
+    if (elem->hasAttribute("window") && static_cast<int>(elem->getAttribute("window"))){
+        double stored_window_xmin = static_cast<double>(elem->getAttribute("window_xmin"));
+        double stored_window_xmax = static_cast<double>(elem->getAttribute("window_xmax"));
+        double stored_window_ymin = static_cast<double>(elem->getAttribute("window_ymin"));
+        double stored_window_ymax = static_cast<double>(elem->getAttribute("window_ymax"));
+
+        gr_setwindow(stored_window_xmin, stored_window_xmax, stored_window_ymin, stored_window_ymax);
+    }
+
+    gr_panzoom(x, y, xzoom, yzoom, &xmin, &xmax, &ymin, &ymax);
+
+    elem->setAttribute("panzoom", false);
+    elem->removeChild(panzoom_element);
+  }
+
+  if (!(scale & GR_OPTION_X_LOG))
+    {
+      adjust_xlim = static_cast<int>(elem->getAttribute("adjust_xlim"));
+      if (adjust_xlim)
+        {
+          logger((stderr, "_xlim before \"gr_adjustlimits\": (%lf, %lf)\n", xmin, xmax));
+          gr_adjustlimits(&xmin, &xmax);
+          logger((stderr, "_xlim after \"gr_adjustlimits\": (%lf, %lf)\n", xmin, xmax));
+        }
+    }
+
+  if (!(scale & GR_OPTION_Y_LOG))
+    {
+      adjust_ylim = static_cast<int>(elem->getAttribute("adjust_ylim"));
+      if (adjust_ylim)
+        {
+          logger((stderr, "_ylim before \"gr_adjustlimits\": (%lf, %lf)\n", ymin, ymax));
+          gr_adjustlimits(&ymin, &ymax);
+          logger((stderr, "_ylim after \"gr_adjustlimits\": (%lf, %lf)\n", ymin, ymax));
+        }
+    }
+
+  if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume", "isosurface"))
+    {
+      double zmin = static_cast<double>(elem->getAttribute("lim_zmin"));
+      double zmax = static_cast<double>(elem->getAttribute("lim_zmax"));
+      if (!(scale & GR_OPTION_Z_LOG))
+        {
+          int adjust_zlim = static_cast<int>(elem->hasAttribute("adjust_zlim"));
+          if (adjust_zlim)
+            {
+              logger((stderr, "_zlim before \"gr_adjustlimits\": (%lf, %lf)\n", zmin, zmax));
+              gr_adjustlimits(&zmin, &zmax);
+              logger((stderr, "_zlim after \"gr_adjustlimits\": (%lf, %lf)\n", zmin, zmax));
+            }
+        }
+      logger((stderr, "Storing window3d (%lf, %lf, %lf, %lf, %lf, %lf)\n", xmin, xmax, ymin, ymax, zmin, zmax));
+      gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
+      global_render->setWindow3d(elem, xmin, xmax, ymin, ymax, zmin, zmax);
+    }
+  else
+  {
+      logger((stderr, "Storing window (%lf, %lf, %lf, %lf)\n", xmin, xmax, ymin, ymax));
+      if (!str_equals_any(kind.c_str(), 2, "polar", "polar_histogram"))
+      {
+        gr_setwindow(xmin, xmax, ymin, ymax);
+        global_render->setWindow(elem, xmin, xmax, ymin, ymax);
+      }
+      else
+      {
+        global_render->setWindow(elem, -1, 1, -1, 1);
+      }
+  }
 }
 
 static void processProjectionType(const std::shared_ptr<GR::Element> &elem)
@@ -1870,27 +2254,6 @@ static void legend_size(std::vector<std::string> labels, double *w, double *h)
           *h += grm_max(tby[2] - tby[0], 0.03);
         }
     }
-}
-
-static double auto_tick(double amin, double amax)
-{
-  double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
-  double scale, tick;
-  int i, n;
-
-  scale = std::pow(10.0, (int)(std::log10(amax - amin)));
-  tick = 1.0;
-  for (i = 0; i < 9; i++)
-    {
-      n = (amax - amin) / scale / tick_size[i];
-      if (n > 7)
-        {
-          tick = tick_size[i - 1];
-          break;
-        }
-    }
-  tick *= scale;
-  return tick;
 }
 
 static void drawLegend(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
@@ -2470,6 +2833,24 @@ static void isosurfaceRender(const std::shared_ptr<GR::Element> &elem, const std
   gr3_drawimage(x_min, x_max, y_min, y_max, subplot_width, subplot_height, GR3_DRAWABLE_GKS);
 }
 
+static void panzoom(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context){
+    ; /* panzoom is being processed in the processLimits routine */
+}
+
+static void drawYLine(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context){
+    auto draw_axes_element = elem->parentElement();
+    auto subplot_element = draw_axes_element->parentElement();
+
+    auto x_axes_elements = subplot_element->getElementsByTagName("x-axes-information")[0];
+    double x_org_low = static_cast<double>(x_axes_elements->getAttribute("x_org_low"));
+    double x_org_high =  static_cast<double>(x_axes_elements->getAttribute("x_org_high"));
+
+    double x[2] = {x_org_low, x_org_high};
+    double y[2] = {0, 0};
+
+    gr_polyline(2, x, y);
+}
+
 static void processGR3CameraLookAt(const std::shared_ptr<GR::Element> &elem)
 {
   double camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z;
@@ -2613,28 +2994,27 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
                          (int)elem->getAttribute("textalign_vertical"));
        }},
       {std::string("textencoding"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_settextencoding((int)elem->getAttribute("textencoding")); }},
-      {std::string("title"), processTitle},
+                                      [](const std::shared_ptr<GR::Element> &elem) { gr_settextencoding((int)elem->getAttribute("textencoding")); }},
+      {std::string("title"),          processTitle},
       {std::string("transparency"),
-       [](const std::shared_ptr<GR::Element> &elem) {
+                                      [](const std::shared_ptr<GR::Element> &elem) {
          gr_settransparency((double)elem->getAttribute("transparency"));
        }},
       {std::string("linespec"),
-       [](const std::shared_ptr<GR::Element> &elem) {
+                                      [](const std::shared_ptr<GR::Element> &elem) {
          gr_uselinespec(((std::string)elem->getAttribute("linespec")).data());
        }},
-      {std::string("window"), processWindow},
-      {std::string("window3d"), processWindow3d},
+      {std::string("limits"),         processLimits},
       {std::string("resamplemethod"),
-       [](const std::shared_ptr<GR::Element>
+                                      [](const std::shared_ptr<GR::Element>
               &elem) { gr_setresamplemethod((int)elem->getAttribute("resamplemethod")); }},
       {std::string("projectiontype"), processProjectionType},
-      {std::string("space3d"), processSpace3d},
-      {std::string("space"), processSpace},
-      {std::string("viewport"), processViewport},
-      {std::string("subplot"), processSubplot},
+      {std::string("space3d"),        processSpace3d},
+      {std::string("space"),          processSpace},
+      {std::string("viewport"),       processViewport},
+      {std::string("subplot"),        processSubplot},
       {std::string("scale"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_setscale((int)elem->getAttribute("scale")); }},
+                                      [](const std::shared_ptr<GR::Element> &elem) { gr_setscale((int)elem->getAttribute("scale")); }},
       {std::string("selntran"),
        [](const std::shared_ptr<GR::Element> &elem) { gr_selntran((int)elem->getAttribute("selntran")); }},
       {std::string("gr3cameralookat"), processGR3CameraLookAt},
@@ -2741,6 +3121,8 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
                        {std::string("draw-polar-axes"), drawPolarAxes},
                        {std::string("draw-pie-legend"), drawPieLegend},
                        {std::string("pie-plot-title-render"), piePlotTitleRender},
+                       {std::string("panzoom"), panzoom},
+                       {std::string("y-line"), drawYLine},
                        {std::string("isosurface-render"), isosurfaceRender}};
   /*! Modifier */
   if (element->localName() == "group")
@@ -3018,7 +3400,7 @@ std::shared_ptr<GR::Element> GR::Render::createCellArray(double xmin, double xma
 }
 
 std::shared_ptr<GR::Element> GR::Render::createAxes(double x_tick, double y_tick, double x_org, double y_org,
-                                                    int major_x, int major_y, int tick_orientation)
+                                                    int x_major, int y_major, int tick_orientation)
 {
   /*!
    * This function can be used for creating an Axes GR::Element
@@ -3027,17 +3409,29 @@ std::shared_ptr<GR::Element> GR::Render::createAxes(double x_tick, double y_tick
    * \param[in] y_tick A double value
    * \param[in] x_org A double value
    * \param[in] y_org A double value
-   * \param[in] major_x An Integer value
-   * \param[in] major_y An Integer value
-   * \param[in] tick_size A Double value
+   * \param[in] x_major An Integer value
+   * \param[in] y_major An Integer value
+   * \param[in] tick_orientation A Double value
    */
   auto element = createElement("axes");
   element->setAttribute("x_tick", x_tick);
   element->setAttribute("y_tick", y_tick);
   element->setAttribute("x_org", x_org);
   element->setAttribute("y_org", y_org);
-  element->setAttribute("major_x", major_x);
-  element->setAttribute("major_y", major_y);
+  element->setAttribute("x_major", x_major);
+  element->setAttribute("y_major", y_major);
+  element->setAttribute("tick_orientation", tick_orientation);
+  return element;
+}
+
+std::shared_ptr<GR::Element> GR::Render::createEmptyAxes(int tick_orientation)
+{
+  /*!
+   * This function can be used for creating an Axes GR::Element with missing information
+   *
+   * \param[in] tick_orientation A Int value specifing the direction of the ticks
+   */
+  auto element = createElement("axes");
   element->setAttribute("tick_orientation", tick_orientation);
   return element;
 }
@@ -3141,6 +3535,17 @@ std::shared_ptr<GR::Element> GR::Render::createGrid(double x_tick, double y_tick
   return element;
 }
 
+std::shared_ptr<GR::Element> GR::Render::createEmptyGrid(bool x_grid, bool y_grid)
+{
+    auto element = createElement("grid");
+    if (!x_grid){
+        element->setAttribute("x_tick", 0);
+    }
+    if (!y_grid){
+        element->setAttribute("y_tick", 0);
+    }
+    return element;
+}
 
 std::shared_ptr<GR::Element> GR::Render::createGroup()
 {
@@ -3491,7 +3896,7 @@ std::shared_ptr<GR::Element> GR::Render::createSurface(const std::string &px_key
 }
 
 std::shared_ptr<GR::Element> GR::Render::createGrid3d(double x_tick, double y_tick, double z_tick, double x_org,
-                                                      double y_org, double z_org, int major_x, int major_y, int major_z)
+                                                      double y_org, double z_org, int x_major, int y_major, int z_major)
 {
   auto element = createElement("grid3d");
   element->setAttribute("x_tick", x_tick);
@@ -3500,9 +3905,24 @@ std::shared_ptr<GR::Element> GR::Render::createGrid3d(double x_tick, double y_ti
   element->setAttribute("x_org", x_org);
   element->setAttribute("y_org", y_org);
   element->setAttribute("z_org", z_org);
-  element->setAttribute("major_x", major_x);
-  element->setAttribute("major_y", major_y);
-  element->setAttribute("major_z", major_z);
+  element->setAttribute("x_major", x_major);
+  element->setAttribute("y_major", y_major);
+  element->setAttribute("z_major", z_major);
+  return element;
+}
+
+std::shared_ptr<GR::Element> GR::Render::createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid)
+{
+  auto element = createElement("grid3d");
+  if (!x_grid){
+      element->setAttribute("x_tick", 0);
+  }
+  if (!y_grid){
+      element->setAttribute("y_tick", 0);
+  }
+  if (!z_grid){
+      element->setAttribute("z_tick", 0);
+  }
   return element;
 }
 
@@ -3520,6 +3940,13 @@ std::shared_ptr<GR::Element> GR::Render::createAxes3d(double x_tick, double y_ti
   element->setAttribute("major_x", major_x);
   element->setAttribute("major_y", major_y);
   element->setAttribute("major_z", major_z);
+  element->setAttribute("tick_orientation", tick_orientation);
+  return element;
+}
+
+std::shared_ptr<GR::Element> GR::Render::createEmptyAxes3d(int tick_orientation)
+{
+  auto element = createElement("axes3d");
   element->setAttribute("tick_orientation", tick_orientation);
   return element;
 }
@@ -3910,13 +4337,29 @@ std::shared_ptr<GR::Element> GR::Render::createLayoutGridElement(const grm::Grid
   return element;
 }
 
+std::shared_ptr<GR::Element> GR::Render::createPanzoom(double x, double y, double xzoom, double yzoom){
+
+    auto element = createElement("panzoom");
+    element->setAttribute("x", x);
+    element->setAttribute("y", y);
+    element->setAttribute("xzoom", xzoom);
+    element->setAttribute("yzoom", yzoom);
+    return element;
+}
+
+std::shared_ptr<GR::Element> GR::Render::createYLine(){
+
+    auto element = createElement("y-line");
+    return element;
+}
+
 //! Modifierfunctions
 
 void GR::Render::setViewport(const std::shared_ptr<GR::Element> &element, double xmin, double xmax, double ymin,
                              double ymax)
 {
   /*!
-   * This function can be used to set the window of a GR::Element
+   * This function can be used to set the viewport of a GR::Element
    *
    * \param[in] element A GR::Element
    * \param[in] xmin The left horizontal coordinate of the viewport (0 <= xmin < xmax)
@@ -4304,12 +4747,12 @@ void GR::Render::setWindow3d(const std::shared_ptr<GR::Element> &element, double
    */
 
   element->setAttribute("window3d", true);
-  element->setAttribute("window3d_xmin", xmin);
-  element->setAttribute("window3d_xmax", xmax);
-  element->setAttribute("window3d_ymin", ymin);
-  element->setAttribute("window3d_ymax", ymax);
-  element->setAttribute("window3d_zmin", zmin);
-  element->setAttribute("window3d_zmax", zmax);
+  element->setAttribute("window_xmin", xmin);
+  element->setAttribute("window_xmax", xmax);
+  element->setAttribute("window_ymin", ymin);
+  element->setAttribute("window_ymax", ymax);
+  element->setAttribute("window_zmin", zmin);
+  element->setAttribute("window_zmax", zmax);
 }
 
 void GR::Render::setSpace3d(const std::shared_ptr<GR::Element> &element, double phi, double theta, double fov,
@@ -4574,6 +5017,17 @@ void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element)
   element->setAttribute("setNextColor", true);
   element->setAttribute("snc-fallback", true);
 }
+
+void GR::Render::setOriginPosition(const std::shared_ptr<GR::Element> &element, std::string x_org_pos, std::string y_org_pos){
+    element->setAttribute("x_org_pos", x_org_pos);
+    element->setAttribute("y_org_pos", y_org_pos);
+}
+
+void GR::Render::setOriginPosition3d(const std::shared_ptr<GR::Element> &element, std::string x_org_pos, std::string y_org_pos, std::string z_org_pos){
+    setOriginPosition(element, x_org_pos, y_org_pos);
+    element->setAttribute("z_org_pos", z_org_pos);
+}
+
 //! Render functions
 static void renderHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
@@ -4741,7 +5195,8 @@ void GR::Render::render()
    */
   auto root = this->firstChildElement();
   global_root = root;
-  if (root->hasChildNodes())
+    std::cout << toXML(root) << "\n";
+    if (root->hasChildNodes())
     {
       finalizeGrid(root);
       int i = 0;

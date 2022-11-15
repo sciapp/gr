@@ -54,8 +54,12 @@ public:
                                            std::optional<std::vector<int>> color,
                                            const std::shared_ptr<Context> &extContext = nullptr);
 
-  std::shared_ptr<Element> createAxes(double x_tick, double y_tick, double x_org, double y_org, int major_x,
-                                      int major_y, int tick_orientation);
+  std::shared_ptr<Element> createAxes(double x_tick, double y_tick, double x_org, double y_org, int x_major,
+                                      int y_major, int tick_orientation);
+
+  std::shared_ptr<GR::Element> createEmptyAxes(int tick_orientation);
+
+  std::shared_ptr<GR::Element> createEmptyDoubleAxes();
 
   std::shared_ptr<Element> createDrawLegend(const std::string &labels_key,
                                             std::optional<std::vector<std::string>> labels, int location,
@@ -74,6 +78,8 @@ public:
 
   std::shared_ptr<Element> createGrid(double x_tick, double y_tick, double x_org, double y_org, int major_x,
                                       int major_y);
+
+  std::shared_ptr<GR::Element> createEmptyGrid(bool x_grid, bool y_grid);
 
   std::shared_ptr<Element> createGroup();
 
@@ -131,8 +137,13 @@ public:
   std::shared_ptr<Element> createGrid3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org,
                                         double z_org, int major_x, int major_y, int major_z);
 
+  std::shared_ptr<GR::Element> createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid);
+
+
   std::shared_ptr<Element> createAxes3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org,
                                         double z_org, int major_x, int major_y, int major_z, int tick_orientation);
+
+  std::shared_ptr<GR::Element> createEmptyAxes3d(int tick_orientation);
 
   std::shared_ptr<Element> createPolyline3d(const std::string &x_key, std::optional<std::vector<double>> x,
                                             const std::string &y_key, std::optional<std::vector<double>> y,
@@ -198,6 +209,10 @@ public:
   std::shared_ptr<Element> createPiePlotTitleRenderElement(std::string title);
 
   std::shared_ptr<Element> createIsoSurfaceRenderElement(int drawable_type);
+
+  std::shared_ptr<GR::Element> createPanzoom(double x, double y, double xzoom, double yzoom);
+
+  std::shared_ptr<GR::Element> createYLine();
 
   //! Modifierfunctions
 
@@ -308,6 +323,10 @@ public:
   void setXTickLabels(std::shared_ptr<GR::Element> group, const std::string &key,
                       std::optional<std::vector<std::string>> xticklabels,
                       const std::shared_ptr<GR::Context> &extContext = nullptr);
+
+  void setOriginPosition(const std::shared_ptr<GR::Element> &element, std::string x_org_pos, std::string y_org_pos);
+
+  void setOriginPosition3d(const std::shared_ptr<GR::Element> &element, std::string x_org_pos, std::string y_org_pos, std::string z_org_pos);
 
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context

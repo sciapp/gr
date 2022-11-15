@@ -53,5 +53,6 @@ EXPORT std::shared_ptr<GR::Element> grm_get_document_root(void);
 EXPORT std::shared_ptr<GR::Render> grm_get_render(void);
 EXPORT int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
                            const std::shared_ptr<GR::Element> &parentDomElement);
+EXPORT std::shared_ptr<GR::Element> get_subplot_from_ndc_point_using_dom(double x, double y);
 #endif
 #endif /* ifndef GRM_PLOT_H_INCLUDED */
