@@ -134,6 +134,9 @@ if(Qt4_FOUND)
   foreach(DIR IN LISTS QT_INCLUDE_DIR)
     set(QT4_MOC_INCLUDE_FLAGS ${QT4_MOC_INCLUDE_FLAGS} -I${DIR})
   endforeach()
+  if(NOT DEFINED Qt4_LIBRARY_DIR)
+    get_filename_component(Qt4_LIBRARY_DIR "${QT_LIBRARY_DIR}/../.." ABSOLUTE)
+  endif()
 endif()
 if(Qt5Widgets_FOUND
    AND Qt5Core_FOUND
@@ -143,6 +146,9 @@ if(Qt5Widgets_FOUND
   foreach(DIR IN LISTS Qt5Core_INCLUDE_DIRS Qt5Gui_INCLUDE_DIRS Qt5Widgets_INCLUDE_DIRS)
     set(QT5_MOC_INCLUDE_FLAGS ${QT5_MOC_INCLUDE_FLAGS} -I${DIR})
   endforeach()
+  if(NOT DEFINED Qt5_LIBRARY_DIR)
+    get_filename_component(Qt5_LIBRARY_DIR "${Qt5_DIR}/../.." ABSOLUTE)
+  endif()
 endif()
 if(Qt6Widgets_FOUND
    AND Qt6Core_FOUND
@@ -152,6 +158,9 @@ if(Qt6Widgets_FOUND
   foreach(DIR IN LISTS Qt6Core_INCLUDE_DIRS Qt6Gui_INCLUDE_DIRS Qt6Widgets_INCLUDE_DIRS)
     set(QT6_MOC_INCLUDE_FLAGS ${QT6_MOC_INCLUDE_FLAGS} -I${DIR})
   endforeach()
+  if(NOT DEFINED Qt6_LIBRARY_DIR)
+    get_filename_component(Qt6_LIBRARY_DIR "${Qt6_DIR}/../.." ABSOLUTE)
+  endif()
 endif()
 
 if(X11_FOUND)
@@ -1003,22 +1012,27 @@ if(Qt4_FOUND
       )
 )
   add_executable(gksqt WIN32 MACOSX_BUNDLE lib/gks/qt/gksqt.cxx lib/gks/qt/gksserver.cxx lib/gks/qt/gkswidget.cxx)
-  set_target_properties(gksqt PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
   target_link_libraries(gksqt PUBLIC gks_static)
   if(Qt6Widgets_FOUND
      AND Qt6Core_FOUND
      AND Qt6Network_FOUND
   )
     target_link_libraries(gksqt PUBLIC Qt6::Widgets Qt6::Core Qt6::Network)
+    set(gksqt_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
   elseif(
     Qt5Widgets_FOUND
     AND Qt5Core_FOUND
     AND Qt5Network_FOUND
   )
     target_link_libraries(gksqt PUBLIC Qt5::Widgets Qt5::Core Qt5::Network)
+    set(gksqt_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
   elseif(Qt4_FOUND)
     target_link_libraries(gksqt PUBLIC Qt4::QtCore Qt4::QtGui Qt4::QtNetwork)
+    set(gksqt_INSTALL_RPATH "${INSTALL_RPATH};${Qt4_LIBRARY_DIR}")
   endif()
+  set_target_properties(
+    gksqt PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH "${gksqt_INSTALL_RPATH}"
+  )
   if(MINGW)
     target_compile_options(gksqt PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
   endif()
@@ -1093,15 +1107,9 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
   )
   if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
     target_link_libraries(grm-plots PRIVATE Qt6::Widgets Qt6::Core grm_static)
-    if(NOT DEFINED Qt6_LIBRARY_DIR)
-      get_filename_component(Qt6_LIBRARY_DIR "${Qt6_DIR}/../.." ABSOLUTE)
-    endif()
     set(grm-plots_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
   else()
     target_link_libraries(grm-plots PRIVATE Qt5::Widgets Qt5::Core grm_static)
-    if(NOT DEFINED Qt5_LIBRARY_DIR)
-      get_filename_component(Qt5_LIBRARY_DIR "${Qt5_DIR}/../.." ABSOLUTE)
-    endif()
     set(grm-plots_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
   endif()
   set_target_properties(
