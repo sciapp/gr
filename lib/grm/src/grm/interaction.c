@@ -104,6 +104,7 @@ int grm_input(const grm_args_t *input_args)
               double *x_series, *y_series;
               unsigned int x_length, y_length;
               double x_0, x_end, y_0, y_end, x_step, y_step;
+              double xind, yind;
 
               args_values(input_args, "x", "i", &x);
               args_values(input_args, "y", "i", &y);
@@ -123,9 +124,16 @@ int grm_input(const grm_args_t *input_args)
 
               x_step = (x_end - x_0) / x_length;
               y_step = (y_end - y_0) / y_length;
+              xind = (x - x_0) / x_step;
+              yind = (y - y_0) / y_step;
 
-              grm_args_push(subplot_args, "xind", "i", (int)((x - x_0) / x_step));
-              grm_args_push(subplot_args, "yind", "i", (int)((y - y_0) / y_step));
+              if (xind < 0 || xind >= x_length || yind < 0 || yind >= y_length)
+                {
+                  xind = -1;
+                  yind = -1;
+                }
+              grm_args_push(subplot_args, "xind", "i", (int)xind);
+              grm_args_push(subplot_args, "yind", "i", (int)yind);
             }
 
           if (args_values(input_args, "angle_delta", "d", &angle_delta))
@@ -181,7 +189,6 @@ int grm_input(const grm_args_t *input_args)
             {
               double ndc_xshift, ndc_yshift, rotation, tilt;
               int shift_pressed;
-              const char *kind;
 
               if (str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
                                  "isosurface"))
@@ -409,7 +416,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
               double num;
               double x_0 = x_series[0], x_end = x_series[x_length - 1], y_0 = y_series[0],
                      y_end = y_series[y_length - 1];
-              double x_step, y_step;
+              double x_step, y_step, x_series_idx, y_series_idx;
 
               gr_wctondc(&x_0, &y_0);
               gr_wctondc(&x_end, &y_end);
@@ -422,13 +429,19 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
               y_step = (y_end - y_0) / y_length;
 
               mindiff = 0;
-              info->x = x_series[(int)((mouse_x - x_0) / x_step)];
-              info->y = y_series[(int)((mouse_y - y_0) / y_step)];
+              x_series_idx = (mouse_x - x_0) / x_step;
+              y_series_idx = (mouse_y - y_0) / y_step;
+              if (x_series_idx < 0 || x_series_idx >= x_length || y_series_idx < 0 || y_series_idx >= y_length)
+                {
+                  mindiff = DBL_MAX;
+                  break;
+                }
+              info->x = x_series[(int)x_series_idx];
+              info->y = y_series[(int)y_series_idx];
               info->x_px = mouse_x;
               info->y_px = mouse_y;
 
-              num = z_series[((y_length - 1) - (int)((mouse_y - y_0) / y_step)) * x_length +
-                             (int)((mouse_x - x_0) / x_step)];
+              num = z_series[((y_length - 1) - (int)y_series_idx) * x_length + (int)x_series_idx];
               snprintf(output, 50, "%f", num);
               info->label = output;
             }
