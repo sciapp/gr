@@ -73,15 +73,23 @@ endif()
 find_path(FFMPEG_VERSION_DIR libavcodec/version.h)
 if(FFMPEG_VERSION_DIR)
   if(NOT FFMPEG_VERSION_STRING)
-    file(READ ${FFMPEG_VERSION_DIR}/libavcodec/version.h FFMPEG_H_TEXT)
-    string(REGEX REPLACE ".*#define LIBAVCODEC_VERSION_MAJOR[ \t]*([0-9]+).*" "\\1." FFMPEG_MAJOR_STRING
-                         ${FFMPEG_H_TEXT}
-    )
+    if(EXISTS ${FFMPEG_VERSION_DIR}/libavcodec/version_major.h)
+      file(READ ${FFMPEG_VERSION_DIR}/libavcodec/version_major.h FFMPEG_VERSION_MAJOR_H_TEXT)
+      string(REGEX REPLACE ".*#define LIBAVCODEC_VERSION_MAJOR[ \t]*([0-9]+).*" "\\1." FFMPEG_MAJOR_STRING
+                           ${FFMPEG_VERSION_MAJOR_H_TEXT}
+      )
+    endif()
+    file(READ ${FFMPEG_VERSION_DIR}/libavcodec/version.h FFMPEG_VERSION_H_TEXT)
+    if(NOT FFMPEG_VERSION_MAJOR_H_TEXT)
+      string(REGEX REPLACE ".*#define LIBAVCODEC_VERSION_MAJOR[ \t]*([0-9]+).*" "\\1." FFMPEG_MAJOR_STRING
+                           ${FFMPEG_VERSION_H_TEXT}
+      )
+    endif()
     string(REGEX REPLACE ".*#define LIBAVCODEC_VERSION_MINOR[ \t]*([0-9]+).*" "\\1." FFMPEG_MINOR_STRING
-                         ${FFMPEG_H_TEXT}
+                         ${FFMPEG_VERSION_H_TEXT}
     )
     string(REGEX REPLACE ".*#define LIBAVCODEC_VERSION_MICRO[ \t]*([0-9]+).*" "\\1" FFMPEG_MICRO_STRING
-                         ${FFMPEG_H_TEXT}
+                         ${FFMPEG_VERSION_H_TEXT}
     )
     string(CONCAT FFMPEG_VERSION_STRING "${FFMPEG_MAJOR_STRING}" "${FFMPEG_MINOR_STRING}" "${FFMPEG_MICRO_STRING}")
   endif()
