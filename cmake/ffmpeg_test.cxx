@@ -15,7 +15,7 @@ extern "C" {
 
 int main(void)
 {
-  AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_VP8);
+  const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_VP8);
   AVCodecContext *ctx = avcodec_alloc_context3(codec);
   avcodec_free_context(&ctx);
   return 0;
