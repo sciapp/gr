@@ -20,7 +20,9 @@
 #include <signal.h>
 #include <sys/errno.h>
 #else
+#define __STRSAFE__NO_INLINE
 #include <windows.h>
+#include <strsafe.h>
 #endif
 
 #include "gks.h"
@@ -60,18 +62,12 @@ static int is_running = 0;
 
 static DWORD WINAPI gksqt_thread(LPVOID parm)
 {
-  char *cmd = (char *)parm;
-  wchar_t *w_cmd;
-  int len = strlen(cmd);
-  int w_len = MultiByteToWideChar(CP_UTF8, 0, cmd, len, NULL, 0) + 1;
+  wchar_t *cmd = (char *)parm;
   wchar_t w_cmd_line[CMD_LINE_LEN];
   STARTUPINFOW startupInfo;
   PROCESS_INFORMATION processInformation;
 
-  w_cmd = (wchar_t *)gks_malloc(sizeof(wchar_t) * w_len);
-  MultiByteToWideChar(CP_UTF8, 0, cmd, len + 1, w_cmd, w_len);
-
-  swprintf(w_cmd_line, CMD_LINE_LEN, L"cmd /c \"%ls\"", w_cmd);
+  StringCbPrintfW(w_cmd_line, CMD_LINE_LEN, L"cmd /c \"%ls\"", cmd);
 
   ZeroMemory(&startupInfo, sizeof(startupInfo));
   startupInfo.cb = sizeof(startupInfo);
@@ -85,8 +81,6 @@ static DWORD WINAPI gksqt_thread(LPVOID parm)
 
   CloseHandle(processInformation.hProcess);
   CloseHandle(processInformation.hThread);
-
-  free(w_cmd);
 
   return 0;
 }
@@ -160,16 +154,16 @@ static void *gksqt_thread(void *arg)
 
 #endif
 
-static int start(const char *cmd)
+static int start(void *cmd)
 {
 #ifdef _WIN32
   DWORD thread;
 
-  if (CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)gksqt_thread, (void *)cmd, 0, &thread) == NULL) return -1;
+  if (CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)gksqt_thread, cmd, 0, &thread) == NULL) return -1;
 #else
   pthread_t thread;
 
-  if (pthread_create(&thread, NULL, gksqt_thread, (void *)cmd)) return -1;
+  if (pthread_create(&thread, NULL, gksqt_thread, cmd)) return -1;
 #endif
   return 0;
 }
@@ -234,14 +228,31 @@ static int connect_socket(int quiet)
 
 static int open_socket(int wstype)
 {
+#ifdef _WIN32
+  wchar_t command[MAX_PATH], w_env[MAX_PATH];
+#else
   const char *command = NULL, *env;
+  char *cmd = NULL;
+#endif
   int retry_count;
   int max_retry_count = 20;
-  char *cmd = NULL;
   int s;
 
   if (wstype >= 411 && wstype <= 413)
     {
+#ifdef _WIN32
+      if (!GetEnvironmentVariableW(L"GKS_QT", command, MAX_PATH))
+        {
+          if (!GetEnvironmentVariableW(L"GRDIR", w_env, MAX_PATH))
+            {
+              StringCbPrintfW(command, MAX_PATH, L"%wS\\bin\\gksqt.exe", GRDIR);
+            }
+          else
+            {
+              StringCbPrintfW(command, MAX_PATH, L"%ws\\bin\\gksqt.exe", w_env);
+            }
+        }
+#else
       command = gks_getenv("GKS_QT");
       if (command == NULL)
         {
@@ -249,17 +260,14 @@ static int open_socket(int wstype)
           if (env == NULL) env = GRDIR;
 
           cmd = (char *)gks_malloc(MAXPATHLEN);
-#ifndef _WIN32
 #ifdef __APPLE__
           snprintf(cmd, MAXPATHLEN, "%s/Applications/gksqt.app/Contents/MacOS/gksqt", env);
 #else
           snprintf(cmd, MAXPATHLEN, "%s/bin/gksqt", env);
 #endif
-#else
-          snprintf(cmd, MAXPATHLEN, "%s\\bin\\gksqt.exe", env);
-#endif
           command = cmd;
         }
+#endif
     }
 
   for (retry_count = 1; retry_count <= max_retry_count; retry_count++)
@@ -272,7 +280,7 @@ static int open_socket(int wstype)
                  because in this case gksqt is started by the GR.jl wrapper script */
               if (*command)
                 {
-                  if (start(command) != 0) gks_perror("could not auto-start GKS Qt application");
+                  if (start((void *)command) != 0) gks_perror("could not auto-start GKS Qt application");
                 }
             }
 #ifndef _WIN32
@@ -291,7 +299,9 @@ static int open_socket(int wstype)
 
   is_running = (retry_count <= max_retry_count);
 
+#ifndef _WIN32
   if (cmd != NULL) free(cmd);
+#endif
 
   return s;
 }
