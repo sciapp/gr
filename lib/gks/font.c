@@ -13,6 +13,14 @@
 #include "gks.h"
 #include "gkscore.h"
 
+#if defined(_WIN32)
+#define STRSAFE_NO_DEPRECATE
+#define _CRT_NON_CONFORMING_WCSTOK
+#define __STRSAFE__NO_INLINE
+#include <windows.h>
+#include <strsafe.h>
+#endif
+
 #ifndef MAXPATHLEN
 #define MAXPATHLEN 1024
 #endif
@@ -25,6 +33,7 @@ int gks_open_font(void)
   char fontdb[MAXPATHLEN];
   int fd;
 
+#ifndef _WIN32
   path = gks_getenv("GKS_FONTPATH");
   if (path == NULL)
     {
@@ -32,10 +41,18 @@ int gks_open_font(void)
       if (path == NULL) path = GRDIR;
     }
   strcpy(fontdb, (char *)path);
-#ifndef _WIN32
   strcat(fontdb, "/fonts/gksfont.dat");
 #else
-  strcat(fontdb, "\\FONTS\\GKSFONT.DAT");
+  wchar_t wfontdb[MAXPATHLEN];
+  if (!GetEnvironmentVariableW(L"GKS_FONTPATH", wfontdb, MAXPATHLEN))
+    {
+      if (!GetEnvironmentVariableW(L"GRDIR", wfontdb, MAXPATHLEN))
+        {
+          MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, GRDIR, -1, wfontdb, MAXPATHLEN);
+        }
+    }
+  StringCbCatW(wfontdb, MAXPATHLEN, L"\\FONTS\\GKSFONT.DAT");
+  WideCharToMultiByte(CP_UTF8, 0, wfontdb, wcslen(wfontdb) + 1, fontdb, MAXPATHLEN, NULL, NULL);
 #endif
   fd = gks_open_file(fontdb, "r");
 
