@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #ifdef _WIN32
+#define __STRSAFE__NO_INLINE
 #include <windows.h>
 #include <strsafe.h>
 #else
@@ -51,6 +52,16 @@ static void *load_library(const char *name)
       GetEnvironmentVariableW(L"GRDIR", grdir, MAX_PATH);
       StringCbPrintfW(w_pathname, MAX_PATH, L"%ws\\bin\\%S.%S", grdir, name, EXTENSION);
       handle = LoadLibraryExW(w_pathname, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+      if (handle == NULL)
+        {
+          /* Try loading with default search path if altered search path fails
+             This value is a combination of LOAD_LIBRARY_SEARCH_APPLICATION_DIR,
+             LOAD_LIBRARY_SEARCH_USER_DIRS, and LOAD_LIBRARY_SEARCH_SYSTEM32.
+             They are searched in that order.
+             Use AddDllDirectory to add additional user directories to the search.
+           */
+          handle = LoadLibraryExW(w_pathname, NULL, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+        }
     }
 #else
   handle = dlopen(pathname, RTLD_LAZY);

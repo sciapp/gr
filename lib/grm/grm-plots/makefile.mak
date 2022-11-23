@@ -1,10 +1,5 @@
 UNAME := $(shell uname)
-TMP_QMAKE ?= $(shell which qmake 2>/dev/null || which qmake6 2>/dev/null || which qmake-qt5 2>/dev/null || which qmake-qt4 2>/dev/null || echo '')
-ifneq ($(QT4_QMAKE),)
-ifneq ($(QT4_QMAKE),false)
-  TMP_QMAKE := $(QT4_QMAKE)
-endif
-endif
+TMP_QMAKE ?= $(shell which qmake 2>/dev/null || which qmake6 2>/dev/null || which qmake-qt5 2>/dev/null || echo '')
 ifneq ($(QT5_QMAKE),)
 ifneq ($(QT5_QMAKE),false)
   TMP_QMAKE := $(QT5_QMAKE)
@@ -27,10 +22,14 @@ install: default
 ifeq ($(UNAME), Darwin)
 	@if [ ! -d $(DESTDIR)$(GRDIR)/Applications ]; then \
 	mkdir -m 755 $(DESTDIR)$(GRDIR)/Applications; fi
-	@ditto gksqt.app \
-	$(DESTDIR)$(GRDIR)/Applications/gksqt.app
+	@ditto grm-plots.app \
+	$(DESTDIR)$(GRDIR)/Applications/grm-plots.app
+	@if [ ! -d $(DESTDIR)$(GRDIR)/bin ]; then \
+    mkdir -m 755 $(DESTDIR)$(GRDIR)/bin; fi
+	@ditto grm-plots.macos.sh \
+	$(DESTDIR)$(GRDIR)/bin/grm-plots
 else
-	cp -p gksqt $(DESTDIR)$(GRDIR)/bin
+	cp -p grm-plots $(DESTDIR)$(GRDIR)/bin/
 endif
 
 clean:
