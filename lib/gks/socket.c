@@ -58,7 +58,10 @@ static int is_running = 0;
 
 #ifdef _WIN32
 
-#define CMD_LINE_LEN 8192
+#define CMD_LINE_LEN (32767 + 10)
+/*
+ * The maximum length of an environment variable is 32767 characters plus 10 characters for 'cmd /c ""'
+ */
 
 static DWORD WINAPI gksqt_thread(LPVOID parm)
 {
@@ -229,7 +232,7 @@ static int connect_socket(int quiet)
 static int open_socket(int wstype)
 {
 #ifdef _WIN32
-  wchar_t command[MAX_PATH], w_env[MAX_PATH];
+  wchar_t command[CMD_LINE_LEN], w_env[MAXPATHLEN];
 #else
   const char *command = NULL, *env;
   char *cmd = NULL;
@@ -241,15 +244,15 @@ static int open_socket(int wstype)
   if (wstype >= 411 && wstype <= 413)
     {
 #ifdef _WIN32
-      if (!GetEnvironmentVariableW(L"GKS_QT", command, MAX_PATH))
+      if (!GetEnvironmentVariableW(L"GKS_QT", command, CMD_LINE_LEN))
         {
-          if (!GetEnvironmentVariableW(L"GRDIR", w_env, MAX_PATH))
+          if (!GetEnvironmentVariableW(L"GRDIR", w_env, MAXPATHLEN))
             {
-              StringCbPrintfW(command, MAX_PATH, L"%wS\\bin\\gksqt.exe", GRDIR);
+              StringCbPrintfW(command, CMD_LINE_LEN, L"%wS\\bin\\gksqt.exe", GRDIR);
             }
           else
             {
-              StringCbPrintfW(command, MAX_PATH, L"%ws\\bin\\gksqt.exe", w_env);
+              StringCbPrintfW(command, CMD_LINE_LEN, L"%ws\\bin\\gksqt.exe", w_env);
             }
         }
 #else
