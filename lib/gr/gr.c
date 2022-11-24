@@ -8912,6 +8912,8 @@ void gr_contourf(int nx, int ny, int nh, double *px, double *py, double *h, doub
   int nxq, nyq;
   int fillintstyle, fillcolorind;
   double *xq = NULL, *yq = NULL, *zq = NULL;
+  int scale_options;
+  double *x = NULL, *y = NULL;
 
   if ((nx <= 0) || (ny <= 0))
     {
@@ -8947,16 +8949,34 @@ void gr_contourf(int nx, int ny, int nh, double *px, double *py, double *h, doub
 
   check_autoinit;
 
-  setscale(lx.scale_options);
+  scale_options = lx.scale_options;
+  if (scale_options != 0)
+    {
+      setscale(scale_options & ~(OPTION_FLIP_X | OPTION_FLIP_Y));
+
+      x = (double *)xcalloc(nx, sizeof(double));
+      for (i = 0; i < nx; i++) x[i] = x_lin(px[i]);
+
+      y = (double *)xcalloc(ny, sizeof(double));
+      for (i = 0; i < ny; i++) y[i] = y_lin(py[i]);
+
+      setscale(scale_options &
+               ~(OPTION_X_LOG | OPTION_Y_LOG | OPTION_X_LOG2 | OPTION_Y_LOG2 | OPTION_X_LN | OPTION_Y_LN));
+    }
+  else
+    {
+      x = px;
+      y = py;
+    }
 
   /* save fill style and color */
 
   gks_inq_fill_style_index(&errind, &fillintstyle);
   gks_inq_fill_color_index(&errind, &fillcolorind);
 
-  if (!islinspace(nx, px) || !islinspace(ny, py))
+  if (!islinspace(nx, x) || !islinspace(ny, y))
     {
-      rebin(nx, ny, px, py, pz, &nxq, &nyq, &xq, &yq, &zq);
+      rebin(nx, ny, x, y, pz, &nxq, &nyq, &xq, &yq, &zq);
 
       gr_draw_contourf(nxq, nyq, nh, xq, yq, h, zq, first_color, last_color, major_h);
 
@@ -8965,10 +8985,16 @@ void gr_contourf(int nx, int ny, int nh, double *px, double *py, double *h, doub
       free(xq);
     }
   else
-    gr_draw_contourf(nx, ny, nh, px, py, h, pz, first_color, last_color, major_h);
+    gr_draw_contourf(nx, ny, nh, x, y, h, pz, first_color, last_color, major_h);
+
+  if (x != px) free(x);
+  if (y != py) free(y);
 
   /* restore fill style and color */
-
+  if (scale_options != 0)
+    {
+      setscale(scale_options);
+    }
   gks_set_fill_style_index(fillintstyle);
   gks_set_fill_color_index(fillcolorind);
 
