@@ -930,7 +930,7 @@ L60:
     }
   ii = ij[0] + i2[l - 1];
   jj = ij[1] + i2[3 - l - 1];
-  if (Z(ii, jj) < zmax)
+  if (Z(ii, jj) <= zmax)
     {
       ix = 0;
     }
@@ -946,7 +946,7 @@ L80:
     {
       goto L90;
     }
-  if (Z(ij[0] + 1, ij[1] + 1) < zmax)
+  if (Z(ij[0] + 1, ij[1] + 1) <= zmax)
     {
       goto L100;
     }
