@@ -1168,7 +1168,7 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
   endif()
   string(APPEND GR_REPORT "- grm-plots: Yes\n")
 else()
-  string(APPEND GR_REPORT "- grm-plots: No (Qt6 or Qt5 not found)\n")
+  string(APPEND GR_REPORT "- grm-plots: No (Qt6 and Qt5 not found)\n")
 endif()
 
 if(GR_BUILD_DEMOS)
