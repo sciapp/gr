@@ -142,6 +142,9 @@ void GRWidget::paintEvent(QPaintEvent *event)
                            (int)(geometry().height() * this->devicePixelRatioF()));
       pixmap->setDevicePixelRatio(this->devicePixelRatioF());
 
+#ifdef _WIN32
+      addresses << "GKS_CONID=";
+#endif
       addresses << static_cast<void *>(this) << "!" << static_cast<void *>(&painter);
 #ifdef _WIN32
       putenv(addresses.str().c_str());
