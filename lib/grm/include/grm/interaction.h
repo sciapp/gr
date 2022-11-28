@@ -23,9 +23,9 @@ typedef struct
   double y;
   int x_px;
   int y_px;
-  char *xlabel;
-  char *ylabel;
-  char *label;
+  const char *xlabel;
+  const char *ylabel;
+  const char *label;
 } grm_tooltip_info_t;
 
 /* ========================= functions ============================================================================== */

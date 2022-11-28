@@ -462,7 +462,7 @@ set(GRM_SOURCES
     lib/grm/src/grm/dynamic_args_array.c
     lib/grm/src/grm/error.c
     lib/grm/src/grm/event.c
-    lib/grm/src/grm/interaction.c
+    lib/grm/src/grm/interaction.cxx
     lib/grm/src/grm/json.c
     lib/grm/src/grm/layout_c.cxx
     lib/grm/src/grm/layout.cxx

@@ -44,23 +44,23 @@ static std::map<std::string, double> symbol_to_meters_per_unit{
 
 double auto_tick(double amin, double amax)
 {
-    double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
-    double scale, tick;
-    int i, n;
+  double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
+  double scale, tick;
+  int i, n;
 
-    scale = pow(10.0, (int)(log10(amax - amin)));
-    tick = 1.0;
-    for (i = 0; i < 9; i++)
+  scale = pow(10.0, (int)(log10(amax - amin)));
+  tick = 1.0;
+  for (i = 0; i < 9; i++)
     {
-        n = (amax - amin) / scale / tick_size[i];
-        if (n > 7)
+      n = (amax - amin) / scale / tick_size[i];
+      if (n > 7)
         {
-            tick = tick_size[i - 1];
-            break;
+          tick = tick_size[i - 1];
+          break;
         }
     }
-    tick *= scale;
-    return tick;
+  tick *= scale;
+  return tick;
 }
 
 static void markerHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context,
@@ -323,187 +323,220 @@ static void lineHelper(const std::shared_ptr<GR::Element> &element, const std::s
     }
 }
 
-static void getMajorCount(const std::shared_ptr<GR::Element> &element, const std::string kind, int &major_count){
-    if (element->hasAttribute("major"))
+static void getMajorCount(const std::shared_ptr<GR::Element> &element, const std::string kind, int &major_count)
+{
+  if (element->hasAttribute("major"))
     {
-        major_count = static_cast<int>(element->getAttribute("major"));
+      major_count = static_cast<int>(element->getAttribute("major"));
     }
-    else
+  else
     {
-        if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf"))
+      if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf"))
         {
-            major_count = 2;
+          major_count = 2;
         }
-        else
+      else
         {
-            major_count = 5;
+          major_count = 5;
         }
     }
 }
 
-static void getAxesInformation(const std::shared_ptr<GR::Element> &element, double &x_tick, double &y_tick, double &x_org, double &y_org, int &x_major, int &y_major){
-    int x_org_low, x_org_high;
-    int y_org_low, y_org_high;
-    int major_count;
-    std::string x_org_pos, y_org_pos;
+static void getAxesInformation(const std::shared_ptr<GR::Element> &element, double &x_tick, double &y_tick,
+                               double &x_org, double &y_org, int &x_major, int &y_major)
+{
+  int x_org_low, x_org_high;
+  int y_org_low, y_org_high;
+  int major_count;
+  std::string x_org_pos, y_org_pos;
 
-    auto draw_axes_group = element->parentElement();
-    auto subplot_element = draw_axes_group->parentElement();
-    std::string kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
-    int scale = static_cast<int>(subplot_element->getAttribute("scale"));
-    double xmin = static_cast<double>(subplot_element->getAttribute("window_xmin"));
-    double xmax = static_cast<double>(subplot_element->getAttribute("window_xmax"));
-    double ymin = static_cast<double>(subplot_element->getAttribute("window_ymin"));
-    double ymax = static_cast<double>(subplot_element->getAttribute("window_ymax"));
+  auto draw_axes_group = element->parentElement();
+  auto subplot_element = draw_axes_group->parentElement();
+  std::string kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
+  int scale = static_cast<int>(subplot_element->getAttribute("scale"));
+  double xmin = static_cast<double>(subplot_element->getAttribute("window_xmin"));
+  double xmax = static_cast<double>(subplot_element->getAttribute("window_xmax"));
+  double ymin = static_cast<double>(subplot_element->getAttribute("window_ymin"));
+  double ymax = static_cast<double>(subplot_element->getAttribute("window_ymax"));
 
-    if (element->hasAttribute("x_org_pos")){
-        x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
-    } else{
-        x_org_pos = "low";
+  if (element->hasAttribute("x_org_pos"))
+    {
+      x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
     }
-    if (element->hasAttribute("y_org_pos")){
-        y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
-    } else{
-        y_org_pos = "low";
+  else
+    {
+      x_org_pos = "low";
+    }
+  if (element->hasAttribute("y_org_pos"))
+    {
+      y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
+    }
+  else
+    {
+      y_org_pos = "low";
     }
 
-    getMajorCount(element, kind, major_count);
+  getMajorCount(element, kind, major_count);
 
-    if (element->hasAttribute("x_major")){
-        x_major = static_cast<int>(element->getAttribute("x_major"));
+  if (element->hasAttribute("x_major"))
+    {
+      x_major = static_cast<int>(element->getAttribute("x_major"));
     }
-    else{
-        if (!(scale & GR_OPTION_X_LOG))
+  else
+    {
+      if (!(scale & GR_OPTION_X_LOG))
         {
-            if (kind == "barplot")
+          if (kind == "barplot")
             {
-                if (draw_axes_group->hasAttribute("xticklabels"))
+              if (draw_axes_group->hasAttribute("xticklabels"))
                 {
-                    x_major = 0;
+                  x_major = 0;
                 }
-                else
+              else
                 {
-                    x_major = 1;
+                  x_major = 1;
                 }
             }
-            else
+          else
             {
-                x_major = major_count;
+              x_major = major_count;
             }
         }
-        else
+      else
         {
-            x_major = 1;
+          x_major = 1;
         }
     }
 
-    if (element->hasAttribute("x_tick")){
-        x_tick = static_cast<double>(element->getAttribute("x_tick"));
-    }
-    else
+  if (element->hasAttribute("x_tick"))
     {
-        if (!(scale & GR_OPTION_X_LOG))
+      x_tick = static_cast<double>(element->getAttribute("x_tick"));
+    }
+  else
+    {
+      if (!(scale & GR_OPTION_X_LOG))
         {
-            if (kind == "barplot")
+          if (kind == "barplot")
             {
-                x_tick = 1;
+              x_tick = 1;
             }
-            else
+          else
             {
-                if (x_major != 0){
-                    x_tick = auto_tick(xmin, xmax) / x_major;
-                } else{
-                    x_tick = 1;
+              if (x_major != 0)
+                {
+                  x_tick = auto_tick(xmin, xmax) / x_major;
+                }
+              else
+                {
+                  x_tick = 1;
                 }
             }
         }
-        else
+      else
         {
-            x_tick = 1;
+          x_tick = 1;
         }
     }
 
-    if (element->hasAttribute("x_org")){
-        x_org = static_cast<double>(element->getAttribute("x_org"));
-    } else{
-        if (!(scale & GR_OPTION_FLIP_X))
-        {
-            x_org_low = xmin;
-            x_org_high = xmax;
-        }
-        else
-        {
-            x_org_low = xmax;
-            x_org_high = xmin;
-        }
-        if (x_org_pos == "low"){
-            x_org = x_org_low;
-        } else{
-            x_org = x_org_high;
-            x_major = -x_major;
-        }
-    }
-
-
-    if (element->hasAttribute("y_major")){
-        y_major = static_cast<int>(element->getAttribute("y_major"));
-    }
-    else
+  if (element->hasAttribute("x_org"))
     {
-        if (!(scale & GR_OPTION_Y_LOG))
+      x_org = static_cast<double>(element->getAttribute("x_org"));
+    }
+  else
+    {
+      if (!(scale & GR_OPTION_FLIP_X))
         {
-            y_major = major_count;
+          x_org_low = xmin;
+          x_org_high = xmax;
         }
-        else
+      else
         {
-            y_major = 1;
+          x_org_low = xmax;
+          x_org_high = xmin;
+        }
+      if (x_org_pos == "low")
+        {
+          x_org = x_org_low;
+        }
+      else
+        {
+          x_org = x_org_high;
+          x_major = -x_major;
         }
     }
 
-    if (element->hasAttribute("y_tick")){
-        y_tick = static_cast<double>(element->getAttribute("y_tick"));
-    }
-    else
+
+  if (element->hasAttribute("y_major"))
     {
-        if (!(scale & GR_OPTION_Y_LOG))
+      y_major = static_cast<int>(element->getAttribute("y_major"));
+    }
+  else
+    {
+      if (!(scale & GR_OPTION_Y_LOG))
         {
-            if (y_major != 0){
-                y_tick = auto_tick(ymin, ymax) / y_major;
-            } else{
-                y_tick = 1;
+          y_major = major_count;
+        }
+      else
+        {
+          y_major = 1;
+        }
+    }
+
+  if (element->hasAttribute("y_tick"))
+    {
+      y_tick = static_cast<double>(element->getAttribute("y_tick"));
+    }
+  else
+    {
+      if (!(scale & GR_OPTION_Y_LOG))
+        {
+          if (y_major != 0)
+            {
+              y_tick = auto_tick(ymin, ymax) / y_major;
+            }
+          else
+            {
+              y_tick = 1;
             }
         }
-        else
+      else
         {
-            y_tick = 1;
+          y_tick = 1;
         }
     }
 
-    if (element->hasAttribute("y_org")){
-        y_org = static_cast<double>(element->getAttribute("y_org"));
-    }
-    else
+  if (element->hasAttribute("y_org"))
     {
-        if (!(scale & GR_OPTION_FLIP_Y))
+      y_org = static_cast<double>(element->getAttribute("y_org"));
+    }
+  else
+    {
+      if (!(scale & GR_OPTION_FLIP_Y))
         {
-            y_org_low = ymin;
-            y_org_high = ymax;
+          y_org_low = ymin;
+          y_org_high = ymax;
         }
-        else
+      else
         {
-            y_org_low = ymax;
-            y_org_high = ymin;
+          y_org_low = ymax;
+          y_org_high = ymin;
         }
-        if (y_org_pos == "low"){
-            y_org = y_org_low;
-        } else{
-            y_org = y_org_high;
-            y_major = -y_major;
+      if (y_org_pos == "low")
+        {
+          y_org = y_org_low;
+        }
+      else
+        {
+          y_org = y_org_high;
+          y_major = -y_major;
         }
     }
 }
 
-static void getAxes3dInformation(const std::shared_ptr<GR::Element> &element, double &x_tick, double &y_tick, double &z_tick, double &x_org, double &y_org, double &z_org, int &x_major, int &y_major, int &z_major){
+static void getAxes3dInformation(const std::shared_ptr<GR::Element> &element, double &x_tick, double &y_tick,
+                                 double &z_tick, double &x_org, double &y_org, double &z_org, int &x_major,
+                                 int &y_major, int &z_major)
+{
   getAxesInformation(element, x_tick, y_tick, x_org, y_org, x_major, y_major);
 
   double z_org_low, z_org_high;
@@ -519,17 +552,21 @@ static void getAxes3dInformation(const std::shared_ptr<GR::Element> &element, do
 
   getMajorCount(element, kind, major_count);
 
-  if (element->hasAttribute("z_org_pos")){
+  if (element->hasAttribute("z_org_pos"))
+    {
       z_org_pos = static_cast<std::string>(element->getAttribute("z_org_pos"));
-  } else{
-      z_org_pos = "low";
-  }
-
-  if (element->hasAttribute("z_major")){
-      z_major = static_cast<int>(element->getAttribute("z_major"));
-  }
+    }
   else
-  {
+    {
+      z_org_pos = "low";
+    }
+
+  if (element->hasAttribute("z_major"))
+    {
+      z_major = static_cast<int>(element->getAttribute("z_major"));
+    }
+  else
+    {
       if (!(scale & GR_OPTION_Z_LOG))
         {
           z_major = major_count;
@@ -538,47 +575,57 @@ static void getAxes3dInformation(const std::shared_ptr<GR::Element> &element, do
         {
           z_major = 1;
         }
-  }
+    }
 
-  if (element->hasAttribute("z_tick")){
+  if (element->hasAttribute("z_tick"))
+    {
       z_tick = static_cast<double>(element->getAttribute("z_tick"));
-  }
+    }
   else
-  {
+    {
       if (!(scale & GR_OPTION_Z_LOG))
-      {
-          if (z_major != 0){
+        {
+          if (z_major != 0)
+            {
               z_tick = auto_tick(zmin, zmax) / z_major;
-          } else{
+            }
+          else
+            {
               z_tick = 1;
-          }
-      }
+            }
+        }
       else
-      {
+        {
           z_tick = 1;
-      }
-  }
+        }
+    }
 
-  if (element->hasAttribute("z_org")){
+  if (element->hasAttribute("z_org"))
+    {
       z_org = static_cast<double>(element->getAttribute("z_org"));
-  } else {
+    }
+  else
+    {
       if (!(scale & GR_OPTION_FLIP_Z))
-      {
+        {
           z_org_low = zmin;
           z_org_high = zmax;
-      }
+        }
       else
-      {
+        {
           z_org_low = zmax;
           z_org_high = zmin;
-      }
-      if (z_org_pos == "low"){
+        }
+      if (z_org_pos == "low")
+        {
           z_org = z_org_low;
-      } else{
+        }
+      else
+        {
           z_org = z_org_high;
           z_major = -z_major;
-      }
-  }
+        }
+    }
 }
 
 static void polymarker(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
@@ -1744,7 +1791,7 @@ static void processRelativeCharHeight(const std::shared_ptr<GR::Element> &elem)
   gr_setcharheight(charheight);
 }
 
-static void processLimits(const std::shared_ptr<GR::Element> &elem)
+void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
 {
   /*!
    * Procestd::sing function for gr_window
@@ -1761,11 +1808,12 @@ static void processLimits(const std::shared_ptr<GR::Element> &elem)
   double ymin = static_cast<double>(elem->getAttribute("lim_ymin"));
   double ymax = static_cast<double>(elem->getAttribute("lim_ymax"));
 
-  if (elem->hasAttribute("reset_ranges") && static_cast<int>(elem->getAttribute("reset_ranges"))){
+  if (elem->hasAttribute("reset_ranges") && static_cast<int>(elem->getAttribute("reset_ranges")))
+    {
       if (elem->hasAttribute("_original_xmin") && elem->hasAttribute("_original_xmax") &&
           elem->hasAttribute("_original_ymin") && elem->hasAttribute("_original_ymax") &&
           elem->hasAttribute("_original_adjust_xlim") && elem->hasAttribute("_original_adjust_ylim"))
-      {
+        {
           xmin = static_cast<double>(elem->getAttribute("_original_xmin"));
           xmax = static_cast<double>(elem->getAttribute("_original_xmax"));
           ymin = static_cast<double>(elem->getAttribute("_original_ymin"));
@@ -1780,48 +1828,52 @@ static void processLimits(const std::shared_ptr<GR::Element> &elem)
           elem->removeAttribute("_original_ymax");
           elem->removeAttribute("_original_adjust_xlim");
           elem->removeAttribute("_original_adjust_ylim");
-      }
+        }
       elem->removeAttribute("reset_ranges");
-  }
-
-  if (elem->hasAttribute("panzoom") && static_cast<int>(elem->getAttribute("panzoom"))){
-    if (!elem->hasAttribute("_original_xlim")){
-        elem->setAttribute("_original_xmin", xmin);
-        elem->setAttribute("_original_xmax", xmax);
-        elem->setAttribute("_original_xlim", true);
-        adjust_xlim = static_cast<int>(elem->getAttribute("adjust_xlim"));
-        elem->setAttribute("_original_adjust_xlim", adjust_xlim);
-        elem->setAttribute("adjust_xlim", 0);
-    }
-    if (!elem->hasAttribute("_original_ylim")){
-        elem->setAttribute("_original_ymin", ymin);
-        elem->setAttribute("_original_ymax", ymax);
-        elem->setAttribute("_original_ylim", true);
-        adjust_ylim = static_cast<int>(elem->getAttribute("adjust_ylim"));
-        elem->setAttribute("_original_adjust_ylim", adjust_ylim);
-        elem->setAttribute("adjust_ylim", 0);
-      }
-    auto panzoom_element = elem->getElementsByTagName("panzoom")[0];
-    double x = static_cast<double>(panzoom_element->getAttribute("x"));
-    double y = static_cast<double>(panzoom_element->getAttribute("y"));
-    double xzoom = static_cast<double>(panzoom_element->getAttribute("xzoom"));
-    double yzoom = static_cast<double>(panzoom_element->getAttribute("yzoom"));
-
-    /* Ensure the correct window is set in GR */
-    if (elem->hasAttribute("window") && static_cast<int>(elem->getAttribute("window"))){
-        double stored_window_xmin = static_cast<double>(elem->getAttribute("window_xmin"));
-        double stored_window_xmax = static_cast<double>(elem->getAttribute("window_xmax"));
-        double stored_window_ymin = static_cast<double>(elem->getAttribute("window_ymin"));
-        double stored_window_ymax = static_cast<double>(elem->getAttribute("window_ymax"));
-
-        gr_setwindow(stored_window_xmin, stored_window_xmax, stored_window_ymin, stored_window_ymax);
     }
 
-    gr_panzoom(x, y, xzoom, yzoom, &xmin, &xmax, &ymin, &ymax);
+  if (elem->hasAttribute("panzoom") && static_cast<int>(elem->getAttribute("panzoom")))
+    {
+      if (!elem->hasAttribute("_original_xlim"))
+        {
+          elem->setAttribute("_original_xmin", xmin);
+          elem->setAttribute("_original_xmax", xmax);
+          elem->setAttribute("_original_xlim", true);
+          adjust_xlim = static_cast<int>(elem->getAttribute("adjust_xlim"));
+          elem->setAttribute("_original_adjust_xlim", adjust_xlim);
+          elem->setAttribute("adjust_xlim", 0);
+        }
+      if (!elem->hasAttribute("_original_ylim"))
+        {
+          elem->setAttribute("_original_ymin", ymin);
+          elem->setAttribute("_original_ymax", ymax);
+          elem->setAttribute("_original_ylim", true);
+          adjust_ylim = static_cast<int>(elem->getAttribute("adjust_ylim"));
+          elem->setAttribute("_original_adjust_ylim", adjust_ylim);
+          elem->setAttribute("adjust_ylim", 0);
+        }
+      auto panzoom_element = elem->getElementsByTagName("panzoom")[0];
+      double x = static_cast<double>(panzoom_element->getAttribute("x"));
+      double y = static_cast<double>(panzoom_element->getAttribute("y"));
+      double xzoom = static_cast<double>(panzoom_element->getAttribute("xzoom"));
+      double yzoom = static_cast<double>(panzoom_element->getAttribute("yzoom"));
 
-    elem->setAttribute("panzoom", false);
-    elem->removeChild(panzoom_element);
-  }
+      /* Ensure the correct window is set in GR */
+      if (elem->hasAttribute("window") && static_cast<int>(elem->getAttribute("window")))
+        {
+          double stored_window_xmin = static_cast<double>(elem->getAttribute("window_xmin"));
+          double stored_window_xmax = static_cast<double>(elem->getAttribute("window_xmax"));
+          double stored_window_ymin = static_cast<double>(elem->getAttribute("window_ymin"));
+          double stored_window_ymax = static_cast<double>(elem->getAttribute("window_ymax"));
+
+          gr_setwindow(stored_window_xmin, stored_window_xmax, stored_window_ymin, stored_window_ymax);
+        }
+
+      gr_panzoom(x, y, xzoom, yzoom, &xmin, &xmax, &ymin, &ymax);
+
+      elem->setAttribute("panzoom", false);
+      elem->removeChild(panzoom_element);
+    }
 
   if (!(scale & GR_OPTION_X_LOG))
     {
@@ -1864,18 +1916,18 @@ static void processLimits(const std::shared_ptr<GR::Element> &elem)
       global_render->setWindow3d(elem, xmin, xmax, ymin, ymax, zmin, zmax);
     }
   else
-  {
+    {
       logger((stderr, "Storing window (%lf, %lf, %lf, %lf)\n", xmin, xmax, ymin, ymax));
       if (!str_equals_any(kind.c_str(), 2, "polar", "polar_histogram"))
-      {
-        gr_setwindow(xmin, xmax, ymin, ymax);
-        global_render->setWindow(elem, xmin, xmax, ymin, ymax);
-      }
+        {
+          gr_setwindow(xmin, xmax, ymin, ymax);
+          global_render->setWindow(elem, xmin, xmax, ymin, ymax);
+        }
       else
-      {
-        global_render->setWindow(elem, -1, 1, -1, 1);
-      }
-  }
+        {
+          global_render->setWindow(elem, -1, 1, -1, 1);
+        }
+    }
 }
 
 static void processProjectionType(const std::shared_ptr<GR::Element> &elem)
@@ -1907,7 +1959,7 @@ static void processSpace(const std::shared_ptr<GR::Element> &elem)
   gr_setspace(zmin, zmax, rotation, tilt);
 }
 
-static void processViewport(const std::shared_ptr<GR::Element> &elem)
+void GR::Render::processViewport(const std::shared_ptr<GR::Element> &elem)
 {
   /*!
    * Procestd::sing function for gr_viewport
@@ -2234,7 +2286,7 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
   elem->setAttribute("vp_ymin", vp[2]);
   elem->setAttribute("vp_ymax", vp[3]);
 
-  processViewport(elem);
+  GR::Render::processViewport(elem);
 }
 
 static void legend_size(std::vector<std::string> labels, double *w, double *h)
@@ -2833,22 +2885,24 @@ static void isosurfaceRender(const std::shared_ptr<GR::Element> &elem, const std
   gr3_drawimage(x_min, x_max, y_min, y_max, subplot_width, subplot_height, GR3_DRAWABLE_GKS);
 }
 
-static void panzoom(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context){
-    ; /* panzoom is being processed in the processLimits routine */
+static void panzoom(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+{
+  ; /* panzoom is being processed in the processLimits routine */
 }
 
-static void drawYLine(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context){
-    auto draw_axes_element = elem->parentElement();
-    auto subplot_element = draw_axes_element->parentElement();
+static void drawYLine(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+{
+  auto draw_axes_element = elem->parentElement();
+  auto subplot_element = draw_axes_element->parentElement();
 
-    auto x_axes_elements = subplot_element->getElementsByTagName("x-axes-information")[0];
-    double x_org_low = static_cast<double>(x_axes_elements->getAttribute("x_org_low"));
-    double x_org_high =  static_cast<double>(x_axes_elements->getAttribute("x_org_high"));
+  auto x_axes_elements = subplot_element->getElementsByTagName("x-axes-information")[0];
+  double x_org_low = static_cast<double>(x_axes_elements->getAttribute("x_org_low"));
+  double x_org_high = static_cast<double>(x_axes_elements->getAttribute("x_org_high"));
 
-    double x[2] = {x_org_low, x_org_high};
-    double y[2] = {0, 0};
+  double x[2] = {x_org_low, x_org_high};
+  double y[2] = {0, 0};
 
-    gr_polyline(2, x, y);
+  gr_polyline(2, x, y);
 }
 
 static void processGR3CameraLookAt(const std::shared_ptr<GR::Element> &elem)
@@ -2994,27 +3048,27 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
                          (int)elem->getAttribute("textalign_vertical"));
        }},
       {std::string("textencoding"),
-                                      [](const std::shared_ptr<GR::Element> &elem) { gr_settextencoding((int)elem->getAttribute("textencoding")); }},
-      {std::string("title"),          processTitle},
+       [](const std::shared_ptr<GR::Element> &elem) { gr_settextencoding((int)elem->getAttribute("textencoding")); }},
+      {std::string("title"), processTitle},
       {std::string("transparency"),
-                                      [](const std::shared_ptr<GR::Element> &elem) {
+       [](const std::shared_ptr<GR::Element> &elem) {
          gr_settransparency((double)elem->getAttribute("transparency"));
        }},
       {std::string("linespec"),
-                                      [](const std::shared_ptr<GR::Element> &elem) {
+       [](const std::shared_ptr<GR::Element> &elem) {
          gr_uselinespec(((std::string)elem->getAttribute("linespec")).data());
        }},
-      {std::string("limits"),         processLimits},
+      {std::string("limits"), GR::Render::processLimits},
       {std::string("resamplemethod"),
-                                      [](const std::shared_ptr<GR::Element>
+       [](const std::shared_ptr<GR::Element>
               &elem) { gr_setresamplemethod((int)elem->getAttribute("resamplemethod")); }},
       {std::string("projectiontype"), processProjectionType},
-      {std::string("space3d"),        processSpace3d},
-      {std::string("space"),          processSpace},
-      {std::string("viewport"),       processViewport},
-      {std::string("subplot"),        processSubplot},
+      {std::string("space3d"), processSpace3d},
+      {std::string("space"), processSpace},
+      {std::string("viewport"), GR::Render::processViewport},
+      {std::string("subplot"), processSubplot},
       {std::string("scale"),
-                                      [](const std::shared_ptr<GR::Element> &elem) { gr_setscale((int)elem->getAttribute("scale")); }},
+       [](const std::shared_ptr<GR::Element> &elem) { gr_setscale((int)elem->getAttribute("scale")); }},
       {std::string("selntran"),
        [](const std::shared_ptr<GR::Element> &elem) { gr_selntran((int)elem->getAttribute("selntran")); }},
       {std::string("gr3cameralookat"), processGR3CameraLookAt},
@@ -3537,14 +3591,16 @@ std::shared_ptr<GR::Element> GR::Render::createGrid(double x_tick, double y_tick
 
 std::shared_ptr<GR::Element> GR::Render::createEmptyGrid(bool x_grid, bool y_grid)
 {
-    auto element = createElement("grid");
-    if (!x_grid){
-        element->setAttribute("x_tick", 0);
+  auto element = createElement("grid");
+  if (!x_grid)
+    {
+      element->setAttribute("x_tick", 0);
     }
-    if (!y_grid){
-        element->setAttribute("y_tick", 0);
+  if (!y_grid)
+    {
+      element->setAttribute("y_tick", 0);
     }
-    return element;
+  return element;
 }
 
 std::shared_ptr<GR::Element> GR::Render::createGroup()
@@ -3914,15 +3970,18 @@ std::shared_ptr<GR::Element> GR::Render::createGrid3d(double x_tick, double y_ti
 std::shared_ptr<GR::Element> GR::Render::createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid)
 {
   auto element = createElement("grid3d");
-  if (!x_grid){
+  if (!x_grid)
+    {
       element->setAttribute("x_tick", 0);
-  }
-  if (!y_grid){
+    }
+  if (!y_grid)
+    {
       element->setAttribute("y_tick", 0);
-  }
-  if (!z_grid){
+    }
+  if (!z_grid)
+    {
       element->setAttribute("z_tick", 0);
-  }
+    }
   return element;
 }
 
@@ -4337,20 +4396,22 @@ std::shared_ptr<GR::Element> GR::Render::createLayoutGridElement(const grm::Grid
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createPanzoom(double x, double y, double xzoom, double yzoom){
+std::shared_ptr<GR::Element> GR::Render::createPanzoom(double x, double y, double xzoom, double yzoom)
+{
 
-    auto element = createElement("panzoom");
-    element->setAttribute("x", x);
-    element->setAttribute("y", y);
-    element->setAttribute("xzoom", xzoom);
-    element->setAttribute("yzoom", yzoom);
-    return element;
+  auto element = createElement("panzoom");
+  element->setAttribute("x", x);
+  element->setAttribute("y", y);
+  element->setAttribute("xzoom", xzoom);
+  element->setAttribute("yzoom", yzoom);
+  return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createYLine(){
+std::shared_ptr<GR::Element> GR::Render::createYLine()
+{
 
-    auto element = createElement("y-line");
-    return element;
+  auto element = createElement("y-line");
+  return element;
 }
 
 //! Modifierfunctions
@@ -5018,14 +5079,18 @@ void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element)
   element->setAttribute("snc-fallback", true);
 }
 
-void GR::Render::setOriginPosition(const std::shared_ptr<GR::Element> &element, std::string x_org_pos, std::string y_org_pos){
-    element->setAttribute("x_org_pos", x_org_pos);
-    element->setAttribute("y_org_pos", y_org_pos);
+void GR::Render::setOriginPosition(const std::shared_ptr<GR::Element> &element, std::string x_org_pos,
+                                   std::string y_org_pos)
+{
+  element->setAttribute("x_org_pos", x_org_pos);
+  element->setAttribute("y_org_pos", y_org_pos);
 }
 
-void GR::Render::setOriginPosition3d(const std::shared_ptr<GR::Element> &element, std::string x_org_pos, std::string y_org_pos, std::string z_org_pos){
-    setOriginPosition(element, x_org_pos, y_org_pos);
-    element->setAttribute("z_org_pos", z_org_pos);
+void GR::Render::setOriginPosition3d(const std::shared_ptr<GR::Element> &element, std::string x_org_pos,
+                                     std::string y_org_pos, std::string z_org_pos)
+{
+  setOriginPosition(element, x_org_pos, y_org_pos);
+  element->setAttribute("z_org_pos", z_org_pos);
 }
 
 //! Render functions
@@ -5195,8 +5260,8 @@ void GR::Render::render()
    */
   auto root = this->firstChildElement();
   global_root = root;
-    std::cout << toXML(root) << "\n";
-    if (root->hasChildNodes())
+  std::cout << toXML(root) << "\n";
+  if (root->hasChildNodes())
     {
       finalizeGrid(root);
       int i = 0;

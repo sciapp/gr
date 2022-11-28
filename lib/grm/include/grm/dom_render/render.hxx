@@ -326,7 +326,8 @@ public:
 
   void setOriginPosition(const std::shared_ptr<GR::Element> &element, std::string x_org_pos, std::string y_org_pos);
 
-  void setOriginPosition3d(const std::shared_ptr<GR::Element> &element, std::string x_org_pos, std::string y_org_pos, std::string z_org_pos);
+  void setOriginPosition3d(const std::shared_ptr<GR::Element> &element, std::string x_org_pos, std::string y_org_pos,
+                           std::string z_org_pos);
 
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context
@@ -336,11 +337,15 @@ public:
 
   std::shared_ptr<Context> getContext();
 
+  static void processViewport(const std::shared_ptr<GR::Element> &elem);
+  static void processLimits(const std::shared_ptr<GR::Element> &elem);
+
 
 private:
   Render();
   std::shared_ptr<Context> context;
 };
+
 } // namespace GR
 
 #endif

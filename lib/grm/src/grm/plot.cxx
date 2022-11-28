@@ -2257,15 +2257,12 @@ err_t plot_quiver(grm_args_t *subplot_args)
 
 err_t plot_stem(grm_args_t *subplot_args)
 {
-  const double *window;
-  double base_line_y[2] = {0.0, 0.0};
   double stem_x[2], stem_y[2] = {0.0};
   grm_args_t **current_series;
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
   group->setAttribute("name", "stem");
 
-  grm_args_values(subplot_args, "window", "D", &window);
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
@@ -2281,7 +2278,7 @@ err_t plot_stem(grm_args_t *subplot_args)
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
 
-      subGroup->append(global_render->createPolyline(window[0], window[1], base_line_y[0], base_line_y[1]));
+      subGroup->append(global_render->createYLine());
       grm_args_values(*current_series, "spec", "s", &spec);
 
       global_render->setLineSpec(subGroup, spec);
@@ -4244,7 +4241,6 @@ err_t plot_volume(grm_args_t *subplot_args)
 
 err_t plot_polar(grm_args_t *subplot_args)
 {
-  const double *window;
   double r_min, r_max, tick;
   int n;
   grm_args_t **current_series;
@@ -4252,9 +4248,8 @@ err_t plot_polar(grm_args_t *subplot_args)
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "polar");
 
-  grm_args_values(subplot_args, "window", "D", &window);
-  r_min = window[2];
-  r_max = window[3];
+  r_min = -1;
+  r_max = 1;
   tick = 0.5 * auto_tick(r_min, r_max);
   n = (int)ceil((r_max - r_min) / tick);
   r_max = r_min + n * tick;
@@ -8391,6 +8386,126 @@ std::shared_ptr<GR::Element> get_subplot_from_ndc_point_using_dom(double x, doub
     }
 
   return nullptr;
+}
+
+std::shared_ptr<GR::Element> get_subplot_from_ndc_points_using_dom(unsigned int n, const double *x, const double *y)
+{
+  unsigned int i;
+  std::shared_ptr<GR::Element> subplot_element;
+
+  for (i = 0, subplot_element = nullptr; i < n && subplot_element == nullptr; ++i)
+    {
+      subplot_element = get_subplot_from_ndc_point_using_dom(x[i], y[i]);
+    }
+
+  return subplot_element;
+}
+
+void grm_set_attribute_on_all_subplots_helper(std::shared_ptr<GR::Element> element, std::string attribute, int value)
+{
+  bool elementIsSubplotGroup =
+      (element->hasAttribute("subplotGroup") && static_cast<int>(element->getAttribute("subplotGroup")));
+
+  if (element->localName() == "layout-gridelement" || elementIsSubplotGroup)
+    {
+      element->setAttribute(attribute, value);
+    }
+  if (element->localName() == "layout-grid")
+    {
+      for (const auto &child : element->children())
+        {
+          grm_set_attribute_on_all_subplots_helper(child, attribute, value);
+        }
+    }
+}
+
+void grm_set_attribute_on_all_subplots(std::string attribute, int value)
+{
+  if (global_root->hasChildNodes())
+    {
+      for (const auto &child : global_root->children())
+        {
+          grm_set_attribute_on_all_subplots_helper(child, attribute, value);
+        }
+    }
+}
+
+int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, const int y2, const int keep_aspect_ratio,
+                                  double *factor_x, double *factor_y, double *focus_x, double *focus_y,
+                                  std::shared_ptr<GR::Element> subplot_element)
+{
+  double ndc_box_x[4], ndc_box_y[4], viewport[4];
+  double ndc_left, ndc_top, ndc_right, ndc_bottom;
+  const double *wswindow;
+  int width, height, max_width_height;
+
+  get_figure_size(NULL, &width, &height, NULL, NULL);
+  max_width_height = grm_max(width, height);
+
+  if (x1 <= x2)
+    {
+      ndc_left = (double)x1 / max_width_height;
+      ndc_right = (double)x2 / max_width_height;
+    }
+  else
+    {
+      ndc_left = (double)x2 / max_width_height;
+      ndc_right = (double)x1 / max_width_height;
+    }
+  if (y1 <= y2)
+    {
+      ndc_top = (double)(height - y1) / max_width_height;
+      ndc_bottom = (double)(height - y2) / max_width_height;
+    }
+  else
+    {
+      ndc_top = (double)(height - y2) / max_width_height;
+      ndc_bottom = (double)(height - y1) / max_width_height;
+    }
+
+  ndc_box_x[0] = ndc_left;
+  ndc_box_y[0] = ndc_bottom;
+  ndc_box_x[1] = ndc_right;
+  ndc_box_y[1] = ndc_bottom;
+  ndc_box_x[2] = ndc_left;
+  ndc_box_y[2] = ndc_top;
+  ndc_box_x[3] = ndc_right;
+  ndc_box_y[3] = ndc_top;
+  subplot_element = get_subplot_from_ndc_points_using_dom(array_size(ndc_box_x), ndc_box_x, ndc_box_y);
+  if (subplot_element == nullptr)
+    {
+      return 0;
+    }
+  viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
+  viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_xmax"));
+  viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_ymin"));
+  viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_ymax"));
+  grm_args_values(active_plot_args, "wswindow", "D", &wswindow);
+
+  *factor_x = abs(x1 - x2) / (width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0]));
+  *factor_y = abs(y1 - y2) / (height * (viewport[3] - viewport[2]) / (wswindow[3] - wswindow[2]));
+  if (keep_aspect_ratio)
+    {
+      if (*factor_x <= *factor_y)
+        {
+          *factor_x = *factor_y;
+          if (x1 > x2)
+            {
+              ndc_left = ndc_right - *factor_x * (viewport[1] - viewport[0]);
+            }
+        }
+      else
+        {
+          *factor_y = *factor_x;
+          if (y1 > y2)
+            {
+              ndc_top = ndc_bottom + *factor_y * (viewport[3] - viewport[2]);
+            }
+        }
+    }
+  *focus_x = (ndc_left - *factor_x * viewport[0]) / (1 - *factor_x) - (viewport[0] + viewport[1]) / 2.0;
+  *focus_y = (ndc_top - *factor_y * viewport[3]) / (1 - *factor_y) - (viewport[2] + viewport[3]) / 2.0;
+  return 1;
 }
 
 /*!

@@ -14,40 +14,38 @@
 
 static void test_panzoom(void)
 {
-    double plots[2][1000];
-    int n = sizeof(plots[0]) / sizeof(plots[0][0]);
-    grm_args_t *args;
-    int i;
+  double plots[2][1000];
+  int n = sizeof(plots[0]) / sizeof(plots[0][0]);
+  grm_args_t *args;
+  int i;
 
-    printf("filling argument container...\n");
+  printf("filling argument container...\n");
 
-    for (i = 0; i < n; ++i)
+  for (i = 0; i < n; ++i)
     {
-        plots[0][i] = i * 2 * M_PI / n;
-        plots[1][i] = 2 * sin(i * 2 * M_PI / n);
+      plots[0][i] = i * 2 * M_PI / n;
+      plots[1][i] = 2 * sin(i * 2 * M_PI / n);
     }
 
-    args = grm_args_new();
+  args = grm_args_new();
 
-    grm_args_push(args, "x", "nD", n, plots[0]);
-    grm_args_push(args, "y", "nD", n, plots[1]);
-    grm_plot(args);
-    printf("Press any key to continue...\n");
-    getchar();
+  grm_args_push(args, "x", "nD", n, plots[0]);
+  grm_args_push(args, "y", "nD", n, plots[1]);
+  grm_plot(args);
+  printf("Press any key to continue...\n");
+  getchar();
 
-    grm_args_push(args, "panzoom", "dddd", -0.04, 0.0, 0.8, 1.0);
-    grm_plot(args);
-    printf("Press any key to continue...\n");
-    getchar();
+  grm_args_push(args, "panzoom", "dddd", -0.04, 0.0, 0.8, 1.0);
+  grm_plot(args);
+  printf("Press any key to continue...\n");
+  getchar();
 
-    grm_args_delete(args);
+  grm_args_delete(args);
 }
 
 int main(void)
 {
-    test_panzoom();
+  test_panzoom();
 
-    return 0;
+  return 0;
 }
-
-
