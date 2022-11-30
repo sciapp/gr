@@ -47,6 +47,7 @@ GRWidget::GRWidget(QMainWindow *parent, const char *csv_file, const char *plot_t
   setenv("GKS_WSTYPE", "381", 1);
   setenv("GKS_DOUBLE_BUF", "True", 1);
 #endif
+  grm_args_push(args_, "keep_aspect_ratio", "i", 1);
   if (!grm_interactive_plot_from_file(args_, csv_file_, &plot_type_, colms_, heatmap_type_, heatmap_algorithm_))
     {
       exit(0);

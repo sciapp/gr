@@ -351,6 +351,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, const char *data_file, cons
       fprintf(stderr, "File data is to big for line plot. A heatmap is being tried instead.\n");
     }
   grm_args_push(args, "kind", "s", *plot_type);
+  if (strcmp(*plot_type, "line") == 0)
+    {
+      grm_args_push(args, "keep_aspect_ratio", "i", 0);
+    }
 
   if (str_equals_any(*plot_type, 2, "heatmap", "marginalheatmap"))
     {

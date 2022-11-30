@@ -1183,7 +1183,15 @@ void plot_process_viewport(grm_args_t *subplot_args)
   if (str_equals_any(kind, 9, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface", "trisurf",
                      "volume", "marginalheatmap"))
     {
-      right_margin = (vp1 - vp0) * 0.1;
+      right_margin = 0.05;
+      if (strcmp(kind, "marginalheatmap") == 0)
+        {
+          right_margin += (vp1 - vp0) * 0.1;
+        }
+      if (!keep_aspect_ratio)
+        {
+          right_margin += 0.025;
+        }
     }
   else
     {
@@ -5656,6 +5664,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   double ticksize;
   char *title;
   char *x_label, *y_label, *z_label;
+  int keep_aspect_ratio;
 
   args_values(args, "kind", "s", &kind);
   args_values(args, "viewport", "D", &viewport);
@@ -5668,6 +5677,8 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   args_values(args, "yorg", "dd", &y_org_low, &y_org_high);
   args_values(args, "ymajor", "i", &y_major_count);
   args_values(args, "ygrid", "i", &y_grid);
+  args_values(args, "keep_aspect_ratio", "i", &keep_aspect_ratio);
+
 
   gr_setlinecolorind(1);
   gr_setlinewidth(1);
@@ -5742,7 +5753,8 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           gr_savestate();
           gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
           gr_setcharup(-1, 0);
-          gr_text(vp[0] + 0.5 * charheight, 0.5 * (viewport[2] + viewport[3]), y_label);
+          gr_text(((keep_aspect_ratio) ? 0.925 : 1) * vp[0] + 0.5 * charheight, 0.5 * (viewport[2] + viewport[3]),
+                  y_label); // 0.925 is 1 - right_margin from plot_process_viewport
           gr_restorestate();
         }
     }
