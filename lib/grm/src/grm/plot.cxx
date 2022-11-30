@@ -2036,22 +2036,23 @@ err_t plot_step(grm_args_t *subplot_args)
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       // TODO: marginalheatmap
       grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
-      cleanup_and_set_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length) && x_length < 1,
+      cleanup_and_set_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length) && x_length < 1,
                                ERROR_PLOT_MISSING_DATA);
-      cleanup_and_set_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
+      cleanup_and_set_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length),
+                               ERROR_PLOT_MISSING_DATA);
       if (strcmp(kind, "marginalheatmap") == 0 && xind != -1 && yind != -1)
         {
           double y_max = 0, *plot, c_min, c_max;
           unsigned int n = 0;
 
-          args_values(*current_series, "xrange", "dd", &xmin, &xmax);
-          args_values(*current_series, "yrange", "dd", &ymin, &ymax);
-          args_values(subplot_args, "_zlim", "dd", &c_min, &c_max);
-          args_first_value(*current_series, "z", "D", &plot, &n);
+          grm_args_values(*current_series, "xrange", "dd", &xmin, &xmax);
+          grm_args_values(*current_series, "yrange", "dd", &ymin, &ymax);
+          grm_args_values(subplot_args, "_zlim", "dd", &c_min, &c_max);
+          grm_args_first_value(*current_series, "z", "D", &plot, &n);
 
-          y = malloc((is_vertical ? y_length : x_length) * sizeof(double));
+          y = static_cast<double *>(malloc((is_vertical ? y_length : x_length) * sizeof(double)));
           cleanup_and_set_error_if(y == NULL, ERROR_MALLOC);
-          xi = malloc((is_vertical ? y_length : x_length) * sizeof(double));
+          xi = static_cast<double *>(malloc((is_vertical ? y_length : x_length) * sizeof(double)));
           cleanup_and_set_error_if(xi == NULL, ERROR_MALLOC);
           for (i = 0; i < (is_vertical ? y_length : x_length); i++)
             {
@@ -2059,13 +2060,13 @@ err_t plot_step(grm_args_t *subplot_args)
                 {
                   y[(is_vertical ? y_length : x_length) - i - 1] =
                       isnan(plot[xind + i * x_length]) ? 0 : plot[xind + i * x_length];
-                  y_max = max(y_max, y[(is_vertical ? y_length : x_length) - i - 1]);
+                  y_max = grm_max(y_max, y[(is_vertical ? y_length : x_length) - i - 1]);
                 }
               else
                 {
                   y[i] = isnan(plot[x_length * (y_length - 1 - yind) + i]) ? 0
                                                                            : plot[x_length * (y_length - 1 - yind) + i];
-                  y_max = max(y_max, y[i]);
+                  y_max = grm_max(y_max, y[i]);
                 }
             }
           for (i = 0; i < (is_vertical ? y_length : x_length); i++)
@@ -2078,7 +2079,7 @@ err_t plot_step(grm_args_t *subplot_args)
         {
           return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
         }
-      args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
+      grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
       // end todo
       mask = gr_uselinespec(spec);
       if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
@@ -2091,9 +2092,9 @@ err_t plot_step(grm_args_t *subplot_args)
               double x_pos, y_pos;
               unsigned int len = is_vertical ? y_length : x_length;
 
-              x_step_boundaries = calloc(2 * len, sizeof(double));
+              x_step_boundaries = static_cast<double *>(calloc(2 * len, sizeof(double)));
               cleanup_and_set_error_if(x_step_boundaries == NULL, ERROR_MALLOC);
-              y_step_values = calloc(2 * len, sizeof(double));
+              y_step_values = static_cast<double *>(calloc(2 * len, sizeof(double)));
               cleanup_and_set_error_if(y_step_values == NULL, ERROR_MALLOC);
               x_step_boundaries[0] = is_vertical ? ymin : xmin;
               for (i = 2; i < 2 * len; i += 2)
@@ -3864,7 +3865,7 @@ cleanup:
   return error;
 }
 // todo marginalheatmap
-error_t plot_marginalheatmap(grm_args_t *subplot_args)
+err_t plot_marginalheatmap(grm_args_t *subplot_args)
 {
   const double *viewport;
   double c_min, c_max;
@@ -3875,13 +3876,13 @@ error_t plot_marginalheatmap(grm_args_t *subplot_args)
   double *bins = NULL;
   unsigned int num_bins_x = 0, num_bins_y = 0, n = 0;
   double *xi, *yi, *plot;
-  error_t error = NO_ERROR;
+  err_t error = ERROR_NONE;
 
   plot_heatmap(subplot_args);
 
-  args_values(subplot_args, "type", "s", &type);
-  args_values(subplot_args, "xind", "i", &xind);
-  args_values(subplot_args, "yind", "i", &yind);
+  grm_args_values(subplot_args, "type", "s", &type);
+  grm_args_values(subplot_args, "xind", "i", &xind);
+  grm_args_values(subplot_args, "yind", "i", &yind);
 
   for (k = 0; k < 2; k++)
     {
@@ -3889,24 +3890,25 @@ error_t plot_marginalheatmap(grm_args_t *subplot_args)
 
       gr_savestate();
 
-      args_values(subplot_args, "series", "A", &current_series);
-      args_values(*current_series, "algorithm", "s", &algorithm);
-      args_values(*current_series, "xrange", "dd", &x_min, &x_max);
-      args_values(*current_series, "yrange", "dd", &y_min, &y_max);
-      if (!args_values(subplot_args, "_clim", "dd", &c_min, &c_max))
+      grm_args_values(subplot_args, "series", "A", &current_series);
+      grm_args_values(*current_series, "algorithm", "s", &algorithm);
+      grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
+      grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
+      if (!grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max))
         {
-          cleanup_and_set_error_if(!args_values(subplot_args, "_zlim", "dd", &c_min, &c_max), ERROR_PLOT_MISSING_DATA);
+          cleanup_and_set_error_if(!grm_args_values(subplot_args, "_zlim", "dd", &c_min, &c_max),
+                                   ERROR_PLOT_MISSING_DATA);
         }
 
-      args_first_value(*current_series, "x", "D", &xi, &num_bins_x);
-      args_first_value(*current_series, "y", "D", &yi, &num_bins_y);
-      args_first_value(*current_series, "z", "D", &plot, &n);
+      grm_args_first_value(*current_series, "x", "D", &xi, &num_bins_x);
+      grm_args_first_value(*current_series, "y", "D", &yi, &num_bins_y);
+      grm_args_first_value(*current_series, "z", "D", &plot, &n);
 
       if (strcmp(type, "all") == 0)
         {
           unsigned int x_len = num_bins_x, y_len = num_bins_y;
 
-          bins = malloc(((k == 0) ? num_bins_y : num_bins_x) * sizeof(double));
+          bins = static_cast<double *>(malloc(((k == 0) ? num_bins_y : num_bins_x) * sizeof(double)));
           cleanup_and_set_error_if(bins == NULL, ERROR_MALLOC);
           grm_args_push(subplot_args, "kind", "s", "hist");
 
@@ -3927,19 +3929,19 @@ error_t plot_marginalheatmap(grm_args_t *subplot_args)
                     }
                   else if (strcmp(algorithm, "max") == 0)
                     {
-                      bins[(k == 0) ? i : j] = max(bins[(k == 0) ? i : j], value);
+                      bins[(k == 0) ? i : j] = grm_max(bins[(k == 0) ? i : j], value);
                     }
                 }
               if (k == 0)
                 {
-                  bin_max = max(bin_max, bins[i]);
+                  bin_max = grm_max(bin_max, bins[i]);
                 }
             }
           if (k == 1)
             {
               for (i = 0; i < x_len; i++)
                 {
-                  bin_max = max(bin_max, bins[i]);
+                  bin_max = grm_max(bin_max, bins[i]);
                 }
             }
           for (i = 0; i < ((k == 0) ? y_len : x_len); i++)
@@ -3953,15 +3955,15 @@ error_t plot_marginalheatmap(grm_args_t *subplot_args)
           bins = NULL;
         }
 
-      args_values(subplot_args, "viewport", "D", &viewport);
+      grm_args_values(subplot_args, "viewport", "D", &viewport);
 
       gr_inqscale(&options);
-      if (args_values(subplot_args, "xflip", "i", &flip) && flip)
+      if (grm_args_values(subplot_args, "xflip", "i", &flip) && flip)
         {
           options = (options | GR_OPTION_FLIP_Y) & ~GR_OPTION_FLIP_X;
           gr_setscale(options);
         }
-      else if (args_values(subplot_args, "yflip", "i", &flip) && flip)
+      else if (grm_args_values(subplot_args, "yflip", "i", &flip) && flip)
         {
           options = options & ~GR_OPTION_FLIP_Y & ~GR_OPTION_FLIP_X;
           gr_setscale(options);
@@ -3982,7 +3984,7 @@ error_t plot_marginalheatmap(grm_args_t *subplot_args)
       else
         {
           gr_setwindow(x_min, x_max, 0.0, c_max / 10);
-          gr_setviewport(viewport[0], viewport[1], viewport[3] + 0.02, min(viewport[3] + 0.12, 1));
+          gr_setviewport(viewport[0], viewport[1], viewport[3] + 0.02, grm_min(viewport[3] + 0.12, 1));
 
           grm_args_push(subplot_args, "orientation", "s", "horizontal");
         }
@@ -6081,6 +6083,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   char *x_label, *y_label, *z_label;
   int tick_orientation = 1;
 
+  int keep_aspect_ratio;
 
   auto group = global_render->createGroup("draw_axes");
   if (!currentDomElement)
@@ -6094,6 +6097,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   grm_args_values(args, "kind", "s", &kind);
   grm_args_values(args, "xgrid", "i", &x_grid);
   grm_args_values(args, "ygrid", "i", &y_grid);
+  grm_args_values(args, "keep_aspect_ratio", "i", &keep_aspect_ratio); // todo needed?
 
   global_render->setLineColorInd(group, 1);
   global_render->setLineWidth(group, 1);
