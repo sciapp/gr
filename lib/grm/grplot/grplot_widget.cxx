@@ -7,7 +7,7 @@
 #include <list>
 #include <sstream>
 
-#include "grmplots_widget.hxx"
+#include "grplot_widget.hxx"
 #include "util.hxx"
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
