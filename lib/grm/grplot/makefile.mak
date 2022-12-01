@@ -22,14 +22,14 @@ install: default
 ifeq ($(UNAME), Darwin)
 	@if [ ! -d $(DESTDIR)$(GRDIR)/Applications ]; then \
 	mkdir -m 755 $(DESTDIR)$(GRDIR)/Applications; fi
-	@ditto grm-plots.app \
-	$(DESTDIR)$(GRDIR)/Applications/grm-plots.app
+	@ditto grplot.app \
+	$(DESTDIR)$(GRDIR)/Applications/grplot.app
 	@if [ ! -d $(DESTDIR)$(GRDIR)/bin ]; then \
     mkdir -m 755 $(DESTDIR)$(GRDIR)/bin; fi
-	@ditto grm-plots.macos.sh \
-	$(DESTDIR)$(GRDIR)/bin/grm-plots
+	@ditto grplot.macos.sh \
+	$(DESTDIR)$(GRDIR)/bin/grplot
 else
-	cp -p grm-plots $(DESTDIR)$(GRDIR)/bin/
+	cp -p grplot $(DESTDIR)$(GRDIR)/bin/
 endif
 
 clean:

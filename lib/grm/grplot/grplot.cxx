@@ -1,4 +1,4 @@
-#include "grmplots_mainwindow.hxx"
+#include "grplot_mainwindow.hxx"
 #include <QApplication>
 
 int main(int argc, char **argv)
@@ -11,7 +11,7 @@ int main(int argc, char **argv)
     }
   else
     {
-      fprintf(stderr, "Please specify a file to run grm-plots.\n");
+      fprintf(stderr, "Please specify a file to run grplot.\n");
       exit(0);
     }
   if (argc > 2)

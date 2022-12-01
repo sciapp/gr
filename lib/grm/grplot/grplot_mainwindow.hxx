@@ -1,6 +1,6 @@
 #ifndef MAIN_WINDOW_H_INCLUDED
 #define MAIN_WINDOW_H_INCLUDED
-#include "grmplots_widget.hxx"
+#include "grplot_widget.hxx"
 #include <QMainWindow>
 
 class MainWindow : public QMainWindow
