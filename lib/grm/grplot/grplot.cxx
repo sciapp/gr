@@ -30,7 +30,7 @@ int main(int argc, char **argv)
     }
   if (strcmp(csv_file, "") == 0)
     {
-      fprintf(stderr, "Please specify a file to run grplot.\n");
+      fprintf(stderr, "Missing input file name\n");
       exit(0);
     }
 

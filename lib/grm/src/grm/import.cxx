@@ -59,10 +59,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<double>> &
                 }
               catch (std::invalid_argument &e)
                 {
-                  fprintf(stderr,
-                          "Value error for column parameter. Use numbers in the "
-                          "specified format. Entry '%s'\n",
-                          token.c_str());
+                  fprintf(stderr, "Invalid argument for column parameter (%s)\n", token.c_str());
                   return ERROR_PARSE_INT;
                 }
             }
@@ -83,10 +80,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<double>> &
                     }
                   catch (std::invalid_argument &e)
                     {
-                      fprintf(stderr,
-                              "Value error for column parameter. Use numbers in the "
-                              "specified format. Entry '%s'\n",
-                              token.c_str());
+                      fprintf(stderr, "Invalid argument for column parameter (%s)\n", token.c_str());
                       return ERROR_PARSE_INT;
                     }
                 }
@@ -104,10 +98,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<double>> &
             }
           catch (std::invalid_argument &e)
             {
-              fprintf(stderr,
-                      "Value error for column parameter. Use numbers in the "
-                      "specified format. Entry '%s'\n",
-                      token.c_str());
+              fprintf(stderr, "Invalid argument for column parameter (%s)\n", token.c_str());
               return ERROR_PARSE_INT;
             }
         }
@@ -154,10 +145,8 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<double>> &
                 }
               catch (std::invalid_argument &e)
                 {
-                  fprintf(stderr,
-                          "Value error for plot parameter in argument '%s : %s'. Problem "
-                          "appeared in line %i.\n",
-                          key.c_str(), value.c_str(), linecount);
+                  fprintf(stderr, "Invalid argument for plot parameter (%s:%s) in line %i\n", key.c_str(),
+                          value.c_str(), linecount);
                   return ERROR_PARSE_INT;
                 }
             }
@@ -183,10 +172,8 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<double>> &
                 }
               catch (std::invalid_argument &e)
                 {
-                  fprintf(stderr,
-                          "Value error for plot parameter in argument '%s : %s, %s'. "
-                          "Problem appeared in line %i.\n",
-                          key.c_str(), value1.c_str(), value2.c_str(), linecount);
+                  fprintf(stderr, "Invalid argument for plot parameter (%s:%s,%s) in line %i\n", key.c_str(),
+                          value1.c_str(), value2.c_str(), linecount);
                   return ERROR_PARSE_DOUBLE;
                 }
               if (strcmp(key.c_str(), "xrange") == 0)
@@ -202,11 +189,8 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<double>> &
             }
           else
             {
-              fprintf(stderr,
-                      "Key-value pair '%s : %s' in line %i unknown. Check if the key-value pair "
-                      "exists in grm.\n",
-                      key.c_str(), value.c_str(),
-                      linecount); /* TODO: extend these ifs when more key values pairs are needed */
+              fprintf(stderr, "Unknown key:value pair (%s:%s) in line %i\n", key.c_str(), value.c_str(), linecount);
+              /* TODO: extend these if more key values pairs are needed */
             }
           continue;
         }
@@ -244,10 +228,8 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<double>> &
                 }
               catch (std::invalid_argument &e)
                 {
-                  fprintf(stderr,
-                          "Value error inside data. Check if '%s' in row %zu and column "
-                          "%zu is correct.\n",
-                          token.c_str(), row + linecount + 1, col + 1);
+                  fprintf(stderr, "Invalid number in line %zu, column %zu (%s)\n", row + linecount + 1, col + 1,
+                          token.c_str());
                   return ERROR_PARSE_DOUBLE;
                 }
               cnt += 1;
@@ -307,10 +289,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, const char *data_file, cons
 
   if (!file_exists(data_file))
     {
-      fprintf(stderr,
-              "Error! No file with the name %s was found. Please use a correct "
-              "filename and filepath.\n",
-              data_file);
+      fprintf(stderr, "File not found (%s)\n", data_file);
       return 0;
     }
   if (read_data_file(data_file, filedata, labels, args, colms, &ranges))
@@ -324,7 +303,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, const char *data_file, cons
     }
   else
     {
-      fprintf(stderr, "Error! No data or valid columns are specified.\n");
+      fprintf(stderr, "File is empty\n");
       return 0;
     }
 
@@ -341,14 +320,13 @@ int grm_interactive_plot_from_file(grm_args_t *args, const char *data_file, cons
 
   if (!str_equals_any(*plot_type, 3, "line", "heatmap", "marginalheatmap"))
     {
+      fprintf(stderr, "Invalid plot type (%s) - fallback to line plot\n", *plot_type);
       *plot_type = "line";
-      fprintf(stderr, "No correct plot type was specified. A normal line plot is "
-                      "getting used.\n");
     }
   if (strcmp("line", *plot_type) == 0 && (rows >= 100 && cols >= 100))
     {
+      fprintf(stderr, "Too much data for line plot - use heatmap instead\n");
       *plot_type = "heatmap";
-      fprintf(stderr, "File data is to big for line plot. A heatmap is being tried instead.\n");
     }
   grm_args_push(args, "kind", "s", *plot_type);
   if (strcmp(*plot_type, "line") == 0 || cols != rows)
@@ -362,8 +340,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, const char *data_file, cons
 
       if (cols <= 1)
         {
-          fprintf(stderr, "Error! For heatmap and marginalheatmap there must be "
-                          "atleast two specified columns.\n");
+          fprintf(stderr, "Unsufficient data for heatmap plot\n");
           return 0;
         }
       ranges.xmax = (ranges.xmax == -1.0) ? ((double)rows - 1.0 + ranges.xmin) : ranges.xmax;
@@ -407,11 +384,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, const char *data_file, cons
             }
         }
       grm_args_push(args, "series", "nA", cols, series.data());
-      if (labels_c.empty())
-        {
-          fprintf(stderr, "No labels specified. Continue with no labels for the lines.\n");
-        }
-      else
+      if (!labels_c.empty())
         {
           grm_args_push(args, "labels", "nS", cols, labels_c.data());
         }
