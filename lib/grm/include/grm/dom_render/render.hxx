@@ -9,7 +9,12 @@
 #include <grm/dom_render/graphics_tree/Document.hxx>
 #include "gr.h"
 #include "grm/layout.hxx"
-#include <grm/util_int.h>
+
+enum CoordinateSpace
+{
+  WC,
+  NDC
+};
 
 
 namespace GR
