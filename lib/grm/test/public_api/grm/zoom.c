@@ -11,12 +11,11 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-
-static void test_panzoom(void)
+static void test_zoom_using_interactions(void)
 {
   double plots[2][1000];
   int n = sizeof(plots[0]) / sizeof(plots[0][0]);
-  grm_args_t *args;
+  grm_args_t *args, *input_args;
   int i;
 
   printf("filling argument container...\n");
@@ -35,17 +34,23 @@ static void test_panzoom(void)
   printf("Press any key to continue...\n");
   getchar();
 
-  grm_args_push(args, "panzoom", "dddd", -0.04, 0.0, 0.8, 1.0);
-  grm_plot(args);
+  input_args = grm_args_new();
+  grm_args_push(input_args, "x", "i", 300);
+  grm_args_push(input_args, "y", "i", 225);
+  grm_args_push(input_args, "factor", "d", 2.0);
+
+  grm_input(input_args);
+  grm_render();
   printf("Press any key to continue...\n");
   getchar();
 
   grm_args_delete(args);
+  grm_args_delete(input_args);
 }
 
 int main(void)
 {
-  test_panzoom();
+  test_zoom_using_interactions();
 
   return 0;
 }
