@@ -680,6 +680,7 @@ windows-32bit-cross:
     CC=i686-w64-mingw32-gcc
     CXX=i686-w64-mingw32-g++
     AR=i686-w64-mingw32-ar
+    ARCHITECTURE=i686
   - MAKE="make -f makefile.mingw" make -f makefile.mingw -C lib/gks/qt
     GRDIR=./
     CC=i686-w64-mingw32-gcc
@@ -783,6 +784,7 @@ windows-64bit-cross:
     CC=x86_64-w64-mingw32-gcc
     CXX=x86_64-w64-mingw32-g++
     AR=x86_64-w64-mingw32-ar
+    ARCHITECTURE=x86_64
   - MAKE="make -f makefile.mingw" make -f makefile.mingw -C lib/gks/qt
     GRDIR=./
     CC=x86_64-w64-mingw32-gcc
