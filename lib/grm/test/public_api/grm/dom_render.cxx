@@ -720,11 +720,13 @@ static void test_polarhistogram_subplots(void)
   grm_args_push(subplots[0], "kind", "s", "polar_histogram");
   grm_args_push(subplots[0], "x", "nD", theta_length, &theta);
   i = 0;
-  grm_args_push(subplots[0], "subplot", "dddd", 0.5 * (i % 2), 0.5 * (i % 2 + 1), 0.5 * (i / 2), 0.5 * (i / 2 + 1));
+  //  grm_args_push(subplots[0], "subplot", "dddd", 0.5 * (i % 2), 0.5 * (i % 2 + 1), 0.5 * (i / 2), 0.5 * (i / 2 + 1));
+  grm_args_push(subplots[0], "subplot", "dddd", 0.0, 0.5, 0.0, 1.0);
   i = 1;
   grm_args_push(subplots[1], "kind", "s", "polar_histogram");
   grm_args_push(subplots[1], "x", "nD", theta_length, &theta);
-  grm_args_push(subplots[i], "subplot", "dddd", 0.5 * (i % 2), 0.5 * (i % 2 + 1), 0.5 * (i / 2), 0.5 * (i / 2 + 1));
+  //  grm_args_push(subplots[i], "subplot", "dddd", 0.5 * (i % 2), 0.5 * (i % 2 + 1), 0.5 * (i / 2), 0.5 * (i / 2 + 1));
+  grm_args_push(subplots[i], "subplot", "dddd", 0.5, 1.0, 0.0, 1.0);
 
   args = grm_args_new();
   grm_args_push(args, "subplots", "nA", 2, subplots);
@@ -782,12 +784,47 @@ static void test_interaction_on_tree(void)
   grm_finalize();
 }
 
+static void testPolar()
+{
+  grm_args_t *args, *subplots;
+  int i, j;
+  int n = 40;
 
+  double angles[n], radii[n];
+  double r_tick = 2.0 / n;
+  double a_tick = 2 * M_PI / n;
+  for (i = 0; i < n; ++i)
+    {
+      angles[i] = i * a_tick;
+      radii[i] = i * r_tick;
+    }
+  angles[n - 1] = 2 * M_PI;
+  radii[n - 1] = 2.0;
+
+  printf("Polar plot\n");
+
+  args = grm_args_new();
+
+  subplots = grm_args_new();
+
+  grm_args_push(args, "kind", "s", "polar");
+  grm_args_push(args, "x", "nD", n, &angles);
+  grm_args_push(args, "y", "nD", n, &radii);
+
+  printf("plotting data...\n");
+
+  grm_plot(args);
+  printf("Press any key to continue...\n");
+  getchar();
+
+  grm_args_delete(args);
+}
 int main(void)
 {
 
+  testPolar();
   //  test_dom_render();
-  //  test_polarhistogram_subplots();
+  //    test_polarhistogram_subplots();
   // test_wireframe();
   // test_plot3();
   //  testTrisurf();

@@ -73,8 +73,9 @@ public:
 
   std::shared_ptr<Element> createDrawPolarAxes(int angle_ticks, int rings, const std::string &kind, int phiflip,
                                                double vp_xmin, double vp_xmax, double vp_ymin, double vp_ymax,
-                                               const std::string &title = "", const std::string &norm = "",
-                                               double r_max = -1.0);
+                                               const std::string &title = "", double r_max = -1.0,
+                                               const std::string &norm = "", double tick = 0.0,
+                                               double line_width = 0.0);
 
   std::shared_ptr<Element> createDrawPieLegend(const std::string &labels_key,
                                                std::optional<std::vector<std::string>> labels,

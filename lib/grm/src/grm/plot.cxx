@@ -1338,6 +1338,36 @@ static void legend_size(grm_args_t *subplot_args, double *w, double *h)
     }
 }
 
+double auto_tick_polar(double rmax, int rings, const std::string &norm)
+{
+  if (norm == "cdf")
+    {
+      return 1.0 / rings;
+    }
+  double scale;
+
+  if (rmax > rings)
+    {
+      return (static_cast<int>(rmax) + (rings - (static_cast<int>(rmax) % rings))) / rings;
+    }
+  else if (rmax > (rings * 0.6))
+    {
+      // returns rings / rings -> 1.0 so that rmax = rings * tick -> rings. Number of rings is rmax then
+      return 1.0;
+    }
+  scale = ceil(abs(log10(rmax)));
+  rmax = static_cast<int>(rmax * pow(10.0, scale));
+  if (static_cast<int>(rmax) % rings == 0)
+    {
+      rmax = rmax / pow(10.0, scale);
+      return rmax / rings;
+    }
+  rmax += rings - (static_cast<int>(rmax) % rings);
+  rmax = rmax / pow(10.0, scale);
+
+  return rmax / rings;
+}
+
 double auto_tick(double amin, double amax)
 {
   double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
@@ -1762,7 +1792,6 @@ void plot_post_subplot(grm_args_t *subplot_args)
   logger((stderr, "Post subplot processing\n"));
 
   gr_restorestate();
-  grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "kind", "s", &kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   if (grm_args_contains(subplot_args, "labels"))
@@ -4244,15 +4273,12 @@ err_t plot_polar(grm_args_t *subplot_args)
   double r_min, r_max, tick;
   int n;
   grm_args_t **current_series;
+  std::cout << "polar\n";
 
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "polar");
 
-  r_min = -1;
-  r_max = 1;
-  tick = 0.5 * auto_tick(r_min, r_max);
-  n = (int)ceil((r_max - r_min) / tick);
-  r_max = r_min + n * tick;
+  r_max = static_cast<double>(group->getAttribute("r_max"));
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
@@ -4418,7 +4444,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   int freeable_angles = 0;
   err_t error = ERROR_NONE;
 
-  // TODO: Some functions are broken, also broken in the classic develop
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "polarhistogram");
 
@@ -5837,7 +5862,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 
 err_t plot_draw_polar_axes(grm_args_t *args)
 {
-  const double *window, *viewport, *vp;
+  const double *viewport, *vp;
   double diag;
   double charheight;
   double r_min, r_max = -1.0;
@@ -5853,25 +5878,26 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   char *char_title;
   char *char_norm;
   std::string norm, title;
+  std::shared_ptr<GR::Element> group;
 
   grm_args_values(args, "vp", "D", &vp);
-  r_max = static_cast<double>(global_root->lastChildElement()->getAttribute("r_max"));
 
-  if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
-    {
-      angle_ticks = 8;
-    }
-  if (grm_args_values(args, "rings", "i", &rings) == 0)
-    {
-      rings = 4;
-    }
 
   grm_args_values(args, "kind", "s", &kind);
 
   if (strcmp(kind, "polar_histogram") == 0)
     {
+
+      if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
+        {
+          angle_ticks = 8;
+        }
+      if (grm_args_values(args, "rings", "i", &rings) == 0)
+        {
+          rings = 4;
+        }
+
       r_min = 0.0;
-      r_max += static_cast<int>(r_max) % 2;
       if (grm_args_values(args, "normalization", "s", &char_norm) == 0)
         {
           norm = "count";
@@ -5881,29 +5907,30 @@ err_t plot_draw_polar_axes(grm_args_t *args)
           norm = char_norm;
         }
 
-      if (norm == "count" || norm == "cumcount")
-        {
-          tick = 1.5 * auto_tick(r_min, r_max);
-        }
-      else if (norm == "pdf" || norm == "probability")
-        {
-          tick = 1.5 * auto_tick(r_min, r_max);
-        }
-      else if (norm == "countdensity")
-        {
-          tick = 1.5 * auto_tick(r_min, r_max);
-        }
-      else if (norm == "cdf")
-        {
-          tick = 1.0 / rings;
-        }
-      else
-        {
-          tick = auto_tick(r_min, r_max);
-        }
-      // r_max for plot_polar_histogram
-      //      global_root->lastChildElement()->setAttribute("r_max", r_max);
+      tick = auto_tick_polar(r_max, rings, norm);
       global_root->lastChildElement()->setAttribute("r_max", rings * tick);
+    }
+  else
+    {
+      // Not Polarhistogram
+      if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
+        {
+          angle_ticks = 8;
+        }
+      if (grm_args_values(args, "rings", "i", &rings) == 0)
+        {
+          rings = 9;
+        }
+      // ToDo: Maybe change tick calculation -> 0.1, 0.2, 0.5
+      r_min = -1;
+      r_max = 1;
+
+      n = (int)ceil((r_max - r_min) / rings);
+      tick = (r_max - r_min) / static_cast<int>(rings);
+      tick = ceil(tick * 10);
+      tick /= 10;
+      r_max = r_min + rings * tick;
+      global_root->lastChildElement()->setAttribute("r_max", r_max);
     }
 
   if (grm_args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
@@ -5917,8 +5944,16 @@ err_t plot_draw_polar_axes(grm_args_t *args)
       title = char_title;
     }
 
-  auto group = global_render->createDrawPolarAxes(angle_ticks, rings, kind, phiflip, vp[0], vp[1], vp[2], vp[3], title,
-                                                  norm, r_max);
+  if (strcmp(kind, "polar_histogram") == 0)
+    {
+      group = global_render->createDrawPolarAxes(angle_ticks, rings, kind, phiflip, vp[0], vp[1], vp[2], vp[3], title,
+                                                 r_max, norm, tick, 1.0);
+    }
+  else
+    {
+      group = global_render->createDrawPolarAxes(angle_ticks, rings, kind, phiflip, vp[0], vp[1], vp[2], vp[3], title,
+                                                 r_max, "", tick);
+    }
 
   if (!currentDomElement)
     {
@@ -8329,6 +8364,7 @@ int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
           grm_plot_helper(elementToSlice.first, elementToSlice.second, gridDomElement);
         }
     }
+  return 0;
 }
 
 std::shared_ptr<GR::Element> grm_get_document_root(void)
