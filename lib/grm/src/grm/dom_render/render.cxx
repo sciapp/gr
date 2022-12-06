@@ -342,13 +342,13 @@ static void getMajorCount(const std::shared_ptr<GR::Element> &element, const std
     }
 }
 
-static void getAxesInformation(const std::shared_ptr<GR::Element> &element, double &x_tick, double &y_tick,
-                               double &x_org, double &y_org, int &x_major, int &y_major)
+static void getAxesInformation(const std::shared_ptr<GR::Element> &element, std::string x_org_pos,
+                               std::string y_org_pos, double &x_org, double &y_org, int &x_major, int &y_major,
+                               double &x_tick, double &y_tick)
 {
   int x_org_low, x_org_high;
   int y_org_low, y_org_high;
   int major_count;
-  std::string x_org_pos, y_org_pos;
 
   auto draw_axes_group = element->parentElement();
   auto subplot_element = draw_axes_group->parentElement();
@@ -358,23 +358,6 @@ static void getAxesInformation(const std::shared_ptr<GR::Element> &element, doub
   double xmax = static_cast<double>(subplot_element->getAttribute("window_xmax"));
   double ymin = static_cast<double>(subplot_element->getAttribute("window_ymin"));
   double ymax = static_cast<double>(subplot_element->getAttribute("window_ymax"));
-
-  if (element->hasAttribute("x_org_pos"))
-    {
-      x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
-    }
-  else
-    {
-      x_org_pos = "low";
-    }
-  if (element->hasAttribute("y_org_pos"))
-    {
-      y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
-    }
-  else
-    {
-      y_org_pos = "low";
-    }
 
   getMajorCount(element, kind, major_count);
 
@@ -533,14 +516,14 @@ static void getAxesInformation(const std::shared_ptr<GR::Element> &element, doub
     }
 }
 
-static void getAxes3dInformation(const std::shared_ptr<GR::Element> &element, double &x_tick, double &y_tick,
-                                 double &z_tick, double &x_org, double &y_org, double &z_org, int &x_major,
-                                 int &y_major, int &z_major)
+static void getAxes3dInformation(const std::shared_ptr<GR::Element> &element, std::string x_org_pos,
+                                 std::string y_org_pos, std::string z_org_pos, double &x_org, double &y_org,
+                                 double &z_org, int &x_major, int &y_major, int &z_major, double &x_tick,
+                                 double &y_tick, double &z_tick)
 {
-  getAxesInformation(element, x_tick, y_tick, x_org, y_org, x_major, y_major);
+  getAxesInformation(element, x_org_pos, y_org_pos, x_org, y_org, x_major, y_major, x_tick, y_tick);
 
   double z_org_low, z_org_high;
-  std::string z_org_pos;
   int major_count;
 
   auto draw_axes_group = element->parentElement();
@@ -551,15 +534,6 @@ static void getAxes3dInformation(const std::shared_ptr<GR::Element> &element, do
   double zmax = static_cast<double>(subplot_element->getAttribute("window_zmax"));
 
   getMajorCount(element, kind, major_count);
-
-  if (element->hasAttribute("z_org_pos"))
-    {
-      z_org_pos = static_cast<std::string>(element->getAttribute("z_org_pos"));
-    }
-  else
-    {
-      z_org_pos = "low";
-    }
 
   if (element->hasAttribute("z_major"))
     {
@@ -825,8 +799,26 @@ static void axes(const std::shared_ptr<GR::Element> &element, const std::shared_
   int y_major;
   int tick_orientation = 1;
   double tick_size;
+  std::string x_org_pos, y_org_pos;
 
-  getAxesInformation(element, x_tick, y_tick, x_org, y_org, x_major, y_major);
+  if (element->hasAttribute("x_org_pos"))
+    {
+      x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
+    }
+  else
+    {
+      x_org_pos = "low";
+    }
+  if (element->hasAttribute("y_org_pos"))
+    {
+      y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
+    }
+  else
+    {
+      y_org_pos = "low";
+    }
+
+  getAxesInformation(element, x_org_pos, y_org_pos, x_org, y_org, x_major, y_major, x_tick, y_tick);
 
   auto draw_axes_group = element->parentElement();
   auto subplot_element = draw_axes_group->parentElement();
@@ -859,11 +851,26 @@ static void grid(const std::shared_ptr<GR::Element> &element, const std::shared_
    */
   double x_tick, y_tick, x_org, y_org;
   int x_major, y_major;
-  int x_grid = 1, y_grid = 1;
-  auto draw_axes_element = element->parentElement();
-  auto subplot_element = draw_axes_element->parentElement();
+  std::string x_org_pos, y_org_pos;
 
-  getAxesInformation(element, x_tick, y_tick, x_org, y_org, x_major, y_major);
+  if (element->hasAttribute("x_org_pos"))
+    {
+      x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
+    }
+  else
+    {
+      x_org_pos = "low";
+    }
+  if (element->hasAttribute("y_org_pos"))
+    {
+      y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
+    }
+  else
+    {
+      y_org_pos = "low";
+    }
+
+  getAxesInformation(element, x_org_pos, y_org_pos, x_org, y_org, x_major, y_major, x_tick, y_tick);
 
   gr_grid(x_tick, y_tick, x_org, y_org, x_major, y_major);
 }
@@ -1128,7 +1135,8 @@ static void grid3d(const std::shared_ptr<GR::Element> &element, const std::share
   int x_major;
   int y_major;
   int z_major;
-  getAxes3dInformation(element, x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major);
+  getAxes3dInformation(element, std::string(), std::string(), std::string(), x_org, y_org, z_org, x_major, y_major,
+                       z_major, x_tick, y_tick, z_tick);
 
   gr_grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major);
 }
@@ -1150,7 +1158,8 @@ static void axes3d(const std::shared_ptr<GR::Element> &element, const std::share
   int tick_orientation = 1;
   double tick_size;
 
-  getAxes3dInformation(element, x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major);
+  getAxes3dInformation(element, std::string(), std::string(), std::string(), x_org, y_org, z_org, x_major, y_major,
+                       z_major, x_tick, y_tick, z_tick);
 
   auto draw_axes_group = element->parentElement();
   auto subplot_element = draw_axes_group->parentElement();
@@ -2893,11 +2902,13 @@ static void panzoom(const std::shared_ptr<GR::Element> &elem, const std::shared_
 static void drawYLine(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
 {
   auto draw_axes_element = elem->parentElement();
-  auto subplot_element = draw_axes_element->parentElement();
+  double x_tick, x_org_low, x_org_high;
+  double y_tick, y_org;
+  int x_major;
+  int y_major;
 
-  auto x_axes_elements = subplot_element->getElementsByTagName("x-axes-information")[0];
-  double x_org_low = static_cast<double>(x_axes_elements->getAttribute("x_org_low"));
-  double x_org_high = static_cast<double>(x_axes_elements->getAttribute("x_org_high"));
+  getAxesInformation(elem, "low", "low", x_org_low, y_org, x_major, y_major, x_tick, y_tick);
+  getAxesInformation(elem, "high", "high", x_org_high, y_org, x_major, y_major, x_tick, y_tick);
 
   double x[2] = {x_org_low, x_org_high};
   double y[2] = {0, 0};
