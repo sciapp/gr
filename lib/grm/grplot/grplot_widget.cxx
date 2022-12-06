@@ -32,12 +32,10 @@ void getWheelPos(QWheelEvent *event, int *x, int *y)
 #endif
 }
 
-GRWidget::GRWidget(QMainWindow *parent, const char *csv_file, const char *plot_type, const char *colms)
+GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
     : QWidget(parent), args_(nullptr), rubberBand(nullptr), pixmap(nullptr), tooltip(nullptr)
 {
-  csv_file_ = csv_file;
-  colms_ = colms;
-  plot_type_ = plot_type;
+  const char *kind;
   args_ = grm_args_new();
 
 #ifdef _WIN32
@@ -48,7 +46,7 @@ GRWidget::GRWidget(QMainWindow *parent, const char *csv_file, const char *plot_t
   setenv("GKS_DOUBLE_BUF", "True", 1);
 #endif
   grm_args_push(args_, "keep_aspect_ratio", "i", 1);
-  if (!grm_interactive_plot_from_file(args_, csv_file_, &plot_type_, colms_, heatmap_type_, heatmap_algorithm_))
+  if (!grm_interactive_plot_from_file(args_, argc, argv))
     {
       exit(0);
     }
@@ -62,20 +60,21 @@ GRWidget::GRWidget(QMainWindow *parent, const char *csv_file, const char *plot_t
   menu = parent->menuBar();
   type = new QMenu("&Plot type");
   algo = new QMenu("&Algorithm");
-  if (strcmp(plot_type_, "heatmap") == 0 || strcmp(plot_type_, "marginalheatmap") == 0)
+  grm_args_values(args_, "kind", "s", &kind);
+  if (strcmp(kind, "heatmap") == 0 || strcmp(kind, "marginalheatmap") == 0)
     {
       auto submenu = type->addMenu("&Marginalheatmap");
 
       heatmapAct = new QAction(tr("&Heatmap"), this);
-      connect(heatmapAct, &QAction::triggered, this, &GRWidget::heatmap);
+      connect(heatmapAct, &QAction::triggered, this, &GRPlotWidget::heatmap);
       marginalheatmapAllAct = new QAction(tr("&Type 1 all"), this);
-      connect(marginalheatmapAllAct, &QAction::triggered, this, &GRWidget::marginalheatmapall);
+      connect(marginalheatmapAllAct, &QAction::triggered, this, &GRPlotWidget::marginalheatmapall);
       marginalheatmapLineAct = new QAction(tr("&Type 2 line"), this);
-      connect(marginalheatmapLineAct, &QAction::triggered, this, &GRWidget::marginalheatmapline);
+      connect(marginalheatmapLineAct, &QAction::triggered, this, &GRPlotWidget::marginalheatmapline);
       sumAct = new QAction(tr("&Sum"), this);
-      connect(sumAct, &QAction::triggered, this, &GRWidget::sumalgorithm);
+      connect(sumAct, &QAction::triggered, this, &GRPlotWidget::sumalgorithm);
       maxAct = new QAction(tr("&Maximum"), this);
-      connect(maxAct, &QAction::triggered, this, &GRWidget::maxalgorithm);
+      connect(maxAct, &QAction::triggered, this, &GRPlotWidget::maxalgorithm);
 
       submenu->addAction(marginalheatmapAllAct);
       submenu->addAction(marginalheatmapLineAct);
@@ -83,27 +82,27 @@ GRWidget::GRWidget(QMainWindow *parent, const char *csv_file, const char *plot_t
       algo->addAction(sumAct);
       algo->addAction(maxAct);
     }
-  else if (strcmp(plot_type_, "line") == 0)
+  else if (strcmp(kind, "line") == 0)
     {
       lineAct = new QAction(tr("&Line"), this);
-      connect(lineAct, &QAction::triggered, this, &GRWidget::line);
+      connect(lineAct, &QAction::triggered, this, &GRPlotWidget::line);
       type->addAction(lineAct);
     }
   menu->addMenu(type);
   menu->addMenu(algo);
 }
 
-GRWidget::~GRWidget()
+GRPlotWidget::~GRPlotWidget()
 {
   grm_args_delete(args_);
 }
 
-void GRWidget::draw()
+void GRPlotWidget::draw()
 {
   grm_plot(nullptr);
 }
 
-void GRWidget::redraw()
+void GRPlotWidget::redraw()
 {
   delete pixmap;
   pixmap = nullptr;
@@ -131,11 +130,12 @@ void GRWidget::redraw()
     <span class=\"gr-label\">%s: </span>\n\
     <span class=\"gr-value\">%.14g</span>"
 
-void GRWidget::paintEvent(QPaintEvent *event)
+void GRPlotWidget::paintEvent(QPaintEvent *event)
 {
   util::unused(event);
   QPainter painter;
   std::stringstream addresses;
+  const char *kind;
 
   if (!pixmap)
     {
@@ -186,7 +186,8 @@ void GRWidget::paintEvent(QPaintEvent *event)
               std::string info(c_info);
               label.setDefaultStyleSheet(style);
               label.setHtml(info.c_str());
-              if (strcmp(plot_type_, "heatmap") == 0 || strcmp(plot_type_, "marginalheatmap") == 0)
+              grm_args_values(args_, "kind", "s", &kind);
+              if (strcmp(kind, "heatmap") == 0 || strcmp(kind, "marginalheatmap") == 0)
                 {
                   background.setAlpha(224);
                 }
@@ -211,7 +212,7 @@ void GRWidget::paintEvent(QPaintEvent *event)
     }
 }
 
-void GRWidget::keyPressEvent(QKeyEvent *event)
+void GRPlotWidget::keyPressEvent(QKeyEvent *event)
 {
   if (event->key() == Qt::Key_R)
     {
@@ -226,8 +227,9 @@ void GRWidget::keyPressEvent(QKeyEvent *event)
     }
 }
 
-void GRWidget::mouseMoveEvent(QMouseEvent *event)
+void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
 {
+  const char *kind;
   if (mouseState.mode == MouseState::Mode::boxzoom)
     {
       rubberBand->setGeometry(QRect(mouseState.pressed, event->pos()).normalized());
@@ -253,7 +255,8 @@ void GRWidget::mouseMoveEvent(QMouseEvent *event)
     {
       tooltip = grm_get_tooltip(event->pos().x(), event->pos().y());
 
-      if (strcmp(plot_type_, "marginalheatmap") == 0)
+      grm_args_values(args_, "kind", "s", &kind);
+      if (strcmp(kind, "marginalheatmap") == 0)
         {
           grm_args_t *input_args;
           input_args = grm_args_new();
@@ -267,7 +270,7 @@ void GRWidget::mouseMoveEvent(QMouseEvent *event)
     }
 }
 
-void GRWidget::mousePressEvent(QMouseEvent *event)
+void GRPlotWidget::mousePressEvent(QMouseEvent *event)
 {
   mouseState.pressed = event->pos();
   if (event->button() == Qt::MouseButton::RightButton)
@@ -283,7 +286,7 @@ void GRWidget::mousePressEvent(QMouseEvent *event)
     }
 }
 
-void GRWidget::mouseReleaseEvent(QMouseEvent *event)
+void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
 {
   grm_args_t *args = grm_args_new();
   int x, y;
@@ -312,7 +315,7 @@ void GRWidget::mouseReleaseEvent(QMouseEvent *event)
   redraw();
 }
 
-void GRWidget::resizeEvent(QResizeEvent *event)
+void GRPlotWidget::resizeEvent(QResizeEvent *event)
 {
   grm_args_push(args_, "size", "dd", (double)event->size().width(), (double)event->size().height());
   grm_merge(args_);
@@ -320,7 +323,7 @@ void GRWidget::resizeEvent(QResizeEvent *event)
   redraw();
 }
 
-void GRWidget::wheelEvent(QWheelEvent *event)
+void GRPlotWidget::wheelEvent(QWheelEvent *event)
 {
   int x, y;
   getWheelPos(event, &x, &y);
@@ -335,7 +338,7 @@ void GRWidget::wheelEvent(QWheelEvent *event)
   redraw();
 }
 
-void GRWidget::mouseDoubleClickEvent(QMouseEvent *event)
+void GRPlotWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
   grm_args_t *args = grm_args_new();
   QPoint pos = mapFromGlobal(QCursor::pos());
@@ -348,64 +351,46 @@ void GRWidget::mouseDoubleClickEvent(QMouseEvent *event)
   redraw();
 }
 
-void GRWidget::heatmap()
+void GRPlotWidget::heatmap()
 {
-  plot_type_ = "heatmap";
-  if (!grm_interactive_plot_from_file(args_, csv_file_, &plot_type_, colms_, heatmap_type_, heatmap_algorithm_))
-    {
-      exit(0);
-    }
+  grm_args_push(args_, "kind", "s", "heatmap");
+  grm_merge(args_);
   redraw();
 }
 
-void GRWidget::marginalheatmapall()
+void GRPlotWidget::marginalheatmapall()
 {
-  plot_type_ = "marginalheatmap";
-  heatmap_type_ = "all";
-  if (!grm_interactive_plot_from_file(args_, csv_file_, &plot_type_, colms_, heatmap_type_, heatmap_algorithm_))
-    {
-      exit(0);
-    }
+  grm_args_push(args_, "kind", "s", "marginalheatmap");
+  grm_args_push(args_, "heatmaptype", "s", "all");
+  grm_merge(args_);
   redraw();
 }
 
-void GRWidget::marginalheatmapline()
+void GRPlotWidget::marginalheatmapline()
 {
-  plot_type_ = "marginalheatmap";
-  heatmap_type_ = "line";
-  if (!grm_interactive_plot_from_file(args_, csv_file_, &plot_type_, colms_, heatmap_type_, heatmap_algorithm_))
-    {
-      exit(0);
-    }
+  grm_args_push(args_, "kind", "s", "marginalheatmap");
+  grm_args_push(args_, "heatmaptype", "s", "line");
+  grm_merge(args_);
   redraw();
 }
 
-void GRWidget::line()
+void GRPlotWidget::line()
 {
-  plot_type_ = "line";
-  if (!grm_interactive_plot_from_file(args_, csv_file_, &plot_type_, colms_, heatmap_type_, heatmap_algorithm_))
-    {
-      exit(0);
-    }
+  grm_args_push(args_, "kind", "s", "line");
+  grm_merge(args_);
   redraw();
 }
 
-void GRWidget::sumalgorithm()
+void GRPlotWidget::sumalgorithm()
 {
-  heatmap_algorithm_ = "sum";
-  if (!grm_interactive_plot_from_file(args_, csv_file_, &plot_type_, colms_, heatmap_type_, heatmap_algorithm_))
-    {
-      exit(0);
-    }
+  grm_args_push(args_, "algorithm", "s", "sum");
+  grm_merge(args_);
   redraw();
 }
 
-void GRWidget::maxalgorithm()
+void GRPlotWidget::maxalgorithm()
 {
-  heatmap_algorithm_ = "max";
-  if (!grm_interactive_plot_from_file(args_, csv_file_, &plot_type_, colms_, heatmap_type_, heatmap_algorithm_))
-    {
-      exit(0);
-    }
+  grm_args_push(args_, "algorithm", "s", "max");
+  grm_merge(args_);
   redraw();
 }

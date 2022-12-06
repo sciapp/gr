@@ -1,18 +1,18 @@
-#ifndef MAIN_WINDOW_H_INCLUDED
-#define MAIN_WINDOW_H_INCLUDED
+#ifndef GRPLOT_MAIN_WINDOW_H_INCLUDED
+#define GRPLOT_MAIN_WINDOW_H_INCLUDED
 #include "grplot_widget.hxx"
 #include <QMainWindow>
 
-class MainWindow : public QMainWindow
+class GRPlotMainWindow : public QMainWindow
 {
   Q_OBJECT
 
 public:
-  explicit MainWindow(const char *csv_file, const char *plot_type, const char *colms);
-  ~MainWindow() override;
+  explicit GRPlotMainWindow(int argc, char **argv);
+  ~GRPlotMainWindow() override;
 
 private:
-  GRWidget *gr_widget_;
+  GRPlotWidget *grplot_widget_;
 };
 
-#endif /* ifndef MAIN_WINDOW_H_INCLUDED */
+#endif /* ifndef GRPLOT_MAIN_WINDOW_H_INCLUDED */
