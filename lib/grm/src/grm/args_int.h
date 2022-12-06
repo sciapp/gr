@@ -165,11 +165,6 @@ err_t args_increase_array(grm_args_t *args, const char *key, size_t increment) U
 unsigned int args_count(const grm_args_t *args) UNUSED;
 
 arg_t *args_at(const grm_args_t *args, const char *keyword);
-int args_first_value(const grm_args_t *args, const char *keyword, const char *first_value_format, void *first_value,
-                     unsigned int *array_length);
-#define args_first_value(args, keyword, first_value_format, first_value, array_length) \
-  args_first_value(args, keyword, first_value_format, (void *)first_value, array_length)
-int args_values(const grm_args_t *args, const char *keyword, const char *expected_format, ...);
 
 args_node_t *args_find_node(const grm_args_t *args, const char *keyword);
 int args_find_previous_node(const grm_args_t *args, const char *keyword, args_node_t **previous_node);

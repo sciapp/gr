@@ -1791,8 +1791,8 @@ arg_t *args_at(const grm_args_t *args, const char *keyword)
   return NULL;
 }
 
-int(args_first_value)(const grm_args_t *args, const char *keyword, const char *first_value_format, void *first_value,
-                      unsigned int *array_length)
+int(grm_args_first_value)(const grm_args_t *args, const char *keyword, const char *first_value_format,
+                          void *first_value, unsigned int *array_length)
 {
   arg_t *arg;
 
@@ -1805,7 +1805,7 @@ int(args_first_value)(const grm_args_t *args, const char *keyword, const char *f
   return arg_first_value(arg, first_value_format, first_value, array_length);
 }
 
-int args_values(const grm_args_t *args, const char *keyword, const char *expected_format, ...)
+int grm_args_values(const grm_args_t *args, const char *keyword, const char *expected_format, ...)
 {
   va_list vl;
   arg_t *arg;
