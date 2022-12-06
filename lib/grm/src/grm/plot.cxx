@@ -5771,12 +5771,40 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
               group->append(grid);
             }
         }
-      auto axes = global_render->createEmptyAxes(tick_orientation);
-      global_render->setOriginPosition(axes, "low", "low");
-      group->append(axes);
-      axes = global_render->createEmptyAxes(-tick_orientation);
-      global_render->setOriginPosition(axes, "high", "high");
-      group->append(axes);
+      if (strcmp(kind, "barplot") != 0 || pass == 2)
+        {
+          auto axes = global_render->createEmptyAxes(tick_orientation);
+          global_render->setOriginPosition(axes, "low", "low");
+          group->append(axes);
+          axes = global_render->createEmptyAxes(-tick_orientation);
+          global_render->setOriginPosition(axes, "high", "high");
+          group->append(axes);
+
+          if (strcmp("barplot", kind) == 0)
+            {
+              /* xticklabels */
+              char **xticklabels = NULL;
+              unsigned int xticklabels_length;
+              double y_min, y_max;
+
+              grm_args_values(args, "_ylim", "dd", &y_min, &y_max);
+
+              if (grm_args_first_value(args, "xticklabels", "S", &xticklabels, &xticklabels_length))
+                {
+                  std::vector<std::string> xticklabels_vec(xticklabels, xticklabels + xticklabels_length);
+                  int id = static_cast<int>(global_root->getAttribute("id"));
+                  std::string key = "xticklabels" + std::to_string(id);
+                  global_root->setAttribute("id", ++id);
+                  global_render->setXTickLabels(group, key, xticklabels_vec);
+                }
+
+              /* negative values */
+              if (y_min < 0)
+                {
+                  group->append(global_render->createYLine());
+                }
+            }
+        }
     }
 
   if (grm_args_values(args, "title", "s", &title))
@@ -5801,31 +5829,6 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
       if (grm_args_values(args, "ylabel", "s", &y_label))
         {
           group->setAttribute("ylabel", y_label);
-        }
-    }
-
-  if (strcmp("barplot", kind) == 0 && pass == 2)
-    {
-      /* xticklabels */
-      char **xticklabels = NULL;
-      unsigned int xticklabels_length;
-      double y_min, y_max;
-
-      grm_args_values(args, "_ylim", "dd", &y_min, &y_max);
-
-      if (grm_args_first_value(args, "xticklabels", "S", &xticklabels, &xticklabels_length))
-        {
-          std::vector<std::string> xticklabels_vec(xticklabels, xticklabels + xticklabels_length);
-          int id = static_cast<int>(global_root->getAttribute("id"));
-          std::string key = "xticklabels" + std::to_string(id);
-          global_root->setAttribute("id", ++id);
-          global_render->setXTickLabels(group, key, xticklabels_vec);
-        }
-
-      /* negative values */
-      if (y_min < 0)
-        {
-          group->append(global_render->createYLine());
         }
     }
 

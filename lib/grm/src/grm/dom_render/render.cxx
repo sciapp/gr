@@ -1653,7 +1653,7 @@ static void processXTickLabels(const std::shared_ptr<GR::Element> &elem)
 
   auto subplot_element = elem->parentElement();
 
-  /* Manualy check if charheight is set on a lower level instead of ustd::sing `gr_inqcharheight` to eliminate
+  /* Manualy check if charheight is set on a lower level instead of using `gr_inqcharheight` to eliminate
    * dependency of the order of attributes */
   if (elem->hasAttribute("charheight"))
     {
