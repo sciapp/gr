@@ -1103,7 +1103,7 @@ endif()
 if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
   add_executable(
     grplot WIN32 MACOSX_BUNDLE lib/grm/grplot/grplot.cxx lib/grm/grplot/grplot_mainwindow.cxx
-                               lib/grm/grplot/grplot_widget.cxx
+                               lib/grm/grplot/grplot_widget.cxx lib/grm/grplot/util.cxx
   )
   if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
     target_link_libraries(grplot PRIVATE Qt6::Widgets Qt6::Core grm_static)

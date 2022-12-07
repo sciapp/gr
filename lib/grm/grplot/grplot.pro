@@ -6,7 +6,7 @@ QT += widgets core
 QMAKE_CXXLAGS += $$(EXTRA_CXXFLAGS)
 QMAKE_LFLAGS += $$(EXTRA_LDFLAGS)
 HEADERS += grplot_widget.hxx grplot_mainwindow.hxx util.hxx
-SOURCES += grplot_widget.cxx grplot.cxx grplot_mainwindow.cxx
+SOURCES += grplot_widget.cxx grplot.cxx grplot_mainwindow.cxx util.cxx
 INCLUDEPATH += ../include
 if (macx) {
     if (exists(../libGRM.dylib)) {
