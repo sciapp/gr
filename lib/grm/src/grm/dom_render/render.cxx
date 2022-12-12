@@ -1135,8 +1135,33 @@ static void grid3d(const std::shared_ptr<GR::Element> &element, const std::share
   int x_major;
   int y_major;
   int z_major;
-  getAxes3dInformation(element, std::string(), std::string(), std::string(), x_org, y_org, z_org, x_major, y_major,
-                       z_major, x_tick, y_tick, z_tick);
+  std::string x_org_pos, y_org_pos, z_org_pos;
+  if (element->hasAttribute("x_org_pos"))
+    {
+      x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
+    }
+  else
+    {
+      x_org_pos = "low";
+    }
+  if (element->hasAttribute("y_org_pos"))
+    {
+      y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
+    }
+  else
+    {
+      y_org_pos = "low";
+    }
+  if (element->hasAttribute("z_org_pos"))
+    {
+      z_org_pos = static_cast<std::string>(element->getAttribute("z_org_pos"));
+    }
+  else
+    {
+      z_org_pos = "low";
+    }
+  getAxes3dInformation(element, x_org_pos, y_org_pos, z_org_pos, x_org, y_org, z_org, x_major, y_major, z_major, x_tick,
+                       y_tick, z_tick);
 
   gr_grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major);
 }
@@ -1157,9 +1182,34 @@ static void axes3d(const std::shared_ptr<GR::Element> &element, const std::share
   int z_major;
   int tick_orientation = 1;
   double tick_size;
+  std::string x_org_pos, y_org_pos, z_org_pos;
 
-  getAxes3dInformation(element, std::string(), std::string(), std::string(), x_org, y_org, z_org, x_major, y_major,
-                       z_major, x_tick, y_tick, z_tick);
+  if (element->hasAttribute("x_org_pos"))
+    {
+      x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
+    }
+  else
+    {
+      x_org_pos = "low";
+    }
+  if (element->hasAttribute("y_org_pos"))
+    {
+      y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
+    }
+  else
+    {
+      y_org_pos = "low";
+    }
+  if (element->hasAttribute("z_org_pos"))
+    {
+      z_org_pos = static_cast<std::string>(element->getAttribute("z_org_pos"));
+    }
+  else
+    {
+      z_org_pos = "low";
+    }
+  getAxes3dInformation(element, x_org_pos, y_org_pos, z_org_pos, x_org, y_org, z_org, x_major, y_major, z_major, x_tick,
+                       y_tick, z_tick);
 
   auto draw_axes_group = element->parentElement();
   auto subplot_element = draw_axes_group->parentElement();
