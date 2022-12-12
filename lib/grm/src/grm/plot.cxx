@@ -5887,7 +5887,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
 
   if (strcmp(kind, "polar_histogram") == 0)
     {
-
+      r_max = static_cast<double>(global_root->lastChildElement()->getAttribute("r_max"));
       if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
         {
           angle_ticks = 8;

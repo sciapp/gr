@@ -740,50 +740,6 @@ static void test_polarhistogram_subplots(void)
   grm_args_delete(args);
 }
 
-static void test_interaction_on_tree(void)
-{
-  double plots[2][1000];
-  int n = sizeof(plots[0]) / sizeof(plots[0][0]);
-  grm_args_t *args;
-  int i;
-
-  printf("filling argument container...\n");
-
-  for (i = 0; i < n; ++i)
-    {
-      plots[0][i] = i * 2 * M_PI / n;
-      plots[1][i] = 2 * sin(i * 2 * M_PI / n);
-    }
-
-  args = grm_args_new();
-
-  grm_args_push(args, "x", "nD", n, plots[0]);
-  grm_args_push(args, "y", "nD", n, plots[1]);
-  grm_plot(args);
-  //    printf("Press any key to continue...\n");
-  //    getchar();
-
-  auto root = grm_get_document_root();
-  auto render = grm_get_render();
-  std::cout << toXML(root) << std::endl;
-
-  auto subplot_element = get_subplot_from_ndc_point_using_dom(0.5, 0.5);
-  std::cout << toXML(subplot_element) << std::endl;
-  auto panzoom = render->createPanzoom(-0.04, 0.0, 0.8, 1.0);
-  subplot_element->setAttribute("panzoom", true);
-  subplot_element->appendChild(panzoom);
-
-  gr_clearws();
-  render->render();
-  gr_updatews();
-
-  printf("Press any key to continue...\n");
-  getchar();
-
-  grm_args_delete(args);
-  grm_finalize();
-}
-
 static void testPolar()
 {
   grm_args_t *args, *subplots;
@@ -819,12 +775,13 @@ static void testPolar()
 
   grm_args_delete(args);
 }
+
 int main(void)
 {
 
-  testPolar();
+  //  testPolar();
   //  test_dom_render();
-  //    test_polarhistogram_subplots();
+  test_polarhistogram_subplots();
   // test_wireframe();
   // test_plot3();
   //  testTrisurf();
@@ -835,6 +792,5 @@ int main(void)
   //  testBar();
   //  testContext();
   //  grm_finalize();
-  test_interaction_on_tree();
   return 0;
 }

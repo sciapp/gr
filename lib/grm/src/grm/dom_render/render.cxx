@@ -1934,7 +1934,12 @@ void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
         }
       else
         {
-          global_render->setWindow(elem, -1, 1, -1, 1);
+          xmin = -1.0;
+          xmax = 1.0;
+          ymin = -1.0;
+          ymax = 1.0;
+          gr_setwindow(xmin, xmax, ymin, ymax);
+          global_render->setWindow(elem, xmin, xmax, ymin, ymax);
         }
     }
 }
