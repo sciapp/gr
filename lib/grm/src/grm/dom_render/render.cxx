@@ -1803,6 +1803,77 @@ static void processYlabel(const std::shared_ptr<GR::Element> &elem)
     }
 }
 
+static void processImshowInformation(const std::shared_ptr<GR::Element> &elem)
+{
+  double x_min, x_max, y_min, y_max;
+  double vp[4];
+  int scale;
+  int cols = static_cast<int>(elem->getAttribute("cols"));
+  int rows = static_cast<int>(elem->getAttribute("rows"));
+  std::string image_data_key = static_cast<std::string>(elem->getAttribute("image_data_key"));
+  std::shared_ptr<GR::Element> ancestor = elem->parentElement();
+  bool vp_found = false;
+
+  // Get vp from ancestor GR::element, usually the q"plot-group"
+  while (ancestor->localName() != "root")
+    {
+      if (ancestor->hasAttribute("vp"))
+        {
+          vp[0] = static_cast<double>(ancestor->getAttribute("vp_xmin"));
+          vp[1] = static_cast<double>(ancestor->getAttribute("vp_xmax"));
+          vp[2] = static_cast<double>(ancestor->getAttribute("vp_ymin"));
+          vp[3] = static_cast<double>(ancestor->getAttribute("vp_ymax"));
+          vp_found = true;
+          break;
+        }
+      else
+        {
+          ancestor = ancestor->parentElement();
+        }
+    }
+  if (!vp_found)
+    {
+      throw NotFoundError("No vp was found within ancestors");
+    }
+
+  gr_inqscale(&scale);
+
+  if (cols * (vp[3] - vp[2]) < rows * (vp[1] - vp[0]))
+    {
+      double w = (double)cols / (double)rows * (vp[3] - vp[2]);
+      x_min = grm_max(0.5 * (vp[0] + vp[1] - w), vp[0]);
+      x_max = grm_min(0.5 * (vp[0] + vp[1] + w), vp[1]);
+      y_min = vp[2];
+      y_max = vp[3];
+    }
+  else
+    {
+      double h = (double)rows / (double)cols * (vp[1] - vp[0]);
+      x_min = vp[0];
+      x_max = vp[1];
+      y_min = grm_max(0.5 * (vp[3] + vp[2] - h), vp[2]);
+      y_max = grm_min(0.5 * (vp[3] + vp[2] + h), vp[3]);
+    }
+
+  if (scale & GR_OPTION_FLIP_X)
+    {
+      double tmp = x_max;
+      x_max = x_min;
+      x_min = tmp;
+    }
+  if (scale & GR_OPTION_FLIP_Y)
+    {
+      double tmp = y_max;
+      y_max = y_min;
+      y_min = tmp;
+    }
+
+  auto temp = global_render->createCellArray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, image_data_key,
+                                             std::nullopt);
+
+  elem->append(temp);
+}
+
 static void processColorbarPosition(const std::shared_ptr<GR::Element> &elem)
 {
   double viewport[4];
@@ -2391,7 +2462,7 @@ static void drawLegend(const std::shared_ptr<GR::Element> &elem, const std::shar
   double legend_symbol_x[2], legend_symbol_y[2];
   int i;
   std::shared_ptr<GR::Render> render;
-
+  gr_savestate();
   gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
   auto labels_key = static_cast<std::string>(elem->getAttribute("labels"));
   auto specs_key = static_cast<std::string>(elem->getAttribute("specs"));
@@ -2592,9 +2663,6 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
     {
       tick = static_cast<double>(elem->getAttribute("tick"));
       r_max = static_cast<double>(elem->getAttribute("r_max"));
-      std::cout << "tick " << tick << "\n";
-      std::cout << "rmax " << r_max << "\n";
-      //      tick = auto_tick(r_min, r_max);
     }
 
 
@@ -2712,9 +2780,9 @@ static void setNextColor(gr_color_type_t color_type, std::vector<int> &color_ind
   else if (!color_rgb_values.empty())
     {
       color_index = PLOT_CUSTOM_COLOR_INDEX;
-      last_array_index = current_array_index + 2;
       global_render->setColorRep(elem, PLOT_CUSTOM_COLOR_INDEX, color_rgb_values[current_array_index],
                                  color_rgb_values[current_array_index + 1], color_rgb_values[current_array_index + 2]);
+      last_array_index = current_array_index + 2;
     }
 
   if (color_type & GR_COLOR_LINE)
@@ -3115,6 +3183,7 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
       {std::string("xlabel"), processXlabel},
       {std::string("xticklabels"), processXTickLabels},
       {std::string("ylabel"), processYlabel},
+      {std::string("imshow-information"), processImshowInformation},
       {std::string("colorbar-position"), processColorbarPosition}};
 
 
@@ -5139,6 +5208,21 @@ void GR::Render::setOriginPosition3d(const std::shared_ptr<GR::Element> &element
   element->setAttribute("z_org_pos", z_org_pos);
 }
 
+void GR::Render::setImshowInformation(const std::shared_ptr<GR::Element> &element, unsigned int cols, unsigned int rows,
+                                      std::string img_data_key, std::optional<std::vector<int>> img_data,
+                                      const std::shared_ptr<GR::Context> &extContext)
+{
+  auto useContext = (extContext == nullptr) ? context : extContext;
+  if (img_data != std::nullopt)
+    {
+      (*useContext)[img_data_key] = *img_data;
+    }
+  element->setAttribute("image_data_key", img_data_key);
+  element->setAttribute("cols", (int)cols);
+  element->setAttribute("rows", (int)rows);
+  element->setAttribute("imshow-information", true);
+}
+
 //! Render functions
 static void renderHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
@@ -5306,6 +5390,10 @@ void GR::Render::render()
    */
   auto root = this->firstChildElement();
   global_root = root;
+
+  global_render = (std::dynamic_pointer_cast<GR::Render>(root->ownerDocument()))
+                      ? std::dynamic_pointer_cast<GR::Render>(root->ownerDocument())
+                      : GR::Render::createRender();
   std::cout << toXML(root) << "\n";
   if (root->hasChildNodes())
     {

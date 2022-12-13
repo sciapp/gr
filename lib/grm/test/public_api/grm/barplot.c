@@ -230,7 +230,6 @@ int main()
 
   grm_plot(args);
   sleep(3);
-  getchar();
 
   grm_args_delete(args);
   grm_finalize();

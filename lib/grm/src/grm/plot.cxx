@@ -3877,19 +3877,15 @@ err_t plot_imshow(grm_args_t *subplot_args)
   grm_args_t **current_series;
   double *c_data;
   double c_min, c_max;
-  double *vp;
   unsigned int c_data_length, i, j, k, rows, cols;
   int *img_data;
   unsigned int *shape;
-  int xflip, yflip;
-  double x_min, x_max, y_min, y_max, w, h, tmp;
 
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "imshow");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   return_error_if(!grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max), ERROR_PLOT_MISSING_DATA);
-  return_error_if(!grm_args_values(subplot_args, "vp", "D", &vp), ERROR_PLOT_MISSING_DATA);
   while (*current_series != NULL)
     {
       auto subGroup = global_render->createGroup("imshow_series");
@@ -3919,49 +3915,14 @@ err_t plot_imshow(grm_args_t *subplot_args)
             img_data[k++] = 1000 + (int)grm_round((1.0 * c_data[i * rows + j] - c_min) / (c_max - c_min) * 255);
           }
 
-      if (cols * (vp[3] - vp[2]) < rows * (vp[1] - vp[0]))
-        {
-          w = (double)cols / (double)rows * (vp[3] - vp[2]);
-          x_min = grm_max(0.5 * (vp[0] + vp[1] - w), vp[0]);
-          x_max = grm_min(0.5 * (vp[0] + vp[1] + w), vp[1]);
-          y_min = vp[2];
-          y_max = vp[3];
-        }
-      else
-        {
-          h = (double)rows / (double)cols * (vp[1] - vp[0]);
-          x_min = vp[0];
-          x_max = vp[1];
-          y_min = grm_max(0.5 * (vp[3] + vp[2] - h), vp[2]);
-          y_max = grm_min(0.5 * (vp[3] + vp[2] + h), vp[3]);
-        }
-
-      global_render->setSelntran(subGroup, 0);
-      global_render->setScale(subGroup, 0);
-      grm_args_values(subplot_args, "xflip", "i", &xflip);
-      if (xflip)
-        {
-          tmp = x_max;
-          x_max = x_min;
-          x_min = tmp;
-        }
-      grm_args_values(subplot_args, "yflip", "i", &yflip);
-      if (yflip)
-        {
-          tmp = y_max;
-          y_max = y_min;
-          y_min = tmp;
-        }
-
       std::vector<int> img_vec = std::vector<int>(img_data, img_data + cols * rows);
       int id_int = static_cast<int>(global_root->getAttribute("id"));
       global_root->setAttribute("id", ++id_int);
       std::string id = std::to_string(id_int);
 
-      auto temp = global_render->createCellArray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows,
-                                                 "img_data" + id, img_vec);
-      subGroup->append(temp);
-
+      global_render->setSelntran(subGroup, 0);
+      global_render->setScale(subGroup, 0);
+      global_render->setImshowInformation(subGroup, cols, rows, "img_data" + id, img_vec, nullptr);
 
       free(img_data);
 
@@ -4273,7 +4234,6 @@ err_t plot_polar(grm_args_t *subplot_args)
   double r_min, r_max, tick;
   int n;
   grm_args_t **current_series;
-  std::cout << "polar\n";
 
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "polar");
@@ -5479,7 +5439,6 @@ err_t plot_pie(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
 
-  gr_savestate();
   global_render->setFillIntStyle(group, GKS_K_INTSTYLE_SOLID);
 
   global_render->setTextAlign(group, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);

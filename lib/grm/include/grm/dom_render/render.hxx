@@ -335,6 +335,10 @@ public:
   void setOriginPosition3d(const std::shared_ptr<GR::Element> &element, std::string x_org_pos, std::string y_org_pos,
                            std::string z_org_pos);
 
+  void setImshowInformation(const std::shared_ptr<GR::Element> &element, unsigned int cols, unsigned int rows,
+                            std::string img_data_key, std::optional<std::vector<int>> img_data,
+                            const std::shared_ptr<GR::Context> &extContext);
+
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context
   void render(const std::shared_ptr<Document> &document);  // external doc and render context
