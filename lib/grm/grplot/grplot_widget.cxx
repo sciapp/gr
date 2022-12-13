@@ -61,7 +61,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   type = new QMenu("&Plot type");
   algo = new QMenu("&Algorithm");
   grm_args_values(args_, "kind", "s", &kind);
-  if (strcmp(kind, "heatmap") == 0 || strcmp(kind, "marginalheatmap") == 0)
+  if (strcmp(kind, "contour") == 0 || strcmp(kind, "heatmap") == 0 || strcmp(kind, "imshow") == 0 ||
+      strcmp(kind, "marginalheatmap") == 0 || strcmp(kind, "surface") == 0 || strcmp(kind, "wireframe") == 0)
     {
       auto submenu = type->addMenu("&Marginalheatmap");
 
@@ -71,6 +72,14 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       connect(marginalheatmapAllAct, &QAction::triggered, this, &GRPlotWidget::marginalheatmapall);
       marginalheatmapLineAct = new QAction(tr("&Type 2 line"), this);
       connect(marginalheatmapLineAct, &QAction::triggered, this, &GRPlotWidget::marginalheatmapline);
+      surfaceAct = new QAction(tr("&Surface"), this);
+      connect(surfaceAct, &QAction::triggered, this, &GRPlotWidget::surface);
+      wireframeAct = new QAction(tr("&Wireframe"), this);
+      connect(wireframeAct, &QAction::triggered, this, &GRPlotWidget::wireframe);
+      contourAct = new QAction(tr("&Contour"), this);
+      connect(contourAct, &QAction::triggered, this, &GRPlotWidget::contour);
+      imshowAct = new QAction(tr("&Imshow"), this);
+      connect(imshowAct, &QAction::triggered, this, &GRPlotWidget::imshow);
       sumAct = new QAction(tr("&Sum"), this);
       connect(sumAct, &QAction::triggered, this, &GRPlotWidget::sumalgorithm);
       maxAct = new QAction(tr("&Maximum"), this);
@@ -79,6 +88,10 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       submenu->addAction(marginalheatmapAllAct);
       submenu->addAction(marginalheatmapLineAct);
       type->addAction(heatmapAct);
+      type->addAction(surfaceAct);
+      type->addAction(wireframeAct);
+      type->addAction(contourAct);
+      type->addAction(imshowAct);
       algo->addAction(sumAct);
       algo->addAction(maxAct);
     }
@@ -87,6 +100,21 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       lineAct = new QAction(tr("&Line"), this);
       connect(lineAct, &QAction::triggered, this, &GRPlotWidget::line);
       type->addAction(lineAct);
+    }
+  else if (strcmp(kind, "volume") == 0 || strcmp(kind, "isosurface") == 0)
+    {
+      volumeAct = new QAction(tr("&Volume"), this);
+      connect(volumeAct, &QAction::triggered, this, &GRPlotWidget::volume);
+      isosurfaceAct = new QAction(tr("&Isosurface"), this);
+      connect(isosurfaceAct, &QAction::triggered, this, &GRPlotWidget::isosurface);
+      type->addAction(volumeAct);
+      type->addAction(isosurfaceAct);
+    }
+  else if (strcmp(kind, "plot3") == 0)
+    {
+      plot3Act = new QAction(tr("&Plot3"), this);
+      connect(plot3Act, &QAction::triggered, this, &GRPlotWidget::plot3);
+      type->addAction(plot3Act);
     }
   menu->addMenu(type);
   menu->addMenu(algo);
@@ -361,7 +389,7 @@ void GRPlotWidget::heatmap()
 void GRPlotWidget::marginalheatmapall()
 {
   grm_args_push(args_, "kind", "s", "marginalheatmap");
-  grm_args_push(args_, "heatmaptype", "s", "all");
+  grm_args_push(args_, "marginalheatmap_kind", "s", "all");
   grm_merge(args_);
   redraw();
 }
@@ -369,7 +397,7 @@ void GRPlotWidget::marginalheatmapall()
 void GRPlotWidget::marginalheatmapline()
 {
   grm_args_push(args_, "kind", "s", "marginalheatmap");
-  grm_args_push(args_, "heatmaptype", "s", "line");
+  grm_args_push(args_, "marginalheatmap_kind", "s", "line");
   grm_merge(args_);
   redraw();
 }
@@ -391,6 +419,53 @@ void GRPlotWidget::sumalgorithm()
 void GRPlotWidget::maxalgorithm()
 {
   grm_args_push(args_, "algorithm", "s", "max");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::volume()
+{
+  grm_args_push(args_, "kind", "s", "volume");
+  grm_merge(args_);
+  redraw();
+}
+void GRPlotWidget::isosurface()
+{
+  grm_args_push(args_, "kind", "s", "isosurface");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::surface()
+{
+  grm_args_push(args_, "kind", "s", "surface");
+  grm_merge(args_);
+  redraw();
+}
+void GRPlotWidget::wireframe()
+{
+  grm_args_push(args_, "kind", "s", "wireframe");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::contour()
+{
+  grm_args_push(args_, "kind", "s", "contour");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::imshow()
+{
+  grm_args_push(args_, "kind", "s", "imshow");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::plot3()
+{
+  grm_args_push(args_, "kind", "s", "plot3");
   grm_merge(args_);
   redraw();
 }

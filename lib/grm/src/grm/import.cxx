@@ -15,17 +15,20 @@
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ key to types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::map<std::string, const char *> key_to_types{
-    {"algorithm", "s"}, {"marginalheatmap_kind", "s"}, {"keep_aspect_ratio", "i"}, {"kind", "s"}};
+static std::map<std::string, const char *> key_to_types{{"algorithm", "s"}, {"colormap", "i"},
+                                                        {"isovalue", "d"},  {"keep_aspect_ratio", "i"},
+                                                        {"kind", "s"},      {"marginalheatmap_kind", "s"}};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::list<std::string> kind_types = {"line", "heatmap", "marginalheatmap"};
+static std::list<std::string> kind_types = {"contour",         "heatmap", "imshow",  "isosurface", "line",
+                                            "marginalheatmap", "plot3",   "surface", "volume",     "wireframe"};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ alias for keys ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::map<std::string, std::string> key_alias = {{"hkind", "marginalheatmap_kind"},
-                                                       {"aspect", "keep_aspect_ratio"}};
+static std::map<std::string, std::string> key_alias = {
+    {"hkind", "marginalheatmap_kind"}, {"aspect", "keep_aspect_ratio"}, {"cmap", "colormap"}};
+
 
 /* ========================= functions ============================================================================== */
 
@@ -52,13 +55,15 @@ std::string normalize_line(const std::string &str)
   return s;
 }
 
-err_t read_data_file(const std::string &path, std::vector<std::vector<double>> &data, std::vector<std::string> &labels,
-                     grm_args_t *args, const char *colms, PlotRange *ranges)
+err_t read_data_file(const std::string &path, std::vector<std::vector<std::vector<double>>> &data,
+                     std::vector<std::string> &labels, grm_args_t *args, const char *colms, PlotRange *ranges)
 {
   std::string line;
   std::string token;
   std::ifstream file(path);
   std::list<int> columns;
+  bool depth_change = true;
+  int depth = 0;
   int linecount = 0;
 
   /* read the columns from the colms string also converts slicing into numbers */
@@ -151,11 +156,11 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<double>> &
                   value = trim(token);
                 }
             }
-          if (str_equals_any(key.c_str(), 4, "title", "xlabel", "ylabel", "resample_method"))
+          if (str_equals_any(key.c_str(), 5, "title", "xlabel", "ylabel", "zlabel", "resample_method"))
             {
               grm_args_push(args, key.c_str(), "s", value.c_str());
             }
-          else if (str_equals_any(key.c_str(), 5, "location", "xlog", "ylog", "xgrid", "ygrid"))
+          else if (str_equals_any(key.c_str(), 7, "location", "xlog", "ylog", "zlog", "xgrid", "ygrid", "zgrid"))
             {
               try
                 {
@@ -168,7 +173,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<double>> &
                   return ERROR_PARSE_INT;
                 }
             }
-          else if (str_equals_any(key.c_str(), 4, "xlim", "ylim", "xrange", "yrange"))
+          else if (str_equals_any(key.c_str(), 6, "xlim", "ylim", "zlim", "xrange", "yrange", "zrange"))
             {
               std::stringstream sv(value);
               std::string value1;
@@ -204,6 +209,11 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<double>> &
                   ranges->ymin = std::stod(value1);
                   ranges->ymax = std::stod(value2);
                 }
+              else if (strcmp(key.c_str(), "zrange") == 0)
+                {
+                  ranges->zmin = std::stod(value1);
+                  ranges->zmax = std::stod(value2);
+                }
             }
           else
             {
@@ -227,22 +237,32 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<double>> &
     }
 
   /* read the numeric data for the plot */
-  for (size_t row = 0; std::getline(file, line) && line.length(); row++)
+  for (size_t row = 0; std::getline(file, line); row++)
     {
       std::istringstream line_ss(normalize_line(line));
       int cnt = 0;
+      if (line.empty())
+        {
+          depth += 1;
+          depth_change = true;
+          continue;
+        }
       for (size_t col = 0; std::getline(line_ss, token, '\t') && token.length(); col++)
         {
           if (std::find(columns.begin(), columns.end(), col) != columns.end() || (columns.empty() && labels.empty()) ||
               (columns.empty() && col < labels.size()))
             {
-              if (row == 0)
+              if (row == 0 && col == 0 || depth_change && col == 0)
                 {
-                  data.emplace_back(std::vector<double>());
+                  data.emplace_back(std::vector<std::vector<double>>());
+                }
+              if (depth_change)
+                {
+                  data[depth].emplace_back(std::vector<double>());
                 }
               try
                 {
-                  data[cnt].push_back(std::stod(token));
+                  data[depth][cnt].push_back(std::stod(token));
                 }
               catch (std::invalid_argument &e)
                 {
@@ -253,6 +273,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<double>> &
               cnt += 1;
             }
         }
+      depth_change = false;
     }
   return ERROR_NONE;
 }
@@ -306,8 +327,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
  */
 {
   std::string s;
-  size_t row, col, rows, cols;
-  std::vector<std::vector<double>> filedata;
+  size_t row, col, rows, cols, depth;
+  std::vector<std::vector<std::vector<double>>> filedata;
   std::vector<std::string> labels;
   std::vector<const char *> labels_c;
   std::vector<grm_args_t *> series;
@@ -316,7 +337,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   const char *kind;
   grm_file_args_t *file_args;
   file_args = grm_file_args_new();
-  PlotRange ranges = {0.0, -1.0, 0.0, -1.0};
+  PlotRange ranges = {0.0, -1.0, 0.0, -1.0, 0.0, -1.0};
 
   if (!convert_inputstream_into_args(args, file_args, argc, argv))
     {
@@ -334,8 +355,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     }
   if (!filedata.empty())
     {
-      cols = filedata.size();
-      rows = filedata[0].size();
+      depth = filedata.size();
+      cols = filedata[0].size();
+      rows = filedata[0][0].size();
+      depth = (depth == 1) ? 0 : depth;
     }
   else
     {
@@ -361,18 +384,24 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       kind = "heatmap";
       grm_args_push(args, "kind", "s", kind);
     }
+  if (strcmp("volume", kind) != 0 && strcmp("isosurface", kind) != 0 && depth >= 1)
+    {
+      fprintf(stderr, "Too much data for %s plot - use volume instead\n", kind);
+      kind = "volume";
+      grm_args_push(args, "kind", "s", kind);
+    }
   if (strcmp(kind, "line") == 0 || cols != rows)
     {
       grm_args_push(args, "keep_aspect_ratio", "i", 0);
     }
 
-  if (str_equals_any(kind, 2, "heatmap", "marginalheatmap"))
+  if (str_equals_any(kind, 6, "contour", "heatmap", "imshow", "marginalheatmap", "surface", "wireframe"))
     {
       std::vector<double> xi(rows), yi(cols), zi(rows * cols);
 
       if (cols <= 1)
         {
-          fprintf(stderr, "Unsufficient data for heatmap plot\n");
+          fprintf(stderr, "Unsufficient data for %s plot\n", kind);
           return 0;
         }
       ranges.xmax = (ranges.xmax == -1.0) ? ((double)rows - 1.0 + ranges.xmin) : ranges.xmax;
@@ -388,9 +417,25 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 {
                   yi[col] = ranges.ymin + (ranges.ymax - ranges.ymin) * ((double)col / ((double)cols - 1));
                 }
-              zi[((cols - 1) - col) * rows + row] = filedata[col][row];
+              zi[((cols - 1) - col) * rows + row] = filedata[depth][col][row];
             }
         }
+
+      if (ranges.zmax != -1)
+        {
+          int elem;
+          double min_val = *std::min_element(zi.begin(), zi.end());
+          double max_val = *std::max_element(zi.begin(), zi.end());
+
+          for (elem = 0; elem < rows * cols; ++elem)
+            {
+              zi[elem] = ranges.zmin + (ranges.zmax - ranges.zmin) * (zi[elem] - min_val) / (max_val - min_val);
+            }
+        }
+
+      // for imshow plot
+      grm_args_push(args, "c", "nD", rows * cols, zi.data());
+      grm_args_push(args, "c_dims", "ii", rows, cols);
 
       grm_args_push(args, "x", "nD", rows, xi.data());
       grm_args_push(args, "y", "nD", cols, yi.data());
@@ -407,7 +452,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         {
           series[col] = grm_args_new();
           grm_args_push(series[col], "x", "nD", rows, x.data());
-          grm_args_push(series[col], "y", "nD", rows, filedata[col].data());
+          grm_args_push(series[col], "y", "nD", rows, filedata[depth][col].data());
           if (!labels.empty())
             {
               labels_c.push_back(labels[col].c_str());
@@ -418,6 +463,42 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         {
           grm_args_push(args, "labels", "nS", cols, labels_c.data());
         }
+    }
+  else if (strcmp(kind, "volume") == 0 || strcmp(kind, "isosurface") == 0)
+    {
+      int i, j, k;
+      std::vector<double> data(rows * cols * depth);
+      int n = (int)rows * (int)cols * (int)depth;
+      std::vector<int> dims = {(int)cols, (int)rows, (int)depth};
+      double x, y, z;
+      for (i = 0; i < rows; ++i)
+        {
+          for (j = 0; j < cols; ++j)
+            {
+              for (k = 0; k < depth; ++k)
+                {
+                  data[k * cols * rows + j * rows + i] = filedata[k][j][i];
+                }
+            }
+        }
+
+      grm_args_push(args, "c", "nD", n, data.data());
+      grm_args_push(args, "c_dims", "nI", 3, dims.data());
+    }
+  else if (strcmp(kind, "plot3") == 0)
+    {
+      std::vector<double> x(rows);
+      std::vector<double> y(rows);
+      std::vector<double> z(rows);
+      if (cols < 3)
+        {
+          fprintf(stderr, "Unsufficient data for 3d lineplot\n");
+          return 0;
+        }
+
+      grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
+      grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
+      grm_args_push(args, "z", "nD", rows, filedata[depth][2].data());
     }
   grm_merge(args);
 
