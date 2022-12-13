@@ -13,7 +13,7 @@ int main(int argc, char **argv)
   // Ensure that the `GRDIR` envionment variable is set, so GR can find its components like fonts.
   try
     {
-      setGrdir();
+      util::setGrdir();
     }
   // Catch an exception, print an error message but ignore it. If GR is located in its install location,
   // no environment variablaes need to be set at all.

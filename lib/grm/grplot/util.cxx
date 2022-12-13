@@ -28,6 +28,8 @@
 
 #include "util.hxx"
 
+namespace util
+{
 const unsigned int MAXPATHLEN = 1024;
 
 
@@ -325,3 +327,4 @@ void setGrdir(bool force)
     }
 #endif
 }
+} // namespace util

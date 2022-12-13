@@ -6,7 +6,6 @@
 namespace util
 {
 template <class... T> void unused(T &&...) {}
-} // namespace util
 
 class GetExecutablePathError : public virtual std::exception
 {
@@ -137,5 +136,6 @@ std::wstring getExecutablePath();
 std::string getExecutablePath();
 #endif
 void setGrdir(bool force = false);
+} // namespace util
 
 #endif /* ifndef UTIL_HXX_INCLUDED */
