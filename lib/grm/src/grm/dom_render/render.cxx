@@ -1994,6 +1994,16 @@ void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
     }
 }
 
+static void processWindow(const std::shared_ptr<GR::Element> &elem)
+{
+  double xmin = static_cast<double>(elem->getAttribute("window_xmin"));
+  double xmax = static_cast<double>(elem->getAttribute("window_xmax"));
+  double ymin = static_cast<double>(elem->getAttribute("window_ymin"));
+  double ymax = static_cast<double>(elem->getAttribute("window_ymax"));
+
+  gr_setwindow(xmin, xmax, ymin, ymax);
+}
+
 static void processProjectionType(const std::shared_ptr<GR::Element> &elem)
 {
   int type = (int)elem->getAttribute("projectiontype");
@@ -3082,6 +3092,7 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
          gr_uselinespec(((std::string)elem->getAttribute("linespec")).data());
        }},
       {std::string("limits"), GR::Render::processLimits},
+      {std::string("window"), processWindow},
       {std::string("resamplemethod"),
        [](const std::shared_ptr<GR::Element>
               &elem) { gr_setresamplemethod((int)elem->getAttribute("resamplemethod")); }},
