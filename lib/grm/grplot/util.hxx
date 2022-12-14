@@ -1,7 +1,12 @@
 #ifndef UTIL_HXX_INCLUDED
 #define UTIL_HXX_INCLUDED
 
+#include <optional>
 #include <string>
+
+#if !(defined(__EXCEPTIONS) || defined(__cpp_exceptions) || defined(_CPPUNWIND))
+#define NO_EXCEPTIONS
+#endif
 
 namespace util
 {
@@ -130,12 +135,25 @@ public:
 bool endsWith(const std::string &str, const std::string &suffix);
 bool startsWith(const std::string &str, const std::string &prefix);
 
+#ifdef NO_EXCEPTIONS
+#ifdef _WIN32
+std::optional<std::wstring> get_executable_path();
+#else
+std::optional<std::string> get_executable_path();
+#endif
+#else
 #ifdef _WIN32
 std::wstring getExecutablePath();
 #else
 std::string getExecutablePath();
 #endif
-void setGrdir(bool force = false);
+#endif
+#ifdef NO_EXCEPTIONS
+bool
+#else
+void
+#endif
+setGrdir(bool force = false);
 } // namespace util
 
 #endif /* ifndef UTIL_HXX_INCLUDED */

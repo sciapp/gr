@@ -11,9 +11,12 @@
 int main(int argc, char **argv)
 {
   // Ensure that the `GRDIR` envionment variable is set, so GR can find its components like fonts.
+#ifndef NO_EXCEPTIONS
   try
     {
+#endif
       util::setGrdir();
+#ifndef NO_EXCEPTIONS
     }
   // Catch an exception, print an error message but ignore it. If GR is located in its install location,
   // no environment variablaes need to be set at all.
@@ -29,6 +32,7 @@ int main(int argc, char **argv)
       std::cerr << e.what() << std::endl;
 #endif
     }
+#endif
 
   QApplication app(argc, argv);
   GRPlotMainWindow window(argc, argv);

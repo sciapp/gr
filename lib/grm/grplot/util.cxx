@@ -22,11 +22,52 @@
 #endif
 #include <array>
 #include <exception>
+#include <iostream>
 #include <memory>
 #include <sstream>
 #include <vector>
 
 #include "util.hxx"
+
+#ifdef NO_EXCEPTIONS
+#ifdef _WIN32
+#define throwWithoutReturn_(e)                                                         \
+  do                                                                                   \
+    {                                                                                  \
+      int neededWideChars = MultiByteToWideChar(CP_UTF8, 0, e.what(), -1, nullptr, 0); \
+      std::vector<wchar_t> whatWide(neededWideChars);                                  \
+      MultiByteToWideChar(CP_UTF8, 0, e.what(), -1, whatWide.data(), neededWideChars); \
+      std::wcerr << whatWide.data() << std::endl;                                      \
+    }                                                                                  \
+  while (0)
+#else
+#define throwWithoutReturn_(e)            \
+  do                                      \
+    {                                     \
+      std::cerr << e.what() << std::endl; \
+      return {};                          \
+    }                                     \
+  while (0)
+#endif
+#define throw_(e)             \
+  do                          \
+    {                         \
+      throwWithoutReturn_(e); \
+      return {};              \
+    }                         \
+  while (0)
+#define throwOrTerminate_(e)  \
+  do                          \
+    {                         \
+      throwWithoutReturn_(e); \
+      std::terminate();       \
+    }                         \
+  while (0)
+#else
+#define throwWithoutReturn_(e) throw(e)
+#define throw_(e) throw(e)
+#define throwOrTerminate_(e) throw(e)
+#endif
 
 namespace util
 {
@@ -61,7 +102,7 @@ GetLastErrorError::GetLastErrorError()
   if (!FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                      nullptr, errorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&errorMessage, 0, nullptr))
     {
-      throw FormatMessageError();
+      throwOrTerminate_(FormatMessageError());
     }
   whatStream << "Error " << errorCode << ": " << errorMessage;
   LocalFree(errorMessage);
@@ -139,14 +180,14 @@ DirnameError::DirnameError(const std::wstring &filepath)
       WideCharToMultiByte(CP_UTF8, 0, whatStream.str().c_str(), -1, nullptr, 0, nullptr, nullptr);
   if (neededBytesUtf8String == 0)
     {
-      throw WideCharToMultiByteError();
+      throwOrTerminate_(WideCharToMultiByteError());
     }
   std::vector<char> utf8Bytes(neededBytesUtf8String);
   int writtenBytesUtf8String = WideCharToMultiByte(CP_UTF8, 0, whatStream.str().c_str(), -1, utf8Bytes.data(),
                                                    neededBytesUtf8String, nullptr, nullptr);
   if (writtenBytesUtf8String == 0)
     {
-      throw WideCharToMultiByteError();
+      throwOrTerminate_(WideCharToMultiByteError());
     }
   whatStr_ = utf8Bytes.data();
 }
@@ -166,14 +207,14 @@ AbsolutePathError::AbsolutePathError(const std::wstring &path)
       WideCharToMultiByte(CP_UTF8, 0, whatStream.str().c_str(), -1, nullptr, 0, nullptr, nullptr);
   if (neededBytesUtf8String == 0)
     {
-      throw WideCharToMultiByteError();
+      throwOrTerminate_(WideCharToMultiByteError());
     }
   std::vector<char> utf8Bytes(neededBytesUtf8String);
   int writtenBytesUtf8String = WideCharToMultiByte(CP_UTF8, 0, whatStream.str().c_str(), -1, utf8Bytes.data(),
                                                    neededBytesUtf8String, nullptr, nullptr);
   if (writtenBytesUtf8String == 0)
     {
-      throw WideCharToMultiByteError();
+      throwOrTerminate_(WideCharToMultiByteError());
     }
   whatStr_ = utf8Bytes.data();
 }
@@ -201,10 +242,18 @@ bool startsWith(const std::string &str, const std::string &prefix)
   return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
 }
 
+#ifdef NO_EXCEPTIONS
+#ifdef _WIN32
+std::optional<std::wstring> getExecutablePath()
+#else
+std::optional<std::string> getExecutablePath()
+#endif
+#else
 #ifdef _WIN32
 std::wstring getExecutablePath()
 #else
 std::string getExecutablePath()
+#endif
 #endif
 {
 #ifdef _WIN32
@@ -218,7 +267,7 @@ std::string getExecutablePath()
 
   if (_NSGetExecutablePath(exePath.data(), &pathLen))
     {
-      throw PathTooLongError(pathLen);
+      throw_(PathTooLongError(pathLen));
     }
 #elif defined __FreeBSD__ || defined __NetBSD__ || defined __OpenBSD__
   ssize_t pathLen = -1;
@@ -226,11 +275,11 @@ std::string getExecutablePath()
   pathLen = readlink("/proc/curproc/file", exePath.data(), MAXPATHLEN);
   if (pathLen < 0)
     {
-      throw ProcessFileLinkNotReadableError();
+      throw_(ProcessFileLinkNotReadableError());
     }
   else if (pathLen == MAXPATHLEN)
     {
-      throw PathTooLongError();
+      throw_(PathTooLongError());
     }
 #elif defined __linux__
   ssize_t pathLen = -1;
@@ -238,11 +287,11 @@ std::string getExecutablePath()
   pathLen = readlink("/proc/self/exe", exePath.data(), MAXPATHLEN);
   if (pathLen < 0)
     {
-      throw ProcessFileLinkNotReadableError();
+      throw_(ProcessFileLinkNotReadableError());
     }
   if (pathLen == MAXPATHLEN)
     {
-      throw PathTooLongError();
+      throw_(PathTooLongError());
     }
 #elif defined _WIN32
   unsigned int pathLen = 0;
@@ -250,7 +299,7 @@ std::string getExecutablePath()
   pathLen = GetModuleFileNameW(nullptr, exePath.data(), MAXPATHLEN);
   if (GetLastError() != ERROR_SUCCESS)
     {
-      throw ModulePathError();
+      throw_(ModulePathError());
     }
 #else
 #error "Unsupported system"
@@ -260,31 +309,50 @@ std::string getExecutablePath()
   return exePath.data();
 }
 
-void setGrdir(bool force)
-{
-#ifdef _WIN32
-  std::wstring exePath;
+#ifdef NO_EXCEPTIONS
+bool
 #else
-  std::string exePath;
+void
 #endif
-
+setGrdir(bool force)
+{
   if (!force)
     {
 #ifdef _WIN32
       GetEnvironmentVariableW(L"GRDIR", nullptr, 0);
       if (GetLastError() != ERROR_ENVVAR_NOT_FOUND)
         {
-          return;
+          return
+#ifdef NO_EXCEPTIONS
+              false
+#endif
+              ;
         }
 #else
       if (getenv("GRDIR") != nullptr)
         {
-          return;
+          return
+#ifdef NO_EXCEPTIONS
+              false
+#endif
+              ;
         }
 #endif
     }
 
-  exePath = getExecutablePath();
+#ifdef NO_EXCEPTIONS
+  decltype(getExecutablePath())::value_type exePath;
+  if (auto exePath_ = getExecutablePath())
+    {
+      exePath = *exePath_;
+    }
+  else
+    {
+      return false;
+    }
+#else
+  auto exePath = getExecutablePath();
+#endif
 #ifdef _WIN32
   std::array<wchar_t, MAXPATHLEN> exeDirname;
   std::wstringstream grDirRelativeStream;
@@ -292,16 +360,16 @@ void setGrdir(bool force)
 
   if (_wsplitpath_s(exePath.c_str(), nullptr, 0, exeDirname.data(), MAXPATHLEN, nullptr, 0, nullptr, 0))
     {
-      throw DirnameError(exePath);
+      throw_(DirnameError(exePath));
     }
   grDirRelativeStream << exeDirname.data() << L"/..";
   if (_wfullpath(grDirAbsolute.data(), grDirRelativeStream.str().c_str(), MAXPATHLEN) == nullptr)
     {
-      throw AbsolutePathError(grDirRelativeStream.str());
+      throw_(AbsolutePathError(grDirRelativeStream.str()));
     }
   if (!SetEnvironmentVariableW(L"GRDIR", grDirAbsolute.data()))
     {
-      throw SetEnvError();
+      throw_(SetEnvError());
     }
 #else
   std::stringstream grDirRelativeStream;
@@ -319,12 +387,15 @@ void setGrdir(bool force)
                                                                  std::free};
   if (!grDirAbsoluteCptr)
     {
-      throw AbsolutePathError();
+      throw_(AbsolutePathError());
     }
   if (setenv("GRDIR", grDirAbsoluteCptr.get(), 1) != 0)
     {
-      throw SetEnvError();
+      throw_(SetEnvError());
     }
+#endif
+#ifdef NO_EXCEPTIONS
+  return true;
 #endif
 }
 } // namespace util
