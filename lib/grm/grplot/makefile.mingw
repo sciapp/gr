@@ -33,7 +33,7 @@ grplot.exe: grplot.cxx grplot_mainwindow.cxx grplot_widget.cxx $(GRMLIB)
 
 
 clean:
-	$(RM) include
+	$(RM) -r include
 	$(RM) *.dll
 	$(RM) moc_*.cxx
 	$(RM) grplot.exe
