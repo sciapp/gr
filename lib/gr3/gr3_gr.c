@@ -19,6 +19,10 @@ extern float __cdecl sqrtf(float);
 #define M_PI 3.14159265358979323846
 #endif
 
+#ifndef NAN
+#define NAN (0.0 / 0.0)
+#endif
+
 #ifndef max
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #endif
@@ -682,13 +686,27 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
 GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const float *directions, const float *ups,
                                 const float *colors, const float *scales)
 {
-  double zmin, zmax;
+  double xmin, xmax, ymin, ymax, zmin, zmax;
   int rotation, tilt;
   float grmatrix[16], grviewmatrix[16];
   float grscales[4];
   float *modelscales, *modelpos;
   int i, j;
   int projection_type;
+  int errind;
+  double clrt[4];
+  int clsw = 0;
+
+  gks_inq_clip(&errind, &clsw, clrt);
+  if (clsw == GKS_K_CLIP)
+    {
+      gr_inqwindow3d(&xmin, &xmax, &ymin, &ymax, &zmin, &zmax);
+      gr3_setclipping(xmin, xmax, ymin, ymax, zmin, zmax);
+    }
+  else
+    {
+      gr3_setclipping(NAN, NAN, NAN, NAN, NAN, NAN);
+    }
   gr_inqprojectiontype(&projection_type);
   if (projection_type == GR_PROJECTION_DEFAULT)
     {
