@@ -37,6 +37,13 @@ private slots:
   void line();
   void sumalgorithm();
   void maxalgorithm();
+  void volume();
+  void isosurface();
+  void surface();
+  void wireframe();
+  void contour();
+  void imshow();
+  void plot3();
 
 private:
   struct MouseState
@@ -67,6 +74,13 @@ private:
   QAction *lineAct;
   QAction *sumAct;
   QAction *maxAct;
+  QAction *volumeAct;
+  QAction *isosurfaceAct;
+  QAction *surfaceAct;
+  QAction *wireframeAct;
+  QAction *contourAct;
+  QAction *imshowAct;
+  QAction *plot3Act;
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */
