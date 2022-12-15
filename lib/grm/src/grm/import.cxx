@@ -261,7 +261,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<double>> &
 
 grm_file_args_t *grm_file_args_new()
 {
-  auto *args = (grm_file_args_t *)malloc(sizeof(grm_file_args_t));
+  auto *args = new grm_file_args_t;
   if (args == nullptr)
     {
       debug_print_malloc_error();
@@ -427,7 +427,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       grm_close(handle);
     }
 
-  free(file_args);
+  delete file_args;
   return 1;
 }
 
