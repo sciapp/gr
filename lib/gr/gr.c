@@ -8121,32 +8121,46 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
             while (j < ny)
               {
+                if (y[j] < lx.ymin || y[j] > lx.ymax)
+                  {
+                    j++;
+                    continue;
+                  }
                 k = 0;
 
                 if (j > 0)
                   {
-                    xn[k] = x[0];
-                    yn[k] = y[j - 1];
-                    zn[k] = Z(0, j - 1);
-                    k++;
+                    if (x[0] >= lx.xmin && x[0] <= lx.xmax)
+                      {
+                        xn[k] = x[0];
+                        yn[k] = y[j - 1];
+                        zn[k] = Z(0, j - 1);
+                        k++;
+                      }
                   }
 
                 for (i = 0; i < nx; i++)
                   {
-                    xn[k] = x[i];
-                    yn[k] = y[j];
-                    zn[k] = Z(i, j);
-                    k++;
+                    if (x[i] >= lx.xmin && x[i] <= lx.xmax)
+                      {
+                        xn[k] = x[i];
+                        yn[k] = y[j];
+                        zn[k] = Z(i, j);
+                        k++;
+                      }
                   }
 
                 if (j == 0)
 
                   for (i = 1; i < ny; i++)
                     {
-                      xn[k] = x[nx - 1];
-                      yn[k] = y[i];
-                      zn[k] = Z(nx - 1, i);
-                      k++;
+                      if (x[nx - 1] >= lx.xmin && x[nx - 1] <= lx.xmax)
+                        {
+                          xn[k] = x[nx - 1];
+                          yn[k] = y[i];
+                          zn[k] = Z(nx - 1, i);
+                          k++;
+                        }
                     }
 
                 pline_hlr(k, xn, yn, zn);
@@ -8164,18 +8178,24 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
             for (i = 0; i < nx; i++)
               {
-                xn[k] = x[i];
-                yn[k] = y[0];
-                zn[k] = Z(i, 0);
-                k++;
+                if (x[i] >= lx.xmin && x[i] <= lx.xmax && y[0] >= lx.ymin && y[0] <= lx.ymax)
+                  {
+                    xn[k] = x[i];
+                    yn[k] = y[0];
+                    zn[k] = Z(i, 0);
+                    k++;
+                  }
               }
 
             for (j = 1; j < ny; j++)
               {
-                xn[k] = x[nx - 1];
-                yn[k] = y[j];
-                zn[k] = Z(nx - 1, j);
-                k++;
+                if (x[nx - 1] >= lx.xmin && x[nx - 1] <= lx.xmax && y[j] >= lx.ymin && y[j] <= lx.ymax)
+                  {
+                    xn[k] = x[nx - 1];
+                    yn[k] = y[j];
+                    zn[k] = Z(nx - 1, j);
+                    k++;
+                  }
               }
 
             hlr.initialize = 1;
@@ -8202,7 +8222,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                     yn[2] = y[j];
                     zn[2] = Z(i, j);
 
-                    pline_hlr(3, xn, yn, zn);
+                    if (xn[0] >= lx.xmin && xn[2] <= lx.xmax && yn[0] >= lx.ymin && yn[1] <= lx.ymax)
+                      pline_hlr(3, xn, yn, zn);
                   }
 
                 i--;
@@ -8243,6 +8264,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                     xn[4] = xn[0];
                     yn[4] = yn[0];
                     zn[4] = zn[0];
+
+                    if (xn[0] < lx.xmin || xn[2] > lx.xmax || yn[1] < lx.ymin || yn[3] > lx.ymax) continue;
 
                     if (option == OPTION_SHADED_MESH)
                       {
