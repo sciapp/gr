@@ -7957,14 +7957,14 @@ static void get_intensity(double *fx, double *fy, double *fz, double *light_sour
  */
 void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 {
-  int errind, ltype, coli, int_style, tnr;
+  int errind, ltype, coli, int_style, tnr, clsw;
   int modern_projection_type;
 
   int i, ii, j, jj, k;
   int color;
 
   double *xn, *yn, *zn, *x, *y, *z;
-  double facex[4], facey[4], facez[4], vp[4], wn[4], intensity = 0, meanz;
+  double facex[4], facey[4], facez[4], clrt[4], vp[4], wn[4], intensity = 0, meanz;
   double a, b, c, d, e, f;
 
   double ymin, ymax, zmin, zmax;
@@ -8002,10 +8002,11 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
   setscale(lx.scale_options);
 
-  /* inquire current normalization transformation */
+  /* inquire current normalization transformation and clipping indicator */
 
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
+  gks_inq_clip(&errind, &clsw, clrt);
 
   modern_projection_type =
       gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC;
@@ -8121,7 +8122,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
             while (j < ny)
               {
-                if (y[j] < lx.ymin || y[j] > lx.ymax)
+                if (clsw == GKS_K_CLIP && (y[j] < lx.ymin || y[j] > lx.ymax))
                   {
                     j++;
                     continue;
@@ -8130,7 +8131,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
                 if (j > 0)
                   {
-                    if (x[0] >= lx.xmin && x[0] <= lx.xmax)
+                    if (clsw == GKS_K_NOCLIP || (x[0] >= lx.xmin && x[0] <= lx.xmax))
                       {
                         xn[k] = x[0];
                         yn[k] = y[j - 1];
@@ -8141,7 +8142,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
                 for (i = 0; i < nx; i++)
                   {
-                    if (x[i] >= lx.xmin && x[i] <= lx.xmax)
+                    if (clsw == GKS_K_NOCLIP || (x[i] >= lx.xmin && x[i] <= lx.xmax))
                       {
                         xn[k] = x[i];
                         yn[k] = y[j];
@@ -8154,7 +8155,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
                   for (i = 1; i < ny; i++)
                     {
-                      if (x[nx - 1] >= lx.xmin && x[nx - 1] <= lx.xmax)
+                      if (clsw == GKS_K_NOCLIP || (x[nx - 1] >= lx.xmin && x[nx - 1] <= lx.xmax))
                         {
                           xn[k] = x[nx - 1];
                           yn[k] = y[i];
@@ -8178,7 +8179,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
             for (i = 0; i < nx; i++)
               {
-                if (x[i] >= lx.xmin && x[i] <= lx.xmax && y[0] >= lx.ymin && y[0] <= lx.ymax)
+                if (clsw == GKS_K_NOCLIP || (x[i] >= lx.xmin && x[i] <= lx.xmax && y[0] >= lx.ymin && y[0] <= lx.ymax))
                   {
                     xn[k] = x[i];
                     yn[k] = y[0];
@@ -8189,7 +8190,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
             for (j = 1; j < ny; j++)
               {
-                if (x[nx - 1] >= lx.xmin && x[nx - 1] <= lx.xmax && y[j] >= lx.ymin && y[j] <= lx.ymax)
+                if (clsw == GKS_K_NOCLIP ||
+                    (x[nx - 1] >= lx.xmin && x[nx - 1] <= lx.xmax && y[j] >= lx.ymin && y[j] <= lx.ymax))
                   {
                     xn[k] = x[nx - 1];
                     yn[k] = y[j];
@@ -8222,7 +8224,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                     yn[2] = y[j];
                     zn[2] = Z(i, j);
 
-                    if (xn[0] >= lx.xmin && xn[2] <= lx.xmax && yn[0] >= lx.ymin && yn[1] <= lx.ymax)
+                    if (clsw == GKS_K_NOCLIP ||
+                        (xn[0] >= lx.xmin && xn[2] <= lx.xmax && yn[0] >= lx.ymin && yn[1] <= lx.ymax))
                       pline_hlr(3, xn, yn, zn);
                   }
 
@@ -8265,7 +8268,9 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                     yn[4] = yn[0];
                     zn[4] = zn[0];
 
-                    if (xn[0] < lx.xmin || xn[2] > lx.xmax || yn[1] < lx.ymin || yn[3] > lx.ymax) continue;
+                    if (clsw == GKS_K_CLIP &&
+                        (xn[0] < lx.xmin || xn[2] > lx.xmax || yn[1] < lx.ymin || yn[3] > lx.ymax))
+                      continue;
 
                     if (option == OPTION_SHADED_MESH)
                       {
