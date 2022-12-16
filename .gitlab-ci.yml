@@ -912,15 +912,25 @@ darwin-self-contained-iff1600:
   - cp -r lib/grm/include/grm artifacts/include/
   - mkdir artifacts/Applications/
   - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
-  - cp -r lib/grm/grplot/grplot.app artifacts/Applications/grplot.app
   - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
   - mkdir -p artifacts/Applications/gksqt.app/Contents/Frameworks
   - mkdir -p artifacts/Applications/gksqt.app/Contents/plugins/platforms
   - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/gksqt.app/Contents/plugins/platforms
+  - cp lib/grm/grplot/grplot.macos.sh artifacts/grplot.sh
+  - cp -r lib/grm/grplot/grplot.app artifacts/Applications/grplot.app
+  - mkdir -p artifacts/Applications/grplot.app/Contents/Frameworks
+  - mkdir -p artifacts/Applications/grplot.app/Contents/plugins/platforms
+  - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/grplot.app/Contents/plugins/platforms
   - cd artifacts/Applications
   - for BINARY in gksqt.app/Contents/plugins/platforms/libqcocoa.dylib gksqt.app/Contents/MacOS/gksqt; do
       for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
         rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework gksqt.app/Contents/Frameworks/;
+        install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
+      done;
+    done
+  - for BINARY in grplot.app/Contents/plugins/platforms/libqcocoa.dylib grplot.app/Contents/MacOS/grplot; do
+      for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
+        rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework grplot.app/Contents/Frameworks/;
         install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
       done;
     done
@@ -954,15 +964,25 @@ darwin-self-contained:
   - cp -r lib/grm/include/grm artifacts/include/
   - mkdir artifacts/Applications/
   - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
-  - cp -r lib/grm/grplot/grplot.app artifacts/Applications/grplot.app
   - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
   - mkdir -p artifacts/Applications/gksqt.app/Contents/Frameworks
   - mkdir -p artifacts/Applications/gksqt.app/Contents/plugins/platforms
   - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/gksqt.app/Contents/plugins/platforms
+  - cp lib/grm/grplot/grplot.macos.sh artifacts/grplot.sh
+  - cp -r lib/grm/grplot/grplot.app artifacts/Applications/grplot.app
+  - mkdir -p artifacts/Applications/grplot.app/Contents/Frameworks
+  - mkdir -p artifacts/Applications/grplot.app/Contents/plugins/platforms
+  - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/grplot.app/Contents/plugins/platforms
   - cd artifacts/Applications
   - for BINARY in gksqt.app/Contents/plugins/platforms/libqcocoa.dylib gksqt.app/Contents/MacOS/gksqt; do
       for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
         rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework gksqt.app/Contents/Frameworks/;
+        install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
+      done;
+    done
+  - for BINARY in grplot.app/Contents/plugins/platforms/libqcocoa.dylib grplot.app/Contents/MacOS/grplot; do
+      for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
+        rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework grplot.app/Contents/Frameworks/;
         install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
       done;
     done
@@ -996,17 +1016,27 @@ darwin-self-contained-iff1605:
     - cp -r lib/grm/include/grm artifacts/include/
     - mkdir artifacts/Applications/
     - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
-    - cp -r lib/grm/grplot/grplot.app artifacts/Applications/grplot.app
     - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
     - mkdir -p artifacts/Applications/gksqt.app/Contents/Frameworks
     - mkdir -p artifacts/Applications/gksqt.app/Contents/plugins/platforms
     - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/gksqt.app/Contents/plugins/platforms
+    - cp lib/grm/grplot/grplot.macos.sh artifacts/grplot.sh
+    - cp -r lib/grm/grplot/grplot.app artifacts/Applications/grplot.app
+    - mkdir -p artifacts/Applications/grplot.app/Contents/Frameworks
+    - mkdir -p artifacts/Applications/grplot.app/Contents/plugins/platforms
+    - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/grplot.app/Contents/plugins/platforms
     - cd artifacts/Applications
     - for BINARY in gksqt.app/Contents/plugins/platforms/libqcocoa.dylib gksqt.app/Contents/MacOS/gksqt; do
-      for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
-      rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework gksqt.app/Contents/Frameworks/;
-      install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
-      done;
+        for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
+          rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework gksqt.app/Contents/Frameworks/;
+          install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
+        done;
+      done
+    - for BINARY in grplot.app/Contents/plugins/platforms/libqcocoa.dylib grplot.app/Contents/MacOS/grplot; do
+        for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
+          rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework grplot.app/Contents/Frameworks/;
+          install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
+        done;
       done
     - cd ../../
     - mv artifacts artifacts-darwin-aarch64
@@ -1134,7 +1164,9 @@ packages-tar:
   - mv artifacts-freebsd13/include FreeBSD-x86_64/gr/
   - cp artifacts-js/gr.js FreeBSD-x86_64/gr/lib/
   - rm -rf artifacts-freebsd13
+  - mkdir -p Darwin-x86_64/gr/bin
   - mkdir -p Darwin-x86_64/gr/lib
+  - mv artifacts-darwin/grplot.sh Darwin-x86_64/gr/bin/grplot
   - mv artifacts-darwin/*.dylib Darwin-x86_64/gr/lib/
   - mv artifacts-darwin/*.so Darwin-x86_64/gr/lib/
   - mv artifacts-darwin/fonts Darwin-x86_64/gr/

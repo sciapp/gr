@@ -23,7 +23,7 @@ default: grplot.exe
 $(GRMLIB):
 	$(MAKE) -C .. libGRM.lib
 
-grplot.exe: grplot.cxx grplot_mainwindow.cxx grplot_widget.cxx $(GRMLIB)
+grplot.exe: grplot.cxx grplot_mainwindow.cxx grplot_widget.cxx util.cxx $(GRMLIB)
 	wget https://gr-framework.org/downloads/3rdparty/qt5-runtime-Windows-$(ARCHITECTURE)-mingw81.tar.gz
 	tar xzf qt5-runtime-Windows-$(ARCHITECTURE)-mingw81.tar.gz
 	moc -DGRDIR=\"$(GRDIR)\" -Iinclude grplot_widget.hxx -o moc_grplot_widget.cxx
@@ -33,7 +33,7 @@ grplot.exe: grplot.cxx grplot_mainwindow.cxx grplot_widget.cxx $(GRMLIB)
 
 
 clean:
-	$(RM) include
+	$(RM) -r include
 	$(RM) *.dll
 	$(RM) moc_*.cxx
 	$(RM) grplot.exe

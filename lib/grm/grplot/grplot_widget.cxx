@@ -201,11 +201,11 @@ void GRPlotWidget::paintEvent(QPaintEvent *event)
               QPainterPath triangle;
               std::string x_label = tooltip->xlabel, y_label = tooltip->ylabel;
 
-              if (startsWith(x_label, "$") && endsWith(x_label, "$"))
+              if (util::startsWith(x_label, "$") && util::endsWith(x_label, "$"))
                 {
                   x_label = "x";
                 }
-              if (startsWith(y_label, "$") && endsWith(y_label, "$"))
+              if (util::startsWith(y_label, "$") && util::endsWith(y_label, "$"))
                 {
                   y_label = "y";
                 }
