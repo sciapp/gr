@@ -6175,7 +6175,6 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
   double diag, charheight;
   int scale, flip, options;
   unsigned int i;
-  err_t error;
 
   gr_savestate();
   grm_args_values(subplot_args, "viewport", "D", &viewport);
