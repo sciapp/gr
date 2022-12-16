@@ -760,8 +760,8 @@ int gr3_export_html_(const char *filename, int width, int height)
                   "varying vec3 Normal;\n"
 
                   "void main(void) {\n"
-                  "  WorldSpacePosition = ModelMatrix*vec4(Scales*in_Vertex,1);\n"
-                  "  Position = ViewMatrix*WorldSpacePosition;\n"
+                  "  WorldSpacePosition = ModelMatrix*vec4(in_Vertex,1);\n"
+                  "  Position = ViewMatrix*ModelMatrix*vec4(Scales*in_Vertex,1);\n"
                   "  Normal = vec3(ViewMatrix*ModelMatrix*vec4(in_Normal,0)).xyz;\n"
                   "  Color = in_Color;\n"
                   "  gl_Position = ProjectionMatrix * Position;\n"
