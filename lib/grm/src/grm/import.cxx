@@ -252,7 +252,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
           if (std::find(columns.begin(), columns.end(), col) != columns.end() || (columns.empty() && labels.empty()) ||
               (columns.empty() && col < labels.size()))
             {
-              if (row == 0 && col == 0 || depth_change && col == 0)
+              if ((row == 0 && col == 0) || (depth_change && col == 0))
                 {
                   data.emplace_back(std::vector<std::vector<double>>());
                 }
@@ -470,7 +470,6 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       std::vector<double> data(rows * cols * depth);
       int n = (int)rows * (int)cols * (int)depth;
       std::vector<int> dims = {(int)cols, (int)rows, (int)depth};
-      double x, y, z;
       for (i = 0; i < rows; ++i)
         {
           for (j = 0; j < cols; ++j)
@@ -516,7 +515,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
 
 int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, int argc, char **argv)
 {
-  int i, j;
+  int i;
   std::string token, found_key;
   size_t found_key_size;
   std::string delim = ":";
