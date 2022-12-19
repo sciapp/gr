@@ -42,7 +42,7 @@ static void test_marginalheatmap()
   grm_args_push(args, "y", "nD", COLS, yi);
   grm_args_push(args, "z", "nD", ROWS * COLS, zi);
   grm_args_push(args, "kind", "s", "marginalheatmap");
-  grm_args_push(args, "type", "s", "all");
+  grm_args_push(args, "marginalheatmap_kind", "s", "all");
   grm_args_push(args, "algorithm", "s", "sum");
   grm_plot(args);
 
@@ -57,7 +57,7 @@ static void test_marginalheatmap()
   grm_args_push(args, "y", "nD", COLS, yi);
   grm_args_push(args, "z", "nD", ROWS * COLS, zi);
   grm_args_push(args, "kind", "s", "marginalheatmap");
-  grm_args_push(args, "type", "s", "line");
+  grm_args_push(args, "marginalheatmap_kind", "s", "line");
   grm_args_push(args, "algorithm", "s", "sum");
   grm_args_push(args, "xind", "i", 1);
   grm_args_push(args, "yind", "i", 1);
