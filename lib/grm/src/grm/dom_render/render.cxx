@@ -704,7 +704,7 @@ static void text(const std::shared_ptr<GR::Element> &element, const std::shared_
   CoordinateSpace space = static_cast<CoordinateSpace>(static_cast<int>(element->getAttribute("space")));
 
 
-  if (space == WC)
+  if (space == CoordinateSpace::WC)
     {
       gr_wctondc(&x, &y);
     }
@@ -2689,7 +2689,7 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
           x[0] = 0.05;
           y[0] = r;
           snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", tick * i);
-          newGroup->append(render->createText(x[0], y[0], text_buffer, WC));
+          newGroup->append(render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC));
         }
       else
         {
@@ -2727,7 +2727,7 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
           else
             snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xb0", 330 - (int)grm_round(alpha - interval));
         }
-      temp = render->createText(x[0], y[0], text_buffer, WC);
+      temp = render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC);
       newGroup->append(temp);
       render->setTextAlign(temp, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
     }
@@ -3459,7 +3459,7 @@ std::shared_ptr<GR::Element> GR::Render::createText(double x, double y, const st
   element->setAttribute("x", x);
   element->setAttribute("y", y);
   element->setAttribute("text", text);
-  element->setAttribute("space", space);
+  element->setAttribute("space", static_cast<int>(space));
   return element;
 }
 
