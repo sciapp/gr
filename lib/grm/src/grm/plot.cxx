@@ -2902,7 +2902,8 @@ err_t plot_barplot(grm_args_t *subplot_args)
                   x_text = (x1 + x2) / 2;
                   y_text = (y1 + y2) / 2;
 
-                  std::shared_ptr<GR::Element> temp = global_render->createText(x_text, y_text, ylabels[i], WC);
+                  std::shared_ptr<GR::Element> temp =
+                      global_render->createText(x_text, y_text, ylabels[i], CoordinateSpace::WC);
                   global_render->setTextAlign(temp, 2, 3);
                   global_render->setTextWidthAndHeight(temp, available_width, available_height);
                   if (y_lightness[i] < 0.4)
@@ -3103,8 +3104,8 @@ err_t plot_barplot(grm_args_t *subplot_args)
                       x_text = (x1 + x2) / 2;
                       y_text = (y1 + y2) / 2;
 
-                      auto label_elem =
-                          global_render->createText(x_text, y_text, ylabels[ylabels_length - ylabels_left], WC);
+                      auto label_elem = global_render->createText(
+                          x_text, y_text, ylabels[ylabels_length - ylabels_left], CoordinateSpace::WC);
                       global_render->setTextAlign(label_elem, 2, 3);
                       global_render->setTextWidthAndHeight(label_elem, available_width, available_height);
                       inner_group->append(label_elem);
@@ -5491,7 +5492,7 @@ err_t plot_pie(grm_args_t *subplot_args)
 
       snprintf(text, 80, "%.2lf\n%.1lf %%", x[i], normalized_x_int[i] / 10.0);
 
-      auto text_elem = global_render->createText(text_pos[0], text_pos[1], text, WC);
+      auto text_elem = global_render->createText(text_pos[0], text_pos[1], text, CoordinateSpace::WC);
       text_elem->setAttribute("color_index", color_index);
       group->append(text_elem);
 
