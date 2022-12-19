@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <grm/dom_render/graphics_tree/Element.hxx>
 
 #include "args.h"
 #include "error.h"
@@ -19,7 +20,6 @@ public:
   bool isPositive();
   bool isForward();
 
-private:
   int rowStart;
   int rowStop;
   int colStart;
@@ -31,6 +31,8 @@ class GridElement
 {
 public:
   GridElement();
+  GridElement(double absHeight, double absWidth, int absHeightPxl, int absWidthPxl, int fitParentsHeight,
+              int fitParentsWidth, double relativeHeight, double relativeWidth, double aspectRatio);
   virtual void finalizeSubplot();
   virtual bool isGrid();
   void setSubplot(double x1, double x2, double y1, double y2);
@@ -44,8 +46,8 @@ public:
   void setFitParentsHeight(bool fitParentsHeight);
   void setFitParentsWidth(bool fitParentsWidth);
   double *getSubplot();
+  grm_args_t *subplot_args = nullptr;
 
-private:
   double *subplot;
 
   double absHeight = -1;
@@ -56,7 +58,7 @@ private:
   int fitParentsWidth = 1;
   double relativeHeight = -1;
   double relativeWidth = -1;
-  double aspectRatio;
+  double aspectRatio = -1;
 
   int widthSet = 0;
   int heightSet = 0;
@@ -65,15 +67,18 @@ private:
 
   int finalized = 0;
 
-  grm_args_t *subplot_args = nullptr;
 
   friend class Grid;
+  std::shared_ptr<GR::Element> elementInDOM = nullptr;
 };
 
 class Grid : public GridElement
 {
+
 public:
   Grid(int nrows, int ncols);
+  Grid(int nrows, int ncols, double absHeight, double absWidth, int absHeightPxl, int absWidthPxl, int fitParentsHeight,
+       int fitParentsWidth, double relativeHeight, double relativeWidth, double aspectRatio);
   ~Grid();
   void setElement(int row, int col, GridElement *element);
   void setElement(int row, int col, grm_args_t *args);
@@ -88,6 +93,10 @@ public:
   void trim();
   int getColSpan(GridElement *element);
   int getRowSpan(GridElement *element);
+  int getNRows() const;
+  int getNCols() const;
+  bool isRowsEmpty() const;
+  std::unordered_map<GridElement *, Slice *> getElementToPosition();
 
 private:
   std::vector<std::vector<GridElement *>> rows;
@@ -96,6 +105,7 @@ private:
   int ncols;
   void upsize(int nrows, int ncols);
 };
+
 } // namespace grm
 
 #endif /* ifndef LAYOUT_HPP_INCLUDED */

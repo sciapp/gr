@@ -2,8 +2,8 @@
 #include <limits>
 #include <sstream>
 #include "args_int.h"
-#include <grm/layout.hxx>
 #include <grm/layout_error.hxx>
+#include "grm/layout.hxx"
 
 using namespace grm;
 
@@ -56,6 +56,15 @@ GridElement::GridElement()
 {
   subplot = new double[4];
 };
+
+GridElement::GridElement(double absHeight, double absWidth, int absHeightPxl, int absWidthPxl, int fitParentsHeight,
+                         int fitParentsWidth, double relativeHeight, double relativeWidth, double aspectRatio)
+    : absHeight(absHeight), absWidth(absWidth), absHeightPxl(absHeightPxl), absWidthPxl(absWidthPxl),
+      fitParentsHeight(fitParentsHeight), fitParentsWidth(fitParentsWidth), relativeHeight(relativeHeight),
+      relativeWidth(relativeWidth), aspectRatio(aspectRatio)
+{
+  subplot = new double[4];
+}
 
 void GridElement::setSubplot(double x1, double x2, double y1, double y2)
 {
@@ -282,6 +291,15 @@ void GridElement::finalizeSubplot()
       grm_args_push(subplot_args, "subplot", "nD", 4, subplot);
     }
 
+  if (elementInDOM != nullptr)
+    {
+      elementInDOM->setAttribute("subplot", true);
+      elementInDOM->setAttribute("subplot_xmin", subplot[0]);
+      elementInDOM->setAttribute("subplot_xmax", subplot[1]);
+      elementInDOM->setAttribute("subplot_ymin", subplot[2]);
+      elementInDOM->setAttribute("subplot_ymax", subplot[3]);
+    }
+
   finalized = 1;
 }
 
@@ -305,7 +323,13 @@ bool GridElement::isGrid()
   return false;
 }
 
-Grid::Grid(int nrows, int ncols) : GridElement(), nrows(nrows), ncols(ncols)
+Grid::Grid(int nrows, int ncols) : Grid(nrows, ncols, -1, -1, -1, -1, 0, 1, -1, -1, -1) {}
+
+Grid::Grid(int nrows, int ncols, double absHeight, double absWidth, int absHeightPxl, int absWidthPxl,
+           int fitParentsHeight, int fitParentsWidth, double relativeHeight, double relativeWidth, double aspectRatio)
+    : GridElement(absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight, fitParentsWidth, relativeHeight,
+                  relativeWidth, aspectRatio),
+      nrows(nrows), ncols(ncols)
 {
   if (nrows < 1 || ncols < 1)
     {
@@ -668,6 +692,16 @@ int Grid::getRowSpan(GridElement *element)
   return slice->rowStop - slice->rowStart;
 }
 
+int Grid::getNRows() const
+{
+  return this->nrows;
+}
+
+int Grid::getNCols() const
+{
+  return this->ncols;
+}
+
 void Grid::ensureCellIsGrid(int row, int col)
 {
   this->upsize(row + 1, col + 1);
@@ -710,4 +744,14 @@ void Grid::ensureCellsAreGrid(Slice *slice)
 bool Grid::isGrid()
 {
   return true;
+}
+
+bool Grid::isRowsEmpty() const
+{
+  return this->rows.empty();
+}
+
+std::unordered_map<GridElement *, Slice *> Grid::getElementToPosition()
+{
+  return this->elementToPosition;
 }

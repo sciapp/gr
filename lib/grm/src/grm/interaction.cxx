@@ -1,7 +1,3 @@
-#ifdef __unix__
-#define _POSIX_C_SOURCE 200112L
-#endif
-
 /* ######################### includes ############################################################################### */
 
 #include <math.h>
@@ -13,6 +9,7 @@
 #include "plot_int.h"
 #include "util_int.h"
 #include "gr.h"
+#include "grm/dom_render/render.hxx"
 
 
 /* ######################### public implementation ################################################################## */
@@ -42,8 +39,6 @@ int grm_input(const grm_args_t *input_args)
    */
   int width, height, max_width_height;
   int x, y, x1, y1, x2, y2;
-  grm_args_t *subplot_args;
-  const double *viewport;
   double viewport_mid_x, viewport_mid_y;
 
   logger((stderr, "Processing input\n"));
@@ -61,7 +56,7 @@ int grm_input(const grm_args_t *input_args)
       ndc_y = (double)(height - y) / max_width_height;
       logger((stderr, "x: %d, y: %d, ndc_x: %lf, ndc_y: %lf\n", x, y, ndc_x, ndc_y));
 
-      subplot_args = get_subplot_from_ndc_point(ndc_x, ndc_y);
+      auto subplot_element = get_subplot_from_ndc_point_using_dom(ndc_x, ndc_y);
 
       if (grm_args_values(input_args, "key", "s", &key))
         {
@@ -69,40 +64,38 @@ int grm_input(const grm_args_t *input_args)
 
           if (strcmp(key, "r") == 0)
             {
-              if (subplot_args != NULL)
+              if (subplot_element != nullptr)
                 {
                   logger((stderr, "Reset single subplot coordinate ranges\n"));
-                  grm_args_push(subplot_args, "reset_ranges", "i", 1);
+                  subplot_element->setAttribute("reset_ranges", 1);
                 }
               else
                 {
-                  grm_args_t **subplot_args_ptr;
                   logger((stderr, "Reset all subplot coordinate ranges\n"));
-                  grm_args_values(active_plot_args, "subplots", "A", &subplot_args_ptr);
-                  while (*subplot_args_ptr != NULL)
-                    {
-                      grm_args_push(*subplot_args_ptr, "reset_ranges", "i", 1);
-                      ++subplot_args_ptr;
-                    }
+                  grm_set_attribute_on_all_subplots("reset_ranges", 1);
                 }
             }
 
           return 1;
         }
 
-      if (subplot_args != NULL)
+      if (subplot_element != nullptr)
         {
           double angle_delta, factor;
           int xshift, yshift;
-          const char *kind;
-          grm_args_values(subplot_args, "viewport", "D", &viewport);
+          std::string kind;
+          double viewport[4];
+          viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
+          viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_xmax"));
+          viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_ymin"));
+          viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_ymax"));
 
           if (grm_args_values(input_args, "angle_delta", "d", &angle_delta))
             {
               double focus_x, focus_y;
+              kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
 
-              grm_args_values(subplot_args, "kind", "s", &kind);
-              if (str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
+              if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
                                  "isosurface"))
                 {
                   /*
@@ -117,8 +110,10 @@ int grm_input(const grm_args_t *input_args)
                   focus_y = ndc_y - viewport_mid_y;
                   logger(
                       (stderr, "Zoom to ndc focus point (%lf, %lf), angle_delta %lf\n", focus_x, focus_y, angle_delta));
-                  grm_args_push(subplot_args, "panzoom", "ddd", focus_x, focus_y,
-                                1.0 - INPUT_ANGLE_DELTA_FACTOR * angle_delta);
+                  double zoom = 1.0 - INPUT_ANGLE_DELTA_FACTOR * angle_delta;
+                  auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, zoom, zoom);
+                  subplot_element->append(panzoom_element);
+                  subplot_element->setAttribute("panzoom", true);
                 }
 
               return 1;
@@ -127,8 +122,8 @@ int grm_input(const grm_args_t *input_args)
             {
               double focus_x, focus_y;
 
-              grm_args_values(subplot_args, "kind", "s", &kind);
-              if (str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
+              kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
+              if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
                                  "isosurface"))
                 {
                   /*
@@ -142,7 +137,9 @@ int grm_input(const grm_args_t *input_args)
                   focus_x = ndc_x - viewport_mid_x;
                   focus_y = ndc_y - viewport_mid_y;
                   logger((stderr, "Zoom to ndc focus point (%lf, %lf), factor %lf\n", focus_x, focus_y, factor));
-                  grm_args_push(subplot_args, "panzoom", "ddd", focus_x, focus_y, factor);
+                  auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, factor, factor);
+                  subplot_element->append(panzoom_element);
+                  subplot_element->setAttribute("panzoom", true);
                 }
 
               return 1;
@@ -153,11 +150,11 @@ int grm_input(const grm_args_t *input_args)
             {
               double ndc_xshift, ndc_yshift, rotation, tilt;
               int shift_pressed;
-              const char *kind;
+              std::string kind;
 
-              grm_args_values(subplot_args, "kind", "s", &kind);
+              kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
 
-              if (str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
+              if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
                                  "isosurface"))
                 {
                   if (grm_args_values(input_args, "shift_pressed", "i", &shift_pressed) && shift_pressed)
@@ -168,8 +165,8 @@ int grm_input(const grm_args_t *input_args)
                     }
                   else
                     {
-                      grm_args_values(subplot_args, "rotation", "d", &rotation);
-                      grm_args_values(subplot_args, "tilt", "d", &tilt);
+                      rotation = static_cast<double>(subplot_element->getAttribute("rotation"));
+                      tilt = static_cast<double>(subplot_element->getAttribute("tilt"));
 
                       rotation += xshift * 0.2;
                       tilt -= yshift * 0.2;
@@ -183,8 +180,8 @@ int grm_input(const grm_args_t *input_args)
                           tilt = 0;
                         }
 
-                      grm_args_push(subplot_args, "rotation", "d", rotation);
-                      grm_args_push(subplot_args, "tilt", "d", tilt);
+                      subplot_element->setAttribute("roation", rotation);
+                      subplot_element->setAttribute("tilt", tilt);
                     }
                 }
               else
@@ -192,7 +189,9 @@ int grm_input(const grm_args_t *input_args)
                   ndc_xshift = (double)-xshift / max_width_height;
                   ndc_yshift = (double)yshift / max_width_height;
                   logger((stderr, "Translate by ndc coordinates (%lf, %lf)\n", ndc_xshift, ndc_yshift));
-                  grm_args_push(subplot_args, "panzoom", "ddd", ndc_xshift, ndc_yshift, 0.0);
+                  auto panzoom_element = grm_get_render()->createPanzoom(ndc_xshift, ndc_yshift, 0, 0);
+                  subplot_element->append(panzoom_element);
+                  subplot_element->setAttribute("panzoom", true);
                 }
               return 1;
             }
@@ -204,11 +203,12 @@ int grm_input(const grm_args_t *input_args)
     {
       double focus_x, focus_y, factor_x, factor_y;
       int keep_aspect_ratio = INPUT_DEFAULT_KEEP_ASPECT_RATIO;
+      std::shared_ptr<GR::Element> subplot_element;
 
       grm_args_values(input_args, "keep_aspect_ratio", "i", &keep_aspect_ratio);
 
-      if (!get_focus_and_factor(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x, &focus_y,
-                                &subplot_args))
+      if (!get_focus_and_factor_from_dom(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x, &focus_y,
+                                         subplot_element))
         {
           return 0;
         }
@@ -218,7 +218,9 @@ int grm_input(const grm_args_t *input_args)
       logger((stderr, "zoom focus: (%lf, %lf)\n", focus_x, focus_y));
       logger((stderr, "zoom factors: (%lf, %lf)\n", factor_x, factor_y));
 
-      grm_args_push(subplot_args, "panzoom", "dddd", focus_x, focus_y, factor_x, factor_y);
+      auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, factor_x, factor_y);
+      subplot_element->append(panzoom_element);
+      subplot_element->setAttribute("panzoom", true);
 
       return 1;
     }
@@ -230,7 +232,6 @@ int grm_is3d(const int x, const int y)
 {
   int width, height, max_width_height;
   double ndc_x, ndc_y;
-  grm_args_t *subplot_args;
   const char *kind;
 
   get_figure_size(NULL, &width, &height, NULL, NULL);
@@ -238,10 +239,10 @@ int grm_is3d(const int x, const int y)
   ndc_x = (double)x / max_width_height;
   ndc_y = (double)y / max_width_height;
 
-  subplot_args = get_subplot_from_ndc_points(1, &ndc_x, &ndc_y);
+  auto subplot_element = get_subplot_from_ndc_points_using_dom(1, &ndc_x, &ndc_y);
 
-  if (subplot_args && grm_args_values(subplot_args, "kind", "s", &kind) &&
-      str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume", "isosurface"))
+  if (subplot_element && str_equals_any(static_cast<std::string>(subplot_element->getAttribute("kind")).c_str(), 7,
+                                        "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume", "isosurface"))
     {
       return 1;
     }
@@ -257,16 +258,21 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   int width, height, max_width_height;
   double focus_x, focus_y, factor_x, factor_y;
   double viewport_mid_x, viewport_mid_y;
-  const double *viewport, *wswindow;
-  grm_args_t *subplot_args;
+  const double *wswindow;
+  double viewport[4];
+  std::shared_ptr<GR::Element> subplot_element;
   get_figure_size(NULL, &width, &height, NULL, NULL);
   max_width_height = grm_max(width, height);
-  if (!get_focus_and_factor(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x, &focus_y, &subplot_args))
+  if (!get_focus_and_factor_from_dom(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x, &focus_y,
+                                     subplot_element))
     {
       return 0;
     }
   grm_args_values(active_plot_args, "wswindow", "D", &wswindow);
-  grm_args_values(subplot_args, "viewport", "D", &viewport);
+  viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
+  viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_xmax"));
+  viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_ymin"));
+  viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_ymax"));
   viewport_mid_x = (viewport[1] + viewport[0]) / 2.0;
   viewport_mid_y = (viewport[3] + viewport[2]) / 2.0;
   *w = (int)grm_round(factor_x * width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0]));
@@ -280,26 +286,26 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
 
 grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
 {
-  grm_tooltip_info_t *info = malloc(sizeof(grm_tooltip_info_t));
-  double *x_series, *y_series, x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
+  grm_tooltip_info_t *info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
+  double x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
   double x_range_min, x_range_max, y_range_min, y_range_max, x_px, y_px;
   int width, height, max_width_height;
   unsigned int num_labels = 0;
-  char *kind, **labels;
-  grm_args_t *subplot_args, **current_series;
-  unsigned int x_length, y_length, series_i = 0, i;
+  std::string kind;
+  unsigned int series_i = 0, i;
 
   get_figure_size(NULL, &width, &height, NULL, NULL);
   max_width_height = grm_max(width, height);
   x = (double)mouse_x / max_width_height;
   y = (double)(height - mouse_y) / max_width_height;
 
-  subplot_args = get_subplot_from_ndc_points(1, &x, &y);
-  if (subplot_args != NULL)
+  auto subplot_element = get_subplot_from_ndc_points_using_dom(1, &x, &y);
+
+  if (subplot_element != nullptr)
     {
-      grm_args_values(subplot_args, "kind", "s", &kind);
+      kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
     }
-  if (subplot_args == NULL || !str_equals_any(kind, 4, "line", "scatter", "stem", "step"))
+  if (subplot_element == nullptr || !str_equals_any(kind.c_str(), 4, "line", "scatter", "stem", "step"))
     {
       info->x_px = -1;
       info->y_px = -1;
@@ -310,17 +316,26 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       info->label = "";
       return info;
     }
-  plot_process_viewport(subplot_args);
-  plot_process_window(subplot_args);
+
+  GR::Render::processViewport(subplot_element);
+  GR::Render::processLimits(subplot_element);
 
   gr_ndctowc(&x, &y);
-  if (!grm_args_values(subplot_args, "xlabel", "s", &info->xlabel))
+  if (!subplot_element->hasAttribute("xlabel"))
     {
       info->xlabel = "x";
     }
-  if (!grm_args_values(subplot_args, "ylabel", "s", &info->ylabel))
+  else
+    {
+      info->xlabel = static_cast<std::string>(subplot_element->getAttribute("xlabel")).c_str();
+    }
+  if (!subplot_element->hasAttribute("ylabel"))
     {
       info->ylabel = "y";
+    }
+  else
+    {
+      info->ylabel = static_cast<std::string>(subplot_element->getAttribute("ylabel")).c_str();
     }
 
   x_range_min = (double)(mouse_x - 50) / max_width_height;
@@ -330,28 +345,38 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   gr_ndctowc(&x_range_min, &y_range_min);
   gr_ndctowc(&x_range_max, &y_range_max);
 
-  grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "_xlim", "dd", &x_min, &x_max);
-  grm_args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
+  auto current_series_vec = subplot_element->getElementsByClassName(kind + "_series");
+
+  x_min = static_cast<double>(subplot_element->getAttribute("lim_xmin"));
+  x_max = static_cast<double>(subplot_element->getAttribute("lim_xmax"));
+  y_min = static_cast<double>(subplot_element->getAttribute("lim_ymin"));
+  y_max = static_cast<double>(subplot_element->getAttribute("lim_ymax"));
 
   x_range_min = (x_min > x_range_min) ? x_min : x_range_min;
   y_range_min = (y_min > y_range_min) ? y_min : y_range_min;
   x_range_max = (x_max < x_range_max) ? x_max : x_range_max;
   y_range_max = (y_max < y_range_max) ? y_max : y_range_max;
-  grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels);
-  while (*current_series != NULL)
+
+  auto draw_legend_element = subplot_element->getElementsByClassName("draw-legend")[0];
+  std::string labels_key = static_cast<std::string>(draw_legend_element->getAttribute("labels"));
+  std::shared_ptr<GR::Context> context = grm_get_render()->getContext();
+  std::vector<std::string> labels = GR::get<std::vector<std::string>>((*context)[labels_key]);
+  num_labels = labels.size();
+  for (auto &current_series : current_series_vec)
     {
-      grm_args_first_value(*current_series, "x", "D", &x_series, &x_length);
-      grm_args_first_value(*current_series, "y", "D", &y_series, &y_length);
-      for (i = 0; i < x_length; i++)
+      auto x_key = static_cast<std::string>(current_series->getAttribute("x"));
+      auto y_key = static_cast<std::string>(current_series->getAttribute("y"));
+      auto x_series_vec = GR::get<std::vector<double>>((*context)[x_key]);
+      auto y_series_vec = GR::get<std::vector<double>>((*context)[y_key]);
+      for (i = 0; i < x_series_vec.size(); i++)
         {
-          if (x_series[i] < x_range_min || x_series[i] > x_range_max || y_series[i] < y_range_min ||
-              y_series[i] > y_range_max)
+          if (x_series_vec[i] < x_range_min || x_series_vec[i] > x_range_max || y_series_vec[i] < y_range_min ||
+              y_series_vec[i] > y_range_max)
             {
               continue;
             }
-          x_px = x_series[i];
-          y_px = y_series[i];
+          x_px = x_series_vec[i];
+          y_px = y_series_vec[i];
           gr_wctondc(&x_px, &y_px);
           x_px = (x_px * max_width_height);
           y_px = (height - y_px * max_width_height);
@@ -359,13 +384,13 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
           if (diff < mindiff && diff <= 50)
             {
               mindiff = diff;
-              info->x = x_series[i];
-              info->y = y_series[i];
+              info->x = x_series_vec[i];
+              info->y = y_series_vec[i];
               info->x_px = (int)x_px;
               info->y_px = (int)y_px;
               if (num_labels > series_i)
                 {
-                  info->label = labels[series_i];
+                  info->label = labels[series_i].c_str();
                 }
               else
                 {
@@ -374,7 +399,6 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
             }
         }
       ++series_i;
-      ++current_series;
     }
   if (mindiff == DBL_MAX)
     {

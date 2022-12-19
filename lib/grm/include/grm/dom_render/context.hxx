@@ -45,6 +45,7 @@ public:
     std::string key;
     bool intUsed();
     bool doubleUsed();
+    bool stringUsed();
 
   public:
     Inner(Context &context, std::string key);
@@ -52,6 +53,7 @@ public:
 
     Inner &operator=(std::vector<int> vec);
     Inner &operator=(std::vector<double> vec);
+    Inner &operator=(std::vector<std::string> vec);
 
     explicit operator std::vector<int> &();
     explicit operator const std::vector<int> &() const;
@@ -59,11 +61,18 @@ public:
     explicit operator std::vector<double> &();
     explicit operator const std::vector<double> &() const;
 
+    explicit operator std::vector<std::string> &();
+    explicit operator const std::vector<std::string> &() const;
+
+
     explicit operator std::vector<int> *();
     explicit operator const std::vector<int> *() const;
 
     explicit operator std::vector<double> *();
     explicit operator const std::vector<double> *() const;
+
+    explicit operator std::vector<std::string> *();
+    explicit operator const std::vector<std::string> *() const;
   };
 
   Context();
@@ -75,6 +84,7 @@ private:
   friend class Inner;
   std::map<std::string, std::vector<double>> tableDouble;
   std::map<std::string, std::vector<int>> tableInt;
+  std::map<std::string, std::vector<std::string>> tableString;
 };
 
 template <class T> static T &get(Context::Inner &&data)

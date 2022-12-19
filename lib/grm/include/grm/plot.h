@@ -50,6 +50,16 @@ EXPORT void grm_load_graphics_tree(FILE *file);
 }
 
 EXPORT std::shared_ptr<GR::Element> grm_get_document_root(void);
-
+EXPORT std::shared_ptr<GR::Render> grm_get_render(void);
+EXPORT int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
+                           const std::shared_ptr<GR::Element> &parentDomElement);
+EXPORT std::shared_ptr<GR::Element> get_subplot_from_ndc_point_using_dom(double x, double y);
+EXPORT std::shared_ptr<GR::Element> get_subplot_from_ndc_points_using_dom(unsigned int n, const double *x,
+                                                                          const double *y);
+EXPORT void grm_set_attribute_on_all_subplots(std::string attribute, int value);
+EXPORT int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, const int y2,
+                                         const int keep_aspect_ratio, double *factor_x, double *factor_y,
+                                         double *focus_x, double *focus_y,
+                                         std::shared_ptr<GR::Element> subplot_element);
 #endif
 #endif /* ifndef GRM_PLOT_H_INCLUDED */

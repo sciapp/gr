@@ -302,7 +302,7 @@ int main(void)
   /* test_grid_with_grm(); */
   /* test_grid_with_grm_args(); */
   test_grid_with_grm_args_and_width_parameters();
-  grm_finalize();
+  /* grm_finalize(); */
 
   return 0;
 }
