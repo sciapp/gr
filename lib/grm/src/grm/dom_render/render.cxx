@@ -2757,6 +2757,7 @@ static void setNextColor(gr_color_type_t color_type, std::vector<int> &color_ind
     {
       last_array_index = -1;
       color_array_length = -1;
+      return;
     }
 
   if (color_indices.empty() && color_rgb_values.empty())
@@ -2882,6 +2883,9 @@ static void drawPieLegend(const std::shared_ptr<GR::Element> &elem, const std::s
   subGroup->append(subsubGroup);
   render->setLineSpec(subsubGroup, const_cast<char *>(" "));
   render->setTextAlign(subsubGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+  // reset setNextColor
+  setNextColor(GR_COLOR_RESET, color_indices_vec, color_rgb_values_vec, subGroup);
+
 
   for (auto &current_label : labels)
     {
@@ -2897,10 +2901,12 @@ static void drawPieLegend(const std::shared_ptr<GR::Element> &elem, const std::s
       gr_inqtext(0, 0, current_label.data(), tbx, tby);
       px += tbx[2] - tbx[0] + 0.05;
     }
+  // reset setNextColor
+  setNextColor(GR_COLOR_RESET, color_indices_vec, color_rgb_values_vec, subGroup);
+
   auto reset_group = render->createGroup("reset_group");
   render->setSelntran(reset_group, 1);
   elem->append(reset_group);
-  gr_restorestate();
 }
 
 static void piePlotTitleRender(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
