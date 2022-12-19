@@ -346,8 +346,8 @@ static void getAxesInformation(const std::shared_ptr<GR::Element> &element, std:
                                std::string y_org_pos, double &x_org, double &y_org, int &x_major, int &y_major,
                                double &x_tick, double &y_tick)
 {
-  int x_org_low, x_org_high;
-  int y_org_low, y_org_high;
+  double x_org_low, x_org_high;
+  double y_org_low, y_org_high;
   int major_count;
 
   auto draw_axes_group = element->parentElement();
