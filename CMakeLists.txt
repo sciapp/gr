@@ -1102,66 +1102,73 @@ endif()
 
 if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
   add_executable(
-    grm-plots WIN32 MACOSX_BUNDLE lib/grm/grm-plots/grmplots.cxx lib/grm/grm-plots/grmplots_mainwindow.cxx
-                                  lib/grm/grm-plots/grmplots_widget.cxx
+    grplot WIN32 MACOSX_BUNDLE lib/grm/grplot/grplot.cxx lib/grm/grplot/grplot_mainwindow.cxx
+                               lib/grm/grplot/grplot_widget.cxx lib/grm/grplot/util.cxx
   )
   if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
-    target_link_libraries(grm-plots PRIVATE Qt6::Widgets Qt6::Core grm_static)
-    set(grm-plots_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
+    target_link_libraries(grplot PRIVATE Qt6::Widgets Qt6::Core grm_static)
+    set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
   else()
-    target_link_libraries(grm-plots PRIVATE Qt5::Widgets Qt5::Core grm_static)
-    set(grm-plots_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
+    target_link_libraries(grplot PRIVATE Qt5::Widgets Qt5::Core grm_static)
+    set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
   endif()
   set_target_properties(
-    grm-plots PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
-                                                                                     "${grm-plots_INSTALL_RPATH}"
+    grplot PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
+                                                                                  "${grplot_INSTALL_RPATH}"
   )
+  if(WIN32)
+    if(MINGW)
+      target_link_options(grplot PRIVATE -mconsole)
+    else()
+      target_link_options(grplot PRIVATE /SUBSYSTEM:CONSOLE)
+    endif()
+  endif()
   if(GR_MANUAL_MOC_AND_RCC)
-    set_target_properties(grm-plots PROPERTIES AUTOMOC OFF AUTORCC OFF)
+    set_target_properties(grplot PROPERTIES AUTOMOC OFF AUTORCC OFF)
     if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
       set(MOC_INCLUDE_FLAGS ${QT6_MOC_INCLUDE_FLAGS})
     else()
       set(MOC_INCLUDE_FLAGS ${QT5_MOC_INCLUDE_FLAGS})
     endif()
     add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grmplots_widget.cxx
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
       COMMAND
         ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grm-plots/grmplots_widget.hxx -o
-        ${CMAKE_CURRENT_BINARY_DIR}/moc_grmplots_widget.cxx
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grm-plots/grmplots_widget.hxx
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
     )
     add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grmplots_mainwindow.cxx
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
       COMMAND
         ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grm-plots/grmplots_mainwindow.hxx -o
-        ${CMAKE_CURRENT_BINARY_DIR}/moc_grmplots_mainwindow.cxx
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grm-plots/grmplots_mainwindow.hxx
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
     )
     target_sources(
-      grm-plots PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grmplots_mainwindow.cxx
-                        ${CMAKE_CURRENT_BINARY_DIR}/moc_grmplots_widget.cxx
+      grplot PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
+                     ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
     )
   else()
-    set_target_properties(grm-plots PROPERTIES AUTOMOC ON AUTORCC ON)
+    set_target_properties(grplot PROPERTIES AUTOMOC ON AUTORCC ON)
     target_sources(
-      grm-plots PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grm-plots/grmplots_mainwindow.hxx
-                        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grm-plots/grmplots_widget.hxx
+      grplot PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
+                     ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
     )
   endif()
   if(APPLE)
-    set_target_properties(grm-plots PROPERTIES MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.grm-plots")
+    set_target_properties(grplot PROPERTIES MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.grplot")
   endif()
   if(WIN32)
-    target_compile_definitions(grm-plots PRIVATE GR_STATIC_LIB)
+    target_compile_definitions(grplot PRIVATE GR_STATIC_LIB)
   endif()
   if(MINGW)
-    target_compile_options(grm-plots PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
+    target_compile_options(grplot PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
   endif()
-  string(APPEND GR_REPORT "- grm-plots: Yes\n")
+  string(APPEND GR_REPORT "- grplot: Yes\n")
 else()
-  string(APPEND GR_REPORT "- grm-plots: No (Qt6 or Qt5 not found)\n")
+  string(APPEND GR_REPORT "- grplot: No (Qt6 and Qt5 not found)\n")
 endif()
 
 if(GR_BUILD_DEMOS)
@@ -1309,17 +1316,17 @@ if(GR_INSTALL)
       BUNDLE DESTINATION Applications
     )
   endif()
-  if(TARGET grm-plots)
+  if(TARGET grplot)
     install(
-      TARGETS grm-plots
+      TARGETS grplot
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
       BUNDLE DESTINATION Applications
     )
     if(APPLE)
       install(
-        PROGRAMS lib/grm/grm-plots/grm-plots.macos.sh
+        PROGRAMS lib/grm/grplot/grplot.macos.sh
         DESTINATION ${CMAKE_INSTALL_BINDIR}
-        RENAME grm-plots
+        RENAME grplot
       )
     endif()
   endif()

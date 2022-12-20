@@ -57,15 +57,15 @@ endif
      GR3LIBS = -L ../gr3/ -lGR3
         LIBS = $(GRLIBS) $(GR3LIBS) -lm
 
-grmplots_support =
+grplot_support =
 ifneq ($(QT5_QMAKE),)
 ifneq ($(QT5_QMAKE),false)
-    grmplots_support = yes
+    grplot_support = yes
 endif
 endif
 ifneq ($(QT6_QMAKE),)
 ifneq ($(QT6_QMAKE),false)
-    grmplots_support = yes
+    grplot_support = yes
 endif
 endif
 
@@ -81,8 +81,8 @@ default:
 
 all: targets
 
-ifdef grmplots_support
-targets: prerequisites libGRM.a libGRM${GR_SHARED_LIBRARY_SUFFIX} grm-plots
+ifdef grplot_support
+targets: prerequisites libGRM.a libGRM${GR_SHARED_LIBRARY_SUFFIX} grplot
 else
 targets: prerequisites libGRM.a libGRM${GR_SHARED_LIBRARY_SUFFIX}
 endif
@@ -103,8 +103,8 @@ libGRM.a: $(GRMOBJS)
 libGRM${GR_SHARED_LIBRARY_SUFFIX}: $(GRMOBJS) libGR libGR3
 	$(CXX) -o $@ $(SOFLAGS) $(GRMOBJS) $(LIBS) $(LDFLAGS) $(INSTALL_NAME)
 
-grm-plots:
-	$(MAKE) -C grm-plots -f makefile.mak GRDIR=$(GRDIR)
+grplot:
+	$(MAKE) -C grplot -f makefile.mak GRDIR=$(GRDIR)
 
 install:
 	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
@@ -114,18 +114,18 @@ install:
 	cp -p include/grm.h $(INCDIR)
 	cp -rp include/grm $(INCDIR)/
 ifeq ($(UNAME), Darwin)
-	@if [ -d grm-plots/grm-plots.app ]; then \
-		$(MAKE) -C grm-plots -f makefile.mak install; \
+	@if [ -d grplot/grplot.app ]; then \
+		$(MAKE) -C grplot -f makefile.mak install; \
 	fi
 else
-	@if [ -f grm-plots/grm-plots ]; then \
-		$(MAKE) -C grm-plots -f makefile.mak install; \
+	@if [ -f grplot/grplot ]; then \
+		$(MAKE) -C grplot -f makefile.mak install; \
 	fi
 endif
 
 clean:
-	$(MAKE) -C grm-plots -f makefile.mak clean
-	rm -f grm-plots/.qmake.stash
+	$(MAKE) -C grplot -f makefile.mak clean
+	rm -f grplot/.qmake.stash
 	rm -f *.so \
 	      *.a \
 	      src/grm/*.o \
@@ -133,6 +133,6 @@ clean:
 	      *${GR_SHARED_LIBRARY_SUFFIX}
 
 
-.PHONY: all targets install clean prerequisites libGR libGR3 grm-plots
+.PHONY: all targets install clean prerequisites libGR libGR3 grplot
 .SUFFIXES:  # Delete the default suffixes
 .SUFFIXES: .c .cxx .o  # List all suffixes for suffix rules explicitly

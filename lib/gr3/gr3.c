@@ -290,8 +290,8 @@ GR3API int gr3_init(int *attrib_list)
               "varying vec3 Color;\n",
 
               "void main(void) {\n",
-              "WorldSpacePosition = ModelMatrix*(Scales*vec4(in_Vertex,1));\n",
-              "Position = ViewMatrix*WorldSpacePosition;\n",
+              "WorldSpacePosition = ModelMatrix*(vec4(in_Vertex,1));\n",
+              "Position = ViewMatrix*ModelMatrix*(Scales*vec4(in_Vertex,1));\n",
               "gl_Position=ProjectionMatrix*Position;\n",
               "Normal = normalize(mat3(ViewMatrix)*mat3(ModelMatrix)*(in_Normal/vec3(Scales)));\n",
               "Color = in_Color;\n",

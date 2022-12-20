@@ -74,12 +74,22 @@ typedef struct _grm_args_value_iterator_t
 
 EXPORT grm_args_t *grm_args_new(void);
 EXPORT void grm_args_delete(grm_args_t *args);
+
 EXPORT int grm_args_push(grm_args_t *args, const char *key, const char *value_format, ...);
 EXPORT int grm_args_push_buf(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
                              int apply_padding);
+
 EXPORT int grm_args_contains(const grm_args_t *args, const char *keyword);
+
+EXPORT int grm_args_first_value(const grm_args_t *args, const char *keyword, const char *first_value_format,
+                                void *first_value, unsigned int *array_length);
+#define grm_args_first_value(args, keyword, first_value_format, first_value, array_length) \
+  grm_args_first_value(args, keyword, first_value_format, (void *)first_value, array_length)
+EXPORT int grm_args_values(const grm_args_t *args, const char *keyword, const char *expected_format, ...);
+
 EXPORT void grm_args_clear(grm_args_t *args);
 EXPORT void grm_args_remove(grm_args_t *args, const char *key);
+
 
 /* ------------------------- utilities ------------------------------------------------------------------------------ */
 
