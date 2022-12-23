@@ -1,3 +1,15 @@
+#if defined __unix__ || defined __APPLE__
+#include <cerrno>
+#include <cstdlib>
+#include <cstring>
+#endif
+#include <array>
+#include <exception>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <vector>
+
 #if defined __APPLE__
 #include <libgen.h>
 #include <mach-o/dyld.h>
@@ -15,17 +27,6 @@
 #else
 #error "Unsupported system"
 #endif
-#if defined __unix__ || defined __APPLE__
-#include <cerrno>
-#include <cstdlib>
-#include <cstring>
-#endif
-#include <array>
-#include <exception>
-#include <iostream>
-#include <memory>
-#include <sstream>
-#include <vector>
 
 #include "util.hxx"
 
@@ -97,10 +98,10 @@ GetLastErrorError::GetLastErrorError()
 {
   unsigned int errorCode = GetLastError();
   std::stringstream whatStream;
-  char *errorMessage = nullptr;
+  LPTSTR errorMessage = nullptr;
 
   if (!FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                     nullptr, errorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&errorMessage, 0, nullptr))
+                     nullptr, errorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&errorMessage, 0, nullptr))
     {
       throwOrTerminate_(FormatMessageError());
     }
