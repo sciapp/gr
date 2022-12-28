@@ -241,6 +241,15 @@ static int open_socket(int wstype)
   int max_retry_count = 20;
   int s;
 
+  /* In order to not sleep an excessive amount start with a short sleep time and then ramp
+     it up to `max_sleep_time` */
+  int sleep_ms;
+  int ms_to_ns = 1000000;
+  int initial_sleep_time_ms[] = {5, 10, 25, 50, 100};
+  int max_sleep_time_ms = 300;
+  size_t n_initial_times = sizeof(initial_sleep_time_ms) / sizeof(initial_sleep_time_ms[0]);
+  max_retry_count += n_initial_times;
+
   if (wstype >= 411 && wstype <= 413)
     {
 #ifdef _WIN32
@@ -286,14 +295,15 @@ static int open_socket(int wstype)
                   if (start((void *)command) != 0) gks_perror("could not auto-start GKS Qt application");
                 }
             }
+          sleep_ms = retry_count <= n_initial_times ? initial_sleep_time_ms[retry_count - 1] : max_sleep_time_ms;
 #ifndef _WIN32
           {
-            struct timespec delay = {0, 300000000};
+            struct timespec delay = {0, sleep_ms * ms_to_ns};
             while (nanosleep(&delay, &delay) == -1)
               ;
           }
 #else
-          Sleep(300);
+          Sleep(sleep_ms);
 #endif
         }
       else
