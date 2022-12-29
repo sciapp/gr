@@ -1334,8 +1334,12 @@ deploy-to-aur:
             fi;
           );
           makepkg --printsrcinfo > .SRCINFO;
-          git commit -a -m "Update to version ${CI_COMMIT_TAG#v}";
-          git push;
+          if ! git diff --quiet; then
+            git commit -a -m "Update to version ${CI_COMMIT_TAG#v}";
+            git push;
+          else
+            echo "No changes to commit.";
+          fi;
           cd ..;
         done;
       fi;
@@ -1346,8 +1350,12 @@ deploy-to-aur:
         cd "${repo}";
         sed -i -e "/^pkgver=/c\pkgver=\"${PKGVERS}\"" -e "/^pkgrel=/c\pkgrel=\"1\"" PKGBUILD;
         makepkg --printsrcinfo > .SRCINFO;
-        git commit -a -m "Update to version ${PKGVERS}";
-        git push;
+        if ! git diff --quiet; then
+          git commit -a -m "Update to version ${PKGVERS}";
+          git push;
+        else
+          echo "No changes to commit.";
+        fi;
         cd ..;
       done;
     fi
