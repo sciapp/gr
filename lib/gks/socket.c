@@ -21,6 +21,9 @@
 #include <sys/errno.h>
 #else
 #define __STRSAFE__NO_INLINE
+#define _WIN32_WINNT 0x0602
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
 #include <strsafe.h>
 #endif
@@ -42,7 +45,7 @@
 #define MAXPATHLEN 1024
 #endif
 
-#define PORT 8410
+#define PORT "8410"
 
 typedef struct
 {
@@ -173,10 +176,9 @@ static int start(void *cmd)
 
 static int connect_socket(int quiet)
 {
-  int s;
-  char *env;
-  struct hostent *hp;
-  struct sockaddr_in sin;
+  int rc, s;
+  char *server;
+  struct addrinfo hints, *res = NULL;
   int opt;
 
 #if defined(_WIN32)
@@ -190,12 +192,34 @@ static int connect_socket(int quiet)
     }
 #endif
 
-  s = socket(PF_INET,      /* get a socket descriptor */
-             SOCK_STREAM,  /* stream socket           */
-             IPPROTO_TCP); /* use TCP protocol        */
-  if (s == -1)
+  server = (char *)gks_getenv("GKS_CONID");
+  if (!server) server = (char *)gks_getenv("GKSconid");
+  if (server)
+    if (!*server) server = NULL;
+  if (!server) server = "localhost";
+
+  memset(&hints, 0x00, sizeof(hints));
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+
+  if ((rc = getaddrinfo(server, PORT, &hints, &res)) != 0)
+    {
+      hints.ai_family = AF_INET6;
+      if ((rc = getaddrinfo(server, PORT, &hints, &res)) != 0)
+        {
+          if (!quiet)
+            {
+              fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rc));
+            }
+          return -1;
+        }
+    }
+
+  s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+  if (s < 0)
     {
       if (!quiet) perror("socket");
+      freeaddrinfo(res);
       return -1;
     }
 
@@ -204,27 +228,14 @@ static int connect_socket(int quiet)
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt));
 #endif
 
-  env = (char *)gks_getenv("GKS_CONID");
-  if (env)
-    if (!*env) env = NULL;
-  if (!env) env = (char *)gks_getenv("GKSconid");
-
-  if ((hp = gethostbyname(env != NULL ? env : "127.0.0.1")) == 0)
-    {
-      if (!quiet) perror("gethostbyname");
-      return -1;
-    }
-
-  memset(&sin, 0, sizeof(sin));
-  sin.sin_family = AF_INET;
-  sin.sin_addr.s_addr = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
-  sin.sin_port = htons(PORT);
-
-  if (connect(s, (struct sockaddr *)&sin, sizeof(sin)) == -1)
+  if (connect(s, res->ai_addr, res->ai_addrlen) < 0)
     {
       if (!quiet) perror("connect");
+      freeaddrinfo(res);
       return -1;
     }
+
+  freeaddrinfo(res);
 
   return s;
 }
@@ -237,8 +248,7 @@ static int open_socket(int wstype)
   const char *command = NULL, *env;
   char *cmd = NULL;
 #endif
-  int retry_count;
-  int max_retry_count = 20;
+  size_t retry_count, max_retry_count = 20;
   int s;
 
   /* In order to not sleep an excessive amount start with a short sleep time and then ramp
@@ -298,7 +308,9 @@ static int open_socket(int wstype)
           sleep_ms = retry_count <= n_initial_times ? initial_sleep_time_ms[retry_count - 1] : max_sleep_time_ms;
 #ifndef _WIN32
           {
-            struct timespec delay = {0, sleep_ms * ms_to_ns};
+            struct timespec delay;
+            delay.tv_sec = 0;
+            delay.tv_nsec = sleep_ms * ms_to_ns;
             while (nanosleep(&delay, &delay) == -1)
               ;
           }
