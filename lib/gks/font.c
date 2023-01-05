@@ -173,5 +173,5 @@ void gks_lookup_font(int fd, int version, int font, int chr, stroke_data_t *s)
 
 void gks_close_font(int fd)
 {
-  if (fd != -1) gks_close_file(fd);
+  if (fd > 0) gks_close_file(fd);
 }
