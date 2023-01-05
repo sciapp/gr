@@ -35,6 +35,7 @@
 static gks_state_list_t *s = NULL, *seg_state = NULL;
 
 static int state = GKS_K_GKCL, api = 1;
+static int fontfile = 0;
 
 static int i_arr[13];
 static double f_arr_1[6], f_arr_2[6];
@@ -576,7 +577,7 @@ void gks_open_gks(int errfil)
       gks_parse_env();
 
       /* postpone opening of the font database */
-      s->fontfile = 0;
+      fontfile = 0;
 
       /* miscellaneous flags */
       s->wiss = 0;
@@ -608,13 +609,13 @@ void gks_close_gks(void)
       /* call the device driver link routine */
       gks_ddlk(CLOSE_GKS, 0, 0, 0, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
 
-      if (s->fontfile > 0)
+      if (fontfile > 0)
         {
           /* close font database */
-          if (s->debug) fprintf(stdout, "[DEBUG:GKS] close font database (fd=%d)\n", s->fontfile);
+          if (s->debug) fprintf(stdout, "[DEBUG:GKS] close font database (fd=%d)\n", fontfile);
 
-          gks_close_font(s->fontfile);
-          s->fontfile = 0;
+          gks_close_font(fontfile);
+          fontfile = 0;
         }
 
       gks_list_free(av_ws_types);
@@ -1243,6 +1244,8 @@ void gks_text(double px, double py, char *str)
               f_arr_1[0] = px;
               f_arr_2[0] = py;
 
+              s->fontfile = fontfile;
+
               /* call the device driver link routine */
               gks_ddlk(TEXT, 0, 0, 0, i_arr, 1, f_arr_1, 1, f_arr_2, 1, utf8_str, NULL);
               gks_free(utf8_str);
@@ -1582,14 +1585,14 @@ void gks_set_text_fontprec(int font, int prec)
         {
           if (font != s->txfont || prec != s->txprec)
             {
-              if ((prec == GKS_K_TEXT_PRECISION_STROKE || prec == GKS_K_TEXT_PRECISION_CHAR) && s->fontfile == 0)
+              if ((prec == GKS_K_TEXT_PRECISION_STROKE || prec == GKS_K_TEXT_PRECISION_CHAR) && fontfile == 0)
                 {
                   /* open font database */
                   if (s->debug) fprintf(stdout, "[DEBUG:GKS] open font database ");
 
-                  s->fontfile = gks_open_font();
+                  fontfile = gks_open_font();
 
-                  if (s->debug) fprintf(stdout, "=> fd=%d\n", s->fontfile);
+                  if (s->debug) fprintf(stdout, "=> fd=%d\n", fontfile);
                 }
 
               s->txfont = i_arr[0] = font;
@@ -3020,6 +3023,8 @@ void gks_inq_text_extent(int wkid, double px, double py, char *str, int *errind,
                */
               char *utf8_str = gks_malloc(strlen(str) * 2 + 1);
               gks_input2utf8(str, utf8_str, s->input_encoding);
+
+              s->fontfile = fontfile;
 
               gks_util_inq_text_extent(px, py, utf8_str, strlen(utf8_str), cpx, cpy, tx, ty);
 
