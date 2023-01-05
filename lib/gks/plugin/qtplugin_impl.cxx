@@ -1345,7 +1345,7 @@ static void memory_plugin_dl_render(int fctid, int dx, int dy, int dimx, int *ia
         }
       return;
     case 3:
-      if (fontfile != 0)
+      if (fontfile > 0)
         {
           gks_close_font(fontfile);
           fontfile = 0;
@@ -1780,6 +1780,11 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       break;
 
     case 3:
+      if (fontfile > 0)
+        {
+          gks_close_font(fontfile);
+          fontfile = 0;
+        }
       release_data();
 
       p = NULL;
