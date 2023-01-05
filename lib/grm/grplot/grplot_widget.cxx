@@ -36,6 +36,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
     : QWidget(parent), args_(nullptr), rubberBand(nullptr), pixmap(nullptr), tooltip(nullptr)
 {
   const char *kind;
+  unsigned int z_length;
+  double *z = NULL;
   args_ = grm_args_new();
 
 #ifdef _WIN32
@@ -62,7 +64,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   algo = new QMenu("&Algorithm");
   grm_args_values(args_, "kind", "s", &kind);
   if (strcmp(kind, "contour") == 0 || strcmp(kind, "heatmap") == 0 || strcmp(kind, "imshow") == 0 ||
-      strcmp(kind, "marginalheatmap") == 0 || strcmp(kind, "surface") == 0 || strcmp(kind, "wireframe") == 0)
+      strcmp(kind, "marginalheatmap") == 0 || strcmp(kind, "surface") == 0 || strcmp(kind, "wireframe") == 0 ||
+      strcmp(kind, "contourf") == 0)
     {
       auto submenu = type->addMenu("&Marginalheatmap");
 
@@ -84,6 +87,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       connect(sumAct, &QAction::triggered, this, &GRPlotWidget::sumalgorithm);
       maxAct = new QAction(tr("&Maximum"), this);
       connect(maxAct, &QAction::triggered, this, &GRPlotWidget::maxalgorithm);
+      contourfAct = new QAction(tr("&Contourf"), this);
+      connect(contourfAct, &QAction::triggered, this, &GRPlotWidget::contourf);
 
       submenu->addAction(marginalheatmapAllAct);
       submenu->addAction(marginalheatmapLineAct);
@@ -92,14 +97,19 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       type->addAction(wireframeAct);
       type->addAction(contourAct);
       type->addAction(imshowAct);
+      type->addAction(contourfAct);
       algo->addAction(sumAct);
       algo->addAction(maxAct);
     }
-  else if (strcmp(kind, "line") == 0)
+  else if (strcmp(kind, "line") == 0 ||
+           (strcmp(kind, "scatter") == 0 && !grm_args_values(args_, "z", "D", &z, &z_length)))
     {
       lineAct = new QAction(tr("&Line"), this);
       connect(lineAct, &QAction::triggered, this, &GRPlotWidget::line);
+      scatterAct = new QAction(tr("&Scatter"), this);
+      connect(scatterAct, &QAction::triggered, this, &GRPlotWidget::scatter);
       type->addAction(lineAct);
+      type->addAction(scatterAct);
     }
   else if (strcmp(kind, "volume") == 0 || strcmp(kind, "isosurface") == 0)
     {
@@ -110,11 +120,24 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       type->addAction(volumeAct);
       type->addAction(isosurfaceAct);
     }
-  else if (strcmp(kind, "plot3") == 0)
+  else if (strcmp(kind, "plot3") == 0 || strcmp(kind, "trisurf") == 0 || strcmp(kind, "tricont") == 0 ||
+           strcmp(kind, "scatter3") == 0 || strcmp(kind, "scatter") == 0)
     {
       plot3Act = new QAction(tr("&Plot3"), this);
       connect(plot3Act, &QAction::triggered, this, &GRPlotWidget::plot3);
+      trisurfAct = new QAction(tr("&Trisurf"), this);
+      connect(trisurfAct, &QAction::triggered, this, &GRPlotWidget::trisurf);
+      tricontAct = new QAction(tr("&Tricont"), this);
+      connect(tricontAct, &QAction::triggered, this, &GRPlotWidget::tricont);
+      scatter3Act = new QAction(tr("&Scatter3"), this);
+      connect(scatter3Act, &QAction::triggered, this, &GRPlotWidget::scatter3);
+      scatterAct = new QAction(tr("&Scatter"), this);
+      connect(scatterAct, &QAction::triggered, this, &GRPlotWidget::scatter);
       type->addAction(plot3Act);
+      type->addAction(trisurfAct);
+      type->addAction(tricontAct);
+      type->addAction(scatter3Act);
+      type->addAction(scatterAct);
     }
   menu->addMenu(type);
   menu->addMenu(algo);
@@ -466,6 +489,41 @@ void GRPlotWidget::imshow()
 void GRPlotWidget::plot3()
 {
   grm_args_push(args_, "kind", "s", "plot3");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::contourf()
+{
+  grm_args_push(args_, "kind", "s", "contourf");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::trisurf()
+{
+  grm_args_push(args_, "kind", "s", "trisurf");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::tricont()
+{
+  grm_args_push(args_, "kind", "s", "tricont");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::scatter3()
+{
+  grm_args_push(args_, "kind", "s", "scatter3");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::scatter()
+{
+  grm_args_push(args_, "kind", "s", "scatter");
   grm_merge(args_);
   redraw();
 }

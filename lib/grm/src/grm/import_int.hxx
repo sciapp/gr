@@ -43,4 +43,8 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
 int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, int argc, char **argv);
 grm_file_args_t *grm_file_args_new();
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+void adjust_ranges(double *, double *, double, double);
+
 #endif // GRM_IMPORT_INT_HXX_INCLUDED

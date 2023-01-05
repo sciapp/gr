@@ -333,7 +333,8 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
     {
       grm_args_values(subplot_args, "kind", "s", &kind);
     }
-  if (subplot_args == NULL || !str_equals_any(kind, 6, "line", "scatter", "stem", "step", "heatmap", "marginalheatmap"))
+  if (subplot_args == NULL || !str_equals_any(kind, 9, "line", "scatter", "stem", "step", "heatmap", "marginalheatmap",
+                                              "contour", "imshow", "contourf"))
     {
       info->x_px = -1;
       info->y_px = -1;
@@ -377,7 +378,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
     {
       grm_args_first_value(*current_series, "x", "D", &x_series, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y_series, &y_length);
-      if (str_equals_any(kind, 2, "heatmap", "marginalheatmap"))
+      if (str_equals_any(kind, 5, "heatmap", "marginalheatmap", "contour", "imshow", "contourf"))
         {
           grm_args_first_value(*current_series, "z", "D", &z_series, &z_length);
         }
@@ -385,7 +386,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
         {
           if ((x_series[i] < x_range_min || x_series[i] > x_range_max || y_series[i] < y_range_min ||
                y_series[i] > y_range_max) &&
-              !str_equals_any(kind, 2, "heatmap", "marginalheatmap"))
+              !str_equals_any(kind, 5, "heatmap", "marginalheatmap", "contour", "imshow", "contourf"))
             {
               continue;
             }
@@ -411,13 +412,15 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                   info->label = "";
                 }
             }
-          else if (str_equals_any(kind, 2, "heatmap", "marginalheatmap"))
+          else if (str_equals_any(kind, 5, "heatmap", "marginalheatmap", "contour", "imshow", "contourf"))
             {
               static char output[50];
               double num;
               double x_0 = x_series[0], x_end = x_series[x_length - 1], y_0 = y_series[0],
                      y_end = y_series[y_length - 1];
               double x_step, y_step, x_series_idx, y_series_idx;
+
+              if (strcmp(kind, "imshow") == 0) x_0 = x_min, x_end = x_max, y_0 = y_min, y_end = y_max;
 
               gr_wctondc(&x_0, &y_0);
               gr_wctondc(&x_end, &y_end);
@@ -442,7 +445,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
               info->x_px = mouse_x;
               info->y_px = mouse_y;
 
-              num = z_series[((y_length - 1) - (int)y_series_idx) * x_length + (int)x_series_idx];
+              num = z_series[(int)y_series_idx * x_length + (int)x_series_idx];
               snprintf(output, 50, "%f", num);
               info->label = output;
             }

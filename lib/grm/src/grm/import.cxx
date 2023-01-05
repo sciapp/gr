@@ -15,20 +15,32 @@
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ key to types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::map<std::string, const char *> key_to_types{{"algorithm", "s"}, {"colormap", "i"},
-                                                        {"isovalue", "d"},  {"keep_aspect_ratio", "i"},
-                                                        {"kind", "s"},      {"marginalheatmap_kind", "s"}};
+static std::map<std::string, const char *> key_to_types{{"algorithm", "s"},
+                                                        {"colormap", "i"},
+                                                        {"isovalue", "d"},
+                                                        {"keep_aspect_ratio", "i"},
+                                                        {"kind", "s"},
+                                                        {"levels", "i"},
+                                                        {"marginalheatmap_kind", "s"},
+                                                        {"markertype", "i"},
+                                                        {"scatterz", "i"},
+                                                        {"xflip", "i"},
+                                                        {"yflip", "i"}};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::list<std::string> kind_types = {"contour",         "heatmap", "imshow",  "isosurface", "line",
-                                            "marginalheatmap", "plot3",   "surface", "volume",     "wireframe"};
+static std::list<std::string> kind_types = {"contour", "contourf",        "heatmap", "imshow",  "isosurface",
+                                            "line",    "marginalheatmap", "plot3",   "scatter", "scatter3",
+                                            "surface", "tricont",         "trisurf", "volume",  "wireframe"};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ alias for keys ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static std::map<std::string, std::string> key_alias = {
     {"hkind", "marginalheatmap_kind"}, {"aspect", "keep_aspect_ratio"}, {"cmap", "colormap"}};
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ scatter interpretation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static int scatter_with_z = 0;
 
 /* ========================= functions ============================================================================== */
 
@@ -293,6 +305,14 @@ grm_file_args_t *grm_file_args_new()
   return args;
 }
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ utils ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+void adjust_ranges(double *range_min, double *range_max, double default_value_min, double default_value_max)
+{
+  *range_min = (*range_min == INFINITY) ? default_value_min : *range_min;
+  *range_max = (*range_max == INFINITY) ? default_value_max : *range_max;
+}
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 int grm_plot_from_file(int argc, char **argv)
@@ -337,7 +357,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   const char *kind;
   grm_file_args_t *file_args;
   file_args = grm_file_args_new();
-  PlotRange ranges = {0.0, -1.0, 0.0, -1.0, 0.0, -1.0};
+  PlotRange ranges = {INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY};
 
   if (!convert_inputstream_into_args(args, file_args, argc, argv))
     {
@@ -378,9 +398,9 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     }
 
   grm_args_values(args, "kind", "s", &kind);
-  if (strcmp("line", kind) == 0 && (rows >= 100 && cols >= 100))
+  if (strcmp(kind, "line") == 0 || (strcmp(kind, "scatter") == 0 && !scatter_with_z) && (rows >= 100 && cols >= 100))
     {
-      fprintf(stderr, "Too much data for line plot - use heatmap instead\n");
+      fprintf(stderr, "Too much data for %s plot - use heatmap instead\n", kind);
       kind = "heatmap";
       grm_args_push(args, "kind", "s", kind);
     }
@@ -390,38 +410,38 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       kind = "volume";
       grm_args_push(args, "kind", "s", kind);
     }
-  if (strcmp(kind, "line") == 0 || cols != rows)
+  if (strcmp(kind, "line") == 0 || (strcmp(kind, "scatter") == 0 && !scatter_with_z) || cols != rows)
     {
       grm_args_push(args, "keep_aspect_ratio", "i", 0);
     }
 
-  if (str_equals_any(kind, 6, "contour", "heatmap", "imshow", "marginalheatmap", "surface", "wireframe"))
+  if (str_equals_any(kind, 7, "contour", "contourf", "heatmap", "imshow", "marginalheatmap", "surface", "wireframe"))
     {
-      std::vector<double> xi(rows), yi(cols), zi(rows * cols);
+      std::vector<double> xi(cols), yi(rows), zi(rows * cols);
 
       if (cols <= 1)
         {
-          fprintf(stderr, "Unsufficient data for %s plot\n", kind);
+          fprintf(stderr, "Unsufficient data for plot type (%s)\n", kind);
           return 0;
         }
-      ranges.xmax = (ranges.xmax == -1.0) ? ((double)rows - 1.0 + ranges.xmin) : ranges.xmax;
-      ranges.ymax = (ranges.ymax == -1.0) ? ((double)cols - 1.0 + ranges.ymin) : ranges.ymax;
+      adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)cols - 1.0);
+      adjust_ranges(&ranges.ymin, &ranges.ymax, 0.0, (double)rows - 1.0);
       ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
 
-      for (row = 0; row < rows; ++row)
+      for (col = 0; col < cols; ++col)
         {
-          xi[row] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)row / ((double)rows - 1));
-          for (col = 0; col < cols; ++col)
+          xi[col] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)col / ((double)cols - 1));
+          for (row = 0; row < rows; ++row)
             {
-              if (row == 0)
+              if (col == 0)
                 {
-                  yi[col] = ranges.ymin + (ranges.ymax - ranges.ymin) * ((double)col / ((double)cols - 1));
+                  yi[row] = ranges.ymin + (ranges.ymax - ranges.ymin) * ((double)row / ((double)rows - 1));
                 }
-              zi[((cols - 1) - col) * rows + row] = filedata[depth][col][row];
+              zi[row * cols + col] = filedata[depth][col][row];
             }
         }
 
-      if (ranges.zmax != -1)
+      if (ranges.zmax != INFINITY)
         {
           int elem;
           double min_val = *std::min_element(zi.begin(), zi.end());
@@ -437,11 +457,11 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       grm_args_push(args, "c", "nD", rows * cols, zi.data());
       grm_args_push(args, "c_dims", "ii", rows, cols);
 
-      grm_args_push(args, "x", "nD", rows, xi.data());
-      grm_args_push(args, "y", "nD", cols, yi.data());
+      grm_args_push(args, "x", "nD", cols, xi.data());
+      grm_args_push(args, "y", "nD", rows, yi.data());
       grm_args_push(args, "z", "nD", rows * cols, zi.data());
     }
-  else if (strcmp(kind, "line") == 0)
+  else if (strcmp(kind, "line") == 0 || (strcmp(kind, "scatter") == 0 && !scatter_with_z))
     {
       std::vector<double> x(rows);
       for (row = 0; row < rows; row++)
@@ -464,7 +484,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           grm_args_push(args, "labels", "nS", cols, labels_c.data());
         }
     }
-  else if (strcmp(kind, "volume") == 0 || strcmp(kind, "isosurface") == 0)
+  else if (str_equals_any(kind, 2, "isosurface", "volume"))
     {
       int i, j, k;
       std::vector<double> data(rows * cols * depth);
@@ -484,21 +504,59 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       grm_args_push(args, "c", "nD", n, data.data());
       grm_args_push(args, "c_dims", "nI", 3, dims.data());
     }
-  else if (strcmp(kind, "plot3") == 0)
+  else if (str_equals_any(kind, 4, "plot3", "scatter3", "tricont", "trisurf") ||
+           (strcmp(kind, "scatter") == 0 && scatter_with_z))
     {
+      double min_x, max_x, min_y, max_y, min_z, max_z;
       std::vector<double> x(rows);
       std::vector<double> y(rows);
       std::vector<double> z(rows);
       if (cols < 3)
         {
-          fprintf(stderr, "Unsufficient data for 3d lineplot\n");
+          fprintf(stderr, "Unsufficient data for plot type (%s)\n", kind);
           return 0;
+        }
+      if (cols > 3) fprintf(stderr, "Only the first 3 columns get displayed");
+
+      // apply the ranges to the data
+      if (ranges.xmax != INFINITY)
+        {
+          min_x = *std::min_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
+          max_x = *std::max_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
+          adjust_ranges(&ranges.xmin, &ranges.xmax, min_x, max_x);
+        }
+      if (ranges.ymax != INFINITY)
+        {
+          min_y = *std::min_element(&filedata[depth][1][0], &filedata[depth][1][rows]);
+          max_y = *std::max_element(&filedata[depth][1][0], &filedata[depth][1][rows]);
+          adjust_ranges(&ranges.ymin, &ranges.ymax, min_y, max_y);
+          ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
+        }
+      if (ranges.zmax != INFINITY)
+        {
+          min_z = *std::min_element(&filedata[depth][2][0], &filedata[depth][2][rows]);
+          max_z = *std::max_element(&filedata[depth][2][0], &filedata[depth][2][rows]);
+          adjust_ranges(&ranges.zmin, &ranges.zmax, min_z, max_z);
+          ranges.zmax = (ranges.zmax <= ranges.zmin) ? ranges.zmax + ranges.zmin : ranges.zmax;
+        }
+      for (row = 0; row < rows; ++row)
+        {
+          if (ranges.xmax != INFINITY)
+            filedata[depth][0][row] = ranges.xmin + (ranges.xmax - ranges.xmin) *
+                                                        (((double)filedata[depth][0][row]) - min_x) / (max_x - min_x);
+          if (ranges.ymax != INFINITY)
+            filedata[depth][1][row] = ranges.ymin + (ranges.ymax - ranges.ymin) *
+                                                        (((double)filedata[depth][1][row]) - min_y) / (max_y - min_y);
+          if (ranges.zmax != INFINITY)
+            filedata[depth][2][row] = ranges.zmin + (ranges.zmax - ranges.zmin) *
+                                                        (((double)filedata[depth][2][row]) - min_z) / (max_z - min_z);
         }
 
       grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
       grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
       grm_args_push(args, "z", "nD", rows, filedata[depth][2].data());
     }
+  grm_args_push(args, "grplot", "i", 1);
   grm_merge(args);
 
   if (handle != nullptr)
@@ -530,7 +588,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
         {
           file_args->file_path = token.substr(5, token.length() - 1);
         }
-      else if (i == 1 && token.find(delim) == std::string::npos)
+      else if (i == 1 && (token.find(delim) == std::string::npos || (token.find(delim) == 1 && token.find('/') == 2)))
         {
           optional_file = token; // its only getting used, when no "file:"-keyword was found
         }
@@ -571,7 +629,15 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                         {
                           if (strcmp(search->second, "i") == 0)
                             {
-                              grm_args_push(args, search->first.c_str(), search->second, std::stoi(value));
+                              // special case for scatter plot, to decide how the read data gets interpreted
+                              if (strcmp(search->first.c_str(), "scatterz") == 0)
+                                {
+                                  scatter_with_z = std::stoi(value);
+                                }
+                              else
+                                {
+                                  grm_args_push(args, search->first.c_str(), search->second, std::stoi(value));
+                                }
                             }
                           else if (strcmp(search->second, "d") == 0)
                             {

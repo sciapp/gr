@@ -242,6 +242,7 @@ const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "colormap",
                                     "font",
                                     "font_precision",
+                                    "grplot",
                                     "marginalheatmap_kind",
                                     "ind_bar_color",
                                     "ind_edge_color",
@@ -335,6 +336,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"font", "i"},
                                               {"font_precision", "i"},
                                               {"foreground_color", "D"},
+                                              {"grplot", "i"},
                                               {"hold_plots", "i"},
                                               {"ind_bar_color", "A"},
                                               {"ind_edge_color", "A"},
@@ -1245,7 +1247,36 @@ void plot_process_viewport(grm_args_t *subplot_args)
     {
       top_margin = grm_args_values(subplot_args, "title", "s", &title) ? 0.075 : 0;
     }
+  if (strcmp(kind, "imshow") == 0)
+    {
+      unsigned int rows, cols, i;
+      unsigned int *shape;
+      double w, h, x_min, x_max, y_min, y_max, *x, *y;
+      grm_args_t **current_series;
 
+      grm_args_values(subplot_args, "series", "A", &current_series);
+      if (current_series != NULL)
+        {
+          if (grm_args_first_value(*current_series, "c_dims", "I", &shape, &i))
+            {
+              rows = shape[0];
+              cols = shape[1];
+
+              h = (double)rows / (double)cols * (vp[1] - vp[0]);
+              w = (double)cols / (double)rows * (vp[3] - vp[2]);
+
+              x_min = grm_max(0.5 * (vp[0] + vp[1] - w), vp[0]);
+              x_max = grm_min(0.5 * (vp[0] + vp[1] + w), vp[1]);
+              y_min = grm_max(0.5 * (vp[3] + vp[2] - h), vp[2]);
+              y_max = grm_min(0.5 * (vp[3] + vp[2] + h), vp[3]);
+
+              left_margin = (x_min == vp[0]) ? -0.075 : (x_min - vp[0]) / (vp[1] - vp[0]) - 0.075;
+              right_margin = (x_max == vp[1]) ? -0.05 : 0.95 - (x_max - vp[0]) / (vp[1] - vp[0]);
+              bottom_margin = (y_min == vp[2]) ? -0.075 : (y_min - vp[2]) / (vp[3] - vp[2]) - 0.075;
+              top_margin = (y_max == vp[3]) ? -0.025 : 0.975 - (y_max - vp[2]) / (vp[3] - vp[2]);
+            }
+        }
+    }
   viewport[0] = vp0 + (0.075 + left_margin) * (vp1 - vp0);
   viewport[1] = vp0 + (0.95 - right_margin) * (vp1 - vp0);
   viewport[2] = vp2 + (0.075 + bottom_margin) * (vp3 - vp2);
@@ -3543,12 +3574,14 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   grm_args_t **current_series;
   int icmap[256], *rgba = NULL, *data = NULL, zlog = 0;
   unsigned int i, cols, rows, z_length;
-  double *x = NULL, *y = NULL, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv;
+  double *x = NULL, *y = NULL, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv, tmp;
   err_t error = ERROR_NONE;
+  int grplot;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "zlog", "i", &zlog);
+  grplot = grm_args_values(subplot_args, "grplot", "i", &grplot);
   while (*current_series != NULL)
     {
       int is_uniform_heatmap;
@@ -3669,6 +3702,12 @@ err_t plot_heatmap(grm_args_t *subplot_args)
                 {
                   rgba[i] = (255 << 24) + icmap[data[i]];
                 }
+            }
+          if (grplot)
+            {
+              tmp = y_max;
+              y_max = y_min;
+              y_min = tmp;
             }
           gr_drawimage(x_min, x_max, y_min, y_max, cols, rows, rgba, 0);
         }
@@ -4039,8 +4078,10 @@ err_t plot_imshow(grm_args_t *subplot_args)
   unsigned int *shape;
   int xflip, yflip;
   double x_min, x_max, y_min, y_max, w, h, tmp;
+  int grplot;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
+  grplot = grm_args_values(subplot_args, "grplot", "i", &grplot);
   return_error_if(!grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max), ERROR_PLOT_MISSING_DATA);
   return_error_if(!grm_args_values(subplot_args, "vp", "D", &vp), ERROR_PLOT_MISSING_DATA);
   while (*current_series != NULL)
@@ -4066,25 +4107,18 @@ err_t plot_imshow(grm_args_t *subplot_args)
       for (j = 0; j < rows; ++j)
         for (i = 0; i < cols; ++i)
           {
-            img_data[k++] = 1000 + (int)grm_round((1.0 * c_data[i * rows + j] - c_min) / (c_max - c_min) * 255);
+            img_data[k++] =
+                1000 + (int)grm_round((1.0 * (grplot ? c_data[j * cols + i] : c_data[i * rows + j]) - c_min) /
+                                      (c_max - c_min) * 255);
           }
 
-      if (cols * (vp[3] - vp[2]) < rows * (vp[1] - vp[0]))
-        {
-          w = (double)cols / (double)rows * (vp[3] - vp[2]);
-          x_min = grm_max(0.5 * (vp[0] + vp[1] - w), vp[0]);
-          x_max = grm_min(0.5 * (vp[0] + vp[1] + w), vp[1]);
-          y_min = vp[2];
-          y_max = vp[3];
-        }
-      else
-        {
-          h = (double)rows / (double)cols * (vp[1] - vp[0]);
-          x_min = vp[0];
-          x_max = vp[1];
-          y_min = grm_max(0.5 * (vp[3] + vp[2] - h), vp[2]);
-          y_max = grm_min(0.5 * (vp[3] + vp[2] + h), vp[3]);
-        }
+      h = (double)rows / (double)cols * (vp[1] - vp[0]);
+      w = (double)cols / (double)rows * (vp[3] - vp[2]);
+
+      x_min = grm_max(0.5 * (vp[0] + vp[1] - w), vp[0]);
+      x_max = grm_min(0.5 * (vp[0] + vp[1] + w), vp[1]);
+      y_min = grm_max(0.5 * (vp[3] + vp[2] - h), vp[2]);
+      y_max = grm_min(0.5 * (vp[3] + vp[2] + h), vp[3]);
 
       gr_selntran(0);
       gr_setscale(0);
@@ -4101,6 +4135,12 @@ err_t plot_imshow(grm_args_t *subplot_args)
           tmp = y_max;
           y_max = y_min;
           y_min = tmp;
+        }
+      if (grplot)
+        {
+          tmp = y_min;
+          y_min = y_max;
+          y_max = tmp;
         }
       gr_cellarray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, img_data);
 
