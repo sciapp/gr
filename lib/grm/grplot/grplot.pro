@@ -3,6 +3,7 @@ isEmpty(GRDIR) {
   GRDIR = /usr/local/gr
 }
 QT += widgets core
+DEFINES += GRDIR=\\\"$(GRDIR)\\\"
 QMAKE_CXXLAGS += $$(EXTRA_CXXFLAGS)
 QMAKE_LFLAGS += $$(EXTRA_LDFLAGS)
 HEADERS += grplot_widget.hxx grplot_mainwindow.hxx util.hxx

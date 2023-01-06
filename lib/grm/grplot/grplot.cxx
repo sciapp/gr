@@ -19,10 +19,9 @@ int main(int argc, char **argv)
 #ifndef NO_EXCEPTIONS
     }
   // Catch an exception, print an error message but ignore it. If GR is located in its install location,
-  // no environment variablaes need to be set at all.
+  // no environment variables need to be set at all.
   catch (std::exception &e)
     {
-      std::cerr << "Failed to set the \"GRDIR\" envionment variable." << std::endl;
 #ifdef _WIN32
       int needed_wide_chars = MultiByteToWideChar(CP_UTF8, 0, e.what(), -1, nullptr, 0);
       std::vector<wchar_t> what_wide(needed_wide_chars);
@@ -31,6 +30,8 @@ int main(int argc, char **argv)
 #else
       std::cerr << e.what() << std::endl;
 #endif
+      std::cerr << "Failed to set the \"GRDIR\" envionment variable, falling back to GRDIR=\"" << GRDIR << "\"."
+                << std::endl;
     }
 #endif
 
