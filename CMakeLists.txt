@@ -1112,6 +1112,7 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
     target_link_libraries(grplot PRIVATE Qt5::Widgets Qt5::Core grm_static)
     set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
   endif()
+  target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
   set_target_properties(
     grplot PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
                                                                                   "${grplot_INSTALL_RPATH}"

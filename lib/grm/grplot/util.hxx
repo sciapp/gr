@@ -87,6 +87,16 @@ public:
   [[nodiscard]] const char *what() const noexcept override;
 };
 
+class CorruptedGrDirError : public SetGrDirError
+{
+public:
+  CorruptedGrDirError(const std::string &path);
+  [[nodiscard]] const char *what() const noexcept override;
+
+private:
+  std::string whatStr_;
+};
+
 class SetEnvError : public ErrnoError, public SetGrDirError
 {
 public:
@@ -125,6 +135,16 @@ private:
   std::string whatStr_;
 };
 
+class CorruptedGrDirError : public SetGrDirError
+{
+public:
+  CorruptedGrDirError(const std::wstring &path);
+  [[nodiscard]] const char *what() const noexcept override;
+
+private:
+  std::string whatStr_;
+};
+
 class SetEnvError : public GetLastErrorError, public SetGrDirError
 {
 public:
@@ -144,8 +164,10 @@ std::optional<std::string> get_executable_path();
 #else
 #ifdef _WIN32
 std::wstring getExecutablePath();
+bool fileExists(const std::wstring &file_path);
 #else
 std::string getExecutablePath();
+bool fileExists(const std::string &file_path);
 #endif
 #endif
 #ifdef NO_EXCEPTIONS
