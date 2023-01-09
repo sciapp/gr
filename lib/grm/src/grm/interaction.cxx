@@ -90,10 +90,52 @@ int grm_input(const grm_args_t *input_args)
           viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_ymin"));
           viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_ymax"));
 
+          kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
+          if (kind == "marginalheatmap")
+            {
+              auto current_series_vec = subplot_element->getElementsByClassName(kind + "_series");
+              auto current_series = current_series_vec[0];
+
+              //              grm_args_t **current_series;
+              double *x_series, *y_series;
+              unsigned int x_length, y_length;
+              double x_0, x_end, y_0, y_end, x_step, y_step;
+
+              grm_args_values(input_args, "x", "i", &x);
+              grm_args_values(input_args, "y", "i", &y);
+              //              grm_args_values(subplot_args, "series", "A", &current_series);
+              auto x_series_key = static_cast<std::string>(current_series->getAttribute("x_series"));
+              auto y_series_key = static_cast<std::string>(current_series->getAttribute("y_series"));
+
+              std::shared_ptr<GR::Context> context = grm_get_render()->getContext();
+
+              auto x_series_vec = GR::get<std::vector<double>>((*context)[x_series_key]);
+              auto y_series_vec = GR::get<std::vector<double>>((*context)[y_series_key]);
+
+              //              grm_args_first_value(current_series, "x", "D", &x_series, &x_length);
+              //              grm_args_first_value(current_series, "y", "D", &y_series, &y_length);
+
+              x_0 = x_series[0], x_end = x_series[x_length - 1];
+              y_0 = y_series[0], y_end = y_series[y_length - 1];
+
+              // TODO? wctondc should not work here. Only works during rendering.
+              gr_wctondc(&x_0, &y_0);
+              gr_wctondc(&x_end, &y_end);
+              x_0 = x_0 * max_width_height;
+              x_end = x_end * max_width_height;
+              y_0 = height - y_0 * max_width_height;
+              y_end = height - y_end * max_width_height;
+
+              x_step = (x_end - x_0) / x_length;
+              y_step = (y_end - y_0) / y_length;
+
+              subplot_element->setAttribute("xind", (int)((x - x_0) / x_step));
+              subplot_element->setAttribute("yind", (int)((y - y_0) / y_step));
+            }
+
           if (grm_args_values(input_args, "angle_delta", "d", &angle_delta))
             {
               double focus_x, focus_y;
-              kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
 
               if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
                                  "isosurface"))
@@ -287,12 +329,12 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
 grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
 {
   grm_tooltip_info_t *info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
-  double x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
+  double *x_series, *y_series, *z_series, x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
   double x_range_min, x_range_max, y_range_min, y_range_max, x_px, y_px;
   int width, height, max_width_height;
   unsigned int num_labels = 0;
   std::string kind;
-  unsigned int series_i = 0, i;
+  unsigned int x_length, y_length, z_length, series_i = 0, i;
 
   get_figure_size(NULL, &width, &height, NULL, NULL);
   max_width_height = grm_max(width, height);
@@ -305,7 +347,8 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
     {
       kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
     }
-  if (subplot_element == nullptr || !str_equals_any(kind.c_str(), 4, "line", "scatter", "stem", "step"))
+  if (subplot_element == nullptr ||
+      !str_equals_any(kind.c_str(), 6, "line", "scatter", "stem", "step", "heatmap", "marginalheatmap"))
     {
       info->x_px = -1;
       info->y_px = -1;
@@ -366,12 +409,23 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
     {
       auto x_key = static_cast<std::string>(current_series->getAttribute("x"));
       auto y_key = static_cast<std::string>(current_series->getAttribute("y"));
+      std::string z_key = static_cast<std::string>(current_series->getAttribute("z"));
+
       auto x_series_vec = GR::get<std::vector<double>>((*context)[x_key]);
       auto y_series_vec = GR::get<std::vector<double>>((*context)[y_key]);
+      std::vector<double> z_series_vec;
+
+      if (str_equals_any(kind.c_str(), 2, "heatmap", "marginalheatmap"))
+        {
+          z_series_vec = GR::get<std::vector<double>>((*context)[z_key]);
+          z_length = z_series_vec.size();
+        }
+
       for (i = 0; i < x_series_vec.size(); i++)
         {
-          if (x_series_vec[i] < x_range_min || x_series_vec[i] > x_range_max || y_series_vec[i] < y_range_min ||
-              y_series_vec[i] > y_range_max)
+          if ((x_series_vec[i] < x_range_min || x_series_vec[i] > x_range_max || y_series_vec[i] < y_range_min ||
+               y_series_vec[i] > y_range_max) &&
+              !str_equals_any(kind.c_str(), 2, "heatmap", "marginalheatmap"))
             {
               continue;
             }
@@ -396,6 +450,35 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                 {
                   info->label = "";
                 }
+            }
+          else if (str_equals_any(kind.c_str(), 2, "heatmap", "marginalheatmap"))
+            {
+              static char output[50];
+              double num;
+              double x_0 = x_series[0], x_end = x_series[x_length - 1], y_0 = y_series[0],
+                     y_end = y_series[y_length - 1];
+              double x_step, y_step;
+
+              gr_wctondc(&x_0, &y_0);
+              gr_wctondc(&x_end, &y_end);
+              x_0 = x_0 * max_width_height;
+              x_end = x_end * max_width_height;
+              y_0 = height - y_0 * max_width_height;
+              y_end = height - y_end * max_width_height;
+
+              x_step = (x_end - x_0) / x_length;
+              y_step = (y_end - y_0) / y_length;
+
+              mindiff = 0;
+              info->x = x_series[(int)((mouse_x - x_0) / x_step)];
+              info->y = y_series[(int)((mouse_y - y_0) / y_step)];
+              info->x_px = mouse_x;
+              info->y_px = mouse_y;
+
+              num = z_series[((y_length - 1) - (int)((mouse_y - y_0) / y_step)) * x_length +
+                             (int)((mouse_x - x_0) / x_step)];
+              snprintf(output, 50, "%f", num);
+              info->label = output;
             }
         }
       ++series_i;
