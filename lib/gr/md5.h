@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-extern void md5(const char *buffer, char *sum);
+extern void md5(const char *buffer, char *sum, size_t size);
 
 #ifdef __cplusplus
 }

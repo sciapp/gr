@@ -68,6 +68,12 @@ DECLARE_MAP_TYPE(args_set, args_set_t *)
 
 /* ========================= macros ================================================================================= */
 
+#ifdef isnan
+#define is_nan(a) isnan(a)
+#else
+#define is_nan(x) ((x) != (x))
+#endif
+
 /* ------------------------- math ----------------------------------------------------------------------------------- */
 
 #ifndef M_PI
@@ -1549,8 +1555,11 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                             {
                               for (i = 0; i < current_point_count; i++)
                                 {
-                                  current_min_component = grm_min(current_component[i], current_min_component);
-                                  current_max_component = grm_max(current_component[i], current_max_component);
+                                  if (!is_nan(current_component[i]))
+                                    {
+                                      current_min_component = grm_min(current_component[i], current_min_component);
+                                      current_max_component = grm_max(current_component[i], current_max_component);
+                                    }
                                 }
                             }
                         }
@@ -1597,13 +1606,17 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                                   current_min_component = 0;
                                   for (i = 0; i < current_point_count; i++)
                                     {
-                                      if (current_component[i] > 0)
+                                      if (!is_nan(current_component[i]))
                                         {
-                                          current_max_component += current_component[i];
-                                        }
-                                      else
-                                        {
-                                          current_min_component += current_component[i];
+
+                                          if (current_component[i] > 0)
+                                            {
+                                              current_max_component += current_component[i];
+                                            }
+                                          else
+                                            {
+                                              current_min_component += current_component[i];
+                                            }
                                         }
                                     }
                                   max_component = grm_max(current_max_component, max_component);

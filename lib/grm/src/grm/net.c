@@ -531,7 +531,7 @@ err_t sender_finalize_for_socket(net_handle_t *handle)
 
 err_t sender_send_for_socket(net_handle_t *handle)
 {
-  const char *buf, *send_ptr;
+  const char *buf;
   size_t buf_size;
   int bytes_left;
   err_t error = ERROR_NONE;
@@ -544,7 +544,6 @@ err_t sender_send_for_socket(net_handle_t *handle)
   buf = memwriter_buf(handle->sender_receiver.sender.memwriter);
   buf_size = memwriter_size(handle->sender_receiver.sender.memwriter);
 
-  send_ptr = buf;
   bytes_left = buf_size;
   while (bytes_left)
     {
@@ -554,7 +553,6 @@ err_t sender_send_for_socket(net_handle_t *handle)
           psocketerror("could not send any data");
           return ERROR_NETWORK_SEND;
         }
-      send_ptr += bytes_sent;
       bytes_left -= bytes_sent;
     }
 

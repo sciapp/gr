@@ -18,6 +18,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/errno.h>
 #else
 #include <windows.h>
 #endif
@@ -57,7 +58,7 @@ static int is_running = 0;
 
 #define CMD_LINE_LEN 8192
 
-static DWORD WINAPI gksqt_tread(LPVOID parm)
+static DWORD WINAPI gksqt_thread(LPVOID parm)
 {
   char *cmd = (char *)parm;
   wchar_t *w_cmd;
@@ -92,8 +93,9 @@ static DWORD WINAPI gksqt_tread(LPVOID parm)
 
 #else
 
-static void *gksqt_tread(void *arg)
+static void *gksqt_thread(void *arg)
 {
+  int retstat = 0;
 #ifdef __APPLE__
   sigset_t blockMask, origMask;
   struct sigaction saIgnore, saOrigQuit, saOrigInt, saDefault;
@@ -109,13 +111,8 @@ static void *gksqt_tread(void *arg)
   sigaction(SIGINT, &saIgnore, &saOrigInt);
   sigaction(SIGQUIT, &saIgnore, &saOrigQuit);
 
-  pid = fork();
-  if (pid < 0)
-    {
-      fprintf(stderr, "Fork failed\n");
-      return NULL;
-    }
-  else if (pid == 0)
+  is_running = 1;
+  if ((pid = fork()) == 0)
     {
       saDefault.sa_handler = SIG_DFL;
       saDefault.sa_flags = 0;
@@ -126,23 +123,39 @@ static void *gksqt_tread(void *arg)
 
       sigprocmask(SIG_SETMASK, &origMask, NULL);
 
-      is_running = 1;
       execl("/bin/sh", "sh", "-c", (char *)arg, (char *)NULL);
-      is_running = 0;
 
-      exit(127);
+      _exit(127);
     }
+  if (pid == -1)
+    {
+      fprintf(stderr, "Fork failed\n");
+      retstat = -1;
+    }
+  else
+    {
+      int status;
+      while (waitpid(pid, &status, 0) == -1)
+        {
+          if (errno != EINTR)
+            {
+              retstat = WIFEXITED(status) != 0 ? WEXITSTATUS(status) : -1;
+              break;
+            }
+        }
+    }
+  is_running = 0;
 
   sigprocmask(SIG_SETMASK, &origMask, NULL);
   sigaction(SIGINT, &saOrigInt, NULL);
   sigaction(SIGQUIT, &saOrigQuit, NULL);
 #else
   is_running = 1;
-  system((char *)arg);
+  retstat = system((char *)arg);
   is_running = 0;
 #endif
 
-  return NULL;
+  return retstat == 0 ? arg : NULL;
 }
 
 #endif
@@ -152,11 +165,11 @@ static int start(const char *cmd)
 #ifdef _WIN32
   DWORD thread;
 
-  if (CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)gksqt_tread, (void *)cmd, 0, &thread) == NULL) return -1;
+  if (CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)gksqt_thread, (void *)cmd, 0, &thread) == NULL) return -1;
 #else
   pthread_t thread;
 
-  if (pthread_create(&thread, NULL, gksqt_tread, (void *)cmd)) return -1;
+  if (pthread_create(&thread, NULL, gksqt_thread, (void *)cmd)) return -1;
 #endif
   return 0;
 }
@@ -227,7 +240,7 @@ static int open_socket(int wstype)
   char *cmd = NULL;
   int s;
 
-  if (wstype == 411)
+  if (wstype >= 411 && wstype <= 413)
     {
       command = gks_getenv("GKS_QT");
       if (command == NULL)
@@ -238,12 +251,12 @@ static int open_socket(int wstype)
           cmd = (char *)gks_malloc(MAXPATHLEN);
 #ifndef _WIN32
 #ifdef __APPLE__
-          sprintf(cmd, "%s/Applications/gksqt.app/Contents/MacOS/gksqt", env);
+          snprintf(cmd, MAXPATHLEN, "%s/Applications/gksqt.app/Contents/MacOS/gksqt", env);
 #else
-          sprintf(cmd, "%s/bin/gksqt", env);
+          snprintf(cmd, MAXPATHLEN, "%s/bin/gksqt", env);
 #endif
 #else
-          sprintf(cmd, "%s\\bin\\gksqt.exe", env);
+          snprintf(cmd, MAXPATHLEN, "%s\\bin\\gksqt.exe", env);
 #endif
           command = cmd;
         }
@@ -352,9 +365,9 @@ static int close_socket(int s)
   return 0;
 }
 
-static int check_socket_connection(ws_state_list *wss)
+static void check_socket_connection(ws_state_list *wss)
 {
-  if (wss->s != -1 && wss->wstype == 411)
+  if (wss->s != -1 && wss->wstype >= 411 && wss->wstype <= 413)
     {
       char request_type = SOCKET_FUNCTION_IS_ALIVE;
       char reply;
@@ -368,7 +381,7 @@ static int check_socket_connection(ws_state_list *wss)
     {
       close_socket(wss->s);
       wss->s = open_socket(wss->wstype);
-      if (wss->s != -1 && wss->wstype == 411)
+      if (wss->s != -1 && wss->wstype >= 411 && wss->wstype <= 413)
         {
           /* workstation information was already read during OPEN_WS */
           int nbytes;
@@ -410,7 +423,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
       else
         {
           *ptr = wss;
-          if (wss->wstype == 411)
+          if (wss->wstype >= 411 && wss->wstype <= 413)
             {
               /* get workstation information */
               int nbytes;
@@ -443,7 +456,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
       break;
 
     case 3:
-      if (wss->wstype == 411)
+      if (wss->wstype >= 411 && wss->wstype <= 413)
         {
           request_type = SOCKET_FUNCTION_CLOSE_WINDOW;
           send_socket(wss->s, &request_type, 1, 0);
@@ -462,7 +475,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
         {
           check_socket_connection(wss);
           request_type = SOCKET_FUNCTION_DRAW;
-          if (wss->wstype == 411)
+          if (wss->wstype >= 411 && wss->wstype <= 413)
             {
               send_socket(wss->s, &request_type, 1, 0);
             }
@@ -477,7 +490,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
 
     case 209: /* inq_ws_state */
       check_socket_connection(wss);
-      if (wss->wstype == 411)
+      if (wss->wstype >= 411 && wss->wstype <= 413)
         {
           char reply[1 + sizeof(gks_ws_state_t)];
           request_type = SOCKET_FUNCTION_INQ_WS_STATE;

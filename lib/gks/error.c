@@ -239,6 +239,9 @@ const char *gks_function_name(int routine)
     case 109:
       name = "SET_RESIZE_BEHAVIOUR";
       break;
+    case 110:
+      name = "INQ_TEXT";
+      break;
     case 200:
       name = "SET_TEXT_SLANT";
       break;

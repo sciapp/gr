@@ -483,7 +483,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   seg_xform(&x, &y);
   NDC_to_DC(x, y, x0, y0);
 
-  cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
+  cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_ROUND);
   cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
   set_line_width(p->linewidth);
 
@@ -591,7 +591,11 @@ static void fillarea(int n, double *px, double *py)
 {
   int fl_color;
 
-  p->linewidth = p->nominal_size;
+  p->linewidth = gkss->bwidth * p->nominal_size;
+  set_line_width(p->linewidth);
+
+  cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_ROUND);
+  cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
 
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
   set_color(fl_color);
@@ -617,7 +621,7 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
+  cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_ROUND);
   cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
   p->linewidth = ln_width * p->nominal_size;
   set_line_width(p->linewidth);
@@ -1780,8 +1784,9 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   GKS_UNUSED(n);
 
   cairo_new_path(p->cr);
-  cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
+  cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_ROUND);
   cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
+  cairo_set_fill_rule(p->cr, CAIRO_FILL_RULE_EVEN_ODD);
   set_line_width(gkss->bwidth * p->nominal_size);
 
   j = 0;

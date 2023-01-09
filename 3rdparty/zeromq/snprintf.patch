@@ -1,0 +1,53 @@
+--- zeromq-4.3.4.orig/src/tcp_address.cpp	2021-01-03 22:46:01
++++ zeromq-4.3.4/src/tcp_address.cpp	2022-07-05 10:21:30
+@@ -129,7 +129,7 @@
+     pos += hbuf_len;
+     memcpy (pos, ipv6_suffix_, sizeof ipv6_suffix_ - 1);
+     pos += sizeof ipv6_suffix_ - 1;
+-    pos += sprintf (pos, "%d", ntohs (port_));
++    pos += snprintf (pos, NI_MAXHOST - hbuf_len - (sizeof ipv6_prefix_ - 1) - (sizeof ipv6_prefix_ - 1), "%d", ntohs (port_));
+     return std::string (buf, pos - buf);
+ }
+ 
+--- zeromq-4.3.4.orig/src/udp_engine.cpp	2021-01-03 22:46:01
++++ zeromq-4.3.4/src/udp_engine.cpp	2022-07-05 10:22:37
+@@ -368,7 +368,7 @@
+ 
+     char port[6];
+     const int port_len =
+-      sprintf (port, "%d", static_cast<int> (ntohs (addr_->sin_port)));
++      snprintf (port, 6, "%d", static_cast<int> (ntohs (addr_->sin_port)));
+     zmq_assert (port_len > 0);
+ 
+     const size_t name_len = strlen (name);
+
+--- zeromq-4.3.4.orig/tests/testutil.cpp	2021-01-17 13:00:32
++++ zeromq-4.3.4/tests/testutil.cpp	2022-07-05 10:25:57
+@@ -510,16 +510,16 @@
+         addr_len = sizeof (struct sockaddr_storage);
+         TEST_ASSERT_SUCCESS_RAW_ERRNO (
+           getsockname (s_pre, (struct sockaddr *) &addr, &addr_len));
+-        sprintf (my_endpoint_, "%s://%s:%u",
+-                 protocol_ == IPPROTO_TCP
+-                   ? "tcp"
+-                   : protocol_ == IPPROTO_UDP
+-                       ? "udp"
+-                       : protocol_ == IPPROTO_WSS ? "wss" : "ws",
+-                 address_,
+-                 af_ == AF_INET
+-                   ? ntohs ((*(struct sockaddr_in *) &addr).sin_port)
+-                   : ntohs ((*(struct sockaddr_in6 *) &addr).sin6_port));
++        snprintf (my_endpoint_, MAX_SOCKET_STRING, "%s://%s:%u",
++                  protocol_ == IPPROTO_TCP
++                    ? "tcp"
++                    : protocol_ == IPPROTO_UDP
++                        ? "udp"
++                        : protocol_ == IPPROTO_WSS ? "wss" : "ws",
++                  address_,
++                  af_ == AF_INET
++                    ? ntohs ((*(struct sockaddr_in *) &addr).sin_port)
++                    : ntohs ((*(struct sockaddr_in6 *) &addr).sin6_port));
+     }
+ 
+     return s_pre;
+

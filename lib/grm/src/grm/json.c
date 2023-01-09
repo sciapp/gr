@@ -25,7 +25,6 @@
 #define DBL_DECIMAL_DIG 17
 #endif
 
-
 /* ========================= static variables ======================================================================= */
 
 /* ------------------------- json deserializer ---------------------------------------------------------------------- */
@@ -938,7 +937,11 @@ err_t tojson_stringify_double_value(memwriter_t *memwriter, double value)
   const char *unprocessed_string;
 
   string_start_index = memwriter_size(memwriter);
-  if ((error = memwriter_printf(memwriter, "%." XSTR(DBL_DECIMAL_DIG) "g", value)) != ERROR_NONE)
+  /*
+     The %G format specifier is important here, as it returns "NAN" for missing values -
+     %g would return "nan" and be handled as JSON_DATATYPE_NULL in fromjson_check_type()
+   */
+  if ((error = memwriter_printf(memwriter, "%." XSTR(DBL_DECIMAL_DIG) "G", value)) != ERROR_NONE)
     {
       return error;
     }

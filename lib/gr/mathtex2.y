@@ -659,7 +659,7 @@ DIGIT {
 const char *snowflake_symbols[] = {"\\doteqdot", "\\doteq", "\\dotminus", "\\barleftarrow", "\\ddots", "\\dotplus", "\\dots", "\\barwedge"};
 const char *accent_symbols[] = {"\\hat", "\\breve", "\\bar", "\\grave", "\\acute", "\\tilde", "\\dot", "\\ddot", "\\vec", "\\overrightarrow", "\\overleftarrow", "\\mathring", "\\widebar", "\\widehat", "\\widetilde"};
 const char *font_symbols[] = {"\\rm", "\\cal", "\\it", "\\tt", "\\sf", "\\bf", "\\default", "\\bb", "\\frak", "\\circled", "\\scr", "\\regular"};
-const char *latexfont_symbols[] = {"\\mathrm", "\\mathcal", "\\mathit", "\\mathtt", "\\mathsf", "\\mathbf", "\\mathdefault", "\\mathbb", "\\mathfrak", "\\mathcircled", "\\mathscr", "\\mathregular", "\\textrm", "\\textit", "\\textbf", "\\texttt"};
+const char *latexfont_symbols[] = {"\\mathrm", "\\mathcal", "\\mathit", "\\mathtt", "\\mathsf", "\\mathbf", "\\mathdefault", "\\mathbb", "\\mathfrak", "\\mathcircled", "\\mathscr", "\\mathregular", "\\textrm", "\\textit", "\\textbf", "\\texttt", "\\textsf", "\\textnormal"};
 const char *c_over_c_symbols[] = {"\\AA"};
 const char *space_symbols[] = {"\\thinspace", "\\enspace", "\\quad", "\\qquad"};
 const char *left_delim_symbols[] = {"\\int", "\\lfloor", "\\langle", "\\lceil", "\\sum"};

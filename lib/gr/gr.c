@@ -4,6 +4,9 @@
 
 #ifdef _MSC_VER
 #define NO_THREADS 1
+#define GR_INLINE
+#else
+#define GR_INLINE __inline__
 #endif
 
 #include <stdio.h>
@@ -20,6 +23,10 @@ typedef __int64 int64_t;
 
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
+#endif
+
+#ifndef NO_THREADS
+#include <pthread.h>
 #endif
 
 #ifdef _WIN32
@@ -216,6 +223,27 @@ typedef struct text_node
   double baseline[2];
 } text_node_t;
 
+typedef struct
+{
+  int px_width, px_height;
+  const data_point3d_t *start, *end;
+  kernel_f callback;
+  const void **extra_data;
+  double radius;
+  radius_f radius_callback;
+  double *pixels;
+  const point3d_t *ray_dir_init;
+  const point3d_t *ray_dir_x;
+  const point3d_t *ray_dir_y;
+  const point3d_t *ray_from_init;
+  const point3d_t *ray_from_x;
+  const point3d_t *ray_from_y;
+  double x_factor, y_factor;
+} volume_nogrid_data_struct;
+
+gauss_t interp_gauss_data = {1, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+tri_linear_t interp_tri_linear_data = {1, 1, 1};
+
 static volume_t vt = {1, 0, 1.25, 1000, 1000, NULL, 1};
 
 static norm_xform nx = {1, 0, 1, 0};
@@ -248,6 +276,8 @@ static int autoinit = 1, double_buf = 0, state_saved = 0, def_color = 0;
 
 static const char *display = NULL;
 
+static const char *debug = NULL;
+
 static double vxmin = 0.2, vxmax = 0.9, vymin = 0.2, vymax = 0.9;
 
 static double cxl, cxr, cyf, cyb, czb, czt;
@@ -256,7 +286,7 @@ static int arrow_style = 0;
 
 static double arrow_size = 1;
 
-static int flag_printing = 0, flag_graphics = 0;
+static int flag_printing = 0, flag_stream = 0, flag_graphics = 0;
 
 static text_node_t *text, *head;
 
@@ -1383,6 +1413,9 @@ static void initialize(int state)
   if (display)
     if (*display == '\0') display = NULL;
 
+  debug = gks_getenv("GR_DEBUG");
+  flag_stream = flag_graphics || debug != NULL;
+
   setscale(options);
 }
 
@@ -1443,7 +1476,8 @@ static void initgks(void)
   gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
   if (!double_buf)
     {
-      double_buf = wtype == 380 || wtype == 381 || wtype == 400 || wtype == 410 || wtype == 411;
+      double_buf =
+          wtype == 380 || wtype == 381 || wtype == 400 || wtype == 410 || wtype == 411 || wtype == 412 || wtype == 413;
     }
 
   if (display)
@@ -1452,7 +1486,7 @@ static void initgks(void)
         {
           gr_writestream(XML_HEADER);
           gr_writestream(GR_HEADER);
-          flag_graphics = 1;
+          flag_stream = flag_graphics = 1;
         }
       else
         fprintf(stderr, "%s: open failed\n", display);
@@ -1483,6 +1517,11 @@ void gr_initgr(void)
 
       initialize(GKS_K_GKCL);
     }
+}
+
+int gr_debug()
+{
+  return debug != NULL;
 }
 
 void gr_opengks(void)
@@ -1662,7 +1701,7 @@ void gr_clearws(void)
 
   foreach_activews((void (*)(int, void *))clear, (void *)&clearflag);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream(GR_TRAILER);
       gr_flushstream(1);
@@ -1692,7 +1731,7 @@ void gr_updatews(void)
 
   foreach_openws((void (*)(int, void *))update, (void *)&regenflag);
 
-  if (flag_graphics)
+  if (flag_stream)
     if (display)
       {
         gr_writestream(GR_TRAILER);
@@ -1803,33 +1842,26 @@ static void primitive(char *name, int n, double *x, double *y)
 
 static void polyline(int n, double *x, double *y)
 {
-  int npoints = n;
-  double *px = x, *py = y;
-  int i;
+  int i, npoints;
 
-  if (lx.scale_options)
+  if (n >= maxpath) reallocate(n);
+
+  npoints = 0;
+  for (i = 0; i < n; i++)
     {
-      if (npoints >= maxpath) reallocate(npoints);
-
-      px = xpoint;
-      py = ypoint;
-      npoints = 0;
-      for (i = 0; i < n; i++)
+      xpoint[npoints] = x_lin(x[i]);
+      ypoint[npoints] = y_lin(y[i]);
+      if (is_nan(xpoint[npoints]) || is_nan(ypoint[npoints]))
         {
-          px[npoints] = x_lin(x[i]);
-          py[npoints] = y_lin(y[i]);
-          if (is_nan(px[npoints]) || is_nan(py[npoints]))
-            {
-              if (npoints >= 2) gks_polyline(npoints, px, py);
+          if (npoints >= 2) gks_polyline(npoints, xpoint, ypoint);
 
-              npoints = 0;
-            }
-          else
-            npoints++;
+          npoints = 0;
         }
+      else
+        npoints++;
     }
 
-  if (npoints != 0) gks_polyline(npoints, px, py);
+  if (npoints != 0) gks_polyline(npoints, xpoint, ypoint);
 }
 
 /*!
@@ -1850,38 +1882,31 @@ void gr_polyline(int n, double *x, double *y)
 
   polyline(n, x, y);
 
-  if (flag_graphics) primitive("polyline", n, x, y);
+  if (flag_stream) primitive("polyline", n, x, y);
 }
 
 static void polymarker(int n, double *x, double *y)
 {
-  int npoints = n;
-  double *px = x, *py = y;
-  int i;
+  int i, npoints;
 
-  if (lx.scale_options)
+  if (n >= maxpath) reallocate(n);
+
+  npoints = 0;
+  for (i = 0; i < n; i++)
     {
-      if (npoints >= maxpath) reallocate(npoints);
-
-      px = xpoint;
-      py = ypoint;
-      npoints = 0;
-      for (i = 0; i < n; i++)
+      xpoint[npoints] = x_lin(x[i]);
+      ypoint[npoints] = y_lin(y[i]);
+      if (is_nan(xpoint[npoints]) || is_nan(ypoint[npoints]))
         {
-          px[npoints] = x_lin(x[i]);
-          py[npoints] = y_lin(y[i]);
-          if (is_nan(px[npoints]) || is_nan(py[npoints]))
-            {
-              if (npoints >= 1) gks_polymarker(npoints, px, py);
+          if (npoints >= 1) gks_polymarker(npoints, xpoint, ypoint);
 
-              npoints = 0;
-            }
-          else
-            npoints++;
+          npoints = 0;
         }
+      else
+        npoints++;
     }
 
-  if (npoints != 0) gks_polymarker(npoints, px, py);
+  if (npoints != 0) gks_polymarker(npoints, xpoint, ypoint);
 }
 
 /*!
@@ -1901,7 +1926,7 @@ void gr_polymarker(int n, double *x, double *y)
 
   polymarker(n, x, y);
 
-  if (flag_graphics) primitive("polymarker", n, x, y);
+  if (flag_stream) primitive("polymarker", n, x, y);
 }
 
 /*!
@@ -1918,7 +1943,7 @@ void gr_fillarea(int n, double *x, double *y)
 {
   fillarea(n, x, y);
 
-  if (flag_graphics) primitive("fillarea", n, x, y);
+  if (flag_stream) primitive("fillarea", n, x, y);
 }
 
 /*!
@@ -1948,7 +1973,7 @@ void gr_cellarray(double xmin, double xmax, double ymin, double ymax, int dimx, 
 
   gks_cellarray(x_lin(xmin), y_lin(ymax), x_lin(xmax), y_lin(ymin), dimx, dimy, scol, srow, ncol, nrow, color);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<cellarray xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
                      "dimx=\"%d\" dimy=\"%d\" scol=\"%d\" srow=\"%d\" "
@@ -2657,7 +2682,7 @@ void gr_gdp(int n, double *x, double *y, int primid, int ldr, int *datrec)
 
   gks_gdp(npoints, px, py, primid, ldr, datrec);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<gdp len=\"%d\"", n);
       print_float_array("x", n, x);
@@ -2798,7 +2823,7 @@ void gr_spline(int n, double *px, double *py, int m, int method)
   free(s);
   free(t);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<spline len=\"%d\"", n);
       print_float_array("x", n, px);
@@ -2921,7 +2946,7 @@ void gr_setlinetype(int type)
   gks_set_pline_linetype(type);
   if (ctx) ctx->ltype = type;
 
-  if (flag_graphics) gr_writestream("<setlinetype type=\"%d\"/>\n", type);
+  if (flag_stream) gr_writestream("<setlinetype type=\"%d\"/>\n", type);
 }
 
 void gr_inqlinetype(int *ltype)
@@ -2951,7 +2976,7 @@ void gr_setlinewidth(double width)
   gks_set_pline_linewidth(width);
   if (ctx) ctx->lwidth = width;
 
-  if (flag_graphics) gr_writestream("<setlinewidth width=\"%g\"/>\n", width);
+  if (flag_stream) gr_writestream("<setlinewidth width=\"%g\"/>\n", width);
 }
 
 void gr_inqlinewidth(double *width)
@@ -2975,7 +3000,7 @@ void gr_setlinecolorind(int color)
   gks_set_pline_color_index(color);
   if (ctx) ctx->plcoli = color;
 
-  if (flag_graphics) gr_writestream("<setlinecolorind color=\"%d\"/>\n", color);
+  if (flag_stream) gr_writestream("<setlinecolorind color=\"%d\"/>\n", color);
 }
 
 void gr_inqlinecolorind(int *coli)
@@ -3082,7 +3107,7 @@ void gr_setmarkertype(int type)
   gks_set_pmark_type(type);
   if (ctx) ctx->mtype = type;
 
-  if (flag_graphics) gr_writestream("<setmarkertype type=\"%d\"/>\n", type);
+  if (flag_stream) gr_writestream("<setmarkertype type=\"%d\"/>\n", type);
 }
 
 void gr_inqmarkertype(int *mtype)
@@ -3109,7 +3134,7 @@ void gr_setmarkersize(double size)
   gks_set_pmark_size(size);
   if (ctx) ctx->mszsc = size;
 
-  if (flag_graphics) gr_writestream("<setmarkersize size=\"%g\"/>\n", size);
+  if (flag_stream) gr_writestream("<setmarkersize size=\"%g\"/>\n", size);
 }
 
 /*!
@@ -3140,7 +3165,7 @@ void gr_setmarkercolorind(int color)
   gks_set_pmark_color_index(color);
   if (ctx) ctx->pmcoli = color;
 
-  if (flag_graphics) gr_writestream("<setmarkercolorind color=\"%d\"/>\n", color);
+  if (flag_stream) gr_writestream("<setmarkercolorind color=\"%d\"/>\n", color);
 }
 
 void gr_inqmarkercolorind(int *coli)
@@ -3263,7 +3288,7 @@ void gr_settextfontprec(int font, int precision)
       ctx->txprec = precision;
     }
 
-  if (flag_graphics) gr_writestream("<settextfontprec font=\"%d\" precision=\"%d\"/>\n", font, precision);
+  if (flag_stream) gr_writestream("<settextfontprec font=\"%d\" precision=\"%d\"/>\n", font, precision);
 }
 
 static int loadfont(char *name)
@@ -3326,7 +3351,7 @@ void gr_loadfont(char *filename, int *font)
     }
   if (*font > 0)
     {
-      if (flag_graphics) gr_writestream("<loadfont filename=\"%s\"/>\n", filename);
+      if (flag_stream) gr_writestream("<loadfont filename=\"%s\"/>\n", filename);
     }
 }
 
@@ -3348,7 +3373,7 @@ void gr_setcharexpan(double factor)
   gks_set_text_expfac(factor);
   if (ctx) ctx->chxp = factor;
 
-  if (flag_graphics) gr_writestream("<setcharexpan factor=\"%g\"/>\n", factor);
+  if (flag_stream) gr_writestream("<setcharexpan factor=\"%g\"/>\n", factor);
 }
 
 void gr_setcharspace(double spacing)
@@ -3358,7 +3383,7 @@ void gr_setcharspace(double spacing)
   gks_set_text_spacing(spacing);
   if (ctx) ctx->chsp = spacing;
 
-  if (flag_graphics) gr_writestream("<setcharspace spacingr=\"%g\"/>\n", spacing);
+  if (flag_stream) gr_writestream("<setcharspace spacingr=\"%g\"/>\n", spacing);
 }
 
 /*!
@@ -3376,7 +3401,7 @@ void gr_settextcolorind(int color)
   gks_set_text_color_index(color);
   if (ctx) ctx->txcoli = color;
 
-  if (flag_graphics) gr_writestream("<settextcolorind color=\"%d\"/>\n", color);
+  if (flag_stream) gr_writestream("<settextcolorind color=\"%d\"/>\n", color);
 }
 
 /*!
@@ -3408,7 +3433,7 @@ void gr_setcharheight(double height)
   gks_set_text_height(height);
   if (ctx) ctx->chh = height;
 
-  if (flag_graphics) gr_writestream("<setcharheight height=\"%g\"/>\n", height);
+  if (flag_stream) gr_writestream("<setcharheight height=\"%g\"/>\n", height);
 }
 
 void gr_setwscharheight(double chh, double height)
@@ -3451,7 +3476,7 @@ void gr_setcharup(double ux, double uy)
       ctx->chup[1] = uy;
     }
 
-  if (flag_graphics) gr_writestream("<setcharup x=\"%g\" y=\"%g\"/>\n", ux, uy);
+  if (flag_stream) gr_writestream("<setcharup x=\"%g\" y=\"%g\"/>\n", ux, uy);
 }
 
 /*!
@@ -3480,7 +3505,7 @@ void gr_settextpath(int path)
   gks_set_text_path(path);
   if (ctx) ctx->txp = path;
 
-  if (flag_graphics) gr_writestream("<settextpath path=\"%d\"/>\n", path);
+  if (flag_stream) gr_writestream("<settextpath path=\"%d\"/>\n", path);
 }
 
 /*!
@@ -3532,7 +3557,7 @@ void gr_settextalign(int horizontal, int vertical)
       ctx->txal[1] = vertical;
     }
 
-  if (flag_graphics) gr_writestream("<settextalign halign=\"%d\" valign=\"%d\"/>\n", horizontal, vertical);
+  if (flag_stream) gr_writestream("<settextalign halign=\"%d\" valign=\"%d\"/>\n", horizontal, vertical);
 }
 
 /*!
@@ -3565,7 +3590,7 @@ void gr_setfillintstyle(int style)
   gks_set_fill_int_style(style);
   if (ctx) ctx->ints = style;
 
-  if (flag_graphics) gr_writestream("<setfillintstyle intstyle=\"%d\"/>\n", style);
+  if (flag_stream) gr_writestream("<setfillintstyle intstyle=\"%d\"/>\n", style);
 }
 
 /*!
@@ -3603,7 +3628,7 @@ void gr_setfillstyle(int index)
   gks_set_fill_style_index(index);
   if (ctx) ctx->styli = index;
 
-  if (flag_graphics) gr_writestream("<setfillstyle style=\"%d\"/>\n", index);
+  if (flag_stream) gr_writestream("<setfillstyle style=\"%d\"/>\n", index);
 }
 
 /*!
@@ -3638,7 +3663,7 @@ void gr_setfillcolorind(int color)
   gks_set_fill_color_index(color);
   if (ctx) ctx->facoli = color;
 
-  if (flag_graphics) gr_writestream("<setfillcolorind color=\"%d\"/>\n", color);
+  if (flag_stream) gr_writestream("<setfillcolorind color=\"%d\"/>\n", color);
 }
 
 /*!
@@ -3664,7 +3689,7 @@ void gr_setresizebehaviour(int flag)
   gks_set_resize_behaviour(flag);
   if (ctx) ctx->resize_behaviour = flag;
 
-  if (flag_graphics) gr_writestream("<setresizebehaviour=\"%d\"/>\n", flag);
+  if (flag_stream) gr_writestream("<setresizebehaviour=\"%d\"/>\n", flag);
 }
 
 void gr_inqresizebehaviour(int *flag)
@@ -3711,7 +3736,7 @@ void gr_setcolorrep(int index, double red, double green, double blue)
 
   setcolorrep(index, red, green, blue);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setcolorrep index=\"%d\" red=\"%g\" green=\"%g\" blue=\"%g\"/>\n", index, red, green, blue);
 }
 
@@ -3770,7 +3795,7 @@ int gr_setscale(int options)
   result = setscale(options);
   if (ctx) ctx->scale_options = options;
 
-  if (flag_graphics) gr_writestream("<setscale scale=\"%d\"/>\n", options);
+  if (flag_stream) gr_writestream("<setscale scale=\"%d\"/>\n", options);
 
   return result;
 }
@@ -3817,7 +3842,7 @@ void gr_setwindow(double xmin, double xmax, double ymin, double ymax)
     }
   setscale(lx.scale_options);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setwindow xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
@@ -3888,7 +3913,7 @@ void gr_setviewport(double xmin, double xmax, double ymin, double ymax)
   vymin = ymin;
   vymax = ymax;
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setviewport xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
@@ -3924,7 +3949,7 @@ void gr_selntran(int transform)
 
   gks_select_xform(transform);
 
-  if (flag_graphics) gr_writestream("<selntran transform=\"%d\"/>\n", transform);
+  if (flag_stream) gr_writestream("<selntran transform=\"%d\"/>\n", transform);
 }
 
 /*!
@@ -3955,7 +3980,7 @@ void gr_setclip(int indicator)
 
   gks_set_clipping(indicator);
 
-  if (flag_graphics) gr_writestream("<setclip indicator=\"%d\"/>\n", indicator);
+  if (flag_stream) gr_writestream("<setclip indicator=\"%d\"/>\n", indicator);
 }
 
 static void wswindow(int workstation_id, rect_t *rect)
@@ -3997,7 +4022,7 @@ void gr_setwswindow(double xmin, double xmax, double ymin, double ymax)
 
   foreach_activews((void (*)(int, void *))wswindow, (void *)&rect);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setwswindow xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
@@ -4036,7 +4061,7 @@ void gr_setwsviewport(double xmin, double xmax, double ymin, double ymax)
 
   sizex = xmax - xmin;
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setwsviewport xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
@@ -4166,7 +4191,7 @@ int gr_setspace(double zmin, double zmax, int rotation, int tilt)
 
   setspace(zmin, zmax, rotation, tilt);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setspace zmin=\"%g\" zmax=\"%g\" rotation=\"%d\" tilt=\"%d\"/>\n", zmin, zmax, rotation, tilt);
 
   return 0;
@@ -4200,7 +4225,7 @@ void gr_setprojectiontype(int flag)
     {
       gpx.projection_type = flag;
 
-      if (flag_graphics) gr_writestream("<setprojectiontype flag=\"%i\"/>\n", flag);
+      if (flag_stream) gr_writestream("<setprojectiontype flag=\"%i\"/>\n", flag);
     }
   else
     {
@@ -4300,7 +4325,7 @@ void gr_settransformationparameters(double camera_pos_x, double camera_pos_y, do
   settransformationparameters(camera_pos_x, camera_pos_y, camera_pos_z, up_x, up_y, up_z, focus_point_x, focus_point_y,
                               focus_point_z);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<settransformationparameters camera_pos_x=\"%g\" camera_pos_y=\"%g\" camera_pos_z=\"%g\" "
                    "up_x=\"%g\" up_y=\"%g\" "
                    "up_z=\"%g\" focus_point_x=\"%g\" focus_point_y=\"%g\" focus_point_z=\"%g\"/>\n",
@@ -4340,7 +4365,7 @@ void gr_setperspectiveprojection(double near_plane, double far_plane, double fov
 
   setperspectiveprojection(near_plane, far_plane, fov);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setperspectiveprojection near_plane=\"%g\" far_plane=\"%g\" fov=\"%g\"/>\n", near_plane, far_plane,
                    fov);
 }
@@ -4377,7 +4402,7 @@ void gr_setorthographicprojection(double left, double right, double bottom, doub
 
   setorthographicprojection(left, right, bottom, top, near_plane, far_plane);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setorthographicprojection left=\"%g\" right=\"%g\" bottom=\"%g\" top=\"%g\" near_plane=\"%g\" "
                    "far_plane=\"%g\"/>\n",
                    left, right, bottom, top, near_plane, far_plane);
@@ -4631,7 +4656,7 @@ int gr_textext(double x, double y, char *string)
 
   if (tnr != NDC) gks_select_xform(tnr);
 
-  if (flag_graphics) gr_writestream("<textext x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+  if (flag_stream) gr_writestream("<textext x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
 
   return result;
 }
@@ -4695,7 +4720,7 @@ void gr_setscientificformat(int format_option)
       scientific_format = format_option;
     }
 
-  if (flag_graphics) gr_writestream("<setscientificformat option=>\n", format_option);
+  if (flag_stream) gr_writestream("<setscientificformat option=>\n", format_option);
 }
 
 static void text2dlbl(double x, double y, char *chars, double value, void (*fp)(double, double, const char *, double))
@@ -4829,7 +4854,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
   double clrt[4], wn[4], vp[4];
   double x_min, x_max, y_min, y_max, feps;
 
-  double tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi, start_x, start_y;
+  double tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi;
   int64_t i;
   int decade, exponent;
   char string[256];
@@ -4906,7 +4931,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = ipred(y_min / y0);
           yi = y0 + i * y0;
-          start_y = yi;
           decade = igauss(blog(lx.basey, y_min / y_org));
 
           /* draw Y-axis */
@@ -4929,7 +4953,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                             if (y_tick > 1)
                               {
                                 exponent = iround(blog(lx.basey, yi));
-                                sprintf(string, "%s^{%d}", lx.basey_s, exponent);
+                                snprintf(string, 256, "%s^{%d}", lx.basey_s, exponent);
                                 text2dlbl(x_label, yi, replace_minus_sign(string), yi, fpy);
                               }
                             else
@@ -4968,7 +4992,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = isucc(y_min / y_tick);
           yi = i * y_tick;
-          start_y = yi;
 
           /* draw Y-axis */
 
@@ -5038,7 +5061,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = ipred(x_min / x0);
           xi = x0 + i * x0;
-          start_x = xi;
           decade = igauss(blog(lx.basex, x_min / x_org));
 
           /* draw X-axis */
@@ -5061,7 +5083,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                             if (x_tick > 1)
                               {
                                 exponent = iround(blog(lx.basex, xi));
-                                sprintf(string, "%s^{%d}", lx.basex_s, exponent);
+                                snprintf(string, 256, "%s^{%d}", lx.basex_s, exponent);
                                 text2dlbl(xi, y_label, replace_minus_sign(string), xi, fpx);
                               }
                             else
@@ -5100,7 +5122,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
-          start_x = xi;
 
           str_get_format_reference(&format_reference, x_org, xi, x_max, x_tick, major_x);
 
@@ -5149,7 +5170,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
   gks_set_text_upvec(chux, chuy);
   gks_set_clipping(clsw);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<axes xtick=\"%g\" ytick=\"%g\" xorg=\"%g\" yorg=\"%g\" "
                    "majorx=\"%d\" majory=\"%d\" ticksize=\"%g\"/>\n",
                    x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size);
@@ -5386,7 +5407,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
   gks_set_pline_color_index(color);
   gks_set_clipping(clsw);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<grid xtick=\"%g\" ytick=\"%g\" xorg=\"%g\" yorg=\"%g\" "
                    "majorx=\"%d\" majory=\"%d\"/>\n",
                    x_tick, y_tick, x_org, y_org, major_x, major_y);
@@ -5474,6 +5495,12 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
 
       x_min = ix.xmin;
       x_max = ix.xmax;
@@ -5700,7 +5727,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
   gks_set_pline_color_index(color);
   gks_set_clipping(clsw);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<grid3d xtick=\"%g\" ytick=\"%g\" ztick=\"%g\" "
                    "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
                    "majorx=\"%d\" majory=\"%d\" majorz=\"%d\"/>\n",
@@ -5762,7 +5789,7 @@ void gr_verrorbars(int n, double *px, double *py, double *e1, double *e2)
 
   polymarker(n, px, py);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<verrorbars len=\"%d\"", n);
       print_float_array("x", n, px);
@@ -5822,7 +5849,7 @@ void gr_herrorbars(int n, double *px, double *py, double *e1, double *e2)
 
   polymarker(n, px, py);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<herrorbars len=\"%d\"", n);
       print_float_array("x", n, px);
@@ -5964,6 +5991,12 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
     }
 
   if (clsw == GKS_K_CLIP)
@@ -6028,7 +6061,7 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
 
   end_pline();
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<polyline3d len=\"%d\"", n);
       print_float_array("x", n, px);
@@ -6101,6 +6134,12 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
     }
 
   m = 0;
@@ -6153,9 +6192,9 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
       zpoint[i] = point[i].z;
     }
 
-  if (m > 0) gr_polymarker(m, xpoint, ypoint);
+  if (m > 0) gks_polymarker(m, xpoint, ypoint);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<polymarker3d len=\"%d\"", n);
       print_float_array("x", n, px);
@@ -6246,7 +6285,7 @@ void gr_text3d(double x, double y, double z, char *chars, int axis)
   scaleFactors[2] = tx.z_axis_scale;
   gks_ft_text3d(x, y, z, chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp, gr_wc3towc);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<text3d x=\"%g\" y=\"%g\" z=\"%g\" text=\"%s\" axis=\"%d\"/>\n", x, y, z, chars, axis);
 }
 
@@ -6319,6 +6358,19 @@ static void axes3d_get_params(int axis, int *tick_axis, double x_org, double y_o
   xi = (x_max + x_min) / 2;
   yi = (y_max + y_min) / 2;
   zi = (z_max + z_min) / 2;
+
+  if (lx.scale_options & OPTION_FLIP_X)
+    {
+      x_org = -x_org + x_min + x_max;
+    }
+  if (lx.scale_options & OPTION_FLIP_Y)
+    {
+      y_org = -y_org + y_min + y_max;
+    }
+  if (lx.scale_options & OPTION_FLIP_Z)
+    {
+      z_org = -z_org + z_min + z_max;
+    }
 
   if (axis == 0)
     {
@@ -6558,6 +6610,12 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
 
       x_min = ix.xmin;
       x_max = ix.xmax;
@@ -6709,7 +6767,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                         if (z_tick > 1)
                           {
                             exponent = iround(blog(lx.basez, zi));
-                            sprintf(string, "%s^{%d}", lx.basez_s, exponent);
+                            snprintf(string, 256, "%s^{%d}", lx.basez_s, exponent);
                             text3d(x_label, y_label, zi, replace_minus_sign(string), 0);
                           }
                         else
@@ -6874,7 +6932,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                         if (y_tick > 1)
                           {
                             exponent = iround(blog(lx.basey, yi));
-                            sprintf(string, "%s^{%d}", lx.basey_s, exponent);
+                            snprintf(string, 256, "%s^{%d}", lx.basey_s, exponent);
                             text3d(x_label, yi, z_label, replace_minus_sign(string), 0);
                           }
                         else
@@ -7038,7 +7096,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                         if (x_tick > 1)
                           {
                             exponent = iround(blog(lx.basex, xi));
-                            sprintf(string, "%s^{%d}", lx.basex_s, exponent);
+                            snprintf(string, 256, "%s^{%d}", lx.basex_s, exponent);
                             text3d(xi, y_label, z_label, replace_minus_sign(string), 0);
                           }
                         else
@@ -7123,7 +7181,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   gks_set_text_upvec(chux, chuy);
   gks_set_clipping(clsw);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<axes3d xtick=\"%g\" ytick=\"%g\" ztick=\"%g\" "
                    "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
                    "majorx=\"%d\" majory=\"%d\" majorz=\"%d\" ticksize=\"%g\"/>\n",
@@ -7187,6 +7245,12 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
     }
 
   if (modern_projection_type)
@@ -7510,8 +7574,7 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
       gks_set_text_upvec(chux, chuy);
     }
 
-  if (flag_graphics)
-    gr_writestream("<titles3d xtitle=\"%s\" ytitle=\"%s\" ztitle=\"%s\"/>\n", x_title, y_title, z_title);
+  if (flag_stream) gr_writestream("<titles3d xtitle=\"%s\" ytitle=\"%s\" ztitle=\"%s\"/>\n", x_title, y_title, z_title);
 
   if (modern_projection_type)
     {
@@ -7566,7 +7629,7 @@ static void init_hlr(void)
 
       for (i = 0; i < 3; i++) apply_world_xform(x + i, y + i, z + i);
 
-      if (hlr.xmax > hlr.xmin)
+      if (hlr.xmax != hlr.xmin)
         {
           a = RESOLUTION_X / (hlr.xmax - hlr.xmin);
           b = -(hlr.xmin * a);
@@ -7633,7 +7696,7 @@ static void pline_hlr(int n, double *x, double *y, double *z)
   saved_scale_options = lx.scale_options;
   lx.scale_options = 0;
 
-  if (hlr.xmax > hlr.xmin)
+  if (hlr.xmax != hlr.xmin)
     {
       a = RESOLUTION_X / (hlr.xmax - hlr.xmin);
       b = -(hlr.xmin * a);
@@ -7953,6 +8016,12 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
     }
 
 #define Z(x, y) pz[(x) + nx * (y)]
@@ -8306,7 +8375,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
   gks_set_fill_int_style(int_style);
   gks_set_fill_color_index(coli);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<surface nx=\"%d\" ny=\"%d\"", nx, ny);
       print_float_array("x", nx, px);
@@ -8381,6 +8450,12 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
 
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
+      lx.xmin = ix.xmin;
+      lx.xmax = ix.xmax;
+      lx.ymin = ix.ymin;
+      lx.ymax = ix.ymax;
+      lx.zmin = ix.zmin;
+      lx.zmax = ix.zmax;
     }
 
   /* save fill area interior style and color index */
@@ -8502,7 +8577,7 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
 
   free(triangles);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<trisurface len=\"%d\"", n);
       print_float_array("x", n, px);
@@ -8649,7 +8724,7 @@ void gr_quiver(int nx, int ny, double *x, double *y, double *u, double *v, int c
   gks_set_pline_color_index(linecolor);
   gks_set_fill_color_index(fillcolor);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<quiver nx=\"%d\" ny=\"%d\"", nx, ny);
       print_float_array("x", nx, x);
@@ -8802,7 +8877,7 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
   gks_set_text_align(halign, valign);
   gks_set_text_upvec(chux, chuy);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<contour nx=\"%d\" ny=\"%d\" nh=\"%d\"", nx, ny, nh);
       print_float_array("x", nx, px);
@@ -8897,7 +8972,7 @@ void gr_contourf(int nx, int ny, int nh, double *px, double *py, double *h, doub
   gks_set_fill_style_index(fillintstyle);
   gks_set_fill_color_index(fillcolorind);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<contourf nx=\"%d\" ny=\"%d\" nh=\"%d\"", nx, ny, nh);
       print_float_array("x", nx, px);
@@ -8945,7 +9020,7 @@ void gr_tricontour(int npoints, double *x, double *y, double *z, int nlevels, do
 
   free(colors);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<tricont npoints=\"%d\"", npoints);
       print_float_array("x", npoints, x);
@@ -9149,7 +9224,7 @@ int gr_hexbin(int n, double *x, double *y, int nbins)
   gks_set_fill_int_style(int_style);
   gks_set_fill_color_index(coli);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<hexbin len=\"%d\"", n);
       print_float_array("x", n, x);
@@ -9220,7 +9295,7 @@ void gr_setcolormap(int index)
       setcolorrep(1000 + i, r, g, b);
     }
 
-  if (flag_graphics) gr_writestream("<setcolormap index=\"%d\"/>\n", index);
+  if (flag_stream) gr_writestream("<setcolormap index=\"%d\"/>\n", index);
 }
 
 void gr_inqcolormap(int *index)
@@ -9386,7 +9461,7 @@ void gr_colorbar(void)
   gks_set_text_align(halign, valign);
   gks_set_clipping(clsw);
 
-  if (flag_graphics) gr_writestream("<colorbar/>\n");
+  if (flag_stream) gr_writestream("<colorbar/>\n");
 }
 
 void gr_inqcolor(int color, int *rgb)
@@ -9938,7 +10013,7 @@ void gr_drawrect(double xmin, double xmax, double ymin, double ymax)
       gks_gdp(4, x, y, GKS_K_GDP_DRAW_PATH, 5, codes);
     }
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<drawrect xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
@@ -9987,7 +10062,7 @@ void gr_fillrect(double xmin, double xmax, double ymin, double ymax)
       gks_gdp(4, x, y, GKS_K_GDP_DRAW_PATH, 5, codes);
     }
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<fillrect xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
@@ -10065,7 +10140,7 @@ void gr_drawarc(double xmin, double xmax, double ymin, double ymax, double a1, d
       gks_gdp(4, x, y, GKS_K_GDP_DRAW_PATH, 3, codes);
     }
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<drawarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
                      "a1=\"%g\" a2=\"%g\"/>\n",
@@ -10152,7 +10227,7 @@ void gr_fillarc(double xmin, double xmax, double ymin, double ymax, double a1, d
       gks_gdp(4, x, y, GKS_K_GDP_DRAW_PATH, 3, codes);
     }
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<fillarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
                      "a1=\"%g\" a2=\"%g\"/>\n",
@@ -10306,7 +10381,7 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
     }
   closepath(fill);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<drawpath len=\"%d\"", n);
       print_vertex_array("vertices", n, vertices);
@@ -10371,7 +10446,7 @@ void gr_setarrowstyle(int style)
 
   if (style >= 1 && style <= 18) arrow_style = style - 1;
 
-  if (flag_graphics) gr_writestream("<setarrowstyle style=\"%d\"/>\n", style);
+  if (flag_stream) gr_writestream("<setarrowstyle style=\"%d\"/>\n", style);
 }
 
 /*!
@@ -10388,7 +10463,7 @@ void gr_setarrowsize(double size)
 
   if (size > 0) arrow_size = size;
 
-  if (flag_graphics) gr_writestream("<setarrowsize size=\"%g\"/>\n", size);
+  if (flag_stream) gr_writestream("<setarrowsize size=\"%g\"/>\n", size);
 }
 
 /*!
@@ -10487,7 +10562,7 @@ void gr_drawarrow(double x1, double y1, double x2, double y2)
   gks_set_fill_int_style(intstyle);
   gks_set_pline_linetype(ltype);
 
-  if (flag_graphics) gr_writestream("<drawarrow x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\"/>\n", x1, y1, x2, y2);
+  if (flag_stream) gr_writestream("<drawarrow x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\"/>\n", x1, y1, x2, y2);
 }
 
 static void drawimage_calculation(double xmin, double xmax, double ymin, double ymax, int width, int height, int *data,
@@ -10610,7 +10685,7 @@ void gr_drawimage(double xmin, double xmax, double ymin, double ymax, int width,
 
   drawimage_calculation(xmin, xmax, ymin, ymax, width, height, data, model);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       n = width * height;
       gr_writestream("<drawimage xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
@@ -10681,7 +10756,7 @@ void gr_begingraphics(char *path)
         {
           gr_writestream(XML_HEADER);
           gr_writestream(GR_HEADER);
-          flag_graphics = 1;
+          flag_stream = flag_graphics = 1;
         }
       else
         fprintf(stderr, "%s: open failed\n", path);
@@ -10694,6 +10769,7 @@ void gr_endgraphics(void)
     {
       gr_writestream(GR_TRAILER);
       gr_closestream();
+      flag_stream = debug != NULL;
       flag_graphics = 0;
     }
 }
@@ -10713,8 +10789,8 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
 #endif
 
   color = ((int)(rgb[0] * 255)) + ((int)(rgb[1] * 255) << 8) + ((int)(rgb[2] * 255) << 16) + (255 << 24);
-  sprintf(s, "%d%x%s", pointSize, color, string);
-  md5(s, cache);
+  snprintf(s, FILENAME_MAX, "%d%x%s", pointSize, color, string);
+  md5(s, cache, FILENAME_MAX);
   if (temp == NULL)
     {
 #ifdef _WIN32
@@ -10724,7 +10800,7 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
 #endif
       if (temp == NULL) temp = TMPDIR;
     }
-  sprintf(path, "%s%sgr-cache-%s.png", temp, DIRDELIM, cache);
+  snprintf(path, FILENAME_MAX, "%s%sgr-cache-%s.png", temp, DIRDELIM, cache);
 
 #ifdef _WIN32
   MultiByteToWideChar(CP_UTF8, 0, path, strlen(path) + 1, w_path, MAX_PATH);
@@ -10734,9 +10810,9 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
 #endif
     {
       math = strstr(string, "\\(") == NULL;
-      sprintf(tex, "%s%s%s.tex", temp, DIRDELIM, cache);
-      sprintf(dvi, "%s%s%s.dvi", temp, DIRDELIM, cache);
-      sprintf(png, "%s%s%s.png", temp, DIRDELIM, cache);
+      snprintf(tex, FILENAME_MAX, "%s%s%s.tex", temp, DIRDELIM, cache);
+      snprintf(dvi, FILENAME_MAX, "%s%s%s.dvi", temp, DIRDELIM, cache);
+      snprintf(png, FILENAME_MAX, "%s%s%s.png", temp, DIRDELIM, cache);
 #ifdef _WIN32
       null = "NUL";
       MultiByteToWideChar(CP_UTF8, 0, tex, strlen(tex) + 1, w_path, MAX_PATH);
@@ -10779,7 +10855,8 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
       fprintf(stream, "\\end{document}");
       fclose(stream);
 
-      sprintf(cmd, "latex -interaction=batchmode -halt-on-error -output-directory=%s %s >%s", temp, tex, null);
+      snprintf(cmd, 2 * FILENAME_MAX + 200, "latex -interaction=batchmode -halt-on-error -output-directory=%s %s >%s",
+               temp, tex, null);
       ret = system(cmd);
 
 #ifdef _WIN32
@@ -10789,7 +10866,8 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
       if (ret == 0 && access(dvi, R_OK) == 0)
 #endif
         {
-          sprintf(cmd, "dvipng -bg transparent -q -T tight -x %d %s -o %s >%s", pointSize * 100, dvi, png, null);
+          snprintf(cmd, 2 * FILENAME_MAX + 200, "dvipng -bg transparent -q -T tight -x %d %s -o %s >%s",
+                   pointSize * 100, dvi, png, null);
           ret = system(cmd);
           if (ret == 0)
             {
@@ -11031,7 +11109,7 @@ void gr_mathtex(double x, double y, char *string)
       mathtex(x, y, string, 0, NULL, NULL);
     }
 
-  if (flag_graphics) gr_writestream("<mathtex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+  if (flag_stream) gr_writestream("<mathtex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
 }
 
 void gr_inqmathtex(double x, double y, char *string, double *tbx, double *tby)
@@ -11381,7 +11459,7 @@ void gr_text(double x, double y, char *string)
 
   if (tnr != NDC) gks_select_xform(tnr);
 
-  if (flag_graphics) gr_writestream("<text x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+  if (flag_stream) gr_writestream("<text x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
 }
 
 /*!
@@ -11425,7 +11503,7 @@ void gr_textx(double x, double y, char *string, int opts)
 
   if (tnr != NDC) gks_select_xform(tnr);
 
-  if (flag_graphics) gr_writestream("<textx x=\"%g\" y=\"%g\" text=\"%s\" opts=\"%d\"/>\n", x, y, string, opts);
+  if (flag_stream) gr_writestream("<textx x=\"%g\" y=\"%g\" text=\"%s\" opts=\"%d\"/>\n", x, y, string, opts);
 }
 
 void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
@@ -11601,7 +11679,7 @@ void gr_savestate(void)
   else
     fprintf(stderr, "attempt to save state beyond implementation limit\n");
 
-  if (flag_graphics) gr_writestream("<savestate/>\n");
+  if (flag_stream) gr_writestream("<savestate/>\n");
 }
 
 void gr_restorestate(void)
@@ -11647,7 +11725,7 @@ void gr_restorestate(void)
   else
     fprintf(stderr, "attempt to restore unsaved state\n");
 
-  if (flag_graphics) gr_writestream("<restorestate/>\n");
+  if (flag_stream) gr_writestream("<restorestate/>\n");
 }
 
 void gr_selectcontext(int context)
@@ -11879,7 +11957,7 @@ int gr_uselinespec(char *linespec)
   gr_setlinecolorind(color);
   gr_setmarkercolorind(color);
 
-  if (flag_graphics) gr_writestream("<uselinespec linespec=\"%s\"/>\n", linespec);
+  if (flag_stream) gr_writestream("<uselinespec linespec=\"%s\"/>\n", linespec);
 
   return result;
 }
@@ -12066,7 +12144,7 @@ void gr_shadepoints(int n, double *x, double *y, int xform, int w, int h)
 
   free(bins);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<shadepoints len=\"%d\"", n);
       print_float_array("x", n, x);
@@ -12145,7 +12223,7 @@ void gr_shadelines(int n, double *x, double *y, int xform, int w, int h)
 
   free(bins);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<shadelines len=\"%d\"", n);
       print_float_array("x", n, x);
@@ -12765,7 +12843,7 @@ void gr_camerainteraction(double start_mouse_pos_x, double start_mouse_pos_y, do
       tx.s_z = sz;
     }
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<camerainteraction start_mouse_pos_x=\"%g\" start_mouse_pos_y=\"%g\" end_mouse_pos_x=\"%g\" "
                    "end_mouse_pos_y=\"%g\"/>\n",
                    start_mouse_pos_x, start_mouse_pos_y, end_mouse_pos_x, end_mouse_pos_y);
@@ -12795,7 +12873,7 @@ void gr_setwindow3d(double xmin, double xmax, double ymin, double ymax, double z
   wx.zmin = zmin;
   wx.zmax = zmax;
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setwindow3d xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" zmin=\"%g\" zmax=\"%g\"/>\n", xmin,
                    xmax, ymin, ymax, zmin, zmax);
 }
@@ -12828,7 +12906,7 @@ void gr_setscalefactors3d(double x_axis_scale, double y_axis_scale, double z_axi
 
   setscalefactors3d(x_axis_scale, y_axis_scale, z_axis_scale);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setscalefactors3d x_axis_scale=\"%g\" y_axis_scale=\"%g\" z_axis_scale=\"%g\"/>\n", x_axis_scale,
                    y_axis_scale, z_axis_scale);
 }
@@ -12855,7 +12933,7 @@ void gr_setborderwidth(double width)
   gks_set_border_width(width);
   if (ctx) ctx->bwidth = width;
 
-  if (flag_graphics) gr_writestream("<setborderwidth width=\"%g\"/>\n", width);
+  if (flag_stream) gr_writestream("<setborderwidth width=\"%g\"/>\n", width);
 }
 
 void gr_inqborderwidth(double *width)
@@ -12879,7 +12957,7 @@ void gr_setbordercolorind(int color)
   gks_set_border_color_index(color);
   if (ctx) ctx->bcoli = color;
 
-  if (flag_graphics) gr_writestream("<setbordercolorind color=\"%d\"/>\n", color);
+  if (flag_stream) gr_writestream("<setbordercolorind color=\"%d\"/>\n", color);
 }
 
 void gr_inqbordercolorind(int *coli)
@@ -12898,7 +12976,7 @@ void gr_selectclipxform(int tnr)
   gks_select_clip_xform(tnr);
   if (ctx) ctx->clip_tnr = tnr;
 
-  if (flag_graphics) gr_writestream("<selectclipxform tnr=\"%d\"/>\n", tnr);
+  if (flag_stream) gr_writestream("<selectclipxform tnr=\"%d\"/>\n", tnr);
 }
 
 void gr_inqclipxform(int *tnr)
@@ -12972,7 +13050,7 @@ void gr_setspace3d(double phi, double theta, double fov, double cam)
 
   setscalefactors3d(scale_factor_x, scale_factor_y, scale_factor_z);
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setspace3d phi=\"%g\" theta=\"%g\" fov=\"%g\" cam=\"%g\"/>\n", phi, theta, fov, cam);
 }
 
@@ -12982,7 +13060,7 @@ void gr_settextencoding(int encoding)
 
   gks_set_encoding(encoding);
 
-  if (flag_graphics) gr_writestream("<settextencoding encoding=\"%d\"/>\n", encoding);
+  if (flag_stream) gr_writestream("<settextencoding encoding=\"%d\"/>\n", encoding);
 }
 
 void gr_inqtextencoding(int *encoding)
@@ -13010,7 +13088,7 @@ static void bilinear_interpolation(double c00, double c10, double c01, double c1
 
 /*!
  * Set the number of threads which can run parallel. The default value is the number of threads the cpu has.
- * The only ussage right now is inside gr_cpubasedvolume.
+ * The only usage right now is inside `gr_cpubasedvolume` and `gr_volume_nogrid`.
  *
  * \param[in] num number of threads
  */
@@ -13021,11 +13099,11 @@ void gr_setthreadnumber(int num)
   vt.max_threads = max(1, num);
   vt.thread_size = 10 * (1.0 / (2.0 * num));
 
-  if (flag_graphics) gr_writestream("<setthreadnumber num=\"%i\"/>\n", num);
+  if (flag_stream) gr_writestream("<setthreadnumber num=\"%i\"/>\n", num);
 }
 
 /*!
- * Set the width and height of the resulting picture. These values are only used for gr_volume and gr_cpubasedvolume.
+ * Set the width and height of the resulting picture. These values are only used for the volume rendering methods.
  * The default values are 1000 for both.
  *
  * \param[in] width  width of the resulting image
@@ -13038,7 +13116,7 @@ void gr_setpicturesizeforvolume(int width, int height)
   vt.picture_height = height;
   vt.picture_width = width;
 
-  if (flag_graphics) gr_writestream("<setpicturesizeforvolume width=\"%i\" height=\"%i\"/>\n", width, height);
+  if (flag_stream) gr_writestream("<setpicturesizeforvolume width=\"%i\" height=\"%i\"/>\n", width, height);
 }
 
 /*!
@@ -13060,7 +13138,7 @@ void gr_setapproximativecalculation(int approximative_calculation)
       fprintf(stderr, "Invalid number for approximative_calculation. Valid numbers are 0 and 1.\n");
     }
 
-  if (flag_graphics)
+  if (flag_stream)
     gr_writestream("<setapproximativecalculation approximative_calculation=\"%i\"", approximative_calculation);
 }
 
@@ -13095,7 +13173,7 @@ void gr_setvolumebordercalculation(int flag)
       fprintf(stderr, "Invalid gr_volume bordercalculation flag. Possible options are GR_VOLUME_WITHOUT_BORDER, "
                       "GR_VOLUME_WITH_BORDER \n");
     }
-  if (flag_graphics) gr_writestream("<setvolumebordercalculation flag=\"%i\"/>\n", flag);
+  if (flag_stream) gr_writestream("<setvolumebordercalculation flag=\"%i\"/>\n", flag);
 }
 
 /*!
@@ -13819,6 +13897,19 @@ static void ray_casting_thread(void *arg)
     }
 }
 
+static int system_processor_count()
+{
+#ifdef _WIN32
+#ifndef _SC_NPROCESSORS_ONLN
+  SYSTEM_INFO info;
+  GetSystemInfo(&info);
+#define sysconf(a) info.dwNumberOfProcessors
+#define _SC_NPROCESSORS_ONLN
+#endif
+#endif
+  return (int)sysconf(_SC_NPROCESSORS_ONLN);
+}
+
 /*!
  * Draw volume data with raycasting using the given algorithm and apply the current GR colormap.
  *
@@ -13930,15 +14021,7 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
       fprintf(stderr, "can't allocate memory");
       return;
     }
-#ifdef _WIN32
-#ifndef _SC_NPROCESSORS_ONLN
-  SYSTEM_INFO info;
-  GetSystemInfo(&info);
-#define sysconf(a) info.dwNumberOfProcessors
-#define _SC_NPROCESSORS_ONLN
-#endif
-#endif
-  threadnum = ((int)sysconf(_SC_NPROCESSORS_ONLN) - 1) < 256 ? (int)sysconf(_SC_NPROCESSORS_ONLN) - 1 : 256;
+  threadnum = (system_processor_count() - 1) < 256 ? system_processor_count() - 1 : 256;
   if (vt.max_threads > 0)
     {
       threadnum = vt.max_threads;
@@ -13997,7 +14080,7 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
 
   free(pixels);
   free(jobs);
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<cpubasedvolume nx=\"%i\" ny=\"%i\" nz=\"%i\" />\n", nx, ny, nz);
       print_float_array("data", nx * ny * nz, data);
@@ -14112,7 +14195,7 @@ void gr_polygonmesh3d(int num_points, const double *px, const double *py, const 
   free(y);
   free(x);
 
-  if (flag_graphics)
+  if (flag_stream)
     {
       gr_writestream("<polygonmesh3d num_points=\"%d\"", num_points);
       print_float_array("x", num_points, (double *)px);
@@ -14124,4 +14207,876 @@ void gr_polygonmesh3d(int num_points, const double *px, const double *py, const 
       print_int_array("colors", num_connections, (int *)colors);
       gr_writestream("/>\n");
     }
+}
+
+GR_INLINE static void pt_scale(point3d_t *self, double const other)
+{
+  self->x *= other;
+  self->y *= other;
+  self->z *= other;
+}
+
+GR_INLINE static void pt_mad(point3d_t *self, double const fac, point3d_t const *b)
+{
+  /* self <- self + fac * b */
+  self->x += fac * b->x;
+  self->y += fac * b->y;
+  self->z += fac * b->z;
+}
+
+GR_INLINE static double pt_dot(point3d_t const *self, point3d_t const *other)
+{
+  return self->x * other->x + self->y * other->y + self->z * other->z;
+}
+
+
+GR_INLINE static double pt_length(point3d_t const *self)
+{
+  return sqrt(self->x * self->x + self->y * self->y + self->z * self->z);
+}
+
+GR_INLINE static double pt_smallest_mult(point3d_t const *self, point3d_t const *vec)
+{
+  double low = 1e15;
+  double _x = vec->x / self->x;
+  double _y = vec->y / self->y;
+  double _z = vec->z / self->z;
+  if (fabs(self->x) >= 1e-12)
+    {
+      low = _x;
+    }
+  if (fabs(self->y) >= 1e-12 && low > _y)
+    {
+      low = _y;
+    }
+  if (fabs(self->z) >= 1e-12 && low > _z)
+    {
+      low = _z;
+    }
+  return low;
+}
+
+GR_INLINE static void pt_sub(point3d_t *self, point3d_t const *other)
+{
+  self->x -= other->x;
+  self->y -= other->y;
+  self->z -= other->z;
+}
+
+GR_INLINE static double pt_biggest_mult(point3d_t const *self, point3d_t const *vec)
+{
+  double max = -1e15;
+  double _x = vec->x / self->x;
+  double _y = vec->y / self->y;
+  double _z = vec->z / self->z;
+  if (fabs(self->x) >= 1e-12)
+    {
+      max = _x;
+    }
+  if (fabs(self->y) >= 1e-12 && max < _y)
+    {
+      max = _y;
+    }
+  if (fabs(self->z) >= 1e-12 && max < _z)
+    {
+      max = _z;
+    }
+  return max;
+}
+
+GR_INLINE static void pt_matmul(point3d_t *self, point3d_t const *for_x, point3d_t const *for_y, point3d_t const *for_z)
+{
+  double tmp_x = self->x * for_x->x + self->y * for_y->x + self->z * for_z->x;
+  double tmp_y = self->x * for_x->y + self->y * for_y->y + self->z * for_z->y;
+  double tmp_z = self->x * for_x->z + self->y * for_y->z + self->z * for_z->z;
+  self->x = tmp_x;
+  self->y = tmp_y;
+  self->z = tmp_z;
+}
+
+GR_INLINE static void pt_unitize(point3d_t *pt)
+{
+  double l = pt_length(pt);
+  pt->x /= l;
+  pt->y /= l;
+  pt->z /= l;
+}
+
+/*!
+ * Initializes default parameters for interpolation using the gaussian multivariate distribution.
+ *
+ * if \f$\Sigma\f$ is the covariance matrice:
+ *
+ * \param[in]       determinant   \f$\left|\Sigma\right|\f$
+ * \param[in]       mat           \f$\Sigma^{-\frac{1}{2}}\f$
+ */
+void gr_volume_interp_gauss_init(double determinant, double *mat)
+{
+  interp_gauss_data.sqrt_det = sqrt(determinant);
+  interp_gauss_data.gauss_sig_1.x = mat[0];
+  interp_gauss_data.gauss_sig_2.x = mat[3];
+  interp_gauss_data.gauss_sig_3.x = mat[6];
+  interp_gauss_data.gauss_sig_1.y = mat[1];
+  interp_gauss_data.gauss_sig_2.y = mat[4];
+  interp_gauss_data.gauss_sig_3.y = mat[7];
+  interp_gauss_data.gauss_sig_1.z = mat[2];
+  interp_gauss_data.gauss_sig_2.z = mat[5];
+  interp_gauss_data.gauss_sig_3.z = mat[8];
+}
+
+/*!
+ * Integrates the given ray through a gaussian multivariate distribution.
+ *
+ * The parameters of the distribution are set using either `gr_volume_interp_gauss_init` or `extra_data` (as `gauss_t`)
+ *
+ * \param[in]       dt_pt   The data point with associated intensity and optional distribution parameters
+ * \param[in]       extra_data  Optional extra data for data point
+ * \param[in]       from    Start point of ray
+ * \param[in]       len     The direction and length of ray
+ * \returns                 The integrated density
+ */
+double gr_volume_interp_gauss(const data_point3d_t *dt_pt, const void *extra_data, const point3d_t *from,
+                              const point3d_t *len)
+{
+  point3d_t rfrom = *from, dir = *len;
+  point3d_t y_0, b;
+  const gauss_t *d = extra_data == NULL ? &interp_gauss_data : (const gauss_t *)extra_data;
+  double f, y_0b, ex;
+  pt_sub(&rfrom, &dt_pt->pt);
+
+  y_0 = rfrom;
+  b = dir;
+  pt_unitize(&b);
+
+  pt_matmul(&y_0, &d->gauss_sig_1, &d->gauss_sig_2, &d->gauss_sig_3);
+  pt_matmul(&b, &d->gauss_sig_1, &d->gauss_sig_2, &d->gauss_sig_3);
+
+  f = 1. / pt_length(&b);
+  pt_scale(&b, f);
+
+  y_0b = pt_dot(&y_0, &b);
+  ex = 0.5 * (y_0b * y_0b - pt_dot(&y_0, &y_0));
+
+  return 2 * M_PI * d->sqrt_det * f * dt_pt->data * exp(ex);
+}
+
+/*!
+ * Initializes default parameters for trilinear interpolation.
+ *
+ * \param[in]       grid_x   The extent of density
+ * \param[in]       grid_y   The extent of density
+ * \param[in]       grid_z   The extent of density
+ */
+void gr_volume_interp_tri_linear_init(double grid_x, double grid_y, double grid_z)
+{
+  interp_tri_linear_data.grid_x_re = 1. / grid_x;
+  interp_tri_linear_data.grid_y_re = 1. / grid_y;
+  interp_tri_linear_data.grid_z_re = 1. / grid_z;
+}
+
+/*!
+ * Integrates the given ray through a axis-aligned trilinear interpolation density.
+ *
+ * The parameters of the density are set using either `gr_volume_interp_tri_linear_init` or `extra_data` (as
+ * `tri_linear_t`)
+ *
+ * \param[in]       dt_pt       The data point with associated intensity and optional density parameters
+ * \param[in]       extra_data  Optional extra data for data point
+ * \param[in]       from        Start point of ray
+ * \param[in]       len         The direction and length of ray
+ * \returns                 The integrated density
+ */
+double gr_volume_interp_tri_linear(const data_point3d_t *dt_pt, const void *extra_data, const point3d_t *from,
+                                   const point3d_t *len)
+{
+  point3d_t rfrom = *from, dir = *len;
+
+  const tri_linear_t *d = extra_data == NULL ? &interp_tri_linear_data : (const tri_linear_t *)extra_data;
+
+  double dirlen = 0.5 * sqrt((dir.x * tx.x_axis_scale) * (dir.x * tx.x_axis_scale) +
+                             (dir.y * tx.y_axis_scale) * (dir.y * tx.y_axis_scale) +
+                             (dir.z * tx.z_axis_scale) * (dir.z * tx.z_axis_scale));
+  int i;
+  double low, high;
+  int current = 0;
+  double val = 0;
+
+  double steps[5] = {0., 0., 0., 0., 0.};
+
+  /* convert ray to model space */
+  pt_sub(&rfrom, &dt_pt->pt);
+
+  if (dir.x < 0)
+    {
+      dir.x *= -d->grid_x_re;
+      rfrom.x *= -d->grid_x_re;
+    }
+  else
+    {
+      dir.x *= d->grid_x_re;
+      rfrom.x *= d->grid_x_re;
+    }
+
+  if (dir.y < 0)
+    {
+      dir.y *= -d->grid_y_re;
+      rfrom.y *= -d->grid_y_re;
+    }
+  else
+    {
+      dir.y *= d->grid_y_re;
+      rfrom.y *= d->grid_y_re;
+    }
+
+  if (dir.z < 0)
+    {
+      dir.z *= -d->grid_z_re;
+      rfrom.z *= -d->grid_z_re;
+    }
+  else
+    {
+      dir.z *= d->grid_z_re;
+      rfrom.z *= d->grid_z_re;
+    }
+
+  {
+    point3d_t high_pt = {1, 1, 1};
+    point3d_t low_pt = {-1, -1, -1};
+    pt_sub(&high_pt, &rfrom);
+    pt_sub(&low_pt, &rfrom);
+    high = pt_smallest_mult(&dir, &high_pt);
+    low = pt_biggest_mult(&dir, &low_pt);
+  }
+
+  /* check if ray even intersects density */
+  if (low > high) return -1;
+
+  {
+    point3d_t middle = rfrom;
+    pt_mad(&middle, 0.5 * (low + high), &dir);
+    if (!((-1 <= middle.x && middle.x <= 1) && (-1 <= middle.y && middle.y <= 1) && (-1 <= middle.z && middle.z <= 1)))
+      {
+        return -1;
+      }
+  }
+
+  {
+    /* Find relevant segments along ray */
+    point3d_t middir;
+    middir.x = -rfrom.x / dir.x;
+    middir.y = -rfrom.y / dir.y;
+    middir.z = -rfrom.z / dir.z;
+
+    steps[current++] = low;
+
+    if (fabs(dir.x) >= 1e-12)
+      {
+        if (middir.x > low && middir.x < high) steps[current++] = middir.x;
+      }
+
+    if (fabs(dir.y) >= 1e-12)
+      {
+        if (middir.y > low && middir.y < high) steps[current++] = middir.y;
+      }
+
+    if (fabs(dir.z) >= 1e-12)
+      {
+        if (middir.z > low && middir.z < high) steps[current++] = middir.z;
+      }
+
+    if (current > 3 && steps[2] > steps[3])
+      {
+        float v = steps[3];
+        steps[3] = steps[2];
+        steps[2] = v;
+      }
+    if (current > 2 && steps[1] > steps[2])
+      {
+        float v = steps[2];
+        steps[2] = steps[1];
+        steps[1] = v;
+      }
+    if (current > 3 && steps[2] > steps[3])
+      {
+        float v = steps[3];
+        steps[3] = steps[2];
+        steps[2] = v;
+      }
+
+    steps[current] = high;
+  }
+
+  /* Integrate each segment */
+  for (i = 0; i < current; ++i)
+    {
+      double l_from_seg = steps[i];
+      double l_to_seg = steps[i + 1];
+      double half;
+      if (l_to_seg - l_from_seg < 1e-10) continue;
+      half = 0.5 * (l_from_seg + l_to_seg);
+
+      if (rfrom.x + half * dir.x < 0)
+        {
+          rfrom.x *= -1;
+          dir.x *= -1;
+        }
+      if (rfrom.y + half * dir.y < 0)
+        {
+          rfrom.y *= -1;
+          dir.y *= -1;
+        }
+      if (rfrom.z + half * dir.z < 0)
+        {
+          rfrom.z *= -1;
+          dir.z *= -1;
+        }
+
+      {
+        double a = 1 - rfrom.x - rfrom.y - rfrom.z + rfrom.x * rfrom.y + rfrom.x * rfrom.z + rfrom.y * rfrom.z -
+                   rfrom.x * rfrom.y * rfrom.z;
+        double b = -dir.x - dir.y - dir.z + dir.x * rfrom.y + rfrom.x * dir.y + dir.x * rfrom.z + rfrom.x * dir.z +
+                   dir.y * rfrom.z + rfrom.y * dir.z - dir.x * rfrom.y * rfrom.z - rfrom.x * dir.y * rfrom.z -
+                   rfrom.x * rfrom.y * dir.z;
+        double c = dir.x * dir.y * (1 - rfrom.z) + dir.x * dir.z * (1 - rfrom.y) + dir.y * dir.z * (1 - rfrom.x);
+        double d = -dir.x * dir.y * dir.z;
+        double s_s_2 = l_from_seg * l_from_seg;
+        double s_s_3 = s_s_2 * l_from_seg;
+        double s_s_4 = s_s_3 * l_from_seg;
+        double s_e_2 = l_to_seg * l_to_seg;
+        double s_e_3 = s_e_2 * l_to_seg;
+        double s_e_4 = s_e_3 * l_to_seg;
+        val += 0.25 * d * (s_e_4 - s_s_4) + (1. / 3.) * c * (s_e_3 - s_s_3) + 0.5 * b * (s_e_2 - s_s_2) +
+               a * (l_to_seg - l_from_seg);
+      }
+    }
+
+  return dt_pt->data * val * dirlen;
+}
+
+static void *volume_nogrid_worker(void *data)
+{
+  volume_nogrid_data_struct *d = (volume_nogrid_data_struct *)data;
+  int px_width = d->px_width, px_height = d->px_height;
+  point3d_t ray_dir_init = *(d->ray_dir_init);
+  point3d_t ray_dir_x = *(d->ray_dir_x);
+  point3d_t ray_dir_y = *(d->ray_dir_y);
+  point3d_t ray_from_init = *(d->ray_from_init);
+  point3d_t ray_from_x = *(d->ray_from_x);
+  point3d_t ray_from_y = *(d->ray_from_y);
+  double *pixels = d->pixels;
+  double x_factor = d->x_factor, y_factor = d->y_factor;
+  kernel_f callback = d->callback;
+  const data_point3d_t *curr_dt_pt = d->start;
+  const void **extra_data = d->extra_data;
+
+  /* Initialize pixel buffer */
+  int my_x, my_y;
+  for (my_y = 0; my_y < px_height; ++my_y)
+    {
+      for (my_x = 0; my_x < px_width; ++my_x)
+        {
+          pixels[my_x + my_y * px_width] = -1;
+        }
+    }
+
+  while (curr_dt_pt < d->end)
+    {
+      int y_start, y_fin;
+      double x, y, radius, x_radius, y_radius;
+      point3d_t _z;
+
+      /* Zero optimization */
+      if (curr_dt_pt->data == 0)
+        {
+          ++curr_dt_pt;
+          if (extra_data != NULL) ++extra_data;
+          continue;
+        }
+
+      /* Calculate extent on image */
+      radius = d->radius;
+      if (d->radius_callback != NULL)
+        {
+          radius = d->radius_callback(curr_dt_pt, (const void *)extra_data);
+        }
+
+      _z = curr_dt_pt->pt;
+      apply_world_xform(&_z.x, &_z.y, &_z.z);
+
+      x = (_z.x + 1) * px_width / 2;
+      y = (-_z.y + 1) * px_height / 2;
+
+      x_radius = radius / x_factor;
+      y_radius = radius / y_factor;
+
+      y_start = ceil(y - y_radius);
+      y_fin = ceil(y + y_radius);
+      if (y_start < 0)
+        {
+          y_start = 0;
+        }
+      if (y_fin > px_height)
+        {
+          y_fin = px_height;
+        }
+
+      for (my_y = y_start; my_y < y_fin; ++my_y)
+        {
+          double tmp = (my_y - y) / y_radius;
+          double x_len = x_radius * sqrt(1. - tmp * tmp);
+
+          int x_start = ceil(x - x_len);
+          int x_fin = ceil(x + x_len);
+          if (x_start < 0)
+            {
+              x_start = 0;
+            }
+          if (x_fin > px_width)
+            {
+              x_fin = px_width;
+            }
+          for (my_x = x_start; my_x < x_fin; ++my_x)
+            {
+              /* calculate ray and value */
+              point3d_t ray_from = ray_from_init;
+              point3d_t ray_dir = ray_dir_init;
+              double val;
+              int idx;
+              pt_mad(&ray_from, my_x, &ray_from_x);
+              pt_mad(&ray_dir, my_x, &ray_dir_x);
+              pt_mad(&ray_from, my_y, &ray_from_y);
+              pt_mad(&ray_dir, my_y, &ray_dir_y);
+
+              val = callback(curr_dt_pt, (const void *)extra_data, &ray_from, &ray_dir);
+              if (val < 0)
+                {
+                  continue;
+                }
+
+              idx = my_x + my_y * px_width;
+
+              if (pixels[idx] < 0)
+                {
+                  pixels[idx] = 0;
+                }
+              pixels[idx] += val;
+            }
+        }
+
+      ++curr_dt_pt;
+      if (extra_data != NULL) ++extra_data;
+    }
+  return 0;
+}
+
+static point3d_t pt_rev_calc(double *view_inv, double *proj_inv, double x, double y, double z, double w)
+{
+  /* Reverses coordinates from normalised device space to world space */
+  double prj_x = proj_inv[0 * 4 + 0] * x + proj_inv[0 * 4 + 1] * y + proj_inv[0 * 4 + 2] * z + proj_inv[0 * 4 + 3] * w;
+  double prj_y = proj_inv[1 * 4 + 0] * x + proj_inv[1 * 4 + 1] * y + proj_inv[1 * 4 + 2] * z + proj_inv[1 * 4 + 3] * w;
+  double prj_z = proj_inv[2 * 4 + 0] * x + proj_inv[2 * 4 + 1] * y + proj_inv[2 * 4 + 2] * z + proj_inv[2 * 4 + 3] * w;
+  double prj_w = proj_inv[3 * 4 + 0] * x + proj_inv[3 * 4 + 1] * y + proj_inv[3 * 4 + 2] * z + proj_inv[3 * 4 + 3] * w;
+  point3d_t ret;
+  ret.x = view_inv[0 * 4 + 0] * prj_x + view_inv[0 * 4 + 1] * prj_y + view_inv[0 * 4 + 2] * prj_z +
+          view_inv[0 * 4 + 3] * prj_w;
+  ret.y = view_inv[1 * 4 + 0] * prj_x + view_inv[1 * 4 + 1] * prj_y + view_inv[1 * 4 + 2] * prj_z +
+          view_inv[1 * 4 + 3] * prj_w;
+  ret.z = view_inv[2 * 4 + 0] * prj_x + view_inv[2 * 4 + 1] * prj_y + view_inv[2 * 4 + 2] * prj_z +
+          view_inv[2 * 4 + 3] * prj_w;
+  w = view_inv[3 * 4 + 0] * prj_x + view_inv[3 * 4 + 1] * prj_y + view_inv[3 * 4 + 2] * prj_z +
+      view_inv[3 * 4 + 3] * prj_w;
+  if (fabs(w) >= 1e-12)
+    {
+      ret.x /= w;
+      ret.y /= w;
+      ret.z /= w;
+    }
+  /* w is now not needed */
+  ret.x /= tx.x_axis_scale;
+  ret.y /= tx.y_axis_scale;
+  ret.z /= tx.z_axis_scale;
+  return ret;
+}
+
+/*!
+ * Draws unstructured volume data using splatting, given volume rendering model and currently set GR colormap.
+ *
+ * Each data point is only calculated and drawn as far as `radius`/`radius_callback`.
+ * The used interpolation method can be given using `callback`
+ * `callback` is expected to integrate along a given ray for the given data point.
+ * For trilinear interpolation, you can use `gr_volume_interp_tri_linear`.
+ * For interpolation using the multivariate gaussian distribution, you can use `gr_volume_interp_gauss`.
+ *
+ * \param[in]       ndt_pt              Count of data points (`dt_pts`)
+ * \param[in]       dt_pts              The data points to draw
+ * \param[in]       extra_data          Optional extra data, one for each data point if specified
+ * \param[in]       algorithm           Selected algorithm to draw
+ * \param[in]       callback            Callback to use to integrate
+ * \param[in,out]   dmin_val            if set, will contain lower bound of pixel intensity
+ * \param[in,out]   dmax_val            if set, will contain upper bound of pixel intensity
+ * \param[in]       radius              the calculation radius of each data point in world coordinates
+ * \param[in]       radius_callback     if given, ignores radius and can return the calculation radius per data point
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * The supported volume rendering models are:
+ *
+ * +---------------------+---+-----------------------------+
+ * |GR_VOLUME_EMISSION   |  0|emission model               |
+ * +---------------------+---+-----------------------------+
+ * |GR_VOLUME_ABSORPTION |  1|absorption model             |
+ * +---------------------+---+-----------------------------+
+ *
+ * \endverbatim
+ */
+void gr_volume_nogrid(unsigned long ndt_pt, const data_point3d_t *dt_pts, const void *extra_data, int algorithm,
+                      kernel_f callback, double *dmin_val, double *dmax_val, double radius, radius_f radius_callback)
+{
+  point3d_t camera, up;
+  point3d_t ray_from_init, ray_from_x, ray_from_y;
+  point3d_t ray_dir_init, ray_dir_x, ray_dir_y;
+  double aspect, x_factor, y_factor;
+  double view_inv[16], proj_inv[16];
+  int i, x, y, thread_count;
+#ifndef NO_THREADS
+  pthread_t *threads;
+#endif
+  volume_nogrid_data_struct *data_structs;
+  double *pixels;
+
+  point3d_t ray_dir;
+  camera.x = tx.camera_pos_x;
+  camera.y = tx.camera_pos_y;
+  camera.z = tx.camera_pos_z;
+
+  up.x = tx.up_x;
+  up.y = tx.up_y;
+  up.z = tx.up_z;
+
+  ray_dir.x = tx.focus_point_x;
+  ray_dir.y = tx.focus_point_y;
+  ray_dir.z = tx.focus_point_z;
+
+  pt_sub(&ray_dir, &camera);
+  pt_unitize(&ray_dir);
+
+  /* Calculate inverse of view matrice */
+
+  aspect = (vxmax - vxmin) / (vymax - vymin);
+
+  view_inv[0 * 4 + 0] = tx.s_x;
+  view_inv[1 * 4 + 0] = tx.s_y;
+  view_inv[2 * 4 + 0] = tx.s_z;
+  view_inv[3 * 4 + 0] = 0;
+
+  view_inv[0 * 4 + 1] = up.x;
+  view_inv[1 * 4 + 1] = up.y;
+  view_inv[2 * 4 + 1] = up.z;
+  view_inv[3 * 4 + 1] = 0;
+
+  view_inv[0 * 4 + 2] = -ray_dir.x;
+  view_inv[1 * 4 + 2] = -ray_dir.y;
+  view_inv[2 * 4 + 2] = -ray_dir.z;
+  view_inv[3 * 4 + 2] = 0;
+
+  view_inv[0 * 4 + 3] = camera.x;
+  view_inv[1 * 4 + 3] = camera.y;
+  view_inv[2 * 4 + 3] = camera.z;
+  view_inv[3 * 4 + 3] = 1;
+
+  /* Calculate inverse of projection matrice */
+  if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+    {
+      double left = gpx.left, right = gpx.right, bottom = gpx.bottom, top = gpx.top;
+      if (aspect > 1)
+        {
+          right *= aspect;
+          left *= aspect;
+        }
+      else
+        {
+          top /= aspect;
+          bottom /= aspect;
+        }
+
+      proj_inv[0 * 4 + 0] = (right - left) / 2;
+      proj_inv[1 * 4 + 0] = 0;
+      proj_inv[2 * 4 + 0] = 0;
+      proj_inv[3 * 4 + 0] = 0;
+
+      proj_inv[0 * 4 + 1] = 0;
+      proj_inv[1 * 4 + 1] = (top - bottom) / 2;
+      proj_inv[2 * 4 + 1] = 0;
+      proj_inv[3 * 4 + 1] = 0;
+
+      proj_inv[0 * 4 + 2] = 0;
+      proj_inv[1 * 4 + 2] = 0;
+      proj_inv[2 * 4 + 2] = (gpx.far_plane - gpx.near_plane) / -2;
+      proj_inv[3 * 4 + 2] = 0;
+
+      proj_inv[0 * 4 + 3] = (left + right) / 2;
+      proj_inv[1 * 4 + 3] = (top + bottom) / 2;
+      proj_inv[2 * 4 + 3] = (gpx.far_plane + gpx.near_plane) / -2;
+      proj_inv[3 * 4 + 3] = 1;
+    }
+  else if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE)
+    {
+      double f = cos(gpx.fov * M_PI / 360) / sin(gpx.fov * M_PI / 360); /* cot alpha/2 */
+      double c = (gpx.far_plane + gpx.near_plane) / (gpx.near_plane - gpx.far_plane);
+      double d_inv = (gpx.near_plane - gpx.far_plane) / (2 * gpx.far_plane * gpx.near_plane);
+
+      if (aspect >= 1)
+        {
+          proj_inv[0 * 4 + 0] = aspect / f;
+        }
+      else
+        {
+          proj_inv[0 * 4 + 0] = 1. / f;
+        }
+      proj_inv[1 * 4 + 0] = 0;
+      proj_inv[2 * 4 + 0] = 0;
+      proj_inv[3 * 4 + 0] = 0;
+
+      proj_inv[0 * 4 + 1] = 0;
+      if (aspect >= 1)
+        {
+          proj_inv[1 * 4 + 1] = 1. / f;
+        }
+      else
+        {
+          proj_inv[1 * 4 + 1] = 1. / (f * aspect);
+        }
+      proj_inv[2 * 4 + 1] = 0;
+      proj_inv[3 * 4 + 1] = 0;
+
+      proj_inv[0 * 4 + 2] = 0;
+      proj_inv[1 * 4 + 2] = 0;
+      proj_inv[2 * 4 + 2] = 0;
+      proj_inv[3 * 4 + 2] = d_inv;
+
+      proj_inv[0 * 4 + 3] = 0;
+      proj_inv[1 * 4 + 3] = 0;
+      proj_inv[2 * 4 + 3] = -1;
+      proj_inv[3 * 4 + 3] = c * d_inv;
+    }
+
+  {
+    /* Calculate ray positions and directions */
+    double x_start = -1 + 0. / vt.picture_width;
+    double x_next = -1 + 2. / vt.picture_width;
+    double y_start = 1 - 0. / vt.picture_height;
+    double y_next = 1 - 2. / vt.picture_height;
+
+    ray_from_init = pt_rev_calc(view_inv, proj_inv, x_start, y_start, -1, 1);
+    ray_from_x = pt_rev_calc(view_inv, proj_inv, x_next, y_start, -1, 1);
+    pt_sub(&ray_from_x, &ray_from_init);
+    ray_from_y = pt_rev_calc(view_inv, proj_inv, x_start, y_next, -1, 1);
+    pt_sub(&ray_from_y, &ray_from_init);
+
+    ray_dir_init = pt_rev_calc(view_inv, proj_inv, x_start, y_start, 1, 1);
+    pt_sub(&ray_dir_init, &ray_from_init);
+    {
+      point3d_t temp = pt_rev_calc(view_inv, proj_inv, x_next, y_start, -1, 1);
+      ray_dir_x = pt_rev_calc(view_inv, proj_inv, x_next, y_start, 1, 1);
+      pt_sub(&ray_dir_x, &temp);
+      pt_sub(&ray_dir_x, &ray_dir_init);
+    }
+
+    {
+      point3d_t temp = pt_rev_calc(view_inv, proj_inv, x_start, y_next, -1, 1);
+      ray_dir_y = pt_rev_calc(view_inv, proj_inv, x_start, y_next, 1, 1);
+      pt_sub(&ray_dir_y, &temp);
+      pt_sub(&ray_dir_y, &ray_dir_init);
+    }
+  }
+
+  x_factor = pt_length(&ray_from_x);
+  y_factor = pt_length(&ray_from_y);
+
+  pixels = (double *)calloc(vt.picture_width * vt.picture_height, sizeof(double));
+
+#ifndef NO_THREADS
+  thread_count = (system_processor_count() - 1) < 256 ? system_processor_count() - 1 : 256;
+  if (vt.max_threads > 0)
+    {
+      thread_count = vt.max_threads;
+    }
+
+  if (ndt_pt < (unsigned long)thread_count)
+    {
+      thread_count = ndt_pt;
+    }
+
+  threads = (pthread_t *)calloc(thread_count, sizeof(pthread_t));
+#else
+  thread_count = 1;
+#endif
+  data_structs = (volume_nogrid_data_struct *)calloc(thread_count, sizeof(volume_nogrid_data_struct));
+
+  /* Calculate bounds and start threads */
+
+  for (i = 0; i < thread_count; ++i)
+    {
+      unsigned long start = i * ndt_pt / thread_count;
+      unsigned long end = (i + 1) * ndt_pt / thread_count;
+
+      if (i == thread_count - 1)
+        {
+          end = ndt_pt;
+        }
+
+      if (i == 0)
+        {
+          data_structs[i].pixels = pixels;
+        }
+      else
+        {
+          data_structs[i].pixels = (double *)calloc(vt.picture_width * vt.picture_height, sizeof(double));
+        }
+
+      data_structs[i].px_width = vt.picture_width;
+      data_structs[i].px_height = vt.picture_height;
+      data_structs[i].start = dt_pts + start;
+      data_structs[i].end = dt_pts + end;
+      data_structs[i].callback = callback;
+      if (extra_data == NULL)
+        {
+          data_structs[i].extra_data = NULL;
+        }
+      else
+        {
+          data_structs[i].extra_data = (const void **)extra_data + start;
+        }
+      data_structs[i].radius = radius;
+      data_structs[i].radius_callback = radius_callback;
+      data_structs[i].ray_dir_init = &ray_dir_init;
+      data_structs[i].ray_dir_x = &ray_dir_x;
+      data_structs[i].ray_dir_y = &ray_dir_y;
+      data_structs[i].ray_from_init = &ray_from_init;
+      data_structs[i].ray_from_x = &ray_from_x;
+      data_structs[i].ray_from_y = &ray_from_y;
+      data_structs[i].x_factor = x_factor;
+      data_structs[i].y_factor = y_factor;
+#ifndef NO_THREADS
+      pthread_create(threads + i, NULL, volume_nogrid_worker, (void *)(data_structs + i));
+#else
+      volume_nogrid_worker((void *)(data_structs + i));
+#endif
+    }
+
+
+#ifndef NO_THREADS
+  /* Wait for threads to end and reduce to one image buffer */
+  for (i = 0; i < thread_count; ++i)
+    {
+      pthread_join(threads[i], NULL);
+
+      if (i != 0)
+        {
+          double *px_t = data_structs[i].pixels;
+          for (y = 0; y < vt.picture_height; ++y)
+            {
+              for (x = 0; x < vt.picture_width; ++x)
+                {
+                  int idx = x + y * vt.picture_width;
+
+                  double v = px_t[idx];
+                  if (v >= 0)
+                    {
+                      double v2 = pixels[idx];
+                      if (v2 < 0)
+                        {
+                          pixels[idx] = v;
+                        }
+                      else
+                        {
+                          pixels[idx] = v2 + v;
+                        }
+                    }
+                }
+            }
+          free(data_structs[i].pixels);
+        }
+    }
+
+  free(threads);
+#endif
+  free(data_structs);
+
+  /* Next Step: convert to absorption model if necessary and calculate min and max */
+  {
+    double dmin = 1e15;
+    double dmax = -1;
+    int x, y;
+    int *ipixels, *colormap;
+    if (algorithm == GR_VOLUME_EMISSION)
+      {
+        for (y = 0; y < vt.picture_height; ++y)
+          {
+            for (x = 0; x < vt.picture_width; ++x)
+              {
+                double v = pixels[x + y * vt.picture_width];
+                if (v >= 0)
+                  {
+                    dmin = min(dmin, v);
+                    dmax = max(dmax, v);
+                  }
+              }
+          }
+      }
+    else
+      {
+        for (y = 0; y < vt.picture_height; ++y)
+          {
+            for (x = 0; x < vt.picture_width; ++x)
+              {
+                double v = pixels[x + y * vt.picture_width];
+                if (v >= 0)
+                  {
+                    v = pixels[x + y * vt.picture_width] = exp(-v);
+                    dmin = min(dmin, v);
+                    dmax = max(dmax, v);
+                  }
+              }
+          }
+      }
+    if (dmin_val != NULL)
+      {
+        *dmin_val = dmin;
+      }
+    if (dmax_val != NULL)
+      {
+        *dmax_val = dmax;
+      }
+
+    /* Convert double to color according to selected colormap, draw and cleanup */
+    ipixels = (int *)gks_malloc(vt.picture_width * vt.picture_height * sizeof(int));
+
+    colormap = (int *)gks_malloc((last_color - first_color + 1) * sizeof(int));
+    for (i = first_color; i <= last_color; i++)
+      {
+        gr_inqcolor(i, colormap + i - first_color);
+      }
+
+    for (i = 0; i < vt.picture_width * vt.picture_height; i++)
+      {
+        if (pixels[i] >= 0)
+          {
+            if (dmax == 0)
+              {
+                ipixels[i] = 0;
+              }
+            else
+              {
+                ipixels[i] = (255u << 24) + colormap[(int)(pixels[i] / dmax * (last_color - first_color))];
+              }
+          }
+      }
+    free(pixels);
+    free(colormap);
+
+    drawimage_calculation(lx.xmin, lx.xmax, lx.ymin, lx.ymax, vt.picture_width, vt.picture_height, ipixels, 0);
+
+    free(ipixels);
+  }
 }

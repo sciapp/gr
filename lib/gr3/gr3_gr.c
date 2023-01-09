@@ -392,6 +392,18 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               v[0] = px[i];
               zvalue = pz[k];
               v[1] = py[j];
+              if (scale & OPTION_FLIP_X)
+                {
+                  v[0] = -v[0] + xmin + xmax;
+                }
+              if (scale & OPTION_FLIP_Y)
+                {
+                  v[1] = -v[1] + ymin + ymax;
+                }
+              if (scale & OPTION_FLIP_Z)
+                {
+                  zvalue = -zvalue + zmin + zmax;
+                }
             }
           else
             {
@@ -1058,7 +1070,7 @@ GR3API int gr3_createsurface3dmesh(int *mesh, int ncols, int nrows, float *px, f
               colors[offset + k * 3 + 2] = blue;
             }
           {
-            float normal[3];
+            float normal[3] = {0, 0, 0};
             int corner_indices[4][3] = {{0, 1, 2}, {2, 0, 5}, {1, 5, 0}, {5, 2, 1}};
             for (k = 0; k < 4; k++)
               {

@@ -71,11 +71,13 @@ $(PREFIX)/src/ffmpeg-$(VERSION)/Makefile: $(PREFIX)/src/ffmpeg-$(VERSION)/config
 		--enable-encoder=libtheora \
 		--enable-encoder=libopenh264 \
 		--enable-encoder=gif \
+		--enable-encoder=apng \
 		--enable-muxer=webm \
 		--enable-muxer=mov \
 		--enable-muxer=mp4 \
 		--enable-muxer=ogg \
 		--enable-muxer=gif \
+		--enable-muxer=apng \
 		--enable-protocol=file \
 		$(FFMPEG_EXTRA_CONFIGURE_FLAGS)
 	# configure doesn't update the Makefile mtime correctly

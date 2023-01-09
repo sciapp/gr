@@ -102,6 +102,7 @@ extern "C" {
 #define INQ_ENCODING 107
 #define SET_RESAMPLE_METHOD 108
 #define SET_RESIZE_BEHAVIOUR 109
+#define INQ_TEXT 110
 
 #define SET_TEXT_SLANT 200
 #define DRAW_IMAGE 201
@@ -167,6 +168,7 @@ typedef struct
   int resize_behaviour;
   double aspect_ratio;
   char *(*callback)(const char *);
+  int debug;
 } gks_state_list_t;
 
 typedef struct gks_list
@@ -184,6 +186,7 @@ typedef struct
   int conid;
   void *ptr;
   double vp[4];
+  char *name;
 } ws_list_t;
 
 typedef struct
@@ -195,6 +198,7 @@ typedef struct
   int wscat;
   char *type;
   char *env;
+  char *name;
 } ws_descr_t;
 
 typedef struct
@@ -294,6 +298,7 @@ DLLEXPORT int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
                                void (*fn)(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2,
                                           double *r2, int lc, char *chars, void **ptr));
 void gks_wiss_dispatch(int fctid, int wkid, int segn);
+int gks_debug(void);
 
 #ifndef EMSCRIPTEN
 

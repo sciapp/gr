@@ -1,5 +1,7 @@
 #if !defined(NO_AV) && !defined(NO_CAIRO)
 
+#define _POSIX_C_SOURCE 200112L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,7 +65,7 @@ static ws_state_list *p;
 
 static void close_page(void)
 {
-  if ((p->wtype == 120 || p->wtype == 121 || p->wtype == 130 || p->wtype == 160 || p->wtype == 161 ||
+  if ((p->wtype == 120 || p->wtype == 121 || p->wtype == 130 || p->wtype == 131 || p->wtype == 160 || p->wtype == 161 ||
        p->wtype == 162) &&
       p->movie)
     {
@@ -87,6 +89,10 @@ static void open_page()
   else if (p->wtype == 130)
     {
       gks_filepath(path, p->path, "gif", 0, 0);
+    }
+  else if (p->wtype == 131)
+    {
+      gks_filepath(path, p->path, "png", 0, 0);
     }
   else if (p->wtype == 160)
     {
@@ -245,7 +251,7 @@ void gks_videoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->mem[2] = 144;
       *((unsigned char **)(p->mem + 3)) = NULL;
 
-      sprintf(p->mem_path, "!resizable@%p.mem", (void *)p->mem);
+      snprintf(p->mem_path, MAXPATHLEN, "!resizable@%p.mem", (void *)p->mem);
       chars = p->mem_path;
       /* set wstype for cairo png in memory */
       ia[2] = 143;

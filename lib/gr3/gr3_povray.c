@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200112L
+
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -14,24 +16,24 @@ int gr3_getpovray_(char *pixels, int width, int height, int use_alpha, int ssaa_
 #ifdef GR3_USE_WIN
   char *povfile = malloc(40);
   char *pngfile = malloc(40);
-  sprintf(povfile, "./gr3.%lu.pov", (long unsigned)GetCurrentProcessId());
-  sprintf(pngfile, "./gr3.%lu.png", (long unsigned)GetCurrentProcessId());
+  snprintf(povfile, 40, "./gr3.%lu.pov", (long unsigned)GetCurrentProcessId());
+  snprintf(pngfile, 40, "./gr3.%lu.png", (long unsigned)GetCurrentProcessId());
 #else
   char *povfile = malloc(40);
   char *pngfile = malloc(40);
-  sprintf(povfile, "/tmp/gr3.%d.pov", getpid());
-  sprintf(pngfile, "/tmp/gr3.%d.png", getpid());
+  snprintf(povfile, 40, "/tmp/gr3.%d.pov", getpid());
+  snprintf(pngfile, 40, "/tmp/gr3.%d.png", getpid());
 #endif
   gr3_export_pov_(povfile, width, height);
   {
     int res;
     char *povray_call = malloc(strlen(povfile) + strlen(povfile) + 80);
 #ifdef GR3_USE_WIN
-    sprintf(povray_call, "megapov +I%s +O%s +W%d +H%d -D +UA +FN +A +R%d 2>NUL", povfile, pngfile, width, height,
-            ssaa_factor);
+    snprintf(povray_call, strlen(povfile) + strlen(povfile) + 80,
+             "megapov +I%s +O%s +W%d +H%d -D +UA +FN +A +R%d 2>NUL", povfile, pngfile, width, height, ssaa_factor);
 #else
-    sprintf(povray_call, "povray +I%s +O%s +W%d +H%d -D +UA +FN +A +R%d 2>/dev/null", povfile, pngfile, width, height,
-            ssaa_factor);
+    snprintf(povray_call, strlen(povfile) + strlen(povfile) + 80,
+             "povray +I%s +O%s +W%d +H%d -D +UA +FN +A +R%d 2>/dev/null", povfile, pngfile, width, height, ssaa_factor);
 #endif
     res = system(povray_call);
     free(povray_call);

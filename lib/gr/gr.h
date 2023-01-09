@@ -34,7 +34,37 @@ typedef struct
   double x, y;
 } vertex_t;
 
+/*! Three-dimensional coordinate */
+typedef struct
+{
+  double x, y, z;
+} point3d_t;
+
+/*! Data point for `gr_volume_nogrid` */
+typedef struct
+{
+  point3d_t pt; /*!< Coordinates of data point */
+  double data;  /*!< Intensity of data point */
+} data_point3d_t;
+
+/*! Provides optional extra data for `gr_volume_interp_gauss` */
+typedef struct
+{
+  double sqrt_det;                                 /*!< Square root of determinant of covariance matrix */
+  point3d_t gauss_sig_1, gauss_sig_2, gauss_sig_3; /*!< \f$\Sigma^{-\frac{1}{2}}\f$ encoded as three column vectors */
+} gauss_t;
+
+/*! Provides optional extra data for `gr_volume_interp_tri_linear` */
+typedef struct
+{
+  double grid_x_re; /*!< Reciproke of interpolation kernel extent in x-direction */
+  double grid_y_re; /*!< Reciproke of interpolation kernel extent in y-direction */
+  double grid_z_re; /*!< Reciproke of interpolation kernel extent in z-direction */
+} tri_linear_t;
+
+
 DLLEXPORT void gr_initgr(void);
+DLLEXPORT int gr_debug(void);
 DLLEXPORT void gr_opengks(void);
 DLLEXPORT void gr_closegks(void);
 DLLEXPORT void gr_inqdspsize(double *, double *, int *, int *);
@@ -232,6 +262,18 @@ DLLEXPORT void gr_inqvolumeflags(int *, int *, int *, int *, int *);
 DLLEXPORT void gr_cpubasedvolume(int, int, int, double *, int, double *, double *, double *, double *);
 DLLEXPORT void gr_inqvpsize(int *, int *, double *);
 DLLEXPORT void gr_polygonmesh3d(int, const double *, const double *, const double *, int, const int *, const int *);
+
+typedef double (*kernel_f)(const data_point3d_t *, const void *, const point3d_t *, const point3d_t *);
+typedef double (*radius_f)(const data_point3d_t *, const void *);
+
+DLLEXPORT void gr_volume_nogrid(unsigned long, const data_point3d_t *, const void *, int, kernel_f, double *, double *,
+                                double, radius_f);
+
+DLLEXPORT void gr_volume_interp_tri_linear_init(double, double, double);
+DLLEXPORT void gr_volume_interp_gauss_init(double, double *);
+DLLEXPORT double gr_volume_interp_tri_linear(const data_point3d_t *, const void *, const point3d_t *,
+                                             const point3d_t *);
+DLLEXPORT double gr_volume_interp_gauss(const data_point3d_t *, const void *, const point3d_t *, const point3d_t *);
 
 #ifdef __cplusplus
 }
