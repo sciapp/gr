@@ -2022,6 +2022,8 @@ err_t plot_step(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "xind", "i", &xind);
   grm_args_values(subplot_args, "yind", "i", &yind);
   is_vertical = strcmp(orientation, "vertical") == 0;
+
+  std::shared_ptr<GR::Element> element; // declare element here for multiple usages / assignments later
   while (*current_series != NULL)
     {
       double *x = NULL;
@@ -2034,7 +2036,6 @@ err_t plot_step(grm_args_t *subplot_args)
                       ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      // TODO: marginalheatmap
       grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
       cleanup_and_set_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length) && x_length < 1,
                                ERROR_PLOT_MISSING_DATA);
@@ -2080,13 +2081,11 @@ err_t plot_step(grm_args_t *subplot_args)
           return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
         }
       grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
-      // end todo
       mask = gr_uselinespec(spec);
       if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
         {
           const char *where;
           grm_args_values(*current_series, "step_where", "s", &where); /* `spec` is always set */
-          // todo marginalheatmap
           if (strcmp(kind, "marginalheatmap") == 0)
             {
               double x_pos, y_pos;
@@ -2111,25 +2110,34 @@ err_t plot_step(grm_args_t *subplot_args)
                 }
               y_step_values[2 * len - 1] = y[len - 1];
 
-              gr_setlinecolorind(989);
-              gr_setmarkercolorind(2);
-              gr_setmarkertype(-1);
-              gr_setmarkersize(1.5 * (len / (is_vertical ? (ymax - ymin) : (xmax - xmin))));
+              std::vector<double> y_step_vec(y_step_values, y_step_values + 2 * len);
+              std::vector<double> x_step_vec(x_step_boundaries, x_step_boundaries + 2 * len);
+              int id = static_cast<int>(global_root->getAttribute("id"));
+              global_root->setAttribute("id", id + 1);
+              auto id_str = std::to_string(id);
+
+              std::shared_ptr<GR::Element> line_elem, marker_elem;
+
               if (is_vertical)
                 {
-                  gr_polyline(2 * len, y_step_values, x_step_boundaries);
+                  line_elem = global_render->createPolyline("x" + id_str, y_step_vec, "y" + id_str, x_step_vec);
                   x_pos = (x_step_boundaries[yind * 2] + x_step_boundaries[yind * 2 + 1]) / 2;
                   y_pos = y[yind];
-                  gr_polymarker(1, &y_pos, &x_pos);
+                  marker_elem = global_render->createPolymarker(y_pos, x_pos);
                 }
               else
                 {
-                  gr_polyline(2 * len, x_step_boundaries, y_step_values);
+                  line_elem = global_render->createPolyline("x" + id_str, x_step_vec, "y" + id_str, y_step_vec);
                   x_pos = (x_step_boundaries[xind * 2] + x_step_boundaries[xind * 2 + 1]) / 2;
                   y_pos = y[xind];
-                  gr_polymarker(1, &x_pos, &y_pos);
+                  marker_elem = global_render->createPolymarker(x_pos, y_pos);
                 }
-            } // end todo
+
+              global_render->setLineColorInd(line_elem, 989);
+              global_render->setMarkerColorInd(marker_elem, 2);
+              global_render->setMarkerType(marker_elem, -1);
+              global_render->setMarkerSize(marker_elem, 1.5 * (len / (is_vertical ? (ymax - ymin) : (xmax - xmin))));
+            }
           else if (strcmp(where, "pre") == 0)
             {
               x_step_boundaries = static_cast<double *>(calloc(2 * x_length - 1, sizeof(double)));
@@ -2151,16 +2159,12 @@ err_t plot_step(grm_args_t *subplot_args)
               std::string str = std::to_string(id);
               std::vector<double> x_vec(x_step_boundaries, x_step_boundaries + 2 * x_length - 1);
               std::vector<double> y_vec(y_step_values, y_step_values + 2 * x_length - 1);
-              std::shared_ptr<GR::Element> element;
-              // todo marginal heatmap polyliine
               if (is_vertical)
                 {
-                  gr_polyline(2 * x_length - 1, y_step_values, x_step_boundaries);
-                  element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
+                  element = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
                 }
               else
                 {
-                  gr_polyline(2 * x_length - 1, x_step_boundaries, y_step_values);
                   element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
                 }
               global_root->setAttribute("id", ++id);
@@ -2187,16 +2191,16 @@ err_t plot_step(grm_args_t *subplot_args)
               std::string str = std::to_string(id);
               std::vector<double> x_vec(x_step_boundaries, x_step_boundaries + 2 * x_length - 1);
               std::vector<double> y_vec(y_step_values, y_step_values + 2 * x_length - 1);
+
               if (is_vertical)
                 {
-                  gr_polyline(2 * x_length - 1, y_step_values, x_step_boundaries);
+                  element = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
                 }
               else
                 {
-                  gr_polyline(2 * x_length - 1, x_step_boundaries, y_step_values);
-                } // todo marginalheatmap
-              auto element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
-              global_root->setAttribute("id", ++id);
+                  element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
+                }
+              global_root->setAttribute("id", id + 1);
               subGroup->append(element);
             }
           else if (strcmp(where, "mid") == 0)
@@ -2217,18 +2221,18 @@ err_t plot_step(grm_args_t *subplot_args)
                 }
               int id = static_cast<int>(global_root->getAttribute("id"));
               std::string str = std::to_string(id);
-              std::vector<double> x_vec(x_step_boundaries, x_step_boundaries + 2 * x_length - 1);
-              std::vector<double> y_vec(y_step_values, y_step_values + 2 * x_length - 1);
+              std::vector<double> x_vec(x_step_boundaries, x_step_boundaries + 2 * x_length);
+              std::vector<double> y_vec(y_step_values, y_step_values + 2 * x_length);
+              global_root->setAttribute("id", id + 1);
+
               if (is_vertical)
                 {
-                  gr_polyline(2 * x_length, y_step_values, x_step_boundaries);
+                  element = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
                 }
               else
                 {
-                  gr_polyline(2 * x_length, x_step_boundaries, y_step_values);
-                } // todo marginalheatmap
-              auto element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
-              global_root->setAttribute("id", ++id);
+                  element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
+                }
               subGroup->append(element);
             }
           free(x_step_boundaries);
@@ -2242,16 +2246,16 @@ err_t plot_step(grm_args_t *subplot_args)
 
           int id = static_cast<int>(global_root->getAttribute("id"));
           std::string str = std::to_string(id);
+          global_root->setAttribute("id", id + 1);
+
           if (is_vertical)
             {
-              gr_polymarker(y_length, y, x);
+              element = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
             }
           else
             {
-              gr_polymarker(x_length, x, y);
-            } // todo marginalheatmap
-          auto element = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
-          global_root->setAttribute("id", ++id);
+              element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
+            }
           subGroup->append(element);
         }
       ++current_series;
@@ -2262,8 +2266,8 @@ err_t plot_step(grm_args_t *subplot_args)
           y = xi = NULL;
         }
     }
+  return ERROR_NONE;
 
-//  return ERROR_NONE; ?
 cleanup:
   if (strcmp(kind, "marginalheatmap") == 0 && xind != -1 && yind != -1)
     {
@@ -2605,6 +2609,8 @@ err_t plot_hist(grm_args_t *subplot_args)
       bar_width = (x_max - x_min) / num_bins;
       for (i = 1; i < num_bins + 1; ++i)
         {
+
+          // TODO: are fillRect 1 and 2 needed??
           double x = x_min + (i - 1) * bar_width;
           auto fillRect1 = global_render->createFillRect(x, x + bar_width, 0.0, bins[i - 1]);
           global_render->setFillColorInd(fillRect1, bar_color_index);
@@ -2615,36 +2621,40 @@ err_t plot_hist(grm_args_t *subplot_args)
           global_render->setFillColorInd(fillRect2, edge_color_index);
           global_render->setFillIntStyle(fillRect2, GKS_K_INTSTYLE_HOLLOW);
           subGroup->append(fillRect2);
-          // todo marginalheatmap
-          gr_setfillcolorind(bar_color_index);
-          gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
+
+          std::shared_ptr<GR::Element> fillRect3, fillRect4;
+
           if (is_horizontal)
             {
+              fillRect3 = global_render->createFillRect(x, x + bar_width, 0., bins[i - 1]);
               if (i == xind + 1)
                 {
-                  gr_setfillcolorind(2);
+                  global_render->setFillColorInd(fillRect3, 2);
                 }
-              gr_fillrect(x, x + bar_width, 0., bins[i - 1]);
             }
           else
             {
+              fillRect3 = global_render->createFillRect(0., bins[i - 1], x, x + bar_width);
               if (i == yind + 1)
                 {
-                  gr_setfillcolorind(2);
+                  global_render->setFillColorInd(fillRect3, 2);
                 }
-              gr_fillrect(0., bins[i - 1], x, x + bar_width);
             }
-          gr_setfillcolorind(edge_color_index);
-          gr_setfillintstyle(GKS_K_INTSTYLE_HOLLOW);
+          global_render->setFillColorInd(fillRect3, bar_color_index);
+          global_render->setFillIntStyle(fillRect3, GKS_K_INTSTYLE_SOLID);
+
           if (is_horizontal)
             {
-              gr_fillrect(x, x + bar_width, 0., bins[i - 1]);
+              fillRect4 = global_render->createFillRect(x, x + bar_width, 0., bins[i - 1]);
             }
           else
             {
-              gr_fillrect(0., bins[i - 1], x, x + bar_width);
-            } // end todo
+              fillRect4 = global_render->createFillRect(0., bins[i - 1], x, x + bar_width);
+            }
+          global_render->setFillColorInd(fillRect4, edge_color_index);
+          global_render->setFillIntStyle(fillRect4, GKS_K_INTSTYLE_HOLLOW);
         }
+
       if (grm_args_contains(*current_series, "error"))
         {
           bar_centers = static_cast<double *>(malloc(num_bins * sizeof(double)));
@@ -8508,6 +8518,8 @@ int grm_plot(const grm_args_t *args)
   const char *tmp_size_s[2];
   std::string vars[2] = {"x", "y"};
   double default_size[2] = {PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT};
+
+  // todo: marginalheatmap stops here
   if (!grm_merge(args))
     {
       return 0;
