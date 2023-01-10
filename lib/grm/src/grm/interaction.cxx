@@ -96,14 +96,12 @@ int grm_input(const grm_args_t *input_args)
               auto current_series_vec = subplot_element->getElementsByClassName(kind + "_series");
               auto current_series = current_series_vec[0];
 
-              //              grm_args_t **current_series;
               double *x_series, *y_series;
               unsigned int x_length, y_length;
               double x_0, x_end, y_0, y_end, x_step, y_step;
 
               grm_args_values(input_args, "x", "i", &x);
               grm_args_values(input_args, "y", "i", &y);
-              //              grm_args_values(subplot_args, "series", "A", &current_series);
               auto x_series_key = static_cast<std::string>(current_series->getAttribute("x_series"));
               auto y_series_key = static_cast<std::string>(current_series->getAttribute("y_series"));
 
@@ -112,13 +110,12 @@ int grm_input(const grm_args_t *input_args)
               auto x_series_vec = GR::get<std::vector<double>>((*context)[x_series_key]);
               auto y_series_vec = GR::get<std::vector<double>>((*context)[y_series_key]);
 
-              //              grm_args_first_value(current_series, "x", "D", &x_series, &x_length);
-              //              grm_args_first_value(current_series, "y", "D", &y_series, &y_length);
-
               x_0 = x_series[0], x_end = x_series[x_length - 1];
               y_0 = y_series[0], y_end = y_series[y_length - 1];
 
-              // TODO? wctondc should not work here. Only works during rendering.
+              GR::Render::processViewport(subplot_element);
+              GR::Render::processLimits(subplot_element);
+
               gr_wctondc(&x_0, &y_0);
               gr_wctondc(&x_end, &y_end);
               x_0 = x_0 * max_width_height;
@@ -164,7 +161,6 @@ int grm_input(const grm_args_t *input_args)
             {
               double focus_x, focus_y;
 
-              kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
               if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
                                  "isosurface"))
                 {
@@ -193,8 +189,6 @@ int grm_input(const grm_args_t *input_args)
               double ndc_xshift, ndc_yshift, rotation, tilt;
               int shift_pressed;
               std::string kind;
-
-              kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
 
               if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
                                  "isosurface"))
