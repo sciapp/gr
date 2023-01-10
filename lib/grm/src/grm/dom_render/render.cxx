@@ -2346,8 +2346,8 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
     }
 
   left_margin = y_label_margin ? 0.05 : 0;
-  if (str_equals_any(kind.c_str(), 8, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface",
-                     "trisurf", "volume"))
+  if (str_equals_any(kind.c_str(), 9, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface",
+                     "trisurf", "volume", "marginalheatmap"))
     {
       right_margin = (vp1 - vp0) * 0.1;
     }
@@ -2357,6 +2357,17 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
     }
   bottom_margin = x_label_margin ? 0.05 : 0;
   top_margin = title_margin ? 0.075 : 0;
+
+  if (kind == "marginalheatmap")
+    {
+      top_margin = title_margin ? 0.075 + (vp1 - vp0) * 0.1 : (vp1 - vp0) * 0.1;
+    }
+  else
+    {
+      top_margin = title_margin ? 0.075 : 0;
+    }
+
+
   viewport[0] = vp0 + (0.075 + left_margin) * (vp1 - vp0);
   viewport[1] = vp0 + (0.95 - right_margin) * (vp1 - vp0);
   viewport[2] = vp2 + (0.075 + bottom_margin) * (vp3 - vp2);
