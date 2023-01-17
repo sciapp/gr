@@ -2150,6 +2150,8 @@ err_t plot_step(grm_args_t *subplot_args)
               global_render->setMarkerColorInd(marker_elem, 2);
               global_render->setMarkerType(marker_elem, -1);
               global_render->setMarkerSize(marker_elem, 1.5 * (len / (is_vertical ? (ymax - ymin) : (xmax - xmin))));
+              subGroup->append(marker_elem);
+              subGroup->append(line_elem);
             }
           else if (strcmp(where, "pre") == 0)
             {
@@ -2628,12 +2630,12 @@ err_t plot_hist(grm_args_t *subplot_args)
           auto fillRect1 = global_render->createFillRect(x, x + bar_width, 0.0, bins[i - 1]);
           global_render->setFillColorInd(fillRect1, bar_color_index);
           global_render->setFillIntStyle(fillRect1, GKS_K_INTSTYLE_SOLID);
-          subGroup->append(fillRect1);
+          //          subGroup->append(fillRect1);
 
           auto fillRect2 = global_render->createFillRect(x, x + bar_width, 0.0, bins[i - 1]);
           global_render->setFillColorInd(fillRect2, edge_color_index);
           global_render->setFillIntStyle(fillRect2, GKS_K_INTSTYLE_HOLLOW);
-          subGroup->append(fillRect2);
+          //          subGroup->append(fillRect2);
 
           std::shared_ptr<GR::Element> fillRect3, fillRect4;
 
@@ -2666,7 +2668,10 @@ err_t plot_hist(grm_args_t *subplot_args)
             }
           global_render->setFillColorInd(fillRect4, edge_color_index);
           global_render->setFillIntStyle(fillRect4, GKS_K_INTSTYLE_HOLLOW);
+          subGroup->append(fillRect3);
+          subGroup->append(fillRect4);
         }
+
 
       if (grm_args_contains(*current_series, "error"))
         {
@@ -3902,6 +3907,12 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
   double *xi, *yi, *plot;
   err_t error = ERROR_NONE;
 
+  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  group->setAttribute("name", "marginalheatmap");
+  auto heatmap_group = global_render->createGroup("heatmap");
+  group->appendChild(heatmap_group);
+  currentDomElement = heatmap_group;
+
   plot_heatmap(subplot_args);
 
   grm_args_values(subplot_args, "type", "s", &type);
@@ -3912,7 +3923,10 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
     {
       double x_min, x_max, y_min, y_max, value, bin_max = 0;
 
-      gr_savestate();
+      auto subGroup = global_render->createGroup();
+      subGroup->setAttribute("calc-window-and-viewport-from-parent", 1);
+      group->appendChild(subGroup);
+      currentDomElement = subGroup;
 
       grm_args_values(subplot_args, "series", "A", &current_series);
       grm_args_values(*current_series, "algorithm", "s", &algorithm);
@@ -3922,6 +3936,13 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
         {
           cleanup_and_set_error_if(!grm_args_values(subplot_args, "_zlim", "dd", &c_min, &c_max),
                                    ERROR_PLOT_MISSING_DATA);
+          group->setAttribute("lim_zmin", c_min);
+          group->setAttribute("lim_zmax", c_max);
+        }
+      else
+        {
+          group->setAttribute("lim_cmin", c_min);
+          group->setAttribute("lim_cmax", c_max);
         }
 
       grm_args_first_value(*current_series, "x", "D", &xi, &num_bins_x);
@@ -3979,50 +4000,42 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
           bins = NULL;
         }
 
-      grm_args_values(subplot_args, "viewport", "D", &viewport);
-
-      gr_inqscale(&options);
       if (grm_args_values(subplot_args, "xflip", "i", &flip) && flip)
         {
-          options = (options | GR_OPTION_FLIP_Y) & ~GR_OPTION_FLIP_X;
-          gr_setscale(options);
+          subGroup->setAttribute("gr-option-flip-y", 1);
+          subGroup->setAttribute("gr-option-flip-x", 0);
         }
       else if (grm_args_values(subplot_args, "yflip", "i", &flip) && flip)
         {
-          options = options & ~GR_OPTION_FLIP_Y & ~GR_OPTION_FLIP_X;
-          gr_setscale(options);
+          subGroup->setAttribute("gr-option-flip-y", 0);
+          subGroup->setAttribute("gr-option-flip-x", 0);
         }
       else
         {
-          options = options & ~GR_OPTION_FLIP_X;
-          gr_setscale(options);
+          subGroup->setAttribute("gr-option-flip-x", 0);
         }
 
       if (k == 0)
         {
-          gr_setwindow(0.0, c_max / 10, y_min, y_max);
-          gr_setviewport(viewport[1] + 0.02 + 0.0, viewport[1] + 0.12 + 0.0, viewport[2], viewport[3]);
-
+          subGroup->setAttribute("orientation", "vertical");
           grm_args_push(subplot_args, "orientation", "s", "vertical");
         }
       else
         {
-          gr_setwindow(x_min, x_max, 0.0, c_max / 10);
-          gr_setviewport(viewport[0], viewport[1], viewport[3] + 0.02, grm_min(viewport[3] + 0.12, 1));
-
+          subGroup->setAttribute("orientation", "horizontal");
           grm_args_push(subplot_args, "orientation", "s", "horizontal");
         }
 
       if (strcmp(type, "all") == 0)
         {
+          subGroup->setAttribute("kind", "hist");
           plot_hist(subplot_args);
         }
       else if (strcmp(type, "line") == 0 && xind != -1 && yind != -1)
         {
+          subGroup->setAttribute("kind", "line");
           plot_step(subplot_args);
         }
-
-      gr_restorestate();
     }
   grm_args_push(subplot_args, "kind", "s", "marginalheatmap");
 

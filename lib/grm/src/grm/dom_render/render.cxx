@@ -33,9 +33,9 @@ std::shared_ptr<GR::Element> global_root;
 std::shared_ptr<GR::Render> global_render;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
-static std::set<std::string> parentTypes = {"group",          "layout-grid",     "layout-gridelement",
-                                            "draw-legend",    "draw-polar-axes", "pie-plot-title-render",
-                                            "draw-pie-legend"};
+static std::set<std::string> parentTypes = {"group",           "layout-grid",     "layout-gridelement",
+                                            "draw-legend",     "draw-polar-axes", "pie-plot-title-render",
+                                            "draw-pie-legend", "marginalheatmap"};
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
@@ -1874,6 +1874,86 @@ static void processImshowInformation(const std::shared_ptr<GR::Element> &elem)
   elem->append(temp);
 }
 
+static void processGROptionFlipX(const std::shared_ptr<GR::Element> &elem)
+{
+  int options;
+  int flip_x = static_cast<int>(elem->getAttribute("gr-option-flip-x"));
+  gr_inqscale(&options);
+
+  if (flip_x)
+    {
+      gr_setscale(options | GR_OPTION_FLIP_X);
+    }
+  else
+    {
+      gr_setscale(options & ~GR_OPTION_FLIP_X);
+    }
+}
+
+static void processGROptionFlipY(const std::shared_ptr<GR::Element> &elem)
+{
+  int options;
+  int flip_y = static_cast<int>(elem->getAttribute("gr-option-flip-y"));
+  gr_inqscale(&options);
+
+  if (flip_y)
+    {
+      gr_setscale(options | GR_OPTION_FLIP_Y);
+    }
+  else
+    {
+      gr_setscale(options & ~GR_OPTION_FLIP_Y);
+    }
+}
+
+static void processWindowAndViewportFromParent(const std::shared_ptr<GR::Element> &elem)
+{
+  std::string kind = static_cast<std::string>(elem->getAttribute("kind"));
+  double viewport[4];
+  double x_min, x_max, y_min, y_max, c_min, c_max;
+
+  if (str_equals_any(kind.c_str(), 2, "hist", "line"))
+    {
+      std::string orientation = static_cast<std::string>(elem->getAttribute("orientation"));
+      auto marginalheatmap_group = elem->parentElement();
+      viewport[0] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_xmin"));
+      viewport[1] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_xmax"));
+      viewport[2] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_ymin"));
+      viewport[3] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_ymax"));
+      x_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_xmin"));
+      x_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_xmax"));
+      y_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_ymin"));
+      y_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_ymax"));
+      if (marginalheatmap_group->hasAttribute("lim_cmin"))
+        {
+          c_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_cmin"));
+        }
+      else
+        {
+          c_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_zmin"));
+        }
+      if (marginalheatmap_group->hasAttribute("lim_cmax"))
+        {
+          c_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_cmax"));
+        }
+      else
+        {
+          c_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_zmax"));
+        }
+
+      if (orientation == "vertical")
+        {
+          gr_setwindow(0.0, c_max / 10, y_min, y_max);
+          gr_setviewport(viewport[1] + 0.02 + 0.0, viewport[1] + 0.12 + 0.0, viewport[2], viewport[3]);
+        }
+      else if (orientation == "horizontal")
+        {
+          gr_setwindow(x_min, x_max, 0.0, c_max / 10);
+          gr_setviewport(viewport[0], viewport[1], viewport[3] + 0.02, grm_min(viewport[3] + 0.12, 1));
+        }
+    }
+}
+
 static void processColorbarPosition(const std::shared_ptr<GR::Element> &elem)
 {
   double viewport[4];
@@ -3201,6 +3281,9 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
       {std::string("xticklabels"), processXTickLabels},
       {std::string("ylabel"), processYlabel},
       {std::string("imshow-information"), processImshowInformation},
+      {std::string("gr-option-flip-x"), processGROptionFlipX},
+      {std::string("gr-option-flip-y"), processGROptionFlipY},
+      {std::string("calc-window-and-viewport-from-parent"), processWindowAndViewportFromParent},
       {std::string("colorbar-position"), processColorbarPosition}};
 
 
