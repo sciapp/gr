@@ -4041,6 +4041,7 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
 
 cleanup:
   free(bins);
+  currentDomElement = nullptr;
 
   return error;
 }
