@@ -1856,14 +1856,21 @@ static void gr3_dodrawmesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int 
           }
         for (j = 0; j < 3; j++)
           {
-            model_matrix[j] = -left[j] * scales[i * 3 + 0];
-            model_matrix[4 + j] = up[j] * scales[i * 3 + 1];
-            model_matrix[8 + j] = forward[j] * scales[i * 3 + 2];
+            model_matrix[j] = -left[j];
+            model_matrix[4 + j] = up[j];
+            model_matrix[8 + j] = forward[j];
             model_matrix[12 + j] = positions[i * 3 + j];
           }
         model_matrix[15] = 1;
       }
       gr3_getviewmatrix(view);
+      for (j = 0; j < 3; j++)
+        {
+          view[j * 4 + 0] = view[j * 4 + 0] * scales[i * 3 + j];
+          view[j * 4 + 1] = view[j * 4 + 1] * scales[i * 3 + j];
+          view[j * 4 + 2] = view[j * 4 + 2] * scales[i * 3 + j];
+          view[j * 4 + 3] = view[j * 4 + 3] * scales[i * 3 + j];
+        }
       if (id == 1 && i == (n - 1))
         {
           pass_id = 1;
