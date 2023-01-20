@@ -139,6 +139,22 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       type->addAction(scatter3Act);
       type->addAction(scatterAct);
     }
+  else if (strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0 || strcmp(kind, "step") == 0 ||
+           strcmp(kind, "stem") == 0)
+    {
+      histAct = new QAction(tr("&Hist"), this);
+      connect(histAct, &QAction::triggered, this, &GRPlotWidget::hist);
+      barplotAct = new QAction(tr("&Barplot"), this);
+      connect(barplotAct, &QAction::triggered, this, &GRPlotWidget::barplot);
+      stepAct = new QAction(tr("&Step"), this);
+      connect(stepAct, &QAction::triggered, this, &GRPlotWidget::step);
+      stemAct = new QAction(tr("&Stem"), this);
+      connect(stemAct, &QAction::triggered, this, &GRPlotWidget::stem);
+      type->addAction(histAct);
+      type->addAction(barplotAct);
+      type->addAction(stepAct);
+      type->addAction(stemAct);
+    }
   menu->addMenu(type);
   menu->addMenu(algo);
 }
@@ -524,6 +540,34 @@ void GRPlotWidget::scatter3()
 void GRPlotWidget::scatter()
 {
   grm_args_push(args_, "kind", "s", "scatter");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::hist()
+{
+  grm_args_push(args_, "kind", "s", "hist");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::barplot()
+{
+  grm_args_push(args_, "kind", "s", "barplot");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::step()
+{
+  grm_args_push(args_, "kind", "s", "step");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::stem()
+{
+  grm_args_push(args_, "kind", "s", "stem");
   grm_merge(args_);
   redraw();
 }

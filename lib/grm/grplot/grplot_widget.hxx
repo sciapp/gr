@@ -49,6 +49,10 @@ private slots:
   void tricont();
   void scatter3();
   void scatter();
+  void hist();
+  void barplot();
+  void step();
+  void stem();
 
 private:
   struct MouseState
@@ -91,6 +95,10 @@ private:
   QAction *tricontAct;
   QAction *scatter3Act;
   QAction *scatterAct;
+  QAction *histAct;
+  QAction *barplotAct;
+  QAction *stepAct;
+  QAction *stemAct;
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

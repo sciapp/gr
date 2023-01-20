@@ -16,22 +16,37 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ key to types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static std::map<std::string, const char *> key_to_types{{"algorithm", "s"},
+                                                        {"bar_color", "ddd"},
+                                                        {"bar_color", "i"},
+                                                        {"bar_width", "d"},
+                                                        {"c", "nD"},
                                                         {"colormap", "i"},
+                                                        {"edge_color", "ddd"},
+                                                        {"edge_color", "i"},
+                                                        {"edge_width", "d"},
                                                         {"isovalue", "d"},
                                                         {"keep_aspect_ratio", "i"},
                                                         {"kind", "s"},
                                                         {"levels", "i"},
                                                         {"marginalheatmap_kind", "s"},
                                                         {"markertype", "i"},
+                                                        {"nbins", "i"},
+                                                        {"orientation", "s"},
                                                         {"scatterz", "i"},
+                                                        {"spec", "s"},
+                                                        {"step_where", "s"},
+                                                        {"style", "s"},
                                                         {"xflip", "i"},
-                                                        {"yflip", "i"}};
+                                                        {"xticklabels", "nS"},
+                                                        {"yflip", "i"},
+                                                        {"ylabels", "nS"}};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::list<std::string> kind_types = {"contour", "contourf",        "heatmap", "imshow",  "isosurface",
-                                            "line",    "marginalheatmap", "plot3",   "scatter", "scatter3",
-                                            "surface", "tricont",         "trisurf", "volume",  "wireframe"};
+static std::list<std::string> kind_types = {"barplot", "contour",    "contourf", "heatmap",         "hist",
+                                            "imshow",  "isosurface", "line",     "marginalheatmap", "pie",
+                                            "plot3",   "scatter",    "scatter3", "surface",         "stem",
+                                            "step",    "tricont",    "trisurf",  "volume",          "wireframe"};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ alias for keys ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -508,9 +523,6 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
            (strcmp(kind, "scatter") == 0 && scatter_with_z))
     {
       double min_x, max_x, min_y, max_y, min_z, max_z;
-      std::vector<double> x(rows);
-      std::vector<double> y(rows);
-      std::vector<double> z(rows);
       if (cols < 3)
         {
           fprintf(stderr, "Unsufficient data for plot type (%s)\n", kind);
@@ -555,6 +567,86 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
       grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
       grm_args_push(args, "z", "nD", rows, filedata[depth][2].data());
+    }
+  else if (str_equals_any(kind, 4, "barplot", "hist", "stem", "step"))
+    {
+      std::vector<double> x(rows);
+      double ymin, ymax;
+      char *orientation;
+
+      adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)rows - 1.0);
+      for (row = 0; row < rows; row++)
+        {
+          x[row] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)row / ((double)rows - 1));
+        }
+      if (!grm_args_values(args, "yrange", "dd", &ymin, &ymax))
+        {
+          ymin = *std::min_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
+          ymax = *std::max_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
+          adjust_ranges(&ranges.ymin, &ranges.ymax, std::min(0.0, ymin), ymax);
+          grm_args_push(args, "yrange", "dd", ranges.ymin, ranges.ymax);
+        }
+      else
+        {
+          // apply yrange to the data
+          ymin = *std::min_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
+          ymax = *std::max_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
+          for (row = 0; row < rows; ++row)
+            {
+              filedata[depth][0][row] = ranges.ymin + (ranges.ymax - ranges.ymin) *
+                                                          (((double)filedata[depth][0][row]) - ymin) / (ymax - ymin);
+            }
+        }
+      // when the plot is drawn vertical it can be that the old xrange doesn`t fit the flipped data
+      if (grm_args_values(args, "orientation", "s", &orientation) && strcmp(orientation, "vertical") == 0 &&
+          !grm_args_values(args, "xrange", "dd", &ymin, &ymax))
+        {
+          grm_args_push(args, "xrange", "dd", ranges.ymin, ranges.ymax);
+        }
+      else
+        {
+          // needed for histograms when a xlim is set
+          grm_args_push(args, "xrange", "dd", ranges.xmin, ranges.xmax);
+        }
+      grm_args_push(args, "x", "nD", rows, x.data());
+      // for barplot
+      grm_args_push(args, "y", "nD", rows, filedata[depth][0].data());
+      // for hist
+      grm_args_push(args, "weights", "nD", rows, filedata[depth][0].data());
+      // for step
+      grm_args_push(args, "z", "nD", rows, filedata[depth][0].data());
+      // TODO: missing error container, barplot container
+    }
+  else if (str_equals_any(kind, 1, "pie"))
+    {
+      std::vector<double> x(cols);
+      std::vector<double> c(cols * 3);
+      for (col = 0; col < cols; col++)
+        {
+          x[col] = filedata[depth][col][0];
+        }
+
+      grm_args_push(args, "x", "nD", cols, x.data());
+      if (!labels_c.empty())
+        {
+          grm_args_push(args, "labels", "nS", cols, labels_c.data());
+        }
+      if (rows >= 4)
+        {
+          for (col = 0; col < cols; col++)
+            {
+              for (row = 1; row < 4; row++)
+                {
+                  c[row * cols + col] = filedata[depth][col][row];
+                }
+            }
+          //TODO: Can crash
+          grm_args_push(args, "c", "nD", c.size(), c.data());
+        }
+      else if (rows > 1)
+        {
+          fprintf(stderr, "Unsufficient data for custom colors\n");
+        }
     }
   grm_args_push(args, "grplot", "i", 1);
   grm_merge(args);
@@ -610,21 +702,25 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                 }
               if (auto search = key_to_types.find(found_key); search != key_to_types.end())
                 {
+                  std::string value = token.substr(found_key_size + 1, token.length() - 1);
                   // special case for kind, for following exception
                   if (strcmp(found_key.c_str(), "kind") == 0)
                     {
                       kind = token.substr(found_key_size + 1, token.length() - 1).c_str();
                     }
 
+                  if (value.length() == 0)
+                    {
+                      fprintf(stderr, "Parameter %s will be ignored. No data given\n", search->first.c_str());
+                      continue;
+                    }
                   // different types
                   if (strcmp(search->second, "s") == 0)
                     {
-                      grm_args_push(args, search->first.c_str(), search->second,
-                                    token.substr(found_key_size + 1, token.length() - 1).c_str());
+                      grm_args_push(args, search->first.c_str(), search->second, value.c_str());
                     }
                   else
                     {
-                      std::string value = token.substr(found_key_size + 1, token.length() - 1);
                       try
                         {
                           if (strcmp(search->second, "i") == 0)
@@ -642,6 +738,83 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                           else if (strcmp(search->second, "d") == 0)
                             {
                               grm_args_push(args, search->first.c_str(), search->second, std::stod(value));
+                            }
+                          else if (strcmp(search->second, "ddd") == 0)
+                            {
+                              std::string r, g, b;
+                              size_t pos = 0;
+                              int k = 0;
+                              while ((pos = value.find(',')) != std::string::npos)
+                                {
+                                  if (k == 0) r = value.substr(0, pos);
+                                  if (k == 1) g = value.substr(0, pos);
+                                  value.erase(0, pos + 1);
+                                  k++;
+                                }
+                              if (k != 2 || value.length() == 0)
+                                {
+                                  fprintf(stderr,
+                                          "Given number doesn`t fit the data for %s parameter. The parameter will be "
+                                          "ignored\n",
+                                          search->first.c_str());
+                                }
+                              b = value;
+                              grm_args_push(args, search->first.c_str(), search->second, std::stod(r), std::stod(g),
+                                            std::stod(b));
+                            }
+                          else if (strcmp(search->second, "nS") == 0)
+                            {
+                              size_t pos = value.find(',');
+                              int k = 0;
+                              std::string num = value.substr(0, pos);
+                              std::vector<const char *> values(std::stoi(num));
+                              value.erase(0, pos + 1);
+                              while ((pos = value.find(',')) != std::string::npos)
+                                {
+                                  values[k] = value.substr(0, pos).c_str();
+                                  value.erase(0, pos + 1);
+                                  k++;
+                                }
+                              values[k] = value.c_str();
+                              if (k != std::stoi(num) - 1 || value.length() == 0)
+                                {
+                                  fprintf(stderr,
+                                          "Given number doesn`t fit the data for %s parameter. The parameter will be "
+                                          "ignored\n",
+                                          search->first.c_str());
+                                }
+                              else
+                                {
+                                  grm_args_push(args, search->first.c_str(), search->second, std::stoi(num),
+                                                values.data());
+                                }
+                            }
+                          else if (strcmp(search->second, "nD") == 0)
+                            {
+                              size_t pos = value.find(',');
+                              int k = 0;
+                              std::string num = value.substr(0, pos);
+                              std::vector<double> values(std::stoi(num));
+                              value.erase(0, pos + 1);
+                              while ((pos = value.find(',')) != std::string::npos)
+                                {
+                                  values[k] = std::stod(value.substr(0, pos));
+                                  value.erase(0, pos + 1);
+                                  k++;
+                                }
+                              values[k] = std::stod(value);
+                              if (k != std::stoi(num) - 1 || value.length() == 0)
+                                {
+                                  fprintf(stderr,
+                                          "Given number doesn`t fit the data for %s parameter. The parameter will be "
+                                          "ignored\n",
+                                          search->first.c_str());
+                                }
+                              else
+                                {
+                                  grm_args_push(args, search->first.c_str(), search->second, std::stoi(num),
+                                                values.data());
+                                }
                             }
                         }
                       catch (std::invalid_argument &e)

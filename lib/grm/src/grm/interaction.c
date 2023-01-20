@@ -322,6 +322,8 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   char *kind, **labels;
   grm_args_t *subplot_args, **current_series;
   unsigned int x_length, y_length, z_length, series_i = 0, i;
+  char *orientation;
+  int is_vertical;
 
   get_figure_size(NULL, &width, &height, NULL, NULL);
   max_width_height = grm_max(width, height);
@@ -332,6 +334,8 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   if (subplot_args != NULL)
     {
       grm_args_values(subplot_args, "kind", "s", &kind);
+      grm_args_values(subplot_args, "orientation", "s", &orientation);
+      is_vertical = strcmp(orientation, "vertical") == 0;
     }
   if (subplot_args == NULL || !str_equals_any(kind, 9, "line", "scatter", "stem", "step", "heatmap", "marginalheatmap",
                                               "contour", "imshow", "contourf"))
@@ -376,8 +380,16 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels);
   while (*current_series != NULL)
     {
-      grm_args_first_value(*current_series, "x", "D", &x_series, &x_length);
-      grm_args_first_value(*current_series, "y", "D", &y_series, &y_length);
+      if (is_vertical)
+        {
+          grm_args_first_value(*current_series, "x", "D", &y_series, &y_length);
+          grm_args_first_value(*current_series, "y", "D", &x_series, &x_length);
+        }
+      else
+        {
+          grm_args_first_value(*current_series, "x", "D", &x_series, &x_length);
+          grm_args_first_value(*current_series, "y", "D", &y_series, &y_length);
+        }
       if (str_equals_any(kind, 5, "heatmap", "marginalheatmap", "contour", "imshow", "contourf"))
         {
           grm_args_first_value(*current_series, "z", "D", &z_series, &z_length);

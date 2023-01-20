@@ -940,14 +940,14 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
         {
           args_setdefault(*current_subplot, "levels", "i", PLOT_DEFAULT_TRICONT_LEVELS);
         }
-      else if (str_equals_any(kind, 2, "hist", "line"))
-        {
-          args_setdefault(*current_subplot, "orientation", "s", PLOT_DEFAULT_ORIENTATION);
-        }
       else if (str_equals_any(kind, 2, "marginalheatmap", "hist"))
         {
           args_setdefault(*current_subplot, "xind", "i", -1);
           args_setdefault(*current_subplot, "yind", "i", -1);
+        }
+      if (str_equals_any(kind, 4, "barplot", "hist", "line", "step"))
+        {
+          args_setdefault(*current_subplot, "orientation", "s", PLOT_DEFAULT_ORIENTATION);
         }
 
       grm_args_values(*current_subplot, "series", "A", &current_series);
@@ -1876,43 +1876,49 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
   else if (strcmp(kind, "hist") == 0)
     {
       double y_min = 0.0, y_max = 0.0;
+      char *orientation;
+      int is_horizontal;
+
       if (!grm_args_values(subplot_args, "ylim", "dd", &y_min, &y_max))
         {
           grm_args_values(subplot_args, "series", "A", &current_series);
+          grm_args_values(subplot_args, "orientation", "s", &orientation);
+          is_horizontal = strcmp(orientation, "horizontal") == 0;
           while (*current_series != NULL)
             {
               double current_y_min = DBL_MAX, current_y_max = -DBL_MAX;
-              if (!grm_args_values(*current_series, "yrange", "dd", &current_y_min, &current_y_max))
-                {
-                  double *x = NULL, *weights = NULL;
-                  unsigned int num_bins = 0, num_weights;
-                  cleanup_and_set_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &current_point_count),
-                                           ERROR_PLOT_MISSING_DATA);
-                  grm_args_values(*current_series, "nbins", "i", &num_bins);
-                  grm_args_first_value(*current_series, "weights", "D", &weights, &num_weights);
-                  if (weights != NULL)
-                    {
-                      cleanup_and_set_error_if(current_point_count != num_weights,
-                                               ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-                    }
-                  if (num_bins <= 1)
-                    {
-                      num_bins = (int)(3.3 * log10(current_point_count) + 0.5) + 1;
-                    }
-                  bins = static_cast<double *>(malloc(num_bins * sizeof(double)));
-                  cleanup_and_set_error_if(bins == NULL, ERROR_MALLOC);
-                  bin_data(current_point_count, x, num_bins, bins, weights);
-                  for (i = 0; i < num_bins; i++)
-                    {
-                      current_y_min = grm_min(current_y_min, bins[i]);
-                      current_y_max = grm_max(current_y_max, bins[i]);
-                    }
-                  grm_args_push(*current_series, "bins", "nD", num_bins, bins);
-                  free(bins);
-                  bins = NULL;
-                }
+              {
+                double *x = NULL, *weights = NULL;
+                unsigned int num_bins = 0, num_weights;
+                cleanup_and_set_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &current_point_count),
+                                         ERROR_PLOT_MISSING_DATA);
+                grm_args_values(*current_series, "nbins", "i", &num_bins);
+                grm_args_first_value(*current_series, "weights", "D", &weights, &num_weights);
+                if (weights != NULL)
+                  {
+                    cleanup_and_set_error_if(current_point_count != num_weights, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+                  }
+                if (num_bins <= 1)
+                  {
+                    num_bins = (int)(3.3 * log10(current_point_count) + 0.5) + 1;
+                  }
+                bins = static_cast<double *>(malloc(num_bins * sizeof(double)));
+                cleanup_and_set_error_if(bins == NULL, ERROR_MALLOC);
+                bin_data(current_point_count, x, num_bins, bins, weights);
+                for (i = 0; i < num_bins; i++)
+                  {
+                    current_y_min = grm_min(current_y_min, bins[i]);
+                    current_y_max = grm_max(current_y_max, bins[i]);
+                  }
+                grm_args_push(*current_series, "bins", "nD", num_bins, bins);
+                free(bins);
+                bins = NULL;
+              }
               y_min = grm_min(current_y_min, y_min);
               y_max = grm_max(current_y_max, y_max);
+              grm_args_values(*current_series, "yrange", "dd", &current_y_min, &current_y_max);
+              y_min = grm_max(current_y_min, y_min);
+              y_max = grm_min(current_y_max, y_max);
               current_series++;
             }
           grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
@@ -2168,15 +2174,12 @@ err_t plot_step(grm_args_t *subplot_args)
             {
               if (is_vertical)
                 {
-                  y[(is_vertical ? y_length : x_length) - i - 1] =
-                      grm_isnan(plot[xind + i * x_length]) ? 0 : plot[xind + i * x_length];
-                  y_max = grm_max(y_max, y[(is_vertical ? y_length : x_length) - i - 1]);
+                  y[i] = grm_isnan(plot[xind + i * x_length]) ? 0 : plot[xind + i * x_length];
+                  y_max = grm_max(y_max, y[i]);
                 }
               else
                 {
-                  y[i] = grm_isnan(plot[x_length * (y_length - 1 - yind) + i])
-                             ? 0
-                             : plot[x_length * (y_length - 1 - yind) + i];
+                  y[i] = grm_isnan(plot[x_length * yind + i]) ? 0 : plot[x_length * yind + i];
                   y_max = grm_max(y_max, y[i]);
                 }
             }
@@ -2664,6 +2667,8 @@ err_t plot_barplot(grm_args_t *subplot_args)
   unsigned int i;
   err_t error = ERROR_NONE;
   double *y_lightness = NULL;
+  char *orientation;
+  int is_vertical;
 
   gr_settextalign(2, 3);
   gr_selectclipxform(1);
@@ -2673,6 +2678,9 @@ err_t plot_barplot(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "bar_color", "i", &bar_color);
   grm_args_values(subplot_args, "bar_width", "d", &bar_width);
   grm_args_values(subplot_args, "style", "s", &style);
+  grm_args_values(subplot_args, "orientation", "s", &orientation);
+
+  is_vertical = strcmp(orientation, "vertical") == 0;
 
   if (bar_color_rgb[0] != -1)
     {
@@ -2975,7 +2983,14 @@ err_t plot_barplot(grm_args_t *subplot_args)
               y_lightness[i] = 116 * pow(Y / 100, 1.0 / 3) - 16;
               --y_lightness_to_get;
             }
-          gr_fillrect(x1, x2, y1, y2);
+          if (is_vertical)
+            {
+              gr_fillrect(y1, y2, x1, x2);
+            }
+          else
+            {
+              gr_fillrect(x1, x2, y1, y2);
+            }
         }
 
       pos_vertical_change = 0;
@@ -3039,7 +3054,14 @@ err_t plot_barplot(grm_args_t *subplot_args)
               y1 = 0;
               y2 = y[i];
             }
-          gr_drawrect(x1, x2, y1, y2);
+          if (is_vertical)
+            {
+              gr_fillrect(y1, y2, x1, x2);
+            }
+          else
+            {
+              gr_fillrect(x1, x2, y1, y2);
+            }
         }
 
       pos_vertical_change = 0;
@@ -3209,7 +3231,14 @@ err_t plot_barplot(grm_args_t *subplot_args)
                   y_lightness[ylabels_length - y_lightness_to_get] = 116 * pow(Y / 100, 1.0 / 3) - 16;
                   --y_lightness_to_get;
                 }
-              gr_fillrect(x1, x2, y1, y2);
+              if (is_vertical)
+                {
+                  gr_fillrect(y1, y2, x1, x2);
+                }
+              else
+                {
+                  gr_fillrect(x1, x2, y1, y2);
+                }
             }
           pos_vertical_change = 0;
           neg_vertical_change = 0;
@@ -3257,7 +3286,14 @@ err_t plot_barplot(grm_args_t *subplot_args)
                   y2 = y[i] + neg_vertical_change;
                   neg_vertical_change += y[i];
                 }
-              gr_drawrect(x1, x2, y1, y2);
+              if (is_vertical)
+                {
+                  gr_fillrect(y1, y2, x1, x2);
+                }
+              else
+                {
+                  gr_fillrect(x1, x2, y1, y2);
+                }
             }
           pos_vertical_change = 0;
           neg_vertical_change = 0;
@@ -3576,12 +3612,10 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   unsigned int i, cols, rows, z_length;
   double *x = NULL, *y = NULL, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv, tmp;
   err_t error = ERROR_NONE;
-  int grplot;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "zlog", "i", &zlog);
-  grplot = grm_args_values(subplot_args, "grplot", "i", &grplot);
   while (*current_series != NULL)
     {
       int is_uniform_heatmap;
@@ -3703,13 +3737,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
                   rgba[i] = (255 << 24) + icmap[data[i]];
                 }
             }
-          if (grplot)
-            {
-              tmp = y_max;
-              y_max = y_min;
-              y_min = tmp;
-            }
-          gr_drawimage(x_min, x_max, y_min, y_max, cols, rows, rgba, 0);
+          gr_drawimage(x_min, x_max, y_max, y_min, cols, rows, rgba, 0);
         }
       else
         {
@@ -3802,9 +3830,7 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
             {
               for (j = 0; j < x_len; j++)
                 {
-                  value = (grm_isnan(plot[(num_bins_y - 1 - i) * num_bins_x + j]))
-                              ? 0
-                              : plot[(num_bins_y - 1 - i) * num_bins_x + j];
+                  value = (grm_isnan(plot[i * num_bins_x + j])) ? 0 : plot[i * num_bins_x + j];
                   if (strcmp(algorithm, "sum") == 0)
                     {
                       bins[(k == 0) ? i : j] += value;
@@ -4107,9 +4133,7 @@ err_t plot_imshow(grm_args_t *subplot_args)
       for (j = 0; j < rows; ++j)
         for (i = 0; i < cols; ++i)
           {
-            img_data[k++] =
-                1000 + (int)grm_round((1.0 * (grplot ? c_data[j * cols + i] : c_data[i * rows + j]) - c_min) /
-                                      (c_max - c_min) * 255);
+            img_data[k++] = 1000 + (int)grm_round((1.0 * c_data[j * cols + i] - c_min) / (c_max - c_min) * 255);
           }
 
       h = (double)rows / (double)cols * (vp[1] - vp[0]);
