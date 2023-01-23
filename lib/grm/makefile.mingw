@@ -34,6 +34,8 @@ EXPATLIBS = $(THIRDPARTYDIR)/lib/libexpat.a
             src/grm/net.o \
             src/grm/plot.o \
             src/grm/util.o \
+            src/grm/utilcpp.o \
+            src/grm/import.o \
             src/grm/datatype/double_map.o \
             src/grm/datatype/string_array_map.o \
             src/grm/datatype/string_list.o \

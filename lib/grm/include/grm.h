@@ -12,5 +12,6 @@
 #include <grm/net.h>
 #include <grm/plot.h>
 #include <grm/util.h>
+#include <grm/import.h>
 
 #endif /* ifndef GRM_H_INCLUDED */

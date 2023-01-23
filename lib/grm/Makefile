@@ -24,6 +24,8 @@ UNAME := $(shell uname)
                src/grm/net.o \
                src/grm/plot.o \
                src/grm/util.o \
+               src/grm/utilcpp.o \
+               src/grm/import.o \
                src/grm/datatype/double_map.o \
                src/grm/datatype/string_array_map.o \
                src/grm/datatype/string_list.o \
@@ -72,6 +74,18 @@ endif
      GR3LIBS = -L ../gr3/ -lGR3
         LIBS = $(GRLIBS) $(GR3LIBS) $(EXPATLIBS) -lm
 
+grmplots_support =
+ifneq ($(QT5_QMAKE),)
+ifneq ($(QT5_QMAKE),false)
+    grmplots_support = yes
+endif
+endif
+ifneq ($(QT6_QMAKE),)
+ifneq ($(QT6_QMAKE),false)
+    grmplots_support = yes
+endif
+endif
+
 .c.o:
 	$(CC) -o $@ -c $(INCLUDES) $(CFLAGS) $<
 
@@ -84,7 +98,11 @@ default:
 
 all: targets
 
+ifdef grmplots_support
+targets: prerequisites libGRM.a libGRM${GR_SHARED_LIBRARY_SUFFIX} grm-plots
+else
 targets: prerequisites libGRM.a libGRM${GR_SHARED_LIBRARY_SUFFIX}
+endif
 
 prerequisites:
 	$(MAKE) -C ../../3rdparty/ PREFIX=$(THIRDPARTYDIR)
@@ -102,6 +120,9 @@ libGRM.a: $(GRMOBJS)
 libGRM${GR_SHARED_LIBRARY_SUFFIX}: $(GRMOBJS) libGR libGR3
 	$(CXX) -o $@ $(SOFLAGS) $(GRMOBJS) $(LIBS) $(LDFLAGS) $(INSTALL_NAME)
 
+grm-plots:
+	$(MAKE) -C grm-plots -f makefile.mak GRDIR=$(GRDIR)
+
 install:
 	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
@@ -109,8 +130,19 @@ install:
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p include/grm.h $(INCDIR)
 	cp -rp include/grm $(INCDIR)/
+ifeq ($(UNAME), Darwin)
+	@if [ -d grm-plots/grm-plots.app ]; then \
+		$(MAKE) -C grm-plots -f makefile.mak install; \
+	fi
+else
+	@if [ -f grm-plots/grm-plots ]; then \
+		$(MAKE) -C grm-plots -f makefile.mak install; \
+	fi
+endif
 
 clean:
+	$(MAKE) -C grm-plots -f makefile.mak clean
+	rm -f grm-plots/.qmake.stash
 	rm -f *.so \
 	      *.a \
 	      src/grm/*.o \
@@ -119,6 +151,7 @@ clean:
 	      src/grm/dom_render/graphics_tree/*.o \
 	      *${GR_SHARED_LIBRARY_SUFFIX}
 
-.PHONY: all targets install clean prerequisites libGR libGR3
+
+.PHONY: all targets install clean prerequisites libGR libGR3 grm-plots
 .SUFFIXES:  # Delete the default suffixes
 .SUFFIXES: .c .cxx .o  # List all suffixes for suffix rules explicitly
