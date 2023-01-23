@@ -274,6 +274,7 @@ DLLEXPORT void gr_volume_interp_gauss_init(double, double *);
 DLLEXPORT double gr_volume_interp_tri_linear(const data_point3d_t *, const void *, const point3d_t *,
                                              const point3d_t *);
 DLLEXPORT double gr_volume_interp_gauss(const data_point3d_t *, const void *, const point3d_t *, const point3d_t *);
+DLLEXPORT void gr_setwscharheight(double chh, double height);
 
 #ifdef __cplusplus
 }
