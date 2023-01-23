@@ -1,3 +1,6 @@
+C*
+C*  gfortran demo.f -L/usr/local/gr/lib -lGKS -Wl,-rpath,/usr/local/gr/lib
+C*
         INTEGER ASF(13)
         REAL X(10), Y(10), CPX, CPY, TX(4), TY(4)
         INTEGER I, J, K      
@@ -102,10 +105,21 @@ C* linetypes
         DO 100, J = -8, 4
           IF (J .EQ. 0) GOTO 100
           CALL GSLN(J)
-          Y(1) = Y(1) - 0.05
+          Y(1) = Y(1) - 0.02
           Y(2) = Y(1)
           CALL GPL(2, X, Y)
  100    CONTINUE 
+
+        DO 120, i = 1, 3
+          Y(1) = Y(1) - 0.03
+          CALL GSLWSC(1.0 * i)
+          DO 130, J = 1, 4
+            CALL GSLN(J)
+            Y(1) = Y(1) - 0.02
+            Y(2) = Y(1)
+            CALL GPL(2, X, Y)
+ 130      CONTINUE
+ 120    CONTINUE
 
 C* markertypes
         CALL GSMKSC(3.5)
@@ -199,12 +213,16 @@ C* more text
         CALL GSTXAL(1, 1)
         CALL GSTXFP(3, 0)
         CALL GSCHUP(-1., 0.)
+        CALL GSTXCI(200)
         CALL GTX(.05, .15, 'up')
         CALL GSCHUP(0., -1.)
+        CALL GSTXCI(400)
         CALL GTX(.05, .15, 'left')
         CALL GSCHUP(1., 0.)
+        CALL GSTXCI(600)
         CALL GTX(.05, .15, 'down')
         CALL GSCHUP(0., 1.)
+        CALL GSTXCI(800)
         CALL GTX(.05, .15, 'right')
 
         CALL GUWK(1, 0)
