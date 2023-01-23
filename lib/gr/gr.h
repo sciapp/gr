@@ -107,6 +107,7 @@ DLLEXPORT void gr_setcharspace(double);
 DLLEXPORT void gr_settextcolorind(int);
 DLLEXPORT void gr_inqtextcolorind(int *);
 DLLEXPORT void gr_setcharheight(double);
+DLLEXPORT void gr_setwscharheight(double chh, double height);
 DLLEXPORT void gr_inqcharheight(double *);
 DLLEXPORT void gr_setcharup(double, double);
 DLLEXPORT void gr_settextpath(int);
