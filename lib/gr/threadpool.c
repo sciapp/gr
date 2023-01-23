@@ -2,6 +2,8 @@
 #define NO_THREADS 1
 #endif
 #ifndef NO_THREADS
+#include <assert.h>
+
 #include "threadpool.h"
 
 #ifndef max
@@ -99,13 +101,12 @@ void threadpool_add_work(threadpool_t *tp, void *arg)
 {
   pthread_mutex_lock(&(tp->work_mutex));
 
-  if (next_work_item != NULL)
-    {
-      pthread_cond_wait(&(tp->work_fetched), &(tp->work_mutex));
-    }
+  assert(next_work_item == NULL);
   next_work_item = arg;
 
   pthread_cond_signal(&(tp->wait_for_work_cond));
+  /* wait until `next_work_item` is picked up by a worker thread before returning */
+  pthread_cond_wait(&(tp->work_fetched), &(tp->work_mutex));
   pthread_mutex_unlock(&(tp->work_mutex));
 }
 

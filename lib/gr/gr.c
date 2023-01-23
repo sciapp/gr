@@ -9014,7 +9014,15 @@ void gr_tricontour(int npoints, double *x, double *y, double *z, int nlevels, do
   setscale(lx.scale_options);
 
   colors = (int *)xmalloc(nlevels * sizeof(int));
-  for (i = 0; i < nlevels; i++) colors[i] = (int)((double)i / (nlevels - 1) * (last_color - first_color)) + first_color;
+  if (nlevels > 1)
+    {
+      for (i = 0; i < nlevels; i++)
+        {
+          colors[i] = first_color + (int)((double)i / (nlevels - 1) * (last_color - first_color));
+        }
+    }
+  else
+    colors[0] = 1;
 
   gr_draw_tricont(npoints, x, y, z, nlevels, levels, colors);
 
@@ -11221,6 +11229,18 @@ static text_node_t *parse(double x, double y, char *string, int inline_math)
           math = !math;
           start = end;
         }
+      else if (inline_math && *end == '\\' && *(end + 1) == '(')
+        {
+          *end++ = '\0';
+          append(x, y, start, line_number, 0);
+          start = ++end;
+        }
+      else if (inline_math && *end == '\\' && *(end + 1) == ')')
+        {
+          *end++ = '\0';
+          append(x, y, start, line_number, 1);
+          start = ++end;
+        }
       else
         end++;
     }
@@ -11431,6 +11451,30 @@ static void text_impl(double x, double y, char *string, int inline_math, int inq
   gks_set_text_align(hAlign, vAlign);
 }
 
+static int is_math_text(char *s)
+{
+  if (strchr(s, '$') != NULL)
+    {
+      int dollar_count = 0;
+      while (*s)
+        {
+          if (*s == '$')
+            {
+              if (*(s + 1) != '$')
+                dollar_count++;
+              else
+                s++;
+            }
+          s++;
+        }
+      return dollar_count > 0 && dollar_count % 2 == 0 ? 1 : 0;
+    }
+  else if (strstr(s, "\\(") != NULL)
+    return 1;
+  else
+    return 0;
+}
+
 /*!
  * Draw a text at position `x`, `y` using the current text attributes.
  *
@@ -11452,7 +11496,7 @@ void gr_text(double x, double y, char *string)
   gks_inq_current_xformno(&errind, &tnr);
   if (tnr != NDC) gks_select_xform(NDC);
 
-  if (strchr(string, '\n') != NULL || strchr(string, '$') != NULL)
+  if (strchr(string, '\n') != NULL || is_math_text(string))
     text_impl(x, y, string, 1, 0, NULL, NULL);
   else
     gks_text(x, y, string);
@@ -11496,7 +11540,7 @@ void gr_textx(double x, double y, char *string, int opts)
       gks_select_xform(NDC);
     }
 
-  if (strchr(string, '\n') != NULL || (strchr(string, '$') != NULL && inline_math))
+  if (strchr(string, '\n') != NULL || (is_math_text(string) && inline_math))
     text_impl(xn, yn, string, inline_math, 0, NULL, NULL);
   else
     gks_text(xn, yn, string);
@@ -11516,7 +11560,7 @@ void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
   gks_inq_current_xformno(&errind, &tnr);
   if (tnr != NDC) gks_select_xform(NDC);
 
-  if (strchr(string, '\n') != NULL || strchr(string, '$') != NULL)
+  if (strchr(string, '\n') != NULL || is_math_text(string))
     text_impl(x, y, string, 1, 1, tbx, tby);
   else
     {
@@ -11542,7 +11586,7 @@ void gr_inqtextx(double x, double y, char *string, int opts, double *tbx, double
       gks_select_xform(NDC);
     }
 
-  if (strchr(string, '\n') != NULL || (strchr(string, '$') != NULL && inline_math))
+  if (strchr(string, '\n') != NULL || (is_math_text(string) && inline_math))
     text_impl(xn, yn, string, inline_math, 1, tbx, tby);
   else
     {
@@ -14053,7 +14097,6 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
       y_start = 0;
     }
 #ifndef NO_THREADS
-  threadpool_add_work(tp, jobs + (i - 1) + (j - 1) * n_x);
   threadpool_destroy(tp);
 #endif
 

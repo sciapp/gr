@@ -126,6 +126,8 @@ typedef struct ws_state_list_t
 
 static ws_state_list p_, *p = &p_;
 
+static int fontfile = 0;
+
 static const char *fonts[] = {
     "Times",          "Arial",       "Courier", "Open Symbol", "Bookman Old Style", "Century Schoolbook",
     "Century Gothic", "Book Antiqua"};
@@ -720,9 +722,9 @@ static void text(double px, double py, int nchars, char *chars)
     }
   else
     {
-      if ((tx_prec == GKS_K_TEXT_PRECISION_STROKE || tx_prec == GKS_K_TEXT_PRECISION_CHAR) && gkss->fontfile == 0)
+      if ((tx_prec == GKS_K_TEXT_PRECISION_STROKE || tx_prec == GKS_K_TEXT_PRECISION_CHAR) && fontfile == 0)
         {
-          gkss->fontfile = gks_open_font();
+          fontfile = gks_open_font();
         }
       gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
     }
@@ -1343,17 +1345,18 @@ static void memory_plugin_dl_render(int fctid, int dx, int dy, int dimx, int *ia
         }
       return;
     case 3:
-      if (gkss->fontfile != 0)
+      if (fontfile != 0)
         {
-          gks_close_font(gkss->fontfile);
+          gks_close_font(fontfile);
+          fontfile = 0;
         }
       break;
     case 14:
       {
         int tx_prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
-        if ((tx_prec == GKS_K_TEXT_PRECISION_STROKE || tx_prec == GKS_K_TEXT_PRECISION_CHAR) && gkss->fontfile == 0)
+        if ((tx_prec == GKS_K_TEXT_PRECISION_STROKE || tx_prec == GKS_K_TEXT_PRECISION_CHAR) && fontfile == 0)
           {
-            gkss->fontfile = gks_open_font();
+            fontfile = gks_open_font();
           }
       }
       break;
@@ -1417,7 +1420,6 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
     case 2:
       memmove(&saved_gkss, gkss, sizeof(gks_state_list_t));
       memmove(gkss, *ptr, sizeof(gks_state_list_t));
-      gkss->fontfile = saved_gkss.fontfile;
 
       if (!p->prevent_resize_by_dl)
         {
@@ -1437,10 +1439,10 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       break;
 
     case 3:
-      if (gkss->fontfile > 0)
+      if (fontfile > 0)
         {
-          gks_close_font(gkss->fontfile);
-          gkss->fontfile = 0;
+          gks_close_font(fontfile);
+          fontfile = 0;
         }
       break;
 
