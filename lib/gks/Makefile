@@ -101,7 +101,7 @@ plugins:
 endif
 
 pasdemo: default
-	fpc -Px86_64 demo.p -g -Fl./ -k-rpath -k./
+	fpc demo.p -g -Fl./ -k-rpath -k./
 
 install:
 	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi

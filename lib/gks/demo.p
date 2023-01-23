@@ -1,8 +1,7 @@
 program demo(input, output);
 
 {
-  fpc -Px86_64 demo.p
-  env DYLD_LIBRARY_PATH=/usr/local/gr/lib GKS_WSTYPE=x11 ./demo
+  fpc -Fl/usr/local/gr/lib -k-rpath -k/usr/local/gr/lib demo.p
 }
 
 uses
@@ -122,10 +121,23 @@ begin
     if j <> 0 then
       begin
       gks_set_pline_linetype(j);
-      y[1] := y[1] - 0.05;
+      y[1] := y[1] - 0.02;
       y[2] := y[1];
       gks_polyline(2, x, y);
       end;
+
+  for i := 1 to 3 do
+    begin
+      y[1] := y[1] - 0.03;
+      gks_set_pline_linewidth(1.0 * i);
+      for j := 1 to 4 do
+        begin
+          gks_set_pline_linetype(j);
+          y[1] := y[1] - 0.02;
+          y[2] := y[1];
+          gks_polyline(2, x, y);
+        end;
+    end;
 
   { Markertypes }
   gks_set_pmark_size(3.5);
@@ -252,6 +264,9 @@ begin
   else
     begin
     gks_update_ws(2, GKS_K_POSTPONE_FLAG);
+    write('Press RETURN to continue ...');
+    readln();
+
     gks_set_pmark_type(2);
     gks_request_locator(2, 1, inp_status, tnr, x[1], y[1]);
     while inp_status = 1 do
