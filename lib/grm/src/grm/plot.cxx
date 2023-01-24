@@ -1221,8 +1221,8 @@ void plot_process_viewport(grm_args_t *subplot_args)
     }
 
   left_margin = grm_args_values(subplot_args, "ylabel", "s", &y_label) ? 0.05 : 0;
-  if (str_equals_any(kind, 9, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface", "trisurf",
-                     "volume", "marginalheatmap"))
+  if (str_equals_any(kind, 11, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface", "tricont",
+                     "trisurf", "volume", "marginalheatmap", "quiver"))
     {
       right_margin = 0.05;
       if (strcmp(kind, "marginalheatmap") == 0)
@@ -1916,9 +1916,11 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
               }
               y_min = grm_min(current_y_min, y_min);
               y_max = grm_max(current_y_max, y_max);
-              grm_args_values(*current_series, "yrange", "dd", &current_y_min, &current_y_max);
-              y_min = grm_max(current_y_min, y_min);
-              y_max = grm_min(current_y_max, y_max);
+              if (grm_args_values(*current_series, "yrange", "dd", &current_y_min, &current_y_max))
+                {
+                  y_min = grm_max(current_y_min, y_min);
+                  y_max = grm_min(current_y_max, y_max);
+                }
               current_series++;
             }
           grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
@@ -2481,7 +2483,7 @@ err_t plot_quiver(grm_args_t *subplot_args)
 
       ++current_series;
     }
-  error = plot_draw_colorbar(subplot_args, 0.05, 256);
+  error = plot_draw_colorbar(subplot_args, 0.0, 256);
 
   return error;
 }
@@ -3056,11 +3058,11 @@ err_t plot_barplot(grm_args_t *subplot_args)
             }
           if (is_vertical)
             {
-              gr_fillrect(y1, y2, x1, x2);
+              gr_drawrect(y1, y2, x1, x2);
             }
           else
             {
-              gr_fillrect(x1, x2, y1, y2);
+              gr_drawrect(x1, x2, y1, y2);
             }
         }
 
@@ -3288,11 +3290,11 @@ err_t plot_barplot(grm_args_t *subplot_args)
                 }
               if (is_vertical)
                 {
-                  gr_fillrect(y1, y2, x1, x2);
+                  gr_drawrect(y1, y2, x1, x2);
                 }
               else
                 {
-                  gr_fillrect(x1, x2, y1, y2);
+                  gr_drawrect(x1, x2, y1, y2);
                 }
             }
           pos_vertical_change = 0;
@@ -4130,11 +4132,23 @@ err_t plot_imshow(grm_args_t *subplot_args)
 
       logger((stderr, "Got min, max %lf %lf\n", c_min, c_max));
       k = 0;
-      for (j = 0; j < rows; ++j)
-        for (i = 0; i < cols; ++i)
-          {
-            img_data[k++] = 1000 + (int)grm_round((1.0 * c_data[j * cols + i] - c_min) / (c_max - c_min) * 255);
-          }
+      if (grplot)
+        {
+          for (j = 0; j < rows; ++j)
+            for (i = 0; i < cols; ++i)
+              {
+                img_data[k++] = 1000 + (int)grm_round((1.0 * c_data[j * cols + i] - c_min) / (c_max - c_min) * 255);
+              }
+        }
+      else
+        {
+          for (j = 0; j < rows; ++j)
+            for (i = 0; i < cols; ++i)
+              {
+                img_data[k++] = 1000 + (int)grm_round((1.0 * c_data[(rows - 1 - j) * cols + (cols - 1 - i)] - c_min) /
+                                                      (c_max - c_min) * 255);
+              }
+        }
 
       h = (double)rows / (double)cols * (vp[1] - vp[0]);
       w = (double)cols / (double)rows * (vp[3] - vp[2]);
@@ -5686,8 +5700,7 @@ err_t plot_tricont(grm_args_t *subplot_args)
       gr_tricontour(x_length, x, y, z, num_levels, levels);
       ++current_series;
     }
-  plot_draw_axes(subplot_args, 2);
-  plot_draw_colorbar(subplot_args, 0.05, 256);
+  plot_draw_colorbar(subplot_args, 0.0, 256);
   free(levels);
 
   return ERROR_NONE;

@@ -15,38 +15,23 @@
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ key to types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::map<std::string, const char *> key_to_types{{"algorithm", "s"},
-                                                        {"bar_color", "ddd"},
-                                                        {"bar_color", "i"},
-                                                        {"bar_width", "d"},
-                                                        {"c", "nD"},
-                                                        {"colormap", "i"},
-                                                        {"edge_color", "ddd"},
-                                                        {"edge_color", "i"},
-                                                        {"edge_width", "d"},
-                                                        {"isovalue", "d"},
-                                                        {"keep_aspect_ratio", "i"},
-                                                        {"kind", "s"},
-                                                        {"levels", "i"},
-                                                        {"marginalheatmap_kind", "s"},
-                                                        {"markertype", "i"},
-                                                        {"nbins", "i"},
-                                                        {"orientation", "s"},
-                                                        {"scatterz", "i"},
-                                                        {"spec", "s"},
-                                                        {"step_where", "s"},
-                                                        {"style", "s"},
-                                                        {"xflip", "i"},
-                                                        {"xticklabels", "nS"},
-                                                        {"yflip", "i"},
-                                                        {"ylabels", "nS"}};
+static std::map<std::string, const char *> key_to_types{
+    {"algorithm", "s"},         {"bar_color", "ddd"}, {"bar_color", "i"},     {"bar_width", "d"},
+    {"bin_edges", "nD"},        {"c", "nD"},          {"colormap", "i"},      {"draw_edges", "i"},
+    {"edge_color", "ddd"},      {"edge_color", "i"},  {"edge_width", "d"},    {"isovalue", "d"},
+    {"keep_aspect_ratio", "i"}, {"kind", "s"},        {"levels", "i"},        {"marginalheatmap_kind", "s"},
+    {"markertype", "i"},        {"nbins", "i"},       {"normalization", "s"}, {"orientation", "s"},
+    {"phiflip", "i"},           {"scatterz", "i"},    {"spec", "s"},          {"stairs", "i"},
+    {"step_where", "s"},        {"style", "s"},       {"xcolormap", "i"},     {"xflip", "i"},
+    {"xticklabels", "nS"},      {"ycolormap", "i"},   {"yflip", "i"},         {"ylabels", "nS"}};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::list<std::string> kind_types = {"barplot", "contour",    "contourf", "heatmap",         "hist",
-                                            "imshow",  "isosurface", "line",     "marginalheatmap", "pie",
-                                            "plot3",   "scatter",    "scatter3", "surface",         "stem",
-                                            "step",    "tricont",    "trisurf",  "volume",          "wireframe"};
+static std::list<std::string> kind_types = {"barplot",         "contour",    "contourf", "heatmap",         "hist",
+                                            "imshow",          "isosurface", "line",     "marginalheatmap", "polar",
+                                            "polar_histogram", "pie",        "plot3",    "scatter",         "scatter3",
+                                            "surface",         "stem",       "step",     "tricont",         "trisurf",
+                                            "volume",          "wireframe"};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ alias for keys ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -200,7 +185,8 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                   return ERROR_PARSE_INT;
                 }
             }
-          else if (str_equals_any(key.c_str(), 6, "xlim", "ylim", "zlim", "xrange", "yrange", "zrange"))
+          else if (str_equals_any(key.c_str(), 8, "philim", "rlim", "xlim", "ylim", "zlim", "xrange", "yrange",
+                                  "zrange"))
             {
               std::stringstream sv(value);
               std::string value1;
@@ -617,7 +603,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       grm_args_push(args, "z", "nD", rows, filedata[depth][0].data());
       // TODO: missing error container, barplot container
     }
-  else if (str_equals_any(kind, 1, "pie"))
+  else if (strcmp(kind, "pie") == 0)
     {
       std::vector<double> x(cols);
       std::vector<double> c(cols * 3);
@@ -637,16 +623,27 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             {
               for (row = 1; row < 4; row++)
                 {
-                  c[row * cols + col] = filedata[depth][col][row];
+                  c[(row - 1) * cols + col] = (double)filedata[depth][col][row];
                 }
             }
-          //TODO: Can crash
           grm_args_push(args, "c", "nD", c.size(), c.data());
         }
       else if (rows > 1)
         {
           fprintf(stderr, "Unsufficient data for custom colors\n");
         }
+    }
+  else if (strcmp(kind, "polar_histogram") == 0)
+    {
+      if (cols > 1) fprintf(stderr, "Only the first column gets displayed");
+      grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
+      //TODO: when the mouse is moved the plot disapeares
+    }
+  else if (strcmp(kind, "polar") == 0)
+    {
+      if (cols > 1) fprintf(stderr, "Only the first 2 columns get displayed");
+      grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
+      grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
     }
   grm_args_push(args, "grplot", "i", 1);
   grm_merge(args);

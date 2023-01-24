@@ -334,8 +334,8 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   if (subplot_args != NULL)
     {
       grm_args_values(subplot_args, "kind", "s", &kind);
-      grm_args_values(subplot_args, "orientation", "s", &orientation);
-      is_vertical = strcmp(orientation, "vertical") == 0;
+      if (grm_args_values(subplot_args, "orientation", "s", &orientation))
+        is_vertical = strcmp(orientation, "vertical") == 0;
     }
   if (subplot_args == NULL || !str_equals_any(kind, 9, "line", "scatter", "stem", "step", "heatmap", "marginalheatmap",
                                               "contour", "imshow", "contourf"))
