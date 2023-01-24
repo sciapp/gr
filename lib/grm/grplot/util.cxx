@@ -2,6 +2,7 @@
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
+#include <sys/stat.h>
 #endif
 #include <array>
 #include <exception>
@@ -135,7 +136,7 @@ PathTooLongError::PathTooLongError()
 {
   std::stringstream whatStream;
 
-  whatStream << MAXPATHLEN << " Bytes are not sufficient for storing the path. ";
+  whatStream << MAXPATHLEN << " Bytes are not sufficient for storing the path.";
   whatStr_ = whatStream.str();
 }
 
@@ -154,6 +155,19 @@ const char *ProcessFileLinkNotReadableError::what() const noexcept
 const char *AbsolutePathError::what() const noexcept
 {
   return ErrnoError::what();
+}
+
+CorruptedGrDirError::CorruptedGrDirError(const std::string &path)
+{
+  std::stringstream whatStream;
+
+  whatStream << "The directory \"" << path << "\" is not a valid GR directory (missing \"include/gr.h\")";
+  whatStr_ = whatStream.str();
+}
+
+const char *CorruptedGrDirError::what() const noexcept
+{
+  return whatStr_.c_str();
 }
 
 const char *SetEnvError::what() const noexcept
@@ -175,7 +189,7 @@ DirnameError::DirnameError(const std::wstring &filepath)
 {
   std::wstringstream whatStream;
 
-  whatStream << "Could not extract the directory name of \"" << filepath << "\"." << std::endl;
+  whatStream << "Could not extract the directory name of \"" << filepath << "\".";
 
   int neededBytesUtf8String =
       WideCharToMultiByte(CP_UTF8, 0, whatStream.str().c_str(), -1, nullptr, 0, nullptr, nullptr);
@@ -202,7 +216,7 @@ AbsolutePathError::AbsolutePathError(const std::wstring &path)
 {
   std::wstringstream whatStream;
 
-  whatStream << "Could not determine the absolute path of \"" << path << "\"." << std::endl;
+  whatStream << "Could not determine the absolute path of \"" << path << "\".";
 
   int neededBytesUtf8String =
       WideCharToMultiByte(CP_UTF8, 0, whatStream.str().c_str(), -1, nullptr, 0, nullptr, nullptr);
@@ -221,6 +235,33 @@ AbsolutePathError::AbsolutePathError(const std::wstring &path)
 }
 
 const char *AbsolutePathError::what() const noexcept
+{
+  return whatStr_.c_str();
+}
+
+CorruptedGrDirError::CorruptedGrDirError(const std::wstring &path)
+{
+  std::wstringstream whatStream;
+
+  whatStream << "The directory \"" << path << "\" is not a valid GR directory (missing \"include\\gr.h\")";
+
+  int neededBytesUtf8String =
+      WideCharToMultiByte(CP_UTF8, 0, whatStream.str().c_str(), -1, nullptr, 0, nullptr, nullptr);
+  if (neededBytesUtf8String == 0)
+    {
+      throwOrTerminate_(WideCharToMultiByteError());
+    }
+  std::vector<char> utf8Bytes(neededBytesUtf8String);
+  int writtenBytesUtf8String = WideCharToMultiByte(CP_UTF8, 0, whatStream.str().c_str(), -1, utf8Bytes.data(),
+                                                   neededBytesUtf8String, nullptr, nullptr);
+  if (writtenBytesUtf8String == 0)
+    {
+      throwOrTerminate_(WideCharToMultiByteError());
+    }
+  whatStr_ = utf8Bytes.data();
+}
+
+const char *CorruptedGrDirError::what() const noexcept
 {
   return whatStr_.c_str();
 }
@@ -310,6 +351,20 @@ std::string getExecutablePath()
   return exePath.data();
 }
 
+#ifdef _WIN32
+bool fileExists(const std::wstring &filePath)
+{
+  DWORD fileAttributes = GetFileAttributesW(filePath.c_str());
+  return (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
+}
+#else
+bool fileExists(const std::string &filePath)
+{
+  struct stat fileStat;
+  return stat(filePath.c_str(), &fileStat) == 0 && S_ISREG(fileStat.st_mode);
+}
+#endif
+
 #ifdef NO_EXCEPTIONS
 bool
 #else
@@ -358,6 +413,7 @@ setGrdir(bool force)
   std::array<wchar_t, MAXPATHLEN> exeDirname;
   std::wstringstream grDirRelativeStream;
   std::array<wchar_t, MAXPATHLEN> grDirAbsolute;
+  std::wstringstream grHeaderPathStream;
 
   if (_wsplitpath_s(exePath.c_str(), nullptr, 0, exeDirname.data(), MAXPATHLEN, nullptr, 0, nullptr, 0))
     {
@@ -368,12 +424,18 @@ setGrdir(bool force)
     {
       throw_(AbsolutePathError(grDirRelativeStream.str()));
     }
+  grHeaderPathStream << grDirAbsolute.data() << L"/include/gr.h";
+  if (!fileExists(grHeaderPathStream.str()))
+    {
+      throw_(CorruptedGrDirError(grDirAbsolute.data()));
+    }
   if (!SetEnvironmentVariableW(L"GRDIR", grDirAbsolute.data()))
     {
       throw_(SetEnvError());
     }
 #else
   std::stringstream grDirRelativeStream;
+  std::stringstream grHeaderPathStream;
 
   grDirRelativeStream
       << dirname(&std::string(exePath)[0])
@@ -389,6 +451,11 @@ setGrdir(bool force)
   if (!grDirAbsoluteCptr)
     {
       throw_(AbsolutePathError());
+    }
+  grHeaderPathStream << grDirAbsoluteCptr.get() << "/include/gr.h";
+  if (!fileExists(grHeaderPathStream.str()))
+    {
+      throw_(CorruptedGrDirError(grDirAbsoluteCptr.get()));
     }
   if (setenv("GRDIR", grDirAbsoluteCptr.get(), 1) != 0)
     {

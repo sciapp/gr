@@ -1,3 +1,6 @@
+/*
+  cc demo.c -L/usr/local/gr/lib -lGKS -Wl,-rpath,/usr/local/gr/lib
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -132,12 +135,9 @@ int main(int argc, char *argv[])
       gks_set_pline_linewidth(1.0 * i);
       for (j = 1; j <= 4; j++)
         {
-          if (j)
-            {
-              gks_set_pline_linetype(j);
-              y[1] = y[0] -= 0.02;
-              gks_polyline(2, x, y);
-            }
+          gks_set_pline_linetype(j);
+          y[1] = y[0] -= 0.02;
+          gks_polyline(2, x, y);
         }
     }
 

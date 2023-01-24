@@ -5949,6 +5949,73 @@ static void clip3d(double *x0, double *x1, double *y0, double *y1, double *z0, d
   *visible = 1;
 }
 
+static void clip3d_for_surface(double *x0, double *x1, double *y0, double *y1, double *z0, double *z1)
+{
+  int l, border;
+  for (border = 0; border < 6; border++)
+    {
+      for (l = 0; l < 4; l++)
+        {
+          double d0, d1, s;
+          double inter_x, inter_y, inter_z;
+          if (border == 0)
+            {
+              d0 = *x0 - cxl;
+              d1 = *x1 - cxl;
+            }
+          else if (border == 1)
+            {
+              d1 = *x0 - cxr;
+              d0 = *x1 - cxr;
+            }
+          else if (border == 2)
+            {
+              d0 = *y0 - cyf;
+              d1 = *y1 - cyf;
+            }
+          else if (border == 3)
+            {
+              d1 = *y0 - cyb;
+              d0 = *y1 - cyb;
+            }
+          else if (border == 4)
+            {
+              d0 = *z0 - czb;
+              d1 = *z1 - czb;
+            }
+          else
+            {
+              d1 = *z0 - czt;
+              d0 = *z1 - czt;
+            }
+          if ((d0 <= 0 && d1 <= 0) || (d1 >= 0 && d0 >= 0))
+            {
+              continue;
+            }
+
+          s = d0 / (d0 - d1);
+          if (border == 1 || border == 3 || border == 5) s = 1 - s;
+
+          inter_x = *x0 + s * (*x1 - *x0);
+          inter_y = *y0 + s * (*y1 - *y0);
+          inter_z = *z0 + s * (*z1 - *z0);
+
+          if (d0 < 0)
+            {
+              *x0 = inter_x;
+              *y0 = inter_y;
+              *z0 = inter_z;
+            }
+          else
+            {
+              *x1 = inter_x;
+              *y1 = inter_y;
+              *z1 = inter_z;
+            }
+        }
+    }
+}
+
 /*!
  * Draw a 3D curve using the current line attributes, starting from the
  * first data point and ending at the last data point.
@@ -7676,6 +7743,11 @@ static void pline_hlr(int n, double *x, double *y, double *z)
   int saved_scale_options;
   double xj, yj;
 
+  int errind, clsw;
+  double clrt[4];
+
+  gks_inq_clip(&errind, &clsw, clrt);
+
   if (hlr.buf == NULL)
     {
       hlr.buf = (double *)xmalloc(sizeof(double) * (RESOLUTION_X + 1) * 2);
@@ -7788,8 +7860,15 @@ static void pline_hlr(int n, double *x, double *y, double *z)
 
               if ((yj - hide[j]) * hlr.sign > 0)
                 {
-                  start_pline(xj, hide[j]);
-                  pline(xj, yj);
+                  if (clsw == GKS_K_CLIP && (hide[j] == hlr.ymin[j] || hide[j] == hlr.ymax[j]))
+                    {
+                      if (hlr.ymin[j] <= yj && yj <= hlr.ymax[j]) start_pline(xj, yj);
+                    }
+                  else
+                    {
+                      start_pline(xj, hide[j]);
+                      pline(xj, yj);
+                    }
                   end_pline();
 
                   visible = 1;
@@ -7962,12 +8041,15 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
   int i, ii, j, jj, k;
   int color;
+  double color_min, color_max;
 
   double *xn, *yn, *zn, *x, *y, *z;
+  double *clipx, *clipy, *clipz;
   double facex[4], facey[4], facez[4], clrt[4], vp[4], wn[4], intensity = 0, meanz;
   double a, b, c, d, e, f;
 
   double ymin, ymax, zmin, zmax;
+  int visible;
 
   int flip_x, flip_y, flip_z;
   int np;
@@ -8048,6 +8130,12 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
   x = (double *)xmalloc(nx * sizeof(double));
   y = (double *)xmalloc(ny * sizeof(double));
   z = (double *)xmalloc(nx * ny * sizeof(double));
+  if (clsw == GKS_K_CLIP)
+    {
+      clipx = (double *)xmalloc(k);
+      clipy = (double *)xmalloc(k);
+      clipz = (double *)xmalloc(k);
+    }
 
   flip_x = OPTION_FLIP_X & lx.scale_options;
   if ((gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC) &&
@@ -8093,6 +8181,9 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
   zmin = wx.zmin;
   zmax = wx.zmax;
 
+  color_min = zmin;
+  color_max = zmax;
+
   apply_world_xform(&hlr.xmin, &ymin, &zmin);
   apply_world_xform(&hlr.xmax, &ymax, &zmax);
 
@@ -8108,6 +8199,33 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
   hlr.sign = -1;
 
+  if (clsw == GKS_K_CLIP)
+    {
+      if (modern_projection_type)
+        {
+          cxl = ix.xmin;
+          cxr = ix.xmax;
+          cyf = ix.ymin;
+          cyb = ix.ymax;
+          czb = ix.zmin;
+          czt = ix.zmax;
+        }
+      else
+        {
+          cxl = hlr.x0;
+          cxr = hlr.x1;
+          cyf = hlr.y0;
+          cyb = hlr.y1;
+          czb = hlr.z0;
+          czt = hlr.z1;
+        }
+      for (i = 0; i < nx * ny; i++)
+        {
+          color_min = min(color_min, z[i]);
+          color_max = max(color_max, z[i]);
+        }
+    }
+
   do
     {
       hlr.sign = -hlr.sign;
@@ -8122,49 +8240,62 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
             while (j < ny)
               {
-                if (clsw == GKS_K_CLIP && (y[j] < lx.ymin || y[j] > lx.ymax))
-                  {
-                    j++;
-                    continue;
-                  }
                 k = 0;
 
                 if (j > 0)
                   {
-                    if (clsw == GKS_K_NOCLIP || (x[0] >= lx.xmin && x[0] <= lx.xmax))
-                      {
-                        xn[k] = x[0];
-                        yn[k] = y[j - 1];
-                        zn[k] = Z(0, j - 1);
-                        k++;
-                      }
+                    xn[k] = x[0];
+                    yn[k] = y[j - 1];
+                    zn[k] = Z(0, j - 1);
+                    k++;
                   }
 
                 for (i = 0; i < nx; i++)
                   {
-                    if (clsw == GKS_K_NOCLIP || (x[i] >= lx.xmin && x[i] <= lx.xmax))
-                      {
-                        xn[k] = x[i];
-                        yn[k] = y[j];
-                        zn[k] = Z(i, j);
-                        k++;
-                      }
+                    xn[k] = x[i];
+                    yn[k] = y[j];
+                    zn[k] = Z(i, j);
+                    k++;
                   }
 
                 if (j == 0)
 
                   for (i = 1; i < ny; i++)
                     {
-                      if (clsw == GKS_K_NOCLIP || (x[nx - 1] >= lx.xmin && x[nx - 1] <= lx.xmax))
-                        {
-                          xn[k] = x[nx - 1];
-                          yn[k] = y[i];
-                          zn[k] = Z(nx - 1, i);
-                          k++;
-                        }
+                      xn[k] = x[nx - 1];
+                      yn[k] = y[i];
+                      zn[k] = Z(nx - 1, i);
+                      k++;
                     }
 
-                pline_hlr(k, xn, yn, zn);
+                if (clsw == GKS_K_CLIP)
+                  {
+                    int cnt = 0;
+
+                    for (i = 0; i < k - 1; i++)
+                      {
+                        clip3d(&xn[i], &xn[i + 1], &yn[i], &yn[i + 1], &zn[i], &zn[i + 1], &visible);
+                        if (visible == 1)
+                          {
+                            clipx[cnt] = xn[i];
+                            clipy[cnt] = yn[i];
+                            clipz[cnt] = zn[i];
+                            cnt += 1;
+                            if (i == k - 2)
+                              {
+                                clipx[cnt] = xn[i + 1];
+                                clipy[cnt] = yn[i + 1];
+                                clipz[cnt] = zn[i + 1];
+                                cnt += 1;
+                              }
+                          }
+                      }
+                    pline_hlr(cnt, clipx, clipy, clipz);
+                  }
+                else
+                  {
+                    pline_hlr(k, xn, yn, zn);
+                  }
 
                 hlr.initialize = 0;
                 j++;
@@ -8179,30 +8310,50 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
             for (i = 0; i < nx; i++)
               {
-                if (clsw == GKS_K_NOCLIP || (x[i] >= lx.xmin && x[i] <= lx.xmax && y[0] >= lx.ymin && y[0] <= lx.ymax))
-                  {
-                    xn[k] = x[i];
-                    yn[k] = y[0];
-                    zn[k] = Z(i, 0);
-                    k++;
-                  }
+                xn[k] = x[i];
+                yn[k] = y[0];
+                zn[k] = Z(i, 0);
+                k++;
               }
 
             for (j = 1; j < ny; j++)
               {
-                if (clsw == GKS_K_NOCLIP ||
-                    (x[nx - 1] >= lx.xmin && x[nx - 1] <= lx.xmax && y[j] >= lx.ymin && y[j] <= lx.ymax))
-                  {
-                    xn[k] = x[nx - 1];
-                    yn[k] = y[j];
-                    zn[k] = Z(nx - 1, j);
-                    k++;
-                  }
+                xn[k] = x[nx - 1];
+                yn[k] = y[j];
+                zn[k] = Z(nx - 1, j);
+                k++;
               }
 
             hlr.initialize = 1;
 
-            pline_hlr(k, xn, yn, zn);
+            if (clsw == GKS_K_CLIP)
+              {
+                int cnt = 0;
+
+                for (i = 0; i < k - 1; i++)
+                  {
+                    clip3d(&xn[i], &xn[i + 1], &yn[i], &yn[i + 1], &zn[i], &zn[i + 1], &visible);
+                    if (visible == 1)
+                      {
+                        clipx[cnt] = xn[i];
+                        clipy[cnt] = yn[i];
+                        clipz[cnt] = zn[i];
+                        cnt += 1;
+                        if (i == k - 2)
+                          {
+                            clipx[cnt] = xn[i + 1];
+                            clipy[cnt] = yn[i + 1];
+                            clipz[cnt] = zn[i + 1];
+                            cnt += 1;
+                          }
+                      }
+                  }
+                pline_hlr(cnt, clipx, clipy, clipz);
+              }
+            else
+              {
+                pline_hlr(k, xn, yn, zn);
+              }
 
             i = nx - 1;
 
@@ -8224,9 +8375,40 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                     yn[2] = y[j];
                     zn[2] = Z(i, j);
 
-                    if (clsw == GKS_K_NOCLIP ||
-                        (xn[0] >= lx.xmin && xn[2] <= lx.xmax && yn[0] >= lx.ymin && yn[1] <= lx.ymax))
-                      pline_hlr(3, xn, yn, zn);
+                    if (clsw == GKS_K_CLIP)
+                      {
+                        int cnt = 0, l;
+
+                        for (l = 0; l < 2; l++)
+                          {
+                            clip3d(&xn[l], &xn[l + 1], &yn[l], &yn[l + 1], &zn[l], &zn[l + 1], &visible);
+                            if (visible == 1)
+                              {
+                                if (cnt == 0)
+                                  {
+                                    clipx[cnt] = xn[l];
+                                    clipy[cnt] = yn[l];
+                                    clipz[cnt] = zn[l];
+                                    clipx[cnt + 1] = xn[l + 1];
+                                    clipy[cnt + 1] = yn[l + 1];
+                                    clipz[cnt + 1] = zn[l + 1];
+                                    cnt += 2;
+                                  }
+                                else
+                                  {
+                                    clipx[cnt] = xn[l + 1];
+                                    clipy[cnt] = yn[l + 1];
+                                    clipz[cnt] = zn[l + 1];
+                                    cnt += 1;
+                                  }
+                              }
+                          }
+                        pline_hlr(cnt, clipx, clipy, clipz);
+                      }
+                    else
+                      {
+                        pline_hlr(3, xn, yn, zn);
+                      }
                   }
 
                 i--;
@@ -8248,6 +8430,20 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
               {
                 for (i = 1; i < nx; i++)
                   {
+
+                    if (clsw == GKS_K_CLIP && ((flip_x == 0 && x[i - 1] < cxl && x[i] <= cxl) ||
+                                               (flip_x == 1 && x[i - 1] > cxr && x[i] >= cxr) ||
+                                               (flip_x == 0 && x[i - 1] > cxr) || (flip_x == 1 && x[i - 1] < cxl)))
+                      {
+                        continue;
+                      }
+                    if (clsw == GKS_K_CLIP && ((flip_y == 0 && y[j - 1] > cyb) || (flip_y == 1 && y[j - 1] < cyf) ||
+                                               (flip_y == 0 && y[j - 1] < cyf && y[j] <= cyf) ||
+                                               (flip_y == 1 && y[j - 1] > cyb && y[j] >= cyb)))
+                      {
+                        continue;
+                      }
+
                     xn[0] = x[i - 1];
                     yn[0] = y[j];
                     zn[0] = Z(i - 1, j);
@@ -8264,13 +8460,69 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                     yn[3] = y[j];
                     zn[3] = Z(i, j);
 
+                    if (clsw == GKS_K_CLIP)
+                      {
+                        int l;
+                        if ((zn[0] > czt && zn[1] > czt && zn[2] > czt && zn[3] > czt) ||
+                            (zn[0] < czb && zn[1] < czb && zn[2] < czb && zn[3] < czb))
+                          {
+                            continue;
+                          }
+
+                        clip3d_for_surface(&xn[0], &xn[1], &yn[0], &yn[1], &zn[0], &zn[1]);
+                        clip3d_for_surface(&xn[2], &xn[3], &yn[2], &yn[3], &zn[2], &zn[3]);
+                        clip3d_for_surface(&xn[1], &xn[2], &yn[1], &yn[2], &zn[1], &zn[2]);
+                        clip3d_for_surface(&xn[3], &xn[0], &yn[3], &yn[0], &zn[3], &zn[0]);
+                        if ((xn[0] > cxr && xn[1] > cxr) || (xn[1] > cxr && xn[2] > cxr) ||
+                            (xn[2] > cxr && xn[3] > cxr) || (xn[3] > cxr && xn[0] > cxr))
+                          {
+                            continue;
+                          }
+                        if ((xn[0] < cxl && xn[1] < cxl) || (xn[1] < cxl && xn[2] < cxl) ||
+                            (xn[2] < cxl && xn[3] < cxl) || (xn[3] < cxl && xn[0] < cxl))
+                          {
+                            continue;
+                          }
+                        if ((yn[0] > cyb && yn[1] > cyb) || (yn[1] > cyb && yn[2] > cyb) ||
+                            (yn[2] > cyb && yn[3] > cyb) || (yn[3] > cyb && yn[0] > cyb))
+                          {
+                            continue;
+                          }
+                        if ((yn[0] < cyf && yn[1] < cyf) || (yn[1] < cyf && yn[2] < cyf) ||
+                            (yn[2] < cyf && yn[3] < cyf) || (yn[3] < cyf && yn[0] < cyf))
+                          {
+                            continue;
+                          }
+                        if ((zn[0] > czt && zn[1] > czt) || (zn[1] > czt && zn[2] > czt) ||
+                            (zn[2] > czt && zn[3] > czt) || (zn[3] > czt && zn[0] > czt))
+                          {
+                            continue;
+                          }
+                        if ((zn[0] < czb && zn[1] < czb) || (zn[1] < czb && zn[2] < czb) ||
+                            (zn[2] < czb && zn[3] < czb) || (zn[3] < czb && zn[0] < czb))
+                          {
+                            continue;
+                          }
+                        for (l = 0; l < 4; l++)
+                          {
+                            if ((zn[l] > czt && zn[(l + 1) % 4] == czt && zn[(l == 0) ? 3 : l - 1] == czt))
+                              {
+                                xn[l] = xn[(l + 1) % 4];
+                                yn[l] = yn[(l + 1) % 4];
+                                zn[l] = zn[(l + 1) % 4];
+                              }
+                            if ((zn[l] < czb && zn[(l + 1) % 4] == czb && zn[(l == 0) ? 3 : l - 1] == czb))
+                              {
+                                xn[l] = xn[(l + 1) % 4];
+                                yn[l] = yn[(l + 1) % 4];
+                                zn[l] = zn[(l + 1) % 4];
+                              }
+                          }
+                      }
+
                     xn[4] = xn[0];
                     yn[4] = yn[0];
                     zn[4] = zn[0];
-
-                    if (clsw == GKS_K_CLIP &&
-                        (xn[0] < lx.xmin || xn[2] > lx.xmax || yn[1] < lx.ymin || yn[3] > lx.ymax))
-                      continue;
 
                     if (option == OPTION_SHADED_MESH)
                       {
@@ -8301,8 +8553,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
                     else if (option == OPTION_COLORED_MESH)
                       {
-                        color =
-                            iround((meanz - wx.zmin) / (wx.zmax - wx.zmin) * (last_color - first_color)) + first_color;
+                        color = iround((meanz - color_min) / (color_max - color_min) * (last_color - first_color)) +
+                                first_color;
 
                         if (color < first_color)
                           color = first_color;
@@ -8396,6 +8648,12 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
   free(zn);
   free(yn);
   free(xn);
+  if (clsw == GKS_K_CLIP)
+    {
+      free(clipx);
+      free(clipy);
+      free(clipz);
+    }
 
   /* restore linetype, fill area interior style and color index */
 
