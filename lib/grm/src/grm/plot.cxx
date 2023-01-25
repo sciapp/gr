@@ -945,7 +945,7 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
           args_setdefault(*current_subplot, "xind", "i", -1);
           args_setdefault(*current_subplot, "yind", "i", -1);
         }
-      if (str_equals_any(kind, 4, "barplot", "hist", "line", "step"))
+      if (str_equals_any(kind, 5, "barplot", "hist", "line", "step", "stem"))
         {
           args_setdefault(*current_subplot, "orientation", "s", PLOT_DEFAULT_ORIENTATION);
         }
@@ -1779,9 +1779,15 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
             {
               if ((strcmp(kind, "barplot")) == 0 && strcmp("y", *current_component_name) == 0)
                 {
-                  if (min_component > 0)
+                  int grplot;
+                  grplot = grm_args_values(subplot_args, "grplot", "i", &grplot);
+                  if (grplot)
                     {
-                      min_component = 0;
+                      grm_args_values(subplot_args, "yrange", "dd", &min_component, &max_component);
+                    }
+                  else
+                    {
+                      if (min_component > 0) min_component = 0;
                     }
                 }
               else if (strcmp(kind, "quiver") == 0)
@@ -1853,6 +1859,9 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
   else if (strcmp(kind, "barplot") == 0)
     {
       double x_min = 0.0, x_max = -DBL_MAX;
+      char *orientation;
+
+      grm_args_values(subplot_args, "orientation", "s", &orientation);
       if (!grm_args_values(subplot_args, "xlim", "dd", &x_min, &x_max))
         {
           if (str_equals_any(style, 2, "lined", "stacked"))
@@ -1871,7 +1880,22 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                 }
             }
         }
-      grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
+      if (strcmp(orientation, "horizontal") == 0)
+        {
+          grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
+        }
+      else
+        {
+          double y_min, y_max;
+          grm_args_values(subplot_args, "series", "A", &current_series);
+          while (*current_series != NULL)
+            {
+              grm_args_values(*current_series, "xrange", "dd", &y_min, &y_max);
+              ++current_series;
+            }
+          grm_args_push(subplot_args, "_xlim", "dd", y_min, y_max);
+          grm_args_push(subplot_args, "_ylim", "dd", x_min, x_max);
+        }
     }
   else if (strcmp(kind, "hist") == 0)
     {
@@ -2494,9 +2518,14 @@ err_t plot_stem(grm_args_t *subplot_args)
   double base_line_y[2] = {0.0, 0.0};
   double stem_x[2], stem_y[2] = {0.0};
   grm_args_t **current_series;
+  char *orientation;
+  int is_vertical;
 
   grm_args_values(subplot_args, "window", "D", &window);
   grm_args_values(subplot_args, "series", "A", &current_series);
+  grm_args_values(subplot_args, "orientation", "s", &orientation);
+
+  is_vertical = strcmp(orientation, "vertical") == 0;
   while (*current_series != NULL)
     {
       double *x, *y;
@@ -2506,7 +2535,15 @@ err_t plot_stem(grm_args_t *subplot_args)
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      gr_polyline(2, (double *)window, base_line_y);
+
+      if (is_vertical)
+        {
+          gr_polyline(2, base_line_y, (double *)window);
+        }
+      else
+        {
+          gr_polyline(2, (double *)window, base_line_y);
+        }
       gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_CIRCLE);
       grm_args_values(*current_series, "spec", "s", &spec);
       gr_uselinespec(spec);
@@ -2514,9 +2551,23 @@ err_t plot_stem(grm_args_t *subplot_args)
         {
           stem_x[0] = stem_x[1] = x[i];
           stem_y[1] = y[i];
-          gr_polyline(2, stem_x, stem_y);
+          if (is_vertical)
+            {
+              gr_polyline(2, stem_y, stem_x);
+            }
+          else
+            {
+              gr_polyline(2, stem_x, stem_y);
+            }
         }
-      gr_polymarker(x_length, x, y);
+      if (is_vertical)
+        {
+          gr_polymarker(x_length, y, x);
+        }
+      else
+        {
+          gr_polymarker(x_length, x, y);
+        }
       ++current_series;
     }
 
@@ -2531,6 +2582,7 @@ err_t plot_hist(grm_args_t *subplot_args)
   int bar_color_index = 989, i, xind, yind;
   double bar_color_rgb[3] = {-1};
   err_t error = ERROR_NONE;
+  char *marginalheatmap_kind;
 
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -2552,7 +2604,7 @@ err_t plot_hist(grm_args_t *subplot_args)
     {
       int edge_color_index = 1;
       double edge_color_rgb[3] = {-1};
-      double x_min, x_max, bar_width;
+      double x_min, x_max, bar_width, y_min, y_max;
       double *bins;
       unsigned int num_bins;
       char *orientation;
@@ -2576,11 +2628,14 @@ err_t plot_hist(grm_args_t *subplot_args)
       if (is_horizontal)
         {
           grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
+          grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
         }
       else
         {
           grm_args_values(*current_series, "yrange", "dd", &x_min, &x_max);
+          grm_args_values(*current_series, "xrange", "dd", &y_min, &y_max);
         }
+      if (grm_args_values(subplot_args, "marginalheatmap_kind", "s", &marginalheatmap_kind)) y_min = 0.0;
 
       bar_width = (x_max - x_min) / num_bins;
       for (i = 1; i < num_bins + 1; ++i)
@@ -2594,7 +2649,7 @@ err_t plot_hist(grm_args_t *subplot_args)
                 {
                   gr_setfillcolorind(2);
                 }
-              gr_fillrect(x, x + bar_width, 0., bins[i - 1]);
+              gr_fillrect(x, x + bar_width, y_min, bins[i - 1]);
             }
           else
             {
@@ -2602,17 +2657,17 @@ err_t plot_hist(grm_args_t *subplot_args)
                 {
                   gr_setfillcolorind(2);
                 }
-              gr_fillrect(0., bins[i - 1], x, x + bar_width);
+              gr_fillrect(y_min, bins[i - 1], x, x + bar_width);
             }
           gr_setfillcolorind(edge_color_index);
           gr_setfillintstyle(GKS_K_INTSTYLE_HOLLOW);
           if (is_horizontal)
             {
-              gr_fillrect(x, x + bar_width, 0., bins[i - 1]);
+              gr_fillrect(x, x + bar_width, y_min, bins[i - 1]);
             }
           else
             {
-              gr_fillrect(0., bins[i - 1], x, x + bar_width);
+              gr_fillrect(y_min, bins[i - 1], x, x + bar_width);
             }
         }
       if (grm_args_contains(*current_series, "error"))
@@ -2869,6 +2924,21 @@ err_t plot_barplot(grm_args_t *subplot_args)
       double pos_vertical_change = 0;
       double neg_vertical_change = 0;
       double x1, x2, y1, y2;
+      double y_min, y_max;
+      int grplot;
+
+      grplot = grm_args_values(subplot_args, "grplot", "i", &grplot);
+      if (grplot)
+        {
+          if (is_vertical)
+            {
+              grm_args_values(*current_series, "xrange", "dd", &y_min, &y_max);
+            }
+          else
+            {
+              grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
+            }
+        }
 
       grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
       grm_args_values(*current_series, "edge_color", "i", &edge_color);
@@ -2985,6 +3055,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
               y_lightness[i] = 116 * pow(Y / 100, 1.0 / 3) - 16;
               --y_lightness_to_get;
             }
+          y1 += y_min;
           if (is_vertical)
             {
               gr_fillrect(y1, y2, x1, x2);
@@ -3058,10 +3129,12 @@ err_t plot_barplot(grm_args_t *subplot_args)
             }
           if (is_vertical)
             {
+              x1 += y_min;
               gr_drawrect(y1, y2, x1, x2);
             }
           else
             {
+              y1 += y_min;
               gr_drawrect(x1, x2, y1, y2);
             }
         }
@@ -3235,10 +3308,12 @@ err_t plot_barplot(grm_args_t *subplot_args)
                 }
               if (is_vertical)
                 {
+                  x1 += y_min;
                   gr_fillrect(y1, y2, x1, x2);
                 }
               else
                 {
+                  y1 += y_min;
                   gr_fillrect(x1, x2, y1, y2);
                 }
             }
@@ -3290,10 +3365,12 @@ err_t plot_barplot(grm_args_t *subplot_args)
                 }
               if (is_vertical)
                 {
+                  x1 += y_min;
                   gr_drawrect(y1, y2, x1, x2);
                 }
               else
                 {
+                  y1 += y_min;
                   gr_drawrect(x1, x2, y1, y2);
                 }
             }

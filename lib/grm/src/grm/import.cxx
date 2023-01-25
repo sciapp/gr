@@ -583,7 +583,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   else if (str_equals_any(kind, 4, "barplot", "hist", "stem", "step"))
     {
       std::vector<double> x(rows);
-      double ymin, ymax;
+      double xmin, xmax, ymin, ymax;
       char *orientation;
 
       adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)rows - 1.0);
@@ -605,21 +605,21 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           ymax = *std::max_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
           for (row = 0; row < rows; ++row)
             {
-              filedata[depth][0][row] = ranges.ymin + (ranges.ymax - ranges.ymin) *
-                                                          (((double)filedata[depth][0][row]) - ymin) / (ymax - ymin);
+              filedata[depth][0][row] = ranges.ymin + filedata[depth][0][row];
             }
         }
-      // when the plot is drawn vertical it can be that the old xrange doesn`t fit the flipped data
-      if (grm_args_values(args, "orientation", "s", &orientation) && strcmp(orientation, "vertical") == 0 &&
-          !grm_args_values(args, "xrange", "dd", &ymin, &ymax))
+      if (!grm_args_values(args, "xrange", "dd", &xmin, &xmax))
         {
-          grm_args_push(args, "xrange", "dd", ranges.ymin, ranges.ymax);
-        }
-      else
-        {
-          // needed for histograms when a xlim is set
           grm_args_push(args, "xrange", "dd", ranges.xmin, ranges.xmax);
         }
+      if (grm_args_values(args, "orientation", "s", &orientation) && strcmp(orientation, "vertical") == 0)
+        {
+          grm_args_values(args, "xrange", "dd", &xmin, &xmax);
+          grm_args_values(args, "yrange", "dd", &ymin, &ymax);
+          grm_args_push(args, "xrange", "dd", ymin, ymax);
+          grm_args_push(args, "yrange", "dd", xmin, xmax);
+        }
+
       grm_args_push(args, "x", "nD", rows, x.data());
       // for barplot
       grm_args_push(args, "y", "nD", rows, filedata[depth][0].data());
@@ -661,13 +661,13 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     }
   else if (strcmp(kind, "polar_histogram") == 0)
     {
-      if (cols > 1) fprintf(stderr, "Only the first column gets displayed");
+      if (cols > 1) fprintf(stderr, "Only the first column gets displayed\n");
       grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
       // TODO: when the mouse is moved the plot disapeares
     }
   else if (strcmp(kind, "polar") == 0)
     {
-      if (cols > 1) fprintf(stderr, "Only the first 2 columns get displayed");
+      if (cols > 1) fprintf(stderr, "Only the first 2 columns get displayed\n");
       grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
       grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
     }
@@ -707,7 +707,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     }
   else if (str_equals_any(kind, 2, "hexbin", "shade"))
     {
-      if (cols > 2) fprintf(stderr, "Only the first 2 columns get displayed");
+      if (cols > 2) fprintf(stderr, "Only the first 2 columns get displayed\n");
       grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
       grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
     }
