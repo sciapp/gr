@@ -53,6 +53,8 @@ private slots:
   void barplot();
   void step();
   void stem();
+  void shade();
+  void hexbin();
 
 private:
   struct MouseState
@@ -99,6 +101,8 @@ private:
   QAction *barplotAct;
   QAction *stepAct;
   QAction *stemAct;
+  QAction *shadeAct;
+  QAction *hexbinAct;
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

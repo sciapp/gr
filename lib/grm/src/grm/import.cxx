@@ -15,23 +15,49 @@
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ key to types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::map<std::string, const char *> key_to_types{
-    {"algorithm", "s"},         {"bar_color", "ddd"}, {"bar_color", "i"},     {"bar_width", "d"},
-    {"bin_edges", "nD"},        {"c", "nD"},          {"colormap", "i"},      {"draw_edges", "i"},
-    {"edge_color", "ddd"},      {"edge_color", "i"},  {"edge_width", "d"},    {"isovalue", "d"},
-    {"keep_aspect_ratio", "i"}, {"kind", "s"},        {"levels", "i"},        {"marginalheatmap_kind", "s"},
-    {"markertype", "i"},        {"nbins", "i"},       {"normalization", "s"}, {"orientation", "s"},
-    {"phiflip", "i"},           {"scatterz", "i"},    {"spec", "s"},          {"stairs", "i"},
-    {"step_where", "s"},        {"style", "s"},       {"xcolormap", "i"},     {"xflip", "i"},
-    {"xticklabels", "nS"},      {"ycolormap", "i"},   {"yflip", "i"},         {"ylabels", "nS"}};
+static std::map<std::string, const char *> key_to_types{{"algorithm", "s"},
+                                                        {"bar_color", "ddd"},
+                                                        {"bar_color", "i"},
+                                                        {"bar_width", "d"},
+                                                        {"bin_edges", "nD"},
+                                                        {"c", "nD"},
+                                                        {"colormap", "i"},
+                                                        {"draw_edges", "i"},
+                                                        {"edge_color", "ddd"},
+                                                        {"edge_color", "i"},
+                                                        {"edge_width", "d"},
+                                                        {"isovalue", "d"},
+                                                        {"keep_aspect_ratio", "i"},
+                                                        {"kind", "s"},
+                                                        {"levels", "i"},
+                                                        {"marginalheatmap_kind", "s"},
+                                                        {"markertype", "i"},
+                                                        {"nbins", "i"},
+                                                        {"normalization", "s"},
+                                                        {"orientation", "s"},
+                                                        {"phiflip", "i"},
+                                                        {"scatterz", "i"},
+                                                        {"spec", "s"},
+                                                        {"stairs", "i"},
+                                                        {"step_where", "s"},
+                                                        {"style", "s"},
+                                                        {"xbins", "i"},
+                                                        {"xcolormap", "i"},
+                                                        {"xflip", "i"},
+                                                        {"xform", "i"},
+                                                        {"xticklabels", "nS"},
+                                                        {"ybins", "i"},
+                                                        {"ycolormap", "i"},
+                                                        {"yflip", "i"},
+                                                        {"ylabels", "nS"}};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::list<std::string> kind_types = {"barplot",         "contour",    "contourf", "heatmap",         "hist",
-                                            "imshow",          "isosurface", "line",     "marginalheatmap", "polar",
-                                            "polar_histogram", "pie",        "plot3",    "scatter",         "scatter3",
-                                            "surface",         "stem",       "step",     "tricont",         "trisurf",
-                                            "volume",          "wireframe"};
+static std::list<std::string> kind_types = {"barplot",  "contour",         "contourf",   "heatmap", "hexbin",
+                                            "hist",     "imshow",          "isosurface", "line",    "marginalheatmap",
+                                            "polar",    "polar_histogram", "pie",        "plot3",   "scatter",
+                                            "scatter3", "shade",           "surface",    "stem",    "step",
+                                            "tricont",  "trisurf",         "quiver",     "volume",  "wireframe"};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ alias for keys ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -405,7 +431,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       kind = "heatmap";
       grm_args_push(args, "kind", "s", kind);
     }
-  if (strcmp("volume", kind) != 0 && strcmp("isosurface", kind) != 0 && depth >= 1)
+  if (!str_equals_any(kind, 3, "isosurface", "quiver", "volume") && depth >= 1)
     {
       fprintf(stderr, "Too much data for %s plot - use volume instead\n", kind);
       kind = "volume";
@@ -637,11 +663,51 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     {
       if (cols > 1) fprintf(stderr, "Only the first column gets displayed");
       grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
-      //TODO: when the mouse is moved the plot disapeares
+      // TODO: when the mouse is moved the plot disapeares
     }
   else if (strcmp(kind, "polar") == 0)
     {
       if (cols > 1) fprintf(stderr, "Only the first 2 columns get displayed");
+      grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
+      grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
+    }
+  else if (strcmp(kind, "quiver") == 0)
+    {
+      std::vector<double> x(cols);
+      std::vector<double> y(rows);
+      std::vector<double> u(cols * rows);
+      std::vector<double> v(cols * rows);
+
+      if (depth < 2)
+        {
+          fprintf(stderr, "Not enough data for quiver plot\n");
+          return 0;
+        }
+
+      adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)cols - 1.0);
+      adjust_ranges(&ranges.ymin, &ranges.ymax, 0.0, (double)rows - 1.0);
+      ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
+
+      for (col = 0; col < cols; ++col)
+        {
+          x[col] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)col / ((double)cols - 1));
+
+          for (row = 0; row < rows; ++row)
+            {
+              if (col == 0) y[row] = ranges.ymin + (ranges.ymax - ranges.ymin) * ((double)row / ((double)rows - 1));
+              u[row * cols + col] = filedata[0][col][row];
+              v[row * cols + col] = filedata[1][col][row];
+            }
+        }
+
+      grm_args_push(args, "x", "nD", cols, x.data());
+      grm_args_push(args, "y", "nD", rows, y.data());
+      grm_args_push(args, "u", "nD", cols * row, u.data());
+      grm_args_push(args, "v", "nD", cols * row, v.data());
+    }
+  else if (str_equals_any(kind, 2, "hexbin", "shade"))
+    {
+      if (cols > 2) fprintf(stderr, "Only the first 2 columns get displayed");
       grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
       grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
     }

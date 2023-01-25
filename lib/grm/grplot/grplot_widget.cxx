@@ -155,6 +155,15 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       type->addAction(stepAct);
       type->addAction(stemAct);
     }
+  else if (strcmp(kind, "shade") == 0 || strcmp(kind, "hexbin") == 0)
+    {
+      shadeAct = new QAction(tr("&Shade"), this);
+      connect(shadeAct, &QAction::triggered, this, &GRPlotWidget::shade);
+      hexbinAct = new QAction(tr("&Hexbin"), this);
+      connect(hexbinAct, &QAction::triggered, this, &GRPlotWidget::hexbin);
+      type->addAction(shadeAct);
+      type->addAction(hexbinAct);
+    }
   menu->addMenu(type);
   menu->addMenu(algo);
 }
@@ -568,6 +577,20 @@ void GRPlotWidget::step()
 void GRPlotWidget::stem()
 {
   grm_args_push(args_, "kind", "s", "stem");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::shade()
+{
+  grm_args_push(args_, "kind", "s", "shade");
+  grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::hexbin()
+{
+  grm_args_push(args_, "kind", "s", "hexbin");
   grm_merge(args_);
   redraw();
 }
