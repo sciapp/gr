@@ -26,6 +26,9 @@ static std::map<std::string, const char *> key_to_types{{"algorithm", "s"},
                                                         {"edge_color", "ddd"},
                                                         {"edge_color", "i"},
                                                         {"edge_width", "d"},
+                                                        {"ind_bar_color", "nA"},
+                                                        {"ind_edge_color", "nA"},
+                                                        {"ind_edge_width", "nA"},
                                                         {"isovalue", "d"},
                                                         {"keep_aspect_ratio", "i"},
                                                         {"kind", "s"},
@@ -63,6 +66,14 @@ static std::list<std::string> kind_types = {"barplot",  "contour",         "cont
 
 static std::map<std::string, std::string> key_alias = {
     {"hkind", "marginalheatmap_kind"}, {"aspect", "keep_aspect_ratio"}, {"cmap", "colormap"}};
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ container parameter ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static std::map<std::string, const char *> container_params{
+    {"ind_bar_color", "nA"}, {"ind_edge_color", "nA"}, {"ind_edge_width", "nA"}};
+
+static std::map<std::string, const char *> container_to_types{
+    {"indices", "i"}, {"indices", "nI"}, {"rgb", "ddd"}, {"width", "d"}};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ scatter interpretation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -777,6 +788,128 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                       fprintf(stderr, "Parameter %s will be ignored. No data given\n", search->first.c_str());
                       continue;
                     }
+
+                  // parameter is a container
+                  if (auto container_search = container_params.find(found_key);
+                      container_search != container_params.end())
+                    {
+                      int num = 1;
+                      int num_of_parameter = 0;
+                      size_t pos_a, pos_b;
+                      int container_arr;
+                      int ind = 0;
+
+                      if ((container_arr = (pos_a = value.find(',')) < (pos_b = value.find('{'))) &&
+                          strcmp(container_search->second, "nA") == 0)
+                        {
+                          num = stoi(value.substr(0, pos_a));
+                          value.erase(0, pos_a + 1);
+                        }
+                      else
+                        {
+                          container_search->second = "a";
+                        }
+                      grm_args_t *new_args[num];
+                      for (num_of_parameter = 0; num_of_parameter < num; num_of_parameter++)
+                        {
+                          new_args[num_of_parameter] = grm_args_new();
+                        }
+                      num_of_parameter = 0;
+
+                      // fill the container
+                      size_t pos_begin = value.find('{');
+                      while ((pos = value.find('}')) != std::string::npos)
+                        {
+                          std::string arg = value.substr(pos_begin + 1, pos - 1);
+                          if (starts_with(arg, "{"))
+                            {
+                              arg = arg.substr(1, arg.length());
+                            }
+                          else if (ends_with(arg, "}"))
+                            {
+                              arg = arg.substr(0, arg.length() - 1);
+                            }
+                          size_t key_pos = arg.find(delim);
+                          if (key_pos != std::string::npos)
+                            {
+                              found_key = arg.substr(0, key_pos);
+                              found_key_size = found_key.size();
+                              if (auto con = container_to_types.find(found_key); con != container_to_types.end())
+                                {
+                                  std::string container_value = arg.substr(found_key_size + 1, arg.length() - 1);
+
+                                  // sometimes a parameter can be given by different types, the if makes sure the
+                                  // correct one is used
+                                  if ((pos_a = value.find(',')) < (pos_b = value.find('}')) &&
+                                      (str_equals_any(con->second, 2, "i", "d")))
+                                    {
+                                      if (con.operator++()->second != NULL) con = con.operator++();
+                                    }
+                                  try
+                                    {
+                                      if (strcmp(con->second, "d") == 0)
+                                        {
+                                          grm_args_push(new_args[ind], con->first.c_str(), con->second,
+                                                        std::stod(container_value));
+                                        }
+                                      else if (strcmp(con->second, "i") == 0)
+                                        {
+                                          grm_args_push(new_args[ind], con->first.c_str(), con->second,
+                                                        std::stoi(container_value));
+                                        }
+                                      else if (strcmp(con->second, "ddd") == 0)
+                                        {
+                                          std::string r, g, b;
+                                          parse_parameter_ddd(&container_value, &con->first, &r, &g, &b);
+                                          grm_args_push(new_args[ind], con->first.c_str(), con->second, std::stod(r),
+                                                        std::stod(g), std::stod(b));
+                                        }
+                                      else if ((pos_a = value.find(',')) != std::string::npos &&
+                                               strcmp(con->second, "nI") == 0)
+                                        {
+                                          size_t con_pos = container_value.find(',');
+                                          std::string param_num = container_value.substr(0, con_pos);
+                                          std::vector<int> values(std::stoi(param_num));
+                                          int no_err = parse_parameter_nI(&container_value, &con->first, values);
+                                          if (no_err)
+                                            {
+                                              grm_args_push(new_args[ind], con->first.c_str(), con->second,
+                                                            std::stoi(param_num), values.data());
+                                            }
+                                        }
+                                      num_of_parameter += 1;
+                                      if (num_of_parameter % 2 == 0) ind += 1;
+                                    }
+                                  catch (std::invalid_argument &e)
+                                    {
+                                      fprintf(stderr, "Invalid argument for %s parameter (%s).\n", con->first.c_str(),
+                                              container_value.c_str());
+                                    }
+                                }
+                            }
+                          value.erase(0, pos + 2);
+                        }
+                      if (container_arr && strcmp(container_search->second, "nA") == 0 && num_of_parameter == num * 2)
+                        {
+                          grm_args_push(args, container_search->first.c_str(), container_search->second, num, new_args);
+                        }
+                      else if (num_of_parameter == 2)
+                        {
+                          grm_args_push(args, container_search->first.c_str(), container_search->second, new_args[0]);
+                        }
+                      else
+                        {
+                          fprintf(stderr, "Not enough data for %s parameter\n", container_search->first.c_str());
+                        }
+                    }
+                  size_t pos_a;
+                  // sometimes a parameter can be given by different types, the if makes sure the correct one is used
+                  if ((pos_a = value.find(',')) != std::string::npos &&
+                      (str_equals_any(search->second, 2, "i", "d", "s")))
+                    {
+                      if (search.operator++()->second != NULL) search = search.operator++();
+                    }
+
                   // different types
                   if (strcmp(search->second, "s") == 0)
                     {
@@ -805,48 +938,17 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                           else if (strcmp(search->second, "ddd") == 0)
                             {
                               std::string r, g, b;
-                              size_t pos = 0;
-                              int k = 0;
-                              while ((pos = value.find(',')) != std::string::npos)
-                                {
-                                  if (k == 0) r = value.substr(0, pos);
-                                  if (k == 1) g = value.substr(0, pos);
-                                  value.erase(0, pos + 1);
-                                  k++;
-                                }
-                              if (k != 2 || value.length() == 0)
-                                {
-                                  fprintf(stderr,
-                                          "Given number doesn`t fit the data for %s parameter. The parameter will be "
-                                          "ignored\n",
-                                          search->first.c_str());
-                                }
-                              b = value;
+                              parse_parameter_ddd(&value, &search->first, &r, &g, &b);
                               grm_args_push(args, search->first.c_str(), search->second, std::stod(r), std::stod(g),
                                             std::stod(b));
                             }
                           else if (strcmp(search->second, "nS") == 0)
                             {
                               size_t pos = value.find(',');
-                              int k = 0;
                               std::string num = value.substr(0, pos);
                               std::vector<const char *> values(std::stoi(num));
-                              value.erase(0, pos + 1);
-                              while ((pos = value.find(',')) != std::string::npos)
-                                {
-                                  values[k] = value.substr(0, pos).c_str();
-                                  value.erase(0, pos + 1);
-                                  k++;
-                                }
-                              values[k] = value.c_str();
-                              if (k != std::stoi(num) - 1 || value.length() == 0)
-                                {
-                                  fprintf(stderr,
-                                          "Given number doesn`t fit the data for %s parameter. The parameter will be "
-                                          "ignored\n",
-                                          search->first.c_str());
-                                }
-                              else
+                              int no_err = parse_parameter_nS(&value, &search->first, values);
+                              if (no_err)
                                 {
                                   grm_args_push(args, search->first.c_str(), search->second, std::stoi(num),
                                                 values.data());
@@ -855,25 +957,10 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                           else if (strcmp(search->second, "nD") == 0)
                             {
                               size_t pos = value.find(',');
-                              int k = 0;
                               std::string num = value.substr(0, pos);
                               std::vector<double> values(std::stoi(num));
-                              value.erase(0, pos + 1);
-                              while ((pos = value.find(',')) != std::string::npos)
-                                {
-                                  values[k] = std::stod(value.substr(0, pos));
-                                  value.erase(0, pos + 1);
-                                  k++;
-                                }
-                              values[k] = std::stod(value);
-                              if (k != std::stoi(num) - 1 || value.length() == 0)
-                                {
-                                  fprintf(stderr,
-                                          "Given number doesn`t fit the data for %s parameter. The parameter will be "
-                                          "ignored\n",
-                                          search->first.c_str());
-                                }
-                              else
+                              int no_err = parse_parameter_nD(&value, &search->first, values);
+                              if (no_err)
                                 {
                                   grm_args_push(args, search->first.c_str(), search->second, std::stoi(num),
                                                 values.data());
@@ -914,5 +1001,100 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
       kind = "line";
     }
   grm_args_push(args, "kind", "s", kind);
+  return 1;
+}
+
+void parse_parameter_ddd(std::string *input, const std::string *key, std::string *r, std::string *g, std::string *b)
+{
+  size_t con_pos = 0;
+  int k = 0;
+  while ((con_pos = (*input).find(',')) != std::string::npos)
+    {
+      if (k == 0) *r = (*input).substr(0, con_pos);
+      if (k == 1) *g = (*input).substr(0, con_pos);
+      (*input).erase(0, con_pos + 1);
+      k++;
+    }
+  if (k != 2 || (*input).length() == 0)
+    {
+      fprintf(stderr,
+              "Given number doesn`t fit the data for %s parameter. The "
+              "parameter will be "
+              "ignored\n",
+              (*key).c_str());
+    }
+  *b = *input;
+}
+
+int parse_parameter_nI(std::string *input, const std::string *key, std::vector<int> values)
+{
+  size_t con_pos = (*input).find(',');
+  int k = 0;
+  std::string param_num = (*input).substr(0, con_pos);
+  (*input).erase(0, con_pos + 1);
+  while ((con_pos = (*input).find(',')) != std::string::npos)
+    {
+      values[k] = std::stoi((*input).substr(0, con_pos));
+      (*input).erase(0, con_pos + 1);
+      k++;
+    }
+  values[k] = std::stoi((*input));
+  if (k != std::stoi(param_num) - 1 || (*input).length() == 0)
+    {
+      fprintf(stderr,
+              "Given number doesn`t fit the data for %s parameter. The "
+              "parameter will be "
+              "ignored\n",
+              (*key).c_str());
+      return 0;
+    }
+  return 1;
+}
+
+int parse_parameter_nS(std::string *input, const std::string *key, std::vector<const char *> values)
+{
+  size_t pos = (*input).find(',');
+  int k = 0;
+  std::string num = (*input).substr(0, pos);
+  (*input).erase(0, pos + 1);
+  while ((pos = (*input).find(',')) != std::string::npos)
+    {
+      values[k] = (*input).substr(0, pos).c_str();
+      (*input).erase(0, pos + 1);
+      k++;
+    }
+  values[k] = (*input).c_str();
+  if (k != std::stoi(num) - 1 || (*input).length() == 0)
+    {
+      fprintf(stderr,
+              "Given number doesn`t fit the data for %s parameter. The parameter will be "
+              "ignored\n",
+              (*key).c_str());
+      return 0;
+    }
+  return 1;
+}
+
+int parse_parameter_nD(std::string *input, const std::string *key, std::vector<double> values)
+{
+  size_t pos = (*input).find(',');
+  int k = 0;
+  std::string num = (*input).substr(0, pos);
+  (*input).erase(0, pos + 1);
+  while ((pos = (*input).find(',')) != std::string::npos)
+    {
+      values[k] = std::stod((*input).substr(0, pos));
+      (*input).erase(0, pos + 1);
+      k++;
+    }
+  values[k] = std::stod((*input));
+  if (k != std::stoi(num) - 1 || (*input).length() == 0)
+    {
+      fprintf(stderr,
+              "Given number doesn`t fit the data for %s parameter. The parameter will be "
+              "ignored\n",
+              (*key).c_str());
+      return 0;
+    }
   return 1;
 }
