@@ -37,7 +37,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 {
   const char *kind;
   unsigned int z_length;
-  double *z = NULL;
+  double *z = nullptr;
+  int error = 0;
   args_ = grm_args_new();
 
 #ifdef _WIN32
@@ -63,6 +64,11 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   type = new QMenu("&Plot type");
   algo = new QMenu("&Algorithm");
   grm_args_values(args_, "kind", "s", &kind);
+  if (grm_args_contains(args_, "error"))
+    {
+      error = 1;
+      fprintf(stderr, "Plot types are not compatible with errorbars. The menu got disabled\n");
+    }
   if (strcmp(kind, "contour") == 0 || strcmp(kind, "heatmap") == 0 || strcmp(kind, "imshow") == 0 ||
       strcmp(kind, "marginalheatmap") == 0 || strcmp(kind, "surface") == 0 || strcmp(kind, "wireframe") == 0 ||
       strcmp(kind, "contourf") == 0)
@@ -139,8 +145,9 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       type->addAction(scatter3Act);
       type->addAction(scatterAct);
     }
-  else if (strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0 || strcmp(kind, "step") == 0 ||
-           strcmp(kind, "stem") == 0)
+  else if ((strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0 || strcmp(kind, "step") == 0 ||
+            strcmp(kind, "stem") == 0) &&
+           !error)
     {
       histAct = new QAction(tr("&Hist"), this);
       connect(histAct, &QAction::triggered, this, &GRPlotWidget::hist);
