@@ -495,7 +495,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             }
         }
 
-      // for imshow plot
+      /* for imshow plot */
       grm_args_push(args, "c", "nD", rows * cols, zi.data());
       grm_args_push(args, "c_dims", "ii", rows, cols);
 
@@ -581,7 +581,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         }
       if (cols > 3) fprintf(stderr, "Only the first 3 columns get displayed");
 
-      // apply the ranges to the data
+      /* apply the ranges to the data */
       if (ranges.xmax != INFINITY)
         {
           min_x = *std::min_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
@@ -649,7 +649,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         }
       else
         {
-          // apply yrange to the data
+          /* apply yrange to the data */
           ymin = *std::min_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
           ymax = *std::max_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
           for (row = 0; row < rows; ++row)
@@ -664,14 +664,14 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         }
 
       grm_args_push(args, "x", "nD", rows, x.data());
-      // for barplot
+      /* for barplot */
       grm_args_push(args, "y", "nD", rows, filedata[depth][0].data());
-      // for hist
+      /* for hist */
       grm_args_push(args, "weights", "nD", rows, filedata[depth][0].data());
-      // for step
+      /* for step */
       grm_args_push(args, "z", "nD", rows, filedata[depth][0].data());
 
-      // the needed calculation to get the errorbars out of the data
+      /* the needed calculation to get the errorbars out of the data */
       if (grm_args_values(args, "error", "a", &error))
         {
           int nbins, i;
@@ -743,7 +743,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     {
       if (cols > 1) fprintf(stderr, "Only the first column gets displayed\n");
       grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
-      // TODO: when the mouse is moved the plot disapeares
+      /* TODO: when the mouse is moved the plot disapeares */
     }
   else if (strcmp(kind, "polar") == 0)
     {
@@ -812,20 +812,20 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
   std::string token, found_key;
   size_t found_key_size;
   std::string delim = ":";
-  const char *kind = "line";
+  std::string kind = "line";
   std::string optional_file;
 
   for (i = 1; i < argc; i++)
     {
       token = argv[i];
-      // parameter needed for import.cxx are treated different then grm-parameters
+      /* parameter needed for import.cxx are treated different than grm-parameters */
       if (starts_with(token, "file:"))
         {
           file_args->file_path = token.substr(5, token.length() - 1);
         }
       else if (i == 1 && (token.find(delim) == std::string::npos || (token.find(delim) == 1 && token.find('/') == 2)))
         {
-          optional_file = token; // its only getting used, when no "file:"-keyword was found
+          optional_file = token; /* its only getting used, when no "file:"-keyword was found */
         }
       else if (starts_with(token, "columns:"))
         {
@@ -838,7 +838,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
             {
               found_key = token.substr(0, pos);
               found_key_size = found_key.size();
-              // check if there exist a know alias and in case of replace the key
+              /* check if there exist a know alias and in case of replace the key */
               if (auto search_alias = key_alias.find(found_key); search_alias != key_alias.end())
                 {
                   found_key = search_alias->second;
@@ -846,10 +846,10 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
               if (auto search = key_to_types.find(found_key); search != key_to_types.end())
                 {
                   std::string value = token.substr(found_key_size + 1, token.length() - 1);
-                  // special case for kind, for following exception
+                  /* special case for kind, for following exception */
                   if (strcmp(found_key.c_str(), "kind") == 0)
                     {
-                      kind = token.substr(found_key_size + 1, token.length() - 1).c_str();
+                      kind = token.substr(found_key_size + 1, token.length() - 1);
                     }
 
                   if (value.length() == 0)
@@ -858,7 +858,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                       continue;
                     }
 
-                  // parameter is a container
+                  /* parameter is a container */
                   if (auto container_search = container_params.find(found_key);
                       container_search != container_params.end())
                     {
@@ -885,7 +885,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                         }
                       num_of_parameter = 0;
 
-                      // fill the container
+                      /* fill the container */
                       size_t pos_begin = value.find('{');
                       while ((pos = value.find('}')) != std::string::npos)
                         {
@@ -907,8 +907,8 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                                 {
                                   std::string container_value = arg.substr(found_key_size + 1, arg.length() - 1);
 
-                                  // sometimes a parameter can be given by different types, the if makes sure the
-                                  // correct one is used
+                                  /* sometimes a parameter can be given by different types, the if makes sure the
+                                   * correct one is used */
                                   if ((pos_a = value.find(',')) < (pos_b = value.find('}')) &&
                                       (str_equals_any(con->second, 2, "i", "d")))
                                     {
@@ -973,14 +973,15 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                         }
                     }
                   size_t pos_a;
-                  // sometimes a parameter can be given by different types, the if makes sure the correct one is used
+                  /* sometimes a parameter can be given by different types, the 'if' makes sure the correct one is used
+                   */
                   if ((pos_a = value.find(',')) != std::string::npos &&
                       (str_equals_any(search->second, 2, "i", "d", "s")))
                     {
                       if (search.operator++()->second != NULL) search = search.operator++();
                     }
 
-                  // different types
+                  /* different types */
                   if (strcmp(search->second, "s") == 0)
                     {
                       grm_args_push(args, search->first.c_str(), search->second, value.c_str());
@@ -991,7 +992,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                         {
                           if (strcmp(search->second, "i") == 0)
                             {
-                              // special case for scatter plot, to decide how the read data gets interpreted
+                              /* special case for scatter plot, to decide how the read data gets interpreted */
                               if (strcmp(search->first.c_str(), "scatterz") == 0)
                                 {
                                   scatter_with_z = std::stoi(value);
@@ -1058,7 +1059,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
         }
     }
 
-  // errors than can be cached
+  /* errors that can be caught */
   if (file_args->file_path.empty())
     {
       if (!optional_file.empty())
@@ -1073,10 +1074,10 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
     }
   if (!(std::find(kind_types.begin(), kind_types.end(), kind) != kind_types.end()))
     {
-      fprintf(stderr, "Invalid plot type (%s) - fallback to line plot\n", kind);
+      fprintf(stderr, "Invalid plot type (%s) - fallback to line plot\n", kind.c_str());
       kind = "line";
     }
-  grm_args_push(args, "kind", "s", kind);
+  grm_args_push(args, "kind", "s", kind.c_str());
   return 1;
 }
 
