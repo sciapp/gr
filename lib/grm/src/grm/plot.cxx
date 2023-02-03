@@ -1733,8 +1733,8 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                                                        ERROR_PLOT_MISSING_DIMENSIONS);
                               current_point_count = (strcmp(*current_component_name, "x") == 0) ? cols : rows;
                             }
-                          current_min_component = -0.5;
-                          current_max_component = current_point_count - 0.5;
+                          current_min_component = 0.5;
+                          current_max_component = current_point_count + 0.5;
                         }
                       else if (grm_args_first_value(*current_series, "inner_series", "nA", &inner_series,
                                                     &inner_series_count))

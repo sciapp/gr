@@ -33,6 +33,7 @@ set(EXECUTABLE_SOURCES
     surface.c
     volume.c
     marginalheatmap.c
+    snoop/snoop.c
 )
 
 foreach(executable_source ${EXECUTABLE_SOURCES})
