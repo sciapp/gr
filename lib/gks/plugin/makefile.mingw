@@ -2,7 +2,7 @@ ifeq ($(strip $(THIRDPARTYDIR)),)
 override THIRDPARTYDIR = $(abspath $(CURDIR)/../../../3rdparty/build)
 endif
 
-DEFINES = -DNO_X11 -DNO_GLFW -DNO_GS -DNO_QT4 -DNO_QT5 -DNO_QT6 -DNO_GTK -DNO_WX -DNO_ZMQ -DGRDIR=\"$(GRDIR)\" -DXMD_H
+DEFINES = -DNO_X11 -DNO_GLFW -DNO_GS -DNO_QT4 -DNO_QT6 -DNO_GTK -DNO_WX -DNO_ZMQ -DGRDIR=\"$(GRDIR)\" -DXMD_H
 ZLIB = $(THIRDPARTYDIR)/lib/libz.a
 PNGLIB = $(THIRDPARTYDIR)/lib/libpng.a
 JPEGLIB = $(THIRDPARTYDIR)/lib/libjpeg.a
@@ -11,6 +11,7 @@ CAIROLIB = $(THIRDPARTYDIR)/lib/libcairo.a
 AGGLIB = $(THIRDPARTYDIR)/lib/libagg.a
 FTLIB = $(THIRDPARTYDIR)/lib/libfreetype.a
 AVLIBS = -lavformat -lavcodec -lswscale -lavutil -lvpx -ltheora -logg -lopenh264
+QT5LIBS = qt5-runtime/Qt5Core.dll qt5-runtime/Qt5Gui.dll qt5-runtime/Qt5Widgets.dll
 INCLUDES = -I../ -I$(THIRDPARTYDIR)/include -I/usr/local/include
 CFLAGS = -Wall $(DEFINES) $(INCLUDES)
 CXXFLAGS = -Wall $(DEFINES) $(INCLUDES)
@@ -53,8 +54,14 @@ wxplugin.dll: wxplugin.o $(GKSLIB)
 qtplugin.dll: qtplugin.o $(GKSLIB)
 	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
+qt5plugin.o: qt5plugin.cxx
+	wget https://gr-framework.org/downloads/3rdparty/qt5-runtime-Windows-$(ARCHITECTURE)-mingw81.tar.gz
+	mkdir -p qt5-runtime
+	tar -C qt5-runtime -xzf qt5-runtime-Windows-$(ARCHITECTURE)-mingw81.tar.gz
+	$(CXX) -c $(CXXFLAGS) -Iqt5-runtime/include -Iqt5-runtime/include/QtCore -Iqt5-runtime/include/QtGui -Iqt5-runtime/include/QtWidgets $<
+
 qt5plugin.dll: qt5plugin.o $(GKSLIB)
-	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) $(QT5LIBS)
 
 qt6plugin.dll: qt6plugin.o $(GKSLIB)
 	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
@@ -80,5 +87,6 @@ aggplugin.dll: aggplugin.o $(GKSLIB) $(AGGLIB) $(PNGLIB) $(ZLIB) $(FTLIB) $(JPEG
 clean:
 	$(RM) *.dll
 	$(RM) *.o
+	$(RM) -r qt5-runtime
 
 .PHONY: clean AVLIBS VPXLIBS OGGLIBS THEORALIBS

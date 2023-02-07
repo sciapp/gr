@@ -1,5 +1,5 @@
-#ifndef GR_WIDGET_H_INCLUDED
-#define GR_WIDGET_H_INCLUDED
+#ifndef GRPLOT_WIDGET_H_INCLUDED
+#define GRPLOT_WIDGET_H_INCLUDED
 
 #include <QMenu>
 #include <QMenuBar>
@@ -10,13 +10,13 @@
 
 #include <grm.h>
 
-class GRWidget : public QWidget
+class GRPlotWidget : public QWidget
 {
   Q_OBJECT
 
 public:
-  explicit GRWidget(QMainWindow *parent, const char *csv_file, const char *plot_type, const char *colms);
-  ~GRWidget() override;
+  explicit GRPlotWidget(QMainWindow *parent, int argc, char **argv);
+  ~GRPlotWidget() override;
 
 protected:
   virtual void draw();
@@ -37,6 +37,13 @@ private slots:
   void line();
   void sumalgorithm();
   void maxalgorithm();
+  void volume();
+  void isosurface();
+  void surface();
+  void wireframe();
+  void contour();
+  void imshow();
+  void plot3();
 
 private:
   struct MouseState
@@ -67,12 +74,13 @@ private:
   QAction *lineAct;
   QAction *sumAct;
   QAction *maxAct;
-
-  const char *csv_file_;
-  const char *plot_type_;
-  const char *heatmap_type_ = "all";
-  const char *heatmap_algorithm_ = "sum";
-  const char *colms_;
+  QAction *volumeAct;
+  QAction *isosurfaceAct;
+  QAction *surfaceAct;
+  QAction *wireframeAct;
+  QAction *contourAct;
+  QAction *imshowAct;
+  QAction *plot3Act;
 };
 
-#endif /* ifndef GR_WIDGET_H_INCLUDED */
+#endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

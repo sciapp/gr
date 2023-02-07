@@ -1856,9 +1856,9 @@ static void gr3_dodrawmesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int 
           }
         for (j = 0; j < 3; j++)
           {
-            model_matrix[j] = -left[j] * scales[i * 3 + 0];
-            model_matrix[4 + j] = up[j] * scales[i * 3 + 1];
-            model_matrix[8 + j] = forward[j] * scales[i * 3 + 2];
+            model_matrix[j] = -left[j];
+            model_matrix[4 + j] = up[j];
+            model_matrix[8 + j] = forward[j];
             model_matrix[12 + j] = positions[i * 3 + j];
           }
         model_matrix[15] = 1;
@@ -1886,7 +1886,7 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
                                       GR3_DrawList_t_ *draw, int draw_id)
 {
   int thread_idx, i, j, numtri, tri_per_thread, index_start_end[MAX_NUM_THREADS + 1], rest, rest_distributed;
-  matrix model_mat, view_mat, perspective, viewport;
+  matrix model_mat, model_mat_unscaled, view_mat, perspective, viewport;
   matrix3x3 model_mat_3x3, view_mat_3x3, model_view_mat_3x3;
   color_float c_tmp;
   vertex_fp *vertices_fp;
@@ -1896,7 +1896,8 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
     {
       for (j = 0; j < 4; j++)
         {
-          model_mat.mat[i * 4 + j] = model[j * 4 + i];
+          model_mat.mat[i * 4 + j] = model[j * 4 + i] * (j < 3 ? scales[j] : 1);
+          model_mat_unscaled.mat[i * 4 + j] = model[j * 4 + i];
           view_mat.mat[i * 4 + j] = view[j * 4 + i];
         }
     }
@@ -1955,10 +1956,12 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
         }
       for (i = 0; i < num_vertices; i++)
         {
+          vertex_fp vertex_unscaled = vertices_fp[i];
+          mat_vec_mul_4x1(&model_mat_unscaled, &vertex_unscaled);
+          vertices_fp[i].world_space_position.x = vertex_unscaled.x;
+          vertices_fp[i].world_space_position.y = vertex_unscaled.y;
+          vertices_fp[i].world_space_position.z = vertex_unscaled.z;
           mat_vec_mul_4x1(&model_mat, &vertices_fp[i]);
-          vertices_fp[i].world_space_position.x = vertices_fp[i].x;
-          vertices_fp[i].world_space_position.y = vertices_fp[i].y;
-          vertices_fp[i].world_space_position.z = vertices_fp[i].z;
           mat_vec_mul_4x1(&view_mat, &vertices_fp[i]);
           vertices_fp[i].view_space_position.x = vertices_fp[i].x;
           vertices_fp[i].view_space_position.y = vertices_fp[i].y;

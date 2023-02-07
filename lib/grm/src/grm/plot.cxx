@@ -271,6 +271,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "font",
                                     "font_precision",
                                     "grid_element",
+                                    "marginalheatmap_kind",
                                     "ind_bar_color",
                                     "ind_edge_color",
                                     "ind_edge_width",
@@ -296,7 +297,6 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "subplot",
                                     "tilt",
                                     "title",
-                                    "type",
                                     "xbins",
                                     "xflip",
                                     "xform",
@@ -315,6 +315,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "yind",
                                     "zflip",
                                     "zgrid",
+                                    "zlabel",
                                     "zlim",
                                     "zlog",
                                     NULL};
@@ -404,7 +405,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"subplot", "D"},
                                               {"tilt", "d"},
                                               {"title", "s"},
-                                              {"type", "s"},
+                                              {"marginalheatmap_kind", "s"},
                                               {"u", "D"},
                                               {"update", "i"},
                                               {"v", "D"},
@@ -434,6 +435,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"z_dims", "I"},
                                               {"zflip", "i"},
                                               {"zgrid", "i"},
+                                              {"zlabel", "s"},
                                               {"zlim", "D"},
                                               {"zrange", "D"},
                                               {"zlog", "i"}};
@@ -1030,7 +1032,7 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
           else if (strcmp(kind, "marginalheatmap") == 0)
             {
               args_setdefault(*current_series, "algorithm", "s", "sum");
-              args_setdefault(*current_series, "type", "s", "all");
+              args_setdefault(*current_series, "marginalheatmap_kind", "s", "all");
             }
           ++current_series;
         }
@@ -2607,9 +2609,6 @@ err_t plot_hist(grm_args_t *subplot_args)
         }
 
       grm_args_first_value(*current_series, "bins", "D", &bins, &num_bins);
-      grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
-
-      grm_args_first_value(*current_series, "bins", "D", &bins, &num_bins);
       grm_args_values(subplot_args, "orientation", "s", &orientation);
       is_horizontal = strcmp(orientation, "horizontal") == 0;
       if (is_horizontal)
@@ -3901,7 +3900,7 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
   int flip, options, xind, yind;
   unsigned int i, j, k;
   grm_args_t **current_series;
-  char *algorithm, *type;
+  char *algorithm, *marginalheatmap_kind;
   double *bins = NULL;
   unsigned int num_bins_x = 0, num_bins_y = 0, n = 0;
   double *xi, *yi, *plot;
@@ -3915,7 +3914,7 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
 
   plot_heatmap(subplot_args);
 
-  grm_args_values(subplot_args, "type", "s", &type);
+  grm_args_values(subplot_args, "marginalheatmap_kind", "s", &marginalheatmap_kind);
   grm_args_values(subplot_args, "xind", "i", &xind);
   grm_args_values(subplot_args, "yind", "i", &yind);
 
@@ -3949,7 +3948,7 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
       grm_args_first_value(*current_series, "y", "D", &yi, &num_bins_y);
       grm_args_first_value(*current_series, "z", "D", &plot, &n);
 
-      if (strcmp(type, "all") == 0)
+      if (strcmp(marginalheatmap_kind, "all") == 0)
         {
           unsigned int x_len = num_bins_x, y_len = num_bins_y;
 
@@ -4026,12 +4025,12 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
           grm_args_push(subplot_args, "orientation", "s", "horizontal");
         }
 
-      if (strcmp(type, "all") == 0)
+      if (strcmp(marginalheatmap_kind, "all") == 0)
         {
           subGroup->setAttribute("kind", "hist");
           plot_hist(subplot_args);
         }
-      else if (strcmp(type, "line") == 0 && xind != -1 && yind != -1)
+      else if (strcmp(marginalheatmap_kind, "line") == 0 && xind != -1 && yind != -1)
         {
           subGroup->setAttribute("kind", "line");
           plot_step(subplot_args);
