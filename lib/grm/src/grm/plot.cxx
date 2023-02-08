@@ -2019,6 +2019,7 @@ err_t plot_step(grm_args_t *subplot_args)
    * optional step position `step_where` as string, modes: `pre`, `mid`, `post`, Default: `mid`
    * optional `spec`
    */
+
   grm_args_t **current_series;
   char *kind, *orientation;
   int xind, yind;
@@ -2031,12 +2032,15 @@ err_t plot_step(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "step");
+  group->setAttribute("marginalheatmap", 1);
 
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "orientation", "s", &orientation);
   grm_args_values(subplot_args, "xind", "i", &xind);
   grm_args_values(subplot_args, "yind", "i", &yind);
   is_vertical = strcmp(orientation, "vertical") == 0;
+  group->setAttribute("xind", xind);
+  group->setAttribute("yind", yind);
 
   std::shared_ptr<GR::Element> element; // declare element here for multiple usages / assignments later
   while (*current_series != NULL)
@@ -2066,30 +2070,32 @@ err_t plot_step(grm_args_t *subplot_args)
           grm_args_values(subplot_args, "_zlim", "dd", &c_min, &c_max);
           grm_args_first_value(*current_series, "z", "D", &plot, &n);
 
+          std::vector<double> plot_vec(plot, plot + n);
+          int id = static_cast<int>(global_root->getAttribute("id"));
+          global_root->setAttribute("id", id + 1);
+          std::string str = std::to_string(id);
+
+          // Store "raw" data in Context / marginalheatmap element for later usage e.g. interaction
+          auto context = global_render->getContext();
+          (*context)["plot" + str] = plot_vec;
+          subGroup->setAttribute("plot", "plot" + str);
+
           y = static_cast<double *>(malloc((is_vertical ? y_length : x_length) * sizeof(double)));
           cleanup_and_set_error_if(y == NULL, ERROR_MALLOC);
+
+          std::vector<double> y_vec(y, y + (is_vertical ? y_length : x_length));
+          (*context)["y" + str] = y_vec;
+          subGroup->setAttribute("y", "y" + str);
+
           xi = static_cast<double *>(malloc((is_vertical ? y_length : x_length) * sizeof(double)));
+          std::vector<double> xi_vec(xi, xi + (is_vertical ? y_length : x_length));
+          (*context)["xi" + str] = xi_vec;
+          subGroup->setAttribute("xi", "xi" + str);
           cleanup_and_set_error_if(xi == NULL, ERROR_MALLOC);
-          for (i = 0; i < (is_vertical ? y_length : x_length); i++)
-            {
-              if (is_vertical)
-                {
-                  y[(is_vertical ? y_length : x_length) - i - 1] =
-                      isnan(plot[xind + i * x_length]) ? 0 : plot[xind + i * x_length];
-                  y_max = grm_max(y_max, y[(is_vertical ? y_length : x_length) - i - 1]);
-                }
-              else
-                {
-                  y[i] = isnan(plot[x_length * (y_length - 1 - yind) + i]) ? 0
-                                                                           : plot[x_length * (y_length - 1 - yind) + i];
-                  y_max = grm_max(y_max, y[i]);
-                }
-            }
-          for (i = 0; i < (is_vertical ? y_length : x_length); i++)
-            {
-              y[i] = y[i] / y_max * (c_max / 15);
-              xi[i] = x[i] + (is_vertical ? ymin : xmin);
-            }
+
+          std::vector<double> x_vec(x, x + x_length);
+          (*context)["x" + str] = x_vec;
+          subGroup->setAttribute("x", "x" + str);
         }
       else
         {
@@ -2101,61 +2107,7 @@ err_t plot_step(grm_args_t *subplot_args)
         {
           const char *where;
           grm_args_values(*current_series, "step_where", "s", &where); /* `spec` is always set */
-          if (strcmp(kind, "marginalheatmap") == 0)
-            {
-              double x_pos, y_pos;
-              unsigned int len = is_vertical ? y_length : x_length;
-
-              x_step_boundaries = static_cast<double *>(calloc(2 * len, sizeof(double)));
-              cleanup_and_set_error_if(x_step_boundaries == NULL, ERROR_MALLOC);
-              y_step_values = static_cast<double *>(calloc(2 * len, sizeof(double)));
-              cleanup_and_set_error_if(y_step_values == NULL, ERROR_MALLOC);
-              x_step_boundaries[0] = is_vertical ? ymin : xmin;
-              for (i = 2; i < 2 * len; i += 2)
-                {
-                  x_step_boundaries[i - 1] = x_step_boundaries[i] =
-                      x_step_boundaries[0] + (i / 2) * (is_vertical ? (ymax - ymin) : (xmax - xmin)) / len;
-                }
-              x_step_boundaries[2 * len - 1] = is_vertical ? ymax : xmax;
-              y_step_values[0] = y[0];
-              for (i = 2; i < 2 * len; i += 2)
-                {
-                  y_step_values[i - 1] = y[i / 2 - 1];
-                  y_step_values[i] = y[i / 2];
-                }
-              y_step_values[2 * len - 1] = y[len - 1];
-
-              std::vector<double> y_step_vec(y_step_values, y_step_values + 2 * len);
-              std::vector<double> x_step_vec(x_step_boundaries, x_step_boundaries + 2 * len);
-              int id = static_cast<int>(global_root->getAttribute("id"));
-              global_root->setAttribute("id", id + 1);
-              auto id_str = std::to_string(id);
-
-              std::shared_ptr<GR::Element> line_elem, marker_elem;
-
-              if (is_vertical)
-                {
-                  line_elem = global_render->createPolyline("x" + id_str, y_step_vec, "y" + id_str, x_step_vec);
-                  x_pos = (x_step_boundaries[yind * 2] + x_step_boundaries[yind * 2 + 1]) / 2;
-                  y_pos = y[yind];
-                  marker_elem = global_render->createPolymarker(y_pos, x_pos);
-                }
-              else
-                {
-                  line_elem = global_render->createPolyline("x" + id_str, x_step_vec, "y" + id_str, y_step_vec);
-                  x_pos = (x_step_boundaries[xind * 2] + x_step_boundaries[xind * 2 + 1]) / 2;
-                  y_pos = y[xind];
-                  marker_elem = global_render->createPolymarker(x_pos, y_pos);
-                }
-
-              global_render->setLineColorInd(line_elem, 989);
-              global_render->setMarkerColorInd(marker_elem, 2);
-              global_render->setMarkerType(marker_elem, -1);
-              global_render->setMarkerSize(marker_elem, 1.5 * (len / (is_vertical ? (ymax - ymin) : (xmax - xmin))));
-              subGroup->append(marker_elem);
-              subGroup->append(line_elem);
-            }
-          else if (strcmp(where, "pre") == 0)
+          if (strcmp(where, "pre") == 0)
             {
               x_step_boundaries = static_cast<double *>(calloc(2 * x_length - 1, sizeof(double)));
               cleanup_and_set_error_if(x_step_boundaries == NULL, ERROR_MALLOC);
@@ -2572,6 +2524,9 @@ err_t plot_hist(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "xind", "i", &xind);
   grm_args_values(subplot_args, "yind", "i", &yind);
 
+  group->setAttribute("xind", xind);
+  group->setAttribute("yind", yind);
+
   if (bar_color_rgb[0] != -1)
     {
       for (i = 0; i < 3; i++)
@@ -2621,54 +2576,43 @@ err_t plot_hist(grm_args_t *subplot_args)
         }
 
       bar_width = (x_max - x_min) / num_bins;
+
+      std::shared_ptr<GR::Element> innerFillGroup = global_render->createGroup("innerFillGroup");
+      std::shared_ptr<GR::Element> outerFillGroup = global_render->createGroup("outerFillGroup");
+
+      subGroup->append(innerFillGroup);
+      subGroup->append(outerFillGroup);
+
+      global_render->setFillColorInd(innerFillGroup, bar_color_index);
+      global_render->setFillIntStyle(innerFillGroup, GKS_K_INTSTYLE_SOLID);
+
+      global_render->setFillColorInd(outerFillGroup, edge_color_index);
+      global_render->setFillIntStyle(outerFillGroup, GKS_K_INTSTYLE_HOLLOW);
+
       for (i = 1; i < num_bins + 1; ++i)
         {
-
-          // TODO: are fillRect 1 and 2 needed??
           double x = x_min + (i - 1) * bar_width;
-          auto fillRect1 = global_render->createFillRect(x, x + bar_width, 0.0, bins[i - 1]);
-          global_render->setFillColorInd(fillRect1, bar_color_index);
-          global_render->setFillIntStyle(fillRect1, GKS_K_INTSTYLE_SOLID);
-          //          subGroup->append(fillRect1);
-
-          auto fillRect2 = global_render->createFillRect(x, x + bar_width, 0.0, bins[i - 1]);
-          global_render->setFillColorInd(fillRect2, edge_color_index);
-          global_render->setFillIntStyle(fillRect2, GKS_K_INTSTYLE_HOLLOW);
-          //          subGroup->append(fillRect2);
-
-          std::shared_ptr<GR::Element> fillRect3, fillRect4;
+          std::shared_ptr<GR::Element> fillRect1, fillRect2;
 
           if (is_horizontal)
             {
-              fillRect3 = global_render->createFillRect(x, x + bar_width, 0., bins[i - 1]);
-              if (i == xind + 1)
-                {
-                  global_render->setFillColorInd(fillRect3, 2);
-                }
+              fillRect1 = global_render->createFillRect(x, x + bar_width, 0., bins[i - 1]);
             }
           else
             {
-              fillRect3 = global_render->createFillRect(0., bins[i - 1], x, x + bar_width);
-              if (i == yind + 1)
-                {
-                  global_render->setFillColorInd(fillRect3, 2);
-                }
+              fillRect1 = global_render->createFillRect(0., bins[i - 1], x, x + bar_width);
             }
-          global_render->setFillColorInd(fillRect3, bar_color_index);
-          global_render->setFillIntStyle(fillRect3, GKS_K_INTSTYLE_SOLID);
 
+          innerFillGroup->append(fillRect1);
           if (is_horizontal)
             {
-              fillRect4 = global_render->createFillRect(x, x + bar_width, 0., bins[i - 1]);
+              fillRect2 = global_render->createFillRect(x, x + bar_width, 0., bins[i - 1]);
             }
           else
             {
-              fillRect4 = global_render->createFillRect(0., bins[i - 1], x, x + bar_width);
+              fillRect2 = global_render->createFillRect(0., bins[i - 1], x, x + bar_width);
             }
-          global_render->setFillColorInd(fillRect4, edge_color_index);
-          global_render->setFillIntStyle(fillRect4, GKS_K_INTSTYLE_HOLLOW);
-          subGroup->append(fillRect3);
-          subGroup->append(fillRect4);
+          outerFillGroup->append(fillRect2);
         }
 
 

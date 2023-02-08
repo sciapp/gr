@@ -82,7 +82,7 @@ int grm_input(const grm_args_t *input_args)
       if (subplot_element != nullptr)
         {
           double angle_delta, factor;
-          int xshift, yshift;
+          int xshift, yshift, xind, yind;
           std::string kind;
           double viewport[4];
           viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
@@ -129,13 +129,61 @@ int grm_input(const grm_args_t *input_args)
               xind = (x - x_0) / x_step;
               yind = (y - y_0) / y_step;
 
+              xind = (int)((x - x_0) / x_step);
+              yind = (int)((y - y_0) / y_step);
               if (xind < 0 || xind >= x_length || yind < 0 || yind >= y_length)
                 {
                   xind = -1;
                   yind = -1;
                 }
+
+              int old_xind, old_yind;
+              old_xind = static_cast<int>(subplot_element->getAttribute("xind"));
+              old_yind = static_cast<int>(subplot_element->getAttribute("yind"));
+
               subplot_element->setAttribute("xind", (int)((x - x_0) / x_step));
               subplot_element->setAttribute("yind", (int)((y - y_0) / y_step));
+
+              for (auto &child : subplot_element->children())
+                {
+                  std::string childKind = static_cast<std::string>(child->getAttribute("kind"));
+                  if (kind == "line" || kind == "hist")
+                    {
+                      child->setAttribute("xind", xind);
+
+                      child->setAttribute("yind", yind);
+                    }
+                  if (kind == "hist")
+                    {
+                      // reset bar colors
+                      bool is_horizontal = static_cast<std::string>(child->getAttribute("orientation")) == "horizontal";
+
+                      for (auto &childSeries : child->children())
+                        {
+                          auto groups = childSeries->children(); // innerFillGroup and outerFillGroup
+                          std::shared_ptr<GR::Element> innerFillGroup;
+                          if (groups.size() == 2)
+                            {
+                              innerFillGroup = groups[0];
+                            }
+                          else
+                            {
+                              // no fillGroups?
+                              break;
+                            }
+
+                          int fillColorInd = static_cast<int>(innerFillGroup->getAttribute("fillcolorind"));
+                          if (xind != -1)
+                            {
+                              innerFillGroup->children()[xind]->removeAttribute("fillcolorind");
+                            }
+                          if (yind != -1)
+                            {
+                              innerFillGroup->children()[yind]->removeAttribute("fillcolorind");
+                            }
+                        }
+                    }
+                }
             }
 
           if (grm_args_values(input_args, "angle_delta", "d", &angle_delta))
