@@ -15,6 +15,14 @@
 #include "gr.h"
 
 
+/* ========================= macros ================================================================================= */
+
+/* ------------------------- math ----------------------------------------------------------------------------------- */
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 /* ######################### public implementation ################################################################## */
 
 /* ========================= methods ================================================================================ */
@@ -322,6 +330,8 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   char *kind, **labels;
   grm_args_t *subplot_args, **current_series;
   unsigned int x_length, y_length, z_length, series_i = 0, i;
+  char *orientation;
+  int is_vertical = 0;
 
   get_figure_size(NULL, &width, &height, NULL, NULL);
   max_width_height = grm_max(width, height);
@@ -332,8 +342,11 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   if (subplot_args != NULL)
     {
       grm_args_values(subplot_args, "kind", "s", &kind);
+      if (grm_args_values(subplot_args, "orientation", "s", &orientation))
+        is_vertical = strcmp(orientation, "vertical") == 0;
     }
-  if (subplot_args == NULL || !str_equals_any(kind, 6, "line", "scatter", "stem", "step", "heatmap", "marginalheatmap"))
+  if (subplot_args == NULL || !str_equals_any(kind, 13, "line", "scatter", "stem", "step", "heatmap", "marginalheatmap",
+                                              "contour", "imshow", "contourf", "pie", "hexbin", "shade", "quiver"))
     {
       info->x_px = -1;
       info->y_px = -1;
@@ -373,11 +386,75 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   x_range_max = (x_max < x_range_max) ? x_max : x_range_max;
   y_range_max = (y_max < y_range_max) ? y_max : y_range_max;
   grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels);
-  while (*current_series != NULL)
+
+  if (strcmp(kind, "pie") == 0)
     {
+      static char output[50];
+      double max_x = 0.95, min_x = 0.05, max_y = 0.05, min_y = 0.95;
+      int center_x, center_y;
+      double radius;
+      double *normalized_x = NULL;
+      double start_angle, end_angle, act_angle;
+
+      gr_wctondc(&max_x, &max_y);
+      max_x = max_x * max_width_height;
+      max_y = height - max_y * max_width_height;
+      gr_wctondc(&min_x, &min_y);
+      min_x = min_x * max_width_height;
+      min_y = height - min_y * max_width_height;
+
+      /* calculate the circle */
+      radius = (max_x - min_x) / 2.0;
+      center_x = (int)(max_x - radius);
+      center_y = (int)(max_y - radius);
+
       grm_args_first_value(*current_series, "x", "D", &x_series, &x_length);
-      grm_args_first_value(*current_series, "y", "D", &y_series, &y_length);
-      if (str_equals_any(kind, 2, "heatmap", "marginalheatmap"))
+      normalized_x = normalize(x_length, x_series);
+      start_angle = 90.0;
+      for (i = 0; i < x_length; ++i)
+        {
+          end_angle = start_angle - normalized_x[i] * 360.0;
+          act_angle =
+              acos((mouse_x - center_x) / sqrt(pow(abs(mouse_x - center_x), 2) + pow(abs(mouse_y - center_y), 2)));
+          act_angle = (mouse_y - center_y > 0) ? act_angle * 180 / M_PI : 360 - act_angle * 180 / M_PI;
+          if (act_angle >= 270 && act_angle <= 360) act_angle = act_angle - 360;
+          act_angle *= -1;
+          if (start_angle >= act_angle && end_angle <= act_angle)
+            {
+              snprintf(output, 50, "%f", x_series[i]);
+            }
+          start_angle = end_angle;
+        }
+
+      if (sqrt(pow(abs(mouse_x - center_x), 2) + pow(abs(mouse_y - center_y), 2)) <= radius)
+        {
+          mindiff = 0;
+          info->x = 0;
+          info->y = 0;
+          info->x_px = mouse_x;
+          info->y_px = mouse_y;
+          info->label = output;
+          return info;
+        }
+      else
+        {
+          mindiff = DBL_MAX;
+        }
+    }
+
+  while (*current_series != NULL && strcmp(kind, "pie") != 0)
+    {
+      if (is_vertical)
+        {
+          grm_args_first_value(*current_series, "x", "D", &y_series, &y_length);
+          grm_args_first_value(*current_series, "y", "D", &x_series, &x_length);
+        }
+      else
+        {
+          grm_args_first_value(*current_series, "x", "D", &x_series, &x_length);
+          grm_args_first_value(*current_series, "y", "D", &y_series, &y_length);
+        }
+      if (str_equals_any(kind, 5, "heatmap", "marginalheatmap", "contour", "imshow", "contourf"))
         {
           grm_args_first_value(*current_series, "z", "D", &z_series, &z_length);
         }
@@ -385,7 +462,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
         {
           if ((x_series[i] < x_range_min || x_series[i] > x_range_max || y_series[i] < y_range_min ||
                y_series[i] > y_range_max) &&
-              !str_equals_any(kind, 2, "heatmap", "marginalheatmap"))
+              !str_equals_any(kind, 6, "heatmap", "marginalheatmap", "contour", "imshow", "contourf", "quiver"))
             {
               continue;
             }
@@ -411,13 +488,17 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                   info->label = "";
                 }
             }
-          else if (str_equals_any(kind, 2, "heatmap", "marginalheatmap"))
+          else if (str_equals_any(kind, 6, "heatmap", "marginalheatmap", "contour", "imshow", "contourf", "quiver"))
             {
               static char output[50];
               double num;
               double x_0 = x_series[0], x_end = x_series[x_length - 1], y_0 = y_series[0],
                      y_end = y_series[y_length - 1];
               double x_step, y_step, x_series_idx, y_series_idx;
+              unsigned int u_length, v_length;
+              double *u_series, *v_series;
+
+              if (strcmp(kind, "imshow") == 0) x_0 = x_min, x_end = x_max, y_0 = y_min, y_end = y_max;
 
               gr_wctondc(&x_0, &y_0);
               gr_wctondc(&x_end, &y_end);
@@ -428,6 +509,11 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
 
               x_step = (x_end - x_0) / x_length;
               y_step = (y_end - y_0) / y_length;
+              if (strcmp(kind, "quiver") == 0)
+                {
+                  grm_args_first_value(*current_series, "u", "D", &u_series, &u_length);
+                  grm_args_first_value(*current_series, "v", "D", &v_series, &v_length);
+                }
 
               mindiff = 0;
               x_series_idx = (mouse_x - x_0) / x_step;
@@ -437,14 +523,31 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                   mindiff = DBL_MAX;
                   break;
                 }
-              info->x = x_series[(int)x_series_idx];
-              info->y = y_series[(int)y_series_idx];
+              if (strcmp(kind, "quiver") == 0)
+                {
+                  info->xlabel = "u";
+                  info->ylabel = "v";
+                  info->x = u_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
+                  info->y = v_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
+                }
+              else
+                {
+                  info->x = x_series[(int)x_series_idx];
+                  info->y = y_series[(int)y_series_idx];
+                }
               info->x_px = mouse_x;
               info->y_px = mouse_y;
 
-              num = z_series[((y_length - 1) - (int)y_series_idx) * x_length + (int)x_series_idx];
-              snprintf(output, 50, "%f", num);
-              info->label = output;
+              if (strcmp(kind, "quiver") == 0)
+                {
+                  info->label = "";
+                }
+              else
+                {
+                  num = z_series[(int)y_series_idx * x_length + (int)x_series_idx];
+                  snprintf(output, 50, "%f", num);
+                  info->label = output;
+                }
             }
         }
       ++series_i;
