@@ -44,6 +44,17 @@ private slots:
   void contour();
   void imshow();
   void plot3();
+  void contourf();
+  void trisurf();
+  void tricont();
+  void scatter3();
+  void scatter();
+  void hist();
+  void barplot();
+  void step();
+  void stem();
+  void shade();
+  void hexbin();
 
 private:
   struct MouseState
@@ -81,6 +92,17 @@ private:
   QAction *contourAct;
   QAction *imshowAct;
   QAction *plot3Act;
+  QAction *contourfAct;
+  QAction *trisurfAct;
+  QAction *tricontAct;
+  QAction *scatter3Act;
+  QAction *scatterAct;
+  QAction *histAct;
+  QAction *barplotAct;
+  QAction *stepAct;
+  QAction *stemAct;
+  QAction *shadeAct;
+  QAction *hexbinAct;
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

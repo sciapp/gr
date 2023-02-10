@@ -764,6 +764,20 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
   else if (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC)
     {
       double camera_pos[3], up[3], focus_point[3];
+      double x_axis_scale, y_axis_scale, z_axis_scale;
+
+      gr_inqscalefactors3d(&x_axis_scale, &y_axis_scale, &z_axis_scale);
+      grscales[0] = (float)x_axis_scale;
+      grscales[1] = (float)y_axis_scale;
+      grscales[2] = (float)z_axis_scale;
+      if (clsw == GKS_K_CLIP)
+        {
+          /* axis scales should only affect the viewmatrix cause of that the clipping ranges gets multiplied with the
+           * axis scales */
+          gr3_setclipping(xmin * x_axis_scale, xmax * x_axis_scale, ymin * y_axis_scale, ymax * y_axis_scale,
+                          zmin * z_axis_scale, zmax * z_axis_scale);
+        }
+
       memset(grviewmatrix, 0, 16 * sizeof(GLfloat));
       gr_inqtransformationparameters(&camera_pos[0], &camera_pos[1], &camera_pos[2], &up[0], &up[1], &up[2],
                                      &focus_point[0], &focus_point[1], &focus_point[2]);
@@ -779,16 +793,8 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
     {
       for (j = 0; j < 3; j++)
         {
-          if (projection_type == GR_PROJECTION_ORTHOGRAPHIC || projection_type == GR_PROJECTION_PERSPECTIVE)
-            {
-              modelscales[i * 3 + j] = scales[i * 3 + j];
-              modelpos[i * 3 + j] = positions[i * 3 + j];
-            }
-          else
-            {
-              modelscales[i * 3 + j] = scales[i * 3 + j] * grscales[j];
-              modelpos[i * 3 + j] = positions[i * 3 + j] * grscales[j];
-            }
+          modelscales[i * 3 + j] = scales[i * 3 + j] * grscales[j];
+          modelpos[i * 3 + j] = positions[i * 3 + j] * grscales[j];
         }
     }
   gr3_drawmesh(mesh, n, modelpos, directions, ups, colors, modelscales);
@@ -808,12 +814,9 @@ static void gr3_drawsurface_custom_colors(int mesh, const float *colors)
 
   if (projection_type == GR_PROJECTION_ORTHOGRAPHIC || projection_type == GR_PROJECTION_PERSPECTIVE)
     {
-      double x_axis_scale, y_axis_scale, z_axis_scale;
-      gr_inqscalefactors3d(&x_axis_scale, &y_axis_scale, &z_axis_scale);
-
-      scales[0] = (float)x_axis_scale;
-      scales[1] = (float)y_axis_scale;
-      scales[2] = (float)z_axis_scale;
+      scales[0] = 1.0f;
+      scales[1] = 1.0f;
+      scales[2] = 1.0f;
       positions[0] = 0.0f;
       positions[1] = 0.0f;
       positions[2] = 0.0f;
