@@ -770,7 +770,7 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
       grscales[0] = (float)x_axis_scale;
       grscales[1] = (float)y_axis_scale;
       grscales[2] = (float)z_axis_scale;
-      if (clsw == GKS_K_CLIP)
+      if (clsw == GKS_K_CLIP && context_struct_.use_software_renderer)
         {
           /* axis scales should only affect the viewmatrix cause of that the clipping ranges gets multiplied with the
            * axis scales */
