@@ -33,7 +33,6 @@ set(EXECUTABLE_SOURCES
     surface.c
     volume.c
     marginalheatmap.c
-    snoop/snoop.c
 )
 
 foreach(executable_source ${EXECUTABLE_SOURCES})
@@ -54,3 +53,5 @@ foreach(executable_source ${EXECUTABLE_SOURCES})
                CXX_EXTENSIONS OFF
   )
 endforeach()
+
+add_subdirectory(snoop grm_test_snoop)

@@ -89,12 +89,14 @@ ubuntu-cmake-self-contained:
     - make install
     - cd ..
     - mv install artifacts-ubuntu2004-cmake
-    - mv build/grm_test_public_api/grm_test_public_api_snoop ./grm_snoop
+    - mv build/grm_test_public_api/grm_test_snoop/snoop ./grm_snoop
+    - mv build/grm_test_public_api/grm_test_snoop/libc_rand.so ./
   artifacts:
     expire_in: 1 week
     paths:
       - artifacts-ubuntu2004-cmake/
       - grm_snoop
+      - libc_rand.so
 
 ubuntu-cmake-self-contained-test:
   stage: test
@@ -184,6 +186,7 @@ ubuntu-cmake-self-contained-test-snoop:
   script:
   - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
   - export LD_LIBRARY_PATH=`pwd`/artifacts-ubuntu2004-cmake/lib
+  - export LIBC_RAND_DIRPATH=`pwd`
   - export GRM_SNOOP_EXECUTABLE_PATH=`pwd`/grm_snoop
   - lib/grm/test/public_api/grm/snoop/compare_grm_julia.sh || {
       mv lib/grm/test/public_api/grm/snoop/diff_images ./;

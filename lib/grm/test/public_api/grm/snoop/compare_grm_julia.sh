@@ -8,7 +8,10 @@ DIFF_IMAGE_DIR_NAME="diff_images"
 export GKS_WSTYPE="png"
 GR_BUILD_DIR="$(git rev-parse --show-toplevel)/build"  # Assume a CMake build with `-DGR_BUILD_DEMOS=ON`
 if [[ -z "${GRM_SNOOP_EXECUTABLE_PATH}" ]]; then
-    GRM_SNOOP_EXECUTABLE_PATH="${GR_BUILD_DIR}/grm_test_public_api/grm_test_public_api_snoop"
+    GRM_SNOOP_EXECUTABLE_PATH="${GR_BUILD_DIR}/grm_test_public_api/grm_test_snoop/snoop"
+fi
+if [[ -z "${LIBC_RAND_DIRPATH}" ]]; then
+    export LIBC_RAND_DIRPATH="${GR_BUILD_DIR}/grm_test_public_api/grm_test_snoop"
 fi
 
 
@@ -24,9 +27,10 @@ check () {
 
 prepare () {
     cd "${SCRIPT_DIR}" && \
-    rm -rf "${DIFF_IMAGE_DIR_NAME}"
+    rm -rf "${DIFF_IMAGE_DIR_NAME}" || return
     if [[ ! -e "snoop.jl" ]]; then
-      curl -fLO "https://raw.githubusercontent.com/jheinen/GR.jl/${GR_JL_COMMIT_HASH}/examples/snoop.jl"
+        curl -fLO "https://raw.githubusercontent.com/jheinen/GR.jl/${GR_JL_COMMIT_HASH}/examples/snoop.jl" && \
+        patch -N -i "snoop.jl.patch" || return
     fi
 }
 
