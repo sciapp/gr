@@ -30,6 +30,7 @@ set(EXECUTABLE_SOURCES
     sender.c
     size.c
     subplots.c
+    surface.c
     volume.c
     marginalheatmap.c
 )
