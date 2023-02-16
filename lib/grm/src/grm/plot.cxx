@@ -1699,7 +1699,7 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                           current_min_component = 0.0;
                           current_max_component = y_length - 1;
                         }
-                      else if (str_equals_any(kind, 2, "heatmap", "marginalheatmap") &&
+                      else if (str_equals_any(kind, 3, "heatmap", "marginalheatmap", "surface") &&
                                str_equals_any(*current_component_name, 2, "x", "y"))
                         {
                           /* in this case `x` or `y` (or both) are missing
@@ -1720,7 +1720,7 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                             }
                           else
                             {
-                              /* A heatmap without `x` and `y` values
+                              /* A heatmap/surface without `x` and `y` values
                                * -> dimensions can only be read from `z_dims` */
                               int rows, cols;
                               cleanup_and_set_error_if(!grm_args_values(*current_series, "z_dims", "ii", &rows, &cols),
@@ -4215,31 +4215,76 @@ cleanup:
 err_t plot_surface(grm_args_t *subplot_args)
 {
   double *gridit_x = nullptr, *gridit_y = nullptr, *gridit_z = nullptr;
+  double **value_array_ptrs[2] = {nullptr, nullptr};
+  int allocated_array[2] = {0, 0};
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
-      double *x, *y, *z;
+      double *x = nullptr, *y = nullptr, *z = nullptr;
       unsigned int x_length, y_length, z_length;
+      const char *range_keys[] = {"xrange", "yrange"};
+
+      value_array_ptrs[0] = &x;
+      value_array_ptrs[1] = &y;
+      allocated_array[0] = allocated_array[1] = 0;
+
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
+      cleanup_and_set_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length),
+                               ERROR_PLOT_MISSING_DATA);
+
+      if (x == nullptr && y == nullptr)
+        {
+          /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
+          cleanup_and_set_error_if(!grm_args_values(*current_series, "z_dims", "ii", &y_length, &x_length),
+                                   ERROR_PLOT_MISSING_DIMENSIONS);
+        }
+      else if (x == nullptr)
+        {
+          x_length = z_length / y_length;
+        }
+      else if (y == nullptr)
+        {
+          y_length = z_length / x_length;
+        }
+
+      unsigned int lengths[] = {x_length, y_length};
+      for (int i = 0; i < array_size(value_array_ptrs); ++i)
+        {
+          if (*value_array_ptrs[i] == nullptr)
+            {
+              double value_min, value_max;
+              if (!grm_args_values(*current_series, range_keys[i], "dd", &value_min, &value_max))
+                {
+                  value_min = 0.0;
+                  value_max = lengths[i] - 1;
+                }
+              *value_array_ptrs[i] = static_cast<double *>(malloc(lengths[i] * sizeof(double)));
+              cleanup_and_set_error_if(*value_array_ptrs[i] == nullptr, ERROR_MALLOC);
+              allocated_array[i] = 1;
+              for (int j = 0; j < lengths[i]; ++j)
+                {
+                  (*value_array_ptrs[i])[j] = value_min + (value_max - value_min) / lengths[i] * j;
+                }
+            }
+        }
       /* TODO: add support for GR3 */
       if (x_length == y_length && x_length == z_length)
         {
+          logger((stderr, "Create a %d x %d grid for \"surface\" with \"gridit\"\n", PLOT_SURFACE_GRIDIT_N,
+                  PLOT_CONTOUR_GRIDIT_N));
           if (gridit_x == nullptr)
             {
               gridit_x = static_cast<double *>(malloc(PLOT_SURFACE_GRIDIT_N * sizeof(double)));
+              cleanup_and_set_error_if(gridit_x == nullptr, ERROR_MALLOC);
               gridit_y = static_cast<double *>(malloc(PLOT_SURFACE_GRIDIT_N * sizeof(double)));
+              cleanup_and_set_error_if(gridit_y == nullptr, ERROR_MALLOC);
               gridit_z = static_cast<double *>(malloc(PLOT_SURFACE_GRIDIT_N * PLOT_SURFACE_GRIDIT_N * sizeof(double)));
-              if (gridit_x == nullptr || gridit_y == nullptr || gridit_z == nullptr)
-                {
-                  debug_print_malloc_error();
-                  error = ERROR_MALLOC;
-                  goto cleanup;
-                }
+              cleanup_and_set_error_if(gridit_z == nullptr, ERROR_MALLOC);
             }
           gr_gridit(x_length, x, y, z, PLOT_SURFACE_GRIDIT_N, PLOT_SURFACE_GRIDIT_N, gridit_x, gridit_y, gridit_z);
           gr_surface(PLOT_SURFACE_GRIDIT_N, PLOT_SURFACE_GRIDIT_N, gridit_x, gridit_y, gridit_z,
@@ -4247,12 +4292,17 @@ err_t plot_surface(grm_args_t *subplot_args)
         }
       else
         {
-          if (x_length * y_length != z_length)
-            {
-              error = ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
-              goto cleanup;
-            }
+          logger((stderr, "x_length; %u, y_length: %u, z_length: %u\n", x_length, y_length, z_length));
+          cleanup_and_set_error_if(x_length * y_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
           gr_surface(x_length, y_length, x, y, z, GR_OPTION_COLORED_MESH);
+        }
+      for (int i = 0; i < array_size(value_array_ptrs); ++i)
+        {
+          if (allocated_array[i])
+            {
+              free(*value_array_ptrs[i]);
+              allocated_array[i] = 0;
+            }
         }
       ++current_series;
     }
@@ -4260,6 +4310,13 @@ err_t plot_surface(grm_args_t *subplot_args)
   plot_draw_colorbar(subplot_args, 0.05, 256);
 
 cleanup:
+  for (int i = 0; i < array_size(value_array_ptrs); ++i)
+    {
+      if (allocated_array[i])
+        {
+          free(*value_array_ptrs[i]);
+        }
+    }
   free(gridit_x);
   free(gridit_y);
   free(gridit_z);
