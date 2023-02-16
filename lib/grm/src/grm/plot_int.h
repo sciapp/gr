@@ -90,6 +90,7 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_DEFAULT_HEXBIN_NBINS 40
 #define PLOT_DEFAULT_TRICONT_LEVELS 20
 #define PLOT_DEFAULT_VOLUME_ALGORITHM GR_VOLUME_EMISSION
+#define PLOT_DEFAULT_ORIENTATION "horizontal"
 #define SERIES_DEFAULT_SPEC ""
 #define PLOT_POLAR_AXES_TEXT_BUFFER 40
 #define PLOT_CONTOUR_GRIDIT_N 200
@@ -195,6 +196,7 @@ err_t plot_contour(grm_args_t *subplot_args);
 err_t plot_contourf(grm_args_t *subplot_args);
 err_t plot_hexbin(grm_args_t *subplot_args);
 err_t plot_heatmap(grm_args_t *subplot_args);
+err_t plot_marginalheatmap(grm_args_t *subplot_args);
 err_t plot_wireframe(grm_args_t *subplot_args);
 err_t plot_surface(grm_args_t *subplot_args);
 err_t plot_plot3(grm_args_t *subplot_args);

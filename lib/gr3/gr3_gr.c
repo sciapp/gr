@@ -19,6 +19,10 @@ extern float __cdecl sqrtf(float);
 #define M_PI 3.14159265358979323846
 #endif
 
+#ifndef NAN
+#define NAN (0.0 / 0.0)
+#endif
+
 #ifndef max
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #endif
@@ -392,6 +396,18 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               v[0] = px[i];
               zvalue = pz[k];
               v[1] = py[j];
+              if (scale & OPTION_FLIP_X)
+                {
+                  v[0] = -v[0] + xmin + xmax;
+                }
+              if (scale & OPTION_FLIP_Y)
+                {
+                  v[1] = -v[1] + ymin + ymax;
+                }
+              if (scale & OPTION_FLIP_Z)
+                {
+                  zvalue = -zvalue + zmin + zmax;
+                }
             }
           else
             {
@@ -670,13 +686,27 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
 GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const float *directions, const float *ups,
                                 const float *colors, const float *scales)
 {
-  double zmin, zmax;
+  double xmin, xmax, ymin, ymax, zmin, zmax;
   int rotation, tilt;
   float grmatrix[16], grviewmatrix[16];
   float grscales[4];
   float *modelscales, *modelpos;
   int i, j;
   int projection_type;
+  int errind;
+  double clrt[4];
+  int clsw = 0;
+
+  gks_inq_clip(&errind, &clsw, clrt);
+  if (clsw == GKS_K_CLIP)
+    {
+      gr_inqwindow3d(&xmin, &xmax, &ymin, &ymax, &zmin, &zmax);
+      gr3_setclipping(xmin, xmax, ymin, ymax, zmin, zmax);
+    }
+  else
+    {
+      gr3_setclipping(NAN, NAN, NAN, NAN, NAN, NAN);
+    }
   gr_inqprojectiontype(&projection_type);
   if (projection_type == GR_PROJECTION_DEFAULT)
     {
@@ -734,6 +764,20 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
   else if (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC)
     {
       double camera_pos[3], up[3], focus_point[3];
+      double x_axis_scale, y_axis_scale, z_axis_scale;
+
+      gr_inqscalefactors3d(&x_axis_scale, &y_axis_scale, &z_axis_scale);
+      grscales[0] = (float)x_axis_scale;
+      grscales[1] = (float)y_axis_scale;
+      grscales[2] = (float)z_axis_scale;
+      if (clsw == GKS_K_CLIP)
+        {
+          /* axis scales should only affect the viewmatrix cause of that the clipping ranges gets multiplied with the
+           * axis scales */
+          gr3_setclipping(xmin * x_axis_scale, xmax * x_axis_scale, ymin * y_axis_scale, ymax * y_axis_scale,
+                          zmin * z_axis_scale, zmax * z_axis_scale);
+        }
+
       memset(grviewmatrix, 0, 16 * sizeof(GLfloat));
       gr_inqtransformationparameters(&camera_pos[0], &camera_pos[1], &camera_pos[2], &up[0], &up[1], &up[2],
                                      &focus_point[0], &focus_point[1], &focus_point[2]);
@@ -749,16 +793,8 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
     {
       for (j = 0; j < 3; j++)
         {
-          if (projection_type == GR_PROJECTION_ORTHOGRAPHIC || projection_type == GR_PROJECTION_PERSPECTIVE)
-            {
-              modelscales[i * 3 + j] = scales[i * 3 + j];
-              modelpos[i * 3 + j] = positions[i * 3 + j];
-            }
-          else
-            {
-              modelscales[i * 3 + j] = scales[i * 3 + j] * grscales[j];
-              modelpos[i * 3 + j] = positions[i * 3 + j] * grscales[j];
-            }
+          modelscales[i * 3 + j] = scales[i * 3 + j] * grscales[j];
+          modelpos[i * 3 + j] = positions[i * 3 + j] * grscales[j];
         }
     }
   gr3_drawmesh(mesh, n, modelpos, directions, ups, colors, modelscales);
@@ -766,29 +802,21 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
   free(modelscales);
 }
 
-/*!
- * Convenience function for drawing a surfacemesh
- * \param [in] mesh the mesh to be drawn
- */
-GR3API void gr3_drawsurface(int mesh)
+static void gr3_drawsurface_custom_colors(int mesh, const float *colors)
 {
   int projection_type;
   float directions[3] = {0.0f, 0.0f, 1.0f};
   float ups[3] = {0.0f, 1.0f, 0.0f};
   float positions[3] = {-1.0f, -1.0f, -1.0f};
-  float colors[3] = {1.0f, 1.0f, 1.0f};
   float scales[3] = {2.0f, 2.0f, 2.0f};
 
   gr_inqprojectiontype(&projection_type);
 
   if (projection_type == GR_PROJECTION_ORTHOGRAPHIC || projection_type == GR_PROJECTION_PERSPECTIVE)
     {
-      double x_axis_scale, y_axis_scale, z_axis_scale;
-      gr_inqscalefactors3d(&x_axis_scale, &y_axis_scale, &z_axis_scale);
-
-      scales[0] = (float)x_axis_scale;
-      scales[1] = (float)y_axis_scale;
-      scales[2] = (float)z_axis_scale;
+      scales[0] = 1.0f;
+      scales[1] = 1.0f;
+      scales[2] = 1.0f;
       positions[0] = 0.0f;
       positions[1] = 0.0f;
       positions[2] = 0.0f;
@@ -800,6 +828,188 @@ GR3API void gr3_drawsurface(int mesh)
   if (gr3_geterror(0, NULL, NULL)) return;
   gr3_drawmesh_grlike(mesh, 1, positions, directions, ups, colors, scales);
   if (gr3_geterror(0, NULL, NULL)) return;
+}
+
+/*!
+ * Convenience function for drawing a surfacemesh
+ * \param [in] mesh the mesh to be drawn
+ */
+GR3API void gr3_drawsurface(int mesh)
+{
+  float colors[3] = {1.0f, 1.0f, 1.0f};
+  gr3_drawsurface_custom_colors(mesh, colors);
+}
+
+static void gr3_drawimage_grlike()
+{
+  int width, height;
+  double device_pixel_ratio;
+  double vpxmin, vpxmax, vpymin, vpymax;
+  double aspect;
+  int projection_type;
+  double xmin, xmax, ymin, ymax;
+  int scale;
+
+  gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
+  gr_inqscale(&scale);
+
+  if (scale & OPTION_FLIP_X)
+    {
+      double tmp = xmin;
+      xmin = xmax;
+      xmax = tmp;
+    }
+  if (scale & OPTION_FLIP_Y)
+    {
+      double tmp = ymin;
+      ymin = ymax;
+      ymax = tmp;
+    }
+  gr_inqvpsize(&width, &height, &device_pixel_ratio);
+  width *= device_pixel_ratio;
+  height *= device_pixel_ratio;
+  gr_inqviewport(&vpxmin, &vpxmax, &vpymin, &vpymax);
+  aspect = fabs((vpxmax - vpxmin) / (vpymax - vpymin));
+  if (context_struct_.use_default_light_parameters)
+    {
+      gr3_setlightparameters(0.8, 0.2, 0.1, 10.0);
+      context_struct_.use_default_light_parameters = 1;
+    }
+  gr_inqprojectiontype(&projection_type);
+  if (projection_type == GR_PROJECTION_DEFAULT)
+    {
+      /* projection type does not consider the viewport aspect ratio */
+      aspect = 1;
+      context_struct_.aspect_override = 1;
+    }
+  if (aspect > 1)
+    {
+      gr3_drawimage((float)xmin, (float)xmax, (float)ymin, (float)ymax, width, height, GR3_DRAWABLE_GKS);
+    }
+  else
+    {
+      double fovy = context_struct_.vertical_field_of_view;
+      context_struct_.vertical_field_of_view =
+          (float)(atan(tan(context_struct_.vertical_field_of_view / 360 * M_PI) / aspect) / M_PI * 360);
+      gr3_drawimage((float)xmin, (float)xmax, (float)ymin, (float)ymax, width, height, GR3_DRAWABLE_GKS);
+      context_struct_.vertical_field_of_view = (float)fovy;
+    }
+  context_struct_.aspect_override = 0;
+  if (context_struct_.use_default_light_parameters)
+    {
+      gr3_setdefaultlightparameters();
+    }
+  if (gr3_geterror(0, NULL, NULL)) return;
+}
+
+/*!
+ * Create an isosurface plot and draw it with GKS
+ * \param [in]  nx          number of voxels in x-direction
+ * \param [in]  ny          number of voxels in y-direction
+ * \param [in]  nz          number of voxels in z-direction
+ * \param [in]  data        an array containing the voxel data
+ * \param [in]  isosurface  an array containing the y-coordinates
+ * \param [in]  color       an array containting the RGB values, or NULL to
+ *                          use the default color
+ * \param [in]  strides     an array containting the 3 axis strides, or NULL
+ *                          to use strides for x-y-z axis order
+ */
+GR3API void gr3_isosurface(int nx, int ny, int nz, const float *data, float isovalue, const float *color,
+                           const int *strides)
+{
+  const float DEFAULT_COLOR[3] = {0.0f, 0.5f, 0.8f};
+  int mesh;
+  int ix, iy, iz;
+  int stride_x, stride_y, stride_z;
+  const unsigned short MAX_UINT16 = 65535;
+  unsigned short uint16_isolevel;
+  float min_value = data[0];
+  float max_value = data[0];
+  unsigned short *uint16_data = malloc(sizeof(unsigned short) * nx * ny * nz);
+  assert(uint16_data);
+
+  if (strides)
+    {
+      stride_x = strides[0];
+      stride_y = strides[1];
+      stride_z = strides[2];
+    }
+  else
+    {
+      stride_x = nz * ny;
+      stride_y = nz;
+      stride_z = 1;
+    }
+
+  for (ix = 0; ix < nx; ix += 1)
+    {
+      for (iy = 0; iy < nx; iy += 1)
+        {
+          for (iz = 0; iz < nx; iz += 1)
+            {
+              int index = stride_x * ix + stride_y * iy + stride_z * iz;
+              float value = data[index];
+              if (value < min_value)
+                {
+                  min_value = value;
+                }
+              if (value > max_value)
+                {
+                  max_value = value;
+                }
+            }
+        }
+    }
+
+  for (ix = 0; ix < nx; ix += 1)
+    {
+      for (iy = 0; iy < nx; iy += 1)
+        {
+          for (iz = 0; iz < nx; iz += 1)
+            {
+              int index = stride_x * ix + stride_y * iy + stride_z * iz;
+              float value = data[index];
+              value = (value - min_value) / (max_value - min_value);
+              if (value > 1)
+                {
+                  value = 1;
+                }
+              if (value < 0)
+                {
+                  value = 0;
+                }
+              uint16_data[index] = (unsigned short)(value * MAX_UINT16 + 0.5);
+            }
+        }
+    }
+
+  isovalue = (isovalue - min_value) / (max_value - min_value);
+  if (isovalue > 1)
+    {
+      isovalue = 1;
+    }
+  if (isovalue < 0)
+    {
+      isovalue = 0;
+    }
+  uint16_isolevel = (unsigned short)(isovalue * MAX_UINT16 + 0.5);
+
+  /* fall back to default color if color is NULL */
+  if (!color)
+    {
+      color = &DEFAULT_COLOR[0];
+    }
+
+  gr3_createisosurfacemesh(&mesh, uint16_data, uint16_isolevel, nx, ny, nz, stride_x, stride_y, stride_z,
+                           2.0 / (nx - 1.0), 2.0 / (ny - 1.0), 2 / (nz - 1.0), -1.0, -1.0, -1.0);
+  free(uint16_data);
+  if (gr3_geterror(0, NULL, NULL)) return;
+  gr3_drawsurface_custom_colors(mesh, color);
+  if (gr3_geterror(0, NULL, NULL)) return;
+  gr3_deletemesh(mesh);
+  if (gr3_geterror(0, NULL, NULL)) return;
+
+  gr3_drawimage_grlike();
 }
 
 /*!
@@ -818,13 +1028,6 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
       (context_struct_.use_software_renderer && option <= OPTION_FILLED_MESH))
     {
       int mesh;
-      int width, height;
-      double device_pixel_ratio;
-      double vpxmin, vpxmax, vpymin, vpymax;
-      double aspect;
-      int projection_type;
-      double xmin, xmax, ymin, ymax;
-      int scale;
       int surfaceoption;
       int previous_option = context_struct_.option;
       context_struct_.option = option;
@@ -854,57 +1057,8 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
       if (gr3_geterror(0, NULL, NULL)) return;
       gr3_deletemesh(mesh);
       if (gr3_geterror(0, NULL, NULL)) return;
-      gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
-      gr_inqscale(&scale);
-
-      if (scale & OPTION_FLIP_X)
-        {
-          double tmp = xmin;
-          xmin = xmax;
-          xmax = tmp;
-        }
-      if (scale & OPTION_FLIP_Y)
-        {
-          double tmp = ymin;
-          ymin = ymax;
-          ymax = tmp;
-        }
-      gr_inqvpsize(&width, &height, &device_pixel_ratio);
-      width *= device_pixel_ratio;
-      height *= device_pixel_ratio;
-      gr_inqviewport(&vpxmin, &vpxmax, &vpymin, &vpymax);
-      aspect = fabs((vpxmax - vpxmin) / (vpymax - vpymin));
-      if (context_struct_.use_default_light_parameters)
-        {
-          gr3_setlightparameters(0.8, 0.2, 0.1, 10.0);
-          context_struct_.use_default_light_parameters = 1;
-        }
-      gr_inqprojectiontype(&projection_type);
-      if (projection_type == GR_PROJECTION_DEFAULT)
-        {
-          /* projection type does not consider the viewport aspect ratio */
-          aspect = 1;
-          context_struct_.aspect_override = 1;
-        }
-      if (aspect > 1)
-        {
-          gr3_drawimage((float)xmin, (float)xmax, (float)ymin, (float)ymax, width, height, GR3_DRAWABLE_GKS);
-        }
-      else
-        {
-          double fovy = context_struct_.vertical_field_of_view;
-          context_struct_.vertical_field_of_view =
-              (float)(atan(tan(context_struct_.vertical_field_of_view / 360 * M_PI) / aspect) / M_PI * 360);
-          gr3_drawimage((float)xmin, (float)xmax, (float)ymin, (float)ymax, width, height, GR3_DRAWABLE_GKS);
-          context_struct_.vertical_field_of_view = (float)fovy;
-        }
+      gr3_drawimage_grlike();
       context_struct_.option = previous_option;
-      context_struct_.aspect_override = 0;
-      if (context_struct_.use_default_light_parameters)
-        {
-          gr3_setdefaultlightparameters();
-        }
-      if (gr3_geterror(0, NULL, NULL)) return;
     }
   else
     {
@@ -1058,7 +1212,7 @@ GR3API int gr3_createsurface3dmesh(int *mesh, int ncols, int nrows, float *px, f
               colors[offset + k * 3 + 2] = blue;
             }
           {
-            float normal[3];
+            float normal[3] = {0, 0, 0};
             int corner_indices[4][3] = {{0, 1, 2}, {2, 0, 5}, {1, 5, 0}, {5, 2, 1}};
             for (k = 0; k < 4; k++)
               {

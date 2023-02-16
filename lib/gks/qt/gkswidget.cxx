@@ -74,7 +74,8 @@ static void resize_pixmap(int width, int height)
 GKSWidget::GKSWidget(QWidget *parent)
     : QWidget(parent), is_mapped(false), resize_requested_by_application(false), dl(NULL)
 {
-  gkss->fontfile = gks_open_font();
+  widget_state_list = new ws_state_list;
+  p = widget_state_list;
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
   p->device_pixel_ratio = this->devicePixelRatioF();
@@ -109,6 +110,7 @@ GKSWidget::GKSWidget(QWidget *parent)
 
 GKSWidget::~GKSWidget()
 {
+  delete widget_state_list;
   delete[] dl;
 }
 
@@ -124,14 +126,33 @@ void GKSWidget::paintEvent(QPaintEvent *)
   if (dl)
     {
       QPainter painter(this);
+      p = widget_state_list;
       p->pm->fill(Qt::white);
       interp(dl);
       painter.drawPixmap(0, 0, *(p->pm));
+      if (p->memory_plugin_wstype)
+        {
+          QString renderer_string("");
+          if (p->memory_plugin_wstype == 143)
+            {
+              renderer_string = "cairo";
+            }
+          else if (p->memory_plugin_wstype == 173)
+            {
+              renderer_string = "agg";
+            }
+          if (this->renderer_string != renderer_string)
+            {
+              this->renderer_string = renderer_string;
+              emit(rendererChanged(renderer_string));
+            }
+        }
     }
 }
 
 void GKSWidget::resizeEvent(QResizeEvent *event)
 {
+  p = widget_state_list;
   p->mwidth = (double)width() / p->device_dpi_x * 0.0254;
   p->mheight = (double)height() / p->device_dpi_y * 0.0254;
   p->nominal_size = min(width(), height()) / 500.0;
@@ -146,6 +167,7 @@ void GKSWidget::resizeEvent(QResizeEvent *event)
 
 void GKSWidget::set_window_size_from_dl()
 {
+  p = widget_state_list;
   int sp = 0, *len, *f;
   double *vp;
   len = (int *)(dl + sp);
@@ -183,6 +205,7 @@ void GKSWidget::set_window_size_from_dl()
 
 void GKSWidget::interpret(char *dl)
 {
+  p = widget_state_list;
   delete[] this->dl;
   this->dl = dl;
 

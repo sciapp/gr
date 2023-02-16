@@ -121,7 +121,7 @@ static int idcldp(int *ndp, double *xd, double *yd, int *ncp, int *ipc)
                   ip3 = ipc0[j3 - 1];
                   dx13 = xd[ip3 - 1] - x1;
                   dy13 = yd[ip3 - 1] - y1;
-                  if ((r1 = dy13 * dx12 - dx13 * dy12, fabs(r1)) > 1e-6f)
+                  if ((r1 = dy13 * dx12 - dx13 * dy12, fabs(r1)) > 1e-12)
                     {
                       goto L70;
                     }
@@ -143,7 +143,7 @@ static int idcldp(int *ndp, double *xd, double *yd, int *ncp, int *ipc)
                         }
                       dx13 = xd[ip3 - 1] - x1;
                       dy13 = yd[ip3 - 1] - y1;
-                      if ((r1 = dy13 * dx12 - dx13 * dy12, fabs(r1)) > 1e-6f)
+                      if ((r1 = dy13 * dx12 - dx13 * dy12, fabs(r1)) > 1e-12)
                         {
                           r1 = xd[ip3 - 1] - x1;
                           r2 = yd[ip3 - 1] - y1;
@@ -696,7 +696,7 @@ static int idpdrv(int *ndp, double *xd, double *yd, double *zd, int *ncp, int *i
               dx2 = xd[ipi - 1] - x0;
               dy2 = yd[ipi - 1] - y0;
               dnmz = dx1 * dy2 - dy1 * dx2;
-              if (fabs(dnmz) > 1e-6f)
+              if (fabs(dnmz) > 1e-12)
                 {
                   dz2 = zd[ipi - 1] - z0;
                   dnmx = dy1 * dz2 - dz1 * dy2;
@@ -752,7 +752,7 @@ static int idpdrv(int *ndp, double *xd, double *yd, double *zd, int *ncp, int *i
               dx2 = xd[ipi - 1] - x0;
               dy2 = yd[ipi - 1] - y0;
               dnmz = dx1 * dy2 - dy1 * dx2;
-              if (fabs(dnmz) > 1e-6f)
+              if (fabs(dnmz) > 1e-12)
                 {
                   jpd = ipi * 5;
                   dzx2 = pd[jpd - 5] - zx0;
@@ -1179,7 +1179,7 @@ static int idxchg(double *x, double *y, int *i1, int *i2, int *i3, int *i4)
 static int idtang(int *ndp, double *xd, double *yd, int *nt, int *ipt, int *nl, int *ipl, int *iwl, int *iwp,
                   double *wk)
 {
-  Real ratio = 1e-6f;
+  Real ratio = 1e-12;
   Integer nrep = 100;
   Real x1, y1, ar, r1, r2;
   Integer ip, jp;
@@ -1271,7 +1271,7 @@ static int idtang(int *ndp, double *xd, double *yd, int *nt, int *ipt, int *nl, 
               r1 = xd[ip2 - 1] - x1;
               r2 = yd[ip2 - 1] - y1;
               dsqi = r1 * r1 + r2 * r2;
-              if (fabs(dsqi) <= 1e-6f)
+              if (fabs(dsqi) <= 1e-12)
                 {
                   goto L30;
                 }

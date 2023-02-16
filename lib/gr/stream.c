@@ -1,3 +1,6 @@
+#if defined(__unix__) && !defined(__FreeBSD__)
+#define _POSIX_C_SOURCE 200112L
+#endif
 
 #include <stdio.h>
 #include <string.h>
@@ -8,14 +11,16 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #else
+#define _WIN32_WINNT 0x0602
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
-#include <winsock.h>
 #endif
-
-#define PORT 0x1234
 
 #include "gr.h"
 #include "stream.h"
@@ -29,9 +34,9 @@ static int s = -1;
 
 static char *buffer = NULL, *static_buffer = NULL;
 
-static char *hostname = NULL;
+static char *server = NULL;
 
-static int port = PORT;
+static char *port = "4660"; /* 0x1234 */
 
 static int nbytes = 0, size = 0, static_size = 0;
 
@@ -60,9 +65,8 @@ static void save(char *string, int nbytes)
 
 static int sendstream(char *string)
 {
-  int pos, i;
-  struct hostent *hp;
-  struct sockaddr_in sin;
+  int rc, pos, i;
+  struct addrinfo hints, *res = NULL;
   char buf[BUFSIZ + 1];
   char *env, *display;
 
@@ -82,34 +86,37 @@ static int sendstream(char *string)
 
       if (s == -1)
         {
-          s = socket(PF_INET,      /* get a socket descriptor */
-                     SOCK_STREAM,  /* stream socket           */
-                     IPPROTO_TCP); /* use TCP protocol        */
-          if (s != -1)
+          if (server == NULL)
             {
-              int size = 128 * 128 * 16;
-              setsockopt(s, SOL_SOCKET, SO_SNDBUF, (char *)&size, sizeof(int));
-
-              if (hostname == NULL)
+              env = (char *)getenv("GR_DISPLAY");
+              if (env != NULL)
                 {
-                  env = (char *)getenv("GR_DISPLAY");
-                  if (env != NULL)
-                    {
-                      display = gks_strdup(env);
-                      if ((env = strtok(display, ":")) != NULL) hostname = env;
-                      if ((env = strtok(NULL, ":")) != NULL) port = atoi(env);
-                    }
+                  display = gks_strdup(env);
+                  if ((env = strtok(display, ":")) != NULL) server = env;
+                  if ((env = strtok(NULL, ":")) != NULL) port = env;
                 }
-              if (hostname == NULL) hostname = "localhost";
+            }
+          if (server == NULL) server = "localhost";
 
-              if ((hp = gethostbyname(hostname)) != NULL)
+          memset(&hints, 0x00, sizeof(hints));
+          hints.ai_family = AF_INET;
+          hints.ai_socktype = SOCK_STREAM;
+
+          if ((rc = getaddrinfo(server, port, &hints, &res)) != 0)
+            {
+              hints.ai_family = AF_INET6;
+              rc = getaddrinfo(server, port, &hints, &res);
+            }
+
+          if (rc == 0)
+            {
+              s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+              if (s != -1)
                 {
-                  memset(&sin, 0, sizeof(sin));
-                  sin.sin_family = AF_INET;
-                  sin.sin_addr.s_addr = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
-                  sin.sin_port = htons(port);
+                  int size = 128 * 128 * 16;
+                  setsockopt(s, SOL_SOCKET, SO_SNDBUF, (char *)&size, sizeof(int));
 
-                  if (connect(s, (struct sockaddr *)&sin, sizeof(sin)) == -1)
+                  if (connect(s, res->ai_addr, res->ai_addrlen) == -1)
                     {
                       perror("connect");
                       status = EXIT_FAILURE;
@@ -117,13 +124,13 @@ static int sendstream(char *string)
                 }
               else
                 {
-                  perror("gethostbyname");
+                  perror("socket");
                   status = EXIT_FAILURE;
                 }
             }
           else
             {
-              perror("socket");
+              fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rc));
               status = EXIT_FAILURE;
             }
         }
@@ -157,6 +164,8 @@ static int sendstream(char *string)
         }
       else if (s != -1)
         close_socket(s);
+
+      if (res != NULL) freeaddrinfo(res);
     }
 
   return status;
@@ -193,9 +202,7 @@ int gr_openstream(const char *path)
 
   if (path != NULL)
     {
-      if (strcmp(path, "-") == 0)
-        stream = stdout;
-      else if (*path == '\0')
+      if (*path == '\0')
         status = -1;
       else if (strchr(path, ':') == NULL)
         {
@@ -231,13 +238,18 @@ void gr_writestream(char *string, ...)
   char s[BUFSIZ];
 
   va_start(ap, string);
-  vsprintf(s, string, ap);
+  vsnprintf(s, BUFSIZ, string, ap);
   va_end(ap);
 
-  if (stream != stdout)
-    append(s);
-  else
-    fprintf(stdout, "%s", s);
+  if (gr_debug())
+    {
+      if (*s == '<')
+        fprintf(stdout, "[DEBUG:GR] %s", s);
+      else
+        fprintf(stdout, "%s", s);
+    }
+
+  if (stream != NULL) append(s);
 }
 
 void gr_flushstream(int discard)
@@ -263,7 +275,7 @@ void gr_closestream(void)
   gr_flushstream(0);
 
   if (stream)
-    if (stream != stdout) fclose(stream);
+    if (stream != NULL) fclose(stream);
 
   free(buffer);
   buffer = NULL;

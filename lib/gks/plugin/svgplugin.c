@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200112L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -186,7 +188,7 @@ static void svg_printf(SVG_stream *p, const char *args, ...)
   strcpy(fmt, args);
 
   va_start(ap, args);
-  vsprintf(s, fmt, ap);
+  vsnprintf(s, BUFSIZ, fmt, ap);
   va_end(ap);
 
   svg_memcpy(p, s, strlen(s));
@@ -444,7 +446,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           svg_printf(p->stream,
                      "<polyline clip-path=\"url(#clip%02d%d)\" "
                      "style=\"stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g; fill:none\" "
-                     "points=\"\n  ",
+                     "points=\"",
                      path_id, p->rect_index, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2],
                      gkss->bwidth * p->nominal_size, p->transparency);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
@@ -453,12 +455,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               yr = -scale * marker[mtype][pc + 3 + 2 * i];
               seg_xform_rel(&xr, &yr);
               svg_printf(p->stream, "%g,%g ", x - xr, y + yr);
-              if (!((i + 1) % 10))
-                {
-                  svg_printf(p->stream, "\n  ");
-                }
             }
-          svg_printf(p->stream, "\n  \"/>\n");
+          svg_printf(p->stream, "\"/>\n");
           pc += 1 + 2 * marker[mtype][pc + 1];
           break;
 
@@ -557,23 +555,40 @@ static void stroke(void)
 
   svg_printf(p->stream,
              "<polyline clip-path=\"url(#clip%02d%d)\" style=\""
-             "stroke:#%02x%02x%02x; stroke-linecap:butt; stroke-linejoin:round; stroke-width:%g; stroke-opacity:%g; "
+             "stroke:#%02x%02x%02x; stroke-linecap:round; stroke-linejoin:round; stroke-width:%g; stroke-opacity:%g; "
              "fill:none\" ",
              path_id, p->rect_index, p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->linewidth,
              p->transparency);
-  svg_printf(p->stream, "points=\"\n  ");
+  svg_printf(p->stream, "points=\"");
   for (i = 0; i < p->npoints; i++)
     {
       svg_printf(p->stream, "%g,%g ", p->points[i].x, p->points[i].y);
-      if (!((i + 1) % 10))
-        {
-          svg_printf(p->stream, "\n  ");
-        }
     }
-  svg_printf(p->stream, "\n  \"/>\n");
+  svg_printf(p->stream, "\"/>\n");
 
   p->npoints = 0;
 }
+
+/*
+  Using single-precision floats, SVG viewers are not expected to correctly draw differences
+  between two values finer than 1/4,000,000 of the larger number. This leads to problems with
+  mid-sized numbers when you zoom in to coordinates with large values but small differences
+  between them. As a workaround, we therefore apply the fix_ccordinates macro() here.
+ */
+
+#define SVG_MAX 4194304 /* 2^22 */
+
+#define fix_coordinates(x, y) \
+  {                           \
+    if ((x) < -SVG_MAX)       \
+      (x) = -SVG_MAX;         \
+    else if ((x) > SVG_MAX)   \
+      (x) = SVG_MAX;          \
+    if ((y) < -SVG_MAX)       \
+      (y) = -SVG_MAX;         \
+    else if ((y) > SVG_MAX)   \
+      (y) = SVG_MAX;          \
+  }
 
 static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
@@ -589,7 +604,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
   svg_printf(p->stream,
              "<polyline clip-path=\"url(#clip%02d%d)\" style=\""
-             "stroke:#%02x%02x%02x; stroke-linecap:butt; stroke-linejoin:round; stroke-width:%g; stroke-opacity:%g; "
+             "stroke:#%02x%02x%02x; stroke-linecap:round; stroke-linejoin:round; stroke-width:%g; stroke-opacity:%g; "
              "fill:none\" ",
              path_id, p->rect_index, p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->linewidth,
              p->transparency);
@@ -600,20 +615,23 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
       *s = '\0';
       for (i = 1; i <= len; i++)
         {
-          sprintf(buf, "%d%s", dash_list[i], i < len ? ", " : "");
+          snprintf(buf, 20, "%d%s", dash_list[i], i < len ? ", " : "");
           strcat(s, buf);
         }
       svg_printf(p->stream, "stroke-dasharray=\"%s\" ", s);
     }
-  svg_printf(p->stream, "points=\"\n  %g,%g ", x0, y0);
+  svg_printf(p->stream, "points=\"%g,%g ", x0, y0);
 
   xim1 = x0;
   yim1 = y0;
+  fix_coordinates(x0, y0);
+
   for (i = 1; i < n; i++)
     {
       WC_to_NDC(px[i], py[i], tnr, x, y);
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
+      fix_coordinates(xi, yi);
 
       if (i == 1 || xi != xim1 || yi != yim1)
         {
@@ -621,13 +639,9 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
           xim1 = xi;
           yim1 = yi;
         }
-      if (!((i + 1) % 10))
-        {
-          svg_printf(p->stream, "\n  ");
-        }
     }
   if (linetype == 0) svg_printf(p->stream, "%g,%g", x0, y0);
-  svg_printf(p->stream, "\n  \"/>\n");
+  svg_printf(p->stream, "\"/>\n");
 }
 
 static void fill_routine(int n, double *px, double *py, int tnr)
@@ -708,7 +722,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
         }
     }
 
-  svg_printf(p->stream, "<path clip-path=\"url(#clip%02d%d)\" d=\"\n", path_id, p->rect_index);
+  svg_printf(p->stream, "<path clip-path=\"url(#clip%02d%d)\" d=\"", path_id, p->rect_index);
   for (i = 0; i < n; i++)
     {
       if (px[i] != px[i] && py[i] != py[i])
@@ -729,16 +743,12 @@ static void fill_routine(int n, double *px, double *py, int tnr)
         {
           svg_printf(p->stream, "L%g %g ", ix, iy);
         }
-      if (!((i + 1) % 10))
-        {
-          svg_printf(p->stream, "\n  ");
-        }
     }
   if (p->pattern)
-    svg_printf(p->stream, " Z\n  \" fill=\"url(#pattern%d)\"", p->pattern_count);
+    svg_printf(p->stream, " Z\" fill=\"url(#pattern%d)\"", p->pattern_count);
   else
-    svg_printf(p->stream, " Z\n  \" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\"",
-               p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency);
+    svg_printf(p->stream, " Z\" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\"", p->rgb[p->color][0],
+               p->rgb[p->color][1], p->rgb[p->color][2], p->transparency);
   svg_printf(p->stream, "/>\n");
 }
 
@@ -1226,7 +1236,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           break;
         case 'S': /* stroke */
           svg_printf(p->stream,
-                     "\" fill=\"none\" stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-linecap=\"butt\" "
+                     "\" fill=\"none\" stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-linecap=\"round\" "
                      "stroke-linejoin=\"round\" stroke-width=\"%g\" />",
                      p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
                      gkss->bwidth * p->nominal_size);
@@ -1234,7 +1244,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           break;
         case 's': /* close and stroke */
           svg_printf(p->stream,
-                     "Z\" fill=\"none\" stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-linecap=\"butt\" "
+                     "Z\" fill=\"none\" stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-linecap=\"round\" "
                      "stroke-linejoin=\"round\" stroke-width=\"%g\" />",
                      p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
                      gkss->bwidth * p->nominal_size);
@@ -1252,7 +1262,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
         case 'F': /* fill and stroke */
           svg_printf(p->stream,
                      "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" stroke=\"#%02x%02x%02x\" "
-                     "stroke-opacity=\"%g\" stroke-width=\"%g\" />",
+                     "stroke-opacity=\"%g\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"%g\" />",
                      p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency,
                      p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
                      gkss->bwidth * p->nominal_size);
@@ -1524,15 +1534,15 @@ static void write_page(void)
 
   if (fd >= 0)
     {
-      sprintf(buf,
-              "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-              "<svg xmlns=\"http://www.w3.org/2000/svg\" "
-              "xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
-              "width=\"%g\" height=\"%g\" viewBox=\"0 0 %d %d\">\n",
-              p->width / 4.0, p->height / 4.0, p->width, p->height);
+      snprintf(buf, 256,
+               "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+               "<svg xmlns=\"http://www.w3.org/2000/svg\" "
+               "xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
+               "width=\"%g\" height=\"%g\" viewBox=\"0 0 %d %d\">\n",
+               p->width / 4.0, p->height / 4.0, p->width, p->height);
       gks_write_file(fd, buf, strlen(buf));
       gks_write_file(fd, p->stream->buffer, p->stream->length);
-      sprintf(buf, "</svg>\n");
+      snprintf(buf, 256, "</svg>\n");
       gks_write_file(fd, buf, strlen(buf));
       if (fd != p->conid) gks_close_file(fd);
 

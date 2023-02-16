@@ -273,6 +273,7 @@ static void seg_xform_rel(double *x, double *y) {}
         {
         case 2:
           RESOLVE(sl, gks_state_list_t, sizeof(gks_state_list_t));
+          sp += 3 * sizeof(int); /* ignore workstation type */
           break;
 
         case 12: /* polyline */
@@ -417,7 +418,6 @@ static void seg_xform_rel(double *x, double *y) {}
               have_colors = 1;
             }
 
-          gkss->fontfile = fontfile;
           gks_init_core(gkss);
 
           [self set_clip_rect:gkss->cntnr];
@@ -472,6 +472,11 @@ static void seg_xform_rel(double *x, double *y) {}
           break;
 
         case 27:
+          if ((i_arr[1] == GKS_K_TEXT_PRECISION_STROKE || i_arr[1] == GKS_K_TEXT_PRECISION_CHAR) && fontfile == 0)
+            {
+              fontfile = gks_open_font();
+              gkss->fontfile = fontfile;
+            }
           gkss->txfont = i_arr[0];
           gkss->txprec = i_arr[1];
           break;
@@ -651,7 +656,6 @@ static void seg_xform_rel(double *x, double *y) {}
       size = 0;
       angle = 0;
       has_been_resized = 0;
-      fontfile = gks_open_font();
     }
   return self;
 }
@@ -787,7 +791,7 @@ static void seg_xform_rel(double *x, double *y) {}
       CGColorSpaceRelease(colorSpace);
       colorSpace = NULL;
     }
-  if (fontfile)
+  if (fontfile > 0)
     {
       gks_close_font(fontfile);
       fontfile = 0;
@@ -1607,7 +1611,7 @@ static void to_DC(int n, double *x, double *y)
 
   begin_context(context);
 
-  CGContextSetLineCap(context, kCGLineCapButt);
+  CGContextSetLineCap(context, kCGLineCapRound);
   CGContextSetLineJoin(context, kCGLineJoinRound);
   CGContextSetLineWidth(context, gkss->bwidth * p->nominal_size);
   [self set_stroke_color:gkss->bcoli:context];
@@ -1745,13 +1749,13 @@ static void to_DC(int n, double *x, double *y)
           CGContextClosePath(context);
           cur_x = start_x;
           cur_y = start_y;
-          CGContextDrawPath(context, kCGPathFill);
+          CGContextDrawPath(context, kCGPathEOFill);
           break;
         case 'F':
           CGContextClosePath(context);
           cur_x = start_x;
           cur_y = start_y;
-          CGContextDrawPath(context, kCGPathFillStroke);
+          CGContextDrawPath(context, kCGPathEOFillStroke);
           break;
         case 'Z':
           CGContextClosePath(context);

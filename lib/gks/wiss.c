@@ -104,7 +104,7 @@ static void write_item(int sgnum, int fctid, int dx, int dy, int dimx, int *i_ar
 
       memset((void *)s, 0, GKS_K_TEXT_MAX_SIZE);
       slen = strlen(c_arr);
-      memcpy(s, c_arr, slen < GKS_K_TEXT_MAX_SIZE ? slen : GKS_K_TEXT_MAX_SIZE - 1);
+      memcpy(s, c_arr, slen < GKS_K_TEXT_MAX_SIZE ? slen : GKS_K_TEXT_MAX_SIZE);
 
       COPY(&len, sizeof(int));
       COPY(&sgnum, sizeof(int));
@@ -525,7 +525,7 @@ static void interp(char *str, int segn)
         case 52:  /* select normalization transformation */
         case 53:  /* set clipping indicator */
         case 108: /* set resample method */
-        case 109: /* set resample method */
+        case 109: /* set resize behaviour */
         case 207: /* set border color index */
         case 208: /* select clipping transformation */
 

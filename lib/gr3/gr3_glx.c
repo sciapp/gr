@@ -1,4 +1,6 @@
 #define GR3_GLX_C
+#define _POSIX_C_SOURCE 200112L
+
 #include "gr3_glx.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -48,7 +50,7 @@ int gr3_platform_initGL_(void)
       if (strlen(grdir) + strlen("libGR3platform.so") < MAXPATHLEN)
         {
           char pathname[MAXPATHLEN];
-          sprintf(pathname, "%s/lib/libGR3platform.so", grdir);
+          snprintf(pathname, MAXPATHLEN, "%s/lib/libGR3platform.so", grdir);
           platform_library = dlopen(pathname, RTLD_NOW | RTLD_LOCAL);
         }
     }

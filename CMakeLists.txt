@@ -135,6 +135,9 @@ if(Qt4_FOUND)
   foreach(DIR IN LISTS QT_INCLUDE_DIR)
     set(QT4_MOC_INCLUDE_FLAGS ${QT4_MOC_INCLUDE_FLAGS} -I${DIR})
   endforeach()
+  if(NOT DEFINED Qt4_LIBRARY_DIR)
+    get_filename_component(Qt4_LIBRARY_DIR "${QT_LIBRARY_DIR}/../.." ABSOLUTE)
+  endif()
 endif()
 if(Qt5Widgets_FOUND
    AND Qt5Core_FOUND
@@ -144,6 +147,9 @@ if(Qt5Widgets_FOUND
   foreach(DIR IN LISTS Qt5Core_INCLUDE_DIRS Qt5Gui_INCLUDE_DIRS Qt5Widgets_INCLUDE_DIRS)
     set(QT5_MOC_INCLUDE_FLAGS ${QT5_MOC_INCLUDE_FLAGS} -I${DIR})
   endforeach()
+  if(NOT DEFINED Qt5_LIBRARY_DIR)
+    get_filename_component(Qt5_LIBRARY_DIR "${Qt5_DIR}/../.." ABSOLUTE)
+  endif()
 endif()
 if(Qt6Widgets_FOUND
    AND Qt6Core_FOUND
@@ -153,6 +159,9 @@ if(Qt6Widgets_FOUND
   foreach(DIR IN LISTS Qt6Core_INCLUDE_DIRS Qt6Gui_INCLUDE_DIRS Qt6Widgets_INCLUDE_DIRS)
     set(QT6_MOC_INCLUDE_FLAGS ${QT6_MOC_INCLUDE_FLAGS} -I${DIR})
   endforeach()
+  if(NOT DEFINED Qt6_LIBRARY_DIR)
+    get_filename_component(Qt6_LIBRARY_DIR "${Qt6_DIR}/../.." ABSOLUTE)
+  endif()
 endif()
 
 if(X11_FOUND)
@@ -243,7 +252,7 @@ foreach(LIBRARY gks_static gks_shared)
   if(UNIX)
     target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} dl)
   elseif(WIN32)
-    target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} wsock32)
+    target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} ws2_32)
     target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} msimg32)
     target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} gdi32)
   endif()
@@ -472,6 +481,8 @@ set(GRM_SOURCES
     lib/grm/src/grm/net.c
     lib/grm/src/grm/plot.cxx
     lib/grm/src/grm/util.c
+    lib/grm/src/grm/import.cxx
+    lib/grm/src/grm/utilcpp.cxx
     lib/grm/src/grm/datatype/double_map.c
     lib/grm/src/grm/datatype/string_array_map.c
     lib/grm/src/grm/datatype/string_list.c
@@ -629,6 +640,7 @@ else()
   string(APPEND GR_REPORT "\tWEBM output: Yes\n")
   string(APPEND GR_REPORT "\tOGG output: Yes\n")
   string(APPEND GR_REPORT "\tGIF output: Yes\n")
+  string(APPEND GR_REPORT "\tAPNG output: Yes\n")
   target_link_libraries(videoplugin PUBLIC Ffmpeg::Ffmpeg)
 endif()
 target_compile_options(videoplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
@@ -1018,22 +1030,27 @@ if(Qt4_FOUND
       )
 )
   add_executable(gksqt WIN32 MACOSX_BUNDLE lib/gks/qt/gksqt.cxx lib/gks/qt/gksserver.cxx lib/gks/qt/gkswidget.cxx)
-  set_target_properties(gksqt PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
   target_link_libraries(gksqt PUBLIC gks_static)
   if(Qt6Widgets_FOUND
      AND Qt6Core_FOUND
      AND Qt6Network_FOUND
   )
     target_link_libraries(gksqt PUBLIC Qt6::Widgets Qt6::Core Qt6::Network)
+    set(gksqt_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
   elseif(
     Qt5Widgets_FOUND
     AND Qt5Core_FOUND
     AND Qt5Network_FOUND
   )
     target_link_libraries(gksqt PUBLIC Qt5::Widgets Qt5::Core Qt5::Network)
+    set(gksqt_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
   elseif(Qt4_FOUND)
     target_link_libraries(gksqt PUBLIC Qt4::QtCore Qt4::QtGui Qt4::QtNetwork)
+    set(gksqt_INSTALL_RPATH "${INSTALL_RPATH};${Qt4_LIBRARY_DIR}")
   endif()
+  set_target_properties(
+    gksqt PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH "${gksqt_INSTALL_RPATH}"
+  )
   if(MINGW)
     target_compile_options(gksqt PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
   endif()
@@ -1099,6 +1116,78 @@ if(Qt4_FOUND
   string(APPEND GR_REPORT "- gksqt: Yes\n")
 else()
   string(APPEND GR_REPORT "- gksqt: No (Qt4 / Qt5 / Qt6 not found)\n")
+endif()
+
+if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
+  add_executable(
+    grplot WIN32 MACOSX_BUNDLE lib/grm/grplot/grplot.cxx lib/grm/grplot/grplot_mainwindow.cxx
+                               lib/grm/grplot/grplot_widget.cxx lib/grm/grplot/util.cxx
+  )
+  if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
+    target_link_libraries(grplot PRIVATE Qt6::Widgets Qt6::Core grm_static)
+    set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
+  else()
+    target_link_libraries(grplot PRIVATE Qt5::Widgets Qt5::Core grm_static)
+    set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
+  endif()
+  target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
+  set_target_properties(
+    grplot PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
+                                                                                  "${grplot_INSTALL_RPATH}"
+  )
+  if(WIN32)
+    if(MINGW)
+      target_link_options(grplot PRIVATE -mconsole)
+    else()
+      target_link_options(grplot PRIVATE /SUBSYSTEM:CONSOLE)
+    endif()
+  endif()
+  if(GR_MANUAL_MOC_AND_RCC)
+    set_target_properties(grplot PROPERTIES AUTOMOC OFF AUTORCC OFF)
+    if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
+      set(MOC_INCLUDE_FLAGS ${QT6_MOC_INCLUDE_FLAGS})
+    else()
+      set(MOC_INCLUDE_FLAGS ${QT5_MOC_INCLUDE_FLAGS})
+    endif()
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
+    )
+    target_sources(
+      grplot PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
+                     ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+    )
+  else()
+    set_target_properties(grplot PROPERTIES AUTOMOC ON AUTORCC ON)
+    target_sources(
+      grplot PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
+                     ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
+    )
+  endif()
+  if(APPLE)
+    set_target_properties(grplot PROPERTIES MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.grplot")
+  endif()
+  if(WIN32)
+    target_compile_definitions(grplot PRIVATE GR_STATIC_LIB)
+  endif()
+  if(MINGW)
+    target_compile_options(grplot PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
+  endif()
+  string(APPEND GR_REPORT "- grplot: Yes\n")
+else()
+  string(APPEND GR_REPORT "- grplot: No (Qt6 and Qt5 not found)\n")
 endif()
 
 if(GR_BUILD_DEMOS)
@@ -1245,6 +1334,20 @@ if(GR_INSTALL)
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
       BUNDLE DESTINATION Applications
     )
+  endif()
+  if(TARGET grplot)
+    install(
+      TARGETS grplot
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      BUNDLE DESTINATION Applications
+    )
+    if(APPLE)
+      install(
+        PROGRAMS lib/grm/grplot/grplot.macos.sh
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+        RENAME grplot
+      )
+    endif()
   endif()
   install(FILES lib/gr/gr.h lib/gks/gks.h lib/gr3/gr3.h lib/grm/include/grm.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
   install(DIRECTORY lib/grm/include/grm DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)

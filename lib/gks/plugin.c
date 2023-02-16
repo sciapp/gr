@@ -1,9 +1,12 @@
+#define _POSIX_C_SOURCE 200112L
 
 #include <stdio.h>
 #include <stdlib.h>
 
 #ifdef _WIN32
+#define __STRSAFE__NO_INLINE
 #include <windows.h>
+#include <strsafe.h>
 #else
 #include <dlfcn.h>
 #include <sys/param.h>
@@ -30,47 +33,50 @@
 
 static void *load_library(const char *name)
 {
-  char pathname[MAXPATHLEN], symbol[255];
+  char pathname[MAXPATHLEN];
 #ifdef _WIN32
+  wchar_t grdir[MAX_PATH], w_pathname[MAX_PATH];
   HINSTANCE handle;
-  LPCTSTR grdir;
-  char grbin[MAXPATHLEN];
 #else
-  void *handle;
   const char *grdir, *error;
+  void *handle;
 #endif
+  char symbol[255];
   void *entry = NULL;
 
-  sprintf(pathname, "%s.%s", name, EXTENSION);
+  snprintf(pathname, MAXPATHLEN, "%s.%s", name, EXTENSION);
 #ifdef _WIN32
   handle = LoadLibrary(pathname);
   if (handle == NULL)
     {
-      grdir = gks_getenv("GRDIR");
-      if (grdir == NULL) grdir = GRDIR;
-      sprintf(grbin, "%s/bin", grdir);
-      SetDllDirectory(grbin);
-      handle = LoadLibrary(pathname);
+      GetEnvironmentVariableW(L"GRDIR", grdir, MAX_PATH);
+      StringCbPrintfW(w_pathname, MAX_PATH, L"%ws\\bin\\%S.%S", grdir, name, EXTENSION);
+      handle = LoadLibraryExW(w_pathname, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+      if (handle == NULL)
+        {
+          /* Try loading with default search path if altered search path fails
+             This value is a combination of LOAD_LIBRARY_SEARCH_APPLICATION_DIR,
+             LOAD_LIBRARY_SEARCH_USER_DIRS, and LOAD_LIBRARY_SEARCH_SYSTEM32.
+             They are searched in that order.
+             Use AddDllDirectory to add additional user directories to the search.
+           */
+          handle = LoadLibraryExW(w_pathname, NULL, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+        }
     }
 #else
   handle = dlopen(pathname, RTLD_LAZY);
   if (handle == NULL)
     {
-      sprintf(pathname, "%s/%s.%s", "./", name, EXTENSION);
-      handle = dlopen(pathname, RTLD_LAZY);
-    }
-  if (handle == NULL)
-    {
       grdir = gks_getenv("GRDIR");
       if (grdir == NULL) grdir = GRDIR;
-      sprintf(pathname, "%s/lib/%s.%s", grdir, name, EXTENSION);
+      snprintf(pathname, MAXPATHLEN, "%s/lib/%s.%s", grdir, name, EXTENSION);
       handle = dlopen(pathname, RTLD_LAZY);
     }
 #endif
 
   if (handle != NULL)
     {
-      sprintf(symbol, "gks_%s", name);
+      snprintf(symbol, 255, "gks_%s", name);
 #ifdef _WIN32
       entry = (void *)GetProcAddress(handle, symbol);
 #else

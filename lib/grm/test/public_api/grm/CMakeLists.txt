@@ -34,6 +34,7 @@ set(EXECUTABLE_SOURCES
     size.c
     subplots.c
     volume.c
+    marginalheatmap.c
 )
 
 foreach(executable_source ${EXECUTABLE_SOURCES})

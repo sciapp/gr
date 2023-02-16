@@ -1,6 +1,8 @@
+#define _POSIX_C_SOURCE 200112L
 
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #define MD5_BIG_ENDIAN 0
 
@@ -283,7 +285,7 @@ static void md5_finish(md5_t *md5_p, void *signature)
   md5_get_result(md5_p, signature);
 }
 
-void md5(const char *buffer, char *sum)
+void md5(const char *buffer, char *sum, size_t size)
 {
   md5_t md5;
   unsigned char signature[MD5_SIZE];
@@ -293,6 +295,8 @@ void md5(const char *buffer, char *sum)
   md5_process(&md5, buffer, strlen(buffer));
   md5_finish(&md5, signature);
 
-  for (i = 0; i < MD5_SIZE; i++) sprintf(sum + 2 * i, "%02x", signature[i]);
+  for (i = 0; i < MD5_SIZE; i++) snprintf(sum + 2 * i, size, "%02x", signature[i]);
+
+  assert(size > 2 * MD5_SIZE);
   sum[2 * MD5_SIZE] = '\0';
 }

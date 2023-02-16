@@ -18,8 +18,14 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/errno.h>
 #else
+#define __STRSAFE__NO_INLINE
+#define _WIN32_WINNT 0x0602
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
+#include <strsafe.h>
 #endif
 
 #include "gks.h"
@@ -39,7 +45,7 @@
 #define MAXPATHLEN 1024
 #endif
 
-#define PORT 8410
+#define PORT "8410"
 
 typedef struct
 {
@@ -55,22 +61,19 @@ static int is_running = 0;
 
 #ifdef _WIN32
 
-#define CMD_LINE_LEN 8192
+#define CMD_LINE_LEN (32767 + 10)
+/*
+ * The maximum length of an environment variable is 32767 characters plus 10 characters for 'cmd /c ""'
+ */
 
-static DWORD WINAPI gksqt_tread(LPVOID parm)
+static DWORD WINAPI gksqt_thread(LPVOID parm)
 {
-  char *cmd = (char *)parm;
-  wchar_t *w_cmd;
-  int len = strlen(cmd);
-  int w_len = MultiByteToWideChar(CP_UTF8, 0, cmd, len, NULL, 0) + 1;
+  wchar_t *cmd = (char *)parm;
   wchar_t w_cmd_line[CMD_LINE_LEN];
   STARTUPINFOW startupInfo;
   PROCESS_INFORMATION processInformation;
 
-  w_cmd = (wchar_t *)gks_malloc(sizeof(wchar_t) * w_len);
-  MultiByteToWideChar(CP_UTF8, 0, cmd, len + 1, w_cmd, w_len);
-
-  swprintf(w_cmd_line, CMD_LINE_LEN, L"cmd /c \"%ls\"", w_cmd);
+  StringCbPrintfW(w_cmd_line, CMD_LINE_LEN, L"cmd /c \"%ls\"", cmd);
 
   ZeroMemory(&startupInfo, sizeof(startupInfo));
   startupInfo.cb = sizeof(startupInfo);
@@ -85,15 +88,14 @@ static DWORD WINAPI gksqt_tread(LPVOID parm)
   CloseHandle(processInformation.hProcess);
   CloseHandle(processInformation.hThread);
 
-  free(w_cmd);
-
   return 0;
 }
 
 #else
 
-static void *gksqt_tread(void *arg)
+static void *gksqt_thread(void *arg)
 {
+  int retstat = 0;
 #ifdef __APPLE__
   sigset_t blockMask, origMask;
   struct sigaction saIgnore, saOrigQuit, saOrigInt, saDefault;
@@ -109,13 +111,8 @@ static void *gksqt_tread(void *arg)
   sigaction(SIGINT, &saIgnore, &saOrigInt);
   sigaction(SIGQUIT, &saIgnore, &saOrigQuit);
 
-  pid = fork();
-  if (pid < 0)
-    {
-      fprintf(stderr, "Fork failed\n");
-      return NULL;
-    }
-  else if (pid == 0)
+  is_running = 1;
+  if ((pid = fork()) == 0)
     {
       saDefault.sa_handler = SIG_DFL;
       saDefault.sa_flags = 0;
@@ -126,47 +123,62 @@ static void *gksqt_tread(void *arg)
 
       sigprocmask(SIG_SETMASK, &origMask, NULL);
 
-      is_running = 1;
       execl("/bin/sh", "sh", "-c", (char *)arg, (char *)NULL);
-      is_running = 0;
 
-      exit(127);
+      _exit(127);
     }
+  if (pid == -1)
+    {
+      fprintf(stderr, "Fork failed\n");
+      retstat = -1;
+    }
+  else
+    {
+      int status;
+      while (waitpid(pid, &status, 0) == -1)
+        {
+          if (errno != EINTR)
+            {
+              retstat = WIFEXITED(status) != 0 ? WEXITSTATUS(status) : -1;
+              break;
+            }
+        }
+    }
+  is_running = 0;
 
   sigprocmask(SIG_SETMASK, &origMask, NULL);
   sigaction(SIGINT, &saOrigInt, NULL);
   sigaction(SIGQUIT, &saOrigQuit, NULL);
 #else
   is_running = 1;
-  system((char *)arg);
+  retstat = system((char *)arg);
   is_running = 0;
 #endif
 
-  return NULL;
+  return retstat == 0 ? arg : NULL;
 }
 
 #endif
 
-static int start(const char *cmd)
+static int start(void *cmd)
 {
 #ifdef _WIN32
   DWORD thread;
 
-  if (CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)gksqt_tread, (void *)cmd, 0, &thread) == NULL) return -1;
+  if (CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)gksqt_thread, cmd, 0, &thread) == NULL) return -1;
 #else
   pthread_t thread;
 
-  if (pthread_create(&thread, NULL, gksqt_tread, (void *)cmd)) return -1;
+  if (pthread_create(&thread, NULL, gksqt_thread, cmd)) return -1;
 #endif
   return 0;
 }
 
 static int connect_socket(int quiet)
 {
-  int s;
-  char *env;
-  struct hostent *hp;
-  struct sockaddr_in sin;
+  int rc, s;
+  char *server;
+  struct addrinfo hints, *res = NULL;
   int opt;
 
 #if defined(_WIN32)
@@ -180,12 +192,34 @@ static int connect_socket(int quiet)
     }
 #endif
 
-  s = socket(PF_INET,      /* get a socket descriptor */
-             SOCK_STREAM,  /* stream socket           */
-             IPPROTO_TCP); /* use TCP protocol        */
-  if (s == -1)
+  server = (char *)gks_getenv("GKS_CONID");
+  if (!server) server = (char *)gks_getenv("GKSconid");
+  if (server)
+    if (!*server) server = NULL;
+  if (!server) server = "localhost";
+
+  memset(&hints, 0x00, sizeof(hints));
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+
+  if ((rc = getaddrinfo(server, PORT, &hints, &res)) != 0)
+    {
+      hints.ai_family = AF_INET6;
+      if ((rc = getaddrinfo(server, PORT, &hints, &res)) != 0)
+        {
+          if (!quiet)
+            {
+              fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rc));
+            }
+          return -1;
+        }
+    }
+
+  s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+  if (s < 0)
     {
       if (!quiet) perror("socket");
+      freeaddrinfo(res);
       return -1;
     }
 
@@ -194,41 +228,53 @@ static int connect_socket(int quiet)
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt));
 #endif
 
-  env = (char *)gks_getenv("GKS_CONID");
-  if (env)
-    if (!*env) env = NULL;
-  if (!env) env = (char *)gks_getenv("GKSconid");
-
-  if ((hp = gethostbyname(env != NULL ? env : "127.0.0.1")) == 0)
-    {
-      if (!quiet) perror("gethostbyname");
-      return -1;
-    }
-
-  memset(&sin, 0, sizeof(sin));
-  sin.sin_family = AF_INET;
-  sin.sin_addr.s_addr = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
-  sin.sin_port = htons(PORT);
-
-  if (connect(s, (struct sockaddr *)&sin, sizeof(sin)) == -1)
+  if (connect(s, res->ai_addr, res->ai_addrlen) < 0)
     {
       if (!quiet) perror("connect");
+      freeaddrinfo(res);
       return -1;
     }
+
+  freeaddrinfo(res);
 
   return s;
 }
 
 static int open_socket(int wstype)
 {
+#ifdef _WIN32
+  wchar_t command[CMD_LINE_LEN], w_env[MAXPATHLEN];
+#else
   const char *command = NULL, *env;
-  int retry_count;
-  int max_retry_count = 20;
   char *cmd = NULL;
+#endif
+  size_t retry_count, max_retry_count = 20;
   int s;
 
-  if (wstype == 411)
+  /* In order to not sleep an excessive amount start with a short sleep time and then ramp
+     it up to `max_sleep_time` */
+  int sleep_ms;
+  int ms_to_ns = 1000000;
+  int initial_sleep_time_ms[] = {5, 10, 25, 50, 100};
+  int max_sleep_time_ms = 300;
+  size_t n_initial_times = sizeof(initial_sleep_time_ms) / sizeof(initial_sleep_time_ms[0]);
+  max_retry_count += n_initial_times;
+
+  if (wstype >= 411 && wstype <= 413)
     {
+#ifdef _WIN32
+      if (!GetEnvironmentVariableW(L"GKS_QT", command, CMD_LINE_LEN))
+        {
+          if (!GetEnvironmentVariableW(L"GRDIR", w_env, MAXPATHLEN))
+            {
+              StringCbPrintfW(command, CMD_LINE_LEN, L"%wS\\bin\\gksqt.exe", GRDIR);
+            }
+          else
+            {
+              StringCbPrintfW(command, CMD_LINE_LEN, L"%ws\\bin\\gksqt.exe", w_env);
+            }
+        }
+#else
       command = gks_getenv("GKS_QT");
       if (command == NULL)
         {
@@ -236,17 +282,14 @@ static int open_socket(int wstype)
           if (env == NULL) env = GRDIR;
 
           cmd = (char *)gks_malloc(MAXPATHLEN);
-#ifndef _WIN32
 #ifdef __APPLE__
-          sprintf(cmd, "%s/Applications/gksqt.app/Contents/MacOS/gksqt", env);
+          snprintf(cmd, MAXPATHLEN, "%s/Applications/gksqt.app/Contents/MacOS/gksqt", env);
 #else
-          sprintf(cmd, "%s/bin/gksqt", env);
-#endif
-#else
-          sprintf(cmd, "%s\\bin\\gksqt.exe", env);
+          snprintf(cmd, MAXPATHLEN, "%s/bin/gksqt", env);
 #endif
           command = cmd;
         }
+#endif
     }
 
   for (retry_count = 1; retry_count <= max_retry_count; retry_count++)
@@ -259,17 +302,20 @@ static int open_socket(int wstype)
                  because in this case gksqt is started by the GR.jl wrapper script */
               if (*command)
                 {
-                  if (start(command) != 0) gks_perror("could not auto-start GKS Qt application");
+                  if (start((void *)command) != 0) gks_perror("could not auto-start GKS Qt application");
                 }
             }
+          sleep_ms = retry_count <= n_initial_times ? initial_sleep_time_ms[retry_count - 1] : max_sleep_time_ms;
 #ifndef _WIN32
           {
-            struct timespec delay = {0, 300000000};
+            struct timespec delay;
+            delay.tv_sec = 0;
+            delay.tv_nsec = sleep_ms * ms_to_ns;
             while (nanosleep(&delay, &delay) == -1)
               ;
           }
 #else
-          Sleep(300);
+          Sleep(sleep_ms);
 #endif
         }
       else
@@ -278,7 +324,9 @@ static int open_socket(int wstype)
 
   is_running = (retry_count <= max_retry_count);
 
+#ifndef _WIN32
   if (cmd != NULL) free(cmd);
+#endif
 
   return s;
 }
@@ -352,9 +400,9 @@ static int close_socket(int s)
   return 0;
 }
 
-static int check_socket_connection(ws_state_list *wss)
+static void check_socket_connection(ws_state_list *wss)
 {
-  if (wss->s != -1 && wss->wstype == 411)
+  if (wss->s != -1 && wss->wstype >= 411 && wss->wstype <= 413)
     {
       char request_type = SOCKET_FUNCTION_IS_ALIVE;
       char reply;
@@ -368,7 +416,7 @@ static int check_socket_connection(ws_state_list *wss)
     {
       close_socket(wss->s);
       wss->s = open_socket(wss->wstype);
-      if (wss->s != -1 && wss->wstype == 411)
+      if (wss->s != -1 && wss->wstype >= 411 && wss->wstype <= 413)
         {
           /* workstation information was already read during OPEN_WS */
           int nbytes;
@@ -410,7 +458,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
       else
         {
           *ptr = wss;
-          if (wss->wstype == 411)
+          if (wss->wstype >= 411 && wss->wstype <= 413)
             {
               /* get workstation information */
               int nbytes;
@@ -443,7 +491,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
       break;
 
     case 3:
-      if (wss->wstype == 411)
+      if (wss->wstype >= 411 && wss->wstype <= 413)
         {
           request_type = SOCKET_FUNCTION_CLOSE_WINDOW;
           send_socket(wss->s, &request_type, 1, 0);
@@ -462,7 +510,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
         {
           check_socket_connection(wss);
           request_type = SOCKET_FUNCTION_DRAW;
-          if (wss->wstype == 411)
+          if (wss->wstype >= 411 && wss->wstype <= 413)
             {
               send_socket(wss->s, &request_type, 1, 0);
             }
@@ -477,7 +525,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
 
     case 209: /* inq_ws_state */
       check_socket_connection(wss);
-      if (wss->wstype == 411)
+      if (wss->wstype >= 411 && wss->wstype <= 413)
         {
           char reply[1 + sizeof(gks_ws_state_t)];
           request_type = SOCKET_FUNCTION_INQ_WS_STATE;

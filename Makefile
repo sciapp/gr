@@ -66,6 +66,8 @@ osxpkg:
 	ln -s ../gr/bin/gr tmp/bin/gr
 	ln -s ../gr/Applications/glgr.app/Contents/MacOS/glgr tmp/bin/glgr
 	ln -s ../gr/Applications/gksqt.app/Contents/MacOS/gksqt tmp/bin/gksqt
+	@if [ -e ../gr/Applications/grplot.app/Contents/MacOS/grplot ]; then \
+	ln -s ../gr/Applications/grplot.app/Contents/MacOS/grplot tmp/bin/grplot; fi
 	sudo chown -R -h root:wheel tmp/
 	pkgbuild --identifier de.fz-juelich.gr --root tmp --install-location /usr/local --ownership preserve gr.pkg
 	sudo rm -rf tmp

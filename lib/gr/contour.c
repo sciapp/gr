@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200112L
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -639,7 +640,7 @@ static void draw(double x, double y, double z, int iflag)
                     {
                       gks_set_pline_linetype(linetype);
                     }
-                  sprintf(label, contour_vars.lblfmt, z);
+                  snprintf(label, 20, contour_vars.lblfmt, z);
                   label_line(n, xpts, ypts, zpts, label);
                 }
               else
@@ -711,7 +712,7 @@ static void draw(double x, double y, double z, int iflag)
                 {
                   gks_set_pline_linetype(linetype);
                 }
-              sprintf(label, contour_vars.lblfmt, z);
+              snprintf(label, 20, contour_vars.lblfmt, z);
               label_line(n, xpts, ypts, zpts, label);
             }
           else
@@ -929,7 +930,7 @@ L60:
     }
   ii = ij[0] + i2[l - 1];
   jj = ij[1] + i2[3 - l - 1];
-  if (Z(ii, jj) < zmax)
+  if (Z(ii, jj) <= zmax)
     {
       ix = 0;
     }
@@ -945,7 +946,7 @@ L80:
     {
       goto L90;
     }
-  if (Z(ij[0] + 1, ij[1] + 1) < zmax)
+  if (Z(ij[0] + 1, ij[1] + 1) <= zmax)
     {
       goto L100;
     }
@@ -1281,7 +1282,7 @@ void gr_draw_contours(int nx, int ny, int nh, double *px, double *py, double *h,
 
   /*--------------------------------------------------------------------------
   / Find the maximum required precision for the labels and create the
-  / appropriate format for 'sprintf'
+  / appropriate format for 'snprintf'
   /-------------------------------------------------------------------------*/
 
   if (contour_vars.txtflg == 1)
@@ -1292,7 +1293,7 @@ void gr_draw_contours(int nx, int ny, int nh, double *px, double *py, double *h,
       for (i = 0; i < ncv; i++)
         if ((contour_vars.txtflg == 1) && ((contour_vars.lblmjh == 1) || ((i % contour_vars.lblmjh) == 1)))
           {
-            sprintf(buffer, "%g", cv[i]);
+            snprintf(buffer, 80, "%g", cv[i]);
             if ((s = (char *)strchr(buffer, '.')) != 0)
               {
                 precision = strspn(s + 1, "0123456789");
@@ -1301,7 +1302,7 @@ void gr_draw_contours(int nx, int ny, int nh, double *px, double *py, double *h,
               }
           }
 
-      sprintf(contour_vars.lblfmt, "%%.%d%c", max_precision, eflag ? 'e' : 'f');
+      snprintf(contour_vars.lblfmt, 15, "%%.%d%c", max_precision, eflag ? 'e' : 'f');
     }
 
   bitmap = (int *)xmalloc(nx * ny * ncv * 2 * sizeof(int));

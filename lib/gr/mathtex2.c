@@ -809,7 +809,8 @@ typedef enum FontVariant_
   FV_FRAK = 4,
   FV_BB = 5,
   FV_BF = 6,
-  FV_BI = 7
+  FV_BI = 7,
+  FV_SF = 8
 } FontVariant;
 
 static unsigned int get_codepoint_for_character_variant(unsigned int codepoint, FontVariant variant);
@@ -2070,6 +2071,14 @@ static size_t convert_latextext_to_box_model(ParserNode *node)
           get_current_state()->font = FV_BF;
         }
     }
+  else if (strncmp("sf", font_str, font_str_length) == 0 && strlen("sf") == font_str_length)
+    {
+      get_current_state()->font = FV_SF;
+    }
+  else if (strncmp("normal", font_str, font_str_length) == 0 && strlen("normal") == font_str_length)
+    {
+      get_current_state()->font = FV_RM;
+    }
   else
     {
       fprintf(stderr, "Error: unknown font variant %.*s\n", (int)font_str_length, font_str);
@@ -2187,6 +2196,14 @@ static size_t convert_group_to_box_model(ParserNode *node)
           else if (strncmp("bb", font_str, font_str_length) == 0 && strlen("bb") == font_str_length)
             {
               get_current_state()->font = FV_BB;
+            }
+          else if (strncmp("sf", font_str, font_str_length) == 0 && strlen("sf") == font_str_length)
+            {
+              get_current_state()->font = FV_SF;
+            }
+          else if (strncmp("normal", font_str, font_str_length) == 0 && strlen("normal") == font_str_length)
+            {
+              get_current_state()->font = FV_RM;
             }
           else
             {
@@ -3613,6 +3630,11 @@ static unsigned int get_codepoint_for_character_variant(unsigned int codepoint, 
   if (variant == FV_DEFAULT)
     {
       variant = FV_IT;
+    }
+  /* sans serif font is not supported */
+  if (variant == FV_SF)
+    {
+      variant = FV_RM;
     }
   switch (variant)
     {
