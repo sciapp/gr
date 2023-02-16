@@ -1689,6 +1689,16 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                                 }
                             }
                         }
+                      /* TODO: Add more plot types which can omit `x` */
+                      else if (str_equals_any(kind, 1, "line") && strcmp(*current_component_name, "x") == 0)
+                        {
+                          double *y;
+                          unsigned int y_length;
+                          cleanup_and_set_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length),
+                                                   ERROR_PLOT_MISSING_DATA);
+                          current_min_component = 0.0;
+                          current_max_component = y_length - 1;
+                        }
                       else if (str_equals_any(kind, 2, "heatmap", "marginalheatmap") &&
                                str_equals_any(*current_component_name, 2, "x", "y"))
                         {
@@ -2174,7 +2184,7 @@ err_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name_s
 err_t plot_line(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
-  err_t error;
+  err_t error = ERROR_NONE;
   const char *kind, *orientation;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -2182,13 +2192,27 @@ err_t plot_line(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "orientation", "s", &orientation);
   while (*current_series != nullptr)
     {
-      double *x, *y;
-      unsigned int x_length, y_length;
+      double *x = NULL, *y = NULL;
+      int allocated_x = 0;
+      unsigned int x_length = 0, y_length = 0;
       char *spec;
       int mask;
-      return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      cleanup_and_set_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length),
+                               ERROR_PLOT_MISSING_DATA);
+      if (!grm_args_first_value(*current_series, "x", "D", &x, &x_length))
+        {
+          int i;
+          /* If no `x` is given, use integer values startng at `0` */
+          x = static_cast<double *>(malloc(y_length * sizeof(double)));
+          cleanup_and_set_error_if(x == NULL, ERROR_MALLOC);
+          x_length = y_length;
+          allocated_x = 1;
+          for (i = 0; i < y_length; ++i)
+            {
+              x[i] = i;
+            }
+        }
+      cleanup_and_set_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
       mask = gr_uselinespec(spec);
       if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
@@ -2215,11 +2239,25 @@ err_t plot_line(grm_args_t *subplot_args)
         }
       grm_args_push(*current_series, "orientation", "s", orientation);
       error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
-      return_if_error;
+      cleanup_if_error;
       ++current_series;
+
+    cleanup:
+      if (allocated_x)
+        {
+          free(x);
+        }
+      x = y = NULL;
+      x_length = y_length = 0;
+      allocated_x = 0;
+
+      if (error != ERROR_NONE)
+        {
+          break;
+        }
     }
 
-  return ERROR_NONE;
+  return error;
 }
 
 err_t plot_step(grm_args_t *subplot_args)
