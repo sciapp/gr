@@ -11,8 +11,7 @@
 
 /* ------------------------- error handling ------------------------------------------------------------------------- */
 
-const char *error_names[] = {STRING_ARRAY_VALUE(ERROR_NONE, 0)
-                                 ENUM_ELEMENTS(STRING_ARRAY_VALUE, STRING_ARRAY_LAST_VALUE)};
+const char *error_names[] = {ENUM_ELEMENTS(STRING_ARRAY_VALUE, STRING_ARRAY_VALUE)};
 
 /* ========================= functions ============================================================================== */
 
