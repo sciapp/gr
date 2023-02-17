@@ -1217,15 +1217,7 @@ void plot_process_viewport(grm_args_t *subplot_args)
   if (str_equals_any(kind, 11, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface", "tricont",
                      "trisurf", "volume", "marginalheatmap", "quiver"))
     {
-      right_margin = 0.05;
-      if (strcmp(kind, "marginalheatmap") == 0)
-        {
-          right_margin += (vp1 - vp0) * 0.1;
-        }
-      if (!keep_aspect_ratio)
-        {
-          right_margin += 0.025;
-        }
+      right_margin = (vp1 - vp0) * 0.1;
     }
   else
     {
@@ -1842,9 +1834,9 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
     {
       /* Iterate over `x` and `y` range keys (and `z` depending on `kind`) */
       current_range_keys = range_keys;
-      for (i = 0; i < (strcmp(kind, "volume") != 0 ? 2 : 3); i++)
+      for (i = 0; i < (strcmp(kind, "imshow") == 0 ? 2 : 3); i++)
         {
-          double min_component = (strcmp(kind, "volume") != 0 ? 0.0 : -1.0);
+          double min_component = (strcmp(kind, "imshow") == 0 ? 0.0 : -1.0);
           double max_component = 1.0;
           grm_args_values(subplot_args, current_range_keys->subplot, "dd", &min_component, &max_component);
           grm_args_push(subplot_args, private_name(current_range_keys->subplot), "dd", min_component, max_component);
@@ -2208,14 +2200,13 @@ err_t plot_line(grm_args_t *subplot_args)
       if (!grm_args_first_value(*current_series, "x", "D", &x, &x_length))
         {
           int i;
-          /* If no `x` is given, use integer values startng at `0` */
           x = static_cast<double *>(malloc(y_length * sizeof(double)));
           cleanup_and_set_error_if(x == NULL, ERROR_MALLOC);
           x_length = y_length;
           allocated_x = 1;
-          for (i = 0; i < y_length; ++i)
+          for (i = 0; i < y_length; ++i) /* julia starts with 1, so GRM starts with 1 to be consistent */
             {
-              x[i] = i;
+              x[i] = i + 1;
             }
         }
       cleanup_and_set_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
@@ -2564,7 +2555,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
                 {
                   if (i < z_length)
                     {
-                      gr_setmarkersize(z[i] / 100.0);
+                      gr_setmarkersize(z[i]);
                     }
                   else
                     {
@@ -2575,7 +2566,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
                 {
                   if (i < c_length)
                     {
-                      c_index = 1000 + (int)(255 * (c[i] - c_min) / (c_max - c_min));
+                      c_index = 1000 + (int)grm_round(255 * (c[i] - c_min) / (c_max - c_min));
                       if (c_index < 1000 || c_index > 1255)
                         {
                           continue;
@@ -2665,6 +2656,7 @@ err_t plot_stem(grm_args_t *subplot_args)
         }
       grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
 
+      gr_setlinecolorind(1);
       if (is_vertical)
         {
           window += 2;
@@ -3765,14 +3757,15 @@ err_t plot_contourf(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
+      double corner_x[5], corner_y[5];
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
+      gr_setlinecolorind(1);
       if ((error = plot_draw_colorbar(subplot_args, 0.0, num_levels)) != ERROR_NONE)
         {
           goto cleanup;
         }
-      gr_setlinecolorind(1);
       if (x_length == y_length && x_length == z_length)
         {
           if (gridit_x == nullptr)
@@ -3797,7 +3790,14 @@ err_t plot_contourf(grm_args_t *subplot_args)
             {
               h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
             }
-          gr_contourf(PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, num_levels, gridit_x, gridit_y, h, gridit_z, 1000);
+          gr_setlinecolorind(989);
+          gr_contourf(PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, num_levels, gridit_x, gridit_y, h, gridit_z, 0);
+          // julia contourf is framed
+          corner_x[0] = corner_x[3] = corner_x[4] = gridit_x[0];
+          corner_x[1] = corner_x[2] = gridit_x[PLOT_CONTOUR_GRIDIT_N - 1];
+          corner_y[0] = corner_y[1] = corner_y[4] = gridit_y[0];
+          corner_y[2] = corner_y[3] = gridit_y[PLOT_CONTOUR_GRIDIT_N - 1];
+          gr_polyline(5, corner_x, corner_y);
         }
       else
         {
@@ -3810,7 +3810,14 @@ err_t plot_contourf(grm_args_t *subplot_args)
             {
               h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
             }
-          gr_contourf(x_length, y_length, num_levels, x, y, h, z, 1000);
+          gr_setlinecolorind(989);
+          gr_contourf(x_length, y_length, num_levels, x, y, h, z, 0);
+          // julia contourf is framed
+          corner_x[0] = corner_x[3] = corner_x[4] = x[0];
+          corner_x[1] = corner_x[2] = x[x_length - 1];
+          corner_y[0] = corner_y[1] = corner_y[4] = y[0];
+          corner_y[2] = corner_y[3] = y[y_length - 1];
+          gr_polyline(5, corner_x, corner_y);
         }
       ++current_series;
     }
@@ -3950,7 +3957,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
                 }
               else
                 {
-                  data[i] = (int)((zv - c_min) / (c_max - c_min) * 255);
+                  data[i] = (int)grm_round((zv - c_min) / (c_max - c_min) * 255);
                   if (data[i] >= 255)
                     {
                       data[i] = 255;
@@ -4012,6 +4019,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
 
   if (strcmp(kind, "marginalheatmap") != 0)
     {
+      gr_setlinecolorind(1);
       plot_draw_colorbar(subplot_args, 0.0, 256);
     }
 
@@ -4371,6 +4379,7 @@ err_t plot_surface(grm_args_t *subplot_args)
     }
   plot_draw_axes(subplot_args, 2);
   plot_draw_colorbar(subplot_args, 0.05, 256);
+  gr3_terminate();
 
 cleanup:
   for (int i = 0; i < array_size(value_array_ptrs); ++i)
@@ -4432,7 +4441,7 @@ err_t plot_scatter3(grm_args_t *subplot_args)
             {
               if (i < c_length)
                 {
-                  c_index = 1000 + (int)(255 * (c[i] - c_min) / c_max);
+                  c_index = 1000 + (int)grm_round(255 * (c[i] - c_min) / c_max);
                 }
               else
                 {
@@ -4481,8 +4490,8 @@ err_t plot_imshow(grm_args_t *subplot_args)
       return_error_if(!grm_args_first_value(*current_series, "c_dims", "I", &shape, &i), ERROR_PLOT_MISSING_DATA);
       return_error_if(i != 2, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       return_error_if(shape[0] * shape[1] != c_data_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      rows = shape[0];
-      cols = shape[1];
+      cols = shape[0];
+      rows = shape[1];
 
       img_data = static_cast<int *>(malloc(sizeof(int) * c_data_length));
       if (img_data == nullptr)
@@ -4494,23 +4503,11 @@ err_t plot_imshow(grm_args_t *subplot_args)
 
       logger((stderr, "Got min, max %lf %lf\n", c_min, c_max));
       k = 0;
-      if (grplot)
-        {
-          for (j = 0; j < rows; ++j)
-            for (i = 0; i < cols; ++i)
-              {
-                img_data[k++] = 1000 + (int)grm_round((1.0 * c_data[j * cols + i] - c_min) / (c_max - c_min) * 255);
-              }
-        }
-      else
-        {
-          for (j = 0; j < rows; ++j)
-            for (i = 0; i < cols; ++i)
-              {
-                img_data[k++] = 1000 + (int)grm_round((1.0 * c_data[(rows - 1 - j) * cols + (cols - 1 - i)] - c_min) /
-                                                      (c_max - c_min) * 255);
-              }
-        }
+      for (j = 0; j < rows; ++j)
+        for (i = 0; i < cols; ++i)
+          {
+            img_data[k++] = 1000 + (int)grm_round((1.0 * c_data[j * cols + i] - c_min) / (c_max - c_min) * 255);
+          }
 
       h = (double)rows / (double)cols * (vp[1] - vp[0]);
       w = (double)cols / (double)rows * (vp[3] - vp[2]);
@@ -4705,9 +4702,9 @@ err_t plot_isosurface(grm_args_t *subplot_args)
                                        /* stride_y */ shape[2],
                                        /* stride_z */ 1,
 
-                                       /* step_x */ 2.f / (shape[0] - 1),
-                                       /* step_y */ 2.f / (shape[1] - 1),
-                                       /* step_z */ 2.f / (shape[2] - 1),
+                                       /* step_x */ 2.f / (shape[0] - 1.f),
+                                       /* step_y */ 2.f / (shape[1] - 1.f),
+                                       /* step_z */ 2.f / (shape[2] - 1.f),
 
                                        /* offset_x */ -1.f,
                                        /* offset_y */ -1.f,
@@ -4830,7 +4827,7 @@ err_t plot_volume(grm_args_t *subplot_args)
 
   error = plot_draw_axes(subplot_args, 2);
   return_if_error;
-  error = plot_draw_colorbar(subplot_args, 0.0, 256);
+  error = plot_draw_colorbar(subplot_args, 0.05, 256);
   return_if_error;
 
   return ERROR_NONE;
@@ -6088,15 +6085,15 @@ err_t plot_shade(grm_args_t *subplot_args)
     }
   if (!grm_args_values(subplot_args, "xform", "i", &xform))
     {
-      xform = 1;
+      xform = 5;
     }
   if (!grm_args_values(subplot_args, "xbins", "i", &xbins))
     {
-      xbins = 100;
+      xbins = 1200;
     }
   if (!grm_args_values(subplot_args, "ybins", "i", &ybins))
     {
-      ybins = 100;
+      ybins = 1200;
     }
   gr_shadepoints(point_count, components[0], components[1], xform, xbins, ybins);
 
@@ -6367,14 +6364,13 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   if (grm_args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
   for (i = 0; i <= n; i++)
     {
-      double r = 2.0 / 3 * (r_min + i * tick) / r_max;
+      double r = (r_min + i * tick) / (r_max - r_min);
       if (i % 2 == 0)
         {
           gr_setlinecolorind(88);
           if (i > 0)
             {
-              gr_drawarc(-r, r, -r, r, 0, 180);
-              gr_drawarc(-r, r, -r, r, 180, 360);
+              gr_drawarc(-r, r, -r, r, 0, 360);
             }
           gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
           x[0] = 0.05;
@@ -6386,8 +6382,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
       else
         {
           gr_setlinecolorind(90);
-          gr_drawarc(-r, r, -r, r, 0, 180);
-          gr_drawarc(-r, r, -r, r, 180, 360);
+          gr_drawarc(-r, r, -r, r, 0, 360);
         }
     }
   if (strcmp(kind, "polar_histogram") == 0)
@@ -6659,6 +6654,7 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
   charheight = grm_max(0.016 * diag, 0.012);
   gr_setcharheight(charheight);
   grm_args_values(subplot_args, "scale", "i", &scale);
+  gr_setlinecolorind(1);
   if (scale & GR_OPTION_Z_LOG)
     {
       gr_setscale(GR_OPTION_Y_LOG);
@@ -7202,8 +7198,6 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
     }
   else if (grm_args_values(plot_args, "size", "dd", &tmp_size_d[0], &tmp_size_d[1]))
     {
-
-
       for (i = 0; i < 2; ++i)
         {
           pixel_size[i] = (int)grm_round(tmp_size_d[i]);

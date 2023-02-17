@@ -162,7 +162,7 @@ static void test_scatter(void)
   cleanup_if(x == NULL);
   y = mapx(test_scatter_y, NULL, x, n);
   cleanup_if(y == NULL);
-  sz = lin_range(NULL, 50.0, 300.0, n, 0);
+  sz = lin_range(NULL, 0.5, 3.0, n, 0);
   cleanup_if(sz == NULL);
   c = lin_range(NULL, 0.0, 255.0, n, 0);
   cleanup_if(c == NULL);
@@ -337,9 +337,9 @@ static void test_polar(void)
   double *angles = NULL, *radii = NULL;
   grm_args_t *args = NULL;
 
-  angles = lin_range(NULL, 0.0, 2 * M_PI, n, 1);
+  angles = lin_range(NULL, 0.0, 2 * M_PI, n, 0);
   cleanup_if(angles == NULL);
-  radii = lin_range(NULL, 0.0, 2.0, n, 1);
+  radii = lin_range(NULL, 0.0, 2.0, n, 0);
   cleanup_if(radii == NULL);
 
   args = grm_args_new();
@@ -427,9 +427,9 @@ static void test_hexbin(void)
   double *x = NULL, *y = NULL;
   grm_args_t *args = NULL;
 
-  x = rand(NULL, n);
+  x = randn(NULL, n);
   cleanup_if(x == NULL);
-  y = rand(NULL, n);
+  y = randn(NULL, n);
   cleanup_if(y == NULL);
 
   args = grm_args_new();
@@ -505,9 +505,9 @@ static void test_contour2(void)
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
 
-  x = lin_range(NULL, -2, 2, n, 1);
+  x = lin_range(NULL, -2, 2, n, 0);
   cleanup_if(x == NULL);
-  y = lin_range(NULL, 0.0, M_PI, n / 2, 1);
+  y = lin_range(NULL, 0.0, M_PI, n / 2, 0);
   cleanup_if(y == NULL);
   z = mapxty(test_contour1_z, NULL, x, y, n, n / 2);
   cleanup_if(z == NULL);
@@ -587,9 +587,9 @@ static void test_contourf2(void)
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
 
-  x = lin_range(NULL, -2, 2, n, 1);
+  x = lin_range(NULL, -2, 2, n, 0);
   cleanup_if(x == NULL);
-  y = lin_range(NULL, 0.0, M_PI, n / 2, 1);
+  y = lin_range(NULL, 0.0, M_PI, n / 2, 0);
   cleanup_if(y == NULL);
   z = mapxty(test_contourf1_z, NULL, x, y, n, n / 2);
   cleanup_if(z == NULL);
@@ -719,9 +719,9 @@ static void test_surface2(void)
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
 
-  x = lin_range(NULL, -2, 2, n, 1);
+  x = lin_range(NULL, -2, 2, n, 0);
   cleanup_if(x == NULL);
-  y = lin_range(NULL, 0.0, M_PI, n / 2, 1);
+  y = lin_range(NULL, 0.0, M_PI, n / 2, 0);
   cleanup_if(y == NULL);
   z = mapxty(test_surface1_z, NULL, x, y, n, n / 2);
   cleanup_if(z == NULL);
@@ -861,9 +861,9 @@ static void test_wireframe(void)
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
 
-  x = lin_range(NULL, -2, 2, n, 1);
+  x = lin_range(NULL, -2, 2, n, 0);
   cleanup_if(x == NULL);
-  y = lin_range(NULL, 0.0, M_PI, n / 2, 1);
+  y = lin_range(NULL, 0.0, M_PI, n / 2, 0);
   cleanup_if(y == NULL);
   z = mapxty(test_wireframe_z, NULL, x, y, n, n / 2);
   cleanup_if(z == NULL);
@@ -898,9 +898,9 @@ static void test_heatmap_and_imshow(void)
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
 
-  x = lin_range(NULL, -2, 2, n, 1);
+  x = lin_range(NULL, -2, 2, n, 0);
   cleanup_if(x == NULL);
-  y = lin_range(NULL, 0.0, M_PI, n / 2, 1);
+  y = lin_range(NULL, 0.0, M_PI, n / 2, 0);
   cleanup_if(y == NULL);
   z = mapxty(test_heatmap_z, NULL, x, y, n, n / 2);
   cleanup_if(z == NULL);
@@ -918,7 +918,7 @@ static void test_heatmap_and_imshow(void)
   args = grm_args_new();
   cleanup_if(args == NULL);
   grm_args_push(args, "c", "nD", n * (n / 2), z);
-  grm_args_push(args, "c_dims", "ii", n / 2, n);
+  grm_args_push(args, "c_dims", "ii", n, n / 2);
   grm_args_push(args, "kind", "s", "imshow");
 
   grm_plot(args);
