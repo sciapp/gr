@@ -15,7 +15,8 @@
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ key to types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::map<std::string, const char *> key_to_types{{"algorithm", "s"},
+static std::map<std::string, const char *> key_to_types{{"accelerate", "i"},
+                                                        {"algorithm", "s"},
                                                         {"bar_color", "ddd"},
                                                         {"bar_color", "i"},
                                                         {"bar_width", "d"},

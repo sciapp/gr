@@ -25,10 +25,11 @@ For plots where multiple columns are read there is also a parameter which allows
 
 There are more key-valid parameters. These parameter only effect specific plot types. For example `bar_width` makes only
 sense, when bars are drawn.
-`algorithm`, `bar_color`, `bar_width`, `bin_edges`, `c`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `grplot`
-, `isovalue`, `keep_aspect_ratio`, `kind`, `levels`, `marginalheatmap_kind`, `markertype`, `nbins`, `normalization`
-, `orientation`, `phiflip`, `scatterz`, `spec`, `stairs`, `step_where`, `style`, `xbins`, `xcolormap`, `xflip`, `xform`
-, `xticklabels`, `ybins`, `ycolormap`, `yflip`, `ylabels`
+
+`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_edges`, `c`, `colormap`, `draw_edges`, `edge_color`,
+`edge_width`, `grplot`, `isovalue`, `keep_aspect_ratio`, `kind`, `levels`, `marginalheatmap_kind`, `markertype`,
+`nbins`, `normalization`, `orientation`, `phiflip`, `scatterz`, `spec`, `stairs`, `step_where`, `style`, `xbins`,
+`xcolormap`, `xflip`, `xform`, `xticklabels`, `ybins`, `ycolormap`, `yflip`, `ylabels`
 
 All parameters are separated through 1 whitespace.
 Some parameters are more complex than others. These parameters represent a container inside GRM.

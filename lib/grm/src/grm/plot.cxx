@@ -231,7 +231,8 @@ static int pre_plot_text_encoding = -1;
 const char *valid_root_keys[] = {"plots", "append_plots", "hold_plots", nullptr};
 const char *valid_plot_keys[] = {"clear", "figsize", "raw", "size", "subplots", "update", nullptr};
 
-const char *valid_subplot_keys[] = {"adjust_xlim",
+const char *valid_subplot_keys[] = {"accelerate",
+                                    "adjust_xlim",
                                     "adjust_ylim",
                                     "adjust_zlim",
                                     "alpha",
@@ -301,6 +302,7 @@ const char *valid_series_keys[] = {
  * Example: "i|s" for supporting both integer and strings */
 /* TODO: type for format "s"? */
 static string_map_entry_t key_to_formats[] = {{"a", "A"},
+                                              {"accelerate", "i"},
                                               {"algorithm", "i|s"},
                                               {"adjust_xlim", "i"},
                                               {"adjust_ylim", "i"},
@@ -931,6 +933,10 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
         {
           args_setdefault(*current_subplot, "xind", "i", -1);
           args_setdefault(*current_subplot, "yind", "i", -1);
+        }
+      else if (str_equals_any(kind, 1, "surface"))
+        {
+          args_setdefault(*current_subplot, "accelerate", "i", 1);
         }
       if (str_equals_any(kind, 6, "barplot", "hist", "line", "scatter", "step", "stem"))
         {
@@ -4219,8 +4225,11 @@ err_t plot_surface(grm_args_t *subplot_args)
   int allocated_array[2] = {0, 0};
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
+  int accelerate; /* this argument decides if GR3 or GR is used to plot the surface */
+  float *x_f = nullptr, *y_f = nullptr, *z_f = nullptr;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
+  grm_args_values(subplot_args, "accelerate", "i", &accelerate);
   while (*current_series != nullptr)
     {
       double *x = nullptr, *y = nullptr, *z = nullptr;
@@ -4272,7 +4281,6 @@ err_t plot_surface(grm_args_t *subplot_args)
                 }
             }
         }
-      /* TODO: add support for GR3 */
       if (x_length == y_length && x_length == z_length)
         {
           logger((stderr, "Create a %d x %d grid for \"surface\" with \"gridit\"\n", PLOT_SURFACE_GRIDIT_N,
@@ -4287,14 +4295,69 @@ err_t plot_surface(grm_args_t *subplot_args)
               cleanup_and_set_error_if(gridit_z == nullptr, ERROR_MALLOC);
             }
           gr_gridit(x_length, x, y, z, PLOT_SURFACE_GRIDIT_N, PLOT_SURFACE_GRIDIT_N, gridit_x, gridit_y, gridit_z);
-          gr_surface(PLOT_SURFACE_GRIDIT_N, PLOT_SURFACE_GRIDIT_N, gridit_x, gridit_y, gridit_z,
-                     GR_OPTION_COLORED_MESH);
+          if (accelerate)
+            {
+              x_f = static_cast<float *>(malloc(PLOT_SURFACE_GRIDIT_N * sizeof(float)));
+              cleanup_and_set_error_if(x_f == nullptr, ERROR_MALLOC);
+              y_f = static_cast<float *>(malloc(PLOT_SURFACE_GRIDIT_N * sizeof(float)));
+              cleanup_and_set_error_if(y_f == nullptr, ERROR_MALLOC);
+              z_f = static_cast<float *>(malloc(PLOT_SURFACE_GRIDIT_N * PLOT_SURFACE_GRIDIT_N * sizeof(float)));
+              cleanup_and_set_error_if(z_f == nullptr, ERROR_MALLOC);
+              for (int i = 0; i < PLOT_SURFACE_GRIDIT_N; i++)
+                {
+                  x_f[i] = (float)gridit_x[i];
+                  y_f[i] = (float)gridit_y[i];
+                  for (int j = 0; j < PLOT_SURFACE_GRIDIT_N; j++)
+                    {
+                      z_f[i * PLOT_SURFACE_GRIDIT_N + j] = (float)gridit_z[i * PLOT_SURFACE_GRIDIT_N + j];
+                    }
+                }
+              gr3_surface(PLOT_SURFACE_GRIDIT_N, PLOT_SURFACE_GRIDIT_N, x_f, y_f, z_f, GR_OPTION_COLORED_MESH);
+              free(x_f);
+              free(y_f);
+              free(z_f);
+              x_f = y_f = z_f = nullptr;
+            }
+          else
+            {
+              gr_surface(PLOT_SURFACE_GRIDIT_N, PLOT_SURFACE_GRIDIT_N, gridit_x, gridit_y, gridit_z,
+                         GR_OPTION_COLORED_MESH);
+            }
         }
       else
         {
           logger((stderr, "x_length; %u, y_length: %u, z_length: %u\n", x_length, y_length, z_length));
           cleanup_and_set_error_if(x_length * y_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-          gr_surface(x_length, y_length, x, y, z, GR_OPTION_COLORED_MESH);
+          if (accelerate)
+            {
+              x_f = static_cast<float *>(malloc(x_length * sizeof(float)));
+              cleanup_and_set_error_if(x_f == nullptr, ERROR_MALLOC);
+              y_f = static_cast<float *>(malloc(y_length * sizeof(float)));
+              cleanup_and_set_error_if(y_f == nullptr, ERROR_MALLOC);
+              z_f = static_cast<float *>(malloc(z_length * sizeof(float)));
+              cleanup_and_set_error_if(z_f == nullptr, ERROR_MALLOC);
+              for (int i = 0; i < x_length; i++)
+                {
+                  x_f[i] = (float)x[i];
+                }
+              for (int i = 0; i < y_length; i++)
+                {
+                  y_f[i] = (float)y[i];
+                }
+              for (int i = 0; i < z_length; i++)
+                {
+                  z_f[i] = (float)z[i];
+                }
+              gr3_surface(x_length, y_length, x_f, y_f, z_f, GR_OPTION_COLORED_MESH);
+              free(x_f);
+              free(y_f);
+              free(z_f);
+              x_f = y_f = z_f = nullptr;
+            }
+          else
+            {
+              gr_surface(x_length, y_length, x, y, z, GR_OPTION_COLORED_MESH);
+            }
         }
       for (int i = 0; i < array_size(value_array_ptrs); ++i)
         {
@@ -4320,6 +4383,9 @@ cleanup:
   free(gridit_x);
   free(gridit_y);
   free(gridit_z);
+  free(x_f);
+  free(y_f);
+  free(z_f);
 
   return error;
 }
