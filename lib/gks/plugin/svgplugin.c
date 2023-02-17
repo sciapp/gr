@@ -1252,20 +1252,23 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           cur_y = start_y;
           in_path = 0;
           break;
-        case 'f': /* fill */
-          svg_printf(p->stream, "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" />",
-                     p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency);
+        case 'f': /* fill (even-odd) */
+        case 'g': /* fill (winding) */
+          svg_printf(p->stream, "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"%s\" fill-opacity=\"%g\" />",
+                     p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2],
+                     codes[i] == 'f' ? "evenodd" : "nonzero", p->transparency);
           cur_x = start_x;
           cur_y = start_y;
           in_path = 0;
           break;
-        case 'F': /* fill and stroke */
+        case 'F': /* fill (even-odd) and stroke */
+        case 'G': /* fill (winding) and stroke */
           svg_printf(p->stream,
-                     "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" stroke=\"#%02x%02x%02x\" "
+                     "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"%s\" fill-opacity=\"%g\" stroke=\"#%02x%02x%02x\" "
                      "stroke-opacity=\"%g\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"%g\" />",
-                     p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency,
-                     p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
-                     gkss->bwidth * p->nominal_size);
+                     p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2],
+                     codes[i] == 'F' ? "evenodd" : "nonzero", p->transparency, p->rgb[gkss->bcoli][0],
+                     p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency, gkss->bwidth * p->nominal_size);
           cur_x = start_x;
           cur_y = start_y;
           in_path = 0;

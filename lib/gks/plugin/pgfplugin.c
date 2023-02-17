@@ -1212,19 +1212,21 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
           pgf_clear_stream(buf);
           break;
-        case 'F': /* fill and stroke */
+        case 'F': /* fill (even-odd) and stroke */
+        case 'G': /* fill (winding) and stroke */
           pgf_printf(buf, "-- cycle;\n");
-          pgf_printf(p->stream,
-                     "\\filldraw[color=pathstroke, fill=pathfill, even odd rule, line width=%fpt, opacity=%f] ",
-                     line_width, p->transparency);
+          pgf_printf(p->stream, "\\filldraw[color=pathstroke, fill=pathfill%s, line width=%fpt, opacity=%f] ",
+                     codes[i] == 'F' ? ", even odd rule" : "", line_width, p->transparency);
           pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
           pgf_clear_stream(buf);
           cur_x = start_x;
           cur_y = start_y;
           break;
-        case 'f': /* fill */
+        case 'f': /* fill (even-odd) */
+        case 'g': /* fill (winding) */
           pgf_printf(buf, "-- cycle;\n");
-          pgf_printf(p->stream, "\\fill[fill=pathfill, even odd rule, opacity=%f] ", p->transparency);
+          pgf_printf(p->stream, "\\fill[fill=pathfill%s, opacity=%f] ", codes[i] == 'f' ? ", even odd rule" : "",
+                     p->transparency);
           pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
           pgf_clear_stream(buf);
           cur_x = start_x;

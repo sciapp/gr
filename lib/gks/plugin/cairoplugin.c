@@ -1929,20 +1929,26 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           cairo_stroke(p->cr);
           break;
         case 'F': /* fill and stroke */
+        case 'G': /* fill and stroke (winding rule) */
           cairo_close_path(p->cr);
           cur_x = start_x;
           cur_y = start_y;
           set_color(gkss->facoli);
+          cairo_set_fill_rule(p->cr, codes[i] == 'F' ? CAIRO_FILL_RULE_EVEN_ODD : CAIRO_FILL_RULE_WINDING);
           cairo_fill_preserve(p->cr);
+          cairo_set_fill_rule(p->cr, CAIRO_FILL_RULE_EVEN_ODD);
           set_color(gkss->bcoli);
           cairo_stroke(p->cr);
           break;
         case 'f': /* fill */
+        case 'g': /* fill (winding rule) */
           cairo_close_path(p->cr);
           cur_x = start_x;
           cur_y = start_y;
           set_color(gkss->facoli);
+          cairo_set_fill_rule(p->cr, codes[i] == 'f' ? CAIRO_FILL_RULE_EVEN_ODD : CAIRO_FILL_RULE_WINDING);
           cairo_fill(p->cr);
+          cairo_set_fill_rule(p->cr, CAIRO_FILL_RULE_EVEN_ODD);
           break;
         case 'Z': /* close */
           cairo_close_path(p->cr);

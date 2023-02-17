@@ -1537,7 +1537,7 @@ static void get_outline(FT_Face face, FT_UInt charcode, FT_Bool first, FT_Bool l
 
   if (num_opcodes > 0)
     {
-      opcodes[num_opcodes++] = 'f';
+      opcodes[num_opcodes++] = 'g'; /* use winding rule for fonts */
       opcodes[num_opcodes] = '\0';
     }
 
