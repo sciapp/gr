@@ -1049,18 +1049,22 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           p->pixmap->strokePath(
               path, QPen(stroke_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
           break;
-        case 'F': /* fill and stroke */
+        case 'F': /* fill (even-odd) and stroke */
+        case 'G': /* fill (winding) and stroke */
           path.closeSubpath();
           cur_x = start_x;
           cur_y = start_y;
+          path.setFillRule(codes[i] == 'F' ? Qt::OddEvenFill : Qt::WindingFill);
           p->pixmap->fillPath(path, fill_color);
           p->pixmap->strokePath(
               path, QPen(stroke_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
           break;
-        case 'f': /* fill */
+        case 'f': /* fill (even-odd) */
+        case 'g': /* fill (winding) */
           path.closeSubpath();
           cur_x = start_x;
           cur_y = start_y;
+          path.setFillRule(codes[i] == 'f' ? Qt::OddEvenFill : Qt::WindingFill);
           p->pixmap->fillPath(path, fill_color);
           break;
         case 'Z': /* closepath */
