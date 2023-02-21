@@ -2842,7 +2842,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
   char *orientation;
   int is_vertical;
 
-  gr_settextalign(2, 3);
   gr_selectclipxform(1);
 
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -3698,6 +3697,7 @@ err_t plot_contour(grm_args_t *subplot_args)
             {
               h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
             }
+          gr_setspace(z_min, z_max, 0, 90);
           gr_contour(PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, num_levels, gridit_x, gridit_y, h, gridit_z, 1000);
         }
       else

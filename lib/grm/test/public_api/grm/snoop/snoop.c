@@ -486,6 +486,16 @@ static void test_contour1(void)
   grm_args_push(args, "kind", "s", "contour");
 
   grm_plot(args);
+  grm_args_delete(args);
+
+  args = grm_args_new();
+  cleanup_if(args == NULL);
+  grm_args_push(args, "x", "nD", n, x);
+  grm_args_push(args, "y", "nD", n, y);
+  grm_args_push(args, "z", "nD", n, z);
+  grm_args_push(args, "kind", "s", "contourf");
+
+  grm_plot(args);
 
 cleanup:
   free(x_rand);
@@ -520,7 +530,16 @@ static void test_contour2(void)
   grm_args_push(args, "kind", "s", "contour");
 
   grm_plot(args);
+  grm_args_delete(args);
 
+  args = grm_args_new();
+  cleanup_if(args == NULL);
+  grm_args_push(args, "x", "nD", n, x);
+  grm_args_push(args, "y", "nD", n / 2, y);
+  grm_args_push(args, "z", "nD", n * (n / 2), z);
+  grm_args_push(args, "kind", "s", "contourf");
+
+  grm_plot(args);
 cleanup:
   free(x);
   free(y);
@@ -1088,10 +1107,8 @@ int main(void)
   /* 9 */ test_polar();
   /* 10, 11 */ test_scatter3();
   /* 12 */ test_hexbin();
-  /* 13 */ test_contour1();
-  /* 14 */ test_contour2();
-  /* 15 */ test_contourf1();
-  /* 16 */ test_contourf2();
+  /* 13, 14 */ test_contour1();
+  /* 15, 16 */ test_contour2();
   /* 17 */ test_tricont();
   /* 18 */ test_surface1();
   /* 19 */ test_surface2();
