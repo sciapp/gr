@@ -2816,7 +2816,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
   int bar_color = 989, edge_color = 1;
   double bar_color_rgb[3] = {-1};
   double edge_color_rgb[3] = {-1};
-  double bar_width = 1, edge_width = 1, bar_shift = 1;
+  double bar_width = 0.8, edge_width = 1.0, bar_shift = 1;
   const char *style = "default";
   double *y;
   unsigned int y_length;

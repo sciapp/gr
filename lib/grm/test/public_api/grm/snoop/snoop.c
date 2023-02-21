@@ -1026,6 +1026,57 @@ cleanup:
     }
 }
 
+static void test_barplot(void)
+{
+  const int n = 20;
+  double *x = NULL;
+  grm_args_t *args = NULL;
+
+  x = randn(NULL, n);
+  cleanup_if(x == NULL);
+  args = grm_args_new();
+  cleanup_if(args == NULL);
+  grm_args_push(args, "y", "nD", n, x);
+  grm_args_push(args, "kind", "s", "barplot");
+
+  grm_plot(args);
+
+cleanup:
+  free(x);
+  if (args != NULL)
+    {
+      grm_args_delete(args);
+    }
+}
+
+static void test_step(void)
+{
+  const int n = 51;
+  double *x = NULL, *y = NULL;
+  grm_args_t *args = NULL;
+
+  x = lin_range(NULL, 0.0, 1.0, n, 0);
+  cleanup_if(x == NULL);
+  y = mapx(test_scatter_y, NULL, x, n);
+  cleanup_if(y == NULL);
+
+  args = grm_args_new();
+  cleanup_if(args == NULL);
+  grm_args_push(args, "x", "nD", n, x);
+  grm_args_push(args, "y", "nD", n, y);
+  grm_args_push(args, "kind", "s", "step");
+
+  grm_plot(args);
+
+cleanup:
+  free(x);
+  free(y);
+  if (args != NULL)
+    {
+      grm_args_delete(args);
+    }
+}
+
 int main(void)
 {
   /* 1 */ test_line();
@@ -1052,6 +1103,8 @@ int main(void)
   /* 26 */ test_isosurface();
   /* 27 */ test_volume();
   /* 28 */ test_shade();
+  /* 29 */ test_barplot();
+  /* 30 */ test_step();
 
   grm_finalize();
 

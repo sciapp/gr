@@ -1,5 +1,5 @@
---- snoop.jl	2023-02-14 11:44:13.972371786 +0100
-+++ snoop.patched.jl	2023-02-14 11:45:11.068927545 +0100
+--- snoop.jl	2023-02-21 11:33:41
++++ snoop.patched.jl	2023-02-21 10:25:51
 @@ -1,8 +1,31 @@
 -using Random
 -rng = MersenneTwister(1234)
@@ -34,13 +34,13 @@
  x = 0:π/100:2π
  y = sin.(x)
  plot(x, y)
-@@ -115,35 +138,3 @@
- x = randn(rng, N)
+@@ -116,34 +139,8 @@
  y = randn(rng, N)
  shade(x, y)
--
+ 
 -setprojectiontype(0)
--
++barplot(randn(rng, 20))
+ 
 -clearws()
 -xd = -2 .+ 4 * rand(rng, 100)
 -yd = -2 .+ 4 * rand(rng, 100)
@@ -70,3 +70,6 @@
 -GR.axes(0.25, 0.25, -2, -2, 2, 2, 0.01)
 -
 -updatews()
++x = LinRange(0, 1, 51)
++y = x .- x.^2
++stairs(x, y)
