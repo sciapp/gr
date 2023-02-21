@@ -984,34 +984,74 @@ cleanup:
     }
 }
 
+static void test_isosurface(void)
+{
+  int i, j, k;
+  const int n = 40;
+  double *s = NULL, *v = NULL;
+  grm_args_t *args = NULL;
+  int dims[3] = {n, n, n};
+
+  s = lin_range(NULL, -1, 1, n, 0);
+  cleanup_if(s == NULL);
+
+  v = malloc(n * n * n * sizeof(double));
+  cleanup_if(v == NULL);
+  for (i = 0; i < n; i++)
+    {
+      for (j = 0; j < n; j++)
+        {
+          for (k = 0; k < n; k++)
+            {
+              v[k * n * n + j * n + i] = 1 - sqrt(s[i] * s[i] + s[j] * s[j] + s[k] * s[k]);
+            }
+        }
+    }
+
+  args = grm_args_new();
+  cleanup_if(args == NULL);
+  grm_args_push(args, "kind", "s", "isosurface");
+  grm_args_push(args, "c", "nD", n * n * n, v);
+  grm_args_push(args, "c_dims", "nI", 3, dims);
+  grm_args_push(args, "isovalue", "d", 0.2);
+
+  grm_plot(args);
+
+cleanup:
+  free(s);
+  free(v);
+  if (args != NULL)
+    {
+      grm_args_delete(args);
+    }
+}
 
 int main(void)
 {
-  test_line();
-  test_scatter();
-  test_stem();
-  test_histogram();
-  test_line_only_y();
-  test_plot3d();
-  test_polar();
-  test_scatter3();
-  test_hexbin();
-  test_contour1();
-  test_contour2();
-  test_contourf1();
-  test_contourf2();
-  test_tricont();
-  test_surface1();
-  test_surface2();
-  test_trisurf();
-  test_surface_peaks();
-  test_wireframe();
-  test_heatmap_and_imshow();
-  /* TODO: Implement polarheatmap in GRM */
-  /* TODO: Add isosurface plot */
-  test_volume();
-  test_shade();
-  /* TODO: Add last plot: combination of surface, contour and polymarker */
+  /* 1 */ test_line();
+  /* 2, 3 */ test_scatter();
+  /* 4 */ test_stem();
+  /* 5 */ test_histogram();
+  /* 6, 7 */ test_line_only_y();
+  /* 8 */ test_plot3d();
+  /* 9 */ test_polar();
+  /* 10, 11 */ test_scatter3();
+  /* 12 */ test_hexbin();
+  /* 13 */ test_contour1();
+  /* 14 */ test_contour2();
+  /* 15 */ test_contourf1();
+  /* 16 */ test_contourf2();
+  /* 17 */ test_tricont();
+  /* 18 */ test_surface1();
+  /* 19 */ test_surface2();
+  /* 20 */ test_trisurf();
+  /* 21 */ test_surface_peaks();
+  /* 22 */ test_wireframe();
+  /* 23, 24 */ test_heatmap_and_imshow();
+  /* 25 */ test_line(); /* TODO: Implement polarheatmap in GRM */
+  /* 26 */ test_isosurface();
+  /* 27 */ test_volume();
+  /* 28 */ test_shade();
 
   grm_finalize();
 
