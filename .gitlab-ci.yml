@@ -180,8 +180,8 @@ ubuntu-cmake-self-contained-test-snoop:
   - apt-get update && apt-get install -y curl
   - curl -fLO "https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_VERSION%.*}/julia-${JULIA_VERSION}-linux-x86_64.tar.gz"
   - tar -C/usr/local --strip=1 -xf "julia-${JULIA_VERSION}-linux-x86_64.tar.gz"
-  - julia -e "using Pkg; Pkg.add(\"Images\")";
-    julia -e "using Pkg; Pkg.add(url=\"https://github.com/jheinen/GR.jl.git#master\")"
+  - julia -e "using Pkg; Pkg.add(\"Images\")"
+  - julia -e "using Pkg; Pkg.add(name=\"GR\", rev=\"master\")"
   script:
   - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
   - export LD_LIBRARY_PATH=`pwd`/artifacts-ubuntu2004-cmake/lib
