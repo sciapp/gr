@@ -1,6 +1,6 @@
---- snoop.jl	2023-02-21 14:57:19
-+++ snoop.patched.jl	2023-02-21 14:57:10
-@@ -1,8 +1,31 @@
+--- snoop.jl	2023-02-24 12:02:17.173747943 +0100
++++ snoop.patched.jl	2023-02-24 12:01:49.777183482 +0100
+@@ -1,8 +1,33 @@
 -using Random
 -rng = MersenneTwister(1234)
 +import Random
@@ -8,6 +8,8 @@
  
  using GR
  
++figure(600, 450, 600)
++
 +libc_rand_directory_path = get(ENV, "LIBC_RAND_DIRPATH", ".")
 +
 +function c_rand(num_elements:: Int32):: Ptr{Float64}
@@ -34,37 +36,34 @@
  x = 0:π/100:2π
  y = sin.(x)
  plot(x, y)
-@@ -49,21 +72,15 @@
+@@ -49,19 +74,13 @@
  z = sin.(x) .+ cos.(y)
  contour(x, y, z)
  
-+contourf(x, y, z)
-+
- x = LinRange(-2, 2, 40)
- y = LinRange(0, pi, 20)
- z = sin.(x') .+ cos.(y)
- contour(x, y, z)
- 
+-x = LinRange(-2, 2, 40)
+-y = LinRange(0, pi, 20)
+-z = sin.(x') .+ cos.(y)
+-contour(x, y, z)
+-
 -x = 8 .* rand(rng, 100) .- 4
 -y = 8 .* rand(rng, 100) .- 4
 -z = sin.(x) .+ cos.(y)
  contourf(x, y, z)
  
--x = LinRange(-2, 2, 40)
--y = LinRange(0, pi, 20)
--z = sin.(x') .+ cos.(y)
--contourf(x, y, z)
--
+ x = LinRange(-2, 2, 40)
+ y = LinRange(0, pi, 20)
+ z = sin.(x') .+ cos.(y)
++contour(x, y, z)
++
+ contourf(x, y, z)
+ 
  x = 8 .* rand(rng, 100) .- 4
- y = 8 .* rand(rng, 100) .- 4
- z = sin.(x) + cos.(y)
-@@ -116,34 +133,8 @@
+@@ -116,34 +135,8 @@
  y = randn(rng, N)
  shade(x, y)
  
 -setprojectiontype(0)
-+barplot(randn(rng, 20))
- 
+-
 -clearws()
 -xd = -2 .+ 4 * rand(rng, 100)
 -yd = -2 .+ 4 * rand(rng, 100)
@@ -92,7 +91,8 @@
 -contour(x, y, h, z, 0)
 -polymarker(xd, yd)
 -GR.axes(0.25, 0.25, -2, -2, 2, 2, 0.01)
--
++barplot(randn(rng, 20))
+ 
 -updatews()
 +x = LinRange(0, 1, 51)
 +y = x .- x.^2

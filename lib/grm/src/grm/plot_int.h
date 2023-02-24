@@ -42,8 +42,8 @@ extern const char *plot_clear_exclude_keys[];
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 #define ROOT_DEFAULT_APPEND_PLOTS 0
-#define PLOT_DEFAULT_WIDTH 3599.0
-#define PLOT_DEFAULT_HEIGHT 2699.0
+#define PLOT_DEFAULT_WIDTH 3600.0
+#define PLOT_DEFAULT_HEIGHT 2700.0
 #define PLOT_DEFAULT_KIND "line"
 #define PLOT_DEFAULT_SPEC ""
 #define PLOT_DEFAULT_CLEAR 1
