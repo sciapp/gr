@@ -2566,7 +2566,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
                 {
                   if (i < c_length)
                     {
-                      c_index = 1000 + (int)grm_round(255 * (c[i] - c_min) / (c_max - c_min));
+                      c_index = 1000 + (int)(255.0 * (c[i] - c_min) / (c_max - c_min) + 0.5);
                       if (c_index < 1000 || c_index > 1255)
                         {
                           continue;
@@ -3957,7 +3957,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
                 }
               else
                 {
-                  data[i] = (int)grm_round((zv - c_min) / (c_max - c_min) * 255);
+                  data[i] = (int)((zv - c_min) / (c_max - c_min) * 255 + 0.5);
                   if (data[i] >= 255)
                     {
                       data[i] = 255;
@@ -4441,7 +4441,7 @@ err_t plot_scatter3(grm_args_t *subplot_args)
             {
               if (i < c_length)
                 {
-                  c_index = 1000 + (int)grm_round(255 * (c[i] - c_min) / c_max);
+                  c_index = 1000 + (int)(255.0 * (c[i] - c_min) / (c_max - c_min) + 0.5);
                 }
               else
                 {
@@ -6628,7 +6628,7 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
     }
   for (i = 0; i < colors; ++i)
     {
-      data[i] = 1000 + 255 * i / (colors - 1);
+      data[i] = 1000 + (int)((255.0 * i) / (colors - 1) + 0.5);
     }
   gr_inqscale(&options);
   if (grm_args_values(subplot_args, "xflip", "i", &flip) && flip)
