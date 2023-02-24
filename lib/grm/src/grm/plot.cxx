@@ -147,7 +147,7 @@ event_queue_t *event_queue = nullptr;
 
 static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},           {"hexbin", "xys"},
                                            {"polar", "xys"},          {"shade", "xys"},
-                                           {"stem", "xys"},           {"step", "xys"},
+                                           {"stem", "xys"},           {"stairs", "xys"},
                                            {"contour", "xyzc"},       {"contourf", "xyzc"},
                                            {"tricont", "xyzc"},       {"trisurf", "xyzc"},
                                            {"surface", "xyzc"},       {"wireframe", "xyzc"},
@@ -164,7 +164,7 @@ static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},           {"hexbin",
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static plot_func_map_entry_t kind_to_func[] = {{"line", plot_line},
-                                               {"step", plot_step},
+                                               {"stairs", plot_stairs},
                                                {"scatter", plot_scatter},
                                                {"quiver", plot_quiver},
                                                {"stem", plot_stem},
@@ -941,7 +941,7 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
         {
           args_setdefault(*current_subplot, "accelerate", "i", 1);
         }
-      if (str_equals_any(kind, 6, "barplot", "hist", "line", "scatter", "step", "stem"))
+      if (str_equals_any(kind, 6, "barplot", "hist", "line", "scatter", "stairs", "stem"))
         {
           args_setdefault(*current_subplot, "orientation", "s", PLOT_DEFAULT_ORIENTATION);
         }
@@ -950,7 +950,7 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
       while (*current_series != nullptr)
         {
           args_setdefault(*current_series, "spec", "s", SERIES_DEFAULT_SPEC);
-          if (strcmp(kind, "step") == 0)
+          if (strcmp(kind, "stairs") == 0)
             {
               args_setdefault(*current_series, "step_where", "s", PLOT_DEFAULT_STEP_WHERE);
             }
@@ -2013,7 +2013,7 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
       cleanup_if_error;
       grm_args_push(subplot_args, "r_max", "d", r_max);
     }
-  else if (str_equals_any(kind, 2, "stem", "step"))
+  else if (str_equals_any(kind, 2, "stem", "stairs"))
     {
       double x_min = 0.0, x_max = 0.0, y_min = 0.0, y_max = 0.0;
       char *orientation;
@@ -2084,7 +2084,7 @@ void plot_post_subplot(grm_args_t *subplot_args)
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   if (grm_args_contains(subplot_args, "labels"))
     {
-      if (str_equals_any(kind, 4, "line", "step", "scatter", "stem"))
+      if (str_equals_any(kind, 4, "line", "stairs", "scatter", "stem"))
         {
           plot_draw_legend(subplot_args);
         }
@@ -2261,7 +2261,7 @@ err_t plot_line(grm_args_t *subplot_args)
   return error;
 }
 
-err_t plot_step(grm_args_t *subplot_args)
+err_t plot_stairs(grm_args_t *subplot_args)
 {
   /*
    * Parameters:
@@ -4322,7 +4322,7 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
         }
       else if (strcmp(marginalheatmap_kind, "line") == 0 && xind != -1 && yind != -1)
         {
-          plot_step(subplot_args);
+          plot_stairs(subplot_args);
         }
 
       gr_restorestate();

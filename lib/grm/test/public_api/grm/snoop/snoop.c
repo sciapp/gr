@@ -1068,7 +1068,7 @@ cleanup:
     }
 }
 
-static void test_step(void)
+static void test_stairs(void)
 {
   const int n = 51;
   double *x = NULL, *y = NULL;
@@ -1083,7 +1083,7 @@ static void test_step(void)
   cleanup_if(args == NULL);
   grm_args_push(args, "x", "nD", n, x);
   grm_args_push(args, "y", "nD", n, y);
-  grm_args_push(args, "kind", "s", "step");
+  grm_args_push(args, "kind", "s", "stairs");
 
   grm_plot(args);
 
@@ -1170,7 +1170,7 @@ int main(void)
   /* 27 */ test_volume();
   /* 28 */ test_shade();
   /* 29 */ test_barplot();
-  /* 30 */ test_step();
+  /* 30 */ test_stairs();
 
   grm_finalize();
 

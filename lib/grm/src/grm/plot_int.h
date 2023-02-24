@@ -174,7 +174,7 @@ err_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name_s
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plotting ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 err_t plot_line(grm_args_t *subplot_args);
-err_t plot_step(grm_args_t *subplot_args);
+err_t plot_stairs(grm_args_t *subplot_args);
 err_t plot_scatter(grm_args_t *subplot_args);
 err_t plot_quiver(grm_args_t *subplot_args);
 err_t plot_stem(grm_args_t *subplot_args);

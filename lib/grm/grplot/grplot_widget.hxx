@@ -51,7 +51,7 @@ private slots:
   void scatter();
   void hist();
   void barplot();
-  void step();
+  void stairs();
   void stem();
   void shade();
   void hexbin();
@@ -104,7 +104,7 @@ private:
   QAction *scatterAct;
   QAction *histAct;
   QAction *barplotAct;
-  QAction *stepAct;
+  QAction *stairsAct;
   QAction *stemAct;
   QAction *shadeAct;
   QAction *hexbinAct;

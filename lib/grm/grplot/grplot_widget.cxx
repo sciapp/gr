@@ -162,7 +162,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       type->addAction(scatter3Act);
       type->addAction(scatterAct);
     }
-  else if ((strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0 || strcmp(kind, "step") == 0 ||
+  else if ((strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0 || strcmp(kind, "stairs") == 0 ||
             strcmp(kind, "stem") == 0) &&
            !error)
     {
@@ -170,13 +170,13 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       connect(histAct, &QAction::triggered, this, &GRPlotWidget::hist);
       barplotAct = new QAction(tr("&Barplot"), this);
       connect(barplotAct, &QAction::triggered, this, &GRPlotWidget::barplot);
-      stepAct = new QAction(tr("&Step"), this);
-      connect(stepAct, &QAction::triggered, this, &GRPlotWidget::step);
+      stairsAct = new QAction(tr("&Step"), this);
+      connect(stairsAct, &QAction::triggered, this, &GRPlotWidget::stairs);
       stemAct = new QAction(tr("&Stem"), this);
       connect(stemAct, &QAction::triggered, this, &GRPlotWidget::stem);
       type->addAction(histAct);
       type->addAction(barplotAct);
-      type->addAction(stepAct);
+      type->addAction(stairsAct);
       type->addAction(stemAct);
     }
   else if (strcmp(kind, "shade") == 0 || strcmp(kind, "hexbin") == 0)
@@ -601,9 +601,9 @@ void GRPlotWidget::barplot()
   redraw();
 }
 
-void GRPlotWidget::step()
+void GRPlotWidget::stairs()
 {
-  grm_args_push(args_, "kind", "s", "step");
+  grm_args_push(args_, "kind", "s", "stairs");
   grm_merge(args_);
   redraw();
 }
