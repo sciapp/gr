@@ -340,6 +340,11 @@ static int ft_search_file_in_dir(const ft_path_char_t *base_dir, const ft_path_c
 static int ft_find_font(const ft_path_char_t *filename, ft_path_char_t *result)
 {
 #if defined(_WIN32)
+  #ifndef _UCRT
+    /* for mingw-w64 targeting msvcrt */
+    #define wcstok(strToken, strDelimit, context) wcstok(strToken, strDelimit)
+  #endif
+
   const ft_path_char_t **font_directory;
   ft_path_char_t abspath[MAXPATHLEN];
   ft_path_char_t env[MAXPATHLEN];
@@ -354,14 +359,15 @@ static int ft_find_font(const ft_path_char_t *filename, ft_path_char_t *result)
   /* search paths from `GKS_FONT_DIRS` environment variable */
   if (GetEnvironmentVariableW(L"GKS_FONT_DIRS", env, MAXPATHLEN))
     {
-      gks_font_dir = wcstok(env, delim);
+      wchar_t *buffer;
+      gks_font_dir = wcstok(env, delim, &buffer);
       while (gks_font_dir)
         {
           if (ft_search_file_in_dir(gks_font_dir, filename, result, 0))
             {
               return 1;
             }
-          gks_font_dir = wcstok(NULL, delim);
+          gks_font_dir = wcstok(NULL, delim, &buffer);
         }
     }
 

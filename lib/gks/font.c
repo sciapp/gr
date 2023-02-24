@@ -15,7 +15,6 @@
 
 #if defined(_WIN32)
 #define STRSAFE_NO_DEPRECATE
-#define _CRT_NON_CONFORMING_WCSTOK
 #define __STRSAFE__NO_INLINE
 #include <windows.h>
 #include <strsafe.h>
