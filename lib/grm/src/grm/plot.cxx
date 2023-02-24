@@ -1447,8 +1447,8 @@ void plot_process_window(grm_args_t *subplot_args)
       grm_args_remove(subplot_args, "panzoom");
     }
 
-  if (str_equals_any(kind, 8, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf", "polar_heatmap",
-                     "nonuniformpolar_heatmap"))
+  if (str_equals_any(kind, 9, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf", "polar_heatmap",
+                     "nonuniformpolar_heatmap", "volume"))
     {
       major_count = 2;
     }
@@ -3761,7 +3761,6 @@ err_t plot_contourf(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
-      double corner_x[5], corner_y[5];
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
@@ -3796,12 +3795,6 @@ err_t plot_contourf(grm_args_t *subplot_args)
             }
           gr_setlinecolorind(989);
           gr_contourf(PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, num_levels, gridit_x, gridit_y, h, gridit_z, 0);
-          // julia contourf is framed
-          corner_x[0] = corner_x[3] = corner_x[4] = gridit_x[0];
-          corner_x[1] = corner_x[2] = gridit_x[PLOT_CONTOUR_GRIDIT_N - 1];
-          corner_y[0] = corner_y[1] = corner_y[4] = gridit_y[0];
-          corner_y[2] = corner_y[3] = gridit_y[PLOT_CONTOUR_GRIDIT_N - 1];
-          gr_polyline(5, corner_x, corner_y);
         }
       else
         {
@@ -3816,12 +3809,6 @@ err_t plot_contourf(grm_args_t *subplot_args)
             }
           gr_setlinecolorind(989);
           gr_contourf(x_length, y_length, num_levels, x, y, h, z, 0);
-          // julia contourf is framed
-          corner_x[0] = corner_x[3] = corner_x[4] = x[0];
-          corner_x[1] = corner_x[2] = x[x_length - 1];
-          corner_y[0] = corner_y[1] = corner_y[4] = y[0];
-          corner_y[2] = corner_y[3] = y[y_length - 1];
-          gr_polyline(5, corner_x, corner_y);
         }
       ++current_series;
     }
