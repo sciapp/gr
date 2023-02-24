@@ -145,19 +145,20 @@ event_queue_t *event_queue = nullptr;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},          {"hexbin", "xys"},
-                                           {"polar", "xys"},         {"shade", "xys"},
-                                           {"stem", "xys"},          {"step", "xys"},
-                                           {"contour", "xyzc"},      {"contourf", "xyzc"},
-                                           {"tricont", "xyzc"},      {"trisurf", "xyzc"},
-                                           {"surface", "xyzc"},      {"wireframe", "xyzc"},
-                                           {"plot3", "xyzc"},        {"scatter", "xyzc"},
-                                           {"scatter3", "xyzc"},     {"quiver", "xyuv"},
-                                           {"heatmap", "xyzc"},      {"hist", "x"},
-                                           {"barplot", "y"},         {"isosurface", "c"},
-                                           {"imshow", "c"},          {"nonuniformheatmap", "xyzc"},
-                                           {"polar_histogram", "x"}, {"pie", "x"},
-                                           {"volume", "c"},          {"marginalheatmap", "xyzc"}};
+static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},           {"hexbin", "xys"},
+                                           {"polar", "xys"},          {"shade", "xys"},
+                                           {"stem", "xys"},           {"step", "xys"},
+                                           {"contour", "xyzc"},       {"contourf", "xyzc"},
+                                           {"tricont", "xyzc"},       {"trisurf", "xyzc"},
+                                           {"surface", "xyzc"},       {"wireframe", "xyzc"},
+                                           {"plot3", "xyzc"},         {"scatter", "xyzc"},
+                                           {"scatter3", "xyzc"},      {"quiver", "xyuv"},
+                                           {"heatmap", "xyzc"},       {"hist", "x"},
+                                           {"barplot", "y"},          {"isosurface", "c"},
+                                           {"imshow", "c"},           {"nonuniformheatmap", "xyzc"},
+                                           {"polar_histogram", "x"},  {"pie", "x"},
+                                           {"volume", "c"},           {"marginalheatmap", "xyzc"},
+                                           {"polar_heatmap", "xyzc"}, {"nonuniformpolar_heatmap", "xyzc"}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -186,6 +187,8 @@ static plot_func_map_entry_t kind_to_func[] = {{"line", plot_line},
                                                {"shade", plot_shade},
                                                {"nonuniformheatmap", plot_heatmap},
                                                {"polar_histogram", plot_polar_histogram},
+                                               {"polar_heatmap", plot_polar_heatmap},
+                                               {"nonuniformpolar_heatmap", plot_polar_heatmap},
                                                {"pie", plot_pie},
                                                {"volume", plot_volume}};
 
@@ -1062,7 +1065,7 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
     {
       plot_draw_polar_axes(subplot_args);
     }
-  else if (!str_equals_any(kind, 3, "imshow", "isosurface", "pie"))
+  else if (!str_equals_any(kind, 5, "imshow", "isosurface", "pie", "polar_heatmap", "nonuniformpolar_heatmap"))
     {
       plot_draw_axes(subplot_args, 1);
     }
@@ -1214,8 +1217,8 @@ void plot_process_viewport(grm_args_t *subplot_args)
     }
 
   left_margin = grm_args_values(subplot_args, "ylabel", "s", &y_label) ? 0.05 : 0;
-  if (str_equals_any(kind, 11, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface", "tricont",
-                     "trisurf", "volume", "marginalheatmap", "quiver"))
+  if (str_equals_any(kind, 13, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface", "tricont",
+                     "trisurf", "volume", "marginalheatmap", "quiver", "polar_heatmap", "nonuniformpolar_heatmap"))
     {
       right_margin = (vp1 - vp0) * 0.1;
     }
@@ -1300,7 +1303,7 @@ void plot_process_viewport(grm_args_t *subplot_args)
       gr_restorestate();
     }
 
-  if (str_equals_any(kind, 3, "pie", "polar", "polar_histogram"))
+  if (str_equals_any(kind, 5, "pie", "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
     {
       double x_center, y_center, r;
 
@@ -1371,7 +1374,7 @@ void plot_process_window(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "yflip", "i", &yflip);
   grm_args_values(subplot_args, "zflip", "i", &zflip);
 
-  if (!str_equals_any(kind, 3, "pie", "polar", "polar_histogram"))
+  if (!str_equals_any(kind, 5, "pie", "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
     {
       scale |= xlog ? GR_OPTION_X_LOG : 0;
       scale |= ylog ? GR_OPTION_Y_LOG : 0;
@@ -1444,7 +1447,8 @@ void plot_process_window(grm_args_t *subplot_args)
       grm_args_remove(subplot_args, "panzoom");
     }
 
-  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf"))
+  if (str_equals_any(kind, 8, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf", "polar_heatmap",
+                     "nonuniformpolar_heatmap"))
     {
       major_count = 2;
     }
@@ -1532,7 +1536,7 @@ void plot_process_window(grm_args_t *subplot_args)
 
   logger((stderr, "Storing window (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
   grm_args_push(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
-  if (!str_equals_any(kind, 2, "polar", "polar_histogram"))
+  if (!str_equals_any(kind, 4, "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
     {
       gr_setwindow(x_min, x_max, y_min, y_max);
     }
@@ -3858,6 +3862,166 @@ err_t plot_hexbin(grm_args_t *subplot_args)
   return ERROR_NONE;
 }
 
+err_t plot_polar_heatmap(grm_args_t *subplot_args)
+{
+  unsigned int cols, rows, z_length, i;
+  const char *kind = nullptr;
+  int icmap[256], *rgba = nullptr, *data = nullptr, zlog = 0;
+  grm_args_t **current_series;
+  err_t error = ERROR_NONE;
+  double *x = nullptr, *y = nullptr, *z = nullptr, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv,
+         *theta = nullptr, *phi = nullptr;
+  int is_uniform_heatmap;
+
+  grm_args_values(subplot_args, "series", "A", &current_series);
+  grm_args_values(subplot_args, "kind", "s", &kind);
+  grm_args_values(subplot_args, "zlog", "i", &zlog);
+  while (*current_series != nullptr)
+    {
+      cleanup_and_set_error_if(!grm_args_values(*current_series, "x", "D", &x, &cols), ERROR_PLOT_MISSING_DATA);
+      cleanup_and_set_error_if(!grm_args_values(*current_series, "y", "D", &y, &rows), ERROR_PLOT_MISSING_DATA);
+      is_uniform_heatmap = is_equidistant_array(cols, x) && is_equidistant_array(rows, y);
+      cleanup_and_set_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length),
+                               ERROR_PLOT_MISSING_DATA);
+      cleanup_and_set_error_if(!grm_args_values(*current_series, "z_dims", "ii", &cols, &rows),
+                               ERROR_PLOT_MISSING_DIMENSIONS);
+
+      grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
+      grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
+      grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max);
+      if (!grm_args_values(*current_series, "crange", "dd", &c_min, &c_max))
+        {
+          c_min = z_min;
+          c_max = z_max;
+        }
+
+      if (zlog)
+        {
+          z_min = log(z_min);
+          z_max = log(z_max);
+          c_min = log(c_min);
+          c_max = log(c_max);
+        }
+
+      for (i = 0; i < 256; i++)
+        {
+          gr_inqcolor(1000 + i, icmap + i);
+        }
+
+      data = static_cast<int *>(malloc(rows * cols * sizeof(int)));
+      cleanup_and_set_error_if(data == nullptr, ERROR_MALLOC);
+      if (z_max > z_min)
+        {
+          for (i = 0; i < cols * rows; i++)
+            {
+              if (zlog)
+                {
+                  zv = log(z[i]);
+                }
+              else
+                {
+                  zv = z[i];
+                }
+
+              if (zv > z_max || zv < z_min || grm_isnan(zv))
+                {
+                  data[i] = -1;
+                }
+              else
+                {
+                  data[i] = (int)grm_round((zv - c_min) / (c_max - c_min) * 255);
+                  if (data[i] >= 255)
+                    {
+                      data[i] = 255;
+                    }
+                  else if (data[i] < 0)
+                    {
+                      data[i] = 0;
+                    }
+                }
+            }
+        }
+      else
+        {
+          for (i = 0; i < cols * rows; i++)
+            {
+              data[i] = 0;
+            }
+        }
+
+      rgba = static_cast<int *>(malloc(rows * cols * sizeof(int)));
+      cleanup_and_set_error_if(rgba == nullptr, ERROR_MALLOC);
+      if (is_uniform_heatmap)
+        {
+          for (i = 0; i < rows * cols; i++)
+            {
+              if (data[i] == -1)
+                {
+                  rgba[i] = 0;
+                }
+              else
+                {
+                  rgba[i] = (255 << 24) + icmap[data[i]];
+                }
+            }
+          gr_polarcellarray(0, 0, 0, 360, 0, 1, -cols, -rows, 1, 1, cols, rows, rgba);
+        }
+      else
+        {
+          const double *window;
+          phi = static_cast<double *>(malloc(cols * sizeof(double)));
+          theta = static_cast<double *>(malloc(rows * sizeof(double)));
+
+          grm_args_values(subplot_args, "window", "D", &window);
+          y_min = window[2];
+          y_max = window[3];
+          for (i = 0; i < rows * cols; i++)
+            {
+              if (data[i] == -1)
+                {
+                  rgba[i] = 1256 + 1;
+                }
+              else
+                {
+                  rgba[i] = data[i] + 1000;
+                }
+            }
+          for (i = 0; i < rows; i++)
+            {
+              theta[i] = y_min + y[i] / (y_max - y_min);
+            }
+          for (i = 0; i < cols; i++)
+            {
+              phi[i] = x[i] * 180 / M_PI;
+            }
+          gr_nonuniformpolarcellarray(0, 0, phi, theta, -cols, -rows, 1, 1, cols, rows, rgba);
+          fprintf(stderr, "\n");
+          free(phi);
+          free(theta);
+          theta = nullptr;
+          phi = nullptr;
+        }
+
+      free(rgba);
+      free(data);
+      rgba = nullptr;
+      data = nullptr;
+
+      ++current_series;
+    }
+
+  plot_draw_polar_axes(subplot_args);
+  plot_draw_colorbar(subplot_args, 0.0, 256);
+
+cleanup:
+  free(rgba);
+  free(data);
+  free(phi);
+  free(theta);
+
+  return error;
+}
+
 err_t plot_heatmap(grm_args_t *subplot_args)
 {
   const char *kind = nullptr;
@@ -4277,8 +4441,8 @@ err_t plot_surface(grm_args_t *subplot_args)
               double value_min, value_max;
               if (!grm_args_values(*current_series, range_keys[i], "dd", &value_min, &value_max))
                 {
-                  value_min = 0.0;
-                  value_max = lengths[i] - 1;
+                  value_min = 1.0;
+                  value_max = lengths[i];
                 }
               *value_array_ptrs[i] = static_cast<double *>(malloc(lengths[i] * sizeof(double)));
               cleanup_and_set_error_if(*value_array_ptrs[i] == nullptr, ERROR_MALLOC);
@@ -6311,12 +6475,12 @@ err_t plot_draw_polar_axes(grm_args_t *args)
     {
       angle_ticks = 8;
     }
-  if (grm_args_values(args, "rings", "i", &rings) == 0)
-    {
-      rings = 4;
-    }
 
   grm_args_values(args, "kind", "s", &kind);
+  if (grm_args_values(args, "rings", "i", &rings) == 0)
+    {
+      rings = grm_max(4, (int)(r_max - r_min));
+    }
 
 
   gr_savestate();

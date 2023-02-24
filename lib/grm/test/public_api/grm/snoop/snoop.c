@@ -1096,6 +1096,55 @@ cleanup:
     }
 }
 
+static double test_polarheatmap_z(double x, double y)
+{
+  return sin(2.0 * x) * cos(y);
+}
+
+static void test_polarheatmap(void)
+{
+  int i, j;
+  const int n = 200, m = 360;
+  double *phi = NULL, *theta = NULL, *z = NULL, *zv = NULL;
+  grm_args_t *args = NULL;
+
+  phi = lin_range(NULL, 0.0, 7, n, 0);
+  cleanup_if(phi == NULL);
+  theta = lin_range(NULL, 0.0, 2.0 * M_PI, m, 0);
+  cleanup_if(theta == NULL);
+  z = mapxty(test_polarheatmap_z, NULL, phi, theta, n, m);
+  cleanup_if(z == NULL);
+
+  zv = malloc(n * m * sizeof(double));
+  for (i = 0; i < n; i++)
+    {
+      for (j = 0; j < m; j++)
+        {
+          zv[i * m + j] = z[j * n + i];
+        }
+    }
+
+  args = grm_args_new();
+  cleanup_if(args == NULL);
+  grm_args_push(args, "x", "nD", m, theta);
+  grm_args_push(args, "y", "nD", n, phi);
+  grm_args_push(args, "z", "nD", n * m, zv);
+  grm_args_push(args, "z_dims", "ii", m, n);
+  grm_args_push(args, "kind", "s", "polar_heatmap");
+
+  grm_plot(args);
+
+cleanup:
+  free(phi);
+  free(theta);
+  free(z);
+  free(zv);
+  if (args != NULL)
+    {
+      grm_args_delete(args);
+    }
+}
+
 int main(void)
 {
   /* 1 */ test_line();
@@ -1116,7 +1165,7 @@ int main(void)
   /* 21 */ test_surface_peaks();
   /* 22 */ test_wireframe();
   /* 23, 24 */ test_heatmap_and_imshow();
-  /* 25 */ test_line(); /* TODO: Implement polarheatmap in GRM */
+  /* 25 */ test_polarheatmap();
   /* 26 */ test_isosurface();
   /* 27 */ test_volume();
   /* 28 */ test_shade();
