@@ -1169,7 +1169,9 @@ int main(void)
   /* 26 */ test_isosurface();
   /* 27 */ test_volume();
   /* 28 */ test_shade();
+#if defined(__x86_64__) || defined(_M_X64)
   /* 29 */ test_barplot();
+#endif
   /* 30 */ test_stairs();
 
   grm_finalize();

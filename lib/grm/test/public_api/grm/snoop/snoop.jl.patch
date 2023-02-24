@@ -1,5 +1,5 @@
---- snoop.jl	2023-02-24 12:02:17.173747943 +0100
-+++ snoop.patched.jl	2023-02-24 12:01:49.777183482 +0100
+--- snoop.jl	2023-02-24 13:23:42.799298545 +0100
++++ snoop.patched.jl	2023-02-24 13:24:18.235888853 +0100
 @@ -1,8 +1,33 @@
 -using Random
 -rng = MersenneTwister(1234)
@@ -58,7 +58,7 @@
  contourf(x, y, z)
  
  x = 8 .* rand(rng, 100) .- 4
-@@ -116,34 +135,8 @@
+@@ -116,34 +135,10 @@
  y = randn(rng, N)
  shade(x, y)
  
@@ -91,7 +91,9 @@
 -contour(x, y, h, z, 0)
 -polymarker(xd, yd)
 -GR.axes(0.25, 0.25, -2, -2, 2, 2, 0.01)
-+barplot(randn(rng, 20))
++if Sys.ARCH == :x86_64
++    barplot(randn(rng, 20))
++end
  
 -updatews()
 +x = LinRange(0, 1, 51)
