@@ -814,6 +814,11 @@ cleanup:
     }
 }
 
+static double peak(double x, double y)
+{
+  return 3 * pow(1-x,2) * exp(-pow(x,2) - pow(y+1,2)) - 10 * (x/5 - pow(x,3) - pow(y,5)) * exp(-pow(x,2)-pow(y,2)) - 1/3.0 * exp(-pow(x+1,2) - pow(y,2));
+}
+
 static double *peaks(unsigned int n)
 {
   double *x = NULL, *y = NULL, *z = NULL;
@@ -830,10 +835,7 @@ static double *peaks(unsigned int n)
     {
       for (j = 0; j < n; ++j)
         {
-          z[n * i + j] = 3 * (1 - x[i]) * (1 - x[i]) * exp(-x[i] * x[i] - (y[j] + 1) * (y[j] + 1)) -
-                         10 * (x[i] / 5 - x[i] * x[i] * x[i] - y[j] * y[j] * y[j] * y[j] * y[j]) *
-                             exp(-x[i] * x[i] - y[j] * y[j]) -
-                         exp(-(x[i] + 1) * (x[i] + 1) - y[j] * y[j]) / 3;
+          z[n * i + j] = peak(x[i], y[j]);
         }
     }
 

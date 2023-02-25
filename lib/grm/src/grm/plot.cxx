@@ -4436,7 +4436,7 @@ err_t plot_surface(grm_args_t *subplot_args)
               allocated_array[i] = 1;
               for (int j = 0; j < lengths[i]; ++j)
                 {
-                  (*value_array_ptrs[i])[j] = value_min + (value_max - value_min) / lengths[i] * j;
+                  (*value_array_ptrs[i])[j] = (int)(value_min + (value_max - value_min) / lengths[i] * j + 0.5);
                 }
             }
         }
@@ -4471,6 +4471,7 @@ err_t plot_surface(grm_args_t *subplot_args)
                       z_f[i * PLOT_SURFACE_GRIDIT_N + j] = (float)gridit_z[i * PLOT_SURFACE_GRIDIT_N + j];
                     }
                 }
+              gr3_clear();
               gr3_surface(PLOT_SURFACE_GRIDIT_N, PLOT_SURFACE_GRIDIT_N, x_f, y_f, z_f, GR_OPTION_COLORED_MESH);
               free(x_f);
               free(y_f);
@@ -4507,6 +4508,7 @@ err_t plot_surface(grm_args_t *subplot_args)
                 {
                   z_f[i] = (float)z[i];
                 }
+              gr3_clear();
               gr3_surface(x_length, y_length, x_f, y_f, z_f, GR_OPTION_COLORED_MESH);
               free(x_f);
               free(y_f);
@@ -4964,7 +4966,7 @@ err_t plot_volume(grm_args_t *subplot_args)
       grm_args_values(*current_series, "dmax", "d", &dmax);
 
       gr_inqvpsize(&width, &height, &device_pixel_ratio);
-      gr_setpicturesizeforvolume((int)width * device_pixel_ratio, (int)height * device_pixel_ratio);
+      gr_setpicturesizeforvolume((int)(width * device_pixel_ratio), (int)(height * device_pixel_ratio));
       gr_volume(shape[0], shape[1], shape[2], (double *)c, algorithm, &dmin, &dmax);
 
       dlim[0] = grm_min(dlim[0], dmin);
