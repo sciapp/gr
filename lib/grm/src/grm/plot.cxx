@@ -4736,9 +4736,8 @@ err_t plot_isosurface(grm_args_t *subplot_args)
   double c_min, c_max, isovalue, x_min, x_max, y_min, y_max, rotation, tilt;
   float foreground_colors[3], positions[3], directions[3], ups[3], scales[3];
   float r;
-  int fig_width, fig_height;
-  int subplot_width, subplot_height;
-
+  int width, height;
+  double device_pixel_ratio;
   unsigned short isovalue_int, *conv_data;
 
   int mesh; /* The mesh id of the drawn surface */
@@ -4755,20 +4754,14 @@ err_t plot_isosurface(grm_args_t *subplot_args)
   rotation = fmod(rotation, 360.0) / 180.0 * M_PI;
   logger((stderr, "tilt %lf rotation %lf\n", tilt, rotation));
 
-  /* Calculate subplot pixel size */
+  gr_inqvpsize(&width, &height, &device_pixel_ratio);
   x_min = viewport[0];
   x_max = viewport[1];
   y_min = viewport[2];
   y_max = viewport[3];
 
-  get_figure_size(nullptr, &fig_width, &fig_height, nullptr, nullptr);
-  subplot_width = (int)(grm_max(fig_width, fig_height) * (x_max - x_min));
-  subplot_height = (int)(grm_max(fig_width, fig_height) * (y_max - y_min));
-
   logger((stderr, "viewport: (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
   logger((stderr, "viewport ratio: %lf\n", (x_min - x_max) / (y_min - y_max)));
-  logger((stderr, "subplot size: (%d, %d)\n", subplot_width, subplot_height));
-  logger((stderr, "subplot ratio: %lf\n", ((double)subplot_width / (double)subplot_height)));
   while (*current_series != nullptr)
     {
       return_error_if(!grm_args_first_value(*current_series, "c", "D", &orig_data, &data_length),
@@ -4890,7 +4883,7 @@ err_t plot_isosurface(grm_args_t *subplot_args)
                        (float)(r * sin(tilt) * cos(rotation)), 0.0f, 0.0f, 0.0f, ups[0], ups[1], ups[2]);
 
       logger((stderr, "gr3_drawimage returned %i\n",
-              gr3_drawimage(x_min, x_max, y_min, y_max, subplot_width, subplot_height, GR3_DRAWABLE_GKS)));
+              gr3_drawimage(x_min, x_max, y_min, y_max, (int)(width * device_pixel_ratio), (int)(height * device_pixel_ratio), GR3_DRAWABLE_GKS)));
       gr3_deletemesh(mesh);
       gr_selntran(1);
 
