@@ -3853,7 +3853,7 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
 {
   unsigned int cols, rows, z_length, i;
   const char *kind = nullptr;
-  int icmap[256], *rgba = nullptr, *data = nullptr, zlog = 0;
+  int icmap[256], *data = nullptr, zlog = 0;
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
   double *x = nullptr, *y = nullptr, *z = nullptr, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv,
@@ -3910,21 +3910,14 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
                   zv = z[i];
                 }
 
-              if (zv > z_max || zv < z_min || grm_isnan(zv))
+              data[i] = 1000 + (int)(255.0 * (zv - c_min) / (c_max - c_min) + 0.5);
+              if (data[i] > 1255)
                 {
-                  data[i] = -1;
+                  data[i] = 1255;
                 }
-              else
+              else if (data[i] < 1000)
                 {
-                  data[i] = (int)grm_round((zv - c_min) / (c_max - c_min) * 255);
-                  if (data[i] >= 255)
-                    {
-                      data[i] = 255;
-                    }
-                  else if (data[i] < 0)
-                    {
-                      data[i] = 0;
-                    }
+                  data[i] = 1000;
                 }
             }
         }
@@ -3936,22 +3929,9 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
             }
         }
 
-      rgba = static_cast<int *>(malloc(rows * cols * sizeof(int)));
-      cleanup_and_set_error_if(rgba == nullptr, ERROR_MALLOC);
       if (is_uniform_heatmap)
         {
-          for (i = 0; i < rows * cols; i++)
-            {
-              if (data[i] == -1)
-                {
-                  rgba[i] = 0;
-                }
-              else
-                {
-                  rgba[i] = (255 << 24) + icmap[data[i]];
-                }
-            }
-          gr_polarcellarray(0, 0, 0, 360, 0, 1, -cols, -rows, 1, 1, cols, rows, rgba);
+          gr_polarcellarray(0, 0, 0, 360, 0, 1, cols, rows, 1, 1, cols, rows, data);
         }
       else
         {
@@ -3962,17 +3942,6 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
           grm_args_values(subplot_args, "window", "D", &window);
           y_min = window[2];
           y_max = window[3];
-          for (i = 0; i < rows * cols; i++)
-            {
-              if (data[i] == -1)
-                {
-                  rgba[i] = 1256 + 1;
-                }
-              else
-                {
-                  rgba[i] = data[i] + 1000;
-                }
-            }
           for (i = 0; i < rows; i++)
             {
               theta[i] = y_min + y[i] / (y_max - y_min);
@@ -3981,17 +3950,14 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
             {
               phi[i] = x[i] * 180 / M_PI;
             }
-          gr_nonuniformpolarcellarray(0, 0, phi, theta, -cols, -rows, 1, 1, cols, rows, rgba);
-          fprintf(stderr, "\n");
+          gr_nonuniformpolarcellarray(0, 0, phi, theta, -cols, -rows, 1, 1, cols, rows, data);
           free(phi);
           free(theta);
           theta = nullptr;
           phi = nullptr;
         }
 
-      free(rgba);
       free(data);
-      rgba = nullptr;
       data = nullptr;
 
       ++current_series;
@@ -4001,7 +3967,6 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
   plot_draw_colorbar(subplot_args, 0.0, 256);
 
 cleanup:
-  free(rgba);
   free(data);
   free(phi);
   free(theta);
@@ -4881,7 +4846,6 @@ err_t plot_isosurface(grm_args_t *subplot_args)
 
       gr3_cameralookat((float)(r * sin(tilt) * sin(rotation)), (float)(r * cos(tilt)),
                        (float)(r * sin(tilt) * cos(rotation)), 0.0f, 0.0f, 0.0f, ups[0], ups[1], ups[2]);
-
       logger((stderr, "gr3_drawimage returned %i\n",
               gr3_drawimage(x_min, x_max, y_min, y_max, (int)(width * device_pixel_ratio), (int)(height * device_pixel_ratio), GR3_DRAWABLE_GKS)));
       gr3_deletemesh(mesh);
