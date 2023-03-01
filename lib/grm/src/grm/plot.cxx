@@ -8615,6 +8615,14 @@ int grm_plot(const grm_args_t *args)
   return 1;
 }
 
+int grm_export(const char *file_path)
+{
+  gr_beginprint(const_cast<char *>(file_path));
+  int return_value = grm_plot(nullptr);
+  gr_endprint();
+  return return_value;
+}
+
 int grm_switch(unsigned int id)
 {
   grm_args_t **args_array = nullptr;

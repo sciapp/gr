@@ -25,6 +25,7 @@ EXPORT int grm_merge_extended(const grm_args_t *args, int hold, const char *iden
 EXPORT int grm_merge_hold(const grm_args_t *args);
 EXPORT int grm_merge_named(const grm_args_t *args, const char *identificator);
 EXPORT int grm_plot(const grm_args_t *args);
+EXPORT int grm_export(const char *file_path);
 EXPORT int grm_switch(unsigned int id);
 
 
