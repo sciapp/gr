@@ -35,10 +35,17 @@ int main(int argc, char **argv)
     }
 #endif
 
-  QApplication app(argc, argv);
-  GRPlotMainWindow window(argc, argv);
+  if(getenv("GKS_WSTYPE") != nullptr)
+    {
+      return (grm_plot_from_file(argc, argv) != 1);
+    }
+  else
+    {
+        QApplication app(argc, argv);
+        GRPlotMainWindow window(argc, argv);
 
-  window.show();
+        window.show();
 
-  return app.exec();
+        return app.exec();
+    }
 }

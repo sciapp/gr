@@ -376,6 +376,7 @@ int grm_plot_from_file(int argc, char **argv)
 
   args = grm_args_new();
   error = grm_interactive_plot_from_file(args, argc, argv);
+  grm_plot(args);
   grm_args_delete(args);
   return error;
 }
@@ -398,7 +399,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   std::vector<std::string> labels;
   std::vector<const char *> labels_c;
   std::vector<grm_args_t *> series;
-  char *env;
+  char *env, *wstype;
   void *handle = nullptr;
   const char *kind;
   int grplot;
@@ -435,7 +436,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
 
   series.resize(cols);
 
-  if ((env = getenv("GR_DISPLAY")) != nullptr)
+  wstype = getenv("GKS_WSTYPE");
+  if (strcmp(wstype, "381") == 0 && (env = getenv("GR_DISPLAY")) != nullptr)
     {
       handle = grm_open(GRM_SENDER, env, 8002, nullptr, nullptr);
       if (handle == nullptr)
