@@ -3865,16 +3865,45 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "zlog", "i", &zlog);
   while (*current_series != nullptr)
     {
-      cleanup_and_set_error_if(!grm_args_values(*current_series, "x", "D", &x, &cols), ERROR_PLOT_MISSING_DATA);
-      cleanup_and_set_error_if(!grm_args_values(*current_series, "y", "D", &y, &rows), ERROR_PLOT_MISSING_DATA);
-      is_uniform_heatmap = is_equidistant_array(cols, x) && is_equidistant_array(rows, y);
+      x = y = nullptr;
+      grm_args_first_value(*current_series, "x", "D", &x, &cols);
+      grm_args_first_value(*current_series, "y", "D", &y, &rows);
+      is_uniform_heatmap =
+          (x == nullptr || is_equidistant_array(cols, x)) && (y == nullptr || is_equidistant_array(rows, y));
       cleanup_and_set_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length),
                                ERROR_PLOT_MISSING_DATA);
-      cleanup_and_set_error_if(!grm_args_values(*current_series, "z_dims", "ii", &cols, &rows),
-                               ERROR_PLOT_MISSING_DIMENSIONS);
-
-      grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
-      grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
+      if (x == nullptr && y == nullptr)
+        {
+          /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
+          cleanup_and_set_error_if(!grm_args_values(*current_series, "z_dims", "ii", &rows, &cols),
+                                   ERROR_PLOT_MISSING_DIMENSIONS);
+        }
+      else if (x == nullptr)
+        {
+          cols = z_length / rows;
+        }
+      else if (y == nullptr)
+        {
+          rows = z_length / cols;
+        }
+      if (x == nullptr)
+        {
+          grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
+        }
+      else
+        {
+          x_min = x[0];
+          x_max = x[cols - 1];
+        }
+      if (x == nullptr)
+        {
+          grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
+        }
+      else
+        {
+          y_min = y[0];
+          y_max = y[rows - 1];
+        }
       grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max);
       if (!grm_args_values(*current_series, "crange", "dd", &c_min, &c_max))
         {
@@ -3890,6 +3919,11 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
           c_max = log(c_max);
         }
 
+      if (!is_uniform_heatmap)
+        {
+          --cols;
+          --rows;
+        }
       for (i = 0; i < 256; i++)
         {
           gr_inqcolor(1000 + i, icmap + i);
@@ -3989,9 +4023,11 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       int is_uniform_heatmap;
+      x = y = nullptr;
       grm_args_first_value(*current_series, "x", "D", &x, &cols);
       grm_args_first_value(*current_series, "y", "D", &y, &rows);
-      is_uniform_heatmap = is_equidistant_array(cols, x) && is_equidistant_array(rows, y);
+      is_uniform_heatmap =
+          (x == nullptr || is_equidistant_array(cols, x)) && (y == nullptr || is_equidistant_array(rows, y));
       cleanup_and_set_error_if(!is_uniform_heatmap && (x == nullptr || y == nullptr), ERROR_PLOT_MISSING_DATA);
       cleanup_and_set_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length),
                                ERROR_PLOT_MISSING_DATA);
@@ -4847,7 +4883,8 @@ err_t plot_isosurface(grm_args_t *subplot_args)
       gr3_cameralookat((float)(r * sin(tilt) * sin(rotation)), (float)(r * cos(tilt)),
                        (float)(r * sin(tilt) * cos(rotation)), 0.0f, 0.0f, 0.0f, ups[0], ups[1], ups[2]);
       logger((stderr, "gr3_drawimage returned %i\n",
-              gr3_drawimage(x_min, x_max, y_min, y_max, (int)(width * device_pixel_ratio), (int)(height * device_pixel_ratio), GR3_DRAWABLE_GKS)));
+              gr3_drawimage(x_min, x_max, y_min, y_max, (int)(width * device_pixel_ratio),
+                            (int)(height * device_pixel_ratio), GR3_DRAWABLE_GKS)));
       gr3_deletemesh(mesh);
       gr_selntran(1);
 

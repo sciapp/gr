@@ -816,7 +816,8 @@ cleanup:
 
 static double peak(double x, double y)
 {
-  return 3 * pow(1-x,2) * exp(-pow(x,2) - pow(y+1,2)) - 10 * (x/5 - pow(x,3) - pow(y,5)) * exp(-pow(x,2)-pow(y,2)) - 1/3.0 * exp(-pow(x+1,2) - pow(y,2));
+  return 3 * pow(1 - x, 2) * exp(-pow(x, 2) - pow(y + 1, 2)) -
+         10 * (x / 5 - pow(x, 3) - pow(y, 5)) * exp(-pow(x, 2) - pow(y, 2)) - 1 / 3.0 * exp(-pow(x + 1, 2) - pow(y, 2));
 }
 
 static double *peaks(unsigned int n)
@@ -1131,7 +1132,6 @@ static void test_polarheatmap(void)
   grm_args_push(args, "x", "nD", m, theta);
   grm_args_push(args, "y", "nD", n, phi);
   grm_args_push(args, "z", "nD", n * m, zv);
-  grm_args_push(args, "z_dims", "ii", m, n);
   grm_args_push(args, "kind", "s", "polar_heatmap");
 
   grm_plot(args);
