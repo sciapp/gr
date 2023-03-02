@@ -9,6 +9,9 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#define PLOT_WIDTH 3600
+#define PLOT_HEIGHT 2700
+
 #ifndef array_size
 #define array_size(a) ((sizeof(a) / sizeof((a)[0])))
 #endif
@@ -134,6 +137,7 @@ static void test_line(void)
   grm_args_push(args, "x", "nD", n, x);
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "kind", "s", "line");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -172,6 +176,7 @@ static void test_scatter(void)
   grm_args_push(args, "x", "nD", n, x);
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "kind", "s", "scatter");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -208,6 +213,7 @@ static void test_stem(void)
   grm_args_push(args, "x", "nD", n, x);
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "kind", "s", "stem");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -233,6 +239,7 @@ static void test_histogram(void)
   cleanup_if(args == NULL);
   grm_args_push(args, "x", "nD", n, x);
   grm_args_push(args, "kind", "s", "hist");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -264,6 +271,7 @@ static void test_line_only_y(void)
   cleanup_if(args == NULL);
   grm_args_push(args, "y", "nD", n, y[0]);
   grm_args_push(args, "kind", "s", "line");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -272,6 +280,7 @@ static void test_line_only_y(void)
   cleanup_if(args == NULL);
   grm_args_push(args, "series", "nA", array_size(series), series);
   grm_args_push(args, "kind", "s", "line");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
   /* TODO: Use `hold_plots` for a real `oplot`! */
   /* grm_args_push(args, "hold_plots", "i", 1); */
 
@@ -318,6 +327,7 @@ static void test_plot3d(void)
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "z", "nD", n, z);
   grm_args_push(args, "kind", "s", "plot3");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -348,6 +358,7 @@ static void test_polar(void)
   grm_args_push(args, "x", "nD", n, angles);
   grm_args_push(args, "y", "nD", n, radii);
   grm_args_push(args, "kind", "s", "polar");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -401,6 +412,7 @@ static void test_scatter3(void)
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "z", "nD", n, z);
   grm_args_push(args, "kind", "s", "scatter3");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -437,6 +449,7 @@ static void test_hexbin(void)
   grm_args_push(args, "x", "nD", n, x);
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "kind", "s", "hexbin");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -484,6 +497,7 @@ static void test_contour1(void)
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "z", "nD", n, z);
   grm_args_push(args, "kind", "s", "contour");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
   grm_args_delete(args);
@@ -494,6 +508,7 @@ static void test_contour1(void)
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "z", "nD", n, z);
   grm_args_push(args, "kind", "s", "contourf");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -528,6 +543,7 @@ static void test_contour2(void)
   grm_args_push(args, "y", "nD", n / 2, y);
   grm_args_push(args, "z", "nD", n * (n / 2), z);
   grm_args_push(args, "kind", "s", "contour");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
   grm_args_delete(args);
@@ -538,6 +554,7 @@ static void test_contour2(void)
   grm_args_push(args, "y", "nD", n / 2, y);
   grm_args_push(args, "z", "nD", n * (n / 2), z);
   grm_args_push(args, "kind", "s", "contourf");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 cleanup:
@@ -585,6 +602,7 @@ static void test_contourf1(void)
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "z", "nD", n, z);
   grm_args_push(args, "kind", "s", "contourf");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -619,6 +637,7 @@ static void test_contourf2(void)
   grm_args_push(args, "y", "nD", n / 2, y);
   grm_args_push(args, "z", "nD", n * (n / 2), z);
   grm_args_push(args, "kind", "s", "contourf");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -667,6 +686,7 @@ static void test_tricont(void)
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "z", "nD", n, z);
   grm_args_push(args, "kind", "s", "tricont");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -717,6 +737,7 @@ static void test_surface1(void)
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "z", "nD", n, z);
   grm_args_push(args, "kind", "s", "surface");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -751,6 +772,7 @@ static void test_surface2(void)
   grm_args_push(args, "y", "nD", n / 2, y);
   grm_args_push(args, "z", "nD", n * (n / 2), z);
   grm_args_push(args, "kind", "s", "surface");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -799,6 +821,7 @@ static void test_trisurf(void)
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "z", "nD", n, z);
   grm_args_push(args, "kind", "s", "trisurf");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -861,6 +884,7 @@ static void test_surface_peaks(void)
   grm_args_push(args, "z", "nD", n * n, z);
   grm_args_push(args, "z_dims", "ii", n, n);
   grm_args_push(args, "kind", "s", "surface");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -896,6 +920,7 @@ static void test_wireframe(void)
   grm_args_push(args, "y", "nD", n / 2, y);
   grm_args_push(args, "z", "nD", n * (n / 2), z);
   grm_args_push(args, "kind", "s", "wireframe");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -932,6 +957,7 @@ static void test_heatmap_and_imshow(void)
   grm_args_push(args, "z", "nD", n * (n / 2), z);
   grm_args_push(args, "z_dims", "ii", n / 2, n);
   grm_args_push(args, "kind", "s", "heatmap");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -942,6 +968,7 @@ static void test_heatmap_and_imshow(void)
   grm_args_push(args, "c", "nD", n * (n / 2), z);
   grm_args_push(args, "c_dims", "ii", n, n / 2);
   grm_args_push(args, "kind", "s", "imshow");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -968,6 +995,7 @@ static void test_volume(void)
   grm_args_push(args, "c", "nD", n * n * n, c);
   grm_args_push(args, "c_dims", "iii", n, n, n);
   grm_args_push(args, "kind", "s", "volume");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -994,6 +1022,7 @@ static void test_shade(void)
   grm_args_push(args, "x", "nD", n, x);
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "kind", "s", "shade");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -1033,6 +1062,7 @@ static void test_isosurface(void)
   args = grm_args_new();
   cleanup_if(args == NULL);
   grm_args_push(args, "kind", "s", "isosurface");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
   grm_args_push(args, "c", "nD", n * n * n, v);
   grm_args_push(args, "c_dims", "nI", 3, dims);
   grm_args_push(args, "isovalue", "d", 0.2);
@@ -1060,6 +1090,7 @@ static void test_barplot(void)
   cleanup_if(args == NULL);
   grm_args_push(args, "y", "nD", n, x);
   grm_args_push(args, "kind", "s", "barplot");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -1087,6 +1118,7 @@ static void test_stairs(void)
   grm_args_push(args, "x", "nD", n, x);
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "kind", "s", "stairs");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
@@ -1133,6 +1165,7 @@ static void test_polarheatmap(void)
   grm_args_push(args, "y", "nD", n, phi);
   grm_args_push(args, "z", "nD", n * m, zv);
   grm_args_push(args, "kind", "s", "polar_heatmap");
+  grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
 
