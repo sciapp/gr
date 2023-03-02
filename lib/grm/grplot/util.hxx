@@ -3,6 +3,18 @@
 
 #include <optional>
 #include <string>
+#include <fstream>
+
+#ifdef _WIN64
+#include <stdlib.h>
+#include <io.h>
+#include <process.h>
+#include <direct.h>
+#define F_OK 0
+#define access _access
+#else
+#include <unistd.h>
+#endif
 
 #if !(defined(__EXCEPTIONS) || defined(__cpp_exceptions) || defined(_CPPUNWIND))
 #define NO_EXCEPTIONS
@@ -154,6 +166,8 @@ public:
 
 bool endsWith(const std::string &str, const std::string &suffix);
 bool startsWith(const std::string &str, const std::string &prefix);
+bool file_exists(const std::string &name);
+int grplot_overview(int argc, char **argv);
 
 #ifdef NO_EXCEPTIONS
 #ifdef _WIN32

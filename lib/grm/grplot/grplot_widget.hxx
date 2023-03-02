@@ -112,7 +112,6 @@ private:
   QAction *PngAct;
   QAction *JpegAct;
   QAction *SvgAct;
-
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */
