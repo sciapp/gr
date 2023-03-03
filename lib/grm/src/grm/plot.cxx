@@ -1545,7 +1545,7 @@ void plot_process_window(grm_args_t *subplot_args)
       gr_setwindow(-1, 1, -1, 1);
     }
 
-  if (str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume", "isosurface"))
+  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
       int z_major_count;
       double z_tick;
@@ -1585,8 +1585,21 @@ void plot_process_window(grm_args_t *subplot_args)
 
       grm_args_values(subplot_args, "rotation", "d", &rotation);
       grm_args_values(subplot_args, "tilt", "d", &tilt);
+      logger((stderr, "window3d: (%lf, %lf, %lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max, z_min, z_max));
       gr_setwindow3d(x_min, x_max, y_min, y_max, z_min, z_max);
-      gr_setspace3d(-rotation, tilt, 30, 0);
+      logger((stderr, "space3d: (%lf, %lf, %lf, %lf)\n", -rotation, tilt, 30.0, 0.0));
+      gr_setspace3d(-rotation, tilt, 30.0, 0.0);
+    }
+  else if (strcmp(kind, "isosurface") == 0)
+    {
+      double rotation, tilt;
+
+      grm_args_values(subplot_args, "rotation", "d", &rotation);
+      grm_args_values(subplot_args, "tilt", "d", &tilt);
+      logger((stderr, "window3d: (%lf, %lf, %lf, %lf, %lf, %lf)\n", -1.0, 1.0, -1.0, 1.0, -1.0, 1.0));
+      gr_setwindow3d(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+      logger((stderr, "space3d: (%lf, %lf, %lf, %lf)\n", -rotation, tilt, 45.0, 2.5));
+      gr_setspace3d(-rotation, tilt, 45.0, 2.5);
     }
 
   grm_args_push(subplot_args, "scale", "i", scale);
@@ -4705,19 +4718,6 @@ err_t plot_imshow(grm_args_t *subplot_args)
   return ERROR_NONE;
 }
 
-/*
- * Checks if the GR3_MC_DTYPE macro is set to unsigned short, as we only support this dtype in plot_isosurface.
- */
-void gr3_mc_dtype_test_(void)
-{
-  switch (0)
-    {
-    case ((sizeof(GR3_MC_DTYPE) == 2) && (((GR3_MC_DTYPE)-1) > 0)):
-    case 0:
-      break;
-    }
-}
-
 err_t plot_isosurface(grm_args_t *subplot_args)
 {
   /*
@@ -4726,43 +4726,19 @@ err_t plot_isosurface(grm_args_t *subplot_args)
    * int[3] `c_dims` shape of the c-array
    * optional double `isovalue` of the surface. All values higher or equal to isovalue are seen as inside the object,
    * all values below the isovalue are seen as outside the object.
-   * optional double `rotation` in degrees
-   * optional double `tilt` of the camera in degrees
    * optional double[3] `foreground_color`: color of the surface
    */
   grm_args_t **current_series;
-  double *orig_data, *viewport, *temp_colors;
+  double *orig_data, *temp_colors;
   unsigned int i, data_length, dims;
   unsigned int *shape;
-  double c_min, c_max, isovalue, x_min, x_max, y_min, y_max, rotation, tilt;
-  float foreground_colors[3], positions[3], directions[3], ups[3], scales[3];
-  float r;
-  int width, height;
-  double device_pixel_ratio;
-  unsigned short isovalue_int, *conv_data;
-
-  int mesh; /* The mesh id of the drawn surface */
-  int error;
+  int strides[3];
+  double c_min, c_max, isovalue;
+  float foreground_colors[3];
+  float *conv_data = nullptr;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  return_error_if(!grm_args_values(subplot_args, "viewport", "D", &viewport), ERROR_PLOT_MISSING_DATA);
 
-  grm_args_values(subplot_args, "rotation", "d", &rotation);
-  grm_args_values(subplot_args, "tilt", "d", &tilt);
-
-  /* Convert to radians */
-  tilt = fmod(tilt, 360.0) / 180.0 * M_PI;
-  rotation = fmod(rotation, 360.0) / 180.0 * M_PI;
-  logger((stderr, "tilt %lf rotation %lf\n", tilt, rotation));
-
-  gr_inqvpsize(&width, &height, &device_pixel_ratio);
-  x_min = viewport[0];
-  x_max = viewport[1];
-  y_min = viewport[2];
-  y_max = viewport[3];
-
-  logger((stderr, "viewport: (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
-  logger((stderr, "viewport ratio: %lf\n", (x_min - x_max) / (y_min - y_max)));
   while (*current_series != nullptr)
     {
       return_error_if(!grm_args_first_value(*current_series, "c", "D", &orig_data, &data_length),
@@ -4772,15 +4748,15 @@ err_t plot_isosurface(grm_args_t *subplot_args)
       return_error_if(shape[0] * shape[1] * shape[2] != data_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       return_error_if(data_length <= 0, ERROR_PLOT_MISSING_DATA);
 
-      /* Capture isovalue, rotation and tilt, also default values */
       isovalue = 0.5;
       foreground_colors[0] = 0.0;
       foreground_colors[1] = 0.5;
       foreground_colors[2] = 0.8;
-
       grm_args_values(*current_series, "isovalue", "d", &isovalue);
-      /* We need to convert the double values to floats, as the gr3_drawmesh expects floats, but an argument can only
-       * contain doubles. */
+      /*
+       * We need to convert the double values to floats, as GR3 expects floats, but an argument can only contain
+       * doubles.
+       */
       if (grm_args_first_value(*current_series, "foreground_color", "D", &temp_colors, &i))
         {
           return_error_if(i != 3, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
@@ -4809,86 +4785,32 @@ err_t plot_isosurface(grm_args_t *subplot_args)
         }
       return_error_if(c_min == c_max || !isfinite(c_min) || !isfinite(c_max), ERROR_PLOT_MISSING_DATA);
 
-      /* Calculate isovalue in ushort, and translate the original data into ushorts */
-      isovalue_int = (unsigned short)((isovalue - c_min) / (c_max - c_min) * USHRT_MAX);
-
-      logger((stderr, "c_min %lf c_max %lf isovalue_int %hu\n ", c_min, c_max, isovalue_int));
-      conv_data = static_cast<unsigned short *>(malloc(sizeof(unsigned short) * data_length));
-      if (conv_data == nullptr)
-        {
-          debug_print_malloc_error();
-          free(conv_data);
-          return ERROR_MALLOC;
-        }
+      logger((stderr, "c_min %lf c_max %lf isovalue %lf\n ", c_min, c_max, isovalue));
+      conv_data = static_cast<float *>(malloc(sizeof(float) * data_length));
+      return_error_if(conv_data == nullptr, ERROR_MALLOC);
 
       for (i = 0; i < data_length; ++i)
         {
-          if (grm_isnan(orig_data[i]) || orig_data[i] < c_min)
-            {
-              conv_data[i] = 0;
-            }
-          else if (orig_data[i] > c_max)
-            {
-              conv_data[i] = USHRT_MAX;
-            }
-          else
-            {
-              conv_data[i] = (unsigned short)((orig_data[i] - c_min) / (c_max - c_min) * USHRT_MAX);
-            }
+          conv_data[i] = static_cast<float>(orig_data[i]);
         }
 
-      gr_selntran(0);
-      gr3_clear();
-      error = gr3_createisosurfacemesh(&mesh, conv_data, isovalue_int,
+      strides[0] = shape[1] * shape[2];
+      strides[1] = shape[2];
+      strides[2] = 1;
 
-                                       /* dim_x */ shape[0],
-                                       /* dim_y */ shape[1],
-                                       /* dim_z */ shape[2],
-
-                                       /* stride_x */ shape[1] * shape[2],
-                                       /* stride_y */ shape[2],
-                                       /* stride_z */ 1,
-
-                                       /* step_x */ 2.f / (shape[0] - 1.f),
-                                       /* step_y */ 2.f / (shape[1] - 1.f),
-                                       /* step_z */ 2.f / (shape[2] - 1.f),
-
-                                       /* offset_x */ -1.f,
-                                       /* offset_y */ -1.f,
-                                       /* offset_z */ -1.f);
-      return_error_if(error == GR3_ERROR_OUT_OF_MEM, ERROR_MALLOC);
-      return_error_if(error != GR3_ERROR_NONE, ERROR_INTERNAL);
-
-      gr3_setbackgroundcolor(1.0f, 1.0f, 1.0f, 0.0f);
-
-      positions[0] = 0.0f;
-      positions[1] = 0.0f;
-      positions[2] = 0.0f;
-      directions[0] = 0.0f;
-      directions[1] = 0.0f;
-      directions[2] = 1.0f;
-      ups[0] = 0.0f;
-      ups[1] = 1.0f;
-      ups[2] = 0.0f;
-      scales[0] = 1.0f;
-      scales[1] = 1.0f;
-      scales[2] = 1.0f;
-      gr3_drawmesh(mesh, 1, positions, directions, ups, foreground_colors, scales);
-
-      r = 2.5;
-      ups[0] = 0.0f;
-      ups[1] = (tilt == 0 ? 0.0f : 1.0f);
-      ups[2] = (tilt == 0 ? 1.0f : 0.0f);
-
-      gr3_cameralookat((float)(r * sin(tilt) * sin(rotation)), (float)(r * cos(tilt)),
-                       (float)(r * sin(tilt) * cos(rotation)), 0.0f, 0.0f, 0.0f, ups[0], ups[1], ups[2]);
-      logger((stderr, "gr3_drawimage returned %i\n",
-              gr3_drawimage(x_min, x_max, y_min, y_max, (int)(width * device_pixel_ratio),
-                            (int)(height * device_pixel_ratio), GR3_DRAWABLE_GKS)));
-      gr3_deletemesh(mesh);
-      gr_selntran(1);
+      {
+        float light_parameters[4];
+        gr3_clear();
+        /* Save and restore original light parameters */
+        gr3_getlightparameters(&light_parameters[0], &light_parameters[1], &light_parameters[2], &light_parameters[3]);
+        gr3_setlightparameters(0.2, 0.8, 0.7, 128);
+        gr3_isosurface(shape[0], shape[1], shape[2], conv_data, static_cast<float>(isovalue), foreground_colors,
+                       strides);
+        gr3_setlightparameters(light_parameters[0], light_parameters[1], light_parameters[2], light_parameters[3]);
+      }
 
       free(conv_data);
+      conv_data = nullptr;
       ++current_series;
     }
 
