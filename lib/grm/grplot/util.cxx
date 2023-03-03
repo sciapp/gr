@@ -292,10 +292,11 @@ bool file_exists(const std::string &name)
 int grplot_overview(int argc, char **argv)
 {
   std::string line, kind;
-  std::string path = "grplot.man.md";
-  std::ifstream file(path);
   int given_help = 0, removed_start = 0;
   static char function[50];
+  static char path[MAXPATHLEN];
+  std::snprintf(path, MAXPATHLEN, "%s/bin/grplot.man.md", GRDIR);
+  std::ifstream file(path);
 
   while (getline(file, line))
     {
