@@ -8,6 +8,8 @@
 #include "grplot_mainwindow.hxx"
 #include "util.hxx"
 
+const unsigned int MAXPATHLEN = 1024;
+
 int main(int argc, char **argv)
 {
   // Ensure that the `GRDIR` envionment variable is set, so GR can find its components like fonts.
@@ -38,7 +40,9 @@ int main(int argc, char **argv)
   /* help page should be shown */
   if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)
     {
-      if (!util::file_exists("grplot.man.md"))
+      static char path[MAXPATHLEN];
+      std::snprintf(path, MAXPATHLEN, "%s/bin/grplot.man.md", GRDIR);
+      if (!util::file_exists(path))
         {
           fprintf(stderr, "Helpfile not found\n");
           return 1;
