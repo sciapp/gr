@@ -60,6 +60,7 @@ ubuntu-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/grm/grplot/grplot artifacts/grplot
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -189,6 +190,7 @@ debian-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/grm/grplot/grplot artifacts/grplot
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -258,6 +260,7 @@ debian-self-contained-armhf:
     - cp lib/gks/demo artifacts/gksdemo
     - cp lib/gks/qt/gksqt artifacts/gksqt
     - cp lib/grm/grplot/grplot artifacts/grplot
+    - cp lib/grm/grplot/README.md artifacts/grplot.man.md
     - cp lib/gr/demo artifacts/grdemo
     - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
          lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -306,6 +309,7 @@ debian-self-contained-aarch64:
     - cp lib/gks/demo artifacts/gksdemo
     - cp lib/gks/qt/gksqt artifacts/gksqt
     - cp lib/grm/grplot/grplot artifacts/grplot
+    - cp lib/grm/grplot/README.md artifacts/grplot.man.md
     - cp lib/gr/demo artifacts/grdemo
     - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -433,6 +437,7 @@ centos7-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/grm/grplot/grplot artifacts/grplot
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -506,6 +511,7 @@ centos7-32bit-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/grm/grplot/grplot artifacts/grplot
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -577,6 +583,7 @@ arch-self-contained:
     - cp lib/gks/demo artifacts/gksdemo
     - cp lib/gks/qt/gksqt artifacts/gksqt
     - cp lib/grm/grplot/grplot artifacts/grplot
+    - cp lib/grm/grplot/README.md artifacts/grplot.man.md
     - cp lib/gr/demo artifacts/grdemo
     - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
          lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -639,6 +646,7 @@ freebsd-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/grm/grplot/grplot artifacts/grplot
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
        lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
@@ -696,6 +704,7 @@ windows-32bit-cross:
   - mkdir artifacts
   - cp lib/gks/qt/gksqt.exe artifacts/
   - cp lib/grm/grplot/grplot.exe artifacts/
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
   - cp lib/gks/qt/*.dll artifacts/
   - cp -r lib/gks/qt/platforms artifacts/
   - cp lib/gks/libGKS.lib lib/gks/libGKS.dll lib/gks/libGKS.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libGR.lib
@@ -800,6 +809,7 @@ windows-64bit-cross:
   - mkdir artifacts
   - cp lib/gks/qt/gksqt.exe artifacts/
   - cp lib/grm/grplot/grplot.exe artifacts/
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
   - cp lib/gks/qt/*.dll artifacts/
   - cp -r lib/gks/qt/platforms artifacts/
   - cp lib/gks/libGKS.lib lib/gks/libGKS.dll lib/gks/libGKS.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libGR.lib
@@ -917,6 +927,7 @@ darwin-self-contained-iff1600:
   - mkdir -p artifacts/Applications/gksqt.app/Contents/plugins/platforms
   - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/gksqt.app/Contents/plugins/platforms
   - cp lib/grm/grplot/grplot.macos.sh artifacts/grplot.sh
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
   - cp -r lib/grm/grplot/grplot.app artifacts/Applications/grplot.app
   - mkdir -p artifacts/Applications/grplot.app/Contents/Frameworks
   - mkdir -p artifacts/Applications/grplot.app/Contents/plugins/platforms
@@ -969,6 +980,7 @@ darwin-self-contained:
   - mkdir -p artifacts/Applications/gksqt.app/Contents/plugins/platforms
   - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/gksqt.app/Contents/plugins/platforms
   - cp lib/grm/grplot/grplot.macos.sh artifacts/grplot.sh
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
   - cp -r lib/grm/grplot/grplot.app artifacts/Applications/grplot.app
   - mkdir -p artifacts/Applications/grplot.app/Contents/Frameworks
   - mkdir -p artifacts/Applications/grplot.app/Contents/plugins/platforms
@@ -1021,6 +1033,7 @@ darwin-self-contained-iff1605:
     - mkdir -p artifacts/Applications/gksqt.app/Contents/plugins/platforms
     - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/gksqt.app/Contents/plugins/platforms
     - cp lib/grm/grplot/grplot.macos.sh artifacts/grplot.sh
+    - cp lib/grm/grplot/README.md artifacts/grplot.man.md
     - cp -r lib/grm/grplot/grplot.app artifacts/Applications/grplot.app
     - mkdir -p artifacts/Applications/grplot.app/Contents/Frameworks
     - mkdir -p artifacts/Applications/grplot.app/Contents/plugins/platforms
@@ -1073,6 +1086,7 @@ packages-tar:
   - mv artifacts-windows32/*.lib Windows-i686/gr/bin/
   - mv artifacts-windows32/gksqt.exe Windows-i686/gr/bin/
   - mv artifacts-windows32/grplot.exe Windows-i686/gr/bin/
+  - mv artifacts-windows32/grplot.man.md Windows-i686/gr/bin/
   - mv artifacts-windows32/platforms Windows-i686/gr/bin/
   - mv artifacts-windows32/fonts Windows-i686/gr/
   - mv artifacts-windows32/include Windows-i686/gr/
@@ -1084,6 +1098,7 @@ packages-tar:
   - mv artifacts-windows64/*.lib Windows-x86_64/gr/bin/
   - mv artifacts-windows64/gksqt.exe Windows-x86_64/gr/bin/
   - mv artifacts-windows64/grplot.exe Windows-x86_64/gr/bin/
+  - mv artifacts-windows64/grplot.man.md Windows-x86_64/gr/bin/
   - mv artifacts-windows64/platforms Windows-x86_64/gr/bin/
   - mv artifacts-windows64/fonts Windows-x86_64/gr/
   - mv artifacts-windows64/include Windows-x86_64/gr/
@@ -1096,6 +1111,7 @@ packages-tar:
   - mv artifacts-debian10/*.so Debian-x86_64/gr/lib/
   - mv artifacts-debian10/gksqt Debian-x86_64/gr/bin/
   - mv artifacts-debian10/grplot Debian-x86_64/gr/bin/
+  - mv artifacts-debian10/grplot.man.md Debian-x86_64/gr/bin/
   - mv artifacts-debian10/fonts Debian-x86_64/gr/
   - mv artifacts-debian10/include Debian-x86_64/gr/
   - cp artifacts-js/gr.js Debian-x86_64/gr/lib/
@@ -1105,6 +1121,7 @@ packages-tar:
   - mv artifacts-debian10-armhf/*.so Debian-armhf/gr/lib/
   - mv artifacts-debian10-armhf/gksqt Debian-armhf/gr/bin/
   - mv artifacts-debian10-armhf/grplot Debian-armhf/gr/bin/
+  - mv artifacts-debian10-armhf/grplot.man.md Debian-armhf/gr/bin/
   - mv artifacts-debian10-armhf/fonts Debian-armhf/gr/
   - mv artifacts-debian10-armhf/include Debian-armhf/gr/
   - cp artifacts-js/gr.js Debian-armhf/gr/lib/
@@ -1114,6 +1131,7 @@ packages-tar:
   - mv artifacts-debian10-aarch64/*.so Debian-aarch64/gr/lib/
   - mv artifacts-debian10-aarch64/gksqt Debian-aarch64/gr/bin/
   - mv artifacts-debian10-aarch64/grplot Debian-aarch64/gr/bin/
+  - mv artifacts-debian10-aarch64/grplot.man.md Debian-aarch64/gr/bin/
   - mv artifacts-debian10-aarch64/fonts Debian-aarch64/gr/
   - mv artifacts-debian10-aarch64/include Debian-aarch64/gr/
   - cp artifacts-js/gr.js Debian-aarch64/gr/lib/
@@ -1123,6 +1141,7 @@ packages-tar:
   - mv artifacts-ubuntu2004/*.so Ubuntu-x86_64/gr/lib/
   - mv artifacts-ubuntu2004/gksqt Ubuntu-x86_64/gr/bin/
   - mv artifacts-ubuntu2004/grplot Ubuntu-x86_64/gr/bin/
+  - mv artifacts-ubuntu2004/grplot.man.md Ubuntu-x86_64/gr/bin/
   - mv artifacts-ubuntu2004/fonts Ubuntu-x86_64/gr/
   - mv artifacts-ubuntu2004/include Ubuntu-x86_64/gr/
   - cp artifacts-js/gr.js Ubuntu-x86_64/gr/lib/
@@ -1132,6 +1151,7 @@ packages-tar:
   - mv artifacts-centos7/*.so CentOS-x86_64/gr/lib/
   - mv artifacts-centos7/gksqt CentOS-x86_64/gr/bin/
   - mv artifacts-centos7/grplot CentOS-x86_64/gr/bin/
+  - mv artifacts-centos7/grplot.man.md CentOS-x86_64/gr/bin/
   - mv artifacts-centos7/fonts CentOS-x86_64/gr/
   - mv artifacts-centos7/include CentOS-x86_64/gr/
   - cp artifacts-js/gr.js CentOS-x86_64/gr/lib/
@@ -1142,6 +1162,7 @@ packages-tar:
   - mv artifacts-centos7-32bit/*.so Linux-i386/gr/lib/
   - mv artifacts-centos7-32bit/gksqt Linux-i386/gr/bin/
   - mv artifacts-centos7-32bit/grplot Linux-i386/gr/bin/
+  - mv artifacts-centos7-32bit/grplot.man.md Linux-i386/gr/bin/
   - mv artifacts-centos7-32bit/fonts Linux-i386/gr/
   - mv artifacts-centos7-32bit/include Linux-i386/gr/
   - cp artifacts-js/gr.js Linux-i386/gr/lib/
@@ -1151,6 +1172,7 @@ packages-tar:
   - mv artifacts-arch/*.so ArchLinux-x86_64/gr/lib/
   - mv artifacts-arch/gksqt ArchLinux-x86_64/gr/bin/
   - mv artifacts-arch/grplot ArchLinux-x86_64/gr/bin/
+  - mv artifacts-arch/grplot.man.md ArchLinux-x86_64/gr/bin/
   - mv artifacts-arch/fonts ArchLinux-x86_64/gr/
   - mv artifacts-arch/include ArchLinux-x86_64/gr/
   - cp artifacts-js/gr.js ArchLinux-x86_64/gr/lib/
@@ -1160,6 +1182,7 @@ packages-tar:
   - mv artifacts-freebsd13/*.so FreeBSD-x86_64/gr/lib/
   - mv artifacts-freebsd13/gksqt FreeBSD-x86_64/gr/bin/
   - mv artifacts-freebsd13/grplot FreeBSD-x86_64/gr/bin/
+  - mv artifacts-freebsd13/grplot.man.md FreeBSD-x86_64/gr/bin/
   - mv artifacts-freebsd13/fonts FreeBSD-x86_64/gr/
   - mv artifacts-freebsd13/include FreeBSD-x86_64/gr/
   - cp artifacts-js/gr.js FreeBSD-x86_64/gr/lib/
@@ -1167,6 +1190,7 @@ packages-tar:
   - mkdir -p Darwin-x86_64/gr/bin
   - mkdir -p Darwin-x86_64/gr/lib
   - mv artifacts-darwin/grplot.sh Darwin-x86_64/gr/bin/grplot
+  - mv artifacts-darwin/grplot.man.md Darwin-x86_64/gr/bin/
   - mv artifacts-darwin/*.dylib Darwin-x86_64/gr/lib/
   - mv artifacts-darwin/*.so Darwin-x86_64/gr/lib/
   - mv artifacts-darwin/fonts Darwin-x86_64/gr/

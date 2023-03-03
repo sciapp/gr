@@ -35,10 +35,28 @@ int main(int argc, char **argv)
     }
 #endif
 
-  QApplication app(argc, argv);
-  GRPlotMainWindow window(argc, argv);
+  /* help page should be shown */
+  if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)
+    {
+      if (!util::file_exists("grplot.man.md"))
+        {
+          fprintf(stderr, "Helpfile not found\n");
+          return 1;
+        }
+      return util::grplot_overview(argc, argv);
+    }
 
-  window.show();
+  if (getenv("GKS_WSTYPE") != nullptr)
+    {
+      return (grm_plot_from_file(argc, argv) != 1);
+    }
+  else
+    {
+      QApplication app(argc, argv);
+      GRPlotMainWindow window(argc, argv);
 
-  return app.exec();
+      window.show();
+
+      return app.exec();
+    }
 }

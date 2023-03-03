@@ -20,7 +20,9 @@ static std::map<std::string, const char *> key_to_types{{"accelerate", "i"},
                                                         {"bar_color", "ddd"},
                                                         {"bar_color", "i"},
                                                         {"bar_width", "d"},
+                                                        {"bin_counts", "i"},
                                                         {"bin_edges", "nD"},
+                                                        {"bin_width", "d"},
                                                         {"c", "nD"},
                                                         {"colormap", "i"},
                                                         {"draw_edges", "i"},
@@ -42,11 +44,14 @@ static std::map<std::string, const char *> key_to_types{{"accelerate", "i"},
                                                         {"normalization", "s"},
                                                         {"orientation", "s"},
                                                         {"phiflip", "i"},
+                                                        {"rotation", "d"},
+                                                        {"scale", "i"},
                                                         {"scatterz", "i"},
                                                         {"spec", "s"},
                                                         {"stairs", "i"},
                                                         {"step_where", "s"},
                                                         {"style", "s"},
+                                                        {"tilt", "d"},
                                                         {"xbins", "i"},
                                                         {"xcolormap", "i"},
                                                         {"xflip", "i"},
@@ -372,6 +377,7 @@ int grm_plot_from_file(int argc, char **argv)
 
   args = grm_args_new();
   error = grm_interactive_plot_from_file(args, argc, argv);
+  grm_plot(args);
   grm_args_delete(args);
   return error;
 }
@@ -394,7 +400,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   std::vector<std::string> labels;
   std::vector<const char *> labels_c;
   std::vector<grm_args_t *> series;
-  char *env;
+  char *env, *wstype;
   void *handle = nullptr;
   const char *kind;
   int grplot;
@@ -431,7 +437,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
 
   series.resize(cols);
 
-  if ((env = getenv("GR_DISPLAY")) != nullptr)
+  wstype = getenv("GKS_WSTYPE");
+  if (strcmp(wstype, "381") == 0 && (env = getenv("GR_DISPLAY")) != nullptr)
     {
       handle = grm_open(GRM_SENDER, env, 8002, nullptr, nullptr);
       if (handle == nullptr)
@@ -744,7 +751,6 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     {
       if (cols > 1) fprintf(stderr, "Only the first column gets displayed\n");
       grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
-      /* TODO: when the mouse is moved the plot disapeares */
     }
   else if (strcmp(kind, "polar") == 0)
     {

@@ -55,6 +55,10 @@ private slots:
   void stem();
   void shade();
   void hexbin();
+  void pdf();
+  void png();
+  void jpeg();
+  void svg();
 
 private:
   struct MouseState
@@ -79,6 +83,7 @@ private:
   QMenuBar *menu;
   QMenu *type;
   QMenu *algo;
+  QMenu *export_menu;
   QAction *heatmapAct;
   QAction *marginalheatmapAllAct;
   QAction *marginalheatmapLineAct;
@@ -103,6 +108,10 @@ private:
   QAction *stemAct;
   QAction *shadeAct;
   QAction *hexbinAct;
+  QAction *PdfAct;
+  QAction *PngAct;
+  QAction *JpegAct;
+  QAction *SvgAct;
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

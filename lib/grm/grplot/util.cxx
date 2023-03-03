@@ -284,6 +284,78 @@ bool startsWith(const std::string &str, const std::string &prefix)
   return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
 }
 
+bool file_exists(const std::string &name)
+{
+  return (access(name.c_str(), F_OK) != -1);
+}
+
+int grplot_overview(int argc, char **argv)
+{
+  std::string line, kind;
+  std::string path = "grplot.man.md";
+  std::ifstream file(path);
+  int given_help = 0, removed_start = 0;
+  static char function[50];
+
+  while (getline(file, line))
+    {
+      if (argc < 3)
+        {
+          if (strcmp(line.c_str(), "## Advanced information for each plot type") != 0)
+            {
+              if (strcmp(line.c_str(), "# GR Plot Overview") == 0)
+                {
+                  fprintf(stderr, "--------------------------------------------------------------------------------\n");
+                  fprintf(stderr, "%s\n", line.erase(0, 2).c_str());
+                  fprintf(stderr, "--------------------------------------------------------------------------------\n");
+                  continue;
+                }
+              /* remove the # from the Markdown text */
+              while (util::startsWith(line, "#"))
+                {
+                  line.erase(0, 1);
+                  removed_start = 1;
+                }
+              if (removed_start)
+                {
+                  removed_start = 0;
+                  fprintf(stderr, ">");
+                }
+              if (util::startsWith(line, "```")) continue;
+              fprintf(stderr, "%s\n", line.c_str());
+            }
+          else
+            {
+              return 0;
+            }
+        }
+      else
+        {
+          kind = argv[2];
+          snprintf(function, 50, "# %s", kind.c_str());
+          if (given_help)
+            {
+              if (util::startsWith(line, "#")) return 0;
+              fprintf(stderr, "%s\n", line.c_str());
+            }
+          if (strcmp(line.c_str(), function) == 0)
+            {
+              given_help = 1;
+              fprintf(stderr, "--------------------------------------------------------------------------------\n");
+              fprintf(stderr, "%s\n", kind.c_str());
+              fprintf(stderr, "--------------------------------------------------------------------------------\n");
+            }
+        }
+    }
+  if (!given_help)
+    {
+      fprintf(stderr, "No plot type with the name %s was found. Use a correct plot type and try it again.\n",
+              kind.c_str());
+      return 1;
+    }
+  return 0;
+}
+
 #ifdef NO_EXCEPTIONS
 #ifdef _WIN32
 std::optional<std::wstring> getExecutablePath()
