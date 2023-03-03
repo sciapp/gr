@@ -10,15 +10,15 @@ are converted into GRM containers which will then be used to plot the data.
 The following parameters are key-value pairs which can be used for every plot type.
 
 - `file`: contains the data which should be displayed. If no file is referred this results in an error message. If this
-  parameter is the first argument the `file` keyword may be ommited. More information about these files can be found
+  parameter is the first argument the `file` keyword may be omitted. More information about these files can be found
   under the subchapter `Data file`.
 - `kind`: defines the plot type that should be displayed. Possible options are: `barplot`, `contour`, `contourf`
   , `heatmap`, `hexbin`, `hist`, `imshow`, `isosurface`, `line`, `marginalheatmap`, `polar`, `polar_histogram`
-  , `polar_heatmap`, `pie`, `plot3`, `scale`, `scatter`, `scatter3`, `shade`, `surface`, `stem`, `step`, `tricont`
+  , `polar_heatmap`, `pie`, `plot3`, `scale`, `scatter`, `scatter3`, `shade`, `surface`, `stairs`, `stem`, `tricont`
   , `trisurf`, `quiver`, `volume`, `wireframe`.
   The default plot type is `line`.
 
-  To get extra informations about a specific plot type use:
+  To get extra information about a specific plot type use:
 
     ```shell
     --help plot_type
@@ -75,7 +75,7 @@ This is an advanced example for a command line, where container parameters are s
 ```
 
 If wanted the plot can be exported as a `pdf`, `png`, `jpeg` or `svg` file using the interactive menu. Alternatively
-these files can directly be created from console line when the enviroment variable `GKS_WSTYPE` is set.
+these files can directly be created from console line when the environment variable `GKS_WSTYPE` is set.
 
 ## Data file
 
@@ -108,19 +108,22 @@ differently. The following list shows how the data is treated for different plot
    Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted
    as values in x- and y-direction.
 2. `line`, `scatter`: One or more columns are expected here. Each column will be displayed in a single plot. The values
-   inside the columns gets therefore interpreted as y values.
+   inside the columns gets therefore interpreted as y-values.
 3. `isosurface`, `volume`: The expected data are multiple matrices. Each matrix represents a slice inside the volume.
-4. `plot3`, `scatter`, `scatter3`, `tricont`, `trisurf`: Three columns with data are expected, representing the x, y and
-   z data.
-5. `barplot`, `hist`, `stem`, `step`: One column is expected which represents the y data.
+4. `plot3`, `scatter`, `scatter3`, `tricont`, `trisurf`: Three columns with data are expected, representing the x-, y-
+   and z-data.
+5. `barplot`, `hist`, `stem`, `stairs`: One column is expected which represents the y-data.
 6. `pie`: The expected data are 1-4 lines. The first line represents the data which should be displayed. The next 3 rows
    are used to set the RGB of the pie charts. Each row stands for one RGB element.
 7. `polar_histogram`: One column is expected which represents the values.
 8. `polar`: The expected data are two columns containing the angles and values.
-9. `polar_heatmap`: The expected data are two columns containing the angles and values.
+9. `polar_heatmap`: The expected data is a matrix. Each element of the matrix is displayed according to its position
+   inside the matrix. These elements are interpreted as values in theta- and phi-direction. When not given, theta will
+   be in the range of 0.0 and 3.0 while phi will be in range of 0.0 and 360.0. Both parameters can be changed
+   with `xrange` for theta and `yrange` for phi.
 10. `quiver`: The expected data are two matrices. The first matrix contains the information about the x-directions and
     the second matrix the information about the y-directions.
-11. `hexbin`, `shade`: The expected data are two columns, representing the x and y data.
+11. `hexbin`, `shade`: The expected data are two columns, representing the x- and y-data.
 
 A plot type that expect the same data shape as other plot types can be converted using an interactive menu. The
 interaction also yields extra information about the plot, when the mouse is being hovered over them.
@@ -133,7 +136,7 @@ This plot type converts the data into a bar plot. A bar plot itself is used to d
 numeric and a categorical variable. The resulting bars represent the frequency or quantity of different categories of
 the data.
 
-The expected data is one column representing the y data.
+The expected data is one column representing the y-data.
 
 Possible parameters for the bar plot are:
 
@@ -181,7 +184,7 @@ Possible parameters for the bar plot are:
 8. `ind_edge_width`: With this parameter the width of specific edges can be changed. The value of this parameter are
    key-value pairs with the following keys:
     - `indices`: The index number of the edge, which width should be changed.
-    - `width`: The new width for the specified edge.or double.
+    - `width`: The new width for the specified edge. The value of this parameter has to be an integer or double.
 
    The syntax of this parameter is:
 
@@ -189,9 +192,9 @@ Possible parameters for the bar plot are:
 9. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal`
    or `vertical` while the default is `horizontal`.
 10. `style`: This parameter defines how the data inside the bar plot is displayed. There are three options:
-- `default`: All values are displayed with a separate bar.
-- `stacked`: The values are displayed with bars which are stacked over each other.
-- `lined`: The values are displayed with smaller bars next to each other.
+    - `default`: All values are displayed with a separate bar.
+    - `stacked`: The values are displayed with bars which are stacked over each other.
+    - `lined`: The values are displayed with smaller bars next to each other.
 
 # contour
 
@@ -255,7 +258,7 @@ Possible parameters for the hexbin are:
 # hist
 
 This plot type converts the data into a histogram. A histogram is an approximate representation of the distribution of
-numerical data. Two columns are expected containing the x and the y data.
+numerical data. Two columns are expected containing the x- and the y-data.
 
 Possible parameters for the histogram are:
 
@@ -263,7 +266,7 @@ Possible parameters for the histogram are:
    an integer which represents a color index or three doubles which represents the RGB value of the color. If the
    parameter is omitted color 989 (dark blue) will be used.
 2. `bins`: This parameter defines the number of bins which should be used to represent the distribution of the data. The
-   defauklt value is 3.3 * log10(pnumber of points) + 0.5) + 1.
+   default value is 3.3 * log10(number of points) + 0.5) + 1.
 3. `edge_color`: This parameter defines the color of all edges inside the plot. The value of this parameter can either
    be an integer which represents a color index or three doubles which represents the rgb value of the color. If the
    parameter is omitted color 1 (black) will be used.
@@ -309,9 +312,10 @@ Possible parameters for the isosurface are:
 
 1. `isovalue`: Values greater than the isovalue will be seen as outside the isosurface, while values less than the
    isovalue will be seen as inside the isosurface. The value has to an integer or double where the default is 0.5.
-2. `rotation`: This parameter defines the rotation of the displayed data in degrees.or double. The default is no
-   rotation.
-3. `tilt`: This parameter defines the tilt of the camera in degrees.or double. The default is no tilt.
+2. `rotation`: This parameter defines the rotation of the displayed data in degrees. The value of this parameter has to
+   be an integer or double. The default is no rotation.
+3. `tilt`: This parameter defines the tilt of the camera in degrees. The value of this parameter has to be an integer or
+   double. The default is no tilt.
 
 # line
 
@@ -319,7 +323,7 @@ This plot type converts the data into a line plot. A line plot is a simple plot 
 polyline.
 
 The expected data are columns. Each column will be interpreted as a single line. Multiple columns leads to multiple
-displayed lines. The values inside the columns gets therefore interpreted as y values.
+displayed lines. The values inside the columns gets therefore interpreted as y-values.
 
 Possible parameters for the line plot are:
 
@@ -342,9 +346,9 @@ Possible parameters for the line plot are:
 
 # marginalheatmap
 
-This plot type converts the data into a marginalheatmap. A marginalheatmap is a combination of a heatmap and either step
-plots or histograms. With those extra plots some parts of the heatmap data are displayed in vertical and horizontal
-direction at the margins of the heatmap.
+This plot type converts the data into a marginalheatmap. A marginalheatmap is a combination of a heatmap and either
+stairs plots or histograms. With those extra plots some parts of the heatmap data are displayed in vertical and
+horizontal direction at the margins of the heatmap.
 
 The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix.
 These elements are interpreted as values in x- and y-direction.
@@ -373,7 +377,10 @@ The expected data are two columns containing the angles and values.
 
 This plot type converts the data into a polar heatmap. A polar heatmap is a heatmap in polar coordinates.
 
-The expected data are two columns containing the angles and values.
+The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix.
+These elements are interpreted as values in phi- and theta-direction. When not given, theta will be in the range of 0.0
+and 3.0 while phi will be in range of 0.0 and 360.0. Both parameters can be changed with `xrange` for phi and `yrange`
+for theta.
 
 Possible parameters for the polar heatmap are:
 
@@ -398,9 +405,9 @@ Possible parameters for the polar histogram are:
    , `probability`, `countdensity`, `pdf`, `cumcount` or `cdf`.
 7. `phiflip`: This parameter decides whether the phi values are flipped or not. The value can be either 0 or 1.
 8. `stairs`: When this parameter is set, only the outer shapes of the bins are drawn. The value can be either 0 or 1.
-9. `xcolormap`: This parameter sets the colormap for the x direction.
+9. `xcolormap`: This parameter sets the colormap for the x-direction.
 10. `xflip`: This parameter defines whether the x-axis is flipped or not.
-11. `ycolormap`: This parameter sets the colormap for the y direction.
+11. `ycolormap`: This parameter sets the colormap for the y-direction.
 12. `yflip`: This parameter defines whether the y-axis is flipped or not.
 
 # pie
@@ -417,7 +424,7 @@ the RGB values for the slices.
 This plot type converts the data into a three-dimensional line plot. The data points inside the three-dimensional space
 are connected through polylines.
 
-The expected data are three columns containing the x, y and z data.
+The expected data are three columns containing the x-, y- and z-data.
 
 # scatter
 
@@ -425,7 +432,7 @@ This plot type converts the data into a scatter plot. A scatter plot displays ea
 two-dimensional coordinate system.
 
 The expected data are columns. Each column will be interpreted as a single plot. Multiple columns lead to multiple
-plots. The column values are interpreted as y values. There is also a special case of the scatter plot where the size of
+plots. The column values are interpreted as y-values. There is also a special case of the scatter plot where the size of
 the points can be given.
 
 Possible parameters for the scatter plot are:
@@ -444,7 +451,7 @@ Possible parameters for the scatter plot are:
 
    `error:{{errorbar_color:`color_index`},{downwardscap_color:`color_index`},{upwardscap_color:`color_index`}}`
 
-2. `markertype`: This parameter defines the style of the visualized data points.where the effect belonging to the
+2. `markertype`: This parameter defines the style of the visualized data points, where the effect belonging to the
    numbers is the same as for gr_setmarkertype.
 
 # scatter3
@@ -452,21 +459,23 @@ Possible parameters for the scatter plot are:
 This plot type converts the data into a three-dimensional scatter plot. A three-dimensional scatter plot displays each
 data point as a point inside the three-dimensional coordinate system.
 
-The expected data are three columns containing the x, y and z data.
+The expected data are three columns containing the x-, y- and z-data.
 
 # shade
 
 This plot type converts the data into a shade plot. With a shade plot a point or line based heatmap can be drawn from
 the data.
 
-The expected data are two columns containing the x and y data.
+The expected data are two columns containing the x- and y-data.
 
 Possible parameters for the shade plot are:
 
-1. `xbins`: This parameter defines the bins in x direction.where the default is 100.
-2. `xform`: This parameter defines the transformation type used for color mapping.where the default is 1. The effect
-   belonging to the numbers is the same as for gr_shadepoints.
-3. `ybins` : This parameter defines the bins in y direction.where the default is 100.
+1. `xbins`: This parameter defines the bins in x-direction. The value of this parameter has to be an integer where the
+   default is 100.
+2. `xform`: This parameter defines the transformation type used for color mapping. The value of this parameter has to be
+   an integer where the default is 1. The effect belonging to the numbers is the same as for gr_shadepoints.
+3. `ybins` : This parameter defines the bins in y-direction. The value of this parameter has to be an integer where the
+   default is 100.
 
 # surface
 
@@ -479,43 +488,43 @@ These elements are interpreted as values in x- and y-direction.
 Possible parameters for the surface plot are:
 
 1. `accelerate`: This parameter defines whether the surface plot is calculated with the GR or the GR3
-   functionalities.where in its default case the GR3 to be used.
+   functionalities. The value of this parameter has to be 0 or 1 where in its default case the GR3 to be used.
 2. `colormap` or `cmap`: This parameter defines the colormap to be used. The default is 44 (viridis).
 3. `xflip`: This parameter defines whether the x-axis is flipped or not.
 4. `yflip`: This parameter defines whether the y-axis is flipped or not.
 
-# stem
+# stairs
 
-This plot type converts the data into a stem plot. A stem plot draws lines perpendicular to a baseline at each location
-from the baseline to the data values.
-
-The expected data is one column containing the the y data.
-
-Possible parameters for the stem plot are:
-
-1. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal`
-   or `vertical` while the default is `horizontal`.
-
-# step
-
-This plot type converts the data into a step plot. A step plot is a piecewise constant function having only finitely
+This plot type converts the data into a stairs plot. A stairs plot is a piecewise constant function having only finitely
 many pieces.
 
-The expected data is 1 column. This column represents the y data.
+The expected data is 1 column. This column represents the y-data.
 
-Possible parameters for the step plot are:
+Possible parameters for the stairs plot are:
 
 1. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal`
    or `vertical` while the default is `horizontal`.
 2. `step_where`: This parameter defines the calculation of the steps. The possible values are `pre`, `post` and `mid`
    which is also the default case.
 
+# stem
+
+This plot type converts the data into a stem plot. A stem plot draws lines perpendicular to a baseline at each location
+from the baseline to the data values.
+
+The expected data is one column containing the y-data.
+
+Possible parameters for the stem plot are:
+
+1. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal`
+   or `vertical` while the default is `horizontal`.
+
 # tricont
 
 This plot type converts the data into a tricontour plot. A tricontour plot displays contour lines on an unstructured
 triangular grid.
 
-The expected data are 3 columns. The first columns represents x, the second y and the last the z data.
+The expected data are 3 columns. The first columns represents x-, the second y- and the last the z-data.
 
 The possible parameters for the tricontour plot are:
 
@@ -530,7 +539,7 @@ This plot type converts the data into a trisurfaces. A trisurface is a type of s
 compact surfaces of finite number of triangles which cover the whole surface in a manner that each and every point on
 the surface is in triangle.
 
-The expected data are 3 columns. The first columns represents x, the second y and the last the z data.
+The expected data are 3 columns. The first columns represents x-, the second y- and the last the z-data.
 
 Possible parameters for the trisurface are:
 
