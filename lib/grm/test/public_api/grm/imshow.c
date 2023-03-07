@@ -28,7 +28,7 @@ static void test_plot(void)
     {
       for (j = 0; j < ROWS; ++j)
         {
-          plot[j][i] = sin(4.0 * i / ROWS - 2.0) + cos(M_PI * j / COLS);
+          plot[j][i] = sin(4.0 * i / COLS - 2.0) + cos(M_PI * j / ROWS);
         }
     }
 

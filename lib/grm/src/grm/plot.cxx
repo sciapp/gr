@@ -1,5 +1,7 @@
 /* ######################### includes ############################################################################### */
 
+#include <string>
+
 extern "C" {
 
 #include <ctype.h>
@@ -936,6 +938,7 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
         {
           args_setdefault(*current_subplot, "xind", "i", -1);
           args_setdefault(*current_subplot, "yind", "i", -1);
+          args_setdefault(*current_subplot, "marginalheatmap_kind", "s", "all");
         }
       else if (str_equals_any(kind, 1, "surface"))
         {
@@ -965,7 +968,6 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
           else if (strcmp(kind, "marginalheatmap") == 0)
             {
               args_setdefault(*current_series, "algorithm", "s", "sum");
-              args_setdefault(*current_series, "marginalheatmap_kind", "s", "all");
             }
           ++current_series;
         }
@@ -1230,10 +1232,15 @@ void plot_process_viewport(grm_args_t *subplot_args)
   if (strcmp(kind, "marginalheatmap") == 0)
     {
       top_margin = grm_args_values(subplot_args, "title", "s", &title) ? 0.075 + (vp1 - vp0) * 0.1 : (vp1 - vp0) * 0.1;
+      top_margin = grm_args_values(subplot_args, "title", "s", &title)
+                       ? 0.075 + 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws)
+                       : 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws);
+      if (keep_aspect_ratio) right_margin += grm_args_values(subplot_args, "title", "s", &title) ? 0.075 : 0;
     }
   else
     {
       top_margin = grm_args_values(subplot_args, "title", "s", &title) ? 0.075 : 0;
+      if (keep_aspect_ratio) right_margin -= 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws) - top_margin;
     }
   if (strcmp(kind, "imshow") == 0)
     {
@@ -1328,6 +1335,36 @@ void plot_process_viewport(grm_args_t *subplot_args)
 
   logger((stderr, "Stored vp (%lf, %lf, %lf, %lf)\n", vp[0], vp[1], vp[2], vp[3]));
   logger((stderr, "Stored viewport (%lf, %lf, %lf, %lf)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
+}
+
+double auto_tick_polar(double rmax, int rings, const std::string &norm)
+{
+  if (norm == "cdf")
+    {
+      return 1.0 / rings;
+    }
+  double scale;
+
+  if (rmax > rings)
+    {
+      return (static_cast<int>(rmax) + (rings - (static_cast<int>(rmax) % rings))) / rings;
+    }
+  else if (rmax > (rings * 0.6))
+    {
+      // returns rings / rings -> 1.0 so that rmax = rings * tick -> rings. Number of rings is rmax then
+      return 1.0;
+    }
+  scale = ceil(abs(log10(rmax)));
+  rmax = static_cast<int>(rmax * pow(10.0, scale));
+  if (static_cast<int>(rmax) % rings == 0)
+    {
+      rmax = rmax / pow(10.0, scale);
+      return rmax / rings;
+    }
+  rmax += rings - (static_cast<int>(rmax) % rings);
+  rmax = rmax / pow(10.0, scale);
+
+  return rmax / rings;
 }
 
 double auto_tick(double amin, double amax)
@@ -1536,7 +1573,7 @@ void plot_process_window(grm_args_t *subplot_args)
 
   logger((stderr, "Storing window (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
   grm_args_push(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
-  if (!str_equals_any(kind, 4, "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
+  if (!str_equals_any(kind, 3, "polar", "polar_heatmap", "nonuniformpolar_heatmap"))
     {
       gr_setwindow(x_min, x_max, y_min, y_max);
     }
@@ -1810,6 +1847,12 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
           ++current_component_name;
         }
     }
+  else if (strcmp(kind, "polar_histogram") == 0)
+    {
+      grm_args_push(subplot_args, "_xlim", "dd", -1.0, 1.0);
+      grm_args_push(subplot_args, "_ylim", "dd", -1.0, 1.0);
+    }
+
   /* For quiver plots use u^2 + v^2 as z value */
   if (strcmp(kind, "quiver") == 0)
     {
@@ -5967,9 +6010,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
         }
     }
 
-
-  gr_updatews();
-  gr_updategks();
   gr_setresamplemethod(resample);
 
 cleanup:
@@ -6382,6 +6422,11 @@ err_t plot_draw_polar_axes(grm_args_t *args)
     }
 
   grm_args_values(args, "kind", "s", &kind);
+  if (strcmp(kind, "polar_histogram") == 0)
+    {
+      r_min = 0.0;
+      grm_args_values(args, "r_max", "d", &r_max);
+    }
   if (grm_args_values(args, "rings", "i", &rings) == 0)
     {
       rings = grm_max(4, (int)(r_max - r_min));
@@ -6395,34 +6440,11 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   if (strcmp(kind, "polar_histogram") == 0)
     {
       const char *norm;
-      r_min = 0.0;
       if (grm_args_values(args, "normalization", "s", &norm) == 0)
         {
           norm = "count";
         }
-
-      grm_args_values(args, "r_max", "d", &r_max);
-
-      if (str_equals_any(norm, 2, "count", "cumcount"))
-        {
-          tick = 1.5 * auto_tick(r_min, r_max);
-        }
-      else if (str_equals_any(norm, 2, "pdf", "probability"))
-        {
-          tick = 1.5 * auto_tick(r_min, r_max);
-        }
-      else if (strcmp(norm, "countdensity") == 0)
-        {
-          tick = 1.5 * auto_tick(r_min, r_max);
-        }
-      else if (strcmp(norm, "cdf") == 0)
-        {
-          tick = 1.0 / rings;
-        }
-      else
-        {
-          tick = auto_tick(r_min, r_max);
-        }
+      tick = auto_tick_polar(r_max, rings, norm);
     }
   else
     {
@@ -6433,7 +6455,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   if (grm_args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
   for (i = 0; i <= n; i++)
     {
-      double r = (r_min + i * tick) / (r_max - r_min);
+      double r = 1.0 / n * i;
       if (i % 2 == 0)
         {
           gr_setlinecolorind(88);
