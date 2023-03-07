@@ -4709,27 +4709,25 @@ err_t plot_scatter3(grm_args_t *subplot_args)
               markerCVec.push_back(c_index);
             }
         }
-      else
+
+      std::vector<double> x_vec = std::vector<double>(x, x + x_length);
+      std::vector<double> y_vec = std::vector<double>(y, y + y_length);
+      std::vector<double> z_vec = std::vector<double>(z, z + z_length);
+      int id_int = static_cast<int>(global_root->getAttribute("id"));
+      global_root->setAttribute("id", ++id_int);
+      std::string id = std::to_string(id_int);
+
+      if (markerCVec.size() > 0)
         {
-          std::vector<double> x_vec = std::vector<double>(x, x + x_length);
-          std::vector<double> y_vec = std::vector<double>(y, y + y_length);
-          std::vector<double> z_vec = std::vector<double>(z, z + z_length);
-          int id_int = static_cast<int>(global_root->getAttribute("id"));
-          global_root->setAttribute("id", ++id_int);
-          std::string id = std::to_string(id_int);
-
-          if (markerCVec.size() > 0)
-            {
-              global_render->setMarkerColorInd(subGroup, "markercolorinds" + id, markerCVec);
-            }
-          else if (grm_args_values(*current_series, "c", "i", &c_index))
-            {
-              global_render->setMarkerColorInd(subGroup, c_index);
-            }
-
-          auto temp = global_render->createPolymarker3d("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec);
-          subGroup->append(temp);
+          global_render->setMarkerColorInd(subGroup, "markercolorinds" + id, markerCVec);
         }
+      else if (grm_args_values(*current_series, "c", "i", &c_index))
+        {
+          global_render->setMarkerColorInd(subGroup, c_index);
+        }
+
+      auto temp = global_render->createPolymarker3d("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec);
+      subGroup->append(temp);
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
