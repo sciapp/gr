@@ -2349,6 +2349,7 @@ void gr_polarcellarray(double x_org, double y_org, double phimin, double phimax,
             {
               phi_ind = dimphi - phi_ind - 1;
             }
+          img_data[y * size + x] = color[(r_ind + srow - 1) * ncol + phi_ind + scol - 1];
           color_ind = color[(r_ind + srow - 1) * ncol + phi_ind + scol - 1];
           if (color_ind >= 0 && color_ind < MAX_COLOR)
             {

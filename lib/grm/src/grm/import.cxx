@@ -65,11 +65,10 @@ static std::map<std::string, const char *> key_to_types{{"accelerate", "i"},
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static std::list<std::string> kind_types = {
-    "barplot",         "contour",    "contourf", "heatmap",         "hexbin",   "hist",
-    "imshow",          "isosurface", "line",     "marginalheatmap", "polar",    "polar_heatmap",
-    "polar_histogram", "pie",        "plot3",    "scatter",         "scatter3", "shade",
-    "surface",         "stem",       "step",     "tricont",         "trisurf",  "quiver",
-    "volume",          "wireframe"};
+    "barplot",  "contour",         "contourf", "heatmap",       "hexbin",          "hist",    "imshow",  "isosurface",
+    "line",     "marginalheatmap", "polar",    "polar_heatmap", "polar_histogram", "pie",     "plot3",   "scatter",
+    "scatter3", "shade",           "surface",  "stem",          "stairs",          "tricont", "trisurf", "quiver",
+    "volume",   "wireframe"};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ alias for keys ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -628,7 +627,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
       grm_args_push(args, "z", "nD", rows, filedata[depth][2].data());
     }
-  else if (str_equals_any(kind, 4, "barplot", "hist", "stem", "step"))
+  else if (str_equals_any(kind, 4, "barplot", "hist", "stem", "stairs"))
     {
       std::vector<double> x(rows);
       double xmin, xmax, ymin, ymax;
@@ -677,7 +676,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       grm_args_push(args, "y", "nD", rows, filedata[depth][0].data());
       /* for hist */
       grm_args_push(args, "weights", "nD", rows, filedata[depth][0].data());
-      /* for step */
+      /* for stairs */
       grm_args_push(args, "z", "nD", rows, filedata[depth][0].data());
 
       /* the needed calculation to get the errorbars out of the data */

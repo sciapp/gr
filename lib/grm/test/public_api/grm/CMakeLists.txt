@@ -53,3 +53,5 @@ foreach(executable_source ${EXECUTABLE_SOURCES})
                CXX_EXTENSIONS OFF
   )
 endforeach()
+
+add_subdirectory(snoop grm_test_snoop)
