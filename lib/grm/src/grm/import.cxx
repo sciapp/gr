@@ -64,11 +64,12 @@ static std::map<std::string, const char *> key_to_types{{"accelerate", "i"},
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::list<std::string> kind_types = {"barplot",  "contour",         "contourf",   "heatmap", "hexbin",
-                                            "hist",     "imshow",          "isosurface", "line",    "marginalheatmap",
-                                            "polar",    "polar_histogram", "pie",        "plot3",   "scatter",
-                                            "scatter3", "shade",           "surface",    "stem",    "step",
-                                            "tricont",  "trisurf",         "quiver",     "volume",  "wireframe"};
+static std::list<std::string> kind_types = {
+    "barplot",         "contour",    "contourf", "heatmap",         "hexbin",   "hist",
+    "imshow",          "isosurface", "line",     "marginalheatmap", "polar",    "polar_heatmap",
+    "polar_histogram", "pie",        "plot3",    "scatter",         "scatter3", "shade",
+    "surface",         "stem",       "step",     "tricont",         "trisurf",  "quiver",
+    "volume",          "wireframe"};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ alias for keys ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -471,7 +472,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
 
       if (cols <= 1)
         {
-          fprintf(stderr, "Unsufficient data for plot type (%s)\n", kind);
+          fprintf(stderr, "Insufficient data for plot type (%s)\n", kind);
           return 0;
         }
       adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)cols - 1.0);
@@ -584,7 +585,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       double min_x, max_x, min_y, max_y, min_z, max_z;
       if (cols < 3)
         {
-          fprintf(stderr, "Unsufficient data for plot type (%s)\n", kind);
+          fprintf(stderr, "Insufficient data for plot type (%s)\n", kind);
           return 0;
         }
       if (cols > 3) fprintf(stderr, "Only the first 3 columns get displayed");
@@ -744,7 +745,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         }
       else if (rows > 1)
         {
-          fprintf(stderr, "Unsufficient data for custom colors\n");
+          fprintf(stderr, "Insufficient data for custom colors\n");
         }
     }
   else if (strcmp(kind, "polar_histogram") == 0)
@@ -757,6 +758,35 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       if (cols > 1) fprintf(stderr, "Only the first 2 columns get displayed\n");
       grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
       grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
+    }
+  else if (strcmp(kind, "polar_heatmap") == 0)
+    {
+      std::vector<double> xi(cols), yi(rows), zi(rows * cols);
+
+      if (cols <= 1)
+        {
+          fprintf(stderr, "Insufficient data for plot type (%s)\n", kind);
+          return 0;
+        }
+      adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, 360.0);
+      adjust_ranges(&ranges.ymin, &ranges.ymax, 0.0, 3.0);
+      ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
+
+      for (col = 0; col < cols; ++col)
+        {
+          xi[col] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)col / ((double)cols - 1));
+          for (row = 0; row < rows; ++row)
+            {
+              if (col == 0)
+                {
+                  yi[row] = ranges.ymin + (ranges.ymax - ranges.ymin) * ((double)row / ((double)rows - 1));
+                }
+              zi[row * cols + col] = filedata[depth][col][row];
+            }
+        }
+      grm_args_push(args, "x", "nD", cols, xi.data());
+      grm_args_push(args, "y", "nD", rows, yi.data());
+      grm_args_push(args, "z", "nD", cols * rows, zi.data());
     }
   else if (strcmp(kind, "quiver") == 0)
     {
