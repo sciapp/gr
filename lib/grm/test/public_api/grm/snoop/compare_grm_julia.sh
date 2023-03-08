@@ -35,18 +35,21 @@ prepare () {
 }
 
 create_grm_images () (
+    echo  "Create GRM images..." && \
     mkdir -p "${DIFF_IMAGE_DIR_NAME}/grm" && \
     cd "${DIFF_IMAGE_DIR_NAME}/grm" &>/dev/null && \
     "${GRM_SNOOP_EXECUTABLE_PATH}"
 )
 
 create_julia_images () (
+    echo  "Create GR.jl images..." && \
     mkdir -p "${DIFF_IMAGE_DIR_NAME}/julia" && \
     cd "${DIFF_IMAGE_DIR_NAME}/julia" &>/dev/null && \
     julia "../../snoop.jl"
 )
 
 diff_images () {
+    echo  "Compare images..." && \
     mkdir -p "${DIFF_IMAGE_DIR_NAME}/diff" && \
     julia - <<-EOF
 		using Images
