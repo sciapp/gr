@@ -167,7 +167,6 @@ public:
 bool endsWith(const std::string &str, const std::string &suffix);
 bool startsWith(const std::string &str, const std::string &prefix);
 bool file_exists(const std::string &name);
-int grplot_overview(int argc, char **argv);
 
 #ifdef NO_EXCEPTIONS
 #ifdef _WIN32
