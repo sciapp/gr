@@ -12,7 +12,8 @@ const unsigned int MAXPATHLEN = 1024;
 
 int main(int argc, char **argv)
 {
-  // Ensure that the `GRDIR` envionment variable is set, so GR can find its components like fonts.
+  int pass = 0;
+  // Ensure that the `GRDIR` environment variable is set, so GR can find its components like fonts.
 #ifndef NO_EXCEPTIONS
   try
     {
@@ -47,10 +48,10 @@ int main(int argc, char **argv)
           fprintf(stderr, "Helpfile not found\n");
           return 1;
         }
-      return util::grplot_overview(argc, argv);
+      pass = 1;
     }
 
-  if (getenv("GKS_WSTYPE") != nullptr)
+  if (!pass && getenv("GKS_WSTYPE") != nullptr)
     {
       return (grm_plot_from_file(argc, argv) != 1);
     }
