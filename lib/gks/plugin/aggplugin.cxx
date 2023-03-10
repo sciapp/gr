@@ -467,13 +467,13 @@ static void close_page()
   delete[] p->image_buffer;
 }
 
-static void fill_path(agg::path_storage &path)
+static void fill_path(agg::path_storage &path, bool winding_rule = false)
 {
   path.close_polygon();
   p->rasterizer.reset();
   p->rasterizer.add_path(p->curve);
   p->renderer_aa.color(p->fill_col);
-  p->rasterizer.filling_rule(agg::fill_even_odd);
+  p->rasterizer.filling_rule(winding_rule ? agg::fill_non_zero : agg::fill_even_odd);
   agg::render_scanlines(p->rasterizer, p->scanline, p->renderer_aa);
   p->rasterizer.filling_rule(agg::fill_non_zero);
   p->path.remove_all();
@@ -492,13 +492,13 @@ static void stroke_path(agg::path_storage &path, bool close = true)
   p->path.remove_all();
 }
 
-static void fill_stroke_path(agg::path_storage &path)
+static void fill_stroke_path(agg::path_storage &path, bool winding_rule = false)
 {
   path.close_polygon();
   p->rasterizer.reset();
   p->rasterizer.add_path(p->curve);
   p->renderer_aa.color(p->fill_col);
-  p->rasterizer.filling_rule(agg::fill_even_odd);
+  p->rasterizer.filling_rule(winding_rule ? agg::fill_non_zero : agg::fill_even_odd);
   agg::render_scanlines(p->rasterizer, p->scanline, p->renderer_aa);
   p->rasterizer.filling_rule(agg::fill_non_zero);
   p->rasterizer.reset();
@@ -1127,14 +1127,16 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
             stroke_path(p->path, true);
           }
           break;
-        case 'f': /* fill */
+        case 'f': /* fill (even-odd) */
+        case 'g': /* fill (winding) */
           {
-            fill_path(p->path);
+            fill_path(p->path, codes[i] == 'g');
           }
           break;
-        case 'F': /* fill and stroke */
+        case 'F': /* fill (even-odd) and stroke */
+        case 'G': /* fill (winding) and stroke */
           {
-            fill_stroke_path(p->path);
+            fill_stroke_path(p->path, codes[i] == 'G');
           }
           break;
         case 'Z': /* close */

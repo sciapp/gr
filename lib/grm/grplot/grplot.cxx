@@ -8,9 +8,12 @@
 #include "grplot_mainwindow.hxx"
 #include "util.hxx"
 
+const unsigned int MAXPATHLEN = 1024;
+
 int main(int argc, char **argv)
 {
-  // Ensure that the `GRDIR` envionment variable is set, so GR can find its components like fonts.
+  int pass = 0;
+  // Ensure that the `GRDIR` environment variable is set, so GR can find its components like fonts.
 #ifndef NO_EXCEPTIONS
   try
     {
@@ -35,10 +38,30 @@ int main(int argc, char **argv)
     }
 #endif
 
-  QApplication app(argc, argv);
-  GRPlotMainWindow window(argc, argv);
+  /* help page should be shown */
+  if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)
+    {
+      static char path[MAXPATHLEN];
+      std::snprintf(path, MAXPATHLEN, "%s/bin/grplot.man.md", GRDIR);
+      if (!util::file_exists(path))
+        {
+          fprintf(stderr, "Helpfile not found\n");
+          return 1;
+        }
+      pass = 1;
+    }
 
-  window.show();
+  if (!pass && getenv("GKS_WSTYPE") != nullptr)
+    {
+      return (grm_plot_from_file(argc, argv) != 1);
+    }
+  else
+    {
+      QApplication app(argc, argv);
+      GRPlotMainWindow window(argc, argv);
 
-  return app.exec();
+      window.show();
+
+      return app.exec();
+    }
 }

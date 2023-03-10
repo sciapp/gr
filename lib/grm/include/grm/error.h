@@ -141,7 +141,6 @@ extern "C" {
 #define ENUM_VALUE(name, value) name = value,
 #define ENUM_LAST_VALUE(name, value) name = value
 #define STRING_ARRAY_VALUE(name, value) #name,
-#define STRING_ARRAY_LAST_VALUE(name, value) #name
 
 typedef enum
 {

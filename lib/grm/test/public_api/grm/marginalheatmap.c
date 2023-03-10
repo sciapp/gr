@@ -15,7 +15,7 @@ static void test_marginalheatmap()
 {
   unsigned int row, col;
   grm_args_t *args;
-  double xi[ROWS], yi[COLS], zi[ROWS * COLS];
+  double xi[COLS], yi[ROWS], zi[ROWS * COLS];
   double df[COLS][ROWS];
 
   df[0][0] = 1, df[1][0] = 2, df[2][0] = 3, df[3][0] = 4;
@@ -25,21 +25,21 @@ static void test_marginalheatmap()
 
   for (row = 0; row < ROWS; ++row)
     {
-      xi[row] = XMIN + (XMAX - XMIN) * ((double)row / ((double)ROWS - 1));
+      yi[row] = YMIN + (YMAX - YMIN) * ((double)row / ((double)ROWS - 1));
       for (col = 0; col < COLS; ++col)
         {
           if (row == 0)
             {
-              yi[col] = YMIN + (YMAX - YMIN) * ((double)col / ((double)COLS - 1));
+              xi[col] = XMIN + (XMAX - XMIN) * ((double)col / ((double)COLS - 1));
             }
-          zi[((COLS - 1) - col) * ROWS + row] = df[col][row];
+          zi[row * COLS + col] = df[col][row];
         }
     }
 
   printf("plot a marginalheatmap with x, y and z\n");
   args = grm_args_new();
-  grm_args_push(args, "x", "nD", ROWS, xi);
-  grm_args_push(args, "y", "nD", COLS, yi);
+  grm_args_push(args, "x", "nD", COLS, xi);
+  grm_args_push(args, "y", "nD", ROWS, yi);
   grm_args_push(args, "z", "nD", ROWS * COLS, zi);
   grm_args_push(args, "kind", "s", "marginalheatmap");
   grm_args_push(args, "marginalheatmap_kind", "s", "all");
@@ -53,14 +53,14 @@ static void test_marginalheatmap()
 
   printf("plot a special type of marginalheatmap where only one line and column is shown\n");
   args = grm_args_new();
-  grm_args_push(args, "x", "nD", ROWS, xi);
-  grm_args_push(args, "y", "nD", COLS, yi);
+  grm_args_push(args, "x", "nD", COLS, xi);
+  grm_args_push(args, "y", "nD", ROWS, yi);
   grm_args_push(args, "z", "nD", ROWS * COLS, zi);
   grm_args_push(args, "kind", "s", "marginalheatmap");
   grm_args_push(args, "marginalheatmap_kind", "s", "line");
   grm_args_push(args, "algorithm", "s", "sum");
   grm_args_push(args, "xind", "i", 1);
-  grm_args_push(args, "yind", "i", 1);
+  grm_args_push(args, "yind", "i", 2);
   grm_plot(args);
 
   printf("Press any key to continue...\n");

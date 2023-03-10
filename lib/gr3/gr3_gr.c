@@ -79,6 +79,8 @@ int gr3_drawimage_gks_(float xmin, float xmax, float ymin, float ymax, int width
   double _ymin = (double)ymin, _ymax = (double)ymax;
   char *pixels;
   int err;
+
+  GR3_DO_INIT;
   gr3_log_("gr3_drawimage_gks_();");
   pixels = (char *)malloc(sizeof(int) * width * height);
   if (!pixels)
@@ -314,6 +316,8 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
   int new_idx, l, errind;
   float linewidth_y = 0;
   float linewidth_x = 0;
+
+  GR3_DO_INIT;
 
   gr_inqprojectiontype(&projection_type);
   gr_inqcolormapinds(&first_color, &last_color);
@@ -697,6 +701,8 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
   double clrt[4];
   int clsw = 0;
 
+  GR3_DO_INIT;
+
   gks_inq_clip(&errind, &clsw, clrt);
   if (clsw == GKS_K_CLIP)
     {
@@ -770,7 +776,7 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
       grscales[0] = (float)x_axis_scale;
       grscales[1] = (float)y_axis_scale;
       grscales[2] = (float)z_axis_scale;
-      if (clsw == GKS_K_CLIP)
+      if (clsw == GKS_K_CLIP && context_struct_.use_software_renderer)
         {
           /* axis scales should only affect the viewmatrix cause of that the clipping ranges gets multiplied with the
            * axis scales */
@@ -837,6 +843,8 @@ static void gr3_drawsurface_custom_colors(int mesh, const float *colors)
 GR3API void gr3_drawsurface(int mesh)
 {
   float colors[3] = {1.0f, 1.0f, 1.0f};
+
+  GR3_DO_INIT;
   gr3_drawsurface_custom_colors(mesh, colors);
 }
 
@@ -927,6 +935,8 @@ GR3API void gr3_isosurface(int nx, int ny, int nz, const float *data, float isov
   float max_value = data[0];
   unsigned short *uint16_data = malloc(sizeof(unsigned short) * nx * ny * nz);
   assert(uint16_data);
+
+  GR3_DO_INIT;
 
   if (strides)
     {
@@ -1024,6 +1034,7 @@ GR3API void gr3_isosurface(int nx, int ny, int nz, const float *data, float isov
  */
 GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int option)
 {
+  GR3_DO_INIT;
   if (option == OPTION_Z_SHADED_MESH || option == OPTION_COLORED_MESH || option == OPTION_3D_MESH ||
       (context_struct_.use_software_renderer && option <= OPTION_FILLED_MESH))
     {
@@ -1117,6 +1128,8 @@ GR3API int gr3_createsurface3dmesh(int *mesh, int ncols, int nrows, float *px, f
   float *vertices = malloc(num_vertices * 3 * sizeof(float));
   float *normals = malloc(num_vertices * 3 * sizeof(float));
   float *colors = malloc(num_vertices * 3 * sizeof(float));
+
+  GR3_DO_INIT;
   if (!vertices || !normals || !colors)
     {
       if (vertices)
@@ -1282,6 +1295,8 @@ GR3API void gr3_drawtrianglesurface(int n, const float *positions)
   } window;
   float *normals;
   float *colors;
+
+  GR3_DO_INIT;
   if (n < 1)
     {
       return;
@@ -1431,7 +1446,7 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
       return;
     }
 
-  gr3_getrenderpathstring(); /* Initializes GR3 if it is not initialized yet */
+  GR3_DO_INIT;
 
   if (context_struct_.use_software_renderer)
     {

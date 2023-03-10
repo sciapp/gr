@@ -356,18 +356,20 @@ mergeInto(LibraryManager.library, {
               case 'S': /* stroke */
                   context.stroke();
                   break;
-              case 'F': /* fill and stroke */
+              case 'F': /* fill (even-odd rule) and stroke */
+              case 'G': /* fill (winding rule) and stroke */
                   context.closePath();
                   cur_x = start_x;
                   cur_y = start_y;
-                  context.fill();
+                  context.fill(code === "F" ? "evenodd" : "nonzero");
                   context.stroke();
                   break;
-              case 'f': /* fill */
+              case 'f': /* fill (even-odd rule) */
+              case 'g': /* fill (winding rule) */
                   context.closePath();
                   cur_x = start_x;
                   cur_y = start_y;
-                  context.fill();
+                  context.fill(code === "f" ? "evenodd" : "nonzero");
                   break;
               case 'Z': /* closepath */
                   context.closePath();

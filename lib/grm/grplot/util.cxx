@@ -284,6 +284,11 @@ bool startsWith(const std::string &str, const std::string &prefix)
   return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
 }
 
+bool file_exists(const std::string &name)
+{
+  return (access(name.c_str(), F_OK) != -1);
+}
+
 #ifdef NO_EXCEPTIONS
 #ifdef _WIN32
 std::optional<std::wstring> getExecutablePath()

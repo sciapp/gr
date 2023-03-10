@@ -12,6 +12,14 @@
 #include "grm/dom_render/render.hxx"
 
 
+/* ========================= macros ================================================================================= */
+
+/* ------------------------- math ----------------------------------------------------------------------------------- */
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 /* ######################### public implementation ################################################################## */
 
 /* ========================= methods ================================================================================ */
@@ -385,6 +393,8 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   unsigned int num_labels = 0;
   std::string kind;
   unsigned int x_length, y_length, z_length, series_i = 0, i;
+  std::string orientation;
+  int is_vertical = 0;
 
   get_figure_size(NULL, &width, &height, NULL, NULL);
   max_width_height = grm_max(width, height);
@@ -396,9 +406,15 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   if (subplot_element != nullptr)
     {
       kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
+      if (subplot_element->hasAttribute("orientation"))
+        {
+          orientation = static_cast<std::string>(subplot_element->getAttribute("orientation"));
+          is_vertical = orientation == "vertical";
+        }
     }
   if (subplot_element == nullptr ||
-      !str_equals_any(kind.c_str(), 6, "line", "scatter", "stem", "step", "heatmap", "marginalheatmap"))
+      !str_equals_any(kind, 13, "line", "scatter", "stem", "step", "heatmap", "marginalheatmap", "contour", "imshow",
+                      "contourf", "pie", "hexbin", "shade", "quiver"))
     {
       info->x_px = -1;
       info->y_px = -1;
@@ -455,89 +471,185 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   std::shared_ptr<GR::Context> context = grm_get_render()->getContext();
   std::vector<std::string> labels = GR::get<std::vector<std::string>>((*context)[labels_key]);
   num_labels = labels.size();
-  for (auto &current_series : current_series_vec)
+  if (strcmp(kind, "pie") == 0)
     {
-      auto x_key = static_cast<std::string>(current_series->getAttribute("x"));
-      auto y_key = static_cast<std::string>(current_series->getAttribute("y"));
-      std::string z_key = static_cast<std::string>(current_series->getAttribute("z"));
+      static char output[50];
+      double max_x = 0.95, min_x = 0.05, max_y = 0.05, min_y = 0.95;
+      int center_x, center_y;
+      double radius;
+      double *normalized_x = NULL;
+      double start_angle, end_angle, act_angle;
 
-      auto x_series_vec = GR::get<std::vector<double>>((*context)[x_key]);
-      auto y_series_vec = GR::get<std::vector<double>>((*context)[y_key]);
-      std::vector<double> z_series_vec;
+      gr_wctondc(&max_x, &max_y);
+      max_x = max_x * max_width_height;
+      max_y = height - max_y * max_width_height;
+      gr_wctondc(&min_x, &min_y);
+      min_x = min_x * max_width_height;
+      min_y = height - min_y * max_width_height;
 
-      if (str_equals_any(kind.c_str(), 2, "heatmap", "marginalheatmap"))
+      /* calculate the circle */
+      radius = (max_x - min_x) / 2.0;
+      center_x = (int)(max_x - radius);
+      center_y = (int)(max_y - radius);
+
+      grm_args_first_value(*current_series, "x", "D", &x_series, &x_length);
+      normalized_x = normalize(x_length, x_series);
+      start_angle = 90.0;
+      for (i = 0; i < x_length; ++i)
         {
-          z_series_vec = GR::get<std::vector<double>>((*context)[z_key]);
-          z_length = z_series_vec.size();
+          end_angle = start_angle - normalized_x[i] * 360.0;
+          act_angle =
+              acos((mouse_x - center_x) / sqrt(pow(abs(mouse_x - center_x), 2) + pow(abs(mouse_y - center_y), 2)));
+          act_angle = (mouse_y - center_y > 0) ? act_angle * 180 / M_PI : 360 - act_angle * 180 / M_PI;
+          if (act_angle >= 270 && act_angle <= 360) act_angle = act_angle - 360;
+          act_angle *= -1;
+          if (start_angle >= act_angle && end_angle <= act_angle)
+            {
+              snprintf(output, 50, "%f", x_series[i]);
+            }
+          start_angle = end_angle;
         }
 
-      for (i = 0; i < x_series_vec.size(); i++)
+      if (sqrt(pow(abs(mouse_x - center_x), 2) + pow(abs(mouse_y - center_y), 2)) <= radius)
         {
-          if ((x_series_vec[i] < x_range_min || x_series_vec[i] > x_range_max || y_series_vec[i] < y_range_min ||
-               y_series_vec[i] > y_range_max) &&
-              !str_equals_any(kind.c_str(), 2, "heatmap", "marginalheatmap"))
-            {
-              continue;
-            }
-          x_px = x_series_vec[i];
-          y_px = y_series_vec[i];
-          gr_wctondc(&x_px, &y_px);
-          x_px = (x_px * max_width_height);
-          y_px = (height - y_px * max_width_height);
-          diff = sqrt((x_px - mouse_x) * (x_px - mouse_x) + (y_px - mouse_y) * (y_px - mouse_y));
-          if (diff < mindiff && diff <= 50)
-            {
-              mindiff = diff;
-              info->x = x_series_vec[i];
-              info->y = y_series_vec[i];
-              info->x_px = (int)x_px;
-              info->y_px = (int)y_px;
-              if (num_labels > series_i)
-                {
-                  info->label = labels[series_i].c_str();
-                }
-              else
-                {
-                  info->label = "";
-                }
-            }
-          else if (str_equals_any(kind.c_str(), 2, "heatmap", "marginalheatmap"))
-            {
-              static char output[50];
-              double num;
-              double x_0 = x_series[0], x_end = x_series[x_length - 1], y_0 = y_series[0],
-                     y_end = y_series[y_length - 1];
-              double x_step, y_step, x_series_idx, y_series_idx;
-
-              gr_wctondc(&x_0, &y_0);
-              gr_wctondc(&x_end, &y_end);
-              x_0 = x_0 * max_width_height;
-              x_end = x_end * max_width_height;
-              y_0 = height - y_0 * max_width_height;
-              y_end = height - y_end * max_width_height;
-
-              x_step = (x_end - x_0) / x_length;
-              y_step = (y_end - y_0) / y_length;
-
-              mindiff = 0;
-              x_series_idx = (mouse_x - x_0) / x_step;
-              y_series_idx = (mouse_y - y_0) / y_step;
-              if (x_series_idx < 0 || x_series_idx >= x_length || y_series_idx < 0 || y_series_idx >= y_length)
-                {
-                  mindiff = DBL_MAX;
-                  break;
-                }
-              info->x = x_series[(int)x_series_idx];
-              info->y = y_series[(int)y_series_idx];
-              info->x_px = mouse_x;
-              info->y_px = mouse_y;
-
-              num = z_series[((y_length - 1) - (int)y_series_idx) * x_length + (int)x_series_idx];
-              snprintf(output, 50, "%f", num);
-              info->label = output;
-            }
+          mindiff = 0;
+          info->x = 0;
+          info->y = 0;
+          info->x_px = mouse_x;
+          info->y_px = mouse_y;
+          info->label = output;
+          return info;
         }
-      ++series_i;
+      else
+        {
+          mindiff = DBL_MAX;
+        }
+    }
+  else
+    {
+      for (auto &current_series : current_series_vec)
+        {
+          auto x_key = static_cast<std::string>(current_series->getAttribute("x"));
+          auto y_key = static_cast<std::string>(current_series->getAttribute("y"));
+          std::string z_key = static_cast<std::string>(current_series->getAttribute("z"));
+
+          std::vector<double> x_series_vec;
+          std::vector<double> y_series_vec;
+
+          if (is_vertical)
+            {
+              x_series_vec = GR::get<std::vector<double>>((*context)[y_key]);
+              y_series_vec = GR::get<std::vector<double>>((*context)[x_key]);
+            }
+          else
+            {
+              x_series_vec = GR::get<std::vector<double>>((*context)[x_key]);
+              y_series_vec = GR::get<std::vector<double>>((*context)[y_key]);
+            }
+          std::vector<double> z_series_vec;
+
+          if (str_equals_any(kind.c_str(), 5, "heatmap", "marginalheatmap", "contour", "imshow", "contourf"))
+            {
+              z_series_vec = GR::get<std::vector<double>>((*context)[z_key]);
+              z_length = z_series_vec.size();
+            }
+
+          for (i = 0; i < x_series_vec.size(); i++)
+            {
+              if ((x_series_vec[i] < x_range_min || x_series_vec[i] > x_range_max || y_series_vec[i] < y_range_min ||
+                   y_series_vec[i] > y_range_max) &&
+                  !str_equals_any(kind.c_str(), 6, "heatmap", "marginalheatmap", "contour", "imshow", "contourf",
+                                  "quiver"))
+                {
+                  continue;
+                }
+              x_px = x_series_vec[i];
+              y_px = y_series_vec[i];
+              gr_wctondc(&x_px, &y_px);
+              x_px = (x_px * max_width_height);
+              y_px = (height - y_px * max_width_height);
+              diff = sqrt((x_px - mouse_x) * (x_px - mouse_x) + (y_px - mouse_y) * (y_px - mouse_y));
+              if (diff < mindiff && diff <= 50)
+                {
+                  mindiff = diff;
+                  info->x = x_series_vec[i];
+                  info->y = y_series_vec[i];
+                  info->x_px = (int)x_px;
+                  info->y_px = (int)y_px;
+                  if (num_labels > series_i)
+                    {
+                      info->label = labels[series_i].c_str();
+                    }
+                  else
+                    {
+                      info->label = "";
+                    }
+                }
+              else if (str_equals_any(kind.c_str(), 6, "heatmap", "marginalheatmap", "contour", "imshow", "contourf",
+                                      "quiver"))
+                {
+                  static char output[50];
+                  double num;
+                  double x_0 = x_series[0], x_end = x_series[x_length - 1], y_0 = y_series[0],
+                         y_end = y_series[y_length - 1];
+                  double x_step, y_step, x_series_idx, y_series_idx;
+                  unsigned int u_length, v_length;
+                  double *u_series, *v_series;
+
+                  if (strcmp(kind, "imshow") == 0) x_0 = x_min, x_end = x_max, y_0 = y_min, y_end = y_max;
+
+                  gr_wctondc(&x_0, &y_0);
+                  gr_wctondc(&x_end, &y_end);
+                  x_0 = x_0 * max_width_height;
+                  x_end = x_end * max_width_height;
+                  y_0 = height - y_0 * max_width_height;
+                  y_end = height - y_end * max_width_height;
+
+                  x_step = (x_end - x_0) / x_length;
+                  y_step = (y_end - y_0) / y_length;
+                  if (strcmp(kind, "quiver") == 0)
+                    {
+                      grm_args_first_value(*current_series, "u", "D", &u_series, &u_length);
+                      grm_args_first_value(*current_series, "v", "D", &v_series, &v_length);
+                    }
+
+                  mindiff = 0;
+                  x_series_idx = (mouse_x - x_0) / x_step;
+                  y_series_idx = (mouse_y - y_0) / y_step;
+                  if (x_series_idx < 0 || x_series_idx >= x_length || y_series_idx < 0 || y_series_idx >= y_length)
+                    {
+                      mindiff = DBL_MAX;
+                      break;
+                    }
+                  if (strcmp(kind, "quiver") == 0)
+                    {
+                      info->xlabel = "u";
+                      info->ylabel = "v";
+                      info->x = u_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
+                      info->y = v_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
+                    }
+                  else
+                    {
+                      info->x = x_series[(int)x_series_idx];
+                      info->y = y_series[(int)y_series_idx];
+                    }
+                  info->x_px = mouse_x;
+                  info->y_px = mouse_y;
+
+                  if (strcmp(kind, "quiver") == 0)
+                    {
+                      info->label = "";
+                    }
+                  else
+                    {
+                      num = z_series[(int)y_series_idx * x_length + (int)x_series_idx];
+                      snprintf(output, 50, "%f", num);
+                      info->label = output;
+                    }
+                }
+            }
+          ++series_i;
+        }
     }
   if (mindiff == DBL_MAX)
     {

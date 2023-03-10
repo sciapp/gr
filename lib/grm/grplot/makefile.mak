@@ -28,8 +28,11 @@ ifeq ($(UNAME), Darwin)
     mkdir -m 755 $(DESTDIR)$(GRDIR)/bin; fi
 	@ditto grplot.macos.sh \
 	$(DESTDIR)$(GRDIR)/bin/grplot
+	@ditto README.md \
+    $(DESTDIR)$(GRDIR)/bin/grplot.man.md
 else
 	cp -p grplot $(DESTDIR)$(GRDIR)/bin/
+	cp -p README.md $(DESTDIR)$(GRDIR)/bin/grplot.man.md
 endif
 
 clean:

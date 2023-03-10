@@ -1746,16 +1746,18 @@ static void to_DC(int n, double *x, double *y)
           CGContextDrawPath(context, kCGPathStroke);
           break;
         case 'f':
+        case 'g':
           CGContextClosePath(context);
           cur_x = start_x;
           cur_y = start_y;
-          CGContextDrawPath(context, kCGPathEOFill);
+          CGContextDrawPath(context, codes[i] == 'f' ? kCGPathEOFill : kCGPathFill);
           break;
         case 'F':
+        case 'G':
           CGContextClosePath(context);
           cur_x = start_x;
           cur_y = start_y;
-          CGContextDrawPath(context, kCGPathEOFillStroke);
+          CGContextDrawPath(context, codes[i] == 'F' ? kCGPathEOFillStroke : kCGPathFillStroke);
           break;
         case 'Z':
           CGContextClosePath(context);
