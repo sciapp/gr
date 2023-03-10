@@ -167,6 +167,11 @@ public:
 bool endsWith(const std::string &str, const std::string &suffix);
 bool startsWith(const std::string &str, const std::string &prefix);
 bool file_exists(const std::string &name);
+#ifdef _WIN32
+std::wstring getEnvVar(const std::wstring &name, const std::wstring &defaultValue = L"");
+#else
+std::string getEnvVar(const std::string &name, const std::string &defaultValue = "");
+#endif
 
 #ifdef NO_EXCEPTIONS
 #ifdef _WIN32

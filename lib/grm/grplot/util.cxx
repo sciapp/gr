@@ -289,6 +289,37 @@ bool file_exists(const std::string &name)
   return (access(name.c_str(), F_OK) != -1);
 }
 
+#ifdef _WIN32
+std::wstring getEnvVar(const std::wstring &name, const std::wstring &defaultValue)
+#else
+std::string getEnvVar(const std::string &name, const std::string &defaultValue)
+#endif
+{
+#ifdef _WIN32
+  DWORD neededWideChars = GetEnvironmentVariableW(name.c_str(), nullptr, 0);
+  if (GetLastError() != ERROR_ENVVAR_NOT_FOUND)
+    {
+      std::vector<wchar_t> valueWide(neededWideChars);
+      GetEnvironmentVariableW(name.c_str(), valueWide.data(), neededWideChars);
+      return std::wstring(valueWide.data());
+    }
+  else
+    {
+      return defaultValue;
+    }
+#else
+  const char *valueCPtr = getenv(name.c_str());
+  if (valueCPtr != nullptr)
+    {
+      return std::string(valueCPtr);
+    }
+  else
+    {
+      return defaultValue;
+    }
+#endif
+}
+
 #ifdef NO_EXCEPTIONS
 #ifdef _WIN32
 std::optional<std::wstring> getExecutablePath()
