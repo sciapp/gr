@@ -38,17 +38,25 @@ int main(int argc, char **argv)
     }
 #endif
 
-  /* help page should be shown */
-  if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)
+  if (argc > 1)
     {
-      static char path[MAXPATHLEN];
-      std::snprintf(path, MAXPATHLEN, "%s/bin/grplot.man.md", GRDIR);
-      if (!util::file_exists(path))
+      /* help page should be shown */
+      if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)
         {
-          fprintf(stderr, "Helpfile not found\n");
-          return 1;
+          static char path[MAXPATHLEN];
+          std::snprintf(path, MAXPATHLEN, "%s/bin/grplot.man.md", GRDIR);
+          if (!util::file_exists(path))
+            {
+              fprintf(stderr, "Helpfile not found\n");
+              return 1;
+            }
+          pass = 1;
         }
-      pass = 1;
+    }
+  else
+    {
+      fprintf(stderr, "Usage: grplot <FILE> [<KEY:VALUE>] ...\n  -h, --help\n");
+      return 0;
     }
 
   if (!pass && getenv("GKS_WSTYPE") != nullptr)
