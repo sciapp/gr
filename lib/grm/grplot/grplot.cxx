@@ -49,7 +49,7 @@ int main(int argc, char **argv)
           std::stringstream pathStream;
           pathStream << util::getEnvVar("GRDIR", GRDIR)
 #endif
-                     << "/bin/grplot.man.md";
+                     << "/share/doc/grplot/grplot.man.md";
 
           if (!util::fileExists(pathStream.str()))
             {
