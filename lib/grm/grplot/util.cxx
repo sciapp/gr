@@ -284,11 +284,6 @@ bool startsWith(const std::string &str, const std::string &prefix)
   return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
 }
 
-bool file_exists(const std::string &name)
-{
-  return (access(name.c_str(), F_OK) != -1);
-}
-
 #ifdef _WIN32
 std::wstring getEnvVar(const std::wstring &name, const std::wstring &defaultValue)
 #else
@@ -388,6 +383,14 @@ std::string getExecutablePath()
 }
 
 #ifdef _WIN32
+bool fileExists(const std::string &filePath)
+{
+  int neededWideChars = MultiByteToWideChar(CP_UTF8, 0, filePath.c_str(), -1, nullptr, 0);
+  std::vector<wchar_t> filePathWide(neededWideChars);
+  MultiByteToWideChar(CP_UTF8, 0, filePath.c_str(), -1, filePathWide.data(), neededWideChars);
+  return fileExists(filePathWide.data());
+}
+
 bool fileExists(const std::wstring &filePath)
 {
   DWORD fileAttributes = GetFileAttributesW(filePath.c_str());

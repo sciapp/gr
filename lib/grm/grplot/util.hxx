@@ -166,28 +166,29 @@ public:
 
 bool endsWith(const std::string &str, const std::string &suffix);
 bool startsWith(const std::string &str, const std::string &prefix);
-bool file_exists(const std::string &name);
 #ifdef _WIN32
+bool fileExists(const std::string &file_path);
+bool fileExists(const std::wstring &file_path);
 std::wstring getEnvVar(const std::wstring &name, const std::wstring &defaultValue = L"");
 #else
+bool fileExists(const std::string &file_path);
 std::string getEnvVar(const std::string &name, const std::string &defaultValue = "");
 #endif
 
 #ifdef NO_EXCEPTIONS
 #ifdef _WIN32
-std::optional<std::wstring> get_executable_path();
+std::optional<std::wstring> getExecutablePath();
 #else
-std::optional<std::string> get_executable_path();
+std::optional<std::string> getExecutablePath();
 #endif
 #else
 #ifdef _WIN32
 std::wstring getExecutablePath();
-bool fileExists(const std::wstring &file_path);
 #else
 std::string getExecutablePath();
-bool fileExists(const std::string &file_path);
 #endif
 #endif
+
 #ifdef NO_EXCEPTIONS
 bool
 #else
