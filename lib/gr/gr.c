@@ -14456,11 +14456,16 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
 
 void gr_inqvpsize(int *width, int *height, double *device_pixel_ratio)
 {
-  int n = 1, errind, wkid, ol;
+  int n = 1, errind, wkid, ol, conid, wtype;
 
   check_autoinit;
 
   gks_inq_open_ws(n, &errind, &ol, &wkid);
+  gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
+  if (wtype == 381)
+    {
+      gks_update_ws(wkid, GKS_K_PERFORM_FLAG);
+    }
   gks_inq_vp_size(wkid, &errind, width, height, device_pixel_ratio);
 }
 
