@@ -7721,6 +7721,9 @@ static void init_hlr(void)
             {
               if (x1 != x2) m = (y[i] - y[i - 1]) / (x2 - x1);
 
+              x1 = max(x1, 0);
+              x2 = min(x2, RESOLUTION_X);
+
               for (j = x1; j <= x2; j++)
                 {
                   if (x1 != x2)
@@ -7807,6 +7810,9 @@ static void pline_hlr(int n, double *x, double *y, double *z)
       if (x1 < x2)
         {
           if (x1 != x2) m = (y[i] - y[i - 1]) / (x2 - x1);
+
+          x1 = max(x1, 0);
+          x2 = min(x2, RESOLUTION_X);
 
           for (j = x1; j <= x2; j++)
             {
