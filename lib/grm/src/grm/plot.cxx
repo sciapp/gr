@@ -1399,36 +1399,6 @@ double auto_tick_polar(double rmax, int rings, const std::string &norm)
   return rmax / rings;
 }
 
-double auto_tick_polar(double rmax, int rings, const std::string &norm)
-{
-  if (norm == "cdf")
-    {
-      return 1.0 / rings;
-    }
-  double scale;
-
-  if (rmax > rings)
-    {
-      return (static_cast<int>(rmax) + (rings - (static_cast<int>(rmax) % rings))) / rings;
-    }
-  else if (rmax > (rings * 0.6))
-    {
-      // returns rings / rings -> 1.0 so that rmax = rings * tick -> rings. Number of rings is rmax then
-      return 1.0;
-    }
-  scale = ceil(abs(log10(rmax)));
-  rmax = static_cast<int>(rmax * pow(10.0, scale));
-  if (static_cast<int>(rmax) % rings == 0)
-    {
-      rmax = rmax / pow(10.0, scale);
-      return rmax / rings;
-    }
-  rmax += rings - (static_cast<int>(rmax) % rings);
-  rmax = rmax / pow(10.0, scale);
-
-  return rmax / rings;
-}
-
 double auto_tick(double amin, double amax)
 {
   double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
@@ -7145,7 +7115,7 @@ err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_len
             }
           else
             {
-              global_render->createPolyline(line_y[0], line_y[1], line_x[0], line_x[1], 0, 0.0, color_errorbar));
+              global_render->createPolyline(line_y[0], line_y[1], line_x[0], line_x[1], 0, 0.0, color_errorbar);
             }
         }
     }
