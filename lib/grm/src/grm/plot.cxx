@@ -3271,14 +3271,16 @@ err_t plot_barplot(grm_args_t *subplot_args)
               y2 = y[i];
             }
 
+          std::shared_ptr<GR::Element> temp;
+
           if (is_vertical)
             {
-              auto temp = global_render->createDrawRect(y1, y2, x1, x2);
+              temp = global_render->createDrawRect(y1, y2, x1, x2);
               subGroup->append(temp);
             }
           else
             {
-              auto temp = global_render->createDrawRect(x1, x2, y1, y2);
+              temp = global_render->createDrawRect(x1, x2, y1, y2);
               subGroup->append(temp);
             }
 
@@ -3529,14 +3531,16 @@ err_t plot_barplot(grm_args_t *subplot_args)
                 }
               x1 += x_min;
               x2 += x_min;
+
+              std::shared_ptr<GR::Element> temp;
               if (is_vertical)
                 {
-                  auto temp = global_render->createDrawRect(y1, y2, x1, x2);
+                  temp = global_render->createDrawRect(y1, y2, x1, x2);
                   inner_edges->append(temp);
                 }
               else
                 {
-                  auto temp = global_render->createDrawRect(x1, x2, y1, y2);
+                  temp = global_render->createDrawRect(x1, x2, y1, y2);
                   inner_edges->append(temp);
                 }
               global_render->setFillColorInd(temp, std_colors[inner_series_index % len_std_colors]);
@@ -4110,6 +4114,9 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv, tmp;
   err_t error = ERROR_NONE;
 
+  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  group->setAttribute("name", "heatmap");
+
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "zlog", "i", &zlog);
@@ -4117,6 +4124,8 @@ err_t plot_heatmap(grm_args_t *subplot_args)
     {
       int is_uniform_heatmap;
       x = y = nullptr;
+      auto subGroup = global_render->createGroup("heatmap_series");
+      group->append(subGroup);
       grm_args_first_value(*current_series, "x", "D", &x, &cols);
       grm_args_first_value(*current_series, "y", "D", &y, &rows);
       is_uniform_heatmap =
@@ -4806,6 +4815,8 @@ err_t plot_imshow(grm_args_t *subplot_args)
   unsigned int c_data_length, i, j, k, rows, cols;
   int *img_data;
   unsigned int *shape;
+  int grplot = 0;
+
 
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "imshow");
@@ -4817,6 +4828,7 @@ err_t plot_imshow(grm_args_t *subplot_args)
     {
       auto subGroup = global_render->createGroup("imshow_series");
       group->append(subGroup);
+      subGroup->setAttribute("grplot", grplot);
 
       return_error_if(!grm_args_first_value(*current_series, "c", "D", &c_data, &c_data_length),
                       ERROR_PLOT_MISSING_DATA);

@@ -1813,6 +1813,7 @@ static void processImshowInformation(const std::shared_ptr<GR::Element> &elem)
   std::string image_data_key = static_cast<std::string>(elem->getAttribute("image_data_key"));
   std::shared_ptr<GR::Element> ancestor = elem->parentElement();
   bool vp_found = false;
+  int grplot;
 
   // Get vp from ancestor GR::element, usually the q"plot-group"
   while (ancestor->localName() != "root")
@@ -1824,6 +1825,7 @@ static void processImshowInformation(const std::shared_ptr<GR::Element> &elem)
           vp[2] = static_cast<double>(ancestor->getAttribute("vp_ymin"));
           vp[3] = static_cast<double>(ancestor->getAttribute("vp_ymax"));
           vp_found = true;
+          grplot = static_cast<int>(ancestor->getAttribute("grplot"));
           break;
         }
       else
@@ -1866,6 +1868,12 @@ static void processImshowInformation(const std::shared_ptr<GR::Element> &elem)
       double tmp = y_max;
       y_max = y_min;
       y_min = tmp;
+    }
+  if (grplot)
+    {
+      double tmp = y_min;
+      y_min = y_max;
+      y_max = tmp;
     }
 
   auto temp = global_render->createCellArray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, image_data_key,
