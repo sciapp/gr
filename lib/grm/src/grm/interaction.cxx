@@ -413,8 +413,8 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
         }
     }
   if (subplot_element == nullptr ||
-      !str_equals_any(kind, 13, "line", "scatter", "stem", "step", "heatmap", "marginalheatmap", "contour", "imshow",
-                      "contourf", "pie", "hexbin", "shade", "quiver"))
+      !str_equals_any(kind.c_str(), 13, "line", "scatter", "stem", "step", "heatmap", "marginalheatmap", "contour",
+                      "imshow", "contourf", "pie", "hexbin", "shade", "quiver"))
     {
       info->x_px = -1;
       info->y_px = -1;
@@ -471,7 +471,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   std::shared_ptr<GR::Context> context = grm_get_render()->getContext();
   std::vector<std::string> labels = GR::get<std::vector<std::string>>((*context)[labels_key]);
   num_labels = labels.size();
-  if (strcmp(kind, "pie") == 0)
+  if (strcmp(kind.c_str(), "pie") == 0)
     {
       static char output[50];
       double max_x = 0.95, min_x = 0.05, max_y = 0.05, min_y = 0.95;
@@ -492,7 +492,13 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       center_x = (int)(max_x - radius);
       center_y = (int)(max_y - radius);
 
-      grm_args_first_value(*current_series, "x", "D", &x_series, &x_length);
+      auto current_series = current_series_vec[0];
+      auto x_key = static_cast<std::string>(current_series->getAttribute("x"));
+      std::vector<double> x_series_vec;
+      x_series_vec = GR::get<std::vector<double>>((*context)[x_key]);
+
+      x_series = &x_series_vec[0];
+      x_length = x_series_vec.size();
       normalized_x = normalize(x_length, x_series);
       start_angle = 90.0;
       for (i = 0; i < x_length; ++i)
@@ -593,10 +599,9 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                   double x_0 = x_series[0], x_end = x_series[x_length - 1], y_0 = y_series[0],
                          y_end = y_series[y_length - 1];
                   double x_step, y_step, x_series_idx, y_series_idx;
-                  unsigned int u_length, v_length;
                   double *u_series, *v_series;
 
-                  if (strcmp(kind, "imshow") == 0) x_0 = x_min, x_end = x_max, y_0 = y_min, y_end = y_max;
+                  if (strcmp(kind.c_str(), "imshow") == 0) x_0 = x_min, x_end = x_max, y_0 = y_min, y_end = y_max;
 
                   gr_wctondc(&x_0, &y_0);
                   gr_wctondc(&x_end, &y_end);
@@ -607,10 +612,15 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
 
                   x_step = (x_end - x_0) / x_length;
                   y_step = (y_end - y_0) / y_length;
-                  if (strcmp(kind, "quiver") == 0)
+                  if (strcmp(kind.c_str(), "quiver") == 0)
                     {
-                      grm_args_first_value(*current_series, "u", "D", &u_series, &u_length);
-                      grm_args_first_value(*current_series, "v", "D", &v_series, &v_length);
+                      auto u_key = static_cast<std::string>(current_series->getAttribute("u"));
+                      auto v_key = static_cast<std::string>(current_series->getAttribute("v"));
+
+                      auto u_series_vec = GR::get<std::vector<double>>((*context)[u_key]);
+                      auto v_series_vec = GR::get<std::vector<double>>((*context)[v_key]);
+                      u_series = &u_series_vec[0];
+                      v_series = &v_series_vec[0];
                     }
 
                   mindiff = 0;
@@ -621,7 +631,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                       mindiff = DBL_MAX;
                       break;
                     }
-                  if (strcmp(kind, "quiver") == 0)
+                  if (strcmp(kind.c_str(), "quiver") == 0)
                     {
                       info->xlabel = "u";
                       info->ylabel = "v";
@@ -636,7 +646,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                   info->x_px = mouse_x;
                   info->y_px = mouse_y;
 
-                  if (strcmp(kind, "quiver") == 0)
+                  if (strcmp(kind.c_str(), "quiver") == 0)
                     {
                       info->label = "";
                     }
