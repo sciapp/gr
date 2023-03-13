@@ -907,7 +907,7 @@ static void grid(const std::shared_ptr<GR::Element> &element, const std::shared_
 
   getAxesInformation(element, x_org_pos, y_org_pos, x_org, y_org, x_major, y_major, x_tick, y_tick);
 
-  gr_grid(x_tick, y_tick, x_org, y_org, x_major, y_major);
+  gr_grid(x_tick, y_tick, x_org, y_org, abs(x_major), abs(y_major));
 }
 
 static void drawImage(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
@@ -1215,7 +1215,7 @@ static void grid3d(const std::shared_ptr<GR::Element> &element, const std::share
   getAxes3dInformation(element, x_org_pos, y_org_pos, z_org_pos, x_org, y_org, z_org, x_major, y_major, z_major, x_tick,
                        y_tick, z_tick);
 
-  gr_grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major);
+  gr_grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, abs(x_major), abs(y_major), abs(z_major));
 }
 
 static void axes3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
