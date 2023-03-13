@@ -3111,6 +3111,43 @@ static void drawYLine(const std::shared_ptr<GR::Element> &elem, const std::share
   gr_polyline(2, x, y);
 }
 
+static void drawIsosurface3(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+{
+  auto nx = static_cast<int>(elem->getAttribute("nx"));
+  auto ny = static_cast<int>(elem->getAttribute("ny"));
+  auto nz = static_cast<int>(elem->getAttribute("nz"));
+  auto data_key = static_cast<std::string>(elem->getAttribute("data"));
+  float isovalue = static_cast<double>(elem->getAttribute("isovalue"));
+  auto color_key = static_cast<std::string>(elem->getAttribute("color"));
+  auto strides_key = static_cast<std::string>(elem->getAttribute("strides"));
+
+  float ambient = static_cast<double>(elem->getAttribute("ambient"));
+  float diffuse = static_cast<double>(elem->getAttribute("diffuse"));
+  float specular = static_cast<double>(elem->getAttribute("specular"));
+  float specular_power = static_cast<double>(elem->getAttribute("specular_power"));
+
+  auto data_vec = GR::get<std::vector<double>>((*context)[data_key]);
+  auto color_vec = GR::get<std::vector<double>>((*context)[color_key]);
+  auto strides_vec = GR::get<std::vector<int>>((*context)[strides_key]);
+
+  std::vector<float> data_vec_f(data_vec.begin(), data_vec.end());
+  std::vector<float> color_vec_f(color_vec.begin(), color_vec.end());
+
+  float *data = &data_vec_f[0];
+  float *color = &color_vec_f[0];
+  int *strides = &strides_vec[0];
+
+  float light_parameters[4];
+
+  /* Save and restore original light parameters */
+  gr3_getlightparameters(&light_parameters[0], &light_parameters[1], &light_parameters[2], &light_parameters[3]);
+  gr3_setlightparameters(ambient, diffuse, specular, specular_power);
+
+  gr3_isosurface(nx, ny, nz, data, isovalue, color, strides);
+
+  gr3_setlightparameters(light_parameters[0], light_parameters[1], light_parameters[2], light_parameters[3]);
+}
+
 static void processGR3CameraLookAt(const std::shared_ptr<GR::Element> &elem)
 {
   double camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z;
@@ -3561,6 +3598,7 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
                        {std::string("pie-plot-title-render"), piePlotTitleRender},
                        {std::string("panzoom"), panzoom},
                        {std::string("y-line"), drawYLine},
+                       {std::string("isosurface3"), drawIsosurface3},
                        {std::string("isosurface-render"), isosurfaceRender}};
   /*! Modifier */
   if (element->localName() == "group")
@@ -4507,6 +4545,37 @@ GR::Render::createGR3DrawMesh(int mesh, int n, const std::string &positions_key,
       (*useContext)[scales_key] = *scales;
     }
   return element;
+}
+
+std::shared_ptr<GR::Element>
+GR::Render::createGR3Isosurface(int nx, int ny, int nz, const std::string &data_key,
+                                std::optional<std::vector<double>> data, double isovalue, const std::string &color_key,
+                                std::optional<std::vector<double>> color, const std::string &strides_key,
+                                std::optional<std::vector<int>> strides, const std::shared_ptr<GR::Context> &extContext)
+{
+  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+
+  auto element = createElement("isosurface3");
+  element->setAttribute("nx", nx);
+  element->setAttribute("ny", ny);
+  element->setAttribute("nz", nz);
+  element->setAttribute("data", data_key);
+  element->setAttribute("isovalue", isovalue);
+  element->setAttribute("color", color_key);
+  element->setAttribute("strides", strides_key);
+
+  if (data != std::nullopt)
+    {
+      (*useContext)[data_key] = *data;
+    }
+  if (color != std::nullopt)
+    {
+      (*useContext)[color_key] = *color;
+    }
+  if (strides != std::nullopt)
+    {
+      (*useContext)[strides_key] = *strides;
+    }
 }
 
 std::shared_ptr<GR::Element> GR::Render::createVolume(int nx, int ny, int nz, const std::string &data_key,
@@ -5502,6 +5571,15 @@ void GR::Render::setImshowInformation(const std::shared_ptr<GR::Element> &elemen
   element->setAttribute("cols", (int)cols);
   element->setAttribute("rows", (int)rows);
   element->setAttribute("imshow-information", true);
+}
+
+void GR::Render::setGR3LightParameters(const std::shared_ptr<GR::Element> &element, double ambient, double diffuse,
+                                       double specular, double specular_power)
+{
+  element->setAttribute("ambient", ambient);
+  element->setAttribute("diffuse", diffuse);
+  element->setAttribute("specular", specular);
+  element->setAttribute("specular_power", specular_power);
 }
 
 //! Render functions

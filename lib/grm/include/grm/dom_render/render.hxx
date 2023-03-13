@@ -169,6 +169,12 @@ public:
                     std::optional<std::vector<double>> colors, const std::string &scales_key,
                     std::optional<std::vector<double>> scales, const std::shared_ptr<Context> &extContext = nullptr);
 
+  std::shared_ptr<GR::Element>
+  createGR3Isosurface(int nx, int ny, int nz, const std::string &data_key, std::optional<std::vector<double>> data,
+                      double isovalue, const std::string &color_key, std::optional<std::vector<double>> color,
+                      const std::string &strides_key, std::optional<std::vector<int>> strides,
+                      const std::shared_ptr<GR::Context> &extContext = nullptr);
+
   std::shared_ptr<Element> createVolume(int nx, int ny, int nz, const std::string &data_key,
                                         std::optional<std::vector<double>> data, int algorithm, double dmin,
                                         double dmax, const std::shared_ptr<Context> &extContext = nullptr);
@@ -339,6 +345,9 @@ public:
   void setImshowInformation(const std::shared_ptr<GR::Element> &element, unsigned int cols, unsigned int rows,
                             std::string img_data_key, std::optional<std::vector<int>> img_data,
                             const std::shared_ptr<GR::Context> &extContext);
+
+  void setGR3LightParameters(const std::shared_ptr<GR::Element> &element, double ambient, double diffuse,
+                             double specular, double specular_power);
 
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context

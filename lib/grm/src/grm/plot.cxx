@@ -4895,14 +4895,6 @@ err_t plot_isosurface(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "series", "A", &current_series);
 
-  grm_args_values(subplot_args, "rotation", "d", &rotation);
-  grm_args_values(subplot_args, "tilt", "d", &tilt);
-
-  /* Convert to radians */
-  tilt = fmod(tilt, 360.0) / 180.0 * M_PI;
-  rotation = fmod(rotation, 360.0) / 180.0 * M_PI;
-  logger((stderr, "tilt %lf rotation %lf\n", tilt, rotation));
-
   while (*current_series != nullptr)
     {
 
@@ -4961,74 +4953,29 @@ err_t plot_isosurface(grm_args_t *subplot_args)
           conv_data[i] = static_cast<float>(orig_data[i]);
         }
 
-      global_render->setSelntran(subGroup, 0);
-      subGroup->append(global_render->createGR3Clear());
+      strides[0] = shape[1] * shape[2];
+      strides[1] = shape[2];
+      strides[2] = 1;
 
-      error = gr3_createisosurfacemesh(&mesh, conv_data, isovalue_int,
+      {
+        float light_parameters[4];
+        subGroup->append(global_render->createGR3Clear());
 
-                                       /* dim_x */ shape[0],
-                                       /* dim_y */ shape[1],
-                                       /* dim_z */ shape[2],
+        auto conv_data_vec = std::vector<double>(conv_data, conv_data + array_size(conv_data));
+        auto foreground_colors_vec =
+            std::vector<double>(foreground_colors, foreground_colors + array_size(foreground_colors));
+        auto strides_vec = std::vector<int>(strides, strides + array_size(strides));
 
-                                       /* stride_x */ shape[1] * shape[2],
-                                       /* stride_y */ shape[2],
-                                       /* stride_z */ 1,
+        int id = static_cast<int>(global_root->getAttribute("id"));
+        global_root->setAttribute("id", id + 1);
+        std::string id_str = std::to_string(id);
 
-                                       /* step_x */ 2.f / (shape[0] - 1),
-                                       /* step_y */ 2.f / (shape[1] - 1),
-                                       /* step_z */ 2.f / (shape[2] - 1),
-
-                                       /* offset_x */ -1.f,
-                                       /* offset_y */ -1.f,
-                                       /* offset_z */ -1.f);
-
-      return_error_if(error == GR3_ERROR_OUT_OF_MEM, ERROR_MALLOC);
-      return_error_if(error != GR3_ERROR_NONE, ERROR_INTERNAL);
-
-      global_render->setGR3BackgroundColor(subGroup, 1.0f, 1.0f, 1.0f, 0.0f);
-
-      positions[0] = 0.0f;
-      positions[1] = 0.0f;
-      positions[2] = 0.0f;
-      directions[0] = 0.0f;
-      directions[1] = 0.0f;
-      directions[2] = 1.0f;
-      ups[0] = 0.0f;
-      ups[1] = 1.0f;
-      ups[2] = 0.0f;
-      scales[0] = 1.0f;
-      scales[1] = 1.0f;
-      scales[2] = 1.0f;
-
-      auto p_vec = std::vector<double>(positions, positions + data_length);
-      auto d_vec = std::vector<double>(directions, directions + data_length);
-      auto u_vec = std::vector<double>(ups, ups + data_length);
-      auto c_vec = std::vector<double>(foreground_colors, foreground_colors + data_length);
-      auto s_vec = std::vector<double>(scales, scales + data_length);
-
-      int id = static_cast<int>(global_root->getAttribute("id"));
-      global_root->setAttribute("id", id + 1);
-      std::string str = std::to_string(id);
-
-      auto drawMesh =
-          global_render->createGR3DrawMesh(mesh, 1, "positions" + str, p_vec, "directions" + str, d_vec, "ups" + str,
-                                           u_vec, "foregroundcolors" + str, c_vec, "scales" + str, s_vec);
-      subGroup->append(drawMesh);
-
-      r = 2.5;
-      ups[0] = 0.0f;
-      ups[1] = (tilt == 0 ? 0.0f : 1.0f);
-      ups[2] = (tilt == 0 ? 1.0f : 0.0f);
-
-      auto drawImageRenderElement = global_render->createIsoSurfaceRenderElement(GR3_DRAWABLE_GKS);
-      subGroup->append(drawImageRenderElement);
-
-      global_render->setGR3CameraLookAt(drawImageRenderElement, (float)(r * sin(tilt) * sin(rotation)),
-                                        (float)(r * cos(tilt)), (float)(r * sin(tilt) * cos(rotation)), 0.0f, 0.0f,
-                                        0.0f, ups[0], ups[1], ups[2]);
-
-      auto deleteMesh = global_render->createGR3DeleteMesh(mesh);
-      subGroup->append(deleteMesh);
+        auto gr3_isosurface_element = global_render->createGR3Isosurface(
+            shape[0], shape[1], shape[2], "conv_data" + id_str, conv_data_vec, isovalue, "foreground_colors" + id_str,
+            foreground_colors_vec, "strides" + id_str, strides_vec);
+        global_render->setGR3LightParameters(gr3_isosurface_element, 0.2, 0.8, 0.7, 128);
+        subGroup->append(gr3_isosurface_element);
+      }
 
       free(conv_data);
       conv_data = nullptr;
