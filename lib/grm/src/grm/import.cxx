@@ -682,7 +682,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         {
           ymin = *std::min_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
           ymax = *std::max_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
-          adjust_ranges(&ranges.ymin, &ranges.ymax, std::min(0.0, ymin), ymax);
+          adjust_ranges(&ranges.ymin, &ranges.ymax, std::min<double>(0.0, ymin), ymax);
           grm_args_push(args, "yrange", "dd", ranges.ymin, ranges.ymax);
         }
       else
