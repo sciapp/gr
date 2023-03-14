@@ -2085,6 +2085,8 @@ err_t plot_line(grm_args_t *subplot_args)
       double *x = nullptr, *y = nullptr;
       int allocated_x = 0;
       unsigned int x_length = 0, y_length = 0;
+      std::vector<double> x_vec;
+      std::vector<double> y_vec;
       char *spec;
       int mask;
       auto subGroup = global_render->createGroup("line_series");
@@ -2104,8 +2106,8 @@ err_t plot_line(grm_args_t *subplot_args)
             }
         }
       cleanup_and_set_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      std::vector<double> x_vec(x, x + x_length);
-      std::vector<double> y_vec(y, y + y_length);
+      x_vec.insert(x_vec.end(), x, x + x_length);
+      y_vec.insert(y_vec.end(), y, y + y_length);
       grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
       mask = gr_uselinespec(spec);
       if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
