@@ -4627,6 +4627,8 @@ GR::Render::createGR3Isosurface(int nx, int ny, int nz, const std::string &data_
     {
       (*useContext)[strides_key] = *strides;
     }
+
+  return element;
 }
 
 std::shared_ptr<GR::Element> GR::Render::createVolume(int nx, int ny, int nz, const std::string &data_key,
