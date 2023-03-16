@@ -4890,7 +4890,7 @@ err_t plot_isosurface(grm_args_t *subplot_args)
         float light_parameters[4];
         subGroup->append(global_render->createGR3Clear());
 
-        auto conv_data_vec = std::vector<double>(conv_data, conv_data + array_size(conv_data));
+        auto conv_data_vec = std::vector<double>(conv_data, conv_data + data_length);
         auto foreground_colors_vec =
             std::vector<double>(foreground_colors, foreground_colors + array_size(foreground_colors));
         auto strides_vec = std::vector<int>(strides, strides + array_size(strides));
