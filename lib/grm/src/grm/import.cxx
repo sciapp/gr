@@ -284,10 +284,23 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
       else /* the line contains the labels for the plot */
         {
           std::istringstream line_ss(normalize_line(line));
+          std::string split_label;
           for (size_t col = 0; std::getline(line_ss, token, '\t') && token.length(); col++)
             {
               if (std::find(columns.begin(), columns.end(), col) != columns.end() || columns.empty())
                 {
+                  if (std::find(token.begin(), token.end(), '"') != token.end() && split_label.empty())
+                    {
+                      split_label = token.erase(0, 1);
+                      continue;
+                    }
+                  if (!split_label.empty())
+                    {
+                      token.erase(std::remove(token.begin(), token.end(), '"'), token.end());
+                      labels.push_back(split_label.append(" ").append(token));
+                      split_label = "";
+                      continue;
+                    }
                   labels.push_back(token);
                 }
             }
@@ -300,18 +313,26 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
     {
       std::istringstream line_ss(normalize_line(line));
       int cnt = 0;
+      char det = '\t';
+      int start_with_nan = 0;
       if (line.empty())
         {
           depth += 1;
           depth_change = true;
           continue;
         }
-      for (size_t col = 0; std::getline(line_ss, token, '\t') && token.length(); col++)
+      if (std::find(line.begin(), line.end(), ',') != line.end())
+        {
+          det = ',';
+          std::string tmp = ",";
+          if (starts_with(trim(line), tmp)) start_with_nan = 1;
+        }
+      for (size_t col = 0; std::getline(line_ss, token, det) && (token.length() || start_with_nan); col++)
         {
           if (std::find(columns.begin(), columns.end(), col) != columns.end() || (columns.empty() && labels.empty()) ||
               (columns.empty() && col < labels.size()))
             {
-              if ((row == 0 && col == 0) || (depth_change && col == 0))
+              if ((row == 0 && col == 0) || (depth_change && col == 0) || (start_with_nan && col == 0))
                 {
                   data.emplace_back(std::vector<std::vector<double>>());
                 }
@@ -321,7 +342,16 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                 }
               try
                 {
-                  data[depth][cnt].push_back(std::stod(token));
+                  trim(token);
+                  token.erase(std::remove(token.begin(), token.end(), '\t'), token.end());
+                  if (token.empty() && det == ',')
+                    {
+                      data[depth][cnt].push_back(NAN);
+                    }
+                  else
+                    {
+                      data[depth][cnt].push_back(std::stod(token));
+                    }
                 }
               catch (std::invalid_argument &e)
                 {

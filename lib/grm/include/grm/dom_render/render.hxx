@@ -73,7 +73,6 @@ public:
                                             const std::shared_ptr<GR::Context> &extContext = nullptr);
 
   std::shared_ptr<Element> createDrawPolarAxes(int angle_ticks, int rings, const std::string &kind, int phiflip,
-                                               double vp_xmin, double vp_xmax, double vp_ymin, double vp_ymax,
                                                const std::string &title = "", double r_max = -1.0,
                                                const std::string &norm = "", double tick = 0.0,
                                                double line_width = 0.0);
@@ -137,9 +136,9 @@ public:
                                                      const std::shared_ptr<Context> &extContext = nullptr);
 
   std::shared_ptr<Element> createSurface(const std::string &px_key, std::optional<std::vector<double>> px,
-                                         const std::string py_key, std::optional<std::vector<double>> py,
+                                         const std::string &py_key, std::optional<std::vector<double>> py,
                                          const std::string &pz_key, std::optional<std::vector<double>> pz, int option,
-                                         const std::shared_ptr<Context> &extContext = nullptr);
+                                         int accelerate, const std::shared_ptr<Context> &extContext = nullptr);
 
   std::shared_ptr<Element> createGrid3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org,
                                         double z_org, int major_x, int major_y, int major_z);

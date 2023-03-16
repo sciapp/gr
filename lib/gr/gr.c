@@ -7721,6 +7721,9 @@ static void init_hlr(void)
             {
               if (x1 != x2) m = (y[i] - y[i - 1]) / (x2 - x1);
 
+              x1 = max(x1, 0);
+              x2 = min(x2, RESOLUTION_X);
+
               for (j = x1; j <= x2; j++)
                 {
                   if (x1 != x2)
@@ -7807,6 +7810,9 @@ static void pline_hlr(int n, double *x, double *y, double *z)
       if (x1 < x2)
         {
           if (x1 != x2) m = (y[i] - y[i - 1]) / (x2 - x1);
+
+          x1 = max(x1, 0);
+          x2 = min(x2, RESOLUTION_X);
 
           for (j = x1; j <= x2; j++)
             {
@@ -14456,11 +14462,16 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
 
 void gr_inqvpsize(int *width, int *height, double *device_pixel_ratio)
 {
-  int n = 1, errind, wkid, ol;
+  int n = 1, errind, wkid, ol, conid, wtype;
 
   check_autoinit;
 
   gks_inq_open_ws(n, &errind, &ol, &wkid);
+  gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
+  if (wtype == 381)
+    {
+      gks_update_ws(wkid, GKS_K_PERFORM_FLAG);
+    }
   gks_inq_vp_size(wkid, &errind, width, height, device_pixel_ratio);
 }
 

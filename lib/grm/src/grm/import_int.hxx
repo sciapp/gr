@@ -7,7 +7,6 @@
 #include <string>
 #include <cstring>
 #include <vector>
-#include <grm/import.h>
 
 
 /* ######################### internal interface ##################################################################### */

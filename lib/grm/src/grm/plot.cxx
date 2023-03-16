@@ -1897,6 +1897,7 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
       error = classes_polar_histogram(subplot_args, &r_max);
       cleanup_if_error;
       global_root->lastChildElement()->setAttribute("r_max", r_max);
+      grm_args_push(subplot_args, "r_max", "d", r_max);
     }
   else if (str_equals_any(kind, 2, "stem", "stairs"))
     {
@@ -2148,7 +2149,7 @@ err_t plot_line(grm_args_t *subplot_args)
           element->setAttribute("markercolorind", current_marker_colorind);
           subGroup->append(element);
         }
-
+      grm_args_push(*current_series, "orientation", "s", orientation);
       error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
       cleanup_if_error;
       ++current_series;
@@ -2439,7 +2440,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
 
       auto parent_element = global_render->createElement("polymarker");
       double *x = nullptr, *y = nullptr, *z = nullptr, *c = nullptr, c_min, c_max;
-      double *markertypes = nullptr;
+      double *markertypes = NULL;
       unsigned int x_length, y_length, z_length, c_length, markertypes_length;
       int i, c_index = -1, markertype;
       std::vector<int> markerTypesVec, markerColorIndsVec;
@@ -2456,7 +2457,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
         {
           global_render->setMarkerType(subGroup, markertype);
         }
-      else if (!grm_args_first_value(*current_series, "markertype", "D", &markertypes, &markertypes_length))
+      else
         {
           global_render->setMarkerType(subGroup, *previous_marker_type++);
           if (*previous_marker_type == INT_MAX)
@@ -2478,7 +2479,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
               c_index = 255;
             }
         }
-      if (z != nullptr || c != nullptr || markertypes != nullptr)
+      if (z != nullptr || c != nullptr)
         {
           grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max);
 
@@ -2518,7 +2519,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
                   markerColorIndsVec.push_back(1000 + c_index);
                 }
 
-              if (markertypes != nullptr)
+              if (markertypes != NULL)
                 {
                   if (i < markertypes_length)
                     {
@@ -2555,12 +2556,6 @@ err_t plot_scatter(grm_args_t *subplot_args)
           if (!markerColorIndsVec.empty())
             {
               global_render->setMarkerColorInd(element, "markercolorinds" + str, markerColorIndsVec);
-            }
-
-
-          if (markertypes == nullptr)
-            {
-              previous_marker_type++;
             }
         }
       else
@@ -2652,6 +2647,8 @@ err_t plot_stem(grm_args_t *subplot_args)
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max)) stem_y[0] = y_min;
 
       subGroup->append(global_render->createYLine());
       grm_args_values(*current_series, "spec", "s", &spec);
@@ -2796,7 +2793,6 @@ err_t plot_hist(grm_args_t *subplot_args)
             }
           outerFillGroup->append(fillRect2);
         }
-
 
       if (grm_args_contains(*current_series, "error"))
         {
@@ -3714,6 +3710,7 @@ err_t plot_contour(grm_args_t *subplot_args)
 
           int id = (int)global_root->getAttribute("id");
           global_root->setAttribute("id", id + 1);
+          global_render->setSpace(group, z_min, z_max, 0, 90);
           std::string str = std::to_string(id);
 
           std::vector<double> px_vec = std::vector<double>(gridit_x, gridit_x + PLOT_CONTOUR_GRIDIT_N);
@@ -3835,6 +3832,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
             }
           int id = (int)global_root->getAttribute("id");
           global_root->setAttribute("id", id + 1);
+          global_render->setLineColorInd(subGroup, 989);
           std::string str = std::to_string(id);
 
           std::vector<double> px_vec = std::vector<double>(gridit_x, gridit_x + PLOT_CONTOUR_GRIDIT_N);
@@ -3844,7 +3842,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
               std::vector<double>(gridit_z, gridit_z + PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N);
 
           auto contour = global_render->createContourf("px" + str, px_vec, "py" + str, py_vec, "h" + str, h_vec,
-                                                       "pz" + str, pz_vec, 1000);
+                                                       "pz" + str, pz_vec, 0);
           subGroup->append(contour);
         }
       else
@@ -3860,6 +3858,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
             }
           int id = (int)global_root->getAttribute("id");
           global_root->setAttribute("id", id + 1);
+          global_render->setLineColorInd(subGroup, 989);
           std::string str = std::to_string(id);
 
           std::vector<double> px_vec = std::vector<double>(x, x + x_length);
@@ -3868,7 +3867,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
           std::vector<double> pz_vec = std::vector<double>(z, z + x_length * y_length);
 
           auto contour = global_render->createContourf("px" + str, px_vec, "py" + str, py_vec, "h" + str, h_vec,
-                                                       "pz" + str, pz_vec, 1000);
+                                                       "pz" + str, pz_vec, 0);
           subGroup->append(contour);
         }
       ++current_series;
@@ -4274,10 +4273,9 @@ cleanup:
 
   return error;
 }
-// todo marginalheatmap
+
 err_t plot_marginalheatmap(grm_args_t *subplot_args)
 {
-  const double *viewport;
   double c_min, c_max;
   int flip, options, xind, yind;
   unsigned int i, j, k;
@@ -4425,7 +4423,6 @@ cleanup:
   return error;
 }
 
-
 err_t plot_wireframe(grm_args_t *subplot_args)
 {
   double *gridit_x = nullptr, *gridit_y = nullptr, *gridit_z = nullptr;
@@ -4473,7 +4470,7 @@ err_t plot_wireframe(grm_args_t *subplot_args)
           std::string id = std::to_string(id_int);
 
           auto temp = global_render->createSurface("x" + id, grid_x_vec, "y" + id, grid_y_vec, "z" + id, grid_z_vec,
-                                                   GR_OPTION_FILLED_MESH);
+                                                   GR_OPTION_FILLED_MESH, false);
           subGroup->append(temp);
         }
       else
@@ -4490,8 +4487,8 @@ err_t plot_wireframe(grm_args_t *subplot_args)
           global_root->setAttribute("id", ++id_int);
           std::string id = std::to_string(id_int);
 
-          auto temp =
-              global_render->createSurface("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec, GR_OPTION_FILLED_MESH);
+          auto temp = global_render->createSurface("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec,
+                                                   GR_OPTION_FILLED_MESH, false);
           subGroup->append(temp);
         }
       ++current_series;
@@ -4514,13 +4511,14 @@ err_t plot_surface(grm_args_t *subplot_args)
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
   int accelerate; /* this argument decides if GR3 or GR is used to plot the surface */
-  float *x_f = nullptr, *y_f = nullptr, *z_f = nullptr;
+  std::vector<double> x_vec, y_vec, z_vec;
 
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "surface");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "accelerate", "i", &accelerate);
+
   while (*current_series != nullptr)
     {
       double *x = nullptr, *y = nullptr, *z = nullptr;
@@ -4574,6 +4572,7 @@ err_t plot_surface(grm_args_t *subplot_args)
                 }
             }
         }
+
       if (x_length == y_length && x_length == z_length)
         {
           logger((stderr, "Create a %d x %d grid for \"surface\" with \"gridit\"\n", PLOT_SURFACE_GRIDIT_N,
@@ -4589,55 +4588,27 @@ err_t plot_surface(grm_args_t *subplot_args)
             }
           gr_gridit(x_length, x, y, z, PLOT_SURFACE_GRIDIT_N, PLOT_SURFACE_GRIDIT_N, gridit_x, gridit_y, gridit_z);
 
-          std::vector<double> grid_x_vec = std::vector<double>(gridit_x, gridit_x + PLOT_WIREFRAME_GRIDIT_N);
-          std::vector<double> grid_y_vec = std::vector<double>(gridit_y, gridit_y + PLOT_WIREFRAME_GRIDIT_N);
-          std::vector<double> grid_z_vec = std::vector<double>(gridit_z, gridit_z + PLOT_WIREFRAME_GRIDIT_N);
-          int id_int = static_cast<int>(global_root->getAttribute("id"));
-          global_root->setAttribute("id", ++id_int);
-          std::string id = std::to_string(id_int);
-
-          auto temp = global_render->createSurface("x" + id, grid_x_vec, "y" + id, grid_y_vec, "z" + id, grid_z_vec,
-                                                   GR_OPTION_COLORED_MESH);
-
-          subGroup->append(temp);
-          // TODO: Support `accelerate`!
+          x_vec = std::vector<double>(gridit_x, gridit_x + PLOT_SURFACE_GRIDIT_N);
+          y_vec = std::vector<double>(gridit_y, gridit_y + PLOT_SURFACE_GRIDIT_N);
+          z_vec = std::vector<double>(gridit_z, gridit_z + PLOT_SURFACE_GRIDIT_N * PLOT_SURFACE_GRIDIT_N);
         }
       else
         {
           logger((stderr, "x_length; %u, y_length: %u, z_length: %u\n", x_length, y_length, z_length));
           cleanup_and_set_error_if(x_length * y_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-          if (accelerate)
-            {
-              x_f = static_cast<float *>(malloc(x_length * sizeof(float)));
-              cleanup_and_set_error_if(x_f == nullptr, ERROR_MALLOC);
-              y_f = static_cast<float *>(malloc(y_length * sizeof(float)));
-              cleanup_and_set_error_if(y_f == nullptr, ERROR_MALLOC);
-              z_f = static_cast<float *>(malloc(z_length * sizeof(float)));
-              cleanup_and_set_error_if(z_f == nullptr, ERROR_MALLOC);
-              for (int i = 0; i < x_length; i++)
-                {
-                  x_f[i] = (float)x[i];
-                }
-              for (int i = 0; i < y_length; i++)
-                {
-                  y_f[i] = (float)y[i];
-                }
-              for (int i = 0; i < z_length; i++)
-                {
-                  z_f[i] = (float)z[i];
-                }
-              gr3_clear();
-              gr3_surface(x_length, y_length, x_f, y_f, z_f, GR_OPTION_COLORED_MESH);
-              free(x_f);
-              free(y_f);
-              free(z_f);
-              x_f = y_f = z_f = nullptr;
-            }
-          else
-            {
-              gr_surface(x_length, y_length, x, y, z, GR_OPTION_COLORED_MESH);
-            }
+
+          x_vec = std::vector<double>(x, x + x_length);
+          y_vec = std::vector<double>(y, y + y_length);
+          z_vec = std::vector<double>(z, z + z_length);
         }
+
+      int id_int = static_cast<int>(global_root->getAttribute("id"));
+      global_root->setAttribute("id", ++id_int);
+      std::string id = std::to_string(id_int);
+      auto temp = global_render->createSurface("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec,
+                                               GR_OPTION_COLORED_MESH, accelerate);
+      subGroup->append(temp);
+
       for (int i = 0; i < array_size(value_array_ptrs); ++i)
         {
           if (allocated_array[i])
@@ -4645,22 +4616,11 @@ err_t plot_surface(grm_args_t *subplot_args)
               free(*value_array_ptrs[i]);
               allocated_array[i] = 0;
             }
-          std::vector<double> x_vec = std::vector<double>(x, x + x_length);
-          std::vector<double> y_vec = std::vector<double>(y, y + y_length);
-          std::vector<double> z_vec = std::vector<double>(z, z + z_length);
-          int id_int = static_cast<int>(global_root->getAttribute("id"));
-          global_root->setAttribute("id", ++id_int);
-          std::string id = std::to_string(id_int);
-
-          auto temp =
-              global_render->createSurface("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec, GR_OPTION_COLORED_MESH);
-          subGroup->append(temp);
         }
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
   plot_draw_colorbar(subplot_args, 0.05, 256);
-  gr3_terminate();
 
 cleanup:
   for (int i = 0; i < array_size(value_array_ptrs); ++i)
@@ -4673,9 +4633,6 @@ cleanup:
   free(gridit_x);
   free(gridit_y);
   free(gridit_z);
-  free(x_f);
-  free(y_f);
-  free(z_f);
 
   return error;
 }
@@ -6640,7 +6597,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   const double *viewport, *vp;
   double diag;
   double charheight;
-  double r_min, r_max = -1.0;
+  double r_min = 0.0, r_max = -1.0;
   double tick;
   double x[2], y[2];
   int i, n;
@@ -6650,13 +6607,19 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   int angle_ticks, rings;
   int phiflip = 0;
   double interval;
-  char *char_title;
-  char *char_norm;
-  std::string norm, title;
+  const char *norm, *title;
+  double window[4];
   std::shared_ptr<GR::Element> group;
 
+  gr_inqwindow(&window[0], &window[1], &window[2], &window[3]);
+  r_min = window[2];
+  r_max = window[3];
   grm_args_values(args, "vp", "D", &vp);
 
+  if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
+    {
+      angle_ticks = 8;
+    }
 
   grm_args_values(args, "kind", "s", &kind);
   if (strcmp(kind, "polar_histogram") == 0)
@@ -6671,72 +6634,31 @@ err_t plot_draw_polar_axes(grm_args_t *args)
 
   if (strcmp(kind, "polar_histogram") == 0)
     {
-      r_max = static_cast<double>(global_root->lastChildElement()->getAttribute("r_max"));
-      if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
-        {
-          angle_ticks = 8;
-        }
-      if (grm_args_values(args, "rings", "i", &rings) == 0)
-        {
-          rings = 4;
-        }
-
-      r_min = 0.0;
-      if (grm_args_values(args, "normalization", "s", &char_norm) == 0)
-        {
-          norm = "count";
-        }
-      else
-        {
-          norm = char_norm;
-        }
+      if (grm_args_values(args, "normalization", "s", &norm) == 0) norm = "count";
 
       tick = auto_tick_polar(r_max, rings, norm);
       global_root->lastChildElement()->setAttribute("r_max", rings * tick);
     }
   else
     {
-      // Not Polarhistogram
-      if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
-        {
-          angle_ticks = 8;
-        }
-      if (grm_args_values(args, "rings", "i", &rings) == 0)
-        {
-          rings = 9;
-        }
-      // ToDo: Maybe change tick calculation -> 0.1, 0.2, 0.5
-      r_min = -1;
-      r_max = 1;
-
-      n = (int)ceil((r_max - r_min) / rings);
-      tick = (r_max - r_min) / static_cast<int>(rings);
-      tick = ceil(tick * 10);
-      tick /= 10;
-      r_max = r_min + rings * tick;
+      // for polar needed calculation
+      tick = auto_tick(r_min, r_max);
+      n = (int)ceil((r_max - r_min) / (0.5 * tick));
+      r_max = r_min + n * tick;
       global_root->lastChildElement()->setAttribute("r_max", r_max);
     }
 
   if (grm_args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
 
-  if (!grm_args_values(args, "title", "s", &char_title))
-    {
-      title = "";
-    }
-  else
-    {
-      title = char_title;
-    }
+  if (!grm_args_values(args, "title", "s", &title)) title = "";
 
   if (strcmp(kind, "polar_histogram") == 0)
     {
-      group = global_render->createDrawPolarAxes(angle_ticks, rings, kind, phiflip, vp[0], vp[1], vp[2], vp[3], title,
-                                                 r_max, norm, tick, 1.0);
+      group = global_render->createDrawPolarAxes(angle_ticks, rings, kind, phiflip, title, r_max, norm, tick, 1.0);
     }
   else
     {
-      group = global_render->createDrawPolarAxes(angle_ticks, rings, kind, phiflip, vp[0], vp[1], vp[2], vp[3], title,
-                                                 r_max, "", tick);
+      group = global_render->createDrawPolarAxes(angle_ticks, rings, kind, phiflip, title, r_max, "", tick);
     }
 
   if (!currentDomElement)
@@ -6755,7 +6677,6 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
   const char **labels, **current_label;
   unsigned int num_labels, num_series;
   grm_args_t **current_series;
-  const double *viewport;
   int location;
   double px, py, w, h;
   double tbx[4], tby[4];
