@@ -25,14 +25,20 @@ ifeq ($(UNAME), Darwin)
 	@ditto grplot.app \
 	$(DESTDIR)$(GRDIR)/Applications/grplot.app
 	@if [ ! -d $(DESTDIR)$(GRDIR)/bin ]; then \
-    mkdir -m 755 $(DESTDIR)$(GRDIR)/bin; fi
+		mkdir -m 755 $(DESTDIR)$(GRDIR)/bin; fi
 	@ditto grplot.macos.sh \
 	$(DESTDIR)$(GRDIR)/bin/grplot
+	@if [ ! -d $(DESTDIR)$(GRDIR)/share/doc/grplot ]; then \
+		mkdir -m 755 -p $(DESTDIR)$(GRDIR)/share/doc/grplot; fi
 	@ditto README.md \
-    $(DESTDIR)$(GRDIR)/bin/grplot.man.md
+    $(DESTDIR)$(GRDIR)/share/doc/grplot/grplot.man.md
 else
+	@if [ ! -d $(DESTDIR)$(GRDIR)/bin ]; then \
+		mkdir -m 755 $(DESTDIR)$(GRDIR)/bin; fi
 	cp -p grplot $(DESTDIR)$(GRDIR)/bin/
-	cp -p README.md $(DESTDIR)$(GRDIR)/bin/grplot.man.md
+	@if [ ! -d $(DESTDIR)$(GRDIR)/share/doc/grplot ]; then \
+		mkdir -m 755 -p $(DESTDIR)$(GRDIR)/share/doc/grplot; fi
+	cp -p README.md $(DESTDIR)$(GRDIR)/share/doc/grplot/grplot.man.md
 endif
 
 clean:

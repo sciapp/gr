@@ -1332,7 +1332,7 @@ if(GR_INSTALL)
     endif()
     install(
       FILES lib/grm/grplot/README.md
-      DESTINATION ${CMAKE_INSTALL_BINDIR}
+      DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/grplot
       RENAME grplot.man.md
     )
   endif()
