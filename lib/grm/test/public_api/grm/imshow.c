@@ -24,11 +24,11 @@ static void test_plot(void)
 
   printf("filling argument container...\n");
 
-  for (i = 0; i < ROWS; ++i)
+  for (i = 0; i < COLS; ++i)
     {
-      for (j = 0; j < COLS; ++j)
+      for (j = 0; j < ROWS; ++j)
         {
-          plot[i][j] = sin(4.0 * i / ROWS - 2.0) + cos(M_PI * j / COLS);
+          plot[j][i] = sin(4.0 * i / COLS - 2.0) + cos(M_PI * j / ROWS);
         }
     }
 
@@ -36,7 +36,7 @@ static void test_plot(void)
   grm_args_push(args, "kind", "s", "imshow");
   grm_args_push(args, "title", "s", "imshow-test from c!");
   grm_args_push(args, "c", "nD", n, plot);
-  grm_args_push(args, "c_dims", "ii", ROWS, COLS);
+  grm_args_push(args, "c_dims", "ii", COLS, ROWS);
   grm_args_push(args, "colormap", "i", 44);
 
   printf("plotting data...\n");

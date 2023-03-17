@@ -2,6 +2,8 @@
 #define GRPLOT_MAIN_WINDOW_H_INCLUDED
 #include "grplot_widget.hxx"
 #include <QMainWindow>
+#include <QTextBrowser>
+#include <fstream>
 
 class GRPlotMainWindow : public QMainWindow
 {

@@ -2349,6 +2349,7 @@ void gr_polarcellarray(double x_org, double y_org, double phimin, double phimax,
             {
               phi_ind = dimphi - phi_ind - 1;
             }
+          img_data[y * size + x] = color[(r_ind + srow - 1) * ncol + phi_ind + scol - 1];
           color_ind = color[(r_ind + srow - 1) * ncol + phi_ind + scol - 1];
           if (color_ind >= 0 && color_ind < MAX_COLOR)
             {
@@ -7720,6 +7721,9 @@ static void init_hlr(void)
             {
               if (x1 != x2) m = (y[i] - y[i - 1]) / (x2 - x1);
 
+              x1 = max(x1, 0);
+              x2 = min(x2, RESOLUTION_X);
+
               for (j = x1; j <= x2; j++)
                 {
                   if (x1 != x2)
@@ -7806,6 +7810,9 @@ static void pline_hlr(int n, double *x, double *y, double *z)
       if (x1 < x2)
         {
           if (x1 != x2) m = (y[i] - y[i - 1]) / (x2 - x1);
+
+          x1 = max(x1, 0);
+          x2 = min(x2, RESOLUTION_X);
 
           for (j = x1; j <= x2; j++)
             {
@@ -12814,29 +12821,33 @@ void gr_inqresamplemethod(unsigned int *flag)
  *
  * \verbatim embed:rst:leading-asterisk
  *
- * +----------+---------------------------------+-------------------+-------------------+
- * | **Code** | **Description**                 | **x**             | **y**             |
- * +----------+---------------------------------+-------------------+-------------------+
- * |     M, m | move                            | x                 | y                 |
- * +----------+---------------------------------+-------------------+-------------------+
- * |     L, l | line                            | x                 | y                 |
- * +----------+---------------------------------+-------------------+-------------------+
- * |     Q, q | quadratic Bezier                | x1, x2            | y1, y2            |
- * +----------+---------------------------------+-------------------+-------------------+
- * |     C, c | cubic Bezier                    | x1, x2, x3        | y1, y2, y3        |
- * +----------+---------------------------------+-------------------+-------------------+
- * |     A, a | arc                             | rx, a1, reserved  | ry, a2, reserved  |
- * +----------+---------------------------------+-------------------+-------------------+
- * |        Z | close path                      |                   |                   |
- * +----------+---------------------------------+-------------------+-------------------+
- * |        S | stroke                          |                   |                   |
- * +----------+---------------------------------+-------------------+-------------------+
- * |        s | close path and stroke           |                   |                   |
- * +----------+---------------------------------+-------------------+-------------------+
- * |        f | close path and fill             |                   |                   |
- * +----------+---------------------------------+-------------------+-------------------+
- * |        F | close path, fill and stroke     |                   |                   |
- * +----------+---------------------------------+-------------------+-------------------+
+ * +----------+---------------------------------------+-------------------+-------------------+
+ * | **Code** | **Description**                       | **x**             | **y**             |
+ * +----------+---------------------------------------+-------------------+-------------------+
+ * |     M, m | move                                  | x                 | y                 |
+ * +----------+---------------------------------------+-------------------+-------------------+
+ * |     L, l | line                                  | x                 | y                 |
+ * +----------+---------------------------------------+-------------------+-------------------+
+ * |     Q, q | quadratic Bezier                      | x1, x2            | y1, y2            |
+ * +----------+---------------------------------------+-------------------+-------------------+
+ * |     C, c | cubic Bezier                          | x1, x2, x3        | y1, y2, y3        |
+ * +----------+---------------------------------------+-------------------+-------------------+
+ * |     A, a | arc                                   | rx, a1, reserved  | ry, a2, reserved  |
+ * +----------+---------------------------------------+-------------------+-------------------+
+ * |        Z | close path                            |                   |                   |
+ * +----------+---------------------------------------+-------------------+-------------------+
+ * |        S | stroke                                |                   |                   |
+ * +----------+---------------------------------------+-------------------+-------------------+
+ * |        s | close path and stroke                 |                   |                   |
+ * +----------+---------------------------------------+-------------------+-------------------+
+ * |        f | close path and fill                   |                   |                   |
+ * +----------+---------------------------------------+-------------------+-------------------+
+ * |        F | close path, fill and stroke           |                   |                   |
+ * +----------+---------------------------------------+-------------------+-------------------+
+ * |        g | close path and fill (nonzero)         |                   |                   |
+ * +----------+---------------------------------------+-------------------+-------------------+
+ * |        G | close path, fill (nonzero) and stroke |                   |                   |
+ * +----------+---------------------------------------+-------------------+-------------------+
  *
  * \endverbatim
  *
@@ -12947,11 +12958,12 @@ void gr_inqresamplemethod(unsigned int *flag)
  *    `gr_setbordercolorind`). In case of `s` the path is closed beforehand, which is equivalent to `ZS`.
  *
  *
- *  - F, f
+ *  - F, f, G, g
  *
- *    Fills the current path using the even-odd-rule using the current fill color. Filling a path implicitly closes the
- *    path. The fill color can be set using `gr_setfillcolorind`. In case of `F` the path is also stroked using the
- *    current border width and color afterwards.
+ *    Fills the current path using the even-odd-rule for `F` and `f` or the nonzero / winding rule for `G` and `g`
+ *    in the current fill color. Filling a path implicitly closes the path. The fill color can be set using
+ *    `gr_setfillcolorind`. In case of `F` and `G` the path is also stroked using the current border width and color
+ *    afterwards.
  *
  */
 void gr_path(int n, double *x, double *y, const char *codes)
@@ -14450,11 +14462,16 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
 
 void gr_inqvpsize(int *width, int *height, double *device_pixel_ratio)
 {
-  int n = 1, errind, wkid, ol;
+  int n = 1, errind, wkid, ol, conid, wtype;
 
   check_autoinit;
 
   gks_inq_open_ws(n, &errind, &ol, &wkid);
+  gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
+  if (wtype == 381)
+    {
+      gks_update_ws(wkid, GKS_K_PERFORM_FLAG);
+    }
   gks_inq_vp_size(wkid, &errind, width, height, device_pixel_ratio);
 }
 

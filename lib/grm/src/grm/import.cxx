@@ -15,11 +15,14 @@
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ key to types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::map<std::string, const char *> key_to_types{{"algorithm", "s"},
+static std::map<std::string, const char *> key_to_types{{"accelerate", "i"},
+                                                        {"algorithm", "s"},
                                                         {"bar_color", "ddd"},
                                                         {"bar_color", "i"},
                                                         {"bar_width", "d"},
+                                                        {"bin_counts", "i"},
                                                         {"bin_edges", "nD"},
+                                                        {"bin_width", "d"},
                                                         {"c", "nD"},
                                                         {"colormap", "i"},
                                                         {"draw_edges", "i"},
@@ -41,11 +44,15 @@ static std::map<std::string, const char *> key_to_types{{"algorithm", "s"},
                                                         {"normalization", "s"},
                                                         {"orientation", "s"},
                                                         {"phiflip", "i"},
+                                                        {"rotation", "d"},
+                                                        {"scale", "i"},
                                                         {"scatterz", "i"},
                                                         {"spec", "s"},
                                                         {"stairs", "i"},
                                                         {"step_where", "s"},
                                                         {"style", "s"},
+                                                        {"tilt", "d"},
+                                                        {"use_bins", "i"},
                                                         {"xbins", "i"},
                                                         {"xcolormap", "i"},
                                                         {"xflip", "i"},
@@ -58,11 +65,11 @@ static std::map<std::string, const char *> key_to_types{{"algorithm", "s"},
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::list<std::string> kind_types = {"barplot",  "contour",         "contourf",   "heatmap", "hexbin",
-                                            "hist",     "imshow",          "isosurface", "line",    "marginalheatmap",
-                                            "polar",    "polar_histogram", "pie",        "plot3",   "scatter",
-                                            "scatter3", "shade",           "surface",    "stem",    "step",
-                                            "tricont",  "trisurf",         "quiver",     "volume",  "wireframe"};
+static std::list<std::string> kind_types = {
+    "barplot",  "contour",         "contourf", "heatmap",       "hexbin",          "hist",    "imshow",  "isosurface",
+    "line",     "marginalheatmap", "polar",    "polar_heatmap", "polar_histogram", "pie",     "plot3",   "scatter",
+    "scatter3", "shade",           "surface",  "stem",          "stairs",          "tricont", "trisurf", "quiver",
+    "volume",   "wireframe"};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ alias for keys ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -81,6 +88,7 @@ static std::map<std::string, const char *> container_to_types{
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ scatter interpretation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static int scatter_with_z = 0;
+static int use_bins = 0;
 
 /* ========================= functions ============================================================================== */
 
@@ -278,10 +286,23 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
       else /* the line contains the labels for the plot */
         {
           std::istringstream line_ss(normalize_line(line));
+          std::string split_label;
           for (size_t col = 0; std::getline(line_ss, token, '\t') && token.length(); col++)
             {
               if (std::find(columns.begin(), columns.end(), col) != columns.end() || columns.empty())
                 {
+                  if (std::find(token.begin(), token.end(), '"') != token.end() && split_label.empty())
+                    {
+                      split_label = token.erase(0, 1);
+                      continue;
+                    }
+                  if (!split_label.empty())
+                    {
+                      token.erase(std::remove(token.begin(), token.end(), '"'), token.end());
+                      labels.push_back(split_label.append(" ").append(token));
+                      split_label = "";
+                      continue;
+                    }
                   labels.push_back(token);
                 }
             }
@@ -294,18 +315,29 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
     {
       std::istringstream line_ss(normalize_line(line));
       int cnt = 0;
+      char det = '\t';
+      int start_with_nan = 0;
       if (line.empty())
         {
           depth += 1;
           depth_change = true;
           continue;
         }
-      for (size_t col = 0; std::getline(line_ss, token, '\t') && token.length(); col++)
+      if (std::find(line.begin(), line.end(), ',') != line.end())
         {
-          if (std::find(columns.begin(), columns.end(), col) != columns.end() || (columns.empty() && labels.empty()) ||
-              (columns.empty() && col < labels.size()))
+          det = ',';
+          std::string tmp = ",";
+          if (starts_with(trim(line), tmp)) start_with_nan = 1;
+        }
+      for (size_t col = 0; std::getline(line_ss, token, det) && (token.length() || start_with_nan); col++)
+        {
+          if (std::find(columns.begin(), columns.end(), col) != columns.end() ||
+              (columns.empty() && labels.empty() && (!use_bins || col > 0)) ||
+              (columns.empty() && col < labels.size() && (!use_bins || col > 0)))
             {
-              if ((row == 0 && col == 0) || (depth_change && col == 0))
+              if ((row == 0 && (col == use_bins || col == columns.front())) ||
+                  (depth_change && (col == use_bins || col == columns.front())) ||
+                  (start_with_nan && (col == use_bins || col == columns.front())))
                 {
                   data.emplace_back(std::vector<std::vector<double>>());
                 }
@@ -315,7 +347,16 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                 }
               try
                 {
-                  data[depth][cnt].push_back(std::stod(token));
+                  trim(token);
+                  token.erase(std::remove(token.begin(), token.end(), '\t'), token.end());
+                  if (token.empty() && det == ',')
+                    {
+                      data[depth][cnt].push_back(NAN);
+                    }
+                  else
+                    {
+                      data[depth][cnt].push_back(std::stod(token));
+                    }
                 }
               catch (std::invalid_argument &e)
                 {
@@ -324,6 +365,25 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                   return ERROR_PARSE_DOUBLE;
                 }
               cnt += 1;
+            }
+          else if (use_bins && col == 0)
+            {
+              try
+                {
+                  if (row == 0)
+                    {
+                      ranges->ymin = std::stod(token);
+                    }
+                  else
+                    {
+                      ranges->ymax = std::stod(token); // not the best way to get ymax but the amount of rows is unknown
+                    }
+                }
+              catch (std::invalid_argument &e)
+                {
+                  fprintf(stderr, "Invalid argument for yrange parameter (%s) while using option use_bins in line %i\n",
+                          labels[0].c_str(), (int)row);
+                }
             }
         }
       depth_change = false;
@@ -371,6 +431,7 @@ int grm_plot_from_file(int argc, char **argv)
 
   args = grm_args_new();
   error = grm_interactive_plot_from_file(args, argc, argv);
+  grm_plot(args);
   grm_args_delete(args);
   return error;
 }
@@ -393,7 +454,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   std::vector<std::string> labels;
   std::vector<const char *> labels_c;
   std::vector<grm_args_t *> series;
-  char *env;
+  char *env, *wstype;
   void *handle = nullptr;
   const char *kind;
   int grplot;
@@ -430,7 +491,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
 
   series.resize(cols);
 
-  if ((env = getenv("GR_DISPLAY")) != nullptr)
+  wstype = getenv("GKS_WSTYPE");
+  if (strcmp(wstype, "381") == 0 && (env = getenv("GR_DISPLAY")) != nullptr)
     {
       handle = grm_open(GRM_SENDER, env, 8002, nullptr, nullptr);
       if (handle == nullptr)
@@ -463,8 +525,21 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
 
       if (cols <= 1)
         {
-          fprintf(stderr, "Unsufficient data for plot type (%s)\n", kind);
+          fprintf(stderr, "Insufficient data for plot type (%s)\n", kind);
           return 0;
+        }
+      if (use_bins)
+        {
+          try
+            {
+              ranges.xmin = std::stod(labels[0]);
+              ranges.xmax = std::stod(labels[cols - 1]);
+            }
+          catch (std::invalid_argument &e)
+            {
+              fprintf(stderr, "Invalid argument for xrange parameter (%s, %s) while using option use_bins\n",
+                      labels[0].c_str(), labels[cols - 1].c_str());
+            }
         }
       adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)cols - 1.0);
       adjust_ranges(&ranges.ymin, &ranges.ymax, 0.0, (double)rows - 1.0);
@@ -576,7 +651,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       double min_x, max_x, min_y, max_y, min_z, max_z;
       if (cols < 3)
         {
-          fprintf(stderr, "Unsufficient data for plot type (%s)\n", kind);
+          fprintf(stderr, "Insufficient data for plot type (%s)\n", kind);
           return 0;
         }
       if (cols > 3) fprintf(stderr, "Only the first 3 columns get displayed");
@@ -619,7 +694,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
       grm_args_push(args, "z", "nD", rows, filedata[depth][2].data());
     }
-  else if (str_equals_any(kind, 4, "barplot", "hist", "stem", "step"))
+  else if (str_equals_any(kind, 4, "barplot", "hist", "stem", "stairs"))
     {
       std::vector<double> x(rows);
       double xmin, xmax, ymin, ymax;
@@ -668,7 +743,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       grm_args_push(args, "y", "nD", rows, filedata[depth][0].data());
       /* for hist */
       grm_args_push(args, "weights", "nD", rows, filedata[depth][0].data());
-      /* for step */
+      /* for stairs */
       grm_args_push(args, "z", "nD", rows, filedata[depth][0].data());
 
       /* the needed calculation to get the errorbars out of the data */
@@ -736,20 +811,48 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         }
       else if (rows > 1)
         {
-          fprintf(stderr, "Unsufficient data for custom colors\n");
+          fprintf(stderr, "Insufficient data for custom colors\n");
         }
     }
   else if (strcmp(kind, "polar_histogram") == 0)
     {
       if (cols > 1) fprintf(stderr, "Only the first column gets displayed\n");
       grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
-      /* TODO: when the mouse is moved the plot disapeares */
     }
   else if (strcmp(kind, "polar") == 0)
     {
       if (cols > 1) fprintf(stderr, "Only the first 2 columns get displayed\n");
       grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
       grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
+    }
+  else if (strcmp(kind, "polar_heatmap") == 0)
+    {
+      std::vector<double> xi(cols), yi(rows), zi(rows * cols);
+
+      if (cols <= 1)
+        {
+          fprintf(stderr, "Insufficient data for plot type (%s)\n", kind);
+          return 0;
+        }
+      adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, 360.0);
+      adjust_ranges(&ranges.ymin, &ranges.ymax, 0.0, 3.0);
+      ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
+
+      for (col = 0; col < cols; ++col)
+        {
+          xi[col] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)col / ((double)cols - 1));
+          for (row = 0; row < rows; ++row)
+            {
+              if (col == 0)
+                {
+                  yi[row] = ranges.ymin + (ranges.ymax - ranges.ymin) * ((double)row / ((double)rows - 1));
+                }
+              zi[row * cols + col] = filedata[depth][col][row];
+            }
+        }
+      grm_args_push(args, "x", "nD", cols, xi.data());
+      grm_args_push(args, "y", "nD", rows, yi.data());
+      grm_args_push(args, "z", "nD", cols * rows, zi.data());
     }
   else if (strcmp(kind, "quiver") == 0)
     {
@@ -997,6 +1100,10 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                                 {
                                   scatter_with_z = std::stoi(value);
                                 }
+                              else if (strcmp(search->first.c_str(), "use_bins") == 0)
+                                {
+                                  use_bins = std::stoi(value);
+                                }
                               else
                                 {
                                   grm_args_push(args, search->first.c_str(), search->second, std::stoi(value));
@@ -1076,6 +1183,11 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
     {
       fprintf(stderr, "Invalid plot type (%s) - fallback to line plot\n", kind.c_str());
       kind = "line";
+    }
+  if (!str_equals_any(kind.c_str(), 7, "contour", "contourf", "heatmap", "imshow", "marginalheatmap", "surface",
+                      "wireframe"))
+    {
+      use_bins = 0; // this parameter is only for surface and similar types
     }
   grm_args_push(args, "kind", "s", kind.c_str());
   return 1;

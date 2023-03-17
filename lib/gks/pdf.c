@@ -1813,8 +1813,18 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           cur_x = start_x;
           cur_y = start_y;
           break;
+        case 'g': /* close, fill using winding rule */
+          pdf_printf(p->content, "h f\n");
+          cur_x = start_x;
+          cur_y = start_y;
+          break;
         case 'F': /* close, fill using even-odd rule, stroke */
           pdf_printf(p->content, "h b*\n");
+          cur_x = start_x;
+          cur_y = start_y;
+          break;
+        case 'G': /* close, fill using winding rule, stroke */
+          pdf_printf(p->content, "h b\n");
           cur_x = start_x;
           cur_y = start_y;
           break;

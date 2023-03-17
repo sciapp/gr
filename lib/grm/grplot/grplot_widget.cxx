@@ -10,6 +10,8 @@
 #include "grplot_widget.hxx"
 #include "util.hxx"
 
+static std::string file_export;
+
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
 #if QT_VERSION >= 0x060000
@@ -63,6 +65,21 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   menu = parent->menuBar();
   type = new QMenu("&Plot type");
   algo = new QMenu("&Algorithm");
+  export_menu = new QMenu("&Export");
+
+  PdfAct = new QAction(tr("&PDF"), this);
+  connect(PdfAct, &QAction::triggered, this, &GRPlotWidget::pdf);
+  export_menu->addAction(PdfAct);
+  PngAct = new QAction(tr("&PNG"), this);
+  connect(PngAct, &QAction::triggered, this, &GRPlotWidget::png);
+  export_menu->addAction(PngAct);
+  JpegAct = new QAction(tr("&JPEG"), this);
+  connect(JpegAct, &QAction::triggered, this, &GRPlotWidget::jpeg);
+  export_menu->addAction(JpegAct);
+  SvgAct = new QAction(tr("&SVG"), this);
+  connect(SvgAct, &QAction::triggered, this, &GRPlotWidget::svg);
+  export_menu->addAction(SvgAct);
+
   grm_args_values(args_, "kind", "s", &kind);
   if (grm_args_contains(args_, "error"))
     {
@@ -145,7 +162,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       type->addAction(scatter3Act);
       type->addAction(scatterAct);
     }
-  else if ((strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0 || strcmp(kind, "step") == 0 ||
+  else if ((strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0 || strcmp(kind, "stairs") == 0 ||
             strcmp(kind, "stem") == 0) &&
            !error)
     {
@@ -153,13 +170,13 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       connect(histAct, &QAction::triggered, this, &GRPlotWidget::hist);
       barplotAct = new QAction(tr("&Barplot"), this);
       connect(barplotAct, &QAction::triggered, this, &GRPlotWidget::barplot);
-      stepAct = new QAction(tr("&Step"), this);
-      connect(stepAct, &QAction::triggered, this, &GRPlotWidget::step);
+      stairsAct = new QAction(tr("&Step"), this);
+      connect(stairsAct, &QAction::triggered, this, &GRPlotWidget::stairs);
       stemAct = new QAction(tr("&Stem"), this);
       connect(stemAct, &QAction::triggered, this, &GRPlotWidget::stem);
       type->addAction(histAct);
       type->addAction(barplotAct);
-      type->addAction(stepAct);
+      type->addAction(stairsAct);
       type->addAction(stemAct);
     }
   else if (strcmp(kind, "shade") == 0 || strcmp(kind, "hexbin") == 0)
@@ -173,6 +190,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
     }
   menu->addMenu(type);
   menu->addMenu(algo);
+  menu->addMenu(export_menu);
 }
 
 GRPlotWidget::~GRPlotWidget()
@@ -182,6 +200,15 @@ GRPlotWidget::~GRPlotWidget()
 
 void GRPlotWidget::draw()
 {
+  if (!file_export.empty())
+    {
+      static char file[50];
+      const char *kind;
+
+      grm_args_values(args_, "kind", "s", &kind);
+      snprintf(file, 50, "grplot_%s.%s", kind, file_export.c_str());
+      grm_export(file);
+    }
   grm_plot(nullptr);
 }
 
@@ -574,9 +601,9 @@ void GRPlotWidget::barplot()
   redraw();
 }
 
-void GRPlotWidget::step()
+void GRPlotWidget::stairs()
 {
-  grm_args_push(args_, "kind", "s", "step");
+  grm_args_push(args_, "kind", "s", "stairs");
   grm_merge(args_);
   redraw();
 }
@@ -599,5 +626,29 @@ void GRPlotWidget::hexbin()
 {
   grm_args_push(args_, "kind", "s", "hexbin");
   grm_merge(args_);
+  redraw();
+}
+
+void GRPlotWidget::pdf()
+{
+  file_export = "pdf";
+  redraw();
+}
+
+void GRPlotWidget::png()
+{
+  file_export = "png";
+  redraw();
+}
+
+void GRPlotWidget::jpeg()
+{
+  file_export = "jpeg";
+  redraw();
+}
+
+void GRPlotWidget::svg()
+{
+  file_export = "svg";
   redraw();
 }

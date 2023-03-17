@@ -118,7 +118,8 @@ typedef enum
   GR_OPTION_Z_SHADED_MESH = 3,
   GR_OPTION_COLORED_MESH = 4,
   GR_OPTION_CELL_ARRAY = 5,
-  GR_OPTION_SHADED_MESH = 6
+  GR_OPTION_SHADED_MESH = 6,
+  GR_OPTION_3D_MESH = 7
 } gr_option_t;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -173,7 +174,7 @@ err_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name_s
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plotting ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 err_t plot_line(grm_args_t *subplot_args);
-err_t plot_step(grm_args_t *subplot_args);
+err_t plot_stairs(grm_args_t *subplot_args);
 err_t plot_scatter(grm_args_t *subplot_args);
 err_t plot_quiver(grm_args_t *subplot_args);
 err_t plot_stem(grm_args_t *subplot_args);
@@ -198,6 +199,7 @@ err_t plot_trisurf(grm_args_t *subplot_args);
 err_t plot_tricont(grm_args_t *subplot_args);
 err_t plot_shade(grm_args_t *subplot_args);
 err_t plot_raw(grm_args_t *subplot_args);
+err_t plot_polar_heatmap(grm_args_t *subplot_args);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ auxiliary drawing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

@@ -1330,6 +1330,11 @@ if(GR_INSTALL)
         RENAME grplot
       )
     endif()
+    install(
+      FILES lib/grm/grplot/README.md
+      DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/grplot
+      RENAME grplot.man.md
+    )
   endif()
   install(FILES lib/gr/gr.h lib/gks/gks.h lib/gr3/gr3.h lib/grm/include/grm.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
   install(DIRECTORY lib/grm/include/grm DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
