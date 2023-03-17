@@ -66,9 +66,9 @@ static vector linearcombination(vector *v1, vector *v2, vector *v3, float fac1, 
 static float triangle_surface_2d(float dif_a_b_x, float dif_a_b_y, float cy, float cx, float ay, float ax);
 
 static args *malloc_arg(int thread_idx, int mesh, matrix model_mat, matrix view_mat, matrix projection_mat,
-                        matrix viewport, matrix3x3 model_view_3x3, const float *colors, const float *scales, int width,
-                        int height, int id, int idxstart, int idxend, vertex_fp *vertices_fp,
-                        GR3_LightSource_t_ *light_sources, int num_light_sources);
+                        matrix viewport, matrix3x3 model_view_3x3, matrix3x3 normal_view_3x3, const float *colors,
+                        const float *scales, int width, int height, int id, int idxstart, int idxend,
+                        vertex_fp *vertices_fp, GR3_LightSource_t_ *light_sources, int num_light_sources);
 static void *draw_triangle_indexbuffer(void *v_arguments);
 static void draw_triangle(unsigned char *pixels, float *dep_buf, int width, int height, vertex_fp *v_fp[3],
                           const float *colors, const GR3_LightSource_t_ *light_sources, int num_lights,
@@ -234,7 +234,7 @@ static void create_queues_and_pixmaps(int width, int height)
         {
 #ifndef NO_THREADS
           args *arg = malloc_arg(i, 0, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL,
-                                 MAT3x3_INIT_NUL, NULL, NULL, 0, 0, 2, 0, 0, NULL, NULL, 0);
+                                 MAT3x3_INIT_NUL, MAT3x3_INIT_NUL, NULL, NULL, 0, 0, 2, 0, 0, NULL, NULL, 0);
           queue_enqueue(context_struct_.queues[i], arg);
 
           pthread_join(context_struct_.threads[i], NULL);
@@ -754,9 +754,9 @@ GR3API int gr3_initSR_()
  * transforms its own coordinates leading to a higher proportion of parallelisation.
  */
 static args *malloc_arg(int thread_idx, int mesh, matrix model_mat, matrix view_mat, matrix projection_mat,
-                        matrix viewport, matrix3x3 model_view_3x3, const float *colors, const float *scales, int width,
-                        int height, int id, int idxstart, int idxend, vertex_fp *vertices_fp,
-                        GR3_LightSource_t_ *light_sources, int num_light_sources)
+                        matrix viewport, matrix3x3 model_view_3x3, matrix3x3 normal_view_3x3, const float *colors,
+                        const float *scales, int width, int height, int id, int idxstart, int idxend,
+                        vertex_fp *vertices_fp, GR3_LightSource_t_ *light_sources, int num_light_sources)
 {
   args *arg = malloc(sizeof(args));
   arg->thread_idx = thread_idx;
@@ -766,6 +766,7 @@ static args *malloc_arg(int thread_idx, int mesh, matrix model_mat, matrix view_
   arg->projection_mat = projection_mat;
   arg->viewport = viewport;
   arg->model_view_3x3 = model_view_3x3;
+  arg->normal_view_3x3 = normal_view_3x3;
   arg->colors = colors;
   arg->scales = scales;
   arg->width = width;
@@ -820,9 +821,6 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
     }
   else
     {
-      float div_0 = 0;
-      float div_1 = 0;
-      float div_2 = 0;
       color fill_color;
       color line_color;
       color_float dummy_color = {0, 0, 0, 0};
@@ -832,9 +830,6 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
       if (arg->scales != NULL) /* there is a mesh passed to this function with the intention to finish the rendering
                                 * process and it has all values set to 0/NULL */
         {
-          div_0 = arg->scales[0];
-          div_1 = arg->scales[1];
-          div_2 = arg->scales[2];
           if (context_struct_.option >= 0 && context_struct_.option <= 2)
             {
               /* If a mesh representation with the lines is demanded, the fill color and the linecolor have
@@ -842,9 +837,6 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
               int color, errind;
               double r, g, b;
               color_float line_color_f;
-              div_0 = 1;
-              div_1 = 1;
-              div_2 = 1;
               gks_inq_pline_color_index(&errind, &color);
               gks_inq_color_rep(1, color, GKS_K_VALUE_SET, &errind, &r, &g, &b);
               line_color_f.r = r;
@@ -884,10 +876,10 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
               vertices_fp[j].c.b = colors[index + 2];
 
               vertices_fp[j].c.a = 1.0f;
-              vertices_fp[j].normal.x = normals[index] / div_0;
-              vertices_fp[j].normal.y = normals[index + 1] / div_1;
-              vertices_fp[j].normal.z = normals[index + 2] / div_2;
-              mat_vec_mul_3x1(&arg->model_view_3x3, &vertices_fp[j].normal);
+              vertices_fp[j].normal.x = normals[index];
+              vertices_fp[j].normal.y = normals[index + 1];
+              vertices_fp[j].normal.z = normals[index + 2];
+              mat_vec_mul_3x1(&arg->normal_view_3x3, &vertices_fp[j].normal);
               vertices_fp[j].x = vertices[index];
               vertices_fp[j].y = vertices[index + 1];
               vertices_fp[j].z = vertices[index + 2];
@@ -1581,6 +1573,12 @@ static color calc_colors(color_float col_one, color_float col_two, color_float c
       norm.y = -norm.y;
       norm.z = -norm.z;
     }
+  color_float norm_color;
+  norm_color.r = fabs(norm.x);
+  norm_color.g = fabs(norm.y);
+  norm_color.b = fabs(norm.z);
+  norm_color.a = 1.0;
+  /*return color_float_to_color(norm_color);*/
   /* clipping */
   world_space_position = linearcombination(&v_fp[0]->world_space_position, &v_fp[1]->world_space_position,
                                            &v_fp[2]->world_space_position, fac_one, fac_two, fac_three);
@@ -1748,7 +1746,7 @@ static int gr3_draw_softwarerendered(queue *queues[MAX_NUM_THREADS], int width, 
       for (i = 0; i < context_struct_.num_threads; i++)
         {
           args *arg = malloc_arg(i, 0, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL,
-                                 MAT3x3_INIT_NUL, NULL, NULL, 0, 0, 1, 0, 0, NULL, NULL, 0);
+                                 MAT3x3_INIT_NUL, MAT3x3_INIT_NUL, NULL, NULL, 0, 0, 1, 0, 0, NULL, NULL, 0);
           queue_enqueue(context_struct_.queues[i], arg);
         }
     }
@@ -1887,7 +1885,7 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
 {
   int thread_idx, i, j, numtri, tri_per_thread, index_start_end[MAX_NUM_THREADS + 1], rest, rest_distributed;
   matrix model_mat, view_mat, perspective, viewport;
-  matrix3x3 model_mat_3x3, view_mat_3x3, model_view_mat_3x3;
+  matrix3x3 model_mat_3x3, view_mat_3x3, model_view_mat_3x3, normal_view_mat_3x3;
   color_float c_tmp;
   vertex_fp *vertices_fp;
 
@@ -1920,6 +1918,43 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
     {
       model_view_mat_3x3 = mat_mul_3x3(&view_mat_3x3, &model_mat_3x3);
     }
+  {
+    double det =
+        model_view_mat_3x3.mat[0 * 3 + 0] * (model_view_mat_3x3.mat[1 * 3 + 1] * model_view_mat_3x3.mat[2 * 3 + 2] -
+                                             model_view_mat_3x3.mat[2 * 3 + 1] * model_view_mat_3x3.mat[1 * 3 + 2]) -
+        model_view_mat_3x3.mat[0 * 3 + 1] * (model_view_mat_3x3.mat[1 * 3 + 0] * model_view_mat_3x3.mat[2 * 3 + 2] -
+                                             model_view_mat_3x3.mat[1 * 3 + 2] * model_view_mat_3x3.mat[2 * 3 + 0]) +
+        model_view_mat_3x3.mat[0 * 3 + 2] * (model_view_mat_3x3.mat[1 * 3 + 0] * model_view_mat_3x3.mat[2 * 3 + 1] -
+                                             model_view_mat_3x3.mat[1 * 3 + 1] * model_view_mat_3x3.mat[2 * 3 + 0]);
+    double inv_det = 1.0 / det;
+    normal_view_mat_3x3.mat[0 * 3 + 0] = (model_view_mat_3x3.mat[1 * 3 + 1] * model_view_mat_3x3.mat[2 * 3 + 2] -
+                                          model_view_mat_3x3.mat[2 * 3 + 1] * model_view_mat_3x3.mat[1 * 3 + 2]) *
+                                         inv_det;
+    normal_view_mat_3x3.mat[1 * 3 + 0] = (model_view_mat_3x3.mat[0 * 3 + 2] * model_view_mat_3x3.mat[2 * 3 + 1] -
+                                          model_view_mat_3x3.mat[0 * 3 + 1] * model_view_mat_3x3.mat[2 * 3 + 2]) *
+                                         inv_det;
+    normal_view_mat_3x3.mat[2 * 3 + 0] = (model_view_mat_3x3.mat[0 * 3 + 1] * model_view_mat_3x3.mat[1 * 3 + 2] -
+                                          model_view_mat_3x3.mat[0 * 3 + 2] * model_view_mat_3x3.mat[1 * 3 + 1]) *
+                                         inv_det;
+    normal_view_mat_3x3.mat[0 * 3 + 1] = (model_view_mat_3x3.mat[1 * 3 + 2] * model_view_mat_3x3.mat[2 * 3 + 0] -
+                                          model_view_mat_3x3.mat[1 * 3 + 0] * model_view_mat_3x3.mat[2 * 3 + 2]) *
+                                         inv_det;
+    normal_view_mat_3x3.mat[1 * 3 + 1] = (model_view_mat_3x3.mat[0 * 3 + 0] * model_view_mat_3x3.mat[2 * 3 + 2] -
+                                          model_view_mat_3x3.mat[0 * 3 + 2] * model_view_mat_3x3.mat[2 * 3 + 0]) *
+                                         inv_det;
+    normal_view_mat_3x3.mat[2 * 3 + 1] = (model_view_mat_3x3.mat[1 * 3 + 0] * model_view_mat_3x3.mat[0 * 3 + 2] -
+                                          model_view_mat_3x3.mat[0 * 3 + 0] * model_view_mat_3x3.mat[1 * 3 + 2]) *
+                                         inv_det;
+    normal_view_mat_3x3.mat[0 * 3 + 2] = (model_view_mat_3x3.mat[1 * 3 + 0] * model_view_mat_3x3.mat[2 * 3 + 1] -
+                                          model_view_mat_3x3.mat[2 * 3 + 0] * model_view_mat_3x3.mat[1 * 3 + 1]) *
+                                         inv_det;
+    normal_view_mat_3x3.mat[1 * 3 + 2] = (model_view_mat_3x3.mat[2 * 3 + 0] * model_view_mat_3x3.mat[0 * 3 + 1] -
+                                          model_view_mat_3x3.mat[0 * 3 + 0] * model_view_mat_3x3.mat[2 * 3 + 1]) *
+                                         inv_det;
+    normal_view_mat_3x3.mat[2 * 3 + 2] = (model_view_mat_3x3.mat[0 * 3 + 0] * model_view_mat_3x3.mat[1 * 3 + 1] -
+                                          model_view_mat_3x3.mat[1 * 3 + 0] * model_view_mat_3x3.mat[0 * 3 + 1]) *
+                                         inv_det;
+  }
 
   vertices_fp = NULL;
   if (context_struct_.mesh_list_[mesh].data.number_of_indices != 0)
@@ -1944,9 +1979,9 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
           tmp_v.z = vertices[i + 2];
           tmp_v.w = 1.0;
           tmp_v.w_div = 1.0;
-          normal_vector.x = normals[i] / scales[0];
-          normal_vector.y = normals[i + 1] / scales[1];
-          normal_vector.z = normals[i + 2] / scales[2];
+          normal_vector.x = normals[i];
+          normal_vector.y = normals[i + 1];
+          normal_vector.z = normals[i + 2];
           tmp_v.normal = normal_vector;
 
           tmp_v.c = c_tmp;
@@ -1966,7 +2001,7 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
           mat_vec_mul_4x1(&perspective, &vertices_fp[i]);
           divide_by_w(&vertices_fp[i]);
           mat_vec_mul_4x1(&viewport, &vertices_fp[i]);
-          mat_vec_mul_3x1(&model_view_mat_3x3, &vertices_fp[i].normal);
+          mat_vec_mul_3x1(&normal_view_mat_3x3, &vertices_fp[i].normal);
         }
 
       numtri = context_struct_.mesh_list_[mesh].data.number_of_indices / 3;
@@ -2041,7 +2076,7 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
         }
       queue_enqueue(queues[thread_idx],
                     malloc_arg(thread_idx, mesh, model_mat, view_mat, perspective, viewport, model_view_mat_3x3,
-                               colors_facs, scales, width, height, id, index_start_end[thread_idx],
+                               normal_view_mat_3x3, colors_facs, scales, width, height, id, index_start_end[thread_idx],
                                index_start_end[thread_idx + 1], vertices_fp, light_sources, num_lights));
     }
   return 1;
@@ -2106,8 +2141,8 @@ GR3API void gr3_terminateSR_()
         }
       free(context_struct_.depth_buffers[i]);
 #ifndef NO_THREADS
-      arg = malloc_arg(i, 0, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT3x3_INIT_NUL, NULL,
-                       NULL, 0, 0, 2, 0, 0, NULL, NULL, 0);
+      arg = malloc_arg(i, 0, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT3x3_INIT_NUL,
+                       MAT3x3_INIT_NUL, NULL, NULL, 0, 0, 2, 0, 0, NULL, NULL, 0);
       queue_enqueue(context_struct_.queues[i], arg);
       pthread_join(context_struct_.threads[i], NULL);
 #endif

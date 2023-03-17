@@ -4,11 +4,10 @@
 #include <stringapiset.h>
 #endif
 #include <iostream>
+#include <sstream>
 #include <QApplication>
 #include "grplot_mainwindow.hxx"
 #include "util.hxx"
-
-const unsigned int MAXPATHLEN = 1024;
 
 int main(int argc, char **argv)
 {
@@ -43,9 +42,16 @@ int main(int argc, char **argv)
       /* help page should be shown */
       if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)
         {
-          static char path[MAXPATHLEN];
-          std::snprintf(path, MAXPATHLEN, "%s/bin/grplot.man.md", GRDIR);
-          if (!util::file_exists(path))
+#ifdef _WIN32
+          std::wstringstream pathStream;
+          pathStream << util::getEnvVar(L"GRDIR", L"" GRDIR)
+#else
+          std::stringstream pathStream;
+          pathStream << util::getEnvVar("GRDIR", GRDIR)
+#endif
+                     << "/share/doc/grplot/grplot.man.md";
+
+          if (!util::fileExists(pathStream.str()))
             {
               fprintf(stderr, "Helpfile not found\n");
               return 1;

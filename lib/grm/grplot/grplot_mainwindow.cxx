@@ -15,7 +15,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv) : QMainWindow()
 
       auto *message = new QTextBrowser(w);
       message->setSearchPaths(QStringList(path));
-      message->setSource(QUrl("grplot.man.md"));
+      message->setSource(QUrl("../share/doc/grplot/grplot.man.md"));
       message->setReadOnly(true);
       message->setOpenExternalLinks(true);
       message->setAlignment(Qt::AlignTop);

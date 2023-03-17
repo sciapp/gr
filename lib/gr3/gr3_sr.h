@@ -103,6 +103,7 @@ typedef struct
   matrix projection_mat;
   matrix viewport;
   matrix3x3 model_view_3x3;
+  matrix3x3 normal_view_3x3;
   const float *colors;
   const float *scales;
   int width;
