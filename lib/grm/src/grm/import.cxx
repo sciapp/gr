@@ -1211,7 +1211,7 @@ void parse_parameter_ddd(std::string *input, const std::string *key, std::string
   if (k != 2 || (*input).length() == 0)
     {
       fprintf(stderr,
-              "Given number doesn`t fit the data for %s parameter. The "
+              "Given number doesn't fit the data for %s parameter. The "
               "parameter will be "
               "ignored\n",
               (*key).c_str());
@@ -1235,7 +1235,7 @@ int parse_parameter_nI(std::string *input, const std::string *key, std::vector<i
   if (k != std::stoi(param_num) - 1 || (*input).length() == 0)
     {
       fprintf(stderr,
-              "Given number doesn`t fit the data for %s parameter. The "
+              "Given number doesn't fit the data for %s parameter. The "
               "parameter will be "
               "ignored\n",
               (*key).c_str());
@@ -1260,7 +1260,7 @@ int parse_parameter_nS(std::string *input, const std::string *key, std::vector<s
   if (k != std::stoi(num) - 1 || (*input).length() == 0)
     {
       fprintf(stderr,
-              "Given number doesn`t fit the data for %s parameter. The parameter will be "
+              "Given number doesn't fit the data for %s parameter. The parameter will be "
               "ignored\n",
               (*key).c_str());
       return 0;
@@ -1284,7 +1284,7 @@ int parse_parameter_nD(std::string *input, const std::string *key, std::vector<d
   if (k != std::stoi(num) - 1 || (*input).length() == 0)
     {
       fprintf(stderr,
-              "Given number doesn`t fit the data for %s parameter. The parameter will be "
+              "Given number doesn't fit the data for %s parameter. The parameter will be "
               "ignored\n",
               (*key).c_str());
       return 0;
