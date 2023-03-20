@@ -488,6 +488,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       fprintf(stderr, "File is empty\n");
       return 0;
     }
+  if (cols != labels.size())
+    {
+      fprintf(stderr, "The size of the columns (%zu) doesn`t fit the size of the labels (%zu)\n", cols, labels.size());
+    }
 
   series.resize(cols);
 
@@ -502,7 +506,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     }
 
   grm_args_values(args, "kind", "s", &kind);
-  if ((strcmp(kind, "line") == 0 || (strcmp(kind, "scatter") == 0 && !scatter_with_z)) && (rows >= 100 && cols >= 100))
+  if ((strcmp(kind, "line") == 0 || (strcmp(kind, "scatter") == 0 && !scatter_with_z)) && (rows >= 50 && cols >= 50))
     {
       fprintf(stderr, "Too much data for %s plot - use heatmap instead\n", kind);
       kind = "heatmap";

@@ -6253,7 +6253,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   double charheight;
   double ticksize;
   char *title;
-  char *x_label, *y_label, *z_label;
+  char *x_label = strdup(""), *y_label = strdup(""), *z_label = strdup("");
   int keep_aspect_ratio;
 
   grm_args_values(args, "kind", "s", &kind);
@@ -6323,7 +6323,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
-      if (grm_args_values(args, "xlabel", "s", &x_label) && grm_args_values(args, "ylabel", "s", &y_label) &&
+      if (grm_args_values(args, "xlabel", "s", &x_label) || grm_args_values(args, "ylabel", "s", &y_label) ||
           grm_args_values(args, "zlabel", "s", &z_label))
         {
           gr_titles3d(x_label, y_label, z_label);
