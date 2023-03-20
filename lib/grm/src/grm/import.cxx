@@ -490,7 +490,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     }
   if (cols != labels.size())
     {
-      fprintf(stderr, "The size of the columns (%zu) doesn`t fit the size of the labels (%zu)\n", cols, labels.size());
+      fprintf(stderr, "The number of columns (%zu) doesn't fit the number of labels (%zu)\n", cols, labels.size());
     }
 
   series.resize(cols);
