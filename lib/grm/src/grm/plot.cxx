@@ -1462,6 +1462,7 @@ void plot_process_window(grm_args_t *subplot_args)
       grm_args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
       group->setAttribute("lim_zmin", z_min);
       group->setAttribute("lim_zmax", z_max);
+      group->setAttribute("adjust_zlim", true);
       grm_args_values(subplot_args, "rotation", "d", &rotation);
       grm_args_values(subplot_args, "tilt", "d", &tilt);
       /* TODO: Doesn`t the renderer expect an space3d element? */
