@@ -2441,10 +2441,9 @@ err_t plot_scatter(grm_args_t *subplot_args)
 
       auto parent_element = global_render->createElement("polymarker");
       double *x = nullptr, *y = nullptr, *z = nullptr, *c = nullptr, c_min, c_max;
-      double *markertypes = NULL;
-      unsigned int x_length, y_length, z_length, c_length, markertypes_length;
+      unsigned int x_length, y_length, z_length, c_length;
       int i, c_index = -1, markertype;
-      std::vector<int> markerTypesVec, markerColorIndsVec;
+      std::vector<int> markerColorIndsVec;
       std::vector<double> markerSizesVec;
 
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
@@ -2519,22 +2518,6 @@ err_t plot_scatter(grm_args_t *subplot_args)
                 {
                   markerColorIndsVec.push_back(1000 + c_index);
                 }
-
-              if (markertypes != NULL)
-                {
-                  if (i < markertypes_length)
-                    {
-                      markerTypesVec.push_back((int)markertypes[i]);
-                    }
-                  else
-                    {
-                      markerTypesVec.push_back((int)markertypes[markertypes_length - 1]);
-                    }
-                }
-              else
-                {
-                  markerTypesVec.push_back(*previous_marker_type);
-                }
             }
 
           std::vector<double> x_vec(x, x + x_length);
@@ -2546,10 +2529,6 @@ err_t plot_scatter(grm_args_t *subplot_args)
 
           auto element = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
           subGroup->append(element);
-          if (!markerTypesVec.empty())
-            {
-              global_render->setMarkerType(element, "markertypes" + str, markerTypesVec);
-            }
           if (!markerSizesVec.empty())
             {
               global_render->setMarkerSize(element, "markersizes" + str, markerSizesVec);
