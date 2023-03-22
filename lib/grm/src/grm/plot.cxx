@@ -8891,19 +8891,16 @@ int grm_plot(const grm_args_t *args)
       return 0;
     }
 
-  if (!global_render->documentElement())
+  if (args == nullptr && global_render->documentElement())
+    {
+      global_render->render();
+      return 1;
+    }
+  else
     {
       global_root = global_render->createElement("root");
       global_render->replaceChildren(global_root);
       global_root->setAttribute("id", 0);
-    }
-  else
-    {
-      if (args == nullptr)
-        {
-          global_render->render();
-          return 1;
-        }
     }
 
   if (grm_args_values(active_plot_args, "raw", "s", &current_subplot_args))
