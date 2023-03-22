@@ -2736,17 +2736,9 @@ err_t plot_hist(grm_args_t *subplot_args)
 
       bar_width = (x_max - x_min) / num_bins;
 
-      std::shared_ptr<GR::Element> innerFillGroup = global_render->createGroup("innerFillGroup");
-      std::shared_ptr<GR::Element> outerFillGroup = global_render->createGroup("outerFillGroup");
-
-      subGroup->append(innerFillGroup);
-      subGroup->append(outerFillGroup);
-
-      global_render->setFillColorInd(innerFillGroup, bar_color_index);
-      global_render->setFillIntStyle(innerFillGroup, GKS_K_INTSTYLE_SOLID);
-
-      global_render->setFillColorInd(outerFillGroup, edge_color_index);
-      global_render->setFillIntStyle(outerFillGroup, GKS_K_INTSTYLE_HOLLOW);
+      // Use of two groups does not produce the same results as julia...
+      // std::shared_ptr<GR::Element> innerFillGroup = global_render->createGroup("innerFillGroup");
+      // std::shared_ptr<GR::Element> outerFillGroup = global_render->createGroup("outerFillGroup");
 
       for (i = 1; i < num_bins + 1; ++i)
         {
@@ -2756,13 +2748,23 @@ err_t plot_hist(grm_args_t *subplot_args)
           if (is_horizontal)
             {
               fillRect1 = global_render->createFillRect(x, x + bar_width, y_min, bins[i - 1]);
+              if (i == xind + 1)
+                {
+                  global_render->setFillColorInd(fillRect1, 2);
+                }
             }
           else
             {
               fillRect1 = global_render->createFillRect(y_min, bins[i - 1], x, x + bar_width);
+              if (i == yind + 1)
+                {
+                  global_render->setFillColorInd(fillRect1, 2);
+                }
             }
+          global_render->setFillColorInd(fillRect1, bar_color_index);
+          global_render->setFillIntStyle(fillRect1, GKS_K_INTSTYLE_SOLID);
+          subGroup->append(fillRect1);
 
-          innerFillGroup->append(fillRect1);
           if (is_horizontal)
             {
               fillRect2 = global_render->createFillRect(x, x + bar_width, y_min, bins[i - 1]);
@@ -2771,7 +2773,10 @@ err_t plot_hist(grm_args_t *subplot_args)
             {
               fillRect2 = global_render->createFillRect(y_min, bins[i - 1], x, x + bar_width);
             }
-          outerFillGroup->append(fillRect2);
+
+          global_render->setFillColorInd(fillRect2, edge_color_index);
+          global_render->setFillIntStyle(fillRect2, GKS_K_INTSTYLE_HOLLOW);
+          subGroup->append(fillRect2);
         }
 
       if (grm_args_contains(*current_series, "error"))
