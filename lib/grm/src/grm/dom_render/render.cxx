@@ -5806,11 +5806,12 @@ void GR::Render::render()
    */
   auto root = this->firstChildElement();
   global_root = root;
+  const unsigned int indent = 2;
 
   global_render = (std::dynamic_pointer_cast<GR::Render>(root->ownerDocument()))
                       ? std::dynamic_pointer_cast<GR::Render>(root->ownerDocument())
                       : GR::Render::createRender();
-  std::cout << toXML(root) << "\n";
+  std::cerr << toXML(root, GR::SerializerOptions{std::string(indent, ' ')}) << "\n";
   if (root->hasChildNodes())
     {
       finalizeGrid(root);
@@ -5822,7 +5823,7 @@ void GR::Render::render()
           gr_restorestate();
         }
     }
-  std::cout << toXML(root) << "\n";
+  std::cerr << toXML(root, GR::SerializerOptions{std::string(indent, ' ')}) << "\n";
 }
 
 
