@@ -1415,7 +1415,15 @@ void plot_process_window(grm_args_t *subplot_args)
       grm_args_values(subplot_args, "rotation", "d", &rotation);
       grm_args_values(subplot_args, "tilt", "d", &tilt);
       /* TODO: Doesn`t the renderer expect an space3d element? */
-      global_render->setSpace3d(group, -rotation, tilt, 30, 0);
+      global_render->setSpace3d(group, -rotation, tilt, 30.0, 0.0);
+    }
+  else if (strcmp(kind, "isosurface") == 0)
+    {
+      grm_args_values(subplot_args, "rotation", "d", &rotation);
+      grm_args_values(subplot_args, "tilt", "d", &tilt);
+      /* TODO: Doesn`t the renderer expect a space3d element? */
+      global_render->setWindow3d(group, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+      global_render->setSpace3d(group, -rotation, tilt, 45.0, 2.5);
     }
 
   grm_args_push(subplot_args, "scale", "i", scale);

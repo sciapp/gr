@@ -2122,19 +2122,22 @@ void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
     {
       double zmin = static_cast<double>(elem->getAttribute("lim_zmin"));
       double zmax = static_cast<double>(elem->getAttribute("lim_zmax"));
-      if (!(scale & GR_OPTION_Z_LOG))
+      if (zmax > 0)
         {
-          int adjust_zlim = static_cast<int>(elem->hasAttribute("adjust_zlim"));
-          if (adjust_zlim)
+          if (!(scale & GR_OPTION_Z_LOG))
             {
-              logger((stderr, "_zlim before \"gr_adjustlimits\": (%lf, %lf)\n", zmin, zmax));
-              gr_adjustlimits(&zmin, &zmax);
-              logger((stderr, "_zlim after \"gr_adjustlimits\": (%lf, %lf)\n", zmin, zmax));
+              int adjust_zlim = static_cast<int>(elem->hasAttribute("adjust_zlim"));
+              if (adjust_zlim)
+                {
+                  logger((stderr, "_zlim before \"gr_adjustlimits\": (%lf, %lf)\n", zmin, zmax));
+                  gr_adjustlimits(&zmin, &zmax);
+                  logger((stderr, "_zlim after \"gr_adjustlimits\": (%lf, %lf)\n", zmin, zmax));
+                }
             }
+          logger((stderr, "Storing window3d (%lf, %lf, %lf, %lf, %lf, %lf)\n", xmin, xmax, ymin, ymax, zmin, zmax));
+          gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
+          global_render->setWindow3d(elem, xmin, xmax, ymin, ymax, zmin, zmax);
         }
-      logger((stderr, "Storing window3d (%lf, %lf, %lf, %lf, %lf, %lf)\n", xmin, xmax, ymin, ymax, zmin, zmax));
-      gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
-      global_render->setWindow3d(elem, xmin, xmax, ymin, ymax, zmin, zmax);
     }
   else
     {
