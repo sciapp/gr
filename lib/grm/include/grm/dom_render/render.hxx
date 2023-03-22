@@ -72,10 +72,9 @@ public:
                                             const std::string &specs_key, std::optional<std::vector<std::string>> specs,
                                             const std::shared_ptr<GR::Context> &extContext = nullptr);
 
-  std::shared_ptr<Element> createDrawPolarAxes(int angle_ticks, int rings, const std::string &kind, int phiflip,
-                                               const std::string &title = "", double r_max = -1.0,
-                                               const std::string &norm = "", double tick = 0.0,
-                                               double line_width = 0.0);
+  std::shared_ptr<Element> createDrawPolarAxes(int angle_ticks, const std::string &kind, int phiflip,
+                                               const std::string &title = "", const std::string &norm = "",
+                                               double tick = 0.0, double line_width = 0.0);
 
   std::shared_ptr<Element> createDrawPieLegend(const std::string &labels_key,
                                                std::optional<std::vector<std::string>> labels,

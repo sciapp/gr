@@ -249,6 +249,7 @@ double get_lightness_from_rbg(double r, double g, double b);
 void set_text_color_for_background(double r, double g, double b);
 void draw_xticklabel(double x1, double x2, const char *label, double available_width);
 void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type);
+double auto_tick(double amin, double amax);
 
 
 #ifdef __cplusplus
@@ -262,6 +263,7 @@ int set_next_color(const grm_args_t *args, const char *key, gr_color_type_t colo
 void set_text_color_for_background(double r, double g, double b, const std::shared_ptr<GR::Element> &element);
 void draw_xticklabel(double x1, double x2, const char *label, double available_width,
                      const std::shared_ptr<GR::Element> &element);
+double auto_tick_polar(double rmax, int rings, const std::string &norm);
 
 
 #endif

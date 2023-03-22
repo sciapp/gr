@@ -1369,57 +1369,6 @@ static void legend_size(grm_args_t *subplot_args, double *w, double *h)
     }
 }
 
-double auto_tick_polar(double rmax, int rings, const std::string &norm)
-{
-  if (norm == "cdf")
-    {
-      return 1.0 / rings;
-    }
-  double scale;
-
-  if (rmax > rings)
-    {
-      return (static_cast<int>(rmax) + (rings - (static_cast<int>(rmax) % rings))) / rings;
-    }
-  else if (rmax > (rings * 0.6))
-    {
-      // returns rings / rings -> 1.0 so that rmax = rings * tick -> rings. Number of rings is rmax then
-      return 1.0;
-    }
-  scale = ceil(abs(log10(rmax)));
-  rmax = static_cast<int>(rmax * pow(10.0, scale));
-  if (static_cast<int>(rmax) % rings == 0)
-    {
-      rmax = rmax / pow(10.0, scale);
-      return rmax / rings;
-    }
-  rmax += rings - (static_cast<int>(rmax) % rings);
-  rmax = rmax / pow(10.0, scale);
-
-  return rmax / rings;
-}
-
-double auto_tick(double amin, double amax)
-{
-  double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
-  double scale, tick;
-  int i, n;
-
-  scale = pow(10.0, (int)(log10(amax - amin)));
-  tick = 1.0;
-  for (i = 0; i < 9; i++)
-    {
-      n = (amax - amin) / scale / tick_size[i];
-      if (n > 7)
-        {
-          tick = tick_size[i - 1];
-          break;
-        }
-    }
-  tick *= scale;
-  return tick;
-}
-
 void plot_process_window(grm_args_t *subplot_args)
 {
   int scale = 0;
@@ -4990,14 +4939,15 @@ err_t plot_volume(grm_args_t *subplot_args)
 
 err_t plot_polar(grm_args_t *subplot_args)
 {
-  double r_min, r_max, tick;
+  double y_min, y_max, r_max, tick;
   int n;
   grm_args_t **current_series;
 
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "polar");
 
-  r_max = static_cast<double>(group->getAttribute("r_max"));
+  grm_args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
+  r_max = y_max;
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
@@ -6577,7 +6527,6 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 
 err_t plot_draw_polar_axes(grm_args_t *args)
 {
-  const double *viewport, *vp;
   double diag;
   double charheight;
   double r_min = 0.0, r_max = -1.0;
@@ -6591,13 +6540,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   int phiflip = 0;
   double interval;
   const char *norm, *title;
-  double window[4];
   std::shared_ptr<GR::Element> group;
-
-  gr_inqwindow(&window[0], &window[1], &window[2], &window[3]);
-  r_min = window[2];
-  r_max = window[3];
-  grm_args_values(args, "vp", "D", &vp);
 
   if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
     {
@@ -6605,30 +6548,10 @@ err_t plot_draw_polar_axes(grm_args_t *args)
     }
 
   grm_args_values(args, "kind", "s", &kind);
-  if (strcmp(kind, "polar_histogram") == 0)
-    {
-      r_min = 0.0;
-      grm_args_values(args, "r_max", "d", &r_max);
-    }
-  if (grm_args_values(args, "rings", "i", &rings) == 0)
-    {
-      rings = grm_max(4, (int)(r_max - r_min));
-    }
 
   if (strcmp(kind, "polar_histogram") == 0)
     {
       if (grm_args_values(args, "normalization", "s", &norm) == 0) norm = "count";
-
-      tick = auto_tick_polar(r_max, rings, norm);
-      global_root->lastChildElement()->setAttribute("r_max", rings * tick);
-    }
-  else
-    {
-      // for polar needed calculation
-      tick = auto_tick(r_min, r_max);
-      n = (int)ceil((r_max - r_min) / (0.5 * tick));
-      r_max = r_min + n * tick;
-      global_root->lastChildElement()->setAttribute("r_max", r_max);
     }
 
   if (grm_args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
@@ -6637,11 +6560,13 @@ err_t plot_draw_polar_axes(grm_args_t *args)
 
   if (strcmp(kind, "polar_histogram") == 0)
     {
-      group = global_render->createDrawPolarAxes(angle_ticks, rings, kind, phiflip, title, r_max, norm, tick, 1.0);
+      group = global_render->createDrawPolarAxes(angle_ticks, kind, phiflip, title, norm, 1.0);
+      grm_args_values(args, "r_max", "d", &r_max);
+      group->setAttribute("r_max", r_max);
     }
   else
     {
-      group = global_render->createDrawPolarAxes(angle_ticks, rings, kind, phiflip, title, r_max, "", tick);
+      group = global_render->createDrawPolarAxes(angle_ticks, kind, phiflip, title, "");
     }
 
   if (!currentDomElement)
@@ -8551,6 +8476,27 @@ void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t col
     }
 }
 
+double auto_tick(double amin, double amax)
+{
+  double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
+  double scale, tick;
+  int i, n;
+
+  scale = pow(10.0, (int)(log10(amax - amin)));
+  tick = 1.0;
+  for (i = 0; i < 9; i++)
+    {
+      n = (amax - amin) / scale / tick_size[i];
+      if (n > 7)
+        {
+          tick = tick_size[i - 1];
+          break;
+        }
+    }
+  tick *= scale;
+  return tick;
+}
+
 
 /* ========================= methods ================================================================================ */
 
@@ -9408,4 +9354,34 @@ int set_next_color(const grm_args_t *args, const char *key, gr_color_type_t colo
       global_render->setBorderColorInd(element, color_index);
     }
   return color_index;
+}
+
+double auto_tick_polar(double rmax, int rings, const std::string &norm)
+{
+  if (norm == "cdf")
+    {
+      return 1.0 / rings;
+    }
+  double scale;
+
+  if (rmax > rings)
+    {
+      return (static_cast<int>(rmax) + (rings - (static_cast<int>(rmax) % rings))) / rings;
+    }
+  else if (rmax > (rings * 0.6))
+    {
+      // returns rings / rings -> 1.0 so that rmax = rings * tick -> rings. Number of rings is rmax then
+      return 1.0;
+    }
+  scale = ceil(abs(log10(rmax)));
+  rmax = static_cast<int>(rmax * pow(10.0, scale));
+  if (static_cast<int>(rmax) % rings == 0)
+    {
+      rmax = rmax / pow(10.0, scale);
+      return rmax / rings;
+    }
+  rmax += rings - (static_cast<int>(rmax) % rings);
+  rmax = rmax / pow(10.0, scale);
+
+  return rmax / rings;
 }

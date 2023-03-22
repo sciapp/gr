@@ -42,26 +42,56 @@ static std::map<std::string, double> symbol_to_meters_per_unit{
     {"\"", 0.0254}, {"ft", 0.3048}, {"'", 0.0254}, {"pc", 0.0254 / 6.0}, {"pt", 0.0254 / 72.0},
 };
 
-double auto_tick(double amin, double amax)
-{
-  double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
-  double scale, tick;
-  int i, n;
-
-  scale = pow(10.0, (int)(log10(amax - amin)));
-  tick = 1.0;
-  for (i = 0; i < 9; i++)
-    {
-      n = (amax - amin) / scale / tick_size[i];
-      if (n > 7)
-        {
-          tick = tick_size[i - 1];
-          break;
-        }
-    }
-  tick *= scale;
-  return tick;
-}
+// double auto_tick(double amin, double amax)
+//{
+//   double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
+//   double scale, tick;
+//   int i, n;
+//
+//   scale = pow(10.0, (int)(log10(amax - amin)));
+//   tick = 1.0;
+//   for (i = 0; i < 9; i++)
+//     {
+//       n = (amax - amin) / scale / tick_size[i];
+//       if (n > 7)
+//         {
+//           tick = tick_size[i - 1];
+//           break;
+//         }
+//     }
+//   tick *= scale;
+//   return tick;
+// }
+//
+// double auto_tick_polar(double rmax, int rings, const std::string &norm)
+//{
+//   if (norm == "cdf")
+//   {
+//     return 1.0 / rings;
+//   }
+//   double scale;
+//
+//   if (rmax > rings)
+//   {
+//     return (static_cast<int>(rmax) + (rings - (static_cast<int>(rmax) % rings))) / rings;
+//   }
+//   else if (rmax > (rings * 0.6))
+//   {
+//     // returns rings / rings -> 1.0 so that rmax = rings * tick -> rings. Number of rings is rmax then
+//     return 1.0;
+//   }
+//   scale = ceil(abs(log10(rmax)));
+//   rmax = static_cast<int>(rmax * pow(10.0, scale));
+//   if (static_cast<int>(rmax) % rings == 0)
+//   {
+//     rmax = rmax / pow(10.0, scale);
+//     return rmax / rings;
+//   }
+//   rmax += rings - (static_cast<int>(rmax) % rings);
+//   rmax = rmax / pow(10.0, scale);
+//
+//   return rmax / rings;
+// }
 
 static void markerHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context,
                          const std::string &str)
@@ -2738,7 +2768,7 @@ static void drawLegend(const std::shared_ptr<GR::Element> &elem, const std::shar
 
 static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
 {
-  double window[4], viewport[4], vp[4];
+  double viewport[4], vp[4];
   double diag;
   double charheight;
   double r_min, r_max;
@@ -2757,7 +2787,7 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
   std::shared_ptr<GR::Render> render;
 
   gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
-  gr_inqwindow(&window[0], &window[1], &window[2], &window[3]);
+  auto subplot = getSubplotElement(elem);
 
   render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
   if (!render)
@@ -2778,11 +2808,10 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
                    (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
   charheight = grm_max(0.018 * diag, 0.012);
 
-  r_min = window[2];
-  r_max = window[3];
+  r_min = static_cast<double>(subplot->getAttribute("lim_ymin"));
+  r_max = static_cast<double>(subplot->getAttribute("lim_ymax"));
 
   angle_ticks = static_cast<int>(elem->getAttribute("angle_ticks"));
-  rings = static_cast<int>(elem->getAttribute("rings"));
 
   kind = static_cast<std::string>(elem->getAttribute("kind"));
 
@@ -2793,8 +2822,8 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
   if (kind == "polar_histogram")
     {
       r_min = 0.0;
-      norm = static_cast<std::string>(elem->getAttribute("norm"));
       r_max = static_cast<double>(elem->getAttribute("r_max"));
+      norm = static_cast<std::string>(elem->getAttribute("norm"));
     }
   else
     {
@@ -2802,10 +2831,24 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
       elem->setAttribute("rings", rings);
     }
 
+  if (elem->hasAttribute("tick"))
+    {
+      tick = static_cast<double>(elem->getAttribute("tick"));
+    }
+  else
+    {
+      if (kind == "polar_histogram")
+        {
+          tick = auto_tick_polar(r_max, rings, norm);
+        }
+      else
+        {
+          tick = auto_tick(r_min, r_max);
+        }
+    }
 
   n = rings;
   phiflip = static_cast<int>(elem->getAttribute("phiflip"));
-
   for (i = 0; i <= n; i++)
     {
       double r = 1.0 / n * i;
@@ -4007,9 +4050,9 @@ std::shared_ptr<GR::Element> GR::Render::createDrawLegend(const std::string &lab
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createDrawPolarAxes(int angle_ticks, int rings, const std::string &kind,
-                                                             int phiflip, const std::string &title, double r_max,
-                                                             const std::string &norm, double tick, double line_width)
+std::shared_ptr<GR::Element> GR::Render::createDrawPolarAxes(int angle_ticks, const std::string &kind, int phiflip,
+                                                             const std::string &title, const std::string &norm,
+                                                             double tick, double line_width)
 {
   auto element = createElement("draw-polar-axes");
   if (!title.empty())
@@ -4024,16 +4067,11 @@ std::shared_ptr<GR::Element> GR::Render::createDrawPolarAxes(int angle_ticks, in
     {
       element->setAttribute("tick", tick);
     }
-  if (r_max != -1.0)
-    {
-      element->setAttribute("r_max", r_max);
-    }
   if (line_width != 0.0)
     {
       element->setAttribute("linewidth", line_width);
     }
   element->setAttribute("angle_ticks", angle_ticks);
-  element->setAttribute("rings", rings);
   element->setAttribute("kind", kind);
   element->setAttribute("phiflip", phiflip);
 
