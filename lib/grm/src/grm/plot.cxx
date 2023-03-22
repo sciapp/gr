@@ -6780,6 +6780,7 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
   colorbar_group->setAttribute("diag_factor", 0.016);
   colorbar_group->setAttribute("max_charheight", 0.012);
   colorbar_group->setAttribute("relative-charheight", true);
+  global_render->setLineColorInd(colorbar_group, 1);
   grm_args_values(subplot_args, "scale", "i", &scale);
   gr_setlinecolorind(1);
   if (scale & GR_OPTION_Z_LOG)
