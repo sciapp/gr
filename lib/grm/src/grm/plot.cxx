@@ -1945,7 +1945,7 @@ void plot_post_plot(grm_args_t *plot_args)
   logger((stderr, "Got keyword \"update\" with value %d\n", update));
   if (update)
     {
-      gr_updatews();
+      global_root->append(global_render->createUpdateWS());
     }
   plot_restore_text_encoding();
 }
@@ -8891,9 +8891,20 @@ int grm_plot(const grm_args_t *args)
       return 0;
     }
 
-  global_root = global_render->createElement("root");
-  global_render->replaceChildren(global_root);
-  global_root->setAttribute("id", 0);
+  if (!global_render->documentElement())
+    {
+      global_root = global_render->createElement("root");
+      global_render->replaceChildren(global_root);
+      global_root->setAttribute("id", 0);
+    }
+  else
+    {
+      if (args == nullptr)
+        {
+          global_render->render();
+          return 1;
+        }
+    }
 
   if (grm_args_values(active_plot_args, "raw", "s", &current_subplot_args))
     {
@@ -9001,8 +9012,8 @@ int grm_plot(const grm_args_t *args)
             }
         }
 
-      global_render->render();
       plot_post_plot(active_plot_args);
+      global_render->render();
     }
 
   process_events();

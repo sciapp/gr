@@ -2108,6 +2108,10 @@ void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
 
       gr_panzoom(x, y, xzoom, yzoom, &xmin, &xmax, &ymin, &ymax);
 
+      elem->setAttribute("lim_xmin", xmin);
+      elem->setAttribute("lim_xmax", xmax);
+      elem->setAttribute("lim_ymin", ymin);
+      elem->setAttribute("lim_ymax", ymax);
       elem->setAttribute("panzoom", false);
       elem->removeChild(panzoom_element);
     }
