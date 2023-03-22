@@ -241,6 +241,14 @@ typedef struct
   double x_factor, y_factor;
 } volume_nogrid_data_struct;
 
+struct hexbin_2pass_priv
+{
+  int *cell;
+  int *cnt;
+  double *xcm;
+  double *ycm;
+};
+
 gauss_t interp_gauss_data = {1, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 tri_linear_t interp_tri_linear_data = {1, 1, 1};
 
@@ -9453,115 +9461,159 @@ static int hcell2xy(int nbins, double rx[2], double ry[2], double shape, int bnd
 
 int gr_hexbin(int n, double *x, double *y, int nbins)
 {
-  int errind, int_style, coli;
-  int jmax, c1, imax, lmax;
-  double size, shape;
-  double d, R;
-  double ycorr;
-  int *cell, *cnt;
-  double *xcm, *ycm;
-  double rx[2], ry[2];
-  int bnd[2];
-  int nc, cntmax;
-  int i, j;
-  double xlist[7], ylist[7], xdelta[6], ydelta[6];
+  const hexbin_2pass_t *context;
+  int cntmax;
 
-  if (n <= 2)
+  context = gr_hexbin_2pass(n, x, y, nbins, NULL);
+  if (context == NULL)
     {
-      fprintf(stderr, "invalid number of points\n");
       return -1;
     }
-  else if (nbins <= 2)
-    {
-      fprintf(stderr, "invalid number of bins\n");
-      return -1;
-    }
-
-  check_autoinit;
-
-  setscale(lx.scale_options);
-
-  /* save fill area interior style and color index */
-
-  gks_inq_fill_int_style(&errind, &int_style);
-  gks_inq_fill_color_index(&errind, &coli);
-
-  size = nbins;
-  shape = (vymax - vymin) / (vxmax - vxmin);
-
-  jmax = floor(nbins + 1.5001);
-  c1 = 2 * floor((nbins * shape) / sqrt(3) + 1.5001);
-  imax = floor((jmax * c1 - 1) / jmax + 1);
-  lmax = jmax * imax;
-
-  d = (vxmax - vxmin) / nbins;
-  R = 1. / sqrt(3) * d;
-
-  ycorr = (vymax - vymin) - ((imax - 2) * 1.5 * R + (imax % 2) * R);
-  ycorr = ycorr / 2;
-
-  cell = (int *)xcalloc(lmax + 1, sizeof(int));
-  cnt = (int *)xcalloc(lmax + 1, sizeof(int));
-  xcm = (double *)xcalloc(lmax + 1, sizeof(double));
-  ycm = (double *)xcalloc(lmax + 1, sizeof(double));
-
-  rx[0] = vxmin;
-  rx[1] = vxmax;
-  ry[0] = vymin;
-  ry[1] = vymax;
-
-  bnd[0] = imax;
-  bnd[1] = jmax;
-
-  nc = binning(x, y, cell, cnt, size, shape, rx, ry, bnd, n, ycorr);
-
-  cntmax = hcell2xy(nbins, rx, ry, shape, bnd, cell, xcm, ycm, cnt, ycorr);
-
-  for (j = 0; j < 6; j++)
-    {
-      xdelta[j] = sin(M_PI / 3 * j) * R;
-      ydelta[j] = cos(M_PI / 3 * j) * R;
-    }
-
-  gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
-
-  for (i = 1; i <= nc; i++)
-    {
-      for (j = 0; j < 6; j++)
-        {
-          xlist[j] = xcm[i] + xdelta[j];
-          ylist[j] = ycm[i] + ydelta[j];
-          gr_ndctowc(xlist + j, ylist + j);
-        }
-      xlist[6] = xlist[0];
-      ylist[6] = ylist[0];
-
-      gks_set_fill_color_index(first_color + (last_color - first_color) * ((double)cnt[i] / cntmax));
-      gks_fillarea(6, xlist, ylist);
-      gks_polyline(7, xlist, ylist);
-    }
-
-  free(ycm);
-  free(xcm);
-  free(cnt);
-  free(cell);
-
-  /* restore fill area interior style and color index */
-
-  gks_set_fill_int_style(int_style);
-  gks_set_fill_color_index(coli);
-
-  if (flag_stream)
-    {
-      gr_writestream("<hexbin len=\"%d\"", n);
-      print_float_array("x", n, x);
-      print_float_array("y", n, y);
-      gr_writestream(" nbins=\"%d\"/>\n", nbins);
-    }
+  cntmax = context->cntmax;
+  gr_hexbin_2pass(n, x, y, nbins, context);
 
   return cntmax;
 }
 
+const hexbin_2pass_t *gr_hexbin_2pass(int n, double *x, double *y, int nbins, const hexbin_2pass_t *context)
+{
+  hexbin_2pass_t *context_;
+  double d, R;
+
+  if (n <= 2)
+    {
+      fprintf(stderr, "invalid number of points\n");
+      return NULL;
+    }
+  else if (nbins <= 2)
+    {
+      fprintf(stderr, "invalid number of bins\n");
+      return NULL;
+    }
+
+  check_autoinit;
+
+  d = (vxmax - vxmin) / nbins;
+  R = 1. / sqrt(3) * d;
+
+  if (context == NULL)
+    {
+      int jmax, c1, imax, lmax;
+      double size, shape;
+      double ycorr;
+      int *cell, *cnt;
+      double *xcm, *ycm;
+      double rx[2], ry[2];
+      int bnd[2];
+      int nc, cntmax;
+
+      size = nbins;
+      shape = (vymax - vymin) / (vxmax - vxmin);
+
+      jmax = floor(nbins + 1.5001);
+      c1 = 2 * floor((nbins * shape) / sqrt(3) + 1.5001);
+      imax = floor((jmax * c1 - 1) / jmax + 1);
+      lmax = jmax * imax;
+
+      ycorr = (vymax - vymin) - ((imax - 2) * 1.5 * R + (imax % 2) * R);
+      ycorr = ycorr / 2;
+
+      cell = (int *)xcalloc(lmax + 1, sizeof(int));
+      cnt = (int *)xcalloc(lmax + 1, sizeof(int));
+      xcm = (double *)xcalloc(lmax + 1, sizeof(double));
+      ycm = (double *)xcalloc(lmax + 1, sizeof(double));
+
+      rx[0] = vxmin;
+      rx[1] = vxmax;
+      ry[0] = vymin;
+      ry[1] = vymax;
+
+      bnd[0] = imax;
+      bnd[1] = jmax;
+
+      nc = binning(x, y, cell, cnt, size, shape, rx, ry, bnd, n, ycorr);
+
+      cntmax = hcell2xy(nbins, rx, ry, shape, bnd, cell, xcm, ycm, cnt, ycorr);
+
+      context_ = (hexbin_2pass_t *)xmalloc(sizeof(hexbin_2pass_t));
+      context_->nc = nc;
+      context_->cntmax = cntmax;
+      context_->priv = (hexbin_2pass_priv_t *)xmalloc(sizeof(hexbin_2pass_priv_t));
+      context_->priv->cell = cell;
+      context_->priv->cnt = cnt;
+      context_->priv->xcm = xcm;
+      context_->priv->ycm = ycm;
+    }
+  else
+    {
+      int errind, int_style, coli;
+      int nc, cntmax;
+      int *cell, *cnt;
+      double *xcm, *ycm;
+      double xlist[7], ylist[7], xdelta[6], ydelta[6];
+      int i, j;
+
+      nc = context->nc;
+      cntmax = context->cntmax;
+      cell = context->priv->cell;
+      cnt = context->priv->cnt;
+      xcm = context->priv->xcm;
+      ycm = context->priv->ycm;
+
+      for (j = 0; j < 6; j++)
+        {
+          xdelta[j] = sin(M_PI / 3 * j) * R;
+          ydelta[j] = cos(M_PI / 3 * j) * R;
+        }
+
+      setscale(lx.scale_options);
+
+      /* save fill area interior style and color index */
+      gks_inq_fill_int_style(&errind, &int_style);
+      gks_inq_fill_color_index(&errind, &coli);
+
+      gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
+
+      for (i = 1; i <= nc; i++)
+        {
+          for (j = 0; j < 6; j++)
+            {
+              xlist[j] = xcm[i] + xdelta[j];
+              ylist[j] = ycm[i] + ydelta[j];
+              gr_ndctowc(xlist + j, ylist + j);
+            }
+          xlist[6] = xlist[0];
+          ylist[6] = ylist[0];
+
+          gks_set_fill_color_index(first_color + (last_color - first_color) * ((double)cnt[i] / cntmax));
+          gks_fillarea(6, xlist, ylist);
+          gks_polyline(7, xlist, ylist);
+        }
+
+      free(ycm);
+      free(xcm);
+      free(cnt);
+      free(cell);
+      free(context->priv);
+      free((hexbin_2pass_t *)context);
+      context_ = NULL;
+
+      /* restore fill area interior style and color index */
+
+      gks_set_fill_int_style(int_style);
+      gks_set_fill_color_index(coli);
+
+      if (flag_stream)
+        {
+          gr_writestream("<hexbin len=\"%d\"", n);
+          print_float_array("x", n, x);
+          print_float_array("y", n, y);
+          gr_writestream(" nbins=\"%d\"/>\n", nbins);
+        }
+    }
+
+  return context_;
+}
 /*!
  * Set the currently used colormap.
  *
