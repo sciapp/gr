@@ -1235,12 +1235,14 @@ void plot_process_viewport(grm_args_t *subplot_args)
       top_margin = grm_args_values(subplot_args, "title", "s", &title)
                        ? 0.075 + 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws)
                        : 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws);
-      if (keep_aspect_ratio) right_margin += grm_args_values(subplot_args, "title", "s", &title) ? 0.075 : 0;
+      if (keep_aspect_ratio && !str_equals_any(kind, 2, "surface", "volume"))
+        right_margin += grm_args_values(subplot_args, "title", "s", &title) ? 0.075 : 0;
     }
   else
     {
       top_margin = grm_args_values(subplot_args, "title", "s", &title) ? 0.075 : 0;
-      if (keep_aspect_ratio) right_margin -= 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws) - top_margin;
+      if (keep_aspect_ratio && !str_equals_any(kind, 2, "surface", "volume"))
+        right_margin -= 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws) - top_margin;
     }
   if (strcmp(kind, "imshow") == 0)
     {

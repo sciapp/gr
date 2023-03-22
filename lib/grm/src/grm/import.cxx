@@ -123,7 +123,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
   std::ifstream file(path);
   std::list<int> columns;
   bool depth_change = true;
-  int depth = 0;
+  int depth = 0, max_col = -1;
   int linecount = 0;
 
   /* read the columns from the colms string also converts slicing into numbers */
@@ -317,6 +317,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
       int cnt = 0;
       char det = '\t';
       int start_with_nan = 0;
+      size_t col;
       if (line.empty())
         {
           depth += 1;
@@ -329,7 +330,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
           std::string tmp = ",";
           if (starts_with(trim(line), tmp)) start_with_nan = 1;
         }
-      for (size_t col = 0; std::getline(line_ss, token, det) && (token.length() || start_with_nan); col++)
+      for (col = 0; std::getline(line_ss, token, det) && (token.length() || start_with_nan); col++)
         {
           if (std::find(columns.begin(), columns.end(), col) != columns.end() ||
               (columns.empty() && labels.empty() && (!use_bins || col > 0)) ||
@@ -365,6 +366,12 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                   return ERROR_PARSE_DOUBLE;
                 }
               cnt += 1;
+              if (max_col != -1 && max_col < (int)cnt)
+                {
+                  fprintf(stderr, "Line %i has a different amount of columns (%i) while the lines before had (%i)\n",
+                          (int)row + linecount + 1, cnt, max_col);
+                  return ERROR_PLOT_MISSING_DATA;
+                }
             }
           else if (use_bins && col == 0)
             {
@@ -382,11 +389,21 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
               catch (std::invalid_argument &e)
                 {
                   fprintf(stderr, "Invalid argument for yrange parameter (%s) while using option use_bins in line %i\n",
-                          labels[0].c_str(), (int)row);
+                          labels[0].c_str(), (int)row + linecount + 1);
                 }
             }
         }
       depth_change = false;
+      if (max_col == -1)
+        {
+          max_col = (int)col - 1;
+        }
+      else if (max_col != (int)(col - 1))
+        {
+          fprintf(stderr, "Line %i has a different amount of columns (%i) while the lines before had (%i)\n",
+                  (int)row + linecount + 1, (int)col, max_col);
+          return ERROR_PLOT_MISSING_DATA;
+        }
     }
   return ERROR_NONE;
 }
