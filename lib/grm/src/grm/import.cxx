@@ -368,7 +368,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
               cnt += 1;
               if (max_col != -1 && max_col < (int)cnt)
                 {
-                  fprintf(stderr, "Line %i has a different amount of columns (%i) while the lines before had (%i)\n",
+                  fprintf(stderr, "Line %i has a different number of columns (%i) than previous lines (%i)\n",
                           (int)row + linecount + 1, cnt, max_col);
                   return ERROR_PLOT_MISSING_DATA;
                 }
@@ -383,7 +383,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                     }
                   else
                     {
-                      ranges->ymax = std::stod(token); // not the best way to get ymax but the amount of rows is unknown
+                      ranges->ymax = std::stod(token); // not the best way to get ymax but the number of rows is unknown
                     }
                 }
               catch (std::invalid_argument &e)
@@ -400,7 +400,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
         }
       else if (max_col != (int)(col - 1))
         {
-          fprintf(stderr, "Line %i has a different amount of columns (%i) while the lines before had (%i)\n",
+          fprintf(stderr, "Line %i has a different number of columns (%i) than previous lines (%i)\n",
                   (int)row + linecount + 1, (int)col, max_col);
           return ERROR_PLOT_MISSING_DATA;
         }
