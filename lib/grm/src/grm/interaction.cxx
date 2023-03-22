@@ -10,6 +10,7 @@
 #include "util_int.h"
 #include "gr.h"
 #include "grm/dom_render/render.hxx"
+#include <grm/dom_render/graphics_tree/util.hxx>
 
 
 /* ========================= macros ================================================================================= */
@@ -101,8 +102,8 @@ int grm_input(const grm_args_t *input_args)
           kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
           if (kind == "marginalheatmap")
             {
-              auto current_series_vec = subplot_element->getElementsByClassName(kind + "_series");
-              auto current_series = current_series_vec[0];
+              auto current_series =
+                  subplot_element->querySelectorsAll("group[name=\"" + kind + "_series\"]")[0]->children()[0];
 
               double *x_series, *y_series;
               unsigned int x_length, y_length;
@@ -455,7 +456,15 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   gr_ndctowc(&x_range_min, &y_range_min);
   gr_ndctowc(&x_range_max, &y_range_max);
 
-  auto current_series_vec = subplot_element->getElementsByClassName(kind + "_series");
+  auto current_series_group_vec = subplot_element->querySelectorsAll("group[name=\"" + kind + "_series\"]");
+  std::vector<std::shared_ptr<GR::Element>> current_series_vec;
+  for (const auto &current_series_group : current_series_group_vec)
+    {
+      for (const auto &current_series_group_child : current_series_group->children())
+        {
+          current_series_vec.push_back(current_series_group_child);
+        }
+    }
 
   x_min = static_cast<double>(subplot_element->getAttribute("lim_xmin"));
   x_max = static_cast<double>(subplot_element->getAttribute("lim_xmax"));
@@ -498,7 +507,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       center_x = (int)(max_x - radius);
       center_y = (int)(max_y - radius);
 
-      auto current_series = current_series_vec[0];
+      auto current_series = subplot_element->querySelectorsAll("group[name=\"" + kind + "_series\"]")[0]->children()[0];
       auto x_key = static_cast<std::string>(current_series->getAttribute("x"));
       std::vector<double> x_series_vec;
       x_series_vec = GR::get<std::vector<double>>((*context)[x_key]);
