@@ -42,56 +42,6 @@ static std::map<std::string, double> symbol_to_meters_per_unit{
     {"\"", 0.0254}, {"ft", 0.3048}, {"'", 0.0254}, {"pc", 0.0254 / 6.0}, {"pt", 0.0254 / 72.0},
 };
 
-// double auto_tick(double amin, double amax)
-//{
-//   double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
-//   double scale, tick;
-//   int i, n;
-//
-//   scale = pow(10.0, (int)(log10(amax - amin)));
-//   tick = 1.0;
-//   for (i = 0; i < 9; i++)
-//     {
-//       n = (amax - amin) / scale / tick_size[i];
-//       if (n > 7)
-//         {
-//           tick = tick_size[i - 1];
-//           break;
-//         }
-//     }
-//   tick *= scale;
-//   return tick;
-// }
-//
-// double auto_tick_polar(double rmax, int rings, const std::string &norm)
-//{
-//   if (norm == "cdf")
-//   {
-//     return 1.0 / rings;
-//   }
-//   double scale;
-//
-//   if (rmax > rings)
-//   {
-//     return (static_cast<int>(rmax) + (rings - (static_cast<int>(rmax) % rings))) / rings;
-//   }
-//   else if (rmax > (rings * 0.6))
-//   {
-//     // returns rings / rings -> 1.0 so that rmax = rings * tick -> rings. Number of rings is rmax then
-//     return 1.0;
-//   }
-//   scale = ceil(abs(log10(rmax)));
-//   rmax = static_cast<int>(rmax * pow(10.0, scale));
-//   if (static_cast<int>(rmax) % rings == 0)
-//   {
-//     rmax = rmax / pow(10.0, scale);
-//     return rmax / rings;
-//   }
-//   rmax += rings - (static_cast<int>(rmax) % rings);
-//   rmax = rmax / pow(10.0, scale);
-//
-//   return rmax / rings;
-// }
 
 static void markerHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context,
                          const std::string &str)
