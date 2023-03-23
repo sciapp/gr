@@ -4154,6 +4154,18 @@ err_t plot_heatmap(grm_args_t *subplot_args)
           global_root->setAttribute("id", id + 1);
           std::string str = std::to_string(id);
 
+          // Store "raw" data in Context / heatmap element for later usage e.g. interaction
+          auto context = global_render->getContext();
+          std::vector<double> x_vec(x, x + cols);
+          (*context)["x" + str] = x_vec;
+          subGroup->setAttribute("x", "x" + str);
+          std::vector<double> y_vec(y, y + rows);
+          (*context)["y" + str] = y_vec;
+          subGroup->setAttribute("y", "y" + str);
+          std::vector<double> z_vec(z, z + z_length);
+          (*context)["z" + str] = z_vec;
+          subGroup->setAttribute("z", "z" + str);
+
           std::vector<int> rgba_vec = std::vector<int>(rgba, rgba + cols * rows);
 
           auto drawImage =
@@ -6144,12 +6156,16 @@ err_t plot_pie(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
 
+  auto subGroup = global_render->createGroup("pie_series");
+  group->append(subGroup);
+
   global_render->setFillIntStyle(group, GKS_K_INTSTYLE_SOLID);
 
   global_render->setTextAlign(group, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
 
   int id = static_cast<int>(global_root->getAttribute("id"));
   global_root->setAttribute("id", id + 1);
+  std::string str = std::to_string(id);
 
   cleanup_and_set_error_if(!grm_args_first_value(series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
   normalized_x = normalize(x_length, x);
@@ -6157,6 +6173,13 @@ err_t plot_pie(grm_args_t *subplot_args)
   normalized_x_int = normalize_int(x_length, x, 1000);
   cleanup_and_set_error_if(normalized_x_int == nullptr, ERROR_MALLOC);
 
+  if (x_length > 0)
+    {
+      auto context = global_render->getContext();
+      std::vector<double> x_vec(x, x + x_length);
+      (*context)["x" + str] = x_vec;
+      subGroup->setAttribute("x", "x" + str);
+    }
 
   if (grm_args_first_value(series, "c", "I", &color_indices, &color_array_length))
     {

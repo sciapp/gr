@@ -103,25 +103,26 @@ int grm_input(const grm_args_t *input_args)
           if (kind == "marginalheatmap")
             {
               auto current_series =
-                  subplot_element->querySelectorsAll("group[name=\"" + kind + "_series\"]")[0]->children()[0];
+                  subplot_element->querySelectorsAll("group[name=\"heatmap_series\"]")[0];
 
-              double *x_series, *y_series;
               unsigned int x_length, y_length;
               double x_0, x_end, y_0, y_end, x_step, y_step;
               double xind, yind;
 
               grm_args_values(input_args, "x", "i", &x);
               grm_args_values(input_args, "y", "i", &y);
-              auto x_series_key = static_cast<std::string>(current_series->getAttribute("x_series"));
-              auto y_series_key = static_cast<std::string>(current_series->getAttribute("y_series"));
+              auto x_series_key = static_cast<std::string>(current_series->getAttribute("x"));
+              auto y_series_key = static_cast<std::string>(current_series->getAttribute("y"));
 
               std::shared_ptr<GR::Context> context = grm_get_render()->getContext();
 
               auto x_series_vec = GR::get<std::vector<double>>((*context)[x_series_key]);
               auto y_series_vec = GR::get<std::vector<double>>((*context)[y_series_key]);
 
-              x_0 = x_series[0], x_end = x_series[x_length - 1];
-              y_0 = y_series[0], y_end = y_series[y_length - 1];
+              x_length = x_series_vec.size();
+              y_length = y_series_vec.size();
+              x_0 = x_series_vec[0], x_end = x_series_vec[x_length - 1];
+              y_0 = y_series_vec[0], y_end = y_series_vec[y_length - 1];
 
               GR::Render::processViewport(subplot_element);
               GR::Render::processLimits(subplot_element);
@@ -145,10 +146,6 @@ int grm_input(const grm_args_t *input_args)
                   xind = -1;
                   yind = -1;
                 }
-
-              int old_xind, old_yind;
-              old_xind = static_cast<int>(subplot_element->getAttribute("xind"));
-              old_yind = static_cast<int>(subplot_element->getAttribute("yind"));
 
               subplot_element->setAttribute("xind", (int)((x - x_0) / x_step));
               subplot_element->setAttribute("yind", (int)((y - y_0) / y_step));
@@ -456,16 +453,6 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   gr_ndctowc(&x_range_min, &y_range_min);
   gr_ndctowc(&x_range_max, &y_range_max);
 
-  auto current_series_group_vec = subplot_element->querySelectorsAll("group[name=\"" + kind + "_series\"]");
-  std::vector<std::shared_ptr<GR::Element>> current_series_vec;
-  for (const auto &current_series_group : current_series_group_vec)
-    {
-      for (const auto &current_series_group_child : current_series_group->children())
-        {
-          current_series_vec.push_back(current_series_group_child);
-        }
-    }
-
   x_min = static_cast<double>(subplot_element->getAttribute("lim_xmin"));
   x_max = static_cast<double>(subplot_element->getAttribute("lim_xmax"));
   y_min = static_cast<double>(subplot_element->getAttribute("lim_ymin"));
@@ -507,7 +494,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       center_x = (int)(max_x - radius);
       center_y = (int)(max_y - radius);
 
-      auto current_series = subplot_element->querySelectorsAll("group[name=\"" + kind + "_series\"]")[0]->children()[0];
+      auto current_series = subplot_element->querySelectorsAll("group[name=\"" + kind + "_series\"]")[0];
       auto x_key = static_cast<std::string>(current_series->getAttribute("x"));
       std::vector<double> x_series_vec;
       x_series_vec = GR::get<std::vector<double>>((*context)[x_key]);
@@ -526,7 +513,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
           act_angle *= -1;
           if (start_angle >= act_angle && end_angle <= act_angle)
             {
-              snprintf(output, 50, "%f", x_series[i]);
+              snprintf(output, 50, "%f", x_series_vec[i]);
             }
           start_angle = end_angle;
         }
@@ -548,8 +535,23 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
     }
   else
     {
+      if (kind == "marginalheatmap") kind = "heatmap";
+      auto current_series_group_vec = subplot_element->querySelectorsAll("group[name=\"" + kind + "_series\"]");
+      std::vector<std::shared_ptr<GR::Element>> current_series_vec;
+      for (const auto &current_series_group : current_series_group_vec)
+        {
+          for (const auto &current_series_group_child : current_series_group->children())
+            {
+              current_series_vec.push_back(current_series_group_child);
+            }
+        }
+
       for (auto &current_series : current_series_vec)
         {
+          if (kind == "heatmap")
+            {
+              current_series = current_series->parentElement();
+            }
           auto x_key = static_cast<std::string>(current_series->getAttribute("x"));
           auto y_key = static_cast<std::string>(current_series->getAttribute("y"));
           std::string z_key = static_cast<std::string>(current_series->getAttribute("z"));
@@ -611,8 +613,10 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                 {
                   static char output[50];
                   double num;
-                  double x_0 = x_series[0], x_end = x_series[x_length - 1], y_0 = y_series[0],
-                         y_end = y_series[y_length - 1];
+                  x_length = x_series_vec.size();
+                  y_length = y_series_vec.size();
+                  double x_0 = x_series_vec[0], x_end = x_series_vec[x_length - 1], y_0 = y_series_vec[0],
+                         y_end = y_series_vec[y_length - 1];
                   double x_step, y_step, x_series_idx, y_series_idx;
                   double *u_series, *v_series;
 
@@ -655,8 +659,8 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                     }
                   else
                     {
-                      info->x = x_series[(int)x_series_idx];
-                      info->y = y_series[(int)y_series_idx];
+                      info->x = x_series_vec[(int)x_series_idx];
+                      info->y = y_series_vec[(int)y_series_idx];
                     }
                   info->x_px = mouse_x;
                   info->y_px = mouse_y;
@@ -667,7 +671,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                     }
                   else
                     {
-                      num = z_series[(int)y_series_idx * x_length + (int)x_series_idx];
+                      num = z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx];
                       snprintf(output, 50, "%f", num);
                       info->label = output;
                     }
