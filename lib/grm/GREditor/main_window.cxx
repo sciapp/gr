@@ -9,6 +9,7 @@
 #include <QDialogButtonBox>
 #include <QComboBox>
 #include <QtWidgets>
+#include <QFileDialog>
 #include <QPrinter>
 
 MainWindow::MainWindow(QWidget *parent) : QWidget(parent)
