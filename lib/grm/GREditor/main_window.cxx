@@ -170,12 +170,13 @@ void MainWindow::draw()
     {
       if (write_to_file)
         {
-          gr_beginprint("/Users/clever/workspace/Masterarbeit/qt_example/cmake-build-debug/tmp.jpg");
+          char *file = strdup("tmp.jpg");
+          gr_beginprint(file);
           int ret_code = grm_plot(nullptr);
           qDebug() << "Return code of gr_plotmeta()" << ret_code;
           //            gr_endprint();
-          QImage image("/Users/clever/workspace/Masterarbeit/qt_example/cmake-build-debug/tmp.jpg");
-          QImageWriter writer("/Users/clever/workspace/Masterarbeit/qt_example/cmake-build-debug/out.png", "png");
+          QImage image("tmp.jpg");
+          QImageWriter writer("out.png", "png");
           writer.setText("XML-Data", GR::toXML(grm_get_render()).c_str());
           writer.write(image);
 

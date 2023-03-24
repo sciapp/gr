@@ -94,9 +94,9 @@ find_package(OpenGL OPTIONAL_COMPONENTS OpenGL)
 find_package(Gs)
 find_package(Expat)
 if(${CMAKE_VERSION} VERSION_GREATER "3.16.0")
-  find_package(Qt6 OPTIONAL_COMPONENTS Widgets Core Network Gui)
+  find_package(Qt6 OPTIONAL_COMPONENTS Widgets Core Network Gui PrintSupport)
 endif()
-find_package(Qt5 OPTIONAL_COMPONENTS Widgets Core Network Gui)
+find_package(Qt5 OPTIONAL_COMPONENTS Widgets Core Network Gui PrintSupport)
 find_package(Qt4)
 
 if(APPLE)
@@ -1190,18 +1190,17 @@ else()
   string(APPEND GR_REPORT "- grplot: No (Qt6 and Qt5 not found)\n")
 endif()
 
-if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
+if((Qt6Widgets_FOUND AND Qt6Core_FOUND AND Qt6Gui_FOUND AND Qt6PrintSupport_FOUND) OR
+   (Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Gui_FOUND AND Qt5PrintSupport_FOUND))
   add_executable(
     gredit WIN32 MACOSX_BUNDLE lib/grm/GREditor/main.cpp lib/grm/GREditor/main_window.cxx
     lib/grm/GREditor/TreeWidget.cpp lib/grm/GREditor/CustomTreeWidgetItem.cpp lib/grm/GREditor/Bounding_object.cpp
     lib/grm/GREditor/Bounding_logic.cpp
   )
   if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
-    find_package(Qt6 COMPONENTS PrintSupport REQUIRED)
     target_link_libraries(gredit PRIVATE Qt6::Widgets Qt6::Core Qt6::Gui Qt6::PrintSupport grm_static gr_static)
     set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
   else()
-    find_package(Qt5 COMPONENTS PrintSupport REQUIRED)
     target_link_libraries(gredit PRIVATE Qt5::Widgets Qt5::Core Qt5::Gui Qt5::PrintSupport grm_static gr_static)
     set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
   endif()

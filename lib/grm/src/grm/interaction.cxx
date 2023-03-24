@@ -102,8 +102,7 @@ int grm_input(const grm_args_t *input_args)
           kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
           if (kind == "marginalheatmap")
             {
-              auto current_series =
-                  subplot_element->querySelectorsAll("group[name=\"heatmap_series\"]")[0];
+              auto current_series = subplot_element->querySelectorsAll("group[name=\"heatmap_series\"]")[0];
 
               unsigned int x_length, y_length;
               double x_0, x_end, y_0, y_end, x_step, y_step;
