@@ -2,6 +2,7 @@
 #include "main_window.hxx"
 #include <cfloat>
 #include <algorithm>
+#include <fstream>
 #include <QStackedLayout>
 #include <QInputDialog>
 #include <QFormLayout>
@@ -10,6 +11,7 @@
 #include <QComboBox>
 #include <QtWidgets>
 #include <QFileDialog>
+#include <QMessageBox>
 #include <QPrinter>
 
 MainWindow::MainWindow(QWidget *parent) : QWidget(parent)
@@ -113,7 +115,22 @@ void MainWindow::save_file_slot()
       QApplication::beep();
       return;
     }
-  QFileDialog::saveFileContent(GR::toXML(grm_get_render()).c_str(), QDir::homePath() + "/Desktop/untitled.xml");
+  std::string save_file_name =
+      QFileDialog::getSaveFileName(this, "Save XML", QDir::homePath(), "XML files (*.xml)").toStdString();
+  if (save_file_name.empty())
+    {
+      return;
+    }
+  std::ofstream save_file_stream(save_file_name);
+  if (!save_file_stream)
+    {
+      std::stringstream text_stream;
+      text_stream << "Could not save the graphics tree to the XML file \"" << save_file_name << "\".";
+      QMessageBox::critical(this, "File save not possible", QString::fromStdString(text_stream.str()));
+      return;
+    }
+  save_file_stream << GR::toXML(grm_get_render()) << std::endl;
+  save_file_stream.close();
 }
 
 void MainWindow::show_bounding_boxes_slot()
