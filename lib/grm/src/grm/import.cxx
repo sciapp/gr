@@ -348,7 +348,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                 }
               if (max_col != -1 && max_col < (int)cnt + 1)
                 {
-                  fprintf(stderr, "Line %i has a different amount of columns (%i) while the lines before had (%i)\n",
+                  fprintf(stderr, "Line %i has a different number of columns (%i) than previous lines (%i)\n",
                           (int)row + linecount + 1, cnt + 1, max_col);
                   return ERROR_PLOT_MISSING_DATA;
                 }
