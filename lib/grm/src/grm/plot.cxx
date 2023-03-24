@@ -2705,6 +2705,7 @@ err_t plot_hist(grm_args_t *subplot_args)
           if (is_horizontal)
             {
               fillRect1 = global_render->createFillRect(x, x + bar_width, y_min, bins[i - 1]);
+              global_render->setFillColorInd(fillRect1, bar_color_index);
               if (i == xind + 1)
                 {
                   global_render->setFillColorInd(fillRect1, 2);
@@ -2713,12 +2714,12 @@ err_t plot_hist(grm_args_t *subplot_args)
           else
             {
               fillRect1 = global_render->createFillRect(y_min, bins[i - 1], x, x + bar_width);
+              global_render->setFillColorInd(fillRect1, bar_color_index);
               if (i == yind + 1)
                 {
                   global_render->setFillColorInd(fillRect1, 2);
                 }
             }
-          global_render->setFillColorInd(fillRect1, bar_color_index);
           global_render->setFillIntStyle(fillRect1, GKS_K_INTSTYLE_SOLID);
           subGroup->append(fillRect1);
 
