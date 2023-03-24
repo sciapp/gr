@@ -1219,12 +1219,12 @@ if((Qt6Widgets_FOUND
 )
   add_executable(
     gredit WIN32 MACOSX_BUNDLE
-    lib/grm/GREditor/main.cpp
-    lib/grm/GREditor/main_window.cxx
-    lib/grm/GREditor/TreeWidget.cpp
     lib/grm/GREditor/Bounding_logic.cpp
     lib/grm/GREditor/Bounding_object.cpp
     lib/grm/GREditor/CustomTreeWidgetItem.cpp
+    lib/grm/GREditor/main.cpp
+    lib/grm/GREditor/main_window.cxx
+    lib/grm/GREditor/TreeWidget.cpp
   )
   if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
     target_link_libraries(
