@@ -5840,3 +5840,65 @@ std::shared_ptr<GR::Context> GR::Render::getContext()
 {
   return context;
 }
+
+/*
+ * Searches in elementToTooltip for attributeName and returns a string vector
+ * containing:
+ * [0] The default value for this attribute
+ * [1] The description for this attribute
+ */
+std::vector<std::string> GR::Render::getDefaultAndTooltip(const std::shared_ptr<Element> &element,
+                                                          std::string attributeName)
+{
+  static std::unordered_map<std::string, std::map<std::string, std::vector<std::string>>> elementToTooltip{
+      {std::string("polyline"),
+       std::map<std::string, std::vector<std::string>>{
+           {std::string("linecolorind"),
+            std::vector<std::string>{"989", "Sets the linecolor according to the current colormap"}},
+           {std::string("x"), std::vector<std::string>{"None", "References the x-values stored in the context"}},
+           {std::string("y"), std::vector<std::string>{"None", "References the y-values stored in the context"}},
+           {std::string("x1"), std::vector<std::string>{"None", "The beginning x-coordinate"}},
+           {std::string("y1"), std::vector<std::string>{"None", "The beginning y-coordinate"}},
+           {std::string("x2"), std::vector<std::string>{"None", "The ending x-coordinate"}},
+           {std::string("y2"), std::vector<std::string>{"None", "The ending y-coordinate"}},
+       }},
+      {std::string("text"),
+       std::map<std::string, std::vector<std::string>>{
+           {std::string("x"), std::vector<std::string>{"None", "X-position of the text"}},
+           {std::string("y"), std::vector<std::string>{"None", "Y-position of the text"}},
+           {std::string("text"), std::vector<std::string>{"Title", "The text diplayed by this node"}},
+           {std::string("render_method"),
+            std::vector<std::string>{"gr_text", "Render method used to display the text"}},
+           {std::string("textalign"), std::vector<std::string>{"1", "Use alignment"}},
+           {std::string("textalign_horizontal"), std::vector<std::string>{"2", "Horizontal alignment method"}},
+           {std::string("textalign_vertical"), std::vector<std::string>{"1", "Horizontal alignment method"}},
+       }},
+      {std::string("grid"),
+       std::map<std::string, std::vector<std::string>>{
+           {std::string("x_tick"),
+            std::vector<std::string>{"1", "The interval between minor tick marks on the X-axis"}},
+           {std::string("y_tick"),
+            std::vector<std::string>{"1", "The interval between minor tick marks on the Y-axis"}},
+           {std::string("x_org"),
+            std::vector<std::string>{"0", "The world coordinates of the origin (point of intersection) of the X-axis"}},
+           {std::string("y_org"),
+            std::vector<std::string>{"0", "The world coordinates of the origin (point of intersection) of the Y-axis"}},
+           {std::string("major_x"),
+            std::vector<std::string>{"5", "Unitless integer values specifying the number of minor tick intervals "
+                                          "between major tick marks. Values of 0 or 1 imply no minor ticks. Negative "
+                                          "values specify no labels will be drawn for the X-axis"}},
+           {std::string("major_y"),
+            std::vector<std::string>{"5", "Unitless integer values specifying the number of minor tick intervals "
+                                          "between major tick marks. Values of 0 or 1 imply no minor ticks. Negative "
+                                          "values specify no labels will be drawn for the Y-axis"}},
+       }}};
+  if (elementToTooltip.count(element->localName()) &&
+      elementToTooltip[element->localName().c_str()].count(attributeName))
+    {
+      return elementToTooltip[element->localName().c_str()][attributeName];
+    }
+  else
+    {
+      return std::vector<std::string>{"", "No description found"};
+    }
+}

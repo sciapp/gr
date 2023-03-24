@@ -357,6 +357,8 @@ public:
 
   static void processViewport(const std::shared_ptr<GR::Element> &elem);
   static void processLimits(const std::shared_ptr<GR::Element> &elem);
+  static std::vector<std::string> getDefaultAndTooltip(const std::shared_ptr<Element> &element,
+                                                       std::string attributeName);
 
 
 private:
