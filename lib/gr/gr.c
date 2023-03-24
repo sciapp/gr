@@ -241,6 +241,11 @@ typedef struct
   double x_factor, y_factor;
 } volume_nogrid_data_struct;
 
+struct cpubasedvolume_2pass_priv
+{
+  double *pixels;
+};
+
 struct hexbin_2pass_priv
 {
   int *cell;
@@ -14365,6 +14370,58 @@ static int system_processor_count()
 void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, double *dmin_ptr, double *dmax_ptr,
                        double *dmin_val, double *dmax_val)
 {
+  const cpubasedvolume_2pass_t *context;
+
+  context = gr_cpubasedvolume_2pass(nx, ny, nz, data, algorithm, dmin_ptr, dmax_ptr, dmin_val, dmax_val, NULL);
+  if (context == NULL)
+    {
+      return;
+    }
+  gr_cpubasedvolume_2pass(nx, ny, nz, data, algorithm, dmin_ptr, dmax_ptr, dmin_val, dmax_val, context);
+}
+
+/*!
+ * Draw volume data with raycasting using the given algorithm and apply the current GR colormap. This is the two pass
+ * version of gr_cpubasedvolume and can be used to retrieve dmin and dmax in a first call before the actual volume is
+ * drawn in the second call.
+ *
+ * \param[in]     nx         number of points in x-direction
+ * \param[in]     ny         number of points in y-direction
+ * \param[in]     nz         number of points in z-direction
+ * \param[in]     data       an array of shape nx * ny * nz containing the intensities for each point
+ * \param[in]     algorithm  the algorithm to reduce the volume data
+ * \param[in,out] dmin_ptr   The variable this parameter points at will be used as minimum data value when applying the
+ *                           colormap. If it is negative, the variable will be set to the actual occuring minimum and
+ *                           that value will be used instead. If dmin_ptr is NULL, it will be ignored.
+ * \param[in,out] dmax_ptr   The variable this parameter points at will be used as maximum data value when applying the
+ *                           colormap. If it is negative, the variable will be set to the actual occuring maximum and
+ *                           that value will be used instead. If dmax_ptr is NULL, it will be ignored.
+ * \param[in]     min_val    array with the minimum coordinates of the volumedata
+ * \param[in]     max_val    array with the maximum coordinates of the volumedata
+ * \param[in,out] context    pointer to a cpubasedvolume_2pass_t context struct. In the first pass, this pointer must
+ *                           be NULL. In the second pass, the return value of the first call must be used as context
+ *                           parameter.
+ * \returns                  a context struct in the first pass, NULL in the second pass.
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * Available algorithms are:
+ *
+ * +---------------------+---+-----------------------------+
+ * |GR_VOLUME_EMISSION   |  0|emission model               |
+ * +---------------------+---+-----------------------------+
+ * |GR_VOLUME_ABSORPTION |  1|absorption model             |
+ * +---------------------+---+-----------------------------+
+ * |GR_VOLUME_MIP        |  2|maximum intensity projection |
+ * +---------------------+---+-----------------------------+
+ *
+ * \endverbatim
+ */
+const cpubasedvolume_2pass_t *gr_cpubasedvolume_2pass(int nx, int ny, int nz, double *data, int algorithm,
+                                                      double *dmin_ptr, double *dmax_ptr, double *dmin_val,
+                                                      double *dmax_val, const cpubasedvolume_2pass_t *context)
+{
+  cpubasedvolume_2pass_t *context_;
   int n_x, n_y, size;
   double *pixels, *min_ptr, *max_ptr;
   double min_val[3], max_val[3];
@@ -14377,139 +14434,159 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
   int i, j = 0, threadnum;
   check_autoinit;
 
-  if (gpx.projection_type == GR_PROJECTION_DEFAULT)
+  if (context == NULL)
     {
-      fprintf(stderr, "gr_cpubasedvolume only runs when the projectiontype is set to GR_PROJECTION_ORTHOGRAPHIC or "
-                      "GR_PROJECTION_PERSPECTIVE.\n");
-      return;
-    }
+      if (gpx.projection_type == GR_PROJECTION_DEFAULT)
+        {
+          fprintf(stderr, "gr_cpubasedvolume only runs when the projectiontype is set to GR_PROJECTION_ORTHOGRAPHIC or "
+                          "GR_PROJECTION_PERSPECTIVE.\n");
+          return NULL;
+        }
 
-  pixels = calloc(vt.picture_width * vt.picture_height, sizeof(double));
-  if (pixels == 0)
-    {
-      fprintf(stderr, "can't allocate memory");
-      return;
-    }
-  /* size of each thread calculated out of threadnumber */
-  size = (int)(max(10, (nx + ny + nz) / 3.0 * vt.thread_size));
-  n_x = (int)ceil(1. * vt.picture_width / size);
-  n_y = (int)ceil(1. * vt.picture_height / size);
+      pixels = calloc(vt.picture_width * vt.picture_height, sizeof(double));
+      if (pixels == 0)
+        {
+          fprintf(stderr, "can't allocate memory");
+          return NULL;
+        }
+      /* size of each thread calculated out of threadnumber */
+      size = (int)(max(10, (nx + ny + nz) / 3.0 * vt.thread_size));
+      n_x = (int)ceil(1. * vt.picture_width / size);
+      n_y = (int)ceil(1. * vt.picture_height / size);
 
-  max_ptr = dmax_ptr;
-  min_ptr = dmin_ptr;
-  if (dmax_ptr && *dmax_ptr < 0) max_ptr = NULL;
-  if (dmin_ptr && *dmin_ptr < 0) min_ptr = NULL;
+      max_ptr = dmax_ptr;
+      min_ptr = dmin_ptr;
+      if (dmax_ptr && *dmax_ptr < 0) max_ptr = NULL;
+      if (dmin_ptr && *dmin_ptr < 0) min_ptr = NULL;
 
-  if (dmin_val == NULL)
-    {
-      min_val[0] = min_val[1] = min_val[2] = -1;
-    }
-  else
-    {
-      min_val[0] = dmin_val[0];
-      min_val[1] = dmin_val[1];
-      min_val[2] = dmin_val[2];
-    }
-  if (dmax_val == NULL)
-    {
-      max_val[0] = max_val[1] = max_val[2] = -1;
-    }
-  else
-    {
-      max_val[0] = dmax_val[0];
-      max_val[1] = dmax_val[1];
-      max_val[2] = dmax_val[2];
-    }
+      if (dmin_val == NULL)
+        {
+          min_val[0] = min_val[1] = min_val[2] = -1;
+        }
+      else
+        {
+          min_val[0] = dmin_val[0];
+          min_val[1] = dmin_val[1];
+          min_val[2] = dmin_val[2];
+        }
+      if (dmax_val == NULL)
+        {
+          max_val[0] = max_val[1] = max_val[2] = -1;
+        }
+      else
+        {
+          max_val[0] = dmax_val[0];
+          max_val[1] = dmax_val[1];
+          max_val[2] = dmax_val[2];
+        }
 
-  f.nx = nx;
-  f.ny = ny;
-  f.nz = nz;
-  f.algorithm = algorithm;
-  f.data = data;
-  f.dmin_ptr = min_ptr;
-  f.dmax_ptr = max_ptr;
-  f.min_val = min_val;
-  f.max_val = max_val;
-  f.pixels = pixels;
-  vt.ray_casting = &f;
+      f.nx = nx;
+      f.ny = ny;
+      f.nz = nz;
+      f.algorithm = algorithm;
+      f.data = data;
+      f.dmin_ptr = min_ptr;
+      f.dmax_ptr = max_ptr;
+      f.min_val = min_val;
+      f.max_val = max_val;
+      f.pixels = pixels;
+      vt.ray_casting = &f;
 
 /* creates the threadpool */
 #ifndef NO_THREADS
-  tp = calloc(1, sizeof(*tp));
-  if (tp == 0)
-    {
-      fprintf(stderr, "can't allocate memory");
-      return;
-    }
-  threadnum = (system_processor_count() - 1) < 256 ? system_processor_count() - 1 : 256;
-  if (vt.max_threads > 0)
-    {
-      threadnum = vt.max_threads;
-    }
-  threadpool_create(tp, threadnum, ray_casting_thread);
-#endif
-  jobs = (struct thread_attr *)gks_malloc(n_x * n_y * sizeof(struct thread_attr));
-
-  for (i = 0; i < n_x; i++)
-    {
-      x_end = (int)min((i + 1.0) * size, vt.picture_width);
-      for (j = 0; j < n_y; j++)
+      tp = calloc(1, sizeof(*tp));
+      if (tp == 0)
         {
-          /* transfer data for each thread */
-          y_end = (int)min((j + 1.0) * size, vt.picture_height);
-          jobs[i + j * n_x].x_start = x_start;
-          jobs[i + j * n_x].y_start = y_start;
-          jobs[i + j * n_x].x_end = x_end;
-          jobs[i + j * n_x].y_end = y_end;
+          fprintf(stderr, "can't allocate memory");
+          return NULL;
+        }
+      threadnum = (system_processor_count() - 1) < 256 ? system_processor_count() - 1 : 256;
+      if (vt.max_threads > 0)
+        {
+          threadnum = vt.max_threads;
+        }
+      threadpool_create(tp, threadnum, ray_casting_thread);
+#endif
+      jobs = (struct thread_attr *)gks_malloc(n_x * n_y * sizeof(struct thread_attr));
+
+      for (i = 0; i < n_x; i++)
+        {
+          x_end = (int)min((i + 1.0) * size, vt.picture_width);
+          for (j = 0; j < n_y; j++)
+            {
+              /* transfer data for each thread */
+              y_end = (int)min((j + 1.0) * size, vt.picture_height);
+              jobs[i + j * n_x].x_start = x_start;
+              jobs[i + j * n_x].y_start = y_start;
+              jobs[i + j * n_x].x_end = x_end;
+              jobs[i + j * n_x].y_end = y_end;
 
 #ifndef NO_THREADS
-          threadpool_add_work(tp, jobs + i + j * n_x);
+              threadpool_add_work(tp, jobs + i + j * n_x);
 #else
-          ray_casting_thread(jobs + i + j * n_x);
+              ray_casting_thread(jobs + i + j * n_x);
 #endif
-          y_start = y_end;
+              y_start = y_end;
+            }
+          x_start = x_end;
+          y_start = 0;
         }
-      x_start = x_end;
-      y_start = 0;
-    }
 #ifndef NO_THREADS
-  threadpool_destroy(tp);
+      threadpool_destroy(tp);
 #endif
 
-  /* calculate the min and max value of all pixels */
-  if (dmax_ptr && *dmax_ptr < 0)
-    {
-      double max_color = 0;
-      for (i = 0; i < vt.picture_width * vt.picture_height; i++)
+      /* calculate the min and max value of all pixels */
+      if (dmax_ptr && *dmax_ptr < 0)
         {
-          if (pixels[i] > max_color) max_color = pixels[i];
+          double max_color = 0;
+          for (i = 0; i < vt.picture_width * vt.picture_height; i++)
+            {
+              if (pixels[i] > max_color) max_color = pixels[i];
+            }
+          *dmax_ptr = max_color;
         }
-      *dmax_ptr = max_color;
-    }
-  if (dmin_ptr && *dmin_ptr < 0)
-    {
-      double min_color = pixels[0];
-      for (i = 1; i < vt.picture_width * vt.picture_height; i++)
+      if (dmin_ptr && *dmin_ptr < 0)
         {
-          if (pixels[i] < min_color) min_color = pixels[i];
+          double min_color = pixels[0];
+          for (i = 1; i < vt.picture_width * vt.picture_height; i++)
+            {
+              if (pixels[i] < min_color) min_color = pixels[i];
+            }
+          *dmin_ptr = max(0, min_color);
         }
-      *dmin_ptr = max(0, min_color);
-    }
-  draw_volume(pixels);
+      free(jobs);
 
-  free(pixels);
-  free(jobs);
-  if (flag_stream)
-    {
-      gr_writestream("<cpubasedvolume nx=\"%i\" ny=\"%i\" nz=\"%i\" />\n", nx, ny, nz);
-      print_float_array("data", nx * ny * nz, data);
-      gr_writestream(" algorithm=\"%i\" ", algorithm);
-      print_float_array("dmin_ptr", 1, dmin_ptr);
-      print_float_array("dmax_ptr", 1, dmax_ptr);
-      print_float_array("dmin_val", 1, dmin_val);
-      print_float_array("dmax_val", 1, dmax_val);
-      gr_writestream("/>\n");
+      context_ = (cpubasedvolume_2pass_t *)xmalloc(sizeof(cpubasedvolume_2pass_t));
+      context_->dmin = *dmin_ptr;
+      context_->dmax = *dmax_ptr;
+      context_->priv = (cpubasedvolume_2pass_priv_t *)xmalloc(sizeof(cpubasedvolume_2pass_priv_t));
+      context_->priv->pixels = pixels;
     }
+  else
+    {
+      double *pixels = context->priv->pixels;
+
+      draw_volume(pixels);
+
+      free(pixels);
+      free(context->priv);
+      free((cpubasedvolume_2pass_t *)context);
+      context_ = NULL;
+
+      if (flag_stream)
+        {
+          gr_writestream("<cpubasedvolume nx=\"%i\" ny=\"%i\" nz=\"%i\" />\n", nx, ny, nz);
+          print_float_array("data", nx * ny * nz, data);
+          gr_writestream(" algorithm=\"%i\" ", algorithm);
+          print_float_array("dmin_ptr", 1, dmin_ptr);
+          print_float_array("dmax_ptr", 1, dmax_ptr);
+          print_float_array("dmin_val", 1, dmin_val);
+          print_float_array("dmax_val", 1, dmax_val);
+          gr_writestream("/>\n");
+        }
+    }
+
+  return context_;
 }
 
 void gr_inqvpsize(int *width, int *height, double *device_pixel_ratio)
