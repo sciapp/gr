@@ -1070,6 +1070,8 @@ void plot_process_wswindow_wsviewport(grm_args_t *plot_args)
   double wsviewport[4] = {0.0, 0.0, 0.0, 0.0};
   double wswindow[4] = {0.0, 0.0, 0.0, 0.0};
 
+  auto group = global_root->lastChildElement();
+
   get_figure_size(plot_args, &pixel_width, &pixel_height, &metric_width, &metric_height);
 
   if (!grm_args_values(plot_args, "previous_pixel_size", "ii", &previous_pixel_width, &previous_pixel_height) ||
@@ -1095,9 +1097,8 @@ void plot_process_wswindow_wsviewport(grm_args_t *plot_args)
       wswindow[1] = aspect_ratio_ws_pixel;
       wswindow[3] = 1.0;
     }
-
-  gr_setwsviewport(wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
-  gr_setwswindow(wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
+  global_render->setWSViewport(group, wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
+  global_render->setWSWindow(group, wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
 
   grm_args_push(plot_args, "wswindow", "dddd", wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
   grm_args_push(plot_args, "wsviewport", "dddd", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);

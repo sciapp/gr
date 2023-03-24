@@ -243,7 +243,11 @@ public:
 
   void setViewport(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
+  void setWSViewport(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
+
   void setWindow(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
+
+  void setWSWindow(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
   void setMarkerType(const std::shared_ptr<Element> &element, int type);
 

@@ -1,7 +1,7 @@
 #ifdef _WIN32
 /*
  * Headers on Windows can define `min` and `max` as macros which causes
- * problem when ustd::sing `std::min` and `std::max`
+ * problem when using `std::min` and `std::max`
  * -> Define `NOMINMAX` to prevent the definition of these macros
  */
 #define NOMINMAX
@@ -47,7 +47,7 @@ static void markerHelper(const std::shared_ptr<GR::Element> &element, const std:
                          const std::string &str)
 {
   /*!
-   * Helperfunction for marker functions ustd::sing vectors for marker parameters
+   * Helperfunction for marker functions using vectors for marker parameters
    *
    * \param[in] element The GR::Element that contains all marker attributes and data keys. If element's parent is a
    * group element it may fallback to its marker attributes
@@ -183,7 +183,7 @@ static void lineHelper(const std::shared_ptr<GR::Element> &element, const std::s
                        const std::string &str)
 {
   /*!
-   * Helperfunction for line functions ustd::sing vectors for line parameters
+   * Helperfunction for line functions using vectors for line parameters
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -627,7 +627,7 @@ static void getAxes3dInformation(const std::shared_ptr<GR::Element> &element, st
 static void polymarker(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for polymarker
+   * Processing function for polymarker
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -666,7 +666,7 @@ static void polymarker(const std::shared_ptr<GR::Element> &element, const std::s
 static void polyline(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing Function for polyline
+   * Processing Function for polyline
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -710,7 +710,7 @@ static void polyline(const std::shared_ptr<GR::Element> &element, const std::sha
 static void text(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing funcions for text
+   * Processing funcions for text
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -768,7 +768,7 @@ static void text(const std::shared_ptr<GR::Element> &element, const std::shared_
 static void fillArea(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for fillArea
+   * Processing function for fillArea
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -787,7 +787,7 @@ static void fillArea(const std::shared_ptr<GR::Element> &element, const std::sha
 static void cellArray(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for cellArray
+   * Processing function for cellArray
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -810,7 +810,7 @@ static void cellArray(const std::shared_ptr<GR::Element> &element, const std::sh
 static void axes(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for axes
+   * Processing function for axes
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -859,7 +859,7 @@ static void axes(const std::shared_ptr<GR::Element> &element, const std::shared_
 static void grid(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for grid
+   * Processing function for grid
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -893,7 +893,7 @@ static void grid(const std::shared_ptr<GR::Element> &element, const std::shared_
 static void drawImage(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for drawImage
+   * Processing function for drawImage
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -912,7 +912,7 @@ static void drawImage(const std::shared_ptr<GR::Element> &element, const std::sh
 static void drawArc(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for drawArc
+   * Processing function for drawArc
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -929,7 +929,7 @@ static void drawArc(const std::shared_ptr<GR::Element> &element, const std::shar
 static void fillArc(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for drawArc
+   * Processing function for drawArc
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -946,7 +946,7 @@ static void fillArc(const std::shared_ptr<GR::Element> &element, const std::shar
 static void drawRect(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for drawArc
+   * Processing function for drawArc
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -961,7 +961,7 @@ static void drawRect(const std::shared_ptr<GR::Element> &element, const std::sha
 static void fillRect(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for drawArc
+   * Processing function for drawArc
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -976,7 +976,7 @@ static void fillRect(const std::shared_ptr<GR::Element> &element, const std::sha
 static void quiver(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for quiver
+   * Processing function for quiver
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -1002,7 +1002,7 @@ static void quiver(const std::shared_ptr<GR::Element> &element, const std::share
 static void contour(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for contour
+   * Processing function for contour
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -1033,7 +1033,7 @@ static void contour(const std::shared_ptr<GR::Element> &element, const std::shar
 static void contourf(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for contourf
+   * Processing function for contourf
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -1064,7 +1064,7 @@ static void contourf(const std::shared_ptr<GR::Element> &element, const std::sha
 static void hexbin(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for hexbin
+   * Processing function for hexbin
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -1086,7 +1086,7 @@ static void nonuniformcellarray(const std::shared_ptr<GR::Element> &element,
                                 const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for nonuniformcellarray
+   * Processing function for nonuniformcellarray
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -1112,7 +1112,7 @@ static void nonuniformcellarray(const std::shared_ptr<GR::Element> &element,
 static void surface(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for surface
+   * Processing function for surface
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -1156,7 +1156,7 @@ static void surface(const std::shared_ptr<GR::Element> &element, const std::shar
 static void grid3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for grid3d
+   * Processing function for grid3d
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -1201,7 +1201,7 @@ static void grid3d(const std::shared_ptr<GR::Element> &element, const std::share
 static void axes3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for axes3d
+   * Processing function for axes3d
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -1259,7 +1259,7 @@ static void axes3d(const std::shared_ptr<GR::Element> &element, const std::share
 static void polyline3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for polyline3d
+   * Processing function for polyline3d
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -1294,7 +1294,7 @@ static void polyline3d(const std::shared_ptr<GR::Element> &element, const std::s
 static void polymarker3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for polymarker3d
+   * Processing function for polymarker3d
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -1330,7 +1330,7 @@ static void polymarker3d(const std::shared_ptr<GR::Element> &element, const std:
 static void gr3DrawMesh(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for gr3_drawmesh
+   * Processing function for gr3_drawmesh
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -1391,7 +1391,7 @@ static void volume(const std::shared_ptr<GR::Element> &element, const std::share
 static void triSurface(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for trisurface
+   * Processing function for trisurface
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -1417,7 +1417,7 @@ static void triSurface(const std::shared_ptr<GR::Element> &element, const std::s
 static void triContour(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for tricontour
+   * Processing function for tricontour
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -1446,7 +1446,7 @@ static void triContour(const std::shared_ptr<GR::Element> &element, const std::s
 static void titles3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for titles3d
+   * Processing function for titles3d
    *
    * \param[in] element The GR::Element that contains the attributes and data keys
    * \param[in] context The GR::Context that contains the actual data
@@ -1972,7 +1972,7 @@ static void processColorbarPosition(const std::shared_ptr<GR::Element> &elem)
 
   if (!subplot_element->hasAttribute("viewport"))
     {
-      throw NotFoundError("Misstd::sing viewport\n");
+      throw NotFoundError("Missing viewport\n");
     }
 
   viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
@@ -2011,7 +2011,7 @@ static void processRelativeCharHeight(const std::shared_ptr<GR::Element> &elem)
 void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
 {
   /*!
-   * Procestd::sing function for gr_window
+   * processing function for gr_window
    *
    * \param[in] element The GR::Element that contains the attributes
    */
@@ -2198,10 +2198,37 @@ static void processSpace(const std::shared_ptr<GR::Element> &elem)
   gr_setspace(zmin, zmax, rotation, tilt);
 }
 
+static void processWSViewport(const std::shared_ptr<GR::Element> &elem)
+{
+  /*!
+   * processing function for gr_wsviewport
+   *
+   * \param[in] element The GR::Element that contains the attributes
+   */
+  double wsviewport[4];
+  wsviewport[0] = (double)elem->getAttribute("wsviewport_xmin");
+  wsviewport[1] = (double)elem->getAttribute("wsviewport_xmax");
+  wsviewport[2] = (double)elem->getAttribute("wsviewport_ymin");
+  wsviewport[3] = (double)elem->getAttribute("wsviewport_ymax");
+
+  gr_setwsviewport(wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
+}
+
+static void processWSWindow(const std::shared_ptr<GR::Element> &elem)
+{
+  double wswindow[4];
+  double xmin = static_cast<double>(elem->getAttribute("wswindow_xmin"));
+  double xmax = static_cast<double>(elem->getAttribute("wswindow_xmax"));
+  double ymin = static_cast<double>(elem->getAttribute("wswindow_ymin"));
+  double ymax = static_cast<double>(elem->getAttribute("wswindow_ymax"));
+
+  gr_setwswindow(xmin, xmax, ymin, ymax);
+}
+
 void GR::Render::processViewport(const std::shared_ptr<GR::Element> &elem)
 {
   /*!
-   * Procestd::sing function for gr_viewport
+   * processing function for gr_viewport
    *
    * \param[in] element The GR::Element that contains the attributes
    */
@@ -2362,7 +2389,7 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
 static void processSubplot(const std::shared_ptr<GR::Element> &elem)
 {
   /*!
-   * Procestd::sing function for the subplot
+   * processing function for the subplot
    *
    * \param[in] element The GR::Element that contains the attributes
    */
@@ -3452,12 +3479,12 @@ static void processKind(const std::shared_ptr<GR::Element> &elem)
 static void processAttributes(const std::shared_ptr<GR::Element> &element)
 {
   /*!
-   * processtd::sing function for all kinds of attributes
+   * processing function for all kinds of attributes
    *
    * \param[in] element The GR::Element containing attributes
    */
 
-  //! Map used for processtd::sing all kinds of attributes
+  //! Map used for processing all kinds of attributes
   static std::map<std::string, std::function<void(const std::shared_ptr<GR::Element> &)>> attrStringToFunc{
       {std::string("kind"), processKind},
       {std::string("markertype"),
@@ -3555,6 +3582,8 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
        * */
       {std::string("subplot"), processSubplot},
       {std::string("viewport"), GR::Render::processViewport},
+      {std::string("wsviewport"), processWSViewport},
+      {std::string("wswindow"), processWSWindow},
       {std::string("charheight"),
        [](const std::shared_ptr<GR::Element> &elem) { gr_setcharheight((double)elem->getAttribute("charheight")); }}};
 
@@ -3602,13 +3631,13 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
 static void processElement(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * Processtd::sing function for all kinds of elements
+   * Processing function for all kinds of elements
    *
    * \param[in] element The GR::Element containing attributes and data keys
    * \param[in] context The GR::Context containing the actual data
    */
 
-  //! Map used for processtd::sing all kinds of elements
+  //! Map used for processing all kinds of elements
   static std::map<std::string,
                   std::function<void(const std::shared_ptr<GR::Element> &, const std::shared_ptr<GR::Context> &)>>
       elemStringToFunc{{std::string("polymarker"), polymarker},
@@ -4950,6 +4979,27 @@ void GR::Render::setViewport(const std::shared_ptr<GR::Element> &element, double
 }
 
 
+void GR::Render::setWSViewport(const std::shared_ptr<GR::Element> &element, double xmin, double xmax, double ymin,
+                               double ymax)
+{
+  /*!
+   * This function can be used to set the wsviewport of a GR::Element
+   *
+   * \param[in] element A GR::Element
+   * \param[in] xmin The left horizontal coordinate of the viewport (0 <= xmin < xmax)
+   * \param[in] xmax The right horizontal coordinate of the viewport (xmin < xmax <= 1)
+   * \param[in] ymin TThe bottom vertical coordinate of the viewport (0 <= ymin < ymax)
+   * \param[in] ymax The top vertical coordinate of the viewport (ymin < ymax <= 1)
+   */
+
+  element->setAttribute("wsviewport", true);
+  element->setAttribute("wsviewport_xmin", xmin);
+  element->setAttribute("wsviewport_xmax", xmax);
+  element->setAttribute("wsviewport_ymin", ymin);
+  element->setAttribute("wsviewport_ymax", ymax);
+}
+
+
 void GR::Render::setWindow(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax)
 {
   /*!
@@ -4967,6 +5017,27 @@ void GR::Render::setWindow(const std::shared_ptr<Element> &element, double xmin,
   element->setAttribute("window_xmax", xmax);
   element->setAttribute("window_ymin", ymin);
   element->setAttribute("window_ymax", ymax);
+}
+
+
+void GR::Render::setWSWindow(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin,
+                             double ymax)
+{
+  /*!
+   * This function can be used to set the ws_window of a GR::Element
+   *
+   * \param[in] element A GR::Element
+   * \param[in] xmin The left horizontal coordinate of the window (xmin < xmax)
+   * \param[in] xmax The right horizontal coordinate of the window (xmin < xmax)
+   * \param[in] ymin The bottom vertical coordinate of the window (ymin < ymax)
+   * \param[in] ymax The top vertical coordinate of the window (ymin < ymax)
+   */
+
+  element->setAttribute("wswindow", true);
+  element->setAttribute("wswindow_xmin", xmin);
+  element->setAttribute("wswindow_xmax", xmax);
+  element->setAttribute("wswindow_ymin", ymin);
+  element->setAttribute("wswindow_ymax", ymax);
 }
 
 void GR::Render::setMarkerType(const std::shared_ptr<Element> &element, int type)
@@ -5554,7 +5625,7 @@ void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element, const
     }
   else
     {
-      throw NotFoundError("Color indices are misstd::sing in vector\n");
+      throw NotFoundError("Color indices are missing in vector\n");
     }
 }
 
@@ -5636,7 +5707,7 @@ static void renderHelper(const std::shared_ptr<GR::Element> &element, const std:
   /*!
    * Recursive helper function for render; Not part of render class
    * Only renders / processes children if the parent is in parentTypes (group etc.)
-   * Used for traverstd::sing the tree
+   * Used for traversing the tree
    *
    * \param[in] element A GR::Element
    * \param[in] context A GR::Context
