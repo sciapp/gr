@@ -346,6 +346,12 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                 {
                   data[depth].emplace_back(std::vector<double>());
                 }
+              if (max_col != -1 && max_col < (int)cnt + 1)
+                {
+                  fprintf(stderr, "Line %i has a different number of columns (%i) than previous lines (%i)\n",
+                          (int)row + linecount + 1, cnt + 1, max_col);
+                  return ERROR_PLOT_MISSING_DATA;
+                }
               try
                 {
                   trim(token);
@@ -366,12 +372,6 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                   return ERROR_PARSE_DOUBLE;
                 }
               cnt += 1;
-              if (max_col != -1 && max_col < (int)cnt)
-                {
-                  fprintf(stderr, "Line %i has a different number of columns (%i) than previous lines (%i)\n",
-                          (int)row + linecount + 1, cnt, max_col);
-                  return ERROR_PLOT_MISSING_DATA;
-                }
             }
           else if (use_bins && col == 0)
             {
@@ -396,9 +396,9 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
       depth_change = false;
       if (max_col == -1)
         {
-          max_col = (int)col - 1;
+          max_col = (int)col;
         }
-      else if (max_col != (int)(col - 1))
+      else if (max_col != (int)col)
         {
           fprintf(stderr, "Line %i has a different number of columns (%i) than previous lines (%i)\n",
                   (int)row + linecount + 1, (int)col, max_col);
