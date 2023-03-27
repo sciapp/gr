@@ -16,6 +16,7 @@
 #include <sstream>
 #include <algorithm>
 #include <cmath>
+#include <cfloat>
 #include <grm/dom_render/graphics_tree/Element.hxx>
 #include <grm/dom_render/graphics_tree/Document.hxx>
 #include <grm/dom_render/graphics_tree/Value.hxx>
@@ -2744,6 +2745,21 @@ static void drawLegend(const std::shared_ptr<GR::Element> &elem, const std::shar
   render->setSelntran(resetGroup, 1);
   elem->append(resetGroup);
   gr_restorestate();
+}
+
+static int bounding_id = 0;
+static std::map<int, std::shared_ptr<GR::Element>> bounding_map;
+
+void receiverfunction(int id, double x_min, double x_max, double y_min, double y_max)
+{
+  if (!(x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX))
+    {
+      bounding_map[id]->setAttribute("bbox_id", id);
+      bounding_map[id]->setAttribute("bbox_xmin", x_min);
+      bounding_map[id]->setAttribute("bbox_xmax", x_max);
+      bounding_map[id]->setAttribute("bbox_ymin", y_min);
+      bounding_map[id]->setAttribute("bbox_ymax", y_max);
+    }
 }
 
 static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
@@ -5712,6 +5728,15 @@ static void renderHelper(const std::shared_ptr<GR::Element> &element, const std:
    * \param[in] element A GR::Element
    * \param[in] context A GR::Context
    */
+  bool bounding_boxes = true; // make the creation of the bounding boxes optional for better performance
+
+  if (bounding_boxes)
+    {
+      gr_begin_grm_selection(bounding_id, &receiverfunction);
+      bounding_map[bounding_id] = element;
+      bounding_id++;
+    }
+
   processElement(element, context);
   if (element->hasChildNodes() && parentTypes.count(element->localName()))
     {
@@ -5721,6 +5746,10 @@ static void renderHelper(const std::shared_ptr<GR::Element> &element, const std:
           renderHelper(child, context);
           gr_restorestate();
         }
+    }
+  if (bounding_boxes)
+    {
+      gr_end_grm_selection();
     }
 }
 
@@ -5870,6 +5899,7 @@ void GR::Render::render()
   global_root = root;
   const unsigned int indent = 2;
 
+  bounding_id = 0;
   global_render = (std::dynamic_pointer_cast<GR::Render>(root->ownerDocument()))
                       ? std::dynamic_pointer_cast<GR::Render>(root->ownerDocument())
                       : GR::Render::createRender();
