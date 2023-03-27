@@ -7386,81 +7386,6 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
   return 1;
 }
 
-int get_focus_and_factor(const int x1, const int y1, const int x2, const int y2, const int keep_aspect_ratio,
-                         double *factor_x, double *factor_y, double *focus_x, double *focus_y,
-                         grm_args_t **subplot_args)
-{
-  double ndc_box_x[4], ndc_box_y[4];
-  double ndc_left, ndc_top, ndc_right, ndc_bottom;
-  const double *wswindow, *viewport;
-  int width, height, max_width_height;
-
-  get_figure_size(nullptr, &width, &height, nullptr, nullptr);
-  max_width_height = grm_max(width, height);
-
-  if (x1 <= x2)
-    {
-      ndc_left = (double)x1 / max_width_height;
-      ndc_right = (double)x2 / max_width_height;
-    }
-  else
-    {
-      ndc_left = (double)x2 / max_width_height;
-      ndc_right = (double)x1 / max_width_height;
-    }
-  if (y1 <= y2)
-    {
-      ndc_top = (double)(height - y1) / max_width_height;
-      ndc_bottom = (double)(height - y2) / max_width_height;
-    }
-  else
-    {
-      ndc_top = (double)(height - y2) / max_width_height;
-      ndc_bottom = (double)(height - y1) / max_width_height;
-    }
-
-  ndc_box_x[0] = ndc_left;
-  ndc_box_y[0] = ndc_bottom;
-  ndc_box_x[1] = ndc_right;
-  ndc_box_y[1] = ndc_bottom;
-  ndc_box_x[2] = ndc_left;
-  ndc_box_y[2] = ndc_top;
-  ndc_box_x[3] = ndc_right;
-  ndc_box_y[3] = ndc_top;
-  *subplot_args = get_subplot_from_ndc_points(array_size(ndc_box_x), ndc_box_x, ndc_box_y);
-  if (*subplot_args == nullptr)
-    {
-      return 0;
-    }
-  grm_args_values(*subplot_args, "viewport", "D", &viewport);
-  grm_args_values(active_plot_args, "wswindow", "D", &wswindow);
-
-  *factor_x = abs(x1 - x2) / (width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0]));
-  *factor_y = abs(y1 - y2) / (height * (viewport[3] - viewport[2]) / (wswindow[3] - wswindow[2]));
-  if (keep_aspect_ratio)
-    {
-      if (*factor_x <= *factor_y)
-        {
-          *factor_x = *factor_y;
-          if (x1 > x2)
-            {
-              ndc_left = ndc_right - *factor_x * (viewport[1] - viewport[0]);
-            }
-        }
-      else
-        {
-          *factor_y = *factor_x;
-          if (y1 > y2)
-            {
-              ndc_top = ndc_bottom + *factor_y * (viewport[3] - viewport[2]);
-            }
-        }
-    }
-  *focus_x = (ndc_left - *factor_x * viewport[0]) / (1 - *factor_x) - (viewport[0] + viewport[1]) / 2.0;
-  *focus_y = (ndc_top - *factor_y * viewport[3]) / (1 - *factor_y) - (viewport[2] + viewport[3]) / 2.0;
-  return 1;
-}
-
 grm_args_t *get_subplot_from_ndc_point(double x, double y)
 {
   grm_args_t **subplot_args;
@@ -9185,9 +9110,8 @@ int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, cons
                                   double *factor_x, double *factor_y, double *focus_x, double *focus_y,
                                   std::shared_ptr<GR::Element> subplot_element)
 {
-  double ndc_box_x[4], ndc_box_y[4], viewport[4];
+  double ndc_box_x[4], ndc_box_y[4], viewport[4], wswindow[4];
   double ndc_left, ndc_top, ndc_right, ndc_bottom;
-  const double *wswindow;
   int width, height, max_width_height;
 
   get_figure_size(nullptr, &width, &height, nullptr, nullptr);
@@ -9231,7 +9155,10 @@ int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, cons
   viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_xmax"));
   viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_ymin"));
   viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_ymax"));
-  grm_args_values(active_plot_args, "wswindow", "D", &wswindow);
+  wswindow[0] = static_cast<double>(subplot_element->getAttribute("wswindow_xmin"));
+  wswindow[1] = static_cast<double>(subplot_element->getAttribute("wswindow_xmax"));
+  wswindow[2] = static_cast<double>(subplot_element->getAttribute("wswindow_ymin"));
+  wswindow[3] = static_cast<double>(subplot_element->getAttribute("wswindow_ymax"));
 
   *factor_x = abs(x1 - x2) / (width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0]));
   *factor_y = abs(y1 - y2) / (height * (viewport[3] - viewport[2]) / (wswindow[3] - wswindow[2]));
@@ -9417,4 +9344,85 @@ double auto_tick_polar(double rmax, int rings, const std::string &norm)
   rmax = rmax / pow(10.0, scale);
 
   return rmax / rings;
+}
+
+int get_focus_and_factor(const int x1, const int y1, const int x2, const int y2, const int keep_aspect_ratio,
+                         double *factor_x, double *factor_y, double *focus_x, double *focus_y,
+                         std::shared_ptr<GR::Element> subplot_element)
+{
+  double ndc_box_x[4], ndc_box_y[4];
+  double ndc_left, ndc_top, ndc_right, ndc_bottom;
+  double wswindow[4], viewport[4];
+  int width, height, max_width_height;
+
+  get_figure_size(nullptr, &width, &height, nullptr, nullptr);
+  max_width_height = grm_max(width, height);
+
+  if (x1 <= x2)
+    {
+      ndc_left = (double)x1 / max_width_height;
+      ndc_right = (double)x2 / max_width_height;
+    }
+  else
+    {
+      ndc_left = (double)x2 / max_width_height;
+      ndc_right = (double)x1 / max_width_height;
+    }
+  if (y1 <= y2)
+    {
+      ndc_top = (double)(height - y1) / max_width_height;
+      ndc_bottom = (double)(height - y2) / max_width_height;
+    }
+  else
+    {
+      ndc_top = (double)(height - y2) / max_width_height;
+      ndc_bottom = (double)(height - y1) / max_width_height;
+    }
+
+  ndc_box_x[0] = ndc_left;
+  ndc_box_y[0] = ndc_bottom;
+  ndc_box_x[1] = ndc_right;
+  ndc_box_y[1] = ndc_bottom;
+  ndc_box_x[2] = ndc_left;
+  ndc_box_y[2] = ndc_top;
+  ndc_box_x[3] = ndc_right;
+  ndc_box_y[3] = ndc_top;
+  subplot_element = get_subplot_from_ndc_points_using_dom(array_size(ndc_box_x), ndc_box_x, ndc_box_y);
+  if (subplot_element == nullptr)
+    {
+      return 0;
+    }
+  viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
+  viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_xmax"));
+  viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_ymin"));
+  viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_ymax"));
+  wswindow[0] = static_cast<double>(subplot_element->getAttribute("wswindow_xmin"));
+  wswindow[1] = static_cast<double>(subplot_element->getAttribute("wswindow_xmax"));
+  wswindow[2] = static_cast<double>(subplot_element->getAttribute("wswindow_ymin"));
+  wswindow[3] = static_cast<double>(subplot_element->getAttribute("wswindow_ymax"));
+
+  *factor_x = abs(x1 - x2) / (width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0]));
+  *factor_y = abs(y1 - y2) / (height * (viewport[3] - viewport[2]) / (wswindow[3] - wswindow[2]));
+  if (keep_aspect_ratio)
+    {
+      if (*factor_x <= *factor_y)
+        {
+          *factor_x = *factor_y;
+          if (x1 > x2)
+            {
+              ndc_left = ndc_right - *factor_x * (viewport[1] - viewport[0]);
+            }
+        }
+      else
+        {
+          *factor_y = *factor_x;
+          if (y1 > y2)
+            {
+              ndc_top = ndc_bottom + *factor_y * (viewport[3] - viewport[2]);
+            }
+        }
+    }
+  *focus_x = (ndc_left - *factor_x * viewport[0]) / (1 - *factor_x) - (viewport[0] + viewport[1]) / 2.0;
+  *focus_y = (ndc_top - *factor_y * viewport[3]) / (1 - *factor_y) - (viewport[2] + viewport[3]) / 2.0;
+  return 1;
 }

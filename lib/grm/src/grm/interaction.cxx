@@ -355,8 +355,7 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   int width, height, max_width_height;
   double focus_x, focus_y, factor_x, factor_y;
   double viewport_mid_x, viewport_mid_y;
-  const double *wswindow;
-  double viewport[4];
+  double wswindow[4], viewport[4];
   std::shared_ptr<GR::Element> subplot_element;
   get_figure_size(NULL, &width, &height, NULL, NULL);
   max_width_height = grm_max(width, height);
@@ -365,7 +364,10 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
     {
       return 0;
     }
-  grm_args_values(active_plot_args, "wswindow", "D", &wswindow);
+  wswindow[0] = static_cast<double>(subplot_element->getAttribute("wswindow_xmin"));
+  wswindow[1] = static_cast<double>(subplot_element->getAttribute("wswindow_xmax"));
+  wswindow[2] = static_cast<double>(subplot_element->getAttribute("wswindow_ymin"));
+  wswindow[3] = static_cast<double>(subplot_element->getAttribute("wswindow_ymax"));
   viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
   viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_xmax"));
   viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_ymin"));
