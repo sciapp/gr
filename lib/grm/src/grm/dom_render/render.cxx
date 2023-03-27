@@ -2040,8 +2040,10 @@ void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
           adjust_ylim = static_cast<int>(elem->getAttribute("_original_adjust_ylim"));
           elem->setAttribute("adjust_xlim", adjust_xlim);
           elem->setAttribute("adjust_ylim", adjust_ylim);
+          elem->removeAttribute("_original_xlim");
           elem->removeAttribute("_original_xmin");
           elem->removeAttribute("_original_xmax");
+          elem->removeAttribute("_original_ylim");
           elem->removeAttribute("_original_ymin");
           elem->removeAttribute("_original_ymax");
           elem->removeAttribute("_original_adjust_xlim");
@@ -2089,13 +2091,14 @@ void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
 
       gr_panzoom(x, y, xzoom, yzoom, &xmin, &xmax, &ymin, &ymax);
 
-      elem->setAttribute("lim_xmin", xmin);
-      elem->setAttribute("lim_xmax", xmax);
-      elem->setAttribute("lim_ymin", ymin);
-      elem->setAttribute("lim_ymax", ymax);
       elem->setAttribute("panzoom", false);
       elem->removeChild(panzoom_element);
     }
+
+  elem->setAttribute("lim_xmin", xmin);
+  elem->setAttribute("lim_xmax", xmax);
+  elem->setAttribute("lim_ymin", ymin);
+  elem->setAttribute("lim_ymax", ymax);
 
   if (!(scale & GR_OPTION_X_LOG))
     {
