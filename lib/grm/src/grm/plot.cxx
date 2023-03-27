@@ -1070,7 +1070,8 @@ void plot_process_wswindow_wsviewport(grm_args_t *plot_args)
   double wsviewport[4] = {0.0, 0.0, 0.0, 0.0};
   double wswindow[4] = {0.0, 0.0, 0.0, 0.0};
 
-  auto group = global_root->lastChildElement();
+  // set wswindow/wsviewport on root
+  auto group = global_root;
 
   get_figure_size(plot_args, &pixel_width, &pixel_height, &metric_width, &metric_height);
 
@@ -8772,7 +8773,6 @@ int grm_plot(const grm_args_t *args)
   std::string vars[2] = {"x", "y"};
   double default_size[2] = {PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT};
 
-  // todo: marginalheatmap stops here
   if (!grm_merge(args))
     {
       return 0;
