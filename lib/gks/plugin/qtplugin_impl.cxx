@@ -5,6 +5,9 @@
 #include <assert.h>
 #include <string.h>
 #include <math.h>
+#include <float.h>
+#include <stack>
+#include <QDebug>
 
 #endif
 
@@ -86,6 +89,14 @@ static gks_state_list_t gkss_, *gkss = &gkss_;
 
 static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
+struct bounding_struct
+{
+  double x_min, x_max;
+  double y_min, y_max;
+  void (*fun_call)(int, double, double, double, double);
+  int item_id;
+};
+
 typedef struct ws_state_list_t
 {
   gks_display_list_t dl;
@@ -122,6 +133,7 @@ typedef struct ws_state_list_t
   void *memory_plugin_ws_state_list;
   int *memory_plugin_mem_ptr;
   char *memory_plugin_mem_path;
+  std::stack<bounding_struct> bounding_stack;
 } ws_state_list;
 
 static ws_state_list p_, *p = &p_;
@@ -387,6 +399,19 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
     {
       p->pixmap->drawPolyline(p->points->constData(), p->npoints);
     }
+  if (!p->bounding_stack.empty())
+    {
+      double point_x, point_y;
+      for (i = 0; i < p->npoints; i++)
+        {
+          point_x = p->points->constData()[i].x();
+          point_y = p->points->constData()[i].y();
+          if (p->bounding_stack.top().x_max < point_x) p->bounding_stack.top().x_max = point_x;
+          if (p->bounding_stack.top().x_min > point_x) p->bounding_stack.top().x_min = point_x;
+          if (p->bounding_stack.top().y_max < point_y) p->bounding_stack.top().y_max = point_y;
+          if (p->bounding_stack.top().y_min > point_y) p->bounding_stack.top().y_min = point_y;
+        }
+    }
 }
 
 static void polyline(int n, double *px, double *py)
@@ -548,6 +573,16 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           p->pixmap->drawChord(QRectF(x - r, y - r, d, d), 0, 360 * 16);
           break;
         }
+      if (!p->bounding_stack.empty())
+        {
+          double point_x, point_y;
+          point_x = x;
+          point_y = y;
+          if (p->bounding_stack.top().x_max <= point_x) p->bounding_stack.top().x_max = point_x;
+          if (p->bounding_stack.top().x_min >= point_x) p->bounding_stack.top().x_min = point_x;
+          if (p->bounding_stack.top().y_max <= point_y) p->bounding_stack.top().y_max = point_y;
+          if (p->bounding_stack.top().y_min >= point_y) p->bounding_stack.top().y_min = point_y;
+        }
       pc++;
     }
   while (op != 0);
@@ -640,6 +675,16 @@ static void text_routine(double x, double y, int nchars, char *chars)
     }
   else
     p->pixmap->drawText(xstart, ystart, s);
+
+  if (!p->bounding_stack.empty())
+    {
+      double point_x = p->points->constData()[i].x();
+      double point_y = p->points->constData()[i].y();
+      p->bounding_stack.top().x_max = xstart + xrel;
+      p->bounding_stack.top().x_min = xstart;
+      p->bounding_stack.top().y_max = ystart + yrel;
+      p->bounding_stack.top().y_min = ystart;
+    }
 }
 
 static void set_font(int font)
@@ -758,6 +803,19 @@ static void fill_routine(int n, double *px, double *py, int tnr)
       p->pixmap->drawPolygon(points->constData(), points->size());
     }
 
+  if (!p->bounding_stack.empty())
+    {
+      double point_x, point_y;
+      for (i = 0; i < points->size(); i++)
+        {
+          point_x = points->constData()[i].x();
+          point_y = points->constData()[i].y();
+          if (p->bounding_stack.top().x_max < point_x) p->bounding_stack.top().x_max = point_x;
+          if (p->bounding_stack.top().x_min > point_x) p->bounding_stack.top().x_min = point_x;
+          if (p->bounding_stack.top().y_max < point_y) p->bounding_stack.top().y_max = point_y;
+          if (p->bounding_stack.top().y_min > point_y) p->bounding_stack.top().y_min = point_y;
+        }
+    }
   delete points;
 }
 
@@ -1079,6 +1137,18 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           exit(1);
         }
     }
+
+  if (!p->bounding_stack.empty())
+    {
+      if (p->bounding_stack.top().x_max < path.boundingRect().x() + path.boundingRect().width())
+        p->bounding_stack.top().x_max = path.boundingRect().x() + path.boundingRect().width();
+      if (p->bounding_stack.top().x_min > path.boundingRect().x())
+        p->bounding_stack.top().x_min = path.boundingRect().x();
+      if (p->bounding_stack.top().y_max < path.boundingRect().y() + path.boundingRect().height())
+        p->bounding_stack.top().y_max = path.boundingRect().y() + path.boundingRect().height();
+      if (p->bounding_stack.top().y_min > path.boundingRect().y())
+        p->bounding_stack.top().y_min = path.boundingRect().y();
+    }
   p->pixmap->restore();
 }
 
@@ -1176,6 +1246,16 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
       (*p->points)[i] = QPointF(xi, yi);
+      if (!p->bounding_stack.empty())
+        {
+          double point_x, point_y;
+          point_x = xi;
+          point_y = yi;
+          if (p->bounding_stack.top().x_max <= point_x) p->bounding_stack.top().x_max = point_x;
+          if (p->bounding_stack.top().x_min >= point_x) p->bounding_stack.top().x_min = point_x;
+          if (p->bounding_stack.top().y_max <= point_y) p->bounding_stack.top().y_max = point_y;
+          if (p->bounding_stack.top().y_min >= point_y) p->bounding_stack.top().y_min = point_y;
+        }
     }
 
   triangle = new QPolygonF(3);
@@ -1230,6 +1310,16 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
       (*p->points)[i] = QPointF(xi, yi);
+      if (!p->bounding_stack.empty())
+        {
+          double point_x, point_y;
+          point_x = xi;
+          point_y = yi;
+          if (p->bounding_stack.top().x_max <= point_x) p->bounding_stack.top().x_max = point_x;
+          if (p->bounding_stack.top().x_min >= point_x) p->bounding_stack.top().x_min = point_x;
+          if (p->bounding_stack.top().y_max <= point_y) p->bounding_stack.top().y_max = point_y;
+          if (p->bounding_stack.top().y_min >= point_y) p->bounding_stack.top().y_min = point_y;
+        }
     }
 
   j = 0;
@@ -1418,6 +1508,9 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
   GKS_UNUSED(lc);
   static gks_state_list_t saved_gkss;
   int true_color;
+  int cur_id;
+  bounding_struct s;
+  bounding_struct *top;
 
   switch (fctid)
     {
@@ -1537,6 +1630,18 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
 
     case 203:
       p->transparency = (int)(r1[0] * 255);
+      break;
+
+    case GRM_BEGIN_SELECTION: /* 260 */
+      cur_id = ia[0];
+      s = {DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX, (void (*)(int, double, double, double, double))r1, cur_id};
+      p->bounding_stack.push(s);
+      break;
+
+    case GRM_END_SELECTION: /* 261 */
+      top = &p->bounding_stack.top();
+      s.fun_call(top->item_id, top->x_min, top->x_max, top->y_min, top->y_max);
+      p->bounding_stack.pop();
       break;
     }
 }

@@ -2750,21 +2750,6 @@ static void drawLegend(const std::shared_ptr<GR::Element> &elem, const std::shar
   gr_restorestate();
 }
 
-static int bounding_id = 0;
-static std::map<int, std::shared_ptr<GR::Element>> bounding_map;
-
-void receiverfunction(int id, double x_min, double x_max, double y_min, double y_max)
-{
-  if (!(x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX))
-    {
-      bounding_map[id]->setAttribute("bbox_id", id);
-      bounding_map[id]->setAttribute("bbox_xmin", x_min);
-      bounding_map[id]->setAttribute("bbox_xmax", x_max);
-      bounding_map[id]->setAttribute("bbox_ymin", y_min);
-      bounding_map[id]->setAttribute("bbox_ymax", y_max);
-    }
-}
-
 static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
 {
   double viewport[4], vp[4];
@@ -5718,6 +5703,21 @@ void GR::Render::setGR3LightParameters(const std::shared_ptr<GR::Element> &eleme
   element->setAttribute("diffuse", diffuse);
   element->setAttribute("specular", specular);
   element->setAttribute("specular_power", specular_power);
+}
+
+static int bounding_id = 0;
+static std::map<int, std::shared_ptr<GR::Element>> bounding_map;
+
+void receiverfunction(int id, double x_min, double x_max, double y_min, double y_max)
+{
+  if (!(x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX))
+    {
+      bounding_map[id]->setAttribute("bbox_id", id);
+      bounding_map[id]->setAttribute("bbox_xmin", x_min);
+      bounding_map[id]->setAttribute("bbox_xmax", x_max);
+      bounding_map[id]->setAttribute("bbox_ymin", y_min);
+      bounding_map[id]->setAttribute("bbox_ymax", y_max);
+    }
 }
 
 //! Render functions
