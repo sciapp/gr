@@ -5733,7 +5733,7 @@ static void renderHelper(const std::shared_ptr<GR::Element> &element, const std:
    */
   bool bounding_boxes = true; // make the creation of the bounding boxes optional for better performance
 
-  if (bounding_boxes)
+  if (bounding_boxes && element->hasAttributes())
     {
       gr_begin_grm_selection(bounding_id, &receiverfunction);
       bounding_map[bounding_id] = element;
@@ -5750,7 +5750,7 @@ static void renderHelper(const std::shared_ptr<GR::Element> &element, const std:
           gr_restorestate();
         }
     }
-  if (bounding_boxes)
+  if (bounding_boxes && element->hasAttributes())
     {
       gr_end_grm_selection();
     }
@@ -5910,7 +5910,6 @@ void GR::Render::render()
   if (root->hasChildNodes())
     {
       finalizeGrid(root);
-      int i = 0;
       for (const auto &child : root->children())
         {
           gr_savestate();
