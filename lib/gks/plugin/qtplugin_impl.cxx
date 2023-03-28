@@ -1899,14 +1899,6 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       p = NULL;
       break;
 
-    case 6:
-      /* set display list length to zero */
-      memset(p->dl.buffer, 0, sizeof(int));
-      p->dl.nbytes = 0;
-
-      p->empty = true;
-      break;
-
     case 8:
       if (i_arr[1] & GKS_K_PERFORM_FLAG)
         {
