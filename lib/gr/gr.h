@@ -62,6 +62,21 @@ typedef struct
   double grid_z_re; /*!< Reciproke of interpolation kernel extent in z-direction */
 } tri_linear_t;
 
+typedef struct cpubasedvolume_2pass_priv cpubasedvolume_2pass_priv_t;
+typedef struct
+{
+  double dmin;
+  double dmax;
+  cpubasedvolume_2pass_priv_t *priv;
+} cpubasedvolume_2pass_t;
+
+typedef struct hexbin_2pass_priv hexbin_2pass_priv_t;
+typedef struct
+{
+  int nc;
+  int cntmax;
+  hexbin_2pass_priv_t *priv;
+} hexbin_2pass_t;
 
 DLLEXPORT void gr_initgr(void);
 DLLEXPORT int gr_debug(void);
@@ -160,6 +175,7 @@ DLLEXPORT void gr_contour(int, int, int, double *, double *, double *, double *,
 DLLEXPORT void gr_contourf(int, int, int, double *, double *, double *, double *, int);
 DLLEXPORT void gr_tricontour(int, double *, double *, double *, int, double *);
 DLLEXPORT int gr_hexbin(int, double *, double *, int);
+DLLEXPORT const hexbin_2pass_t *gr_hexbin_2pass(int, double *, double *, int, const hexbin_2pass_t *);
 DLLEXPORT void gr_setcolormap(int);
 DLLEXPORT void gr_inqcolormap(int *);
 DLLEXPORT void gr_setcolormapfromrgb(int n, double *r, double *g, double *b, double *x);
@@ -263,6 +279,8 @@ DLLEXPORT void gr_setvolumebordercalculation(int);
 DLLEXPORT void gr_setapproximativecalculation(int);
 DLLEXPORT void gr_inqvolumeflags(int *, int *, int *, int *, int *);
 DLLEXPORT void gr_cpubasedvolume(int, int, int, double *, int, double *, double *, double *, double *);
+DLLEXPORT const cpubasedvolume_2pass_t *gr_cpubasedvolume_2pass(int, int, int, double *, int, double *, double *,
+                                                                double *, double *, const cpubasedvolume_2pass_t *);
 DLLEXPORT void gr_inqvpsize(int *, int *, double *);
 DLLEXPORT void gr_polygonmesh3d(int, const double *, const double *, const double *, int, const int *, const int *);
 

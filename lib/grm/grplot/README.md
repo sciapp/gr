@@ -25,7 +25,7 @@ There is another parameter that can be used for all two-dimensional data sets:
 
 For plots where multiple columns are read there is also a parameter that allows to select columns.
 
-- `columns`: define the columns of the file which should be respected in the plot. The default is all columns. If all columns from x to y should be drawn use `x:y`. To select more than 1 specific column use the `,` without whitespace as separator.
+- `columns`: define the columns of the file which should be respected in the plot. The default is all columns. If all columns from x to y should be drawn use `x:y`. The `y` is necessary even when all lines from `x` to the end should be drawn. To select more than 1 specific column use the `,` without whitespace as separator.
 
 There are more key-value parameters. These parameters only effect specific plot types. For example `bar_width` only makes sense, when bars are drawn. All possible parameters are:
 
@@ -84,7 +84,7 @@ Values are seperated through commas (`,`), e.g. `3, 5`.
 
 The next line after the header may contain the column labels. If the data does not have a label a blank line can be used instead. Data items are separated with a tab character (`\t`). Depending on the plot type the data is interpreted differently. The following list shows how the data is treated for different plot types.
 
-1. `contour`, `contourf`, `heatmap`, `imshow`, `marginalheatmap`, `surface`, `wireframe`: The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction.
+1. `contour`, `contourf`, `heatmap`, `imshow`, `marginalheatmap`, `surface`, `wireframe`: The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction. With the parameter `use_bins:1` the first row and column of the data is interpreted as information about the `xrange` and `yrange`.
 2. `line`, `scatter`: One or more columns are expected here. Each column will be displayed in a single plot. The values inside the columns gets therefore interpreted as y-values.
 3. `isosurface`, `volume`: The expected data are multiple matrices. Each matrix represents a slice inside the volume.
 4. `plot3`, `scatter`, `scatter3`, `tricont`, `trisurf`: Three columns with data are expected, representing the x-, y- and z-data.
@@ -152,7 +152,7 @@ Possible parameters for the bar plot are:
 
 This plot type converts the data into a contour plot. A contour plot displays the three-dimensional data over a rectangular mesh. Depending on the specified number of `levels` contour lines are displayed which represent the different height values.
 
-The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction.
+The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction. With the parameter `use_bins:1` the first row and column of the data is interpreted as information about the `xrange` and `yrange`.
 
 Possible parameters for the contour plot are:
 
@@ -165,7 +165,7 @@ Possible parameters for the contour plot are:
 
 This plot type converts the data into a contourf plot. A contourf plot displays the three-dimensional data over a rectangular mesh. Depending on the specified number of `levels` contour lines are displayed which represent the different height values. The space between the contour lines is filled with a color respecting the specified colormap.
 
-The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction.
+The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction. With the parameter `use_bins:1` the first row and column of the data is interpreted as information about the `xrange` and `yrange`.
 
 Possible parameters for the contourf plot are:
 
@@ -179,7 +179,7 @@ Possible parameters for the contourf plot are:
 
 This plot type converts the data into a heatmap. A heatmap uses the current colormap to display the data. Each data point is represented with a colored square which size depends on the amount of data.
 
-The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix and is interpreted as a coordinate in x- and y-direction.
+The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction. With the parameter `use_bins:1` the first row and column of the data is interpreted as information about the `xrange` and `yrange`.
 
 Possible parameters for the heatmap are:
 
@@ -221,7 +221,7 @@ Possible parameters for the histogram are:
 
 This plot type converts the data into an imshow plot. The data is displayed as a colored image where each data point is represented as a colored rectangle inside the image.
 
-The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix and are interpreted as a coordinates in x- and y-direction.
+The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction. With the parameter `use_bins:1` the first row and column of the data is interpreted as information about the `xrange` and `yrange`.
 
 Possible parameters for the imshow plot are:
 
@@ -265,7 +265,7 @@ Possible parameters for the line plot are:
 
 This plot type converts the data into a marginalheatmap. A marginalheatmap is a combination of a heatmap and either stairs plots or histograms. With those extra plots some parts of the heatmap data are displayed in vertical and horizontal direction at the margins of the heatmap.
 
-The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction.
+The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction. With the parameter `use_bins:1` the first row and column of the data is interpreted as information about the `xrange` and `yrange`.
 
 Possible parameters for the marginalheatmap are:
 
@@ -367,7 +367,7 @@ Possible parameters for the shade plot are:
 
 This plot type converts the data into a surface plot. A surface plot is to be compared with a visualization of a function of two variables inside the three-dimensional space.
 
-The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction.
+The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction. With the parameter `use_bins:1` the first row and column of the data is interpreted as information about the `xrange` and `yrange`.
 
 Possible parameters for the surface plot are:
 
@@ -449,4 +449,4 @@ Possible parameters for the volume plot are:
 
 This plot type converts the data into a wireframe plot. A wireframe plot takes a grid of values and projects it onto the specified three-dimensional surface. The surface itself has a grid structure.
 
-The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction.
+The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in x- and y-direction. With the parameter `use_bins:1` the first row and column of the data is interpreted as information about the `xrange` and `yrange`.

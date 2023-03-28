@@ -241,6 +241,19 @@ typedef struct
   double x_factor, y_factor;
 } volume_nogrid_data_struct;
 
+struct cpubasedvolume_2pass_priv
+{
+  double *pixels;
+};
+
+struct hexbin_2pass_priv
+{
+  int *cell;
+  int *cnt;
+  double *xcm;
+  double *ycm;
+};
+
 gauss_t interp_gauss_data = {1, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 tri_linear_t interp_tri_linear_data = {1, 1, 1};
 
@@ -9453,115 +9466,159 @@ static int hcell2xy(int nbins, double rx[2], double ry[2], double shape, int bnd
 
 int gr_hexbin(int n, double *x, double *y, int nbins)
 {
-  int errind, int_style, coli;
-  int jmax, c1, imax, lmax;
-  double size, shape;
-  double d, R;
-  double ycorr;
-  int *cell, *cnt;
-  double *xcm, *ycm;
-  double rx[2], ry[2];
-  int bnd[2];
-  int nc, cntmax;
-  int i, j;
-  double xlist[7], ylist[7], xdelta[6], ydelta[6];
+  const hexbin_2pass_t *context;
+  int cntmax;
 
-  if (n <= 2)
+  context = gr_hexbin_2pass(n, x, y, nbins, NULL);
+  if (context == NULL)
     {
-      fprintf(stderr, "invalid number of points\n");
       return -1;
     }
-  else if (nbins <= 2)
-    {
-      fprintf(stderr, "invalid number of bins\n");
-      return -1;
-    }
-
-  check_autoinit;
-
-  setscale(lx.scale_options);
-
-  /* save fill area interior style and color index */
-
-  gks_inq_fill_int_style(&errind, &int_style);
-  gks_inq_fill_color_index(&errind, &coli);
-
-  size = nbins;
-  shape = (vymax - vymin) / (vxmax - vxmin);
-
-  jmax = floor(nbins + 1.5001);
-  c1 = 2 * floor((nbins * shape) / sqrt(3) + 1.5001);
-  imax = floor((jmax * c1 - 1) / jmax + 1);
-  lmax = jmax * imax;
-
-  d = (vxmax - vxmin) / nbins;
-  R = 1. / sqrt(3) * d;
-
-  ycorr = (vymax - vymin) - ((imax - 2) * 1.5 * R + (imax % 2) * R);
-  ycorr = ycorr / 2;
-
-  cell = (int *)xcalloc(lmax + 1, sizeof(int));
-  cnt = (int *)xcalloc(lmax + 1, sizeof(int));
-  xcm = (double *)xcalloc(lmax + 1, sizeof(double));
-  ycm = (double *)xcalloc(lmax + 1, sizeof(double));
-
-  rx[0] = vxmin;
-  rx[1] = vxmax;
-  ry[0] = vymin;
-  ry[1] = vymax;
-
-  bnd[0] = imax;
-  bnd[1] = jmax;
-
-  nc = binning(x, y, cell, cnt, size, shape, rx, ry, bnd, n, ycorr);
-
-  cntmax = hcell2xy(nbins, rx, ry, shape, bnd, cell, xcm, ycm, cnt, ycorr);
-
-  for (j = 0; j < 6; j++)
-    {
-      xdelta[j] = sin(M_PI / 3 * j) * R;
-      ydelta[j] = cos(M_PI / 3 * j) * R;
-    }
-
-  gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
-
-  for (i = 1; i <= nc; i++)
-    {
-      for (j = 0; j < 6; j++)
-        {
-          xlist[j] = xcm[i] + xdelta[j];
-          ylist[j] = ycm[i] + ydelta[j];
-          gr_ndctowc(xlist + j, ylist + j);
-        }
-      xlist[6] = xlist[0];
-      ylist[6] = ylist[0];
-
-      gks_set_fill_color_index(first_color + (last_color - first_color) * ((double)cnt[i] / cntmax));
-      gks_fillarea(6, xlist, ylist);
-      gks_polyline(7, xlist, ylist);
-    }
-
-  free(ycm);
-  free(xcm);
-  free(cnt);
-  free(cell);
-
-  /* restore fill area interior style and color index */
-
-  gks_set_fill_int_style(int_style);
-  gks_set_fill_color_index(coli);
-
-  if (flag_stream)
-    {
-      gr_writestream("<hexbin len=\"%d\"", n);
-      print_float_array("x", n, x);
-      print_float_array("y", n, y);
-      gr_writestream(" nbins=\"%d\"/>\n", nbins);
-    }
+  cntmax = context->cntmax;
+  gr_hexbin_2pass(n, x, y, nbins, context);
 
   return cntmax;
 }
 
+const hexbin_2pass_t *gr_hexbin_2pass(int n, double *x, double *y, int nbins, const hexbin_2pass_t *context)
+{
+  hexbin_2pass_t *context_;
+  double d, R;
+
+  if (n <= 2)
+    {
+      fprintf(stderr, "invalid number of points\n");
+      return NULL;
+    }
+  else if (nbins <= 2)
+    {
+      fprintf(stderr, "invalid number of bins\n");
+      return NULL;
+    }
+
+  check_autoinit;
+
+  d = (vxmax - vxmin) / nbins;
+  R = 1. / sqrt(3) * d;
+
+  if (context == NULL)
+    {
+      int jmax, c1, imax, lmax;
+      double size, shape;
+      double ycorr;
+      int *cell, *cnt;
+      double *xcm, *ycm;
+      double rx[2], ry[2];
+      int bnd[2];
+      int nc, cntmax;
+
+      size = nbins;
+      shape = (vymax - vymin) / (vxmax - vxmin);
+
+      jmax = floor(nbins + 1.5001);
+      c1 = 2 * floor((nbins * shape) / sqrt(3) + 1.5001);
+      imax = floor((jmax * c1 - 1) / jmax + 1);
+      lmax = jmax * imax;
+
+      ycorr = (vymax - vymin) - ((imax - 2) * 1.5 * R + (imax % 2) * R);
+      ycorr = ycorr / 2;
+
+      cell = (int *)xcalloc(lmax + 1, sizeof(int));
+      cnt = (int *)xcalloc(lmax + 1, sizeof(int));
+      xcm = (double *)xcalloc(lmax + 1, sizeof(double));
+      ycm = (double *)xcalloc(lmax + 1, sizeof(double));
+
+      rx[0] = vxmin;
+      rx[1] = vxmax;
+      ry[0] = vymin;
+      ry[1] = vymax;
+
+      bnd[0] = imax;
+      bnd[1] = jmax;
+
+      nc = binning(x, y, cell, cnt, size, shape, rx, ry, bnd, n, ycorr);
+
+      cntmax = hcell2xy(nbins, rx, ry, shape, bnd, cell, xcm, ycm, cnt, ycorr);
+
+      context_ = (hexbin_2pass_t *)xmalloc(sizeof(hexbin_2pass_t));
+      context_->nc = nc;
+      context_->cntmax = cntmax;
+      context_->priv = (hexbin_2pass_priv_t *)xmalloc(sizeof(hexbin_2pass_priv_t));
+      context_->priv->cell = cell;
+      context_->priv->cnt = cnt;
+      context_->priv->xcm = xcm;
+      context_->priv->ycm = ycm;
+    }
+  else
+    {
+      int errind, int_style, coli;
+      int nc, cntmax;
+      int *cell, *cnt;
+      double *xcm, *ycm;
+      double xlist[7], ylist[7], xdelta[6], ydelta[6];
+      int i, j;
+
+      nc = context->nc;
+      cntmax = context->cntmax;
+      cell = context->priv->cell;
+      cnt = context->priv->cnt;
+      xcm = context->priv->xcm;
+      ycm = context->priv->ycm;
+
+      for (j = 0; j < 6; j++)
+        {
+          xdelta[j] = sin(M_PI / 3 * j) * R;
+          ydelta[j] = cos(M_PI / 3 * j) * R;
+        }
+
+      setscale(lx.scale_options);
+
+      /* save fill area interior style and color index */
+      gks_inq_fill_int_style(&errind, &int_style);
+      gks_inq_fill_color_index(&errind, &coli);
+
+      gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
+
+      for (i = 1; i <= nc; i++)
+        {
+          for (j = 0; j < 6; j++)
+            {
+              xlist[j] = xcm[i] + xdelta[j];
+              ylist[j] = ycm[i] + ydelta[j];
+              gr_ndctowc(xlist + j, ylist + j);
+            }
+          xlist[6] = xlist[0];
+          ylist[6] = ylist[0];
+
+          gks_set_fill_color_index(first_color + (last_color - first_color) * ((double)cnt[i] / cntmax));
+          gks_fillarea(6, xlist, ylist);
+          gks_polyline(7, xlist, ylist);
+        }
+
+      free(ycm);
+      free(xcm);
+      free(cnt);
+      free(cell);
+      free(context->priv);
+      free((hexbin_2pass_t *)context);
+      context_ = NULL;
+
+      /* restore fill area interior style and color index */
+
+      gks_set_fill_int_style(int_style);
+      gks_set_fill_color_index(coli);
+
+      if (flag_stream)
+        {
+          gr_writestream("<hexbin len=\"%d\"", n);
+          print_float_array("x", n, x);
+          print_float_array("y", n, y);
+          gr_writestream(" nbins=\"%d\"/>\n", nbins);
+        }
+    }
+
+  return context_;
+}
 /*!
  * Set the currently used colormap.
  *
@@ -14327,6 +14384,58 @@ static int system_processor_count()
 void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, double *dmin_ptr, double *dmax_ptr,
                        double *dmin_val, double *dmax_val)
 {
+  const cpubasedvolume_2pass_t *context;
+
+  context = gr_cpubasedvolume_2pass(nx, ny, nz, data, algorithm, dmin_ptr, dmax_ptr, dmin_val, dmax_val, NULL);
+  if (context == NULL)
+    {
+      return;
+    }
+  gr_cpubasedvolume_2pass(nx, ny, nz, data, algorithm, dmin_ptr, dmax_ptr, dmin_val, dmax_val, context);
+}
+
+/*!
+ * Draw volume data with raycasting using the given algorithm and apply the current GR colormap. This is the two pass
+ * version of gr_cpubasedvolume and can be used to retrieve dmin and dmax in a first call before the actual volume is
+ * drawn in the second call.
+ *
+ * \param[in]     nx         number of points in x-direction
+ * \param[in]     ny         number of points in y-direction
+ * \param[in]     nz         number of points in z-direction
+ * \param[in]     data       an array of shape nx * ny * nz containing the intensities for each point
+ * \param[in]     algorithm  the algorithm to reduce the volume data
+ * \param[in,out] dmin_ptr   The variable this parameter points at will be used as minimum data value when applying the
+ *                           colormap. If it is negative, the variable will be set to the actual occuring minimum and
+ *                           that value will be used instead. If dmin_ptr is NULL, it will be ignored.
+ * \param[in,out] dmax_ptr   The variable this parameter points at will be used as maximum data value when applying the
+ *                           colormap. If it is negative, the variable will be set to the actual occuring maximum and
+ *                           that value will be used instead. If dmax_ptr is NULL, it will be ignored.
+ * \param[in]     min_val    array with the minimum coordinates of the volumedata
+ * \param[in]     max_val    array with the maximum coordinates of the volumedata
+ * \param[in,out] context    pointer to a cpubasedvolume_2pass_t context struct. In the first pass, this pointer must
+ *                           be NULL. In the second pass, the return value of the first call must be used as context
+ *                           parameter.
+ * \returns                  a context struct in the first pass, NULL in the second pass.
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * Available algorithms are:
+ *
+ * +---------------------+---+-----------------------------+
+ * |GR_VOLUME_EMISSION   |  0|emission model               |
+ * +---------------------+---+-----------------------------+
+ * |GR_VOLUME_ABSORPTION |  1|absorption model             |
+ * +---------------------+---+-----------------------------+
+ * |GR_VOLUME_MIP        |  2|maximum intensity projection |
+ * +---------------------+---+-----------------------------+
+ *
+ * \endverbatim
+ */
+const cpubasedvolume_2pass_t *gr_cpubasedvolume_2pass(int nx, int ny, int nz, double *data, int algorithm,
+                                                      double *dmin_ptr, double *dmax_ptr, double *dmin_val,
+                                                      double *dmax_val, const cpubasedvolume_2pass_t *context)
+{
+  cpubasedvolume_2pass_t *context_;
   int n_x, n_y, size;
   double *pixels, *min_ptr, *max_ptr;
   double min_val[3], max_val[3];
@@ -14339,139 +14448,159 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
   int i, j = 0, threadnum;
   check_autoinit;
 
-  if (gpx.projection_type == GR_PROJECTION_DEFAULT)
+  if (context == NULL)
     {
-      fprintf(stderr, "gr_cpubasedvolume only runs when the projectiontype is set to GR_PROJECTION_ORTHOGRAPHIC or "
-                      "GR_PROJECTION_PERSPECTIVE.\n");
-      return;
-    }
+      if (gpx.projection_type == GR_PROJECTION_DEFAULT)
+        {
+          fprintf(stderr, "gr_cpubasedvolume only runs when the projectiontype is set to GR_PROJECTION_ORTHOGRAPHIC or "
+                          "GR_PROJECTION_PERSPECTIVE.\n");
+          return NULL;
+        }
 
-  pixels = calloc(vt.picture_width * vt.picture_height, sizeof(double));
-  if (pixels == 0)
-    {
-      fprintf(stderr, "can't allocate memory");
-      return;
-    }
-  /* size of each thread calculated out of threadnumber */
-  size = (int)(max(10, (nx + ny + nz) / 3.0 * vt.thread_size));
-  n_x = (int)ceil(1. * vt.picture_width / size);
-  n_y = (int)ceil(1. * vt.picture_height / size);
+      pixels = calloc(vt.picture_width * vt.picture_height, sizeof(double));
+      if (pixels == 0)
+        {
+          fprintf(stderr, "can't allocate memory");
+          return NULL;
+        }
+      /* size of each thread calculated out of threadnumber */
+      size = (int)(max(10, (nx + ny + nz) / 3.0 * vt.thread_size));
+      n_x = (int)ceil(1. * vt.picture_width / size);
+      n_y = (int)ceil(1. * vt.picture_height / size);
 
-  max_ptr = dmax_ptr;
-  min_ptr = dmin_ptr;
-  if (dmax_ptr && *dmax_ptr < 0) max_ptr = NULL;
-  if (dmin_ptr && *dmin_ptr < 0) min_ptr = NULL;
+      max_ptr = dmax_ptr;
+      min_ptr = dmin_ptr;
+      if (dmax_ptr && *dmax_ptr < 0) max_ptr = NULL;
+      if (dmin_ptr && *dmin_ptr < 0) min_ptr = NULL;
 
-  if (dmin_val == NULL)
-    {
-      min_val[0] = min_val[1] = min_val[2] = -1;
-    }
-  else
-    {
-      min_val[0] = dmin_val[0];
-      min_val[1] = dmin_val[1];
-      min_val[2] = dmin_val[2];
-    }
-  if (dmax_val == NULL)
-    {
-      max_val[0] = max_val[1] = max_val[2] = -1;
-    }
-  else
-    {
-      max_val[0] = dmax_val[0];
-      max_val[1] = dmax_val[1];
-      max_val[2] = dmax_val[2];
-    }
+      if (dmin_val == NULL)
+        {
+          min_val[0] = min_val[1] = min_val[2] = -1;
+        }
+      else
+        {
+          min_val[0] = dmin_val[0];
+          min_val[1] = dmin_val[1];
+          min_val[2] = dmin_val[2];
+        }
+      if (dmax_val == NULL)
+        {
+          max_val[0] = max_val[1] = max_val[2] = -1;
+        }
+      else
+        {
+          max_val[0] = dmax_val[0];
+          max_val[1] = dmax_val[1];
+          max_val[2] = dmax_val[2];
+        }
 
-  f.nx = nx;
-  f.ny = ny;
-  f.nz = nz;
-  f.algorithm = algorithm;
-  f.data = data;
-  f.dmin_ptr = min_ptr;
-  f.dmax_ptr = max_ptr;
-  f.min_val = min_val;
-  f.max_val = max_val;
-  f.pixels = pixels;
-  vt.ray_casting = &f;
+      f.nx = nx;
+      f.ny = ny;
+      f.nz = nz;
+      f.algorithm = algorithm;
+      f.data = data;
+      f.dmin_ptr = min_ptr;
+      f.dmax_ptr = max_ptr;
+      f.min_val = min_val;
+      f.max_val = max_val;
+      f.pixels = pixels;
+      vt.ray_casting = &f;
 
 /* creates the threadpool */
 #ifndef NO_THREADS
-  tp = calloc(1, sizeof(*tp));
-  if (tp == 0)
-    {
-      fprintf(stderr, "can't allocate memory");
-      return;
-    }
-  threadnum = (system_processor_count() - 1) < 256 ? system_processor_count() - 1 : 256;
-  if (vt.max_threads > 0)
-    {
-      threadnum = vt.max_threads;
-    }
-  threadpool_create(tp, threadnum, ray_casting_thread);
-#endif
-  jobs = (struct thread_attr *)gks_malloc(n_x * n_y * sizeof(struct thread_attr));
-
-  for (i = 0; i < n_x; i++)
-    {
-      x_end = (int)min((i + 1.0) * size, vt.picture_width);
-      for (j = 0; j < n_y; j++)
+      tp = calloc(1, sizeof(*tp));
+      if (tp == 0)
         {
-          /* transfer data for each thread */
-          y_end = (int)min((j + 1.0) * size, vt.picture_height);
-          jobs[i + j * n_x].x_start = x_start;
-          jobs[i + j * n_x].y_start = y_start;
-          jobs[i + j * n_x].x_end = x_end;
-          jobs[i + j * n_x].y_end = y_end;
+          fprintf(stderr, "can't allocate memory");
+          return NULL;
+        }
+      threadnum = (system_processor_count() - 1) < 256 ? system_processor_count() - 1 : 256;
+      if (vt.max_threads > 0)
+        {
+          threadnum = vt.max_threads;
+        }
+      threadpool_create(tp, threadnum, ray_casting_thread);
+#endif
+      jobs = (struct thread_attr *)gks_malloc(n_x * n_y * sizeof(struct thread_attr));
+
+      for (i = 0; i < n_x; i++)
+        {
+          x_end = (int)min((i + 1.0) * size, vt.picture_width);
+          for (j = 0; j < n_y; j++)
+            {
+              /* transfer data for each thread */
+              y_end = (int)min((j + 1.0) * size, vt.picture_height);
+              jobs[i + j * n_x].x_start = x_start;
+              jobs[i + j * n_x].y_start = y_start;
+              jobs[i + j * n_x].x_end = x_end;
+              jobs[i + j * n_x].y_end = y_end;
 
 #ifndef NO_THREADS
-          threadpool_add_work(tp, jobs + i + j * n_x);
+              threadpool_add_work(tp, jobs + i + j * n_x);
 #else
-          ray_casting_thread(jobs + i + j * n_x);
+              ray_casting_thread(jobs + i + j * n_x);
 #endif
-          y_start = y_end;
+              y_start = y_end;
+            }
+          x_start = x_end;
+          y_start = 0;
         }
-      x_start = x_end;
-      y_start = 0;
-    }
 #ifndef NO_THREADS
-  threadpool_destroy(tp);
+      threadpool_destroy(tp);
 #endif
 
-  /* calculate the min and max value of all pixels */
-  if (dmax_ptr && *dmax_ptr < 0)
-    {
-      double max_color = 0;
-      for (i = 0; i < vt.picture_width * vt.picture_height; i++)
+      /* calculate the min and max value of all pixels */
+      if (dmax_ptr && *dmax_ptr < 0)
         {
-          if (pixels[i] > max_color) max_color = pixels[i];
+          double max_color = 0;
+          for (i = 0; i < vt.picture_width * vt.picture_height; i++)
+            {
+              if (pixels[i] > max_color) max_color = pixels[i];
+            }
+          *dmax_ptr = max_color;
         }
-      *dmax_ptr = max_color;
-    }
-  if (dmin_ptr && *dmin_ptr < 0)
-    {
-      double min_color = pixels[0];
-      for (i = 1; i < vt.picture_width * vt.picture_height; i++)
+      if (dmin_ptr && *dmin_ptr < 0)
         {
-          if (pixels[i] < min_color) min_color = pixels[i];
+          double min_color = pixels[0];
+          for (i = 1; i < vt.picture_width * vt.picture_height; i++)
+            {
+              if (pixels[i] < min_color) min_color = pixels[i];
+            }
+          *dmin_ptr = max(0, min_color);
         }
-      *dmin_ptr = max(0, min_color);
-    }
-  draw_volume(pixels);
+      free(jobs);
 
-  free(pixels);
-  free(jobs);
-  if (flag_stream)
-    {
-      gr_writestream("<cpubasedvolume nx=\"%i\" ny=\"%i\" nz=\"%i\" />\n", nx, ny, nz);
-      print_float_array("data", nx * ny * nz, data);
-      gr_writestream(" algorithm=\"%i\" ", algorithm);
-      print_float_array("dmin_ptr", 1, dmin_ptr);
-      print_float_array("dmax_ptr", 1, dmax_ptr);
-      print_float_array("dmin_val", 1, dmin_val);
-      print_float_array("dmax_val", 1, dmax_val);
-      gr_writestream("/>\n");
+      context_ = (cpubasedvolume_2pass_t *)xmalloc(sizeof(cpubasedvolume_2pass_t));
+      context_->dmin = *dmin_ptr;
+      context_->dmax = *dmax_ptr;
+      context_->priv = (cpubasedvolume_2pass_priv_t *)xmalloc(sizeof(cpubasedvolume_2pass_priv_t));
+      context_->priv->pixels = pixels;
     }
+  else
+    {
+      double *pixels = context->priv->pixels;
+
+      draw_volume(pixels);
+
+      free(pixels);
+      free(context->priv);
+      free((cpubasedvolume_2pass_t *)context);
+      context_ = NULL;
+
+      if (flag_stream)
+        {
+          gr_writestream("<cpubasedvolume nx=\"%i\" ny=\"%i\" nz=\"%i\" />\n", nx, ny, nz);
+          print_float_array("data", nx * ny * nz, data);
+          gr_writestream(" algorithm=\"%i\" ", algorithm);
+          print_float_array("dmin_ptr", 1, dmin_ptr);
+          print_float_array("dmax_ptr", 1, dmax_ptr);
+          print_float_array("dmin_val", 1, dmin_val);
+          print_float_array("dmax_val", 1, dmax_val);
+          gr_writestream("/>\n");
+        }
+    }
+
+  return context_;
 }
 
 void gr_inqvpsize(int *width, int *height, double *device_pixel_ratio)

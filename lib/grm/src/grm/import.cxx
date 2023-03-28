@@ -52,6 +52,7 @@ static std::map<std::string, const char *> key_to_types{{"accelerate", "i"},
                                                         {"step_where", "s"},
                                                         {"style", "s"},
                                                         {"tilt", "d"},
+                                                        {"use_bins", "i"},
                                                         {"xbins", "i"},
                                                         {"xcolormap", "i"},
                                                         {"xflip", "i"},
@@ -87,6 +88,7 @@ static std::map<std::string, const char *> container_to_types{
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ scatter interpretation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static int scatter_with_z = 0;
+static int use_bins = 0;
 
 /* ========================= functions ============================================================================== */
 
@@ -121,7 +123,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
   std::ifstream file(path);
   std::list<int> columns;
   bool depth_change = true;
-  int depth = 0;
+  int depth = 0, max_col = -1;
   int linecount = 0;
 
   /* read the columns from the colms string also converts slicing into numbers */
@@ -315,6 +317,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
       int cnt = 0;
       char det = '\t';
       int start_with_nan = 0;
+      size_t col;
       if (line.empty())
         {
           depth += 1;
@@ -327,18 +330,27 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
           std::string tmp = ",";
           if (starts_with(trim(line), tmp)) start_with_nan = 1;
         }
-      for (size_t col = 0; std::getline(line_ss, token, det) && (token.length() || start_with_nan); col++)
+      for (col = 0; std::getline(line_ss, token, det) && (token.length() || start_with_nan); col++)
         {
-          if (std::find(columns.begin(), columns.end(), col) != columns.end() || (columns.empty() && labels.empty()) ||
-              (columns.empty() && col < labels.size()))
+          if (std::find(columns.begin(), columns.end(), col) != columns.end() ||
+              (columns.empty() && labels.empty() && (!use_bins || col > 0)) ||
+              (columns.empty() && col < labels.size() && (!use_bins || col > 0)))
             {
-              if ((row == 0 && col == 0) || (depth_change && col == 0) || (start_with_nan && col == 0))
+              if ((row == 0 && (col == use_bins || col == columns.front())) ||
+                  (depth_change && (col == use_bins || col == columns.front())) ||
+                  (start_with_nan && (col == use_bins || col == columns.front())))
                 {
                   data.emplace_back(std::vector<std::vector<double>>());
                 }
               if (depth_change)
                 {
                   data[depth].emplace_back(std::vector<double>());
+                }
+              if (max_col != -1 && max_col < (int)cnt + 1)
+                {
+                  fprintf(stderr, "Line %i has a different number of columns (%i) than previous lines (%i)\n",
+                          (int)row + linecount + 1, cnt + 1, max_col);
+                  return ERROR_PLOT_MISSING_DATA;
                 }
               try
                 {
@@ -361,8 +373,37 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                 }
               cnt += 1;
             }
+          else if (use_bins && col == 0)
+            {
+              try
+                {
+                  if (row == 0)
+                    {
+                      ranges->ymin = std::stod(token);
+                    }
+                  else
+                    {
+                      ranges->ymax = std::stod(token); // not the best way to get ymax but the number of rows is unknown
+                    }
+                }
+              catch (std::invalid_argument &e)
+                {
+                  fprintf(stderr, "Invalid argument for yrange parameter (%s) while using option use_bins in line %i\n",
+                          labels[0].c_str(), (int)row + linecount + 1);
+                }
+            }
         }
       depth_change = false;
+      if (max_col == -1)
+        {
+          max_col = (int)col;
+        }
+      else if (max_col != (int)col)
+        {
+          fprintf(stderr, "Line %i has a different number of columns (%i) than previous lines (%i)\n",
+                  (int)row + linecount + 1, (int)col, max_col);
+          return ERROR_PLOT_MISSING_DATA;
+        }
     }
   return ERROR_NONE;
 }
@@ -464,6 +505,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       fprintf(stderr, "File is empty\n");
       return 0;
     }
+  if (cols != labels.size())
+    {
+      fprintf(stderr, "The number of columns (%zu) doesn't fit the number of labels (%zu)\n", cols, labels.size());
+    }
 
   series.resize(cols);
 
@@ -478,7 +523,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     }
 
   grm_args_values(args, "kind", "s", &kind);
-  if ((strcmp(kind, "line") == 0 || (strcmp(kind, "scatter") == 0 && !scatter_with_z)) && (rows >= 100 && cols >= 100))
+  if ((strcmp(kind, "line") == 0 || (strcmp(kind, "scatter") == 0 && !scatter_with_z)) && (rows >= 50 && cols >= 50))
     {
       fprintf(stderr, "Too much data for %s plot - use heatmap instead\n", kind);
       kind = "heatmap";
@@ -503,6 +548,19 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         {
           fprintf(stderr, "Insufficient data for plot type (%s)\n", kind);
           return 0;
+        }
+      if (use_bins)
+        {
+          try
+            {
+              ranges.xmin = std::stod(labels[0]);
+              ranges.xmax = std::stod(labels[cols - 1]);
+            }
+          catch (std::invalid_argument &e)
+            {
+              fprintf(stderr, "Invalid argument for xrange parameter (%s, %s) while using option use_bins\n",
+                      labels[0].c_str(), labels[cols - 1].c_str());
+            }
         }
       adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)cols - 1.0);
       adjust_ranges(&ranges.ymin, &ranges.ymax, 0.0, (double)rows - 1.0);
@@ -1063,6 +1121,10 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                                 {
                                   scatter_with_z = std::stoi(value);
                                 }
+                              else if (strcmp(search->first.c_str(), "use_bins") == 0)
+                                {
+                                  use_bins = std::stoi(value);
+                                }
                               else
                                 {
                                   grm_args_push(args, search->first.c_str(), search->second, std::stoi(value));
@@ -1143,6 +1205,11 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
       fprintf(stderr, "Invalid plot type (%s) - fallback to line plot\n", kind.c_str());
       kind = "line";
     }
+  if (!str_equals_any(kind.c_str(), 7, "contour", "contourf", "heatmap", "imshow", "marginalheatmap", "surface",
+                      "wireframe"))
+    {
+      use_bins = 0; // this parameter is only for surface and similar types
+    }
   grm_args_push(args, "kind", "s", kind.c_str());
   return 1;
 }
@@ -1161,7 +1228,7 @@ void parse_parameter_ddd(std::string *input, const std::string *key, std::string
   if (k != 2 || (*input).length() == 0)
     {
       fprintf(stderr,
-              "Given number doesn`t fit the data for %s parameter. The "
+              "Given number doesn't fit the data for %s parameter. The "
               "parameter will be "
               "ignored\n",
               (*key).c_str());
@@ -1185,7 +1252,7 @@ int parse_parameter_nI(std::string *input, const std::string *key, std::vector<i
   if (k != std::stoi(param_num) - 1 || (*input).length() == 0)
     {
       fprintf(stderr,
-              "Given number doesn`t fit the data for %s parameter. The "
+              "Given number doesn't fit the data for %s parameter. The "
               "parameter will be "
               "ignored\n",
               (*key).c_str());
@@ -1210,7 +1277,7 @@ int parse_parameter_nS(std::string *input, const std::string *key, std::vector<s
   if (k != std::stoi(num) - 1 || (*input).length() == 0)
     {
       fprintf(stderr,
-              "Given number doesn`t fit the data for %s parameter. The parameter will be "
+              "Given number doesn't fit the data for %s parameter. The parameter will be "
               "ignored\n",
               (*key).c_str());
       return 0;
@@ -1234,7 +1301,7 @@ int parse_parameter_nD(std::string *input, const std::string *key, std::vector<d
   if (k != std::stoi(num) - 1 || (*input).length() == 0)
     {
       fprintf(stderr,
-              "Given number doesn`t fit the data for %s parameter. The parameter will be "
+              "Given number doesn't fit the data for %s parameter. The parameter will be "
               "ignored\n",
               (*key).c_str());
       return 0;

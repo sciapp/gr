@@ -6538,7 +6538,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
-      if (grm_args_values(args, "xlabel", "s", &x_label) && grm_args_values(args, "ylabel", "s", &y_label) &&
+      if (grm_args_values(args, "xlabel", "s", &x_label) || grm_args_values(args, "ylabel", "s", &y_label) ||
           grm_args_values(args, "zlabel", "s", &z_label))
         {
           group->append(global_render->createTitles3d(x_label, y_label, z_label));
