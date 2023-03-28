@@ -364,10 +364,10 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
     {
       return 0;
     }
-  wswindow[0] = static_cast<double>(subplot_element->getAttribute("wswindow_xmin"));
-  wswindow[1] = static_cast<double>(subplot_element->getAttribute("wswindow_xmax"));
-  wswindow[2] = static_cast<double>(subplot_element->getAttribute("wswindow_ymin"));
-  wswindow[3] = static_cast<double>(subplot_element->getAttribute("wswindow_ymax"));
+  wswindow[0] = static_cast<double>(subplot_element->parentElement()->getAttribute("wswindow_xmin"));
+  wswindow[1] = static_cast<double>(subplot_element->parentElement()->getAttribute("wswindow_xmax"));
+  wswindow[2] = static_cast<double>(subplot_element->parentElement()->getAttribute("wswindow_ymin"));
+  wswindow[3] = static_cast<double>(subplot_element->parentElement()->getAttribute("wswindow_ymax"));
   viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
   viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_xmax"));
   viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_ymin"));

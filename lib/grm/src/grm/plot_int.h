@@ -235,6 +235,9 @@ const char *get_compatible_format(const char *key, const char *given_format);
 int get_id_from_args(const grm_args_t *args, int *plot_id, int *subplot_id, int *series_id);
 int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_height, double *metric_width,
                     double *metric_height);
+int get_focus_and_factor(const int top, const int right, const int bottom, const int left, const int keep_aspect_ratio,
+                         double *factor_x, double *factor_y, double *focus_x, double *focus_y,
+                         grm_args_t **subplot_args);
 grm_args_t *get_subplot_from_ndc_point(double x, double y);
 grm_args_t *get_subplot_from_ndc_points(unsigned int n, const double *x, const double *y);
 double *moivre(double r, int x, int n);
@@ -261,9 +264,6 @@ void set_text_color_for_background(double r, double g, double b, const std::shar
 void draw_xticklabel(double x1, double x2, const char *label, double available_width,
                      const std::shared_ptr<GR::Element> &element);
 double auto_tick_polar(double rmax, int rings, const std::string &norm);
-int get_focus_and_factor(const int top, const int right, const int bottom, const int left, const int keep_aspect_ratio,
-                         double *factor_x, double *factor_y, double *focus_x, double *focus_y,
-                         std::shared_ptr<GR::Element> subplot_element);
 
 
 #endif
