@@ -4167,12 +4167,6 @@ err_t plot_heatmap(grm_args_t *subplot_args)
 
           // Store "raw" data in Context / heatmap element for later usage e.g. interaction
           auto context = global_render->getContext();
-          std::vector<double> x_vec(x, x + cols);
-          (*context)["x" + str] = x_vec;
-          subGroup->setAttribute("x", "x" + str);
-          std::vector<double> y_vec(y, y + rows);
-          (*context)["y" + str] = y_vec;
-          subGroup->setAttribute("y", "y" + str);
           std::vector<double> z_vec(z, z + z_length);
           (*context)["z" + str] = z_vec;
           subGroup->setAttribute("z", "z" + str);
