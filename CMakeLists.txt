@@ -1134,16 +1134,47 @@ else()
   string(APPEND GR_REPORT "- gksqt: No (Qt4 / Qt5 / Qt6 not found)\n")
 endif()
 
-if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
+if((Qt6Widgets_FOUND
+    AND Qt6Core_FOUND
+    AND Qt6Gui_FOUND
+    AND Qt6PrintSupport_FOUND
+   )
+    OR (Qt5Widgets_FOUND
+        AND Qt5Core_FOUND
+        AND Qt5Gui_FOUND
+        AND Qt5PrintSupport_FOUND
+       )
+)
   add_executable(
-    grplot WIN32 MACOSX_BUNDLE lib/grm/grplot/grplot.cxx lib/grm/grplot/grplot_mainwindow.cxx
-                               lib/grm/grplot/grplot_widget.cxx lib/grm/grplot/util.cxx
+    grplot WIN32 MACOSX_BUNDLE
+    lib/grm/grplot/gredit/Bounding_logic.cpp
+    lib/grm/grplot/gredit/Bounding_object.cpp
+    lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
+    lib/grm/grplot/gredit/TreeWidget.cpp
+    lib/grm/grplot/grplot.cxx
+    lib/grm/grplot/grplot_mainwindow.cxx
+    lib/grm/grplot/grplot_widget.cxx
+    lib/grm/grplot/util.cxx
   )
   if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
-    target_link_libraries(grplot PRIVATE Qt6::Widgets Qt6::Core grm_static)
+    target_link_libraries(
+      grplot
+      PRIVATE Qt6::Widgets
+              Qt6::Core
+              Qt6::Gui
+              gr_static
+              grm_static
+    )
     set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
   else()
-    target_link_libraries(grplot PRIVATE Qt5::Widgets Qt5::Core grm_static)
+    target_link_libraries(
+      grplot
+      PRIVATE Qt5::Widgets
+              Qt5::Core
+              Qt5::Gui
+              gr_static
+              grm_static
+    )
     set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
   endif()
   target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
@@ -1204,85 +1235,6 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
   string(APPEND GR_REPORT "- grplot: Yes\n")
 else()
   string(APPEND GR_REPORT "- grplot: No (Qt6 and Qt5 not found)\n")
-endif()
-
-if((Qt6Widgets_FOUND
-    AND Qt6Core_FOUND
-    AND Qt6Gui_FOUNDgi
-    AND Qt6PrintSupport_FOUND
-   )
-   OR (Qt5Widgets_FOUND
-       AND Qt5Core_FOUND
-       AND Qt5Gui_FOUND
-       AND Qt5PrintSupport_FOUND
-      )
-)
-  add_executable(
-    gredit WIN32 MACOSX_BUNDLE
-    lib/grm/GREditor/Bounding_logic.cpp
-    lib/grm/GREditor/Bounding_object.cpp
-    lib/grm/GREditor/CustomTreeWidgetItem.cpp
-    lib/grm/GREditor/main.cpp
-    lib/grm/GREditor/main_window.cxx
-    lib/grm/GREditor/TreeWidget.cpp
-  )
-  if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
-    target_link_libraries(
-      gredit
-      PRIVATE Qt6::Widgets
-              Qt6::Core
-              Qt6::Gui
-              Qt6::PrintSupport
-              grm_static
-              gr_static
-    )
-    set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
-  else()
-    target_link_libraries(
-      gredit
-      PRIVATE Qt5::Widgets
-              Qt5::Core
-              Qt5::Gui
-              Qt5::PrintSupport
-              grm_static
-              gr_static
-    )
-    set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
-  endif()
-  target_compile_definitions(gredit PRIVATE GRDIR="${GR_DIRECTORY}")
-  set_target_properties(
-    gredit PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
-                                                                                  "${gredit_INSTALL_RPATH}"
-  )
-  if(WIN32)
-    if(MINGW)
-      target_link_options(gredit PRIVATE -mconsole)
-    else()
-      target_link_options(gredit PRIVATE /SUBSYSTEM:CONSOLE)
-    endif()
-  endif()
-  if(GR_MANUAL_MOC_AND_RCC)
-    set_target_properties(gredit PROPERTIES AUTOMOC OFF AUTORCC OFF)
-    if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
-      set(MOC_INCLUDE_FLAGS ${QT6_MOC_INCLUDE_FLAGS})
-    else()
-      set(MOC_INCLUDE_FLAGS ${QT5_MOC_INCLUDE_FLAGS})
-    endif()
-  else()
-    set_target_properties(gredit PROPERTIES AUTOMOC ON AUTORCC ON)
-  endif()
-  if(APPLE)
-    set_target_properties(gredit PROPERTIES MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.grplot")
-  endif()
-  if(WIN32)
-    target_compile_definitions(gredit PRIVATE GR_STATIC_LIB)
-  endif()
-  if(MINGW)
-    target_compile_options(gredit PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
-  endif()
-  string(APPEND GR_REPORT "- gredit: Yes\n")
-else()
-  string(APPEND GR_REPORT "- gredit: No (Qt6 and Qt5 not found)\n")
 endif()
 
 if(GR_BUILD_DEMOS)
@@ -1447,13 +1399,6 @@ if(GR_INSTALL)
       FILES lib/grm/grplot/README.md
       DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/grplot
       RENAME grplot.man.md
-    )
-  endif()
-  if(TARGET gredit)
-    install(
-      TARGETS gredit
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-      BUNDLE DESTINATION Applications
     )
   endif()
   install(FILES lib/gr/gr.h lib/gks/gks.h lib/gr3/gr3.h lib/grm/include/grm.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)

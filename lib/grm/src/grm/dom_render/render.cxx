@@ -5731,7 +5731,7 @@ static void renderHelper(const std::shared_ptr<GR::Element> &element, const std:
    * \param[in] element A GR::Element
    * \param[in] context A GR::Context
    */
-  bool bounding_boxes = true; // make the creation of the bounding boxes optional for better performance
+  bool bounding_boxes = getenv("GRPLOT_ENABLE_EDITOR");
 
   if (bounding_boxes && element->hasAttributes())
     {

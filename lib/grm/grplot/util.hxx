@@ -4,6 +4,9 @@
 #include <optional>
 #include <string>
 #include <fstream>
+#include <iostream>
+#include <iomanip>
+#include <QPoint>
 
 #ifdef _WIN64
 #include <stdlib.h>
@@ -22,6 +25,11 @@
 
 namespace util
 {
+template <typename T> int sgn(T x)
+{
+  return (x > 0) ? 1 : ((x < 0) ? -1 : 0);
+}
+
 template <class... T> void unused(T &&...) {}
 
 class GetExecutablePathError : public virtual std::exception
@@ -196,5 +204,10 @@ void
 #endif
 setGrdir(bool force = false);
 } // namespace util
+
+inline std::ostream &operator<<(std::ostream &os, const QPoint &point)
+{
+  return os << "(" << std::setw(4) << point.x() << ", " << std::setw(4) << point.y() << ")";
+}
 
 #endif /* ifndef UTIL_HXX_INCLUDED */

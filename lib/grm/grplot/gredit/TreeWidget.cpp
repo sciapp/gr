@@ -54,13 +54,13 @@ void TreeWidget::updateData(std::shared_ptr<GR::Element> ref)
             //
 
 
-            printf("(%d %d)", index.column(), index.row());
+            //            printf("(%d %d)", index.column(), index.row());
 
-            for (auto i : roles)
-              {
-                printf("%d ", i);
-              }
-            printf("\n");
+            //            for (auto i : roles)
+            //              {
+            //                printf("%d ", i);
+            //              }
+            //            printf("\n");
           });
 }
 

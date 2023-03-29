@@ -8,6 +8,10 @@
 #include <QWidget>
 #include <QMainWindow>
 
+#include "gredit/Bounding_object.h"
+#include "gredit/Bounding_logic.h"
+#include "gredit/TreeWidget.h"
+
 #include <grm.h>
 
 class GRPlotWidget : public QWidget
@@ -29,6 +33,7 @@ protected:
   void resizeEvent(QResizeEvent *event) override;
   void wheelEvent(QWheelEvent *event) override;
   void mouseDoubleClickEvent(QMouseEvent *event) override;
+  void leaveEvent(QEvent *event) override;
 
 private slots:
   void heatmap();
@@ -59,6 +64,11 @@ private slots:
   void png();
   void jpeg();
   void svg();
+  void show_container_slot();
+  void show_bounding_boxes_slot();
+  void save_file_slot();
+  void open_file_slot();
+  void enable_editor_functions();
 
 private:
   struct MouseState
@@ -79,11 +89,16 @@ private:
   QRubberBand *rubberBand;
   grm_tooltip_info_t *tooltip;
   QTextDocument label;
+  Bounding_logic *bounding_logic;
+  std::vector<Bounding_object> clicked;
+  Bounding_object *current_selection, *mouse_move_selection;
+  bool highlightBoundingObjects;
+  TreeWidget *treewidget;
+  int amount_scrolled;
+  bool enable_editor;
 
   QMenuBar *menu;
-  QMenu *type;
-  QMenu *algo;
-  QMenu *export_menu;
+  QMenu *type, *algo, *export_menu, *editor_menu;
   QAction *heatmapAct;
   QAction *marginalheatmapAllAct;
   QAction *marginalheatmapLineAct;
@@ -112,6 +127,12 @@ private:
   QAction *PngAct;
   QAction *JpegAct;
   QAction *SvgAct;
+  QAction *show_container_action, *show_bounding_boxes_action, *save_file_action, *open_file_action, *editor_action;
+
+  void reset_pixmap();
+  void moveEvent(QMoveEvent *event) override;
+  void highlight_current_selection(QPainter &painter);
+  void extract_bounding_boxes_from_grm(QPainter &painter);
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */
