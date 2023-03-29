@@ -1137,13 +1137,11 @@ endif()
 if((Qt6Widgets_FOUND
     AND Qt6Core_FOUND
     AND Qt6Gui_FOUND
-    AND Qt6PrintSupport_FOUND
    )
-    OR (Qt5Widgets_FOUND
-        AND Qt5Core_FOUND
-        AND Qt5Gui_FOUND
-        AND Qt5PrintSupport_FOUND
-       )
+   OR (Qt5Widgets_FOUND
+       AND Qt5Core_FOUND
+       AND Qt5Gui_FOUND
+      )
 )
   add_executable(
     grplot WIN32 MACOSX_BUNDLE
