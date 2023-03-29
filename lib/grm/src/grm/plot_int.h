@@ -197,6 +197,7 @@ err_t plot_contour(grm_args_t *subplot_args);
 err_t plot_contourf(grm_args_t *subplot_args);
 err_t plot_hexbin(grm_args_t *subplot_args);
 err_t plot_heatmap(grm_args_t *subplot_args);
+err_t plot_polar_heatmap(grm_args_t *subplot_args);
 err_t plot_marginalheatmap(grm_args_t *subplot_args);
 err_t plot_wireframe(grm_args_t *subplot_args);
 err_t plot_surface(grm_args_t *subplot_args);

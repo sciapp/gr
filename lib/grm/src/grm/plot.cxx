@@ -197,6 +197,7 @@ static plot_func_map_entry_t kind_to_func[] = {{"line", plot_line},
                                                {"contourf", plot_contourf},
                                                {"hexbin", plot_hexbin},
                                                {"heatmap", plot_heatmap},
+                                               {"polar_heatmap", plot_polar_heatmap},
                                                {"marginalheatmap", plot_marginalheatmap},
                                                {"wireframe", plot_wireframe},
                                                {"surface", plot_surface},
@@ -209,6 +210,7 @@ static plot_func_map_entry_t kind_to_func[] = {{"line", plot_line},
                                                {"tricont", plot_tricont},
                                                {"shade", plot_shade},
                                                {"nonuniformheatmap", plot_heatmap},
+                                               {"nonuniformpolar_heatmap", plot_polar_heatmap},
                                                {"polar_histogram", plot_polar_histogram},
                                                {"polar_heatmap", plot_polar_heatmap},
                                                {"nonuniformpolar_heatmap", plot_polar_heatmap},
@@ -1483,7 +1485,7 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
             }
           /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
           if (!grm_args_contains(subplot_args, current_range_keys->subplot) ||
-              str_equals_any(kind, 2, "heatmap", "marginalheatmap"))
+              str_equals_any(kind, 3, "heatmap", "marginalheatmap", "polar_heatmap"))
             {
               grm_args_first_value(subplot_args, "series", "A", &current_series, &series_count);
               while (*current_series != nullptr)
@@ -1538,7 +1540,7 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                           current_min_component = 0.0;
                           current_max_component = y_length - 1;
                         }
-                      else if (str_equals_any(kind, 3, "heatmap", "marginalheatmap", "surface") &&
+                      else if (str_equals_any(kind, 4, "heatmap", "marginalheatmap", "polar_heatmap", "surface") &&
                                str_equals_any(*current_component_name, 2, "x", "y"))
                         {
                           /* in this case `x` or `y` (or both) are missing
@@ -1937,6 +1939,10 @@ void plot_post_subplot(grm_args_t *subplot_args)
   if (strcmp(kind, "barplot") == 0)
     {
       plot_draw_axes(subplot_args, 2);
+    }
+  else if (str_equals_any(kind, 2, "polar_heatmap", "nonuniformpolar_heatmap"))
+    {
+      plot_draw_polar_axes(subplot_args);
     }
 }
 
@@ -6180,6 +6186,38 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   if (strcmp(kind, "polar_histogram") == 0)
     {
       if (grm_args_values(args, "normalization", "s", &norm) == 0) norm = "count";
+    }
+  else
+    {
+      // Not Polarhistogram TODO: Merge  Polarheatmap
+      if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
+        {
+          angle_ticks = 8;
+        }
+      if (grm_args_values(args, "rings", "i", &rings) == 0)
+        {
+          if (str_equals_any(kind, 2, "polar_heatmap", "nonuniformpolar_heatmap"))
+            {
+              rings = 7;
+            }
+          else
+            {
+              rings = 9;
+            }
+        }
+
+      // ToDo: Maybe change tick calculation -> 0.1, 0.2, 0.5
+      if (grm_args_values(args, "yrange", "dd", &r_min, &r_max) == 0)
+        {
+          r_min = 0.0;
+          r_max = 1.0;
+        }
+      n = (int)ceil((r_max - r_min) / rings);
+      tick = (r_max - r_min) / static_cast<int>(rings);
+      tick = ceil(tick * 10);
+      tick /= 10;
+      r_max = r_min + rings * tick;
+      global_root->lastChildElement()->setAttribute("r_max", r_max);
     }
 
   if (grm_args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
