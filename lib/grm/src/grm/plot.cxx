@@ -166,19 +166,20 @@ event_queue_t *event_queue = NULL;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},          {"hexbin", "xys"},
-                                           {"polar", "xys"},         {"shade", "xys"},
-                                           {"stem", "xys"},          {"step", "xys"},
-                                           {"contour", "xyzc"},      {"contourf", "xyzc"},
-                                           {"tricont", "xyzc"},      {"trisurf", "xyzc"},
-                                           {"surface", "xyzc"},      {"wireframe", "xyzc"},
-                                           {"plot3", "xyzc"},        {"scatter", "xyzc"},
-                                           {"scatter3", "xyzc"},     {"quiver", "xyuv"},
-                                           {"heatmap", "xyzc"},      {"hist", "x"},
-                                           {"barplot", "y"},         {"isosurface", "c"},
-                                           {"imshow", "c"},          {"nonuniformheatmap", "xyzc"},
-                                           {"polar_histogram", "x"}, {"pie", "x"},
-                                           {"volume", "c"},          {"marginalheatmap", "xyzc"}};
+static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},           {"hexbin", "xys"},
+                                           {"polar", "xys"},          {"shade", "xys"},
+                                           {"stem", "xys"},           {"step", "xys"},
+                                           {"contour", "xyzc"},       {"contourf", "xyzc"},
+                                           {"tricont", "xyzc"},       {"trisurf", "xyzc"},
+                                           {"surface", "xyzc"},       {"wireframe", "xyzc"},
+                                           {"plot3", "xyzc"},         {"scatter", "xyzc"},
+                                           {"scatter3", "xyzc"},      {"quiver", "xyuv"},
+                                           {"heatmap", "xyzc"},       {"hist", "x"},
+                                           {"barplot", "y"},          {"isosurface", "c"},
+                                           {"imshow", "c"},           {"nonuniformheatmap", "xyzc"},
+                                           {"polar_histogram", "x"},  {"pie", "x"},
+                                           {"polar_heatmap", "xyzc"}, {"nonuniformpolar_heatmap", "xyzc"},
+                                           {"volume", "c"},           {"marginalheatmap", "xyzc"}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -194,6 +195,7 @@ static plot_func_map_entry_t kind_to_func[] = {{"line", plot_line},
                                                {"contourf", plot_contourf},
                                                {"hexbin", plot_hexbin},
                                                {"heatmap", plot_heatmap},
+                                               {"polar_heatmap", plot_polar_heatmap},
                                                {"marginalheatmap", plot_marginalheatmap},
                                                {"wireframe", plot_wireframe},
                                                {"surface", plot_surface},
@@ -206,6 +208,7 @@ static plot_func_map_entry_t kind_to_func[] = {{"line", plot_line},
                                                {"tricont", plot_tricont},
                                                {"shade", plot_shade},
                                                {"nonuniformheatmap", plot_heatmap},
+                                               {"nonuniformpolar_heatmap", plot_polar_heatmap},
                                                {"polar_histogram", plot_polar_histogram},
                                                {"pie", plot_pie},
                                                {"volume", plot_volume}};
@@ -1130,7 +1133,7 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
     {
       plot_draw_polar_axes(subplot_args);
     }
-  else if (!str_equals_any(kind, 3, "imshow", "isosurface", "pie"))
+  else if (!str_equals_any(kind, 5, "imshow", "isosurface", "pie", "polar_heatmap", "nonuniformpolar_heatmap"))
     {
       plot_draw_axes(subplot_args, 1);
     }
@@ -1525,7 +1528,7 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
             }
           /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
           if (!grm_args_contains(subplot_args, current_range_keys->subplot) ||
-              str_equals_any(kind, 2, "heatmap", "marginalheatmap"))
+              str_equals_any(kind, 3, "heatmap", "marginalheatmap", "polar_heatmap"))
             {
               grm_args_first_value(subplot_args, "series", "A", &current_series, &series_count);
               while (*current_series != NULL)
@@ -1565,7 +1568,7 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                                 }
                             }
                         }
-                      else if (str_equals_any(kind, 2, "heatmap", "marginalheatmap") &&
+                      else if (str_equals_any(kind, 3, "heatmap", "marginalheatmap", "polar_heatmap") &&
                                str_equals_any(*current_component_name, 2, "x", "y"))
                         {
                           /* in this case `x` or `y` (or both) are missing
@@ -1848,6 +1851,10 @@ void plot_post_subplot(grm_args_t *subplot_args)
   if (strcmp(kind, "barplot") == 0)
     {
       plot_draw_axes(subplot_args, 2);
+    }
+  else if (str_equals_any(kind, 2, "polar_heatmap", "nonuniformpolar_heatmap"))
+    {
+      plot_draw_polar_axes(subplot_args);
     }
 }
 
@@ -3640,6 +3647,213 @@ err_t plot_hexbin(grm_args_t *subplot_args)
     }
 
   return ERROR_NONE;
+}
+
+err_t plot_polar_heatmap(grm_args_t *subplot_args)
+{
+  const char *kind = NULL;
+  grm_args_t **current_series;
+  int icmap[256], *rgba = NULL, *data = NULL, zlog = 0;
+  unsigned int i, cols, rows, z_length;
+  double *x = NULL, *y = NULL, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv;
+  err_t error = ERROR_NONE;
+
+  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  group->setAttribute("name", "polar_heatmap");
+
+  grm_args_values(subplot_args, "series", "A", &current_series);
+  grm_args_values(subplot_args, "kind", "s", &kind);
+  grm_args_values(subplot_args, "zlog", "i", &zlog);
+  while (*current_series != NULL)
+    {
+      int is_uniform_heatmap;
+      auto subGroup = global_render->createGroup("heatmap_series");
+      group->append(subGroup);
+      grm_args_first_value(*current_series, "x", "D", &x, &cols);
+      grm_args_first_value(*current_series, "y", "D", &y, &rows);
+      is_uniform_heatmap = is_equidistant_array(cols, x) && is_equidistant_array(rows, y);
+      cleanup_and_set_error_if(!is_uniform_heatmap && (x == NULL || y == NULL), ERROR_PLOT_MISSING_DATA);
+      cleanup_and_set_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length),
+                               ERROR_PLOT_MISSING_DATA);
+
+      if (x == NULL && y == NULL)
+        {
+          /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
+          cleanup_and_set_error_if(!grm_args_values(*current_series, "z_dims", "ii", &rows, &cols),
+                                   ERROR_PLOT_MISSING_DIMENSIONS);
+        }
+      else if (x == NULL)
+        {
+          cols = z_length / rows;
+        }
+      else if (y == NULL)
+        {
+          rows = z_length / cols;
+        }
+      if (x == NULL)
+        {
+          grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
+        }
+      else
+        {
+          x_min = x[0];
+          x_max = x[cols - 1];
+        }
+      if (x == NULL)
+        {
+          grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
+        }
+      else
+        {
+          y_min = y[0];
+          y_max = y[rows - 1];
+        }
+      grm_args_push(subplot_args, "yrange", "dd", y_min, y_max);
+      grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max);
+      if (!grm_args_values(*current_series, "crange", "dd", &c_min, &c_max))
+        {
+          c_min = z_min;
+          c_max = z_max;
+        }
+
+      if (zlog)
+        {
+          z_min = log(z_min);
+          z_max = log(z_max);
+          c_min = log(c_min);
+          c_max = log(c_max);
+        }
+
+      if (!is_uniform_heatmap)
+        {
+          --cols;
+          --rows;
+        }
+      for (i = 0; i < 256; i++)
+        {
+          gr_inqcolor(1000 + i, icmap + i);
+        }
+
+      data = static_cast<int *>(malloc(rows * cols * sizeof(int)));
+      cleanup_and_set_error_if(data == NULL, ERROR_MALLOC);
+      if (z_max > z_min)
+        {
+          for (i = 0; i < cols * rows; i++)
+            {
+              if (zlog)
+                {
+                  zv = log(z[i]);
+                }
+              else
+                {
+                  zv = z[i];
+                }
+
+              if (zv > z_max || zv < z_min || grm_isnan(zv))
+                {
+                  data[i] = -1;
+                }
+              else
+                {
+                  data[i] = (int)((zv - c_min) / (c_max - c_min) * 255);
+                  if (data[i] >= 255)
+                    {
+                      data[i] = 255;
+                    }
+                  else if (data[i] < 0)
+                    {
+                      data[i] = 0;
+                    }
+                }
+            }
+        }
+      else
+        {
+          for (i = 0; i < cols * rows; i++)
+            {
+              data[i] = 0;
+            }
+        }
+
+      rgba = static_cast<int *>(malloc(rows * cols * sizeof(int)));
+      cleanup_and_set_error_if(rgba == NULL, ERROR_MALLOC);
+      std::vector<double> vec;
+      if (is_uniform_heatmap)
+        {
+          for (i = 0; i < rows * cols; i++)
+            {
+              vec.push_back(data[i]);
+              if (data[i] == -1)
+                {
+                  rgba[i] = 1256 + 1; /* Invalid color index -> gr_nonuniformcellarray draws a transparent rectangle */
+                }
+              else
+                {
+                  rgba[i] = data[i] + 1000;
+                }
+            }
+          int id = (int)global_root->getAttribute("id");
+          global_root->setAttribute("id", id + 1);
+          std::string str = std::to_string(id);
+
+          std::vector<int> rgba_vec = std::vector<int>(rgba, rgba + cols * rows);
+
+          auto polarCellArray = global_render->createPolarCellArray(0, 0, 0, 360, 0, 1, cols, rows, 1, 1, cols, rows,
+                                                                    "color" + str, rgba_vec);
+          subGroup->append(polarCellArray);
+        }
+      else
+        {
+          for (i = 0; i < rows * cols; i++)
+            {
+              if (data[i] == -1)
+                {
+                  rgba[i] = 1256 + 1; /* Invalid color index -> gr_nonuniformcellarray draws a transparent rectangle */
+                }
+              else
+                {
+                  rgba[i] = data[i] + 1000;
+                }
+            }
+          int id = (int)global_root->getAttribute("id");
+          global_root->setAttribute("id", id + 1);
+          std::string str = std::to_string(id);
+
+          std::vector<int> color_vec = std::vector<int>(rgba, rgba + cols * rows);
+
+          std::vector<double> rho, phi;
+          for (i = 0; i <= ((cols > rows) ? cols : rows); ++i)
+            {
+              if (i <= cols)
+                {
+                  phi.push_back(x[i] * 180 / M_PI);
+                }
+              if (i <= rows)
+                {
+                  rho.push_back(y_min + y[i] / (y_max - y_min));
+                }
+            }
+
+          auto nupca = global_render->createNonUniformPolarCellArray(0, 0, "phi" + str, phi, "rho" + str, rho, cols,
+                                                                     rows, 1, 1, cols, rows, "color" + str, color_vec);
+          subGroup->append(nupca);
+        }
+
+      plot_draw_colorbar(subplot_args, 0.025, 256);
+
+      free(rgba);
+      free(data);
+      rgba = NULL;
+      data = NULL;
+
+      ++current_series;
+    }
+
+cleanup:
+  free(rgba);
+  free(data);
+
+  return error;
 }
 
 err_t plot_heatmap(grm_args_t *subplot_args)
@@ -6256,12 +6470,22 @@ err_t plot_draw_polar_axes(grm_args_t *args)
         }
       if (grm_args_values(args, "rings", "i", &rings) == 0)
         {
-          rings = 9;
+          if (str_equals_any(kind, 2, "polar_heatmap", "nonuniformpolar_heatmap"))
+            {
+              rings = 7;
+            }
+          else
+            {
+              rings = 9;
+            }
         }
-      // ToDo: Maybe change tick calculation -> 0.1, 0.2, 0.5
-      r_min = -1;
-      r_max = 1;
 
+      // ToDo: Maybe change tick calculation -> 0.1, 0.2, 0.5
+      if (grm_args_values(args, "yrange", "dd", &r_min, &r_max) == 0)
+        {
+          r_min = 0.0;
+          r_max = 1.0;
+        }
       n = (int)ceil((r_max - r_min) / rings);
       tick = (r_max - r_min) / static_cast<int>(rings);
       tick = ceil(tick * 10);

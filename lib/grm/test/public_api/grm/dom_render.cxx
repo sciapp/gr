@@ -30,6 +30,66 @@
 #define Y_MIN 0.0
 #define Y_MAX M_PI
 
+
+#ifdef __unix__
+#define _XOPEN_SOURCE 500
+#endif
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "grm.h"
+#include "gks.h"
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+#define X_DIM 40
+#define Y_DIM 20
+
+#define X_MIN -2.0
+#define X_MAX 2.0
+#define Y_MIN 0.0
+#define Y_MAX M_PI
+
+
+static void test_polarheatmap(void)
+{
+  // x is rho, y is phi, z is z
+  double x[X_DIM], y[Y_DIM], z[X_DIM * Y_DIM];
+  int i, j;
+  grm_args_t *args, *series[2];
+
+  for (i = 0; i < X_DIM; ++i)
+    {
+      x[i] = i * M_PI * 2 / X_DIM;
+    }
+  for (i = 0; i < Y_DIM; ++i)
+    {
+      y[i] = i * 120 / Y_DIM;
+    }
+  for (i = 0; i < X_DIM; ++i)
+    {
+      for (j = 0; j < Y_DIM; ++j)
+        {
+          z[((Y_DIM - 1) - j) * X_DIM + i] = sin(x[i] / 10) * cos(y[j]); // todo missing complex transpose???
+        }
+    }
+
+  printf("plot a polarheatmap with x, y and z\n");
+  args = grm_args_new();
+  grm_args_push(args, "x", "nD", X_DIM, x);
+  grm_args_push(args, "y", "nD", Y_DIM, y);
+  grm_args_push(args, "z", "nD", X_DIM * Y_DIM, z);
+  grm_args_push(args, "kind", "s", "polarheatmap");
+  grm_plot(args);
+
+  printf("Press any key to continue...\n");
+  getchar();
+}
+
+
 static void test_dom_render(void)
 {
   double plots[2][2][20];
@@ -778,10 +838,10 @@ static void testPolar()
 
 int main(void)
 {
-
+  test_polarheatmap();
   //  testPolar();
   //  test_dom_render();
-  test_polarhistogram_subplots();
+  //  test_polarhistogram_subplots();
   // test_wireframe();
   // test_plot3();
   //  testTrisurf();

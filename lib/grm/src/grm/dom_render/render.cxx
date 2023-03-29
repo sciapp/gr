@@ -1533,6 +1533,57 @@ static void layoutGridElement(const std::shared_ptr<GR::Element> &element, const
   //  gr_setviewport(xmin, xmax, ymin, ymax);
 }
 
+
+static void nonUniformPolarCellArray(const std::shared_ptr<GR::Element> &element,
+                                     const std::shared_ptr<GR::Context> &context)
+{
+  double x_org = static_cast<double>(element->getAttribute("x_org"));
+  double y_org = static_cast<double>(element->getAttribute("y_org"));
+  std::string phi_key = static_cast<std::string>(element->getAttribute("phi"));
+  std::string r_key = static_cast<std::string>(element->getAttribute("r"));
+  int dimr = static_cast<int>(element->getAttribute("dimr"));
+  int dimphi = static_cast<int>(element->getAttribute("dimphi"));
+  int scol = static_cast<int>(element->getAttribute("scol"));
+  int srow = static_cast<int>(element->getAttribute("srow"));
+  int ncol = static_cast<int>(element->getAttribute("ncol"));
+  int nrow = static_cast<int>(element->getAttribute("nrow"));
+  std::string color_key = static_cast<std::string>(element->getAttribute("color"));
+
+  auto r_vec = GR::get<std::vector<double>>((*context)[r_key]);
+  auto phi_vec = GR::get<std::vector<double>>((*context)[phi_key]);
+  auto color_vec = GR::get<std::vector<int>>((*context)[color_key]);
+
+  double *phi = &(phi_vec[0]);
+  double *r = &(r_vec[0]);
+  int *color = &(color_vec[0]);
+
+  gr_nonuniformpolarcellarray(x_org, y_org, phi, r, dimphi, dimr, scol, srow, ncol, nrow, color);
+}
+
+
+static void polarCellArray(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  double x_org = static_cast<double>(element->getAttribute("x_org"));
+  double y_org = static_cast<double>(element->getAttribute("y_org"));
+  double phimin = static_cast<double>(element->getAttribute("phimin"));
+  double phimax = static_cast<double>(element->getAttribute("phimax"));
+  double rmin = static_cast<double>(element->getAttribute("rmin"));
+  double rmax = static_cast<double>(element->getAttribute("rmax"));
+  int dimr = static_cast<int>(element->getAttribute("dimr"));
+  int dimphi = static_cast<int>(element->getAttribute("dimphi"));
+  int scol = static_cast<int>(element->getAttribute("scol"));
+  int srow = static_cast<int>(element->getAttribute("srow"));
+  int ncol = static_cast<int>(element->getAttribute("ncol"));
+  int nrow = static_cast<int>(element->getAttribute("nrow"));
+  std::string color_key = static_cast<std::string>(element->getAttribute("color"));
+
+  auto color_vec = GR::get<std::vector<int>>((*context)[color_key]);
+  int *color = &(color_vec[0]);
+
+  gr_polarcellarray(x_org, y_org, phimin, phimax, rmin, rmax, dimphi, dimr, scol, srow, ncol, nrow, color);
+}
+
+
 static void processColorRep(const std::shared_ptr<GR::Element> &elem)
 {
   int index, hex_int;
@@ -1543,7 +1594,7 @@ static void processColorRep(const std::shared_ptr<GR::Element> &elem)
   for (auto &attr : elem->getAttributeNames())
     {
       auto start = 0U;
-      auto end = attr.find('_');
+      auto end = attr.find('/');
       if (attr.substr(start, end) == "colorrep")
         {
           name = attr;
@@ -1561,6 +1612,7 @@ static void processColorRep(const std::shared_ptr<GR::Element> &elem)
 
   gr_setcolorrep(index, red, green, blue);
 }
+
 
 static void processTitle(const std::shared_ptr<GR::Element> &elem)
 {
@@ -2128,7 +2180,8 @@ void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
   else
     {
       logger((stderr, "Storing window (%lf, %lf, %lf, %lf)\n", xmin, xmax, ymin, ymax));
-      if (!str_equals_any(kind.c_str(), 2, "polar", "polar_histogram"))
+      // todo: grplot zoom etc. dont set -1 1 -1 1 window here --> use _xlim _ylim like in plot.cxx
+      if (!str_equals_any(kind.c_str(), 4, "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
         {
           gr_setwindow(xmin, xmax, ymin, ymax);
           global_render->setWindow(elem, xmin, xmax, ymin, ymax);
@@ -2489,7 +2542,7 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
       gr_restorestate();
     }
 
-  if (str_equals_any(kind.c_str(), 3, "pie", "polar", "polar_histogram"))
+  if (str_equals_any(kind.c_str(), 5, "pie", "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
     {
       double x_center, y_center, r;
 
@@ -2760,6 +2813,7 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
   n = rings;
   phiflip = static_cast<int>(elem->getAttribute("phiflip"));
 
+  // Draw rings
   for (i = 0; i <= n; i++)
     {
       double r = 1.0 / n * i;
@@ -2775,12 +2829,6 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
               newGroup->append(temp);
               render->setLineColorInd(temp, 88);
             }
-          render->setTextAlign(newGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-
-          x[0] = 0.05;
-          y[0] = r;
-          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", tick * i);
-          newGroup->append(render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC));
         }
       else
         {
@@ -2793,6 +2841,7 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
           render->setLineColorInd(temp, 90);
         }
     }
+  // Draw sectorlines
   interval = 360.0 / angle_ticks;
   for (alpha = 0.0; alpha < 360; alpha += interval)
     {
@@ -2821,6 +2870,19 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
       temp = render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC);
       newGroup->append(temp);
       render->setTextAlign(temp, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
+    }
+  // Draw Text
+  render->setTextAlign(newGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+  for (i = 0; i <= n; i++)
+    {
+      double r = 1.0 / n * i;
+      if (i % 2 == 0)
+        {
+          x[0] = 0.05;
+          y[0] = r;
+          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", tick * i);
+          newGroup->append(render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC));
+        }
     }
   title = static_cast<std::string>(elem->getAttribute("title"));
   if (title != "")
@@ -3469,7 +3531,7 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
   for (auto &attribute : element->getAttributeNames())
     {
       auto start = 0U;
-      auto end = attribute.find('_');
+      auto end = attribute.find('/');
       if (end == std::string::npos)
         {
           if (attrStringToFunc.find(attribute) != attrStringToFunc.end())
@@ -3531,6 +3593,8 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
                        {std::string("grid3d"), grid3d},
                        {std::string("surface"), surface},
                        {std::string("axes3d"), axes3d},
+                       {std::string("polarcellarray"), polarCellArray},
+                       {std::string("nonuniform-polarcellarray"), nonUniformPolarCellArray},
                        {std::string("polyline3d"), polyline3d},
                        {std::string("polymarker3d"), polymarker3d},
                        {std::string("gr3drawmesh"), gr3DrawMesh},
@@ -3825,6 +3889,197 @@ std::shared_ptr<GR::Element> GR::Render::createCellArray(double xmin, double xma
   if (color != std::nullopt)
     {
       (*useContext)[color_key] = *color;
+    }
+  return element;
+}
+
+
+std::shared_ptr<GR::Element> GR::Render::createPolarCellArray(double x_org, double y_org, double phimin, double phimax,
+                                                              double rmin, double rmax, int dimphi, int dimr, int scol,
+                                                              int srow, int ncol, int nrow,
+                                                              const std::string &color_key,
+                                                              std::optional<std::vector<int>> color,
+                                                              const std::shared_ptr<Context> &extContext)
+{
+  /*!
+   * Display a two dimensional color index array mapped to a disk using polar
+   * coordinates.
+   *
+   * \param[in] x_org X coordinate of the disk center in world coordinates
+   * \param[in] y_org Y coordinate of the disk center in world coordinates
+   * \param[in] phimin start angle of the disk sector in degrees
+   * \param[in] phimax end angle of the disk sector in degrees
+   * \param[in] rmin inner radius of the punctured disk in world coordinates
+   * \param[in] rmax outer radius of the disk in world coordinates
+   * \param[in] dimphi Phi (X) dimension of the color index array
+   * \param[in] dimr R (Y) dimension of the color index array
+   * \param[in] scol number of leading columns in the color index array
+   * \param[in] srow number of leading rows in the color index array
+   * \param[in] ncol total number of columns in the color index array
+   * \param[in] nrow total number of rows in the color index array
+   * \param[in] color color index array
+   *
+   * The two dimensional color index array is mapped to the resulting image by
+   * interpreting the X-axis of the array as the angle and the Y-axis as the radius.
+   * The center point of the resulting disk is located at `x_org`, `y_org` and the
+   * radius of the disk is `rmax`.
+   *
+   * To draw a contiguous array as a complete disk use:
+   *
+   *     gr_polarcellarray(x_org, y_org, 0, 360, 0, rmax, dimphi, dimr, 1, 1, dimphi, dimr, color)
+   *
+   * The additional parameters to the function can be used to further control the
+   * mapping from polar to cartesian coordinates.
+   *
+   * If `rmin` is greater than 0 the input data is mapped to a punctured disk (or
+   * annulus) with an inner radius of `rmin` and an outer radius `rmax`. If `rmin`
+   * is greater than `rmax` the Y-axis of the array is reversed.
+   *
+   * The parameter `phimin` and `phimax` can be used to map the data to a sector
+   * of the (punctured) disk starting at `phimin` and ending at `phimax`. If
+   * `phimin` is greater than `phimax` the X-axis is reversed. The visible sector
+   * is the one starting in mathematically positive direction (counterclockwise)
+   * at the smaller angle and ending at the larger angle. An example of the four
+   * possible options can be found below:
+   *
+   * \verbatim embed:rst:leading-asterisk
+   *
+   * +-----------+-----------+---------------------------------------------------+
+   * |**phimin** |**phimax** |**Result**                                         |
+   * +-----------+-----------+---------------------------------------------------+
+   * |90         |270        |Left half visible, mapped counterclockwise         |
+   * +-----------+-----------+---------------------------------------------------+
+   * |270        |90         |Left half visible, mapped clockwise                |
+   * +-----------+-----------+---------------------------------------------------+
+   * |-90        |90         |Right half visible, mapped counterclockwise        |
+   * +-----------+-----------+---------------------------------------------------+
+   * |90         |-90        |Right half visible, mapped clockwise               |
+   * +-----------+-----------+---------------------------------------------------+
+   *
+   * \endverbatim
+   *
+   * `scol` and `srow` can be used to specify a (1-based) starting column and row
+   * in the `color` array. `ncol` and `nrow` specify the actual dimension of the
+   * array in the memory whereof `dimphi` and `dimr` values are mapped to the disk.
+   *
+   */
+
+  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  auto element = createElement("polarcellarray");
+  element->setAttribute("x_org", x_org);
+  element->setAttribute("y_org", y_org);
+  element->setAttribute("phimin", phimin);
+  element->setAttribute("phimax", phimax);
+  element->setAttribute("rmin", rmin);
+  element->setAttribute("rmax", rmax);
+  element->setAttribute("dimphi", dimphi);
+  element->setAttribute("dimr", dimr);
+  element->setAttribute("scol", scol);
+  element->setAttribute("srow", srow);
+  element->setAttribute("ncol", ncol);
+  element->setAttribute("nrow", nrow);
+  element->setAttribute("color", color_key);
+  if (color != std::nullopt)
+    {
+      (*useContext)[color_key] = *color;
+    }
+  return element;
+}
+
+
+std::shared_ptr<GR::Element> GR::Render::createNonUniformPolarCellArray(
+    double x_org, double y_org, const std::string &phi_key, std::optional<std::vector<double>> phi,
+    const std::string &r_key, std::optional<std::vector<double>> r, int dimphi, int dimr, int scol, int srow, int ncol,
+    int nrow, const std::string &color_key, std::optional<std::vector<int>> color,
+    const std::shared_ptr<GR::Context> &extContext)
+{
+  /*!
+   * Display a two dimensional color index array mapped to a disk using polar
+   * coordinates.
+   *
+   * \param[in] x_org X coordinate of the disk center in world coordinates
+   * \param[in] y_org Y coordinate of the disk center in world coordinates
+   * \param[in] phimin start angle of the disk sector in degrees
+   * \param[in] phimax end angle of the disk sector in degrees
+   * \param[in] rmin inner radius of the punctured disk in world coordinates
+   * \param[in] rmax outer radius of the disk in world coordinates
+   * \param[in] dimphi Phi (X) dimension of the color index array
+   * \param[in] dimr R (Y) dimension of the color index array
+   * \param[in] scol number of leading columns in the color index array
+   * \param[in] srow number of leading rows in the color index array
+   * \param[in] ncol total number of columns in the color index array
+   * \param[in] nrow total number of rows in the color index array
+   * \param[in] color color index array
+   *
+   * The two dimensional color index array is mapped to the resulting image by
+   * interpreting the X-axis of the array as the angle and the Y-axis as the radius.
+   * The center point of the resulting disk is located at `x_org`, `y_org` and the
+   * radius of the disk is `rmax`.
+   *
+   * To draw a contiguous array as a complete disk use:
+   *
+   *     gr_polarcellarray(x_org, y_org, 0, 360, 0, rmax, dimphi, dimr, 1, 1, dimphi, dimr, color)
+   *
+   * The additional parameters to the function can be used to further control the
+   * mapping from polar to cartesian coordinates.
+   *
+   * If `rmin` is greater than 0 the input data is mapped to a punctured disk (or
+   * annulus) with an inner radius of `rmin` and an outer radius `rmax`. If `rmin`
+   * is greater than `rmax` the Y-axis of the array is reversed.
+   *
+   * The parameter `phimin` and `phimax` can be used to map the data to a sector
+   * of the (punctured) disk starting at `phimin` and ending at `phimax`. If
+   * `phimin` is greater than `phimax` the X-axis is reversed. The visible sector
+   * is the one starting in mathematically positive direction (counterclockwise)
+   * at the smaller angle and ending at the larger angle. An example of the four
+   * possible options can be found below:
+   *
+   * \verbatim embed:rst:leading-asterisk
+   *
+   * +-----------+-----------+---------------------------------------------------+
+   * |**phimin** |**phimax** |**Result**                                         |
+   * +-----------+-----------+---------------------------------------------------+
+   * |90         |270        |Left half visible, mapped counterclockwise         |
+   * +-----------+-----------+---------------------------------------------------+
+   * |270        |90         |Left half visible, mapped clockwise                |
+   * +-----------+-----------+---------------------------------------------------+
+   * |-90        |90         |Right half visible, mapped counterclockwise        |
+   * +-----------+-----------+---------------------------------------------------+
+   * |90         |-90        |Right half visible, mapped clockwise               |
+   * +-----------+-----------+---------------------------------------------------+
+   *
+   * \endverbatim
+   *
+   * `scol` and `srow` can be used to specify a (1-based) starting column and row
+   * in the `color` array. `ncol` and `nrow` specify the actual dimension of the
+   * array in the memory whereof `dimphi` and `dimr` values are mapped to the disk.
+   *
+   */
+
+  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  auto element = createElement("nonuniform-polarcellarray");
+  element->setAttribute("x_org", x_org);
+  element->setAttribute("y_org", y_org);
+  element->setAttribute("r", r_key);
+  element->setAttribute("phi", phi_key);
+  element->setAttribute("dimphi", dimphi);
+  element->setAttribute("dimr", dimr);
+  element->setAttribute("scol", scol);
+  element->setAttribute("srow", srow);
+  element->setAttribute("ncol", ncol);
+  element->setAttribute("nrow", nrow);
+  element->setAttribute("color", color_key);
+  if (color != std::nullopt)
+    {
+      (*useContext)[color_key] = *color;
+    }
+  if (phi != std::nullopt)
+    {
+      (*useContext)[phi_key] = *phi;
+    }
+  if (r != std::nullopt)
+    {
+      (*useContext)[r_key] = *r;
     }
   return element;
 }
@@ -5128,7 +5383,7 @@ void GR::Render::setColorRep(const std::shared_ptr<Element> &element, int index,
   std::string hex;
   stream << std::hex << (red_int << 16 | green_int << 8 | blue_int);
 
-  std::string name = "colorrep_" + std::to_string(index);
+  std::string name = "colorrep/" + std::to_string(index);
 
   element->setAttribute(name, stream.str());
 }
