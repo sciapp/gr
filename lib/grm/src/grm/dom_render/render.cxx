@@ -36,7 +36,7 @@ std::shared_ptr<GR::Render> global_render;
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {"group",           "layout-grid",     "layout-gridelement",
                                             "draw-legend",     "draw-polar-axes", "pie-plot-title-render",
-                                            "draw-pie-legend", "marginalheatmap"};
+                                            "draw-pie-legend", "marginalheatmap", "root"};
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
@@ -3689,7 +3689,7 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
                        {std::string("isosurface3"), drawIsosurface3},
                        {std::string("isosurface-render"), isosurfaceRender}};
   /*! Modifier */
-  if (element->localName() == "group")
+  if (element->localName() == "group" || element->localName() == "root")
     {
       processAttributes(element);
     }
@@ -5731,6 +5731,7 @@ static void renderHelper(const std::shared_ptr<GR::Element> &element, const std:
    * \param[in] element A GR::Element
    * \param[in] context A GR::Context
    */
+  gr_savestate();
   bool bounding_boxes = getenv("GRPLOT_ENABLE_EDITOR");
 
   if (bounding_boxes && element->hasAttributes())
@@ -5745,15 +5746,14 @@ static void renderHelper(const std::shared_ptr<GR::Element> &element, const std:
     {
       for (const auto &child : element->children())
         {
-          gr_savestate();
           renderHelper(child, context);
-          gr_restorestate();
         }
     }
   if (bounding_boxes && element->hasAttributes())
     {
       gr_end_grm_selection();
     }
+  gr_restorestate();
 }
 
 static void initializeGridElements(const std::shared_ptr<GR::Element> &element, grm::Grid *grid)
@@ -5907,16 +5907,7 @@ void GR::Render::render()
                       ? std::dynamic_pointer_cast<GR::Render>(root->ownerDocument())
                       : GR::Render::createRender();
   std::cerr << toXML(root, GR::SerializerOptions{std::string(indent, ' ')}) << "\n";
-  if (root->hasChildNodes())
-    {
-      finalizeGrid(root);
-      for (const auto &child : root->children())
-        {
-          gr_savestate();
-          ::renderHelper(child, this->context);
-          gr_restorestate();
-        }
-    }
+  renderHelper(root, this->context);
   std::cerr << toXML(root, GR::SerializerOptions{std::string(indent, ' ')}) << "\n";
 }
 
