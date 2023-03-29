@@ -2246,6 +2246,7 @@ err_t plot_line(grm_args_t *subplot_args)
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
   const char *kind, *orientation;
+  int *previous_marker_type = plot_scatter_markertypes;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
@@ -2253,7 +2254,7 @@ err_t plot_line(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       double *x = NULL, *y = NULL;
-      int allocated_x = 0;
+      int allocated_x = 0, markertype;
       unsigned int x_length = 0, y_length = 0;
       char *spec;
       int mask;
@@ -2294,6 +2295,19 @@ err_t plot_line(grm_args_t *subplot_args)
           else
             {
               gr_polymarker(x_length, y, x);
+            }
+        }
+      if (grm_args_values(*current_series, "markertype", "i", &markertype))
+        {
+          gr_setmarkertype(markertype);
+          gr_polymarker(x_length, x, y);
+        }
+      else
+        {
+          gr_setmarkertype(*previous_marker_type++);
+          if (*previous_marker_type == INT_MAX)
+            {
+              previous_marker_type = plot_scatter_markertypes;
             }
         }
       grm_args_push(*current_series, "orientation", "s", orientation);
