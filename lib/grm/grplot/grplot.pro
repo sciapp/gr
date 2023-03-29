@@ -19,11 +19,6 @@ if (macx) {
     } else {
       LIBS += -L$(GRDIR)/lib -lGRM
     }
-    if (exists(../libGR.dylib)) {
-      LIBS += -L.. -lGR
-    } else {
-      LIBS += -L$(GRDIR)/lib -lGR
-    }
     # On macOS, the grplot executable is located in `$(GRDIR)/Applications/grplot.app/Contents/MacOS`
     # and we need to resolve `libGRM.dylib` in `$(GRDIR)/lib`
     QMAKE_RPATHDIR += ../../../../lib
@@ -32,11 +27,6 @@ if (macx) {
       LIBS += -L.. -lGRM -Wl,-rpath-link,../../gr -Wl,-rpath-link,../../gr3
     } else {
       LIBS += -L$(GRDIR)/lib -lGRM -Wl,-rpath-link,$(GRDIR)/lib
-    }
-    if (exists(../libGR.so)) {
-      LIBS += -L.. -lGR
-    } else {
-      LIBS += -L$(GRDIR)/lib -lGR
     }
     # On every other system, the grplot executable is located in `$(GRDIR)/bin`
     # and we need to resolve `libGRM.so` in `$(GRDIR)/lib`

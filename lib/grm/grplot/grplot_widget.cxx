@@ -26,23 +26,13 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsScene>
 
+#include <grm/dom_render/graphics_tree/Element.hxx>
 #include "grplot_widget.hxx"
 #include "util.hxx"
 
 static std::string file_export;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
-{
-#if QT_VERSION >= 0x060000
-  x[0] = (int)event->position().x();
-  y[0] = (int)event->position().y();
-#else
-  x[0] = (int)event->pos().x();
-  y[0] = (int)event->pos().y();
-#endif
-}
-
-void getMovePos(QMoveEvent *event, int *x, int *y)
 {
 #if QT_VERSION >= 0x060000
   x[0] = (int)event->position().x();
@@ -1034,9 +1024,8 @@ void GRPlotWidget::moveEvent(QMoveEvent *event)
 {
   if (enable_editor)
     {
-      int x, y;
-      getMovePos(event, &x, &y);
-      treewidget->move(this->width() + x, y - (treewidget->geometry().y() - treewidget->pos().y()));
+      treewidget->move(this->width() + event->pos().x(),
+                       event->pos().y() - (treewidget->geometry().y() - treewidget->pos().y()));
     }
 }
 
