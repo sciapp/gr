@@ -60,6 +60,18 @@ public:
                                            std::optional<std::vector<int>> color,
                                            const std::shared_ptr<Context> &extContext = nullptr);
 
+  std::shared_ptr<Element> createNonUniformPolarCellArray(
+      double x_org, double y_org, const std::string &phi_key, std::optional<std::vector<double>> phi,
+      const std::string &r_key, std::optional<std::vector<double>> r, int dimphi, int dimr, int scol, int srow,
+      int ncol, int nrow, const std::string &color_key, std::optional<std::vector<int>> color,
+      const std::shared_ptr<Context> &extContext = nullptr);
+
+  std::shared_ptr<Element> createPolarCellArray(double x_org, double y_org, double phimin, double phimax, double rmin,
+                                                double rmax, int dimphi, int dimr, int scol, int srow, int ncol,
+                                                int nrow, const std::string &color_key,
+                                                std::optional<std::vector<int>> color,
+                                                const std::shared_ptr<Context> &extContext = nullptr);
+
   std::shared_ptr<Element> createAxes(double x_tick, double y_tick, double x_org, double y_org, int x_major,
                                       int y_major, int tick_orientation);
 

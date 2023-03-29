@@ -26,6 +26,7 @@ set(EXECUTABLE_SOURCES
     pie.c
     plot.c
     polar_histogram.c
+    polar_heatmap.cxx
     quiver.c
     raw.c
     receiver.c
