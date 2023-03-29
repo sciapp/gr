@@ -3547,6 +3547,8 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
        }},
       {std::string("limits"), GR::Render::processLimits},
       {std::string("window"), processWindow},
+      {std::string("wsviewport"), processWSViewport},
+      {std::string("wswindow"), processWSWindow},
       {std::string("resamplemethod"),
        [](const std::shared_ptr<GR::Element> &elem) {
          gr_setresamplemethod((int)elem->getAttribute("resamplemethod"));
@@ -3582,12 +3584,11 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
       {std::string("set-text-color-for-background"), setTextColorForBackground}};
 
   static std::map<std::string, std::function<void(const std::shared_ptr<GR::Element> &)>> attrStringToFuncPre{
-      /* This map contains functions for attributes that should be called before other attributes are being processed.
+      /* This map contains functions for attributes that should be called before other attributes of the element are
+       * being processed.
        * */
       {std::string("subplot"), processSubplot},
       {std::string("viewport"), GR::Render::processViewport},
-      {std::string("wsviewport"), processWSViewport},
-      {std::string("wswindow"), processWSWindow},
       {std::string("charheight"),
        [](const std::shared_ptr<GR::Element> &elem) { gr_setcharheight((double)elem->getAttribute("charheight")); }}};
 
