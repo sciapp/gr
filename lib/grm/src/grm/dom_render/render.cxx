@@ -2882,14 +2882,14 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
       y[0] *= 1.1;
       if (phiflip == 0)
         {
-          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xb0", (int)grm_round(alpha));
+          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", (int)grm_round(alpha));
         }
       else
         {
           if (alpha == 0.0)
-            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xb0", 0);
+            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 0);
           else
-            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xb0", 330 - (int)grm_round(alpha - interval));
+            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 330 - (int)grm_round(alpha - interval));
         }
       temp = render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC);
       newGroup->append(temp);
