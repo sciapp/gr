@@ -8,6 +8,8 @@
 #include <QWidget>
 #include <QMainWindow>
 
+#include "qtterm/receiver_thread.h"
+#include "qtterm/grm_args_t_wrapper.h"
 #include <grm.h>
 
 class GRPlotWidget : public QWidget
@@ -59,6 +61,8 @@ private slots:
   void png();
   void jpeg();
   void svg();
+  void received(grm_args_t_wrapper args);
+  void screenChanged();
 
 private:
   struct MouseState
@@ -79,6 +83,7 @@ private:
   QRubberBand *rubberBand;
   grm_tooltip_info_t *tooltip;
   QTextDocument label;
+  Receiver_Thread *receiver_thread;
 
   QMenuBar *menu;
   QMenu *type;
@@ -112,6 +117,11 @@ private:
   QAction *PngAct;
   QAction *JpegAct;
   QAction *SvgAct;
+
+  void reset_pixmap();
+  void showEvent(QShowEvent *) override;
+  void closeEvent(QCloseEvent *event) override;
+  void size_callback(const grm_event_t *);
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

@@ -6,8 +6,8 @@ QT += widgets core
 DEFINES += GRDIR=\\\"$(GRDIR)\\\"
 QMAKE_CXXLAGS += $$(EXTRA_CXXFLAGS)
 QMAKE_LFLAGS += $$(EXTRA_LDFLAGS)
-HEADERS += grplot_widget.hxx grplot_mainwindow.hxx util.hxx
-SOURCES += grplot_widget.cxx grplot.cxx grplot_mainwindow.cxx util.cxx
+HEADERS += grplot_widget.hxx grplot_mainwindow.hxx util.hxx qtterm/grm_args_t_wrapper.h qtterm/receiver_thread.h
+SOURCES += grplot_widget.cxx grplot.cxx grplot_mainwindow.cxx util.cxx qtterm/grm_args_t_wrapper.cpp qtterm/receiver_thread.cpp
 INCLUDEPATH += ../include
 if (macx) {
     if (exists(../libGRM.dylib)) {

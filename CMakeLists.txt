@@ -1102,8 +1102,13 @@ endif()
 
 if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
   add_executable(
-    grplot WIN32 MACOSX_BUNDLE lib/grm/grplot/grplot.cxx lib/grm/grplot/grplot_mainwindow.cxx
-                               lib/grm/grplot/grplot_widget.cxx lib/grm/grplot/util.cxx
+    grplot WIN32 MACOSX_BUNDLE
+    lib/grm/grplot/grplot.cxx
+    lib/grm/grplot/grplot_mainwindow.cxx
+    lib/grm/grplot/grplot_widget.cxx
+    lib/grm/grplot/qtterm/grm_args_t_wrapper.cpp
+    lib/grm/grplot/qtterm/receiver_thread.cpp
+    lib/grm/grplot/util.cxx
   )
   if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
     target_link_libraries(grplot PRIVATE Qt6::Widgets Qt6::Core grm_static)
@@ -1147,15 +1152,37 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
         ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
     )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h
+    )
     target_sources(
-      grplot PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
-                     ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+      grplot
+      PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
     )
   else()
     set_target_properties(grplot PROPERTIES AUTOMOC ON AUTORCC ON)
     target_sources(
-      grplot PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
-                     ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
+      grplot
+      PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h
     )
   endif()
   if(APPLE)
