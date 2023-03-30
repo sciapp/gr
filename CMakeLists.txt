@@ -1196,15 +1196,57 @@ if((Qt6Widgets_FOUND
         ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
     )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
+    )
     target_sources(
-      grplot PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
-                     ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+      grplot
+      PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
     )
   else()
     set_target_properties(grplot PROPERTIES AUTOMOC ON AUTORCC ON)
     target_sources(
-      grplot PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
-                     ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
+      grplot
+      PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
     )
   endif()
   if(APPLE)
