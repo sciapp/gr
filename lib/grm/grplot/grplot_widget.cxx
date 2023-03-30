@@ -6,6 +6,14 @@
 #include <iostream>
 #include <list>
 #include <sstream>
+#include <QtGlobal>
+#include <QApplication>
+#include <QWindow>
+#include <QToolTip>
+#include <QTimer>
+#include <QEvent>
+#include <QRubberBand>
+#include <functional>
 
 #include "grplot_widget.hxx"
 #include "util.hxx"
@@ -34,6 +42,13 @@ void getWheelPos(QWheelEvent *event, int *x, int *y)
 #endif
 }
 
+std::function<void(const grm_event_t *)> callback;
+extern "C" void wrapper(const grm_event_t *cb)
+{
+  callback(cb);
+}
+
+
 GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
     : QWidget(parent), args_(nullptr), rubberBand(nullptr), pixmap(nullptr), tooltip(nullptr)
 {
@@ -50,11 +65,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   setenv("GKS_WSTYPE", "381", 1);
   setenv("GKS_DOUBLE_BUF", "True", 1);
 #endif
-  grm_args_push(args_, "keep_aspect_ratio", "i", 1);
-  if (!grm_interactive_plot_from_file(args_, argc, argv))
-    {
-      exit(0);
-    }
+
   rubberBand = new QRubberBand(QRubberBand::Rectangle, this);
   setFocusPolicy(Qt::FocusPolicy::StrongFocus); // needed to receive key press events
   setMouseTracking(true);
@@ -63,10 +74,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   mouseState.anchor = {0, 0};
 
   menu = parent->menuBar();
-  type = new QMenu("&Plot type");
-  algo = new QMenu("&Algorithm");
   export_menu = new QMenu("&Export");
-
   PdfAct = new QAction(tr("&PDF"), this);
   connect(PdfAct, &QAction::triggered, this, &GRPlotWidget::pdf);
   export_menu->addAction(PdfAct);
@@ -80,116 +88,149 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   connect(SvgAct, &QAction::triggered, this, &GRPlotWidget::svg);
   export_menu->addAction(SvgAct);
 
-  grm_args_values(args_, "kind", "s", &kind);
-  if (grm_args_contains(args_, "error"))
+  if (strcmp(argv[1], "--listen") == 0)
     {
-      error = 1;
-      fprintf(stderr, "Plot types are not compatible with errorbars. The menu got disabled\n");
-    }
-  if (strcmp(kind, "contour") == 0 || strcmp(kind, "heatmap") == 0 || strcmp(kind, "imshow") == 0 ||
-      strcmp(kind, "marginalheatmap") == 0 || strcmp(kind, "surface") == 0 || strcmp(kind, "wireframe") == 0 ||
-      strcmp(kind, "contourf") == 0)
-    {
-      auto submenu = type->addMenu("&Marginalheatmap");
+      qRegisterMetaType<grm_args_t_wrapper>("grm_args_t_wrapper");
+      receiver_thread = new Receiver_Thread();
+      QObject::connect(receiver_thread, SIGNAL(resultReady(grm_args_t_wrapper)), this,
+                       SLOT(received(grm_args_t_wrapper)));
+      receiver_thread->start();
 
-      heatmapAct = new QAction(tr("&Heatmap"), this);
-      connect(heatmapAct, &QAction::triggered, this, &GRPlotWidget::heatmap);
-      marginalheatmapAllAct = new QAction(tr("&Type 1 all"), this);
-      connect(marginalheatmapAllAct, &QAction::triggered, this, &GRPlotWidget::marginalheatmapall);
-      marginalheatmapLineAct = new QAction(tr("&Type 2 line"), this);
-      connect(marginalheatmapLineAct, &QAction::triggered, this, &GRPlotWidget::marginalheatmapline);
-      surfaceAct = new QAction(tr("&Surface"), this);
-      connect(surfaceAct, &QAction::triggered, this, &GRPlotWidget::surface);
-      wireframeAct = new QAction(tr("&Wireframe"), this);
-      connect(wireframeAct, &QAction::triggered, this, &GRPlotWidget::wireframe);
-      contourAct = new QAction(tr("&Contour"), this);
-      connect(contourAct, &QAction::triggered, this, &GRPlotWidget::contour);
-      imshowAct = new QAction(tr("&Imshow"), this);
-      connect(imshowAct, &QAction::triggered, this, &GRPlotWidget::imshow);
-      sumAct = new QAction(tr("&Sum"), this);
-      connect(sumAct, &QAction::triggered, this, &GRPlotWidget::sumalgorithm);
-      maxAct = new QAction(tr("&Maximum"), this);
-      connect(maxAct, &QAction::triggered, this, &GRPlotWidget::maxalgorithm);
-      contourfAct = new QAction(tr("&Contourf"), this);
-      connect(contourfAct, &QAction::triggered, this, &GRPlotWidget::contourf);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+      callback = [this](auto &&PH1) { size_callback(std::forward<decltype(PH1)>(PH1)); };
+#else
+      callback = std::bind(&GRPlotWidget::size_callback, this, std::placeholders::_1);
+#endif
 
-      submenu->addAction(marginalheatmapAllAct);
-      submenu->addAction(marginalheatmapLineAct);
-      type->addAction(heatmapAct);
-      type->addAction(surfaceAct);
-      type->addAction(wireframeAct);
-      type->addAction(contourAct);
-      type->addAction(imshowAct);
-      type->addAction(contourfAct);
-      algo->addAction(sumAct);
-      algo->addAction(maxAct);
+      grm_register(GRM_EVENT_SIZE, wrapper);
+      grm_args_t_wrapper configuration;
+      configuration.set_wrapper(grm_args_new());
+      grm_args_push(configuration.get_wrapper(), "hold_plots", "i", 0);
+      grm_merge(configuration.get_wrapper());
+      grm_args_delete(configuration.get_wrapper());
     }
-  else if (strcmp(kind, "line") == 0 ||
-           (strcmp(kind, "scatter") == 0 && !grm_args_values(args_, "z", "D", &z, &z_length)))
+  else
     {
-      lineAct = new QAction(tr("&Line"), this);
-      connect(lineAct, &QAction::triggered, this, &GRPlotWidget::line);
-      scatterAct = new QAction(tr("&Scatter"), this);
-      connect(scatterAct, &QAction::triggered, this, &GRPlotWidget::scatter);
-      type->addAction(lineAct);
-      type->addAction(scatterAct);
+      grm_args_push(args_, "keep_aspect_ratio", "i", 1);
+      if (!grm_interactive_plot_from_file(args_, argc, argv))
+        {
+          exit(0);
+        }
+
+      type = new QMenu("&Plot type");
+      algo = new QMenu("&Algorithm");
+
+      grm_args_values(args_, "kind", "s", &kind);
+      if (grm_args_contains(args_, "error"))
+        {
+          error = 1;
+          fprintf(stderr, "Plot types are not compatible with errorbars. The menu got disabled\n");
+        }
+      if (strcmp(kind, "contour") == 0 || strcmp(kind, "heatmap") == 0 || strcmp(kind, "imshow") == 0 ||
+          strcmp(kind, "marginalheatmap") == 0 || strcmp(kind, "surface") == 0 || strcmp(kind, "wireframe") == 0 ||
+          strcmp(kind, "contourf") == 0)
+        {
+          auto submenu = type->addMenu("&Marginalheatmap");
+
+          heatmapAct = new QAction(tr("&Heatmap"), this);
+          connect(heatmapAct, &QAction::triggered, this, &GRPlotWidget::heatmap);
+          marginalheatmapAllAct = new QAction(tr("&Type 1 all"), this);
+          connect(marginalheatmapAllAct, &QAction::triggered, this, &GRPlotWidget::marginalheatmapall);
+          marginalheatmapLineAct = new QAction(tr("&Type 2 line"), this);
+          connect(marginalheatmapLineAct, &QAction::triggered, this, &GRPlotWidget::marginalheatmapline);
+          surfaceAct = new QAction(tr("&Surface"), this);
+          connect(surfaceAct, &QAction::triggered, this, &GRPlotWidget::surface);
+          wireframeAct = new QAction(tr("&Wireframe"), this);
+          connect(wireframeAct, &QAction::triggered, this, &GRPlotWidget::wireframe);
+          contourAct = new QAction(tr("&Contour"), this);
+          connect(contourAct, &QAction::triggered, this, &GRPlotWidget::contour);
+          imshowAct = new QAction(tr("&Imshow"), this);
+          connect(imshowAct, &QAction::triggered, this, &GRPlotWidget::imshow);
+          sumAct = new QAction(tr("&Sum"), this);
+          connect(sumAct, &QAction::triggered, this, &GRPlotWidget::sumalgorithm);
+          maxAct = new QAction(tr("&Maximum"), this);
+          connect(maxAct, &QAction::triggered, this, &GRPlotWidget::maxalgorithm);
+          contourfAct = new QAction(tr("&Contourf"), this);
+          connect(contourfAct, &QAction::triggered, this, &GRPlotWidget::contourf);
+
+          submenu->addAction(marginalheatmapAllAct);
+          submenu->addAction(marginalheatmapLineAct);
+          type->addAction(heatmapAct);
+          type->addAction(surfaceAct);
+          type->addAction(wireframeAct);
+          type->addAction(contourAct);
+          type->addAction(imshowAct);
+          type->addAction(contourfAct);
+          algo->addAction(sumAct);
+          algo->addAction(maxAct);
+        }
+      else if (strcmp(kind, "line") == 0 ||
+               (strcmp(kind, "scatter") == 0 && !grm_args_values(args_, "z", "D", &z, &z_length)))
+        {
+          lineAct = new QAction(tr("&Line"), this);
+          connect(lineAct, &QAction::triggered, this, &GRPlotWidget::line);
+          scatterAct = new QAction(tr("&Scatter"), this);
+          connect(scatterAct, &QAction::triggered, this, &GRPlotWidget::scatter);
+          type->addAction(lineAct);
+          type->addAction(scatterAct);
+        }
+      else if (strcmp(kind, "volume") == 0 || strcmp(kind, "isosurface") == 0)
+        {
+          volumeAct = new QAction(tr("&Volume"), this);
+          connect(volumeAct, &QAction::triggered, this, &GRPlotWidget::volume);
+          isosurfaceAct = new QAction(tr("&Isosurface"), this);
+          connect(isosurfaceAct, &QAction::triggered, this, &GRPlotWidget::isosurface);
+          type->addAction(volumeAct);
+          type->addAction(isosurfaceAct);
+        }
+      else if (strcmp(kind, "plot3") == 0 || strcmp(kind, "trisurf") == 0 || strcmp(kind, "tricont") == 0 ||
+               strcmp(kind, "scatter3") == 0 || strcmp(kind, "scatter") == 0)
+        {
+          plot3Act = new QAction(tr("&Plot3"), this);
+          connect(plot3Act, &QAction::triggered, this, &GRPlotWidget::plot3);
+          trisurfAct = new QAction(tr("&Trisurf"), this);
+          connect(trisurfAct, &QAction::triggered, this, &GRPlotWidget::trisurf);
+          tricontAct = new QAction(tr("&Tricont"), this);
+          connect(tricontAct, &QAction::triggered, this, &GRPlotWidget::tricont);
+          scatter3Act = new QAction(tr("&Scatter3"), this);
+          connect(scatter3Act, &QAction::triggered, this, &GRPlotWidget::scatter3);
+          scatterAct = new QAction(tr("&Scatter"), this);
+          connect(scatterAct, &QAction::triggered, this, &GRPlotWidget::scatter);
+          type->addAction(plot3Act);
+          type->addAction(trisurfAct);
+          type->addAction(tricontAct);
+          type->addAction(scatter3Act);
+          type->addAction(scatterAct);
+        }
+      else if ((strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0 || strcmp(kind, "stairs") == 0 ||
+                strcmp(kind, "stem") == 0) &&
+               !error)
+        {
+          histAct = new QAction(tr("&Hist"), this);
+          connect(histAct, &QAction::triggered, this, &GRPlotWidget::hist);
+          barplotAct = new QAction(tr("&Barplot"), this);
+          connect(barplotAct, &QAction::triggered, this, &GRPlotWidget::barplot);
+          stairsAct = new QAction(tr("&Step"), this);
+          connect(stairsAct, &QAction::triggered, this, &GRPlotWidget::stairs);
+          stemAct = new QAction(tr("&Stem"), this);
+          connect(stemAct, &QAction::triggered, this, &GRPlotWidget::stem);
+          type->addAction(histAct);
+          type->addAction(barplotAct);
+          type->addAction(stairsAct);
+          type->addAction(stemAct);
+        }
+      else if (strcmp(kind, "shade") == 0 || strcmp(kind, "hexbin") == 0)
+        {
+          shadeAct = new QAction(tr("&Shade"), this);
+          connect(shadeAct, &QAction::triggered, this, &GRPlotWidget::shade);
+          hexbinAct = new QAction(tr("&Hexbin"), this);
+          connect(hexbinAct, &QAction::triggered, this, &GRPlotWidget::hexbin);
+          type->addAction(shadeAct);
+          type->addAction(hexbinAct);
+        }
+      menu->addMenu(type);
+      menu->addMenu(algo);
     }
-  else if (strcmp(kind, "volume") == 0 || strcmp(kind, "isosurface") == 0)
-    {
-      volumeAct = new QAction(tr("&Volume"), this);
-      connect(volumeAct, &QAction::triggered, this, &GRPlotWidget::volume);
-      isosurfaceAct = new QAction(tr("&Isosurface"), this);
-      connect(isosurfaceAct, &QAction::triggered, this, &GRPlotWidget::isosurface);
-      type->addAction(volumeAct);
-      type->addAction(isosurfaceAct);
-    }
-  else if (strcmp(kind, "plot3") == 0 || strcmp(kind, "trisurf") == 0 || strcmp(kind, "tricont") == 0 ||
-           strcmp(kind, "scatter3") == 0 || strcmp(kind, "scatter") == 0)
-    {
-      plot3Act = new QAction(tr("&Plot3"), this);
-      connect(plot3Act, &QAction::triggered, this, &GRPlotWidget::plot3);
-      trisurfAct = new QAction(tr("&Trisurf"), this);
-      connect(trisurfAct, &QAction::triggered, this, &GRPlotWidget::trisurf);
-      tricontAct = new QAction(tr("&Tricont"), this);
-      connect(tricontAct, &QAction::triggered, this, &GRPlotWidget::tricont);
-      scatter3Act = new QAction(tr("&Scatter3"), this);
-      connect(scatter3Act, &QAction::triggered, this, &GRPlotWidget::scatter3);
-      scatterAct = new QAction(tr("&Scatter"), this);
-      connect(scatterAct, &QAction::triggered, this, &GRPlotWidget::scatter);
-      type->addAction(plot3Act);
-      type->addAction(trisurfAct);
-      type->addAction(tricontAct);
-      type->addAction(scatter3Act);
-      type->addAction(scatterAct);
-    }
-  else if ((strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0 || strcmp(kind, "stairs") == 0 ||
-            strcmp(kind, "stem") == 0) &&
-           !error)
-    {
-      histAct = new QAction(tr("&Hist"), this);
-      connect(histAct, &QAction::triggered, this, &GRPlotWidget::hist);
-      barplotAct = new QAction(tr("&Barplot"), this);
-      connect(barplotAct, &QAction::triggered, this, &GRPlotWidget::barplot);
-      stairsAct = new QAction(tr("&Step"), this);
-      connect(stairsAct, &QAction::triggered, this, &GRPlotWidget::stairs);
-      stemAct = new QAction(tr("&Stem"), this);
-      connect(stemAct, &QAction::triggered, this, &GRPlotWidget::stem);
-      type->addAction(histAct);
-      type->addAction(barplotAct);
-      type->addAction(stairsAct);
-      type->addAction(stemAct);
-    }
-  else if (strcmp(kind, "shade") == 0 || strcmp(kind, "hexbin") == 0)
-    {
-      shadeAct = new QAction(tr("&Shade"), this);
-      connect(shadeAct, &QAction::triggered, this, &GRPlotWidget::shade);
-      hexbinAct = new QAction(tr("&Hexbin"), this);
-      connect(hexbinAct, &QAction::triggered, this, &GRPlotWidget::hexbin);
-      type->addAction(shadeAct);
-      type->addAction(hexbinAct);
-    }
-  menu->addMenu(type);
-  menu->addMenu(algo);
   menu->addMenu(export_menu);
 }
 
@@ -340,6 +381,10 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
 void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
 {
   const char *kind;
+  if (!args_)
+    {
+      return;
+    }
   if (mouseState.mode == MouseState::Mode::boxzoom)
     {
       rubberBand->setGeometry(QRect(mouseState.pressed, event->pos()).normalized());
@@ -363,20 +408,22 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
     }
   else
     {
-      tooltip = grm_get_tooltip(event->pos().x(), event->pos().y());
-
-      grm_args_values(args_, "kind", "s", &kind);
-      if (strcmp(kind, "marginalheatmap") == 0)
+      if (grm_args_values(args_, "kind", "s", &kind))
         {
-          grm_args_t *input_args;
-          input_args = grm_args_new();
+          tooltip = grm_get_tooltip(event->pos().x(), event->pos().y());
 
-          grm_args_push(input_args, "x", "i", event->pos().x());
-          grm_args_push(input_args, "y", "i", event->pos().y());
-          grm_input(input_args);
+          if (strcmp(kind, "marginalheatmap") == 0)
+            {
+              grm_args_t *input_args;
+              input_args = grm_args_new();
+
+              grm_args_push(input_args, "x", "i", event->pos().x());
+              grm_args_push(input_args, "y", "i", event->pos().y());
+              grm_input(input_args);
+            }
+
+          redraw();
         }
-
-      redraw();
     }
 }
 
@@ -651,4 +698,56 @@ void GRPlotWidget::svg()
 {
   file_export = "svg";
   redraw();
+}
+
+void GRPlotWidget::received(grm_args_t_wrapper args)
+{
+  if (!isVisible())
+    {
+      show();
+    }
+  if (args_)
+    {
+      grm_args_delete(args_);
+    }
+  grm_switch(1);
+  args_ = args.get_wrapper();
+  grm_merge(args_);
+  reset_pixmap();
+}
+
+void GRPlotWidget::closeEvent(QCloseEvent *event)
+{
+  event->ignore();
+  hide();
+  if (args_)
+    {
+      grm_args_delete(args_);
+      args_ = nullptr;
+    }
+}
+
+void GRPlotWidget::showEvent(QShowEvent *)
+{
+  QObject::connect(window()->windowHandle(), SIGNAL(screenChanged(QScreen *)), this, SLOT(screenChanged()));
+}
+
+void GRPlotWidget::screenChanged()
+{
+  reset_pixmap();
+}
+
+void GRPlotWidget::reset_pixmap()
+{
+  pixmap = nullptr;
+  update();
+}
+
+void GRPlotWidget::size_callback(const grm_event_t *new_size_object)
+{
+  // TODO: Get Plot ID
+  if (this->size() != QSize(new_size_object->size_event.width, new_size_object->size_event.height))
+    {
+      this->resize(new_size_object->size_event.width, new_size_object->size_event.height);
+    }
 }
