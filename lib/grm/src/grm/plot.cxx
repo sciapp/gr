@@ -1235,12 +1235,14 @@ void plot_process_viewport(grm_args_t *subplot_args)
       top_margin = grm_args_values(subplot_args, "title", "s", &title)
                        ? 0.075 + 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws)
                        : 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws);
-      if (keep_aspect_ratio) right_margin += grm_args_values(subplot_args, "title", "s", &title) ? 0.075 : 0;
+      if (keep_aspect_ratio && !str_equals_any(kind, 2, "surface", "volume"))
+        right_margin += grm_args_values(subplot_args, "title", "s", &title) ? 0.075 : 0;
     }
   else
     {
       top_margin = grm_args_values(subplot_args, "title", "s", &title) ? 0.075 : 0;
-      if (keep_aspect_ratio) right_margin -= 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws) - top_margin;
+      if (keep_aspect_ratio && !str_equals_any(kind, 2, "surface", "volume"))
+        right_margin -= 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws) - top_margin;
     }
   if (strcmp(kind, "imshow") == 0)
     {
@@ -2244,6 +2246,7 @@ err_t plot_line(grm_args_t *subplot_args)
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
   const char *kind, *orientation;
+  int *previous_marker_type = plot_scatter_markertypes;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
@@ -2251,7 +2254,7 @@ err_t plot_line(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       double *x = NULL, *y = NULL;
-      int allocated_x = 0;
+      int allocated_x = 0, markertype;
       unsigned int x_length = 0, y_length = 0;
       char *spec;
       int mask;
@@ -2292,6 +2295,19 @@ err_t plot_line(grm_args_t *subplot_args)
           else
             {
               gr_polymarker(x_length, y, x);
+            }
+        }
+      if (grm_args_values(*current_series, "markertype", "i", &markertype))
+        {
+          gr_setmarkertype(markertype);
+          gr_polymarker(x_length, x, y);
+        }
+      else
+        {
+          gr_setmarkertype(*previous_marker_type++);
+          if (*previous_marker_type == INT_MAX)
+            {
+              previous_marker_type = plot_scatter_markertypes;
             }
         }
       grm_args_push(*current_series, "orientation", "s", orientation);
@@ -6253,7 +6269,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   double charheight;
   double ticksize;
   char *title;
-  char *x_label, *y_label, *z_label;
+  char *x_label = strdup(""), *y_label = strdup(""), *z_label = strdup("");
   int keep_aspect_ratio;
 
   grm_args_values(args, "kind", "s", &kind);
@@ -6323,7 +6339,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
-      if (grm_args_values(args, "xlabel", "s", &x_label) && grm_args_values(args, "ylabel", "s", &y_label) &&
+      if (grm_args_values(args, "xlabel", "s", &x_label) || grm_args_values(args, "ylabel", "s", &y_label) ||
           grm_args_values(args, "zlabel", "s", &z_label))
         {
           gr_titles3d(x_label, y_label, z_label);

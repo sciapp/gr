@@ -123,7 +123,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
   std::ifstream file(path);
   std::list<int> columns;
   bool depth_change = true;
-  int depth = 0;
+  int depth = 0, max_col = -1;
   int linecount = 0;
 
   /* read the columns from the colms string also converts slicing into numbers */
@@ -317,6 +317,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
       int cnt = 0;
       char det = '\t';
       int start_with_nan = 0;
+      size_t col;
       if (line.empty())
         {
           depth += 1;
@@ -329,7 +330,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
           std::string tmp = ",";
           if (starts_with(trim(line), tmp)) start_with_nan = 1;
         }
-      for (size_t col = 0; std::getline(line_ss, token, det) && (token.length() || start_with_nan); col++)
+      for (col = 0; std::getline(line_ss, token, det) && (token.length() || start_with_nan); col++)
         {
           if (std::find(columns.begin(), columns.end(), col) != columns.end() ||
               (columns.empty() && labels.empty() && (!use_bins || col > 0)) ||
@@ -344,6 +345,12 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
               if (depth_change)
                 {
                   data[depth].emplace_back(std::vector<double>());
+                }
+              if (max_col != -1 && max_col < (int)cnt + 1)
+                {
+                  fprintf(stderr, "Line %i has a different number of columns (%i) than previous lines (%i)\n",
+                          (int)row + linecount + 1, cnt + 1, max_col);
+                  return ERROR_PLOT_MISSING_DATA;
                 }
               try
                 {
@@ -376,17 +383,27 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                     }
                   else
                     {
-                      ranges->ymax = std::stod(token); // not the best way to get ymax but the amount of rows is unknown
+                      ranges->ymax = std::stod(token); // not the best way to get ymax but the number of rows is unknown
                     }
                 }
               catch (std::invalid_argument &e)
                 {
                   fprintf(stderr, "Invalid argument for yrange parameter (%s) while using option use_bins in line %i\n",
-                          labels[0].c_str(), (int)row);
+                          labels[0].c_str(), (int)row + linecount + 1);
                 }
             }
         }
       depth_change = false;
+      if (max_col == -1)
+        {
+          max_col = (int)col;
+        }
+      else if (max_col != (int)col)
+        {
+          fprintf(stderr, "Line %i has a different number of columns (%i) than previous lines (%i)\n",
+                  (int)row + linecount + 1, (int)col, max_col);
+          return ERROR_PLOT_MISSING_DATA;
+        }
     }
   return ERROR_NONE;
 }
@@ -488,6 +505,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       fprintf(stderr, "File is empty\n");
       return 0;
     }
+  if (cols != labels.size())
+    {
+      fprintf(stderr, "The number of columns (%zu) doesn't fit the number of labels (%zu)\n", cols, labels.size());
+    }
 
   series.resize(cols);
 
@@ -502,7 +523,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     }
 
   grm_args_values(args, "kind", "s", &kind);
-  if ((strcmp(kind, "line") == 0 || (strcmp(kind, "scatter") == 0 && !scatter_with_z)) && (rows >= 100 && cols >= 100))
+  if ((strcmp(kind, "line") == 0 || (strcmp(kind, "scatter") == 0 && !scatter_with_z)) && (rows >= 50 && cols >= 50))
     {
       fprintf(stderr, "Too much data for %s plot - use heatmap instead\n", kind);
       kind = "heatmap";
@@ -1207,7 +1228,7 @@ void parse_parameter_ddd(std::string *input, const std::string *key, std::string
   if (k != 2 || (*input).length() == 0)
     {
       fprintf(stderr,
-              "Given number doesn`t fit the data for %s parameter. The "
+              "Given number doesn't fit the data for %s parameter. The "
               "parameter will be "
               "ignored\n",
               (*key).c_str());
@@ -1231,7 +1252,7 @@ int parse_parameter_nI(std::string *input, const std::string *key, std::vector<i
   if (k != std::stoi(param_num) - 1 || (*input).length() == 0)
     {
       fprintf(stderr,
-              "Given number doesn`t fit the data for %s parameter. The "
+              "Given number doesn't fit the data for %s parameter. The "
               "parameter will be "
               "ignored\n",
               (*key).c_str());
@@ -1256,7 +1277,7 @@ int parse_parameter_nS(std::string *input, const std::string *key, std::vector<s
   if (k != std::stoi(num) - 1 || (*input).length() == 0)
     {
       fprintf(stderr,
-              "Given number doesn`t fit the data for %s parameter. The parameter will be "
+              "Given number doesn't fit the data for %s parameter. The parameter will be "
               "ignored\n",
               (*key).c_str());
       return 0;
@@ -1280,7 +1301,7 @@ int parse_parameter_nD(std::string *input, const std::string *key, std::vector<d
   if (k != std::stoi(num) - 1 || (*input).length() == 0)
     {
       fprintf(stderr,
-              "Given number doesn`t fit the data for %s parameter. The parameter will be "
+              "Given number doesn't fit the data for %s parameter. The parameter will be "
               "ignored\n",
               (*key).c_str());
       return 0;

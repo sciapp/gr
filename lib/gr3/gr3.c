@@ -42,8 +42,8 @@ static char not_initialized_[] = "Not initialized";
  */
 #ifndef NO_GL
 static GLuint framebuffer = 0;
-#endif
 static GLuint user_framebuffer = 0;
+#endif
 
 static int current_object_id = 0;
 
@@ -137,11 +137,15 @@ GR3API int gr3_init(int *attrib_list)
   int i, error;
   char *renderpath_string = "gr3";
   GR3_InitStruct_t_ init_struct = GR3_InitStruct_INITIALIZER;
-  char *software_renderer;
-  software_renderer = getenv("GR3_USE_SR");
+  /* Only try to use OpenGL if support for it is available and GR3_USE_OPENGL is set */
+  int use_opengl;
+  char *use_opengl_str;
 #ifdef NO_GL
-  software_renderer = "True";
+  use_opengl_str = NULL;
+#else
+  use_opengl_str = getenv("GR3_USE_OPENGL");
 #endif
+  use_opengl = (use_opengl_str != NULL) && (use_opengl_str[0] != 0);
   if (attrib_list)
     {
       for (i = 0; attrib_list[i] != GR3_IA_END_OF_LIST; i++)
@@ -172,7 +176,7 @@ GR3API int gr3_init(int *attrib_list)
   error = GR3_ERROR_INIT_FAILED;
   do
     {
-      if (software_renderer == NULL)
+      if (use_opengl)
         {
 #if defined(GR3_USE_CGL)
           error = gr3_initGL_CGL_();
@@ -387,7 +391,10 @@ GR3API int gr3_init(int *attrib_list)
 
   context_struct_.is_initialized = 1;
   gr3_init_convenience();
-  gr3_useframebuffer(0);
+  if (!context_struct_.use_software_renderer)
+    {
+      gr3_useframebuffer(0);
+    }
   gr3_setcameraprojectionparameters(45, 1, 200);
   gr3_cameralookat(0, 0, 10, 0, 0, 0, 0, 1, 0);
   gr3_log_("init completed successfully");
@@ -576,6 +583,12 @@ GR3API int gr3_clear(void)
 GR3API void gr3_usecurrentframebuffer()
 {
   GLuint framebuffer = 0;
+  if (context_struct_.use_software_renderer)
+    {
+      fprintf(stderr, "Error: gr3_usecurrentframebuffer is only available when using OpenGL. Set the GR3_USE_OPENGL "
+                      "environment variable for GR3 to use OpenGL\n");
+      return;
+    }
 #ifndef NO_GL
   glGetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint *)&framebuffer);
 #endif
@@ -584,7 +597,15 @@ GR3API void gr3_usecurrentframebuffer()
 
 GR3API void gr3_useframebuffer(unsigned int framebuffer)
 {
+  if (context_struct_.use_software_renderer)
+    {
+      fprintf(stderr, "Error: gr3_useframebuffer is only available when using OpenGL. Set the GR3_USE_OPENGL "
+                      "environment variable for GR3 to use OpenGL\n");
+      return;
+    }
+#ifndef NO_GL
   user_framebuffer = framebuffer;
+#endif
 }
 
 /*!
@@ -1803,6 +1824,8 @@ GR3API int gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int wid
     case GR3_DRAWABLE_OPENGL:
       if (context_struct_.use_software_renderer == 1)
         {
+          fprintf(stderr, "Error: gr3_drawimage with GR3_DRAWABLE_OPENGL is only available when using OpenGL. Set the "
+                          "GR3_USE_OPENGL environment variable for GR3 to use OpenGL\n");
           RETURN_ERROR(GR3_ERROR_INVALID_VALUE);
         }
       return gr3_drawimage_opengl_(xmin, xmax, ymin, ymax, width, height);
@@ -2486,6 +2509,14 @@ GR3API int gr3_selectid(int px, int py, int width, int height, int *object_id)
   GLfloat zNear = context_struct_.zNear;
   GLfloat zFar = context_struct_.zFar;
   GLfloat left, right, bottom, top;
+  GR3_DO_INIT;
+
+  if (context_struct_.use_software_renderer)
+    {
+      fprintf(stderr, "Error: gr3_selectid is only available when using OpenGL. Set the GR3_USE_OPENGL environment "
+                      "variable for GR3 to use OpenGL\n");
+      return -1;
+    }
 
   if (context_struct_.projection_type == GR3_PROJECTION_ORTHOGRAPHIC)
     {
@@ -2504,7 +2535,6 @@ GR3API int gr3_selectid(int px, int py, int width, int height, int *object_id)
       top = zNear * tan_halffovy;
       bottom = -top;
     }
-  GR3_DO_INIT;
   if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
 
   *object_id = 0;

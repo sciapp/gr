@@ -121,6 +121,14 @@ typedef struct
   gr3_coord_t normal[3];
 } gr3_triangle_t;
 
+typedef struct gr3_volume_2pass_priv gr3_volume_2pass_priv_t;
+typedef struct
+{
+  double dmin;
+  double dmax;
+  gr3_volume_2pass_priv_t *priv;
+} gr3_volume_2pass_t;
+
 GR3API int gr3_init(int *attrib_list);
 GR3API void gr3_free(void *pointer);
 GR3API void gr3_terminate(void);
@@ -250,6 +258,8 @@ GR3API void gr3_drawzslicemesh(const GR3_MC_DTYPE *data, unsigned int iz, unsign
 GR3API void gr3_drawtrianglesurface(int n, const float *triangles);
 
 GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, double *dmin_ptr, double *dmax_ptr);
+GR3API const gr3_volume_2pass_t *gr_volume_2pass(int nx, int ny, int nz, double *data, int algorithm, double *dmin_ptr,
+                                                 double *dmax_ptr, const gr3_volume_2pass_t *context);
 
 GR3API void gr3_setorthographicprojection(float left, float right, float bottom, float top, float znear, float zfar);
 

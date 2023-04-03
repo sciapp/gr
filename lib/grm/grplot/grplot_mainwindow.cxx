@@ -24,7 +24,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv) : QMainWindow()
           kind = argv[2];
           std::transform(kind.begin(), kind.end(), kind.begin(), ::toupper);
           if (!message->find(QString(kind.c_str()), QTextDocument::FindCaseSensitively))
-            fprintf(stderr, "No plot type with the name %s was found.", kind.c_str());
+            fprintf(stderr, "No plot type with the name %s was found.\n", kind.c_str());
         }
       setCentralWidget(message);
     }
