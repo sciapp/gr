@@ -9543,6 +9543,7 @@ const hexbin_2pass_t *gr_hexbin_2pass(int n, double *x, double *y, int nbins, co
       context_ = (hexbin_2pass_t *)xmalloc(sizeof(hexbin_2pass_t));
       context_->nc = nc;
       context_->cntmax = cntmax;
+      context_->action = GR_2PASS_CLEANUP | GR_2PASS_RENDER; /* render and clean up by default */
       context_->priv = (hexbin_2pass_priv_t *)xmalloc(sizeof(hexbin_2pass_priv_t));
       context_->priv->cell = cell;
       context_->priv->cnt = cnt;
@@ -9551,70 +9552,74 @@ const hexbin_2pass_t *gr_hexbin_2pass(int n, double *x, double *y, int nbins, co
     }
   else
     {
-      int errind, int_style, coli;
-      int nc, cntmax;
-      int *cell, *cnt;
-      double *xcm, *ycm;
-      double xlist[7], ylist[7], xdelta[6], ydelta[6];
-      int i, j;
-
-      nc = context->nc;
-      cntmax = context->cntmax;
-      cell = context->priv->cell;
-      cnt = context->priv->cnt;
-      xcm = context->priv->xcm;
-      ycm = context->priv->ycm;
-
-      for (j = 0; j < 6; j++)
+      if (context->action & GR_2PASS_RENDER)
         {
-          xdelta[j] = sin(M_PI / 3 * j) * R;
-          ydelta[j] = cos(M_PI / 3 * j) * R;
-        }
+          int errind, int_style, coli;
+          int nc, cntmax;
+          int *cell, *cnt;
+          double *xcm, *ycm;
+          double xlist[7], ylist[7], xdelta[6], ydelta[6];
+          int i, j;
 
-      setscale(lx.scale_options);
+          nc = context->nc;
+          cntmax = context->cntmax;
+          cell = context->priv->cell;
+          cnt = context->priv->cnt;
+          xcm = context->priv->xcm;
+          ycm = context->priv->ycm;
 
-      /* save fill area interior style and color index */
-      gks_inq_fill_int_style(&errind, &int_style);
-      gks_inq_fill_color_index(&errind, &coli);
-
-      gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
-
-      for (i = 1; i <= nc; i++)
-        {
           for (j = 0; j < 6; j++)
             {
-              xlist[j] = xcm[i] + xdelta[j];
-              ylist[j] = ycm[i] + ydelta[j];
-              gr_ndctowc(xlist + j, ylist + j);
+              xdelta[j] = sin(M_PI / 3 * j) * R;
+              ydelta[j] = cos(M_PI / 3 * j) * R;
             }
-          xlist[6] = xlist[0];
-          ylist[6] = ylist[0];
 
-          gks_set_fill_color_index(first_color + (last_color - first_color) * ((double)cnt[i] / cntmax));
-          gks_fillarea(6, xlist, ylist);
-          gks_polyline(7, xlist, ylist);
+          setscale(lx.scale_options);
+
+          /* save fill area interior style and color index */
+          gks_inq_fill_int_style(&errind, &int_style);
+          gks_inq_fill_color_index(&errind, &coli);
+
+          gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
+
+          for (i = 1; i <= nc; i++)
+            {
+              for (j = 0; j < 6; j++)
+                {
+                  xlist[j] = xcm[i] + xdelta[j];
+                  ylist[j] = ycm[i] + ydelta[j];
+                  gr_ndctowc(xlist + j, ylist + j);
+                }
+              xlist[6] = xlist[0];
+              ylist[6] = ylist[0];
+
+              gks_set_fill_color_index(first_color + (last_color - first_color) * ((double)cnt[i] / cntmax));
+              gks_fillarea(6, xlist, ylist);
+              gks_polyline(7, xlist, ylist);
+            }
+          free(ycm);
+          free(xcm);
+          free(cnt);
+          free(cell);
+          /* restore fill area interior style and color index */
+
+          gks_set_fill_int_style(int_style);
+          gks_set_fill_color_index(coli);
+          if (flag_stream)
+            {
+              gr_writestream("<hexbin len=\"%d\"", n);
+              print_float_array("x", n, x);
+              print_float_array("y", n, y);
+              gr_writestream(" nbins=\"%d\"/>\n", nbins);
+            }
         }
 
-      free(ycm);
-      free(xcm);
-      free(cnt);
-      free(cell);
-      free(context->priv);
-      free((hexbin_2pass_t *)context);
-      context_ = NULL;
-
-      /* restore fill area interior style and color index */
-
-      gks_set_fill_int_style(int_style);
-      gks_set_fill_color_index(coli);
-
-      if (flag_stream)
+      if (context->action & GR_2PASS_CLEANUP)
         {
-          gr_writestream("<hexbin len=\"%d\"", n);
-          print_float_array("x", n, x);
-          print_float_array("y", n, y);
-          gr_writestream(" nbins=\"%d\"/>\n", nbins);
+          free(context->priv);
+          free((hexbin_2pass_t *)context);
         }
+      context_ = NULL;
     }
 
   return context_;
@@ -14573,6 +14578,7 @@ const cpubasedvolume_2pass_t *gr_cpubasedvolume_2pass(int nx, int ny, int nz, do
       context_ = (cpubasedvolume_2pass_t *)xmalloc(sizeof(cpubasedvolume_2pass_t));
       context_->dmin = *dmin_ptr;
       context_->dmax = *dmax_ptr;
+      context_->action = GR_2PASS_CLEANUP | GR_2PASS_RENDER; /* render and clean up by default */
       context_->priv = (cpubasedvolume_2pass_priv_t *)xmalloc(sizeof(cpubasedvolume_2pass_priv_t));
       context_->priv->pixels = pixels;
     }
@@ -14580,24 +14586,29 @@ const cpubasedvolume_2pass_t *gr_cpubasedvolume_2pass(int nx, int ny, int nz, do
     {
       double *pixels = context->priv->pixels;
 
-      draw_volume(pixels);
-
-      free(pixels);
-      free(context->priv);
-      free((cpubasedvolume_2pass_t *)context);
-      context_ = NULL;
-
-      if (flag_stream)
+      if (context->action & GR_2PASS_RENDER)
         {
-          gr_writestream("<cpubasedvolume nx=\"%i\" ny=\"%i\" nz=\"%i\" />\n", nx, ny, nz);
-          print_float_array("data", nx * ny * nz, data);
-          gr_writestream(" algorithm=\"%i\" ", algorithm);
-          print_float_array("dmin_ptr", 1, dmin_ptr);
-          print_float_array("dmax_ptr", 1, dmax_ptr);
-          print_float_array("dmin_val", 1, dmin_val);
-          print_float_array("dmax_val", 1, dmax_val);
-          gr_writestream("/>\n");
+          draw_volume(pixels);
+          if (flag_stream)
+            {
+              gr_writestream("<cpubasedvolume nx=\"%i\" ny=\"%i\" nz=\"%i\" />\n", nx, ny, nz);
+              print_float_array("data", nx * ny * nz, data);
+              gr_writestream(" algorithm=\"%i\" ", algorithm);
+              print_float_array("dmin_ptr", 1, dmin_ptr);
+              print_float_array("dmax_ptr", 1, dmax_ptr);
+              print_float_array("dmin_val", 1, dmin_val);
+              print_float_array("dmax_val", 1, dmax_val);
+              gr_writestream("/>\n");
+            }
         }
+
+      if (context->action & GR_2PASS_CLEANUP)
+        {
+          free(pixels);
+          free(context->priv);
+          free((cpubasedvolume_2pass_t *)context);
+        }
+      context_ = NULL;
     }
 
   return context_;

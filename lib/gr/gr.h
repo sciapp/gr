@@ -29,6 +29,9 @@ extern "C" {
 #define GR_TEXT_USE_WC (1 << 0)
 #define GR_TEXT_ENABLE_INLINE_MATH (1 << 1)
 
+#define GR_2PASS_CLEANUP 1
+#define GR_2PASS_RENDER 2
+
 typedef struct
 {
   double x, y;
@@ -67,6 +70,7 @@ typedef struct
 {
   double dmin;
   double dmax;
+  int action;
   cpubasedvolume_2pass_priv_t *priv;
 } cpubasedvolume_2pass_t;
 
@@ -75,6 +79,7 @@ typedef struct
 {
   int nc;
   int cntmax;
+  int action;
   hexbin_2pass_priv_t *priv;
 } hexbin_2pass_t;
 
