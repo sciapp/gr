@@ -2157,7 +2157,7 @@ void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
                 }
             }
           logger((stderr, "Storing window3d (%lf, %lf, %lf, %lf, %lf, %lf)\n", xmin, xmax, ymin, ymax, zmin, zmax));
-          gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
+          //          gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
           global_render->setWindow3d(elem, xmin, xmax, ymin, ymax, zmin, zmax);
         }
     }
@@ -2189,6 +2189,18 @@ static void processWindow(const std::shared_ptr<GR::Element> &elem)
   double ymax = static_cast<double>(elem->getAttribute("window_ymax"));
 
   gr_setwindow(xmin, xmax, ymin, ymax);
+}
+
+static void processWindow3d(const std::shared_ptr<GR::Element> &elem)
+{
+  double xmin = static_cast<double>(elem->getAttribute("window_xmin"));
+  double xmax = static_cast<double>(elem->getAttribute("window_xmax"));
+  double ymin = static_cast<double>(elem->getAttribute("window_ymin"));
+  double ymax = static_cast<double>(elem->getAttribute("window_ymax"));
+  double zmin = static_cast<double>(elem->getAttribute("window_zmin"));
+  double zmax = static_cast<double>(elem->getAttribute("window_zmax"));
+
+  gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
 }
 
 static void processProjectionType(const std::shared_ptr<GR::Element> &elem)
@@ -3563,8 +3575,8 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
        [](const std::shared_ptr<GR::Element> &elem) {
          gr_uselinespec(((std::string)elem->getAttribute("linespec")).data());
        }},
-      {std::string("limits"), GR::Render::processLimits},
       {std::string("window"), processWindow},
+      {std::string("window3d"), processWindow3d},
       {std::string("wsviewport"), processWSViewport},
       {std::string("wswindow"), processWSWindow},
       {std::string("resamplemethod"),
@@ -3608,7 +3620,9 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
       {std::string("subplot"), processSubplot},
       {std::string("viewport"), GR::Render::processViewport},
       {std::string("charheight"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_setcharheight((double)elem->getAttribute("charheight")); }}};
+       [](const std::shared_ptr<GR::Element> &elem) { gr_setcharheight((double)elem->getAttribute("charheight")); }},
+      {std::string("limits"), GR::Render::processLimits},
+  };
 
   for (auto attributeToFunctionPair : attrStringToFuncPre)
     {
