@@ -1610,9 +1610,15 @@ static void processTitle(const std::shared_ptr<GR::Element> &elem)
 
       if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
         {
-          auto title_elem = render->createText(x, y, title);
-          render->setTextAlign(title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-          elem->appendChild(title_elem);
+          auto new_title_elem = render->createText(x, y, title);
+          new_title_elem->setAttribute("name", "title");
+          render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          auto title_elems = elem->querySelectorsAll("[name=\"title\"]");
+          for (auto &title_elem : title_elems)
+            {
+              title_elem->remove();
+            }
+          elem->appendChild(new_title_elem);
         }
     }
 }
@@ -1640,7 +1646,13 @@ static void processXlabel(const std::shared_ptr<GR::Element> &elem)
   if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
     {
       auto text = render->createText(x, y, x_label);
+      text->setAttribute("name", "xlabel");
       render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
+      auto xlabel_elems = elem->querySelectorsAll("[name=\"xlabel\"]");
+      for (auto &xlabel_elem : xlabel_elems)
+        {
+          xlabel_elem->remove();
+        }
       elem->appendChild(text);
     }
 }
@@ -1797,7 +1809,13 @@ static void processYlabel(const std::shared_ptr<GR::Element> &elem)
   if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
     {
       auto text = render->createText(x, y, y_label);
+      text->setAttribute("name", "ylabel");
       render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+      auto ylabel_elems = elem->querySelectorsAll("[name=\"ylabel\"]");
+      for (auto &ylabel_elem : ylabel_elems)
+        {
+          ylabel_elem->remove();
+        }
       render->setCharUp(text, -1, 0);
       elem->appendChild(text);
     }
