@@ -2157,7 +2157,6 @@ void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
                 }
             }
           logger((stderr, "Storing window3d (%lf, %lf, %lf, %lf, %lf, %lf)\n", xmin, xmax, ymin, ymax, zmin, zmax));
-          //          gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
           global_render->setWindow3d(elem, xmin, xmax, ymin, ymax, zmin, zmax);
         }
     }
@@ -2166,7 +2165,6 @@ void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
       logger((stderr, "Storing window (%lf, %lf, %lf, %lf)\n", xmin, xmax, ymin, ymax));
       if (!str_equals_any(kind.c_str(), 2, "polar", "polar_histogram"))
         {
-          gr_setwindow(xmin, xmax, ymin, ymax);
           global_render->setWindow(elem, xmin, xmax, ymin, ymax);
         }
       else
@@ -2175,7 +2173,6 @@ void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
           xmax = 1.0;
           ymin = -1.0;
           ymax = 1.0;
-          gr_setwindow(xmin, xmax, ymin, ymax);
           global_render->setWindow(elem, xmin, xmax, ymin, ymax);
         }
     }
@@ -3575,8 +3572,6 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
        [](const std::shared_ptr<GR::Element> &elem) {
          gr_uselinespec(((std::string)elem->getAttribute("linespec")).data());
        }},
-      {std::string("window"), processWindow},
-      {std::string("window3d"), processWindow3d},
       {std::string("wsviewport"), processWSViewport},
       {std::string("wswindow"), processWSWindow},
       {std::string("resamplemethod"),
@@ -3622,6 +3617,8 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
       {std::string("charheight"),
        [](const std::shared_ptr<GR::Element> &elem) { gr_setcharheight((double)elem->getAttribute("charheight")); }},
       {std::string("limits"), GR::Render::processLimits},
+      {std::string("window"), processWindow},
+      {std::string("window3d"), processWindow3d}, /* needs to be set before space3d is processed */
   };
 
   for (auto attributeToFunctionPair : attrStringToFuncPre)
