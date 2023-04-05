@@ -43,6 +43,10 @@ static std::map<std::string, double> symbol_to_meters_per_unit{
     {"\"", 0.0254}, {"ft", 0.3048}, {"'", 0.0254}, {"pc", 0.0254 / 6.0}, {"pt", 0.0254 / 72.0},
 };
 
+static int bounding_id = 0;
+static std::map<int, std::shared_ptr<GR::Element>> bounding_map;
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static void markerHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context,
                          const std::string &str)
@@ -625,1038 +629,6 @@ static void getAxes3dInformation(const std::shared_ptr<GR::Element> &element, st
     }
 }
 
-static void polymarker(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for polymarker
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  if (element->getAttribute("x").isString() && element->getAttribute("y").isString())
-    {
-      auto x = static_cast<std::string>(element->getAttribute("x"));
-      auto y = static_cast<std::string>(element->getAttribute("y"));
-
-      std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
-      std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
-
-      int n = std::min(x_vec.size(), y_vec.size());
-      auto group = element->parentElement();
-      if ((element->hasAttribute("markertypes") || element->hasAttribute("markersizes") ||
-           element->hasAttribute("markercolorinds")) ||
-          (parentTypes.count(group->localName()) &&
-           (group->hasAttribute("markertypes") || group->hasAttribute("markersizes") ||
-            group->hasAttribute("markercolorinds"))))
-        {
-          markerHelper(element, context, "polymarker");
-        }
-      else
-        {
-          gr_polymarker(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
-        }
-    }
-  else if (element->getAttribute("x").isDouble() && element->getAttribute("y").isDouble())
-    {
-      double x = static_cast<double>(element->getAttribute("x"));
-      double y = static_cast<double>(element->getAttribute("y"));
-      gr_polymarker(1, &x, &y);
-    }
-}
-
-static void polyline(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing Function for polyline
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  int n = static_cast<int>(element->getAttribute("n"));
-  if (element->getAttribute("x").isString() && element->getAttribute("y").isString())
-    {
-      auto x = static_cast<std::string>(element->getAttribute("x"));
-      auto y = static_cast<std::string>(element->getAttribute("y"));
-
-      std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
-      std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
-
-      int n = std::min(x_vec.size(), y_vec.size());
-      auto group = element->parentElement();
-      if ((element->hasAttribute("linetypes") || element->hasAttribute("linewidths") ||
-           element->hasAttribute("linecolorinds")) ||
-          ((parentTypes.count(group->localName())) &&
-           (group->hasAttribute("linetypes") || group->hasAttribute("linewidths") ||
-            group->hasAttribute("linecolorinds"))))
-        {
-          lineHelper(element, context, "polyline");
-        }
-      else
-        gr_polyline(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
-    }
-  else if (element->getAttribute("x1").isDouble() && element->getAttribute("x2").isDouble() &&
-           element->getAttribute("y1").isDouble() && element->getAttribute("y2").isDouble())
-    {
-      auto x1 = static_cast<double>(element->getAttribute("x1"));
-      auto x2 = static_cast<double>(element->getAttribute("x2"));
-      auto y1 = static_cast<double>(element->getAttribute("y1"));
-      auto y2 = static_cast<double>(element->getAttribute("y2"));
-      double x[2] = {x1, x2};
-      double y[2] = {y1, y2};
-
-      gr_polyline(2, x, y);
-    }
-}
-
-static void text(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing funcions for text
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  gr_savestate();
-  auto x = static_cast<double>(element->getAttribute("x"));
-  auto y = static_cast<double>(element->getAttribute("y"));
-  auto str = static_cast<std::string>(element->getAttribute("text"));
-  auto available_width = static_cast<double>(element->getAttribute("width"));
-  auto available_height = static_cast<double>(element->getAttribute("height"));
-  double tbx[4], tby[4];
-  bool text_fits = true;
-  CoordinateSpace space = static_cast<CoordinateSpace>(static_cast<int>(element->getAttribute("space")));
-
-
-  if (space == CoordinateSpace::WC)
-    {
-      gr_wctondc(&x, &y);
-    }
-  if (element->hasAttribute("width") && element->hasAttribute("height"))
-    {
-      gr_wctondc(&available_width, &available_height);
-      gr_inqtext(x, y, &str[0], tbx, tby);
-      auto minmax_x = std::minmax_element(std::begin(tbx), std::end(tbx));
-      auto minmax_y = std::minmax_element(std::begin(tby), std::end(tby));
-      double width = minmax_x.second - minmax_x.first;
-      double height = minmax_y.second - minmax_y.first;
-      if (width > available_width && height > available_height)
-        {
-          gr_setcharup(0.0, 1.0);
-          gr_settextalign(2, 3);
-          gr_inqtext(x, y, &str[0], tbx, tby);
-          width = tbx[2] - tbx[0];
-          height = tby[2] - tby[0];
-          if (width < available_width && height < available_height)
-            {
-              gr_setcharup(0.0, 1.0);
-              gr_settextalign(2, 3);
-            }
-          else if (height < available_width && width < available_height)
-            {
-              gr_setcharup(-1.0, 0.0);
-              gr_settextalign(2, 3);
-            }
-          else
-            {
-              text_fits = false;
-            }
-        }
-    }
-  if (text_fits) gr_text(x, y, &str[0]);
-  gr_restorestate();
-}
-
-static void fillArea(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for fillArea
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  auto x = static_cast<std::string>(element->getAttribute("x"));
-  auto y = static_cast<std::string>(element->getAttribute("y"));
-
-  std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
-  std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
-
-  int n = std::min(x_vec.size(), y_vec.size());
-
-  gr_fillarea(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
-}
-
-static void cellArray(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for cellArray
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  double xmin = static_cast<double>(element->getAttribute("xmin"));
-  double xmax = static_cast<double>(element->getAttribute("xmax"));
-  double ymin = static_cast<double>(element->getAttribute("ymin"));
-  double ymax = static_cast<double>(element->getAttribute("ymax"));
-  int dimx = static_cast<int>(element->getAttribute("dimx"));
-  int dimy = static_cast<int>(element->getAttribute("dimy"));
-  int scol = static_cast<int>(element->getAttribute("scol"));
-  int srow = static_cast<int>(element->getAttribute("srow"));
-  int ncol = static_cast<int>(element->getAttribute("ncol"));
-  int nrow = static_cast<int>(element->getAttribute("nrow"));
-  auto color = static_cast<std::string>(element->getAttribute("color"));
-  gr_cellarray(xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nrow,
-               (int *)&(GR::get<std::vector<int>>((*context)[color])[0]));
-}
-
-static void axes(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for axes
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  double x_tick, x_org;
-  double y_tick, y_org;
-  int x_major;
-  int y_major;
-  int tick_orientation = 1;
-  double tick_size;
-  std::string x_org_pos, y_org_pos;
-
-  if (element->hasAttribute("x_org_pos"))
-    {
-      x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
-    }
-  else
-    {
-      x_org_pos = "low";
-    }
-  if (element->hasAttribute("y_org_pos"))
-    {
-      y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
-    }
-  else
-    {
-      y_org_pos = "low";
-    }
-
-  getAxesInformation(element, x_org_pos, y_org_pos, x_org, y_org, x_major, y_major, x_tick, y_tick);
-
-  auto draw_axes_group = element->parentElement();
-  auto subplot_element = getSubplotElement(element);
-
-  if (element->hasAttribute("tick_orientation"))
-    {
-      tick_orientation = static_cast<int>(element->getAttribute("tick_orientation"));
-    }
-
-  getTickSize(element, tick_size);
-  tick_size *= tick_orientation;
-
-  gr_axes(x_tick, y_tick, x_org, y_org, x_major, y_major, tick_size);
-}
-
-static void grid(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for grid
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  double x_tick, y_tick, x_org, y_org;
-  int x_major, y_major;
-  std::string x_org_pos, y_org_pos;
-
-  if (element->hasAttribute("x_org_pos"))
-    {
-      x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
-    }
-  else
-    {
-      x_org_pos = "low";
-    }
-  if (element->hasAttribute("y_org_pos"))
-    {
-      y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
-    }
-  else
-    {
-      y_org_pos = "low";
-    }
-
-  getAxesInformation(element, x_org_pos, y_org_pos, x_org, y_org, x_major, y_major, x_tick, y_tick);
-
-  gr_grid(x_tick, y_tick, x_org, y_org, abs(x_major), abs(y_major));
-}
-
-static void drawImage(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for drawImage
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  double xmin = static_cast<double>(element->getAttribute("xmin"));
-  double xmax = static_cast<double>(element->getAttribute("xmax"));
-  double ymin = static_cast<double>(element->getAttribute("ymin"));
-  double ymax = static_cast<double>(element->getAttribute("ymax"));
-  int width = static_cast<int>(element->getAttribute("width"));
-  int height = static_cast<int>(element->getAttribute("height"));
-  int model = static_cast<int>(element->getAttribute("model"));
-  auto data = static_cast<std::string>(element->getAttribute("data"));
-  gr_drawimage(xmin, ymin, xmax, ymax, width, height, (int *)&(GR::get<std::vector<int>>((*context)[data])[0]), model);
-}
-
-static void drawArc(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for drawArc
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  double xmin = static_cast<double>(element->getAttribute("xmin"));
-  double xmax = static_cast<double>(element->getAttribute("xmax"));
-  double ymin = static_cast<double>(element->getAttribute("ymin"));
-  double ymax = static_cast<double>(element->getAttribute("ymax"));
-  double a1 = static_cast<double>(element->getAttribute("a1"));
-  double a2 = static_cast<double>(element->getAttribute("a2"));
-  gr_drawarc(xmin, xmax, ymin, ymax, a1, a2);
-}
-
-static void fillArc(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for drawArc
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  double xmin = static_cast<double>(element->getAttribute("xmin"));
-  double xmax = static_cast<double>(element->getAttribute("xmax"));
-  double ymin = static_cast<double>(element->getAttribute("ymin"));
-  double ymax = static_cast<double>(element->getAttribute("ymax"));
-  double a1 = static_cast<double>(element->getAttribute("a1"));
-  double a2 = static_cast<double>(element->getAttribute("a2"));
-  gr_fillarc(xmin, xmax, ymin, ymax, a1, a2);
-}
-
-static void drawRect(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for drawArc
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  double xmin = static_cast<double>(element->getAttribute("xmin"));
-  double xmax = static_cast<double>(element->getAttribute("xmax"));
-  double ymin = static_cast<double>(element->getAttribute("ymin"));
-  double ymax = static_cast<double>(element->getAttribute("ymax"));
-  gr_drawrect(xmin, xmax, ymin, ymax);
-}
-
-static void fillRect(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for drawArc
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  double xmin = static_cast<double>(element->getAttribute("xmin"));
-  double xmax = static_cast<double>(element->getAttribute("xmax"));
-  double ymin = static_cast<double>(element->getAttribute("ymin"));
-  double ymax = static_cast<double>(element->getAttribute("ymax"));
-  gr_fillrect(xmin, xmax, ymin, ymax);
-}
-
-static void quiver(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for quiver
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  auto x = static_cast<std::string>(element->getAttribute("x"));
-  auto y = static_cast<std::string>(element->getAttribute("y"));
-  auto u = static_cast<std::string>(element->getAttribute("u"));
-  auto v = static_cast<std::string>(element->getAttribute("v"));
-  int color = static_cast<int>(element->getAttribute("color"));
-
-  std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
-  std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
-
-
-  double *x_p = &(x_vec[0]);
-  double *y_p = &(y_vec[0]);
-  double *u_p = &(GR::get<std::vector<double>>((*context)[u])[0]);
-  double *v_p = &(GR::get<std::vector<double>>((*context)[v])[0]);
-
-  gr_quiver(x_vec.size(), y_vec.size(), x_p, y_p, u_p, v_p, color);
-}
-
-static void contour(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for contour
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  auto px = static_cast<std::string>(element->getAttribute("px"));
-  auto py = static_cast<std::string>(element->getAttribute("py"));
-  auto h = static_cast<std::string>(element->getAttribute("h"));
-  auto pz = static_cast<std::string>(element->getAttribute("pz"));
-  int major_h = static_cast<int>(element->getAttribute("major_h"));
-
-  std::vector<double> px_vec = GR::get<std::vector<double>>((*context)[px]);
-  std::vector<double> py_vec = GR::get<std::vector<double>>((*context)[py]);
-  std::vector<double> h_vec = GR::get<std::vector<double>>((*context)[h]);
-  std::vector<double> pz_vec = GR::get<std::vector<double>>((*context)[pz]);
-
-  int nx = px_vec.size();
-  int ny = py_vec.size();
-  int nh = h_vec.size();
-
-  double *px_p = &(px_vec[0]);
-  double *py_p = &(py_vec[0]);
-  double *h_p = &(h_vec[0]);
-  double *pz_p = &(pz_vec[0]);
-
-  gr_contour(nx, ny, nh, px_p, py_p, h_p, pz_p, major_h);
-}
-
-static void contourf(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for contourf
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  auto px = static_cast<std::string>(element->getAttribute("px"));
-  auto py = static_cast<std::string>(element->getAttribute("py"));
-  auto h = static_cast<std::string>(element->getAttribute("h"));
-  auto pz = static_cast<std::string>(element->getAttribute("pz"));
-  int major_h = static_cast<int>(element->getAttribute("major_h"));
-
-  std::vector<double> px_vec = GR::get<std::vector<double>>((*context)[px]);
-  std::vector<double> py_vec = GR::get<std::vector<double>>((*context)[py]);
-  std::vector<double> h_vec = GR::get<std::vector<double>>((*context)[h]);
-  std::vector<double> pz_vec = GR::get<std::vector<double>>((*context)[pz]);
-
-  int nx = px_vec.size();
-  int ny = py_vec.size();
-  int nh = h_vec.size();
-
-  double *px_p = &(px_vec[0]);
-  double *py_p = &(py_vec[0]);
-  double *h_p = &(h_vec[0]);
-  double *pz_p = &(pz_vec[0]);
-
-  gr_contourf(nx, ny, nh, px_p, py_p, h_p, pz_p, major_h);
-}
-
-static void hexbin(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for hexbin
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-
-  auto x = static_cast<std::string>(element->getAttribute("x"));
-  auto y = static_cast<std::string>(element->getAttribute("y"));
-  int nbins = static_cast<int>(element->getAttribute("nbins"));
-
-  int x_length = static_cast<int>(element->getAttribute("x_length"));
-
-  double *x_p = &(GR::get<std::vector<double>>((*context)[x])[0]);
-  double *y_p = &(GR::get<std::vector<double>>((*context)[y])[0]);
-
-  gr_hexbin(x_length, x_p, y_p, nbins);
-}
-
-static void nonuniformcellarray(const std::shared_ptr<GR::Element> &element,
-                                const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for nonuniformcellarray
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  auto x = static_cast<std::string>(element->getAttribute("x"));
-  auto y = static_cast<std::string>(element->getAttribute("y"));
-
-  int dimx = static_cast<int>(element->getAttribute("dimx"));
-  int dimy = static_cast<int>(element->getAttribute("dimy"));
-  int scol = static_cast<int>(element->getAttribute("scol"));
-  int srow = static_cast<int>(element->getAttribute("srow"));
-  int ncol = static_cast<int>(element->getAttribute("ncol"));
-  int nrow = static_cast<int>(element->getAttribute("nrow"));
-  auto color = static_cast<std::string>(element->getAttribute("color"));
-
-  auto x_p = (double *)&(GR::get<std::vector<double>>((*context)[x])[0]);
-  auto y_p = (double *)&(GR::get<std::vector<double>>((*context)[y])[0]);
-
-  auto color_p = (int *)&(GR::get<std::vector<int>>((*context)[color])[0]);
-  gr_nonuniformcellarray(x_p, y_p, dimx, dimy, scol, srow, ncol, nrow, color_p);
-}
-
-static void surface(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for surface
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  auto px = static_cast<std::string>(element->getAttribute("px"));
-  auto py = static_cast<std::string>(element->getAttribute("py"));
-  auto pz = static_cast<std::string>(element->getAttribute("pz"));
-  int option = static_cast<int>(element->getAttribute("option"));
-  int accelerate = static_cast<int>(element->getAttribute("accelerate"));
-
-  std::vector<double> px_vec = GR::get<std::vector<double>>((*context)[px]);
-  std::vector<double> py_vec = GR::get<std::vector<double>>((*context)[py]);
-  std::vector<double> pz_vec = GR::get<std::vector<double>>((*context)[pz]);
-
-  int nx = px_vec.size();
-  int ny = py_vec.size();
-
-  if (!accelerate)
-    {
-
-      double *px_p = &(px_vec[0]);
-      double *py_p = &(py_vec[0]);
-      double *pz_p = &(pz_vec[0]);
-
-      gr_surface(nx, ny, px_p, py_p, pz_p, option);
-    }
-  else
-    {
-      std::vector<float> px_vec_f(px_vec.begin(), px_vec.end());
-      std::vector<float> py_vec_f(py_vec.begin(), py_vec.end());
-      std::vector<float> pz_vec_f(pz_vec.begin(), pz_vec.end());
-
-      float *px_p = &(px_vec_f[0]);
-      float *py_p = &(py_vec_f[0]);
-      float *pz_p = &(pz_vec_f[0]);
-
-      gr3_surface(nx, ny, px_p, py_p, pz_p, option);
-    }
-}
-
-static void grid3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for grid3d
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  double x_tick, x_org;
-  double y_tick, y_org;
-  double z_tick, z_org;
-  int x_major;
-  int y_major;
-  int z_major;
-  std::string x_org_pos, y_org_pos, z_org_pos;
-  if (element->hasAttribute("x_org_pos"))
-    {
-      x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
-    }
-  else
-    {
-      x_org_pos = "low";
-    }
-  if (element->hasAttribute("y_org_pos"))
-    {
-      y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
-    }
-  else
-    {
-      y_org_pos = "low";
-    }
-  if (element->hasAttribute("z_org_pos"))
-    {
-      z_org_pos = static_cast<std::string>(element->getAttribute("z_org_pos"));
-    }
-  else
-    {
-      z_org_pos = "low";
-    }
-  getAxes3dInformation(element, x_org_pos, y_org_pos, z_org_pos, x_org, y_org, z_org, x_major, y_major, z_major, x_tick,
-                       y_tick, z_tick);
-
-  gr_grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, abs(x_major), abs(y_major), abs(z_major));
-}
-
-static void axes3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for axes3d
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  double x_tick, x_org;
-  double y_tick, y_org;
-  double z_tick, z_org;
-  int x_major;
-  int y_major;
-  int z_major;
-  int tick_orientation = 1;
-  double tick_size;
-  std::string x_org_pos, y_org_pos, z_org_pos;
-
-  if (element->hasAttribute("x_org_pos"))
-    {
-      x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
-    }
-  else
-    {
-      x_org_pos = "low";
-    }
-  if (element->hasAttribute("y_org_pos"))
-    {
-      y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
-    }
-  else
-    {
-      y_org_pos = "low";
-    }
-  if (element->hasAttribute("z_org_pos"))
-    {
-      z_org_pos = static_cast<std::string>(element->getAttribute("z_org_pos"));
-    }
-  else
-    {
-      z_org_pos = "low";
-    }
-  getAxes3dInformation(element, x_org_pos, y_org_pos, z_org_pos, x_org, y_org, z_org, x_major, y_major, z_major, x_tick,
-                       y_tick, z_tick);
-
-  auto subplot_element = getSubplotElement(element);
-
-  if (element->hasAttribute("tick_orientation"))
-    {
-      tick_orientation = static_cast<int>(element->getAttribute("tick_orientation"));
-    }
-
-  getTickSize(element, tick_size);
-  tick_size *= tick_orientation;
-
-  gr_axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major, tick_size);
-}
-
-static void polyline3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for polyline3d
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  auto x = static_cast<std::string>(element->getAttribute("x"));
-  auto y = static_cast<std::string>(element->getAttribute("y"));
-  auto z = static_cast<std::string>(element->getAttribute("z"));
-
-  std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
-  std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
-  std::vector<double> z_vec = GR::get<std::vector<double>>((*context)[z]);
-
-
-  double *x_p = &(x_vec[0]);
-  double *y_p = &(y_vec[0]);
-  double *z_p = &(z_vec[0]);
-  auto group = element->parentElement();
-
-  if ((element->hasAttribute("linetypes") || element->hasAttribute("linewidths") ||
-       element->hasAttribute("linecolorinds")) ||
-      ((parentTypes.count(group->localName())) &&
-       (group->hasAttribute("linetypes") || group->hasAttribute("linewidths") || group->hasAttribute("linecolorinds"))))
-    {
-      lineHelper(element, context, "polyline3d");
-    }
-  else
-    {
-      gr_polyline3d(x_vec.size(), x_p, y_p, z_p);
-    }
-}
-
-static void polymarker3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for polymarker3d
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  auto x = static_cast<std::string>(element->getAttribute("x"));
-  auto y = static_cast<std::string>(element->getAttribute("y"));
-  auto z = static_cast<std::string>(element->getAttribute("z"));
-
-  std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
-  std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
-  std::vector<double> z_vec = GR::get<std::vector<double>>((*context)[z]);
-
-
-  double *x_p = &(x_vec[0]);
-  double *y_p = &(y_vec[0]);
-  double *z_p = &(z_vec[0]);
-
-  auto group = element->parentElement();
-  if ((element->hasAttribute("markertypes") || element->hasAttribute("markersizes") ||
-       element->hasAttribute("markercolorinds")) ||
-      (parentTypes.count(group->localName()) &&
-       (group->hasAttribute("markertypes") || group->hasAttribute("markersizes") ||
-        group->hasAttribute("markercolorinds"))))
-    {
-      markerHelper(element, context, "polymarker3d");
-    }
-  else
-    {
-      gr_polymarker3d(x_vec.size(), x_p, y_p, z_p);
-    }
-}
-
-static void gr3DrawMesh(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for gr3_drawmesh
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-
-  int mesh = (int)element->getAttribute("mesh");
-  int n = (int)element->getAttribute("n");
-
-  auto positions = static_cast<std::string>(element->getAttribute("positions"));
-  auto directions = static_cast<std::string>(element->getAttribute("directions"));
-  auto ups = static_cast<std::string>(element->getAttribute("ups"));
-  auto colors = static_cast<std::string>(element->getAttribute("colors"));
-  auto scales = static_cast<std::string>(element->getAttribute("scales"));
-
-  std::vector<double> positions_vec = GR::get<std::vector<double>>((*context)[positions]);
-  std::vector<double> directions_vec = GR::get<std::vector<double>>((*context)[directions]);
-  std::vector<double> ups_vec = GR::get<std::vector<double>>((*context)[ups]);
-  std::vector<double> colors_vec = GR::get<std::vector<double>>((*context)[colors]);
-  std::vector<double> scales_vec = GR::get<std::vector<double>>((*context)[scales]);
-
-  std::vector<float> pf_vec(positions_vec.begin(), positions_vec.end());
-  std::vector<float> df_vec(directions_vec.begin(), directions_vec.end());
-  std::vector<float> uf_vec(ups_vec.begin(), ups_vec.end());
-  std::vector<float> cf_vec(colors_vec.begin(), colors_vec.end());
-  std::vector<float> sf_vec(scales_vec.begin(), scales_vec.end());
-
-  float *positions_p = &(pf_vec[0]);
-  float *directions_p = &(df_vec[0]);
-  float *ups_p = &(uf_vec[0]);
-  float *colors_p = &(cf_vec[0]);
-  float *scales_p = &(sf_vec[0]);
-
-  gr3_drawmesh(mesh, n, positions_p, directions_p, ups_p, colors_p, scales_p);
-}
-
-static void volume(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  int nx, ny, nz, algorithm;
-  std::string dmin_key, dmax_key;
-  double dmin, dmax;
-
-  auto data = static_cast<std::string>(element->getAttribute("data"));
-  nx = (int)element->getAttribute("nx");
-  ny = (int)element->getAttribute("ny");
-  nz = (int)element->getAttribute("nz");
-  algorithm = (int)element->getAttribute("algorithm");
-  dmin_key = (std::string)element->getAttribute("dmin");
-  dmax_key = (std::string)element->getAttribute("dmax");
-
-  auto dmin_vec = GR::get<std::vector<double>>((*context)[dmin_key]);
-
-
-  std::vector<double> data_vec = GR::get<std::vector<double>>((*context)[data]);
-
-  gr_volume(nx, ny, nz, &(data_vec[0]), algorithm, &dmin, &dmax);
-}
-
-static void triSurface(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for trisurface
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  auto px = static_cast<std::string>(element->getAttribute("px"));
-  auto py = static_cast<std::string>(element->getAttribute("py"));
-  auto pz = static_cast<std::string>(element->getAttribute("pz"));
-
-  std::vector<double> px_vec = GR::get<std::vector<double>>((*context)[px]);
-  std::vector<double> py_vec = GR::get<std::vector<double>>((*context)[py]);
-  std::vector<double> pz_vec = GR::get<std::vector<double>>((*context)[pz]);
-
-  int nx = px_vec.size();
-  int ny = py_vec.size();
-
-  double *px_p = &(px_vec[0]);
-  double *py_p = &(py_vec[0]);
-  double *pz_p = &(pz_vec[0]);
-
-  gr_trisurface(nx, px_p, py_p, pz_p);
-}
-
-static void triContour(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for tricontour
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  auto px = static_cast<std::string>(element->getAttribute("px"));
-  auto py = static_cast<std::string>(element->getAttribute("py"));
-  auto pz = static_cast<std::string>(element->getAttribute("pz"));
-  auto levels = static_cast<std::string>(element->getAttribute("levels"));
-
-  std::vector<double> px_vec = GR::get<std::vector<double>>((*context)[px]);
-  std::vector<double> py_vec = GR::get<std::vector<double>>((*context)[py]);
-  std::vector<double> pz_vec = GR::get<std::vector<double>>((*context)[pz]);
-  std::vector<double> l_vec = GR::get<std::vector<double>>((*context)[levels]);
-
-  int nx = px_vec.size();
-  int nl = l_vec.size();
-
-  double *px_p = &(px_vec[0]);
-  double *py_p = &(py_vec[0]);
-  double *pz_p = &(pz_vec[0]);
-  double *l_p = &(l_vec[0]);
-
-  gr_tricontour(nx, px_p, py_p, pz_p, nl, l_p);
-}
-
-static void titles3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Processing function for titles3d
-   *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   */
-  std::string x, y, z;
-  x = static_cast<std::string>(element->getAttribute("x"));
-  y = static_cast<std::string>(element->getAttribute("y"));
-  z = static_cast<std::string>(element->getAttribute("z"));
-  gr_titles3d(x.data(), y.data(), z.data());
-}
-
-static void gr3Clear(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  gr3_clear();
-}
-
-static void gr3DeleteMesh(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  int mesh = static_cast<int>(element->getAttribute("mesh"));
-  gr3_deletemesh(mesh);
-}
-
-static void gr3DrawImage(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  double xmin, xmax, ymin, ymax;
-  int width, height, drawable_type;
-
-  xmin = (double)element->getAttribute("xmin");
-  xmax = (double)element->getAttribute("xmax");
-  ymin = (double)element->getAttribute("ymin");
-  ymax = (double)element->getAttribute("ymax");
-  width = (int)element->getAttribute("width");
-  height = (int)element->getAttribute("height");
-  drawable_type = (int)element->getAttribute("drawable_type");
-
-
-  logger((stderr, "gr3_drawimage returned %i\n", gr3_drawimage(xmin, xmax, ymin, ymax, width, height, drawable_type)));
-}
-
-static void shadePoints(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  int xform, w, h, n;
-  std::string xx, yy;
-  double *x, *y;
-
-  xform = (int)element->getAttribute("xform");
-  w = (int)element->getAttribute("w");
-  h = (int)element->getAttribute("h");
-  xx = (std::string)element->getAttribute("x");
-  yy = (std::string)element->getAttribute("y");
-
-  auto x_vec = GR::get<std::vector<double>>((*context)[xx]);
-  auto y_vec = GR::get<std::vector<double>>((*context)[yy]);
-
-  x = &(x_vec[0]);
-  y = &(y_vec[0]);
-  n = std::min(x_vec.size(), y_vec.size());
-
-  gr_shadepoints(n, x, y, xform, w, h);
-}
-
-static void clearWS(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  gr_clearws();
-}
-
-static void updateWS(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  gr_updatews();
-}
-
-static void drawGraphics(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  auto key = (std::string)element->getAttribute("data");
-  auto data_vec = GR::get<std::vector<int>>((*context)[key]);
-
-  std::vector<char> char_vec;
-  char_vec.reserve(data_vec.size());
-  for (int i : data_vec)
-    {
-      char_vec.push_back((char)i);
-    }
-  char *data_p = &(char_vec[0]);
-
-  gr_drawgraphics(data_p);
-}
-
-static void layoutGrid(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  double xmin, xmax, ymin, ymax;
-  xmin = (double)element->getAttribute("subplot_xmin");
-  xmax = (double)element->getAttribute("subplot_xmax");
-  ymin = (double)element->getAttribute("subplot_ymin");
-  ymax = (double)element->getAttribute("subplot_ymax");
-
-  gr_setviewport(xmin, xmax, ymin, ymax);
-}
-
-static void layoutGridElement(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  // todo is layoutgridelement actually needed? Can it be replaced by an ordinary group
-  double xmin, xmax, ymin, ymax;
-  xmin = (double)element->getAttribute("subplot_xmin");
-  xmax = (double)element->getAttribute("subplot_xmax");
-  ymin = (double)element->getAttribute("subplot_ymin");
-  ymax = (double)element->getAttribute("subplot_ymax");
-
-  //  gr_setviewport(xmin, xmax, ymin, ymax);
-}
-
-static void processColorRep(const std::shared_ptr<GR::Element> &elem)
-{
-  int index, hex_int;
-  double red, green, blue;
-  std::stringstream stringstream;
-  std::string name, hex_string;
-
-  for (auto &attr : elem->getAttributeNames())
-    {
-      auto start = 0U;
-      auto end = attr.find('_');
-      if (attr.substr(start, end) == "colorrep")
-        {
-          name = attr;
-          index = std::stoi(attr.substr(end + 1, attr.size()));
-        }
-    }
-
-  hex_string = static_cast<std::string>(elem->getAttribute(name));
-  stringstream << std::hex << hex_string;
-  stringstream >> hex_int;
-
-  red = ((hex_int >> 16) & 0xFF) / 255.0;
-  green = ((hex_int >> 8) & 0xFF) / 255.0;
-  blue = ((hex_int)&0xFF) / 255.0;
-
-  gr_setcolorrep(index, red, green, blue);
-}
-
-static void processTitle(const std::shared_ptr<GR::Element> &elem)
-{
-  double viewport[4], vp[4];
-
-  auto subplot_element = getSubplotElement(elem);
-  std::string name = (std::string)subplot_element->getAttribute("name");
-  if (name != "polarhistogram")
-    {
-      viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
-      viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
-      viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
-      viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
-      vp[0] = (double)subplot_element->getAttribute("vp_xmin");
-      vp[1] = (double)subplot_element->getAttribute("vp_xmax");
-      vp[2] = (double)subplot_element->getAttribute("vp_ymin");
-      vp[3] = (double)subplot_element->getAttribute("vp_ymax");
-
-      double x = 0.5 * (viewport[0] + viewport[1]);
-      double y = vp[3];
-      std::string title = (std::string)elem->getAttribute("title");
-
-      if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
-        {
-          auto new_title_elem = render->createText(x, y, title);
-          new_title_elem->setAttribute("name", "title");
-          render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-          auto title_elems = elem->querySelectorsAll("[name=\"title\"]");
-          for (auto &title_elem : title_elems)
-            {
-              title_elem->remove();
-            }
-          elem->appendChild(new_title_elem);
-        }
-    }
-}
-
-static void processXlabel(const std::shared_ptr<GR::Element> &elem)
-{
-  double viewport[4], vp[4], charheight;
-
-  auto subplot_element = getSubplotElement(elem);
-
-  gr_inqcharheight(&charheight);
-  viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
-  viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
-  viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
-  viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
-  vp[0] = (double)subplot_element->getAttribute("vp_xmin");
-  vp[1] = (double)subplot_element->getAttribute("vp_xmax");
-  vp[2] = (double)subplot_element->getAttribute("vp_ymin");
-  vp[3] = (double)subplot_element->getAttribute("vp_ymax");
-
-  double x = 0.5 * (viewport[0] + viewport[1]);
-  double y = vp[2] + 0.5 * charheight;
-  std::string x_label = (std::string)elem->getAttribute("xlabel");
-
-  if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
-    {
-      auto text = render->createText(x, y, x_label);
-      text->setAttribute("name", "xlabel");
-      render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
-      auto xlabel_elems = elem->querySelectorsAll("[name=\"xlabel\"]");
-      for (auto &xlabel_elem : xlabel_elems)
-        {
-          xlabel_elem->remove();
-        }
-      elem->appendChild(text);
-    }
-}
-
 /*!
  * Draw an xticklabel at the specified position while trying to stay in the available space.
  * Every space character (' ') is seen as a possible position to break the label into the next line.
@@ -1736,89 +708,439 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
   element->append(global_render->createText(x1, x2, std::string(new_label + cur_start)));
 }
 
-static void processXTickLabels(const std::shared_ptr<GR::Element> &elem)
+static void legend_size(const std::shared_ptr<GR::Element> &elem, double *w, double *h)
 {
-  double viewport[4], vp[4], window[4], charheight;
-  std::vector<std::string> xticklabels;
-
-  auto subplot_element = getSubplotElement(elem);
-
-  gr_inqcharheight(&charheight);
-  viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
-  viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
-  viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
-  viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
-  vp[0] = (double)subplot_element->getAttribute("vp_xmin");
-  vp[1] = (double)subplot_element->getAttribute("vp_xmax");
-  vp[2] = (double)subplot_element->getAttribute("vp_ymin");
-  vp[3] = (double)subplot_element->getAttribute("vp_ymax");
-  window[0] = (double)subplot_element->getAttribute("window_xmin");
-  window[1] = (double)subplot_element->getAttribute("window_xmax");
-  window[2] = (double)subplot_element->getAttribute("window_ymin");
-  window[3] = (double)subplot_element->getAttribute("window_ymax");
+  double tbx[4], tby[4];
+  int labelsExist = 1;
+  unsigned int num_labels;
+  std::vector<std::string> labels;
+  *w = 0;
+  *h = 0;
 
   if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
     {
-      std::shared_ptr<GR::Context> context = render->getContext();
-      std::string key = static_cast<std::string>(elem->getAttribute("xticklabels"));
-      xticklabels = GR::get<std::vector<std::string>>((*context)[key]);
-
-      double x1, x2;
-      double x_left = 0, x_right = 1, null;
-      double available_width;
-      const double *window;
-      auto xtick_group = render->createGroup("barplot_xtick");
-
-      elem->append(xtick_group);
-
-      /* calculate width available for xticknotations */
-      gr_wctondc(&x_left, &null);
-      gr_wctondc(&x_right, &null);
-      available_width = x_right - x_left;
-      render->setTextAlign(xtick_group, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-      for (int i = 1; i <= xticklabels.size(); i++)
+      auto context = render->getContext();
+      std::string key = static_cast<std::string>(elem->getAttribute("labels"));
+      labels = GR::get<std::vector<std::string>>((*context)[key]);
+    }
+  if (labelsExist)
+    {
+      for (auto current_label : labels)
         {
-          x1 = i;
-          gr_wctondc(&x1, &x2);
-          x2 = viewport[2] - 0.5 * charheight;
-          draw_xticklabel(x1, x2, xticklabels[i - 1].c_str(), available_width, xtick_group, render);
+          gr_inqtext(0, 0, current_label.data(), tbx, tby);
+          *w = grm_max(*w, tbx[2] - tbx[0]);
+          *h += grm_max(tby[2] - tby[0], 0.03);
         }
     }
 }
 
-static void processYlabel(const std::shared_ptr<GR::Element> &elem)
+static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height)
 {
-  double viewport[4], vp[4], charheight;
+  double display_metric_width, display_metric_height;
+  int display_pixel_width, display_pixel_height;
+  double dpm[2], dpi[2];
+  int tmp_size_i[2], pixel_size[2];
+  double tmp_size_d[2], metric_size[2];
+  int i;
+  std::string size_unit, size_type;
+  std::string vars[2] = {"x", "y"};
+
+  std::shared_ptr<GR::Element> root = global_root;
+
+
+#ifdef __EMSCRIPTEN__
+  display_metric_width = 0.16384;
+  display_metric_height = 0.12288;
+  display_pixel_width = 640;
+  display_pixel_height = 480;
+#else
+  gr_inqdspsize(&display_metric_width, &display_metric_height, &display_pixel_width, &display_pixel_height);
+#endif
+  dpm[0] = display_pixel_width / display_metric_width;
+  dpm[1] = display_pixel_height / display_metric_height;
+  dpi[0] = dpm[0] * 0.0254;
+  dpi[1] = dpm[1] * 0.0254;
+
+  /* TODO: Overwork this calculation */
+  if (root->hasAttribute("figsize"))
+    {
+      tmp_size_d[0] = (double)root->getAttribute("figsize_x");
+      tmp_size_d[1] = (double)root->getAttribute("figsize_y");
+      for (i = 0; i < 2; ++i)
+        {
+          pixel_size[i] = (int)grm_round(tmp_size_d[i] * dpi[i]);
+          metric_size[i] = tmp_size_d[i] / 0.0254;
+        }
+    }
+  else if (root->hasAttribute("size"))
+    {
+      for (i = 0; i < 2; ++i)
+        {
+          size_unit = (std::string)root->getAttribute("size_unit_" + vars[i]);
+          size_type = (std::string)root->getAttribute("size_type_" + vars[i]);
+          if (size_unit.empty()) size_unit = "m";
+
+          auto meters_per_unit_iter = symbol_to_meters_per_unit.find(size_unit);
+          if (meters_per_unit_iter != symbol_to_meters_per_unit.end())
+            {
+              double meters_per_unit = meters_per_unit_iter->second;
+              double pixels_per_unit = meters_per_unit * dpm[i];
+
+              if (size_type == "double")
+                {
+                  tmp_size_d[i] = tmp_size_d[i] * pixels_per_unit;
+                }
+              else if (size_type == "int")
+                {
+                  tmp_size_d[i] = tmp_size_i[i] * pixels_per_unit;
+                }
+              else
+                {
+                  tmp_size_d[0] = PLOT_DEFAULT_WIDTH;
+                  tmp_size_d[1] = PLOT_DEFAULT_HEIGHT;
+                }
+              pixel_size[i] = (int)grm_round(tmp_size_d[i]);
+              metric_size[i] = tmp_size_d[i] / dpm[i];
+            }
+          else
+            {
+              pixel_size[0] = (int)grm_round(PLOT_DEFAULT_WIDTH);
+              pixel_size[1] = (int)grm_round(PLOT_DEFAULT_HEIGHT);
+              metric_size[0] = PLOT_DEFAULT_WIDTH / dpm[0];
+              metric_size[1] = PLOT_DEFAULT_HEIGHT / dpm[1];
+            }
+        }
+    }
+  else
+    {
+      pixel_size[0] = (int)grm_round(PLOT_DEFAULT_WIDTH);
+      pixel_size[1] = (int)grm_round(PLOT_DEFAULT_HEIGHT);
+      metric_size[0] = PLOT_DEFAULT_WIDTH / dpm[0];
+      metric_size[1] = PLOT_DEFAULT_HEIGHT / dpm[1];
+    }
+
+  if (pixel_width != NULL)
+    {
+      *pixel_width = pixel_size[0];
+    }
+  if (pixel_height != NULL)
+    {
+      *pixel_height = pixel_size[1];
+    }
+  if (metric_width != NULL)
+    {
+      *metric_width = metric_size[0];
+    }
+  if (metric_height != NULL)
+    {
+      *metric_height = metric_size[1];
+    }
+}
+
+static void legend_size(std::vector<std::string> labels, double *w, double *h)
+{
+  double tbx[4], tby[4];
+  unsigned int num_labels;
+
+  *w = 0;
+  *h = 0;
+
+  if (!labels.empty())
+    {
+      for (std::string current_label : labels)
+        {
+          gr_inqtext(0, 0, current_label.data(), tbx, tby);
+          *w = grm_max(*w, tbx[2] - tbx[0]);
+          *h += grm_max(tby[2] - tby[0], 0.03);
+        }
+    }
+}
+
+static void setNextColor(gr_color_type_t color_type, std::vector<int> &color_indices,
+                         std::vector<double> &color_rgb_values, const std::shared_ptr<GR::Element> &elem)
+{
+  const static std::vector<int> fallback_color_indices{989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
+                                                       991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
+  static double saved_color[3];
+  static int last_array_index = -1;
+  static unsigned int color_array_length = -1;
+  int current_array_index = last_array_index + 1;
+  int color_index = 0;
+  int reset = (color_type == GR_COLOR_RESET);
+  int gks_errind = GKS_K_NO_ERROR;
+
+  if (reset)
+    {
+      last_array_index = -1;
+      color_array_length = -1;
+      return;
+    }
+
+  if (color_indices.empty() && color_rgb_values.empty())
+    {
+      color_indices = fallback_color_indices;
+    }
+
+  if (last_array_index < 0 && !color_rgb_values.empty())
+    {
+      gks_inq_color_rep(1, PLOT_CUSTOM_COLOR_INDEX, GKS_K_VALUE_SET, &gks_errind, &saved_color[0], &saved_color[1],
+                        &saved_color[2]);
+    }
+
+  current_array_index %= color_array_length;
+
+  if (!color_indices.empty())
+    {
+      color_index = color_indices[current_array_index];
+      last_array_index = current_array_index;
+    }
+  else if (!color_rgb_values.empty())
+    {
+      color_index = PLOT_CUSTOM_COLOR_INDEX;
+      global_render->setColorRep(elem, PLOT_CUSTOM_COLOR_INDEX, color_rgb_values[current_array_index],
+                                 color_rgb_values[current_array_index + 1], color_rgb_values[current_array_index + 2]);
+      last_array_index = current_array_index + 2;
+    }
+
+  if (color_type & GR_COLOR_LINE)
+    {
+      global_render->setLineColorInd(elem, color_index);
+    }
+  if (color_type & GR_COLOR_MARKER)
+    {
+      global_render->setMarkerColorInd(elem, color_index);
+    }
+  if (color_type & GR_COLOR_FILL)
+    {
+      global_render->setFillColorInd(elem, color_index);
+    }
+  if (color_type & GR_COLOR_TEXT)
+    {
+      global_render->setTextColorInd(elem, color_index);
+    }
+  if (color_type & GR_COLOR_BORDER)
+    {
+      global_render->setBorderColorInd(elem, color_index);
+    }
+}
+
+void receiverfunction(int id, double x_min, double x_max, double y_min, double y_max)
+{
+  if (!(x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX))
+    {
+      bounding_map[id]->setAttribute("bbox_id", id);
+      bounding_map[id]->setAttribute("bbox_xmin", x_min);
+      bounding_map[id]->setAttribute("bbox_xmax", x_max);
+      bounding_map[id]->setAttribute("bbox_ymin", y_min);
+      bounding_map[id]->setAttribute("bbox_ymax", y_max);
+    }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ attribute processing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static void processBorderColorInd(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_setbordercolorind(static_cast<int>(elem->getAttribute("bordercolorind")));
+}
+
+static void processCalcWindowAndViewportFromParent(const std::shared_ptr<GR::Element> &elem)
+{
+  std::string kind = static_cast<std::string>(elem->getAttribute("kind"));
+  double viewport[4];
+  double x_min, x_max, y_min, y_max, c_min, c_max;
+
+  if (str_equals_any(kind.c_str(), 2, "hist", "line"))
+    {
+      std::string orientation = static_cast<std::string>(elem->getAttribute("orientation"));
+      auto marginalheatmap_group = elem->parentElement();
+      viewport[0] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_xmin"));
+      viewport[1] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_xmax"));
+      viewport[2] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_ymin"));
+      viewport[3] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_ymax"));
+      x_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_xmin"));
+      x_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_xmax"));
+      y_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_ymin"));
+      y_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_ymax"));
+      if (marginalheatmap_group->hasAttribute("lim_cmin"))
+        {
+          c_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_cmin"));
+        }
+      else
+        {
+          c_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_zmin"));
+        }
+      if (marginalheatmap_group->hasAttribute("lim_cmax"))
+        {
+          c_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_cmax"));
+        }
+      else
+        {
+          c_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_zmax"));
+        }
+
+      if (orientation == "vertical")
+        {
+          gr_setwindow(0.0, c_max / 10, y_min, y_max);
+          gr_setviewport(viewport[1] + 0.02 + 0.0, viewport[1] + 0.12 + 0.0, viewport[2], viewport[3]);
+        }
+      else if (orientation == "horizontal")
+        {
+          gr_setwindow(x_min, x_max, 0.0, c_max / 10);
+          gr_setviewport(viewport[0], viewport[1], viewport[3] + 0.02, grm_min(viewport[3] + 0.12, 1));
+        }
+    }
+}
+
+static void processCharExpan(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_setcharexpan(static_cast<double>(elem->getAttribute("charexpan")));
+}
+
+static void processCharHeight(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_setcharheight(static_cast<double>(elem->getAttribute("charheight")));
+}
+
+static void processCharSpace(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_setcharspace(static_cast<double>(elem->getAttribute("charspace")));
+}
+
+static void processCharUp(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_setcharup(static_cast<double>(elem->getAttribute("charup_ux")),
+               static_cast<double>(elem->getAttribute("charup_uy")));
+}
+
+static void processClipXForm(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_selectclipxform(static_cast<double>(elem->getAttribute("clipxform")));
+}
+
+static void processColorbarPosition(const std::shared_ptr<GR::Element> &elem)
+{
+  double viewport[4];
 
   auto subplot_element = getSubplotElement(elem);
 
-  gr_inqcharheight(&charheight);
-  viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
-  viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
-  viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
-  viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
-  vp[0] = (double)subplot_element->getAttribute("vp_xmin");
-  vp[1] = (double)subplot_element->getAttribute("vp_xmax");
-  vp[2] = (double)subplot_element->getAttribute("vp_ymin");
-  vp[3] = (double)subplot_element->getAttribute("vp_ymax");
+  double width = static_cast<double>(elem->getAttribute("width"));
+  double offset = static_cast<double>(elem->getAttribute("offset"));
 
-  double x = vp[0] + 0.5 * charheight;
-  double y = 0.5 * (viewport[2] + viewport[3]);
-  std::string y_label = (std::string)elem->getAttribute("ylabel");
-
-  if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+  if (!subplot_element->hasAttribute("viewport"))
     {
-      auto text = render->createText(x, y, y_label);
-      text->setAttribute("name", "ylabel");
-      render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-      auto ylabel_elems = elem->querySelectorsAll("[name=\"ylabel\"]");
-      for (auto &ylabel_elem : ylabel_elems)
-        {
-          ylabel_elem->remove();
-        }
-      render->setCharUp(text, -1, 0);
-      elem->appendChild(text);
+      throw NotFoundError("Missing viewport\n");
     }
+
+  viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
+  viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_xmax"));
+  viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_ymin"));
+  viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_ymax"));
+
+  gr_setviewport(viewport[1] + offset, viewport[1] + offset + width, viewport[2], viewport[3]);
+}
+
+static void processColorRep(const std::shared_ptr<GR::Element> &elem)
+{
+  int index, hex_int;
+  double red, green, blue;
+  std::stringstream stringstream;
+  std::string name, hex_string;
+
+  for (auto &attr : elem->getAttributeNames())
+    {
+      auto start = 0U;
+      auto end = attr.find('_');
+      if (attr.substr(start, end) == "colorrep")
+        {
+          name = attr;
+          index = std::stoi(attr.substr(end + 1, attr.size()));
+        }
+    }
+
+  hex_string = static_cast<std::string>(elem->getAttribute(name));
+  stringstream << std::hex << hex_string;
+  stringstream >> hex_int;
+
+  red = ((hex_int >> 16) & 0xFF) / 255.0;
+  green = ((hex_int >> 8) & 0xFF) / 255.0;
+  blue = ((hex_int)&0xFF) / 255.0;
+
+  gr_setcolorrep(index, red, green, blue);
+}
+
+static void processFillColorInd(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_setfillcolorind(static_cast<int>(elem->getAttribute("fillcolorind")));
+}
+
+static void processFillIntStyle(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_setfillintstyle(static_cast<int>(elem->getAttribute("fillintstyle")));
+}
+
+static void processFillStyle(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_setfillstyle(static_cast<int>(elem->getAttribute("fillstyle")));
+}
+
+static void processGROptionFlipX(const std::shared_ptr<GR::Element> &elem)
+{
+  int options;
+  int flip_x = static_cast<int>(elem->getAttribute("gr-option-flip-x"));
+  gr_inqscale(&options);
+
+  if (flip_x)
+    {
+      gr_setscale(options | GR_OPTION_FLIP_X);
+    }
+  else
+    {
+      gr_setscale(options & ~GR_OPTION_FLIP_X);
+    }
+}
+
+static void processGROptionFlipY(const std::shared_ptr<GR::Element> &elem)
+{
+  int options;
+  int flip_y = static_cast<int>(elem->getAttribute("gr-option-flip-y"));
+  gr_inqscale(&options);
+
+  if (flip_y)
+    {
+      gr_setscale(options | GR_OPTION_FLIP_Y);
+    }
+  else
+    {
+      gr_setscale(options & ~GR_OPTION_FLIP_Y);
+    }
+}
+
+static void processGR3BackgroundColor(const std::shared_ptr<GR::Element> &elem)
+{
+  double r, g, b, a;
+  r = (double)elem->getAttribute("gr3backgroundcolor_red");
+  g = (double)elem->getAttribute("gr3backgroundcolor_green");
+  b = (double)elem->getAttribute("gr3backgroundcolor_blue");
+  a = (double)elem->getAttribute("gr3backgroundcolor_alpha");
+
+  gr3_setbackgroundcolor(r, g, b, a);
+}
+
+static void processGR3CameraLookAt(const std::shared_ptr<GR::Element> &elem)
+{
+  double camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z;
+
+  camera_x = (double)elem->getAttribute("gr3cameralookat_camera-x");
+  camera_y = (double)elem->getAttribute("gr3cameralookat_camera-y");
+  camera_z = (double)elem->getAttribute("gr3cameralookat_camera-z");
+  center_x = (double)elem->getAttribute("gr3cameralookat_center-x");
+  center_y = (double)elem->getAttribute("gr3cameralookat_center-y");
+  center_z = (double)elem->getAttribute("gr3cameralookat_center-z");
+  up_x = (double)elem->getAttribute("gr3cameralookat_up-x");
+  up_y = (double)elem->getAttribute("gr3cameralookat_up-y");
+  up_z = (double)elem->getAttribute("gr3cameralookat_up-z");
+
+  gr3_cameralookat(camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z);
 }
 
 static void processImshowInformation(const std::shared_ptr<GR::Element> &elem)
@@ -1900,131 +1222,176 @@ static void processImshowInformation(const std::shared_ptr<GR::Element> &elem)
   elem->append(temp);
 }
 
-static void processGROptionFlipX(const std::shared_ptr<GR::Element> &elem)
-{
-  int options;
-  int flip_x = static_cast<int>(elem->getAttribute("gr-option-flip-x"));
-  gr_inqscale(&options);
-
-  if (flip_x)
-    {
-      gr_setscale(options | GR_OPTION_FLIP_X);
-    }
-  else
-    {
-      gr_setscale(options & ~GR_OPTION_FLIP_X);
-    }
-}
-
-static void processGROptionFlipY(const std::shared_ptr<GR::Element> &elem)
-{
-  int options;
-  int flip_y = static_cast<int>(elem->getAttribute("gr-option-flip-y"));
-  gr_inqscale(&options);
-
-  if (flip_y)
-    {
-      gr_setscale(options | GR_OPTION_FLIP_Y);
-    }
-  else
-    {
-      gr_setscale(options & ~GR_OPTION_FLIP_Y);
-    }
-}
-
-static void processWindowAndViewportFromParent(const std::shared_ptr<GR::Element> &elem)
+static void processKind(const std::shared_ptr<GR::Element> &elem)
 {
   std::string kind = static_cast<std::string>(elem->getAttribute("kind"));
-  double viewport[4];
-  double x_min, x_max, y_min, y_max, c_min, c_max;
-
-  if (str_equals_any(kind.c_str(), 2, "hist", "line"))
+  if (kind == "line")
     {
-      std::string orientation = static_cast<std::string>(elem->getAttribute("orientation"));
-      auto marginalheatmap_group = elem->parentElement();
-      viewport[0] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_xmin"));
-      viewport[1] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_xmax"));
-      viewport[2] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_ymin"));
-      viewport[3] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_ymax"));
-      x_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_xmin"));
-      x_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_xmax"));
-      y_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_ymin"));
-      y_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_ymax"));
-      if (marginalheatmap_group->hasAttribute("lim_cmin"))
+      if (elem->hasAttribute("marginalheatmap"))
         {
-          c_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_cmin"));
-        }
-      else
-        {
-          c_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_zmin"));
-        }
-      if (marginalheatmap_group->hasAttribute("lim_cmax"))
-        {
-          c_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_cmax"));
-        }
-      else
-        {
-          c_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_zmax"));
-        }
+          std::shared_ptr<GR::Context> context;
+          std::shared_ptr<GR::Render> render;
 
-      if (orientation == "vertical")
-        {
-          gr_setwindow(0.0, c_max / 10, y_min, y_max);
-          gr_setviewport(viewport[1] + 0.02 + 0.0, viewport[1] + 0.12 + 0.0, viewport[2], viewport[3]);
-        }
-      else if (orientation == "horizontal")
-        {
-          gr_setwindow(x_min, x_max, 0.0, c_max / 10);
-          gr_setviewport(viewport[0], viewport[1], viewport[3] + 0.02, grm_min(viewport[3] + 0.12, 1));
+          render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
+          if (!render)
+            {
+              throw NotFoundError("Render-document not found for element\n");
+            }
+          context = render->getContext();
+          auto orientation = static_cast<std::string>(elem->getAttribute("orientation"));
+          int is_vertical = orientation == "vertical";
+          int xind = static_cast<int>(elem->getAttribute("xind"));
+          int yind = static_cast<int>(elem->getAttribute("yind"));
+
+          auto marginalheatmap_group = elem->parentElement();
+
+          double c_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_zmin"));
+          double c_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_zmax"));
+
+          for (auto &child : elem->children())
+            {
+              if (child->hasChildNodes())
+                {
+                  for (auto &grandchild : child->children())
+                    {
+                      child->removeChild(grandchild);
+                      grandchild->remove();
+                    }
+                }
+              int i;
+              double y_max = 0;
+              std::vector<double> plot =
+                  GR::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("plot"))]);
+              std::vector<double> y =
+                  GR::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("y"))]);
+              std::vector<double> xi =
+                  GR::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("xi"))]);
+              std::vector<double> x =
+                  GR::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("x"))]);
+
+              int y_length = y.size();
+              int x_length = xi.size();
+
+              double xmin = static_cast<double>(marginalheatmap_group->getAttribute("lim_xmin"));
+              double xmax = static_cast<double>(marginalheatmap_group->getAttribute("lim_xmax"));
+              double ymin = static_cast<double>(marginalheatmap_group->getAttribute("lim_ymin"));
+              double ymax = static_cast<double>(marginalheatmap_group->getAttribute("lim_ymax"));
+              // plot step in marginal
+              for (i = 0; i < (is_vertical ? y_length : x_length); i++)
+                {
+                  if (is_vertical)
+                    {
+                      y[(is_vertical ? y_length : x_length) - i - 1] =
+                          std::isnan(plot[xind + i * x_length]) ? 0 : plot[xind + i * x_length];
+                      y_max = grm_max(y_max, y[(is_vertical ? y_length : x_length) - i - 1]);
+                    }
+                  else
+                    {
+                      y[i] = std::isnan(plot[x_length * (y_length - 1 - yind) + i])
+                                 ? 0
+                                 : plot[x_length * (y_length - 1 - yind) + i];
+                      y_max = grm_max(y_max, y[i]);
+                    }
+                }
+              for (i = 0; i < (is_vertical ? y_length : x_length); i++)
+                {
+                  y[i] = y[i] / y_max * (c_max / 15);
+                  xi[i] = x[i] + (is_vertical ? ymin : xmin);
+                }
+
+              double x_pos, y_pos;
+              unsigned int len = is_vertical ? y_length : x_length;
+              std::vector<double> x_step_boundaries(2 * len);
+              std::vector<double> y_step_values(2 * len);
+
+              x_step_boundaries[0] = is_vertical ? ymin : xmin;
+              for (i = 2; i < 2 * len; i += 2)
+                {
+                  x_step_boundaries[i - 1] = x_step_boundaries[i] =
+                      x_step_boundaries[0] + (i / 2) * (is_vertical ? (ymax - ymin) : (xmax - xmin)) / len;
+                }
+              x_step_boundaries[2 * len - 1] = is_vertical ? ymax : xmax;
+              y_step_values[0] = y[0];
+              for (i = 2; i < 2 * len; i += 2)
+                {
+                  y_step_values[i - 1] = y[i / 2 - 1];
+                  y_step_values[i] = y[i / 2];
+                }
+              y_step_values[2 * len - 1] = y[len - 1];
+
+              int id = static_cast<int>(global_root->getAttribute("id"));
+              global_root->setAttribute("id", id + 1);
+              auto id_str = std::to_string(id);
+
+              std::shared_ptr<GR::Element> line_elem, marker_elem;
+
+              if (is_vertical)
+                {
+                  line_elem =
+                      global_render->createPolyline("x" + id_str, y_step_values, "y" + id_str, x_step_boundaries);
+                  x_pos = (x_step_boundaries[yind * 2] + x_step_boundaries[yind * 2 + 1]) / 2;
+                  y_pos = y[yind];
+                  marker_elem = global_render->createPolymarker(y_pos, x_pos);
+                }
+              else
+                {
+                  line_elem =
+                      global_render->createPolyline("x" + id_str, x_step_boundaries, "y" + id_str, y_step_values);
+                  x_pos = (x_step_boundaries[xind * 2] + x_step_boundaries[xind * 2 + 1]) / 2;
+                  y_pos = y[xind];
+                  marker_elem = global_render->createPolymarker(x_pos, y_pos);
+                }
+
+              global_render->setLineColorInd(line_elem, 989);
+              global_render->setMarkerColorInd(marker_elem, 2);
+              global_render->setMarkerType(marker_elem, -1);
+              global_render->setMarkerSize(marker_elem, 1.5 * (len / (is_vertical ? (ymax - ymin) : (xmax - xmin))));
+              child->append(marker_elem);
+              child->append(line_elem);
+            } // end for child_series
         }
     }
-}
-
-static void processColorbarPosition(const std::shared_ptr<GR::Element> &elem)
-{
-  double viewport[4];
-
-  auto subplot_element = getSubplotElement(elem);
-
-  double width = static_cast<double>(elem->getAttribute("width"));
-  double offset = static_cast<double>(elem->getAttribute("offset"));
-
-  if (!subplot_element->hasAttribute("viewport"))
+  else if (kind == "hist")
     {
-      throw NotFoundError("Missing viewport\n");
+      if (elem->hasAttribute("xind") || elem->hasAttribute("yind"))
+        {
+          int xind, yind;
+          xind = elem->hasAttribute("xind") ? static_cast<int>(elem->getAttribute("xind")) : -1;
+          yind = elem->hasAttribute("yind") ? static_cast<int>(elem->getAttribute("yind")) : -1;
+
+          if (xind == -1 && yind == -1)
+            {
+              return;
+            }
+
+          bool is_horizontal = static_cast<std::string>(elem->getAttribute("orientation")) == "horizontal";
+          for (auto &childSeries : elem->children()) // iterate over all hist series
+            {
+              std::vector<std::shared_ptr<GR::Element>> groups = childSeries->children();
+              std::vector<std::shared_ptr<GR::Element>> bars;
+
+              if (groups.size() == 2)
+                {
+                  bars = groups[0]->children();
+                }
+              else
+                {
+                  // error no fillgroups?
+                  return;
+                }
+
+              if ((is_horizontal && xind == -1) || (!is_horizontal && yind == -1))
+                {
+                  continue;
+                }
+              if ((is_horizontal ? xind : yind) >= bars.size())
+                {
+                  continue;
+                }
+              bars[(is_horizontal ? xind : yind)]->setAttribute("fillcolorind", 2);
+            }
+        }
     }
-
-  viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
-  viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_xmax"));
-  viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_ymin"));
-  viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_ymax"));
-
-  gr_setviewport(viewport[1] + offset, viewport[1] + offset + width, viewport[2], viewport[3]);
-}
-
-static void processRelativeCharHeight(const std::shared_ptr<GR::Element> &elem)
-{
-  double viewport[4];
-  auto subplot_element = getSubplotElement(elem);
-  double charheight, diagFactor, maxCharHeight;
-
-  if (!subplot_element->hasAttribute("viewport"))
-    {
-      throw NotFoundError("Viewport not found\n");
-    }
-  viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
-  viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_xmax"));
-  viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_ymin"));
-  viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_ymax"));
-  diagFactor = static_cast<double>(elem->getAttribute("diag_factor"));
-  maxCharHeight = static_cast<double>(elem->getAttribute("max_charheight"));
-
-
-  double diag = std::sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
-                          (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
-
-  charheight = std::max(diag * diagFactor, maxCharHeight);
-  gr_setcharheight(charheight);
 }
 
 void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
@@ -2178,26 +1545,39 @@ void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
     }
 }
 
-static void processWindow(const std::shared_ptr<GR::Element> &elem)
+static void processLineColorInd(const std::shared_ptr<GR::Element> &elem)
 {
-  double xmin = static_cast<double>(elem->getAttribute("window_xmin"));
-  double xmax = static_cast<double>(elem->getAttribute("window_xmax"));
-  double ymin = static_cast<double>(elem->getAttribute("window_ymin"));
-  double ymax = static_cast<double>(elem->getAttribute("window_ymax"));
-
-  gr_setwindow(xmin, xmax, ymin, ymax);
+  gr_setlinecolorind(static_cast<int>(elem->getAttribute("linecolorind")));
 }
 
-static void processWindow3d(const std::shared_ptr<GR::Element> &elem)
+static void processLineSpec(const std::shared_ptr<GR::Element> &elem)
 {
-  double xmin = static_cast<double>(elem->getAttribute("window_xmin"));
-  double xmax = static_cast<double>(elem->getAttribute("window_xmax"));
-  double ymin = static_cast<double>(elem->getAttribute("window_ymin"));
-  double ymax = static_cast<double>(elem->getAttribute("window_ymax"));
-  double zmin = static_cast<double>(elem->getAttribute("window_zmin"));
-  double zmax = static_cast<double>(elem->getAttribute("window_zmax"));
+  gr_uselinespec((static_cast<std::string>(elem->getAttribute("linespec"))).data());
+}
 
-  gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
+static void processLineType(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_setlinetype(static_cast<int>(elem->getAttribute("linetype")));
+}
+
+static void processLineWidth(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_setlinewidth(static_cast<double>(elem->getAttribute("linewidth")));
+}
+
+static void processMarkerColorInd(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_setmarkercolorind(static_cast<int>(elem->getAttribute("markercolorind")));
+}
+
+static void processMarkerSize(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_setmarkersize(static_cast<double>(elem->getAttribute("markersize")));
+}
+
+static void processMarkerType(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_setmarkertype(static_cast<int>(elem->getAttribute("markertype")));
 }
 
 static void processProjectionType(const std::shared_ptr<GR::Element> &elem)
@@ -2206,15 +1586,44 @@ static void processProjectionType(const std::shared_ptr<GR::Element> &elem)
   gr_setprojectiontype(type);
 }
 
-static void processSpace3d(const std::shared_ptr<GR::Element> &elem)
+static void processRelativeCharHeight(const std::shared_ptr<GR::Element> &elem)
 {
-  double phi, theta, fov, camera_distance;
-  phi = (double)elem->getAttribute("space3d_phi");
-  theta = (double)elem->getAttribute("space3d_theta");
-  fov = (double)elem->getAttribute("space3d_fov");
-  camera_distance = (double)elem->getAttribute("space3d_camera-distance");
+  double viewport[4];
+  auto subplot_element = getSubplotElement(elem);
+  double charheight, diagFactor, maxCharHeight;
 
-  gr_setspace3d(phi, theta, fov, camera_distance);
+  if (!subplot_element->hasAttribute("viewport"))
+    {
+      throw NotFoundError("Viewport not found\n");
+    }
+  viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_xmin"));
+  viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_xmax"));
+  viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_ymin"));
+  viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_ymax"));
+  diagFactor = static_cast<double>(elem->getAttribute("diag_factor"));
+  maxCharHeight = static_cast<double>(elem->getAttribute("max_charheight"));
+
+
+  double diag = std::sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
+                          (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
+
+  charheight = std::max(diag * diagFactor, maxCharHeight);
+  gr_setcharheight(charheight);
+}
+
+static void processResampleMethod(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_setresamplemethod(static_cast<int>(elem->getAttribute("resamplemethod")));
+}
+
+static void processScale(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_setscale(static_cast<int>(elem->getAttribute("scale")));
+}
+
+static void processSelntran(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_selntran(static_cast<int>(elem->getAttribute("selntran")));
 }
 
 static void processSpace(const std::shared_ptr<GR::Element> &elem)
@@ -2229,192 +1638,15 @@ static void processSpace(const std::shared_ptr<GR::Element> &elem)
   gr_setspace(zmin, zmax, rotation, tilt);
 }
 
-static void processWSViewport(const std::shared_ptr<GR::Element> &elem)
+static void processSpace3d(const std::shared_ptr<GR::Element> &elem)
 {
-  /*!
-   * processing function for gr_wsviewport
-   *
-   * \param[in] element The GR::Element that contains the attributes
-   */
-  double wsviewport[4];
-  wsviewport[0] = (double)elem->getAttribute("wsviewport_xmin");
-  wsviewport[1] = (double)elem->getAttribute("wsviewport_xmax");
-  wsviewport[2] = (double)elem->getAttribute("wsviewport_ymin");
-  wsviewport[3] = (double)elem->getAttribute("wsviewport_ymax");
+  double phi, theta, fov, camera_distance;
+  phi = (double)elem->getAttribute("space3d_phi");
+  theta = (double)elem->getAttribute("space3d_theta");
+  fov = (double)elem->getAttribute("space3d_fov");
+  camera_distance = (double)elem->getAttribute("space3d_camera-distance");
 
-  gr_setwsviewport(wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
-}
-
-static void processWSWindow(const std::shared_ptr<GR::Element> &elem)
-{
-  double wswindow[4];
-  double xmin = static_cast<double>(elem->getAttribute("wswindow_xmin"));
-  double xmax = static_cast<double>(elem->getAttribute("wswindow_xmax"));
-  double ymin = static_cast<double>(elem->getAttribute("wswindow_ymin"));
-  double ymax = static_cast<double>(elem->getAttribute("wswindow_ymax"));
-
-  gr_setwswindow(xmin, xmax, ymin, ymax);
-}
-
-void GR::Render::processViewport(const std::shared_ptr<GR::Element> &elem)
-{
-  /*!
-   * processing function for gr_viewport
-   *
-   * \param[in] element The GR::Element that contains the attributes
-   */
-  double viewport[4];
-  double diag;
-  double charheight;
-  std::string kind;
-
-  viewport[0] = (double)elem->getAttribute("viewport_xmin");
-  viewport[1] = (double)elem->getAttribute("viewport_xmax");
-  viewport[2] = (double)elem->getAttribute("viewport_ymin");
-  viewport[3] = (double)elem->getAttribute("viewport_ymax");
-  kind = (std::string)elem->getAttribute("kind");
-
-  diag = std::sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
-                   (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
-
-  if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
-    {
-      charheight = grm_max(0.024 * diag, 0.012);
-    }
-  else
-    {
-      charheight = grm_max(0.018 * diag, 0.012);
-    }
-  gr_setcharheight(charheight);
-}
-
-static void legend_size(const std::shared_ptr<GR::Element> &elem, double *w, double *h)
-{
-  double tbx[4], tby[4];
-  int labelsExist = 1;
-  unsigned int num_labels;
-  std::vector<std::string> labels;
-  *w = 0;
-  *h = 0;
-
-  if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
-    {
-      auto context = render->getContext();
-      std::string key = static_cast<std::string>(elem->getAttribute("labels"));
-      labels = GR::get<std::vector<std::string>>((*context)[key]);
-    }
-  if (labelsExist)
-    {
-      for (auto current_label : labels)
-        {
-          gr_inqtext(0, 0, current_label.data(), tbx, tby);
-          *w = grm_max(*w, tbx[2] - tbx[0]);
-          *h += grm_max(tby[2] - tby[0], 0.03);
-        }
-    }
-}
-
-static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height)
-{
-  double display_metric_width, display_metric_height;
-  int display_pixel_width, display_pixel_height;
-  double dpm[2], dpi[2];
-  int tmp_size_i[2], pixel_size[2];
-  double tmp_size_d[2], metric_size[2];
-  int i;
-  std::string size_unit, size_type;
-  std::string vars[2] = {"x", "y"};
-
-  std::shared_ptr<GR::Element> root = global_root;
-
-
-#ifdef __EMSCRIPTEN__
-  display_metric_width = 0.16384;
-  display_metric_height = 0.12288;
-  display_pixel_width = 640;
-  display_pixel_height = 480;
-#else
-  gr_inqdspsize(&display_metric_width, &display_metric_height, &display_pixel_width, &display_pixel_height);
-#endif
-  dpm[0] = display_pixel_width / display_metric_width;
-  dpm[1] = display_pixel_height / display_metric_height;
-  dpi[0] = dpm[0] * 0.0254;
-  dpi[1] = dpm[1] * 0.0254;
-
-  /* TODO: Overwork this calculation */
-  if (root->hasAttribute("figsize"))
-    {
-      tmp_size_d[0] = (double)root->getAttribute("figsize_x");
-      tmp_size_d[1] = (double)root->getAttribute("figsize_y");
-      for (i = 0; i < 2; ++i)
-        {
-          pixel_size[i] = (int)grm_round(tmp_size_d[i] * dpi[i]);
-          metric_size[i] = tmp_size_d[i] / 0.0254;
-        }
-    }
-  else if (root->hasAttribute("size"))
-    {
-      for (i = 0; i < 2; ++i)
-        {
-          size_unit = (std::string)root->getAttribute("size_unit_" + vars[i]);
-          size_type = (std::string)root->getAttribute("size_type_" + vars[i]);
-          if (size_unit.empty()) size_unit = "m";
-
-          auto meters_per_unit_iter = symbol_to_meters_per_unit.find(size_unit);
-          if (meters_per_unit_iter != symbol_to_meters_per_unit.end())
-            {
-              double meters_per_unit = meters_per_unit_iter->second;
-              double pixels_per_unit = meters_per_unit * dpm[i];
-
-              if (size_type == "double")
-                {
-                  tmp_size_d[i] = tmp_size_d[i] * pixels_per_unit;
-                }
-              else if (size_type == "int")
-                {
-                  tmp_size_d[i] = tmp_size_i[i] * pixels_per_unit;
-                }
-              else
-                {
-                  tmp_size_d[0] = PLOT_DEFAULT_WIDTH;
-                  tmp_size_d[1] = PLOT_DEFAULT_HEIGHT;
-                }
-              pixel_size[i] = (int)grm_round(tmp_size_d[i]);
-              metric_size[i] = tmp_size_d[i] / dpm[i];
-            }
-          else
-            {
-              pixel_size[0] = (int)grm_round(PLOT_DEFAULT_WIDTH);
-              pixel_size[1] = (int)grm_round(PLOT_DEFAULT_HEIGHT);
-              metric_size[0] = PLOT_DEFAULT_WIDTH / dpm[0];
-              metric_size[1] = PLOT_DEFAULT_HEIGHT / dpm[1];
-            }
-        }
-    }
-  else
-    {
-      pixel_size[0] = (int)grm_round(PLOT_DEFAULT_WIDTH);
-      pixel_size[1] = (int)grm_round(PLOT_DEFAULT_HEIGHT);
-      metric_size[0] = PLOT_DEFAULT_WIDTH / dpm[0];
-      metric_size[1] = PLOT_DEFAULT_HEIGHT / dpm[1];
-    }
-
-  if (pixel_width != NULL)
-    {
-      *pixel_width = pixel_size[0];
-    }
-  if (pixel_height != NULL)
-    {
-      *pixel_height = pixel_size[1];
-    }
-  if (metric_width != NULL)
-    {
-      *metric_width = metric_size[0];
-    }
-  if (metric_height != NULL)
-    {
-      *metric_height = metric_size[1];
-    }
+  gr_setspace3d(phi, theta, fov, camera_distance);
 }
 
 static void processSubplot(const std::shared_ptr<GR::Element> &elem)
@@ -2611,23 +1843,742 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
   elem->setAttribute("vp_ymax", vp[3]);
 }
 
-static void legend_size(std::vector<std::string> labels, double *w, double *h)
+static void processTextAlign(const std::shared_ptr<GR::Element> &elem)
 {
-  double tbx[4], tby[4];
-  unsigned int num_labels;
 
-  *w = 0;
-  *h = 0;
+  gr_settextalign(static_cast<int>(elem->getAttribute("textalign_horizontal")),
+                  static_cast<int>(elem->getAttribute("textalign_vertical")));
+}
 
-  if (!labels.empty())
+static void processTextColorForBackground(const std::shared_ptr<GR::Element> &elem)
+/*  The set_text_volor_for_background function used in plot.cxx now as an attribute function
+    It is now possible to inquire colors during runtime -> No colors are given as parameters
+    The new color is set on `elem`
+    There are no params apart from elem
+    \param[in] elem The GR::Element the color should be set in. Also contains other attributes which may function as
+ parameters
+
+    Attributes as Parameters (with prefix "stcfb-"):
+    plot: for which plot it is used: right now only pie plot
+ */
+{
+  int color_ind;
+  int inq_color;
+  unsigned char color_rgb[4];
+  std::string plot = "pie";
+
+  if (elem->hasAttribute("stcfb-plot"))
     {
-      for (std::string current_label : labels)
+      plot = static_cast<std::string>(elem->getAttribute("stcfb-plot"));
+    }
+
+  if (plot == "pie")
+    {
+      double r, g, b;
+      double color_lightness;
+      std::shared_ptr<GR::Render> render;
+
+      render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
+      if (!render)
         {
-          gr_inqtext(0, 0, current_label.data(), tbx, tby);
-          *w = grm_max(*w, tbx[2] - tbx[0]);
-          *h += grm_max(tby[2] - tby[0], 0.03);
+          throw NotFoundError("Render-document not found for element\n");
+        }
+      if (elem->hasAttribute("color_index"))
+        {
+          color_ind = static_cast<int>(elem->getAttribute("color_index"));
+        }
+      else
+        {
+          gr_inqfillcolorind(&color_ind);
+        }
+      gr_inqcolor(color_ind, (int *)color_rgb);
+
+      r = color_rgb[0] / 255.0;
+      g = color_rgb[1] / 255.0;
+      b = color_rgb[2] / 255.0;
+
+      color_lightness = get_lightness_from_rbg(r, g, b);
+      if (color_lightness < 0.4)
+        {
+          gr_settextcolorind(0);
+        }
+      else
+        {
+          gr_settextcolorind(1);
         }
     }
+}
+
+static void processTextColorInd(const std::shared_ptr<GR::Element> &elem)
+{
+
+  gr_settextcolorind(static_cast<int>(elem->getAttribute("textcolorind")));
+}
+
+static void processTextEncoding(const std::shared_ptr<GR::Element> &elem)
+{
+
+  gr_settextencoding(static_cast<int>(elem->getAttribute("textencoding")));
+}
+
+static void processTextFontPrec(const std::shared_ptr<GR::Element> &elem)
+{
+
+  gr_settextfontprec(static_cast<int>(elem->getAttribute("textfontprec_font")),
+                     static_cast<int>(elem->getAttribute("textfontprec_prec")));
+}
+
+static void processTextPath(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_settextpath(static_cast<int>(elem->getAttribute("textpath")));
+}
+
+static void processTitle(const std::shared_ptr<GR::Element> &elem)
+{
+  double viewport[4], vp[4];
+
+  auto subplot_element = getSubplotElement(elem);
+  std::string name = (std::string)subplot_element->getAttribute("name");
+  if (name != "polarhistogram")
+    {
+      viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
+      viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
+      viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
+      viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
+      vp[0] = (double)subplot_element->getAttribute("vp_xmin");
+      vp[1] = (double)subplot_element->getAttribute("vp_xmax");
+      vp[2] = (double)subplot_element->getAttribute("vp_ymin");
+      vp[3] = (double)subplot_element->getAttribute("vp_ymax");
+
+      double x = 0.5 * (viewport[0] + viewport[1]);
+      double y = vp[3];
+      std::string title = (std::string)elem->getAttribute("title");
+
+      if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+        {
+          auto new_title_elem = render->createText(x, y, title);
+          new_title_elem->setAttribute("name", "title");
+          render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          auto title_elems = elem->querySelectorsAll("[name=\"title\"]");
+          for (auto &title_elem : title_elems)
+            {
+              title_elem->remove();
+            }
+          elem->appendChild(new_title_elem);
+        }
+    }
+}
+
+static void processTransparency(const std::shared_ptr<GR::Element> &elem)
+{
+  gr_settransparency(static_cast<double>(elem->getAttribute("transparency")));
+}
+
+static void processWindow(const std::shared_ptr<GR::Element> &elem)
+{
+  double xmin = static_cast<double>(elem->getAttribute("window_xmin"));
+  double xmax = static_cast<double>(elem->getAttribute("window_xmax"));
+  double ymin = static_cast<double>(elem->getAttribute("window_ymin"));
+  double ymax = static_cast<double>(elem->getAttribute("window_ymax"));
+
+  gr_setwindow(xmin, xmax, ymin, ymax);
+}
+
+static void processWindow3d(const std::shared_ptr<GR::Element> &elem)
+{
+  double xmin = static_cast<double>(elem->getAttribute("window_xmin"));
+  double xmax = static_cast<double>(elem->getAttribute("window_xmax"));
+  double ymin = static_cast<double>(elem->getAttribute("window_ymin"));
+  double ymax = static_cast<double>(elem->getAttribute("window_ymax"));
+  double zmin = static_cast<double>(elem->getAttribute("window_zmin"));
+  double zmax = static_cast<double>(elem->getAttribute("window_zmax"));
+
+  gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
+}
+
+static void processWSViewport(const std::shared_ptr<GR::Element> &elem)
+{
+  /*!
+   * processing function for gr_wsviewport
+   *
+   * \param[in] element The GR::Element that contains the attributes
+   */
+  double wsviewport[4];
+  wsviewport[0] = (double)elem->getAttribute("wsviewport_xmin");
+  wsviewport[1] = (double)elem->getAttribute("wsviewport_xmax");
+  wsviewport[2] = (double)elem->getAttribute("wsviewport_ymin");
+  wsviewport[3] = (double)elem->getAttribute("wsviewport_ymax");
+
+  gr_setwsviewport(wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
+}
+
+static void processWSWindow(const std::shared_ptr<GR::Element> &elem)
+{
+  double wswindow[4];
+  double xmin = static_cast<double>(elem->getAttribute("wswindow_xmin"));
+  double xmax = static_cast<double>(elem->getAttribute("wswindow_xmax"));
+  double ymin = static_cast<double>(elem->getAttribute("wswindow_ymin"));
+  double ymax = static_cast<double>(elem->getAttribute("wswindow_ymax"));
+
+  gr_setwswindow(xmin, xmax, ymin, ymax);
+}
+
+void GR::Render::processViewport(const std::shared_ptr<GR::Element> &elem)
+{
+  /*!
+   * processing function for gr_viewport
+   *
+   * \param[in] element The GR::Element that contains the attributes
+   */
+  double viewport[4];
+  double diag;
+  double charheight;
+  std::string kind;
+
+  viewport[0] = (double)elem->getAttribute("viewport_xmin");
+  viewport[1] = (double)elem->getAttribute("viewport_xmax");
+  viewport[2] = (double)elem->getAttribute("viewport_ymin");
+  viewport[3] = (double)elem->getAttribute("viewport_ymax");
+  kind = (std::string)elem->getAttribute("kind");
+
+  diag = std::sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
+                   (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
+
+  if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
+    {
+      charheight = grm_max(0.024 * diag, 0.012);
+    }
+  else
+    {
+      charheight = grm_max(0.018 * diag, 0.012);
+    }
+  gr_setcharheight(charheight);
+}
+
+static void processXlabel(const std::shared_ptr<GR::Element> &elem)
+{
+  double viewport[4], vp[4], charheight;
+
+  auto subplot_element = getSubplotElement(elem);
+
+  gr_inqcharheight(&charheight);
+  viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
+  viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
+  viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
+  viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
+  vp[0] = (double)subplot_element->getAttribute("vp_xmin");
+  vp[1] = (double)subplot_element->getAttribute("vp_xmax");
+  vp[2] = (double)subplot_element->getAttribute("vp_ymin");
+  vp[3] = (double)subplot_element->getAttribute("vp_ymax");
+
+  double x = 0.5 * (viewport[0] + viewport[1]);
+  double y = vp[2] + 0.5 * charheight;
+  std::string x_label = (std::string)elem->getAttribute("xlabel");
+
+  if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+    {
+      auto text = render->createText(x, y, x_label);
+      text->setAttribute("name", "xlabel");
+      render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
+      auto xlabel_elems = elem->querySelectorsAll("[name=\"xlabel\"]");
+      for (auto &xlabel_elem : xlabel_elems)
+        {
+          xlabel_elem->remove();
+        }
+      elem->appendChild(text);
+    }
+}
+
+static void processXTickLabels(const std::shared_ptr<GR::Element> &elem)
+{
+  double viewport[4], vp[4], window[4], charheight;
+  std::vector<std::string> xticklabels;
+
+  auto subplot_element = getSubplotElement(elem);
+
+  gr_inqcharheight(&charheight);
+  viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
+  viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
+  viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
+  viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
+  vp[0] = (double)subplot_element->getAttribute("vp_xmin");
+  vp[1] = (double)subplot_element->getAttribute("vp_xmax");
+  vp[2] = (double)subplot_element->getAttribute("vp_ymin");
+  vp[3] = (double)subplot_element->getAttribute("vp_ymax");
+  window[0] = (double)subplot_element->getAttribute("window_xmin");
+  window[1] = (double)subplot_element->getAttribute("window_xmax");
+  window[2] = (double)subplot_element->getAttribute("window_ymin");
+  window[3] = (double)subplot_element->getAttribute("window_ymax");
+
+  if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+    {
+      std::shared_ptr<GR::Context> context = render->getContext();
+      std::string key = static_cast<std::string>(elem->getAttribute("xticklabels"));
+      xticklabels = GR::get<std::vector<std::string>>((*context)[key]);
+
+      double x1, x2;
+      double x_left = 0, x_right = 1, null;
+      double available_width;
+      const double *window;
+      auto xtick_group = render->createGroup("barplot_xtick");
+
+      elem->append(xtick_group);
+
+      /* calculate width available for xticknotations */
+      gr_wctondc(&x_left, &null);
+      gr_wctondc(&x_right, &null);
+      available_width = x_right - x_left;
+      render->setTextAlign(xtick_group, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+      for (int i = 1; i <= xticklabels.size(); i++)
+        {
+          x1 = i;
+          gr_wctondc(&x1, &x2);
+          x2 = viewport[2] - 0.5 * charheight;
+          draw_xticklabel(x1, x2, xticklabels[i - 1].c_str(), available_width, xtick_group, render);
+        }
+    }
+}
+
+static void processYlabel(const std::shared_ptr<GR::Element> &elem)
+{
+  double viewport[4], vp[4], charheight;
+
+  auto subplot_element = getSubplotElement(elem);
+
+  gr_inqcharheight(&charheight);
+  viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
+  viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
+  viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
+  viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
+  vp[0] = (double)subplot_element->getAttribute("vp_xmin");
+  vp[1] = (double)subplot_element->getAttribute("vp_xmax");
+  vp[2] = (double)subplot_element->getAttribute("vp_ymin");
+  vp[3] = (double)subplot_element->getAttribute("vp_ymax");
+
+  double x = vp[0] + 0.5 * charheight;
+  double y = 0.5 * (viewport[2] + viewport[3]);
+  std::string y_label = (std::string)elem->getAttribute("ylabel");
+
+  if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+    {
+      auto text = render->createText(x, y, y_label);
+      text->setAttribute("name", "ylabel");
+      render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+      auto ylabel_elems = elem->querySelectorsAll("[name=\"ylabel\"]");
+      for (auto &ylabel_elem : ylabel_elems)
+        {
+          ylabel_elem->remove();
+        }
+      render->setCharUp(text, -1, 0);
+      elem->appendChild(text);
+    }
+}
+
+static void processAttributes(const std::shared_ptr<GR::Element> &element)
+{
+  /*!
+   * processing function for all kinds of attributes
+   *
+   * \param[in] element The GR::Element containing attributes
+   */
+
+  //! Map used for processing all kinds of attributes
+  static std::map<std::string, std::function<void(const std::shared_ptr<GR::Element> &)>> attrStringToFunc{
+      {std::string("bordercolorind"), processBorderColorInd},
+      {std::string("calc-window-and-viewport-from-parent"), processCalcWindowAndViewportFromParent},
+      {std::string("charexpan"), processCharExpan},
+      {std::string("charspace"), processCharSpace},
+      {std::string("charup"), processCharUp},
+      {std::string("clipxform"), processClipXForm},
+      {std::string("colorbar-position"), processColorbarPosition},
+      {std::string("colorrep"), processColorRep},
+      {std::string("fillcolorind"), processFillColorInd},
+      {std::string("fillintstyle"), processFillIntStyle},
+      {std::string("fillstyle"), processFillStyle},
+      {std::string("gr-option-flip-x"), processGROptionFlipX},
+      {std::string("gr-option-flip-y"), processGROptionFlipY},
+      {std::string("gr3backgroundcolor"), processGR3BackgroundColor},
+      {std::string("gr3cameralookat"), processGR3CameraLookAt},
+      {std::string("imshow-information"), processImshowInformation},
+      {std::string("kind"), processKind},
+      {std::string("linecolorind"), processLineColorInd},
+      {std::string("linespec"), processLineSpec},
+      {std::string("linetype"), processLineType},
+      {std::string("linewidth"), processLineWidth},
+      {std::string("markercolorind"), processMarkerColorInd},
+      {std::string("markersize"), processMarkerSize},
+      {std::string("markertype"), processMarkerType},
+      {std::string("projectiontype"), processProjectionType},
+      {std::string("relative-charheight"), processRelativeCharHeight},
+      {std::string("resamplemethod"), processResampleMethod},
+      {std::string("scale"), processScale},
+      {std::string("selntran"), processSelntran},
+      {std::string("space"), processSpace},
+      {std::string("space3d"), processSpace3d},
+      {std::string("textalign"), processTextAlign},
+      {std::string("textcolorind"), processTextColorInd},
+      {std::string("textencoding"), processTextEncoding},
+      {std::string("textfontprec"), processTextFontPrec},
+      {std::string("textpath"), processTextPath},
+      {std::string("title"), processTitle},
+      {std::string("transparency"), processTransparency},
+      {std::string("wsviewport"), processWSViewport},
+      {std::string("wswindow"), processWSWindow},
+      {std::string("xlabel"), processXlabel},
+      {std::string("xticklabels"), processXTickLabels},
+      {std::string("ylabel"), processYlabel},
+  };
+
+
+  static std::map<std::string, std::function<void(const std::shared_ptr<GR::Element> &)>> attrStringToFuncPost{
+      /* This map contains functions for attributes that should be called after some attributes have been processed
+       * already. These functions can contain e.g. inquire function calls for colors.
+       * */
+      {std::string("set-text-color-for-background"), processTextColorForBackground},
+  };
+
+  static std::map<std::string, std::function<void(const std::shared_ptr<GR::Element> &)>> attrStringToFuncPre{
+      /* This map contains functions for attributes that should be called before other attributes of the element are
+       * being processed. The attributes are being processed in the order of their appearance in the map.
+       * */
+      {std::string("subplot"), processSubplot},
+      {std::string("viewport"), GR::Render::processViewport},
+      {std::string("charheight"), processCharHeight},
+      {std::string("limits"), GR::Render::processLimits},
+      {std::string("window"), processWindow},
+      {std::string("window3d"), processWindow3d}, /* needs to be set before space3d is processed */
+  };
+
+  for (auto attributeToFunctionPair : attrStringToFuncPre)
+    /*
+     * Pre process attibute run
+     */
+    {
+      if (element->getAttributeNames().find(attributeToFunctionPair.first) != element->getAttributeNames().end())
+        {
+          attrStringToFuncPre[attributeToFunctionPair.first](element);
+        }
+    }
+
+  for (auto &attribute : element->getAttributeNames())
+    {
+      auto start = 0U;
+      auto end = attribute.find('_');
+      if (end == std::string::npos)
+        {
+          if (attrStringToFunc.find(attribute) != attrStringToFunc.end())
+            {
+              attrStringToFunc[attribute](element);
+            }
+        }
+      else
+        {
+          auto substr = attribute.substr(start, end);
+          if (attrStringToFunc.find(substr) != attrStringToFunc.end())
+            {
+              attrStringToFunc[substr](element);
+            }
+        }
+    }
+
+  for (auto &attribute : element->getAttributeNames())
+    /*
+     * Post process attribute run
+     */
+    {
+      if (attrStringToFuncPost.find(attribute) != attrStringToFuncPost.end())
+        {
+          attrStringToFuncPost[attribute](element);
+        }
+    }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ element processing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static void axes(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for axes
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  double x_tick, x_org;
+  double y_tick, y_org;
+  int x_major;
+  int y_major;
+  int tick_orientation = 1;
+  double tick_size;
+  std::string x_org_pos, y_org_pos;
+
+  if (element->hasAttribute("x_org_pos"))
+    {
+      x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
+    }
+  else
+    {
+      x_org_pos = "low";
+    }
+  if (element->hasAttribute("y_org_pos"))
+    {
+      y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
+    }
+  else
+    {
+      y_org_pos = "low";
+    }
+
+  getAxesInformation(element, x_org_pos, y_org_pos, x_org, y_org, x_major, y_major, x_tick, y_tick);
+
+  auto draw_axes_group = element->parentElement();
+  auto subplot_element = getSubplotElement(element);
+
+  if (element->hasAttribute("tick_orientation"))
+    {
+      tick_orientation = static_cast<int>(element->getAttribute("tick_orientation"));
+    }
+
+  getTickSize(element, tick_size);
+  tick_size *= tick_orientation;
+
+  gr_axes(x_tick, y_tick, x_org, y_org, x_major, y_major, tick_size);
+}
+
+static void axes3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for axes3d
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  double x_tick, x_org;
+  double y_tick, y_org;
+  double z_tick, z_org;
+  int x_major;
+  int y_major;
+  int z_major;
+  int tick_orientation = 1;
+  double tick_size;
+  std::string x_org_pos, y_org_pos, z_org_pos;
+
+  if (element->hasAttribute("x_org_pos"))
+    {
+      x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
+    }
+  else
+    {
+      x_org_pos = "low";
+    }
+  if (element->hasAttribute("y_org_pos"))
+    {
+      y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
+    }
+  else
+    {
+      y_org_pos = "low";
+    }
+  if (element->hasAttribute("z_org_pos"))
+    {
+      z_org_pos = static_cast<std::string>(element->getAttribute("z_org_pos"));
+    }
+  else
+    {
+      z_org_pos = "low";
+    }
+  getAxes3dInformation(element, x_org_pos, y_org_pos, z_org_pos, x_org, y_org, z_org, x_major, y_major, z_major, x_tick,
+                       y_tick, z_tick);
+
+  auto subplot_element = getSubplotElement(element);
+
+  if (element->hasAttribute("tick_orientation"))
+    {
+      tick_orientation = static_cast<int>(element->getAttribute("tick_orientation"));
+    }
+
+  getTickSize(element, tick_size);
+  tick_size *= tick_orientation;
+
+  gr_axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major, tick_size);
+}
+
+static void cellArray(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for cellArray
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  double xmin = static_cast<double>(element->getAttribute("xmin"));
+  double xmax = static_cast<double>(element->getAttribute("xmax"));
+  double ymin = static_cast<double>(element->getAttribute("ymin"));
+  double ymax = static_cast<double>(element->getAttribute("ymax"));
+  int dimx = static_cast<int>(element->getAttribute("dimx"));
+  int dimy = static_cast<int>(element->getAttribute("dimy"));
+  int scol = static_cast<int>(element->getAttribute("scol"));
+  int srow = static_cast<int>(element->getAttribute("srow"));
+  int ncol = static_cast<int>(element->getAttribute("ncol"));
+  int nrow = static_cast<int>(element->getAttribute("nrow"));
+  auto color = static_cast<std::string>(element->getAttribute("color"));
+  gr_cellarray(xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nrow,
+               (int *)&(GR::get<std::vector<int>>((*context)[color])[0]));
+}
+
+static void clearWS(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  gr_clearws();
+}
+
+static void contour(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for contour
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  auto px = static_cast<std::string>(element->getAttribute("px"));
+  auto py = static_cast<std::string>(element->getAttribute("py"));
+  auto h = static_cast<std::string>(element->getAttribute("h"));
+  auto pz = static_cast<std::string>(element->getAttribute("pz"));
+  int major_h = static_cast<int>(element->getAttribute("major_h"));
+
+  std::vector<double> px_vec = GR::get<std::vector<double>>((*context)[px]);
+  std::vector<double> py_vec = GR::get<std::vector<double>>((*context)[py]);
+  std::vector<double> h_vec = GR::get<std::vector<double>>((*context)[h]);
+  std::vector<double> pz_vec = GR::get<std::vector<double>>((*context)[pz]);
+
+  int nx = px_vec.size();
+  int ny = py_vec.size();
+  int nh = h_vec.size();
+
+  double *px_p = &(px_vec[0]);
+  double *py_p = &(py_vec[0]);
+  double *h_p = &(h_vec[0]);
+  double *pz_p = &(pz_vec[0]);
+
+  gr_contour(nx, ny, nh, px_p, py_p, h_p, pz_p, major_h);
+}
+
+static void contourf(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for contourf
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  auto px = static_cast<std::string>(element->getAttribute("px"));
+  auto py = static_cast<std::string>(element->getAttribute("py"));
+  auto h = static_cast<std::string>(element->getAttribute("h"));
+  auto pz = static_cast<std::string>(element->getAttribute("pz"));
+  int major_h = static_cast<int>(element->getAttribute("major_h"));
+
+  std::vector<double> px_vec = GR::get<std::vector<double>>((*context)[px]);
+  std::vector<double> py_vec = GR::get<std::vector<double>>((*context)[py]);
+  std::vector<double> h_vec = GR::get<std::vector<double>>((*context)[h]);
+  std::vector<double> pz_vec = GR::get<std::vector<double>>((*context)[pz]);
+
+  int nx = px_vec.size();
+  int ny = py_vec.size();
+  int nh = h_vec.size();
+
+  double *px_p = &(px_vec[0]);
+  double *py_p = &(py_vec[0]);
+  double *h_p = &(h_vec[0]);
+  double *pz_p = &(pz_vec[0]);
+
+  gr_contourf(nx, ny, nh, px_p, py_p, h_p, pz_p, major_h);
+}
+
+static void drawArc(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for drawArc
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  double xmin = static_cast<double>(element->getAttribute("xmin"));
+  double xmax = static_cast<double>(element->getAttribute("xmax"));
+  double ymin = static_cast<double>(element->getAttribute("ymin"));
+  double ymax = static_cast<double>(element->getAttribute("ymax"));
+  double a1 = static_cast<double>(element->getAttribute("a1"));
+  double a2 = static_cast<double>(element->getAttribute("a2"));
+  gr_drawarc(xmin, xmax, ymin, ymax, a1, a2);
+}
+
+static void drawGraphics(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  auto key = (std::string)element->getAttribute("data");
+  auto data_vec = GR::get<std::vector<int>>((*context)[key]);
+
+  std::vector<char> char_vec;
+  char_vec.reserve(data_vec.size());
+  for (int i : data_vec)
+    {
+      char_vec.push_back((char)i);
+    }
+  char *data_p = &(char_vec[0]);
+
+  gr_drawgraphics(data_p);
+}
+
+static void drawImage(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for drawImage
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  double xmin = static_cast<double>(element->getAttribute("xmin"));
+  double xmax = static_cast<double>(element->getAttribute("xmax"));
+  double ymin = static_cast<double>(element->getAttribute("ymin"));
+  double ymax = static_cast<double>(element->getAttribute("ymax"));
+  int width = static_cast<int>(element->getAttribute("width"));
+  int height = static_cast<int>(element->getAttribute("height"));
+  int model = static_cast<int>(element->getAttribute("model"));
+  auto data = static_cast<std::string>(element->getAttribute("data"));
+  gr_drawimage(xmin, ymin, xmax, ymax, width, height, (int *)&(GR::get<std::vector<int>>((*context)[data])[0]), model);
+}
+
+static void drawIsosurface3(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+{
+  auto nx = static_cast<int>(elem->getAttribute("nx"));
+  auto ny = static_cast<int>(elem->getAttribute("ny"));
+  auto nz = static_cast<int>(elem->getAttribute("nz"));
+  auto data_key = static_cast<std::string>(elem->getAttribute("data"));
+  float isovalue = static_cast<double>(elem->getAttribute("isovalue"));
+  auto color_key = static_cast<std::string>(elem->getAttribute("color"));
+  auto strides_key = static_cast<std::string>(elem->getAttribute("strides"));
+
+  float ambient = static_cast<double>(elem->getAttribute("ambient"));
+  float diffuse = static_cast<double>(elem->getAttribute("diffuse"));
+  float specular = static_cast<double>(elem->getAttribute("specular"));
+  float specular_power = static_cast<double>(elem->getAttribute("specular_power"));
+
+  auto data_vec = GR::get<std::vector<double>>((*context)[data_key]);
+  auto color_vec = GR::get<std::vector<double>>((*context)[color_key]);
+  auto strides_vec = GR::get<std::vector<int>>((*context)[strides_key]);
+
+  std::vector<float> data_vec_f(data_vec.begin(), data_vec.end());
+  std::vector<float> color_vec_f(color_vec.begin(), color_vec.end());
+
+  float *data = &data_vec_f[0];
+  float *color = &color_vec_f[0];
+  int *strides = &strides_vec[0];
+
+  float light_parameters[4];
+
+  /* Save and restore original light parameters */
+  gr3_getlightparameters(&light_parameters[0], &light_parameters[1], &light_parameters[2], &light_parameters[3]);
+  gr3_setlightparameters(ambient, diffuse, specular, specular_power);
+
+  gr3_isosurface(nx, ny, nz, data, isovalue, color, strides);
+
+  gr3_setlightparameters(light_parameters[0], light_parameters[1], light_parameters[2], light_parameters[3]);
 }
 
 static void drawLegend(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
@@ -2775,6 +2726,107 @@ static void drawLegend(const std::shared_ptr<GR::Element> &elem, const std::shar
   render->setSelntran(resetGroup, 1);
   elem->append(resetGroup);
   gr_restorestate();
+}
+
+static void drawPieLegend(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+{
+  double viewport[4];
+  double px, py, w, h;
+  double tbx[4], tby[4];
+  std::string labels_key = static_cast<std::string>(elem->getAttribute("labels"));
+  auto labels = GR::get<std::vector<std::string>>((*context)[labels_key]);
+  unsigned int num_labels = labels.size();
+  std::shared_ptr<GR::Render> render;
+  std::string color_indices_key;
+  std::string color_rgb_values_key;
+
+  std::vector<int> color_indices_vec;
+  std::vector<double> color_rgb_values_vec;
+
+  gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
+
+  render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
+  if (!render)
+    {
+      throw NotFoundError("No render-document found for element\n");
+    }
+
+  if (elem->hasChildNodes())
+    {
+      for (const auto &child : elem->children())
+        {
+          elem->removeChild(child);
+          child->remove();
+        }
+    }
+
+  if (elem->parentElement()->hasAttribute("color_indices"))
+    {
+      color_indices_key = static_cast<std::string>(elem->parentElement()->getAttribute("color_indices"));
+      color_indices_vec = GR::get<std::vector<int>>((*context)[color_indices_key]);
+    }
+  else if (elem->parentElement()->hasAttribute("color_rgb_values"))
+    {
+      color_rgb_values_key = static_cast<std::string>(elem->parentElement()->getAttribute("color_rgb_values"));
+      color_rgb_values_vec = GR::get<std::vector<double>>((*context)[color_rgb_values_key]);
+    }
+
+  auto subGroup = render->createGroup("drawPieLegendSubGroup");
+  elem->append(subGroup);
+
+  render->setSelntran(subGroup, 0);
+  render->setScale(subGroup, 0);
+  w = 0;
+  h = 0;
+  for (auto current_label : labels)
+    {
+      gr_inqtext(0, 0, current_label.data(), tbx, tby);
+      w += tbx[2] - tbx[0];
+      h = grm_max(h, tby[2] - tby[0]);
+    }
+  w += num_labels * 0.03 + (num_labels - 1) * 0.02;
+
+  px = 0.5 * (viewport[0] + viewport[1] - w);
+  py = viewport[2] - 0.75 * h;
+
+  auto fr = render->createFillRect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
+  subGroup->append(fr);
+  render->setFillIntStyle(subGroup, GKS_K_INTSTYLE_SOLID);
+  render->setFillColorInd(subGroup, 0);
+  auto dr = render->createDrawRect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
+  subGroup->append(dr);
+  render->setLineType(subGroup, GKS_K_INTSTYLE_SOLID);
+  render->setLineColorInd(subGroup, 1);
+  render->setLineWidth(subGroup, 1);
+
+  auto subsubGroup = render->createGroup("labels_group");
+  subGroup->append(subsubGroup);
+  render->setLineSpec(subsubGroup, const_cast<char *>(" "));
+  render->setTextAlign(subsubGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+  // reset setNextColor
+  setNextColor(GR_COLOR_RESET, color_indices_vec, color_rgb_values_vec, subGroup);
+
+
+  for (auto &current_label : labels)
+    {
+      auto labelGroup = render->createGroup("label");
+      subsubGroup->append(labelGroup);
+      render->setLineColorInd(labelGroup, 1);
+      setNextColor(GR_COLOR_FILL, color_indices_vec, color_rgb_values_vec, labelGroup);
+
+      labelGroup->append(render->createFillRect(px, px + 0.02, py - 0.01, py + 0.01));
+      labelGroup->append(render->createDrawRect(px, px + 0.02, py - 0.01, py + 0.01));
+      labelGroup->append(render->createText(px + 0.03, py, current_label));
+
+      gr_inqtext(0, 0, current_label.data(), tbx, tby);
+      px += tbx[2] - tbx[0] + 0.05;
+    }
+  // reset setNextColor
+  setNextColor(GR_COLOR_RESET, color_indices_vec, color_rgb_values_vec, subGroup);
+
+  auto reset_group = render->createGroup("reset_group");
+  render->setSelntran(reset_group, 1);
+  elem->append(reset_group);
 }
 
 static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
@@ -2931,173 +2983,346 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
     }
 }
 
-static void setNextColor(gr_color_type_t color_type, std::vector<int> &color_indices,
-                         std::vector<double> &color_rgb_values, const std::shared_ptr<GR::Element> &elem)
+static void drawRect(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
-  const static std::vector<int> fallback_color_indices{989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
-                                                       991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
-  static double saved_color[3];
-  static int last_array_index = -1;
-  static unsigned int color_array_length = -1;
-  int current_array_index = last_array_index + 1;
-  int color_index = 0;
-  int reset = (color_type == GR_COLOR_RESET);
-  int gks_errind = GKS_K_NO_ERROR;
-
-  if (reset)
-    {
-      last_array_index = -1;
-      color_array_length = -1;
-      return;
-    }
-
-  if (color_indices.empty() && color_rgb_values.empty())
-    {
-      color_indices = fallback_color_indices;
-    }
-
-  if (last_array_index < 0 && !color_rgb_values.empty())
-    {
-      gks_inq_color_rep(1, PLOT_CUSTOM_COLOR_INDEX, GKS_K_VALUE_SET, &gks_errind, &saved_color[0], &saved_color[1],
-                        &saved_color[2]);
-    }
-
-  current_array_index %= color_array_length;
-
-  if (!color_indices.empty())
-    {
-      color_index = color_indices[current_array_index];
-      last_array_index = current_array_index;
-    }
-  else if (!color_rgb_values.empty())
-    {
-      color_index = PLOT_CUSTOM_COLOR_INDEX;
-      global_render->setColorRep(elem, PLOT_CUSTOM_COLOR_INDEX, color_rgb_values[current_array_index],
-                                 color_rgb_values[current_array_index + 1], color_rgb_values[current_array_index + 2]);
-      last_array_index = current_array_index + 2;
-    }
-
-  if (color_type & GR_COLOR_LINE)
-    {
-      global_render->setLineColorInd(elem, color_index);
-    }
-  if (color_type & GR_COLOR_MARKER)
-    {
-      global_render->setMarkerColorInd(elem, color_index);
-    }
-  if (color_type & GR_COLOR_FILL)
-    {
-      global_render->setFillColorInd(elem, color_index);
-    }
-  if (color_type & GR_COLOR_TEXT)
-    {
-      global_render->setTextColorInd(elem, color_index);
-    }
-  if (color_type & GR_COLOR_BORDER)
-    {
-      global_render->setBorderColorInd(elem, color_index);
-    }
+  /*!
+   * Processing function for drawArc
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  double xmin = static_cast<double>(element->getAttribute("xmin"));
+  double xmax = static_cast<double>(element->getAttribute("xmax"));
+  double ymin = static_cast<double>(element->getAttribute("ymin"));
+  double ymax = static_cast<double>(element->getAttribute("ymax"));
+  gr_drawrect(xmin, xmax, ymin, ymax);
 }
 
-static void drawPieLegend(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+static void drawYLine(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+{
+  auto draw_axes_element = elem->parentElement();
+  double x_tick, x_org_low, x_org_high;
+  double y_tick, y_org_low, y_org_high;
+  int x_major;
+  int y_major;
+
+  getAxesInformation(elem, "low", "low", x_org_low, y_org_low, x_major, y_major, x_tick, y_tick);
+  getAxesInformation(elem, "high", "high", x_org_high, y_org_high, x_major, y_major, x_tick, y_tick);
+  auto orientation = static_cast<std::string>(elem->getAttribute("orientation"));
+  int is_vertical = orientation == "vertical";
+
+  double x[2] = {x_org_low, x_org_high};
+  double y[2] = {y_org_low, y_org_low};
+
+  gr_setlinecolorind(1);
+  if (is_vertical)
+    {
+      x[1] = y_org_low;
+      y[1] = y_org_high;
+    }
+  gr_polyline(2, x, y);
+}
+
+static void fillArc(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for drawArc
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  double xmin = static_cast<double>(element->getAttribute("xmin"));
+  double xmax = static_cast<double>(element->getAttribute("xmax"));
+  double ymin = static_cast<double>(element->getAttribute("ymin"));
+  double ymax = static_cast<double>(element->getAttribute("ymax"));
+  double a1 = static_cast<double>(element->getAttribute("a1"));
+  double a2 = static_cast<double>(element->getAttribute("a2"));
+  gr_fillarc(xmin, xmax, ymin, ymax, a1, a2);
+}
+
+static void fillRect(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for drawArc
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  double xmin = static_cast<double>(element->getAttribute("xmin"));
+  double xmax = static_cast<double>(element->getAttribute("xmax"));
+  double ymin = static_cast<double>(element->getAttribute("ymin"));
+  double ymax = static_cast<double>(element->getAttribute("ymax"));
+  gr_fillrect(xmin, xmax, ymin, ymax);
+}
+
+static void fillArea(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for fillArea
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+
+  std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
+  std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
+
+  int n = std::min(x_vec.size(), y_vec.size());
+
+  gr_fillarea(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
+}
+
+static void gr3Clear(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  gr3_clear();
+}
+
+static void gr3DeleteMesh(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  int mesh = static_cast<int>(element->getAttribute("mesh"));
+  gr3_deletemesh(mesh);
+}
+
+static void gr3DrawImage(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  double xmin, xmax, ymin, ymax;
+  int width, height, drawable_type;
+
+  xmin = (double)element->getAttribute("xmin");
+  xmax = (double)element->getAttribute("xmax");
+  ymin = (double)element->getAttribute("ymin");
+  ymax = (double)element->getAttribute("ymax");
+  width = (int)element->getAttribute("width");
+  height = (int)element->getAttribute("height");
+  drawable_type = (int)element->getAttribute("drawable_type");
+
+
+  logger((stderr, "gr3_drawimage returned %i\n", gr3_drawimage(xmin, xmax, ymin, ymax, width, height, drawable_type)));
+}
+
+static void gr3DrawMesh(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for gr3_drawmesh
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+
+  int mesh = (int)element->getAttribute("mesh");
+  int n = (int)element->getAttribute("n");
+
+  auto positions = static_cast<std::string>(element->getAttribute("positions"));
+  auto directions = static_cast<std::string>(element->getAttribute("directions"));
+  auto ups = static_cast<std::string>(element->getAttribute("ups"));
+  auto colors = static_cast<std::string>(element->getAttribute("colors"));
+  auto scales = static_cast<std::string>(element->getAttribute("scales"));
+
+  std::vector<double> positions_vec = GR::get<std::vector<double>>((*context)[positions]);
+  std::vector<double> directions_vec = GR::get<std::vector<double>>((*context)[directions]);
+  std::vector<double> ups_vec = GR::get<std::vector<double>>((*context)[ups]);
+  std::vector<double> colors_vec = GR::get<std::vector<double>>((*context)[colors]);
+  std::vector<double> scales_vec = GR::get<std::vector<double>>((*context)[scales]);
+
+  std::vector<float> pf_vec(positions_vec.begin(), positions_vec.end());
+  std::vector<float> df_vec(directions_vec.begin(), directions_vec.end());
+  std::vector<float> uf_vec(ups_vec.begin(), ups_vec.end());
+  std::vector<float> cf_vec(colors_vec.begin(), colors_vec.end());
+  std::vector<float> sf_vec(scales_vec.begin(), scales_vec.end());
+
+  float *positions_p = &(pf_vec[0]);
+  float *directions_p = &(df_vec[0]);
+  float *ups_p = &(uf_vec[0]);
+  float *colors_p = &(cf_vec[0]);
+  float *scales_p = &(sf_vec[0]);
+
+  gr3_drawmesh(mesh, n, positions_p, directions_p, ups_p, colors_p, scales_p);
+}
+
+static void grid(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for grid
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  double x_tick, y_tick, x_org, y_org;
+  int x_major, y_major;
+  std::string x_org_pos, y_org_pos;
+
+  if (element->hasAttribute("x_org_pos"))
+    {
+      x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
+    }
+  else
+    {
+      x_org_pos = "low";
+    }
+  if (element->hasAttribute("y_org_pos"))
+    {
+      y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
+    }
+  else
+    {
+      y_org_pos = "low";
+    }
+
+  getAxesInformation(element, x_org_pos, y_org_pos, x_org, y_org, x_major, y_major, x_tick, y_tick);
+
+  gr_grid(x_tick, y_tick, x_org, y_org, abs(x_major), abs(y_major));
+}
+
+static void grid3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for grid3d
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  double x_tick, x_org;
+  double y_tick, y_org;
+  double z_tick, z_org;
+  int x_major;
+  int y_major;
+  int z_major;
+  std::string x_org_pos, y_org_pos, z_org_pos;
+  if (element->hasAttribute("x_org_pos"))
+    {
+      x_org_pos = static_cast<std::string>(element->getAttribute("x_org_pos"));
+    }
+  else
+    {
+      x_org_pos = "low";
+    }
+  if (element->hasAttribute("y_org_pos"))
+    {
+      y_org_pos = static_cast<std::string>(element->getAttribute("y_org_pos"));
+    }
+  else
+    {
+      y_org_pos = "low";
+    }
+  if (element->hasAttribute("z_org_pos"))
+    {
+      z_org_pos = static_cast<std::string>(element->getAttribute("z_org_pos"));
+    }
+  else
+    {
+      z_org_pos = "low";
+    }
+  getAxes3dInformation(element, x_org_pos, y_org_pos, z_org_pos, x_org, y_org, z_org, x_major, y_major, z_major, x_tick,
+                       y_tick, z_tick);
+
+  gr_grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, abs(x_major), abs(y_major), abs(z_major));
+}
+
+static void hexbin(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for hexbin
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+  int nbins = static_cast<int>(element->getAttribute("nbins"));
+
+  int x_length = static_cast<int>(element->getAttribute("x_length"));
+
+  double *x_p = &(GR::get<std::vector<double>>((*context)[x])[0]);
+  double *y_p = &(GR::get<std::vector<double>>((*context)[y])[0]);
+
+  gr_hexbin(x_length, x_p, y_p, nbins);
+}
+
+static void isosurfaceRender(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
 {
   double viewport[4];
-  double px, py, w, h;
-  double tbx[4], tby[4];
-  std::string labels_key = static_cast<std::string>(elem->getAttribute("labels"));
-  auto labels = GR::get<std::vector<std::string>>((*context)[labels_key]);
-  unsigned int num_labels = labels.size();
-  std::shared_ptr<GR::Render> render;
-  std::string color_indices_key;
-  std::string color_rgb_values_key;
+  double x_min, x_max, y_min, y_max;
+  int fig_width, fig_height;
+  int subplot_width, subplot_height;
+  int drawable_type;
 
-  std::vector<int> color_indices_vec;
-  std::vector<double> color_rgb_values_vec;
+  drawable_type = static_cast<int>(elem->getAttribute("drawable-type"));
 
   gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
 
-  render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
-  if (!render)
-    {
-      throw NotFoundError("No render-document found for element\n");
-    }
+  x_min = viewport[0];
+  x_max = viewport[1];
+  y_min = viewport[2];
+  y_max = viewport[3];
 
-  if (elem->hasChildNodes())
-    {
-      for (const auto &child : elem->children())
-        {
-          elem->removeChild(child);
-          child->remove();
-        }
-    }
+  get_figure_size(NULL, &fig_width, &fig_height, NULL, NULL);
+  subplot_width = (int)(grm_max(fig_width, fig_height) * (x_max - x_min));
+  subplot_height = (int)(grm_max(fig_width, fig_height) * (y_max - y_min));
 
-  if (elem->parentElement()->hasAttribute("color_indices"))
-    {
-      color_indices_key = static_cast<std::string>(elem->parentElement()->getAttribute("color_indices"));
-      color_indices_vec = GR::get<std::vector<int>>((*context)[color_indices_key]);
-    }
-  else if (elem->parentElement()->hasAttribute("color_rgb_values"))
-    {
-      color_rgb_values_key = static_cast<std::string>(elem->parentElement()->getAttribute("color_rgb_values"));
-      color_rgb_values_vec = GR::get<std::vector<double>>((*context)[color_rgb_values_key]);
-    }
+  logger((stderr, "viewport: (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
+  logger((stderr, "viewport ratio: %lf\n", (x_min - x_max) / (y_min - y_max)));
+  logger((stderr, "subplot size: (%d, %d)\n", subplot_width, subplot_height));
+  logger((stderr, "subplot ratio: %lf\n", ((double)subplot_width / (double)subplot_height)));
 
-  auto subGroup = render->createGroup("drawPieLegendSubGroup");
-  elem->append(subGroup);
+  gr3_drawimage(x_min, x_max, y_min, y_max, subplot_width, subplot_height, GR3_DRAWABLE_GKS);
+}
 
-  render->setSelntran(subGroup, 0);
-  render->setScale(subGroup, 0);
-  w = 0;
-  h = 0;
-  for (auto current_label : labels)
-    {
-      gr_inqtext(0, 0, current_label.data(), tbx, tby);
-      w += tbx[2] - tbx[0];
-      h = grm_max(h, tby[2] - tby[0]);
-    }
-  w += num_labels * 0.03 + (num_labels - 1) * 0.02;
+static void layoutGrid(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  double xmin, xmax, ymin, ymax;
+  xmin = (double)element->getAttribute("subplot_xmin");
+  xmax = (double)element->getAttribute("subplot_xmax");
+  ymin = (double)element->getAttribute("subplot_ymin");
+  ymax = (double)element->getAttribute("subplot_ymax");
 
-  px = 0.5 * (viewport[0] + viewport[1] - w);
-  py = viewport[2] - 0.75 * h;
+  gr_setviewport(xmin, xmax, ymin, ymax);
+}
 
-  auto fr = render->createFillRect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
-  subGroup->append(fr);
-  render->setFillIntStyle(subGroup, GKS_K_INTSTYLE_SOLID);
-  render->setFillColorInd(subGroup, 0);
-  auto dr = render->createDrawRect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
-  subGroup->append(dr);
-  render->setLineType(subGroup, GKS_K_INTSTYLE_SOLID);
-  render->setLineColorInd(subGroup, 1);
-  render->setLineWidth(subGroup, 1);
+static void layoutGridElement(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  // todo is layoutgridelement actually needed? Can it be replaced by an ordinary group
+  double xmin, xmax, ymin, ymax;
+  xmin = (double)element->getAttribute("subplot_xmin");
+  xmax = (double)element->getAttribute("subplot_xmax");
+  ymin = (double)element->getAttribute("subplot_ymin");
+  ymax = (double)element->getAttribute("subplot_ymax");
 
-  auto subsubGroup = render->createGroup("labels_group");
-  subGroup->append(subsubGroup);
-  render->setLineSpec(subsubGroup, const_cast<char *>(" "));
-  render->setTextAlign(subsubGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-  // reset setNextColor
-  setNextColor(GR_COLOR_RESET, color_indices_vec, color_rgb_values_vec, subGroup);
+  //  gr_setviewport(xmin, xmax, ymin, ymax);
+}
 
+static void nonuniformcellarray(const std::shared_ptr<GR::Element> &element,
+                                const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for nonuniformcellarray
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  auto y = static_cast<std::string>(element->getAttribute("y"));
 
-  for (auto &current_label : labels)
-    {
-      auto labelGroup = render->createGroup("label");
-      subsubGroup->append(labelGroup);
-      render->setLineColorInd(labelGroup, 1);
-      setNextColor(GR_COLOR_FILL, color_indices_vec, color_rgb_values_vec, labelGroup);
+  int dimx = static_cast<int>(element->getAttribute("dimx"));
+  int dimy = static_cast<int>(element->getAttribute("dimy"));
+  int scol = static_cast<int>(element->getAttribute("scol"));
+  int srow = static_cast<int>(element->getAttribute("srow"));
+  int ncol = static_cast<int>(element->getAttribute("ncol"));
+  int nrow = static_cast<int>(element->getAttribute("nrow"));
+  auto color = static_cast<std::string>(element->getAttribute("color"));
 
-      labelGroup->append(render->createFillRect(px, px + 0.02, py - 0.01, py + 0.01));
-      labelGroup->append(render->createDrawRect(px, px + 0.02, py - 0.01, py + 0.01));
-      labelGroup->append(render->createText(px + 0.03, py, current_label));
+  auto x_p = (double *)&(GR::get<std::vector<double>>((*context)[x])[0]);
+  auto y_p = (double *)&(GR::get<std::vector<double>>((*context)[y])[0]);
 
-      gr_inqtext(0, 0, current_label.data(), tbx, tby);
-      px += tbx[2] - tbx[0] + 0.05;
-    }
-  // reset setNextColor
-  setNextColor(GR_COLOR_RESET, color_indices_vec, color_rgb_values_vec, subGroup);
+  auto color_p = (int *)&(GR::get<std::vector<int>>((*context)[color])[0]);
+  gr_nonuniformcellarray(x_p, y_p, dimx, dimy, scol, srow, ncol, nrow, color_p);
+}
 
-  auto reset_group = render->createGroup("reset_group");
-  render->setSelntran(reset_group, 1);
-  elem->append(reset_group);
+static void panzoom(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+{
+  ; /* panzoom is being processed in the processLimits routine */
 }
 
 static void piePlotTitleRender(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
@@ -3152,514 +3377,405 @@ static void piePlotTitleRender(const std::shared_ptr<GR::Element> &elem, const s
   elem->append(tx);
 }
 
-static void isosurfaceRender(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
-{
-  double viewport[4];
-  double x_min, x_max, y_min, y_max;
-  int fig_width, fig_height;
-  int subplot_width, subplot_height;
-  int drawable_type;
-
-  drawable_type = static_cast<int>(elem->getAttribute("drawable-type"));
-
-  gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
-
-  x_min = viewport[0];
-  x_max = viewport[1];
-  y_min = viewport[2];
-  y_max = viewport[3];
-
-  get_figure_size(NULL, &fig_width, &fig_height, NULL, NULL);
-  subplot_width = (int)(grm_max(fig_width, fig_height) * (x_max - x_min));
-  subplot_height = (int)(grm_max(fig_width, fig_height) * (y_max - y_min));
-
-  logger((stderr, "viewport: (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
-  logger((stderr, "viewport ratio: %lf\n", (x_min - x_max) / (y_min - y_max)));
-  logger((stderr, "subplot size: (%d, %d)\n", subplot_width, subplot_height));
-  logger((stderr, "subplot ratio: %lf\n", ((double)subplot_width / (double)subplot_height)));
-
-  gr3_drawimage(x_min, x_max, y_min, y_max, subplot_width, subplot_height, GR3_DRAWABLE_GKS);
-}
-
-static void panzoom(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
-{
-  ; /* panzoom is being processed in the processLimits routine */
-}
-
-static void drawYLine(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
-{
-  auto draw_axes_element = elem->parentElement();
-  double x_tick, x_org_low, x_org_high;
-  double y_tick, y_org_low, y_org_high;
-  int x_major;
-  int y_major;
-
-  getAxesInformation(elem, "low", "low", x_org_low, y_org_low, x_major, y_major, x_tick, y_tick);
-  getAxesInformation(elem, "high", "high", x_org_high, y_org_high, x_major, y_major, x_tick, y_tick);
-  auto orientation = static_cast<std::string>(elem->getAttribute("orientation"));
-  int is_vertical = orientation == "vertical";
-
-  double x[2] = {x_org_low, x_org_high};
-  double y[2] = {y_org_low, y_org_low};
-
-  gr_setlinecolorind(1);
-  if (is_vertical)
-    {
-      x[1] = y_org_low;
-      y[1] = y_org_high;
-    }
-  gr_polyline(2, x, y);
-}
-
-static void drawIsosurface3(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
-{
-  auto nx = static_cast<int>(elem->getAttribute("nx"));
-  auto ny = static_cast<int>(elem->getAttribute("ny"));
-  auto nz = static_cast<int>(elem->getAttribute("nz"));
-  auto data_key = static_cast<std::string>(elem->getAttribute("data"));
-  float isovalue = static_cast<double>(elem->getAttribute("isovalue"));
-  auto color_key = static_cast<std::string>(elem->getAttribute("color"));
-  auto strides_key = static_cast<std::string>(elem->getAttribute("strides"));
-
-  float ambient = static_cast<double>(elem->getAttribute("ambient"));
-  float diffuse = static_cast<double>(elem->getAttribute("diffuse"));
-  float specular = static_cast<double>(elem->getAttribute("specular"));
-  float specular_power = static_cast<double>(elem->getAttribute("specular_power"));
-
-  auto data_vec = GR::get<std::vector<double>>((*context)[data_key]);
-  auto color_vec = GR::get<std::vector<double>>((*context)[color_key]);
-  auto strides_vec = GR::get<std::vector<int>>((*context)[strides_key]);
-
-  std::vector<float> data_vec_f(data_vec.begin(), data_vec.end());
-  std::vector<float> color_vec_f(color_vec.begin(), color_vec.end());
-
-  float *data = &data_vec_f[0];
-  float *color = &color_vec_f[0];
-  int *strides = &strides_vec[0];
-
-  float light_parameters[4];
-
-  /* Save and restore original light parameters */
-  gr3_getlightparameters(&light_parameters[0], &light_parameters[1], &light_parameters[2], &light_parameters[3]);
-  gr3_setlightparameters(ambient, diffuse, specular, specular_power);
-
-  gr3_isosurface(nx, ny, nz, data, isovalue, color, strides);
-
-  gr3_setlightparameters(light_parameters[0], light_parameters[1], light_parameters[2], light_parameters[3]);
-}
-
-static void processGR3CameraLookAt(const std::shared_ptr<GR::Element> &elem)
-{
-  double camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z;
-
-  camera_x = (double)elem->getAttribute("gr3cameralookat_camera-x");
-  camera_y = (double)elem->getAttribute("gr3cameralookat_camera-y");
-  camera_z = (double)elem->getAttribute("gr3cameralookat_camera-z");
-  center_x = (double)elem->getAttribute("gr3cameralookat_center-x");
-  center_y = (double)elem->getAttribute("gr3cameralookat_center-y");
-  center_z = (double)elem->getAttribute("gr3cameralookat_center-z");
-  up_x = (double)elem->getAttribute("gr3cameralookat_up-x");
-  up_y = (double)elem->getAttribute("gr3cameralookat_up-y");
-  up_z = (double)elem->getAttribute("gr3cameralookat_up-z");
-
-  gr3_cameralookat(camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z);
-}
-
-static void processGR3BackgroundColor(const std::shared_ptr<GR::Element> &elem)
-{
-  double r, g, b, a;
-  r = (double)elem->getAttribute("gr3backgroundcolor_red");
-  g = (double)elem->getAttribute("gr3backgroundcolor_green");
-  b = (double)elem->getAttribute("gr3backgroundcolor_blue");
-  a = (double)elem->getAttribute("gr3backgroundcolor_alpha");
-
-  gr3_setbackgroundcolor(r, g, b, a);
-}
-
-static void setTextColorForBackground(const std::shared_ptr<GR::Element> &elem)
-/*  The set_text_volor_for_background function used in plot.cxx now as an attribute function
-    It is now possible to inquire colors during runtime -> No colors are given as parameters
-    The new color is set on `elem`
-    There are no params apart from elem
-    \param[in] elem The GR::Element the color should be set in. Also contains other attributes which may function as
- parameters
-
-    Attributes as Parameters (with prefix "stcfb-"):
-    plot: for which plot it is used: right now only pie plot
- */
-{
-  int color_ind;
-  int inq_color;
-  unsigned char color_rgb[4];
-  std::string plot = "pie";
-
-  if (elem->hasAttribute("stcfb-plot"))
-    {
-      plot = static_cast<std::string>(elem->getAttribute("stcfb-plot"));
-    }
-
-  if (plot == "pie")
-    {
-      double r, g, b;
-      double color_lightness;
-      std::shared_ptr<GR::Render> render;
-
-      render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
-      if (!render)
-        {
-          throw NotFoundError("Render-document not found for element\n");
-        }
-      if (elem->hasAttribute("color_index"))
-        {
-          color_ind = static_cast<int>(elem->getAttribute("color_index"));
-        }
-      else
-        {
-          gr_inqfillcolorind(&color_ind);
-        }
-      gr_inqcolor(color_ind, (int *)color_rgb);
-
-      r = color_rgb[0] / 255.0;
-      g = color_rgb[1] / 255.0;
-      b = color_rgb[2] / 255.0;
-
-      color_lightness = get_lightness_from_rbg(r, g, b);
-      if (color_lightness < 0.4)
-        {
-          gr_settextcolorind(0);
-        }
-      else
-        {
-          gr_settextcolorind(1);
-        }
-    }
-}
-
-static void processKind(const std::shared_ptr<GR::Element> &elem)
-{
-  std::string kind = static_cast<std::string>(elem->getAttribute("kind"));
-  if (kind == "line")
-    {
-      if (elem->hasAttribute("marginalheatmap"))
-        {
-          std::shared_ptr<GR::Context> context;
-          std::shared_ptr<GR::Render> render;
-
-          render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
-          if (!render)
-            {
-              throw NotFoundError("Render-document not found for element\n");
-            }
-          context = render->getContext();
-          auto orientation = static_cast<std::string>(elem->getAttribute("orientation"));
-          int is_vertical = orientation == "vertical";
-          int xind = static_cast<int>(elem->getAttribute("xind"));
-          int yind = static_cast<int>(elem->getAttribute("yind"));
-
-          auto marginalheatmap_group = elem->parentElement();
-
-          double c_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_zmin"));
-          double c_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_zmax"));
-
-          for (auto &child : elem->children())
-            {
-              if (child->hasChildNodes())
-                {
-                  for (auto &grandchild : child->children())
-                    {
-                      child->removeChild(grandchild);
-                      grandchild->remove();
-                    }
-                }
-              int i;
-              double y_max = 0;
-              std::vector<double> plot =
-                  GR::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("plot"))]);
-              std::vector<double> y =
-                  GR::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("y"))]);
-              std::vector<double> xi =
-                  GR::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("xi"))]);
-              std::vector<double> x =
-                  GR::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("x"))]);
-
-              int y_length = y.size();
-              int x_length = xi.size();
-
-              double xmin = static_cast<double>(marginalheatmap_group->getAttribute("lim_xmin"));
-              double xmax = static_cast<double>(marginalheatmap_group->getAttribute("lim_xmax"));
-              double ymin = static_cast<double>(marginalheatmap_group->getAttribute("lim_ymin"));
-              double ymax = static_cast<double>(marginalheatmap_group->getAttribute("lim_ymax"));
-              // plot step in marginal
-              for (i = 0; i < (is_vertical ? y_length : x_length); i++)
-                {
-                  if (is_vertical)
-                    {
-                      y[(is_vertical ? y_length : x_length) - i - 1] =
-                          std::isnan(plot[xind + i * x_length]) ? 0 : plot[xind + i * x_length];
-                      y_max = grm_max(y_max, y[(is_vertical ? y_length : x_length) - i - 1]);
-                    }
-                  else
-                    {
-                      y[i] = std::isnan(plot[x_length * (y_length - 1 - yind) + i])
-                                 ? 0
-                                 : plot[x_length * (y_length - 1 - yind) + i];
-                      y_max = grm_max(y_max, y[i]);
-                    }
-                }
-              for (i = 0; i < (is_vertical ? y_length : x_length); i++)
-                {
-                  y[i] = y[i] / y_max * (c_max / 15);
-                  xi[i] = x[i] + (is_vertical ? ymin : xmin);
-                }
-
-              double x_pos, y_pos;
-              unsigned int len = is_vertical ? y_length : x_length;
-              std::vector<double> x_step_boundaries(2 * len);
-              std::vector<double> y_step_values(2 * len);
-
-              x_step_boundaries[0] = is_vertical ? ymin : xmin;
-              for (i = 2; i < 2 * len; i += 2)
-                {
-                  x_step_boundaries[i - 1] = x_step_boundaries[i] =
-                      x_step_boundaries[0] + (i / 2) * (is_vertical ? (ymax - ymin) : (xmax - xmin)) / len;
-                }
-              x_step_boundaries[2 * len - 1] = is_vertical ? ymax : xmax;
-              y_step_values[0] = y[0];
-              for (i = 2; i < 2 * len; i += 2)
-                {
-                  y_step_values[i - 1] = y[i / 2 - 1];
-                  y_step_values[i] = y[i / 2];
-                }
-              y_step_values[2 * len - 1] = y[len - 1];
-
-              int id = static_cast<int>(global_root->getAttribute("id"));
-              global_root->setAttribute("id", id + 1);
-              auto id_str = std::to_string(id);
-
-              std::shared_ptr<GR::Element> line_elem, marker_elem;
-
-              if (is_vertical)
-                {
-                  line_elem =
-                      global_render->createPolyline("x" + id_str, y_step_values, "y" + id_str, x_step_boundaries);
-                  x_pos = (x_step_boundaries[yind * 2] + x_step_boundaries[yind * 2 + 1]) / 2;
-                  y_pos = y[yind];
-                  marker_elem = global_render->createPolymarker(y_pos, x_pos);
-                }
-              else
-                {
-                  line_elem =
-                      global_render->createPolyline("x" + id_str, x_step_boundaries, "y" + id_str, y_step_values);
-                  x_pos = (x_step_boundaries[xind * 2] + x_step_boundaries[xind * 2 + 1]) / 2;
-                  y_pos = y[xind];
-                  marker_elem = global_render->createPolymarker(x_pos, y_pos);
-                }
-
-              global_render->setLineColorInd(line_elem, 989);
-              global_render->setMarkerColorInd(marker_elem, 2);
-              global_render->setMarkerType(marker_elem, -1);
-              global_render->setMarkerSize(marker_elem, 1.5 * (len / (is_vertical ? (ymax - ymin) : (xmax - xmin))));
-              child->append(marker_elem);
-              child->append(line_elem);
-            } // end for child_series
-        }
-    }
-  else if (kind == "hist")
-    {
-      if (elem->hasAttribute("xind") || elem->hasAttribute("yind"))
-        {
-          int xind, yind;
-          xind = elem->hasAttribute("xind") ? static_cast<int>(elem->getAttribute("xind")) : -1;
-          yind = elem->hasAttribute("yind") ? static_cast<int>(elem->getAttribute("yind")) : -1;
-
-          if (xind == -1 && yind == -1)
-            {
-              return;
-            }
-
-          bool is_horizontal = static_cast<std::string>(elem->getAttribute("orientation")) == "horizontal";
-          for (auto &childSeries : elem->children()) // iterate over all hist series
-            {
-              std::vector<std::shared_ptr<GR::Element>> groups = childSeries->children();
-              std::vector<std::shared_ptr<GR::Element>> bars;
-
-              if (groups.size() == 2)
-                {
-                  bars = groups[0]->children();
-                }
-              else
-                {
-                  // error no fillgroups?
-                  return;
-                }
-
-              if ((is_horizontal && xind == -1) || (!is_horizontal && yind == -1))
-                {
-                  continue;
-                }
-              if ((is_horizontal ? xind : yind) >= bars.size())
-                {
-                  continue;
-                }
-              bars[(is_horizontal ? xind : yind)]->setAttribute("fillcolorind", 2);
-            }
-        }
-    }
-}
-
-static void processAttributes(const std::shared_ptr<GR::Element> &element)
+static void polyline(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   /*!
-   * processing function for all kinds of attributes
+   * Processing Function for polyline
    *
-   * \param[in] element The GR::Element containing attributes
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
    */
-
-  //! Map used for processing all kinds of attributes
-  static std::map<std::string, std::function<void(const std::shared_ptr<GR::Element> &)>> attrStringToFunc{
-      {std::string("kind"), processKind},
-      {std::string("markertype"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_setmarkertype((int)elem->getAttribute("markertype")); }},
-      {std::string("markercolorind"),
-       [](const std::shared_ptr<GR::Element> &elem) {
-         gr_setmarkercolorind((int)elem->getAttribute("markercolorind"));
-       }},
-      {std::string("markersize"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_setmarkersize((double)elem->getAttribute("markersize")); }},
-      {std::string("linetype"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_setlinetype((int)elem->getAttribute("linetype")); }},
-      {std::string("linecolorind"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_setlinecolorind((int)elem->getAttribute("linecolorind")); }},
-      {std::string("linewidth"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_setlinewidth((double)elem->getAttribute("linewidth")); }},
-      {std::string("fillintstyle"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_setfillintstyle((int)elem->getAttribute("fillintstyle")); }},
-      {std::string("fillstyle"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_setfillstyle((int)elem->getAttribute("fillstyle")); }},
-      {std::string("fillcolorind"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_setfillcolorind((int)elem->getAttribute("fillcolorind")); }},
-      {std::string("textfontprec"),
-       [](const std::shared_ptr<GR::Element> &elem) {
-         gr_settextfontprec((int)elem->getAttribute("textfontprec_font"), (int)elem->getAttribute("textfontprec_prec"));
-       }},
-      {std::string("charexpan"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_setcharexpan((double)elem->getAttribute("charexpan")); }},
-      {std::string("charspace"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_setcharspace((double)elem->getAttribute("charspace")); }},
-      {std::string("colorrep"), processColorRep},
-      {std::string("textcolorind"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_settextcolorind((int)elem->getAttribute("textcolorind")); }},
-      {std::string("relative-charheight"), processRelativeCharHeight},
-      {std::string("charup"),
-       [](const std::shared_ptr<GR::Element> &elem) {
-         gr_setcharup((double)elem->getAttribute("charup_ux"), (double)elem->getAttribute("charup_uy"));
-       }},
-      {std::string("textpath"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_settextpath((int)elem->getAttribute("textpath")); }},
-      {std::string("textalign"),
-       [](const std::shared_ptr<GR::Element> &elem) {
-         gr_settextalign((int)elem->getAttribute("textalign_horizontal"),
-                         (int)elem->getAttribute("textalign_vertical"));
-       }},
-      {std::string("textencoding"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_settextencoding((int)elem->getAttribute("textencoding")); }},
-      {std::string("title"), processTitle},
-      {std::string("transparency"),
-       [](const std::shared_ptr<GR::Element> &elem) {
-         gr_settransparency((double)elem->getAttribute("transparency"));
-       }},
-      {std::string("linespec"),
-       [](const std::shared_ptr<GR::Element> &elem) {
-         gr_uselinespec(((std::string)elem->getAttribute("linespec")).data());
-       }},
-      {std::string("wsviewport"), processWSViewport},
-      {std::string("wswindow"), processWSWindow},
-      {std::string("resamplemethod"),
-       [](const std::shared_ptr<GR::Element> &elem) {
-         gr_setresamplemethod((int)elem->getAttribute("resamplemethod"));
-       }},
-      {std::string("projectiontype"), processProjectionType},
-      {std::string("space3d"), processSpace3d},
-      {std::string("space"), processSpace},
-      {std::string("scale"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_setscale((int)elem->getAttribute("scale")); }},
-      {std::string("selntran"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_selntran((int)elem->getAttribute("selntran")); }},
-      {std::string("gr3cameralookat"), processGR3CameraLookAt},
-      {std::string("gr3backgroundcolor"), processGR3BackgroundColor},
-      {std::string("bordercolorind"),
-       [](const std::shared_ptr<GR::Element>
-              &elem) { gr_setbordercolorind((int)elem->getAttribute("bordercolorind")); }},
-      {std::string("clipxform"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_selectclipxform((int)elem->getAttribute("clipxform")); }},
-      {std::string("xlabel"), processXlabel},
-      {std::string("xticklabels"), processXTickLabels},
-      {std::string("ylabel"), processYlabel},
-      {std::string("imshow-information"), processImshowInformation},
-      {std::string("gr-option-flip-x"), processGROptionFlipX},
-      {std::string("gr-option-flip-y"), processGROptionFlipY},
-      {std::string("calc-window-and-viewport-from-parent"), processWindowAndViewportFromParent},
-      {std::string("colorbar-position"), processColorbarPosition}};
-
-
-  static std::map<std::string, std::function<void(const std::shared_ptr<GR::Element> &)>> attrStringToFuncPost{
-      /* This map contains functions for attributes that should be called after some attributes have been processed
-       * already. These functions can contain e.g. inquire function calls for colors.
-       * */
-      {std::string("set-text-color-for-background"), setTextColorForBackground}};
-
-  static std::map<std::string, std::function<void(const std::shared_ptr<GR::Element> &)>> attrStringToFuncPre{
-      /* This map contains functions for attributes that should be called before other attributes of the element are
-       * being processed.
-       * */
-      {std::string("subplot"), processSubplot},
-      {std::string("viewport"), GR::Render::processViewport},
-      {std::string("charheight"),
-       [](const std::shared_ptr<GR::Element> &elem) { gr_setcharheight((double)elem->getAttribute("charheight")); }},
-      {std::string("limits"), GR::Render::processLimits},
-      {std::string("window"), processWindow},
-      {std::string("window3d"), processWindow3d}, /* needs to be set before space3d is processed */
-  };
-
-  for (auto attributeToFunctionPair : attrStringToFuncPre)
+  int n = static_cast<int>(element->getAttribute("n"));
+  if (element->getAttribute("x").isString() && element->getAttribute("y").isString())
     {
-      if (element->getAttributeNames().find(attributeToFunctionPair.first) != element->getAttributeNames().end())
+      auto x = static_cast<std::string>(element->getAttribute("x"));
+      auto y = static_cast<std::string>(element->getAttribute("y"));
+
+      std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
+      std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
+
+      int n = std::min(x_vec.size(), y_vec.size());
+      auto group = element->parentElement();
+      if ((element->hasAttribute("linetypes") || element->hasAttribute("linewidths") ||
+           element->hasAttribute("linecolorinds")) ||
+          ((parentTypes.count(group->localName())) &&
+           (group->hasAttribute("linetypes") || group->hasAttribute("linewidths") ||
+            group->hasAttribute("linecolorinds"))))
         {
-          attrStringToFuncPre[attributeToFunctionPair.first](element);
+          lineHelper(element, context, "polyline");
         }
+      else
+        gr_polyline(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
     }
-
-  for (auto &attribute : element->getAttributeNames())
+  else if (element->getAttribute("x1").isDouble() && element->getAttribute("x2").isDouble() &&
+           element->getAttribute("y1").isDouble() && element->getAttribute("y2").isDouble())
     {
-      auto start = 0U;
-      auto end = attribute.find('_');
-      if (end == std::string::npos)
+      auto x1 = static_cast<double>(element->getAttribute("x1"));
+      auto x2 = static_cast<double>(element->getAttribute("x2"));
+      auto y1 = static_cast<double>(element->getAttribute("y1"));
+      auto y2 = static_cast<double>(element->getAttribute("y2"));
+      double x[2] = {x1, x2};
+      double y[2] = {y1, y2};
+
+      gr_polyline(2, x, y);
+    }
+}
+
+static void polyline3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for polyline3d
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+  auto z = static_cast<std::string>(element->getAttribute("z"));
+
+  std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
+  std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
+  std::vector<double> z_vec = GR::get<std::vector<double>>((*context)[z]);
+
+
+  double *x_p = &(x_vec[0]);
+  double *y_p = &(y_vec[0]);
+  double *z_p = &(z_vec[0]);
+  auto group = element->parentElement();
+
+  if ((element->hasAttribute("linetypes") || element->hasAttribute("linewidths") ||
+       element->hasAttribute("linecolorinds")) ||
+      ((parentTypes.count(group->localName())) &&
+       (group->hasAttribute("linetypes") || group->hasAttribute("linewidths") || group->hasAttribute("linecolorinds"))))
+    {
+      lineHelper(element, context, "polyline3d");
+    }
+  else
+    {
+      gr_polyline3d(x_vec.size(), x_p, y_p, z_p);
+    }
+}
+
+static void polymarker(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for polymarker
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  if (element->getAttribute("x").isString() && element->getAttribute("y").isString())
+    {
+      auto x = static_cast<std::string>(element->getAttribute("x"));
+      auto y = static_cast<std::string>(element->getAttribute("y"));
+
+      std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
+      std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
+
+      int n = std::min(x_vec.size(), y_vec.size());
+      auto group = element->parentElement();
+      if ((element->hasAttribute("markertypes") || element->hasAttribute("markersizes") ||
+           element->hasAttribute("markercolorinds")) ||
+          (parentTypes.count(group->localName()) &&
+           (group->hasAttribute("markertypes") || group->hasAttribute("markersizes") ||
+            group->hasAttribute("markercolorinds"))))
         {
-          if (attrStringToFunc.find(attribute) != attrStringToFunc.end())
-            {
-              attrStringToFunc[attribute](element);
-            }
+          markerHelper(element, context, "polymarker");
         }
       else
         {
-          auto substr = attribute.substr(start, end);
-          if (attrStringToFunc.find(substr) != attrStringToFunc.end())
+          gr_polymarker(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
+        }
+    }
+  else if (element->getAttribute("x").isDouble() && element->getAttribute("y").isDouble())
+    {
+      double x = static_cast<double>(element->getAttribute("x"));
+      double y = static_cast<double>(element->getAttribute("y"));
+      gr_polymarker(1, &x, &y);
+    }
+}
+
+static void polymarker3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for polymarker3d
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+  auto z = static_cast<std::string>(element->getAttribute("z"));
+
+  std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
+  std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
+  std::vector<double> z_vec = GR::get<std::vector<double>>((*context)[z]);
+
+
+  double *x_p = &(x_vec[0]);
+  double *y_p = &(y_vec[0]);
+  double *z_p = &(z_vec[0]);
+
+  auto group = element->parentElement();
+  if ((element->hasAttribute("markertypes") || element->hasAttribute("markersizes") ||
+       element->hasAttribute("markercolorinds")) ||
+      (parentTypes.count(group->localName()) &&
+       (group->hasAttribute("markertypes") || group->hasAttribute("markersizes") ||
+        group->hasAttribute("markercolorinds"))))
+    {
+      markerHelper(element, context, "polymarker3d");
+    }
+  else
+    {
+      gr_polymarker3d(x_vec.size(), x_p, y_p, z_p);
+    }
+}
+
+static void quiver(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for quiver
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+  auto u = static_cast<std::string>(element->getAttribute("u"));
+  auto v = static_cast<std::string>(element->getAttribute("v"));
+  int color = static_cast<int>(element->getAttribute("color"));
+
+  std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
+  std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
+
+
+  double *x_p = &(x_vec[0]);
+  double *y_p = &(y_vec[0]);
+  double *u_p = &(GR::get<std::vector<double>>((*context)[u])[0]);
+  double *v_p = &(GR::get<std::vector<double>>((*context)[v])[0]);
+
+  gr_quiver(x_vec.size(), y_vec.size(), x_p, y_p, u_p, v_p, color);
+}
+
+static void shadePoints(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  int xform, w, h, n;
+  std::string xx, yy;
+  double *x, *y;
+
+  xform = (int)element->getAttribute("xform");
+  w = (int)element->getAttribute("w");
+  h = (int)element->getAttribute("h");
+  xx = (std::string)element->getAttribute("x");
+  yy = (std::string)element->getAttribute("y");
+
+  auto x_vec = GR::get<std::vector<double>>((*context)[xx]);
+  auto y_vec = GR::get<std::vector<double>>((*context)[yy]);
+
+  x = &(x_vec[0]);
+  y = &(y_vec[0]);
+  n = std::min(x_vec.size(), y_vec.size());
+
+  gr_shadepoints(n, x, y, xform, w, h);
+}
+
+static void surface(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for surface
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  auto px = static_cast<std::string>(element->getAttribute("px"));
+  auto py = static_cast<std::string>(element->getAttribute("py"));
+  auto pz = static_cast<std::string>(element->getAttribute("pz"));
+  int option = static_cast<int>(element->getAttribute("option"));
+  int accelerate = static_cast<int>(element->getAttribute("accelerate"));
+
+  std::vector<double> px_vec = GR::get<std::vector<double>>((*context)[px]);
+  std::vector<double> py_vec = GR::get<std::vector<double>>((*context)[py]);
+  std::vector<double> pz_vec = GR::get<std::vector<double>>((*context)[pz]);
+
+  int nx = px_vec.size();
+  int ny = py_vec.size();
+
+  if (!accelerate)
+    {
+
+      double *px_p = &(px_vec[0]);
+      double *py_p = &(py_vec[0]);
+      double *pz_p = &(pz_vec[0]);
+
+      gr_surface(nx, ny, px_p, py_p, pz_p, option);
+    }
+  else
+    {
+      std::vector<float> px_vec_f(px_vec.begin(), px_vec.end());
+      std::vector<float> py_vec_f(py_vec.begin(), py_vec.end());
+      std::vector<float> pz_vec_f(pz_vec.begin(), pz_vec.end());
+
+      float *px_p = &(px_vec_f[0]);
+      float *py_p = &(py_vec_f[0]);
+      float *pz_p = &(pz_vec_f[0]);
+
+      gr3_surface(nx, ny, px_p, py_p, pz_p, option);
+    }
+}
+
+static void text(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing funcions for text
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  gr_savestate();
+  auto x = static_cast<double>(element->getAttribute("x"));
+  auto y = static_cast<double>(element->getAttribute("y"));
+  auto str = static_cast<std::string>(element->getAttribute("text"));
+  auto available_width = static_cast<double>(element->getAttribute("width"));
+  auto available_height = static_cast<double>(element->getAttribute("height"));
+  double tbx[4], tby[4];
+  bool text_fits = true;
+  CoordinateSpace space = static_cast<CoordinateSpace>(static_cast<int>(element->getAttribute("space")));
+
+
+  if (space == CoordinateSpace::WC)
+    {
+      gr_wctondc(&x, &y);
+    }
+  if (element->hasAttribute("width") && element->hasAttribute("height"))
+    {
+      gr_wctondc(&available_width, &available_height);
+      gr_inqtext(x, y, &str[0], tbx, tby);
+      auto minmax_x = std::minmax_element(std::begin(tbx), std::end(tbx));
+      auto minmax_y = std::minmax_element(std::begin(tby), std::end(tby));
+      double width = minmax_x.second - minmax_x.first;
+      double height = minmax_y.second - minmax_y.first;
+      if (width > available_width && height > available_height)
+        {
+          gr_setcharup(0.0, 1.0);
+          gr_settextalign(2, 3);
+          gr_inqtext(x, y, &str[0], tbx, tby);
+          width = tbx[2] - tbx[0];
+          height = tby[2] - tby[0];
+          if (width < available_width && height < available_height)
             {
-              attrStringToFunc[substr](element);
+              gr_setcharup(0.0, 1.0);
+              gr_settextalign(2, 3);
+            }
+          else if (height < available_width && width < available_height)
+            {
+              gr_setcharup(-1.0, 0.0);
+              gr_settextalign(2, 3);
+            }
+          else
+            {
+              text_fits = false;
             }
         }
     }
+  if (text_fits) gr_text(x, y, &str[0]);
+  gr_restorestate();
+}
 
-  for (auto &attribute : element->getAttributeNames())
-    /*
-     * Post process attribute run
-     */
-    {
-      if (attrStringToFuncPost.find(attribute) != attrStringToFuncPost.end())
-        {
-          attrStringToFuncPost[attribute](element);
-        }
-    }
+static void titles3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for titles3d
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  std::string x, y, z;
+  x = static_cast<std::string>(element->getAttribute("x"));
+  y = static_cast<std::string>(element->getAttribute("y"));
+  z = static_cast<std::string>(element->getAttribute("z"));
+  gr_titles3d(x.data(), y.data(), z.data());
+}
+
+static void triContour(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for tricontour
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  auto px = static_cast<std::string>(element->getAttribute("px"));
+  auto py = static_cast<std::string>(element->getAttribute("py"));
+  auto pz = static_cast<std::string>(element->getAttribute("pz"));
+  auto levels = static_cast<std::string>(element->getAttribute("levels"));
+
+  std::vector<double> px_vec = GR::get<std::vector<double>>((*context)[px]);
+  std::vector<double> py_vec = GR::get<std::vector<double>>((*context)[py]);
+  std::vector<double> pz_vec = GR::get<std::vector<double>>((*context)[pz]);
+  std::vector<double> l_vec = GR::get<std::vector<double>>((*context)[levels]);
+
+  int nx = px_vec.size();
+  int nl = l_vec.size();
+
+  double *px_p = &(px_vec[0]);
+  double *py_p = &(py_vec[0]);
+  double *pz_p = &(pz_vec[0]);
+  double *l_p = &(l_vec[0]);
+
+  gr_tricontour(nx, px_p, py_p, pz_p, nl, l_p);
+}
+
+static void triSurface(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Processing function for trisurface
+   *
+   * \param[in] element The GR::Element that contains the attributes and data keys
+   * \param[in] context The GR::Context that contains the actual data
+   */
+  auto px = static_cast<std::string>(element->getAttribute("px"));
+  auto py = static_cast<std::string>(element->getAttribute("py"));
+  auto pz = static_cast<std::string>(element->getAttribute("pz"));
+
+  std::vector<double> px_vec = GR::get<std::vector<double>>((*context)[px]);
+  std::vector<double> py_vec = GR::get<std::vector<double>>((*context)[py]);
+  std::vector<double> pz_vec = GR::get<std::vector<double>>((*context)[pz]);
+
+  int nx = px_vec.size();
+  int ny = py_vec.size();
+
+  double *px_p = &(px_vec[0]);
+  double *py_p = &(py_vec[0]);
+  double *pz_p = &(pz_vec[0]);
+
+  gr_trisurface(nx, px_p, py_p, pz_p);
+}
+
+static void updateWS(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  gr_updatews();
+}
+
+static void volume(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  int nx, ny, nz, algorithm;
+  std::string dmin_key, dmax_key;
+  double dmin, dmax;
+
+  auto data = static_cast<std::string>(element->getAttribute("data"));
+  nx = (int)element->getAttribute("nx");
+  ny = (int)element->getAttribute("ny");
+  nz = (int)element->getAttribute("nz");
+  algorithm = (int)element->getAttribute("algorithm");
+  dmin_key = (std::string)element->getAttribute("dmin");
+  dmax_key = (std::string)element->getAttribute("dmax");
+
+  auto dmin_vec = GR::get<std::vector<double>>((*context)[dmin_key]);
+
+
+  std::vector<double> data_vec = GR::get<std::vector<double>>((*context)[data]);
+
+  gr_volume(nx, ny, nz, &(data_vec[0]), algorithm, &dmin, &dmax);
 }
 
 static void processElement(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
@@ -3674,50 +3790,52 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
   //! Map used for processing all kinds of elements
   static std::map<std::string,
                   std::function<void(const std::shared_ptr<GR::Element> &, const std::shared_ptr<GR::Context> &)>>
-      elemStringToFunc{{std::string("polymarker"), polymarker},
-                       {std::string("polyline"), polyline},
-                       {std::string("text"), text},
-                       {std::string("fillarea"), fillArea},
-                       {std::string("cellarray"), cellArray},
-                       {std::string("axes"), axes},
-                       {std::string("grid"), grid},
-                       {std::string("drawimage"), drawImage},
-                       {std::string("drawarc"), drawArc},
-                       {std::string("fillarc"), fillArc},
-                       {std::string("drawrect"), drawRect},
-                       {std::string("fillrect"), fillRect},
-                       {std::string("quiver"), quiver},
-                       {std::string("contour"), contour},
-                       {std::string("contourf"), contourf},
-                       {std::string("hexbin"), hexbin},
-                       {std::string("nonuniformcellarray"), nonuniformcellarray},
-                       {std::string("grid3d"), grid3d},
-                       {std::string("surface"), surface},
-                       {std::string("axes3d"), axes3d},
-                       {std::string("polyline3d"), polyline3d},
-                       {std::string("polymarker3d"), polymarker3d},
-                       {std::string("gr3drawmesh"), gr3DrawMesh},
-                       {std::string("volume"), volume},
-                       {std::string("trisurface"), triSurface},
-                       {std::string("tricontour"), triContour},
-                       {std::string("titles3d"), titles3d},
-                       {std::string("gr3clear"), gr3Clear},
-                       {std::string("gr3deletemesh"), gr3DeleteMesh},
-                       {std::string("gr3drawimage"), gr3DrawImage},
-                       {std::string("shadepoints"), shadePoints},
-                       {std::string("clearws"), clearWS},
-                       {std::string("updatews"), updateWS},
-                       {std::string("drawgraphics"), drawGraphics},
-                       {std::string("layout-grid"), layoutGrid},
-                       {std::string("layout-gridelement"), layoutGridElement},
-                       {std::string("draw-legend"), drawLegend},
-                       {std::string("draw-polar-axes"), drawPolarAxes},
-                       {std::string("draw-pie-legend"), drawPieLegend},
-                       {std::string("pie-plot-title-render"), piePlotTitleRender},
-                       {std::string("panzoom"), panzoom},
-                       {std::string("y-line"), drawYLine},
-                       {std::string("isosurface3"), drawIsosurface3},
-                       {std::string("isosurface-render"), isosurfaceRender}};
+      elemStringToFunc{
+          {std::string("axes"), axes},
+          {std::string("axes3d"), axes3d},
+          {std::string("cellarray"), cellArray},
+          {std::string("clearws"), clearWS},
+          {std::string("contour"), contour},
+          {std::string("contourf"), contourf},
+          {std::string("draw-legend"), drawLegend},
+          {std::string("draw-pie-legend"), drawPieLegend},
+          {std::string("draw-polar-axes"), drawPolarAxes},
+          {std::string("drawarc"), drawArc},
+          {std::string("drawgraphics"), drawGraphics},
+          {std::string("drawimage"), drawImage},
+          {std::string("drawrect"), drawRect},
+          {std::string("fillarc"), fillArc},
+          {std::string("fillarea"), fillArea},
+          {std::string("fillrect"), fillRect},
+          {std::string("gr3clear"), gr3Clear},
+          {std::string("gr3deletemesh"), gr3DeleteMesh},
+          {std::string("gr3drawimage"), gr3DrawImage},
+          {std::string("gr3drawmesh"), gr3DrawMesh},
+          {std::string("grid"), grid},
+          {std::string("grid3d"), grid3d},
+          {std::string("hexbin"), hexbin},
+          {std::string("isosurface-render"), isosurfaceRender},
+          {std::string("isosurface3"), drawIsosurface3},
+          {std::string("layout-grid"), layoutGrid},
+          {std::string("layout-gridelement"), layoutGridElement},
+          {std::string("nonuniformcellarray"), nonuniformcellarray},
+          {std::string("panzoom"), panzoom},
+          {std::string("pie-plot-title-render"), piePlotTitleRender},
+          {std::string("polyline"), polyline},
+          {std::string("polyline3d"), polyline3d},
+          {std::string("polymarker"), polymarker},
+          {std::string("polymarker3d"), polymarker3d},
+          {std::string("quiver"), quiver},
+          {std::string("shadepoints"), shadePoints},
+          {std::string("surface"), surface},
+          {std::string("text"), text},
+          {std::string("titles3d"), titles3d},
+          {std::string("tricontour"), triContour},
+          {std::string("trisurface"), triSurface},
+          {std::string("updatews"), updateWS},
+          {std::string("volume"), volume},
+          {std::string("y-line"), drawYLine},
+      };
   /*! Modifier */
   if (element->localName() == "group" || element->localName() == "root")
     {
@@ -3740,8 +3858,285 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
     }
 }
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ render functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-//! Create Functions
+static void renderHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  /*!
+   * Recursive helper function for render; Not part of render class
+   * Only renders / processes children if the parent is in parentTypes (group etc.)
+   * Used for traversing the tree
+   *
+   * \param[in] element A GR::Element
+   * \param[in] context A GR::Context
+   */
+  gr_savestate();
+  bool bounding_boxes = getenv("GRPLOT_ENABLE_EDITOR");
+
+  if (bounding_boxes && element->hasAttributes())
+    {
+      gr_begin_grm_selection(bounding_id, &receiverfunction);
+      bounding_map[bounding_id] = element;
+      bounding_id++;
+    }
+
+  processElement(element, context);
+  if (element->hasChildNodes() && parentTypes.count(element->localName()))
+    {
+      for (const auto &child : element->children())
+        {
+          renderHelper(child, context);
+        }
+    }
+  if (bounding_boxes && element->hasAttributes())
+    {
+      gr_end_grm_selection();
+    }
+  gr_restorestate();
+}
+
+static void initializeGridElements(const std::shared_ptr<GR::Element> &element, grm::Grid *grid)
+{
+  if (element->hasChildNodes())
+    {
+      for (const auto &child : element->children())
+        {
+          if (child->localName() != "layout-gridelement" && child->localName() != "layout-grid")
+            {
+              return;
+            }
+
+          double absHeight = static_cast<double>(child->getAttribute("absHeight"));
+          double absWidth = static_cast<double>(child->getAttribute("absWidth"));
+          int absHeightPxl = static_cast<int>(child->getAttribute("absHeightPxl"));
+          int absWidthPxl = static_cast<int>(child->getAttribute("absWidthPxl"));
+          int fitParentsHeight = static_cast<int>(child->getAttribute("fitParentsHeight"));
+          int fitParentsWidth = static_cast<int>(child->getAttribute("fitParentsWidth"));
+          double relativeHeight = static_cast<double>(child->getAttribute("relativeHeight"));
+          double relativeWidth = static_cast<double>(child->getAttribute("relativeWidth"));
+          double aspectRatio = static_cast<double>(child->getAttribute("aspectRatio"));
+          int rowStart = static_cast<int>(child->getAttribute("rowStart"));
+          int rowStop = static_cast<int>(child->getAttribute("rowStop"));
+          int colStart = static_cast<int>(child->getAttribute("colStart"));
+          int colStop = static_cast<int>(child->getAttribute("colStop"));
+          grm::Slice *slice = new grm::Slice(rowStart, rowStop, colStart, colStop);
+
+          if (child->localName() == "layout-gridelement")
+            {
+              grm::GridElement *curGridElement =
+                  new grm::GridElement(absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight,
+                                       fitParentsWidth, relativeHeight, relativeWidth, aspectRatio);
+              curGridElement->elementInDOM = child;
+              grid->setElement(slice, curGridElement);
+            }
+
+          if (child->localName() == "layout-grid")
+            {
+              int nrows = static_cast<int>(child->getAttribute("nrows"));
+              int ncols = static_cast<int>(child->getAttribute("ncols"));
+
+              grm::Grid *curGrid =
+                  new grm::Grid(nrows, ncols, absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight,
+                                fitParentsWidth, relativeHeight, relativeWidth, aspectRatio);
+              curGrid->elementInDOM = child;
+              grid->setElement(slice, curGrid);
+              initializeGridElements(child, curGrid);
+            }
+        }
+    }
+}
+
+static void finalizeGrid(const std::shared_ptr<GR::Element> &root)
+{
+  grm::Grid *rootGrid = nullptr;
+  if (root->hasChildNodes())
+    {
+      for (const auto &child : root->children())
+        {
+          if (child->localName() == "layout-grid")
+            {
+              int nrows = static_cast<int>(child->getAttribute("nrows"));
+              int ncols = static_cast<int>(child->getAttribute("ncols"));
+              rootGrid = new grm::Grid(nrows, ncols);
+              child->setAttribute("subplot", true);
+              child->setAttribute("subplot_xmin", 0);
+              child->setAttribute("subplot_xmax", 1);
+              child->setAttribute("subplot_ymin", 0);
+              child->setAttribute("subplot_ymax", 1);
+
+              initializeGridElements(child, rootGrid);
+              rootGrid->finalizeSubplot();
+              break;
+            }
+        }
+    }
+}
+
+void GR::Render::render(const std::shared_ptr<GR::Document> &document, const std::shared_ptr<GR::Context> &extContext)
+{
+  /*!
+   * static GR::Render::render receiving external document and context
+   *
+   * \param[in] document A GR::Document that will be rendered
+   * \param[in] extContext A GR::Context
+   */
+  auto root = document->firstChildElement();
+  if (root->hasChildNodes())
+    {
+      for (const auto &child : root->children())
+        {
+          gr_savestate();
+          ::renderHelper(child, extContext);
+          gr_restorestate();
+        }
+    }
+}
+
+
+void GR::Render::render(std::shared_ptr<GR::Document> const &document)
+{
+  /*!
+   * GR::Render::render that receives an external document but uses the GR::Render instance's context.
+   *
+   * \param[in] document A GR::Document that will be rendered
+   */
+  auto root = document->firstChildElement();
+  if (root->hasChildNodes())
+    {
+      for (const auto &child : root->children())
+        {
+          gr_savestate();
+          ::renderHelper(child, this->context);
+          gr_restorestate();
+        }
+    }
+}
+
+
+void GR::Render::render(const std::shared_ptr<GR::Context> &extContext)
+{
+  /*!
+   *GR::Render::render uses GR::Render instance's document and an external context
+   *
+   * \param[in] extContext A GR::Context
+   */
+  auto root = this->firstChildElement();
+  if (root->hasChildNodes())
+    {
+      for (const auto &child : root->children())
+        {
+          gr_savestate();
+          ::renderHelper(child, extContext);
+          gr_restorestate();
+        }
+    }
+}
+
+void GR::Render::render()
+{
+  /*!
+   * GR::Render::render uses both instance's document and context
+   */
+  auto root = this->firstChildElement();
+  global_root = root;
+  const unsigned int indent = 2;
+
+  bounding_id = 0;
+  global_render = (std::dynamic_pointer_cast<GR::Render>(root->ownerDocument()))
+                      ? std::dynamic_pointer_cast<GR::Render>(root->ownerDocument())
+                      : GR::Render::createRender();
+  std::cerr << toXML(root, GR::SerializerOptions{std::string(indent, ' ')}) << "\n";
+  renderHelper(root, this->context);
+  std::cerr << toXML(root, GR::SerializerOptions{std::string(indent, ' ')}) << "\n";
+}
+
+
+std::shared_ptr<GR::Render> GR::Render::createRender()
+{
+  /*!
+   * This function can be used to create a Render object
+   */
+  auto render = std::shared_ptr<Render>(new Render());
+  return render;
+}
+
+
+GR::Render::Render()
+{
+  /*!
+   * This is the constructor for GR::Render
+   */
+  this->context = std::shared_ptr<GR::Context>(new Context());
+}
+
+std::shared_ptr<GR::Context> GR::Render::getContext()
+{
+  return context;
+}
+
+/*
+ * Searches in elementToTooltip for attributeName and returns a string vector
+ * containing:
+ * [0] The default value for this attribute
+ * [1] The description for this attribute
+ */
+std::vector<std::string> GR::Render::getDefaultAndTooltip(const std::shared_ptr<Element> &element,
+                                                          std::string attributeName)
+{
+  static std::unordered_map<std::string, std::map<std::string, std::vector<std::string>>> elementToTooltip{
+      {std::string("polyline"),
+       std::map<std::string, std::vector<std::string>>{
+           {std::string("linecolorind"),
+            std::vector<std::string>{"989", "Sets the linecolor according to the current colormap"}},
+           {std::string("x"), std::vector<std::string>{"None", "References the x-values stored in the context"}},
+           {std::string("y"), std::vector<std::string>{"None", "References the y-values stored in the context"}},
+           {std::string("x1"), std::vector<std::string>{"None", "The beginning x-coordinate"}},
+           {std::string("y1"), std::vector<std::string>{"None", "The beginning y-coordinate"}},
+           {std::string("x2"), std::vector<std::string>{"None", "The ending x-coordinate"}},
+           {std::string("y2"), std::vector<std::string>{"None", "The ending y-coordinate"}},
+       }},
+      {std::string("text"),
+       std::map<std::string, std::vector<std::string>>{
+           {std::string("x"), std::vector<std::string>{"None", "X-position of the text"}},
+           {std::string("y"), std::vector<std::string>{"None", "Y-position of the text"}},
+           {std::string("text"), std::vector<std::string>{"Title", "The text diplayed by this node"}},
+           {std::string("render_method"),
+            std::vector<std::string>{"gr_text", "Render method used to display the text"}},
+           {std::string("textalign"), std::vector<std::string>{"1", "Use alignment"}},
+           {std::string("textalign_horizontal"), std::vector<std::string>{"2", "Horizontal alignment method"}},
+           {std::string("textalign_vertical"), std::vector<std::string>{"1", "Horizontal alignment method"}},
+       }},
+      {std::string("grid"),
+       std::map<std::string, std::vector<std::string>>{
+           {std::string("x_tick"),
+            std::vector<std::string>{"1", "The interval between minor tick marks on the X-axis"}},
+           {std::string("y_tick"),
+            std::vector<std::string>{"1", "The interval between minor tick marks on the Y-axis"}},
+           {std::string("x_org"),
+            std::vector<std::string>{"0", "The world coordinates of the origin (point of intersection) of the X-axis"}},
+           {std::string("y_org"),
+            std::vector<std::string>{"0", "The world coordinates of the origin (point of intersection) of the Y-axis"}},
+           {std::string("major_x"),
+            std::vector<std::string>{"5", "Unitless integer values specifying the number of minor tick intervals "
+                                          "between major tick marks. Values of 0 or 1 imply no minor ticks. Negative "
+                                          "values specify no labels will be drawn for the X-axis"}},
+           {std::string("major_y"),
+            std::vector<std::string>{"5", "Unitless integer values specifying the number of minor tick intervals "
+                                          "between major tick marks. Values of 0 or 1 imply no minor ticks. Negative "
+                                          "values specify no labels will be drawn for the Y-axis"}},
+       }}};
+  if (elementToTooltip.count(element->localName()) &&
+      elementToTooltip[element->localName().c_str()].count(attributeName))
+    {
+      return elementToTooltip[element->localName().c_str()][attributeName];
+    }
+  else
+    {
+      return std::vector<std::string>{"", "No description found"};
+    }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ create functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 std::shared_ptr<GR::Element>
 GR::Render::createPolymarker(const std::string &x_key, std::optional<std::vector<double>> x, const std::string &y_key,
@@ -4990,7 +5385,7 @@ std::shared_ptr<GR::Element> GR::Render::createYLine()
   return element;
 }
 
-//! Modifierfunctions
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ modifier functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void GR::Render::setViewport(const std::shared_ptr<GR::Element> &element, double xmin, double xmax, double ymin,
                              double ymax)
@@ -5733,296 +6128,4 @@ void GR::Render::setGR3LightParameters(const std::shared_ptr<GR::Element> &eleme
   element->setAttribute("diffuse", diffuse);
   element->setAttribute("specular", specular);
   element->setAttribute("specular_power", specular_power);
-}
-
-static int bounding_id = 0;
-static std::map<int, std::shared_ptr<GR::Element>> bounding_map;
-
-void receiverfunction(int id, double x_min, double x_max, double y_min, double y_max)
-{
-  if (!(x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX))
-    {
-      bounding_map[id]->setAttribute("bbox_id", id);
-      bounding_map[id]->setAttribute("bbox_xmin", x_min);
-      bounding_map[id]->setAttribute("bbox_xmax", x_max);
-      bounding_map[id]->setAttribute("bbox_ymin", y_min);
-      bounding_map[id]->setAttribute("bbox_ymax", y_max);
-    }
-}
-
-//! Render functions
-static void renderHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
-{
-  /*!
-   * Recursive helper function for render; Not part of render class
-   * Only renders / processes children if the parent is in parentTypes (group etc.)
-   * Used for traversing the tree
-   *
-   * \param[in] element A GR::Element
-   * \param[in] context A GR::Context
-   */
-  gr_savestate();
-  bool bounding_boxes = getenv("GRPLOT_ENABLE_EDITOR");
-
-  if (bounding_boxes && element->hasAttributes())
-    {
-      gr_begin_grm_selection(bounding_id, &receiverfunction);
-      bounding_map[bounding_id] = element;
-      bounding_id++;
-    }
-
-  processElement(element, context);
-  if (element->hasChildNodes() && parentTypes.count(element->localName()))
-    {
-      for (const auto &child : element->children())
-        {
-          renderHelper(child, context);
-        }
-    }
-  if (bounding_boxes && element->hasAttributes())
-    {
-      gr_end_grm_selection();
-    }
-  gr_restorestate();
-}
-
-static void initializeGridElements(const std::shared_ptr<GR::Element> &element, grm::Grid *grid)
-{
-  if (element->hasChildNodes())
-    {
-      for (const auto &child : element->children())
-        {
-          if (child->localName() != "layout-gridelement" && child->localName() != "layout-grid")
-            {
-              return;
-            }
-
-          double absHeight = static_cast<double>(child->getAttribute("absHeight"));
-          double absWidth = static_cast<double>(child->getAttribute("absWidth"));
-          int absHeightPxl = static_cast<int>(child->getAttribute("absHeightPxl"));
-          int absWidthPxl = static_cast<int>(child->getAttribute("absWidthPxl"));
-          int fitParentsHeight = static_cast<int>(child->getAttribute("fitParentsHeight"));
-          int fitParentsWidth = static_cast<int>(child->getAttribute("fitParentsWidth"));
-          double relativeHeight = static_cast<double>(child->getAttribute("relativeHeight"));
-          double relativeWidth = static_cast<double>(child->getAttribute("relativeWidth"));
-          double aspectRatio = static_cast<double>(child->getAttribute("aspectRatio"));
-          int rowStart = static_cast<int>(child->getAttribute("rowStart"));
-          int rowStop = static_cast<int>(child->getAttribute("rowStop"));
-          int colStart = static_cast<int>(child->getAttribute("colStart"));
-          int colStop = static_cast<int>(child->getAttribute("colStop"));
-          grm::Slice *slice = new grm::Slice(rowStart, rowStop, colStart, colStop);
-
-          if (child->localName() == "layout-gridelement")
-            {
-              grm::GridElement *curGridElement =
-                  new grm::GridElement(absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight,
-                                       fitParentsWidth, relativeHeight, relativeWidth, aspectRatio);
-              curGridElement->elementInDOM = child;
-              grid->setElement(slice, curGridElement);
-            }
-
-          if (child->localName() == "layout-grid")
-            {
-              int nrows = static_cast<int>(child->getAttribute("nrows"));
-              int ncols = static_cast<int>(child->getAttribute("ncols"));
-
-              grm::Grid *curGrid =
-                  new grm::Grid(nrows, ncols, absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight,
-                                fitParentsWidth, relativeHeight, relativeWidth, aspectRatio);
-              curGrid->elementInDOM = child;
-              grid->setElement(slice, curGrid);
-              initializeGridElements(child, curGrid);
-            }
-        }
-    }
-}
-
-static void finalizeGrid(const std::shared_ptr<GR::Element> &root)
-{
-  grm::Grid *rootGrid = nullptr;
-  if (root->hasChildNodes())
-    {
-      for (const auto &child : root->children())
-        {
-          if (child->localName() == "layout-grid")
-            {
-              int nrows = static_cast<int>(child->getAttribute("nrows"));
-              int ncols = static_cast<int>(child->getAttribute("ncols"));
-              rootGrid = new grm::Grid(nrows, ncols);
-              child->setAttribute("subplot", true);
-              child->setAttribute("subplot_xmin", 0);
-              child->setAttribute("subplot_xmax", 1);
-              child->setAttribute("subplot_ymin", 0);
-              child->setAttribute("subplot_ymax", 1);
-
-              initializeGridElements(child, rootGrid);
-              rootGrid->finalizeSubplot();
-              break;
-            }
-        }
-    }
-}
-
-void GR::Render::render(const std::shared_ptr<GR::Document> &document, const std::shared_ptr<GR::Context> &extContext)
-{
-  /*!
-   * static GR::Render::render receiving external document and context
-   *
-   * \param[in] document A GR::Document that will be rendered
-   * \param[in] extContext A GR::Context
-   */
-  auto root = document->firstChildElement();
-  if (root->hasChildNodes())
-    {
-      for (const auto &child : root->children())
-        {
-          gr_savestate();
-          ::renderHelper(child, extContext);
-          gr_restorestate();
-        }
-    }
-}
-
-
-void GR::Render::render(std::shared_ptr<GR::Document> const &document)
-{
-  /*!
-   * GR::Render::render that receives an external document but uses the GR::Render instance's context.
-   *
-   * \param[in] document A GR::Document that will be rendered
-   */
-  auto root = document->firstChildElement();
-  if (root->hasChildNodes())
-    {
-      for (const auto &child : root->children())
-        {
-          gr_savestate();
-          ::renderHelper(child, this->context);
-          gr_restorestate();
-        }
-    }
-}
-
-
-void GR::Render::render(const std::shared_ptr<GR::Context> &extContext)
-{
-  /*!
-   *GR::Render::render uses GR::Render instance's document and an external context
-   *
-   * \param[in] extContext A GR::Context
-   */
-  auto root = this->firstChildElement();
-  if (root->hasChildNodes())
-    {
-      for (const auto &child : root->children())
-        {
-          gr_savestate();
-          ::renderHelper(child, extContext);
-          gr_restorestate();
-        }
-    }
-}
-
-void GR::Render::render()
-{
-  /*!
-   * GR::Render::render uses both instance's document and context
-   */
-  auto root = this->firstChildElement();
-  global_root = root;
-  const unsigned int indent = 2;
-
-  bounding_id = 0;
-  global_render = (std::dynamic_pointer_cast<GR::Render>(root->ownerDocument()))
-                      ? std::dynamic_pointer_cast<GR::Render>(root->ownerDocument())
-                      : GR::Render::createRender();
-  std::cerr << toXML(root, GR::SerializerOptions{std::string(indent, ' ')}) << "\n";
-  renderHelper(root, this->context);
-  std::cerr << toXML(root, GR::SerializerOptions{std::string(indent, ' ')}) << "\n";
-}
-
-
-std::shared_ptr<GR::Render> GR::Render::createRender()
-{
-  /*!
-   * This function can be used to create a Render object
-   */
-  auto render = std::shared_ptr<Render>(new Render());
-  return render;
-}
-
-
-GR::Render::Render()
-{
-  /*!
-   * This is the constructor for GR::Render
-   */
-  this->context = std::shared_ptr<GR::Context>(new Context());
-}
-
-std::shared_ptr<GR::Context> GR::Render::getContext()
-{
-  return context;
-}
-
-/*
- * Searches in elementToTooltip for attributeName and returns a string vector
- * containing:
- * [0] The default value for this attribute
- * [1] The description for this attribute
- */
-std::vector<std::string> GR::Render::getDefaultAndTooltip(const std::shared_ptr<Element> &element,
-                                                          std::string attributeName)
-{
-  static std::unordered_map<std::string, std::map<std::string, std::vector<std::string>>> elementToTooltip{
-      {std::string("polyline"),
-       std::map<std::string, std::vector<std::string>>{
-           {std::string("linecolorind"),
-            std::vector<std::string>{"989", "Sets the linecolor according to the current colormap"}},
-           {std::string("x"), std::vector<std::string>{"None", "References the x-values stored in the context"}},
-           {std::string("y"), std::vector<std::string>{"None", "References the y-values stored in the context"}},
-           {std::string("x1"), std::vector<std::string>{"None", "The beginning x-coordinate"}},
-           {std::string("y1"), std::vector<std::string>{"None", "The beginning y-coordinate"}},
-           {std::string("x2"), std::vector<std::string>{"None", "The ending x-coordinate"}},
-           {std::string("y2"), std::vector<std::string>{"None", "The ending y-coordinate"}},
-       }},
-      {std::string("text"),
-       std::map<std::string, std::vector<std::string>>{
-           {std::string("x"), std::vector<std::string>{"None", "X-position of the text"}},
-           {std::string("y"), std::vector<std::string>{"None", "Y-position of the text"}},
-           {std::string("text"), std::vector<std::string>{"Title", "The text diplayed by this node"}},
-           {std::string("render_method"),
-            std::vector<std::string>{"gr_text", "Render method used to display the text"}},
-           {std::string("textalign"), std::vector<std::string>{"1", "Use alignment"}},
-           {std::string("textalign_horizontal"), std::vector<std::string>{"2", "Horizontal alignment method"}},
-           {std::string("textalign_vertical"), std::vector<std::string>{"1", "Horizontal alignment method"}},
-       }},
-      {std::string("grid"),
-       std::map<std::string, std::vector<std::string>>{
-           {std::string("x_tick"),
-            std::vector<std::string>{"1", "The interval between minor tick marks on the X-axis"}},
-           {std::string("y_tick"),
-            std::vector<std::string>{"1", "The interval between minor tick marks on the Y-axis"}},
-           {std::string("x_org"),
-            std::vector<std::string>{"0", "The world coordinates of the origin (point of intersection) of the X-axis"}},
-           {std::string("y_org"),
-            std::vector<std::string>{"0", "The world coordinates of the origin (point of intersection) of the Y-axis"}},
-           {std::string("major_x"),
-            std::vector<std::string>{"5", "Unitless integer values specifying the number of minor tick intervals "
-                                          "between major tick marks. Values of 0 or 1 imply no minor ticks. Negative "
-                                          "values specify no labels will be drawn for the X-axis"}},
-           {std::string("major_y"),
-            std::vector<std::string>{"5", "Unitless integer values specifying the number of minor tick intervals "
-                                          "between major tick marks. Values of 0 or 1 imply no minor ticks. Negative "
-                                          "values specify no labels will be drawn for the Y-axis"}},
-       }}};
-  if (elementToTooltip.count(element->localName()) &&
-      elementToTooltip[element->localName().c_str()].count(attributeName))
-    {
-      return elementToTooltip[element->localName().c_str()][attributeName];
-    }
-  else
-    {
-      return std::vector<std::string>{"", "No description found"};
-    }
 }
