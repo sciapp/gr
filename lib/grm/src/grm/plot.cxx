@@ -1408,11 +1408,14 @@ void plot_process_window(grm_args_t *subplot_args)
   group->setAttribute("lim_ymin", y_min);
   group->setAttribute("lim_ymax", y_max);
 
-  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
+  if (grm_args_values(subplot_args, "_zlim", "dd", &z_min, &z_max))
     {
-      grm_args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
       group->setAttribute("lim_zmin", z_min);
       group->setAttribute("lim_zmax", z_max);
+    }
+
+  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
+    {
       group->setAttribute("adjust_zlim", true);
       grm_args_values(subplot_args, "rotation", "d", &rotation);
       grm_args_values(subplot_args, "tilt", "d", &tilt);
@@ -3744,6 +3747,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
       gr_setlinecolorind(1);
+      currentDomElement = subGroup; /* so that the colorbar will be a child of the contourf_series */
       if ((error = plot_draw_colorbar(subplot_args, 0.0, num_levels)) != ERROR_NONE)
         {
           goto cleanup;
@@ -3829,6 +3833,9 @@ err_t plot_hexbin(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
 
+  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  group->setAttribute("name", "hexbin");
+
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
@@ -3839,15 +3846,19 @@ err_t plot_hexbin(grm_args_t *subplot_args)
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       grm_args_values(*current_series, "nbins", "i", &nbins);
-      cntmax = gr_hexbin(x_length, x, y, nbins);
-      // TODO: how to get cntmax with dom render? Dry Run gr_hexbin? Use hcell2xy?
 
-      /* TODO: return an error in the else case? */
-      if (cntmax > 0)
-        {
-          grm_args_push(subplot_args, "_zlim", "dd", 0.0, 1.0 * cntmax);
-          plot_draw_colorbar(subplot_args, 0.0, 256);
-        }
+      int id_int = static_cast<int>(global_root->getAttribute("id"));
+      global_root->setAttribute("id", ++id_int);
+      std::string id = std::to_string(id_int);
+
+      auto x_vec = std::vector<double>(x, x + x_length);
+      auto y_vec = std::vector<double>(y, y + y_length);
+      auto hexbin = global_render->createHexbin(x_length, "x" + id, x_vec, "y" + id, y_vec, nbins);
+      group->append(hexbin);
+
+      currentDomElement = hexbin; /* so that the colorbar will be a child of the hexbin_series */
+      plot_draw_colorbar(subplot_args, 0.0, 256);
+
       ++current_series;
     }
 
@@ -6681,80 +6692,29 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
   unsigned int i;
 
   std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
-  auto colorbar_group = global_render->createGroup("colorbar");
-  group->append(colorbar_group);
 
-  gr_savestate();
-  /* TODO: What to do, if there is a `_clim` and a `_zlim`? Merge both together? */
-  if (!grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max))
-    {
-      if (!grm_args_values(subplot_args, "_zlim", "dd", &c_min, &c_max))
-        {
-          return ERROR_PLOT_MISSING_DATA;
-        }
-    }
-  data = static_cast<int *>(malloc(colors * sizeof(int)));
-  if (data == nullptr)
-    {
-      debug_print_malloc_error();
-      return ERROR_MALLOC;
-    }
-  for (i = 0; i < colors; ++i)
-    {
-      data[i] = 1000 + (int)((255.0 * i) / (colors - 1) + 0.5);
-    }
-  gr_inqscale(&options);
+  auto colorbar = global_render->createColorbar(colors);
+  group->append(colorbar);
+
+  colorbar->setAttribute("flip", 1);
+  colorbar->setAttribute("xflip", 0);
+  colorbar->setAttribute("yflip", 0);
   if (grm_args_values(subplot_args, "xflip", "i", &flip) && flip)
     {
-      options = (options | GR_OPTION_FLIP_Y) & ~GR_OPTION_FLIP_X;
-      global_render->setScale(colorbar_group, options);
+      colorbar->setAttribute("xflip", flip);
     }
   else if (grm_args_values(subplot_args, "yflip", "i", &flip) && flip)
     {
-      options = options & ~GR_OPTION_FLIP_Y & ~GR_OPTION_FLIP_X;
-      global_render->setScale(colorbar_group, options);
+      colorbar->setAttribute("yflip", flip);
     }
-  else
-    {
-      options = options & ~GR_OPTION_FLIP_X;
-      global_render->setScale(colorbar_group, options);
-    }
-  global_render->setWindow(colorbar_group, 0.0, 1.0, c_min, c_max);
-  colorbar_group->setAttribute("offset", off + 0.02);
-  colorbar_group->setAttribute("width", 0.03);
-  colorbar_group->setAttribute("colorbar-position", true);
 
-  std::vector<int> data_vec = std::vector<int>(data, data + colors);
-  int id = (int)global_root->getAttribute("id");
-  std::string str = std::to_string(id);
-  global_root->setAttribute("id", id + 1);
+  colorbar->setAttribute("offset", off + 0.02);
+  colorbar->setAttribute("width", 0.03);
+  colorbar->setAttribute("colorbar-position", true);
 
-  auto cellArray =
-      global_render->createCellArray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, "data" + str, data_vec);
-  colorbar_group->append(cellArray);
-
-  colorbar_group->setAttribute("diag_factor", 0.016);
-  colorbar_group->setAttribute("max_charheight", 0.012);
-  colorbar_group->setAttribute("relative-charheight", true);
-  global_render->setLineColorInd(colorbar_group, 1);
-  grm_args_values(subplot_args, "scale", "i", &scale);
-  gr_setlinecolorind(1);
-  if (scale & GR_OPTION_Z_LOG)
-    {
-      global_render->setScale(colorbar_group, GR_OPTION_Y_LOG);
-      auto axes = global_render->createAxes(0, 2, 1, c_min, 0, 1, 1);
-      axes->setAttribute("tick_size", 0.005);
-      colorbar_group->append(axes);
-    }
-  else
-    {
-      double c_tick = auto_tick(c_min, c_max);
-      auto axes = global_render->createAxes(0, c_tick, 1, c_min, 0, 1, 1);
-      axes->setAttribute("tick_size", 0.005);
-      colorbar_group->append(axes);
-    }
-  free(data);
-  gr_restorestate();
+  colorbar->setAttribute("diag_factor", 0.016);
+  colorbar->setAttribute("max_charheight", 0.012);
+  colorbar->setAttribute("relative-charheight", true);
 
   return ERROR_NONE;
 }

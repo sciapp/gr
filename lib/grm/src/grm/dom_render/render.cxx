@@ -36,7 +36,8 @@ std::shared_ptr<GR::Render> global_render;
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {"group",           "layout-grid",     "layout-gridelement",
                                             "draw-legend",     "draw-polar-axes", "pie-plot-title-render",
-                                            "draw-pie-legend", "marginalheatmap", "root"};
+                                            "draw-pie-legend", "marginalheatmap", "root",
+                                            "hexbin",          "colorbar"};
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
@@ -936,6 +937,27 @@ void receiverfunction(int id, double x_min, double x_max, double y_min, double y
     }
 }
 
+static bool getLimitsForColorbar(const std::shared_ptr<GR::Element> &element, double &c_min, double &c_max)
+{
+  bool limits_found = true;
+  if (element->hasAttribute("lim_cmin") && element->hasAttribute("lim_cmax"))
+    {
+      c_min = static_cast<double>(element->getAttribute("lim_cmin"));
+      c_max = static_cast<double>(element->getAttribute("lim_cmax"));
+    }
+  else if (element->hasAttribute("lim_zmin") && element->hasAttribute("lim_zmax"))
+    {
+      c_min = static_cast<double>(element->getAttribute("lim_zmin"));
+      c_max = static_cast<double>(element->getAttribute("lim_zmax"));
+    }
+  else
+    {
+      limits_found = false;
+    }
+
+  return limits_found;
+}
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ attribute processing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static void processBorderColorInd(const std::shared_ptr<GR::Element> &elem)
@@ -1081,6 +1103,27 @@ static void processFillIntStyle(const std::shared_ptr<GR::Element> &elem)
 static void processFillStyle(const std::shared_ptr<GR::Element> &elem)
 {
   gr_setfillstyle(static_cast<int>(elem->getAttribute("fillstyle")));
+}
+
+static void processFlip(const std::shared_ptr<GR::Element> &elem)
+{
+  int options;
+  int xflip = static_cast<int>(elem->getAttribute("xflip"));
+  int yflip = static_cast<int>(elem->getAttribute("yflip"));
+  gr_inqscale(&options);
+
+  if (xflip)
+    {
+      options = (options | GR_OPTION_FLIP_Y) & ~GR_OPTION_FLIP_X;
+    }
+  else if (yflip)
+    {
+      options = options & ~GR_OPTION_FLIP_Y & ~GR_OPTION_FLIP_X;
+    }
+  else
+    {
+      options = options & ~GR_OPTION_FLIP_X;
+    }
 }
 
 static void processGROptionFlipX(const std::shared_ptr<GR::Element> &elem)
@@ -2195,6 +2238,7 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
       {std::string("fillcolorind"), processFillColorInd},
       {std::string("fillintstyle"), processFillIntStyle},
       {std::string("fillstyle"), processFillStyle},
+      {std::string("flip"), processFlip},
       {std::string("gr-option-flip-x"), processGROptionFlipX},
       {std::string("gr-option-flip-y"), processGROptionFlipY},
       {std::string("gr3backgroundcolor"), processGR3BackgroundColor},
@@ -2211,7 +2255,6 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
       {std::string("projectiontype"), processProjectionType},
       {std::string("relative-charheight"), processRelativeCharHeight},
       {std::string("resamplemethod"), processResampleMethod},
-      {std::string("scale"), processScale},
       {std::string("selntran"), processSelntran},
       {std::string("space"), processSpace},
       {std::string("space3d"), processSpace3d},
@@ -2247,6 +2290,7 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
       {std::string("limits"), GR::Render::processLimits},
       {std::string("window"), processWindow},
       {std::string("window3d"), processWindow3d}, /* needs to be set before space3d is processed */
+      {std::string("scale"), processScale},       /* needs to be set before flip is processed */
   };
 
   for (auto attributeToFunctionPair : attrStringToFuncPre)
@@ -2428,6 +2472,57 @@ static void cellArray(const std::shared_ptr<GR::Element> &element, const std::sh
 static void clearWS(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
 {
   gr_clearws();
+}
+
+static void colorbar(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+{
+  double c_min, c_max;
+  int data, i;
+  int options;
+  unsigned int colors = static_cast<int>(element->getAttribute("colors"));
+
+  if (!getLimitsForColorbar(element, c_min, c_max))
+    {
+      auto subplot_element = getSubplotElement(element);
+      if (!getLimitsForColorbar(subplot_element, c_min, c_max))
+        {
+          throw NotFoundError("Missing limits\n");
+        }
+    }
+
+  gr_setwindow(0.0, 1.0, c_min, c_max);
+
+  /* create cell array */
+  std::vector<int> data_vec;
+  for (i = 0; i < colors; ++i)
+    {
+      data = 1000 + (int)((255.0 * i) / (colors - 1) + 0.5);
+      data_vec.push_back(data);
+    }
+  int id = (int)global_root->getAttribute("id");
+  std::string str = std::to_string(id);
+  global_root->setAttribute("id", id + 1);
+
+  auto cellArray =
+      global_render->createCellArray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, "data" + str, data_vec);
+  element->append(cellArray);
+
+  /* create axes */
+  gr_inqscale(&options);
+  std::shared_ptr<GR::Element> axes;
+  if (options & GR_OPTION_Z_LOG)
+    {
+      axes = global_render->createAxes(0, 2, 1, c_min, 0, 1, 1);
+      global_render->setScale(axes, GR_OPTION_Y_LOG);
+    }
+  else
+    {
+      double c_tick = auto_tick(c_min, c_max);
+      axes = global_render->createAxes(0, c_tick, 1, c_min, 0, 1, 1);
+    }
+  axes->setAttribute("tick_size", 0.005);
+  global_render->setLineColorInd(axes, 1);
+  element->append(axes);
 }
 
 static void contour(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
@@ -3238,7 +3333,12 @@ static void hexbin(const std::shared_ptr<GR::Element> &element, const std::share
   double *x_p = &(GR::get<std::vector<double>>((*context)[x])[0]);
   double *y_p = &(GR::get<std::vector<double>>((*context)[y])[0]);
 
-  gr_hexbin(x_length, x_p, y_p, nbins);
+  int cntmax = gr_hexbin(x_length, x_p, y_p, nbins);
+  auto colorbar = element->querySelectors("colorbar");
+  double c_min = 0.0;
+  double c_max = cntmax;
+  colorbar->setAttribute("lim_cmin", c_min);
+  colorbar->setAttribute("lim_cmax", c_max);
 }
 
 static void isosurfaceRender(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
@@ -3795,6 +3895,7 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
           {std::string("axes3d"), axes3d},
           {std::string("cellarray"), cellArray},
           {std::string("clearws"), clearWS},
+          {std::string("colorbar"), colorbar},
           {std::string("contour"), contour},
           {std::string("contourf"), contourf},
           {std::string("draw-legend"), drawLegend},
@@ -4818,6 +4919,20 @@ std::shared_ptr<GR::Element> GR::Render::createHexbin(int x_length, const std::s
     {
       (*useContext)[y_key] = *y;
     }
+
+  return element;
+}
+
+std::shared_ptr<GR::Element> GR::Render::createColorbar(unsigned int colors,
+                                                        const std::shared_ptr<GR::Context> &extContext)
+{
+  /*!
+   * This function can be used to create a colorbar GR::Element
+   */
+  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+
+  auto element = createElement("colorbar");
+  element->setAttribute("colors", static_cast<int>(colors));
 
   return element;
 }

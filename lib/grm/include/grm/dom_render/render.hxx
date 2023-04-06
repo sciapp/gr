@@ -127,6 +127,8 @@ public:
                                         const std::string &y_key, std::optional<std::vector<double>> y, int nbins,
                                         const std::shared_ptr<Context> &extContext = nullptr);
 
+  std::shared_ptr<Element> createColorbar(unsigned int colors, const std::shared_ptr<Context> &extContext = nullptr);
+
   std::shared_ptr<Element> createNonUniformCellArray(const std::string &x_key, std::optional<std::vector<double>> x,
                                                      const std::string &y_key, std::optional<std::vector<double>> y,
                                                      int dimx, int dimy, int scol, int srow, int ncol, int nrow,
