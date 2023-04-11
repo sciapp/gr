@@ -8815,6 +8815,7 @@ int grm_plot(const grm_args_t *args)
       global_root = global_render->createElement("root");
       global_render->replaceChildren(global_root);
       global_root->setAttribute("id", 0);
+      currentDomElement = nullptr;
     }
 
   if (grm_args_values(active_plot_args, "raw", "s", &current_subplot_args))
