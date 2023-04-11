@@ -575,6 +575,9 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
               return;
             }
           amount_scrolled = 0;
+          // to remove title, xlabel and ylabel from axis Node
+          current_selection->get_ref()->parentElement()->removeAttribute(
+              (std::string)current_selection->get_ref()->getAttribute("name"));
           current_selection->get_ref()->remove();
           std::cerr << GR::toXML(grm_get_document_root()) << std::endl;
           mouse_move_selection = nullptr;

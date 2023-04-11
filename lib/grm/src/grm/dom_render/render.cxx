@@ -1997,17 +1997,23 @@ static void processTitle(const std::shared_ptr<GR::Element> &elem)
       double y = vp[3];
       std::string title = (std::string)elem->getAttribute("title");
 
+      if (title.empty()) return; // Empty title is pointless, no need to waste the space for nothing
       if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
         {
           auto new_title_elem = render->createText(x, y, title);
           new_title_elem->setAttribute("name", "title");
           render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-          auto title_elems = elem->querySelectorsAll("[name=\"title\"]");
-          for (auto &title_elem : title_elems)
+          auto title_elem = elem->querySelectors("[name=\"title\"]");
+          bool removed_elem = false;
+          if (title_elem && (std::string)title_elem->getAttribute("text") != title)
             {
               title_elem->remove();
+              removed_elem = true;
             }
-          elem->appendChild(new_title_elem);
+          if (removed_elem || !title_elem)
+            {
+              elem->appendChild(new_title_elem);
+            }
         }
     }
 }
@@ -2117,18 +2123,24 @@ static void processXlabel(const std::shared_ptr<GR::Element> &elem)
   double x = 0.5 * (viewport[0] + viewport[1]);
   double y = vp[2] + 0.5 * charheight;
   std::string x_label = (std::string)elem->getAttribute("xlabel");
+  if (x_label.empty()) return; // Empty xlabel is pointless, no need to waste the space for nothing
 
   if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
     {
       auto text = render->createText(x, y, x_label);
       text->setAttribute("name", "xlabel");
       render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
-      auto xlabel_elems = elem->querySelectorsAll("[name=\"xlabel\"]");
-      for (auto &xlabel_elem : xlabel_elems)
+      auto xlabel_elem = elem->querySelectors("[name=\"xlabel\"]");
+      bool removed_elem = false;
+      if (xlabel_elem && (std::string)xlabel_elem->getAttribute("text") != x_label)
         {
           xlabel_elem->remove();
+          removed_elem = true;
         }
-      elem->appendChild(text);
+      if (removed_elem || !xlabel_elem)
+        {
+          elem->appendChild(text);
+        }
     }
 }
 
@@ -2201,19 +2213,25 @@ static void processYlabel(const std::shared_ptr<GR::Element> &elem)
   double x = vp[0] + 0.5 * charheight;
   double y = 0.5 * (viewport[2] + viewport[3]);
   std::string y_label = (std::string)elem->getAttribute("ylabel");
+  if (y_label.empty()) return; // Empty ylabel is pointless, no need to waste the space for nothing
 
   if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
     {
       auto text = render->createText(x, y, y_label);
       text->setAttribute("name", "ylabel");
       render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-      auto ylabel_elems = elem->querySelectorsAll("[name=\"ylabel\"]");
-      for (auto &ylabel_elem : ylabel_elems)
+      auto ylabel_elem = elem->querySelectors("[name=\"ylabel\"]");
+      bool removed_elem = false;
+      if (ylabel_elem && (std::string)ylabel_elem->getAttribute("text") != y_label)
         {
           ylabel_elem->remove();
+          removed_elem = true;
         }
-      render->setCharUp(text, -1, 0);
-      elem->appendChild(text);
+      if (removed_elem || !ylabel_elem)
+        {
+          elem->appendChild(text);
+          render->setCharUp(text, -1, 0);
+        }
     }
 }
 
