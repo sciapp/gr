@@ -8811,6 +8811,7 @@ int grm_plot(const grm_args_t *args)
     }
   else
     {
+      global_render = GR::Render::createRender();
       global_root = global_render->createElement("root");
       global_render->replaceChildren(global_root);
       global_root->setAttribute("id", 0);
