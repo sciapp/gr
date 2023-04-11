@@ -6540,10 +6540,26 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
-      if (grm_args_values(args, "xlabel", "s", &x_label) || grm_args_values(args, "ylabel", "s", &y_label) ||
-          grm_args_values(args, "zlabel", "s", &z_label))
+      std::string xlabel, ylabel, zlabel;
+      bool title3d = false;
+      if (grm_args_values(args, "xlabel", "s", &x_label))
         {
-          group->append(global_render->createTitles3d(x_label, y_label, z_label));
+          xlabel = x_label;
+          title3d = true;
+        }
+      if (grm_args_values(args, "ylabel", "s", &y_label))
+        {
+          ylabel = y_label;
+          title3d = true;
+        }
+      if (grm_args_values(args, "zlabel", "s", &z_label))
+        {
+          zlabel = z_label;
+          title3d = true;
+        }
+      if (title3d)
+        {
+          group->append(global_render->createTitles3d(xlabel, ylabel, zlabel));
         }
     }
   else
