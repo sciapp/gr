@@ -3861,21 +3861,39 @@ static void volume(const std::shared_ptr<GR::Element> &element, const std::share
   int nx, ny, nz, algorithm;
   std::string dmin_key, dmax_key;
   double dmin, dmax;
+  double dlim[2];
 
   auto data = static_cast<std::string>(element->getAttribute("data"));
-  nx = (int)element->getAttribute("nx");
-  ny = (int)element->getAttribute("ny");
-  nz = (int)element->getAttribute("nz");
-  algorithm = (int)element->getAttribute("algorithm");
-  dmin_key = (std::string)element->getAttribute("dmin");
-  dmax_key = (std::string)element->getAttribute("dmax");
-
-  auto dmin_vec = GR::get<std::vector<double>>((*context)[dmin_key]);
-
+  nx = static_cast<int>(element->getAttribute("nx"));
+  ny = static_cast<int>(element->getAttribute("ny"));
+  nz = static_cast<int>(element->getAttribute("nz"));
+  algorithm = static_cast<int>(element->getAttribute("algorithm"));
+  dmin = static_cast<double>(element->getAttribute("dmin"));
+  dmax = static_cast<double>(element->getAttribute("dmax"));
 
   std::vector<double> data_vec = GR::get<std::vector<double>>((*context)[data]);
 
   gr_volume(nx, ny, nz, &(data_vec[0]), algorithm, &dmin, &dmax);
+
+  auto subplot_element = getSubplotElement(element);
+  if (subplot_element->hasAttribute("dlim_min") && subplot_element->hasAttribute("dlim_max"))
+    {
+      dlim[0] = static_cast<double>(subplot_element->getAttribute("dlim_min"));
+      dlim[1] = static_cast<double>(subplot_element->getAttribute("dlim_max"));
+      dlim[0] = grm_min(dlim[0], dmin);
+      dlim[1] = grm_max(dlim[1], dmax);
+    }
+  else
+    {
+      dlim[0] = dmin;
+      dlim[1] = dmax;
+    }
+  subplot_element->setAttribute("dlim_min", dlim[0]);
+  subplot_element->setAttribute("dlim_max", dlim[1]);
+
+  auto colorbar = subplot_element->querySelectors("colorbar");
+  colorbar->setAttribute("lim_cmin", dlim[0]);
+  colorbar->setAttribute("lim_cmax", dlim[1]);
 }
 
 static void processElement(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
@@ -4923,6 +4941,32 @@ std::shared_ptr<GR::Element> GR::Render::createHexbin(int x_length, const std::s
   return element;
 }
 
+std::shared_ptr<GR::Element> GR::Render::createVolume(int nx, int ny, int nz, const std::string &data_key,
+                                                      std::optional<std::vector<double>> data, int algorithm, int dmin,
+                                                      int dmax, const std::shared_ptr<Context> &extContext)
+{
+  /*!
+   * This function can be used to create a volume GR::Element
+   */
+  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+
+  auto element = createElement("volume");
+  element->setAttribute("nx", nx);
+  element->setAttribute("ny", ny);
+  element->setAttribute("nz", nz);
+  element->setAttribute("data", data_key);
+  element->setAttribute("algorithm", algorithm);
+  element->setAttribute("dmin", dmin);
+  element->setAttribute("dmax", dmax);
+
+  if (data != std::nullopt)
+    {
+      (*useContext)[data_key] = *data;
+    }
+
+  return element;
+}
+
 std::shared_ptr<GR::Element> GR::Render::createColorbar(unsigned int colors,
                                                         const std::shared_ptr<GR::Context> &extContext)
 {
@@ -5195,78 +5239,6 @@ GR::Render::createGR3Isosurface(int nx, int ny, int nz, const std::string &data_
     {
       (*useContext)[strides_key] = *strides;
     }
-
-  return element;
-}
-
-std::shared_ptr<GR::Element> GR::Render::createVolume(int nx, int ny, int nz, const std::string &data_key,
-                                                      std::optional<std::vector<double>> data, int algorithm,
-                                                      double dmin, double dmax,
-                                                      const std::shared_ptr<GR::Context> &extContext)
-{
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
-
-  auto element = createElement("volume");
-  element->setAttribute("data", data_key);
-  element->setAttribute("nx", nx);
-  element->setAttribute("ny", ny);
-  element->setAttribute("nz", nz);
-  element->setAttribute("algorithm", algorithm);
-  element->setAttribute("dmin", dmin);
-  element->setAttribute("dmax", dmax);
-
-
-  if (data != std::nullopt)
-    {
-      (*useContext)[data_key] = *data;
-    }
-
-
-  return element;
-}
-
-std::shared_ptr<GR::Element> GR::Render::createVolume(int nx, int ny, int nz, const std::string &data_key,
-                                                      std::optional<std::vector<double>> data, int algorithm,
-                                                      const std::string &dmin_key, double dmin,
-                                                      const std::string &dmax_key, double dmax,
-                                                      const std::shared_ptr<GR::Context> &extContext)
-{
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
-
-  auto element = createElement("volume");
-  element->setAttribute("data", data_key);
-  element->setAttribute("nx", nx);
-  element->setAttribute("ny", ny);
-  element->setAttribute("nz", nz);
-  element->setAttribute("algorithm", algorithm);
-  element->setAttribute("dmin", dmin_key);
-  element->setAttribute("dmax", dmax_key);
-
-
-  if (auto dmin_ptr = GR::get_if<std::vector<double>>((*useContext)[dmin_key]))
-    {
-      dmin_ptr->push_back(dmin);
-    }
-  else
-    {
-      std::vector<double> dmin_vec{dmin};
-      (*useContext)[dmin_key] = dmin_vec;
-    }
-  if (auto dmax_ptr = GR::get_if<std::vector<double>>((*useContext)[dmax_key]))
-    {
-      dmax_ptr->push_back(dmax);
-    }
-  else
-    {
-      std::vector<double> dmax_vec{dmax};
-      (*useContext)[dmax_key] = dmax_vec;
-    }
-
-  if (data != std::nullopt)
-    {
-      (*useContext)[data_key] = *data;
-    }
-
 
   return element;
 }

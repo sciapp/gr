@@ -127,6 +127,10 @@ public:
                                         const std::string &y_key, std::optional<std::vector<double>> y, int nbins,
                                         const std::shared_ptr<Context> &extContext = nullptr);
 
+  std::shared_ptr<Element> createVolume(int nx, int ny, int nz, const std::string &data_key,
+                                        std::optional<std::vector<double>> data, int algorithm, int dmin, int dmax,
+                                        const std::shared_ptr<Context> &extContext = nullptr);
+
   std::shared_ptr<Element> createColorbar(unsigned int colors, const std::shared_ptr<Context> &extContext = nullptr);
 
   std::shared_ptr<Element> createNonUniformCellArray(const std::string &x_key, std::optional<std::vector<double>> x,
@@ -174,15 +178,6 @@ public:
                       double isovalue, const std::string &color_key, std::optional<std::vector<double>> color,
                       const std::string &strides_key, std::optional<std::vector<int>> strides,
                       const std::shared_ptr<GR::Context> &extContext = nullptr);
-
-  std::shared_ptr<Element> createVolume(int nx, int ny, int nz, const std::string &data_key,
-                                        std::optional<std::vector<double>> data, int algorithm, double dmin,
-                                        double dmax, const std::shared_ptr<Context> &extContext = nullptr);
-
-  std::shared_ptr<Element> createVolume(int nx, int ny, int nz, const std::string &data_key,
-                                        std::optional<std::vector<double>> data, int algorithm,
-                                        const std::string &dmin_key, double dmin, const std::string &dmax_key,
-                                        double dmax, const std::shared_ptr<Context> &extContext = nullptr);
 
   std::shared_ptr<Element> createClearWS();
 

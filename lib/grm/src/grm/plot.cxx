@@ -4874,11 +4874,13 @@ err_t plot_isosurface(grm_args_t *subplot_args)
 
 err_t plot_volume(grm_args_t *subplot_args)
 {
-  // ToDo: make dom compatible, see todo below for problems
   grm_args_t **current_series;
   const char *kind;
   double dlim[2] = {INFINITY, -INFINITY};
   err_t error;
+
+  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  group->setAttribute("name", "volume");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
@@ -4937,17 +4939,14 @@ err_t plot_volume(grm_args_t *subplot_args)
       grm_args_values(*current_series, "dmin", "d", &dmin);
       grm_args_values(*current_series, "dmax", "d", &dmax);
 
-      gr_inqvpsize(&width, &height, &device_pixel_ratio);
-      gr_setpicturesizeforvolume((int)(width * device_pixel_ratio), (int)(height * device_pixel_ratio));
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      global_root->setAttribute("id", id + 1);
+      std::string str = std::to_string(id);
+      auto data_vec = std::vector<double>(c, c + data_length);
 
-
-      // TODO: In & out parameters dmin and dmax... Use Context to save dmin and dmax as vectors. The next loop should
-      // use a reference to these vectors and use the last dmin and dmax
-      // TODO: Question: what about dlim... Other functions use dlims from subplot_args...
-      gr_volume(shape[0], shape[1], shape[2], (double *)c, algorithm, &dmin, &dmax);
-
-      dlim[0] = grm_min(dlim[0], dmin);
-      dlim[1] = grm_max(dlim[1], dmax);
+      auto volume =
+          global_render->createVolume(shape[0], shape[1], shape[2], "data" + str, data_vec, algorithm, dmin, dmax);
+      group->append(volume);
 
       ++current_series;
     }
