@@ -1224,8 +1224,7 @@ if((Qt6Widgets_FOUND
       OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
       COMMAND
         ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h -o
-        ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
     )
     target_sources(
