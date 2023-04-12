@@ -6533,7 +6533,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         }
     }
 
-  if (grm_args_values(args, "title", "s", &title))
+  if (pass == 1 && grm_args_values(args, "title", "s", &title))
     {
       group->setAttribute("title", title);
     }
@@ -6557,7 +6557,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           zlabel = z_label;
           title3d = true;
         }
-      if (title3d)
+      if (pass == 2 && title3d)
         {
           group->append(global_render->createTitles3d(xlabel, ylabel, zlabel));
         }
