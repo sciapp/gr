@@ -12,10 +12,10 @@ class TreeWidget : public QTreeWidget
   Q_OBJECT
 public:
   explicit TreeWidget(QWidget *parent = nullptr);
-  void updateData(std::shared_ptr<GR::Element> ref);
+  void updateData(std::shared_ptr<GRM::Element> ref);
 
 protected:
-  void updateDataRecursion(std::shared_ptr<GR::Element> ref, QTreeWidgetItem *parent);
+  void updateDataRecursion(std::shared_ptr<GRM::Element> ref, QTreeWidgetItem *parent);
   QTreeWidgetItem *plotTree;
 };
 

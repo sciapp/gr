@@ -27,7 +27,7 @@ TreeWidget::TreeWidget(QWidget *parent) : QTreeWidget(parent)
 }
 
 
-void TreeWidget::updateData(std::shared_ptr<GR::Element> ref)
+void TreeWidget::updateData(std::shared_ptr<GRM::Element> ref)
 {
   this->clear();
   plotTree = new QTreeWidgetItem(this);
@@ -64,7 +64,7 @@ void TreeWidget::updateData(std::shared_ptr<GR::Element> ref)
           });
 }
 
-void TreeWidget::updateDataRecursion(std::shared_ptr<GR::Element> ref, QTreeWidgetItem *parent)
+void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, QTreeWidgetItem *parent)
 {
   bool skip = false;
   QTreeWidgetItem *item = new QTreeWidgetItem(parent);

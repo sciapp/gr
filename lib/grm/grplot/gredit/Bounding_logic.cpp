@@ -26,7 +26,7 @@ std::vector<Bounding_object> Bounding_logic::get_bounding_objects_at_point(int x
 
 
 void Bounding_logic::add_bounding_object(int id, double xmin, double xmax, double ymin, double ymax,
-                                         std::shared_ptr<GR::Element> ref)
+                                         std::shared_ptr<GRM::Element> ref)
 {
   bounding_objects.emplace_back(Bounding_object(id, xmin, xmax, ymin, ymax, std::move(ref)));
 }

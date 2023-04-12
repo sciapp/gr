@@ -1,12 +1,12 @@
-#ifndef GR_GRAPHICS_TREE_INTERFACE_UTIL_HXX
-#define GR_GRAPHICS_TREE_INTERFACE_UTIL_HXX
+#ifndef GRM_GRAPHICS_TREE_INTERFACE_UTIL_HXX
+#define GRM_GRAPHICS_TREE_INTERFACE_UTIL_HXX
 
 #include <string>
 #include <memory>
 #include <map>
 #include <vector>
 
-namespace GR
+namespace GRM
 {
 class Document;
 class Element;
@@ -26,15 +26,15 @@ std::string strip(const std::string &string);
 class Selector
 {
 public:
-  bool matchElement(const GR::Element &element,
-                    std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const;
+  bool matchElement(const GRM::Element &element,
+                    std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const;
 
 protected:
   virtual bool
-  doMatchElement(const GR::Element &element,
-                 std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const = 0;
+  doMatchElement(const GRM::Element &element,
+                 std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const = 0;
 };
-std::shared_ptr<GR::Selector> parseSelectors(const std::string &selectors);
-} // namespace GR
+std::shared_ptr<GRM::Selector> parseSelectors(const std::string &selectors);
+} // namespace GRM
 
 #endif

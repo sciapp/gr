@@ -69,7 +69,7 @@ public:
 
 
   friend class Grid;
-  std::shared_ptr<GR::Element> elementInDOM = nullptr;
+  std::shared_ptr<GRM::Element> elementInDOM = nullptr;
 };
 
 class Grid : public GridElement

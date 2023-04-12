@@ -30,8 +30,8 @@
 #include "grm/layout.hxx"
 #include "grm/plot_int.h"
 
-std::shared_ptr<GR::Element> global_root;
-std::shared_ptr<GR::Render> global_render;
+std::shared_ptr<GRM::Element> global_root;
+std::shared_ptr<GRM::Render> global_render;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {"group",           "layout-grid",     "layout-gridelement",
@@ -45,20 +45,20 @@ static std::map<std::string, double> symbol_to_meters_per_unit{
 };
 
 static int bounding_id = 0;
-static std::map<int, std::shared_ptr<GR::Element>> bounding_map;
+static std::map<int, std::shared_ptr<GRM::Element>> bounding_map;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static void markerHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context,
+static void markerHelper(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context,
                          const std::string &str)
 {
   /*!
    * Helperfunction for marker functions using vectors for marker parameters
    *
-   * \param[in] element The GR::Element that contains all marker attributes and data keys. If element's parent is a
+   * \param[in] element The GRM::Element that contains all marker attributes and data keys. If element's parent is a
    * group element it may fallback to its marker attributes
-   * \param[in] context The GR::Context that contains the actual data
-   * \param[in] str The std::string that specifies what GR Routine should be called (polymarker)
+   * \param[in] context The GRM::Context that contains the actual data
+   * \param[in] str The std::string that specifies what GRM Routine should be called (polymarker)
    *
    */
   std::vector<int> type, colorind;
@@ -71,42 +71,42 @@ static void markerHelper(const std::shared_ptr<GR::Element> &element, const std:
   auto attr = element->getAttribute("markertypes");
   if (attr.isString())
     {
-      type = GR::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
+      type = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
     }
   else if (group)
     {
       attr = parent->getAttribute("markertypes");
       if (attr.isString())
         {
-          type = GR::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
+          type = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
         }
     }
 
   attr = element->getAttribute("markercolorinds");
   if (attr.isString())
     {
-      colorind = GR::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
+      colorind = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
     }
   else if (group)
     {
       attr = parent->getAttribute("markercolorinds");
       if (attr.isString())
         {
-          colorind = GR::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
+          colorind = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
         }
     }
 
   attr = element->getAttribute("markersizes");
   if (attr.isString())
     {
-      size = GR::get<std::vector<double>>((*context)[static_cast<std::string>(attr)]);
+      size = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(attr)]);
     }
   else if (group)
     {
       attr = parent->getAttribute("markersizes");
       if (attr.isString())
         {
-          size = GR::get<std::vector<double>>((*context)[static_cast<std::string>(attr)]);
+          size = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(attr)]);
         }
     }
 
@@ -118,10 +118,10 @@ static void markerHelper(const std::shared_ptr<GR::Element> &element, const std:
       z = static_cast<std::string>(element->getAttribute("z"));
     }
 
-  std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
-  std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
+  std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
   std::vector<double> z_vec;
-  if (auto z_ptr = GR::get_if<std::vector<double>>((*context)[z]))
+  if (auto z_ptr = GRM::get_if<std::vector<double>>((*context)[z]))
     {
       z_vec = *z_ptr;
     }
@@ -185,15 +185,15 @@ static void markerHelper(const std::shared_ptr<GR::Element> &element, const std:
     }
 }
 
-static void lineHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context,
+static void lineHelper(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context,
                        const std::string &str)
 {
   /*!
    * Helperfunction for line functions using vectors for line parameters
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
-   * \param[in] str The std::string that specifies what GR Routine should be called (polyline)
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   * \param[in] str The std::string that specifies what GRM Routine should be called (polyline)
    *
    *
    */
@@ -206,42 +206,42 @@ static void lineHelper(const std::shared_ptr<GR::Element> &element, const std::s
   auto attr = element->getAttribute("linetypes");
   if (attr.isString())
     {
-      type = GR::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
+      type = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
     }
   else if (group)
     {
       attr = parent->getAttribute("linetypes");
       if (attr.isString())
         {
-          type = GR::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
+          type = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
         }
     }
 
   attr = element->getAttribute("linecolorinds");
   if (attr.isString())
     {
-      colorind = GR::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
+      colorind = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
     }
   else if (group)
     {
       attr = parent->getAttribute("linecolorinds");
       if (attr.isString())
         {
-          colorind = GR::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
+          colorind = GRM::get<std::vector<int>>((*context)[static_cast<std::string>(attr)]);
         }
     }
 
   attr = element->getAttribute("linewidths");
   if (attr.isString())
     {
-      width = GR::get<std::vector<double>>((*context)[static_cast<std::string>(attr)]);
+      width = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(attr)]);
     }
   else if (group)
     {
       attr = parent->getAttribute("linewidths");
       if (attr.isString())
         {
-          width = GR::get<std::vector<double>>((*context)[static_cast<std::string>(attr)]);
+          width = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(attr)]);
         }
     }
 
@@ -253,11 +253,11 @@ static void lineHelper(const std::shared_ptr<GR::Element> &element, const std::s
       z = static_cast<std::string>(element->getAttribute("z"));
     }
 
-  std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
-  std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
+  std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
   std::vector<double> z_vec;
 
-  if (auto z_ptr = GR::get_if<std::vector<double>>((*context)[z]))
+  if (auto z_ptr = GRM::get_if<std::vector<double>>((*context)[z]))
     {
       z_vec = *z_ptr;
     }
@@ -309,7 +309,7 @@ static void lineHelper(const std::shared_ptr<GR::Element> &element, const std::s
     }
 }
 
-static std::shared_ptr<GR::Element> getSubplotElement(const std::shared_ptr<GR::Element> &element)
+static std::shared_ptr<GRM::Element> getSubplotElement(const std::shared_ptr<GRM::Element> &element)
 {
   auto ancestor = element;
 
@@ -329,7 +329,7 @@ static std::shared_ptr<GR::Element> getSubplotElement(const std::shared_ptr<GR::
   return nullptr;
 }
 
-static void getTickSize(const std::shared_ptr<GR::Element> &element, double &tick_size)
+static void getTickSize(const std::shared_ptr<GRM::Element> &element, double &tick_size)
 {
   if (element->hasAttribute("tick_size"))
     {
@@ -351,7 +351,7 @@ static void getTickSize(const std::shared_ptr<GR::Element> &element, double &tic
     }
 }
 
-static void getMajorCount(const std::shared_ptr<GR::Element> &element, const std::string kind, int &major_count)
+static void getMajorCount(const std::shared_ptr<GRM::Element> &element, const std::string kind, int &major_count)
 {
   if (element->hasAttribute("major"))
     {
@@ -370,7 +370,7 @@ static void getMajorCount(const std::shared_ptr<GR::Element> &element, const std
     }
 }
 
-static void getAxesInformation(const std::shared_ptr<GR::Element> &element, std::string x_org_pos,
+static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std::string x_org_pos,
                                std::string y_org_pos, double &x_org, double &y_org, int &x_major, int &y_major,
                                double &x_tick, double &y_tick)
 {
@@ -544,7 +544,7 @@ static void getAxesInformation(const std::shared_ptr<GR::Element> &element, std:
     }
 }
 
-static void getAxes3dInformation(const std::shared_ptr<GR::Element> &element, std::string x_org_pos,
+static void getAxes3dInformation(const std::shared_ptr<GRM::Element> &element, std::string x_org_pos,
                                  std::string y_org_pos, std::string z_org_pos, double &x_org, double &y_org,
                                  double &z_org, int &x_major, int &y_major, int &z_major, double &x_tick,
                                  double &y_tick, double &z_tick)
@@ -643,7 +643,7 @@ static void getAxes3dInformation(const std::shared_ptr<GR::Element> &element, st
  * \param[in] available_width The available space in X direction around the starting position.
  */
 void draw_xticklabel(double x1, double x2, const char *label, double available_width,
-                     const std::shared_ptr<GR::Element> &element, std::shared_ptr<GR::Render> global_render)
+                     const std::shared_ptr<GRM::Element> &element, std::shared_ptr<GRM::Render> global_render)
 {
   char new_label[256];
   int breakpoint_positions[128];
@@ -709,7 +709,7 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
   element->append(global_render->createText(x1, x2, std::string(new_label + cur_start)));
 }
 
-static void legend_size(const std::shared_ptr<GR::Element> &elem, double *w, double *h)
+static void legend_size(const std::shared_ptr<GRM::Element> &elem, double *w, double *h)
 {
   double tbx[4], tby[4];
   int labelsExist = 1;
@@ -718,11 +718,11 @@ static void legend_size(const std::shared_ptr<GR::Element> &elem, double *w, dou
   *w = 0;
   *h = 0;
 
-  if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+  if (auto render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument()))
     {
       auto context = render->getContext();
       std::string key = static_cast<std::string>(elem->getAttribute("labels"));
-      labels = GR::get<std::vector<std::string>>((*context)[key]);
+      labels = GRM::get<std::vector<std::string>>((*context)[key]);
     }
   if (labelsExist)
     {
@@ -746,7 +746,7 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
   std::string size_unit, size_type;
   std::string vars[2] = {"x", "y"};
 
-  std::shared_ptr<GR::Element> root = global_root;
+  std::shared_ptr<GRM::Element> root = global_root;
 
 
 #ifdef __EMSCRIPTEN__
@@ -858,7 +858,7 @@ static void legend_size(std::vector<std::string> labels, double *w, double *h)
 }
 
 static void setNextColor(gr_color_type_t color_type, std::vector<int> &color_indices,
-                         std::vector<double> &color_rgb_values, const std::shared_ptr<GR::Element> &elem)
+                         std::vector<double> &color_rgb_values, const std::shared_ptr<GRM::Element> &elem)
 {
   const static std::vector<int> fallback_color_indices{989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
                                                        991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
@@ -937,7 +937,7 @@ void receiverfunction(int id, double x_min, double x_max, double y_min, double y
     }
 }
 
-static bool getLimitsForColorbar(const std::shared_ptr<GR::Element> &element, double &c_min, double &c_max)
+static bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, double &c_min, double &c_max)
 {
   bool limits_found = true;
   if (element->hasAttribute("lim_cmin") && element->hasAttribute("lim_cmax"))
@@ -960,12 +960,12 @@ static bool getLimitsForColorbar(const std::shared_ptr<GR::Element> &element, do
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ attribute processing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static void processBorderColorInd(const std::shared_ptr<GR::Element> &elem)
+static void processBorderColorInd(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setbordercolorind(static_cast<int>(elem->getAttribute("bordercolorind")));
 }
 
-static void processCalcWindowAndViewportFromParent(const std::shared_ptr<GR::Element> &elem)
+static void processCalcWindowAndViewportFromParent(const std::shared_ptr<GRM::Element> &elem)
 {
   std::string kind = static_cast<std::string>(elem->getAttribute("kind"));
   double viewport[4];
@@ -1013,33 +1013,33 @@ static void processCalcWindowAndViewportFromParent(const std::shared_ptr<GR::Ele
     }
 }
 
-static void processCharExpan(const std::shared_ptr<GR::Element> &elem)
+static void processCharExpan(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setcharexpan(static_cast<double>(elem->getAttribute("charexpan")));
 }
 
-static void processCharHeight(const std::shared_ptr<GR::Element> &elem)
+static void processCharHeight(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setcharheight(static_cast<double>(elem->getAttribute("charheight")));
 }
 
-static void processCharSpace(const std::shared_ptr<GR::Element> &elem)
+static void processCharSpace(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setcharspace(static_cast<double>(elem->getAttribute("charspace")));
 }
 
-static void processCharUp(const std::shared_ptr<GR::Element> &elem)
+static void processCharUp(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setcharup(static_cast<double>(elem->getAttribute("charup_ux")),
                static_cast<double>(elem->getAttribute("charup_uy")));
 }
 
-static void processClipXForm(const std::shared_ptr<GR::Element> &elem)
+static void processClipXForm(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_selectclipxform(static_cast<double>(elem->getAttribute("clipxform")));
 }
 
-static void processColorbarPosition(const std::shared_ptr<GR::Element> &elem)
+static void processColorbarPosition(const std::shared_ptr<GRM::Element> &elem)
 {
   double viewport[4];
 
@@ -1061,7 +1061,7 @@ static void processColorbarPosition(const std::shared_ptr<GR::Element> &elem)
   gr_setviewport(viewport[1] + offset, viewport[1] + offset + width, viewport[2], viewport[3]);
 }
 
-static void processColorRep(const std::shared_ptr<GR::Element> &elem)
+static void processColorRep(const std::shared_ptr<GRM::Element> &elem)
 {
   int index, hex_int;
   double red, green, blue;
@@ -1090,22 +1090,22 @@ static void processColorRep(const std::shared_ptr<GR::Element> &elem)
   gr_setcolorrep(index, red, green, blue);
 }
 
-static void processFillColorInd(const std::shared_ptr<GR::Element> &elem)
+static void processFillColorInd(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setfillcolorind(static_cast<int>(elem->getAttribute("fillcolorind")));
 }
 
-static void processFillIntStyle(const std::shared_ptr<GR::Element> &elem)
+static void processFillIntStyle(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setfillintstyle(static_cast<int>(elem->getAttribute("fillintstyle")));
 }
 
-static void processFillStyle(const std::shared_ptr<GR::Element> &elem)
+static void processFillStyle(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setfillstyle(static_cast<int>(elem->getAttribute("fillstyle")));
 }
 
-static void processFlip(const std::shared_ptr<GR::Element> &elem)
+static void processFlip(const std::shared_ptr<GRM::Element> &elem)
 {
   int options;
   int xflip = static_cast<int>(elem->getAttribute("xflip"));
@@ -1126,7 +1126,7 @@ static void processFlip(const std::shared_ptr<GR::Element> &elem)
     }
 }
 
-static void processGROptionFlipX(const std::shared_ptr<GR::Element> &elem)
+static void processGROptionFlipX(const std::shared_ptr<GRM::Element> &elem)
 {
   int options;
   int flip_x = static_cast<int>(elem->getAttribute("gr-option-flip-x"));
@@ -1142,7 +1142,7 @@ static void processGROptionFlipX(const std::shared_ptr<GR::Element> &elem)
     }
 }
 
-static void processGROptionFlipY(const std::shared_ptr<GR::Element> &elem)
+static void processGROptionFlipY(const std::shared_ptr<GRM::Element> &elem)
 {
   int options;
   int flip_y = static_cast<int>(elem->getAttribute("gr-option-flip-y"));
@@ -1158,7 +1158,7 @@ static void processGROptionFlipY(const std::shared_ptr<GR::Element> &elem)
     }
 }
 
-static void processGR3BackgroundColor(const std::shared_ptr<GR::Element> &elem)
+static void processGR3BackgroundColor(const std::shared_ptr<GRM::Element> &elem)
 {
   double r, g, b, a;
   r = (double)elem->getAttribute("gr3backgroundcolor_red");
@@ -1169,7 +1169,7 @@ static void processGR3BackgroundColor(const std::shared_ptr<GR::Element> &elem)
   gr3_setbackgroundcolor(r, g, b, a);
 }
 
-static void processGR3CameraLookAt(const std::shared_ptr<GR::Element> &elem)
+static void processGR3CameraLookAt(const std::shared_ptr<GRM::Element> &elem)
 {
   double camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z;
 
@@ -1186,7 +1186,7 @@ static void processGR3CameraLookAt(const std::shared_ptr<GR::Element> &elem)
   gr3_cameralookat(camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z);
 }
 
-static void processImshowInformation(const std::shared_ptr<GR::Element> &elem)
+static void processImshowInformation(const std::shared_ptr<GRM::Element> &elem)
 {
   double x_min, x_max, y_min, y_max;
   double vp[4];
@@ -1194,11 +1194,11 @@ static void processImshowInformation(const std::shared_ptr<GR::Element> &elem)
   int cols = static_cast<int>(elem->getAttribute("cols"));
   int rows = static_cast<int>(elem->getAttribute("rows"));
   std::string image_data_key = static_cast<std::string>(elem->getAttribute("image_data_key"));
-  std::shared_ptr<GR::Element> ancestor = elem->parentElement();
+  std::shared_ptr<GRM::Element> ancestor = elem->parentElement();
   bool vp_found = false;
   int grplot;
 
-  // Get vp from ancestor GR::element, usually the q"plot-group"
+  // Get vp from ancestor GRM::element, usually the q"plot-group"
   while (ancestor->localName() != "root")
     {
       if (ancestor->hasAttribute("vp"))
@@ -1265,17 +1265,17 @@ static void processImshowInformation(const std::shared_ptr<GR::Element> &elem)
   elem->append(temp);
 }
 
-static void processKind(const std::shared_ptr<GR::Element> &elem)
+static void processKind(const std::shared_ptr<GRM::Element> &elem)
 {
   std::string kind = static_cast<std::string>(elem->getAttribute("kind"));
   if (kind == "line")
     {
       if (elem->hasAttribute("marginalheatmap"))
         {
-          std::shared_ptr<GR::Context> context;
-          std::shared_ptr<GR::Render> render;
+          std::shared_ptr<GRM::Context> context;
+          std::shared_ptr<GRM::Render> render;
 
-          render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
+          render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument());
           if (!render)
             {
               throw NotFoundError("Render-document not found for element\n");
@@ -1304,13 +1304,13 @@ static void processKind(const std::shared_ptr<GR::Element> &elem)
               int i;
               double y_max = 0;
               std::vector<double> plot =
-                  GR::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("plot"))]);
+                  GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("plot"))]);
               std::vector<double> y =
-                  GR::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("y"))]);
+                  GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("y"))]);
               std::vector<double> xi =
-                  GR::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("xi"))]);
+                  GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("xi"))]);
               std::vector<double> x =
-                  GR::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("x"))]);
+                  GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("x"))]);
 
               int y_length = y.size();
               int x_length = xi.size();
@@ -1366,7 +1366,7 @@ static void processKind(const std::shared_ptr<GR::Element> &elem)
               global_root->setAttribute("id", id + 1);
               auto id_str = std::to_string(id);
 
-              std::shared_ptr<GR::Element> line_elem, marker_elem;
+              std::shared_ptr<GRM::Element> line_elem, marker_elem;
 
               if (is_vertical)
                 {
@@ -1410,8 +1410,8 @@ static void processKind(const std::shared_ptr<GR::Element> &elem)
           bool is_horizontal = static_cast<std::string>(elem->getAttribute("orientation")) == "horizontal";
           for (auto &childSeries : elem->children()) // iterate over all hist series
             {
-              std::vector<std::shared_ptr<GR::Element>> groups = childSeries->children();
-              std::vector<std::shared_ptr<GR::Element>> bars;
+              std::vector<std::shared_ptr<GRM::Element>> groups = childSeries->children();
+              std::vector<std::shared_ptr<GRM::Element>> bars;
 
               if (groups.size() == 2)
                 {
@@ -1437,12 +1437,12 @@ static void processKind(const std::shared_ptr<GR::Element> &elem)
     }
 }
 
-void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
+void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &elem)
 {
   /*!
    * processing function for gr_window
    *
-   * \param[in] element The GR::Element that contains the attributes
+   * \param[in] element The GRM::Element that contains the attributes
    */
   int adjust_xlim, adjust_ylim;
   std::string kind = static_cast<std::string>(elem->getAttribute("kind"));
@@ -1506,7 +1506,7 @@ void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
       double xzoom = static_cast<double>(panzoom_element->getAttribute("xzoom"));
       double yzoom = static_cast<double>(panzoom_element->getAttribute("yzoom"));
 
-      /* Ensure the correct window is set in GR */
+      /* Ensure the correct window is set in GRM */
       if (elem->hasAttribute("window") && static_cast<int>(elem->getAttribute("window")))
         {
           double stored_window_xmin = static_cast<double>(elem->getAttribute("window_xmin"));
@@ -1588,48 +1588,48 @@ void GR::Render::processLimits(const std::shared_ptr<GR::Element> &elem)
     }
 }
 
-static void processLineColorInd(const std::shared_ptr<GR::Element> &elem)
+static void processLineColorInd(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setlinecolorind(static_cast<int>(elem->getAttribute("linecolorind")));
 }
 
-static void processLineSpec(const std::shared_ptr<GR::Element> &elem)
+static void processLineSpec(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_uselinespec((static_cast<std::string>(elem->getAttribute("linespec"))).data());
 }
 
-static void processLineType(const std::shared_ptr<GR::Element> &elem)
+static void processLineType(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setlinetype(static_cast<int>(elem->getAttribute("linetype")));
 }
 
-static void processLineWidth(const std::shared_ptr<GR::Element> &elem)
+static void processLineWidth(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setlinewidth(static_cast<double>(elem->getAttribute("linewidth")));
 }
 
-static void processMarkerColorInd(const std::shared_ptr<GR::Element> &elem)
+static void processMarkerColorInd(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setmarkercolorind(static_cast<int>(elem->getAttribute("markercolorind")));
 }
 
-static void processMarkerSize(const std::shared_ptr<GR::Element> &elem)
+static void processMarkerSize(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setmarkersize(static_cast<double>(elem->getAttribute("markersize")));
 }
 
-static void processMarkerType(const std::shared_ptr<GR::Element> &elem)
+static void processMarkerType(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setmarkertype(static_cast<int>(elem->getAttribute("markertype")));
 }
 
-static void processProjectionType(const std::shared_ptr<GR::Element> &elem)
+static void processProjectionType(const std::shared_ptr<GRM::Element> &elem)
 {
   int type = (int)elem->getAttribute("projectiontype");
   gr_setprojectiontype(type);
 }
 
-static void processRelativeCharHeight(const std::shared_ptr<GR::Element> &elem)
+static void processRelativeCharHeight(const std::shared_ptr<GRM::Element> &elem)
 {
   double viewport[4];
   auto subplot_element = getSubplotElement(elem);
@@ -1654,22 +1654,22 @@ static void processRelativeCharHeight(const std::shared_ptr<GR::Element> &elem)
   gr_setcharheight(charheight);
 }
 
-static void processResampleMethod(const std::shared_ptr<GR::Element> &elem)
+static void processResampleMethod(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setresamplemethod(static_cast<int>(elem->getAttribute("resamplemethod")));
 }
 
-static void processScale(const std::shared_ptr<GR::Element> &elem)
+static void processScale(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setscale(static_cast<int>(elem->getAttribute("scale")));
 }
 
-static void processSelntran(const std::shared_ptr<GR::Element> &elem)
+static void processSelntran(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_selntran(static_cast<int>(elem->getAttribute("selntran")));
 }
 
-static void processSpace(const std::shared_ptr<GR::Element> &elem)
+static void processSpace(const std::shared_ptr<GRM::Element> &elem)
 {
   double zmin, zmax;
   int rotation, tilt;
@@ -1681,7 +1681,7 @@ static void processSpace(const std::shared_ptr<GR::Element> &elem)
   gr_setspace(zmin, zmax, rotation, tilt);
 }
 
-static void processSpace3d(const std::shared_ptr<GR::Element> &elem)
+static void processSpace3d(const std::shared_ptr<GRM::Element> &elem)
 {
   double phi, theta, fov, camera_distance;
   phi = (double)elem->getAttribute("space3d_phi");
@@ -1692,12 +1692,12 @@ static void processSpace3d(const std::shared_ptr<GR::Element> &elem)
   gr_setspace3d(phi, theta, fov, camera_distance);
 }
 
-static void processSubplot(const std::shared_ptr<GR::Element> &elem)
+static void processSubplot(const std::shared_ptr<GRM::Element> &elem)
 {
   /*!
    * processing function for the subplot
    *
-   * \param[in] element The GR::Element that contains the attributes
+   * \param[in] element The GRM::Element that contains the attributes
    */
   int y_label_margin, x_label_margin, title_margin;
   std::string kind;
@@ -1823,7 +1823,7 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
     {
       double w, h;
       int location;
-      GR::Value locationValue = elem->getAttribute("location");
+      GRM::Value locationValue = elem->getAttribute("location");
 
       if (!locationValue.isUndefined())
         {
@@ -1886,19 +1886,19 @@ static void processSubplot(const std::shared_ptr<GR::Element> &elem)
   elem->setAttribute("vp_ymax", vp[3]);
 }
 
-static void processTextAlign(const std::shared_ptr<GR::Element> &elem)
+static void processTextAlign(const std::shared_ptr<GRM::Element> &elem)
 {
 
   gr_settextalign(static_cast<int>(elem->getAttribute("textalign_horizontal")),
                   static_cast<int>(elem->getAttribute("textalign_vertical")));
 }
 
-static void processTextColorForBackground(const std::shared_ptr<GR::Element> &elem)
+static void processTextColorForBackground(const std::shared_ptr<GRM::Element> &elem)
 /*  The set_text_volor_for_background function used in plot.cxx now as an attribute function
     It is now possible to inquire colors during runtime -> No colors are given as parameters
     The new color is set on `elem`
     There are no params apart from elem
-    \param[in] elem The GR::Element the color should be set in. Also contains other attributes which may function as
+    \param[in] elem The GRM::Element the color should be set in. Also contains other attributes which may function as
  parameters
 
     Attributes as Parameters (with prefix "stcfb-"):
@@ -1919,9 +1919,9 @@ static void processTextColorForBackground(const std::shared_ptr<GR::Element> &el
     {
       double r, g, b;
       double color_lightness;
-      std::shared_ptr<GR::Render> render;
+      std::shared_ptr<GRM::Render> render;
 
-      render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
+      render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument());
       if (!render)
         {
           throw NotFoundError("Render-document not found for element\n");
@@ -1952,31 +1952,31 @@ static void processTextColorForBackground(const std::shared_ptr<GR::Element> &el
     }
 }
 
-static void processTextColorInd(const std::shared_ptr<GR::Element> &elem)
+static void processTextColorInd(const std::shared_ptr<GRM::Element> &elem)
 {
 
   gr_settextcolorind(static_cast<int>(elem->getAttribute("textcolorind")));
 }
 
-static void processTextEncoding(const std::shared_ptr<GR::Element> &elem)
+static void processTextEncoding(const std::shared_ptr<GRM::Element> &elem)
 {
 
   gr_settextencoding(static_cast<int>(elem->getAttribute("textencoding")));
 }
 
-static void processTextFontPrec(const std::shared_ptr<GR::Element> &elem)
+static void processTextFontPrec(const std::shared_ptr<GRM::Element> &elem)
 {
 
   gr_settextfontprec(static_cast<int>(elem->getAttribute("textfontprec_font")),
                      static_cast<int>(elem->getAttribute("textfontprec_prec")));
 }
 
-static void processTextPath(const std::shared_ptr<GR::Element> &elem)
+static void processTextPath(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_settextpath(static_cast<int>(elem->getAttribute("textpath")));
 }
 
-static void processTitle(const std::shared_ptr<GR::Element> &elem)
+static void processTitle(const std::shared_ptr<GRM::Element> &elem)
 {
   double viewport[4], vp[4];
 
@@ -1998,7 +1998,7 @@ static void processTitle(const std::shared_ptr<GR::Element> &elem)
       std::string title = (std::string)elem->getAttribute("title");
 
       if (title.empty()) return; // Empty title is pointless, no need to waste the space for nothing
-      if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+      if (auto render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument()))
         {
           auto new_title_elem = render->createText(x, y, title);
           new_title_elem->setAttribute("name", "title");
@@ -2018,12 +2018,12 @@ static void processTitle(const std::shared_ptr<GR::Element> &elem)
     }
 }
 
-static void processTransparency(const std::shared_ptr<GR::Element> &elem)
+static void processTransparency(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_settransparency(static_cast<double>(elem->getAttribute("transparency")));
 }
 
-static void processWindow(const std::shared_ptr<GR::Element> &elem)
+static void processWindow(const std::shared_ptr<GRM::Element> &elem)
 {
   double xmin = static_cast<double>(elem->getAttribute("window_xmin"));
   double xmax = static_cast<double>(elem->getAttribute("window_xmax"));
@@ -2033,7 +2033,7 @@ static void processWindow(const std::shared_ptr<GR::Element> &elem)
   gr_setwindow(xmin, xmax, ymin, ymax);
 }
 
-static void processWindow3d(const std::shared_ptr<GR::Element> &elem)
+static void processWindow3d(const std::shared_ptr<GRM::Element> &elem)
 {
   double xmin = static_cast<double>(elem->getAttribute("window_xmin"));
   double xmax = static_cast<double>(elem->getAttribute("window_xmax"));
@@ -2045,12 +2045,12 @@ static void processWindow3d(const std::shared_ptr<GR::Element> &elem)
   gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
 }
 
-static void processWSViewport(const std::shared_ptr<GR::Element> &elem)
+static void processWSViewport(const std::shared_ptr<GRM::Element> &elem)
 {
   /*!
    * processing function for gr_wsviewport
    *
-   * \param[in] element The GR::Element that contains the attributes
+   * \param[in] element The GRM::Element that contains the attributes
    */
   double wsviewport[4];
   wsviewport[0] = (double)elem->getAttribute("wsviewport_xmin");
@@ -2061,7 +2061,7 @@ static void processWSViewport(const std::shared_ptr<GR::Element> &elem)
   gr_setwsviewport(wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
 }
 
-static void processWSWindow(const std::shared_ptr<GR::Element> &elem)
+static void processWSWindow(const std::shared_ptr<GRM::Element> &elem)
 {
   double wswindow[4];
   double xmin = static_cast<double>(elem->getAttribute("wswindow_xmin"));
@@ -2072,12 +2072,12 @@ static void processWSWindow(const std::shared_ptr<GR::Element> &elem)
   gr_setwswindow(xmin, xmax, ymin, ymax);
 }
 
-void GR::Render::processViewport(const std::shared_ptr<GR::Element> &elem)
+void GRM::Render::processViewport(const std::shared_ptr<GRM::Element> &elem)
 {
   /*!
    * processing function for gr_viewport
    *
-   * \param[in] element The GR::Element that contains the attributes
+   * \param[in] element The GRM::Element that contains the attributes
    */
   double viewport[4];
   double diag;
@@ -2104,7 +2104,7 @@ void GR::Render::processViewport(const std::shared_ptr<GR::Element> &elem)
   gr_setcharheight(charheight);
 }
 
-static void processXlabel(const std::shared_ptr<GR::Element> &elem)
+static void processXlabel(const std::shared_ptr<GRM::Element> &elem)
 {
   double viewport[4], vp[4], charheight;
 
@@ -2125,7 +2125,7 @@ static void processXlabel(const std::shared_ptr<GR::Element> &elem)
   std::string x_label = (std::string)elem->getAttribute("xlabel");
   if (x_label.empty()) return; // Empty xlabel is pointless, no need to waste the space for nothing
 
-  if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+  if (auto render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument()))
     {
       auto text = render->createText(x, y, x_label);
       text->setAttribute("name", "xlabel");
@@ -2144,7 +2144,7 @@ static void processXlabel(const std::shared_ptr<GR::Element> &elem)
     }
 }
 
-static void processXTickLabels(const std::shared_ptr<GR::Element> &elem)
+static void processXTickLabels(const std::shared_ptr<GRM::Element> &elem)
 {
   double viewport[4], vp[4], window[4], charheight;
   std::vector<std::string> xticklabels;
@@ -2165,11 +2165,11 @@ static void processXTickLabels(const std::shared_ptr<GR::Element> &elem)
   window[2] = (double)subplot_element->getAttribute("window_ymin");
   window[3] = (double)subplot_element->getAttribute("window_ymax");
 
-  if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+  if (auto render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument()))
     {
-      std::shared_ptr<GR::Context> context = render->getContext();
+      std::shared_ptr<GRM::Context> context = render->getContext();
       std::string key = static_cast<std::string>(elem->getAttribute("xticklabels"));
-      xticklabels = GR::get<std::vector<std::string>>((*context)[key]);
+      xticklabels = GRM::get<std::vector<std::string>>((*context)[key]);
 
       double x1, x2;
       double x_left = 0, x_right = 1, null;
@@ -2194,7 +2194,7 @@ static void processXTickLabels(const std::shared_ptr<GR::Element> &elem)
     }
 }
 
-static void processYlabel(const std::shared_ptr<GR::Element> &elem)
+static void processYlabel(const std::shared_ptr<GRM::Element> &elem)
 {
   double viewport[4], vp[4], charheight;
 
@@ -2215,7 +2215,7 @@ static void processYlabel(const std::shared_ptr<GR::Element> &elem)
   std::string y_label = (std::string)elem->getAttribute("ylabel");
   if (y_label.empty()) return; // Empty ylabel is pointless, no need to waste the space for nothing
 
-  if (auto render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument()))
+  if (auto render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument()))
     {
       auto text = render->createText(x, y, y_label);
       text->setAttribute("name", "ylabel");
@@ -2235,16 +2235,16 @@ static void processYlabel(const std::shared_ptr<GR::Element> &elem)
     }
 }
 
-static void processAttributes(const std::shared_ptr<GR::Element> &element)
+static void processAttributes(const std::shared_ptr<GRM::Element> &element)
 {
   /*!
    * processing function for all kinds of attributes
    *
-   * \param[in] element The GR::Element containing attributes
+   * \param[in] element The GRM::Element containing attributes
    */
 
   //! Map used for processing all kinds of attributes
-  static std::map<std::string, std::function<void(const std::shared_ptr<GR::Element> &)>> attrStringToFunc{
+  static std::map<std::string, std::function<void(const std::shared_ptr<GRM::Element> &)>> attrStringToFunc{
       {std::string("bordercolorind"), processBorderColorInd},
       {std::string("calc-window-and-viewport-from-parent"), processCalcWindowAndViewportFromParent},
       {std::string("charexpan"), processCharExpan},
@@ -2291,21 +2291,21 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
   };
 
 
-  static std::map<std::string, std::function<void(const std::shared_ptr<GR::Element> &)>> attrStringToFuncPost{
+  static std::map<std::string, std::function<void(const std::shared_ptr<GRM::Element> &)>> attrStringToFuncPost{
       /* This map contains functions for attributes that should be called after some attributes have been processed
        * already. These functions can contain e.g. inquire function calls for colors.
        * */
       {std::string("set-text-color-for-background"), processTextColorForBackground},
   };
 
-  static std::map<std::string, std::function<void(const std::shared_ptr<GR::Element> &)>> attrStringToFuncPre{
+  static std::map<std::string, std::function<void(const std::shared_ptr<GRM::Element> &)>> attrStringToFuncPre{
       /* This map contains functions for attributes that should be called before other attributes of the element are
        * being processed. The attributes are being processed in the order of their appearance in the map.
        * */
       {std::string("subplot"), processSubplot},
-      {std::string("viewport"), GR::Render::processViewport},
+      {std::string("viewport"), GRM::Render::processViewport},
       {std::string("charheight"), processCharHeight},
-      {std::string("limits"), GR::Render::processLimits},
+      {std::string("limits"), GRM::Render::processLimits},
       {std::string("window"), processWindow},
       {std::string("window3d"), processWindow3d}, /* needs to be set before space3d is processed */
       {std::string("scale"), processScale},       /* needs to be set before flip is processed */
@@ -2357,13 +2357,13 @@ static void processAttributes(const std::shared_ptr<GR::Element> &element)
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ element processing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static void axes(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void axes(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for axes
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   double x_tick, x_org;
   double y_tick, y_org;
@@ -2406,13 +2406,13 @@ static void axes(const std::shared_ptr<GR::Element> &element, const std::shared_
   gr_axes(x_tick, y_tick, x_org, y_org, x_major, y_major, tick_size);
 }
 
-static void axes3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void axes3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for axes3d
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   double x_tick, x_org;
   double y_tick, y_org;
@@ -2464,13 +2464,13 @@ static void axes3d(const std::shared_ptr<GR::Element> &element, const std::share
   gr_axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major, tick_size);
 }
 
-static void cellArray(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void cellArray(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for cellArray
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   double xmin = static_cast<double>(element->getAttribute("xmin"));
   double xmax = static_cast<double>(element->getAttribute("xmax"));
@@ -2484,15 +2484,15 @@ static void cellArray(const std::shared_ptr<GR::Element> &element, const std::sh
   int nrow = static_cast<int>(element->getAttribute("nrow"));
   auto color = static_cast<std::string>(element->getAttribute("color"));
   gr_cellarray(xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nrow,
-               (int *)&(GR::get<std::vector<int>>((*context)[color])[0]));
+               (int *)&(GRM::get<std::vector<int>>((*context)[color])[0]));
 }
 
-static void clearWS(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void clearWS(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   gr_clearws();
 }
 
-static void colorbar(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void colorbar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   double c_min, c_max;
   int data, i;
@@ -2527,7 +2527,7 @@ static void colorbar(const std::shared_ptr<GR::Element> &element, const std::sha
 
   /* create axes */
   gr_inqscale(&options);
-  std::shared_ptr<GR::Element> axes;
+  std::shared_ptr<GRM::Element> axes;
   if (options & GR_OPTION_Z_LOG)
     {
       axes = global_render->createAxes(0, 2, 1, c_min, 0, 1, 1);
@@ -2543,13 +2543,13 @@ static void colorbar(const std::shared_ptr<GR::Element> &element, const std::sha
   element->append(axes);
 }
 
-static void contour(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void contour(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for contour
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   auto px = static_cast<std::string>(element->getAttribute("px"));
   auto py = static_cast<std::string>(element->getAttribute("py"));
@@ -2557,10 +2557,10 @@ static void contour(const std::shared_ptr<GR::Element> &element, const std::shar
   auto pz = static_cast<std::string>(element->getAttribute("pz"));
   int major_h = static_cast<int>(element->getAttribute("major_h"));
 
-  std::vector<double> px_vec = GR::get<std::vector<double>>((*context)[px]);
-  std::vector<double> py_vec = GR::get<std::vector<double>>((*context)[py]);
-  std::vector<double> h_vec = GR::get<std::vector<double>>((*context)[h]);
-  std::vector<double> pz_vec = GR::get<std::vector<double>>((*context)[pz]);
+  std::vector<double> px_vec = GRM::get<std::vector<double>>((*context)[px]);
+  std::vector<double> py_vec = GRM::get<std::vector<double>>((*context)[py]);
+  std::vector<double> h_vec = GRM::get<std::vector<double>>((*context)[h]);
+  std::vector<double> pz_vec = GRM::get<std::vector<double>>((*context)[pz]);
 
   int nx = px_vec.size();
   int ny = py_vec.size();
@@ -2574,13 +2574,13 @@ static void contour(const std::shared_ptr<GR::Element> &element, const std::shar
   gr_contour(nx, ny, nh, px_p, py_p, h_p, pz_p, major_h);
 }
 
-static void contourf(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void contourf(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for contourf
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   auto px = static_cast<std::string>(element->getAttribute("px"));
   auto py = static_cast<std::string>(element->getAttribute("py"));
@@ -2588,10 +2588,10 @@ static void contourf(const std::shared_ptr<GR::Element> &element, const std::sha
   auto pz = static_cast<std::string>(element->getAttribute("pz"));
   int major_h = static_cast<int>(element->getAttribute("major_h"));
 
-  std::vector<double> px_vec = GR::get<std::vector<double>>((*context)[px]);
-  std::vector<double> py_vec = GR::get<std::vector<double>>((*context)[py]);
-  std::vector<double> h_vec = GR::get<std::vector<double>>((*context)[h]);
-  std::vector<double> pz_vec = GR::get<std::vector<double>>((*context)[pz]);
+  std::vector<double> px_vec = GRM::get<std::vector<double>>((*context)[px]);
+  std::vector<double> py_vec = GRM::get<std::vector<double>>((*context)[py]);
+  std::vector<double> h_vec = GRM::get<std::vector<double>>((*context)[h]);
+  std::vector<double> pz_vec = GRM::get<std::vector<double>>((*context)[pz]);
 
   int nx = px_vec.size();
   int ny = py_vec.size();
@@ -2605,13 +2605,13 @@ static void contourf(const std::shared_ptr<GR::Element> &element, const std::sha
   gr_contourf(nx, ny, nh, px_p, py_p, h_p, pz_p, major_h);
 }
 
-static void drawArc(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void drawArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for drawArc
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   double xmin = static_cast<double>(element->getAttribute("xmin"));
   double xmax = static_cast<double>(element->getAttribute("xmax"));
@@ -2622,10 +2622,10 @@ static void drawArc(const std::shared_ptr<GR::Element> &element, const std::shar
   gr_drawarc(xmin, xmax, ymin, ymax, a1, a2);
 }
 
-static void drawGraphics(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void drawGraphics(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   auto key = (std::string)element->getAttribute("data");
-  auto data_vec = GR::get<std::vector<int>>((*context)[key]);
+  auto data_vec = GRM::get<std::vector<int>>((*context)[key]);
 
   std::vector<char> char_vec;
   char_vec.reserve(data_vec.size());
@@ -2638,13 +2638,13 @@ static void drawGraphics(const std::shared_ptr<GR::Element> &element, const std:
   gr_drawgraphics(data_p);
 }
 
-static void drawImage(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void drawImage(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for drawImage
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   double xmin = static_cast<double>(element->getAttribute("xmin"));
   double xmax = static_cast<double>(element->getAttribute("xmax"));
@@ -2654,10 +2654,10 @@ static void drawImage(const std::shared_ptr<GR::Element> &element, const std::sh
   int height = static_cast<int>(element->getAttribute("height"));
   int model = static_cast<int>(element->getAttribute("model"));
   auto data = static_cast<std::string>(element->getAttribute("data"));
-  gr_drawimage(xmin, ymin, xmax, ymax, width, height, (int *)&(GR::get<std::vector<int>>((*context)[data])[0]), model);
+  gr_drawimage(xmin, ymin, xmax, ymax, width, height, (int *)&(GRM::get<std::vector<int>>((*context)[data])[0]), model);
 }
 
-static void drawIsosurface3(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+static void drawIsosurface3(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
 {
   auto nx = static_cast<int>(elem->getAttribute("nx"));
   auto ny = static_cast<int>(elem->getAttribute("ny"));
@@ -2672,9 +2672,9 @@ static void drawIsosurface3(const std::shared_ptr<GR::Element> &elem, const std:
   float specular = static_cast<double>(elem->getAttribute("specular"));
   float specular_power = static_cast<double>(elem->getAttribute("specular_power"));
 
-  auto data_vec = GR::get<std::vector<double>>((*context)[data_key]);
-  auto color_vec = GR::get<std::vector<double>>((*context)[color_key]);
-  auto strides_vec = GR::get<std::vector<int>>((*context)[strides_key]);
+  auto data_vec = GRM::get<std::vector<double>>((*context)[data_key]);
+  auto color_vec = GRM::get<std::vector<double>>((*context)[color_key]);
+  auto strides_vec = GRM::get<std::vector<int>>((*context)[strides_key]);
 
   std::vector<float> data_vec_f(data_vec.begin(), data_vec.end());
   std::vector<float> color_vec_f(color_vec.begin(), color_vec.end());
@@ -2694,7 +2694,7 @@ static void drawIsosurface3(const std::shared_ptr<GR::Element> &elem, const std:
   gr3_setlightparameters(light_parameters[0], light_parameters[1], light_parameters[2], light_parameters[3]);
 }
 
-static void drawLegend(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+static void drawLegend(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
 {
   double viewport[4];
   int location;
@@ -2702,19 +2702,19 @@ static void drawLegend(const std::shared_ptr<GR::Element> &elem, const std::shar
   double tbx[4], tby[4];
   double legend_symbol_x[2], legend_symbol_y[2];
   int i;
-  std::shared_ptr<GR::Render> render;
+  std::shared_ptr<GRM::Render> render;
   gr_savestate();
   gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
   auto labels_key = static_cast<std::string>(elem->getAttribute("labels"));
   auto specs_key = static_cast<std::string>(elem->getAttribute("specs"));
 
-  render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
+  render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument());
   if (!render)
     {
       throw NotFoundError("No render-document found for element\n");
     }
-  std::vector<std::string> labels = GR::get<std::vector<std::string>>((*context)[labels_key]);
-  std::vector<std::string> specs = GR::get<std::vector<std::string>>((*context)[specs_key]);
+  std::vector<std::string> labels = GRM::get<std::vector<std::string>>((*context)[labels_key]);
+  std::vector<std::string> specs = GRM::get<std::vector<std::string>>((*context)[specs_key]);
 
   location = static_cast<int>(elem->getAttribute("location"));
 
@@ -2841,15 +2841,15 @@ static void drawLegend(const std::shared_ptr<GR::Element> &elem, const std::shar
   gr_restorestate();
 }
 
-static void drawPieLegend(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+static void drawPieLegend(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
 {
   double viewport[4];
   double px, py, w, h;
   double tbx[4], tby[4];
   std::string labels_key = static_cast<std::string>(elem->getAttribute("labels"));
-  auto labels = GR::get<std::vector<std::string>>((*context)[labels_key]);
+  auto labels = GRM::get<std::vector<std::string>>((*context)[labels_key]);
   unsigned int num_labels = labels.size();
-  std::shared_ptr<GR::Render> render;
+  std::shared_ptr<GRM::Render> render;
   std::string color_indices_key;
   std::string color_rgb_values_key;
 
@@ -2858,7 +2858,7 @@ static void drawPieLegend(const std::shared_ptr<GR::Element> &elem, const std::s
 
   gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
 
-  render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
+  render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument());
   if (!render)
     {
       throw NotFoundError("No render-document found for element\n");
@@ -2876,12 +2876,12 @@ static void drawPieLegend(const std::shared_ptr<GR::Element> &elem, const std::s
   if (elem->parentElement()->hasAttribute("color_indices"))
     {
       color_indices_key = static_cast<std::string>(elem->parentElement()->getAttribute("color_indices"));
-      color_indices_vec = GR::get<std::vector<int>>((*context)[color_indices_key]);
+      color_indices_vec = GRM::get<std::vector<int>>((*context)[color_indices_key]);
     }
   else if (elem->parentElement()->hasAttribute("color_rgb_values"))
     {
       color_rgb_values_key = static_cast<std::string>(elem->parentElement()->getAttribute("color_rgb_values"));
-      color_rgb_values_vec = GR::get<std::vector<double>>((*context)[color_rgb_values_key]);
+      color_rgb_values_vec = GRM::get<std::vector<double>>((*context)[color_rgb_values_key]);
     }
 
   auto subGroup = render->createGroup("drawPieLegendSubGroup");
@@ -2942,7 +2942,7 @@ static void drawPieLegend(const std::shared_ptr<GR::Element> &elem, const std::s
   elem->append(reset_group);
 }
 
-static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
 {
   double viewport[4], vp[4];
   double diag;
@@ -2960,12 +2960,12 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
   std::string title;
   std::string norm;
 
-  std::shared_ptr<GR::Render> render;
+  std::shared_ptr<GRM::Render> render;
 
   gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
   auto subplot = getSubplotElement(elem);
 
-  render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
+  render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument());
   if (!render)
     {
       throw NotFoundError("No render-document for element found\n");
@@ -3096,13 +3096,13 @@ static void drawPolarAxes(const std::shared_ptr<GR::Element> &elem, const std::s
     }
 }
 
-static void drawRect(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void drawRect(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for drawArc
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   double xmin = static_cast<double>(element->getAttribute("xmin"));
   double xmax = static_cast<double>(element->getAttribute("xmax"));
@@ -3111,7 +3111,7 @@ static void drawRect(const std::shared_ptr<GR::Element> &element, const std::sha
   gr_drawrect(xmin, xmax, ymin, ymax);
 }
 
-static void drawYLine(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+static void drawYLine(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
 {
   auto draw_axes_element = elem->parentElement();
   double x_tick, x_org_low, x_org_high;
@@ -3136,13 +3136,13 @@ static void drawYLine(const std::shared_ptr<GR::Element> &elem, const std::share
   gr_polyline(2, x, y);
 }
 
-static void fillArc(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void fillArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for drawArc
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   double xmin = static_cast<double>(element->getAttribute("xmin"));
   double xmax = static_cast<double>(element->getAttribute("xmax"));
@@ -3153,13 +3153,13 @@ static void fillArc(const std::shared_ptr<GR::Element> &element, const std::shar
   gr_fillarc(xmin, xmax, ymin, ymax, a1, a2);
 }
 
-static void fillRect(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void fillRect(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for drawArc
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   double xmin = static_cast<double>(element->getAttribute("xmin"));
   double xmax = static_cast<double>(element->getAttribute("xmax"));
@@ -3168,37 +3168,37 @@ static void fillRect(const std::shared_ptr<GR::Element> &element, const std::sha
   gr_fillrect(xmin, xmax, ymin, ymax);
 }
 
-static void fillArea(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void fillArea(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for fillArea
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   auto x = static_cast<std::string>(element->getAttribute("x"));
   auto y = static_cast<std::string>(element->getAttribute("y"));
 
-  std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
-  std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
+  std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
 
   int n = std::min(x_vec.size(), y_vec.size());
 
   gr_fillarea(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
 }
 
-static void gr3Clear(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void gr3Clear(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   gr3_clear();
 }
 
-static void gr3DeleteMesh(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void gr3DeleteMesh(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   int mesh = static_cast<int>(element->getAttribute("mesh"));
   gr3_deletemesh(mesh);
 }
 
-static void gr3DrawImage(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void gr3DrawImage(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   double xmin, xmax, ymin, ymax;
   int width, height, drawable_type;
@@ -3215,13 +3215,13 @@ static void gr3DrawImage(const std::shared_ptr<GR::Element> &element, const std:
   logger((stderr, "gr3_drawimage returned %i\n", gr3_drawimage(xmin, xmax, ymin, ymax, width, height, drawable_type)));
 }
 
-static void gr3DrawMesh(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void gr3DrawMesh(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for gr3_drawmesh
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
 
   int mesh = (int)element->getAttribute("mesh");
@@ -3233,11 +3233,11 @@ static void gr3DrawMesh(const std::shared_ptr<GR::Element> &element, const std::
   auto colors = static_cast<std::string>(element->getAttribute("colors"));
   auto scales = static_cast<std::string>(element->getAttribute("scales"));
 
-  std::vector<double> positions_vec = GR::get<std::vector<double>>((*context)[positions]);
-  std::vector<double> directions_vec = GR::get<std::vector<double>>((*context)[directions]);
-  std::vector<double> ups_vec = GR::get<std::vector<double>>((*context)[ups]);
-  std::vector<double> colors_vec = GR::get<std::vector<double>>((*context)[colors]);
-  std::vector<double> scales_vec = GR::get<std::vector<double>>((*context)[scales]);
+  std::vector<double> positions_vec = GRM::get<std::vector<double>>((*context)[positions]);
+  std::vector<double> directions_vec = GRM::get<std::vector<double>>((*context)[directions]);
+  std::vector<double> ups_vec = GRM::get<std::vector<double>>((*context)[ups]);
+  std::vector<double> colors_vec = GRM::get<std::vector<double>>((*context)[colors]);
+  std::vector<double> scales_vec = GRM::get<std::vector<double>>((*context)[scales]);
 
   std::vector<float> pf_vec(positions_vec.begin(), positions_vec.end());
   std::vector<float> df_vec(directions_vec.begin(), directions_vec.end());
@@ -3254,13 +3254,13 @@ static void gr3DrawMesh(const std::shared_ptr<GR::Element> &element, const std::
   gr3_drawmesh(mesh, n, positions_p, directions_p, ups_p, colors_p, scales_p);
 }
 
-static void grid(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void grid(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for grid
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   double x_tick, y_tick, x_org, y_org;
   int x_major, y_major;
@@ -3288,13 +3288,13 @@ static void grid(const std::shared_ptr<GR::Element> &element, const std::shared_
   gr_grid(x_tick, y_tick, x_org, y_org, abs(x_major), abs(y_major));
 }
 
-static void grid3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void grid3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for grid3d
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   double x_tick, x_org;
   double y_tick, y_org;
@@ -3333,13 +3333,13 @@ static void grid3d(const std::shared_ptr<GR::Element> &element, const std::share
   gr_grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, abs(x_major), abs(y_major), abs(z_major));
 }
 
-static void hexbin(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for hexbin
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
 
   auto x = static_cast<std::string>(element->getAttribute("x"));
@@ -3348,8 +3348,8 @@ static void hexbin(const std::shared_ptr<GR::Element> &element, const std::share
 
   int x_length = static_cast<int>(element->getAttribute("x_length"));
 
-  double *x_p = &(GR::get<std::vector<double>>((*context)[x])[0]);
-  double *y_p = &(GR::get<std::vector<double>>((*context)[y])[0]);
+  double *x_p = &(GRM::get<std::vector<double>>((*context)[x])[0]);
+  double *y_p = &(GRM::get<std::vector<double>>((*context)[y])[0]);
 
   int cntmax = gr_hexbin(x_length, x_p, y_p, nbins);
   auto colorbar = element->querySelectors("colorbar");
@@ -3359,7 +3359,7 @@ static void hexbin(const std::shared_ptr<GR::Element> &element, const std::share
   colorbar->setAttribute("lim_cmax", c_max);
 }
 
-static void isosurfaceRender(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+static void isosurfaceRender(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
 {
   double viewport[4];
   double x_min, x_max, y_min, y_max;
@@ -3388,7 +3388,7 @@ static void isosurfaceRender(const std::shared_ptr<GR::Element> &elem, const std
   gr3_drawimage(x_min, x_max, y_min, y_max, subplot_width, subplot_height, GR3_DRAWABLE_GKS);
 }
 
-static void layoutGrid(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void layoutGrid(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   double xmin, xmax, ymin, ymax;
   xmin = (double)element->getAttribute("subplot_xmin");
@@ -3399,7 +3399,8 @@ static void layoutGrid(const std::shared_ptr<GR::Element> &element, const std::s
   gr_setviewport(xmin, xmax, ymin, ymax);
 }
 
-static void layoutGridElement(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void layoutGridElement(const std::shared_ptr<GRM::Element> &element,
+                              const std::shared_ptr<GRM::Context> &context)
 {
   // todo is layoutgridelement actually needed? Can it be replaced by an ordinary group
   double xmin, xmax, ymin, ymax;
@@ -3411,14 +3412,14 @@ static void layoutGridElement(const std::shared_ptr<GR::Element> &element, const
   //  gr_setviewport(xmin, xmax, ymin, ymax);
 }
 
-static void nonuniformcellarray(const std::shared_ptr<GR::Element> &element,
-                                const std::shared_ptr<GR::Context> &context)
+static void nonuniformcellarray(const std::shared_ptr<GRM::Element> &element,
+                                const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for nonuniformcellarray
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   auto x = static_cast<std::string>(element->getAttribute("x"));
   auto y = static_cast<std::string>(element->getAttribute("y"));
@@ -3431,28 +3432,28 @@ static void nonuniformcellarray(const std::shared_ptr<GR::Element> &element,
   int nrow = static_cast<int>(element->getAttribute("nrow"));
   auto color = static_cast<std::string>(element->getAttribute("color"));
 
-  auto x_p = (double *)&(GR::get<std::vector<double>>((*context)[x])[0]);
-  auto y_p = (double *)&(GR::get<std::vector<double>>((*context)[y])[0]);
+  auto x_p = (double *)&(GRM::get<std::vector<double>>((*context)[x])[0]);
+  auto y_p = (double *)&(GRM::get<std::vector<double>>((*context)[y])[0]);
 
-  auto color_p = (int *)&(GR::get<std::vector<int>>((*context)[color])[0]);
+  auto color_p = (int *)&(GRM::get<std::vector<int>>((*context)[color])[0]);
   gr_nonuniformcellarray(x_p, y_p, dimx, dimy, scol, srow, ncol, nrow, color_p);
 }
 
-static void panzoom(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+static void panzoom(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
 {
   ; /* panzoom is being processed in the processLimits routine */
 }
 
-static void piePlotTitleRender(const std::shared_ptr<GR::Element> &elem, const std::shared_ptr<GR::Context> &context)
+static void piePlotTitleRender(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
 {
   double viewport[4], vp[4];
   bool vp_found = false;
-  std::shared_ptr<GR::Render> render;
-  std::shared_ptr<GR::Element> ancestor = elem->parentElement();
+  std::shared_ptr<GRM::Render> render;
+  std::shared_ptr<GRM::Element> ancestor = elem->parentElement();
 
   gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
 
-  // Get vp from ancestor GR::element, usually the group with the name "pie"
+  // Get vp from ancestor GRM::element, usually the group with the name "pie"
   while (ancestor->localName() != "root")
     {
       if (ancestor->hasAttribute("vp"))
@@ -3474,7 +3475,7 @@ static void piePlotTitleRender(const std::shared_ptr<GR::Element> &elem, const s
       throw NotFoundError("No vp was found within ancestors");
     }
 
-  render = std::dynamic_pointer_cast<GR::Render>(elem->ownerDocument());
+  render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument());
   if (!render)
     {
       throw NotFoundError("No render-document found for element\n");
@@ -3495,13 +3496,13 @@ static void piePlotTitleRender(const std::shared_ptr<GR::Element> &elem, const s
   elem->append(tx);
 }
 
-static void polyline(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void polyline(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing Function for polyline
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   int n = static_cast<int>(element->getAttribute("n"));
   if (element->getAttribute("x").isString() && element->getAttribute("y").isString())
@@ -3509,8 +3510,8 @@ static void polyline(const std::shared_ptr<GR::Element> &element, const std::sha
       auto x = static_cast<std::string>(element->getAttribute("x"));
       auto y = static_cast<std::string>(element->getAttribute("y"));
 
-      std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
-      std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
+      std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x]);
+      std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
 
       int n = std::min(x_vec.size(), y_vec.size());
       auto group = element->parentElement();
@@ -3539,21 +3540,21 @@ static void polyline(const std::shared_ptr<GR::Element> &element, const std::sha
     }
 }
 
-static void polyline3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void polyline3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for polyline3d
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   auto x = static_cast<std::string>(element->getAttribute("x"));
   auto y = static_cast<std::string>(element->getAttribute("y"));
   auto z = static_cast<std::string>(element->getAttribute("z"));
 
-  std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
-  std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
-  std::vector<double> z_vec = GR::get<std::vector<double>>((*context)[z]);
+  std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  std::vector<double> z_vec = GRM::get<std::vector<double>>((*context)[z]);
 
 
   double *x_p = &(x_vec[0]);
@@ -3574,21 +3575,21 @@ static void polyline3d(const std::shared_ptr<GR::Element> &element, const std::s
     }
 }
 
-static void polymarker(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void polymarker(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for polymarker
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   if (element->getAttribute("x").isString() && element->getAttribute("y").isString())
     {
       auto x = static_cast<std::string>(element->getAttribute("x"));
       auto y = static_cast<std::string>(element->getAttribute("y"));
 
-      std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
-      std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
+      std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x]);
+      std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
 
       int n = std::min(x_vec.size(), y_vec.size());
       auto group = element->parentElement();
@@ -3613,21 +3614,21 @@ static void polymarker(const std::shared_ptr<GR::Element> &element, const std::s
     }
 }
 
-static void polymarker3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void polymarker3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for polymarker3d
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   auto x = static_cast<std::string>(element->getAttribute("x"));
   auto y = static_cast<std::string>(element->getAttribute("y"));
   auto z = static_cast<std::string>(element->getAttribute("z"));
 
-  std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
-  std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
-  std::vector<double> z_vec = GR::get<std::vector<double>>((*context)[z]);
+  std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  std::vector<double> z_vec = GRM::get<std::vector<double>>((*context)[z]);
 
 
   double *x_p = &(x_vec[0]);
@@ -3649,13 +3650,13 @@ static void polymarker3d(const std::shared_ptr<GR::Element> &element, const std:
     }
 }
 
-static void quiver(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void quiver(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for quiver
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   auto x = static_cast<std::string>(element->getAttribute("x"));
   auto y = static_cast<std::string>(element->getAttribute("y"));
@@ -3663,19 +3664,19 @@ static void quiver(const std::shared_ptr<GR::Element> &element, const std::share
   auto v = static_cast<std::string>(element->getAttribute("v"));
   int color = static_cast<int>(element->getAttribute("color"));
 
-  std::vector<double> x_vec = GR::get<std::vector<double>>((*context)[x]);
-  std::vector<double> y_vec = GR::get<std::vector<double>>((*context)[y]);
+  std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
 
 
   double *x_p = &(x_vec[0]);
   double *y_p = &(y_vec[0]);
-  double *u_p = &(GR::get<std::vector<double>>((*context)[u])[0]);
-  double *v_p = &(GR::get<std::vector<double>>((*context)[v])[0]);
+  double *u_p = &(GRM::get<std::vector<double>>((*context)[u])[0]);
+  double *v_p = &(GRM::get<std::vector<double>>((*context)[v])[0]);
 
   gr_quiver(x_vec.size(), y_vec.size(), x_p, y_p, u_p, v_p, color);
 }
 
-static void shadePoints(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void shadePoints(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   int xform, w, h, n;
   std::string xx, yy;
@@ -3687,8 +3688,8 @@ static void shadePoints(const std::shared_ptr<GR::Element> &element, const std::
   xx = (std::string)element->getAttribute("x");
   yy = (std::string)element->getAttribute("y");
 
-  auto x_vec = GR::get<std::vector<double>>((*context)[xx]);
-  auto y_vec = GR::get<std::vector<double>>((*context)[yy]);
+  auto x_vec = GRM::get<std::vector<double>>((*context)[xx]);
+  auto y_vec = GRM::get<std::vector<double>>((*context)[yy]);
 
   x = &(x_vec[0]);
   y = &(y_vec[0]);
@@ -3697,13 +3698,13 @@ static void shadePoints(const std::shared_ptr<GR::Element> &element, const std::
   gr_shadepoints(n, x, y, xform, w, h);
 }
 
-static void surface(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void surface(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for surface
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   auto px = static_cast<std::string>(element->getAttribute("px"));
   auto py = static_cast<std::string>(element->getAttribute("py"));
@@ -3711,9 +3712,9 @@ static void surface(const std::shared_ptr<GR::Element> &element, const std::shar
   int option = static_cast<int>(element->getAttribute("option"));
   int accelerate = static_cast<int>(element->getAttribute("accelerate"));
 
-  std::vector<double> px_vec = GR::get<std::vector<double>>((*context)[px]);
-  std::vector<double> py_vec = GR::get<std::vector<double>>((*context)[py]);
-  std::vector<double> pz_vec = GR::get<std::vector<double>>((*context)[pz]);
+  std::vector<double> px_vec = GRM::get<std::vector<double>>((*context)[px]);
+  std::vector<double> py_vec = GRM::get<std::vector<double>>((*context)[py]);
+  std::vector<double> pz_vec = GRM::get<std::vector<double>>((*context)[pz]);
 
   int nx = px_vec.size();
   int ny = py_vec.size();
@@ -3741,13 +3742,13 @@ static void surface(const std::shared_ptr<GR::Element> &element, const std::shar
     }
 }
 
-static void text(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void text(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing funcions for text
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   gr_savestate();
   auto x = static_cast<double>(element->getAttribute("x"));
@@ -3799,13 +3800,13 @@ static void text(const std::shared_ptr<GR::Element> &element, const std::shared_
   gr_restorestate();
 }
 
-static void titles3d(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void titles3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for titles3d
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   std::string x, y, z;
   x = static_cast<std::string>(element->getAttribute("x"));
@@ -3814,23 +3815,23 @@ static void titles3d(const std::shared_ptr<GR::Element> &element, const std::sha
   gr_titles3d(x.data(), y.data(), z.data());
 }
 
-static void triContour(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void triContour(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for tricontour
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   auto px = static_cast<std::string>(element->getAttribute("px"));
   auto py = static_cast<std::string>(element->getAttribute("py"));
   auto pz = static_cast<std::string>(element->getAttribute("pz"));
   auto levels = static_cast<std::string>(element->getAttribute("levels"));
 
-  std::vector<double> px_vec = GR::get<std::vector<double>>((*context)[px]);
-  std::vector<double> py_vec = GR::get<std::vector<double>>((*context)[py]);
-  std::vector<double> pz_vec = GR::get<std::vector<double>>((*context)[pz]);
-  std::vector<double> l_vec = GR::get<std::vector<double>>((*context)[levels]);
+  std::vector<double> px_vec = GRM::get<std::vector<double>>((*context)[px]);
+  std::vector<double> py_vec = GRM::get<std::vector<double>>((*context)[py]);
+  std::vector<double> pz_vec = GRM::get<std::vector<double>>((*context)[pz]);
+  std::vector<double> l_vec = GRM::get<std::vector<double>>((*context)[levels]);
 
   int nx = px_vec.size();
   int nl = l_vec.size();
@@ -3843,21 +3844,21 @@ static void triContour(const std::shared_ptr<GR::Element> &element, const std::s
   gr_tricontour(nx, px_p, py_p, pz_p, nl, l_p);
 }
 
-static void triSurface(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void triSurface(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for trisurface
    *
-   * \param[in] element The GR::Element that contains the attributes and data keys
-   * \param[in] context The GR::Context that contains the actual data
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
    */
   auto px = static_cast<std::string>(element->getAttribute("px"));
   auto py = static_cast<std::string>(element->getAttribute("py"));
   auto pz = static_cast<std::string>(element->getAttribute("pz"));
 
-  std::vector<double> px_vec = GR::get<std::vector<double>>((*context)[px]);
-  std::vector<double> py_vec = GR::get<std::vector<double>>((*context)[py]);
-  std::vector<double> pz_vec = GR::get<std::vector<double>>((*context)[pz]);
+  std::vector<double> px_vec = GRM::get<std::vector<double>>((*context)[px]);
+  std::vector<double> py_vec = GRM::get<std::vector<double>>((*context)[py]);
+  std::vector<double> pz_vec = GRM::get<std::vector<double>>((*context)[pz]);
 
   int nx = px_vec.size();
   int ny = py_vec.size();
@@ -3869,12 +3870,12 @@ static void triSurface(const std::shared_ptr<GR::Element> &element, const std::s
   gr_trisurface(nx, px_p, py_p, pz_p);
 }
 
-static void updateWS(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void updateWS(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   gr_updatews();
 }
 
-static void volume(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void volume(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   int nx, ny, nz, algorithm;
   std::string dmin_key, dmax_key;
@@ -3889,7 +3890,7 @@ static void volume(const std::shared_ptr<GR::Element> &element, const std::share
   dmin = static_cast<double>(element->getAttribute("dmin"));
   dmax = static_cast<double>(element->getAttribute("dmax"));
 
-  std::vector<double> data_vec = GR::get<std::vector<double>>((*context)[data]);
+  std::vector<double> data_vec = GRM::get<std::vector<double>>((*context)[data]);
 
   gr_volume(nx, ny, nz, &(data_vec[0]), algorithm, &dmin, &dmax);
 
@@ -3914,18 +3915,18 @@ static void volume(const std::shared_ptr<GR::Element> &element, const std::share
   colorbar->setAttribute("lim_cmax", dlim[1]);
 }
 
-static void processElement(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void processElement(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for all kinds of elements
    *
-   * \param[in] element The GR::Element containing attributes and data keys
-   * \param[in] context The GR::Context containing the actual data
+   * \param[in] element The GRM::Element containing attributes and data keys
+   * \param[in] context The GRM::Context containing the actual data
    */
 
   //! Map used for processing all kinds of elements
   static std::map<std::string,
-                  std::function<void(const std::shared_ptr<GR::Element> &, const std::shared_ptr<GR::Context> &)>>
+                  std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)>>
       elemStringToFunc{
           {std::string("axes"), axes},
           {std::string("axes3d"), axes3d},
@@ -3984,7 +3985,7 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
       processAttributes(element);
       try
         {
-          std::function<void(const std::shared_ptr<GR::Element> &, const std::shared_ptr<GR::Context> &)> f =
+          std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> f =
               elemStringToFunc[element->localName()];
           f(element, context);
         }
@@ -3997,15 +3998,15 @@ static void processElement(const std::shared_ptr<GR::Element> &element, const st
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ render functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static void renderHelper(const std::shared_ptr<GR::Element> &element, const std::shared_ptr<GR::Context> &context)
+static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Recursive helper function for render; Not part of render class
    * Only renders / processes children if the parent is in parentTypes (group etc.)
    * Used for traversing the tree
    *
-   * \param[in] element A GR::Element
-   * \param[in] context A GR::Context
+   * \param[in] element A GRM::Element
+   * \param[in] context A GRM::Context
    */
   gr_savestate();
   bool bounding_boxes = getenv("GRPLOT_ENABLE_EDITOR");
@@ -4032,7 +4033,7 @@ static void renderHelper(const std::shared_ptr<GR::Element> &element, const std:
   gr_restorestate();
 }
 
-static void initializeGridElements(const std::shared_ptr<GR::Element> &element, grm::Grid *grid)
+static void initializeGridElements(const std::shared_ptr<GRM::Element> &element, grm::Grid *grid)
 {
   if (element->hasChildNodes())
     {
@@ -4083,7 +4084,7 @@ static void initializeGridElements(const std::shared_ptr<GR::Element> &element, 
     }
 }
 
-static void finalizeGrid(const std::shared_ptr<GR::Element> &root)
+static void finalizeGrid(const std::shared_ptr<GRM::Element> &root)
 {
   grm::Grid *rootGrid = nullptr;
   if (root->hasChildNodes())
@@ -4109,13 +4110,14 @@ static void finalizeGrid(const std::shared_ptr<GR::Element> &root)
     }
 }
 
-void GR::Render::render(const std::shared_ptr<GR::Document> &document, const std::shared_ptr<GR::Context> &extContext)
+void GRM::Render::render(const std::shared_ptr<GRM::Document> &document,
+                         const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * static GR::Render::render receiving external document and context
+   * static GRM::Render::render receiving external document and context
    *
-   * \param[in] document A GR::Document that will be rendered
-   * \param[in] extContext A GR::Context
+   * \param[in] document A GRM::Document that will be rendered
+   * \param[in] extContext A GRM::Context
    */
   auto root = document->firstChildElement();
   if (root->hasChildNodes())
@@ -4130,12 +4132,12 @@ void GR::Render::render(const std::shared_ptr<GR::Document> &document, const std
 }
 
 
-void GR::Render::render(std::shared_ptr<GR::Document> const &document)
+void GRM::Render::render(std::shared_ptr<GRM::Document> const &document)
 {
   /*!
-   * GR::Render::render that receives an external document but uses the GR::Render instance's context.
+   * GRM::Render::render that receives an external document but uses the GRM::Render instance's context.
    *
-   * \param[in] document A GR::Document that will be rendered
+   * \param[in] document A GRM::Document that will be rendered
    */
   auto root = document->firstChildElement();
   if (root->hasChildNodes())
@@ -4150,12 +4152,12 @@ void GR::Render::render(std::shared_ptr<GR::Document> const &document)
 }
 
 
-void GR::Render::render(const std::shared_ptr<GR::Context> &extContext)
+void GRM::Render::render(const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   *GR::Render::render uses GR::Render instance's document and an external context
+   *GRM::Render::render uses GRM::Render instance's document and an external context
    *
-   * \param[in] extContext A GR::Context
+   * \param[in] extContext A GRM::Context
    */
   auto root = this->firstChildElement();
   if (root->hasChildNodes())
@@ -4169,26 +4171,26 @@ void GR::Render::render(const std::shared_ptr<GR::Context> &extContext)
     }
 }
 
-void GR::Render::render()
+void GRM::Render::render()
 {
   /*!
-   * GR::Render::render uses both instance's document and context
+   * GRM::Render::render uses both instance's document and context
    */
   auto root = this->firstChildElement();
   global_root = root;
   const unsigned int indent = 2;
 
   bounding_id = 0;
-  global_render = (std::dynamic_pointer_cast<GR::Render>(root->ownerDocument()))
-                      ? std::dynamic_pointer_cast<GR::Render>(root->ownerDocument())
-                      : GR::Render::createRender();
-  std::cerr << toXML(root, GR::SerializerOptions{std::string(indent, ' ')}) << "\n";
+  global_render = (std::dynamic_pointer_cast<GRM::Render>(root->ownerDocument()))
+                      ? std::dynamic_pointer_cast<GRM::Render>(root->ownerDocument())
+                      : GRM::Render::createRender();
+  std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' ')}) << "\n";
   renderHelper(root, this->context);
-  std::cerr << toXML(root, GR::SerializerOptions{std::string(indent, ' ')}) << "\n";
+  std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' ')}) << "\n";
 }
 
 
-std::shared_ptr<GR::Render> GR::Render::createRender()
+std::shared_ptr<GRM::Render> GRM::Render::createRender()
 {
   /*!
    * This function can be used to create a Render object
@@ -4198,15 +4200,15 @@ std::shared_ptr<GR::Render> GR::Render::createRender()
 }
 
 
-GR::Render::Render()
+GRM::Render::Render()
 {
   /*!
-   * This is the constructor for GR::Render
+   * This is the constructor for GRM::Render
    */
-  this->context = std::shared_ptr<GR::Context>(new Context());
+  this->context = std::shared_ptr<GRM::Context>(new Context());
 }
 
-std::shared_ptr<GR::Context> GR::Render::getContext()
+std::shared_ptr<GRM::Context> GRM::Render::getContext()
 {
   return context;
 }
@@ -4217,8 +4219,8 @@ std::shared_ptr<GR::Context> GR::Render::getContext()
  * [0] The default value for this attribute
  * [1] The description for this attribute
  */
-std::vector<std::string> GR::Render::getDefaultAndTooltip(const std::shared_ptr<Element> &element,
-                                                          std::string attributeName)
+std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr<Element> &element,
+                                                           std::string attributeName)
 {
   static std::unordered_map<std::string, std::map<std::string, std::vector<std::string>>> elementToTooltip{
       {std::string("polyline"),
@@ -4275,25 +4277,25 @@ std::vector<std::string> GR::Render::getDefaultAndTooltip(const std::shared_ptr<
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ create functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-std::shared_ptr<GR::Element>
-GR::Render::createPolymarker(const std::string &x_key, std::optional<std::vector<double>> x, const std::string &y_key,
-                             std::optional<std::vector<double>> y, const std::shared_ptr<GR::Context> &extContext,
-                             int marker_type, double marker_size, int marker_colorind)
+std::shared_ptr<GRM::Element>
+GRM::Render::createPolymarker(const std::string &x_key, std::optional<std::vector<double>> x, const std::string &y_key,
+                              std::optional<std::vector<double>> y, const std::shared_ptr<GRM::Context> &extContext,
+                              int marker_type, double marker_size, int marker_colorind)
 {
   /*!
-   * This function can be used to create a Polymarker GR::Element
+   * This function can be used to create a Polymarker GRM::Element
    *
-   * \param[in] x_key A string used for storing the x coordinates in GR::Context
+   * \param[in] x_key A string used for storing the x coordinates in GRM::Context
    * \param[in] x A vector containing double values representing x coordinates
-   * \param[in] y_key A string used for storing the y coordinates in GR::Context
+   * \param[in] y_key A string used for storing the y coordinates in GRM::Context
    * \param[in] y A vector containing double values representing y coordinates
-   * \param[in] extContext A GR::Context that is used for storing the vectors. By default it uses GR::Render's
-   * GR::Context object but an external GR::Context can be used \param[in] marker_type An Integer setting the
+   * \param[in] extContext A GRM::Context that is used for storing the vectors. By default it uses GRM::Render's
+   * GRM::Context object but an external GRM::Context can be used \param[in] marker_type An Integer setting the
    * gr_markertype. By default it is 0 \param[in] marker_size A Double value setting the gr_markersize. By default it is
    * 0.0 \param[in] marker_colorind An Integer setting the gr_markercolorind. By default it is 0
    */
 
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   auto element = createElement("polymarker");
   if (x != std::nullopt)
     {
@@ -4322,8 +4324,8 @@ GR::Render::createPolymarker(const std::string &x_key, std::optional<std::vector
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createPolymarker(double x, double y, int marker_type, double marker_size,
-                                                          int marker_colorind)
+std::shared_ptr<GRM::Element> GRM::Render::createPolymarker(double x, double y, int marker_type, double marker_size,
+                                                            int marker_colorind)
 {
   auto element = createElement("polymarker");
   element->setAttribute("x", x);
@@ -4343,8 +4345,8 @@ std::shared_ptr<GR::Element> GR::Render::createPolymarker(double x, double y, in
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createPolyline(double x1, double x2, double y1, double y2, int line_type,
-                                                        double line_width, int line_colorind)
+std::shared_ptr<GRM::Element> GRM::Render::createPolyline(double x1, double x2, double y1, double y2, int line_type,
+                                                          double line_width, int line_colorind)
 {
   auto element = createElement("polyline");
   element->setAttribute("x1", x1);
@@ -4367,25 +4369,25 @@ std::shared_ptr<GR::Element> GR::Render::createPolyline(double x1, double x2, do
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createPolyline(const std::string &x_key, std::optional<std::vector<double>> x,
-                                                        const std::string &y_key, std::optional<std::vector<double>> y,
-                                                        const std::shared_ptr<GR::Context> &extContext, int line_type,
-                                                        double line_width, int line_colorind)
+std::shared_ptr<GRM::Element>
+GRM::Render::createPolyline(const std::string &x_key, std::optional<std::vector<double>> x, const std::string &y_key,
+                            std::optional<std::vector<double>> y, const std::shared_ptr<GRM::Context> &extContext,
+                            int line_type, double line_width, int line_colorind)
 {
   /*!
-   * This function can be used to create a Polyline GR::Element
+   * This function can be used to create a Polyline GRM::Element
    *
-   * \param[in] x_key A string used for storing the x coordinates in GR::Context
+   * \param[in] x_key A string used for storing the x coordinates in GRM::Context
    * \param[in] x A vector containing double values representing x coordinates
-   * \param[in] y_key A string used for storing the y coordinates in GR::Context
+   * \param[in] y_key A string used for storing the y coordinates in GRM::Context
    * \param[in] y A vector containing double values representing y coordinates
-   * \param[in] extContext A GR::Context that is used for storing the vectors. By default it uses GR::Render's
-   * GR::Context object but an external GR::Context can be used \param[in] line_type An Integer setting the
+   * \param[in] extContext A GRM::Context that is used for storing the vectors. By default it uses GRM::Render's
+   * GRM::Context object but an external GRM::Context can be used \param[in] line_type An Integer setting the
    * gr_linertype. By default it is 0 \param[in] line_width A Double value setting the gr_linewidth. By default it is
    * 0.0 \param[in] marker_colorind An Integer setting the gr_linecolorind. By default it is 0
    */
 
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   auto element = createElement("polyline");
   if (x != std::nullopt)
     {
@@ -4413,10 +4415,11 @@ std::shared_ptr<GR::Element> GR::Render::createPolyline(const std::string &x_key
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createText(double x, double y, const std::string &text, CoordinateSpace space)
+std::shared_ptr<GRM::Element> GRM::Render::createText(double x, double y, const std::string &text,
+                                                      CoordinateSpace space)
 {
   /*!
-   * This function can be used to create a Text GR::Element
+   * This function can be used to create a Text GRM::Element
    *
    * \param[in] x A double value representing the x coordinate
    * \param[in] y A double value representing the y coordinate
@@ -4433,25 +4436,25 @@ std::shared_ptr<GR::Element> GR::Render::createText(double x, double y, const st
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createFillArea(const std::string &x_key, std::optional<std::vector<double>> x,
-                                                        const std::string &y_key, std::optional<std::vector<double>> y,
-                                                        const std::shared_ptr<GR::Context> &extContext,
-                                                        int fillintstyle, int fillstyle, int fillcolorind)
+std::shared_ptr<GRM::Element>
+GRM::Render::createFillArea(const std::string &x_key, std::optional<std::vector<double>> x, const std::string &y_key,
+                            std::optional<std::vector<double>> y, const std::shared_ptr<GRM::Context> &extContext,
+                            int fillintstyle, int fillstyle, int fillcolorind)
 {
   /*!
-   * This function can be used to create a FillArea GR::Element
+   * This function can be used to create a FillArea GRM::Element
    *
    * \param[in] n The number of data points
-   * \param[in] x_key A string used for storing the x coordinates in GR::Context
+   * \param[in] x_key A string used for storing the x coordinates in GRM::Context
    * \param[in] x A vector containing double values representing x coordinates
-   * \param[in] y_key A string used for storing the y coordinates in GR::Context
+   * \param[in] y_key A string used for storing the y coordinates in GRM::Context
    * \param[in] y A vector containing double values representing y coordinates
-   * \param[in] extContext A GR::Context that is used for storing the vectors. By default it uses GR::Render's
-   * GR::Context object but an external GR::Context can be used \param[in] fillintstyle An Integer setting the
+   * \param[in] extContext A GRM::Context that is used for storing the vectors. By default it uses GRM::Render's
+   * GRM::Context object but an external GRM::Context can be used \param[in] fillintstyle An Integer setting the
    * gr_fillintstyle. By default it is 0 \param[in] fillstyle An Integer setting the gr_fillstyle. By default it is 0
    */
 
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   auto element = createElement("fillarea");
   if (x != std::nullopt)
     {
@@ -4480,14 +4483,14 @@ std::shared_ptr<GR::Element> GR::Render::createFillArea(const std::string &x_key
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createCellArray(double xmin, double xmax, double ymin, double ymax, int dimx,
-                                                         int dimy, int scol, int srow, int ncol, int nrow,
-                                                         const std::string &color_key,
-                                                         std::optional<std::vector<int>> color,
-                                                         const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createCellArray(double xmin, double xmax, double ymin, double ymax, int dimx,
+                                                           int dimy, int scol, int srow, int ncol, int nrow,
+                                                           const std::string &color_key,
+                                                           std::optional<std::vector<int>> color,
+                                                           const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * This function can be used to create a CellArray GR::Element
+   * This function can be used to create a CellArray GRM::Element
    *
    * \param[in] xmin A double value
    * \param[in] xmax A double value
@@ -4501,11 +4504,11 @@ std::shared_ptr<GR::Element> GR::Render::createCellArray(double xmin, double xma
    * \param[in] nrow An Integer value
    * \param[in] color_key A string used as a key for storing color
    * \param[in] color A vector with Integers
-   * \param[in] extContext A GR::Context used for storing color. By default it uses GR::Render's GR::Context object but
-   * an external GR::Context can be used
+   * \param[in] extContext A GRM::Context used for storing color. By default it uses GRM::Render's GRM::Context object
+   * but an external GRM::Context can be used
    */
 
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   auto element = createElement("cellarray");
   element->setAttribute("xmin", xmin);
   element->setAttribute("xmax", xmax);
@@ -4525,11 +4528,11 @@ std::shared_ptr<GR::Element> GR::Render::createCellArray(double xmin, double xma
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createAxes(double x_tick, double y_tick, double x_org, double y_org,
-                                                    int x_major, int y_major, int tick_orientation)
+std::shared_ptr<GRM::Element> GRM::Render::createAxes(double x_tick, double y_tick, double x_org, double y_org,
+                                                      int x_major, int y_major, int tick_orientation)
 {
   /*!
-   * This function can be used for creating an Axes GR::Element
+   * This function can be used for creating an Axes GRM::Element
    *
    * \param[in] x_tick A double value
    * \param[in] y_tick A double value
@@ -4550,10 +4553,10 @@ std::shared_ptr<GR::Element> GR::Render::createAxes(double x_tick, double y_tick
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createEmptyAxes(int tick_orientation)
+std::shared_ptr<GRM::Element> GRM::Render::createEmptyAxes(int tick_orientation)
 {
   /*!
-   * This function can be used for creating an Axes GR::Element with missing information
+   * This function can be used for creating an Axes GRM::Element with missing information
    *
    * \param[in] tick_orientation A Int value specifing the direction of the ticks
    */
@@ -4562,16 +4565,16 @@ std::shared_ptr<GR::Element> GR::Render::createEmptyAxes(int tick_orientation)
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createDrawLegend(const std::string &labels_key,
-                                                          std::optional<std::vector<std::string>> labels, int location,
-                                                          const std::string &specs_key,
-                                                          std::optional<std::vector<std::string>> specs,
-                                                          const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createDrawLegend(const std::string &labels_key,
+                                                            std::optional<std::vector<std::string>> labels,
+                                                            int location, const std::string &specs_key,
+                                                            std::optional<std::vector<std::string>> specs,
+                                                            const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * This function can be used for creating a DrawLegend GR::Element
-   * This element is different compared to most of Render's GR::Element, the DrawLegend GR::Element will incorporate
-   * plot_draw_legend code from plot.cxx and will create new GR::Elements as child nodes in the render document
+   * This function can be used for creating a DrawLegend GRM::Element
+   * This element is different compared to most of Render's GRM::Element, the DrawLegend GRM::Element will incorporate
+   * plot_draw_legend code from plot.cxx and will create new GRM::Elements as child nodes in the render document
    *
    * \param[in] labels_key A std::string for the labels vector
    * \param[in] labels May be an std::vector<std::string>> containing the labels
@@ -4580,7 +4583,7 @@ std::shared_ptr<GR::Element> GR::Render::createDrawLegend(const std::string &lab
    */
 
   auto element = createElement("draw-legend");
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   element->setAttribute("location", location);
   element->setAttribute("specs", specs_key);
   element->setAttribute("labels", labels_key);
@@ -4598,9 +4601,9 @@ std::shared_ptr<GR::Element> GR::Render::createDrawLegend(const std::string &lab
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createDrawPolarAxes(int angle_ticks, const std::string &kind, int phiflip,
-                                                             const std::string &title, const std::string &norm,
-                                                             double tick, double line_width)
+std::shared_ptr<GRM::Element> GRM::Render::createDrawPolarAxes(int angle_ticks, const std::string &kind, int phiflip,
+                                                               const std::string &title, const std::string &norm,
+                                                               double tick, double line_width)
 {
   auto element = createElement("draw-polar-axes");
   if (!title.empty())
@@ -4626,12 +4629,12 @@ std::shared_ptr<GR::Element> GR::Render::createDrawPolarAxes(int angle_ticks, co
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createDrawPieLegend(const std::string &labels_key,
-                                                             std::optional<std::vector<std::string>> labels,
-                                                             const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createDrawPieLegend(const std::string &labels_key,
+                                                               std::optional<std::vector<std::string>> labels,
+                                                               const std::shared_ptr<GRM::Context> &extContext)
 {
   auto element = createElement("draw-pie-legend");
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   element->setAttribute("labels", labels_key);
 
   if (labels != std::nullopt)
@@ -4641,7 +4644,7 @@ std::shared_ptr<GR::Element> GR::Render::createDrawPieLegend(const std::string &
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createPiePlotTitleRenderElement(std::string title)
+std::shared_ptr<GRM::Element> GRM::Render::createPiePlotTitleRenderElement(std::string title)
 {
   auto element = createElement("pie-plot-title-render");
   element->setAttribute("pie-plot-title", title);
@@ -4649,8 +4652,8 @@ std::shared_ptr<GR::Element> GR::Render::createPiePlotTitleRenderElement(std::st
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createGrid(double x_tick, double y_tick, double x_org, double y_org,
-                                                    int major_x, int major_y)
+std::shared_ptr<GRM::Element> GRM::Render::createGrid(double x_tick, double y_tick, double x_org, double y_org,
+                                                      int major_x, int major_y)
 {
   auto element = createElement("grid");
   element->setAttribute("x_tick", x_tick);
@@ -4662,7 +4665,7 @@ std::shared_ptr<GR::Element> GR::Render::createGrid(double x_tick, double y_tick
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createEmptyGrid(bool x_grid, bool y_grid)
+std::shared_ptr<GRM::Element> GRM::Render::createEmptyGrid(bool x_grid, bool y_grid)
 {
   auto element = createElement("grid");
   if (!x_grid)
@@ -4676,17 +4679,17 @@ std::shared_ptr<GR::Element> GR::Render::createEmptyGrid(bool x_grid, bool y_gri
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createGroup()
+std::shared_ptr<GRM::Element> GRM::Render::createGroup()
 {
   /*!
-   * This function can be used to create a group GR::Element
+   * This function can be used to create a group GRM::Element
    *
    * A group Element sets all attributes for its children
    */
   return createElement("group");
 }
 
-std::shared_ptr<GR::Element> GR::Render::createGroup(const std::string &name)
+std::shared_ptr<GRM::Element> GRM::Render::createGroup(const std::string &name)
 {
   auto element = createElement("group");
   element->setAttribute("name", name);
@@ -4694,13 +4697,13 @@ std::shared_ptr<GR::Element> GR::Render::createGroup(const std::string &name)
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createDrawImage(double xmin, double ymin, double xmax, double ymax, int width,
-                                                         int height, const std::string &data_key,
-                                                         std::optional<std::vector<int>> data, int model,
-                                                         const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createDrawImage(double xmin, double ymin, double xmax, double ymax,
+                                                           int width, int height, const std::string &data_key,
+                                                           std::optional<std::vector<int>> data, int model,
+                                                           const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * This function can be used to create a DrawImage GR::Element
+   * This function can be used to create a DrawImage GRM::Element
    *
    * \param[in] xmin A Double value
    * \param[in] xmax A Double value
@@ -4711,10 +4714,10 @@ std::shared_ptr<GR::Element> GR::Render::createDrawImage(double xmin, double ymi
    * \param[in] data_key A String used as a key for storing data
    * \param[in] data A vector containing Integers
    * \param[in] model An Integer setting the model
-   * \param[in] extContext A GR::Context used for storing data. By default it uses GR::Render's GR::Context object but
-   * an external GR::Context can be used
+   * \param[in] extContext A GRM::Context used for storing data. By default it uses GRM::Render's GRM::Context object
+   * but an external GRM::Context can be used
    */
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   auto element = createElement("drawimage");
   element->setAttribute("xmin", xmin);
   element->setAttribute("xmax", xmax);
@@ -4732,8 +4735,8 @@ std::shared_ptr<GR::Element> GR::Render::createDrawImage(double xmin, double ymi
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createDrawArc(double xmin, double xmax, double ymin, double ymax, double a1,
-                                                       double a2)
+std::shared_ptr<GRM::Element> GRM::Render::createDrawArc(double xmin, double xmax, double ymin, double ymax, double a1,
+                                                         double a2)
 {
   auto element = createElement("drawarc");
   element->setAttribute("xmin", xmin);
@@ -4746,8 +4749,8 @@ std::shared_ptr<GR::Element> GR::Render::createDrawArc(double xmin, double xmax,
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createFillArc(double xmin, double xmax, double ymin, double ymax, double a1,
-                                                       double a2, int fillintstyle, int fillstyle, int fillcolorind)
+std::shared_ptr<GRM::Element> GRM::Render::createFillArc(double xmin, double xmax, double ymin, double ymax, double a1,
+                                                         double a2, int fillintstyle, int fillstyle, int fillcolorind)
 {
   auto element = createElement("fillarc");
   element->setAttribute("xmin", xmin);
@@ -4774,7 +4777,7 @@ std::shared_ptr<GR::Element> GR::Render::createFillArc(double xmin, double xmax,
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createDrawRect(double xmin, double xmax, double ymin, double ymax)
+std::shared_ptr<GRM::Element> GRM::Render::createDrawRect(double xmin, double xmax, double ymin, double ymax)
 {
   auto element = createElement("drawrect");
   element->setAttribute("xmin", xmin);
@@ -4785,8 +4788,8 @@ std::shared_ptr<GR::Element> GR::Render::createDrawRect(double xmin, double xmax
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createFillRect(double xmin, double xmax, double ymin, double ymax,
-                                                        int fillintstyle, int fillstyle, int fillcolorind)
+std::shared_ptr<GRM::Element> GRM::Render::createFillRect(double xmin, double xmax, double ymin, double ymax,
+                                                          int fillintstyle, int fillstyle, int fillcolorind)
 {
   auto element = createElement("fillrect");
   element->setAttribute("xmin", xmin);
@@ -4811,17 +4814,17 @@ std::shared_ptr<GR::Element> GR::Render::createFillRect(double xmin, double xmax
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createQuiver(const std::string &x_key, std::optional<std::vector<double>> x,
-                                                      const std::string &y_key, std::optional<std::vector<double>> y,
-                                                      const std::string &u_key, std::optional<std::vector<double>> u,
-                                                      const std::string &v_key, std::optional<std::vector<double>> v,
-                                                      int color, const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createQuiver(const std::string &x_key, std::optional<std::vector<double>> x,
+                                                        const std::string &y_key, std::optional<std::vector<double>> y,
+                                                        const std::string &u_key, std::optional<std::vector<double>> u,
+                                                        const std::string &v_key, std::optional<std::vector<double>> v,
+                                                        int color, const std::shared_ptr<GRM::Context> &extContext)
 {
   /*
-   * This function can be used to create a Quiver GR::Element
+   * This function can be used to create a Quiver GRM::Element
    *
    */
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   auto element = createElement("quiver");
   element->setAttribute("x", x_key);
   element->setAttribute("y", y_key);
@@ -4850,17 +4853,18 @@ std::shared_ptr<GR::Element> GR::Render::createQuiver(const std::string &x_key, 
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createContour(const std::string &px_key, std::optional<std::vector<double>> px,
-                                                       const std::string &py_key, std::optional<std::vector<double>> py,
-                                                       const std::string &h_key, std::optional<std::vector<double>> h,
-                                                       const std::string &pz_key, std::optional<std::vector<double>> pz,
-                                                       int major_h, const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element>
+GRM::Render::createContour(const std::string &px_key, std::optional<std::vector<double>> px, const std::string &py_key,
+                           std::optional<std::vector<double>> py, const std::string &h_key,
+                           std::optional<std::vector<double>> h, const std::string &pz_key,
+                           std::optional<std::vector<double>> pz, int major_h,
+                           const std::shared_ptr<GRM::Context> &extContext)
 {
   /*
-   * This function can be used to create a contour GR::Element
+   * This function can be used to create a contour GRM::Element
    *
    */
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   auto element = createElement("contour");
   element->setAttribute("px", px_key);
   element->setAttribute("py", py_key);
@@ -4889,19 +4893,18 @@ std::shared_ptr<GR::Element> GR::Render::createContour(const std::string &px_key
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createContourf(const std::string &px_key,
-                                                        std::optional<std::vector<double>> px,
-                                                        const std::string &py_key,
-                                                        std::optional<std::vector<double>> py, const std::string &h_key,
-                                                        std::optional<std::vector<double>> h, const std::string &pz_key,
-                                                        std::optional<std::vector<double>> pz, int major_h,
-                                                        const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element>
+GRM::Render::createContourf(const std::string &px_key, std::optional<std::vector<double>> px, const std::string &py_key,
+                            std::optional<std::vector<double>> py, const std::string &h_key,
+                            std::optional<std::vector<double>> h, const std::string &pz_key,
+                            std::optional<std::vector<double>> pz, int major_h,
+                            const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * This function can be used to create a contour GR::Element
+   * This function can be used to create a contour GRM::Element
    *
    */
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   auto element = createElement("contourf");
 
   element->setAttribute("px", px_key);
@@ -4931,15 +4934,15 @@ std::shared_ptr<GR::Element> GR::Render::createContourf(const std::string &px_ke
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createHexbin(int x_length, const std::string &x_key,
-                                                      std::optional<std::vector<double>> x, const std::string &y_key,
-                                                      std::optional<std::vector<double>> y, int nbins,
-                                                      const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createHexbin(int x_length, const std::string &x_key,
+                                                        std::optional<std::vector<double>> x, const std::string &y_key,
+                                                        std::optional<std::vector<double>> y, int nbins,
+                                                        const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * This function can be used to create a hexbin GR::Element
+   * This function can be used to create a hexbin GRM::Element
    */
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
 
   auto element = createElement("hexbin");
   element->setAttribute("x_length", x_length);
@@ -4959,14 +4962,14 @@ std::shared_ptr<GR::Element> GR::Render::createHexbin(int x_length, const std::s
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createVolume(int nx, int ny, int nz, const std::string &data_key,
-                                                      std::optional<std::vector<double>> data, int algorithm, int dmin,
-                                                      int dmax, const std::shared_ptr<Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createVolume(int nx, int ny, int nz, const std::string &data_key,
+                                                        std::optional<std::vector<double>> data, int algorithm,
+                                                        int dmin, int dmax, const std::shared_ptr<Context> &extContext)
 {
   /*!
-   * This function can be used to create a volume GR::Element
+   * This function can be used to create a volume GRM::Element
    */
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
 
   auto element = createElement("volume");
   element->setAttribute("nx", nx);
@@ -4985,13 +4988,13 @@ std::shared_ptr<GR::Element> GR::Render::createVolume(int nx, int ny, int nz, co
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createColorbar(unsigned int colors,
-                                                        const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createColorbar(unsigned int colors,
+                                                          const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * This function can be used to create a colorbar GR::Element
+   * This function can be used to create a colorbar GRM::Element
    */
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
 
   auto element = createElement("colorbar");
   element->setAttribute("colors", static_cast<int>(colors));
@@ -4999,15 +5002,17 @@ std::shared_ptr<GR::Element> GR::Render::createColorbar(unsigned int colors,
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createNonUniformCellArray(
-    const std::string &x_key, std::optional<std::vector<double>> x, const std::string &y_key,
-    std::optional<std::vector<double>> y, int dimx, int dimy, int scol, int srow, int ncol, int nrow,
-    const std::string &color_key, std::optional<std::vector<int>> color, const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element>
+GRM::Render::createNonUniformCellArray(const std::string &x_key, std::optional<std::vector<double>> x,
+                                       const std::string &y_key, std::optional<std::vector<double>> y, int dimx,
+                                       int dimy, int scol, int srow, int ncol, int nrow, const std::string &color_key,
+                                       std::optional<std::vector<int>> color,
+                                       const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * This function can be used to create a non uniform cell array GR::Element
+   * This function can be used to create a non uniform cell array GRM::Element
    */
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
 
   auto element = createElement("nonuniformcellarray");
   element->setAttribute("x", x_key);
@@ -5036,13 +5041,13 @@ std::shared_ptr<GR::Element> GR::Render::createNonUniformCellArray(
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createSurface(const std::string &px_key, std::optional<std::vector<double>> px,
-                                                       const std::string &py_key, std::optional<std::vector<double>> py,
-                                                       const std::string &pz_key, std::optional<std::vector<double>> pz,
-                                                       int option, int accelerate,
-                                                       const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element>
+GRM::Render::createSurface(const std::string &px_key, std::optional<std::vector<double>> px, const std::string &py_key,
+                           std::optional<std::vector<double>> py, const std::string &pz_key,
+                           std::optional<std::vector<double>> pz, int option, int accelerate,
+                           const std::shared_ptr<GRM::Context> &extContext)
 {
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   auto element = createElement("surface");
   element->setAttribute("px", px_key);
   element->setAttribute("py", py_key);
@@ -5066,8 +5071,9 @@ std::shared_ptr<GR::Element> GR::Render::createSurface(const std::string &px_key
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createGrid3d(double x_tick, double y_tick, double z_tick, double x_org,
-                                                      double y_org, double z_org, int x_major, int y_major, int z_major)
+std::shared_ptr<GRM::Element> GRM::Render::createGrid3d(double x_tick, double y_tick, double z_tick, double x_org,
+                                                        double y_org, double z_org, int x_major, int y_major,
+                                                        int z_major)
 {
   auto element = createElement("grid3d");
   element->setAttribute("x_tick", x_tick);
@@ -5082,7 +5088,7 @@ std::shared_ptr<GR::Element> GR::Render::createGrid3d(double x_tick, double y_ti
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid)
+std::shared_ptr<GRM::Element> GRM::Render::createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid)
 {
   auto element = createElement("grid3d");
   if (!x_grid)
@@ -5100,9 +5106,9 @@ std::shared_ptr<GR::Element> GR::Render::createEmptyGrid3d(bool x_grid, bool y_g
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createAxes3d(double x_tick, double y_tick, double z_tick, double x_org,
-                                                      double y_org, double z_org, int major_x, int major_y, int major_z,
-                                                      int tick_orientation)
+std::shared_ptr<GRM::Element> GRM::Render::createAxes3d(double x_tick, double y_tick, double z_tick, double x_org,
+                                                        double y_org, double z_org, int major_x, int major_y,
+                                                        int major_z, int tick_orientation)
 {
   auto element = createElement("axes3d");
   element->setAttribute("x_tick", x_tick);
@@ -5118,7 +5124,7 @@ std::shared_ptr<GR::Element> GR::Render::createAxes3d(double x_tick, double y_ti
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createEmptyAxes3d(int tick_orientation)
+std::shared_ptr<GRM::Element> GRM::Render::createEmptyAxes3d(int tick_orientation)
 {
   auto element = createElement("axes3d");
   element->setAttribute("tick_orientation", tick_orientation);
@@ -5126,12 +5132,12 @@ std::shared_ptr<GR::Element> GR::Render::createEmptyAxes3d(int tick_orientation)
 }
 
 
-std::shared_ptr<GR::Element>
-GR::Render::createPolyline3d(const std::string &x_key, std::optional<std::vector<double>> x, const std::string &y_key,
-                             std::optional<std::vector<double>> y, const std::string &z_key,
-                             std::optional<std::vector<double>> z, const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element>
+GRM::Render::createPolyline3d(const std::string &x_key, std::optional<std::vector<double>> x, const std::string &y_key,
+                              std::optional<std::vector<double>> y, const std::string &z_key,
+                              std::optional<std::vector<double>> z, const std::shared_ptr<GRM::Context> &extContext)
 {
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
 
   auto element = createElement("polyline3d");
   element->setAttribute("x", x_key);
@@ -5155,12 +5161,13 @@ GR::Render::createPolyline3d(const std::string &x_key, std::optional<std::vector
 }
 
 
-std::shared_ptr<GR::Element>
-GR::Render::createPolymarker3d(const std::string &x_key, std::optional<std::vector<double>> x, const std::string &y_key,
-                               std::optional<std::vector<double>> y, const std::string &z_key,
-                               std::optional<std::vector<double>> z, const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element>
+GRM::Render::createPolymarker3d(const std::string &x_key, std::optional<std::vector<double>> x,
+                                const std::string &y_key, std::optional<std::vector<double>> y,
+                                const std::string &z_key, std::optional<std::vector<double>> z,
+                                const std::shared_ptr<GRM::Context> &extContext)
 {
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
 
   auto element = createElement("polymarker3d");
   element->setAttribute("x", x_key);
@@ -5184,16 +5191,15 @@ GR::Render::createPolymarker3d(const std::string &x_key, std::optional<std::vect
 }
 
 
-std::shared_ptr<GR::Element>
-GR::Render::createGR3DrawMesh(int mesh, int n, const std::string &positions_key,
-                              std::optional<std::vector<double>> positions, const std::string &directions_key,
-                              std::optional<std::vector<double>> directions, const std::string &ups_key,
-                              std::optional<std::vector<double>> ups, const std::string &colors_key,
-                              std::optional<std::vector<double>> colors, const std::string &scales_key,
-                              std::optional<std::vector<double>> scales, const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createGR3DrawMesh(
+    int mesh, int n, const std::string &positions_key, std::optional<std::vector<double>> positions,
+    const std::string &directions_key, std::optional<std::vector<double>> directions, const std::string &ups_key,
+    std::optional<std::vector<double>> ups, const std::string &colors_key, std::optional<std::vector<double>> colors,
+    const std::string &scales_key, std::optional<std::vector<double>> scales,
+    const std::shared_ptr<GRM::Context> &extContext)
 {
 
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
 
   auto element = createElement("gr3drawmesh");
   element->setAttribute("mesh", mesh);
@@ -5228,13 +5234,12 @@ GR::Render::createGR3DrawMesh(int mesh, int n, const std::string &positions_key,
   return element;
 }
 
-std::shared_ptr<GR::Element>
-GR::Render::createGR3Isosurface(int nx, int ny, int nz, const std::string &data_key,
-                                std::optional<std::vector<double>> data, double isovalue, const std::string &color_key,
-                                std::optional<std::vector<double>> color, const std::string &strides_key,
-                                std::optional<std::vector<int>> strides, const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createGR3Isosurface(
+    int nx, int ny, int nz, const std::string &data_key, std::optional<std::vector<double>> data, double isovalue,
+    const std::string &color_key, std::optional<std::vector<double>> color, const std::string &strides_key,
+    std::optional<std::vector<int>> strides, const std::shared_ptr<GRM::Context> &extContext)
 {
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
 
   auto element = createElement("isosurface3");
   element->setAttribute("nx", nx);
@@ -5261,13 +5266,13 @@ GR::Render::createGR3Isosurface(int nx, int ny, int nz, const std::string &data_
   return element;
 }
 
-std::shared_ptr<GR::Element>
-GR::Render::createTriSurface(const std::string &px_key, std::optional<std::vector<double>> px,
-                             const std::string &py_key, std::optional<std::vector<double>> py,
-                             const std::string &pz_key, std::optional<std::vector<double>> pz,
-                             const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element>
+GRM::Render::createTriSurface(const std::string &px_key, std::optional<std::vector<double>> px,
+                              const std::string &py_key, std::optional<std::vector<double>> py,
+                              const std::string &pz_key, std::optional<std::vector<double>> pz,
+                              const std::shared_ptr<GRM::Context> &extContext)
 {
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   auto element = createElement("trisurface");
   element->setAttribute("px", px_key);
   element->setAttribute("py", py_key);
@@ -5289,14 +5294,14 @@ GR::Render::createTriSurface(const std::string &px_key, std::optional<std::vecto
   return element;
 }
 
-std::shared_ptr<GR::Element>
-GR::Render::createTriContour(const std::string &px_key, std::optional<std::vector<double>> px,
-                             const std::string &py_key, std::optional<std::vector<double>> py,
-                             const std::string &pz_key, std::optional<std::vector<double>> pz,
-                             const std::string &levels_key, std::optional<std::vector<double>> levels,
-                             const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element>
+GRM::Render::createTriContour(const std::string &px_key, std::optional<std::vector<double>> px,
+                              const std::string &py_key, std::optional<std::vector<double>> py,
+                              const std::string &pz_key, std::optional<std::vector<double>> pz,
+                              const std::string &levels_key, std::optional<std::vector<double>> levels,
+                              const std::shared_ptr<GRM::Context> &extContext)
 {
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   auto element = createElement("tricontour");
   element->setAttribute("px", px_key);
   element->setAttribute("py", py_key);
@@ -5323,8 +5328,8 @@ GR::Render::createTriContour(const std::string &px_key, std::optional<std::vecto
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createTitles3d(const std::string &x, const std::string &y,
-                                                        const std::string &z)
+std::shared_ptr<GRM::Element> GRM::Render::createTitles3d(const std::string &x, const std::string &y,
+                                                          const std::string &z)
 {
   auto element = createElement("titles3d");
   element->setAttribute("x", x);
@@ -5335,21 +5340,21 @@ std::shared_ptr<GR::Element> GR::Render::createTitles3d(const std::string &x, co
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createGR3Clear()
+std::shared_ptr<GRM::Element> GRM::Render::createGR3Clear()
 {
   auto element = createElement("gr3clear");
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createGR3DeleteMesh(int mesh)
+std::shared_ptr<GRM::Element> GRM::Render::createGR3DeleteMesh(int mesh)
 {
   auto element = createElement("gr3deletemesh");
   element->setAttribute("mesh", mesh);
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createGR3DrawImage(double xmin, double xmax, double ymin, double ymax,
-                                                            int width, int height, int drawable_type)
+std::shared_ptr<GRM::Element> GRM::Render::createGR3DrawImage(double xmin, double xmax, double ymin, double ymax,
+                                                              int width, int height, int drawable_type)
 {
   auto element = createElement("gr3drawimage");
   element->setAttribute("xmin", xmin);
@@ -5362,13 +5367,13 @@ std::shared_ptr<GR::Element> GR::Render::createGR3DrawImage(double xmin, double 
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createShadePoints(const std::string &x_key,
-                                                           std::optional<std::vector<double>> x,
-                                                           const std::string &y_key,
-                                                           std::optional<std::vector<double>> y, int xform, int w,
-                                                           int h, const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createShadePoints(const std::string &x_key,
+                                                             std::optional<std::vector<double>> x,
+                                                             const std::string &y_key,
+                                                             std::optional<std::vector<double>> y, int xform, int w,
+                                                             int h, const std::shared_ptr<GRM::Context> &extContext)
 {
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   auto element = createElement("shadepoints");
   if (x != std::nullopt)
     {
@@ -5387,23 +5392,23 @@ std::shared_ptr<GR::Element> GR::Render::createShadePoints(const std::string &x_
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createClearWS()
+std::shared_ptr<GRM::Element> GRM::Render::createClearWS()
 {
   auto element = createElement("clearws");
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createUpdateWS()
+std::shared_ptr<GRM::Element> GRM::Render::createUpdateWS()
 {
   return createElement("updatews");
 }
 
-std::shared_ptr<GR::Element> GR::Render::createDrawGraphics(const std::string &data_key,
-                                                            std::optional<std::vector<int>> data,
-                                                            const std::shared_ptr<GR::Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createDrawGraphics(const std::string &data_key,
+                                                              std::optional<std::vector<int>> data,
+                                                              const std::shared_ptr<GRM::Context> &extContext)
 {
 
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
 
   auto element = createElement("drawgraphics");
 
@@ -5416,7 +5421,7 @@ std::shared_ptr<GR::Element> GR::Render::createDrawGraphics(const std::string &d
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createIsoSurfaceRenderElement(int drawable_type)
+std::shared_ptr<GRM::Element> GRM::Render::createIsoSurfaceRenderElement(int drawable_type)
 {
   auto element = createElement("isosurface-render");
   element->setAttribute("drawable-type", drawable_type);
@@ -5424,7 +5429,7 @@ std::shared_ptr<GR::Element> GR::Render::createIsoSurfaceRenderElement(int drawa
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createLayoutGrid(const grm::Grid &grid)
+std::shared_ptr<GRM::Element> GRM::Render::createLayoutGrid(const grm::Grid &grid)
 {
   auto element = createElement("layout-grid");
 
@@ -5447,8 +5452,8 @@ std::shared_ptr<GR::Element> GR::Render::createLayoutGrid(const grm::Grid &grid)
 }
 
 
-std::shared_ptr<GR::Element> GR::Render::createLayoutGridElement(const grm::GridElement &gridElement,
-                                                                 const grm::Slice &slice)
+std::shared_ptr<GRM::Element> GRM::Render::createLayoutGridElement(const grm::GridElement &gridElement,
+                                                                   const grm::Slice &slice)
 {
   auto element = createElement("layout-gridelement");
 
@@ -5467,12 +5472,12 @@ std::shared_ptr<GR::Element> GR::Render::createLayoutGridElement(const grm::Grid
   element->setAttribute("colStop", slice.colStop);
 
   double *subplot = gridElement.subplot;
-  GR::Render::setSubplot(element, subplot[0], subplot[1], subplot[2], subplot[3]);
+  GRM::Render::setSubplot(element, subplot[0], subplot[1], subplot[2], subplot[3]);
 
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createPanzoom(double x, double y, double xzoom, double yzoom)
+std::shared_ptr<GRM::Element> GRM::Render::createPanzoom(double x, double y, double xzoom, double yzoom)
 {
 
   auto element = createElement("panzoom");
@@ -5483,7 +5488,7 @@ std::shared_ptr<GR::Element> GR::Render::createPanzoom(double x, double y, doubl
   return element;
 }
 
-std::shared_ptr<GR::Element> GR::Render::createYLine()
+std::shared_ptr<GRM::Element> GRM::Render::createYLine()
 {
 
   auto element = createElement("y-line");
@@ -5492,13 +5497,13 @@ std::shared_ptr<GR::Element> GR::Render::createYLine()
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ modifier functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void GR::Render::setViewport(const std::shared_ptr<GR::Element> &element, double xmin, double xmax, double ymin,
-                             double ymax)
+void GRM::Render::setViewport(const std::shared_ptr<GRM::Element> &element, double xmin, double xmax, double ymin,
+                              double ymax)
 {
   /*!
-   * This function can be used to set the viewport of a GR::Element
+   * This function can be used to set the viewport of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] xmin The left horizontal coordinate of the viewport (0 <= xmin < xmax)
    * \param[in] xmax The right horizontal coordinate of the viewport (xmin < xmax <= 1)
    * \param[in] ymin TThe bottom vertical coordinate of the viewport (0 <= ymin < ymax)
@@ -5513,13 +5518,13 @@ void GR::Render::setViewport(const std::shared_ptr<GR::Element> &element, double
 }
 
 
-void GR::Render::setWSViewport(const std::shared_ptr<GR::Element> &element, double xmin, double xmax, double ymin,
-                               double ymax)
+void GRM::Render::setWSViewport(const std::shared_ptr<GRM::Element> &element, double xmin, double xmax, double ymin,
+                                double ymax)
 {
   /*!
-   * This function can be used to set the wsviewport of a GR::Element
+   * This function can be used to set the wsviewport of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] xmin The left horizontal coordinate of the viewport (0 <= xmin < xmax)
    * \param[in] xmax The right horizontal coordinate of the viewport (xmin < xmax <= 1)
    * \param[in] ymin TThe bottom vertical coordinate of the viewport (0 <= ymin < ymax)
@@ -5534,12 +5539,12 @@ void GR::Render::setWSViewport(const std::shared_ptr<GR::Element> &element, doub
 }
 
 
-void GR::Render::setWindow(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax)
+void GRM::Render::setWindow(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax)
 {
   /*!
-   * This function can be used to set the window of a GR::Element
+   * This function can be used to set the window of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] xmin The left horizontal coordinate of the window (xmin < xmax)
    * \param[in] xmax The right horizontal coordinate of the window (xmin < xmax)
    * \param[in] ymin The bottom vertical coordinate of the window (ymin < ymax)
@@ -5554,13 +5559,13 @@ void GR::Render::setWindow(const std::shared_ptr<Element> &element, double xmin,
 }
 
 
-void GR::Render::setWSWindow(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin,
-                             double ymax)
+void GRM::Render::setWSWindow(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin,
+                              double ymax)
 {
   /*!
-   * This function can be used to set the ws_window of a GR::Element
+   * This function can be used to set the ws_window of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] xmin The left horizontal coordinate of the window (xmin < xmax)
    * \param[in] xmax The right horizontal coordinate of the window (xmin < xmax)
    * \param[in] ymin The bottom vertical coordinate of the window (ymin < ymax)
@@ -5574,31 +5579,31 @@ void GR::Render::setWSWindow(const std::shared_ptr<Element> &element, double xmi
   element->setAttribute("wswindow_ymax", ymax);
 }
 
-void GR::Render::setMarkerType(const std::shared_ptr<Element> &element, int type)
+void GRM::Render::setMarkerType(const std::shared_ptr<Element> &element, int type)
 {
   /*!
-   * This function can be used to set a MarkerType of a GR::Element
+   * This function can be used to set a MarkerType of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] type An Integer setting the MarkerType
    */
   element->setAttribute("markertype", type);
 }
 
 
-void GR::Render::setMarkerType(const std::shared_ptr<Element> &element, const std::string &types_key,
-                               std::optional<std::vector<int>> types, const std::shared_ptr<GR::Context> &extContext)
+void GRM::Render::setMarkerType(const std::shared_ptr<Element> &element, const std::string &types_key,
+                                std::optional<std::vector<int>> types, const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * This function can be used to set a vector of MarkerTypes of a GR::Element
+   * This function can be used to set a vector of MarkerTypes of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] types_key A string used as a key for storing the types
    * \param[in] types A vector containing the MarkerTypes
-   * \param[in] extContext A GR::Context used for storing types. By default it uses GR::Render's GR::Context object but
-   * an external GR::Context can be used
+   * \param[in] extContext A GRM::Context used for storing types. By default it uses GRM::Render's GRM::Context object
+   * but an external GRM::Context can be used
    */
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   if (types != std::nullopt)
     {
       (*useContext)[types_key] = *types;
@@ -5607,61 +5612,62 @@ void GR::Render::setMarkerType(const std::shared_ptr<Element> &element, const st
 }
 
 
-void GR::Render::setMarkerSize(const std::shared_ptr<Element> &element, double size)
+void GRM::Render::setMarkerSize(const std::shared_ptr<Element> &element, double size)
 {
   /*!
-   * This function can be used to set a MarkerSize of a GR::Element
+   * This function can be used to set a MarkerSize of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] type A Double setting the MarkerSize
    */
   element->setAttribute("markersize", size);
 }
 
-void GR::Render::setMarkerSize(const std::shared_ptr<Element> &element, const std::string &sizes_key,
-                               std::optional<std::vector<double>> sizes, const std::shared_ptr<GR::Context> &extContext)
+void GRM::Render::setMarkerSize(const std::shared_ptr<Element> &element, const std::string &sizes_key,
+                                std::optional<std::vector<double>> sizes,
+                                const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * This function can be used to set a vector of MarkerTypes of a GR::Element
+   * This function can be used to set a vector of MarkerTypes of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] sizes_key A string used as a key for storing the sizes
    * \param[in] sizes A vector containing the MarkerSizes
-   * \param[in] extContext A GR::Context used for storing sizes. By default it uses GR::Render's GR::Context object but
-   * an external GR::Context can be used
+   * \param[in] extContext A GRM::Context used for storing sizes. By default it uses GRM::Render's GRM::Context object
+   * but an external GRM::Context can be used
    */
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   if (sizes != std::nullopt)
     {
       (*useContext)[sizes_key] = *sizes;
     }
   element->setAttribute("markersizes", sizes_key);
 }
-void GR::Render::setMarkerColorInd(const std::shared_ptr<Element> &element, int color)
+void GRM::Render::setMarkerColorInd(const std::shared_ptr<Element> &element, int color)
 {
   /*!
-   * This function can be used to set a MarkerCololrInd of a GR::Element
+   * This function can be used to set a MarkerCololrInd of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] color An Integer setting the MarkerColorInd
    */
   element->setAttribute("markercolorind", color);
 }
 
-void GR::Render::setMarkerColorInd(const std::shared_ptr<Element> &element, const std::string &colorinds_key,
-                                   std::optional<std::vector<int>> colorinds,
-                                   const std::shared_ptr<GR::Context> &extContext)
+void GRM::Render::setMarkerColorInd(const std::shared_ptr<Element> &element, const std::string &colorinds_key,
+                                    std::optional<std::vector<int>> colorinds,
+                                    const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * This function can be used to set a vector of MarkerColorInds of a GR::Element
+   * This function can be used to set a vector of MarkerColorInds of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] colorinds_key A string used as a key for storing the colorinds
    * \param[in] colorinds A vector containing the MarkerColorInds
-   * \param[in] extContext A GR::Context used for storing colorinds. By default it uses GR::Render's GR::Context object
-   * but an external GR::Context can be used
+   * \param[in] extContext A GRM::Context used for storing colorinds. By default it uses GRM::Render's GRM::Context
+   * object but an external GRM::Context can be used
    */
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   if (colorinds != std::nullopt)
     {
       (*useContext)[colorinds_key] = *colorinds;
@@ -5670,19 +5676,19 @@ void GR::Render::setMarkerColorInd(const std::shared_ptr<Element> &element, cons
 }
 
 
-void GR::Render::setLineType(const std::shared_ptr<Element> &element, const std::string &types_key,
-                             std::optional<std::vector<int>> types, const std::shared_ptr<GR::Context> &extContext)
+void GRM::Render::setLineType(const std::shared_ptr<Element> &element, const std::string &types_key,
+                              std::optional<std::vector<int>> types, const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * This function can be used to set a vector of LineTypes of a GR::Element
+   * This function can be used to set a vector of LineTypes of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] types_key A string used as a key for storing the types
    * \param[in] types A vector containing the LineTypes
-   * \param[in] extContext A GR::Context used for storing types. By default it uses GR::Render's GR::Context object but
-   * an external GR::Context can be used
+   * \param[in] extContext A GRM::Context used for storing types. By default it uses GRM::Render's GRM::Context object
+   * but an external GRM::Context can be used
    */
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   if (types != std::nullopt)
     {
       (*useContext)[types_key] = *types;
@@ -5690,31 +5696,32 @@ void GR::Render::setLineType(const std::shared_ptr<Element> &element, const std:
   element->setAttribute("linetypes", types_key);
 }
 
-void GR::Render::setLineType(const std::shared_ptr<Element> &element, int type)
+void GRM::Render::setLineType(const std::shared_ptr<Element> &element, int type)
 {
   /*!
-   * This function can be used to set a LineType of a GR::Element
+   * This function can be used to set a LineType of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] type An Integer setting the LineType
    */
   element->setAttribute("linetype", type);
 }
 
 
-void GR::Render::setLineWidth(const std::shared_ptr<Element> &element, const std::string &widths_key,
-                              std::optional<std::vector<double>> widths, const std::shared_ptr<GR::Context> &extContext)
+void GRM::Render::setLineWidth(const std::shared_ptr<Element> &element, const std::string &widths_key,
+                               std::optional<std::vector<double>> widths,
+                               const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * This function can be used to set a vector of LineWidths of a GR::Element
+   * This function can be used to set a vector of LineWidths of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] widths_key A string used as a key for storing the widths
    * \param[in] widths A vector containing the LineWidths
-   * \param[in] extContext A GR::Context used for storing widths. By default it uses GR::Render's GR::Context object but
-   * an external GR::Context can be used
+   * \param[in] extContext A GRM::Context used for storing widths. By default it uses GRM::Render's GRM::Context object
+   * but an external GRM::Context can be used
    */
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   if (widths != std::nullopt)
     {
       (*useContext)[widths_key] = *widths;
@@ -5723,32 +5730,32 @@ void GR::Render::setLineWidth(const std::shared_ptr<Element> &element, const std
 }
 
 
-void GR::Render::setLineWidth(const std::shared_ptr<Element> &element, double width)
+void GRM::Render::setLineWidth(const std::shared_ptr<Element> &element, double width)
 {
   /*!
-   * This function can be used to set a LineWidth of a GR::Element
+   * This function can be used to set a LineWidth of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] type A Double setting the LineWidth
    */
   element->setAttribute("linewidth", width);
 }
 
 
-void GR::Render::setLineColorInd(const std::shared_ptr<Element> &element, const std::string &colorinds_key,
-                                 std::optional<std::vector<int>> colorinds,
-                                 const std::shared_ptr<GR::Context> &extContext)
+void GRM::Render::setLineColorInd(const std::shared_ptr<Element> &element, const std::string &colorinds_key,
+                                  std::optional<std::vector<int>> colorinds,
+                                  const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * This funciton can be used to set a vector of LineColorInds of a GR::Element
+   * This funciton can be used to set a vector of LineColorInds of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] colorinds_key A string used as a key for storing the colorinds
    * \param[in] colorinds A vector containing the Colorinds
-   * \param[in] extContext A GR::Context used for storing colorinds. By default it uses GR::Render's GR::Context object
-   * but an external GR::Context can be used
+   * \param[in] extContext A GRM::Context used for storing colorinds. By default it uses GRM::Render's GRM::Context
+   * object but an external GRM::Context can be used
    */
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   if (colorinds != std::nullopt)
     {
       (*useContext)[colorinds_key] = *colorinds;
@@ -5756,24 +5763,24 @@ void GR::Render::setLineColorInd(const std::shared_ptr<Element> &element, const 
   element->setAttribute("linecolorinds", colorinds_key);
 }
 
-void GR::Render::setLineColorInd(const std::shared_ptr<Element> &element, int color)
+void GRM::Render::setLineColorInd(const std::shared_ptr<Element> &element, int color)
 {
   /*!
-   * This function can be used to set LineColorInd of a GR::Element
+   * This function can be used to set LineColorInd of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] color An Integer value setting the LineColorInd
    */
   element->setAttribute("linecolorind", color);
 }
 
 
-void GR::Render::setTextFontPrec(const std::shared_ptr<Element> &element, int font, int prec)
+void GRM::Render::setTextFontPrec(const std::shared_ptr<Element> &element, int font, int prec)
 {
   /*!
-   * This function can be used to set TextFontPrec of a GR::Element
+   * This function can be used to set TextFontPrec of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] font An Integer value representing a font type
    * \param[in] prec An Integer value representing a font precision
    */
@@ -5783,12 +5790,12 @@ void GR::Render::setTextFontPrec(const std::shared_ptr<Element> &element, int fo
 }
 
 
-void GR::Render::setCharUp(const std::shared_ptr<Element> &element, double ux, double uy)
+void GRM::Render::setCharUp(const std::shared_ptr<Element> &element, double ux, double uy)
 {
   /*!
-   * This function can be used to set CharUp of a GR::Element
+   * This function can be used to set CharUp of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] ux  X coordinate of the text up vector
    * \param[in] uy  y coordinate of the text up vector
    */
@@ -5797,12 +5804,12 @@ void GR::Render::setCharUp(const std::shared_ptr<Element> &element, double ux, d
   element->setAttribute("charup_uy", uy);
 }
 
-void GR::Render::setTextAlign(const std::shared_ptr<Element> &element, int horizontal, int vertical)
+void GRM::Render::setTextAlign(const std::shared_ptr<Element> &element, int horizontal, int vertical)
 {
   /*!
-   * This function can be used to set TextAlign of a GR::Element
+   * This function can be used to set TextAlign of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] horizontal  Horizontal text alignment
    * \param[in] vertical Vertical text alignment
    */
@@ -5811,12 +5818,12 @@ void GR::Render::setTextAlign(const std::shared_ptr<Element> &element, int horiz
   element->setAttribute("textalign_vertical", vertical);
 }
 
-void GR::Render::setTextWidthAndHeight(const std::shared_ptr<Element> &element, double width, double height)
+void GRM::Render::setTextWidthAndHeight(const std::shared_ptr<Element> &element, double width, double height)
 {
   /*!
-   * This function can be used to set the width and height of a GR::Element
+   * This function can be used to set the width and height of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] width Width of the Element
    * \param[in] height Height of the Element
    */
@@ -5825,24 +5832,24 @@ void GR::Render::setTextWidthAndHeight(const std::shared_ptr<Element> &element, 
 }
 
 
-void GR::Render::setLineSpec(const std::shared_ptr<Element> &element, const std::string &spec)
+void GRM::Render::setLineSpec(const std::shared_ptr<Element> &element, const std::string &spec)
 {
   /*!
-   * This function can be used to set the linespec of a GR::Element
+   * This function can be used to set the linespec of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] spec An std::string
    *
    */
   element->setAttribute("linespec", spec);
 }
 
-void GR::Render::setColorRep(const std::shared_ptr<Element> &element, int index, double red, double green, double blue)
+void GRM::Render::setColorRep(const std::shared_ptr<Element> &element, int index, double red, double green, double blue)
 {
   /*!
-   * This function can be used to set the colorrep of a GR::Element
+   * This function can be used to set the colorrep of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] index Color index in the range 0 to 1256
    * \param[in] red Red intensity in the range 0.0 to 1.0
    * \param[in] green Green intensity in the range 0.0 to 1.0
@@ -5863,35 +5870,35 @@ void GR::Render::setColorRep(const std::shared_ptr<Element> &element, int index,
   element->setAttribute(name, stream.str());
 }
 
-void GR::Render::setFillIntStyle(const std::shared_ptr<GR::Element> &element, int index)
+void GRM::Render::setFillIntStyle(const std::shared_ptr<GRM::Element> &element, int index)
 {
   /*!
-   * This function can be used to set the fillintstyle of a GR::Element
+   * This function can be used to set the fillintstyle of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] index The style of fill to be used
    */
   element->setAttribute("fillintstyle", index);
 }
 
 
-void GR::Render::setFillColorInd(const std::shared_ptr<GR::Element> &element, int color)
+void GRM::Render::setFillColorInd(const std::shared_ptr<GRM::Element> &element, int color)
 {
   /*!
-   * This function can be used to set the fillcolorind of a GR::Element
+   * This function can be used to set the fillcolorind of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] color The fill area color index (COLOR < 1256)
    */
   element->setAttribute("fillcolorind", color);
 }
 
-void GR::Render::setFillStyle(const std::shared_ptr<GR::Element> &element, int index)
+void GRM::Render::setFillStyle(const std::shared_ptr<GRM::Element> &element, int index)
 {
   /*!
-   * This function can be used to set the fillintstyle of a GR::Element
+   * This function can be used to set the fillintstyle of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] index The fill style index to be used
    */
 
@@ -5899,24 +5906,24 @@ void GR::Render::setFillStyle(const std::shared_ptr<GR::Element> &element, int i
 }
 
 
-void GR::Render::setScale(const std::shared_ptr<GR::Element> &element, int scale)
+void GRM::Render::setScale(const std::shared_ptr<GRM::Element> &element, int scale)
 {
   /*!
-   * This function can be used to set the scale of a GR::Element
+   * This function can be used to set the scale of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] index The scale index to be used
    */
   element->setAttribute("scale", scale);
 }
 
-void GR::Render::setWindow3d(const std::shared_ptr<GR::Element> &element, double xmin, double xmax, double ymin,
-                             double ymax, double zmin, double zmax)
+void GRM::Render::setWindow3d(const std::shared_ptr<GRM::Element> &element, double xmin, double xmax, double ymin,
+                              double ymax, double zmin, double zmax)
 {
   /*!
-   * This function can be used to set the window3d of a GR::Element
+   * This function can be used to set the window3d of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] xmin The left horizontal coordinate of the window (xmin < xmax)
    * \param[in] xmax The right horizontal coordinate of the window (xmin < xmax)
    * \param[in] ymin The bottom vertical coordinate of the window (ymin < ymax)
@@ -5934,12 +5941,12 @@ void GR::Render::setWindow3d(const std::shared_ptr<GR::Element> &element, double
   element->setAttribute("window_zmax", zmax);
 }
 
-void GR::Render::setSpace3d(const std::shared_ptr<GR::Element> &element, double phi, double theta, double fov,
-                            double camera_distance)
+void GRM::Render::setSpace3d(const std::shared_ptr<GRM::Element> &element, double phi, double theta, double fov,
+                             double camera_distance)
 {
-  /*! This function can be used to set the space3d of a GR::Element
+  /*! This function can be used to set the space3d of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] phi: azimuthal angle of the spherical coordinates
    * \param[in] theta: polar angle of the spherical coordinates
    * \param[in] fov: vertical field of view(0 or NaN for orthographic projection)
@@ -5954,12 +5961,12 @@ void GR::Render::setSpace3d(const std::shared_ptr<GR::Element> &element, double 
   element->setAttribute("space3d_camera-distance", camera_distance);
 }
 
-void GR::Render::setSpace(const std::shared_ptr<Element> &element, double zmin, double zmax, int rotation, int tilt)
+void GRM::Render::setSpace(const std::shared_ptr<Element> &element, double zmin, double zmax, int rotation, int tilt)
 {
   /*!
-   * This function can be used to set the space of a GR::Element
+   * This function can be used to set the space of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] zmin
    * \param[in] zmax
    * \param[in] rotation
@@ -5973,11 +5980,11 @@ void GR::Render::setSpace(const std::shared_ptr<Element> &element, double zmin, 
   element->setAttribute("space_tilt", tilt);
 }
 
-void GR::Render::setSelntran(const std::shared_ptr<Element> &element, int transform)
+void GRM::Render::setSelntran(const std::shared_ptr<Element> &element, int transform)
 {
-  /*! This function can be used to set the window3d of a GR::Element
+  /*! This function can be used to set the window3d of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] transform Select a predefined transformation from world coordinates to normalized device coordinates.
    */
 
@@ -5985,12 +5992,12 @@ void GR::Render::setSelntran(const std::shared_ptr<Element> &element, int transf
 }
 
 
-void GR::Render::setGR3BackgroundColor(const std::shared_ptr<GR::Element> &element, double red, double green,
-                                       double blue, double alpha)
+void GRM::Render::setGR3BackgroundColor(const std::shared_ptr<GRM::Element> &element, double red, double green,
+                                        double blue, double alpha)
 {
-  /*! This function can be used to set the gr3 backgroundcolor of a GR::Element
+  /*! This function can be used to set the gr3 backgroundcolor of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    */
   element->setAttribute("gr3backgroundcolor", true);
   element->setAttribute("gr3backgroundcolor_red", red);
@@ -5999,13 +6006,13 @@ void GR::Render::setGR3BackgroundColor(const std::shared_ptr<GR::Element> &eleme
   element->setAttribute("gr3backgroundcolor_alpha", alpha);
 }
 
-void GR::Render::setGR3CameraLookAt(const std::shared_ptr<GR::Element> &element, double camera_x, double camera_y,
-                                    double camera_z, double center_x, double center_y, double center_z, double up_x,
-                                    double up_y, double up_z)
+void GRM::Render::setGR3CameraLookAt(const std::shared_ptr<GRM::Element> &element, double camera_x, double camera_y,
+                                     double camera_z, double center_x, double center_y, double center_z, double up_x,
+                                     double up_y, double up_z)
 {
-  /*! This function can be used to set the gr3 camerlookat of a GR::Element
+  /*! This function can be used to set the gr3 camerlookat of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] camera_x: The x-coordinate of the camera
    * \param[in] camera_y: The y-coordinate of the camera
    * \param[in] camera_z: The z-coordinate of the camera
@@ -6029,11 +6036,11 @@ void GR::Render::setGR3CameraLookAt(const std::shared_ptr<GR::Element> &element,
 }
 
 
-void GR::Render::setTextColorInd(const std::shared_ptr<GR::Element> &element, int index)
+void GRM::Render::setTextColorInd(const std::shared_ptr<GRM::Element> &element, int index)
 {
   /*!
-   * This function can be used to set the textcolorind of a GR::Element
-   * \param[in] element A GR::Element
+   * This function can be used to set the textcolorind of a GRM::Element
+   * \param[in] element A GRM::Element
    * \param[in] index The color index
    */
 
@@ -6041,62 +6048,62 @@ void GR::Render::setTextColorInd(const std::shared_ptr<GR::Element> &element, in
 }
 
 
-void GR::Render::setBorderColorInd(const std::shared_ptr<GR::Element> &element, int index)
+void GRM::Render::setBorderColorInd(const std::shared_ptr<GRM::Element> &element, int index)
 {
   /*!
-   * This function can be used to set the bordercolorind of a GR::Element
-   * \param[in] element A GR::Element
+   * This function can be used to set the bordercolorind of a GRM::Element
+   * \param[in] element A GRM::Element
    * \param[in] index The color index
    */
   element->setAttribute("bordercolorind", index);
 }
 
-void GR::Render::selectClipXForm(const std::shared_ptr<GR::Element> &element, int form)
+void GRM::Render::selectClipXForm(const std::shared_ptr<GRM::Element> &element, int form)
 {
   /*!
-   * This function can be used to set the clipxform of a GR::Element
-   * \param[in] element A GR::Element
+   * This function can be used to set the clipxform of a GRM::Element
+   * \param[in] element A GRM::Element
    * \param[in] form the clipxform
    */
   element->setAttribute("clipxform", form);
 }
 
-void GR::Render::setCharHeight(const std::shared_ptr<GR::Element> &element, double height)
+void GRM::Render::setCharHeight(const std::shared_ptr<GRM::Element> &element, double height)
 {
   /*!
-   * This function can be used to set the charheight of a GR::Element
-   * \param[in] element A GR::Element
+   * This function can be used to set the charheight of a GRM::Element
+   * \param[in] element A GRM::Element
    * \param[in] height the charheight
    */
   element->setAttribute("charheight", height);
 }
 
-void GR::Render::setProjectionType(const std::shared_ptr<GR::Element> &element, int type)
+void GRM::Render::setProjectionType(const std::shared_ptr<GRM::Element> &element, int type)
 {
   /*!
-   * This function can be used to set the projectiontype of a GR::Element
+   * This function can be used to set the projectiontype of a GRM::Element
    *
-   * \param[in] element A GR::Element
+   * \param[in] element A GRM::Element
    * \param[in] type The projectiontype
    */
   element->setAttribute("projectiontype", type);
 }
 
-void GR::Render::setTransparency(const std::shared_ptr<GR::Element> &element, double alpha)
+void GRM::Render::setTransparency(const std::shared_ptr<GRM::Element> &element, double alpha)
 {
   /*!
-   * This function can be used to set the transparency of a GR::Element
-   * \param[in] element A GR::Element
+   * This function can be used to set the transparency of a GRM::Element
+   * \param[in] element A GRM::Element
    * \param[in] alpha The alpha
    */
   element->setAttribute("transparency", alpha);
 }
 
-void GR::Render::setResampleMethod(const std::shared_ptr<GR::Element> &element, int resample)
+void GRM::Render::setResampleMethod(const std::shared_ptr<GRM::Element> &element, int resample)
 {
   /*!
-   * This function can be used to set the resamplemethod of a GR::Element
-   * \param[in] element A GR::Element
+   * This function can be used to set the resamplemethod of a GRM::Element
+   * \param[in] element A GRM::Element
    * \param[in] resample The resample method
    */
 
@@ -6104,19 +6111,19 @@ void GR::Render::setResampleMethod(const std::shared_ptr<GR::Element> &element, 
 }
 
 
-void GR::Render::setTextEncoding(const std::shared_ptr<Element> &element, int encoding)
+void GRM::Render::setTextEncoding(const std::shared_ptr<Element> &element, int encoding)
 {
   /*!
-   * This function can be used to set the textencoding of a GR::Element
-   * \param[in] element A GR::Element
+   * This function can be used to set the textencoding of a GRM::Element
+   * \param[in] element A GRM::Element
    * \param[in] encoding The textencoding
    */
   element->setAttribute("textencoding", encoding);
 }
 
 
-void GR::Render::setSubplot(const std::shared_ptr<GR::Element> &element, double xmin, double xmax, double ymin,
-                            double ymax)
+void GRM::Render::setSubplot(const std::shared_ptr<GRM::Element> &element, double xmin, double xmax, double ymin,
+                             double ymax)
 {
   element->setAttribute("subplot", true);
   element->setAttribute("subplot_xmin", xmin);
@@ -6125,20 +6132,20 @@ void GR::Render::setSubplot(const std::shared_ptr<GR::Element> &element, double 
   element->setAttribute("subplot_ymax", ymax);
 }
 
-void GR::Render::setXTickLabels(std::shared_ptr<GR::Element> group, const std::string &key,
-                                std::optional<std::vector<std::string>> xticklabels,
-                                const std::shared_ptr<GR::Context> &extContext)
+void GRM::Render::setXTickLabels(std::shared_ptr<GRM::Element> group, const std::string &key,
+                                 std::optional<std::vector<std::string>> xticklabels,
+                                 const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * This function can be used to create a XTickLabel GR::Element
+   * This function can be used to create a XTickLabel GRM::Element
    *
-   * \param[in] key A string used for storing the xticklabels in GR::Context
+   * \param[in] key A string used for storing the xticklabels in GRM::Context
    * \param[in] xticklabels A vector containing string values representing xticklabels
-   * \param[in] extContext A GR::Context that is used for storing the vectors. By default it uses GR::Render's
-   * GR::Context object but an external GR::Context can be used
+   * \param[in] extContext A GRM::Context that is used for storing the vectors. By default it uses GRM::Render's
+   * GRM::Context object but an external GRM::Context can be used
    */
 
-  std::shared_ptr<GR::Context> useContext = (extContext == nullptr) ? context : extContext;
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   if (xticklabels != std::nullopt)
     {
       (*useContext)[key] = *xticklabels;
@@ -6147,8 +6154,8 @@ void GR::Render::setXTickLabels(std::shared_ptr<GR::Element> group, const std::s
 }
 
 
-void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element, const std::string &color_indices_key,
-                              const std::vector<int> &color_indices, const std::shared_ptr<GR::Context> &extContext)
+void GRM::Render::setNextColor(const std::shared_ptr<GRM::Element> &element, const std::string &color_indices_key,
+                               const std::vector<int> &color_indices, const std::shared_ptr<GRM::Context> &extContext)
 {
   auto useContext = (extContext == nullptr) ? context : extContext;
   element->setAttribute("setNextColor", 1);
@@ -6163,9 +6170,9 @@ void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element, const
     }
 }
 
-void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element, const std::string &color_rgb_values_key,
-                              const std::vector<double> &color_rgb_values,
-                              const std::shared_ptr<GR::Context> &extContext)
+void GRM::Render::setNextColor(const std::shared_ptr<GRM::Element> &element, const std::string &color_rgb_values_key,
+                               const std::vector<double> &color_rgb_values,
+                               const std::shared_ptr<GRM::Context> &extContext)
 {
   auto useContext = (extContext == nullptr) ? context : extContext;
   element->setAttribute("setNextColor", true);
@@ -6176,8 +6183,9 @@ void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element, const
     }
 }
 
-void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element, std::optional<std::string> color_indices_key,
-                              std::optional<std::string> color_rgb_values_key)
+void GRM::Render::setNextColor(const std::shared_ptr<GRM::Element> &element,
+                               std::optional<std::string> color_indices_key,
+                               std::optional<std::string> color_rgb_values_key)
 {
   if (color_indices_key != std::nullopt)
     {
@@ -6191,29 +6199,30 @@ void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element, std::
     }
 }
 
-void GR::Render::setNextColor(const std::shared_ptr<GR::Element> &element)
+void GRM::Render::setNextColor(const std::shared_ptr<GRM::Element> &element)
 {
   element->setAttribute("setNextColor", true);
   element->setAttribute("snc-fallback", true);
 }
 
-void GR::Render::setOriginPosition(const std::shared_ptr<GR::Element> &element, std::string x_org_pos,
-                                   std::string y_org_pos)
+void GRM::Render::setOriginPosition(const std::shared_ptr<GRM::Element> &element, std::string x_org_pos,
+                                    std::string y_org_pos)
 {
   element->setAttribute("x_org_pos", x_org_pos);
   element->setAttribute("y_org_pos", y_org_pos);
 }
 
-void GR::Render::setOriginPosition3d(const std::shared_ptr<GR::Element> &element, std::string x_org_pos,
-                                     std::string y_org_pos, std::string z_org_pos)
+void GRM::Render::setOriginPosition3d(const std::shared_ptr<GRM::Element> &element, std::string x_org_pos,
+                                      std::string y_org_pos, std::string z_org_pos)
 {
   setOriginPosition(element, x_org_pos, y_org_pos);
   element->setAttribute("z_org_pos", z_org_pos);
 }
 
-void GR::Render::setImshowInformation(const std::shared_ptr<GR::Element> &element, unsigned int cols, unsigned int rows,
-                                      std::string img_data_key, std::optional<std::vector<int>> img_data,
-                                      const std::shared_ptr<GR::Context> &extContext)
+void GRM::Render::setImshowInformation(const std::shared_ptr<GRM::Element> &element, unsigned int cols,
+                                       unsigned int rows, std::string img_data_key,
+                                       std::optional<std::vector<int>> img_data,
+                                       const std::shared_ptr<GRM::Context> &extContext)
 {
   auto useContext = (extContext == nullptr) ? context : extContext;
   if (img_data != std::nullopt)
@@ -6226,8 +6235,8 @@ void GR::Render::setImshowInformation(const std::shared_ptr<GR::Element> &elemen
   element->setAttribute("imshow-information", true);
 }
 
-void GR::Render::setGR3LightParameters(const std::shared_ptr<GR::Element> &element, double ambient, double diffuse,
-                                       double specular, double specular_power)
+void GRM::Render::setGR3LightParameters(const std::shared_ptr<GRM::Element> &element, double ambient, double diffuse,
+                                        double specular, double specular_power)
 {
   element->setAttribute("ambient", ambient);
   element->setAttribute("diffuse", diffuse);

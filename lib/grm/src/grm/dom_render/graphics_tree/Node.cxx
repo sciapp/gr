@@ -9,27 +9,27 @@
 #include <map>
 #include <tuple>
 
-GR::Node::Node(Type type, const std::shared_ptr<GR::Document> &owner_document)
+GRM::Node::Node(Type type, const std::shared_ptr<GRM::Document> &owner_document)
     : m_type(type), m_owner_document(owner_document)
 {
 }
 
-GR::Node::Type GR::Node::nodeType() const
+GRM::Node::Type GRM::Node::nodeType() const
 {
   return m_type;
 }
 
-bool GR::Node::isConnected() const
+bool GRM::Node::isConnected() const
 {
-  return getRootNode()->nodeType() == GR::Node::Type::DOCUMENT_NODE;
+  return getRootNode()->nodeType() == GRM::Node::Type::DOCUMENT_NODE;
 }
 
-std::shared_ptr<GR::Document> GR::Node::ownerDocument()
+std::shared_ptr<GRM::Document> GRM::Node::ownerDocument()
 {
-  return std::const_pointer_cast<GR::Document>(const_cast<const GR::Node *>(this)->ownerDocument());
+  return std::const_pointer_cast<GRM::Document>(const_cast<const GRM::Node *>(this)->ownerDocument());
 }
 
-std::shared_ptr<const GR::Document> GR::Node::ownerDocument() const
+std::shared_ptr<const GRM::Document> GRM::Node::ownerDocument() const
 {
   if (nodeType() == Type::DOCUMENT_NODE)
     {
@@ -38,20 +38,20 @@ std::shared_ptr<const GR::Document> GR::Node::ownerDocument() const
   return m_owner_document.lock();
 }
 
-std::shared_ptr<GR::Document> GR::Node::nodeDocument()
+std::shared_ptr<GRM::Document> GRM::Node::nodeDocument()
 {
   if (m_type == Type::DOCUMENT_NODE)
     {
-      return std::dynamic_pointer_cast<GR::Document>(shared_from_this());
+      return std::dynamic_pointer_cast<GRM::Document>(shared_from_this());
     }
   return ownerDocument();
 }
 
-std::shared_ptr<const GR::Document> GR::Node::nodeDocument() const
+std::shared_ptr<const GRM::Document> GRM::Node::nodeDocument() const
 {
   if (m_type == Type::DOCUMENT_NODE)
     {
-      return std::dynamic_pointer_cast<const GR::Document>(shared_from_this());
+      return std::dynamic_pointer_cast<const GRM::Document>(shared_from_this());
     }
   return ownerDocument();
 }
@@ -67,57 +67,57 @@ template <typename T> std::shared_ptr<T> getRootNode_impl(std::shared_ptr<T> nod
 }
 
 
-std::shared_ptr<GR::Node> GR::Node::getRootNode()
+std::shared_ptr<GRM::Node> GRM::Node::getRootNode()
 {
   return getRootNode_impl(shared_from_this());
 }
 
-std::shared_ptr<const GR::Node> GR::Node::getRootNode() const
+std::shared_ptr<const GRM::Node> GRM::Node::getRootNode() const
 {
   return getRootNode_impl(shared_from_this());
 }
 
-std::shared_ptr<GR::Node> GR::Node::parentNode()
+std::shared_ptr<GRM::Node> GRM::Node::parentNode()
 {
   return m_parent_node.lock();
 }
 
-std::shared_ptr<const GR::Node> GR::Node::parentNode() const
+std::shared_ptr<const GRM::Node> GRM::Node::parentNode() const
 {
   return m_parent_node.lock();
 }
 
-std::shared_ptr<GR::Element> GR::Node::parentElement()
+std::shared_ptr<GRM::Element> GRM::Node::parentElement()
 {
-  return std::dynamic_pointer_cast<GR::Element>(parentNode());
+  return std::dynamic_pointer_cast<GRM::Element>(parentNode());
 }
 
-std::shared_ptr<const GR::Element> GR::Node::parentElement() const
+std::shared_ptr<const GRM::Element> GRM::Node::parentElement() const
 {
-  return std::dynamic_pointer_cast<const GR::Element>(parentNode());
+  return std::dynamic_pointer_cast<const GRM::Element>(parentNode());
 }
 
-bool GR::Node::hasChildNodes() const
+bool GRM::Node::hasChildNodes() const
 {
   return !m_child_nodes.empty();
 }
 
-std::vector<std::shared_ptr<GR::Node>> GR::Node::childNodes()
+std::vector<std::shared_ptr<GRM::Node>> GRM::Node::childNodes()
 {
   return {m_child_nodes.cbegin(), m_child_nodes.cend()};
 }
 
-std::vector<std::shared_ptr<const GR::Node>> GR::Node::childNodes() const
+std::vector<std::shared_ptr<const GRM::Node>> GRM::Node::childNodes() const
 {
   return {m_child_nodes.cbegin(), m_child_nodes.cend()};
 }
 
-std::shared_ptr<GR::Node> GR::Node::firstChild()
+std::shared_ptr<GRM::Node> GRM::Node::firstChild()
 {
-  return std::const_pointer_cast<GR::Node>(const_cast<const GR::Node *>(this)->firstChild());
+  return std::const_pointer_cast<GRM::Node>(const_cast<const GRM::Node *>(this)->firstChild());
 }
 
-std::shared_ptr<const GR::Node> GR::Node::firstChild() const
+std::shared_ptr<const GRM::Node> GRM::Node::firstChild() const
 {
   if (m_child_nodes.empty())
     {
@@ -127,12 +127,12 @@ std::shared_ptr<const GR::Node> GR::Node::firstChild() const
 }
 
 
-std::shared_ptr<GR::Node> GR::Node::lastChild()
+std::shared_ptr<GRM::Node> GRM::Node::lastChild()
 {
-  return std::const_pointer_cast<GR::Node>(const_cast<const GR::Node *>(this)->lastChild());
+  return std::const_pointer_cast<GRM::Node>(const_cast<const GRM::Node *>(this)->lastChild());
 }
 
-std::shared_ptr<const GR::Node> GR::Node::lastChild() const
+std::shared_ptr<const GRM::Node> GRM::Node::lastChild() const
 {
   if (m_child_nodes.empty())
     {
@@ -141,12 +141,12 @@ std::shared_ptr<const GR::Node> GR::Node::lastChild() const
   return m_child_nodes.back();
 }
 
-std::shared_ptr<GR::Node> GR::Node::previousSibling()
+std::shared_ptr<GRM::Node> GRM::Node::previousSibling()
 {
-  return std::const_pointer_cast<GR::Node>(const_cast<const GR::Node *>(this)->previousSibling());
+  return std::const_pointer_cast<GRM::Node>(const_cast<const GRM::Node *>(this)->previousSibling());
 }
 
-std::shared_ptr<const GR::Node> GR::Node::previousSibling() const
+std::shared_ptr<const GRM::Node> GRM::Node::previousSibling() const
 {
   auto parent_node = parentNode();
   if (!parent_node)
@@ -162,12 +162,12 @@ std::shared_ptr<const GR::Node> GR::Node::previousSibling() const
   return *it;
 }
 
-std::shared_ptr<GR::Node> GR::Node::nextSibling()
+std::shared_ptr<GRM::Node> GRM::Node::nextSibling()
 {
-  return std::const_pointer_cast<GR::Node>(const_cast<const GR::Node *>(this)->nextSibling());
+  return std::const_pointer_cast<GRM::Node>(const_cast<const GRM::Node *>(this)->nextSibling());
 }
 
-std::shared_ptr<const GR::Node> GR::Node::nextSibling() const
+std::shared_ptr<const GRM::Node> GRM::Node::nextSibling() const
 {
   auto parent_node = parentNode();
   if (!parent_node)
@@ -183,13 +183,13 @@ std::shared_ptr<const GR::Node> GR::Node::nextSibling() const
   return *it;
 }
 
-std::shared_ptr<GR::Node> GR::Node::cloneNode()
+std::shared_ptr<GRM::Node> GRM::Node::cloneNode()
 {
   // hardcoded in overloaded function as virtual functions may not have default arguments
   return cloneNode(false);
 }
 
-std::shared_ptr<GR::Node> GR::Node::cloneNode(bool deep)
+std::shared_ptr<GRM::Node> GRM::Node::cloneNode(bool deep)
 {
   auto clone = cloneIndividualNode();
   clone->m_parent_node = {};
@@ -208,17 +208,17 @@ std::shared_ptr<GR::Node> GR::Node::cloneNode(bool deep)
   return clone;
 }
 
-bool GR::Node::isEqualNode(const std::shared_ptr<const GR::Node> &otherNode) const
+bool GRM::Node::isEqualNode(const std::shared_ptr<const GRM::Node> &otherNode) const
 {
   return isSameNode(otherNode);
 }
 
-bool GR::Node::isSameNode(const std::shared_ptr<const GR::Node> &otherNode) const
+bool GRM::Node::isSameNode(const std::shared_ptr<const GRM::Node> &otherNode) const
 {
   return (otherNode == shared_from_this());
 }
 
-bool GR::Node::contains(const std::shared_ptr<const GR::Node> &otherNode) const
+bool GRM::Node::contains(const std::shared_ptr<const GRM::Node> &otherNode) const
 {
   if (!otherNode)
     {
@@ -231,7 +231,8 @@ bool GR::Node::contains(const std::shared_ptr<const GR::Node> &otherNode) const
   return contains(otherNode->parentNode());
 }
 
-std::shared_ptr<GR::Node> GR::Node::insertBefore(std::shared_ptr<GR::Node> node, const std::shared_ptr<GR::Node> &child)
+std::shared_ptr<GRM::Node> GRM::Node::insertBefore(std::shared_ptr<GRM::Node> node,
+                                                   const std::shared_ptr<GRM::Node> &child)
 {
   if (nodeType() != Type::DOCUMENT_NODE && nodeType() != Type::ELEMENT_NODE)
     {
@@ -255,7 +256,7 @@ std::shared_ptr<GR::Node> GR::Node::insertBefore(std::shared_ptr<GR::Node> node,
     }
   if (nodeType() == Type::DOCUMENT_NODE)
     {
-      auto this_as_document = dynamic_cast<GR::Document *>(this);
+      auto this_as_document = dynamic_cast<GRM::Document *>(this);
       if (node->nodeType() == Type::ELEMENT_NODE && this_as_document->childElementCount() != 0)
         {
           throw HierarchyRequestError("parent already has an element node");
@@ -275,13 +276,14 @@ std::shared_ptr<GR::Node> GR::Node::insertBefore(std::shared_ptr<GR::Node> node,
   return node;
 }
 
-std::shared_ptr<GR::Node> GR::Node::appendChild(std::shared_ptr<GR::Node> node)
+std::shared_ptr<GRM::Node> GRM::Node::appendChild(std::shared_ptr<GRM::Node> node)
 {
   insertBefore(node, nullptr);
   return node;
 }
 
-std::shared_ptr<GR::Node> GR::Node::replaceChild(std::shared_ptr<GR::Node> node, const std::shared_ptr<GR::Node> &child)
+std::shared_ptr<GRM::Node> GRM::Node::replaceChild(std::shared_ptr<GRM::Node> node,
+                                                   const std::shared_ptr<GRM::Node> &child)
 {
   if (nodeType() != Type::DOCUMENT_NODE && nodeType() != Type::ELEMENT_NODE)
     {
@@ -309,7 +311,7 @@ std::shared_ptr<GR::Node> GR::Node::replaceChild(std::shared_ptr<GR::Node> node,
     }
   if (nodeType() == Type::DOCUMENT_NODE)
     {
-      auto this_as_document = dynamic_cast<GR::Document *>(this);
+      auto this_as_document = dynamic_cast<GRM::Document *>(this);
       if (node->nodeType() == Type::ELEMENT_NODE && this_as_document->firstChildElement() != child)
         {
           throw HierarchyRequestError("parent already has an element node");
@@ -323,7 +325,7 @@ std::shared_ptr<GR::Node> GR::Node::replaceChild(std::shared_ptr<GR::Node> node,
   return node;
 }
 
-std::shared_ptr<GR::Node> GR::Node::removeChild(std::shared_ptr<GR::Node> child)
+std::shared_ptr<GRM::Node> GRM::Node::removeChild(std::shared_ptr<GRM::Node> child)
 {
   if (!child)
     {
@@ -338,7 +340,7 @@ std::shared_ptr<GR::Node> GR::Node::removeChild(std::shared_ptr<GR::Node> child)
   return child;
 }
 
-void GR::Node::prepend_impl(const std::vector<std::shared_ptr<GR::Node>> &nodes)
+void GRM::Node::prepend_impl(const std::vector<std::shared_ptr<GRM::Node>> &nodes)
 {
   auto previous_first_child = firstChild();
   for (const auto &node : nodes)
@@ -354,7 +356,7 @@ void GR::Node::prepend_impl(const std::vector<std::shared_ptr<GR::Node>> &nodes)
     }
 }
 
-void GR::Node::append_impl(const std::vector<std::shared_ptr<GR::Node>> &nodes)
+void GRM::Node::append_impl(const std::vector<std::shared_ptr<GRM::Node>> &nodes)
 {
   for (const auto &node : nodes)
     {
@@ -362,7 +364,7 @@ void GR::Node::append_impl(const std::vector<std::shared_ptr<GR::Node>> &nodes)
     }
 }
 
-void GR::Node::replaceChildren_impl(const std::vector<std::shared_ptr<GR::Node>> &nodes)
+void GRM::Node::replaceChildren_impl(const std::vector<std::shared_ptr<GRM::Node>> &nodes)
 {
   for (const auto &node : m_child_nodes)
     {
@@ -372,8 +374,8 @@ void GR::Node::replaceChildren_impl(const std::vector<std::shared_ptr<GR::Node>>
   append_impl(nodes);
 }
 
-void GR::Node::set_owner_document_recursive(const std::shared_ptr<GR::Node> &node,
-                                            const std::shared_ptr<GR::Document> &document)
+void GRM::Node::set_owner_document_recursive(const std::shared_ptr<GRM::Node> &node,
+                                             const std::shared_ptr<GRM::Document> &document)
 {
   node->m_owner_document = document;
   for (const auto &child_node : node->m_child_nodes)
@@ -382,8 +384,8 @@ void GR::Node::set_owner_document_recursive(const std::shared_ptr<GR::Node> &nod
     }
 }
 
-bool GR::Node::children_are_equal_recursive(const std::shared_ptr<const GR::Node> &left_node,
-                                            const std::shared_ptr<const GR::Node> &right_node)
+bool GRM::Node::children_are_equal_recursive(const std::shared_ptr<const GRM::Node> &left_node,
+                                             const std::shared_ptr<const GRM::Node> &right_node)
 {
   if (left_node == right_node)
     {
@@ -415,7 +417,7 @@ template <typename T, typename U> static std::vector<std::shared_ptr<T>> childre
   std::vector<std::shared_ptr<T>> child_elements;
   for (const auto &child_node : child_nodes)
     {
-      if (child_node->nodeType() == GR::Node::Type::ELEMENT_NODE)
+      if (child_node->nodeType() == GRM::Node::Type::ELEMENT_NODE)
         {
           child_elements.push_back(std::dynamic_pointer_cast<T>(child_node));
         }
@@ -423,21 +425,21 @@ template <typename T, typename U> static std::vector<std::shared_ptr<T>> childre
   return child_elements;
 }
 
-std::vector<std::shared_ptr<GR::Element>> GR::Node::children_impl()
+std::vector<std::shared_ptr<GRM::Element>> GRM::Node::children_impl()
 {
-  return ::children_impl<GR::Element>(m_child_nodes);
+  return ::children_impl<GRM::Element>(m_child_nodes);
 }
 
-std::vector<std::shared_ptr<const GR::Element>> GR::Node::children_impl() const
+std::vector<std::shared_ptr<const GRM::Element>> GRM::Node::children_impl() const
 {
-  return ::children_impl<const GR::Element>(m_child_nodes);
+  return ::children_impl<const GRM::Element>(m_child_nodes);
 }
 
 template <typename T, typename U> static std::shared_ptr<T> firstChildElement_impl(U &child_nodes)
 {
   for (const auto &child_node : child_nodes)
     {
-      if (child_node->nodeType() == GR::Node::Type::ELEMENT_NODE)
+      if (child_node->nodeType() == GRM::Node::Type::ELEMENT_NODE)
         {
           return std::dynamic_pointer_cast<T>(child_node);
         }
@@ -445,14 +447,14 @@ template <typename T, typename U> static std::shared_ptr<T> firstChildElement_im
   return nullptr;
 }
 
-std::shared_ptr<GR::Element> GR::Node::firstChildElement_impl()
+std::shared_ptr<GRM::Element> GRM::Node::firstChildElement_impl()
 {
-  return ::firstChildElement_impl<GR::Element>(m_child_nodes);
+  return ::firstChildElement_impl<GRM::Element>(m_child_nodes);
 }
 
-std::shared_ptr<const GR::Element> GR::Node::firstChildElement_impl() const
+std::shared_ptr<const GRM::Element> GRM::Node::firstChildElement_impl() const
 {
-  return ::firstChildElement_impl<const GR::Element>(m_child_nodes);
+  return ::firstChildElement_impl<const GRM::Element>(m_child_nodes);
 }
 
 template <typename T, typename U> static std::shared_ptr<T> lastChildElement_impl(U &child_nodes)
@@ -460,7 +462,7 @@ template <typename T, typename U> static std::shared_ptr<T> lastChildElement_imp
   for (auto node_it = child_nodes.rbegin(); node_it != child_nodes.rend(); ++node_it)
     {
       const auto &child_node = *node_it;
-      if (child_node->nodeType() == GR::Node::Type::ELEMENT_NODE)
+      if (child_node->nodeType() == GRM::Node::Type::ELEMENT_NODE)
         {
           return std::dynamic_pointer_cast<T>(child_node);
         }
@@ -468,22 +470,22 @@ template <typename T, typename U> static std::shared_ptr<T> lastChildElement_imp
   return nullptr;
 }
 
-std::shared_ptr<GR::Element> GR::Node::lastChildElement_impl()
+std::shared_ptr<GRM::Element> GRM::Node::lastChildElement_impl()
 {
-  return ::lastChildElement_impl<GR::Element>(m_child_nodes);
+  return ::lastChildElement_impl<GRM::Element>(m_child_nodes);
 }
 
-std::shared_ptr<const GR::Element> GR::Node::lastChildElement_impl() const
+std::shared_ptr<const GRM::Element> GRM::Node::lastChildElement_impl() const
 {
-  return ::lastChildElement_impl<const GR::Element>(m_child_nodes);
+  return ::lastChildElement_impl<const GRM::Element>(m_child_nodes);
 }
 
-unsigned long GR::Node::childElementCount_impl() const
+unsigned long GRM::Node::childElementCount_impl() const
 {
   unsigned long count = 0;
   for (const auto &node : m_child_nodes)
     {
-      if (node->nodeType() == GR::Node::Type::ELEMENT_NODE)
+      if (node->nodeType() == GRM::Node::Type::ELEMENT_NODE)
         {
           count++;
         }
@@ -491,40 +493,40 @@ unsigned long GR::Node::childElementCount_impl() const
   return count;
 }
 
-std::shared_ptr<GR::Element> GR::Node::previousElementSibling_impl()
+std::shared_ptr<GRM::Element> GRM::Node::previousElementSibling_impl()
 {
   auto sibling = previousSibling();
-  while (sibling && sibling->nodeType() != GR::Node::Type::ELEMENT_NODE)
+  while (sibling && sibling->nodeType() != GRM::Node::Type::ELEMENT_NODE)
     {
       sibling = sibling->previousSibling();
     }
   return std::dynamic_pointer_cast<Element>(sibling);
 }
 
-std::shared_ptr<const GR::Element> GR::Node::previousElementSibling_impl() const
+std::shared_ptr<const GRM::Element> GRM::Node::previousElementSibling_impl() const
 {
   auto sibling = previousSibling();
-  while (sibling && sibling->nodeType() != GR::Node::Type::ELEMENT_NODE)
+  while (sibling && sibling->nodeType() != GRM::Node::Type::ELEMENT_NODE)
     {
       sibling = sibling->previousSibling();
     }
   return std::dynamic_pointer_cast<const Element>(sibling);
 }
 
-std::shared_ptr<GR::Element> GR::Node::nextElementSibling_impl()
+std::shared_ptr<GRM::Element> GRM::Node::nextElementSibling_impl()
 {
   auto sibling = nextSibling();
-  while (sibling && sibling->nodeType() != GR::Node::Type::ELEMENT_NODE)
+  while (sibling && sibling->nodeType() != GRM::Node::Type::ELEMENT_NODE)
     {
       sibling = sibling->nextSibling();
     }
   return std::dynamic_pointer_cast<Element>(sibling);
 }
 
-std::shared_ptr<const GR::Element> GR::Node::nextElementSibling_impl() const
+std::shared_ptr<const GRM::Element> GRM::Node::nextElementSibling_impl() const
 {
   auto sibling = nextSibling();
-  while (sibling && sibling->nodeType() != GR::Node::Type::ELEMENT_NODE)
+  while (sibling && sibling->nodeType() != GRM::Node::Type::ELEMENT_NODE)
     {
       sibling = sibling->nextSibling();
     }
@@ -538,10 +540,10 @@ static std::vector<std::shared_ptr<T>> getElementsByClassName_impl(U &node, cons
     {
       return {};
     }
-  auto class_names = GR::split(GR::tolower(classNames), " ");
+  auto class_names = GRM::split(GRM::tolower(classNames), " ");
   for (auto &class_name : class_names)
     {
-      class_name = GR::tolower(GR::strip(class_name));
+      class_name = GRM::tolower(GRM::strip(class_name));
     }
   for (auto class_name_it = class_names.begin(); class_name_it != class_names.end();)
     {
@@ -561,7 +563,7 @@ static std::vector<std::shared_ptr<T>> getElementsByClassName_impl(U &node, cons
   std::vector<std::shared_ptr<T>> found_elements;
   for (const auto &child_node : node.childNodes())
     {
-      if (child_node->nodeType() != GR::Node::Type::ELEMENT_NODE)
+      if (child_node->nodeType() != GRM::Node::Type::ELEMENT_NODE)
         {
           continue;
         }
@@ -571,12 +573,12 @@ static std::vector<std::shared_ptr<T>> getElementsByClassName_impl(U &node, cons
           auto child_class_names_value = child_element->getAttribute("class");
           if (child_class_names_value.isString())
             {
-              auto child_class_names = GR::split((std::string)child_class_names_value, " ");
+              auto child_class_names = GRM::split((std::string)child_class_names_value, " ");
               if (!child_class_names.empty())
                 {
                   for (auto &child_class_name : child_class_names)
                     {
-                      child_class_name = GR::tolower(GR::strip(child_class_name));
+                      child_class_name = GRM::tolower(GRM::strip(child_class_name));
                     }
 
                   bool missing_a_class = false;
@@ -602,31 +604,31 @@ static std::vector<std::shared_ptr<T>> getElementsByClassName_impl(U &node, cons
   return found_elements;
 }
 
-std::vector<std::shared_ptr<GR::Element>> GR::Node::getElementsByClassName_impl(const std::string &classNames)
+std::vector<std::shared_ptr<GRM::Element>> GRM::Node::getElementsByClassName_impl(const std::string &classNames)
 {
-  return ::getElementsByClassName_impl<GR::Element>(*this, classNames);
+  return ::getElementsByClassName_impl<GRM::Element>(*this, classNames);
 }
 
-std::vector<std::shared_ptr<const GR::Element>>
-GR::Node::getElementsByClassName_impl(const std::string &classNames) const
+std::vector<std::shared_ptr<const GRM::Element>>
+GRM::Node::getElementsByClassName_impl(const std::string &classNames) const
 {
-  return ::getElementsByClassName_impl<const GR::Element>(*this, classNames);
+  return ::getElementsByClassName_impl<const GRM::Element>(*this, classNames);
 }
 
-bool GR::Node::matchSelector(const std::shared_ptr<GR::Selector> &selector,
-                             std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const
+bool GRM::Node::matchSelector(const std::shared_ptr<GRM::Selector> &selector,
+                              std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const
 {
-  auto element = dynamic_cast<const GR::Element *>(this);
-  if (nodeType() != GR::Node::Type::ELEMENT_NODE || !element)
+  auto element = dynamic_cast<const GRM::Element *>(this);
+  if (nodeType() != GRM::Node::Type::ELEMENT_NODE || !element)
     {
       return false;
     }
   return selector->matchElement(*element, match_map);
 }
 
-void GR::Node::querySelectorsAll_impl(const std::shared_ptr<GR::Selector> &selector,
-                                      std::vector<std::shared_ptr<GR::Element>> &found_elements,
-                                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map)
+void GRM::Node::querySelectorsAll_impl(
+    const std::shared_ptr<GRM::Selector> &selector, std::vector<std::shared_ptr<GRM::Element>> &found_elements,
+    std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map)
 {
   if (matchSelector(selector, match_map))
     {
@@ -638,9 +640,9 @@ void GR::Node::querySelectorsAll_impl(const std::shared_ptr<GR::Selector> &selec
     }
 }
 
-void GR::Node::querySelectorsAll_impl(
-    const std::shared_ptr<GR::Selector> &selector, std::vector<std::shared_ptr<const GR::Element>> &found_elements,
-    std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const
+void GRM::Node::querySelectorsAll_impl(
+    const std::shared_ptr<GRM::Selector> &selector, std::vector<std::shared_ptr<const GRM::Element>> &found_elements,
+    std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const
 {
   if (matchSelector(selector, match_map))
     {
@@ -652,9 +654,9 @@ void GR::Node::querySelectorsAll_impl(
     }
 }
 
-std::shared_ptr<GR::Element>
-GR::Node::querySelectors_impl(const std::shared_ptr<GR::Selector> &selector,
-                              std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map)
+std::shared_ptr<GRM::Element>
+GRM::Node::querySelectors_impl(const std::shared_ptr<GRM::Selector> &selector,
+                               std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map)
 {
   if (matchSelector(selector, match_map))
     {
@@ -671,9 +673,9 @@ GR::Node::querySelectors_impl(const std::shared_ptr<GR::Selector> &selector,
   return nullptr;
 }
 
-std::shared_ptr<const GR::Element>
-GR::Node::querySelectors_impl(const std::shared_ptr<GR::Selector> &selector,
-                              std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const
+std::shared_ptr<const GRM::Element>
+GRM::Node::querySelectors_impl(const std::shared_ptr<GRM::Selector> &selector,
+                               std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const
 {
   if (matchSelector(selector, match_map))
     {

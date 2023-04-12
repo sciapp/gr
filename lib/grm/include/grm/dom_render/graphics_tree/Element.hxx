@@ -1,5 +1,5 @@
-#ifndef GR_GRAPHICS_TREE_INTERFACE_ELEMENT_HXX
-#define GR_GRAPHICS_TREE_INTERFACE_ELEMENT_HXX
+#ifndef GRM_GRAPHICS_TREE_INTERFACE_ELEMENT_HXX
+#define GRM_GRAPHICS_TREE_INTERFACE_ELEMENT_HXX
 
 #include <unordered_map>
 #include <unordered_set>
@@ -7,7 +7,7 @@
 #include <grm/dom_render/graphics_tree/Node.hxx>
 #include <grm/dom_render/graphics_tree/Value.hxx>
 
-namespace GR
+namespace GRM
 {
 class Document;
 
@@ -132,6 +132,6 @@ private:
 
   std::shared_ptr<Node> cloneIndividualNode() override;
 };
-} // namespace GR
+} // namespace GRM
 
 #endif

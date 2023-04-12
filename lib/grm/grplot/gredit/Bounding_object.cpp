@@ -1,7 +1,7 @@
 #include "Bounding_object.h"
 
 // getter for ref
-std::shared_ptr<GR::Element> Bounding_object::get_ref() const
+std::shared_ptr<GRM::Element> Bounding_object::get_ref() const
 {
   return ref;
 }

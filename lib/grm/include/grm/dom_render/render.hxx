@@ -17,16 +17,16 @@ enum class CoordinateSpace
 };
 
 
-namespace GR
+namespace GRM
 {
 
 class Render : public Document
 {
   /*!
-   * The GR::Render class is used for creating or modifying elements that can also be processed by this class
+   * The GRM::Render class is used for creating or modifying elements that can also be processed by this class
    * to create plots etc.
    *
-   * GR::Render has an std::shared_ptr GR::Context as a private member for storing certain datatypes
+   * GRM::Render has an std::shared_ptr GRM::Context as a private member for storing certain datatypes
    */
 
 public:
@@ -63,14 +63,14 @@ public:
   std::shared_ptr<Element> createAxes(double x_tick, double y_tick, double x_org, double y_org, int x_major,
                                       int y_major, int tick_orientation);
 
-  std::shared_ptr<GR::Element> createEmptyAxes(int tick_orientation);
+  std::shared_ptr<GRM::Element> createEmptyAxes(int tick_orientation);
 
-  std::shared_ptr<GR::Element> createEmptyDoubleAxes();
+  std::shared_ptr<GRM::Element> createEmptyDoubleAxes();
 
   std::shared_ptr<Element> createDrawLegend(const std::string &labels_key,
                                             std::optional<std::vector<std::string>> labels, int location,
                                             const std::string &specs_key, std::optional<std::vector<std::string>> specs,
-                                            const std::shared_ptr<GR::Context> &extContext = nullptr);
+                                            const std::shared_ptr<GRM::Context> &extContext = nullptr);
 
   std::shared_ptr<Element> createDrawPolarAxes(int angle_ticks, const std::string &kind, int phiflip,
                                                const std::string &title = "", const std::string &norm = "",
@@ -78,13 +78,13 @@ public:
 
   std::shared_ptr<Element> createDrawPieLegend(const std::string &labels_key,
                                                std::optional<std::vector<std::string>> labels,
-                                               const std::shared_ptr<GR::Context> &extContext = nullptr);
+                                               const std::shared_ptr<GRM::Context> &extContext = nullptr);
 
 
   std::shared_ptr<Element> createGrid(double x_tick, double y_tick, double x_org, double y_org, int major_x,
                                       int major_y);
 
-  std::shared_ptr<GR::Element> createEmptyGrid(bool x_grid, bool y_grid);
+  std::shared_ptr<GRM::Element> createEmptyGrid(bool x_grid, bool y_grid);
 
   std::shared_ptr<Element> createGroup();
 
@@ -148,13 +148,13 @@ public:
   std::shared_ptr<Element> createGrid3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org,
                                         double z_org, int major_x, int major_y, int major_z);
 
-  std::shared_ptr<GR::Element> createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid);
+  std::shared_ptr<GRM::Element> createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid);
 
 
   std::shared_ptr<Element> createAxes3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org,
                                         double z_org, int major_x, int major_y, int major_z, int tick_orientation);
 
-  std::shared_ptr<GR::Element> createEmptyAxes3d(int tick_orientation);
+  std::shared_ptr<GRM::Element> createEmptyAxes3d(int tick_orientation);
 
   std::shared_ptr<Element> createPolyline3d(const std::string &x_key, std::optional<std::vector<double>> x,
                                             const std::string &y_key, std::optional<std::vector<double>> y,
@@ -173,11 +173,11 @@ public:
                     std::optional<std::vector<double>> colors, const std::string &scales_key,
                     std::optional<std::vector<double>> scales, const std::shared_ptr<Context> &extContext = nullptr);
 
-  std::shared_ptr<GR::Element>
+  std::shared_ptr<GRM::Element>
   createGR3Isosurface(int nx, int ny, int nz, const std::string &data_key, std::optional<std::vector<double>> data,
                       double isovalue, const std::string &color_key, std::optional<std::vector<double>> color,
                       const std::string &strides_key, std::optional<std::vector<int>> strides,
-                      const std::shared_ptr<GR::Context> &extContext = nullptr);
+                      const std::shared_ptr<GRM::Context> &extContext = nullptr);
 
   std::shared_ptr<Element> createClearWS();
 
@@ -218,9 +218,9 @@ public:
 
   std::shared_ptr<Element> createIsoSurfaceRenderElement(int drawable_type);
 
-  std::shared_ptr<GR::Element> createPanzoom(double x, double y, double xzoom, double yzoom);
+  std::shared_ptr<GRM::Element> createPanzoom(double x, double y, double xzoom, double yzoom);
 
-  std::shared_ptr<GR::Element> createYLine();
+  std::shared_ptr<GRM::Element> createYLine();
 
   //! Modifierfunctions
 
@@ -332,20 +332,20 @@ public:
 
   void setSubplot(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
-  void setXTickLabels(std::shared_ptr<GR::Element> group, const std::string &key,
+  void setXTickLabels(std::shared_ptr<GRM::Element> group, const std::string &key,
                       std::optional<std::vector<std::string>> xticklabels,
-                      const std::shared_ptr<GR::Context> &extContext = nullptr);
+                      const std::shared_ptr<GRM::Context> &extContext = nullptr);
 
-  void setOriginPosition(const std::shared_ptr<GR::Element> &element, std::string x_org_pos, std::string y_org_pos);
+  void setOriginPosition(const std::shared_ptr<GRM::Element> &element, std::string x_org_pos, std::string y_org_pos);
 
-  void setOriginPosition3d(const std::shared_ptr<GR::Element> &element, std::string x_org_pos, std::string y_org_pos,
+  void setOriginPosition3d(const std::shared_ptr<GRM::Element> &element, std::string x_org_pos, std::string y_org_pos,
                            std::string z_org_pos);
 
-  void setImshowInformation(const std::shared_ptr<GR::Element> &element, unsigned int cols, unsigned int rows,
+  void setImshowInformation(const std::shared_ptr<GRM::Element> &element, unsigned int cols, unsigned int rows,
                             std::string img_data_key, std::optional<std::vector<int>> img_data,
-                            const std::shared_ptr<GR::Context> &extContext);
+                            const std::shared_ptr<GRM::Context> &extContext);
 
-  void setGR3LightParameters(const std::shared_ptr<GR::Element> &element, double ambient, double diffuse,
+  void setGR3LightParameters(const std::shared_ptr<GRM::Element> &element, double ambient, double diffuse,
                              double specular, double specular_power);
 
   void render();                                           // render doc and render context
@@ -356,8 +356,8 @@ public:
 
   std::shared_ptr<Context> getContext();
 
-  static void processViewport(const std::shared_ptr<GR::Element> &elem);
-  static void processLimits(const std::shared_ptr<GR::Element> &elem);
+  static void processViewport(const std::shared_ptr<GRM::Element> &elem);
+  static void processLimits(const std::shared_ptr<GRM::Element> &elem);
   static std::vector<std::string> getDefaultAndTooltip(const std::shared_ptr<Element> &element,
                                                        std::string attributeName);
 
@@ -367,6 +367,6 @@ private:
   std::shared_ptr<Context> context;
 };
 
-} // namespace GR
+} // namespace GRM
 
 #endif

@@ -10,7 +10,7 @@
 #include <grm/dom_render/NotFoundError.hxx>
 #include <grm/dom_render/TypeError.hxx>
 
-namespace GR
+namespace GRM
 {
 
 
@@ -25,7 +25,7 @@ class Context
    * To get data from a context object the same syntax can be used again although an object of type Context::Inner
    * will be returned instead of the stored type
    * To get data from that Context::Inner object the function `get` or `get_if` should be used
-   * >>> GR::get<...>(c["x"]);
+   * >>> GRM::get<...>(c["x"]);
    *
    */
 
@@ -37,7 +37,7 @@ public:
      *
      * This class contains vector conversion methods that allow casting an Inner object to a std::vector that is
      * stored in one of Context's tables.
-     * These conversion methods are used in `GR::get` or `GR::get_if`
+     * These conversion methods are used in `GRM::get` or `GRM::get_if`
      */
 
   private:
@@ -90,10 +90,10 @@ private:
 template <class T> static T &get(Context::Inner &&data)
 {
   /*!
-   * The GR::get function is used to retrieve data from a GR::Context::Inner object
-   * Uses GR::Context::Inner custom conversions
+   * The GRM::get function is used to retrieve data from a GRM::Context::Inner object
+   * Uses GRM::Context::Inner custom conversions
    *
-   * \param[in] data rvalue GR::Context::Inner
+   * \param[in] data rvalue GRM::Context::Inner
    * \returns T& casted data
    */
   return static_cast<T &>(data);
@@ -102,10 +102,10 @@ template <class T> static T &get(Context::Inner &&data)
 template <class T> static T &get(Context::Inner &data)
 {
   /*!
-   * The GR::get function is used to retrieve data from a GR::Context::Inner object
-   * Uses GR::Context::Inner custom conversions
+   * The GRM::get function is used to retrieve data from a GRM::Context::Inner object
+   * Uses GRM::Context::Inner custom conversions
    *
-   * \param[in] data lvalue GR::Context::Inner
+   * \param[in] data lvalue GRM::Context::Inner
    * \returns T& casted data
    */
   return static_cast<T &>(data);
@@ -114,10 +114,10 @@ template <class T> static T &get(Context::Inner &data)
 template <class T> static const T &get(const Context::Inner &&data)
 {
   /*!
-   * The const GR::get function is used to retrieve data from a GR::Context::Inner object
-   * Uses GR::Context::Inner custom conversions
+   * The const GRM::get function is used to retrieve data from a GRM::Context::Inner object
+   * Uses GRM::Context::Inner custom conversions
    *
-   * \param[in] data const rvalue GR::Context::Inner
+   * \param[in] data const rvalue GRM::Context::Inner
    * \returns const T& casted data
    */
   return static_cast<const T &>(data);
@@ -126,10 +126,10 @@ template <class T> static const T &get(const Context::Inner &&data)
 template <class T> static const T &get(const Context::Inner &data)
 {
   /*!
-   * The const GR::get function is used to retrieve data from a GR::Context::Inner object
-   * Uses GR::Context::Inner custom conversions
+   * The const GRM::get function is used to retrieve data from a GRM::Context::Inner object
+   * Uses GRM::Context::Inner custom conversions
    *
-   * \param[in] data const lvalue GR::Context::Inner
+   * \param[in] data const lvalue GRM::Context::Inner
    * \returns const T& casted data
    */
   return static_cast<const T &>(data);
@@ -139,14 +139,14 @@ template <class T> static const T &get(const Context::Inner &data)
 template <class T> static T *get_if(Context::Inner &&data)
 {
   /*!
-   * The GR::get_if function can be used to retrieve a pointer to the data in GR::Context::Inner without throwing
+   * The GRM::get_if function can be used to retrieve a pointer to the data in GRM::Context::Inner without throwing
    * runtime exceptions. It can be used to check if a Context::Inner object contains a certain datatype and get a
    * pointer for that data. But it can not be used to check if it contains unsupported types (types that
    * Context::Inner can not be casted to). In those cases the code will not build.
    *
    * Uses Context::Inner custom conversions
    *
-   * \param[in] data rvalue GR::Context::Inner
+   * \param[in] data rvalue GRM::Context::Inner
    *
    * \returns a pointer to the vector if it exists else returns nullptr
    */
@@ -167,14 +167,14 @@ template <class T> static T *get_if(Context::Inner &&data)
 template <class T> static T *get_if(Context::Inner &data)
 {
   /*!
-   * The GR::get_if function can be used to retrieve a pointer to the data in GR::Context::Inner without throwing
+   * The GRM::get_if function can be used to retrieve a pointer to the data in GRM::Context::Inner without throwing
    * runtime exceptions. It can be used to check if a Context::Inner object contains a certain datatype and get a
    * pointer for that data. But it can not be used to check if it contains unsupported types (types that
    * Context::Inner can not be casted to). In those cases the code will not build.
    *
    * Uses Context::Inner custom conversions
    *
-   * \param[in] data lvalue GR::Context::Inner
+   * \param[in] data lvalue GRM::Context::Inner
    *
    * \returns a pointer to the vector if it exists else returns nullptr
    */
@@ -195,14 +195,14 @@ template <class T> static T *get_if(Context::Inner &data)
 template <class T> static const T *get_if(const Context::Inner &&data)
 {
   /*!
-   * The const GR::get_if function can be used to retrieve a pointer to the data in GR::Context::Inner without throwing
-   * runtime exceptions. It can be used to check if a Context::Inner object contains a certain datatype and get a
-   * pointer for that data. But it can not be used to check if it contains unsupported types (types that
+   * The const GRM::get_if function can be used to retrieve a pointer to the data in GRM::Context::Inner without
+   * throwing runtime exceptions. It can be used to check if a Context::Inner object contains a certain datatype and get
+   * a pointer for that data. But it can not be used to check if it contains unsupported types (types that
    * Context::Inner can not be casted to). In those cases the code will not build.
    *
    * Uses Context::Inner custom conversions
    *
-   * \param[in] data const rvalue GR::Context::Inner
+   * \param[in] data const rvalue GRM::Context::Inner
    *
    * \returns a const pointer to the vector if it exists else returns nullptr
    */
@@ -223,14 +223,14 @@ template <class T> static const T *get_if(const Context::Inner &&data)
 template <class T> static const T *get_if(const Context::Inner &data)
 {
   /*!
-   * The const GR::get_if function can be used to retrieve a pointer to the data in GR::Context::Inner without throwing
-   * runtime exceptions. It can be used to check if a Context::Inner object contains a certain datatype and get a
-   * pointer for that data. But it can not be used to check if it contains unsupported types (types that
+   * The const GRM::get_if function can be used to retrieve a pointer to the data in GRM::Context::Inner without
+   * throwing runtime exceptions. It can be used to check if a Context::Inner object contains a certain datatype and get
+   * a pointer for that data. But it can not be used to check if it contains unsupported types (types that
    * Context::Inner can not be casted to). In those cases the code will not build.
    *
    * Uses Context::Inner custom conversions
    *
-   * \param[in] data const lvalue GR::Context::Inner
+   * \param[in] data const lvalue GRM::Context::Inner
    *
    * \returns a const pointer to the vector if it exists else returns nullptr
    */
@@ -248,6 +248,6 @@ template <class T> static const T *get_if(const Context::Inner &data)
     }
 }
 
-} // namespace GR
+} // namespace GRM
 
 #endif

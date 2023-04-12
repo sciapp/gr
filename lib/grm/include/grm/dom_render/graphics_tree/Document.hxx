@@ -1,12 +1,12 @@
-#ifndef GR_GRAPHICS_TREE_INTERFACE_DOCUMENT_HXX
-#define GR_GRAPHICS_TREE_INTERFACE_DOCUMENT_HXX
+#ifndef GRM_GRAPHICS_TREE_INTERFACE_DOCUMENT_HXX
+#define GRM_GRAPHICS_TREE_INTERFACE_DOCUMENT_HXX
 
 #include <memory>
 #include <string>
 
 #include <grm/dom_render/graphics_tree/Node.hxx>
 
-namespace GR
+namespace GRM
 {
 class Element;
 class Comment;
@@ -95,6 +95,6 @@ private:
 };
 
 std::shared_ptr<Document> createDocument();
-} // namespace GR
+} // namespace GRM
 
 #endif

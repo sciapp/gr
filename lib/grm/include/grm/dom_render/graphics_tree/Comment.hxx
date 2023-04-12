@@ -1,9 +1,9 @@
-#ifndef GR_GRAPHICS_TREE_INTERFACE_COMMENT_HXX
-#define GR_GRAPHICS_TREE_INTERFACE_COMMENT_HXX
+#ifndef GRM_GRAPHICS_TREE_INTERFACE_COMMENT_HXX
+#define GRM_GRAPHICS_TREE_INTERFACE_COMMENT_HXX
 
 #include <grm/dom_render/graphics_tree/Node.hxx>
 
-namespace GR
+namespace GRM
 {
 class Document;
 
@@ -48,6 +48,6 @@ private:
 
   std::string m_data;
 };
-} // namespace GR
+} // namespace GRM
 
 #endif

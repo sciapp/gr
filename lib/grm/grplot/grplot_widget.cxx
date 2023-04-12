@@ -456,10 +456,10 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                 {
                   lineEdit = new QComboBox(&dialog);
                   QString tooltipString =
-                      GR::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
                   tooltipString.append(" Default: ");
                   tooltipString.append(
-                      GR::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
                   ((QComboBox *)lineEdit)->setToolTip(tooltipString);
                   ((QComboBox *)lineEdit)->addItem("gr_text");     // 0
                   ((QComboBox *)lineEdit)->addItem("gr_mathtext"); // 1
@@ -471,10 +471,10 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                 {
                   lineEdit = new QComboBox(&dialog);
                   QString tooltipString =
-                      GR::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
                   tooltipString.append(" Default: ");
                   tooltipString.append(
-                      GR::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
                   ((QComboBox *)lineEdit)->setToolTip(tooltipString);
                   ((QComboBox *)lineEdit)->addItem("normal"); // 0
                   ((QComboBox *)lineEdit)->addItem("top");    // 1
@@ -489,10 +489,10 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                 {
                   lineEdit = new QComboBox(&dialog);
                   QString tooltipString =
-                      GR::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
                   tooltipString.append(" Default: ");
                   tooltipString.append(
-                      GR::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
                   ((QComboBox *)lineEdit)->setToolTip(tooltipString);
                   ((QComboBox *)lineEdit)->addItem("normal"); // 0
                   ((QComboBox *)lineEdit)->addItem("left");   // 1
@@ -505,10 +505,10 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                 {
                   lineEdit = new QCheckBox(&dialog);
                   QString tooltipString =
-                      GR::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
                   tooltipString.append(" Default: ");
                   tooltipString.append(
-                      GR::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
                   ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
                   ((QCheckBox *)lineEdit)
                       ->setChecked(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)) == 1);
@@ -520,10 +520,10 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                       ->setText(
                           static_cast<std::string>(current_selection->get_ref()->getAttribute(cur_attr_name)).c_str());
                   QString tooltipString =
-                      GR::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
                   tooltipString.append(" Default: ");
                   tooltipString.append(
-                      GR::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
                   ((QLineEdit *)lineEdit)->setToolTip(tooltipString);
                 }
               QString label = QString(cur_attr_name.c_str());
@@ -564,7 +564,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
               mouse_move_selection = nullptr;
               amount_scrolled = 0;
               clicked.clear();
-              std::cerr << GR::toXML(grm_get_document_root()) << std::endl;
+              std::cerr << GRM::toXML(grm_get_document_root()) << std::endl;
               reset_pixmap();
             }
         }
@@ -579,7 +579,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
           current_selection->get_ref()->parentElement()->removeAttribute(
               (std::string)current_selection->get_ref()->getAttribute("name"));
           current_selection->get_ref()->remove();
-          std::cerr << GR::toXML(grm_get_document_root()) << std::endl;
+          std::cerr << GRM::toXML(grm_get_document_root()) << std::endl;
           mouse_move_selection = nullptr;
           reset_pixmap();
         }
@@ -1139,7 +1139,7 @@ void GRPlotWidget::save_file_slot()
           QMessageBox::critical(this, "File save not possible", QString::fromStdString(text_stream.str()));
           return;
         }
-      save_file_stream << GR::toXML(grm_get_render()) << std::endl;
+      save_file_stream << GRM::toXML(grm_get_render()) << std::endl;
       save_file_stream.close();
     }
 }

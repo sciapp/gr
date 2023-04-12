@@ -6,11 +6,11 @@
 #include <sstream>
 #include <algorithm>
 
-static void nodeToXML(std::stringstream &os, const std::shared_ptr<const GR::Node> &node,
-                      const GR::SerializerOptions &options, const std::string &indent);
+static void nodeToXML(std::stringstream &os, const std::shared_ptr<const GRM::Node> &node,
+                      const GRM::SerializerOptions &options, const std::string &indent);
 
-static void documentToXML(std::stringstream &os, const std::shared_ptr<const GR::Document> &document,
-                          const GR::SerializerOptions &options, const std::string &indent)
+static void documentToXML(std::stringstream &os, const std::shared_ptr<const GRM::Document> &document,
+                          const GRM::SerializerOptions &options, const std::string &indent)
 {
   os << indent << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
   for (const auto &child_node : document->childNodes())
@@ -19,8 +19,8 @@ static void documentToXML(std::stringstream &os, const std::shared_ptr<const GR:
     }
 }
 
-static void elementToXML(std::stringstream &os, const std::shared_ptr<const GR::Element> &element,
-                         const GR::SerializerOptions &options, const std::string &indent)
+static void elementToXML(std::stringstream &os, const std::shared_ptr<const GRM::Element> &element,
+                         const GRM::SerializerOptions &options, const std::string &indent)
 {
   os << indent << "<" << element->localName();
   auto attribute_names_set = element->getAttributeNames();
@@ -38,39 +38,39 @@ static void elementToXML(std::stringstream &os, const std::shared_ptr<const GR::
   os << indent << "</" << element->localName() << ">\n";
 }
 
-static void commentToXML(std::stringstream &os, const std::shared_ptr<const GR::Comment> &comment,
-                         const GR::SerializerOptions &options, const std::string &indent)
+static void commentToXML(std::stringstream &os, const std::shared_ptr<const GRM::Comment> &comment,
+                         const GRM::SerializerOptions &options, const std::string &indent)
 {
   os << indent << "<!--" << comment->data() << "-->\n";
 }
 
-static void nodeToXML(std::stringstream &os, const std::shared_ptr<const GR::Node> &node,
-                      const GR::SerializerOptions &options, const std::string &indent)
+static void nodeToXML(std::stringstream &os, const std::shared_ptr<const GRM::Node> &node,
+                      const GRM::SerializerOptions &options, const std::string &indent)
 {
   switch (node->nodeType())
     {
-    case GR::Node::Type::DOCUMENT_NODE:
+    case GRM::Node::Type::DOCUMENT_NODE:
       {
-        auto document = std::dynamic_pointer_cast<const GR::Document>(node);
+        auto document = std::dynamic_pointer_cast<const GRM::Document>(node);
         documentToXML(os, document, options, indent);
         break;
       }
-    case GR::Node::Type::ELEMENT_NODE:
+    case GRM::Node::Type::ELEMENT_NODE:
       {
-        auto element = std::dynamic_pointer_cast<const GR::Element>(node);
+        auto element = std::dynamic_pointer_cast<const GRM::Element>(node);
         elementToXML(os, element, options, indent);
         break;
       }
-    case GR::Node::Type::COMMENT_NODE:
+    case GRM::Node::Type::COMMENT_NODE:
       {
-        auto comment = std::dynamic_pointer_cast<const GR::Comment>(node);
+        auto comment = std::dynamic_pointer_cast<const GRM::Comment>(node);
         commentToXML(os, comment, options, indent);
         break;
       }
     }
 };
 
-std::string GR::toXML(const std::shared_ptr<const GR::Node> &node, const GR::SerializerOptions &options)
+std::string GRM::toXML(const std::shared_ptr<const GRM::Node> &node, const GRM::SerializerOptions &options)
 {
   if (!node)
     {
@@ -81,7 +81,7 @@ std::string GR::toXML(const std::shared_ptr<const GR::Node> &node, const GR::Ser
   return os.str();
 }
 
-std::string GR::tolower(std::string string)
+std::string GRM::tolower(std::string string)
 {
   for (char &c : string)
     {
@@ -90,7 +90,7 @@ std::string GR::tolower(std::string string)
   return string;
 }
 
-std::string GR::toupper(std::string string)
+std::string GRM::toupper(std::string string)
 {
   for (char &c : string)
     {
@@ -99,7 +99,7 @@ std::string GR::toupper(std::string string)
   return string;
 }
 
-std::vector<std::string> GR::split(const std::string &string, const std::string &token)
+std::vector<std::string> GRM::split(const std::string &string, const std::string &token)
 {
   std::vector<std::string> results;
   if (string.empty())
@@ -132,7 +132,7 @@ std::vector<std::string> GR::split(const std::string &string, const std::string 
   return results;
 }
 
-std::string GR::strip(const std::string &string)
+std::string GRM::strip(const std::string &string)
 {
   if (string.empty())
     {
@@ -147,20 +147,21 @@ std::string GR::strip(const std::string &string)
   return string.substr(left_start, right_start - left_start + 1);
 }
 
-bool GR::Selector::matchElement(const GR::Element &element,
-                                std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const
+bool GRM::Selector::matchElement(
+    const GRM::Element &element,
+    std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const
 {
   auto element_ptr = std::dynamic_pointer_cast<const Element>(element.shared_from_this()).get();
-  if (match_map.find(std::tuple<const GR::Element *, const GR::Selector *>{element_ptr, this}) != match_map.end())
+  if (match_map.find(std::tuple<const GRM::Element *, const GRM::Selector *>{element_ptr, this}) != match_map.end())
     {
-      return match_map[std::tuple<const GR::Element *, const GR::Selector *>{element_ptr, this}];
+      return match_map[std::tuple<const GRM::Element *, const GRM::Selector *>{element_ptr, this}];
     }
   bool result = doMatchElement(element, match_map);
-  match_map[std::tuple<const GR::Element *, const GR::Selector *>{element_ptr, this}] = result;
+  match_map[std::tuple<const GRM::Element *, const GRM::Selector *>{element_ptr, this}] = result;
   return result;
 }
 
-namespace GR
+namespace GRM
 {
 class AndCombinedSelector : public Selector
 {
@@ -171,8 +172,8 @@ public:
   }
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     if (m_part_selectors.empty())
       {
@@ -200,8 +201,8 @@ public:
   }
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     if (m_part_selectors.empty())
       {
@@ -230,8 +231,8 @@ public:
   }
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     bool conditional_selector_matched = false;
     for (auto ancestor = element.parentElement(); ancestor; ancestor = ancestor->parentElement())
@@ -257,8 +258,8 @@ public:
   }
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     bool conditional_selector_matched = false;
     auto parent = element.parentElement();
@@ -283,8 +284,8 @@ public:
   }
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     bool conditional_selector_matched = false;
     auto parent = element.parentElement();
@@ -309,8 +310,8 @@ private:
 class FalseSelector : public Selector
 {
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     (void)element;
     return false;
@@ -319,17 +320,17 @@ protected:
 class RootSelector : public Selector
 {
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
-    return (!element.parentNode() || element.parentNode()->nodeType() == GR::Node::Type::DOCUMENT_NODE);
+    return (!element.parentNode() || element.parentNode()->nodeType() == GRM::Node::Type::DOCUMENT_NODE);
   }
 };
 class EmptySelector : public Selector
 {
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     return (element.childElementCount() == 0);
   }
@@ -337,8 +338,8 @@ protected:
 class OnlyChildSelector : public Selector
 {
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     return (element.previousElementSibling() == nullptr && element.nextElementSibling() == nullptr);
   }
@@ -346,8 +347,8 @@ protected:
 class OnlyOfTypeSelector : public Selector
 {
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     auto parent_element = element.parentElement();
     std::vector<std::shared_ptr<const Element>> elements;
@@ -383,8 +384,8 @@ public:
   }
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     auto elements = this->elements(element);
     if (elements.empty())
@@ -415,7 +416,7 @@ protected:
       }
   }
 
-  virtual std::vector<std::shared_ptr<const Element>> elements(const GR::Element &element) const = 0;
+  virtual std::vector<std::shared_ptr<const Element>> elements(const GRM::Element &element) const = 0;
 
 private:
   long m_offset;
@@ -428,7 +429,7 @@ public:
   explicit NthChildSelector(long offset, long factor, bool reverse) : NthOfSelector(offset, factor, reverse) {}
 
 protected:
-  std::vector<std::shared_ptr<const Element>> elements(const GR::Element &element) const override
+  std::vector<std::shared_ptr<const Element>> elements(const GRM::Element &element) const override
   {
     auto parent_element = element.parentElement();
     if (parent_element)
@@ -451,7 +452,7 @@ public:
   explicit NthOfTypeSelector(long offset, long factor, bool reverse) : NthOfSelector(offset, factor, reverse) {}
 
 protected:
-  std::vector<std::shared_ptr<const Element>> elements(const GR::Element &element) const override
+  std::vector<std::shared_ptr<const Element>> elements(const GRM::Element &element) const override
   {
     auto parent_element = element.parentElement();
     std::vector<std::shared_ptr<const Element>> elements;
@@ -479,11 +480,11 @@ protected:
 class TagSelector : public Selector
 {
 public:
-  explicit TagSelector(const std::string &tag_name) : m_local_name(GR::tolower(tag_name)) {}
+  explicit TagSelector(const std::string &tag_name) : m_local_name(GRM::tolower(tag_name)) {}
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     return !m_local_name.empty() && (m_local_name == "*" || m_local_name == element.localName());
   }
@@ -494,11 +495,11 @@ private:
 class HasAttributeSelector : public Selector
 {
 public:
-  explicit HasAttributeSelector(const std::string &attribute_name) : m_attribute_name(GR::tolower(attribute_name)) {}
+  explicit HasAttributeSelector(const std::string &attribute_name) : m_attribute_name(GRM::tolower(attribute_name)) {}
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     return !m_attribute_name.empty() && element.hasAttribute(m_attribute_name);
   }
@@ -510,13 +511,13 @@ class AttributeEqualsSelector : public Selector
 {
 public:
   AttributeEqualsSelector(const std::string &attribute_name, std::string attribute_value)
-      : m_attribute_name(GR::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
+      : m_attribute_name(GRM::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
   {
   }
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     return !m_attribute_name.empty() && (std::string)element.getAttribute(m_attribute_name) == m_attribute_value;
   }
@@ -529,13 +530,13 @@ class AttributeStartsWithSelector : public Selector
 {
 public:
   AttributeStartsWithSelector(const std::string &attribute_name, std::string attribute_value)
-      : m_attribute_name(GR::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
+      : m_attribute_name(GRM::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
   {
   }
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     return !m_attribute_name.empty() &&
            (((std::string)element.getAttribute(m_attribute_name)).find(m_attribute_value) == 0);
@@ -549,11 +550,11 @@ private:
 class IDSelector : public Selector
 {
 public:
-  explicit IDSelector(const std::string &id) : m_id(GR::tolower(id)) {}
+  explicit IDSelector(const std::string &id) : m_id(GRM::tolower(id)) {}
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     return !m_id.empty() && m_id == (std::string)element.getAttribute("id");
   }
@@ -565,13 +566,13 @@ class AttributeEndsWithSelector : public Selector
 {
 public:
   AttributeEndsWithSelector(const std::string &attribute_name, std::string attribute_value)
-      : m_attribute_name(GR::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
+      : m_attribute_name(GRM::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
   {
   }
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     if (m_attribute_name.empty())
       {
@@ -591,13 +592,13 @@ class AttributeContainsSelector : public Selector
 {
 public:
   AttributeContainsSelector(const std::string &attribute_name, std::string attribute_value)
-      : m_attribute_name(GR::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
+      : m_attribute_name(GRM::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
   {
   }
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     if (m_attribute_name.empty())
       {
@@ -616,20 +617,20 @@ class AttributeContainsWordSelector : public Selector
 {
 public:
   AttributeContainsWordSelector(const std::string &attribute_name, std::string attribute_value)
-      : m_attribute_name(GR::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
+      : m_attribute_name(GRM::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
   {
   }
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     if (m_attribute_name.empty())
       {
         return false;
       }
     auto element_attribute_string = (std::string)element.getAttribute(m_attribute_name);
-    auto element_attribute_words = GR::split(element_attribute_string, " ");
+    auto element_attribute_words = GRM::split(element_attribute_string, " ");
     return (std::find(element_attribute_words.begin(), element_attribute_words.end(), m_attribute_value) !=
             element_attribute_words.end());
   }
@@ -642,20 +643,20 @@ class AttributeContainsPrefixSelector : public Selector
 {
 public:
   AttributeContainsPrefixSelector(const std::string &attribute_name, std::string attribute_value)
-      : m_attribute_name(GR::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
+      : m_attribute_name(GRM::tolower(attribute_name)), m_attribute_value(std::move(attribute_value))
   {
   }
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     if (m_attribute_name.empty())
       {
         return false;
       }
     auto element_attribute_string = (std::string)element.getAttribute(m_attribute_name);
-    auto element_attribute_words = GR::split(element_attribute_string, " ");
+    auto element_attribute_words = GRM::split(element_attribute_string, " ");
     for (const auto &word : element_attribute_words)
       {
         // match either a whole word or a hyphenated word starting with the selector value
@@ -678,16 +679,16 @@ public:
   explicit ClassSelector(std::string class_name) : m_class_name(std::move(class_name)) {}
 
 protected:
-  bool doMatchElement(const GR::Element &element,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const override
+  bool doMatchElement(const GRM::Element &element,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const override
   {
     if (!m_class_name.empty())
       {
         auto element_classes_value = element.getAttribute("class");
-        auto element_classes = GR::split((std::string)element_classes_value, " ");
+        auto element_classes = GRM::split((std::string)element_classes_value, " ");
         for (auto &element_class : element_classes)
           {
-            element_class = GR::tolower(GR::strip(element_class));
+            element_class = GRM::tolower(GRM::strip(element_class));
           }
         for (const auto &element_class : element_classes)
           {
@@ -703,16 +704,16 @@ protected:
 private:
   std::string m_class_name;
 };
-} // namespace GR
+} // namespace GRM
 
-std::shared_ptr<GR::Selector> GR::parseSelectors(const std::string &selectors)
+std::shared_ptr<GRM::Selector> GRM::parseSelectors(const std::string &selectors)
 {
-  auto individual_selectors = GR::split(selectors, ",");
+  auto individual_selectors = GRM::split(selectors, ",");
   for (auto &selector : individual_selectors)
     {
-      selector = GR::tolower(GR::strip(selector));
+      selector = GRM::tolower(GRM::strip(selector));
     }
-  std::vector<std::shared_ptr<GR::Selector>> parsed_individual_selectors;
+  std::vector<std::shared_ptr<GRM::Selector>> parsed_individual_selectors;
   for (auto &selector : individual_selectors)
     {
       bool conditional_selector_found = false;
@@ -775,7 +776,7 @@ std::shared_ptr<GR::Selector> GR::parseSelectors(const std::string &selectors)
                 auto ancestor_selector = parseSelectors(selector.substr(0, selector.rend() - it - 1));
                 auto local_selector = parseSelectors(selector.substr(selector.rend() - it));
                 parsed_individual_selectors.push_back(
-                    std::make_shared<GR::AncestorAndLocalSelector>(ancestor_selector, local_selector));
+                    std::make_shared<GRM::AncestorAndLocalSelector>(ancestor_selector, local_selector));
                 conditional_selector_found = true;
                 break;
               }
@@ -784,7 +785,7 @@ std::shared_ptr<GR::Selector> GR::parseSelectors(const std::string &selectors)
                 auto parent_selector = parseSelectors(selector.substr(0, selector.rend() - it - 1));
                 auto local_selector = parseSelectors(selector.substr(selector.rend() - it));
                 parsed_individual_selectors.push_back(
-                    std::make_shared<GR::ParentAndLocalSelector>(parent_selector, local_selector));
+                    std::make_shared<GRM::ParentAndLocalSelector>(parent_selector, local_selector));
                 conditional_selector_found = true;
                 break;
               }
@@ -793,7 +794,7 @@ std::shared_ptr<GR::Selector> GR::parseSelectors(const std::string &selectors)
                 auto sibling_selector = parseSelectors(selector.substr(0, selector.rend() - it - 1));
                 auto local_selector = parseSelectors(selector.substr(selector.rend() - it));
                 parsed_individual_selectors.push_back(
-                    std::make_shared<GR::PreviousSiblingAndLocalSelector>(sibling_selector, local_selector));
+                    std::make_shared<GRM::PreviousSiblingAndLocalSelector>(sibling_selector, local_selector));
                 conditional_selector_found = true;
                 break;
               }
@@ -806,12 +807,12 @@ std::shared_ptr<GR::Selector> GR::parseSelectors(const std::string &selectors)
           continue;
         }
       std::string local_selector = selector;
-      local_selector = GR::strip(local_selector);
+      local_selector = GRM::strip(local_selector);
       if (local_selector.empty())
         {
           continue;
         }
-      std::vector<std::shared_ptr<GR::Selector>> parsed_selector_parts;
+      std::vector<std::shared_ptr<GRM::Selector>> parsed_selector_parts;
       in_bracketed_block = false;
       in_quotes = false;
       char previous_character = '\0';
@@ -829,12 +830,12 @@ std::shared_ptr<GR::Selector> GR::parseSelectors(const std::string &selectors)
                   if (selector_part.front() == '.')
                     {
                       auto selector_class = selector_part.substr(1);
-                      parsed_selector_parts.push_back(std::make_shared<GR::ClassSelector>(selector_class));
+                      parsed_selector_parts.push_back(std::make_shared<GRM::ClassSelector>(selector_class));
                     }
                   else if (selector_part.front() == '#')
                     {
                       auto selector_id = selector_part.substr(1);
-                      parsed_selector_parts.push_back(std::make_shared<GR::IDSelector>(selector_id));
+                      parsed_selector_parts.push_back(std::make_shared<GRM::IDSelector>(selector_id));
                     }
                   else if (selector_part.front() == '[')
                     {
@@ -843,11 +844,11 @@ std::shared_ptr<GR::Selector> GR::parseSelectors(const std::string &selectors)
                         {
                           auto selector_attribute = selector_part.substr(1, selector_part.size() - 2);
                           parsed_selector_parts.push_back(
-                              std::make_shared<GR::HasAttributeSelector>(selector_attribute));
+                              std::make_shared<GRM::HasAttributeSelector>(selector_attribute));
                         }
                       else if (equals_sign_pos == 0)
                         {
-                          parsed_selector_parts.push_back(std::make_shared<GR::FalseSelector>());
+                          parsed_selector_parts.push_back(std::make_shared<GRM::FalseSelector>());
                         }
                       else
                         {
@@ -903,37 +904,37 @@ std::shared_ptr<GR::Selector> GR::parseSelectors(const std::string &selectors)
                           if (selector_comparison == "=")
                             {
                               parsed_selector_parts.push_back(
-                                  std::make_shared<GR::AttributeEqualsSelector>(selector_attribute, selector_value));
+                                  std::make_shared<GRM::AttributeEqualsSelector>(selector_attribute, selector_value));
                             }
                           else if (selector_comparison == "~=")
                             {
-                              parsed_selector_parts.push_back(std::make_shared<GR::AttributeContainsWordSelector>(
+                              parsed_selector_parts.push_back(std::make_shared<GRM::AttributeContainsWordSelector>(
                                   selector_attribute, selector_value));
                             }
                           else if (selector_comparison == "|=")
                             {
-                              parsed_selector_parts.push_back(std::make_shared<GR::AttributeContainsPrefixSelector>(
+                              parsed_selector_parts.push_back(std::make_shared<GRM::AttributeContainsPrefixSelector>(
                                   selector_attribute, selector_value));
                             }
                           else if (selector_comparison == "^=")
                             {
-                              parsed_selector_parts.push_back(std::make_shared<GR::AttributeStartsWithSelector>(
+                              parsed_selector_parts.push_back(std::make_shared<GRM::AttributeStartsWithSelector>(
                                   selector_attribute, selector_value));
                             }
                           else if (selector_comparison == "$=")
                             {
                               parsed_selector_parts.push_back(
-                                  std::make_shared<GR::AttributeEndsWithSelector>(selector_attribute, selector_value));
+                                  std::make_shared<GRM::AttributeEndsWithSelector>(selector_attribute, selector_value));
                             }
                           else if (selector_comparison == "*=")
                             {
                               parsed_selector_parts.push_back(
-                                  std::make_shared<GR::AttributeContainsSelector>(selector_attribute, selector_value));
+                                  std::make_shared<GRM::AttributeContainsSelector>(selector_attribute, selector_value));
                             }
                           else
                             {
                               // unsupported comparison types
-                              parsed_selector_parts.push_back(std::make_shared<GR::FalseSelector>());
+                              parsed_selector_parts.push_back(std::make_shared<GRM::FalseSelector>());
                             }
                         }
                     }
@@ -945,67 +946,67 @@ std::shared_ptr<GR::Selector> GR::parseSelectors(const std::string &selectors)
                         }
                       else if (selector_part == ":root")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::RootSelector>());
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::RootSelector>());
                         }
                       else if (selector_part == ":empty")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::EmptySelector>());
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::EmptySelector>());
                         }
                       else if (selector_part == ":only-child")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::OnlyChildSelector>());
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::OnlyChildSelector>());
                         }
                       else if (selector_part == ":only-of-type")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::OnlyOfTypeSelector>());
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::OnlyOfTypeSelector>());
                         }
                       else if (selector_part == ":first-child" || selector_part == ":nth-child(1)")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::NthChildSelector>(1, 0, false));
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::NthChildSelector>(1, 0, false));
                         }
                       else if (selector_part == ":nth-child(even)")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::NthChildSelector>(0, 2, false));
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::NthChildSelector>(0, 2, false));
                         }
                       else if (selector_part == ":nth-child(odd)")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::NthChildSelector>(1, 2, false));
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::NthChildSelector>(1, 2, false));
                         }
                       else if (selector_part == ":last-child" || selector_part == ":nth-last-child(1)")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::NthChildSelector>(1, 0, true));
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::NthChildSelector>(1, 0, true));
                         }
                       else if (selector_part == ":nth-last-child(even)")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::NthChildSelector>(0, 2, true));
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::NthChildSelector>(0, 2, true));
                         }
                       else if (selector_part == ":nth-last-child(odd)")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::NthChildSelector>(1, 2, true));
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::NthChildSelector>(1, 2, true));
                         }
                       else if (selector_part == ":first-of-type" || selector_part == ":nth-of-type(1)")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::NthOfTypeSelector>(1, 0, false));
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::NthOfTypeSelector>(1, 0, false));
                         }
                       else if (selector_part == ":nth-of-type(even)")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::NthOfTypeSelector>(0, 2, false));
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::NthOfTypeSelector>(0, 2, false));
                         }
                       else if (selector_part == ":nth-of-type(odd)")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::NthOfTypeSelector>(1, 2, false));
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::NthOfTypeSelector>(1, 2, false));
                         }
                       else if (selector_part == ":last-of-type" || selector_part == ":nth-last-child(1)")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::NthOfTypeSelector>(1, 0, true));
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::NthOfTypeSelector>(1, 0, true));
                         }
                       else if (selector_part == ":nth-last-of-type(even)")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::NthOfTypeSelector>(0, 2, true));
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::NthOfTypeSelector>(0, 2, true));
                         }
                       else if (selector_part == ":nth-last-of-type(odd)")
                         {
-                          parsed_individual_selectors.push_back(std::make_shared<GR::NthOfTypeSelector>(1, 2, true));
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::NthOfTypeSelector>(1, 2, true));
                         }
                       else if ((selector_part.find(":nth-child(") == 0 || selector_part.find(":nth-last-child(") == 0 ||
                                 selector_part.find(":nth-of-type(") == 0 ||
@@ -1014,14 +1015,14 @@ std::shared_ptr<GR::Selector> GR::parseSelectors(const std::string &selectors)
                         {
                           auto parenthesis_position = selector_part.find('(');
                           auto selector_type_string = selector_part.substr(0, parenthesis_position);
-                          auto factor_and_offset_string = GR::strip(selector_part.substr(
+                          auto factor_and_offset_string = GRM::strip(selector_part.substr(
                               parenthesis_position + 1, selector_part.size() - parenthesis_position - 2));
                           auto n_position = factor_and_offset_string.find('n');
                           std::string factor_string;
                           std::string offset_string;
                           if (n_position == std::string::npos)
                             {
-                              parsed_individual_selectors.push_back(std::make_shared<GR::FalseSelector>());
+                              parsed_individual_selectors.push_back(std::make_shared<GRM::FalseSelector>());
                               factor_string = "0";
                               offset_string = factor_and_offset_string;
                             }
@@ -1079,42 +1080,42 @@ std::shared_ptr<GR::Selector> GR::parseSelectors(const std::string &selectors)
                             }
                           if (invalid)
                             {
-                              parsed_individual_selectors.push_back(std::make_shared<GR::FalseSelector>());
+                              parsed_individual_selectors.push_back(std::make_shared<GRM::FalseSelector>());
                             }
                           else if (selector_type_string == ":nth-child")
                             {
                               parsed_individual_selectors.push_back(
-                                  std::make_shared<GR::NthChildSelector>(offset, factor, false));
+                                  std::make_shared<GRM::NthChildSelector>(offset, factor, false));
                             }
                           else if (selector_type_string == ":nth-last-child")
                             {
                               parsed_individual_selectors.push_back(
-                                  std::make_shared<GR::NthChildSelector>(offset, factor, true));
+                                  std::make_shared<GRM::NthChildSelector>(offset, factor, true));
                             }
                           else if (selector_type_string == ":nth-of-type")
                             {
                               parsed_individual_selectors.push_back(
-                                  std::make_shared<GR::NthOfTypeSelector>(offset, factor, false));
+                                  std::make_shared<GRM::NthOfTypeSelector>(offset, factor, false));
                             }
                           else if (selector_type_string == ":nth-last-of-type")
                             {
                               parsed_individual_selectors.push_back(
-                                  std::make_shared<GR::NthOfTypeSelector>(offset, factor, true));
+                                  std::make_shared<GRM::NthOfTypeSelector>(offset, factor, true));
                             }
                           else
                             {
-                              parsed_individual_selectors.push_back(std::make_shared<GR::FalseSelector>());
+                              parsed_individual_selectors.push_back(std::make_shared<GRM::FalseSelector>());
                             }
                         }
                       else
                         {
                           // most pseudo-elements are currently not supported
-                          parsed_individual_selectors.push_back(std::make_shared<GR::FalseSelector>());
+                          parsed_individual_selectors.push_back(std::make_shared<GRM::FalseSelector>());
                         }
                     }
                   else
                     {
-                      parsed_selector_parts.push_back(std::make_shared<GR::TagSelector>(selector_part));
+                      parsed_selector_parts.push_back(std::make_shared<GRM::TagSelector>(selector_part));
                     }
                 }
               if (in_bracketed_block)
@@ -1155,8 +1156,8 @@ std::shared_ptr<GR::Selector> GR::parseSelectors(const std::string &selectors)
         }
       else if (!parsed_selector_parts.empty())
         {
-          parsed_individual_selectors.push_back(std::make_shared<GR::AndCombinedSelector>(parsed_selector_parts));
+          parsed_individual_selectors.push_back(std::make_shared<GRM::AndCombinedSelector>(parsed_selector_parts));
         }
     }
-  return std::make_shared<GR::OrCombinedSelector>(parsed_individual_selectors);
+  return std::make_shared<GRM::OrCombinedSelector>(parsed_individual_selectors);
 }

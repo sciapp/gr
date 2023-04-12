@@ -157,9 +157,9 @@ static grm_args_t *global_root_args = nullptr;
 grm_args_t *active_plot_args = nullptr;
 static unsigned int active_plot_index = 0;
 grid_t *global_grid = nullptr;
-static std::shared_ptr<GR::Render> global_render;
-static std::shared_ptr<GR::Element> global_root;
-static std::shared_ptr<GR::Element> currentDomElement;
+static std::shared_ptr<GRM::Render> global_render;
+static std::shared_ptr<GRM::Element> global_root;
+static std::shared_ptr<GRM::Element> currentDomElement;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ event handling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -457,7 +457,7 @@ err_t plot_init_static_variables(void)
       error_cleanup_and_set_error_if(!grm_args_values(global_root_args, "plots", "a", &active_plot_args),
                                      ERROR_INTERNAL);
       active_plot_index = 1;
-      global_render = GR::Render::createRender();
+      global_render = GRM::Render::createRender();
       meters_per_unit_map = double_map_new_with_data(array_size(symbol_to_meters_per_unit), symbol_to_meters_per_unit);
       error_cleanup_and_set_error_if(meters_per_unit_map == nullptr, ERROR_MALLOC);
       fmt_map = string_map_new_with_data(array_size(kind_to_fmt), kind_to_fmt);
@@ -2039,7 +2039,7 @@ err_t plot_line(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "orientation", "s", &orientation);
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "line");
 
   while (*current_series != nullptr)
@@ -2078,7 +2078,7 @@ err_t plot_line(grm_args_t *subplot_args)
           gr_inqlinecolorind(&current_line_colorind);
           int id = static_cast<int>(global_root->getAttribute("id"));
           std::string str = std::to_string(id);
-          std::shared_ptr<GR::Element> element;
+          std::shared_ptr<GRM::Element> element;
           if (strcmp(orientation, "horizontal") == 0)
             {
               element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
@@ -2097,7 +2097,7 @@ err_t plot_line(grm_args_t *subplot_args)
           gr_inqmarkercolorind(&current_marker_colorind);
           int id = static_cast<int>(global_root->getAttribute("id"));
           std::string str = std::to_string(id);
-          std::shared_ptr<GR::Element> element;
+          std::shared_ptr<GRM::Element> element;
           if (strcmp(orientation, "horizontal") == 0)
             {
               element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
@@ -2153,7 +2153,7 @@ err_t plot_stairs(grm_args_t *subplot_args)
   err_t error = ERROR_NONE;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "step");
   group->setAttribute("marginalheatmap", 1);
 
@@ -2165,7 +2165,7 @@ err_t plot_stairs(grm_args_t *subplot_args)
   group->setAttribute("xind", xind);
   group->setAttribute("yind", yind);
 
-  std::shared_ptr<GR::Element> element; // declare element here for multiple usages / assignments later
+  std::shared_ptr<GRM::Element> element; // declare element here for multiple usages / assignments later
   while (*current_series != nullptr)
     {
       double *x = nullptr;
@@ -2391,7 +2391,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "orientation", "s", &orientation);
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "scatter");
 
   while (*current_series != nullptr)
@@ -2523,7 +2523,7 @@ err_t plot_quiver(grm_args_t *subplot_args)
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "quiver");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -2563,7 +2563,7 @@ err_t plot_stem(grm_args_t *subplot_args)
 {
   double stem_x[2], stem_y[2] = {0.0};
   grm_args_t **current_series;
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
   group->setAttribute("name", "stem");
   char *orientation;
@@ -2638,7 +2638,7 @@ err_t plot_hist(grm_args_t *subplot_args)
   err_t error = ERROR_NONE;
   char *marginalheatmap_kind;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   global_root->lastChildElement()->setAttribute("name", "hist");
 
   grm_args_values(subplot_args, "kind", "s", &kind);
@@ -2697,13 +2697,13 @@ err_t plot_hist(grm_args_t *subplot_args)
       bar_width = (x_max - x_min) / num_bins;
 
       // Use of two groups does not produce the same results as julia...
-      // std::shared_ptr<GR::Element> innerFillGroup = global_render->createGroup("innerFillGroup");
-      // std::shared_ptr<GR::Element> outerFillGroup = global_render->createGroup("outerFillGroup");
+      // std::shared_ptr<GRM::Element> innerFillGroup = global_render->createGroup("innerFillGroup");
+      // std::shared_ptr<GRM::Element> outerFillGroup = global_render->createGroup("outerFillGroup");
 
       for (i = 1; i < num_bins + 1; ++i)
         {
           double x = x_min + (i - 1) * bar_width;
-          std::shared_ptr<GR::Element> fillRect1, fillRect2;
+          std::shared_ptr<GRM::Element> fillRect1, fillRect2;
 
           if (is_horizontal)
             {
@@ -2796,7 +2796,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
   char *orientation;
   int is_vertical;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   gr_savestate();
   group->setAttribute("name", "barplot");
 
@@ -3185,7 +3185,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
               y2 = y[i];
             }
 
-          std::shared_ptr<GR::Element> temp;
+          std::shared_ptr<GRM::Element> temp;
 
           if (is_vertical)
             {
@@ -3275,7 +3275,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
                   x_text = (x1 + x2) / 2;
                   y_text = (y1 + y2) / 2;
 
-                  std::shared_ptr<GR::Element> temp =
+                  std::shared_ptr<GRM::Element> temp =
                       global_render->createText(x_text, y_text, ylabels[i], CoordinateSpace::WC);
                   global_render->setTextAlign(temp, 2, 3);
                   global_render->setTextWidthAndHeight(temp, available_width, available_height);
@@ -3446,7 +3446,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
               x1 += x_min;
               x2 += x_min;
 
-              std::shared_ptr<GR::Element> temp;
+              std::shared_ptr<GRM::Element> temp;
               if (is_vertical)
                 {
                   temp = global_render->createDrawRect(y1, y2, x1, x2);
@@ -3605,7 +3605,7 @@ err_t plot_contour(grm_args_t *subplot_args)
   int i;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "contour");
 
   grm_args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
@@ -3720,7 +3720,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
   int i;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "contourf");
 
   grm_args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
@@ -3833,7 +3833,7 @@ err_t plot_hexbin(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "hexbin");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -3876,7 +3876,7 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
          *theta = nullptr, *phi = nullptr;
   int is_uniform_heatmap;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "heatmap");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -4039,7 +4039,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv, tmp;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "heatmap");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -4246,7 +4246,7 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
   double *xi, *yi, *plot;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "marginalheatmap");
   auto heatmap_group = global_render->createGroup("heatmap");
   group->appendChild(heatmap_group);
@@ -4389,7 +4389,7 @@ err_t plot_wireframe(grm_args_t *subplot_args)
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "wireframe");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -4470,10 +4470,10 @@ err_t plot_surface(grm_args_t *subplot_args)
   int allocated_array[2] = {0, 0};
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
-  int accelerate; /* this argument decides if GR3 or GR is used to plot the surface */
+  int accelerate; /* this argument decides if GR3 or GRM is used to plot the surface */
   std::vector<double> x_vec, y_vec, z_vec;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "surface");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -4601,7 +4601,7 @@ err_t plot_plot3(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "plot3");
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
@@ -4639,7 +4639,7 @@ err_t plot_scatter3(grm_args_t *subplot_args)
   unsigned int x_length, y_length, z_length, c_length, i, c_index;
   double *x, *y, *z, *c;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "scatter3");
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
@@ -4705,7 +4705,7 @@ err_t plot_imshow(grm_args_t *subplot_args)
   int grplot = 0;
 
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "imshow");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -4777,7 +4777,7 @@ err_t plot_isosurface(grm_args_t *subplot_args)
   float foreground_colors[3];
   float *conv_data = nullptr;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "isosurface");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -4879,7 +4879,7 @@ err_t plot_volume(grm_args_t *subplot_args)
   double dlim[2] = {INFINITY, -INFINITY};
   err_t error;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "volume");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -4968,7 +4968,7 @@ err_t plot_polar(grm_args_t *subplot_args)
   int n;
   grm_args_t **current_series;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "polar");
 
   grm_args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
@@ -5138,11 +5138,11 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   int freeable_angles = 0;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "polarhistogram");
 
   gr_savestate();
-  std::shared_ptr<GR::Element> temp_elem;
+  std::shared_ptr<GRM::Element> temp_elem;
   std::string str;
 
   gr_inqresamplemethod(&resample);
@@ -6164,7 +6164,7 @@ err_t plot_pie(grm_args_t *subplot_args)
   std::vector<int> color_indices_vec;
   std::vector<double> color_rgb_values_vec;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "pie");
 
   grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
@@ -6263,7 +6263,7 @@ err_t plot_trisurf(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "trisurf");
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
@@ -6300,7 +6300,7 @@ err_t plot_tricont(grm_args_t *subplot_args)
   grm_args_t **current_series;
   int i;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "tricont");
 
   grm_args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
@@ -6356,7 +6356,7 @@ err_t plot_shade(grm_args_t *subplot_args)
   const char **current_component_name = data_component_names;
   unsigned int point_count;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "shade");
 
   grm_args_values(subplot_args, "series", "A", &current_shader);
@@ -6592,7 +6592,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   int phiflip = 0;
   double interval;
   const char *norm, *title;
-  std::shared_ptr<GR::Element> group;
+  std::shared_ptr<GRM::Element> group;
 
   if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
     {
@@ -6643,7 +6643,7 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
   double legend_symbol_x[2], legend_symbol_y[2];
   int i;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
   return_error_if(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   logger((stderr, "Draw a legend with %d labels\n", num_labels));
@@ -6683,7 +6683,7 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
   static unsigned int color_array_length = -1;
   int useFallback = 0;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
   return_error_if(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
@@ -6706,7 +6706,7 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
   int scale, flip, options;
   unsigned int i;
 
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
   auto colorbar = global_render->createColorbar(colors);
   group->append(colorbar);
@@ -6856,7 +6856,7 @@ err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_len
   grm_args_values(series_args, "orientation", "s", &orientation);
   is_horizontal = strcmp(orientation, "horizontal") == 0;
 
-  /* Getting GR options and sizes. See gr_verrorbars. */
+  /* Getting GRM options and sizes. See gr_verrorbars. */
   gr_savestate();
   gr_inqmarkersize(&marker_size);
   gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
@@ -8610,7 +8610,7 @@ int grm_clear(void)
 void grm_dump_graphics_tree(FILE *f)
 {
   const unsigned int indent = 2;
-  fprintf(f, "%s\n", toXML(global_root, GR::SerializerOptions{std::string(indent, ' ')}).c_str());
+  fprintf(f, "%s\n", toXML(global_root, GRM::SerializerOptions{std::string(indent, ' ')}).c_str());
 }
 
 unsigned int grm_max_plotid(void)
@@ -8636,7 +8636,7 @@ char *grm_dump_graphics_tree_str(void)
 #ifndef NO_EXPAT
 static void xml_parse_start_handler(void *data, const XML_Char *tagName, const XML_Char **attr)
 {
-  std::shared_ptr<GR::Element> *insertionParent = (std::shared_ptr<GR::Element> *)data;
+  std::shared_ptr<GRM::Element> *insertionParent = (std::shared_ptr<GRM::Element> *)data;
   if (strcmp(tagName, "root") == 0)
     {
       global_root = global_render->createElement("root");
@@ -8649,7 +8649,7 @@ static void xml_parse_start_handler(void *data, const XML_Char *tagName, const X
     }
   else
     {
-      std::shared_ptr<GR::Element> child = global_render->createElement(tagName);
+      std::shared_ptr<GRM::Element> child = global_render->createElement(tagName);
       for (int i = 0; attr[i]; i += 2)
         {
           child->setAttribute(attr[i], attr[i + 1]);
@@ -8662,15 +8662,15 @@ static void xml_parse_start_handler(void *data, const XML_Char *tagName, const X
 
 static void xml_parse_end_handler(void *data, const char *tagName)
 {
-  auto currentNode = (std::shared_ptr<GR::Element> *)data;
-  *((std::shared_ptr<GR::Element> *)data) = (*currentNode)->parentElement();
+  auto currentNode = (std::shared_ptr<GRM::Element> *)data;
+  *((std::shared_ptr<GRM::Element> *)data) = (*currentNode)->parentElement();
 }
 
 void grm_load_graphics_tree(FILE *file)
 {
   std::string xmlstring;
   XML_Parser parser = XML_ParserCreate(nullptr);
-  std::shared_ptr<GR::Element> parentNode;
+  std::shared_ptr<GRM::Element> parentNode;
 
   std::fseek(file, 0, SEEK_END);
   xmlstring.resize(std::ftell(file));
@@ -8749,7 +8749,7 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
     }
 
   grm_args_values(subplot_args, "kind", "s", &kind);
-  std::shared_ptr<GR::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("kind", kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
 
@@ -8827,7 +8827,7 @@ int grm_plot(const grm_args_t *args)
     }
   else
     {
-      global_render = GR::Render::createRender();
+      global_render = GRM::Render::createRender();
       global_root = global_render->createElement("root");
       global_render->replaceChildren(global_root);
       global_root->setAttribute("id", 0);
@@ -9006,7 +9006,7 @@ int grm_switch(unsigned int id)
 
 
 int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
-                    const std::shared_ptr<GR::Element> &parentDomElement)
+                    const std::shared_ptr<GRM::Element> &parentDomElement)
 {
   plot_func_t plot_func;
   const char *kind = nullptr;
@@ -9048,18 +9048,18 @@ int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
   return 0;
 }
 
-std::shared_ptr<GR::Element> grm_get_document_root(void)
+std::shared_ptr<GRM::Element> grm_get_document_root(void)
 {
   return global_root;
 }
 
-std::shared_ptr<GR::Render> grm_get_render(void)
+std::shared_ptr<GRM::Render> grm_get_render(void)
 {
   return global_render;
 }
 
-std::shared_ptr<GR::Element> get_subplot_from_ndc_point_using_dom_helper(std::shared_ptr<GR::Element> element, double x,
-                                                                         double y)
+std::shared_ptr<GRM::Element> get_subplot_from_ndc_point_using_dom_helper(std::shared_ptr<GRM::Element> element,
+                                                                          double x, double y)
 {
   bool elementIsSubplotGroup =
       (element->hasAttribute("subplotGroup") && static_cast<int>(element->getAttribute("subplotGroup")));
@@ -9080,7 +9080,7 @@ std::shared_ptr<GR::Element> get_subplot_from_ndc_point_using_dom_helper(std::sh
     {
       for (const auto &child : element->children())
         {
-          std::shared_ptr<GR::Element> subplot_element = get_subplot_from_ndc_point_using_dom_helper(child, x, y);
+          std::shared_ptr<GRM::Element> subplot_element = get_subplot_from_ndc_point_using_dom_helper(child, x, y);
           if (subplot_element != nullptr)
             {
               return subplot_element;
@@ -9091,13 +9091,13 @@ std::shared_ptr<GR::Element> get_subplot_from_ndc_point_using_dom_helper(std::sh
   return nullptr;
 }
 
-std::shared_ptr<GR::Element> get_subplot_from_ndc_point_using_dom(double x, double y)
+std::shared_ptr<GRM::Element> get_subplot_from_ndc_point_using_dom(double x, double y)
 {
   if (global_root->hasChildNodes())
     {
       for (const auto &child : global_root->children())
         {
-          std::shared_ptr<GR::Element> subplot_element = get_subplot_from_ndc_point_using_dom_helper(child, x, y);
+          std::shared_ptr<GRM::Element> subplot_element = get_subplot_from_ndc_point_using_dom_helper(child, x, y);
           if (subplot_element != nullptr)
             {
               return subplot_element;
@@ -9108,10 +9108,10 @@ std::shared_ptr<GR::Element> get_subplot_from_ndc_point_using_dom(double x, doub
   return nullptr;
 }
 
-std::shared_ptr<GR::Element> get_subplot_from_ndc_points_using_dom(unsigned int n, const double *x, const double *y)
+std::shared_ptr<GRM::Element> get_subplot_from_ndc_points_using_dom(unsigned int n, const double *x, const double *y)
 {
   unsigned int i;
-  std::shared_ptr<GR::Element> subplot_element;
+  std::shared_ptr<GRM::Element> subplot_element;
 
   for (i = 0, subplot_element = nullptr; i < n && subplot_element == nullptr; ++i)
     {
@@ -9121,7 +9121,7 @@ std::shared_ptr<GR::Element> get_subplot_from_ndc_points_using_dom(unsigned int 
   return subplot_element;
 }
 
-void grm_set_attribute_on_all_subplots_helper(std::shared_ptr<GR::Element> element, std::string attribute, int value)
+void grm_set_attribute_on_all_subplots_helper(std::shared_ptr<GRM::Element> element, std::string attribute, int value)
 {
   bool elementIsSubplotGroup =
       (element->hasAttribute("subplotGroup") && static_cast<int>(element->getAttribute("subplotGroup")));
@@ -9152,7 +9152,7 @@ void grm_set_attribute_on_all_subplots(std::string attribute, int value)
 
 int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, const int y2, const int keep_aspect_ratio,
                                   double *factor_x, double *factor_y, double *focus_x, double *focus_y,
-                                  std::shared_ptr<GR::Element> subplot_element)
+                                  std::shared_ptr<GRM::Element> subplot_element)
 {
   double ndc_box_x[4], ndc_box_y[4], viewport[4], wswindow[4];
   double ndc_left, ndc_top, ndc_right, ndc_bottom;
@@ -9238,7 +9238,7 @@ int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, cons
  * \param[in] b The blue component of the RGB triple in the range [0.0, 1.0].
  * \return The luminance of the given RGB triple.
  */
-void set_text_color_for_background(double r, double g, double b, const std::shared_ptr<GR::Element> &element)
+void set_text_color_for_background(double r, double g, double b, const std::shared_ptr<GRM::Element> &element)
 {
   double color_lightness;
 
@@ -9271,7 +9271,7 @@ void set_text_color_for_background(double r, double g, double b, const std::shar
  *                   `GR_COLOR_RESET` resets all color modifications.
  */
 int set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type,
-                   const std::shared_ptr<GR::Element> &element)
+                   const std::shared_ptr<GRM::Element> &element)
 {
   const static int fallback_color_indices[] = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
                                                991, 984, 992, 993, 994, 987, 985, 997, 998, 999};

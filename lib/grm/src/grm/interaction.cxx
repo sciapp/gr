@@ -113,18 +113,18 @@ int grm_input(const grm_args_t *input_args)
               auto x_series_key = static_cast<std::string>(current_series->getAttribute("x"));
               auto y_series_key = static_cast<std::string>(current_series->getAttribute("y"));
 
-              std::shared_ptr<GR::Context> context = grm_get_render()->getContext();
+              std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
 
-              auto x_series_vec = GR::get<std::vector<double>>((*context)[x_series_key]);
-              auto y_series_vec = GR::get<std::vector<double>>((*context)[y_series_key]);
+              auto x_series_vec = GRM::get<std::vector<double>>((*context)[x_series_key]);
+              auto y_series_vec = GRM::get<std::vector<double>>((*context)[y_series_key]);
 
               x_length = x_series_vec.size();
               y_length = y_series_vec.size();
               x_0 = x_series_vec[0], x_end = x_series_vec[x_length - 1];
               y_0 = y_series_vec[0], y_end = y_series_vec[y_length - 1];
 
-              GR::Render::processViewport(subplot_element);
-              GR::Render::processLimits(subplot_element);
+              GRM::Render::processViewport(subplot_element);
+              GRM::Render::processLimits(subplot_element);
 
               gr_wctondc(&x_0, &y_0);
               gr_wctondc(&x_end, &y_end);
@@ -166,7 +166,7 @@ int grm_input(const grm_args_t *input_args)
                       for (auto &childSeries : child->children())
                         {
                           auto groups = childSeries->children(); // innerFillGroup and outerFillGroup
-                          std::shared_ptr<GR::Element> innerFillGroup;
+                          std::shared_ptr<GRM::Element> innerFillGroup;
                           if (groups.size() == 2)
                             {
                               innerFillGroup = groups[0];
@@ -300,7 +300,7 @@ int grm_input(const grm_args_t *input_args)
     {
       double focus_x, focus_y, factor_x, factor_y;
       int keep_aspect_ratio = INPUT_DEFAULT_KEEP_ASPECT_RATIO;
-      std::shared_ptr<GR::Element> subplot_element;
+      std::shared_ptr<GRM::Element> subplot_element;
 
       grm_args_values(input_args, "keep_aspect_ratio", "i", &keep_aspect_ratio);
 
@@ -356,7 +356,7 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   double focus_x, focus_y, factor_x, factor_y;
   double viewport_mid_x, viewport_mid_y;
   double wswindow[4], viewport[4];
-  std::shared_ptr<GR::Element> subplot_element;
+  std::shared_ptr<GRM::Element> subplot_element;
   get_figure_size(NULL, &width, &height, NULL, NULL);
   max_width_height = grm_max(width, height);
   if (!get_focus_and_factor_from_dom(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x, &focus_y,
@@ -426,8 +426,8 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       return info;
     }
 
-  GR::Render::processViewport(subplot_element);
-  GR::Render::processLimits(subplot_element);
+  GRM::Render::processViewport(subplot_element);
+  GRM::Render::processLimits(subplot_element);
 
   gr_ndctowc(&x, &y);
   if (!subplot_element->hasAttribute("xlabel"))
@@ -464,14 +464,14 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   x_range_max = (x_max < x_range_max) ? x_max : x_range_max;
   y_range_max = (y_max < y_range_max) ? y_max : y_range_max;
 
-  std::shared_ptr<GR::Context> context = grm_get_render()->getContext();
+  std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
   auto draw_legend_element_vec = subplot_element->getElementsByClassName("draw-legend");
   num_labels = 0;
   if (!draw_legend_element_vec.empty())
     {
       auto &draw_legend_element = draw_legend_element_vec[0];
       std::string labels_key = static_cast<std::string>(draw_legend_element->getAttribute("labels"));
-      labels = GR::get<std::vector<std::string>>((*context)[labels_key]);
+      labels = GRM::get<std::vector<std::string>>((*context)[labels_key]);
       num_labels = labels.size();
     }
   if (strcmp(kind.c_str(), "pie") == 0)
@@ -498,7 +498,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       auto current_series = subplot_element->querySelectorsAll("group[name=\"" + kind + "_series\"]")[0];
       auto x_key = static_cast<std::string>(current_series->getAttribute("x"));
       std::vector<double> x_series_vec;
-      x_series_vec = GR::get<std::vector<double>>((*context)[x_key]);
+      x_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);
 
       x_series = &x_series_vec[0];
       x_length = x_series_vec.size();
@@ -538,7 +538,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
     {
       if (kind == "marginalheatmap") kind = "heatmap";
       auto current_series_group_vec = subplot_element->querySelectorsAll("group[name=\"" + kind + "_series\"]");
-      std::vector<std::shared_ptr<GR::Element>> current_series_vec;
+      std::vector<std::shared_ptr<GRM::Element>> current_series_vec;
       for (const auto &current_series_group : current_series_group_vec)
         {
           for (const auto &current_series_group_child : current_series_group->children())
@@ -562,19 +562,19 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
 
           if (is_vertical)
             {
-              x_series_vec = GR::get<std::vector<double>>((*context)[y_key]);
-              y_series_vec = GR::get<std::vector<double>>((*context)[x_key]);
+              x_series_vec = GRM::get<std::vector<double>>((*context)[y_key]);
+              y_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);
             }
           else
             {
-              x_series_vec = GR::get<std::vector<double>>((*context)[x_key]);
-              y_series_vec = GR::get<std::vector<double>>((*context)[y_key]);
+              x_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);
+              y_series_vec = GRM::get<std::vector<double>>((*context)[y_key]);
             }
           std::vector<double> z_series_vec;
 
           if (str_equals_any(kind.c_str(), 5, "heatmap", "marginalheatmap", "contour", "imshow", "contourf"))
             {
-              z_series_vec = GR::get<std::vector<double>>((*context)[z_key]);
+              z_series_vec = GRM::get<std::vector<double>>((*context)[z_key]);
               z_length = z_series_vec.size();
             }
 
@@ -637,8 +637,8 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                       auto u_key = static_cast<std::string>(current_series->getAttribute("u"));
                       auto v_key = static_cast<std::string>(current_series->getAttribute("v"));
 
-                      auto u_series_vec = GR::get<std::vector<double>>((*context)[u_key]);
-                      auto v_series_vec = GR::get<std::vector<double>>((*context)[v_key]);
+                      auto u_series_vec = GRM::get<std::vector<double>>((*context)[u_key]);
+                      auto v_series_vec = GRM::get<std::vector<double>>((*context)[v_key]);
                       u_series = &u_series_vec[0];
                       v_series = &v_series_vec[0];
                     }

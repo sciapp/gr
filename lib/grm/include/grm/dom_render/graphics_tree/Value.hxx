@@ -1,9 +1,9 @@
-#ifndef GR_GRAPHICS_TREE_INTERFACE_VALUE_HXX
-#define GR_GRAPHICS_TREE_INTERFACE_VALUE_HXX
+#ifndef GRM_GRAPHICS_TREE_INTERFACE_VALUE_HXX
+#define GRM_GRAPHICS_TREE_INTERFACE_VALUE_HXX
 
 #include <string>
 
-namespace GR
+namespace GRM
 {
 class Value
 {
@@ -52,6 +52,6 @@ private:
   double m_double_value;
   std::string m_string_value;
 };
-} // namespace GR
+} // namespace GRM
 
 #endif

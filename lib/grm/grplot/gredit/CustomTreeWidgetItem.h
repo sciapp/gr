@@ -9,7 +9,7 @@ class CustomTreeWidgetItem : public QTreeWidgetItem
 {
 public:
   explicit CustomTreeWidgetItem(const QTreeWidgetItem &other);
-  explicit CustomTreeWidgetItem(QTreeWidgetItem *other, std::shared_ptr<GR::Element> pRef = nullptr);
+  explicit CustomTreeWidgetItem(QTreeWidgetItem *other, std::shared_ptr<GRM::Element> pRef = nullptr);
   //    void setData(int column, int role, const QVariant &value) override
   //    {
   //        const bool isCheckChange = column == 0
@@ -21,10 +21,10 @@ public:
   //            qDebug()<<"hello";
   //        }
   //    }
-  std::shared_ptr<GR::Element> getRef();
+  std::shared_ptr<GRM::Element> getRef();
 
 protected:
-  std::shared_ptr<GR::Element> ref;
+  std::shared_ptr<GRM::Element> ref;
 };
 
 #endif // QT_EXAMPLE_CUSTOMTREEWIDGETITEM_H
