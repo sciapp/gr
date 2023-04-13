@@ -359,7 +359,8 @@ static void getMajorCount(const std::shared_ptr<GRM::Element> &element, const st
     }
   else
     {
-      if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf"))
+      if (str_equals_any(kind.c_str(), 9, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf",
+                         "polar_heatmap", "nonuniformpolar_heatmap", "volume"))
         {
           major_count = 2;
         }
