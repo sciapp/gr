@@ -2523,6 +2523,12 @@ static void colorbar(const std::shared_ptr<GRM::Element> &element, const std::sh
 
   auto cellArray =
       global_render->createCellArray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, "data" + str, data_vec);
+  cellArray->setAttribute("name", "colorbar");
+  auto colorbar_elements = element->querySelectorsAll("[name=\"colorbar\"]");
+  for (auto &colorbar_element : colorbar_elements)
+    {
+      colorbar_element->remove();
+    }
   element->append(cellArray);
 
   /* create axes */
