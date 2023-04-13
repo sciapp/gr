@@ -2510,6 +2510,13 @@ static void colorbar(const std::shared_ptr<GRM::Element> &element, const std::sh
 
   gr_setwindow(0.0, 1.0, c_min, c_max);
 
+  /* remove old cell arrays and axes if they exist */
+  auto colorbar_elements = element->querySelectorsAll("[name=\"colorbar\"]");
+  for (auto &colorbar_element : colorbar_elements)
+    {
+      colorbar_element->remove();
+    }
+
   /* create cell array */
   std::vector<int> data_vec;
   for (i = 0; i < colors; ++i)
@@ -2524,11 +2531,6 @@ static void colorbar(const std::shared_ptr<GRM::Element> &element, const std::sh
   auto cellArray =
       global_render->createCellArray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, "data" + str, data_vec);
   cellArray->setAttribute("name", "colorbar");
-  auto colorbar_elements = element->querySelectorsAll("[name=\"colorbar\"]");
-  for (auto &colorbar_element : colorbar_elements)
-    {
-      colorbar_element->remove();
-    }
   element->append(cellArray);
 
   /* create axes */
@@ -2545,6 +2547,7 @@ static void colorbar(const std::shared_ptr<GRM::Element> &element, const std::sh
       axes = global_render->createAxes(0, c_tick, 1, c_min, 0, 1, 1);
     }
   axes->setAttribute("tick_size", 0.005);
+  axes->setAttribute("name", "colorbar");
   global_render->setLineColorInd(axes, 1);
   element->append(axes);
 }
