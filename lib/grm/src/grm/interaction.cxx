@@ -249,7 +249,6 @@ int grm_input(const grm_args_t *input_args)
             {
               double ndc_xshift, ndc_yshift, rotation, tilt;
               int shift_pressed;
-              std::string kind;
 
               if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
                                  "isosurface"))
@@ -276,9 +275,8 @@ int grm_input(const grm_args_t *input_args)
                         {
                           tilt = 0;
                         }
-
-                      subplot_element->setAttribute("roation", rotation);
-                      subplot_element->setAttribute("tilt", tilt);
+                      subplot_element->setAttribute("space3d_phi", rotation);
+                      subplot_element->setAttribute("space3d_theta", tilt);
                     }
                 }
               else
