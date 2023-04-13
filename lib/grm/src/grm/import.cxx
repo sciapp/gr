@@ -513,7 +513,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   series.resize(cols);
 
   wstype = getenv("GKS_WSTYPE");
-  if (strcmp(wstype, "381") == 0 && (env = getenv("GR_DISPLAY")) != nullptr)
+  if (wstype != nullptr && strcmp(wstype, "381") == 0 && (env = getenv("GR_DISPLAY")) != nullptr)
     {
       handle = grm_open(GRM_SENDER, env, 8002, nullptr, nullptr);
       if (handle == nullptr)
@@ -942,14 +942,14 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
   for (i = 1; i < argc; i++)
     {
       token = argv[i];
-      /* parameter needed for import.cxx are treated different than grm-parameters */
+      /* parameter needed for import.cxx are handled differently than grm-parameters */
       if (starts_with(token, "file:"))
         {
           file_args->file_path = token.substr(5, token.length() - 1);
         }
       else if (i == 1 && (token.find(delim) == std::string::npos || (token.find(delim) == 1 && token.find('/') == 2)))
         {
-          optional_file = token; /* its only getting used, when no "file:"-keyword was found */
+          optional_file = token; /* it's only used, if no "file:" keyword was found */
         }
       else if (starts_with(token, "columns:"))
         {
@@ -962,7 +962,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
             {
               found_key = token.substr(0, pos);
               found_key_size = found_key.size();
-              /* check if there exist a know alias and in case of replace the key */
+              /* replace the key if a known alias exists */
               if (auto search_alias = key_alias.find(found_key); search_alias != key_alias.end())
                 {
                   found_key = search_alias->second;
