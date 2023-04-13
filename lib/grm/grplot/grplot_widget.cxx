@@ -554,6 +554,13 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                   auto &field = *fields[i]; // because typeid(*fields[i]) is bad :(
                   if (typeid(field) == typeid(QLineEdit))
                     {
+                      std::string name = std::string(current_selection->get_ref()->getAttribute("name"));
+                      if (labels[i].toStdString() == "text" &&
+                          (name == "title" || name == "xlabel" || name == "ylabel"))
+                        {
+                          current_selection->get_ref()->parentElement()->setAttribute(
+                              name, ((QLineEdit *)fields[i])->text().toStdString());
+                        }
                       current_selection->get_ref()->setAttribute(labels[i].toStdString(),
                                                                  ((QLineEdit *)fields[i])->text().toStdString());
                     }
