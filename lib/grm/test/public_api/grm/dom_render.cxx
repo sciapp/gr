@@ -94,7 +94,7 @@ static void test_dom_render(void)
 
   //  int color_ind = 983;
   auto render = grm_get_render();
-  //  auto context = std::make_shared<GR::Context>(GR::Context());
+  //  auto context = std::make_shared<GRM::Context>(GRM::Context());
   for (const auto &elem : root->querySelectorsAll("polymarker"))
     {
       elem->setAttribute("markertype", 2);
@@ -691,11 +691,11 @@ static void test_shade(void)
 
 static void testContext()
 {
-  GR::Context context = GR::Context();
+  GRM::Context context = GRM::Context();
   std::vector<std::string> vec = {"a", "b", "abc"};
   context["vec"] = vec;
 
-  std::vector<std::string> res = GR::get<std::vector<std::string>>(context["vec"]);
+  std::vector<std::string> res = GRM::get<std::vector<std::string>>(context["vec"]);
   for (auto elem : res)
     {
       std::cout << elem << "\t";
