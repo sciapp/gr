@@ -1508,7 +1508,9 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &elem)
       double yzoom = static_cast<double>(panzoom_element->getAttribute("yzoom"));
 
       /* Ensure the correct window is set in GRM */
-      if (elem->hasAttribute("window") && static_cast<int>(elem->getAttribute("window")))
+      bool window_exists = elem->hasAttribute("window") && static_cast<int>(elem->getAttribute("window"));
+      bool window3d_exists = elem->hasAttribute("window3d") && static_cast<int>(elem->getAttribute("window3d"));
+      if (window_exists || window3d_exists)
         {
           double stored_window_xmin = static_cast<double>(elem->getAttribute("window_xmin"));
           double stored_window_xmax = static_cast<double>(elem->getAttribute("window_xmax"));
@@ -1516,6 +1518,10 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &elem)
           double stored_window_ymax = static_cast<double>(elem->getAttribute("window_ymax"));
 
           gr_setwindow(stored_window_xmin, stored_window_xmax, stored_window_ymin, stored_window_ymax);
+        }
+      else
+        {
+          throw NotFoundError("Window not found\n");
         }
 
       gr_panzoom(x, y, xzoom, yzoom, &xmin, &xmax, &ymin, &ymax);
