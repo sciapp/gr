@@ -1298,7 +1298,6 @@ static void processKind(const std::shared_ptr<GRM::Element> &elem)
                 {
                   for (auto &grandchild : child->children())
                     {
-                      child->removeChild(grandchild);
                       grandchild->remove();
                     }
                 }
@@ -2777,7 +2776,6 @@ static void drawLegend(const std::shared_ptr<GRM::Element> &elem, const std::sha
     {
       for (const auto &child : elem->children())
         {
-          elem->removeChild(child);
           child->remove();
         }
     }
@@ -2884,7 +2882,6 @@ static void drawPieLegend(const std::shared_ptr<GRM::Element> &elem, const std::
     {
       for (const auto &child : elem->children())
         {
-          elem->removeChild(child);
           child->remove();
         }
     }
@@ -3501,7 +3498,6 @@ static void piePlotTitleRender(const std::shared_ptr<GRM::Element> &elem, const 
     {
       for (const auto &child : elem->children())
         {
-          elem->removeChild(child);
           child->remove();
         }
     }
