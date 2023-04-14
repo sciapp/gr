@@ -23,9 +23,14 @@ public:
   [[nodiscard]] bool contains_point(int x, int y) const;
 
   [[nodiscard]] std::shared_ptr<GRM::Element> get_ref() const;
-
   [[nodiscard]] int get_id() const;
+  void get_cam(double *x, double *y) const;
+  void get_corner(double *x_min, double *x_max, double *y_min, double *y_max) const;
 
+  void set_cam(double x, double y);
+
+protected:
+  double xcam, ycam;
 
 private:
   int id;

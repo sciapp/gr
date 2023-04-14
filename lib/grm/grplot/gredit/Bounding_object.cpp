@@ -22,3 +22,23 @@ int Bounding_object::get_id() const
 {
   return id;
 }
+
+void Bounding_object::get_cam(double *x, double *y) const
+{
+  *x = xcam;
+  *y = ycam;
+}
+
+void Bounding_object::get_corner(double *x_min, double *x_max, double *y_min, double *y_max) const
+{
+  *x_min = xmin;
+  *x_max = xmax;
+  *y_min = ymin;
+  *y_max = ymax;
+}
+
+void Bounding_object::set_cam(double x, double y)
+{
+  xcam = x;
+  ycam = y;
+}
