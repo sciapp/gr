@@ -1695,7 +1695,7 @@ static void processSpace3d(const std::shared_ptr<GRM::Element> &elem)
   fov = (double)elem->getAttribute("space3d_fov");
   camera_distance = (double)elem->getAttribute("space3d_camera-distance");
 
-  gr_setspace3d(phi, theta, fov, camera_distance);
+  gr_setspace3d(-phi, theta, fov, camera_distance);
 }
 
 static void processSubplot(const std::shared_ptr<GRM::Element> &elem)

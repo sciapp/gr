@@ -261,8 +261,8 @@ int grm_input(const grm_args_t *input_args)
                     }
                   else
                     {
-                      rotation = static_cast<double>(subplot_element->getAttribute("rotation"));
-                      tilt = static_cast<double>(subplot_element->getAttribute("tilt"));
+                      rotation = static_cast<double>(subplot_element->getAttribute("space3d_phi"));
+                      tilt = static_cast<double>(subplot_element->getAttribute("space3d_theta"));
 
                       rotation += xshift * 0.2;
                       tilt -= yshift * 0.2;
