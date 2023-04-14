@@ -30,7 +30,7 @@
 #include "util.hxx"
 
 static std::string file_export;
-static bool kind_changed = false;
+static bool arguments_changed = false;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -273,10 +273,10 @@ void GRPlotWidget::draw()
       snprintf(file, 50, "grplot_%s.%s", kind, file_export.c_str());
       grm_export(file);
     }
-  if (kind_changed)
+  if (arguments_changed)
     {
       grm_plot(args_);
-      kind_changed = false;
+      arguments_changed = false;
     }
   else
     {
@@ -738,6 +738,7 @@ void GRPlotWidget::resizeEvent(QResizeEvent *event)
   amount_scrolled = 0;
   clicked.clear();
   pixmap = nullptr;
+  arguments_changed = true;
 
   redraw();
 }
@@ -842,7 +843,7 @@ void GRPlotWidget::heatmap()
 {
   grm_args_push(args_, "kind", "s", "heatmap");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -851,7 +852,7 @@ void GRPlotWidget::marginalheatmapall()
   grm_args_push(args_, "kind", "s", "marginalheatmap");
   grm_args_push(args_, "marginalheatmap_kind", "s", "all");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -860,7 +861,7 @@ void GRPlotWidget::marginalheatmapline()
   grm_args_push(args_, "kind", "s", "marginalheatmap");
   grm_args_push(args_, "marginalheatmap_kind", "s", "line");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -868,7 +869,7 @@ void GRPlotWidget::line()
 {
   grm_args_push(args_, "kind", "s", "line");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -876,7 +877,7 @@ void GRPlotWidget::sumalgorithm()
 {
   grm_args_push(args_, "algorithm", "s", "sum");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -884,7 +885,7 @@ void GRPlotWidget::maxalgorithm()
 {
   grm_args_push(args_, "algorithm", "s", "max");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -892,14 +893,14 @@ void GRPlotWidget::volume()
 {
   grm_args_push(args_, "kind", "s", "volume");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 void GRPlotWidget::isosurface()
 {
   grm_args_push(args_, "kind", "s", "isosurface");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -907,14 +908,14 @@ void GRPlotWidget::surface()
 {
   grm_args_push(args_, "kind", "s", "surface");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 void GRPlotWidget::wireframe()
 {
   grm_args_push(args_, "kind", "s", "wireframe");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -922,7 +923,7 @@ void GRPlotWidget::contour()
 {
   grm_args_push(args_, "kind", "s", "contour");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -930,7 +931,7 @@ void GRPlotWidget::imshow()
 {
   grm_args_push(args_, "kind", "s", "imshow");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -938,7 +939,7 @@ void GRPlotWidget::plot3()
 {
   grm_args_push(args_, "kind", "s", "plot3");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -946,7 +947,7 @@ void GRPlotWidget::contourf()
 {
   grm_args_push(args_, "kind", "s", "contourf");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -954,7 +955,7 @@ void GRPlotWidget::trisurf()
 {
   grm_args_push(args_, "kind", "s", "trisurf");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -962,7 +963,7 @@ void GRPlotWidget::tricont()
 {
   grm_args_push(args_, "kind", "s", "tricont");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -970,7 +971,7 @@ void GRPlotWidget::scatter3()
 {
   grm_args_push(args_, "kind", "s", "scatter3");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -978,7 +979,7 @@ void GRPlotWidget::scatter()
 {
   grm_args_push(args_, "kind", "s", "scatter");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -986,7 +987,7 @@ void GRPlotWidget::hist()
 {
   grm_args_push(args_, "kind", "s", "hist");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -994,7 +995,7 @@ void GRPlotWidget::barplot()
 {
   grm_args_push(args_, "kind", "s", "barplot");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -1002,7 +1003,7 @@ void GRPlotWidget::stairs()
 {
   grm_args_push(args_, "kind", "s", "stairs");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -1010,7 +1011,7 @@ void GRPlotWidget::stem()
 {
   grm_args_push(args_, "kind", "s", "stem");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -1018,7 +1019,7 @@ void GRPlotWidget::shade()
 {
   grm_args_push(args_, "kind", "s", "shade");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
@@ -1026,7 +1027,7 @@ void GRPlotWidget::hexbin()
 {
   grm_args_push(args_, "kind", "s", "hexbin");
   grm_merge(args_);
-  kind_changed = true;
+  arguments_changed = true;
   redraw();
 }
 
