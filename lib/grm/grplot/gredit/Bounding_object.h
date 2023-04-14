@@ -24,6 +24,8 @@ public:
 
   [[nodiscard]] std::shared_ptr<GRM::Element> get_ref() const;
 
+  [[nodiscard]] int get_id() const;
+
 
 private:
   int id;

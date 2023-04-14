@@ -781,16 +781,12 @@ void GRPlotWidget::wheelEvent(QWheelEvent *event)
             {
               for (int i = 0; i < clicked.size(); i++)
                 {
-                  if (clicked[i].boundingRect() == current_selection->boundingRect())
+                  if (clicked[i].get_id() == current_selection->get_id())
                     {
                       if (i + 1 < clicked.size())
                         {
                           current_selection = &clicked[i + 1];
                           break;
-                        }
-                      else
-                        {
-                          current_selection = &clicked[0];
                         }
                     }
                 }
@@ -803,13 +799,9 @@ void GRPlotWidget::wheelEvent(QWheelEvent *event)
             {
               for (int i = clicked.size() - 1; i >= 0; i--)
                 {
-                  if (clicked[i].boundingRect() == current_selection->boundingRect())
+                  if (clicked[i].get_id() == current_selection->get_id())
                     {
-                      if (i - 1 < 0)
-                        {
-                          current_selection = &clicked[clicked.size() - 1];
-                        }
-                      else
+                      if (i - 1 > 0)
                         {
                           current_selection = &clicked[i - 1];
                           break;

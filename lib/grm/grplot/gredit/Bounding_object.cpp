@@ -17,3 +17,8 @@ QRectF Bounding_object::boundingRect() const
 {
   return {xmin, ymin, xmax - xmin, ymax - ymin};
 }
+
+int Bounding_object::get_id() const
+{
+  return id;
+}
