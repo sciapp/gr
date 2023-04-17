@@ -3901,6 +3901,8 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
   std::string dmin_key, dmax_key;
   double dmin, dmax;
   double dlim[2];
+  int width, height;
+  double device_pixel_ratio;
 
   auto data = static_cast<std::string>(element->getAttribute("data"));
   nx = static_cast<int>(element->getAttribute("nx"));
@@ -3912,6 +3914,8 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
 
   std::vector<double> data_vec = GRM::get<std::vector<double>>((*context)[data]);
 
+  gr_inqvpsize(&width, &height, &device_pixel_ratio);
+  gr_setpicturesizeforvolume((int)(width * device_pixel_ratio), (int)(height * device_pixel_ratio));
   gr_volume(nx, ny, nz, &(data_vec[0]), algorithm, &dmin, &dmax);
 
   auto subplot_element = getSubplotElement(element);
