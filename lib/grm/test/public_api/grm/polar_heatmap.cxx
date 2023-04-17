@@ -67,13 +67,13 @@ static void test_polar_heatmap_uniform(void)
     }
   for (i = 0; i < Y_DIM; ++i)
     {
-      y[i] = i * 12.0 / (Y_DIM - 1);
+      y[i] = i * 7.0 / (Y_DIM - 1);
     }
   for (i = 0; i < X_DIM; ++i)
     {
       for (j = 0; j < Y_DIM; ++j)
         {
-          z[i + j * X_DIM] = (i + j) * 1.0 / (X_DIM * Y_DIM);
+          z[i + j * X_DIM] = sin(y[j] * 2.0) * cos(x[i]);
         }
     }
 
@@ -89,6 +89,41 @@ static void test_polar_heatmap_uniform(void)
   getchar();
 }
 
+static void test_polar_heatmap_z_only(void)
+{
+  // x is phi, y is rho, z is z
+
+  double x[X_DIM], y[Y_DIM], z[X_DIM * Y_DIM];
+  int i, j;
+  grm_args_t *args, *series[2];
+
+  for (i = 0; i < X_DIM; ++i)
+    {
+      x[i] = i * M_PI * 2 / (X_DIM - 1);
+    }
+  for (i = 0; i < Y_DIM; ++i)
+    {
+      y[i] = i * 7.0 / (Y_DIM - 1);
+    }
+  for (i = 0; i < X_DIM; ++i)
+    {
+      for (j = 0; j < Y_DIM; ++j)
+        {
+          z[i + j * X_DIM] = sin(y[j] * 2.0) * cos(x[i]);
+        }
+    }
+
+  printf("plot a polar_heatmap with x, y and z\n");
+  args = grm_args_new();
+  grm_args_push(args, "x", "nD", X_DIM, x);
+  grm_args_push(args, "y", "nD", Y_DIM, y);
+  grm_args_push(args, "z", "nD", X_DIM * Y_DIM, z);
+  grm_args_push(args, "kind", "s", "polar_heatmap");
+  grm_plot(args);
+
+  printf("Press any key to continue...\n");
+  getchar();
+}
 
 static void test_polar_heatmap_nonuniform(void)
 {
@@ -130,8 +165,9 @@ static void test_polar_heatmap_nonuniform(void)
 int main(void)
 {
   test_y_z();
-  //    test_polar_heatmap_uniform();
-  //  test_polar_heatmap_nonuniform();
+  test_polar_heatmap_uniform();
+  //  test_polar_heatmap_z_only(); /* z only does not work?*/
+  test_polar_heatmap_nonuniform();
   grm_finalize();
 
   return 0;

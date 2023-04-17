@@ -3122,6 +3122,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
   tick = static_cast<double>(elem->getAttribute("tick"));
   if (kind == "polar_histogram")
     {
+      rings = static_cast<int>(elem->getAttribute("rings"));
       r_min = 0.0;
       r_max = static_cast<double>(elem->getAttribute("r_max"));
       norm = static_cast<std::string>(elem->getAttribute("norm"));
@@ -3716,7 +3717,7 @@ static void nonUniformPolarCellArray(const std::shared_ptr<GRM::Element> &elemen
   int ncol = static_cast<int>(element->getAttribute("ncol"));
   int nrow = static_cast<int>(element->getAttribute("nrow"));
   std::string color_key = static_cast<std::string>(element->getAttribute("color"));
-  
+
   auto r_vec = GRM::get<std::vector<double>>((*context)[r_key]);
   auto phi_vec = GRM::get<std::vector<double>>((*context)[phi_key]);
   auto color_vec = GRM::get<std::vector<int>>((*context)[color_key]);
@@ -3831,7 +3832,7 @@ static void polarCellArray(const std::shared_ptr<GRM::Element> &element, const s
   int ncol = static_cast<int>(element->getAttribute("ncol"));
   int nrow = static_cast<int>(element->getAttribute("nrow"));
   std::string color_key = static_cast<std::string>(element->getAttribute("color"));
-  
+
   auto color_vec = GRM::get<std::vector<int>>((*context)[color_key]);
   int *color = &(color_vec[0]);
 
@@ -6104,12 +6105,12 @@ std::shared_ptr<GRM::Element> GRM::Render::createColorbar(unsigned int colors,
 }
 
 
-std::shared_ptr<GRM::Element> GRM::Render::createPolarCellArray(double x_org, double y_org, double phimin, double phimax,
-                                                              double rmin, double rmax, int dimphi, int dimr, int scol,
-                                                              int srow, int ncol, int nrow,
-                                                              const std::string &color_key,
-                                                              std::optional<std::vector<int>> color,
-                                                              const std::shared_ptr<Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createPolarCellArray(double x_org, double y_org, double phimin,
+                                                                double phimax, double rmin, double rmax, int dimphi,
+                                                                int dimr, int scol, int srow, int ncol, int nrow,
+                                                                const std::string &color_key,
+                                                                std::optional<std::vector<int>> color,
+                                                                const std::shared_ptr<Context> &extContext)
 {
   /*!
    * Display a two dimensional color index array mapped to a disk using polar
@@ -6173,7 +6174,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createPolarCellArray(double x_org, do
    * array in the memory whereof `dimphi` and `dimr` values are mapped to the disk.
    *
    */
-  
+
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   auto element = createElement("polarcellarray");
   element->setAttribute("x_org", x_org);
@@ -6265,7 +6266,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createNonUniformPolarCellArray(
    * array in the memory whereof `dimphi` and `dimr` values are mapped to the disk.
    *
    */
-  
+
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   auto element = createElement("nonuniform_polarcellarray");
   element->setAttribute("x_org", x_org);
