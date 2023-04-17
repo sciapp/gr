@@ -778,8 +778,8 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
     {
       for (i = 0; i < 2; ++i)
         {
-          size_unit = (std::string)root->getAttribute("size_unit_" + vars[i]);
-          size_type = (std::string)root->getAttribute("size_type_" + vars[i]);
+          size_unit = (std::string)root->getAttribute("size_" + vars[i] + "_unit");
+          size_type = (std::string)root->getAttribute("size_" + vars[i] + "_type");
           if (size_unit.empty()) size_unit = "m";
 
           auto meters_per_unit_iter = symbol_to_meters_per_unit.find(size_unit);
@@ -788,18 +788,26 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
               double meters_per_unit = meters_per_unit_iter->second;
               double pixels_per_unit = meters_per_unit * dpm[i];
 
-              if (size_type == "double")
+              if (root->hasAttribute("size_x"))
                 {
-                  tmp_size_d[i] = tmp_size_d[i] * pixels_per_unit;
-                }
-              else if (size_type == "int")
-                {
-                  tmp_size_d[i] = tmp_size_i[i] * pixels_per_unit;
+                  tmp_size_d[0] = (double)root->getAttribute("size_x");
+                  tmp_size_d[1] = (double)root->getAttribute("size_y");
                 }
               else
                 {
-                  tmp_size_d[0] = PLOT_DEFAULT_WIDTH;
-                  tmp_size_d[1] = PLOT_DEFAULT_HEIGHT;
+                  if (size_type == "double") // is this case needed?
+                    {
+                      tmp_size_d[i] = tmp_size_d[i] * pixels_per_unit;
+                    }
+                  else if (size_type == "int") // is this case needed?
+                    {
+                      tmp_size_d[i] = tmp_size_i[i] * pixels_per_unit;
+                    }
+                  else
+                    {
+                      tmp_size_d[0] = PLOT_DEFAULT_WIDTH;
+                      tmp_size_d[1] = PLOT_DEFAULT_HEIGHT;
+                    }
                 }
               pixel_size[i] = (int)grm_round(tmp_size_d[i]);
               metric_size[i] = tmp_size_d[i] / dpm[i];
