@@ -481,6 +481,15 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       double *normalized_x = NULL;
       double start_angle, end_angle, act_angle;
 
+      gr_savestate();
+      for(const auto& elem : subplot_element->parentElement()->children())
+        {
+          if(elem->hasAttribute("viewport_xmin"))
+            {
+              gr_setviewport((double)elem->getAttribute("viewport_xmin"), (double)elem->getAttribute("viewport_xmax"), (double)elem->getAttribute("viewport_ymin"), (double)elem->getAttribute("viewport_ymax"));
+              break;
+            }
+        }
       gr_wctondc(&max_x, &max_y);
       max_x = max_x * max_width_height;
       max_y = height - max_y * max_width_height;
@@ -516,6 +525,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
             }
           start_angle = end_angle;
         }
+      gr_restorestate();
 
       if (sqrt(pow(abs(mouse_x - center_x), 2) + pow(abs(mouse_y - center_y), 2)) <= radius)
         {
