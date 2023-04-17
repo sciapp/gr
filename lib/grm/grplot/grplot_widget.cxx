@@ -94,6 +94,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       receiver_thread = new Receiver_Thread();
       QObject::connect(receiver_thread, SIGNAL(resultReady(grm_args_t_wrapper)), this,
                        SLOT(received(grm_args_t_wrapper)));
+      QObject::connect(receiver_thread, SIGNAL(resultReady(grm_args_t_wrapper)), this->topLevelWidget(), SLOT(show()));
       receiver_thread->start();
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
