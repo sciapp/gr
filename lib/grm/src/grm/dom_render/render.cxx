@@ -12,6 +12,7 @@
 
 #include <functional>
 #include <vector>
+#include <array>
 #include <set>
 #include <sstream>
 #include <algorithm>
@@ -807,8 +808,6 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
       metric_size[0] = PLOT_DEFAULT_WIDTH / dpm[0];
       metric_size[1] = PLOT_DEFAULT_HEIGHT / dpm[1];
     }
-
-  std::cerr << "-------> pixel_size[2] = {" << pixel_size[0] << ", " << pixel_size[1] << "}" << std::endl;
 
   if (pixel_width != NULL)
     {

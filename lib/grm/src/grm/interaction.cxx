@@ -106,7 +106,6 @@ int grm_input(const grm_args_t *input_args)
 
               unsigned int x_length, y_length;
               double x_0, x_end, y_0, y_end, x_step, y_step;
-              double xind, yind;
 
               grm_args_values(input_args, "x", "i", &x);
               grm_args_values(input_args, "y", "i", &y);
@@ -126,6 +125,19 @@ int grm_input(const grm_args_t *input_args)
               GRM::Render::processViewport(subplot_element);
               GRM::Render::processLimits(subplot_element);
 
+              gr_savestate();
+              for (const auto &elem : subplot_element->parentElement()->children())
+                {
+                  if (elem->hasAttribute("viewport_xmin"))
+                    {
+                      gr_setviewport((double)elem->getAttribute("viewport_xmin"), (double)elem->getAttribute("viewport_xmax"),
+                                     (double)elem->getAttribute("viewport_ymin"), (double)elem->getAttribute("viewport_ymax"));
+                      gr_setwindow((double)elem->getAttribute("window_xmin"), (double)elem->getAttribute("window_xmax"),
+                                   (double)elem->getAttribute("window_ymin"), (double)elem->getAttribute("window_ymax"));
+                      break;
+                    }
+                }
+
               gr_wctondc(&x_0, &y_0);
               gr_wctondc(&x_end, &y_end);
               x_0 = x_0 * max_width_height;
@@ -135,30 +147,27 @@ int grm_input(const grm_args_t *input_args)
 
               x_step = (x_end - x_0) / x_length;
               y_step = (y_end - y_0) / y_length;
-              xind = (x - x_0) / x_step;
-              yind = (y - y_0) / y_step;
-
               xind = (int)((x - x_0) / x_step);
               yind = (int)((y - y_0) / y_step);
+
               if (xind < 0 || xind >= x_length || yind < 0 || yind >= y_length)
                 {
                   xind = -1;
                   yind = -1;
                 }
 
-              subplot_element->setAttribute("xind", (int)((x - x_0) / x_step));
-              subplot_element->setAttribute("yind", (int)((y - y_0) / y_step));
+              subplot_element->setAttribute("xind", xind);
+              subplot_element->setAttribute("yind", yind);
 
               for (auto &child : subplot_element->children())
                 {
                   std::string childKind = static_cast<std::string>(child->getAttribute("kind"));
-                  if (kind == "line" || kind == "hist")
+                  if (childKind == "line" || childKind == "hist")
                     {
                       child->setAttribute("xind", xind);
-
                       child->setAttribute("yind", yind);
                     }
-                  if (kind == "hist")
+                  if (childKind == "hist")
                     {
                       // reset bar colors
                       bool is_horizontal = static_cast<std::string>(child->getAttribute("orientation")) == "horizontal";
@@ -189,6 +198,7 @@ int grm_input(const grm_args_t *input_args)
                         }
                     }
                 }
+              gr_restorestate();
             }
 
           if (grm_args_values(input_args, "angle_delta", "d", &angle_delta))
