@@ -4176,6 +4176,33 @@ err_t plot_heatmap(grm_args_t *subplot_args)
 
           // Store "raw" data in Context / heatmap element for later usage e.g. interaction
           auto context = global_render->getContext();
+
+          if (is_uniform_heatmap)
+            {
+              double *x_tmp, *y_tmp;
+
+              x_tmp = static_cast<double *>(malloc((cols) * sizeof(double)));
+              y_tmp = static_cast<double *>(malloc((rows) * sizeof(double)));
+              linspace(x_min, x_max, cols, x_tmp);
+              linspace(y_min, y_max, rows, y_tmp);
+
+              std::vector<double> x_vec(x_tmp, x_tmp + cols);
+              (*context)["x" + str] = x_vec;
+              subGroup->setAttribute("x", "x" + str);
+              std::vector<double> y_vec(y_tmp, y_tmp + rows);
+              (*context)["y" + str] = y_vec;
+              subGroup->setAttribute("y", "y" + str);
+            }
+          else
+            {
+              std::vector<double> x_vec(x, x + cols);
+              (*context)["x" + str] = x_vec;
+              subGroup->setAttribute("x", "x" + str);
+              std::vector<double> y_vec(y, y + rows);
+              (*context)["y" + str] = y_vec;
+              subGroup->setAttribute("y", "y" + str);
+            }
+
           std::vector<double> z_vec(z, z + z_length);
           (*context)["z" + str] = z_vec;
           subGroup->setAttribute("z", "z" + str);
@@ -4745,6 +4772,23 @@ err_t plot_imshow(grm_args_t *subplot_args)
       int id_int = static_cast<int>(global_root->getAttribute("id"));
       global_root->setAttribute("id", ++id_int);
       std::string id = std::to_string(id_int);
+      double *x_tmp, *y_tmp;
+
+      x_tmp = static_cast<double *>(malloc((cols) * sizeof(double)));
+      y_tmp = static_cast<double *>(malloc((rows) * sizeof(double)));
+      linspace(0, cols - 1, cols, x_tmp);
+      linspace(0, rows - 1, rows, y_tmp);
+
+      auto context = global_render->getContext();
+      std::vector<double> x_vec(x_tmp, x_tmp + cols);
+      (*context)["x" + id] = x_vec;
+      subGroup->setAttribute("x", "x" + id);
+      std::vector<double> y_vec(y_tmp, y_tmp + rows);
+      (*context)["y" + id] = y_vec;
+      subGroup->setAttribute("y", "y" + id);
+      std::vector<double> z_vec(c_data, c_data + c_data_length);
+      (*context)["z" + id] = z_vec;
+      subGroup->setAttribute("z", "z" + id);
 
       global_render->setSelntran(subGroup, 0);
       global_render->setScale(subGroup, 0);
@@ -8765,7 +8809,7 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
     {
       group->setAttribute("title_margin", 1);
     }
-  if (grm_args_values(subplot_args, "keep_aspec_ratio", "i", &keep_aspect_ratio))
+  if (grm_args_values(subplot_args, "keep_aspect_ratio", "i", &keep_aspect_ratio))
     {
       group->setAttribute("keep_aspect_ratio", keep_aspect_ratio);
     }

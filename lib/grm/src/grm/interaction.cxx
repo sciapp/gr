@@ -427,6 +427,19 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   GRM::Render::processViewport(subplot_element);
   GRM::Render::processLimits(subplot_element);
 
+  gr_savestate();
+  for (const auto &elem : subplot_element->parentElement()->children())
+    {
+      if (elem->hasAttribute("viewport_xmin"))
+        {
+          gr_setviewport((double)elem->getAttribute("viewport_xmin"), (double)elem->getAttribute("viewport_xmax"),
+                         (double)elem->getAttribute("viewport_ymin"), (double)elem->getAttribute("viewport_ymax"));
+          gr_setwindow((double)elem->getAttribute("window_xmin"), (double)elem->getAttribute("window_xmax"),
+                       (double)elem->getAttribute("window_ymin"), (double)elem->getAttribute("window_ymax"));
+          break;
+        }
+    }
+
   gr_ndctowc(&x, &y);
   if (!subplot_element->hasAttribute("xlabel"))
     {
@@ -481,15 +494,6 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       double *normalized_x = NULL;
       double start_angle, end_angle, act_angle;
 
-      gr_savestate();
-      for(const auto& elem : subplot_element->parentElement()->children())
-        {
-          if(elem->hasAttribute("viewport_xmin"))
-            {
-              gr_setviewport((double)elem->getAttribute("viewport_xmin"), (double)elem->getAttribute("viewport_xmax"), (double)elem->getAttribute("viewport_ymin"), (double)elem->getAttribute("viewport_ymax"));
-              break;
-            }
-        }
       gr_wctondc(&max_x, &max_y);
       max_x = max_x * max_width_height;
       max_y = height - max_y * max_width_height;
@@ -525,7 +529,6 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
             }
           start_angle = end_angle;
         }
-      gr_restorestate();
 
       if (sqrt(pow(abs(mouse_x - center_x), 2) + pow(abs(mouse_y - center_y), 2)) <= radius)
         {
@@ -549,21 +552,55 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       std::vector<std::shared_ptr<GRM::Element>> current_series_vec;
       for (const auto &current_series_group : current_series_group_vec)
         {
-          for (const auto &current_series_group_child : current_series_group->children())
+          if (kind == "imshow")
             {
-              current_series_vec.push_back(current_series_group_child);
+              current_series_vec.push_back(current_series_group);
+            }
+          else
+            {
+              for (const auto &current_series_group_child : current_series_group->children())
+                {
+                  current_series_vec.push_back(current_series_group_child);
+                }
             }
         }
 
       for (auto &current_series : current_series_vec)
         {
+          std::string x_key_string = "x";
+          std::string y_key_string = "y";
+          std::string z_key_string = "z";
+          std::string z_key;
+
+          if (kind == "contour" || kind == "contourf")
+            {
+              x_key_string = "px";
+              y_key_string = "py";
+              z_key_string = "pz";
+            }
+
           if (kind == "heatmap")
             {
               current_series = current_series->parentElement();
             }
-          auto x_key = static_cast<std::string>(current_series->getAttribute("x"));
-          auto y_key = static_cast<std::string>(current_series->getAttribute("y"));
-          std::string z_key = static_cast<std::string>(current_series->getAttribute("z"));
+
+          if (!current_series->hasAttribute(x_key_string) || !current_series->hasAttribute(y_key_string))
+            {
+              mindiff = DBL_MAX;
+              continue;
+            }
+          auto x_key = static_cast<std::string>(current_series->getAttribute(x_key_string));
+          auto y_key = static_cast<std::string>(current_series->getAttribute(y_key_string));
+
+          if (kind != "quiver")
+            {
+              if (!current_series->hasAttribute(z_key_string))
+                {
+                  mindiff = DBL_MAX;
+                  continue;
+                }
+              z_key = static_cast<std::string>(current_series->getAttribute(z_key_string));
+            }
 
           std::vector<double> x_series_vec;
           std::vector<double> y_series_vec;
@@ -629,7 +666,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                   double x_step, y_step, x_series_idx, y_series_idx;
                   double *u_series, *v_series;
 
-                  if (strcmp(kind.c_str(), "imshow") == 0) x_0 = x_min, x_end = x_max, y_0 = y_min, y_end = y_max;
+                  if (kind == "imshow") x_0 = x_min, x_end = x_max, y_0 = y_min, y_end = y_max;
 
                   gr_wctondc(&x_0, &y_0);
                   gr_wctondc(&x_end, &y_end);
@@ -640,7 +677,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
 
                   x_step = (x_end - x_0) / x_length;
                   y_step = (y_end - y_0) / y_length;
-                  if (strcmp(kind.c_str(), "quiver") == 0)
+                  if (kind == "quiver")
                     {
                       auto u_key = static_cast<std::string>(current_series->getAttribute("u"));
                       auto v_key = static_cast<std::string>(current_series->getAttribute("v"));
@@ -659,7 +696,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                       mindiff = DBL_MAX;
                       break;
                     }
-                  if (strcmp(kind.c_str(), "quiver") == 0)
+                  if (kind == "quiver")
                     {
                       info->xlabel = "u";
                       info->ylabel = "v";
@@ -674,7 +711,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                   info->x_px = mouse_x;
                   info->y_px = mouse_y;
 
-                  if (strcmp(kind.c_str(), "quiver") == 0)
+                  if (kind == "quiver")
                     {
                       info->label = "";
                     }
@@ -689,6 +726,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
           ++series_i;
         }
     }
+  gr_restorestate();
   if (mindiff == DBL_MAX)
     {
       info->x_px = -1;
