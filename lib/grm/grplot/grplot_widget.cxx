@@ -256,8 +256,12 @@ void GRPlotWidget::draw()
 
 void GRPlotWidget::redraw()
 {
-  delete pixmap;
-  pixmap = nullptr;
+  if (pixmap != nullptr)
+    {
+      delete pixmap;
+      pixmap = nullptr;
+    }
+
   repaint();
 }
 
@@ -477,6 +481,12 @@ void GRPlotWidget::resizeEvent(QResizeEvent *event)
 {
   grm_args_push(args_, "size", "dd", (double)event->size().width(), (double)event->size().height());
   grm_merge(args_);
+
+  if (pixmap != nullptr)
+    {
+      delete pixmap;
+      pixmap = nullptr;
+    }
 
   redraw();
 }
@@ -714,6 +724,7 @@ void GRPlotWidget::received(grm_args_t_wrapper args)
   grm_switch(1);
   args_ = args.get_wrapper();
   grm_merge(args_);
+
   reset_pixmap();
 }
 
@@ -740,7 +751,12 @@ void GRPlotWidget::screenChanged()
 
 void GRPlotWidget::reset_pixmap()
 {
-  pixmap = nullptr;
+  if (pixmap != nullptr)
+    {
+      delete pixmap;
+      pixmap = nullptr;
+    }
+
   update();
 }
 
@@ -749,6 +765,7 @@ void GRPlotWidget::size_callback(const grm_event_t *new_size_object)
   // TODO: Get Plot ID
   if (this->size() != QSize(new_size_object->size_event.width, new_size_object->size_event.height))
     {
+      this->topLevelWidget()->show();
       this->resize(new_size_object->size_event.width, new_size_object->size_event.height);
     }
 }

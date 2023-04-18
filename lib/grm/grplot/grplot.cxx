@@ -74,10 +74,8 @@ int main(int argc, char **argv)
       QApplication app(argc, argv);
       GRPlotMainWindow window(argc, argv);
 
-      if (strcmp(argv[1], "--listen") != 0)
-        {
-          window.show();
-        }
+      window.show();
+      window.hide();
 
       return app.exec();
     }
