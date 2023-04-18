@@ -745,7 +745,8 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
   double tmp_size_d[2], metric_size[2];
   int i;
   std::string size_unit, size_type;
-  std::string vars[2] = {"x", "y"};
+  std::array<std::string, 2> vars = {"x", "y"};
+  std::array<double, 2> default_size = {PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT};
 
   std::shared_ptr<GRM::Element> root = global_root;
 
@@ -780,45 +781,23 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
         {
           size_unit = (std::string)root->getAttribute("size_" + vars[i] + "_unit");
           size_type = (std::string)root->getAttribute("size_" + vars[i] + "_type");
-          if (size_unit.empty()) size_unit = "m";
+          if (size_unit.empty()) size_unit = "px";
+          tmp_size_d[i] = default_size[i];
 
-          auto meters_per_unit_iter = symbol_to_meters_per_unit.find(size_unit);
-          if (meters_per_unit_iter != symbol_to_meters_per_unit.end())
+          if (size_type == "double" || size_type == "int")
             {
-              double meters_per_unit = meters_per_unit_iter->second;
-              double pixels_per_unit = meters_per_unit * dpm[i];
+              tmp_size_d[i] = (double)root->getAttribute("size_" + vars[i]);
+              auto meters_per_unit_iter = symbol_to_meters_per_unit.find(size_unit);
+              if (meters_per_unit_iter != symbol_to_meters_per_unit.end())
+                {
+                  double meters_per_unit = meters_per_unit_iter->second;
+                  double pixels_per_unit = meters_per_unit * dpm[i];
 
-              if (root->hasAttribute("size_x"))
-                {
-                  tmp_size_d[0] = (double)root->getAttribute("size_x");
-                  tmp_size_d[1] = (double)root->getAttribute("size_y");
+                  tmp_size_d[i] *= pixels_per_unit;
                 }
-              else
-                {
-                  if (size_type == "double") // is this case needed?
-                    {
-                      tmp_size_d[i] = tmp_size_d[i] * pixels_per_unit;
-                    }
-                  else if (size_type == "int") // is this case needed?
-                    {
-                      tmp_size_d[i] = tmp_size_i[i] * pixels_per_unit;
-                    }
-                  else
-                    {
-                      tmp_size_d[0] = PLOT_DEFAULT_WIDTH;
-                      tmp_size_d[1] = PLOT_DEFAULT_HEIGHT;
-                    }
-                }
-              pixel_size[i] = (int)grm_round(tmp_size_d[i]);
-              metric_size[i] = tmp_size_d[i] / dpm[i];
             }
-          else
-            {
-              pixel_size[0] = (int)grm_round(PLOT_DEFAULT_WIDTH);
-              pixel_size[1] = (int)grm_round(PLOT_DEFAULT_HEIGHT);
-              metric_size[0] = PLOT_DEFAULT_WIDTH / dpm[0];
-              metric_size[1] = PLOT_DEFAULT_HEIGHT / dpm[1];
-            }
+          pixel_size[i] = (int)grm_round(tmp_size_d[i]);
+          metric_size[i] = tmp_size_d[i] / dpm[i];
         }
     }
   else
@@ -828,6 +807,8 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
       metric_size[0] = PLOT_DEFAULT_WIDTH / dpm[0];
       metric_size[1] = PLOT_DEFAULT_HEIGHT / dpm[1];
     }
+
+  std::cerr << "-------> pixel_size[2] = {" << pixel_size[0] << ", " << pixel_size[1] << "}" << std::endl;
 
   if (pixel_width != NULL)
     {

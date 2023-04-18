@@ -8894,7 +8894,7 @@ int grm_plot(const grm_args_t *args)
             {
               global_root->setAttribute("size_" + vars[i], tmp_size_d[i]);
               global_root->setAttribute("size_" + vars[i] + "_type", "double");
-              global_root->setAttribute("size_" + vars[i] + "_unit", "m");
+              global_root->setAttribute("size_" + vars[i] + "_unit", "px");
             }
         }
       if (grm_args_values(active_plot_args, "size", "ii", &tmp_size_i[0], &tmp_size_i[1]))
@@ -8904,7 +8904,7 @@ int grm_plot(const grm_args_t *args)
             {
               global_root->setAttribute("size_" + vars[i], tmp_size_i[i]);
               global_root->setAttribute("size_" + vars[i] + "_type", "int");
-              global_root->setAttribute("size_" + vars[i] + "_unit", "m");
+              global_root->setAttribute("size_" + vars[i] + "_unit", "px");
             }
         }
       if (grm_args_values(active_plot_args, "size", "aa", &tmp_size_a[0], &tmp_size_a[1]))
@@ -8933,7 +8933,7 @@ int grm_plot(const grm_args_t *args)
                     {
                       global_root->setAttribute("size_" + vars[i], default_size[i]);
                       global_root->setAttribute("size_" + vars[i] + "_type", "double");
-                      global_root->setAttribute("size_" + vars[i] + "_unit", "m");
+                      global_root->setAttribute("size_" + vars[i] + "_unit", "px");
                     }
                   return 0;
                 }
