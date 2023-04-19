@@ -2155,7 +2155,6 @@ err_t plot_stairs(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "step");
-  group->setAttribute("marginalheatmap", 1);
 
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "orientation", "s", &orientation);
@@ -2187,6 +2186,8 @@ err_t plot_stairs(grm_args_t *subplot_args)
         {
           double y_max = 0, *plot, c_min, c_max;
           unsigned int n = 0;
+
+          group->setAttribute("marginalheatmap", 1);
 
           grm_args_values(*current_series, "xrange", "dd", &xmin, &xmax);
           grm_args_values(*current_series, "yrange", "dd", &ymin, &ymax);
@@ -2639,7 +2640,8 @@ err_t plot_hist(grm_args_t *subplot_args)
   char *marginalheatmap_kind;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
-  global_root->lastChildElement()->setAttribute("name", "hist");
+  if (!global_root->lastChildElement()->hasAttribute("name"))
+    global_root->lastChildElement()->setAttribute("name", "hist");
 
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -4272,6 +4274,7 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
   unsigned int num_bins_x = 0, num_bins_y = 0, n = 0;
   double *xi, *yi, *plot;
   err_t error = ERROR_NONE;
+  std::string mkind;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "marginalheatmap");
@@ -4284,12 +4287,13 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "marginalheatmap_kind", "s", &marginalheatmap_kind);
   grm_args_values(subplot_args, "xind", "i", &xind);
   grm_args_values(subplot_args, "yind", "i", &yind);
+  mkind = marginalheatmap_kind;
 
   for (k = 0; k < 2; k++)
     {
       double x_min, x_max, y_min, y_max, value, bin_max = 0;
 
-      auto subGroup = global_render->createGroup();
+      auto subGroup = global_render->createGroup("mkind_" + mkind + "_series");
       subGroup->setAttribute("calc-window-and-viewport-from-parent", 1);
       group->appendChild(subGroup);
       currentDomElement = subGroup;
@@ -8973,7 +8977,7 @@ int grm_plot(const grm_args_t *args)
           std::cout << "No grid elements\n";
           while (*current_subplot_args != nullptr)
             {
-              auto group = global_render->createGroup("");
+              auto group = global_render->createElement("plot");
               group->setAttribute("subplotGroup", true);
               global_root->append(group);
               if (!plot_process_subplot_args(*current_subplot_args))

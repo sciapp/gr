@@ -38,7 +38,7 @@ std::shared_ptr<GRM::Render> global_render;
 static std::set<std::string> parentTypes = {"group",           "layout-grid",     "layout-gridelement",
                                             "draw-legend",     "draw-polar-axes", "pie-plot-title-render",
                                             "draw-pie-legend", "marginalheatmap", "root",
-                                            "hexbin",          "colorbar"};
+                                            "hexbin",          "colorbar",        "plot"};
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
@@ -4028,7 +4028,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("y-line"), drawYLine},
       };
   /*! Modifier */
-  if (element->localName() == "group" || element->localName() == "root")
+  if (str_equals_any(element->localName().c_str(), 3, "group", "root", "plot"))
     {
       processAttributes(element);
     }
