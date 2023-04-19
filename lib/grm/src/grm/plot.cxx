@@ -139,7 +139,7 @@ DECLARE_MAP_METHODS(args_set)
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ general ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static int plot_static_variables_initialized = 0;
-const char *plot_hierarchy_names[] = {"root", "plots", "subplots", "series", nullptr};
+const char *plot_hierarchy_names[] = {"figure", "plots", "subplots", "series", nullptr};
 static int plot_scatter_markertypes[] = {
     GKS_K_MARKERTYPE_SOLID_CIRCLE,   GKS_K_MARKERTYPE_SOLID_TRI_UP, GKS_K_MARKERTYPE_SOLID_TRI_DOWN,
     GKS_K_MARKERTYPE_SOLID_SQUARE,   GKS_K_MARKERTYPE_SOLID_BOWTIE, GKS_K_MARKERTYPE_SOLID_HGLASS,
@@ -598,7 +598,7 @@ err_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char
    *   - `plot_id` is `1` and `hold_plots` is not set OR
    *   - `hold_plots` is true and no plot will be appended (`plot_id` > 0)
    */
-  if (strcmp(*hierarchy_name_ptr, "root") == 0 && plot_id > 0 && !hold_always)
+  if (strcmp(*hierarchy_name_ptr, "figure") == 0 && plot_id > 0 && !hold_always)
     {
       int hold_plots_key_available, hold_plots;
       hold_plots_key_available = grm_args_values(args, "hold_plots", "i", &hold_plots);
@@ -621,7 +621,7 @@ err_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char
         }
     }
 #ifndef NDEBUG
-  if (strcmp(*hierarchy_name_ptr, "root") == 0 && hold_always)
+  if (strcmp(*hierarchy_name_ptr, "figure") == 0 && hold_always)
     {
       logger((stderr, "\"hold_always\" is set\n"));
     }
@@ -8685,9 +8685,9 @@ char *grm_dump_graphics_tree_str(void)
 static void xml_parse_start_handler(void *data, const XML_Char *tagName, const XML_Char **attr)
 {
   std::shared_ptr<GRM::Element> *insertionParent = (std::shared_ptr<GRM::Element> *)data;
-  if (strcmp(tagName, "root") == 0)
+  if (strcmp(tagName, "figure") == 0)
     {
-      global_root = global_render->createElement("root");
+      global_root = global_render->createElement("figure");
       global_render->replaceChildren(global_root);
       if (attr[0])
         {
@@ -8876,7 +8876,7 @@ int grm_plot(const grm_args_t *args)
   else
     {
       global_render = GRM::Render::createRender();
-      global_root = global_render->createElement("root");
+      global_root = global_render->createElement("figure");
       global_render->replaceChildren(global_root);
       global_root->setAttribute("id", 0);
       currentDomElement = nullptr;

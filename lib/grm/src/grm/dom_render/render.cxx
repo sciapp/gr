@@ -37,7 +37,7 @@ std::shared_ptr<GRM::Render> global_render;
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {"group",           "layout-grid",     "layout-gridelement",
                                             "draw-legend",     "draw-polar-axes", "pie-plot-title-render",
-                                            "draw-pie-legend", "marginalheatmap", "root",
+                                            "draw-pie-legend", "marginalheatmap", "figure",
                                             "hexbin",          "colorbar",        "plot"};
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
@@ -314,7 +314,7 @@ static std::shared_ptr<GRM::Element> getSubplotElement(const std::shared_ptr<GRM
 {
   auto ancestor = element;
 
-  while (ancestor->localName() != "root")
+  while (ancestor->localName() != "figure")
     {
       bool ancestorIsSubplotGroup =
           (ancestor->hasAttribute("subplotGroup") && static_cast<int>(ancestor->getAttribute("subplotGroup")));
@@ -1188,7 +1188,7 @@ static void processImshowInformation(const std::shared_ptr<GRM::Element> &elem)
   int grplot;
 
   // Get vp from ancestor GRM::element, usually the q"plot-group"
-  while (ancestor->localName() != "root")
+  while (ancestor->localName() != "figure")
     {
       if (ancestor->hasAttribute("vp"))
         {
@@ -3500,7 +3500,7 @@ static void piePlotTitleRender(const std::shared_ptr<GRM::Element> &elem, const 
   gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
 
   // Get vp from ancestor GRM::element, usually the group with the name "pie"
-  while (ancestor->localName() != "root")
+  while (ancestor->localName() != "figure")
     {
       if (ancestor->hasAttribute("vp"))
         {
@@ -4028,7 +4028,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("y-line"), drawYLine},
       };
   /*! Modifier */
-  if (str_equals_any(element->localName().c_str(), 3, "group", "root", "plot"))
+  if (str_equals_any(element->localName().c_str(), 3, "group", "figure", "plot"))
     {
       processAttributes(element);
     }
