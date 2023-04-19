@@ -1248,8 +1248,16 @@ static void processImshowInformation(const std::shared_ptr<GRM::Element> &elem)
       y_max = tmp;
     }
 
+  /* remove old cell arrays if they exist */
+  auto imshow_elements = elem->querySelectorsAll("[name=\"imshow\"]");
+  for (auto &imshow_element : imshow_elements)
+    {
+      imshow_element->remove();
+    }
+
   auto temp = global_render->createCellArray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, image_data_key,
                                              std::nullopt);
+  temp->setAttribute("name", "imshow");
 
   elem->append(temp);
 }
@@ -1377,6 +1385,15 @@ static void processKind(const std::shared_ptr<GRM::Element> &elem)
               global_render->setMarkerColorInd(marker_elem, 2);
               global_render->setMarkerType(marker_elem, -1);
               global_render->setMarkerSize(marker_elem, 1.5 * (len / (is_vertical ? (ymax - ymin) : (xmax - xmin))));
+
+              auto line_elements = elem->querySelectorsAll("[name=\"line\"]");
+              for (auto &line_element : line_elements)
+                {
+                  line_element->remove();
+                }
+
+              marker_elem->setAttribute("name", "line");
+              line_elem->setAttribute("name", "line");
               child->append(marker_elem);
               child->append(line_elem);
             } // end for child_series
@@ -3024,6 +3041,14 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
         }
     }
 
+  /* delete old polar_axes_elements */
+  auto polar_axes_elements = elem->querySelectorsAll("[name=\"polar_axes\"]");
+  for (auto &polar_axes_element : polar_axes_elements)
+    {
+      polar_axes_element->remove();
+    }
+
+
   n = rings;
   phiflip = static_cast<int>(elem->getAttribute("phiflip"));
   for (i = 0; i <= n; i++)
@@ -3034,10 +3059,12 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
           if (i > 0)
             {
               auto temp = render->createDrawArc(-r, r, -r, r, 0, 180);
+              temp->setAttribute("name", "polar_axes");
               newGroup->append(temp);
               render->setLineColorInd(temp, 88);
 
               temp = render->createDrawArc(-r, r, -r, r, 180, 360);
+              temp->setAttribute("name", "polar_axes");
               newGroup->append(temp);
               render->setLineColorInd(temp, 88);
             }
@@ -3046,15 +3073,19 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
           x[0] = 0.05;
           y[0] = r;
           snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + tick * i);
-          newGroup->append(render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC));
+          auto temp = render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC);
+          temp->setAttribute("name", "polar_axes");
+          newGroup->append(temp);
         }
       else
         {
           auto temp = render->createDrawArc(-r, r, -r, r, 0, 180);
+          temp->setAttribute("name", "polar_axes");
           newGroup->append(temp);
           render->setLineColorInd(temp, 90);
 
           temp = render->createDrawArc(-r, r, -r, r, 180, 360);
+          temp->setAttribute("name", "polar_axes");
           newGroup->append(temp);
           render->setLineColorInd(temp, 90);
         }
@@ -3068,6 +3099,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
       y[1] = 0.0;
 
       auto temp = render->createPolyline(x[0], x[1], y[0], y[1]);
+      temp->setAttribute("name", "polar_axes");
       newGroup->append(temp);
       render->setLineColorInd(temp, 90 - i % 2 * 2);
 
@@ -3085,15 +3117,28 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
             snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 330 - (int)grm_round(alpha - interval));
         }
       temp = render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC);
+      temp->setAttribute("name", "polar_axes");
       newGroup->append(temp);
       render->setTextAlign(temp, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
     }
   title = static_cast<std::string>(elem->getAttribute("title"));
   if (title != "")
     {
-      auto temp = render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
-      newGroup->append(temp);
-      render->setTextAlign(temp, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+      auto new_title_elem = render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
+      new_title_elem->setAttribute("name", "title");
+      render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+
+      auto old_title_elem = elem->querySelectors("[name=\"title\"]");
+      bool removed_elem = false;
+      if (old_title_elem && (std::string)old_title_elem->getAttribute("text") != title)
+        {
+          old_title_elem->remove();
+          removed_elem = true;
+        }
+      if (removed_elem || !old_title_elem)
+        {
+          elem->appendChild(new_title_elem);
+        }
     }
 }
 
@@ -3481,19 +3526,23 @@ static void piePlotTitleRender(const std::shared_ptr<GRM::Element> &elem, const 
     {
       throw NotFoundError("No render-document found for element\n");
     }
-  std::string title = static_cast<std::string>(elem->getAttribute("pie-plot-title"));
-  if (elem->hasChildNodes())
-    {
-      for (const auto &child : elem->children())
-        {
-          child->remove();
-        }
-    }
 
-  auto tx = render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
-  render->setTextColorInd(tx, 1);
-  render->setTextAlign(tx, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-  elem->append(tx);
+  std::string title = static_cast<std::string>(elem->getAttribute("pie-plot-title"));
+  auto new_title_elem = render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
+  render->setTextColorInd(new_title_elem, 1);
+  render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+
+  auto old_title_elem = elem->querySelectors("[name=\"title\"]");
+  bool removed_elem = false;
+  if (old_title_elem && (std::string)old_title_elem->getAttribute("text") != title)
+    {
+      old_title_elem->remove();
+      removed_elem = true;
+    }
+  if (removed_elem || !old_title_elem)
+    {
+      elem->appendChild(new_title_elem);
+    }
 }
 
 static void polyline(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
