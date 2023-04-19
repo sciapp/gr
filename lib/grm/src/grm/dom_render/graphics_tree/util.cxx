@@ -26,9 +26,18 @@ static void elementToXML(std::stringstream &os, const std::shared_ptr<const GRM:
   auto attribute_names_set = element->getAttributeNames();
   std::vector<std::string> attribute_names{attribute_names_set.begin(), attribute_names_set.end()};
   std::sort(attribute_names.begin(), attribute_names.end());
+  if (element->hasAttribute("name"))
+    {
+      os << " "
+         << "name"
+         << "=\"" << (std::string)element->getAttribute("name") << "\"";
+    }
   for (const auto &attribute_name : attribute_names)
     {
-      os << " " << attribute_name << "=\"" << (std::string)element->getAttribute(attribute_name) << "\"";
+      if (attribute_name != "name")
+        {
+          os << " " << attribute_name << "=\"" << (std::string)element->getAttribute(attribute_name) << "\"";
+        }
     }
   os << ">\n";
   for (const auto &child_node : element->childNodes())
