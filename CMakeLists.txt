@@ -13,7 +13,7 @@ project(
 include(GNUInstallDirs)
 include(CheckCXXCompilerFlag)
 
-# Honor `C_VISIBILITY_PRESET hidden` in static libraries
+# Honor `C_VISIBILITY_PRESET hidden` and `CXX_VISIBILITY_PRESET hidden` in static libraries
 cmake_policy(SET CMP0063 NEW)
 
 check_cxx_compiler_flag("-Werror=implicit" ERROR_IMPLICIT_SUPPORTED)
@@ -524,6 +524,9 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
   else()
     set(GRM_LINK_MODE PRIVATE)
   endif()
+  if(NOT LIBRARY MATCHES "internal")
+    set_target_properties(${LIBRARY} PROPERTIES C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden)
+  endif()
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GKS)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GR)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GR3)
@@ -557,7 +560,6 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
                CXX_EXTENSIONS OFF
                CXX_STANDARD_REQUIRED ON
                POSITION_INDEPENDENT_CODE ON
-               C_VISIBILITY_PRESET hidden
                INSTALL_RPATH "${INSTALL_RPATH}"
                PREFIX "lib"
                IMPORT_PREFIX "lib"
