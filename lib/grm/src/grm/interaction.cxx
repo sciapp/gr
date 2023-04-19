@@ -130,10 +130,12 @@ int grm_input(const grm_args_t *input_args)
                 {
                   if (elem->hasAttribute("viewport_xmin"))
                     {
-                      gr_setviewport((double)elem->getAttribute("viewport_xmin"), (double)elem->getAttribute("viewport_xmax"),
-                                     (double)elem->getAttribute("viewport_ymin"), (double)elem->getAttribute("viewport_ymax"));
+                      gr_setviewport(
+                          (double)elem->getAttribute("viewport_xmin"), (double)elem->getAttribute("viewport_xmax"),
+                          (double)elem->getAttribute("viewport_ymin"), (double)elem->getAttribute("viewport_ymax"));
                       gr_setwindow((double)elem->getAttribute("window_xmin"), (double)elem->getAttribute("window_xmax"),
-                                   (double)elem->getAttribute("window_ymin"), (double)elem->getAttribute("window_ymax"));
+                                   (double)elem->getAttribute("window_ymin"),
+                                   (double)elem->getAttribute("window_ymax"));
                       break;
                     }
                 }

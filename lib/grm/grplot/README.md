@@ -98,6 +98,10 @@ The next line after the header may contain the column labels. If the data does n
 
 A plot type that expect the same data shape as other plot types can be converted using an interactive menu. The interaction also yields extra information about the plot, when the mouse is being hovered over them.
 
+## Editor
+
+The editor can be enabled by setting the environment variable `GRPLOT_ENABLE_EDITOR` to the value of 1. After that the editor can be activated and deactivated via the interactive menubar. The editor allows to modify the displayed plot in parts.
+
 ## Advanced information for each plot type
 
 ### BARPLOT
