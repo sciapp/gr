@@ -75,6 +75,7 @@ int main(int argc, char **argv)
       GRPlotMainWindow window(argc, argv);
 
       window.show();
+      window.hide();
 
       return app.exec();
     }
