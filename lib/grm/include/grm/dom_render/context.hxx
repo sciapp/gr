@@ -7,6 +7,7 @@
 #include <string>
 #include <type_traits>
 
+#include <grm/util.h>
 #include <grm/dom_render/NotFoundError.hxx>
 #include <grm/dom_render/TypeError.hxx>
 
@@ -14,7 +15,7 @@ namespace GRM
 {
 
 
-class Context
+class EXPORT Context
 {
   /*!
    * Context is used to store data that can not be easily stored inside the tree such as vectors.
@@ -30,7 +31,7 @@ class Context
    */
 
 public:
-  class Inner
+  class EXPORT Inner
   {
     /*!
      * The class Inner is used to return data from Context

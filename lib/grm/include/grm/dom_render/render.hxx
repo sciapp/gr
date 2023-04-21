@@ -9,8 +9,9 @@
 #include <grm/dom_render/graphics_tree/Document.hxx>
 #include "gr.h"
 #include "grm/layout.hxx"
+#include <grm/util.h>
 
-enum class CoordinateSpace
+enum class EXPORT CoordinateSpace
 {
   WC,
   NDC
@@ -20,7 +21,7 @@ enum class CoordinateSpace
 namespace GRM
 {
 
-class Render : public Document
+class EXPORT Render : public Document
 {
   /*!
    * The GRM::Render class is used for creating or modifying elements that can also be processed by this class

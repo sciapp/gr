@@ -2,10 +2,11 @@
 #define GRM_GRAPHICS_TREE_INTERFACE_VALUE_HXX
 
 #include <string>
+#include <grm/util.h>
 
 namespace GRM
 {
-class Value
+class EXPORT Value
 {
 public:
   enum class Type

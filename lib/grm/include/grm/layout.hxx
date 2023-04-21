@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <string>
 #include <grm/dom_render/graphics_tree/Element.hxx>
+#include <grm/util.h>
 
 #include "args.h"
 #include "error.h"
@@ -12,7 +13,7 @@
 namespace grm
 {
 
-class Slice
+class EXPORT Slice
 {
 public:
   Slice(int rowStart, int rowStop, int colStart, int colStop);
@@ -27,7 +28,7 @@ public:
   friend class Grid;
 };
 
-class GridElement
+class EXPORT GridElement
 {
 public:
   GridElement();
@@ -72,7 +73,7 @@ public:
   std::shared_ptr<GRM::Element> elementInDOM = nullptr;
 };
 
-class Grid : public GridElement
+class EXPORT Grid : public GridElement
 {
 
 public:

@@ -7,6 +7,7 @@
 #include <string>
 #include <map>
 #include <tuple>
+#include <grm/util.h>
 
 namespace GRM
 {
@@ -14,7 +15,7 @@ class Element;
 class Document;
 class Selector;
 
-class Node : public std::enable_shared_from_this<Node>
+class EXPORT Node : public std::enable_shared_from_this<Node>
 {
 public:
   enum class Type

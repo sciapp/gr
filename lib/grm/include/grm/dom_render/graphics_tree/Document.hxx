@@ -5,13 +5,14 @@
 #include <string>
 
 #include <grm/dom_render/graphics_tree/Node.hxx>
+#include <grm/util.h>
 
 namespace GRM
 {
 class Element;
 class Comment;
 
-class Document : public Node
+class EXPORT Document : public Node
 {
 public:
   static std::shared_ptr<Document> createDocument();
@@ -94,7 +95,7 @@ private:
   std::shared_ptr<Document> shared();
 };
 
-std::shared_ptr<Document> createDocument();
+EXPORT std::shared_ptr<Document> createDocument();
 } // namespace GRM
 
 #endif
