@@ -5012,15 +5012,17 @@ err_t plot_volume(grm_args_t *subplot_args)
 
 err_t plot_polar(grm_args_t *subplot_args)
 {
-  double y_min, y_max, r_max, tick;
+  double r_min, r_max, tick;
   int n;
   grm_args_t **current_series;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "polar");
 
-  grm_args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
-  r_max = y_max;
+  grm_args_values(subplot_args, "_ylim", "dd", &r_min, &r_max);
+  tick = 0.5 * auto_tick(r_min, r_max);
+  n = (int)ceil((r_max - r_min) / tick);
+  r_max = r_min + n * tick;
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
