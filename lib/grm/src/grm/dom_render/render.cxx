@@ -1118,7 +1118,7 @@ static void processFlip(const std::shared_ptr<GRM::Element> &elem)
 static void processGROptionFlipX(const std::shared_ptr<GRM::Element> &elem)
 {
   int options;
-  int flip_x = static_cast<int>(elem->getAttribute("gr-option-flip-x"));
+  int flip_x = static_cast<int>(elem->getAttribute("gr_option_flip_x"));
   gr_inqscale(&options);
 
   if (flip_x)
@@ -1134,7 +1134,7 @@ static void processGROptionFlipX(const std::shared_ptr<GRM::Element> &elem)
 static void processGROptionFlipY(const std::shared_ptr<GRM::Element> &elem)
 {
   int options;
-  int flip_y = static_cast<int>(elem->getAttribute("gr-option-flip-y"));
+  int flip_y = static_cast<int>(elem->getAttribute("gr_option_flip_y"));
   gr_inqscale(&options);
 
   if (flip_y)
@@ -1162,15 +1162,15 @@ static void processGR3CameraLookAt(const std::shared_ptr<GRM::Element> &elem)
 {
   double camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z;
 
-  camera_x = (double)elem->getAttribute("gr3cameralookat_camera-x");
-  camera_y = (double)elem->getAttribute("gr3cameralookat_camera-y");
-  camera_z = (double)elem->getAttribute("gr3cameralookat_camera-z");
-  center_x = (double)elem->getAttribute("gr3cameralookat_center-x");
-  center_y = (double)elem->getAttribute("gr3cameralookat_center-y");
-  center_z = (double)elem->getAttribute("gr3cameralookat_center-z");
-  up_x = (double)elem->getAttribute("gr3cameralookat_up-x");
-  up_y = (double)elem->getAttribute("gr3cameralookat_up-y");
-  up_z = (double)elem->getAttribute("gr3cameralookat_up-z");
+  camera_x = (double)elem->getAttribute("gr3cameralookat_camera_x");
+  camera_y = (double)elem->getAttribute("gr3cameralookat_camera_y");
+  camera_z = (double)elem->getAttribute("gr3cameralookat_camera_z");
+  center_x = (double)elem->getAttribute("gr3cameralookat_center_x");
+  center_y = (double)elem->getAttribute("gr3cameralookat_center_y");
+  center_z = (double)elem->getAttribute("gr3cameralookat_center_z");
+  up_x = (double)elem->getAttribute("gr3cameralookat_up_x");
+  up_y = (double)elem->getAttribute("gr3cameralookat_up_y");
+  up_z = (double)elem->getAttribute("gr3cameralookat_up_z");
 
   gr3_cameralookat(camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z);
 }
@@ -1698,7 +1698,7 @@ static void processSpace3d(const std::shared_ptr<GRM::Element> &elem)
   phi = (double)elem->getAttribute("space3d_phi");
   theta = (double)elem->getAttribute("space3d_theta");
   fov = (double)elem->getAttribute("space3d_fov");
-  camera_distance = (double)elem->getAttribute("space3d_camera-distance");
+  camera_distance = (double)elem->getAttribute("space3d_camera_distance");
 
   gr_setspace3d(-phi, theta, fov, camera_distance);
 }
@@ -1921,9 +1921,9 @@ static void processTextColorForBackground(const std::shared_ptr<GRM::Element> &e
   unsigned char color_rgb[4];
   std::string plot = "pie";
 
-  if (elem->hasAttribute("stcfb-plot"))
+  if (elem->hasAttribute("stcfb_plot"))
     {
-      plot = static_cast<std::string>(elem->getAttribute("stcfb-plot"));
+      plot = static_cast<std::string>(elem->getAttribute("stcfb_plot"));
     }
 
   if (plot == "pie")
@@ -2257,22 +2257,22 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
   //! Map used for processing all kinds of attributes
   static std::map<std::string, std::function<void(const std::shared_ptr<GRM::Element> &)>> attrStringToFunc{
       {std::string("bordercolorind"), processBorderColorInd},
-      {std::string("calc-window-and-viewport-from-parent"), processCalcWindowAndViewportFromParent},
+      {std::string("calc_window_and_viewport_from_parent"), processCalcWindowAndViewportFromParent},
       {std::string("charexpan"), processCharExpan},
       {std::string("charspace"), processCharSpace},
       {std::string("charup"), processCharUp},
       {std::string("clipxform"), processClipXForm},
-      {std::string("colorbar-position"), processColorbarPosition},
+      {std::string("colorbar_position"), processColorbarPosition},
       {std::string("colorrep"), processColorRep},
       {std::string("fillcolorind"), processFillColorInd},
       {std::string("fillintstyle"), processFillIntStyle},
       {std::string("fillstyle"), processFillStyle},
       {std::string("flip"), processFlip},
-      {std::string("gr-option-flip-x"), processGROptionFlipX},
-      {std::string("gr-option-flip-y"), processGROptionFlipY},
+      {std::string("gr_option_flip_x"), processGROptionFlipX},
+      {std::string("gr_option_flip_y"), processGROptionFlipY},
       {std::string("gr3backgroundcolor"), processGR3BackgroundColor},
       {std::string("gr3cameralookat"), processGR3CameraLookAt},
-      {std::string("imshow-information"), processImshowInformation},
+      {std::string("imshow_information"), processImshowInformation},
       {std::string("kind"), processKind},
       {std::string("linecolorind"), processLineColorInd},
       {std::string("linespec"), processLineSpec},
@@ -2282,7 +2282,7 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("markersize"), processMarkerSize},
       {std::string("markertype"), processMarkerType},
       {std::string("projectiontype"), processProjectionType},
-      {std::string("relative-charheight"), processRelativeCharHeight},
+      {std::string("relative_charheight"), processRelativeCharHeight},
       {std::string("resamplemethod"), processResampleMethod},
       {std::string("selntran"), processSelntran},
       {std::string("space"), processSpace},
@@ -3413,7 +3413,7 @@ static void isosurfaceRender(const std::shared_ptr<GRM::Element> &elem, const st
   int subplot_width, subplot_height;
   int drawable_type;
 
-  drawable_type = static_cast<int>(elem->getAttribute("drawable-type"));
+  drawable_type = static_cast<int>(elem->getAttribute("drawable_type"));
 
   gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
 
@@ -3527,7 +3527,7 @@ static void piePlotTitleRender(const std::shared_ptr<GRM::Element> &elem, const 
       throw NotFoundError("No render-document found for element\n");
     }
 
-  std::string title = static_cast<std::string>(elem->getAttribute("pie-plot-title"));
+  std::string title = static_cast<std::string>(elem->getAttribute("pie_plot_title"));
   auto new_title_elem = render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
   render->setTextColorInd(new_title_elem, 1);
   render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
@@ -4700,7 +4700,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawPieLegend(const std::string
 std::shared_ptr<GRM::Element> GRM::Render::createPiePlotTitleRenderElement(std::string title)
 {
   auto element = createElement("pie-plot-title-render");
-  element->setAttribute("pie-plot-title", title);
+  element->setAttribute("pie_plot_title", title);
   return element;
 }
 
@@ -5477,7 +5477,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawGraphics(const std::string 
 std::shared_ptr<GRM::Element> GRM::Render::createIsoSurfaceRenderElement(int drawable_type)
 {
   auto element = createElement("isosurface-render");
-  element->setAttribute("drawable-type", drawable_type);
+  element->setAttribute("drawable_type", drawable_type);
   return element;
 }
 
@@ -6011,7 +6011,7 @@ void GRM::Render::setSpace3d(const std::shared_ptr<GRM::Element> &element, doubl
   element->setAttribute("space3d_phi", phi);
   element->setAttribute("space3d_theta", theta);
   element->setAttribute("space3d_fov", fov);
-  element->setAttribute("space3d_camera-distance", camera_distance);
+  element->setAttribute("space3d_camera_distance", camera_distance);
 }
 
 void GRM::Render::setSpace(const std::shared_ptr<Element> &element, double zmin, double zmax, int rotation, int tilt)
@@ -6077,15 +6077,15 @@ void GRM::Render::setGR3CameraLookAt(const std::shared_ptr<GRM::Element> &elemen
    * \param[in] up_z: The z-component of the up direction
    */
 
-  element->setAttribute("gr3cameralookat_camera-x", camera_x);
-  element->setAttribute("gr3cameralookat_camera-y", camera_y);
-  element->setAttribute("gr3cameralookat_camera-z", camera_z);
-  element->setAttribute("gr3cameralookat_center-x", center_x);
-  element->setAttribute("gr3cameralookat_center-y", center_y);
-  element->setAttribute("gr3cameralookat_center-z", center_z);
-  element->setAttribute("gr3cameralookat_up-x", up_x);
-  element->setAttribute("gr3cameralookat_up-y", up_y);
-  element->setAttribute("gr3cameralookat_up-z", up_z);
+  element->setAttribute("gr3cameralookat_camera_x", camera_x);
+  element->setAttribute("gr3cameralookat_camera_y", camera_y);
+  element->setAttribute("gr3cameralookat_camera_z", camera_z);
+  element->setAttribute("gr3cameralookat_center_x", center_x);
+  element->setAttribute("gr3cameralookat_center_y", center_y);
+  element->setAttribute("gr3cameralookat_center_z", center_z);
+  element->setAttribute("gr3cameralookat_up_x", up_x);
+  element->setAttribute("gr3cameralookat_up_y", up_y);
+  element->setAttribute("gr3cameralookat_up_z", up_z);
 }
 
 
@@ -6255,7 +6255,7 @@ void GRM::Render::setNextColor(const std::shared_ptr<GRM::Element> &element,
 void GRM::Render::setNextColor(const std::shared_ptr<GRM::Element> &element)
 {
   element->setAttribute("setNextColor", true);
-  element->setAttribute("snc-fallback", true);
+  element->setAttribute("snc_fallback", true);
 }
 
 void GRM::Render::setOriginPosition(const std::shared_ptr<GRM::Element> &element, std::string x_org_pos,
@@ -6285,7 +6285,7 @@ void GRM::Render::setImshowInformation(const std::shared_ptr<GRM::Element> &elem
   element->setAttribute("image_data_key", img_data_key);
   element->setAttribute("cols", (int)cols);
   element->setAttribute("rows", (int)rows);
-  element->setAttribute("imshow-information", true);
+  element->setAttribute("imshow_information", true);
 }
 
 void GRM::Render::setGR3LightParameters(const std::shared_ptr<GRM::Element> &element, double ambient, double diffuse,

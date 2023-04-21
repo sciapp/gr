@@ -656,7 +656,7 @@ err_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char
               grm_args_clear(current_args);
               if (cleared_args == nullptr)
                 {
-                  cleared_args = args_set_new(10); /* FIXME: do not use a magic number, use a growbable set instead! */
+                  cleared_args = args_set_new(10); /* FIXME: do not use a magic number, use a growable set instead! */
                   cleanup_and_set_error_if(cleared_args == nullptr, ERROR_MALLOC);
                   cleanup_and_set_error_if(
                       !args_set_map_insert(key_to_cleared_args, *current_hierarchy_name_ptr, cleared_args),
@@ -4294,7 +4294,7 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
       double x_min, x_max, y_min, y_max, value, bin_max = 0;
 
       auto subGroup = global_render->createGroup("mkind_" + mkind + "_series");
-      subGroup->setAttribute("calc-window-and-viewport-from-parent", 1);
+      subGroup->setAttribute("calc_window_and_viewport_from_parent", 1);
       group->appendChild(subGroup);
       currentDomElement = subGroup;
 
@@ -4370,17 +4370,17 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
 
       if (grm_args_values(subplot_args, "xflip", "i", &flip) && flip)
         {
-          subGroup->setAttribute("gr-option-flip-y", 1);
-          subGroup->setAttribute("gr-option-flip-x", 0);
+          subGroup->setAttribute("gr_option_flip_y", 1);
+          subGroup->setAttribute("gr_option_flip_x", 0);
         }
       else if (grm_args_values(subplot_args, "yflip", "i", &flip) && flip)
         {
-          subGroup->setAttribute("gr-option-flip-y", 0);
-          subGroup->setAttribute("gr-option-flip-x", 0);
+          subGroup->setAttribute("gr_option_flip_y", 0);
+          subGroup->setAttribute("gr_option_flip_x", 0);
         }
       else
         {
-          subGroup->setAttribute("gr-option-flip-x", 0);
+          subGroup->setAttribute("gr_option_flip_x", 0);
         }
 
       if (k == 0)
@@ -6284,7 +6284,7 @@ err_t plot_pie(grm_args_t *subplot_args)
       text_elem->setAttribute("color_index", color_index);
       group->append(text_elem);
 
-      text_elem->setAttribute("set-text-color-for-background", true);
+      text_elem->setAttribute("set_text_color_for_background", true);
 
       start_angle = end_angle;
       if (start_angle < 0)
@@ -6773,11 +6773,11 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
 
   colorbar->setAttribute("offset", off + 0.02);
   colorbar->setAttribute("width", 0.03);
-  colorbar->setAttribute("colorbar-position", true);
+  colorbar->setAttribute("colorbar_position", true);
 
   colorbar->setAttribute("diag_factor", 0.016);
   colorbar->setAttribute("max_charheight", 0.012);
-  colorbar->setAttribute("relative-charheight", true);
+  colorbar->setAttribute("relative_charheight", true);
 
   return ERROR_NONE;
 }
