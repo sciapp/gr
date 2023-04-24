@@ -2051,7 +2051,7 @@ err_t plot_line(grm_args_t *subplot_args)
       std::vector<double> y_vec;
       char *spec;
       int mask;
-      auto subGroup = global_render->createGroup("line_series");
+      auto subGroup = global_render->createSeries("line_series");
       group->append(subGroup);
       cleanup_and_set_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length),
                                ERROR_PLOT_MISSING_DATA);
@@ -2170,7 +2170,7 @@ err_t plot_stairs(grm_args_t *subplot_args)
       double *x = nullptr;
       unsigned int x_length, y_length, mask, i;
       char *spec;
-      auto subGroup = global_render->createGroup("step_series");
+      auto subGroup = global_render->createSeries("step_series");
       group->append(subGroup);
 
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length) && x_length < 1,
@@ -2397,7 +2397,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
 
   while (*current_series != nullptr)
     {
-      auto subGroup = global_render->createGroup("scatter_series");
+      auto subGroup = global_render->createSeries("scatter_series");
       group->append(subGroup);
 
       auto parent_element = global_render->createElement("polymarker");
@@ -2530,7 +2530,7 @@ err_t plot_quiver(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
-      auto subGroup = global_render->createGroup("quiver_series");
+      auto subGroup = global_render->createSeries("quiver_series");
       group->append(subGroup);
 
       double *x = nullptr, *y = nullptr, *u = nullptr, *v = nullptr;
@@ -2582,7 +2582,7 @@ err_t plot_stem(grm_args_t *subplot_args)
       char *spec;
       unsigned int i;
 
-      auto subGroup = global_render->createGroup("stem_series");
+      auto subGroup = global_render->createSeries("stem_series");
       group->append(subGroup);
 
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
@@ -2673,7 +2673,7 @@ err_t plot_hist(grm_args_t *subplot_args)
       char *orientation;
       int is_horizontal;
 
-      auto subGroup = global_render->createGroup("hist_series");
+      auto subGroup = global_render->createSeries("hist_series");
       group->append(subGroup);
 
       grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
@@ -2998,7 +2998,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
       double x1, x2, y1, y2;
       double x_min = 0, x_max, y_min = 0, y_max;
 
-      auto subGroup = global_render->createGroup("bar_series");
+      auto subGroup = global_render->createSeries("bar_series");
       group->append(subGroup);
 
       grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
@@ -3629,7 +3629,7 @@ err_t plot_contour(grm_args_t *subplot_args)
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
-      auto subGroup = global_render->createGroup("contour_series");
+      auto subGroup = global_render->createSeries("contour_series");
       group->append(subGroup);
       if (x_length == y_length && x_length == z_length)
         {
@@ -3743,7 +3743,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
-      auto subGroup = global_render->createGroup("contourf_series");
+      auto subGroup = global_render->createSeries("contourf_series");
       group->append(subGroup);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -3887,7 +3887,7 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       int is_uniform_heatmap;
-      auto subGroup = global_render->createGroup("heatmap_series");
+      auto subGroup = global_render->createSeries("heatmap_series");
       group->append(subGroup);
       x = y = nullptr;
       grm_args_first_value(*current_series, "x", "D", &x, &cols);
@@ -4051,7 +4051,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
     {
       int is_uniform_heatmap;
       x = y = nullptr;
-      auto subGroup = global_render->createGroup("heatmap_series");
+      auto subGroup = global_render->createSeries("heatmap_series");
       group->append(subGroup);
       grm_args_first_value(*current_series, "x", "D", &x, &cols);
       grm_args_first_value(*current_series, "y", "D", &y, &rows);
@@ -4429,7 +4429,7 @@ err_t plot_wireframe(grm_args_t *subplot_args)
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
 
-      auto subGroup = global_render->createGroup("wireframe_series");
+      auto subGroup = global_render->createSeries("wireframe_series");
       group->append(subGroup);
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -4514,7 +4514,7 @@ err_t plot_surface(grm_args_t *subplot_args)
     {
       double *x = nullptr, *y = nullptr, *z = nullptr;
       unsigned int x_length, y_length, z_length;
-      auto subGroup = global_render->createGroup("surface_series");
+      auto subGroup = global_render->createSeries("surface_series");
       group->append(subGroup);
       const char *range_keys[] = {"xrange", "yrange"};
 
@@ -4639,7 +4639,7 @@ err_t plot_plot3(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
-      auto subGroup = global_render->createGroup("plot3_series");
+      auto subGroup = global_render->createSeries("plot3_series");
       group->append(subGroup);
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
@@ -4675,7 +4675,7 @@ err_t plot_scatter3(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
-      auto subGroup = global_render->createGroup("scatter3_series");
+      auto subGroup = global_render->createSeries("scatter3_series");
       group->append(subGroup);
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
@@ -4744,7 +4744,7 @@ err_t plot_imshow(grm_args_t *subplot_args)
   return_error_if(!grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max), ERROR_PLOT_MISSING_DATA);
   while (*current_series != nullptr)
     {
-      auto subGroup = global_render->createGroup("imshow_series");
+      auto subGroup = global_render->createSeries("imshow_series");
       group->append(subGroup);
       subGroup->setAttribute("grplot", grplot);
 
@@ -4833,7 +4833,7 @@ err_t plot_isosurface(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
 
-      auto subGroup = global_render->createGroup("isosurface_series");
+      auto subGroup = global_render->createSeries("isosurface_series");
       group->append(subGroup);
       return_error_if(!grm_args_first_value(*current_series, "c", "D", &orig_data, &data_length),
                       ERROR_PLOT_MISSING_DATA);
@@ -5028,7 +5028,7 @@ err_t plot_polar(grm_args_t *subplot_args)
       unsigned int rho_length, theta_length;
       char *spec;
       unsigned int i;
-      auto subGroup = global_render->createGroup("polar_series");
+      auto subGroup = global_render->createSeries("polar_series");
       group->append(subGroup);
 
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &theta, &theta_length), ERROR_PLOT_MISSING_DATA);
@@ -6217,7 +6217,7 @@ err_t plot_pie(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
 
-  auto subGroup = global_render->createGroup("pie_series");
+  auto subGroup = global_render->createSeries("pie_series");
   group->append(subGroup);
 
   global_render->setFillIntStyle(group, GKS_K_INTSTYLE_SOLID);
@@ -6318,7 +6318,7 @@ err_t plot_trisurf(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
-      auto subGroup = global_render->createGroup("trisurf_series");
+      auto subGroup = global_render->createSeries("trisurf_series");
       group->append(subGroup);
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
@@ -6368,7 +6368,7 @@ err_t plot_tricont(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
-      auto subGroup = global_render->createGroup("tricont_series");
+      auto subGroup = global_render->createSeries("tricont_series");
       group->append(subGroup);
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
@@ -6478,7 +6478,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 
   int keep_aspect_ratio;
 
-  auto group = global_render->createGroup("draw_axes");
+  auto group = global_render->createElement("coordinate_system");
   if (!currentDomElement)
     {
       global_root->lastChildElement()->append(group);
@@ -6809,7 +6809,7 @@ err_t extract_multi_type_argument(grm_args_t *error_container, const char *key, 
   else if (strcmp(arg_ptr->value_format, "nD") == 0)
     {
       return_error_if(!grm_args_first_value(error_container, key, "D", downwards, downwards_length), ERROR_INTERNAL);
-      /* Python encapsules all single elements into an array */
+      /* Python encapsulates all single elements into an array */
       if (*downwards_length == 1)
         {
           *downwards_flt = *upwards_flt = **downwards;
@@ -7030,7 +7030,7 @@ double find_max_step(unsigned int n, const double *x)
  *
  * \param[in] n The number of array elements.
  * \param[in] x A pointer to the array elements.
- * \return A pointer to newly alloced heap memory with the normalized values.
+ * \return A pointer to newly allocated heap memory with the normalized values.
  */
 double *normalize(unsigned int n, const double *x)
 {
@@ -7066,7 +7066,7 @@ double *normalize(unsigned int n, const double *x)
  *
  * \param[in] n The number of array elements.
  * \param[in] x A pointer to the array elements.
- * \return A pointer to newly alloced heap memory with the normalized values.
+ * \return A pointer to newly allocated heap memory with the normalized values.
  */
 unsigned int *normalize_int(unsigned int n, const double *x, unsigned int sum)
 {

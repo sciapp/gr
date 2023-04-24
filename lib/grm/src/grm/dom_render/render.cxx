@@ -35,10 +35,20 @@ std::shared_ptr<GRM::Element> global_root;
 std::shared_ptr<GRM::Render> global_render;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
-static std::set<std::string> parentTypes = {"group",           "layout_grid",     "layout_gridelement",
-                                            "draw_legend",     "draw_polar_axes", "pie_plot_title_render",
-                                            "draw_pie_legend", "marginalheatmap", "figure",
-                                            "hexbin",          "colorbar",        "plot"};
+static std::set<std::string> parentTypes = {"group",
+                                            "layout_grid",
+                                            "layout_gridelement",
+                                            "draw_legend",
+                                            "draw_polar_axes",
+                                            "pie_plot_title_render",
+                                            "draw_pie_legend",
+                                            "marginalheatmap",
+                                            "figure",
+                                            "hexbin",
+                                            "colorbar",
+                                            "plot",
+                                            "coordinate_system",
+                                            "series"};
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
@@ -675,7 +685,7 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
 
           if (width > available_width)
             {
-              /* part is too big but doesnt have a breakpoint in it */
+              /* part is too big but doesn't have a breakpoint in it */
               if (cur_num_breakpoints == 1)
                 {
                   new_label[i] = '\0';
@@ -809,19 +819,19 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
       metric_size[1] = PLOT_DEFAULT_HEIGHT / dpm[1];
     }
 
-  if (pixel_width != NULL)
+  if (pixel_width != nullptr)
     {
       *pixel_width = pixel_size[0];
     }
-  if (pixel_height != NULL)
+  if (pixel_height != nullptr)
     {
       *pixel_height = pixel_size[1];
     }
-  if (metric_width != NULL)
+  if (metric_width != nullptr)
     {
       *metric_width = metric_size[0];
     }
-  if (metric_height != NULL)
+  if (metric_height != nullptr)
     {
       *metric_height = metric_size[1];
     }
@@ -1905,7 +1915,7 @@ static void processTextAlign(const std::shared_ptr<GRM::Element> &elem)
 }
 
 static void processTextColorForBackground(const std::shared_ptr<GRM::Element> &elem)
-/*  The set_text_volor_for_background function used in plot.cxx now as an attribute function
+/*  The set_text_color_for_background function used in plot.cxx now as an attribute function
     It is now possible to inquire colors during runtime -> No colors are given as parameters
     The new color is set on `elem`
     There are no params apart from elem
@@ -2324,7 +2334,7 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
 
   for (auto attributeToFunctionPair : attrStringToFuncPre)
     /*
-     * Pre process attibute run
+     * Pre process attribute run
      */
     {
       if (element->getAttributeNames().find(attributeToFunctionPair.first) != element->getAttributeNames().end())
@@ -3409,7 +3419,7 @@ static void isosurfaceRender(const std::shared_ptr<GRM::Element> &elem, const st
   y_min = viewport[2];
   y_max = viewport[3];
 
-  get_figure_size(NULL, &fig_width, &fig_height, NULL, NULL);
+  get_figure_size(nullptr, &fig_width, &fig_height, nullptr, nullptr);
   subplot_width = (int)(grm_max(fig_width, fig_height) * (x_max - x_min));
   subplot_height = (int)(grm_max(fig_width, fig_height) * (y_max - y_min));
 
@@ -4015,7 +4025,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("y_line"), drawYLine},
       };
   /*! Modifier */
-  if (str_equals_any(element->localName().c_str(), 3, "group", "figure", "plot"))
+  if (str_equals_any(element->localName().c_str(), 5, "group", "figure", "plot", "coordinate_system", "series"))
     {
       processAttributes(element);
     }
@@ -4732,6 +4742,13 @@ std::shared_ptr<GRM::Element> GRM::Render::createGroup()
 std::shared_ptr<GRM::Element> GRM::Render::createGroup(const std::string &name)
 {
   auto element = createElement("group");
+  element->setAttribute("name", name);
+  return element;
+}
+
+std::shared_ptr<GRM::Element> GRM::Render::createSeries(const std::string &name)
+{
+  auto element = createElement("series");
   element->setAttribute("name", name);
   return element;
 }
@@ -5686,7 +5703,7 @@ void GRM::Render::setMarkerSize(const std::shared_ptr<Element> &element, const s
 void GRM::Render::setMarkerColorInd(const std::shared_ptr<Element> &element, int color)
 {
   /*!
-   * This function can be used to set a MarkerCololrInd of a GRM::Element
+   * This function can be used to set a MarkerColorInd of a GRM::Element
    *
    * \param[in] element A GRM::Element
    * \param[in] color An Integer setting the MarkerColorInd
