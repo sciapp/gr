@@ -5,6 +5,7 @@
 /* ######################### includes ############################################################################### */
 
 #include <ctype.h>
+#include <locale.h>
 #include <errno.h>
 #include <limits.h>
 #include <math.h>
@@ -77,6 +78,7 @@ err_t fromjson_parse(grm_args_t *args, const char *json_string, fromjson_shared_
   fromjson_state_t state;
   int allocated_shared_state_mem = 0;
   err_t error = ERROR_NONE;
+  char *saved_locale;
 
   state.datatype = JSON_DATATYPE_UNKNOWN;
   state.value_buffer = NULL;
@@ -114,6 +116,9 @@ err_t fromjson_parse(grm_args_t *args, const char *json_string, fromjson_shared_
     {
       ++state.shared_state->json_ptr;
     }
+
+  saved_locale = setlocale(LC_NUMERIC, NULL);
+  setlocale(LC_NUMERIC, "C");
 
   while (strchr("}", *state.shared_state->json_ptr) == NULL)
     {
@@ -190,6 +195,11 @@ err_t fromjson_parse(grm_args_t *args, const char *json_string, fromjson_shared_
   if (allocated_shared_state_mem)
     {
       free(shared_state);
+    }
+
+  if (saved_locale)
+    {
+      setlocale(LC_NUMERIC, saved_locale);
     }
 
   return error;
