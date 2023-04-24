@@ -35,9 +35,9 @@ std::shared_ptr<GRM::Element> global_root;
 std::shared_ptr<GRM::Render> global_render;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
-static std::set<std::string> parentTypes = {"group",           "layout-grid",     "layout-gridelement",
-                                            "draw-legend",     "draw-polar-axes", "pie-plot-title-render",
-                                            "draw-pie-legend", "marginalheatmap", "figure",
+static std::set<std::string> parentTypes = {"group",           "layout_grid",     "layout_gridelement",
+                                            "draw_legend",     "draw_polar_axes", "pie_plot_title_render",
+                                            "draw_pie_legend", "marginalheatmap", "figure",
                                             "hexbin",          "colorbar",        "plot"};
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
@@ -318,7 +318,7 @@ static std::shared_ptr<GRM::Element> getSubplotElement(const std::shared_ptr<GRM
     {
       bool ancestorIsSubplotGroup =
           (ancestor->hasAttribute("subplotGroup") && static_cast<int>(ancestor->getAttribute("subplotGroup")));
-      if (ancestor->localName() == "layout-gridelement" || ancestorIsSubplotGroup)
+      if (ancestor->localName() == "layout_gridelement" || ancestorIsSubplotGroup)
         {
           return ancestor;
         }
@@ -2306,7 +2306,7 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       /* This map contains functions for attributes that should be called after some attributes have been processed
        * already. These functions can contain e.g. inquire function calls for colors.
        * */
-      {std::string("set-text-color-for-background"), processTextColorForBackground},
+      {std::string("set_text_color_for_background"), processTextColorForBackground},
   };
 
   static std::map<std::string, std::function<void(const std::shared_ptr<GRM::Element> &)>> attrStringToFuncPre{
@@ -3988,9 +3988,9 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("colorbar"), colorbar},
           {std::string("contour"), contour},
           {std::string("contourf"), contourf},
-          {std::string("draw-legend"), drawLegend},
-          {std::string("draw-pie-legend"), drawPieLegend},
-          {std::string("draw-polar-axes"), drawPolarAxes},
+          {std::string("draw_legend"), drawLegend},
+          {std::string("draw_pie_legend"), drawPieLegend},
+          {std::string("draw_polar_axes"), drawPolarAxes},
           {std::string("drawarc"), drawArc},
           {std::string("drawgraphics"), drawGraphics},
           {std::string("drawimage"), drawImage},
@@ -4005,13 +4005,13 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("grid"), grid},
           {std::string("grid3d"), grid3d},
           {std::string("hexbin"), hexbin},
-          {std::string("isosurface-render"), isosurfaceRender},
+          {std::string("isosurface_render"), isosurfaceRender},
           {std::string("isosurface3"), drawIsosurface3},
-          {std::string("layout-grid"), layoutGrid},
-          {std::string("layout-gridelement"), layoutGridElement},
+          {std::string("layout_grid"), layoutGrid},
+          {std::string("layout_gridelement"), layoutGridElement},
           {std::string("nonuniformcellarray"), nonuniformcellarray},
           {std::string("panzoom"), panzoom},
-          {std::string("pie-plot-title-render"), piePlotTitleRender},
+          {std::string("pie_plot_title_render"), piePlotTitleRender},
           {std::string("polyline"), polyline},
           {std::string("polyline3d"), polyline3d},
           {std::string("polymarker"), polymarker},
@@ -4025,7 +4025,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("trisurface"), triSurface},
           {std::string("updatews"), updateWS},
           {std::string("volume"), volume},
-          {std::string("y-line"), drawYLine},
+          {std::string("y_line"), drawYLine},
       };
   /*! Modifier */
   if (str_equals_any(element->localName().c_str(), 3, "group", "figure", "plot"))
@@ -4092,7 +4092,7 @@ static void initializeGridElements(const std::shared_ptr<GRM::Element> &element,
     {
       for (const auto &child : element->children())
         {
-          if (child->localName() != "layout-gridelement" && child->localName() != "layout-grid")
+          if (child->localName() != "layout_gridelement" && child->localName() != "layout_grid")
             {
               return;
             }
@@ -4112,7 +4112,7 @@ static void initializeGridElements(const std::shared_ptr<GRM::Element> &element,
           int colStop = static_cast<int>(child->getAttribute("colStop"));
           grm::Slice *slice = new grm::Slice(rowStart, rowStop, colStart, colStop);
 
-          if (child->localName() == "layout-gridelement")
+          if (child->localName() == "layout_gridelement")
             {
               grm::GridElement *curGridElement =
                   new grm::GridElement(absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight,
@@ -4121,7 +4121,7 @@ static void initializeGridElements(const std::shared_ptr<GRM::Element> &element,
               grid->setElement(slice, curGridElement);
             }
 
-          if (child->localName() == "layout-grid")
+          if (child->localName() == "layout_grid")
             {
               int nrows = static_cast<int>(child->getAttribute("nrows"));
               int ncols = static_cast<int>(child->getAttribute("ncols"));
@@ -4144,7 +4144,7 @@ static void finalizeGrid(const std::shared_ptr<GRM::Element> &root)
     {
       for (const auto &child : root->children())
         {
-          if (child->localName() == "layout-grid")
+          if (child->localName() == "layout_grid")
             {
               int nrows = static_cast<int>(child->getAttribute("nrows"));
               int ncols = static_cast<int>(child->getAttribute("ncols"));
@@ -4635,7 +4635,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawLegend(const std::string &l
    * \param[in] spec An std::string
    */
 
-  auto element = createElement("draw-legend");
+  auto element = createElement("draw_legend");
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   element->setAttribute("location", location);
   element->setAttribute("specs", specs_key);
@@ -4658,7 +4658,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawPolarAxes(int angle_ticks, 
                                                                const std::string &title, const std::string &norm,
                                                                double tick, double line_width)
 {
-  auto element = createElement("draw-polar-axes");
+  auto element = createElement("draw_polar_axes");
   if (!title.empty())
     {
       element->setAttribute("title", title);
@@ -4686,7 +4686,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawPieLegend(const std::string
                                                                std::optional<std::vector<std::string>> labels,
                                                                const std::shared_ptr<GRM::Context> &extContext)
 {
-  auto element = createElement("draw-pie-legend");
+  auto element = createElement("draw_pie_legend");
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   element->setAttribute("labels", labels_key);
 
@@ -4699,7 +4699,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawPieLegend(const std::string
 
 std::shared_ptr<GRM::Element> GRM::Render::createPiePlotTitleRenderElement(std::string title)
 {
-  auto element = createElement("pie-plot-title-render");
+  auto element = createElement("pie_plot_title_render");
   element->setAttribute("pie_plot_title", title);
   return element;
 }
@@ -5476,7 +5476,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawGraphics(const std::string 
 
 std::shared_ptr<GRM::Element> GRM::Render::createIsoSurfaceRenderElement(int drawable_type)
 {
-  auto element = createElement("isosurface-render");
+  auto element = createElement("isosurface_render");
   element->setAttribute("drawable_type", drawable_type);
   return element;
 }
@@ -5484,7 +5484,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createIsoSurfaceRenderElement(int dra
 
 std::shared_ptr<GRM::Element> GRM::Render::createLayoutGrid(const grm::Grid &grid)
 {
-  auto element = createElement("layout-grid");
+  auto element = createElement("layout_grid");
 
   element->setAttribute("absHeight", grid.absHeight);
   element->setAttribute("absWidth", grid.absWidth);
@@ -5508,7 +5508,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createLayoutGrid(const grm::Grid &gri
 std::shared_ptr<GRM::Element> GRM::Render::createLayoutGridElement(const grm::GridElement &gridElement,
                                                                    const grm::Slice &slice)
 {
-  auto element = createElement("layout-gridelement");
+  auto element = createElement("layout_gridelement");
 
   element->setAttribute("absHeight", gridElement.absHeight);
   element->setAttribute("absWidth", gridElement.absWidth);
@@ -5544,7 +5544,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createPanzoom(double x, double y, dou
 std::shared_ptr<GRM::Element> GRM::Render::createYLine()
 {
 
-  auto element = createElement("y-line");
+  auto element = createElement("y_line");
   return element;
 }
 

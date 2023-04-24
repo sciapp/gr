@@ -9112,7 +9112,7 @@ std::shared_ptr<GRM::Element> get_subplot_from_ndc_point_using_dom_helper(std::s
   bool elementIsSubplotGroup =
       (element->hasAttribute("subplotGroup") && static_cast<int>(element->getAttribute("subplotGroup")));
 
-  if (element->localName() == "layout-gridelement" || elementIsSubplotGroup)
+  if (element->localName() == "layout_gridelement" || elementIsSubplotGroup)
     {
       double viewport[4];
       viewport[0] = static_cast<double>(element->getAttribute("viewport_xmin"));
@@ -9124,7 +9124,7 @@ std::shared_ptr<GRM::Element> get_subplot_from_ndc_point_using_dom_helper(std::s
           return element;
         }
     }
-  if (element->localName() == "layout-grid")
+  if (element->localName() == "layout_grid")
     {
       for (const auto &child : element->children())
         {
@@ -9174,11 +9174,11 @@ void grm_set_attribute_on_all_subplots_helper(std::shared_ptr<GRM::Element> elem
   bool elementIsSubplotGroup =
       (element->hasAttribute("subplotGroup") && static_cast<int>(element->getAttribute("subplotGroup")));
 
-  if (element->localName() == "layout-gridelement" || elementIsSubplotGroup)
+  if (element->localName() == "layout_gridelement" || elementIsSubplotGroup)
     {
       element->setAttribute(attribute, value);
     }
-  if (element->localName() == "layout-grid")
+  if (element->localName() == "layout_grid")
     {
       for (const auto &child : element->children())
         {
