@@ -42,7 +42,6 @@ static std::set<std::string> parentTypes = {"group",
                                             "draw_polar_axes",
                                             "pie_plot_title_render",
                                             "draw_pie_legend",
-                                            "marginalheatmap",
                                             "figure",
                                             "hexbin",
                                             "colorbar",
@@ -970,33 +969,33 @@ static void processCalcWindowAndViewportFromParent(const std::shared_ptr<GRM::El
   double viewport[4];
   double x_min, x_max, y_min, y_max, c_min, c_max;
 
-  if (str_equals_any(kind.c_str(), 2, "hist", "line"))
+  if (elem->parentElement()->hasAttribute("marginalheatmap_kind"))
     {
       std::string orientation = static_cast<std::string>(elem->getAttribute("orientation"));
-      auto marginalheatmap_group = elem->parentElement();
-      viewport[0] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_xmin"));
-      viewport[1] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_xmax"));
-      viewport[2] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_ymin"));
-      viewport[3] = static_cast<double>(marginalheatmap_group->getAttribute("viewport_ymax"));
-      x_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_xmin"));
-      x_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_xmax"));
-      y_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_ymin"));
-      y_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_ymax"));
-      if (marginalheatmap_group->hasAttribute("lim_cmin"))
+      auto plot_group = elem->parentElement()->parentElement();
+      viewport[0] = static_cast<double>(plot_group->getAttribute("viewport_xmin"));
+      viewport[1] = static_cast<double>(plot_group->getAttribute("viewport_xmax"));
+      viewport[2] = static_cast<double>(plot_group->getAttribute("viewport_ymin"));
+      viewport[3] = static_cast<double>(plot_group->getAttribute("viewport_ymax"));
+      x_min = static_cast<double>(plot_group->getAttribute("lim_xmin"));
+      x_max = static_cast<double>(plot_group->getAttribute("lim_xmax"));
+      y_min = static_cast<double>(plot_group->getAttribute("lim_ymin"));
+      y_max = static_cast<double>(plot_group->getAttribute("lim_ymax"));
+      if (plot_group->hasAttribute("lim_cmin"))
         {
-          c_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_cmin"));
+          c_min = static_cast<double>(plot_group->getAttribute("lim_cmin"));
         }
       else
         {
-          c_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_zmin"));
+          c_min = static_cast<double>(plot_group->getAttribute("lim_zmin"));
         }
-      if (marginalheatmap_group->hasAttribute("lim_cmax"))
+      if (plot_group->hasAttribute("lim_cmax"))
         {
-          c_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_cmax"));
+          c_max = static_cast<double>(plot_group->getAttribute("lim_cmax"));
         }
       else
         {
-          c_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_zmax"));
+          c_max = static_cast<double>(plot_group->getAttribute("lim_zmax"));
         }
 
       if (orientation == "vertical")
@@ -1272,181 +1271,159 @@ static void processImshowInformation(const std::shared_ptr<GRM::Element> &elem)
   elem->append(temp);
 }
 
-static void processKind(const std::shared_ptr<GRM::Element> &elem)
+static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem)
 {
-  std::string kind = static_cast<std::string>(elem->getAttribute("kind"));
-  if (kind == "line")
+  std::string mkind = static_cast<std::string>(elem->getAttribute("marginalheatmap_kind"));
+  for (auto child : elem->children())
     {
-      if (elem->hasAttribute("marginalheatmap"))
+      if (!child->hasAttribute("calc_window_and_viewport_from_parent")) continue;
+      if (mkind == "line")
         {
           std::shared_ptr<GRM::Context> context;
           std::shared_ptr<GRM::Render> render;
 
-          render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument());
+          render = std::dynamic_pointer_cast<GRM::Render>(child->ownerDocument());
           if (!render)
             {
               throw NotFoundError("Render-document not found for element\n");
             }
           context = render->getContext();
-          auto orientation = static_cast<std::string>(elem->getAttribute("orientation"));
+          auto orientation = static_cast<std::string>(child->getAttribute("orientation"));
           int is_vertical = orientation == "vertical";
           int xind = static_cast<int>(elem->getAttribute("xind"));
           int yind = static_cast<int>(elem->getAttribute("yind"));
 
-          auto marginalheatmap_group = elem->parentElement();
+          auto plot_group = elem->parentElement();
 
-          double c_min = static_cast<double>(marginalheatmap_group->getAttribute("lim_zmin"));
-          double c_max = static_cast<double>(marginalheatmap_group->getAttribute("lim_zmax"));
+          double c_min = static_cast<double>(plot_group->getAttribute("lim_zmin"));
+          double c_max = static_cast<double>(plot_group->getAttribute("lim_zmax"));
 
-          for (auto &child : elem->children())
+
+          int i;
+          double y_max = 0;
+          std::vector<double> plot =
+              GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("plot"))]);
+          std::vector<double> y =
+              GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("y"))]);
+          std::vector<double> xi =
+              GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("xi"))]);
+          std::vector<double> x =
+              GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("x"))]);
+
+          int y_length = y.size();
+          int x_length = xi.size();
+
+          double xmin = static_cast<double>(plot_group->getAttribute("lim_xmin"));
+          double xmax = static_cast<double>(plot_group->getAttribute("lim_xmax"));
+          double ymin = static_cast<double>(plot_group->getAttribute("lim_ymin"));
+          double ymax = static_cast<double>(plot_group->getAttribute("lim_ymax"));
+          // plot step in marginal
+          for (i = 0; i < (is_vertical ? y_length : x_length); i++)
             {
-              if (child->hasChildNodes())
-                {
-                  for (auto &grandchild : child->children())
-                    {
-                      grandchild->remove();
-                    }
-                }
-              int i;
-              double y_max = 0;
-              std::vector<double> plot =
-                  GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("plot"))]);
-              std::vector<double> y =
-                  GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("y"))]);
-              std::vector<double> xi =
-                  GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("xi"))]);
-              std::vector<double> x =
-                  GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("x"))]);
-
-              int y_length = y.size();
-              int x_length = xi.size();
-
-              double xmin = static_cast<double>(marginalheatmap_group->getAttribute("lim_xmin"));
-              double xmax = static_cast<double>(marginalheatmap_group->getAttribute("lim_xmax"));
-              double ymin = static_cast<double>(marginalheatmap_group->getAttribute("lim_ymin"));
-              double ymax = static_cast<double>(marginalheatmap_group->getAttribute("lim_ymax"));
-              // plot step in marginal
-              for (i = 0; i < (is_vertical ? y_length : x_length); i++)
-                {
-                  if (is_vertical)
-                    {
-                      y[(is_vertical ? y_length : x_length) - i - 1] =
-                          std::isnan(plot[xind + i * x_length]) ? 0 : plot[xind + i * x_length];
-                      y_max = grm_max(y_max, y[(is_vertical ? y_length : x_length) - i - 1]);
-                    }
-                  else
-                    {
-                      y[i] = std::isnan(plot[x_length * (y_length - 1 - yind) + i])
-                                 ? 0
-                                 : plot[x_length * (y_length - 1 - yind) + i];
-                      y_max = grm_max(y_max, y[i]);
-                    }
-                }
-              for (i = 0; i < (is_vertical ? y_length : x_length); i++)
-                {
-                  y[i] = y[i] / y_max * (c_max / 15);
-                  xi[i] = x[i] + (is_vertical ? ymin : xmin);
-                }
-
-              double x_pos, y_pos;
-              unsigned int len = is_vertical ? y_length : x_length;
-              std::vector<double> x_step_boundaries(2 * len);
-              std::vector<double> y_step_values(2 * len);
-
-              x_step_boundaries[0] = is_vertical ? ymin : xmin;
-              for (i = 2; i < 2 * len; i += 2)
-                {
-                  x_step_boundaries[i - 1] = x_step_boundaries[i] =
-                      x_step_boundaries[0] + (i / 2) * (is_vertical ? (ymax - ymin) : (xmax - xmin)) / len;
-                }
-              x_step_boundaries[2 * len - 1] = is_vertical ? ymax : xmax;
-              y_step_values[0] = y[0];
-              for (i = 2; i < 2 * len; i += 2)
-                {
-                  y_step_values[i - 1] = y[i / 2 - 1];
-                  y_step_values[i] = y[i / 2];
-                }
-              y_step_values[2 * len - 1] = y[len - 1];
-
-              int id = static_cast<int>(global_root->getAttribute("id"));
-              global_root->setAttribute("id", id + 1);
-              auto id_str = std::to_string(id);
-
-              std::shared_ptr<GRM::Element> line_elem, marker_elem;
-
               if (is_vertical)
                 {
-                  line_elem =
-                      global_render->createPolyline("x" + id_str, y_step_values, "y" + id_str, x_step_boundaries);
-                  x_pos = (x_step_boundaries[yind * 2] + x_step_boundaries[yind * 2 + 1]) / 2;
-                  y_pos = y[yind];
-                  marker_elem = global_render->createPolymarker(y_pos, x_pos);
+                  y[(is_vertical ? y_length : x_length) - i - 1] =
+                      std::isnan(plot[xind + i * x_length]) ? 0 : plot[xind + i * x_length];
+                  y_max = grm_max(y_max, y[(is_vertical ? y_length : x_length) - i - 1]);
                 }
               else
                 {
-                  line_elem =
-                      global_render->createPolyline("x" + id_str, x_step_boundaries, "y" + id_str, y_step_values);
-                  x_pos = (x_step_boundaries[xind * 2] + x_step_boundaries[xind * 2 + 1]) / 2;
-                  y_pos = y[xind];
-                  marker_elem = global_render->createPolymarker(x_pos, y_pos);
+                  y[i] = std::isnan(plot[x_length * (y_length - 1 - yind) + i])
+                             ? 0
+                             : plot[x_length * (y_length - 1 - yind) + i];
+                  y_max = grm_max(y_max, y[i]);
                 }
+            }
+          for (i = 0; i < (is_vertical ? y_length : x_length); i++)
+            {
+              y[i] = y[i] / y_max * (c_max / 15);
+              xi[i] = x[i] + (is_vertical ? ymin : xmin);
+            }
 
-              global_render->setLineColorInd(line_elem, 989);
-              global_render->setMarkerColorInd(marker_elem, 2);
-              global_render->setMarkerType(marker_elem, -1);
-              global_render->setMarkerSize(marker_elem, 1.5 * (len / (is_vertical ? (ymax - ymin) : (xmax - xmin))));
+          double x_pos, y_pos;
+          unsigned int len = is_vertical ? y_length : x_length;
+          std::vector<double> x_step_boundaries(2 * len);
+          std::vector<double> y_step_values(2 * len);
 
-              auto line_elements = elem->querySelectorsAll("[name=\"line\"]");
-              for (auto &line_element : line_elements)
-                {
-                  line_element->remove();
-                }
+          x_step_boundaries[0] = is_vertical ? ymin : xmin;
+          for (i = 2; i < 2 * len; i += 2)
+            {
+              x_step_boundaries[i - 1] = x_step_boundaries[i] =
+                  x_step_boundaries[0] + (i / 2) * (is_vertical ? (ymax - ymin) : (xmax - xmin)) / len;
+            }
+          x_step_boundaries[2 * len - 1] = is_vertical ? ymax : xmax;
+          y_step_values[0] = y[0];
+          for (i = 2; i < 2 * len; i += 2)
+            {
+              y_step_values[i - 1] = y[i / 2 - 1];
+              y_step_values[i] = y[i / 2];
+            }
+          y_step_values[2 * len - 1] = y[len - 1];
 
-              marker_elem->setAttribute("name", "line");
-              line_elem->setAttribute("name", "line");
-              child->append(marker_elem);
-              child->append(line_elem);
-            } // end for child_series
+          int id = static_cast<int>(global_root->getAttribute("id"));
+          global_root->setAttribute("id", id + 1);
+          auto id_str = std::to_string(id);
+
+          std::shared_ptr<GRM::Element> line_elem, marker_elem;
+
+          if (is_vertical)
+            {
+              line_elem = global_render->createPolyline("x" + id_str, y_step_values, "y" + id_str, x_step_boundaries);
+              x_pos = (x_step_boundaries[yind * 2] + x_step_boundaries[yind * 2 + 1]) / 2;
+              y_pos = y[yind];
+              marker_elem = global_render->createPolymarker(y_pos, x_pos);
+            }
+          else
+            {
+              line_elem = global_render->createPolyline("x" + id_str, x_step_boundaries, "y" + id_str, y_step_values);
+              x_pos = (x_step_boundaries[xind * 2] + x_step_boundaries[xind * 2 + 1]) / 2;
+              y_pos = y[xind];
+              marker_elem = global_render->createPolymarker(x_pos, y_pos);
+            }
+
+          global_render->setLineColorInd(line_elem, 989);
+          global_render->setMarkerColorInd(marker_elem, 2);
+          global_render->setMarkerType(marker_elem, -1);
+          global_render->setMarkerSize(marker_elem, 1.5 * (len / (is_vertical ? (ymax - ymin) : (xmax - xmin))));
+
+          marker_elem->setAttribute("name", "line");
+          line_elem->setAttribute("name", "line");
+          child->append(marker_elem);
+          child->append(line_elem);
         }
-    }
-  else if (kind == "hist")
-    {
-      if (elem->hasAttribute("xind") || elem->hasAttribute("yind"))
+      else if (mkind == "all")
         {
           int xind, yind;
-          xind = elem->hasAttribute("xind") ? static_cast<int>(elem->getAttribute("xind")) : -1;
-          yind = elem->hasAttribute("yind") ? static_cast<int>(elem->getAttribute("yind")) : -1;
+          xind = static_cast<int>(elem->getAttribute("xind"));
+          yind = static_cast<int>(elem->getAttribute("yind"));
 
           if (xind == -1 && yind == -1)
             {
               return;
             }
 
-          bool is_horizontal = static_cast<std::string>(elem->getAttribute("orientation")) == "horizontal";
-          for (auto &childSeries : elem->children()) // iterate over all hist series
+          bool is_horizontal = static_cast<std::string>(child->getAttribute("orientation")) == "horizontal";
+          std::vector<std::shared_ptr<GRM::Element>> groups = child->children();
+
+          if ((is_horizontal && xind == -1) || (!is_horizontal && yind == -1))
             {
-              std::vector<std::shared_ptr<GRM::Element>> groups = childSeries->children();
-              std::vector<std::shared_ptr<GRM::Element>> bars;
+              continue;
+            }
+          if ((is_horizontal ? xind : yind) >= groups.size())
+            {
+              continue;
+            }
 
-              if (groups.size() == 2)
+          int cnt = 0;
+          for (const auto &rect : groups)
+            {
+              if (rect->hasAttribute("linecolorind")) continue;
+              if (cnt == (is_horizontal ? xind : yind))
                 {
-                  bars = groups[0]->children();
+                  rect->setAttribute("fillcolorind", 2);
+                  break;
                 }
-              else
-                {
-                  // error no fillgroups?
-                  return;
-                }
-
-              if ((is_horizontal && xind == -1) || (!is_horizontal && yind == -1))
-                {
-                  continue;
-                }
-              if ((is_horizontal ? xind : yind) >= bars.size())
-                {
-                  continue;
-                }
-              bars[(is_horizontal ? xind : yind)]->setAttribute("fillcolorind", 2);
+              cnt += 1;
             }
         }
     }
@@ -2283,11 +2260,11 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("gr3backgroundcolor"), processGR3BackgroundColor},
       {std::string("gr3cameralookat"), processGR3CameraLookAt},
       {std::string("imshow_information"), processImshowInformation},
-      {std::string("kind"), processKind},
       {std::string("linecolorind"), processLineColorInd},
       {std::string("linespec"), processLineSpec},
       {std::string("linetype"), processLineType},
       {std::string("linewidth"), processLineWidth},
+      {std::string("marginalheatmap_kind"), processMarginalheatmapKind},
       {std::string("markercolorind"), processMarkerColorInd},
       {std::string("markersize"), processMarkerSize},
       {std::string("markertype"), processMarkerType},

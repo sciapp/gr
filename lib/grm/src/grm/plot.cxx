@@ -999,7 +999,7 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
         {
           args_setdefault(*current_subplot, "levels", "i", PLOT_DEFAULT_TRICONT_LEVELS);
         }
-      else if (str_equals_any(kind, 2, "marginalheatmap", "hist"))
+      else if (strcmp(kind, "marginalheatmap") == 0)
         {
           args_setdefault(*current_subplot, "xind", "i", -1);
           args_setdefault(*current_subplot, "yind", "i", -1);
@@ -2145,7 +2145,6 @@ err_t plot_stairs(grm_args_t *subplot_args)
 
   grm_args_t **current_series;
   char *kind, *orientation;
-  int xind, yind;
   double *x_step_boundaries = nullptr, *y_step_values = nullptr;
   double xmin, xmax, ymin, ymax;
   double *y = nullptr, *xi = nullptr;
@@ -2154,15 +2153,11 @@ err_t plot_stairs(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
-  group->setAttribute("name", "step");
+  if (!global_root->lastChildElement()->hasAttribute("name")) group->setAttribute("name", "step");
 
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "orientation", "s", &orientation);
-  grm_args_values(subplot_args, "xind", "i", &xind);
-  grm_args_values(subplot_args, "yind", "i", &yind);
   is_vertical = strcmp(orientation, "vertical") == 0;
-  group->setAttribute("xind", xind);
-  group->setAttribute("yind", yind);
 
   std::shared_ptr<GRM::Element> element; // declare element here for multiple usages / assignments later
   while (*current_series != nullptr)
@@ -2182,12 +2177,13 @@ err_t plot_stairs(grm_args_t *subplot_args)
                                ERROR_PLOT_MISSING_DATA);
       cleanup_and_set_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length),
                                ERROR_PLOT_MISSING_DATA);
-      if (strcmp(kind, "marginalheatmap") == 0 && xind != -1 && yind != -1)
+      if (subGroup->parentElement()->hasAttribute("marginalheatmap_kind"))
         {
           double y_max = 0, *plot, c_min, c_max;
           unsigned int n = 0;
 
-          group->setAttribute("marginalheatmap", 1);
+          subGroup->setAttribute("calc_window_and_viewport_from_parent", 1);
+          subGroup->setAttribute("orientation", orientation);
 
           grm_args_values(*current_series, "xrange", "dd", &xmin, &xmax);
           grm_args_values(*current_series, "yrange", "dd", &ymin, &ymax);
@@ -2352,7 +2348,7 @@ err_t plot_stairs(grm_args_t *subplot_args)
           subGroup->append(element);
         }
       ++current_series;
-      if (strcmp(kind, "marginalheatmap") == 0 && xind != -1 && yind != -1)
+      if (strcmp(kind, "marginalheatmap") == 0)
         {
           free(y);
           free(xi);
@@ -2362,7 +2358,7 @@ err_t plot_stairs(grm_args_t *subplot_args)
   return ERROR_NONE;
 
 cleanup:
-  if (strcmp(kind, "marginalheatmap") == 0 && xind != -1 && yind != -1)
+  if (strcmp(kind, "marginalheatmap") == 0)
     {
       free(y);
       free(xi);
@@ -2634,7 +2630,7 @@ err_t plot_hist(grm_args_t *subplot_args)
   char *kind;
   grm_args_t **current_series;
   double *bar_centers = nullptr;
-  int bar_color_index = 989, i, xind, yind;
+  int bar_color_index = 989, i, xind = -1, yind = -1;
   double bar_color_rgb[3] = {-1};
   err_t error = ERROR_NONE;
   char *marginalheatmap_kind;
@@ -2647,11 +2643,6 @@ err_t plot_hist(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]);
   grm_args_values(subplot_args, "bar_color", "i", &bar_color_index);
-  grm_args_values(subplot_args, "xind", "i", &xind);
-  grm_args_values(subplot_args, "yind", "i", &yind);
-
-  group->setAttribute("xind", xind);
-  group->setAttribute("yind", yind);
 
   if (bar_color_rgb[0] != -1)
     {
@@ -2676,6 +2667,12 @@ err_t plot_hist(grm_args_t *subplot_args)
       auto subGroup = global_render->createSeries("hist_series");
       group->append(subGroup);
 
+      if (subGroup->parentElement()->hasAttribute("marginalheatmap_kind"))
+        {
+          xind = static_cast<int>(subGroup->parentElement()->getAttribute("xind"));
+          yind = static_cast<int>(subGroup->parentElement()->getAttribute("yind"));
+        }
+
       grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
       grm_args_values(*current_series, "edge_color", "i", &edge_color_index);
       if (edge_color_rgb[0] != -1)
@@ -2694,7 +2691,12 @@ err_t plot_hist(grm_args_t *subplot_args)
       is_horizontal = strcmp(orientation, "horizontal") == 0;
       grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
       grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
-      if (grm_args_values(subplot_args, "marginalheatmap_kind", "s", &marginalheatmap_kind)) y_min = 0.0;
+      if (grm_args_values(subplot_args, "marginalheatmap_kind", "s", &marginalheatmap_kind))
+        {
+          subGroup->setAttribute("calc_window_and_viewport_from_parent", 1);
+          subGroup->setAttribute("orientation", orientation);
+          y_min = 0.0;
+        }
 
       bar_width = (x_max - x_min) / num_bins;
 
@@ -2705,41 +2707,40 @@ err_t plot_hist(grm_args_t *subplot_args)
       for (i = 1; i < num_bins + 1; ++i)
         {
           double x = x_min + (i - 1) * bar_width;
-          std::shared_ptr<GRM::Element> fillRect1, fillRect2;
+          std::shared_ptr<GRM::Element> fillRect, drawRect;
 
           if (is_horizontal)
             {
-              fillRect1 = global_render->createFillRect(x, x + bar_width, y_min, bins[i - 1]);
-              global_render->setFillColorInd(fillRect1, bar_color_index);
+              fillRect = global_render->createFillRect(x, x + bar_width, y_min, bins[i - 1]);
+              global_render->setFillColorInd(fillRect, bar_color_index);
               if (i == xind + 1)
                 {
-                  global_render->setFillColorInd(fillRect1, 2);
+                  global_render->setFillColorInd(fillRect, 2);
                 }
             }
           else
             {
-              fillRect1 = global_render->createFillRect(y_min, bins[i - 1], x, x + bar_width);
-              global_render->setFillColorInd(fillRect1, bar_color_index);
+              fillRect = global_render->createFillRect(y_min, bins[i - 1], x, x + bar_width);
+              global_render->setFillColorInd(fillRect, bar_color_index);
               if (i == yind + 1)
                 {
-                  global_render->setFillColorInd(fillRect1, 2);
+                  global_render->setFillColorInd(fillRect, 2);
                 }
             }
-          global_render->setFillIntStyle(fillRect1, GKS_K_INTSTYLE_SOLID);
-          subGroup->append(fillRect1);
+          global_render->setFillIntStyle(fillRect, GKS_K_INTSTYLE_SOLID);
+          subGroup->append(fillRect);
 
           if (is_horizontal)
             {
-              fillRect2 = global_render->createFillRect(x, x + bar_width, y_min, bins[i - 1]);
+              drawRect = global_render->createDrawRect(x, x + bar_width, y_min, bins[i - 1]);
             }
           else
             {
-              fillRect2 = global_render->createFillRect(y_min, bins[i - 1], x, x + bar_width);
+              drawRect = global_render->createDrawRect(y_min, bins[i - 1], x, x + bar_width);
             }
 
-          global_render->setFillColorInd(fillRect2, edge_color_index);
-          global_render->setFillIntStyle(fillRect2, GKS_K_INTSTYLE_HOLLOW);
-          subGroup->append(fillRect2);
+          global_render->setLineColorInd(drawRect, edge_color_index);
+          subGroup->append(drawRect);
         }
 
       if (grm_args_contains(*current_series, "error"))
@@ -3887,7 +3888,7 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       int is_uniform_heatmap;
-      auto subGroup = global_render->createSeries("heatmap_series");
+      auto subGroup = global_render->createSeries("polarheatmap_series");
       group->append(subGroup);
       x = y = nullptr;
       grm_args_first_value(*current_series, "x", "D", &x, &cols);
@@ -4042,7 +4043,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   err_t error = ERROR_NONE;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
-  group->setAttribute("name", "heatmap");
+  if (!group->hasAttribute("name")) group->setAttribute("name", "heatmap");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
@@ -4278,25 +4279,23 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "marginalheatmap");
-  auto heatmap_group = global_render->createGroup("heatmap");
-  group->appendChild(heatmap_group);
-  currentDomElement = heatmap_group;
+  auto subGroup = global_render->createSeries("marginalheatmap_series");
+  group->append(subGroup);
+  currentDomElement = subGroup;
 
   plot_heatmap(subplot_args);
 
   grm_args_values(subplot_args, "marginalheatmap_kind", "s", &marginalheatmap_kind);
   grm_args_values(subplot_args, "xind", "i", &xind);
   grm_args_values(subplot_args, "yind", "i", &yind);
-  mkind = marginalheatmap_kind;
+
+  subGroup->setAttribute("marginalheatmap_kind", marginalheatmap_kind);
+  subGroup->setAttribute("xind", xind);
+  subGroup->setAttribute("yind", yind);
 
   for (k = 0; k < 2; k++)
     {
       double x_min, x_max, y_min, y_max, value, bin_max = 0;
-
-      auto subGroup = global_render->createGroup("mkind_" + mkind + "_series");
-      subGroup->setAttribute("calc_window_and_viewport_from_parent", 1);
-      group->appendChild(subGroup);
-      currentDomElement = subGroup;
 
       grm_args_values(subplot_args, "series", "A", &current_series);
       grm_args_values(*current_series, "algorithm", "s", &algorithm);
@@ -4385,23 +4384,19 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
 
       if (k == 0)
         {
-          subGroup->setAttribute("orientation", "vertical");
           grm_args_push(subplot_args, "orientation", "s", "vertical");
         }
       else
         {
-          subGroup->setAttribute("orientation", "horizontal");
           grm_args_push(subplot_args, "orientation", "s", "horizontal");
         }
 
       if (strcmp(marginalheatmap_kind, "all") == 0)
         {
-          subGroup->setAttribute("kind", "hist");
           plot_hist(subplot_args);
         }
       else if (strcmp(marginalheatmap_kind, "line") == 0 && xind != -1 && yind != -1)
         {
-          subGroup->setAttribute("kind", "line");
           plot_stairs(subplot_args);
         }
     }
