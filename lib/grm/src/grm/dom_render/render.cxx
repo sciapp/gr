@@ -3045,7 +3045,6 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
       polar_axes_element->remove();
     }
 
-
   n = rings;
   phiflip = static_cast<int>(elem->getAttribute("phiflip"));
   for (i = 0; i <= n; i++)
@@ -3055,18 +3054,12 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
         {
           if (i > 0)
             {
-              auto temp = render->createDrawArc(-r, r, -r, r, 0, 180);
-              temp->setAttribute("name", "polar_axes");
-              newGroup->append(temp);
-              render->setLineColorInd(temp, 88);
-
-              temp = render->createDrawArc(-r, r, -r, r, 180, 360);
+              auto temp = render->createDrawArc(-r, r, -r, r, 0, 360);
               temp->setAttribute("name", "polar_axes");
               newGroup->append(temp);
               render->setLineColorInd(temp, 88);
             }
           render->setTextAlign(newGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-
           x[0] = 0.05;
           y[0] = r;
           snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + tick * i);
@@ -3076,12 +3069,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
         }
       else
         {
-          auto temp = render->createDrawArc(-r, r, -r, r, 0, 180);
-          temp->setAttribute("name", "polar_axes");
-          newGroup->append(temp);
-          render->setLineColorInd(temp, 90);
-
-          temp = render->createDrawArc(-r, r, -r, r, 180, 360);
+          auto temp = render->createDrawArc(-r, r, -r, r, 0, 360);
           temp->setAttribute("name", "polar_axes");
           newGroup->append(temp);
           render->setLineColorInd(temp, 90);
