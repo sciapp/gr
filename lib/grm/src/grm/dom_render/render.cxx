@@ -2335,22 +2335,9 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
 
   for (auto &attribute : element->getAttributeNames())
     {
-      auto start = 0U;
-      auto end = attribute.find('_');
-      if (end == std::string::npos)
+      if (attrStringToFunc.find(attribute) != attrStringToFunc.end())
         {
-          if (attrStringToFunc.find(attribute) != attrStringToFunc.end())
-            {
-              attrStringToFunc[attribute](element);
-            }
-        }
-      else
-        {
-          auto substr = attribute.substr(start, end);
-          if (attrStringToFunc.find(substr) != attrStringToFunc.end())
-            {
-              attrStringToFunc[substr](element);
-            }
+          attrStringToFunc[attribute](element);
         }
     }
 
