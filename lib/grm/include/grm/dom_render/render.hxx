@@ -74,8 +74,8 @@ public:
                                             const std::shared_ptr<GRM::Context> &extContext = nullptr);
 
   std::shared_ptr<Element> createDrawPolarAxes(int angle_ticks, const std::string &kind, int phiflip,
-                                               const std::string &title = "", const std::string &norm = "",
-                                               double tick = 0.0, double line_width = 0.0);
+                                               const std::string &norm = "", double tick = 0.0,
+                                               double line_width = 0.0);
 
   std::shared_ptr<Element> createDrawPieLegend(const std::string &labels_key,
                                                std::optional<std::vector<std::string>> labels,

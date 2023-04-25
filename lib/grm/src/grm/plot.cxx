@@ -6638,7 +6638,24 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   int phiflip = 0;
   double interval;
   const char *norm, *title;
-  std::shared_ptr<GRM::Element> group;
+  std::shared_ptr<GRM::Element> group, subGroup;
+
+  if (global_render->getElementsByTagName("coordinate_system").empty())
+    {
+      group = global_render->createElement("coordinate_system");
+      if (!currentDomElement)
+        {
+          global_root->lastChildElement()->append(group);
+        }
+      else
+        {
+          currentDomElement->append(group);
+        }
+    }
+  else
+    {
+      group = global_render->getElementsByTagName("coordinate_system")[0];
+    }
 
   if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
     {
@@ -6655,26 +6672,19 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   if (grm_args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
 
   if (!grm_args_values(args, "title", "s", &title)) title = "";
+  group->parentElement()->setAttribute("title", title);
 
   if (strcmp(kind, "polar_histogram") == 0)
     {
-      group = global_render->createDrawPolarAxes(angle_ticks, kind, phiflip, title, norm, 1.0);
+      subGroup = global_render->createDrawPolarAxes(angle_ticks, kind, phiflip, norm, 1.0);
       grm_args_values(args, "r_max", "d", &r_max);
-      group->setAttribute("r_max", r_max);
+      subGroup->setAttribute("r_max", r_max);
     }
   else
     {
-      group = global_render->createDrawPolarAxes(angle_ticks, kind, phiflip, title, "");
+      subGroup = global_render->createDrawPolarAxes(angle_ticks, kind, phiflip, "");
     }
-
-  if (!currentDomElement)
-    {
-      global_root->lastChildElement()->append(group);
-    }
-  else
-    {
-      currentDomElement->append(group);
-    }
+  group->append(subGroup);
   return ERROR_NONE;
 }
 

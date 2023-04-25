@@ -35,20 +35,11 @@ std::shared_ptr<GRM::Element> global_root;
 std::shared_ptr<GRM::Render> global_render;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
-static std::set<std::string> parentTypes = {"group",
-                                            "layout_grid",
-                                            "layout_gridelement",
-                                            "draw_legend",
-                                            "draw_polar_axes",
-                                            "pie_plot_title_render",
-                                            "draw_pie_legend",
-                                            "figure",
-                                            "hexbin",
-                                            "colorbar",
-                                            "plot",
-                                            "coordinate_system",
-                                            "series",
-                                            "axes"};
+static std::set<std::string> parentTypes = {"group",           "layout_grid", "layout_gridelement",
+                                            "draw_legend",     "polar_axes",  "pie_plot_title_render",
+                                            "draw_pie_legend", "figure",      "hexbin",
+                                            "colorbar",        "plot",        "coordinate_system",
+                                            "series",          "axes"};
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
@@ -3953,7 +3944,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("contourf"), contourf},
           {std::string("draw_legend"), drawLegend},
           {std::string("draw_pie_legend"), drawPieLegend},
-          {std::string("draw_polar_axes"), drawPolarAxes},
+          {std::string("polar_axes"), drawPolarAxes},
           {std::string("drawarc"), drawArc},
           {std::string("drawgraphics"), drawGraphics},
           {std::string("drawimage"), drawImage},
@@ -4618,14 +4609,9 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawLegend(const std::string &l
 
 
 std::shared_ptr<GRM::Element> GRM::Render::createDrawPolarAxes(int angle_ticks, const std::string &kind, int phiflip,
-                                                               const std::string &title, const std::string &norm,
-                                                               double tick, double line_width)
+                                                               const std::string &norm, double tick, double line_width)
 {
-  auto element = createElement("draw_polar_axes");
-  if (!title.empty())
-    {
-      element->setAttribute("title", title);
-    }
+  auto element = createElement("polar_axes");
   if (!norm.empty())
     {
       element->setAttribute("norm", norm);
