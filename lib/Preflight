@@ -704,7 +704,31 @@ fi
 printf "%12s: %s\n" "agg" "$info" >&2
 rm -f $tmpsrc $tmpout $tmpver
 
-if [ "$expat" != "no" ]
+if [ "$libxml2" != "no" ]
+then
+  libxml2config=xml2-config
+  if [ "$LIBXML2_CONFIG" != "" ]
+  then
+    libxml2config=$LIBXML2_CONFIG
+  fi
+  if [ "`which $libxml2config 2>/dev/null`" = "" ]
+  then
+    libxml2defs="LIBXML2_CONFIG=false LIBXML2DEFS=-DNO_LIBXML2 LIBXML2INC= LIBXML2LIBS="
+    info="${red} no${normal} [xml2-config not found]"
+    ret=1
+  else
+    libxml2defs="LIBXML2_CONFIG=$libxml2config"
+    info="${green}yes${normal} [version `xml2-config --version`]"
+  fi
+else
+  libxml2defs="LIBXML2_CONFIG=false LIBXML2DEFS=-DNO_LIBXML2 LIBXML2INC= LIBXML2LIBS="
+  info="${yellow} no${normal} [disabled]"
+  ret=1
+fi
+printf "%12s: %s\n" "libxml2" "$info" >&2
+
+
+if [ "$expat" != "no" ] && [[ "$libxml2defs" =~ -DNO_LIBXML2 ]]
 then
   tmpout=`mktemp /tmp/a.out.XXXXX`
   tmpsrc=`mktemp /tmp/a$$XXXXX.c`
@@ -740,4 +764,4 @@ printf "%12s: %s\n" "expat" "$info" >&2
 rm -f $tmpsrc $tmpout $tmpver
 
 echo "" >&2
-echo $target $wxdefs $qt4defs $qt5defs $qt6defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $gldefs $zmqdefs $avdefs $cairodefs $tiffdefs $aggdefs $expatdefs $extradefs
+echo $target $wxdefs $qt4defs $qt5defs $qt6defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $gldefs $zmqdefs $avdefs $cairodefs $tiffdefs $aggdefs $libxml2defs $expatdefs $extradefs

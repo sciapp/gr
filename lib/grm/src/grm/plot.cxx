@@ -25,6 +25,7 @@ extern "C" {
 #include "gr3.h"
 #include "logging_int.h"
 
+// TODO: Use libxml2 if available!
 #ifndef NO_EXPAT
 #include <expat.h>
 #endif

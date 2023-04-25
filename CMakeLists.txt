@@ -93,6 +93,10 @@ find_package(Fontconfig)
 find_package(OpenGL OPTIONAL_COMPONENTS OpenGL)
 find_package(Gs)
 find_package(Expat)
+# CMake ships with a `FindLibXml2.cmake` module which does not configure needed libxml2 dependencies.
+# Thus, use the `libxml2-config.cmake` config file shipped with libxml which configures dependencies correctly by
+# skipping module search mode.
+find_package(LibXml2 NO_MODULE)
 if(${CMAKE_VERSION} VERSION_GREATER "3.16.0")
   find_package(
     Qt6
@@ -530,9 +534,15 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GKS)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GR)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GR3)
-  if(Expat_FOUND)
+  if(TARGET LibXml2::LibXml2)
+    target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} LibXml2::LibXml2)
+  elseif(EXPAT_FOUND)
     target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} Expat::Expat)
-  else()
+  endif()
+  if(NOT TARGET LibXml2::LibXml2)
+    target_compile_definitions(${LIBRARY} PRIVATE NO_LIBXML2)
+  endif()
+  if(NOT EXPAT_FOUND OR TARGET LibXml2::LibXml2)
     target_compile_definitions(${LIBRARY} PRIVATE NO_EXPAT)
   endif()
   if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"))

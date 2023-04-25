@@ -43,7 +43,7 @@ EXPORT void grm_render(void);
 EXPORT int grm_export(const char *file_path);
 EXPORT int grm_switch(unsigned int id);
 
-#ifndef NO_EXPAT
+#if !defined(NO_EXPAT) || !defined(NO_LIBXML2)
 EXPORT void grm_load_graphics_tree(FILE *file);
 #endif
 

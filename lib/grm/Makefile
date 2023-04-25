@@ -45,13 +45,19 @@ ifdef USE_STATIC_EXPAT_LIBS
 else
    EXPATLIBS = -lexpat
 endif
-     DEFINES = -DBUILDING_GR $(EXPATDEFS)
+LIBXML2_CONFIG = false
+   LIBXML2DEFS =
+    LIBXML2INC = `$(LIBXML2_CONFIG) --cflags 2>/dev/null`
+   LIBXML2LIBS = `$(LIBXML2_CONFIG) --libs 2>/dev/null`
+
+     DEFINES = -DBUILDING_GR $(EXPATDEFS) $(LIBXML2DEFS)
     INCLUDES = -I./include \
                -I./src \
                -I../gks \
                -I../gr \
                -I../gr3 \
-               -I$(THIRDPARTYDIR)/include
+               -I$(THIRDPARTYDIR)/include \
+               $(LIBXML2INC)
           CC = cc
       CFLAGS = $(DEFINES) -std=c90 -O3 -Wall -fPIC -fvisibility=hidden $(EXTRA_CFLAGS)
     CXXFLAGS = $(DEFINES) -std=c++17 -O3 -Wall -fPIC -fvisibility=hidden $(EXTRA_CXXFLAGS)
@@ -72,7 +78,7 @@ INSTALL_NAME =
 endif
       GRLIBS = -L ../gr/ -lGR
      GR3LIBS = -L ../gr3/ -lGR3
-        LIBS = $(GRLIBS) $(GR3LIBS) $(EXPATLIBS) -lm
+        LIBS = $(GRLIBS) $(GR3LIBS) $(EXPATLIBS) $(LIBXML2LIBS) -lm
 
 grplot_support =
 ifneq ($(QT5_QMAKE),)
