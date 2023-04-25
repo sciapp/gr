@@ -891,6 +891,14 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   swapx = xi1 > xi2;
   swapy = yi1 < yi2;
 
+  if (!p->bounding_stack.empty())
+    {
+      p->bounding_stack.top().x_max = xi2;
+      p->bounding_stack.top().x_min = xi1;
+      p->bounding_stack.top().y_max = yi2;
+      p->bounding_stack.top().y_min = yi1;
+    }
+
   if (!true_color)
     {
       QImage img = QImage(width, height, QImage::Format_RGB32);
