@@ -39,7 +39,7 @@
     <xs:element name="plot">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="coordinate_system" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="coordinate_system" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="series" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="text" minOccurs="0" maxOccurs="1"/> <!-- title -->
                 <xs:element ref="colorbar" minOccurs="0" maxOccurs="1"/>
@@ -109,6 +109,8 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="axes" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="grid" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="axes3d" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="grid3d" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="titles3d" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="polar_axes" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
@@ -120,6 +122,21 @@
 
     <!-- definition of grid -->
     <xs:element name="grid">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="x_major" type="xs:string" use="required"/>
+            <xs:attribute name="x_org_pos" type="xs:string" use="required"/>
+            <xs:attribute name="y_major" type="xs:string" use="required"/>
+            <xs:attribute name="y_org_pos" type="xs:string" use="required"/>
+            <xs:attribute name="x_tick" type="xs:string" />
+            <xs:attribute name="y_tick" type="xs:string" />
+            <xs:attribute name="x_org" type="xs:string" />
+            <xs:attribute name="y_org" type="xs:string" />
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of grid3d -->
+    <xs:element name="grid3d">
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="x_major" type="xs:string" use="required"/>
@@ -140,8 +157,27 @@
     <xs:element name="axes">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="text" minOccurs="0" maxOccurs="3"/> <!-- label -->
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/> <!-- label -->
             </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="tick_orientation" type="xs:string" use="required"/>
+            <xs:attribute name="x_org_pos" type="xs:string" use="required"/>
+            <xs:attribute name="y_org_pos" type="xs:string" use="required"/>
+            <xs:attribute name="x_tick" type="xs:string" />
+            <xs:attribute name="y_tick" type="xs:string" />
+            <xs:attribute name="x_major" type="xs:string" use="required"/>
+            <xs:attribute name="y_major" type="xs:string" use="required"/>
+            <xs:attribute name="x_label" type="xs:string"/>
+            <xs:attribute name="y_label" type="xs:string"/>
+            <xs:attribute name="tick_size" type="xs:string"/>
+            <xs:attribute name="x_org" type="xs:string"/>
+            <xs:attribute name="y_org" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of axes3d -->
+    <xs:element name="axes3d">
+        <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="tick_orientation" type="xs:string" use="required"/>
             <xs:attribute name="x_org_pos" type="xs:string" use="required"/>

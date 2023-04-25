@@ -47,7 +47,8 @@ static std::set<std::string> parentTypes = {"group",
                                             "colorbar",
                                             "plot",
                                             "coordinate_system",
-                                            "series"};
+                                            "series",
+                                            "axes"};
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
@@ -2227,8 +2228,8 @@ static void processYlabel(const std::shared_ptr<GRM::Element> &elem)
         }
       if (removed_elem || !ylabel_elem)
         {
-          elem->appendChild(text);
           render->setCharUp(text, -1, 0);
+          elem->appendChild(text);
         }
     }
 }

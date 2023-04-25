@@ -2630,7 +2630,7 @@ err_t plot_hist(grm_args_t *subplot_args)
   char *kind;
   grm_args_t **current_series;
   double *bar_centers = nullptr;
-  int bar_color_index = 989, i, xind = -1, yind = -1;
+  int bar_color_index = 989, i;
   double bar_color_rgb[3] = {-1};
   err_t error = ERROR_NONE;
   char *marginalheatmap_kind;
@@ -2666,12 +2666,6 @@ err_t plot_hist(grm_args_t *subplot_args)
 
       auto subGroup = global_render->createSeries("hist_series");
       group->append(subGroup);
-
-      if (subGroup->parentElement()->hasAttribute("marginalheatmap_kind"))
-        {
-          xind = static_cast<int>(subGroup->parentElement()->getAttribute("xind"));
-          yind = static_cast<int>(subGroup->parentElement()->getAttribute("yind"));
-        }
 
       grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
       grm_args_values(*current_series, "edge_color", "i", &edge_color_index);
@@ -2713,19 +2707,11 @@ err_t plot_hist(grm_args_t *subplot_args)
             {
               fillRect = global_render->createFillRect(x, x + bar_width, y_min, bins[i - 1]);
               global_render->setFillColorInd(fillRect, bar_color_index);
-              if (i == xind + 1)
-                {
-                  global_render->setFillColorInd(fillRect, 2);
-                }
             }
           else
             {
               fillRect = global_render->createFillRect(y_min, bins[i - 1], x, x + bar_width);
               global_render->setFillColorInd(fillRect, bar_color_index);
-              if (i == yind + 1)
-                {
-                  global_render->setFillColorInd(fillRect, 2);
-                }
             }
           global_render->setFillIntStyle(fillRect, GKS_K_INTSTYLE_SOLID);
           subGroup->append(fillRect);
@@ -6472,17 +6458,24 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   char *title;
   char *x_label, *y_label, *z_label;
   int tick_orientation = 1;
-
   int keep_aspect_ratio;
+  std::shared_ptr<GRM::Element> group;
 
-  auto group = global_render->createElement("coordinate_system");
-  if (!currentDomElement)
+  if (global_render->getElementsByTagName("coordinate_system").empty())
     {
-      global_root->lastChildElement()->append(group);
+      group = global_render->createElement("coordinate_system");
+      if (!currentDomElement)
+        {
+          global_root->lastChildElement()->append(group);
+        }
+      else
+        {
+          currentDomElement->append(group);
+        }
     }
   else
     {
-      currentDomElement->append(group);
+      group = global_render->getElementsByTagName("coordinate_system")[0];
     }
   grm_args_values(args, "kind", "s", &kind);
   grm_args_values(args, "xgrid", "i", &x_grid);
@@ -6580,7 +6573,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 
   if (pass == 1 && grm_args_values(args, "title", "s", &title))
     {
-      group->setAttribute("title", title);
+      group->parentElement()->setAttribute("title", title);
     }
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
@@ -6611,11 +6604,19 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     {
       if (grm_args_values(args, "xlabel", "s", &x_label))
         {
-          group->setAttribute("xlabel", x_label);
+          for (const auto &axes : group->getElementsByTagName("axes"))
+            {
+              if (static_cast<std::string>(axes->getAttribute("x_org_pos")) == "low")
+                axes->setAttribute("xlabel", x_label);
+            }
         }
       if (grm_args_values(args, "ylabel", "s", &y_label))
         {
-          group->setAttribute("ylabel", y_label);
+          for (const auto &axes : group->getElementsByTagName("axes"))
+            {
+              if (static_cast<std::string>(axes->getAttribute("x_org_pos")) == "low")
+                axes->setAttribute("ylabel", y_label);
+            }
         }
     }
 
