@@ -1049,10 +1049,7 @@ void plot_pre_plot(grm_args_t *plot_args)
   plot_set_text_encoding();
   grm_args_values(plot_args, "clear", "i", &clear);
   logger((stderr, "Got keyword \"clear\" with value %d\n", clear));
-  if (clear)
-    {
-      global_root->append(global_render->createClearWS());
-    }
+  global_root->setAttribute("clearws", clear);
   plot_process_wswindow_wsviewport(plot_args);
 }
 
@@ -1903,10 +1900,7 @@ void plot_post_plot(grm_args_t *plot_args)
 
   grm_args_values(plot_args, "update", "i", &update);
   logger((stderr, "Got keyword \"update\" with value %d\n", update));
-  if (update)
-    {
-      global_root->append(global_render->createUpdateWS());
-    }
+  global_root->setAttribute("updatews", update);
   plot_restore_text_encoding();
 }
 
@@ -6433,10 +6427,10 @@ err_t plot_raw(grm_args_t *plot_args)
   graphics_data = base64_decode(nullptr, base64_data, nullptr, &error);
   cleanup_if_error;
 
-  global_root->append(global_render->createClearWS());
+  global_root->setAttribute("clearws", 1);
   data_vec = std::vector<int>(graphics_data, graphics_data + strlen(graphics_data));
   global_root->append(global_render->createDrawGraphics("graphics", data_vec));
-  global_root->append(global_render->createUpdateWS());
+  global_root->setAttribute("updatews", 1);
 
 cleanup:
   if (graphics_data != nullptr)

@@ -32,6 +32,8 @@
             <xs:attribute name="wswindow_xmin" type="xs:string" use="required"/>
             <xs:attribute name="wswindow_ymax" type="xs:string" use="required"/>
             <xs:attribute name="wswindow_ymin" type="xs:string" use="required"/>
+            <xs:attribute name="clearws" type="xs:string" use="required"/>
+            <xs:attribute name="updatews" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
 

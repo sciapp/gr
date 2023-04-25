@@ -2464,11 +2464,6 @@ static void cellArray(const std::shared_ptr<GRM::Element> &element, const std::s
                (int *)&(GRM::get<std::vector<int>>((*context)[color])[0]));
 }
 
-static void clearWS(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
-{
-  gr_clearws();
-}
-
 static void colorbar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   double c_min, c_max;
@@ -3873,11 +3868,6 @@ static void triSurface(const std::shared_ptr<GRM::Element> &element, const std::
   gr_trisurface(nx, px_p, py_p, pz_p);
 }
 
-static void updateWS(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
-{
-  gr_updatews();
-}
-
 static void volume(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   int nx, ny, nz, algorithm;
@@ -3938,7 +3928,6 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("axes"), axes},
           {std::string("axes3d"), axes3d},
           {std::string("cellarray"), cellArray},
-          {std::string("clearws"), clearWS},
           {std::string("colorbar"), colorbar},
           {std::string("contour"), contour},
           {std::string("contourf"), contourf},
@@ -3977,7 +3966,6 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("titles3d"), titles3d},
           {std::string("tricontour"), triContour},
           {std::string("trisurface"), triSurface},
-          {std::string("updatews"), updateWS},
           {std::string("volume"), volume},
           {std::string("y_line"), drawYLine},
       };
@@ -4138,7 +4126,6 @@ void GRM::Render::render(const std::shared_ptr<GRM::Document> &document,
     }
 }
 
-
 void GRM::Render::render(std::shared_ptr<GRM::Document> const &document)
 {
   /*!
@@ -4157,7 +4144,6 @@ void GRM::Render::render(std::shared_ptr<GRM::Document> const &document)
         }
     }
 }
-
 
 void GRM::Render::render(const std::shared_ptr<GRM::Context> &extContext)
 {
@@ -4192,7 +4178,9 @@ void GRM::Render::render()
                       ? std::dynamic_pointer_cast<GRM::Render>(root->ownerDocument())
                       : GRM::Render::createRender();
   std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' ')}) << "\n";
+  if (static_cast<int>(root->getAttribute("clearws"))) gr_clearws();
   renderHelper(root, this->context);
+  if (static_cast<int>(root->getAttribute("updatews"))) gr_updatews();
   std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' ')}) << "\n";
 }
 
@@ -5400,23 +5388,10 @@ std::shared_ptr<GRM::Element> GRM::Render::createShadePoints(const std::string &
   return element;
 }
 
-
-std::shared_ptr<GRM::Element> GRM::Render::createClearWS()
-{
-  auto element = createElement("clearws");
-  return element;
-}
-
-std::shared_ptr<GRM::Element> GRM::Render::createUpdateWS()
-{
-  return createElement("updatews");
-}
-
 std::shared_ptr<GRM::Element> GRM::Render::createDrawGraphics(const std::string &data_key,
                                                               std::optional<std::vector<int>> data,
                                                               const std::shared_ptr<GRM::Context> &extContext)
 {
-
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
 
   auto element = createElement("drawgraphics");
@@ -5429,14 +5404,12 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawGraphics(const std::string 
   return element;
 }
 
-
 std::shared_ptr<GRM::Element> GRM::Render::createIsoSurfaceRenderElement(int drawable_type)
 {
   auto element = createElement("isosurface_render");
   element->setAttribute("drawable_type", drawable_type);
   return element;
 }
-
 
 std::shared_ptr<GRM::Element> GRM::Render::createLayoutGrid(const grm::Grid &grid)
 {
@@ -5459,7 +5432,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createLayoutGrid(const grm::Grid &gri
 
   return element;
 }
-
 
 std::shared_ptr<GRM::Element> GRM::Render::createLayoutGridElement(const grm::GridElement &gridElement,
                                                                    const grm::Slice &slice)
@@ -5488,7 +5460,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createLayoutGridElement(const grm::Gr
 
 std::shared_ptr<GRM::Element> GRM::Render::createPanzoom(double x, double y, double xzoom, double yzoom)
 {
-
   auto element = createElement("panzoom");
   element->setAttribute("x", x);
   element->setAttribute("y", y);
@@ -5499,7 +5470,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createPanzoom(double x, double y, dou
 
 std::shared_ptr<GRM::Element> GRM::Render::createYLine()
 {
-
   auto element = createElement("y_line");
   return element;
 }
@@ -5567,7 +5537,6 @@ void GRM::Render::setWindow(const std::shared_ptr<Element> &element, double xmin
   element->setAttribute("window_ymax", ymax);
 }
 
-
 void GRM::Render::setWSWindow(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin,
                               double ymax)
 {
@@ -5599,7 +5568,6 @@ void GRM::Render::setMarkerType(const std::shared_ptr<Element> &element, int typ
   element->setAttribute("markertype", type);
 }
 
-
 void GRM::Render::setMarkerType(const std::shared_ptr<Element> &element, const std::string &types_key,
                                 std::optional<std::vector<int>> types, const std::shared_ptr<GRM::Context> &extContext)
 {
@@ -5619,7 +5587,6 @@ void GRM::Render::setMarkerType(const std::shared_ptr<Element> &element, const s
     }
   element->setAttribute("markertypes", types_key);
 }
-
 
 void GRM::Render::setMarkerSize(const std::shared_ptr<Element> &element, double size)
 {
@@ -5652,6 +5619,7 @@ void GRM::Render::setMarkerSize(const std::shared_ptr<Element> &element, const s
     }
   element->setAttribute("markersizes", sizes_key);
 }
+
 void GRM::Render::setMarkerColorInd(const std::shared_ptr<Element> &element, int color)
 {
   /*!
@@ -5684,7 +5652,6 @@ void GRM::Render::setMarkerColorInd(const std::shared_ptr<Element> &element, con
   element->setAttribute("markercolorinds", colorinds_key);
 }
 
-
 void GRM::Render::setLineType(const std::shared_ptr<Element> &element, const std::string &types_key,
                               std::optional<std::vector<int>> types, const std::shared_ptr<GRM::Context> &extContext)
 {
@@ -5716,7 +5683,6 @@ void GRM::Render::setLineType(const std::shared_ptr<Element> &element, int type)
   element->setAttribute("linetype", type);
 }
 
-
 void GRM::Render::setLineWidth(const std::shared_ptr<Element> &element, const std::string &widths_key,
                                std::optional<std::vector<double>> widths,
                                const std::shared_ptr<GRM::Context> &extContext)
@@ -5738,7 +5704,6 @@ void GRM::Render::setLineWidth(const std::shared_ptr<Element> &element, const st
   element->setAttribute("linewidths", widths_key);
 }
 
-
 void GRM::Render::setLineWidth(const std::shared_ptr<Element> &element, double width)
 {
   /*!
@@ -5749,7 +5714,6 @@ void GRM::Render::setLineWidth(const std::shared_ptr<Element> &element, double w
    */
   element->setAttribute("linewidth", width);
 }
-
 
 void GRM::Render::setLineColorInd(const std::shared_ptr<Element> &element, const std::string &colorinds_key,
                                   std::optional<std::vector<int>> colorinds,
@@ -5782,7 +5746,6 @@ void GRM::Render::setLineColorInd(const std::shared_ptr<Element> &element, int c
    */
   element->setAttribute("linecolorind", color);
 }
-
 
 void GRM::Render::setTextFontPrec(const std::shared_ptr<Element> &element, int font, int prec)
 {
@@ -5840,7 +5803,6 @@ void GRM::Render::setTextWidthAndHeight(const std::shared_ptr<Element> &element,
   element->setAttribute("height", height);
 }
 
-
 void GRM::Render::setLineSpec(const std::shared_ptr<Element> &element, const std::string &spec)
 {
   /*!
@@ -5889,7 +5851,6 @@ void GRM::Render::setFillIntStyle(const std::shared_ptr<GRM::Element> &element, 
    */
   element->setAttribute("fillintstyle", index);
 }
-
 
 void GRM::Render::setFillColorInd(const std::shared_ptr<GRM::Element> &element, int color)
 {
@@ -6000,7 +5961,6 @@ void GRM::Render::setSelntran(const std::shared_ptr<Element> &element, int trans
   element->setAttribute("selntran", transform);
 }
 
-
 void GRM::Render::setGR3BackgroundColor(const std::shared_ptr<GRM::Element> &element, double red, double green,
                                         double blue, double alpha)
 {
@@ -6044,7 +6004,6 @@ void GRM::Render::setGR3CameraLookAt(const std::shared_ptr<GRM::Element> &elemen
   element->setAttribute("gr3cameralookat_up_z", up_z);
 }
 
-
 void GRM::Render::setTextColorInd(const std::shared_ptr<GRM::Element> &element, int index)
 {
   /*!
@@ -6055,7 +6014,6 @@ void GRM::Render::setTextColorInd(const std::shared_ptr<GRM::Element> &element, 
 
   element->setAttribute("textcolorind", index);
 }
-
 
 void GRM::Render::setBorderColorInd(const std::shared_ptr<GRM::Element> &element, int index)
 {
@@ -6119,7 +6077,6 @@ void GRM::Render::setResampleMethod(const std::shared_ptr<GRM::Element> &element
   element->setAttribute("resamplemethod", resample);
 }
 
-
 void GRM::Render::setTextEncoding(const std::shared_ptr<Element> &element, int encoding)
 {
   /*!
@@ -6129,7 +6086,6 @@ void GRM::Render::setTextEncoding(const std::shared_ptr<Element> &element, int e
    */
   element->setAttribute("textencoding", encoding);
 }
-
 
 void GRM::Render::setSubplot(const std::shared_ptr<GRM::Element> &element, double xmin, double xmax, double ymin,
                              double ymax)
@@ -6161,7 +6117,6 @@ void GRM::Render::setXTickLabels(std::shared_ptr<GRM::Element> group, const std:
     }
   group->setAttribute("xticklabels", key);
 }
-
 
 void GRM::Render::setNextColor(const std::shared_ptr<GRM::Element> &element, const std::string &color_indices_key,
                                const std::vector<int> &color_indices, const std::shared_ptr<GRM::Context> &extContext)

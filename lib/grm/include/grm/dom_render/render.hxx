@@ -182,10 +182,6 @@ public:
                       const std::string &strides_key, std::optional<std::vector<int>> strides,
                       const std::shared_ptr<GRM::Context> &extContext = nullptr);
 
-  std::shared_ptr<Element> createClearWS();
-
-  std::shared_ptr<Element> createUpdateWS();
-
   std::shared_ptr<Element> createDrawGraphics(const std::string &data_key, std::optional<std::vector<int>> data,
                                               const std::shared_ptr<Context> &extContext = nullptr);
 
