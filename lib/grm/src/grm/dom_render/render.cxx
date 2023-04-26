@@ -2666,6 +2666,8 @@ static void drawIsosurface3(const std::shared_ptr<GRM::Element> &elem, const std
 
   float light_parameters[4];
 
+  gr3_clear();
+
   /* Save and restore original light parameters */
   gr3_getlightparameters(&light_parameters[0], &light_parameters[1], &light_parameters[2], &light_parameters[3]);
   gr3_setlightparameters(ambient, diffuse, specular, specular_power);
@@ -3674,6 +3676,67 @@ static void quiver(const std::shared_ptr<GRM::Element> &element, const std::shar
   gr_quiver(x_vec.size(), y_vec.size(), x_p, y_p, u_p, v_p, color);
 }
 
+static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Processing function for stem
+   *
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   */
+  double stem_x[2], stem_y[2] = {0.0};
+  std::string orientation, spec;
+  int is_vertical;
+  double x_min, x_max, y_min, y_max;
+  unsigned int x_length, y_length;
+  unsigned int i;
+  std::vector<double> x_vec, y_vec;
+
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+  orientation = static_cast<std::string>(element->getAttribute("orientation"));
+  spec = static_cast<std::string>(element->getAttribute("spec"));
+
+  is_vertical = orientation == "vertical";
+  x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  x_length = x_vec.size();
+  y_length = y_vec.size();
+
+  if (element->parentElement()->hasAttribute("yrange_min"))
+    stem_y[0] = static_cast<double>(element->parentElement()->getAttribute("yrange_min"));
+
+  global_render->setLineSpec(element, spec);
+  element->append(global_render->createYLine());
+
+  for (i = 0; i < x_length; ++i)
+    {
+      stem_x[0] = stem_x[1] = x_vec[i];
+      stem_y[1] = y_vec[i];
+      if (is_vertical)
+        {
+          element->append(global_render->createPolyline(stem_y[0], stem_y[1], stem_x[0], stem_x[1]));
+        }
+      else
+        {
+          element->append(global_render->createPolyline(stem_x[0], stem_x[1], stem_y[0], stem_y[1]));
+        }
+    }
+
+  int id = static_cast<int>(global_root->getAttribute("id"));
+  std::string str = std::to_string(id);
+  if (is_vertical)
+    {
+      element->append(
+          global_render->createPolymarker("y" + str, y_vec, "x" + str, x_vec, nullptr, GKS_K_MARKERTYPE_SOLID_CIRCLE));
+    }
+  else
+    {
+      element->append(
+          global_render->createPolymarker("x" + str, x_vec, "y" + str, y_vec, nullptr, GKS_K_MARKERTYPE_SOLID_CIRCLE));
+    }
+}
+
 static void shadePoints(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   int xform, w, h, n;
@@ -3912,6 +3975,37 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
   colorbar->setAttribute("lim_cmax", dlim[1]);
 }
 
+static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  static std::map<std::string,
+                  std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)>>
+      seriesNameToFunc{
+          {std::string("contour"), contour},
+          {std::string("contourf"), contourf},
+          {std::string("hexbin"), hexbin},
+          {std::string("isosurface"), drawIsosurface3},
+          {std::string("quiver"), quiver},
+          {std::string("shade"), shadePoints},
+          {std::string("stem"), stem},
+          {std::string("surface"), surface},
+          {std::string("tricontour"), triContour},
+          {std::string("trisurface"), triSurface},
+          {std::string("volume"), volume},
+      };
+
+  try
+    {
+      std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> f =
+          seriesNameToFunc[static_cast<std::string>(element->getAttribute("name"))];
+      f(element, context);
+    }
+  catch (std::bad_function_call &e)
+    {
+      fprintf(stderr,
+              "Series is not in render implemented yet\n"); // todo: when all kinds are implemented here throw an error
+    }
+}
+
 static void processElement(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
@@ -3929,8 +4023,6 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("axes3d"), axes3d},
           {std::string("cellarray"), cellArray},
           {std::string("colorbar"), colorbar},
-          {std::string("contour"), contour},
-          {std::string("contourf"), contourf},
           {std::string("draw_legend"), drawLegend},
           {std::string("draw_pie_legend"), drawPieLegend},
           {std::string("polar_axes"), drawPolarAxes},
@@ -3947,9 +4039,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("gr3drawmesh"), gr3DrawMesh},
           {std::string("grid"), grid},
           {std::string("grid3d"), grid3d},
-          {std::string("hexbin"), hexbin},
           {std::string("isosurface_render"), isosurfaceRender},
-          {std::string("isosurface3"), drawIsosurface3},
           {std::string("layout_grid"), layoutGrid},
           {std::string("layout_gridelement"), layoutGridElement},
           {std::string("nonuniformcellarray"), nonuniformcellarray},
@@ -3959,18 +4049,13 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("polyline3d"), polyline3d},
           {std::string("polymarker"), polymarker},
           {std::string("polymarker3d"), polymarker3d},
-          {std::string("quiver"), quiver},
-          {std::string("shadepoints"), shadePoints},
-          {std::string("surface"), surface},
+          {std::string("series"), ProcessSeries},
           {std::string("text"), text},
           {std::string("titles3d"), titles3d},
-          {std::string("tricontour"), triContour},
-          {std::string("trisurface"), triSurface},
-          {std::string("volume"), volume},
           {std::string("y_line"), drawYLine},
       };
   /*! Modifier */
-  if (str_equals_any(element->localName().c_str(), 5, "group", "figure", "plot", "coordinate_system", "series"))
+  if (str_equals_any(element->localName().c_str(), 4, "group", "figure", "plot", "coordinate_system"))
     {
       processAttributes(element);
     }
@@ -4822,7 +4907,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createQuiver(const std::string &x_key
    *
    */
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
-  auto element = createElement("quiver");
+  auto element = createSeries("quiver");
   element->setAttribute("x", x_key);
   element->setAttribute("y", y_key);
   element->setAttribute("u", u_key);
@@ -4849,88 +4934,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createQuiver(const std::string &x_key
   return element;
 }
 
-
-std::shared_ptr<GRM::Element>
-GRM::Render::createContour(const std::string &px_key, std::optional<std::vector<double>> px, const std::string &py_key,
-                           std::optional<std::vector<double>> py, const std::string &h_key,
-                           std::optional<std::vector<double>> h, const std::string &pz_key,
-                           std::optional<std::vector<double>> pz, int major_h,
-                           const std::shared_ptr<GRM::Context> &extContext)
-{
-  /*
-   * This function can be used to create a contour GRM::Element
-   *
-   */
-  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
-  auto element = createElement("contour");
-  element->setAttribute("px", px_key);
-  element->setAttribute("py", py_key);
-  element->setAttribute("h", h_key);
-  element->setAttribute("pz", pz_key);
-  element->setAttribute("major_h", major_h);
-
-  if (px != std::nullopt)
-    {
-      (*useContext)[px_key] = *px;
-    }
-  if (py != std::nullopt)
-    {
-      (*useContext)[py_key] = *py;
-    }
-  if (h != std::nullopt)
-    {
-      (*useContext)[h_key] = *h;
-    }
-  if (pz != std::nullopt)
-    {
-      (*useContext)[pz_key] = *pz;
-    }
-
-  return element;
-}
-
-
-std::shared_ptr<GRM::Element>
-GRM::Render::createContourf(const std::string &px_key, std::optional<std::vector<double>> px, const std::string &py_key,
-                            std::optional<std::vector<double>> py, const std::string &h_key,
-                            std::optional<std::vector<double>> h, const std::string &pz_key,
-                            std::optional<std::vector<double>> pz, int major_h,
-                            const std::shared_ptr<GRM::Context> &extContext)
-{
-  /*!
-   * This function can be used to create a contour GRM::Element
-   *
-   */
-  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
-  auto element = createElement("contourf");
-
-  element->setAttribute("px", px_key);
-  element->setAttribute("py", py_key);
-  element->setAttribute("h", h_key);
-  element->setAttribute("pz", pz_key);
-  element->setAttribute("major_h", major_h);
-
-  if (px != std::nullopt)
-    {
-      (*useContext)[px_key] = *px;
-    }
-  if (py != std::nullopt)
-    {
-      (*useContext)[py_key] = *py;
-    }
-  if (h != std::nullopt)
-    {
-      (*useContext)[h_key] = *h;
-    }
-  if (pz != std::nullopt)
-    {
-      (*useContext)[pz_key] = *pz;
-    }
-
-  return element;
-}
-
-
 std::shared_ptr<GRM::Element> GRM::Render::createHexbin(int x_length, const std::string &x_key,
                                                         std::optional<std::vector<double>> x, const std::string &y_key,
                                                         std::optional<std::vector<double>> y, int nbins,
@@ -4941,7 +4944,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createHexbin(int x_length, const std:
    */
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
 
-  auto element = createElement("hexbin");
+  auto element = createSeries("hexbin");
   element->setAttribute("x_length", x_length);
   element->setAttribute("x", x_key);
   element->setAttribute("y", y_key);
@@ -4968,7 +4971,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createVolume(int nx, int ny, int nz, 
    */
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
 
-  auto element = createElement("volume");
+  auto element = createSeries("volume");
   element->setAttribute("nx", nx);
   element->setAttribute("ny", ny);
   element->setAttribute("nz", nz);
@@ -5045,7 +5048,7 @@ GRM::Render::createSurface(const std::string &px_key, std::optional<std::vector<
                            const std::shared_ptr<GRM::Context> &extContext)
 {
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
-  auto element = createElement("surface");
+  auto element = createSeries("surface");
   element->setAttribute("px", px_key);
   element->setAttribute("py", py_key);
   element->setAttribute("pz", pz_key);
@@ -5231,38 +5234,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createGR3DrawMesh(
   return element;
 }
 
-std::shared_ptr<GRM::Element> GRM::Render::createGR3Isosurface(
-    int nx, int ny, int nz, const std::string &data_key, std::optional<std::vector<double>> data, double isovalue,
-    const std::string &color_key, std::optional<std::vector<double>> color, const std::string &strides_key,
-    std::optional<std::vector<int>> strides, const std::shared_ptr<GRM::Context> &extContext)
-{
-  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
-
-  auto element = createElement("isosurface3");
-  element->setAttribute("nx", nx);
-  element->setAttribute("ny", ny);
-  element->setAttribute("nz", nz);
-  element->setAttribute("data", data_key);
-  element->setAttribute("isovalue", isovalue);
-  element->setAttribute("color", color_key);
-  element->setAttribute("strides", strides_key);
-
-  if (data != std::nullopt)
-    {
-      (*useContext)[data_key] = *data;
-    }
-  if (color != std::nullopt)
-    {
-      (*useContext)[color_key] = *color;
-    }
-  if (strides != std::nullopt)
-    {
-      (*useContext)[strides_key] = *strides;
-    }
-
-  return element;
-}
-
 std::shared_ptr<GRM::Element>
 GRM::Render::createTriSurface(const std::string &px_key, std::optional<std::vector<double>> px,
                               const std::string &py_key, std::optional<std::vector<double>> py,
@@ -5270,7 +5241,7 @@ GRM::Render::createTriSurface(const std::string &px_key, std::optional<std::vect
                               const std::shared_ptr<GRM::Context> &extContext)
 {
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
-  auto element = createElement("trisurface");
+  auto element = createSeries("trisurface");
   element->setAttribute("px", px_key);
   element->setAttribute("py", py_key);
   element->setAttribute("pz", pz_key);
@@ -5299,7 +5270,7 @@ GRM::Render::createTriContour(const std::string &px_key, std::optional<std::vect
                               const std::shared_ptr<GRM::Context> &extContext)
 {
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
-  auto element = createElement("tricontour");
+  auto element = createSeries("tricontour");
   element->setAttribute("px", px_key);
   element->setAttribute("py", py_key);
   element->setAttribute("pz", pz_key);
@@ -5371,7 +5342,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createShadePoints(const std::string &
                                                              int h, const std::shared_ptr<GRM::Context> &extContext)
 {
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
-  auto element = createElement("shadepoints");
+  auto element = createSeries("shade");
   if (x != std::nullopt)
     {
       (*useContext)[x_key] = *x;

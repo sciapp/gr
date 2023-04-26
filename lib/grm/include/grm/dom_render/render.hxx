@@ -113,19 +113,6 @@ public:
                                         const std::string &v_key, std::optional<std::vector<double>> v, int color,
                                         const std::shared_ptr<Context> &extContext = nullptr);
 
-  std::shared_ptr<Element> createContour(const std::string &px_key, std::optional<std::vector<double>> px,
-                                         const std::string &py_key, std::optional<std::vector<double>> py,
-                                         const std::string &h_key, std::optional<std::vector<double>> h,
-                                         const std::string &pz_key, std::optional<std::vector<double>> pz, int major_h,
-                                         const std::shared_ptr<Context> &extContext = nullptr);
-
-
-  std::shared_ptr<Element> createContourf(const std::string &px_key, std::optional<std::vector<double>> px,
-                                          const std::string &py_key, std::optional<std::vector<double>> py,
-                                          const std::string &h_key, std::optional<std::vector<double>> h,
-                                          const std::string &pz_key, std::optional<std::vector<double>> pz, int major_h,
-                                          const std::shared_ptr<Context> &extContext = nullptr);
-
   std::shared_ptr<Element> createHexbin(int x_length, const std::string &x_key, std::optional<std::vector<double>> x,
                                         const std::string &y_key, std::optional<std::vector<double>> y, int nbins,
                                         const std::shared_ptr<Context> &extContext = nullptr);
@@ -175,12 +162,6 @@ public:
                     const std::string &ups_key, std::optional<std::vector<double>> ups, const std::string &colors_key,
                     std::optional<std::vector<double>> colors, const std::string &scales_key,
                     std::optional<std::vector<double>> scales, const std::shared_ptr<Context> &extContext = nullptr);
-
-  std::shared_ptr<GRM::Element>
-  createGR3Isosurface(int nx, int ny, int nz, const std::string &data_key, std::optional<std::vector<double>> data,
-                      double isovalue, const std::string &color_key, std::optional<std::vector<double>> color,
-                      const std::string &strides_key, std::optional<std::vector<int>> strides,
-                      const std::shared_ptr<GRM::Context> &extContext = nullptr);
 
   std::shared_ptr<Element> createDrawGraphics(const std::string &data_key, std::optional<std::vector<int>> data,
                                               const std::shared_ptr<Context> &extContext = nullptr);

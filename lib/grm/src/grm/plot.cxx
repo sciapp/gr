@@ -2520,9 +2520,6 @@ err_t plot_quiver(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
-      auto subGroup = global_render->createSeries("quiver_series");
-      group->append(subGroup);
-
       double *x = nullptr, *y = nullptr, *u = nullptr, *v = nullptr;
       unsigned int x_length, y_length, u_length, v_length;
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
@@ -2540,7 +2537,7 @@ err_t plot_quiver(grm_args_t *subplot_args)
       int id = (int)global_root->getAttribute("id");
       std::string str = std::to_string(id);
       global_root->setAttribute("id", id + 1);
-      subGroup->append(
+      group->append(
           global_render->createQuiver("x" + str, x_vec, "y" + str, y_vec, "u" + str, u_vec, "v" + str, v_vec, 1));
 
       ++current_series;
@@ -2552,66 +2549,48 @@ err_t plot_quiver(grm_args_t *subplot_args)
 
 err_t plot_stem(grm_args_t *subplot_args)
 {
-  double stem_x[2], stem_y[2] = {0.0};
   grm_args_t **current_series;
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
   group->setAttribute("name", "stem");
   char *orientation;
-  int is_vertical;
-  double x_min, x_max, y_min, y_max;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "orientation", "s", &orientation);
 
-  is_vertical = strcmp(orientation, "vertical") == 0;
   while (*current_series != nullptr)
     {
       double *x, *y;
       unsigned int x_length, y_length;
       char *spec;
-      unsigned int i;
+      double y_min, y_max;
 
-      auto subGroup = global_render->createSeries("stem_series");
+      auto subGroup = global_render->createSeries("stem");
       group->append(subGroup);
+
+      subGroup->setAttribute("orientation", orientation);
 
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
 
-      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max)) stem_y[0] = y_min;
-
-      subGroup->append(global_render->createYLine());
-      grm_args_values(*current_series, "spec", "s", &spec);
-
-      global_render->setLineSpec(subGroup, spec);
-      for (i = 0; i < x_length; ++i)
-        {
-          stem_x[0] = stem_x[1] = x[i];
-          stem_y[1] = y[i];
-          if (is_vertical)
-            {
-              subGroup->append(global_render->createPolyline(stem_y[0], stem_y[1], stem_x[0], stem_x[1]));
-            }
-          else
-            {
-              subGroup->append(global_render->createPolyline(stem_x[0], stem_x[1], stem_y[0], stem_y[1]));
-            }
-        }
-      std::vector<double> x_vec(x, x + x_length);
-      std::vector<double> y_vec(y, y + x_length);
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string str = std::to_string(id);
-      if (is_vertical)
-        {
-          subGroup->append(global_render->createPolymarker("y" + str, y_vec, "x" + str, x_vec, nullptr,
-                                                           GKS_K_MARKERTYPE_SOLID_CIRCLE));
-        }
-      else
-        {
-          subGroup->append(global_render->createPolymarker("x" + str, x_vec, "y" + str, y_vec, nullptr,
-                                                           GKS_K_MARKERTYPE_SOLID_CIRCLE));
-        }
+      auto context = global_render->getContext();
+
+      std::vector<double> x_vec(x, x + x_length);
+      std::vector<double> y_vec(y, y + x_length);
+
+      (*context)["x" + str] = x_vec;
+      subGroup->setAttribute("x", "x" + str);
+      (*context)["y" + str] = y_vec;
+      subGroup->setAttribute("y", "y" + str);
+
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max)) subGroup->setAttribute("yrange_min", y_min);
+
+      grm_args_values(*current_series, "spec", "s", &spec);
+      subGroup->setAttribute("spec", spec);
+
       global_root->setAttribute("id", ++id);
       ++current_series;
     }
@@ -3610,7 +3589,7 @@ err_t plot_contour(grm_args_t *subplot_args)
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
-      auto subGroup = global_render->createSeries("contour_series");
+      auto subGroup = global_render->createSeries("contour");
       group->append(subGroup);
       if (x_length == y_length && x_length == z_length)
         {
@@ -3648,9 +3627,18 @@ err_t plot_contour(grm_args_t *subplot_args)
           std::vector<double> pz_vec =
               std::vector<double>(gridit_z, gridit_z + PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N);
 
-          auto contour = global_render->createContour("px" + str, px_vec, "py" + str, py_vec, "h" + str, h_vec,
-                                                      "pz" + str, pz_vec, 1000);
-          subGroup->append(contour);
+          auto context = global_render->getContext();
+
+          (*context)["px" + str] = px_vec;
+          subGroup->setAttribute("px", "px" + str);
+          (*context)["py" + str] = py_vec;
+          subGroup->setAttribute("py", "py" + str);
+          (*context)["pz" + str] = pz_vec;
+          subGroup->setAttribute("pz", "pz" + str);
+          (*context)["h" + str] = h_vec;
+          subGroup->setAttribute("h", "h" + str);
+
+          subGroup->setAttribute("major_h", 1000);
         }
       else
         {
@@ -3673,9 +3661,18 @@ err_t plot_contour(grm_args_t *subplot_args)
           std::vector<double> h_vec = std::vector<double>(h, h + num_levels);
           std::vector<double> pz_vec = std::vector<double>(z, z + x_length * y_length);
 
-          auto contour = global_render->createContour("px" + str, px_vec, "py" + str, py_vec, "h" + str, h_vec,
-                                                      "pz" + str, pz_vec, 1000);
-          subGroup->append(contour);
+          auto context = global_render->getContext();
+
+          (*context)["px" + str] = px_vec;
+          subGroup->setAttribute("px", "px" + str);
+          (*context)["py" + str] = py_vec;
+          subGroup->setAttribute("py", "py" + str);
+          (*context)["pz" + str] = pz_vec;
+          subGroup->setAttribute("pz", "pz" + str);
+          (*context)["h" + str] = h_vec;
+          subGroup->setAttribute("h", "h" + str);
+
+          subGroup->setAttribute("major_h", 1000);
         }
       ++current_series;
     }
@@ -3724,7 +3721,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
-      auto subGroup = global_render->createSeries("contourf_series");
+      auto subGroup = global_render->createSeries("contourf");
       group->append(subGroup);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -3771,9 +3768,18 @@ err_t plot_contourf(grm_args_t *subplot_args)
           std::vector<double> pz_vec =
               std::vector<double>(gridit_z, gridit_z + PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N);
 
-          auto contour = global_render->createContourf("px" + str, px_vec, "py" + str, py_vec, "h" + str, h_vec,
-                                                       "pz" + str, pz_vec, 0);
-          subGroup->append(contour);
+          auto context = global_render->getContext();
+
+          (*context)["px" + str] = px_vec;
+          subGroup->setAttribute("px", "px" + str);
+          (*context)["py" + str] = py_vec;
+          subGroup->setAttribute("py", "py" + str);
+          (*context)["pz" + str] = pz_vec;
+          subGroup->setAttribute("pz", "pz" + str);
+          (*context)["h" + str] = h_vec;
+          subGroup->setAttribute("h", "h" + str);
+
+          subGroup->setAttribute("major_h", 0);
         }
       else
         {
@@ -3796,9 +3802,18 @@ err_t plot_contourf(grm_args_t *subplot_args)
           std::vector<double> h_vec = std::vector<double>(h, h + num_levels);
           std::vector<double> pz_vec = std::vector<double>(z, z + x_length * y_length);
 
-          auto contour = global_render->createContourf("px" + str, px_vec, "py" + str, py_vec, "h" + str, h_vec,
-                                                       "pz" + str, pz_vec, 0);
-          subGroup->append(contour);
+          auto context = global_render->getContext();
+
+          (*context)["px" + str] = px_vec;
+          subGroup->setAttribute("px", "px" + str);
+          (*context)["py" + str] = py_vec;
+          subGroup->setAttribute("py", "py" + str);
+          (*context)["pz" + str] = pz_vec;
+          subGroup->setAttribute("pz", "pz" + str);
+          (*context)["h" + str] = h_vec;
+          subGroup->setAttribute("h", "h" + str);
+
+          subGroup->setAttribute("major_h", 0);
         }
       ++current_series;
     }
@@ -4489,8 +4504,6 @@ err_t plot_surface(grm_args_t *subplot_args)
     {
       double *x = nullptr, *y = nullptr, *z = nullptr;
       unsigned int x_length, y_length, z_length;
-      auto subGroup = global_render->createSeries("surface_series");
-      group->append(subGroup);
       const char *range_keys[] = {"xrange", "yrange"};
 
       value_array_ptrs[0] = &x;
@@ -4573,7 +4586,7 @@ err_t plot_surface(grm_args_t *subplot_args)
       std::string id = std::to_string(id_int);
       auto temp = global_render->createSurface("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec,
                                                GR_OPTION_COLORED_MESH, accelerate);
-      subGroup->append(temp);
+      group->append(temp);
 
       for (int i = 0; i < array_size(value_array_ptrs); ++i)
         {
@@ -4808,7 +4821,7 @@ err_t plot_isosurface(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
 
-      auto subGroup = global_render->createSeries("isosurface_series");
+      auto subGroup = global_render->createSeries("isosurface");
       group->append(subGroup);
       return_error_if(!grm_args_first_value(*current_series, "c", "D", &orig_data, &data_length),
                       ERROR_PLOT_MISSING_DATA);
@@ -4869,7 +4882,6 @@ err_t plot_isosurface(grm_args_t *subplot_args)
 
       {
         float light_parameters[4];
-        subGroup->append(global_render->createGR3Clear());
 
         auto conv_data_vec = std::vector<double>(conv_data, conv_data + data_length);
         auto foreground_colors_vec =
@@ -4879,12 +4891,20 @@ err_t plot_isosurface(grm_args_t *subplot_args)
         int id = static_cast<int>(global_root->getAttribute("id"));
         global_root->setAttribute("id", id + 1);
         std::string id_str = std::to_string(id);
+        auto context = global_render->getContext();
 
-        auto gr3_isosurface_element = global_render->createGR3Isosurface(
-            shape[0], shape[1], shape[2], "conv_data" + id_str, conv_data_vec, isovalue, "foreground_colors" + id_str,
-            foreground_colors_vec, "strides" + id_str, strides_vec);
-        global_render->setGR3LightParameters(gr3_isosurface_element, 0.2, 0.8, 0.7, 128);
-        subGroup->append(gr3_isosurface_element);
+        (*context)["data" + id_str] = conv_data_vec;
+        subGroup->setAttribute("data", "data" + id_str);
+        (*context)["color" + id_str] = foreground_colors_vec;
+        subGroup->setAttribute("color", "color" + id_str);
+        (*context)["strides" + id_str] = strides_vec;
+        subGroup->setAttribute("strides", "strides" + id_str);
+        subGroup->setAttribute("nx", (const int)shape[0]);
+        subGroup->setAttribute("ny", (const int)shape[1]);
+        subGroup->setAttribute("nz", (const int)shape[2]);
+        subGroup->setAttribute("isovalue", isovalue);
+
+        global_render->setGR3LightParameters(subGroup, 0.2, 0.8, 0.7, 128);
       }
 
       free(conv_data);
@@ -6295,8 +6315,6 @@ err_t plot_trisurf(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
-      auto subGroup = global_render->createSeries("trisurf_series");
-      group->append(subGroup);
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
@@ -6308,7 +6326,7 @@ err_t plot_trisurf(grm_args_t *subplot_args)
 
       std::vector<double> x_vec(x, x + x_length), y_vec(y, y + x_length), z_vec(z, z + x_length);
       auto temp = global_render->createTriSurface("px" + str, x_vec, "py" + str, y_vec, "pz" + str, z_vec);
-      subGroup->append(temp);
+      group->append(temp);
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
@@ -6345,8 +6363,6 @@ err_t plot_tricont(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
-      auto subGroup = global_render->createSeries("tricont_series");
-      group->append(subGroup);
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
@@ -6361,7 +6377,7 @@ err_t plot_tricont(grm_args_t *subplot_args)
       auto temp = global_render->createTriContour("px" + str, x_vec, "py" + str, y_vec, "pz" + str, z_vec,
                                                   "levels" + str, l_vec);
 
-      subGroup->append(temp);
+      group->append(temp);
       ++current_series;
     }
   plot_draw_colorbar(subplot_args, 0.0, 256);
