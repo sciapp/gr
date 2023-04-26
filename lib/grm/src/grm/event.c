@@ -249,6 +249,28 @@ error_cleanup:
   return error;
 }
 
+err_t event_queue_enqueue_cmd_event(event_queue_t *queue, const char *cmd)
+{
+  grm_cmd_event_t *cmd_event = NULL;
+  err_t error = ERROR_NONE;
+
+  cmd_event = malloc(sizeof(grm_cmd_event_t));
+  error_cleanup_and_set_error_if(cmd_event == NULL, ERROR_MALLOC);
+  cmd_event->type = GRM_EVENT_CMD;
+  cmd_event->cmd = cmd; /* TODO: should `cmd` be copied? */
+  error = event_reflist_enqueue(queue->queue, (grm_event_t *)cmd_event);
+  error_cleanup_if_error;
+
+  return ERROR_NONE;
+
+error_cleanup:
+  if (cmd_event != NULL)
+    {
+      free(cmd_event);
+    }
+
+  return error;
+}
 
 #undef DEFINE_LIST_METHODS
 

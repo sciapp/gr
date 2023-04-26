@@ -77,7 +77,8 @@ private:
     QPoint pressed;
     QPoint anchor;
   };
-  QPixmap *pixmap;
+  QPixmap pixmap;
+  bool redraw_pixmap;
   grm_args_t *args_;
   MouseState mouseState;
   QRubberBand *rubberBand;
@@ -118,10 +119,10 @@ private:
   QAction *JpegAct;
   QAction *SvgAct;
 
-  void reset_pixmap();
   void showEvent(QShowEvent *) override;
   void closeEvent(QCloseEvent *event) override;
   void size_callback(const grm_event_t *);
+  void cmd_callback(const grm_cmd_event_t *);
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

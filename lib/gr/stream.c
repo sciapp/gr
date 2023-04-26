@@ -1,30 +1,42 @@
-#if defined(__unix__) && !defined(__FreeBSD__)
-#define _POSIX_C_SOURCE 200112L
+#ifndef __FreeBSD__
+#ifdef __unix__
+#define _POSIX_C_SOURCE 200809L
+#endif
 #endif
 
 #include <stdio.h>
-#include <string.h>
-#include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <stdarg.h>
 
 #ifndef _WIN32
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <sys/time.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/errno.h>
 #else
 #define _WIN32_WINNT 0x0602
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
+#include <strsafe.h>
 #endif
 
 #include "gr.h"
-#include "stream.h"
+#include "gks.h"
 #include "gkscore.h"
+
+#ifndef MAXPATHLEN
+#define MAXPATHLEN 1024
+#endif
+
+#define PORT "8002"
 
 static int status = EXIT_SUCCESS;
 
@@ -39,6 +51,8 @@ static char *server = NULL;
 static char *port = "4660"; /* 0x1234 */
 
 static int nbytes = 0, size = 0, static_size = 0;
+
+static int is_running = 0;
 
 static void close_socket(int s)
 {
@@ -60,7 +74,11 @@ static void save(char *string, int nbytes)
       static_buffer = (char *)realloc(static_buffer, nbytes + 1);
       static_size = nbytes + 1;
     }
+#ifdef _WIN32
+  StringCchCopyA(static_buffer, static_size, string);
+#else
   strcpy(static_buffer, string);
+#endif
 }
 
 static int sendstream(char *string)
@@ -284,4 +302,267 @@ void gr_closestream(void)
 char *gr_getgraphics(void)
 {
   return static_buffer;
+}
+
+#ifdef _WIN32
+
+#define CMD_LINE_LEN (32767 + 10)
+/*
+ * The maximum length of an environment variable is 32767 characters plus 10 characters for 'cmd /c ""'
+ */
+
+static DWORD WINAPI grplot_thread(LPVOID parm)
+{
+  wchar_t *cmd = (char *)parm;
+  wchar_t w_cmd_line[CMD_LINE_LEN];
+  STARTUPINFOW startupInfo;
+  PROCESS_INFORMATION processInformation;
+
+  StringCbPrintfW(w_cmd_line, CMD_LINE_LEN, L"cmd /c \"%ls\" --listen", cmd);
+
+  ZeroMemory(&startupInfo, sizeof(startupInfo));
+  startupInfo.cb = sizeof(startupInfo);
+  ZeroMemory(&processInformation, sizeof(processInformation));
+
+  is_running = 1;
+  CreateProcessW(NULL, w_cmd_line, NULL, NULL, FALSE, CREATE_DEFAULT_ERROR_MODE | CREATE_NO_WINDOW | DETACHED_PROCESS,
+                 NULL, NULL, &startupInfo, &processInformation);
+  WaitForSingleObject(processInformation.hThread, INFINITE);
+  is_running = 0;
+
+  CloseHandle(processInformation.hProcess);
+  CloseHandle(processInformation.hThread);
+
+  return 0;
+}
+
+#else
+
+static void *grplot_thread(void *arg)
+{
+  int retstat = 0;
+#ifdef __APPLE__
+  sigset_t blockMask, origMask;
+  struct sigaction saIgnore, saOrigQuit, saOrigInt, saDefault;
+  pid_t pid;
+
+  sigemptyset(&blockMask);
+  sigaddset(&blockMask, SIGCHLD);
+  sigprocmask(SIG_BLOCK, &blockMask, &origMask);
+
+  saIgnore.sa_handler = SIG_IGN;
+  saIgnore.sa_flags = 0;
+  sigemptyset(&saIgnore.sa_mask);
+  sigaction(SIGINT, &saIgnore, &saOrigInt);
+  sigaction(SIGQUIT, &saIgnore, &saOrigQuit);
+
+  is_running = 1;
+  if ((pid = fork()) == 0)
+    {
+      saDefault.sa_handler = SIG_DFL;
+      saDefault.sa_flags = 0;
+      sigemptyset(&saDefault.sa_mask);
+
+      if (saOrigInt.sa_handler != SIG_IGN) sigaction(SIGINT, &saDefault, NULL);
+      if (saOrigQuit.sa_handler != SIG_IGN) sigaction(SIGQUIT, &saDefault, NULL);
+
+      sigprocmask(SIG_SETMASK, &origMask, NULL);
+      execl("/bin/sh", "sh", "-c", (char *)arg, (char *)NULL);
+
+      _exit(127);
+    }
+  if (pid == -1)
+    {
+      fprintf(stderr, "Fork failed\n");
+      retstat = -1;
+    }
+  else
+    {
+      int status;
+      while (waitpid(pid, &status, 0) == -1)
+        {
+          if (errno != EINTR)
+            {
+              retstat = WIFEXITED(status) != 0 ? WEXITSTATUS(status) : -1;
+              break;
+            }
+        }
+    }
+  is_running = 0;
+
+  sigprocmask(SIG_SETMASK, &origMask, NULL);
+  sigaction(SIGINT, &saOrigInt, NULL);
+  sigaction(SIGQUIT, &saOrigQuit, NULL);
+#else
+  is_running = 1;
+  retstat = system((char *)arg);
+  is_running = 0;
+#endif
+
+  return retstat == 0 ? arg : NULL;
+}
+
+#endif
+
+static int start(void *cmd)
+{
+#ifdef _WIN32
+  DWORD thread;
+
+  if (CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)grplot_thread, cmd, 0, &thread) == NULL) return -1;
+#else
+  pthread_t thread;
+
+  if (pthread_create(&thread, NULL, grplot_thread, cmd)) return -1;
+#endif
+  return 0;
+}
+
+static int connect_socket(int quiet)
+{
+  int rc, s;
+  struct addrinfo hints, *res = NULL;
+  int opt;
+
+#if defined(_WIN32)
+  WORD wVersionRequested = MAKEWORD(1, 1);
+  WSADATA wsaData;
+
+  if (WSAStartup(wVersionRequested, &wsaData) != 0)
+    {
+      fprintf(stderr, "Can't find a usable WinSock DLL\n");
+      return -1;
+    }
+#endif
+
+  memset(&hints, 0x00, sizeof(hints));
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+
+  if ((rc = getaddrinfo("localhost", PORT, &hints, &res)) != 0)
+    {
+      hints.ai_family = AF_INET6;
+      if ((rc = getaddrinfo("localhost", PORT, &hints, &res)) != 0)
+        {
+          if (!quiet)
+            {
+              fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rc));
+            }
+          return -1;
+        }
+    }
+
+  s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+  if (s < 0)
+    {
+      if (!quiet) perror("socket");
+      freeaddrinfo(res);
+      return -1;
+    }
+
+  opt = 1;
+#ifdef SO_REUSEADDR
+  setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt));
+#endif
+
+  if (connect(s, res->ai_addr, res->ai_addrlen) < 0)
+    {
+      if (!quiet) perror("connect");
+      freeaddrinfo(res);
+      return -1;
+    }
+
+  freeaddrinfo(res);
+
+  return s;
+}
+
+int gr_startlistener(void)
+{
+#ifdef _WIN32
+  wchar_t command[CMD_LINE_LEN], w_env[MAXPATHLEN];
+#else
+  const char *command = NULL, *env;
+  char *cmd = NULL;
+#endif
+  size_t retry_count, max_retry_count = 20;
+  int s;
+
+  /* In order to not sleep an excessive amount start with a short sleep time and then ramp
+     it up to `max_sleep_time` */
+  int sleep_ms;
+  int ms_to_ns = 1000000;
+  int initial_sleep_time_ms[] = {5, 10, 25, 50, 100};
+  int max_sleep_time_ms = 300;
+  size_t n_initial_times = sizeof(initial_sleep_time_ms) / sizeof(initial_sleep_time_ms[0]);
+  max_retry_count += n_initial_times;
+
+#ifdef _WIN32
+  if (!GetEnvironmentVariableW(L"GR_PLOT", command, CMD_LINE_LEN))
+    {
+      if (!GetEnvironmentVariableW(L"GRDIR", w_env, MAXPATHLEN))
+        {
+          StringCbPrintfW(command, CMD_LINE_LEN, L"%wS\\bin\\grplot.exe --listen", GRDIR);
+        }
+      else
+        {
+          StringCbPrintfW(command, CMD_LINE_LEN, L"%ws\\bin\\grplot.exe --listen", w_env);
+        }
+    }
+#else
+  command = gks_getenv("GR_PLOT");
+  if (command == NULL)
+    {
+      env = gks_getenv("GRDIR");
+      if (env == NULL) env = GRDIR;
+
+      cmd = (char *)gks_malloc(MAXPATHLEN);
+#ifdef __APPLE__
+      snprintf(cmd, MAXPATHLEN, "%s/Applications/grplot.app/Contents/MacOS/grplot --listen", env);
+#else
+      snprintf(cmd, MAXPATHLEN, "%s/bin/grplot --listen", env);
+#endif
+      command = cmd;
+    }
+#endif
+
+  for (retry_count = 1; retry_count <= max_retry_count; retry_count++)
+    {
+      if ((s = connect_socket(retry_count != max_retry_count)) == -1)
+        {
+          if (command != NULL && retry_count == 1)
+            {
+              /* For Julia BinaryBuilder environments the command string can be set to ""
+                 because in this case grplot is started by the GR.jl wrapper script */
+              if (*command)
+                {
+                  if (start((void *)command) != 0) gks_perror("could not auto-start GR Plot application");
+                }
+            }
+          sleep_ms = retry_count <= n_initial_times ? initial_sleep_time_ms[retry_count - 1] : max_sleep_time_ms;
+#ifndef _WIN32
+          {
+            struct timespec delay;
+            delay.tv_sec = 0;
+            delay.tv_nsec = sleep_ms * ms_to_ns;
+            while (nanosleep(&delay, &delay) == -1)
+              ;
+          }
+#else
+          Sleep(sleep_ms);
+#endif
+        }
+      else
+        break;
+    }
+
+  close_socket(s);
+
+  is_running = (retry_count <= max_retry_count);
+
+#ifndef _WIN32
+  if (cmd != NULL) free(cmd);
+#endif
+
+  return s;
 }

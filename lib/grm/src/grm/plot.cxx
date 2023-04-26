@@ -8639,6 +8639,13 @@ int grm_merge_extended(const grm_args_t *args, int hold, const char *identificat
     }
   if (args != nullptr)
     {
+      const char *cmd = nullptr;
+      if (grm_args_values(args, "cmd", "s", &cmd))
+        {
+          event_queue_enqueue_cmd_event(event_queue, cmd);
+          process_events();
+          return 1;
+        }
       if (plot_merge_args(global_root_args, args, nullptr, nullptr, hold) != ERROR_NONE)
         {
           return 0;

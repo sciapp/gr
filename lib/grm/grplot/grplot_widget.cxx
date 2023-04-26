@@ -42,15 +42,21 @@ void getWheelPos(QWheelEvent *event, int *x, int *y)
 #endif
 }
 
-std::function<void(const grm_event_t *)> callback;
-extern "C" void wrapper(const grm_event_t *cb)
+std::function<void(const grm_event_t *)> size_callback;
+extern "C" void size_callback_wrapper(const grm_event_t *cb)
 {
-  callback(cb);
+  size_callback(cb);
+}
+
+std::function<void(const grm_cmd_event_t *)> cmd_callback;
+extern "C" void cmd_callback_wrapper(const grm_event_t *event)
+{
+  cmd_callback(reinterpret_cast<const grm_cmd_event_t *>(event));
 }
 
 
 GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
-    : QWidget(parent), args_(nullptr), rubberBand(nullptr), pixmap(nullptr), tooltip(nullptr)
+    : QWidget(parent), args_(nullptr), rubberBand(nullptr), pixmap(), redraw_pixmap(false), tooltip(nullptr)
 {
   const char *kind;
   unsigned int z_length;
@@ -93,17 +99,19 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       qRegisterMetaType<grm_args_t_wrapper>("grm_args_t_wrapper");
       receiver_thread = new Receiver_Thread();
       QObject::connect(receiver_thread, SIGNAL(resultReady(grm_args_t_wrapper)), this,
-                       SLOT(received(grm_args_t_wrapper)));
-      QObject::connect(receiver_thread, SIGNAL(resultReady(grm_args_t_wrapper)), this->topLevelWidget(), SLOT(show()));
+                       SLOT(received(grm_args_t_wrapper)), Qt::QueuedConnection);
       receiver_thread->start();
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-      callback = [this](auto &&PH1) { size_callback(std::forward<decltype(PH1)>(PH1)); };
+      ::size_callback = [this](auto &&PH1) { size_callback(std::forward<decltype(PH1)>(PH1)); };
+      ::cmd_callback = [this](auto &&PH1) { cmd_callback(std::forward<decltype(PH1)>(PH1)); };
 #else
-      callback = std::bind(&GRPlotWidget::size_callback, this, std::placeholders::_1);
+      ::size_callback = std::bind(&GRPlotWidget::size_callback, this, std::placeholders::_1);
+      ::cmd_callback = std::bind(&GRPlotWidget::cmd_callback, this, std::placeholders::_1);
 #endif
 
-      grm_register(GRM_EVENT_SIZE, wrapper);
+      grm_register(GRM_EVENT_SIZE, size_callback_wrapper);
+      grm_register(GRM_EVENT_CMD, cmd_callback_wrapper);
       grm_args_t_wrapper configuration;
       configuration.set_wrapper(grm_args_new());
       grm_args_push(configuration.get_wrapper(), "hold_plots", "i", 0);
@@ -256,13 +264,9 @@ void GRPlotWidget::draw()
 
 void GRPlotWidget::redraw()
 {
-  if (pixmap != nullptr)
-    {
-      delete pixmap;
-      pixmap = nullptr;
-    }
+  redraw_pixmap = true;
 
-  repaint();
+  update();
 }
 
 #define style \
@@ -293,12 +297,18 @@ void GRPlotWidget::paintEvent(QPaintEvent *event)
   std::stringstream addresses;
   const char *kind;
 
-  if (!pixmap)
-    {
-      pixmap = new QPixmap((int)(geometry().width() * this->devicePixelRatioF()),
-                           (int)(geometry().height() * this->devicePixelRatioF()));
-      pixmap->setDevicePixelRatio(this->devicePixelRatioF());
+  QSize needed_pixmap_size = QSize((int)(geometry().width() * this->devicePixelRatioF()),
+                                   (int)(geometry().height() * this->devicePixelRatioF()));
 
+  if (pixmap.isNull() || pixmap.size() != needed_pixmap_size)
+    {
+      pixmap = QPixmap(needed_pixmap_size);
+      pixmap.setDevicePixelRatio(this->devicePixelRatioF());
+      redraw_pixmap = true;
+    }
+
+  if (redraw_pixmap)
+    {
 #ifdef _WIN32
       addresses << "GKS_CONID=";
 #endif
@@ -309,63 +319,61 @@ void GRPlotWidget::paintEvent(QPaintEvent *event)
       setenv("GKS_CONID", addresses.str().c_str(), 1);
 #endif
 
-      painter.begin(pixmap);
+      painter.begin(&pixmap);
 
       painter.fillRect(0, 0, width(), height(), QColor("white"));
       draw();
 
       painter.end();
+      redraw_pixmap = false;
     }
-  if (pixmap)
+
+  painter.begin(this);
+  painter.drawPixmap(0, 0, pixmap);
+  if (tooltip != nullptr)
     {
-      painter.begin(this);
-      painter.drawPixmap(0, 0, *pixmap);
-      if (tooltip != nullptr)
+      if (tooltip->x_px > 0 && tooltip->y_px > 0)
         {
-          if (tooltip->x_px > 0 && tooltip->y_px > 0)
+          QColor background(224, 224, 224, 128);
+          char c_info[BUFSIZ];
+          QPainterPath triangle;
+          std::string x_label = tooltip->xlabel, y_label = tooltip->ylabel;
+
+          if (util::startsWith(x_label, "$") && util::endsWith(x_label, "$"))
             {
-              QColor background(224, 224, 224, 128);
-              char c_info[BUFSIZ];
-              QPainterPath triangle;
-              std::string x_label = tooltip->xlabel, y_label = tooltip->ylabel;
-
-              if (util::startsWith(x_label, "$") && util::endsWith(x_label, "$"))
-                {
-                  x_label = "x";
-                }
-              if (util::startsWith(y_label, "$") && util::endsWith(y_label, "$"))
-                {
-                  y_label = "y";
-                }
-              std::snprintf(c_info, BUFSIZ, tooltipTemplate, tooltip->label, x_label.c_str(), tooltip->x,
-                            y_label.c_str(), tooltip->y);
-              std::string info(c_info);
-              label.setDefaultStyleSheet(style);
-              label.setHtml(info.c_str());
-              grm_args_values(args_, "kind", "s", &kind);
-              if (strcmp(kind, "heatmap") == 0 || strcmp(kind, "marginalheatmap") == 0)
-                {
-                  background.setAlpha(224);
-                }
-              painter.fillRect(tooltip->x_px + 8, (int)(tooltip->y_px - label.size().height() / 2),
-                               (int)label.size().width(), (int)label.size().height(),
-                               QBrush(background, Qt::SolidPattern));
-
-              triangle.moveTo(tooltip->x_px, tooltip->y_px);
-              triangle.lineTo(tooltip->x_px + 8, tooltip->y_px + 6);
-              triangle.lineTo(tooltip->x_px + 8, tooltip->y_px - 6);
-              triangle.closeSubpath();
-              background.setRgb(128, 128, 128, 128);
-              painter.fillPath(triangle, QBrush(background, Qt::SolidPattern));
-
-              painter.save();
-              painter.translate(tooltip->x_px + 8, tooltip->y_px - label.size().height() / 2);
-              label.drawContents(&painter);
-              painter.restore();
+              x_label = "x";
             }
+          if (util::startsWith(y_label, "$") && util::endsWith(y_label, "$"))
+            {
+              y_label = "y";
+            }
+          std::snprintf(c_info, BUFSIZ, tooltipTemplate, tooltip->label, x_label.c_str(), tooltip->x, y_label.c_str(),
+                        tooltip->y);
+          std::string info(c_info);
+          label.setDefaultStyleSheet(style);
+          label.setHtml(info.c_str());
+          grm_args_values(args_, "kind", "s", &kind);
+          if (strcmp(kind, "heatmap") == 0 || strcmp(kind, "marginalheatmap") == 0)
+            {
+              background.setAlpha(224);
+            }
+          painter.fillRect(tooltip->x_px + 8, (int)(tooltip->y_px - label.size().height() / 2),
+                           (int)label.size().width(), (int)label.size().height(), QBrush(background, Qt::SolidPattern));
+
+          triangle.moveTo(tooltip->x_px, tooltip->y_px);
+          triangle.lineTo(tooltip->x_px + 8, tooltip->y_px + 6);
+          triangle.lineTo(tooltip->x_px + 8, tooltip->y_px - 6);
+          triangle.closeSubpath();
+          background.setRgb(128, 128, 128, 128);
+          painter.fillPath(triangle, QBrush(background, Qt::SolidPattern));
+
+          painter.save();
+          painter.translate(tooltip->x_px + 8, tooltip->y_px - label.size().height() / 2);
+          label.drawContents(&painter);
+          painter.restore();
         }
-      painter.end();
     }
+  painter.end();
 }
 
 void GRPlotWidget::keyPressEvent(QKeyEvent *event)
@@ -481,12 +489,6 @@ void GRPlotWidget::resizeEvent(QResizeEvent *event)
 {
   grm_args_push(args_, "size", "dd", (double)event->size().width(), (double)event->size().height());
   grm_merge(args_);
-
-  if (pixmap != nullptr)
-    {
-      delete pixmap;
-      pixmap = nullptr;
-    }
 
   redraw();
 }
@@ -715,7 +717,7 @@ void GRPlotWidget::received(grm_args_t_wrapper args)
 {
   if (!isVisible())
     {
-      show();
+      window()->show();
     }
   if (args_)
     {
@@ -725,7 +727,7 @@ void GRPlotWidget::received(grm_args_t_wrapper args)
   args_ = args.get_wrapper();
   grm_merge(args_);
 
-  reset_pixmap();
+  redraw();
 }
 
 void GRPlotWidget::closeEvent(QCloseEvent *event)
@@ -746,18 +748,7 @@ void GRPlotWidget::showEvent(QShowEvent *)
 
 void GRPlotWidget::screenChanged()
 {
-  reset_pixmap();
-}
-
-void GRPlotWidget::reset_pixmap()
-{
-  if (pixmap != nullptr)
-    {
-      delete pixmap;
-      pixmap = nullptr;
-    }
-
-  update();
+  redraw();
 }
 
 void GRPlotWidget::size_callback(const grm_event_t *new_size_object)
@@ -765,7 +756,14 @@ void GRPlotWidget::size_callback(const grm_event_t *new_size_object)
   // TODO: Get Plot ID
   if (this->size() != QSize(new_size_object->size_event.width, new_size_object->size_event.height))
     {
-      this->topLevelWidget()->show();
-      this->resize(new_size_object->size_event.width, new_size_object->size_event.height);
+      this->window()->resize(new_size_object->size_event.width, new_size_object->size_event.height);
+    }
+}
+
+void GRPlotWidget::cmd_callback(const grm_cmd_event_t *event)
+{
+  if (strcmp(event->cmd, "close") == 0)
+    {
+      QApplication::quit();
     }
 }
