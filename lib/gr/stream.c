@@ -1,16 +1,16 @@
-#if defined(__unix__) && !defined(__FreeBSD__)
-#define _POSIX_C_SOURCE 200112L
+#ifndef __FreeBSD__
+#ifdef __unix__
+#define _POSIX_C_SOURCE 200809L
+#endif
 #endif
 
 #include <stdio.h>
-#include <string.h>
-#include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <stdarg.h>
 
 #ifndef _WIN32
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -21,7 +21,6 @@
 #include <signal.h>
 #include <sys/errno.h>
 #else
-#define __STRSAFE__NO_INLINE
 #define _WIN32_WINNT 0x0602
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -30,6 +29,7 @@
 #endif
 
 #include "gr.h"
+#include "gks.h"
 #include "gkscore.h"
 
 #ifndef MAXPATHLEN
@@ -74,7 +74,11 @@ static void save(char *string, int nbytes)
       static_buffer = (char *)realloc(static_buffer, nbytes + 1);
       static_size = nbytes + 1;
     }
+#ifdef _WIN32
+  StringCchCopyA(static_buffer, static_size, string);
+#else
   strcpy(static_buffer, string);
+#endif
 }
 
 static int sendstream(char *string)

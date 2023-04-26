@@ -75,7 +75,7 @@ int main(int argc, char **argv)
       GRPlotMainWindow window(argc, argv);
 
       window.show();
-      if (strcmp(argv[1], "--listen") != 0)
+      if (strcmp(argv[1], "--listen") == 0)
         {
           window.hide();
         }
