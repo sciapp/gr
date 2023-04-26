@@ -234,10 +234,9 @@ void gks_lookup_afm(int font, int chr, stroke_data_t *buffer);
 DLLEXPORT char *gks_malloc(int size);
 DLLEXPORT char *gks_realloc(void *ptr, int size);
 DLLEXPORT void gks_free(void *ptr);
-
 DLLEXPORT char *gks_strdup(const char *str);
 
-void gks_perror(const char *, ...);
+DLLEXPORT void gks_perror(const char *, ...);
 void gks_fatal_error(const char *, ...);
 const char *gks_function_name(int routine);
 void gks_report_error(int routine, int errnum);

@@ -21,6 +21,7 @@
 #include <sys/errno.h>
 #else
 #define __STRSAFE__NO_INLINE
+#define STRSAFE_NO_DEPRECATE
 #define _WIN32_WINNT 0x0602
 #include <winsock2.h>
 #include <ws2tcpip.h>

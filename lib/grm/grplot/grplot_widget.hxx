@@ -122,6 +122,7 @@ private:
   void showEvent(QShowEvent *) override;
   void closeEvent(QCloseEvent *event) override;
   void size_callback(const grm_event_t *);
+  void cmd_callback(const grm_cmd_event_t *);
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

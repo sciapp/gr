@@ -42,10 +42,16 @@ void getWheelPos(QWheelEvent *event, int *x, int *y)
 #endif
 }
 
-std::function<void(const grm_event_t *)> callback;
-extern "C" void wrapper(const grm_event_t *cb)
+std::function<void(const grm_event_t *)> size_callback;
+extern "C" void size_callback_wrapper(const grm_event_t *cb)
 {
-  callback(cb);
+  size_callback(cb);
+}
+
+std::function<void(const grm_cmd_event_t *)> cmd_callback;
+extern "C" void cmd_callback_wrapper(const grm_event_t *event)
+{
+  cmd_callback(reinterpret_cast<const grm_cmd_event_t *>(event));
 }
 
 
@@ -98,12 +104,15 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       receiver_thread->start();
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-      callback = [this](auto &&PH1) { size_callback(std::forward<decltype(PH1)>(PH1)); };
+      ::size_callback = [this](auto &&PH1) { size_callback(std::forward<decltype(PH1)>(PH1)); };
+      ::cmd_callback = [this](auto &&PH1) { cmd_callback(std::forward<decltype(PH1)>(PH1)); };
 #else
-      callback = std::bind(&GRPlotWidget::size_callback, this, std::placeholders::_1);
+      ::size_callback = std::bind(&GRPlotWidget::size_callback, this, std::placeholders::_1);
+      ::cmd_callback = std::bind(&GRPlotWidget::cmd_callback, this, std::placeholders::_1);
 #endif
 
-      grm_register(GRM_EVENT_SIZE, wrapper);
+      grm_register(GRM_EVENT_SIZE, size_callback_wrapper);
+      grm_register(GRM_EVENT_CMD, cmd_callback_wrapper);
       grm_args_t_wrapper configuration;
       configuration.set_wrapper(grm_args_new());
       grm_args_push(configuration.get_wrapper(), "hold_plots", "i", 0);
@@ -767,5 +776,13 @@ void GRPlotWidget::size_callback(const grm_event_t *new_size_object)
     {
       this->topLevelWidget()->show();
       this->resize(new_size_object->size_event.width, new_size_object->size_event.height);
+    }
+}
+
+void GRPlotWidget::cmd_callback(const grm_cmd_event_t *event)
+{
+  if (strcmp(event->cmd, "close") == 0)
+    {
+      QApplication::quit();
     }
 }
