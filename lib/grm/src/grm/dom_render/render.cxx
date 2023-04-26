@@ -3676,6 +3676,55 @@ static void quiver(const std::shared_ptr<GRM::Element> &element, const std::shar
   gr_quiver(x_vec.size(), y_vec.size(), x_p, y_p, u_p, v_p, color);
 }
 
+static void polar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Processing function for polar
+   *
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   */
+  double r_min, r_max, tick;
+  int n;
+  unsigned int rho_length, theta_length;
+  std::string spec;
+  unsigned int i;
+  std::vector<double> theta_vec, rho_vec;
+
+  spec = static_cast<std::string>(element->getAttribute("spec"));
+  r_min = static_cast<double>(element->getAttribute("r_min"));
+  r_max = static_cast<double>(element->getAttribute("r_max"));
+  tick = 0.5 * auto_tick(r_min, r_max);
+  n = (int)ceil((r_max - r_min) / tick);
+  r_max = r_min + n * tick;
+
+
+  auto x_key = static_cast<std::string>(element->getAttribute("x"));
+  auto y_key = static_cast<std::string>(element->getAttribute("y"));
+  theta_vec = GRM::get<std::vector<double>>((*context)[x_key]);
+  rho_vec = GRM::get<std::vector<double>>((*context)[y_key]);
+  theta_length = theta_vec.size();
+  rho_length = rho_vec.size();
+
+  std::vector<double> x(rho_length);
+  std::vector<double> y(rho_length);
+
+  for (i = 0; i < rho_length; ++i)
+    {
+      double current_rho = rho_vec[i] / r_max;
+      x[i] = current_rho * cos(theta_vec[i]);
+      y[i] = current_rho * sin(theta_vec[i]);
+    }
+
+  global_render->setLineSpec(element, spec);
+
+  int id = (int)global_root->getAttribute("id");
+  global_root->setAttribute("id", id + 1);
+
+  auto temp = global_render->createPolyline("x" + std::to_string(id), x, "y" + std::to_string(id), y);
+  element->append(temp);
+}
+
 static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
@@ -3980,17 +4029,12 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
   static std::map<std::string,
                   std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)>>
       seriesNameToFunc{
-          {std::string("contour"), contour},
-          {std::string("contourf"), contourf},
-          {std::string("hexbin"), hexbin},
-          {std::string("isosurface"), drawIsosurface3},
-          {std::string("quiver"), quiver},
-          {std::string("shade"), shadePoints},
-          {std::string("stem"), stem},
-          {std::string("surface"), surface},
-          {std::string("tricontour"), triContour},
-          {std::string("trisurface"), triSurface},
-          {std::string("volume"), volume},
+          {std::string("contour"), contour},       {std::string("contourf"), contourf},
+          {std::string("hexbin"), hexbin},         {std::string("isosurface"), drawIsosurface3},
+          {std::string("polar"), polar},           {std::string("quiver"), quiver},
+          {std::string("shade"), shadePoints},     {std::string("stem"), stem},
+          {std::string("surface"), surface},       {std::string("tricontour"), triContour},
+          {std::string("trisurface"), triSurface}, {std::string("volume"), volume},
       };
 
   try

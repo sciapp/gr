@@ -5007,57 +5007,43 @@ err_t plot_volume(grm_args_t *subplot_args)
 
 err_t plot_polar(grm_args_t *subplot_args)
 {
-  double r_min, r_max, tick;
-  int n;
+  double r_min, r_max;
   grm_args_t **current_series;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "polar");
 
   grm_args_values(subplot_args, "_ylim", "dd", &r_min, &r_max);
-  tick = 0.5 * auto_tick(r_min, r_max);
-  n = (int)ceil((r_max - r_min) / tick);
-  r_max = r_min + n * tick;
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
-      double *rho, *theta, *x, *y;
+      double *rho, *theta;
       unsigned int rho_length, theta_length;
       char *spec;
-      unsigned int i;
-      auto subGroup = global_render->createSeries("polar_series");
+      auto subGroup = global_render->createSeries("polar");
       group->append(subGroup);
+
+      subGroup->setAttribute("r_min", r_min);
+      subGroup->setAttribute("r_max", r_max);
 
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &theta, &theta_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &rho, &rho_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(rho_length != theta_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      x = static_cast<double *>(malloc(rho_length * sizeof(double)));
-      y = static_cast<double *>(malloc(rho_length * sizeof(double)));
-      if (x == nullptr || y == nullptr)
-        {
-          debug_print_malloc_error();
-          free(x);
-          free(y);
-          return ERROR_MALLOC;
-        }
-      for (i = 0; i < rho_length; ++i)
-        {
-          double current_rho = rho[i] / r_max;
-          x[i] = current_rho * cos(theta[i]);
-          y[i] = current_rho * sin(theta[i]);
-        }
+
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      auto context = global_render->getContext();
+
+      std::vector<double> theta_vec(theta, theta + theta_length);
+      std::vector<double> rho_vec(rho, rho + rho_length);
+
+      (*context)["x" + str] = theta_vec;
+      subGroup->setAttribute("x", "x" + str);
+      (*context)["y" + str] = rho_vec;
+      subGroup->setAttribute("y", "y" + str);
+
       grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
-      global_render->setLineSpec(subGroup, spec);
-
-      int id = (int)global_root->getAttribute("id");
-      global_root->setAttribute("id", id + 1);
-
-      std::vector<double> x_vec(x, x + rho_length), y_vec(y, y + rho_length);
-
-      auto temp = global_render->createPolyline("x" + std::to_string(id), x_vec, "y" + std::to_string(id), y_vec);
-      subGroup->append(temp);
-      free(x);
-      free(y);
+      subGroup->setAttribute("spec", spec);
       ++current_series;
     }
 
