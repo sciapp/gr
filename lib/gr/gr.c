@@ -9209,7 +9209,8 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
  * \param[in] major_h Directs GR to label contour lines. For example, a value of
  *                    3 would label every third line. A value of 1 will label
  *                    every line. A value of 0 produces no labels. To produce
- *                    colored contour lines, add an offset of 1000 to major_h
+ *                    colored contour lines, add an offset of 1000 to major_h.
+ *                    Use a value of -1 to disable contour lines and labels.
  */
 void gr_contourf(int nx, int ny, int nh, double *px, double *py, double *h, double *pz, int major_h)
 {
