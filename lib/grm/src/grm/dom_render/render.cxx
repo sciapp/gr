@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cfloat>
+#include <climits>
 #include <grm/dom_render/graphics_tree/Element.hxx>
 #include <grm/dom_render/graphics_tree/Document.hxx>
 #include <grm/dom_render/graphics_tree/Value.hxx>
@@ -45,6 +46,16 @@ static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
     {"\"", 0.0254}, {"ft", 0.3048}, {"'", 0.0254}, {"pc", 0.0254 / 6.0}, {"pt", 0.0254 / 72.0},
 };
+
+static int plot_scatter_markertypes[] = {
+    GKS_K_MARKERTYPE_SOLID_CIRCLE,   GKS_K_MARKERTYPE_SOLID_TRI_UP, GKS_K_MARKERTYPE_SOLID_TRI_DOWN,
+    GKS_K_MARKERTYPE_SOLID_SQUARE,   GKS_K_MARKERTYPE_SOLID_BOWTIE, GKS_K_MARKERTYPE_SOLID_HGLASS,
+    GKS_K_MARKERTYPE_SOLID_DIAMOND,  GKS_K_MARKERTYPE_SOLID_STAR,   GKS_K_MARKERTYPE_SOLID_TRI_RIGHT,
+    GKS_K_MARKERTYPE_SOLID_TRI_LEFT, GKS_K_MARKERTYPE_SOLID_PLUS,   GKS_K_MARKERTYPE_PENTAGON,
+    GKS_K_MARKERTYPE_HEXAGON,        GKS_K_MARKERTYPE_HEPTAGON,     GKS_K_MARKERTYPE_OCTAGON,
+    GKS_K_MARKERTYPE_STAR_4,         GKS_K_MARKERTYPE_STAR_5,       GKS_K_MARKERTYPE_STAR_6,
+    GKS_K_MARKERTYPE_STAR_7,         GKS_K_MARKERTYPE_STAR_8,       GKS_K_MARKERTYPE_VLINE,
+    GKS_K_MARKERTYPE_HLINE,          GKS_K_MARKERTYPE_OMARK,        INT_MAX};
 
 static int bounding_id = 0;
 static std::map<int, std::shared_ptr<GRM::Element>> bounding_map;
@@ -3725,6 +3736,133 @@ static void polar(const std::shared_ptr<GRM::Element> &element, const std::share
   element->append(temp);
 }
 
+static void scatter(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Processing function for scatter
+   *
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   */
+  std::string orientation;
+  double c_min, c_max;
+  unsigned int x_length, y_length, z_length, c_length;
+  int i, c_index = -1, markertype;
+  std::vector<int> markerColorIndsVec;
+  std::vector<double> markerSizesVec;
+  std::vector<double> x_vec, y_vec, z_vec, c_vec;
+
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+  x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  x_length = x_vec.size();
+  y_length = y_vec.size();
+  if (element->hasAttribute("z"))
+    {
+      auto z = static_cast<std::string>(element->getAttribute("z"));
+      z_vec = GRM::get<std::vector<double>>((*context)[z]);
+      z_length = z_vec.size();
+    }
+  if (element->hasAttribute("c"))
+    {
+      auto c = static_cast<std::string>(element->getAttribute("c"));
+      c_vec = GRM::get<std::vector<double>>((*context)[c]);
+      c_length = c_vec.size();
+    }
+  orientation = static_cast<std::string>(element->getAttribute("orientation"));
+
+  markertype = static_cast<int>(element->getAttribute("markertype"));
+  global_render->setMarkerType(element, markertype);
+
+  if (c_vec.empty() && element->hasAttribute("c_index"))
+    {
+      c_index = static_cast<int>(element->getAttribute("c_index"));
+      if (c_index < 0)
+        {
+          logger((stderr, "Invalid scatter color %d, using 0 instead\n", c_index));
+          c_index = 0;
+        }
+      else if (c_index > 255)
+        {
+          logger((stderr, "Invalid scatter color %d, using 255 instead\n", c_index));
+          c_index = 255;
+        }
+    }
+
+  // clear old marker
+  for (auto elem : element->children())
+    {
+      if (elem->localName() == "polymarker") elem->remove();
+    }
+
+  if (!z_vec.empty() || !c_vec.empty())
+    {
+      c_min = static_cast<double>(element->getAttribute("c_min"));
+      c_max = static_cast<double>(element->getAttribute("c_max"));
+
+      for (i = 0; i < x_length; i++)
+        {
+          if (!z_vec.empty())
+            {
+              if (i < z_length)
+                {
+                  markerSizesVec.push_back(z_vec[i]);
+                }
+              else
+                {
+                  markerSizesVec.push_back(2.0);
+                }
+            }
+          if (!c_vec.empty())
+            {
+              if (i < c_length)
+                {
+                  c_index = 1000 + (int)(255.0 * (c_vec[i] - c_min) / (c_max - c_min) + 0.5);
+                  if (c_index < 1000 || c_index > 1255)
+                    {
+                      // colorind -1000 will be skipped
+                      markerColorIndsVec.push_back(-1000);
+                      continue;
+                    }
+                }
+              else
+                {
+                  c_index = 989;
+                }
+              markerColorIndsVec.push_back(c_index);
+            }
+          else if (c_index != -1)
+            {
+              markerColorIndsVec.push_back(1000 + c_index);
+            }
+        }
+
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      global_root->setAttribute("id", ++id);
+
+      auto marker = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
+      element->append(marker);
+      if (!markerSizesVec.empty())
+        {
+          global_render->setMarkerSize(element, "markersizes" + str, markerSizesVec);
+        }
+      if (!markerColorIndsVec.empty())
+        {
+          global_render->setMarkerColorInd(element, "markercolorinds" + str, markerColorIndsVec);
+        }
+    }
+  else
+    {
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      auto marker = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
+      element->append(marker);
+      global_root->setAttribute("id", ++id);
+    }
+}
+
 static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
@@ -4029,13 +4167,26 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
   static std::map<std::string,
                   std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)>>
       seriesNameToFunc{
-          {std::string("contour"), contour},       {std::string("contourf"), contourf},
-          {std::string("hexbin"), hexbin},         {std::string("isosurface"), drawIsosurface3},
-          {std::string("polar"), polar},           {std::string("quiver"), quiver},
-          {std::string("shade"), shadePoints},     {std::string("stem"), stem},
-          {std::string("surface"), surface},       {std::string("tricontour"), triContour},
-          {std::string("trisurface"), triSurface}, {std::string("volume"), volume},
+          {std::string("contour"), contour},
+          {std::string("contourf"), contourf},
+          {std::string("hexbin"), hexbin},
+          {std::string("isosurface"), drawIsosurface3},
+          {std::string("polar"), polar},
+          {std::string("quiver"), quiver},
+          {std::string("scatter"), scatter},
+          {std::string("shade"), shadePoints},
+          {std::string("stem"), stem},
+          {std::string("surface"), surface},
+          {std::string("tricontour"), triContour},
+          {std::string("trisurface"), triSurface},
+          {std::string("volume"), volume},
       };
+  //<series name="scatter_series" markertype="-7">
+  //      <polymarker bbox_id="18" bbox_xmax="570.000000" bbox_xmin="75.000000" bbox_ymax="219.375000"
+  //      bbox_ymin="45.000000" x="3x" y="3y">
+  //      </polymarker>
+  //    </series>
+
 
   try
     {
