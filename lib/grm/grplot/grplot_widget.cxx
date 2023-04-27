@@ -767,11 +767,3 @@ void GRPlotWidget::cmd_callback(const grm_cmd_event_t *event)
       QApplication::quit();
     }
 }
-
-void GRPlotWidget::cmd_callback(const grm_cmd_event_t *event)
-{
-  if (strcmp(event->cmd, "close") == 0)
-    {
-      QApplication::quit();
-    }
-}

@@ -15,8 +15,6 @@ signals:
 
 private:
   void run() override;
-
-  bool running = true;
 };
 
 #endif /* ifndef RECEIVER_THREAD_H_INCLUDED */
