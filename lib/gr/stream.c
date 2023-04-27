@@ -485,7 +485,7 @@ int gr_startlistener(void)
   const char *command = NULL, *env;
   char *cmd = NULL;
 #endif
-  size_t retry_count, max_retry_count = 20;
+  size_t retry_count, max_retry_count = 50;
   int s;
 
   /* In order to not sleep an excessive amount start with a short sleep time and then ramp

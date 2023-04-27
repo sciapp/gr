@@ -17,6 +17,7 @@ void Receiver_Thread::run()
               qCritical() << "receiver could not be created";
               qCritical() << "Retrying in 5 seconds";
               QThread::sleep(5);
+              ready = false;
               continue;
             }
         }
