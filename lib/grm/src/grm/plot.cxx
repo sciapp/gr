@@ -1851,11 +1851,12 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
     }
   else if (strcmp(kind, "polar_histogram") == 0)
     {
-      double r_max;
-      error = classes_polar_histogram(subplot_args, &r_max);
-      cleanup_if_error;
-      global_root->lastChildElement()->setAttribute("r_max", r_max);
-      grm_args_push(subplot_args, "r_max", "d", r_max);
+      // todo: move series/data dependent code to render.cxx
+      //      double r_max;
+      //      error = classes_polar_histogram(subplot_args, &r_max);
+      //      cleanup_if_error;
+      //      global_root->lastChildElement()->setAttribute("r_max", r_max);
+      //      grm_args_push(subplot_args, "r_max", "d", r_max);
     }
   else if (str_equals_any(kind, 2, "stem", "stairs"))
     {
@@ -4679,149 +4680,109 @@ err_t plot_polar(grm_args_t *subplot_args)
 err_t plot_polar_histogram(grm_args_t *subplot_args)
 {
   unsigned int num_bins;
-  double *classes = nullptr;
   unsigned int length;
   double max;
-  double *inner = nullptr, *outer = nullptr;
-  double r;
-  double rect;
-  double *liste = nullptr;
-  double liste0;
-  double liste1;
-  double *liste2 = nullptr;
-  double *mlist = nullptr;
-  double *rectlist = nullptr;
-  const char *norm = nullptr;
-  double bin_width = -1.0;
-  double *bin_edges = nullptr;
-  unsigned int num_bin_edges;
-  double *bin_widths = nullptr;
-  double *philim = nullptr;
   double *rlim = nullptr;
   unsigned int dummy;
-  double *r_min_list = nullptr;
-  double *r_min_list2 = nullptr;
   int stairs;
   double r_min = 0.0;
   double r_max = 1.0;
-  double *phi_array = nullptr;
-  double *arc_2_x = nullptr;
-  double *arc_2_y = nullptr;
   int xcolormap;
   int ycolormap;
   int *colormap = nullptr;
-  double *angles = nullptr;
   int draw_edges = 0;
   int phiflip = 0;
-  int x;
-  const double convert = 180 / M_PI;
   int edge_color = 1;
   int face_color = 989;
   double face_alpha = 0.75;
   grm_args_t **series;
-  unsigned int resample = 0;
-  int *lineardata = nullptr;
   int *bin_counts = nullptr;
-  double *f1 = nullptr;
-  double *f2 = nullptr;
-  int freeable_bin_widths = 0;
-  int freeable_bin_edges = 0;
-  int freeable_angles = 0;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> group = global_root->lastChildElement();
+  group->setAttribute("kind", "polarhistogram");
+
+  // Call classes -> set attributes and data
+  classes_polar_histogram(subplot_args);
+
+  auto context = global_render->getContext();
+
+  int id = static_cast<int>(global_root->getAttribute("id"));
+  global_root->setAttribute("id", id + 1);
+  std::string str = std::to_string(id);
+
   group->setAttribute("name", "polarhistogram");
-
-  gr_savestate();
-  std::shared_ptr<GRM::Element> temp_elem;
-  std::string str;
-
-  gr_inqresamplemethod(&resample);
-
-  global_render->setResampleMethod(group, 0x2020202);
-
   grm_args_values(subplot_args, "series", "A", &series);
 
-  grm_args_first_value(*series, "classes", "D", &classes, &length);
+  //  grm_args_first_value(*series, "classes", "D", &classes, &length);
+  //  std::vector<double> classes_vec(classes, classes + length);
+  //  (*context)["classes" + str] = classes_vec;
 
   /* edge_color */
   if (grm_args_values(*series, "edge_color", "i", &edge_color) == 0)
     {
       edge_color = 1;
     }
+  group->setAttribute("edge_color", edge_color);
 
   /* face_color */
   if (grm_args_values(*series, "face_color", "i", &face_color) == 0)
     {
       face_color = 989;
     }
+  group->setAttribute("face_color", face_color);
 
   /* face_alpha */
   if (grm_args_values(*series, "face_alpha", "d", &face_alpha) == 0)
     {
       face_alpha = 0.75;
     }
+  group->setAttribute("face_alpha", face_alpha);
 
-  global_render->setTransparency(group, face_alpha);
+  //  grm_args_values(*series, "nbins", "i", &num_bins);
+  //  group->setAttribute("nbins", static_cast<int>(num_bins));
 
-  grm_args_values(*series, "nbins", "i", &num_bins);
-
-  max = static_cast<double>(group->getAttribute("r_max"));
+  //  max = static_cast<double>(group->getAttribute("r_max"));
 
   if (grm_args_values(subplot_args, "phiflip", "i", &phiflip) == 0)
     {
       phiflip = 0;
     }
+  group->setAttribute("phiflip", phiflip);
 
-  if (grm_args_values(subplot_args, "normalization", "s", &norm) == 0)
-    {
-      norm = "count";
-    }
+  //  if (grm_args_values(subplot_args, "normalization", "s", &norm) == 0)
+  //    {
+  //      norm = "count";
+  //    }
+  //  group->setAttribute(norm, "count");
 
   if (grm_args_values(*series, "draw_edges", "i", &draw_edges) == 0)
     {
       draw_edges = 0;
     }
+  group->setAttribute("draw_edges", draw_edges);
 
-  if (grm_args_first_value(*series, "bin_edges", "D", &bin_edges, &num_bin_edges) == 0)
-    {
-      bin_edges = nullptr;
-      num_bin_edges = 0;
-      grm_args_values(*series, "bin_width", "d", &bin_width);
-    }
-  else
-    {
-      grm_args_first_value(*series, "bin_widths", "D", &bin_widths, &num_bins);
-    }
+  //  if (grm_args_first_value(*series, "bin_edges", "D", &bin_edges, &num_bin_edges) == 0)
+  //    {
+  //      bin_edges = nullptr;
+  //      num_bin_edges = 0;
+  //      grm_args_values(*series, "bin_width", "d", &bin_width);
+  //    }
+  //  else
+  //    {
+  //      std::vector<double> bin_edges_vec(bin_edges, bin_edges + num_bin_edges);
+  //      (*context)["bin_edges" + str] = bin_edges_vec;
+  //      grm_args_first_value(*series, "bin_widths", "D", &bin_widths, &num_bins);
+  //      std::vector<double> bin_widths_vec(bin_widths, bin_widths + num_bins);
+  //      (*context)["bin_widths" + str] = bin_widths_vec;
+  //    }
 
 
   if (grm_args_values(*series, "stairs", "i", &stairs) == 0)
     {
       stairs = 0;
     }
-  else
-    {
-      if (draw_edges != 0)
-        {
-          logger((stderr, "stairs is not compatible with draw_edges / colormap\n"));
-          cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
-        }
-      /* no bin_edges */
-      else if (num_bin_edges == 0)
-        {
-          mlist = static_cast<double *>(malloc(num_bins * 4 * sizeof(double)));
-          cleanup_and_set_error_if(mlist == nullptr, ERROR_MALLOC);
-          if (stairs != 0)
-            {
-              stairs = 1;
-            }
-        }
-      else
-        {
-          rectlist = static_cast<double *>(malloc(num_bins * sizeof(double)));
-          cleanup_and_set_error_if(rectlist == nullptr, ERROR_MALLOC);
-        }
-    }
+  group->setAttribute("stairs", stairs);
 
   if (grm_args_first_value(*series, "rlim", "D", &rlim, &dummy) == 0)
     {
@@ -4829,904 +4790,23 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
     }
   else
     {
-      /* TODO: Potential memory leak, s. `malloc` in line 3788 */
-      mlist = static_cast<double *>(malloc((num_bins + 1) * 4 * sizeof(double)));
-      cleanup_and_set_error_if(mlist == nullptr, ERROR_MALLOC);
-      if (rlim[0] > rlim[1])
-        {
-          r_min = rlim[1];
-          r_max = rlim[0];
-          rlim[0] = r_min;
-          rlim[1] = r_max;
-        }
-      else
-        {
-          r_min = rlim[0];
-          r_max = rlim[1];
-        }
-
-      if (r_max > 1.0)
-        {
-          r_max = 1.0;
-          logger((stderr, "the max value of rlim can not exceed 1.0\n"));
-          cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
-        }
-      if (r_min < 0.0) r_min = 0.0;
+      group->setAttribute("rlim", true);
+      group->setAttribute("rlim0", rlim[0]);
+      group->setAttribute("rlim1", rlim[1]);
     }
 
-  length /= num_bins;
-  outer = classes;
-  if (phiflip != 0)
+  if (grm_args_values(*series, "xcolormap", "i", &xcolormap))
     {
-      outer += (num_bins - 1) * length;
+      group->setAttribute("xcolormap", xcolormap);
+    }
+  if (grm_args_values(*series, "ycolormap", "i", &ycolormap))
+    {
+      group->setAttribute("ycolormap", ycolormap);
     }
 
-  if (!grm_args_values(*series, "xcolormap", "i", &xcolormap) ||
-      !grm_args_values(*series, "ycolormap", "i", &ycolormap))
-    {
-      colormap = nullptr;
-      if (draw_edges != 0)
-        {
-          logger((stderr, "draw_edges can only be used with colormap\n"));
-          cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
-        }
-    }
-  else
-    {
-      if (-1 > xcolormap || xcolormap > 47 || ycolormap < -1 || ycolormap > 47)
-        {
-          logger((stderr, "the value for keyword \"colormap\" must contain two integer between -1 and 47\n"));
-          cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
-        }
-      else
-        {
-          int colormap_size = 500;
-          int image_size = 2000;
-          int y, center, center_x, center_y;
-          double radius, angle;
-          int temp1, temp2;
-          int temp = 0;
-          int total = 0;
-          double norm_factor = 1;
-          int count = 0;
-          double max_radius;
-
-
-          lineardata = static_cast<int *>(calloc(image_size * image_size, sizeof(int)));
-          cleanup_and_set_error_if(lineardata == nullptr, ERROR_MALLOC);
-
-          bin_counts = static_cast<int *>(malloc(num_bins * sizeof(int)));
-          cleanup_and_set_error_if(bin_counts == nullptr, ERROR_MALLOC);
-
-          colormap = create_colormap(xcolormap, ycolormap, colormap_size);
-          cleanup_and_set_error_if(colormap == nullptr, ERROR_PLOT_COLORMAP);
-
-          if (num_bin_edges == 0)
-            {
-              angles = static_cast<double *>(malloc((num_bins + 1) * sizeof(double)));
-              cleanup_and_set_error_if(angles == nullptr, ERROR_MALLOC);
-              freeable_angles = 1;
-              linspace(0, M_PI * 2, num_bins + 1, angles);
-            }
-          else
-            {
-              angles = bin_edges;
-            }
-
-          outer = classes;
-
-          center_x = image_size / 2;
-          center_y = image_size / 2;
-          center = image_size / 2;
-
-          max_radius = center;
-
-          for (temp1 = 0; temp1 < num_bins; temp1++)
-            {
-              temp = 0;
-              for (temp2 = 0; temp2 < length; temp2++)
-                {
-                  if (classes[temp1 * length + temp2] == -1) break;
-                  ++temp;
-                }
-              bin_counts[temp1] = temp;
-            }
-
-          if (str_equals_any(norm, 2, "probability", "pdf"))
-            {
-              for (temp1 = 0; temp1 < num_bins; ++temp1)
-                {
-                  total += bin_counts[temp1];
-                }
-            }
-          else if (strcmp(norm, "cdf") == 0)
-            total = bin_counts[num_bins - 1];
-
-
-          if (str_equals_any(norm, 2, "probability", "cdf"))
-            norm_factor = total;
-          else if (num_bin_edges == 0 && strcmp(norm, "pdf") == 0)
-            norm_factor = total * bin_width;
-          else if (num_bin_edges == 0 && strcmp(norm, "countdensity") == 0)
-            norm_factor = bin_width;
-
-          if (rlim != nullptr)
-            {
-              r_min *= max_radius;
-              r_max *= max_radius;
-            }
-          else
-            {
-              r_min = 0.0;
-              r_max = max_radius;
-            }
-
-          for (y = 0; y < image_size; y++)
-            {
-              for (x = 0; x < image_size; x++)
-                {
-                  int q;
-                  radius = sqrt(pow(x - center_x, 2) + pow(y - center_y, 2));
-                  angle = atan2(y - center_y, x - center_x);
-
-                  if (angle < 0) angle += M_PI * 2;
-                  if (phiflip == 0) angle = 2 * M_PI - angle;
-
-                  for (q = 0; q < num_bins; ++q)
-                    {
-                      if (angle > angles[q] && angle <= angles[q + 1])
-                        {
-                          count = bin_counts[q];
-                          if (strcmp(norm, "pdf") == 0 && num_bin_edges > 0)
-                            {
-                              norm_factor = total * bin_widths[q];
-                            }
-                          else if (strcmp(norm, "countdensity") == 0 && num_bin_edges > 0)
-                            {
-                              norm_factor = bin_widths[q];
-                            }
-
-                          if ((grm_round(radius * 100) / 100) <=
-                                  (grm_round((count * 1.0 / norm_factor / max * center) * 100) / 100) &&
-                              radius <= r_max && radius > r_min)
-                            {
-                              lineardata[y * image_size + x] = colormap
-                                  [(int)(radius / (center * pow(2, 0.5)) * (colormap_size - 1)) * colormap_size +
-                                   grm_max(grm_min((int)(angle / (2 * M_PI) * colormap_size), colormap_size - 1), 0)];
-                            }
-
-                        } /* end angle check */
-                    }     /* end for q loop: bin check*/
-                }         /* end x loop*/
-            }             /* end y loop */
-          if (rlim != nullptr)
-            {
-              r_min = rlim[0];
-              r_max = rlim[1];
-            }
-
-          int id = (int)global_root->getAttribute("id");
-          global_root->setAttribute("id", id + 1);
-          str = std::to_string(id);
-          std::vector<int> l_vec(lineardata, lineardata + image_size * image_size);
-
-          temp_elem =
-              global_render->createDrawImage(-1.0, 1.0, -1.0, 1.0, image_size, image_size, "data" + str, l_vec, 0);
-          group->append(temp_elem);
-          free(lineardata);
-          free(bin_counts);
-          lineardata = nullptr;
-          bin_counts = nullptr;
-        } /* end colormap calculation*/
-
-    } /* end colormap condition */
-
-  outer = classes;
-  if (phiflip != 0) outer += (num_bins - 1) * length;
-
-  if (phiflip != 0 && num_bin_edges > 0)
-    {
-      double *temp = nullptr;
-      double *temp2 = nullptr;
-      temp = static_cast<double *>(malloc(num_bin_edges * sizeof(double)));
-      cleanup_and_set_error_if(temp == nullptr, ERROR_MALLOC);
-      temp2 = static_cast<double *>(malloc(num_bins * sizeof(double)));
-      cleanup_and_set_error_if(temp2 == nullptr, ERROR_MALLOC);
-      int u;
-      for (u = 0; u < num_bin_edges; u++)
-        {
-          temp[u] = 2 * M_PI - bin_edges[num_bin_edges - 1 - u];
-        }
-      for (u = num_bins - 1; u >= 0; --u)
-        {
-          temp2[u] = bin_widths[num_bins - 1 - u];
-        }
-      bin_widths = temp2;
-      freeable_bin_widths = 1;
-      bin_edges = temp;
-      temp = temp2 = nullptr;
-      freeable_bin_edges = 1;
-    }
-
-  /* no colormap or colormap combined with draw_edges */
-  if (colormap == nullptr || draw_edges == 1)
-    {
-      for (x = 0; x < num_bins; ++x)
-        {
-          double count;
-          int y;
-
-          /*
-           * free memory from the previous iteration
-           * (end of loop is not possible because of `continue` statements)
-           * last iteration memory is freed in the cleanup block
-           */
-          free(liste);
-          liste = nullptr;
-          free(liste2);
-          liste2 = nullptr;
-          free(r_min_list);
-          r_min_list = nullptr;
-          free(r_min_list2);
-          r_min_list2 = nullptr;
-
-          count = 0.0;
-          inner = outer;
-
-          if (*inner == -1)
-            {
-              /* stairs bin_edges / philim  */
-              if (rectlist != nullptr && philim != nullptr)
-                rectlist[x] = r_min;
-              else if (rectlist != nullptr)
-                rectlist[x] = 0.0;
-            }
-
-
-          for (y = 0; y < length; ++y)
-            {
-              if (*inner != -1)
-                {
-                  count++;
-                  inner++;
-                }
-            }
-
-          if (str_equals_any(norm, 2, "probability", "cdf"))
-            {
-              count /= length;
-            }
-          else if (strcmp(norm, "pdf") == 0)
-            {
-              if (num_bin_edges == 0)
-                {
-                  count /= length * bin_width;
-                }
-              else
-                {
-                  count /= (length * *(bin_widths + x));
-                }
-            }
-          else if (strcmp(norm, "countdensity") == 0)
-            {
-              if (num_bin_edges == 0)
-                {
-                  count /= bin_width;
-                }
-              else
-                {
-                  count /= *(bin_widths + x);
-                }
-            }
-
-          /* no stairs*/
-          if (stairs == 0)
-            {
-              r = pow((count / max), num_bins * 2);
-              liste = moivre(r, 2 * x, num_bins * 2);
-              cleanup_and_set_error_if(liste == nullptr, ERROR_MALLOC);
-              liste0 = liste[0];
-              liste1 = liste[1];
-              rect = sqrt(liste0 * liste0 + liste1 * liste1);
-
-              if (rlim != nullptr)
-                {
-                  double temporary;
-                  int i;
-                  liste2 = moivre(r, (2 * x + 2), (num_bins * 2));
-                  cleanup_and_set_error_if(liste2 == nullptr, ERROR_MALLOC);
-
-                  *(mlist + x * 4) = liste0;
-                  *(mlist + x * 4 + 1) = liste1;
-                  *(mlist + x * 4 + 2) = *(liste2);
-                  *(mlist + x * 4 + 3) = *(liste2 + 1);
-
-                  r_min_list = moivre(pow((r_min), (num_bins * 2)), (x * 2), num_bins * 2);
-                  cleanup_and_set_error_if(r_min_list == nullptr, ERROR_MALLOC);
-                  r_min_list2 = moivre(pow((r_min), (num_bins * 2)), (x * 2 + 2), num_bins * 2);
-                  cleanup_and_set_error_if(r_min_list2 == nullptr, ERROR_MALLOC);
-
-                  for (i = 0; i < 2; ++i)
-                    {
-                      temporary = fabs(sqrt(pow(mlist[x * 4 + 2 - i * 2], 2) + pow(mlist[x * 4 + 3 - i * 2], 2)));
-                      if (temporary > r_max)
-                        {
-                          double factor = fabs(r_max / temporary);
-                          mlist[x * 4 + 2 - i * 2] *= factor;
-                          mlist[x * 4 + 3 - i * 2] *= factor;
-                        }
-                    }
-                  r = count / max;
-                  if (r > r_max)
-                    {
-                      r = r_max;
-                    }
-                  free(liste2);
-                  liste2 = nullptr;
-                }
-
-              /*  no binedges */
-              if (num_bin_edges == 0)
-                {
-                  if (rlim != nullptr)
-                    {
-                      double start_angle;
-                      double end_angle;
-
-                      double diff_angle;
-                      int num_angle;
-
-                      int i;
-
-                      if (r <= r_min)
-                        {
-                          if (phiflip == 1)
-                            outer -= length;
-                          else
-                            outer += length;
-                          continue;
-                        }
-
-                      start_angle = x * (360.0 / num_bins) / convert;
-                      end_angle = (x + 1) * (360.0 / num_bins) / convert;
-
-                      diff_angle = end_angle - start_angle;
-                      num_angle = (int)(diff_angle / (0.2 / convert));
-
-                      phi_array = static_cast<double *>(malloc(num_angle * sizeof(double)));
-                      cleanup_and_set_error_if(phi_array == nullptr, ERROR_MALLOC);
-                      linspace(start_angle, end_angle, num_angle, phi_array);
-
-                      f1 = static_cast<double *>(malloc((4 + 2 * num_angle) * sizeof(double)));
-                      cleanup_and_set_error_if(f1 == nullptr, ERROR_MALLOC);
-                      /* line_1_x[0] and [1]*/
-                      f1[0] = r_min_list[0];
-                      f1[1] = mlist[4 * x];
-                      /* arc_1_x */
-                      listcomprehension(r, cos, phi_array, num_angle, 2, f1);
-                      /* reversed line_2_x [0] and [1] */
-                      f1[2 + num_angle + 1] = r_min_list2[0];
-                      f1[2 + num_angle] = mlist[4 * x + 2];
-                      /* reversed arc_2_x */
-                      arc_2_x = listcomprehension(r_min, cos, phi_array, num_angle, 0, nullptr);
-                      cleanup_and_set_error_if(arc_2_x == nullptr, ERROR_MALLOC);
-                      for (i = 0; i < num_angle; ++i)
-                        {
-                          f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
-                        }
-                      free(arc_2_x);
-                      arc_2_x = nullptr;
-
-                      f2 = static_cast<double *>(malloc((4 + 2 * num_angle) * sizeof(double)));
-                      cleanup_and_set_error_if(f2 == nullptr, ERROR_MALLOC);
-                      /* line_1_y[0] and [1] */
-                      f2[0] = r_min_list[1];
-                      f2[1] = mlist[4 * x + 1];
-                      /*arc_1_y */
-                      listcomprehension(r, sin, phi_array, num_angle, 2, f2);
-                      /* reversed line_2_y [0] and [1] */
-                      f2[2 + num_angle + 1] = r_min_list2[1];
-                      f2[2 + num_angle] = mlist[4 * x + 3];
-                      /* reversed arc_2_y */
-                      arc_2_y = listcomprehension(r_min, sin, phi_array, num_angle, 0, nullptr);
-                      cleanup_and_set_error_if(arc_2_y == nullptr, ERROR_MALLOC);
-                      for (i = 0; i < num_angle; ++i)
-                        {
-                          f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
-                        }
-                      free(arc_2_y);
-                      arc_2_y = nullptr;
-
-                      if (draw_edges == 0)
-                        {
-                          int id = (int)global_root->getAttribute("id");
-                          global_root->setAttribute("id", id + 1);
-                          std::vector<double> f1_vec(f1, f1 + 4 + 2 * num_angle), f2_vec(f2, f2 + 4 + 2 * num_angle);
-                          str = std::to_string(id);
-
-                          temp_elem = global_render->createFillArea("x" + str, f1_vec, "y" + str, f2_vec);
-                          group->append(temp_elem);
-                          global_render->setFillColorInd(temp_elem, face_color);
-                          global_render->setFillIntStyle(temp_elem, 1);
-
-                          temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
-                          group->append(temp_elem);
-                          global_render->setFillColorInd(temp_elem, edge_color);
-                          global_render->setFillIntStyle(temp_elem, 0);
-                        }
-                      else
-                        {
-                          int id = (int)global_root->getAttribute("id");
-                          global_root->setAttribute("id", id + 1);
-                          std::vector<double> f1_vec(f1, f1 + 4 + 2 * num_angle), f2_vec(f2, f2 + 4 + 2 * num_angle);
-                          str = std::to_string(id);
-
-                          temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
-                          group->append(temp_elem);
-                          global_render->setFillColorInd(temp_elem, edge_color);
-                          global_render->setFillIntStyle(temp_elem, 0);
-                        }
-
-                      free(f1);
-                      f1 = nullptr;
-                      free(f2);
-                      f2 = nullptr;
-                      free(phi_array);
-                      phi_array = nullptr;
-                    } /* end rlim condition */
-                  /* no rlim */
-                  else
-                    {
-                      if (draw_edges == 0)
-                        {
-                          temp_elem = global_render->createFillArc(-rect, rect, -rect, rect, x * (360.0 / num_bins),
-                                                                   (x + 1) * (360.0 / num_bins));
-                          group->append(temp_elem);
-
-                          global_render->setFillIntStyle(temp_elem, 1);
-                          global_render->setFillColorInd(temp_elem, face_color);
-                        }
-
-                      temp_elem = global_render->createFillArc(-rect, rect, -rect, rect, x * (360.0 / num_bins),
-                                                               (x + 1) * (360.0 / num_bins));
-                      group->append(temp_elem);
-
-                      global_render->setFillIntStyle(temp_elem, 0);
-                      global_render->setFillColorInd(temp_elem, edge_color);
-                    }
-                }
-              /* bin_egdes */
-              else
-                {
-                  if (rlim != nullptr)
-                    {
-                      double start_angle;
-                      double end_angle;
-
-                      double diff_angle;
-                      int num_angle;
-
-                      int i;
-
-                      if (r <= r_min)
-                        {
-                          if (phiflip != 0)
-                            outer -= length;
-                          else
-                            outer += length;
-                          continue;
-                        }
-
-                      start_angle = bin_edges[x];
-                      end_angle = bin_edges[x + 1];
-
-                      diff_angle = end_angle - start_angle;
-                      num_angle = (int)(diff_angle / (0.2 / convert));
-                      phi_array = static_cast<double *>(malloc(num_angle * sizeof(double)));
-                      cleanup_and_set_error_if(phi_array == nullptr, ERROR_MALLOC);
-                      linspace(start_angle, end_angle, num_angle, phi_array);
-
-                      f1 = static_cast<double *>(malloc((4 + 2 * num_angle) * sizeof(double)));
-                      cleanup_and_set_error_if(f1 == nullptr, ERROR_MALLOC);
-                      /* line_1_x[0] and [1]*/
-                      f1[0] = cos(bin_edges[x]) * r_min;
-                      f1[1] = grm_min(rect, r_max) * cos(bin_edges[x]);
-                      /*arc_1_x */
-                      listcomprehension(r, cos, phi_array, num_angle, 2, f1);
-                      /* reversed line_2_x [0] and [1] */
-                      f1[2 + num_angle + 1] = cos(bin_edges[x + 1]) * r_min;
-                      f1[2 + num_angle] = grm_min(rect, r_max) * cos(bin_edges[x + 1]);
-                      /* reversed arc_2_x */
-                      arc_2_x = listcomprehension(r_min, cos, phi_array, num_angle, 0, nullptr);
-                      cleanup_and_set_error_if(arc_2_x == nullptr, ERROR_MALLOC);
-                      for (i = 0; i < num_angle; ++i)
-                        {
-                          f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
-                        }
-                      free(arc_2_x);
-                      arc_2_x = nullptr;
-
-                      f2 = static_cast<double *>(malloc((4 + 2 * num_angle) * sizeof(double)));
-                      cleanup_and_set_error_if(f2 == nullptr, ERROR_MALLOC);
-                      /* line_1_y[0] and [1] */
-                      f2[0] = r_min * sin(bin_edges[x]);
-                      f2[1] = grm_min(rect, r_max) * sin(bin_edges[x]);
-                      /*arc_1_y */
-                      listcomprehension(r, sin, phi_array, num_angle, 2, f2);
-                      /* reversed line_2_y [0] and [1] */
-                      f2[2 + num_angle + 1] = r_min * sin(bin_edges[x + 1]);
-                      f2[2 + num_angle] = grm_min(rect, r_max) * sin(bin_edges[x + 1]);
-                      /* reversed arc_2_y */
-                      arc_2_y = listcomprehension(r_min, sin, phi_array, num_angle, 0, nullptr);
-                      cleanup_and_set_error_if(arc_2_y == nullptr, ERROR_MALLOC);
-                      for (i = 0; i < num_angle; ++i)
-                        {
-                          f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
-                        }
-                      free(arc_2_y);
-                      arc_2_y = nullptr;
-
-                      if (draw_edges == 0)
-                        {
-                          int id = (int)global_root->getAttribute("id");
-                          global_root->setAttribute("id", id + 1);
-                          std::vector<double> f1_vec(f1, f1 + 4 + 2 * num_angle), f2_vec(f2, f2 + 4 + 2 * num_angle);
-                          str = std::to_string(id);
-
-                          temp_elem = global_render->createFillArea("x" + str, f1_vec, "y" + str, f2_vec);
-                          group->append(temp_elem);
-                          global_render->setFillColorInd(temp_elem, face_color);
-                          global_render->setFillIntStyle(temp_elem, 1);
-
-                          temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
-                          group->append(temp_elem);
-                          global_render->setFillColorInd(temp_elem, edge_color);
-                          global_render->setFillIntStyle(temp_elem, 0);
-                        }
-                      else
-                        {
-                          int id = (int)global_root->getAttribute("id");
-                          global_root->setAttribute("id", id + 1);
-                          std::vector<double> f1_vec(f1, f1 + 4 + 2 * num_angle), f2_vec(f2, f2 + 4 + 2 * num_angle);
-                          str = std::to_string(id);
-
-                          temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
-                          group->append(temp_elem);
-                          global_render->setFillColorInd(temp_elem, edge_color);
-                          global_render->setFillIntStyle(temp_elem, 0);
-                        }
-
-                      free(f1);
-                      f1 = nullptr;
-                      free(f2);
-                      f2 = nullptr;
-                      free(phi_array);
-                      phi_array = nullptr;
-                    }
-                  /* no rlim */
-                  else
-                    {
-                      if (draw_edges == 0)
-                        {
-                          temp_elem = global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[x] * convert,
-                                                                   bin_edges[x + 1] * convert);
-                          group->append(temp_elem);
-
-                          global_render->setFillIntStyle(temp_elem, 1);
-                          global_render->setFillColorInd(temp_elem, face_color);
-                        }
-                      temp_elem = global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[x] * convert,
-                                                               bin_edges[x + 1] * convert);
-                      group->append(temp_elem);
-
-                      global_render->setFillIntStyle(temp_elem, 0);
-                      global_render->setFillColorInd(temp_elem, edge_color);
-                    }
-                }
-            } /* end no stairs condition */
-          /* stairs without draw_edges (not compatible) */
-          else if (draw_edges == 0 && colormap == nullptr)
-            {
-              global_render->setFillColorInd(group, 0);
-              global_render->setLineColorInd(group, edge_color);
-              global_render->setLineWidth(group, 2.3);
-
-              r = pow((count / max), (num_bins * 2));
-              liste = moivre(r, (2 * x), num_bins * 2);
-              cleanup_and_set_error_if(liste == nullptr, ERROR_MALLOC);
-              liste2 = moivre(r, (2 * x + 2), (num_bins * 2));
-              cleanup_and_set_error_if(liste2 == nullptr, ERROR_MALLOC);
-              rect = sqrt(*liste * *liste + *(liste + 1) * *(liste + 1));
-
-              /*  no bin_edges */
-              if (num_bin_edges == 0)
-                {
-                  *(mlist + x * 4) = *liste;
-                  *(mlist + x * 4 + 1) = *(liste + 1);
-                  *(mlist + x * 4 + 2) = *(liste2);
-                  *(mlist + x * 4 + 3) = *(liste2 + 1);
-
-                  if (rlim != nullptr)
-                    {
-                      double temporary;
-                      int i;
-                      for (i = 0; i < 2; ++i)
-                        {
-                          temporary = fabs(sqrt(pow(mlist[x * 4 + 2 - i * 2], 2) + pow(mlist[x * 4 + 3 - i * 2], 2)));
-                          if (temporary > r_max)
-                            {
-                              double factor = fabs(r_max / temporary);
-                              mlist[x * 4 + 2 - i * 2] *= factor;
-                              mlist[x * 4 + 3 - i * 2] *= factor;
-                            }
-                        }
-
-                      if (rect > r_min)
-                        {
-                          group->append(global_render->createDrawArc(
-                              -grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max), grm_min(rect, r_max),
-                              x * (360.0 / num_bins), (x + 1) * 360.0 / num_bins));
-
-                          group->append(global_render->createDrawArc(
-                              -r_min, r_min, -r_min, r_min, x * (360.0 / num_bins), (x + 1) * (360.0 / num_bins)));
-                        }
-                    }
-                  /* no rlim */
-                  else
-                    {
-                      group->append(global_render->createDrawArc(-rect, rect, -rect, rect, x * (360.0 / num_bins),
-                                                                 (x + 1) * (360.0 / num_bins)));
-                    }
-                }
-              /* with bin_edges */
-              else
-                {
-                  /* rlim and bin_edges*/
-                  if (rlim != nullptr)
-                    {
-                      if (rect < r_min)
-                        {
-                          rectlist[x] = r_min;
-                        }
-                      else if (rect > r_max)
-                        {
-                          rectlist[x] = r_max;
-                        }
-                      else
-                        {
-                          rectlist[x] = rect;
-                        }
-
-                      if (rect > r_min)
-                        {
-
-                          group->append(global_render->createDrawArc(
-                              -grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max), grm_min(rect, r_max),
-                              bin_edges[x] * convert, bin_edges[x + 1] * convert));
-
-                          group->append(global_render->createDrawArc(
-                              -r_min, r_min, -r_min, r_min, bin_edges[x] * convert, bin_edges[x + 1] * convert));
-                        }
-                    }
-                  /* no rlim */
-                  else
-                    {
-                      *(rectlist + x) = rect;
-                      if (x == num_bin_edges - 1)
-                        {
-                          break;
-                        }
-                      group->append(global_render->createDrawArc(-rect, rect, -rect, rect, *(bin_edges + x) * convert,
-                                                                 *(bin_edges + x + 1) * convert));
-                    }
-                }
-            }
-
-          if (phiflip == 0)
-            outer += length;
-          else
-            {
-              outer -= length;
-            }
-        } /* end of classes for loop */
-
-      if (stairs != 0 && draw_edges == 0)
-        {
-          /* stairs without binedges, rlim */
-          if (mlist != nullptr && rlim == nullptr && rectlist == nullptr)
-            {
-              int s;
-              double line_x[2];
-              double line_y[2];
-              for (s = 0; s < num_bins * 4; s += 2)
-                {
-                  if (s > 2 && s % 4 == 0)
-                    {
-                      line_x[0] = *(mlist + s);
-                      line_x[1] = *(mlist + s - 2);
-                      line_y[0] = *(mlist + s + 1);
-                      line_y[1] = *(mlist + s - 1);
-                      group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-                    }
-                }
-              line_x[0] = *(mlist);
-              line_x[1] = *(mlist + (num_bins - 1) * 4 + 2);
-              line_y[0] = *(mlist + 1);
-              line_y[1] = *(mlist + (num_bins - 1) * 4 + 3);
-              group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-            }
-
-          /* stairs without bin_edges with rlim*/
-          else if (mlist != nullptr && rlim != nullptr && rectlist == nullptr)
-            {
-              double line_x[2], line_y[2];
-              double rect1, rect2;
-              for (x = 0; x < num_bins; ++x)
-                {
-                  if (x > 0)
-                    {
-                      rect1 = sqrt(pow(mlist[x * 4], 2) + pow(mlist[x * 4 + 1], 2));
-                      rect2 = sqrt(pow(mlist[(x - 1) * 4 + 2], 2) + pow(mlist[(x - 1) * 4 + 3], 2));
-
-                      if (rect1 < r_min && rect2 < r_min) continue;
-                      if (rect1 < r_min)
-                        {
-                          mlist[4 * x] = r_min * cos(2 * M_PI / num_bins * x);
-                          mlist[4 * x + 1] = r_min * sin(2 * M_PI / num_bins * x);
-                        }
-                      else if (rect2 < r_min)
-                        {
-                          mlist[(x - 1) * 4 + 2] = r_min * cos(2 * M_PI / num_bins * x);
-                          mlist[(x - 1) * 4 + 3] = r_min * sin(2 * M_PI / num_bins * x);
-                        }
-                      line_x[0] = mlist[x * 4];
-                      line_x[1] = mlist[(x - 1) * 4 + 2];
-                      line_y[0] = mlist[x * 4 + 1];
-                      line_y[1] = mlist[(x - 1) * 4 + 3];
-                      group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-                    }
-                }
-              line_x[0] = mlist[(num_bins - 1) * 4 + 2] = grm_max(mlist[(num_bins - 1) * 4 + 2], r_min * cos(0));
-              line_y[0] = mlist[(num_bins - 1) * 4 + 3] = grm_max(mlist[(num_bins - 1) * 4 + 3], r_min * sin(0));
-              line_x[1] = mlist[0] = grm_max(mlist[0], r_min * cos(0));
-              line_y[1] = mlist[1] = grm_max(mlist[1], r_min * sin(0));
-
-              group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-            }
-
-          /* stairs with binedges without rlim */
-          else if (rectlist != nullptr && rlim == nullptr)
-            {
-              double startx = 0.0, starty = 0.0;
-              double line_x[2], line_y[2];
-
-              for (x = 0; x < num_bin_edges - 1; ++x)
-                {
-                  line_x[0] = startx;
-                  line_x[1] = *(rectlist + x) * cos(*(bin_edges + x));
-                  line_y[0] = starty;
-                  line_y[1] = *(rectlist + x) * sin(*(bin_edges + x));
-
-                  startx = *(rectlist + x) * cos(*(bin_edges + x + 1));
-                  starty = *(rectlist + x) * sin(*(bin_edges + x + 1));
-
-                  if (!(*bin_edges == 0.0 && *(bin_edges + num_bin_edges - 1) > 1.96 * M_PI) || x > 0)
-                    {
-                      group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-                    }
-                }
-
-              if (*bin_edges == 0.0 && *(bin_edges + num_bin_edges - 1) > 1.96 * M_PI)
-                {
-                  line_x[0] = *rectlist * cos(*bin_edges);
-                  line_x[1] = startx;
-                  line_y[0] = *rectlist * sin(*bin_edges);
-                  line_y[1] = starty;
-                  group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-                }
-              else
-                {
-                  line_x[0] = *(rectlist + num_bin_edges - 2) * cos(*(bin_edges + num_bin_edges - 1));
-                  line_x[1] = 0.0;
-                  line_y[0] = *(rectlist + num_bin_edges - 2) * sin(*(bin_edges + num_bin_edges - 1));
-                  line_y[1] = 0.0;
-                  group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-                }
-            }
-
-          /* stairs with bin_edges and rlim */
-          else if (rectlist != nullptr && rlim != nullptr)
-            {
-              double startx = grm_max(rectlist[0] * cos(bin_edges[0]), r_min * cos(bin_edges[0]));
-              double starty = grm_max(rectlist[0] * sin(bin_edges[0]), r_min * sin(bin_edges[0]));
-
-              double line_x[2];
-              double line_y[2];
-
-              for (x = 0; x < num_bin_edges - 1; ++x)
-                {
-                  *line_x = startx;
-                  *(line_x + 1) = *(rectlist + x) * cos(*(bin_edges + x));
-                  *line_y = starty;
-                  *(line_y + 1) = *(rectlist + x) * sin(*(bin_edges + x));
-
-
-                  startx = *(rectlist + x) * cos(*(bin_edges + x + 1));
-                  starty = *(rectlist + x) * sin(*(bin_edges + x + 1));
-
-                  if (((phiflip == 0) &&
-                       (!((*bin_edges > 0.0 && *bin_edges < 0.001) && *(bin_edges + num_bin_edges - 1) > 1.96 * M_PI) ||
-                        x > 0)) ||
-                      ((*bin_edges > 1.96 * M_PI &&
-                        !(*(bin_edges + num_bin_edges - 1) > 0.0 && *(bin_edges + num_bin_edges - 1) < 0.001)) ||
-                       x > 0))
-                    {
-                      group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-                    }
-                }
-
-              if (*bin_edges == 0.0 && *(bin_edges + num_bin_edges - 1) > 1.96 * M_PI)
-                {
-                  *line_x = *rectlist * cos(*bin_edges);
-                  *(line_x + 1) = rectlist[num_bin_edges - 2] * cos(bin_edges[num_bin_edges - 1]);
-                  *line_y = *rectlist * sin(*bin_edges);
-                  *(line_y + 1) = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
-                  group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-                }
-              else
-                {
-                  *line_x = *(rectlist + num_bin_edges - 2) * cos(*(bin_edges + num_bin_edges - 1));
-                  *(line_x + 1) = r_min * cos(bin_edges[num_bin_edges - 1]);
-                  *line_y = *(rectlist + num_bin_edges - 2) * sin(*(bin_edges + num_bin_edges - 1));
-                  *(line_y + 1) = r_min * sin(bin_edges[num_bin_edges - 1]);
-
-                  group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-
-
-                  line_x[0] = r_min * cos(bin_edges[0]);
-                  line_x[1] = rectlist[0] * cos(bin_edges[0]);
-                  line_y[0] = r_min * sin(bin_edges[0]);
-                  line_y[1] = rectlist[0] * sin(bin_edges[0]);
-
-                  group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
-                }
-            }
-        }
-    }
-
-  gr_restorestate();
-  gr_setresamplemethod(resample);
-
-cleanup:
-  free(mlist);
-  free(rectlist);
-  free(lineardata);
-  free(bin_counts);
-  if (freeable_bin_widths == 1)
-    {
-      free(bin_widths);
-    }
-  if (freeable_bin_edges == 1)
-    {
-      free(bin_edges);
-    }
-  if (freeable_angles == 1)
-    {
-      free(angles);
-    }
-  free(phi_array);
-  free(r_min_list);
-  free(r_min_list2);
-  free(f1);
-  free(f2);
-  free(arc_2_x);
-  free(arc_2_y);
-  free(liste);
-  free(liste2);
-  free(colormap);
-
-  return error;
+  return ERROR_NONE;
 }
+
 
 err_t plot_pie(grm_args_t *subplot_args)
 {
@@ -6230,38 +5310,6 @@ err_t plot_draw_polar_axes(grm_args_t *args)
     {
       if (grm_args_values(args, "normalization", "s", &norm) == 0) norm = "count";
     }
-  //  else
-  //    {
-  //      // Not Polarhistogram TODO: Merge  Polarheatmap
-  //      if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
-  //        {
-  //          angle_ticks = 8;
-  //        }
-  //      if (grm_args_values(args, "rings", "i", &rings) == 0)
-  //        {
-  //          if (str_equals_any(kind, 2, "polar_heatmap", "nonuniformpolar_heatmap"))
-  //            {
-  //              rings = 7;
-  //            }
-  //          else
-  //            {
-  //              rings = 9;
-  //            }
-  //        }
-  //
-  //      // ToDo: Maybe change tick calculation -> 0.1, 0.2, 0.5
-  //      if (grm_args_values(args, "yrange", "dd", &r_min, &r_max) == 0)
-  //        {
-  //          r_min = 0.0;
-  //          r_max = 1.0;
-  //        }
-  //      n = (int)ceil((r_max - r_min) / rings);
-  //      tick = (r_max - r_min) / static_cast<int>(rings);
-  //      tick = ceil(tick * 10);
-  //      tick /= 10;
-  //      r_max = r_min + rings * tick;
-  //      global_root->lastChildElement()->setAttribute("r_max", r_max);
-  //    }
 
   if (grm_args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
 
@@ -6270,9 +5318,10 @@ err_t plot_draw_polar_axes(grm_args_t *args)
 
   if (strcmp(kind, "polar_histogram") == 0)
     {
-      subGroup = global_render->createDrawPolarAxes(angle_ticks, kind, phiflip, norm, 1.0);
-      grm_args_values(args, "r_max", "d", &r_max);
-      subGroup->setAttribute("r_max", r_max);
+      // todo: move series/data dependent code into the renderer.
+      group = global_render->createDrawPolarAxes(angle_ticks, kind, phiflip, norm, 1.0);
+      //      grm_args_values(args, "r_max", "d", &r_max);
+      //      group->setAttribute("r_max", r_max);
     }
   else
     {
@@ -7253,7 +6302,7 @@ int *create_colormap(int x, int y, int size)
 /*
  * Calculates the classes for polar histogram
  * */
-err_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
+err_t classes_polar_histogram(grm_args_t *subplot_args)
 {
   unsigned int num_bins;
   double *theta = nullptr;
@@ -7290,619 +6339,80 @@ err_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
 
   err_t error = ERROR_NONE;
 
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Context> context = global_render->getContext();
+
+  group->setAttribute("polar_histogram_classes", true);
+
+  int id = static_cast<int>(global_root->getAttribute("id"));
+  global_root->setAttribute("id", id + 1);
+  auto str = std::to_string(id);
+
+  //! store id string in group for later usages in render.cxx
+  group->setAttribute("id", str);
 
   grm_args_values(subplot_args, "series", "A", &series);
-
 
   /* get theta or bin_counts */
   if (grm_args_values(*series, "bin_counts", "i", &is_bin_counts) == 0)
     {
       is_bin_counts = 0;
       grm_args_first_value(*series, "x", "D", &theta, &length);
+      std::vector<double> theta_vec(theta, theta + length);
+      (*context)["theta" + str] = theta_vec;
+      group->setAttribute("theta", "theta" + str);
     }
   else
     {
       grm_args_first_value(*series, "x", "I", &bin_counts, &length);
+      std::vector<int> bin_counts_vec(bin_counts, bin_counts + length);
+      (*context)["bin_counts" + str];
+      group->setAttribute("bin_counts", "bin_counts" + str);
+
       is_bin_counts = 1;
       num_bins = length;
       grm_args_push(*series, "nbins", "i", num_bins);
+      group->setAttribute("nbins", static_cast<int>(num_bins));
     }
 
-  if (grm_args_first_value(*series, "philim", "D", &philim, &dummy) == 0)
+  if (grm_args_first_value(*series, "philim", "D", &philim, &dummy))
     {
-      philim = &false_;
-    }
-  else
-    {
-      if (philim[0] < 0.0 || philim[1] > 2 * M_PI)
-        {
-          logger((stderr, "philim must be between 0 and 2 * pi\n"));
-          cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
-        }
-      if (philim[1] < philim[0])
-        {
-          double temp = philim[1];
-          int phiflip;
-          philim[1] = philim[0];
-          philim[0] = temp;
-          if (grm_args_values(subplot_args, "phiflip", "i", &phiflip) == 0)
-            {
-              phiflip = 1;
-              grm_args_push(subplot_args, "phiflip", "i", phiflip);
-            }
-          else
-            {
-              grm_args_push(subplot_args, "phiflip", "i", 0);
-            }
-        }
+      int phiflip;
+      grm_args_values(subplot_args, "phiflip", "i", &phiflip);
+      group->setAttribute("phiflip", phiflip);
+      group->setAttribute("philim", true);
+      group->setAttribute("phi_min", philim[0]);
+      group->setAttribute("phi_max", philim[1]);
     }
 
 
   /* bin_edges and nbins */
   if (grm_args_first_value(*series, "bin_edges", "D", &bin_edges, &num_bin_edges) == 0)
     {
-      if (grm_args_values(*series, "nbins", "i", &num_bins) == 0)
+
+      if (grm_args_values(*series, "nbins", "i", &num_bins))
         {
-          num_bins = grm_min(12, (int)(length * 1.0 / 2) - 1);
-          grm_args_push(*series, "nbins", "i", num_bins);
-        }
-      else
-        {
-          if (num_bins <= 0 || num_bins > 200)
-            {
-              num_bins = grm_min(12, (int)(length * 1.0 / 2) - 1);
-              grm_args_push(*series, "nbins", "i", num_bins);
-            }
-        }
-      if (*philim == -1.0)
-        num_bin_edges = 0;
-      else
-        {
-          bin_edges = bin_edges_buf = static_cast<double *>(malloc((num_bins + 1) * sizeof(double)));
-          cleanup_and_set_error_if(bin_edges == nullptr, ERROR_MALLOC);
-          linspace(philim[0], philim[1], num_bins + 1, bin_edges);
-          num_bin_edges = num_bins + 1;
-          grm_args_push(*series, "bin_edges", "nD", num_bin_edges, bin_edges);
+          group->setAttribute("nbins", static_cast<int>(num_bins));
         }
     }
   /* with bin_edges */
   else
     {
-      /* no philim */
-      if (*philim == -1)
-        {
-
-          /* filter bin_edges */
-          int temp = 0;
-          int i;
-          new_edges = static_cast<double *>(malloc(num_bin_edges * sizeof(double)));
-          cleanup_and_set_error_if(new_edges == nullptr, ERROR_MALLOC);
-
-          for (i = 0; i < num_bin_edges; ++i)
-            {
-              if (0.0 <= bin_edges[i] && bin_edges[i] <= 2 * M_PI)
-                {
-                  new_edges[temp] = bin_edges[i];
-                  temp++;
-                }
-              else
-                {
-                  logger((stderr, "Only values between 0 and 2 * pi allowed\n"));
-                  cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
-                }
-            }
-          if (num_bin_edges > temp)
-            {
-              num_bin_edges = temp;
-              bin_edges = bin_edges_buf = (double *)realloc(new_edges, temp * sizeof(double));
-              cleanup_and_set_error_if(bin_edges == nullptr, ERROR_MALLOC);
-            }
-          else
-            {
-              bin_edges = new_edges;
-            }
-          num_bins = num_bin_edges - 1;
-          grm_args_push(*series, "nbins", "i", num_bins);
-        }
-      /* with philim and binedges */
-      else
-        {
-          /* filter bin_edges */
-          int temp = 0;
-          new_edges = static_cast<double *>(malloc(num_bin_edges * sizeof(double)));
-          cleanup_and_set_error_if(new_edges == nullptr, ERROR_MALLOC);
-
-          int i;
-          for (i = 0; i < num_bin_edges; ++i)
-            {
-              if (philim[0] <= bin_edges[i] && bin_edges[i] <= philim[1])
-                {
-                  new_edges[temp] = bin_edges[i];
-                  temp++;
-                }
-            }
-          if (temp > 1)
-            {
-              if (num_bin_edges > temp)
-                {
-                  num_bin_edges = temp;
-                  bin_edges = bin_edges_buf = (double *)realloc(new_edges, temp * sizeof(double));
-                }
-              else
-                {
-                  bin_edges = new_edges;
-                }
-            }
-          if (num_bin_edges == 1)
-            {
-              logger(
-                  (stderr, "given philim and given bin_edges are not compatible --> filtered len(bin_edges) == 1\n"));
-              cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
-            }
-          else
-            {
-              num_bins = num_bin_edges - 1;
-              grm_args_push(*series, "nbins", "i", num_bins);
-              grm_args_push(*series, "bin_edges", "nD", num_bin_edges, bin_edges);
-            }
-        }
+      std::vector<double> bin_edges_vec(bin_edges, bin_edges + num_bin_edges);
+      (*context)["bin_edges" + str] = bin_edges_vec;
+      group->setAttribute("bin_edges", "bin_edges" + str);
     }
-
 
   if (grm_args_values(subplot_args, "normalization", "s", &norm) == 0)
     {
       norm = "count";
     }
-  else
+  group->setAttribute("normalization", norm);
+
+  if (grm_args_values(*series, "bin_width", "d", &bin_width))
     {
-      if (!str_equals_any(norm, 6, "count", "countdensity", "pdf", "probability", "cumcount", "cdf"))
-        {
-          logger((stderr, "Got keyword \"norm\"  with invalid value \"%s\"\n", norm));
-          cleanup_and_set_error(ERROR_PLOT_NORMALIZATION);
-        }
+      group->setAttribute("bin_width", bin_width);
     }
-
-  if (grm_args_values(*series, "bin_width", "d", &bin_width) == 0)
-    {
-      if (num_bin_edges > 0)
-        {
-          int i;
-          bin_widths = static_cast<double *>(malloc((num_bins + 1) * sizeof(double)));
-          cleanup_and_set_error_if(bin_widths == nullptr, ERROR_MALLOC);
-
-          for (i = 1; i <= num_bin_edges - 1; ++i)
-            {
-              *(bin_widths + i - 1) = *(bin_edges + i) - *(bin_edges + i - 1);
-            }
-          grm_args_push(*series, "bin_widths", "nD", num_bins, bin_widths);
-        }
-      else
-        {
-          bin_width = 2 * M_PI / num_bins;
-          grm_args_push(*series, "bin_width", "d", bin_width);
-        }
-    }
-  /* bin_width is given*/
-  else
-    {
-      int n = 0;
-      int temp;
-
-      if (num_bin_edges > 0 && *philim == -1.0)
-        {
-          int i;
-          logger((stderr, "bin_width is not compatible with bin_edges\n"));
-          cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
-
-          bin_widths = static_cast<double *>(malloc(num_bins * sizeof(double)));
-          cleanup_and_set_error_if(bin_widths == nullptr, ERROR_MALLOC);
-
-          for (i = 1; i <= num_bin_edges - 1; ++i)
-            {
-              *(bin_widths + i - 1) = *(bin_edges + i) - *(bin_edges + i - 1);
-            }
-          grm_args_push(*series, "bin_widths", "nD", num_bins, bin_widths);
-        }
-
-      /* with philim */
-      if (*philim != -1)
-        {
-          if (bin_width < 0 || bin_width > 2 * M_PI)
-            {
-              logger((stderr, "bin_width must be between 0 and 2 * Pi\n"));
-              cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
-            }
-          if (philim[1] - philim[0] < bin_width)
-            {
-              logger((stderr, "the given philim range does not work with the given bin_width\n"));
-              cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
-            }
-          else
-            {
-              n = (int)((philim[1] - philim[0]) / bin_width);
-              if (is_bin_counts == 1)
-                {
-                  if (num_bins > n)
-                    {
-                      logger((stderr,
-                              "bin_width does not work with this specific bin_count. Nbins do not fit bin_width\n"));
-                      cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
-                    }
-                  n = num_bins;
-                }
-              bin_edges = bin_edges_buf = static_cast<double *>(malloc((n + 1) * sizeof(double)));
-              cleanup_and_set_error_if(bin_edges == nullptr, ERROR_MALLOC);
-
-              linspace(philim[0], n * bin_width, n + 1, bin_edges);
-            }
-        }
-      /* without philim */
-      else
-        {
-          if (bin_width <= 0 || bin_width > 2 * M_PI)
-            {
-              logger((stderr, "bin_width must be between 0 (exclusive) and 2 * Pi\n"));
-              cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
-            }
-          else if ((int)(2 * M_PI / bin_width) > 200)
-            {
-              n = 200;
-              bin_width = 2 * M_PI / n;
-            }
-          n = (int)(2 * M_PI / bin_width);
-          if (is_bin_counts == 1)
-            {
-              if (num_bins > n)
-                {
-                  logger(
-                      (stderr, "bin_width does not work with this specific bin_count. Nbins do not fit bin_width\n"));
-                  cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
-                }
-              n = num_bins;
-            }
-          bin_edges = bin_edges_buf = static_cast<double *>(malloc((n + 1) * sizeof(double)));
-          cleanup_and_set_error_if(bin_edges == nullptr, ERROR_MALLOC);
-
-          linspace(0, n * bin_width, n + 1, bin_edges);
-        }
-      grm_args_push(*series, "nbins", "i", n);
-      num_bin_edges = n + 1;
-      num_bins = n;
-      grm_args_push(*series, "bin_edges", "nD", num_bin_edges, bin_edges);
-      grm_args_push(*series, "bin_width", "d", bin_width);
-      bin_widths = static_cast<double *>(malloc(num_bins * sizeof(double)));
-      cleanup_and_set_error_if(bin_widths == nullptr, ERROR_MALLOC);
-
-      for (temp = 0; temp < num_bins; ++temp)
-        {
-          bin_widths[temp] = bin_width;
-        }
-      grm_args_push(*series, "bin_widths", "nD", num_bins, bin_widths);
-    }
-
-
-  /* is_bin_counts */
-  if (is_bin_counts == 1)
-    {
-      double temp_max_bc = 0.0;
-      int i;
-      int total = 0;
-      int j;
-      int prev = 0;
-
-      if (num_bin_edges > 0 && num_bins != num_bin_edges - 1)
-        {
-          logger((stderr, "Number of bin_edges must be number of bin_counts + 1\n"));
-          cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
-        }
-
-      /* total number of observations */
-      for (i = 0; i < num_bins; ++i)
-        {
-          total += bin_counts[i];
-        }
-      for (i = 0; i < num_bins; ++i)
-        {
-          if (num_bin_edges > 0) bin_width = bin_widths[i];
-
-          if (strcmp(norm, "pdf") == 0)
-            {
-              if (bin_counts[i] * 1.0 / (total * bin_width) > temp_max_bc)
-                {
-                  temp_max_bc = bin_counts[i] * 1.0 / (total * bin_width);
-                }
-            }
-          else if (strcmp(norm, "countdensity") == 0)
-            {
-              if (bin_counts[i] * 1.0 / (bin_width) > temp_max_bc)
-                {
-                  temp_max_bc = bin_counts[i] * 1.0 / (bin_width);
-                }
-            }
-          else
-            {
-              if (bin_counts[i] > temp_max_bc) temp_max_bc = bin_counts[i];
-            }
-        }
-
-      /* double classes[num_bins][total]; */
-      classes = static_cast<double *>(malloc((num_bins * total) * sizeof(double)));
-      cleanup_and_set_error_if(classes == nullptr, ERROR_MALLOC);
-
-      length = (int)temp_max_bc;
-      p = classes;
-
-      for (i = 0; i < (num_bins * total); ++i)
-        {
-          *p = -1.0;
-          p++;
-        }
-
-      /* fill classes with bin counts */
-      for (i = 0; i < num_bins; ++i)
-        {
-          p = classes + i * total;
-          if (str_equals_any(norm, 2, "cdf", "cumcount"))
-            {
-              prev += bin_counts[i];
-              for (j = 0; j < prev; ++j)
-                {
-                  *p = 1.0;
-                  ++p;
-                }
-            }
-
-          else
-            {
-              for (j = 0; j < bin_counts[i]; ++j)
-                {
-                  *p = 1.0;
-                  ++p;
-                }
-            }
-        }
-
-      grm_args_push(*series, "classes", "nD", total * num_bins, classes);
-      if (strcmp(norm, "probability") == 0)
-        max = temp_max_bc * 1.0 / total;
-      else if (strcmp(norm, "cdf") == 0)
-        max = 1.0;
-      else if (strcmp(norm, "cumcount") == 0)
-        max = total * 1.0;
-      else
-        max = temp_max_bc;
-    }
-
-  /* no is_bin_counts */
-  else
-    {
-      int x;
-
-      /* no bin_edges */
-      if (num_bin_edges == 0)
-        {
-          max = 0.0;
-          start = 0;
-          interval = 2 * M_PI / num_bins;
-          if (str_equals_any(norm, 4, "count", "pdf", "countdensity", "probability"))
-            {
-              /*double classes[num_bins][length];*/
-              classes = static_cast<double *>(malloc(num_bins * length * sizeof(double)));
-              cleanup_and_set_error_if(classes == nullptr, ERROR_MALLOC);
-              p = classes;
-              int i;
-              for (i = 0; i < (num_bins * length); ++i)
-                {
-                  *p = -1.0;
-                  p++;
-                }
-              for (x = 0; x < num_bins; ++x)
-                {
-                  int y;
-                  p = classes + x * length;
-                  temp_max = 0.0;
-                  for (y = 0; y < length; ++y)
-                    {
-                      if (start <= theta[y] && theta[y] < (start + interval))
-                        {
-                          temp_max++;
-                          *p = theta[y];
-                          p++;
-                          if (max < temp_max) max = temp_max;
-                        }
-                    }
-                  start += interval;
-                }
-              grm_args_push(*series, "classes", "nD", num_bins * length, classes);
-            }
-          else if (str_equals_any(norm, 2, "cdf", "cumcount"))
-            {
-              /*double classes[num_bins][length];*/
-              classes = static_cast<double *>(malloc(num_bins * length * sizeof(double)));
-              cleanup_and_set_error_if(classes == nullptr, ERROR_MALLOC);
-              int i;
-              int prev;
-              p = classes;
-
-              for (i = 0; i < (num_bins * length); ++i)
-                {
-                  *p = -1;
-                  p++;
-                }
-
-              prev = 0;
-              for (x = 0; x < num_bins; ++x)
-                {
-                  p = classes + x * length;
-
-                  if (x > 0)
-                    {
-                      double *prev_list;
-                      int y;
-                      /*prev_list = classes[x - 1];*/
-                      prev_list = classes + (x - 1) * length;
-                      for (y = 0; y < prev; ++y)
-                        {
-                          *p = *prev_list;
-                          p++;
-                          prev_list++;
-                        }
-                    }
-                  for (i = 0; i < length; ++i)
-                    {
-                      if (start <= theta[i] && theta[i] < (start + interval))
-                        {
-                          *p = theta[i];
-                          p++;
-                          prev++;
-                        }
-                    }
-                  start += interval;
-                }
-              max = length;
-              grm_args_push(*series, "classes", "nD", num_bins * length, classes);
-            }
-
-          if (str_equals_any(norm, 2, "probability", "cdf"))
-            {
-              max = max / length;
-            }
-          else if (strcmp(norm, "pdf") == 0)
-            {
-              max = max / (length * bin_width);
-            }
-        }
-      /* bin_edges */
-      else
-        {
-          /* filter theta list */
-          int filter;
-          int temp = 0;
-          double bin_min = *bin_edges;
-          double bin_max = bin_edges[num_bin_edges - 1];
-          new_theta = static_cast<double *>(malloc(length * sizeof(double)));
-          cleanup_and_set_error_if(new_theta == nullptr, ERROR_MALLOC);
-          for (filter = 0; filter < length; ++filter)
-            {
-              if (theta[filter] >= bin_min && theta[filter] < bin_max)
-                {
-                  new_theta[temp] = theta[filter];
-                  temp++;
-                }
-            }
-          theta = new_theta;
-          length = temp;
-
-          max = 0.0;
-          if (str_equals_any(norm, 4, "count", "pdf", "countdensity", "probability"))
-            {
-              int a;
-              /* double classes[num_bins][length]; */
-              classes = static_cast<double *>(malloc(num_bins * length * sizeof(double)));
-              cleanup_and_set_error_if(classes == nullptr, ERROR_MALLOC);
-              p = classes;
-              for (a = 0; a < (num_bins * length); ++a)
-                {
-                  *p = -1;
-                  p++;
-                }
-              for (x = 0; x < num_bins; ++x)
-                {
-                  int b;
-                  p = classes + x * length;
-                  temp_max = 0.0;
-                  for (b = 0; b < length; ++b)
-                    {
-                      if (x == num_bin_edges - 1) break;
-                      if (*bin_edges <= theta[b] && theta[b] < *(bin_edges + 1))
-                        {
-                          temp_max++;
-                          *p = theta[b];
-                          p++;
-                        }
-                    }
-                  if (strcmp(norm, "pdf") == 0)
-                    {
-                      temp_max /= length * *(bin_widths + x);
-                    }
-                  else if (strcmp(norm, "countdensity") == 0)
-                    {
-                      temp_max /= *(bin_widths + x);
-                    }
-
-                  if (max < temp_max) max = temp_max;
-
-                  bin_edges++;
-                }
-
-              grm_args_push(*series, "classes", "nD", num_bins * length, classes);
-            }
-          else if (str_equals_any(norm, 2, "cdf", "cumcount"))
-            {
-              int c;
-              int prev;
-              int d;
-              classes = static_cast<double *>(malloc(num_bins * length * sizeof(double)));
-              cleanup_and_set_error_if(classes == nullptr, ERROR_MALLOC);
-              p = classes;
-              for (c = 0; c < (num_bins * length); ++c)
-                {
-                  *p = -1;
-                  p++;
-                }
-
-              prev = 0;
-              for (d = 0; d < num_bins; ++d)
-                {
-                  int i;
-                  p = classes + d * num_bins;
-
-                  if (d > 0)
-                    {
-                      double *prev_list;
-                      int y;
-                      prev_list = classes + (d - 1) * num_bins;
-
-                      for (y = 0; y < prev; ++y)
-                        {
-                          *p = *prev_list;
-                          p++;
-                          prev_list++;
-                        }
-                    }
-                  for (i = 0; i < length; ++i)
-                    {
-                      if (*bin_edges <= theta[i] && theta[i] < *(bin_edges + 1))
-                        {
-                          *p = theta[i];
-                          p++;
-                          prev++;
-                        }
-                    }
-                  bin_edges++;
-                }
-              max = length;
-              grm_args_push(*series, "classes", "nD", num_bins * length, classes);
-            }
-
-          if (str_equals_any(norm, 2, "probability", "cdf"))
-            {
-              max = max / length;
-            }
-        }
-    }
-
-  if (r_max != nullptr)
-    {
-      *r_max = max;
-    }
-
-cleanup:
-  free(bin_edges_buf);
-  free(bin_widths);
-  free(classes);
-  free(new_theta);
-  free(new_edges);
 
   return error;
 }
@@ -8393,15 +6903,16 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
   int keep_aspect_ratio, location, adjust_xlim, adjust_ylim;
   double *subplot;
 
+  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  grm_args_values(subplot_args, "kind", "s", &kind);
+  group->setAttribute("kind", kind);
+  logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
+
+
   if (plot_pre_subplot(subplot_args) != ERROR_NONE)
     {
       return 0;
     }
-
-  grm_args_values(subplot_args, "kind", "s", &kind);
-  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
-  group->setAttribute("kind", kind);
-  logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
 
   if (grm_args_values(subplot_args, "ylabel", "s", &ylabel))
     {
@@ -8582,6 +7093,7 @@ int grm_plot(const grm_args_t *args)
               auto group = global_render->createElement("plot");
               group->setAttribute("subplotGroup", true);
               global_root->append(group);
+              currentDomElement = group;
               if (!plot_process_subplot_args(*current_subplot_args))
                 {
                   return 0;

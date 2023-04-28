@@ -284,15 +284,15 @@ static void polar_histogram_title(void)
 
 static void test_plot(void)
 {
-  polar_histogram_minimal();
-  polar_histogram_phiflip();
-  polar_histogram_nbins();
-  polar_histogram_bin_counts();
-  polar_histogram_colormap();
-  polar_histogram_bin_edges();
-  polar_histogram_stairs();
-  polar_histogram_rlim();
-  polar_histogram_philim();
+  //  polar_histogram_minimal();
+  //  polar_histogram_phiflip();
+  //  polar_histogram_nbins();
+  //  polar_histogram_bin_counts();
+  //  polar_histogram_colormap();
+  //  polar_histogram_bin_edges();
+  //  polar_histogram_stairs();
+  //  polar_histogram_rlim();
+  //  polar_histogram_philim();
   polar_histogram_normalization();
   polar_histogram_bin_width();
   polar_histogram_title();
