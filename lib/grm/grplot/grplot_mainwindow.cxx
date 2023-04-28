@@ -37,6 +37,10 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv) : QMainWindow()
     }
 
   setWindowTitle("GR Plot");
+  if (strcmp(argv[1], "--listen") != 0)
+    {
+      resize(600, 450);
+    }
 }
 
 GRPlotMainWindow::~GRPlotMainWindow() = default;
