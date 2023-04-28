@@ -26,8 +26,6 @@ ifeq ($(UNAME), Darwin)
 	$(DESTDIR)$(GRDIR)/Applications/grplot.app
 	@if [ ! -d $(DESTDIR)$(GRDIR)/bin ]; then \
 		mkdir -m 755 $(DESTDIR)$(GRDIR)/bin; fi
-	@ditto grplot.macos.sh \
-	$(DESTDIR)$(GRDIR)/bin/grplot
 	@if [ ! -d $(DESTDIR)$(GRDIR)/share/doc/grplot ]; then \
 		mkdir -m 755 -p $(DESTDIR)$(GRDIR)/share/doc/grplot; fi
 	@ditto README.md \
