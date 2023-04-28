@@ -488,7 +488,7 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
 void GRPlotWidget::resizeEvent(QResizeEvent *event)
 {
   grm_args_push(args_, "size", "dd", (double)event->size().width(), (double)event->size().height());
-  grm_merge(args_);
+  grm_merge_hold(args_);
 
   redraw();
 }
