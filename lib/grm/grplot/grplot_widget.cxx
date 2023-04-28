@@ -15,6 +15,8 @@
 #include <QRubberBand>
 #include <functional>
 
+#include <gr.h>
+
 #include "grplot_widget.hxx"
 #include "util.hxx"
 
@@ -750,6 +752,7 @@ void GRPlotWidget::showEvent(QShowEvent *)
 
 void GRPlotWidget::screenChanged()
 {
+  gr_configurews();
   redraw();
 }
 
