@@ -1352,13 +1352,6 @@ if(GR_INSTALL)
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
       BUNDLE DESTINATION Applications
     )
-    if(APPLE)
-      install(
-        PROGRAMS lib/grm/grplot/grplot.macos.sh
-        DESTINATION ${CMAKE_INSTALL_BINDIR}
-        RENAME grplot
-      )
-    endif()
     install(
       FILES lib/grm/grplot/README.md
       DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/grplot
