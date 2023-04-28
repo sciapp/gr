@@ -495,17 +495,19 @@ void GRPlotWidget::resizeEvent(QResizeEvent *event)
 
 void GRPlotWidget::wheelEvent(QWheelEvent *event)
 {
-  int x, y;
-  getWheelPos(event, &x, &y);
+  if (event->angleDelta().y() != 0)
+    {
+      int x, y;
+      getWheelPos(event, &x, &y);
+      grm_args_t *args = grm_args_new();
+      grm_args_push(args, "x", "i", x);
+      grm_args_push(args, "y", "i", y);
+      grm_args_push(args, "angle_delta", "d", (double)event->angleDelta().y());
+      grm_input(args);
+      grm_args_delete(args);
 
-  grm_args_t *args = grm_args_new();
-  grm_args_push(args, "x", "i", x);
-  grm_args_push(args, "y", "i", y);
-  grm_args_push(args, "angle_delta", "d", (double)event->angleDelta().y());
-  grm_input(args);
-  grm_args_delete(args);
-
-  redraw();
+      redraw();
+    }
 }
 
 void GRPlotWidget::mouseDoubleClickEvent(QMouseEvent *event)
