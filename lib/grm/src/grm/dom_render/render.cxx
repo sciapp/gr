@@ -47,16 +47,6 @@ static std::map<std::string, double> symbol_to_meters_per_unit{
     {"\"", 0.0254}, {"ft", 0.3048}, {"'", 0.0254}, {"pc", 0.0254 / 6.0}, {"pt", 0.0254 / 72.0},
 };
 
-static int plot_scatter_markertypes[] = {
-    GKS_K_MARKERTYPE_SOLID_CIRCLE,   GKS_K_MARKERTYPE_SOLID_TRI_UP, GKS_K_MARKERTYPE_SOLID_TRI_DOWN,
-    GKS_K_MARKERTYPE_SOLID_SQUARE,   GKS_K_MARKERTYPE_SOLID_BOWTIE, GKS_K_MARKERTYPE_SOLID_HGLASS,
-    GKS_K_MARKERTYPE_SOLID_DIAMOND,  GKS_K_MARKERTYPE_SOLID_STAR,   GKS_K_MARKERTYPE_SOLID_TRI_RIGHT,
-    GKS_K_MARKERTYPE_SOLID_TRI_LEFT, GKS_K_MARKERTYPE_SOLID_PLUS,   GKS_K_MARKERTYPE_PENTAGON,
-    GKS_K_MARKERTYPE_HEXAGON,        GKS_K_MARKERTYPE_HEPTAGON,     GKS_K_MARKERTYPE_OCTAGON,
-    GKS_K_MARKERTYPE_STAR_4,         GKS_K_MARKERTYPE_STAR_5,       GKS_K_MARKERTYPE_STAR_6,
-    GKS_K_MARKERTYPE_STAR_7,         GKS_K_MARKERTYPE_STAR_8,       GKS_K_MARKERTYPE_VLINE,
-    GKS_K_MARKERTYPE_HLINE,          GKS_K_MARKERTYPE_OMARK,        INT_MAX};
-
 static int bounding_id = 0;
 static std::map<int, std::shared_ptr<GRM::Element>> bounding_map;
 
@@ -3863,6 +3853,77 @@ static void scatter(const std::shared_ptr<GRM::Element> &element, const std::sha
     }
 }
 
+static void scatter3(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Processing function for scatter3
+   *
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   */
+  double c_min, c_max;
+  unsigned int x_length, y_length, z_length, c_length, i, c_index;
+  std::vector<double> x_vec, y_vec, z_vec, c_vec;
+
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+  auto z = static_cast<std::string>(element->getAttribute("z"));
+  x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  z_vec = GRM::get<std::vector<double>>((*context)[z]);
+  x_length = x_vec.size();
+  y_length = y_vec.size();
+  z_length = z_vec.size();
+
+  std::vector<int> markerCVec;
+
+  global_render->setMarkerType(element, GKS_K_MARKERTYPE_SOLID_CIRCLE);
+  processMarkerType(element);
+  if (element->hasAttribute("c"))
+    {
+      auto c = static_cast<std::string>(element->getAttribute("c"));
+      c_vec = GRM::get<std::vector<double>>((*context)[c]);
+      c_length = c_vec.size();
+      c_min = static_cast<double>(element->getAttribute("c_min"));
+      c_max = static_cast<double>(element->getAttribute("c_max"));
+
+      for (i = 0; i < x_length; i++)
+        {
+          if (i < c_length)
+            {
+              c_index = 1000 + (int)(255.0 * (c[i] - c_min) / (c_max - c_min) + 0.5);
+            }
+          else
+            {
+              c_index = 989;
+            }
+          markerCVec.push_back(c_index);
+        }
+    }
+
+  int id_int = static_cast<int>(global_root->getAttribute("id"));
+  global_root->setAttribute("id", ++id_int);
+  std::string id = std::to_string(id_int);
+
+  if (!markerCVec.empty())
+    {
+      global_render->setMarkerColorInd(element, "markercolorinds" + id, markerCVec);
+    }
+  else if (element->hasAttribute("c_index"))
+    {
+      global_render->setMarkerColorInd(element, c_index);
+    }
+
+  // clear old marker
+  for (auto elem : element->children())
+    {
+      if (elem->localName() == "polymarker3d") elem->remove();
+    }
+
+  auto temp = global_render->createPolymarker3d("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec);
+  element->append(temp);
+}
+
 static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
@@ -4167,19 +4228,13 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
   static std::map<std::string,
                   std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)>>
       seriesNameToFunc{
-          {std::string("contour"), contour},
-          {std::string("contourf"), contourf},
-          {std::string("hexbin"), hexbin},
-          {std::string("isosurface"), drawIsosurface3},
-          {std::string("polar"), polar},
-          {std::string("quiver"), quiver},
-          {std::string("scatter"), scatter},
-          {std::string("shade"), shadePoints},
-          {std::string("stem"), stem},
-          {std::string("surface"), surface},
-          {std::string("tricontour"), triContour},
-          {std::string("trisurface"), triSurface},
-          {std::string("volume"), volume},
+          {std::string("contour"), contour},       {std::string("contourf"), contourf},
+          {std::string("hexbin"), hexbin},         {std::string("isosurface"), drawIsosurface3},
+          {std::string("polar"), polar},           {std::string("quiver"), quiver},
+          {std::string("scatter"), scatter},       {std::string("scatter3"), scatter3},
+          {std::string("shade"), shadePoints},     {std::string("stem"), stem},
+          {std::string("surface"), surface},       {std::string("tricontour"), triContour},
+          {std::string("trisurface"), triSurface}, {std::string("volume"), volume},
       };
   //<series name="scatter_series" markertype="-7">
   //      <polymarker bbox_id="18" bbox_xmax="570.000000" bbox_xmin="75.000000" bbox_ymax="219.375000"

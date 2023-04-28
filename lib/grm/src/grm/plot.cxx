@@ -4615,49 +4615,39 @@ err_t plot_scatter3(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
-      auto subGroup = global_render->createSeries("scatter3_series");
+      auto subGroup = global_render->createSeries("scatter3");
       group->append(subGroup);
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
-      std::vector<int> markerCVec;
       return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      global_render->setMarkerType(subGroup, GKS_K_MARKERTYPE_SOLID_CIRCLE);
+
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      global_root->setAttribute("id", ++id);
+      auto context = global_render->getContext();
+
+      std::vector<double> x_vec(x, x + x_length);
+      std::vector<double> y_vec(y, y + y_length);
+      std::vector<double> z_vec(z, z + z_length);
+
+      (*context)["x" + str] = x_vec;
+      subGroup->setAttribute("x", "x" + str);
+      (*context)["y" + str] = y_vec;
+      subGroup->setAttribute("y", "y" + str);
+      (*context)["z" + str] = z_vec;
+      subGroup->setAttribute("z", "z" + str);
+
       if (grm_args_first_value(*current_series, "c", "D", &c, &c_length))
         {
+          std::vector<double> c_vec(c, c + c_length);
+          (*context)["c" + str] = c_vec;
+          subGroup->setAttribute("c", "c" + str);
+
           grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max);
-          for (i = 0; i < x_length; i++)
-            {
-              if (i < c_length)
-                {
-                  c_index = 1000 + (int)(255.0 * (c[i] - c_min) / (c_max - c_min) + 0.5);
-                }
-              else
-                {
-                  c_index = 989;
-                }
-              markerCVec.push_back(c_index);
-            }
+          subGroup->setAttribute("c_min", c_min);
+          subGroup->setAttribute("c_max", c_max);
         }
-
-      std::vector<double> x_vec = std::vector<double>(x, x + x_length);
-      std::vector<double> y_vec = std::vector<double>(y, y + y_length);
-      std::vector<double> z_vec = std::vector<double>(z, z + z_length);
-      int id_int = static_cast<int>(global_root->getAttribute("id"));
-      global_root->setAttribute("id", ++id_int);
-      std::string id = std::to_string(id_int);
-
-      if (markerCVec.size() > 0)
-        {
-          global_render->setMarkerColorInd(subGroup, "markercolorinds" + id, markerCVec);
-        }
-      else if (grm_args_values(*current_series, "c", "i", &c_index))
-        {
-          global_render->setMarkerColorInd(subGroup, c_index);
-        }
-
-      auto temp = global_render->createPolymarker3d("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec);
-      subGroup->append(temp);
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
