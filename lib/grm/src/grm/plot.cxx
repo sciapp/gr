@@ -4660,7 +4660,7 @@ err_t plot_imshow(grm_args_t *subplot_args)
   grm_args_t **current_series;
   double *c_data;
   double c_min, c_max;
-  unsigned int c_data_length, i, j, k, rows, cols;
+  unsigned int c_data_length, i, j, k;
   int *img_data;
   unsigned int *shape;
   int grplot = 0;
@@ -4674,61 +4674,29 @@ err_t plot_imshow(grm_args_t *subplot_args)
   return_error_if(!grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max), ERROR_PLOT_MISSING_DATA);
   while (*current_series != nullptr)
     {
-      auto subGroup = global_render->createSeries("imshow_series");
+      auto subGroup = global_render->createSeries("imshow");
       group->append(subGroup);
-      subGroup->setAttribute("grplot", grplot);
+      group->setAttribute("grplot", grplot);
+      subGroup->setAttribute("c_min", c_min);
+      subGroup->setAttribute("c_max", c_max);
 
       return_error_if(!grm_args_first_value(*current_series, "c", "D", &c_data, &c_data_length),
                       ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "c_dims", "I", &shape, &i), ERROR_PLOT_MISSING_DATA);
       return_error_if(i != 2, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       return_error_if(shape[0] * shape[1] != c_data_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      cols = shape[0];
-      rows = shape[1];
 
-      img_data = static_cast<int *>(malloc(sizeof(int) * c_data_length));
-      if (img_data == nullptr)
-        {
-          debug_print_malloc_error();
-          free(img_data);
-          return ERROR_MALLOC;
-        }
-
-      logger((stderr, "Got min, max %lf %lf\n", c_min, c_max));
-      k = 0;
-      for (j = 0; j < rows; ++j)
-        for (i = 0; i < cols; ++i)
-          {
-            img_data[k++] = 1000 + (int)grm_round((1.0 * c_data[j * cols + i] - c_min) / (c_max - c_min) * 255);
-          }
-
-      std::vector<int> img_vec = std::vector<int>(img_data, img_data + cols * rows);
-      int id_int = static_cast<int>(global_root->getAttribute("id"));
-      global_root->setAttribute("id", ++id_int);
-      std::string id = std::to_string(id_int);
-      double *x_tmp, *y_tmp;
-
-      x_tmp = static_cast<double *>(malloc((cols) * sizeof(double)));
-      y_tmp = static_cast<double *>(malloc((rows) * sizeof(double)));
-      linspace(0, cols - 1, cols, x_tmp);
-      linspace(0, rows - 1, rows, y_tmp);
-
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
       auto context = global_render->getContext();
-      std::vector<double> x_vec(x_tmp, x_tmp + cols);
-      (*context)["x" + id] = x_vec;
-      subGroup->setAttribute("x", "x" + id);
-      std::vector<double> y_vec(y_tmp, y_tmp + rows);
-      (*context)["y" + id] = y_vec;
-      subGroup->setAttribute("y", "y" + id);
-      std::vector<double> z_vec(c_data, c_data + c_data_length);
-      (*context)["z" + id] = z_vec;
-      subGroup->setAttribute("z", "z" + id);
 
-      global_render->setSelntran(subGroup, 0);
-      global_render->setScale(subGroup, 0);
-      global_render->setImshowInformation(subGroup, cols, rows, "img_data" + id, img_vec, nullptr);
+      std::vector<double> c_data_vec(c_data, c_data + c_data_length);
+      std::vector<double> shape_vec(shape, shape + i);
 
-      free(img_data);
+      (*context)["c" + str] = c_data_vec;
+      subGroup->setAttribute("c", "c" + str);
+      (*context)["shape" + str] = shape_vec;
+      subGroup->setAttribute("shape", "shape" + str);
 
       ++current_series;
     }

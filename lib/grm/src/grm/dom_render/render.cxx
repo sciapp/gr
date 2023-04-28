@@ -1177,93 +1177,6 @@ static void processGR3CameraLookAt(const std::shared_ptr<GRM::Element> &elem)
   gr3_cameralookat(camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z);
 }
 
-static void processImshowInformation(const std::shared_ptr<GRM::Element> &elem)
-{
-  double x_min, x_max, y_min, y_max;
-  double vp[4];
-  int scale;
-  int cols = static_cast<int>(elem->getAttribute("cols"));
-  int rows = static_cast<int>(elem->getAttribute("rows"));
-  std::string image_data_key = static_cast<std::string>(elem->getAttribute("image_data_key"));
-  std::shared_ptr<GRM::Element> ancestor = elem->parentElement();
-  bool vp_found = false;
-  int grplot;
-
-  // Get vp from ancestor GRM::element, usually the q"plot-group"
-  while (ancestor->localName() != "figure")
-    {
-      if (ancestor->hasAttribute("vp"))
-        {
-          vp[0] = static_cast<double>(ancestor->getAttribute("vp_xmin"));
-          vp[1] = static_cast<double>(ancestor->getAttribute("vp_xmax"));
-          vp[2] = static_cast<double>(ancestor->getAttribute("vp_ymin"));
-          vp[3] = static_cast<double>(ancestor->getAttribute("vp_ymax"));
-          vp_found = true;
-          grplot = static_cast<int>(ancestor->getAttribute("grplot"));
-          break;
-        }
-      else
-        {
-          ancestor = ancestor->parentElement();
-        }
-    }
-  if (!vp_found)
-    {
-      throw NotFoundError("No vp was found within ancestors");
-    }
-
-  gr_inqscale(&scale);
-
-  if (cols * (vp[3] - vp[2]) < rows * (vp[1] - vp[0]))
-    {
-      double w = (double)cols / (double)rows * (vp[3] - vp[2]);
-      x_min = grm_max(0.5 * (vp[0] + vp[1] - w), vp[0]);
-      x_max = grm_min(0.5 * (vp[0] + vp[1] + w), vp[1]);
-      y_min = vp[2];
-      y_max = vp[3];
-    }
-  else
-    {
-      double h = (double)rows / (double)cols * (vp[1] - vp[0]);
-      x_min = vp[0];
-      x_max = vp[1];
-      y_min = grm_max(0.5 * (vp[3] + vp[2] - h), vp[2]);
-      y_max = grm_min(0.5 * (vp[3] + vp[2] + h), vp[3]);
-    }
-
-  if (scale & GR_OPTION_FLIP_X)
-    {
-      double tmp = x_max;
-      x_max = x_min;
-      x_min = tmp;
-    }
-  if (scale & GR_OPTION_FLIP_Y)
-    {
-      double tmp = y_max;
-      y_max = y_min;
-      y_min = tmp;
-    }
-  if (grplot)
-    {
-      double tmp = y_min;
-      y_min = y_max;
-      y_max = tmp;
-    }
-
-  /* remove old cell arrays if they exist */
-  auto imshow_elements = elem->querySelectorsAll("[name=\"imshow\"]");
-  for (auto &imshow_element : imshow_elements)
-    {
-      imshow_element->remove();
-    }
-
-  auto temp = global_render->createCellArray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, image_data_key,
-                                             std::nullopt);
-  temp->setAttribute("name", "imshow");
-
-  elem->append(temp);
-}
-
 static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem)
 {
   std::string mkind = static_cast<std::string>(elem->getAttribute("marginalheatmap_kind"));
@@ -2252,7 +2165,6 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("gr_option_flip_y"), processGROptionFlipY},
       {std::string("gr3backgroundcolor"), processGR3BackgroundColor},
       {std::string("gr3cameralookat"), processGR3CameraLookAt},
-      {std::string("imshow_information"), processImshowInformation},
       {std::string("linecolorind"), processLineColorInd},
       {std::string("linespec"), processLineSpec},
       {std::string("linetype"), processLineType},
@@ -4051,10 +3963,157 @@ static void surface(const std::shared_ptr<GRM::Element> &element, const std::sha
     }
 }
 
+static void imshow(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Processing function for imshow
+   *
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   */
+  double c_min, c_max;
+  unsigned int c_data_length, i, j, k;
+  int grplot = 0;
+  int rows, cols;
+
+  grplot = element->parentElement()->hasAttribute("grplot");
+  c_min = static_cast<double>(element->getAttribute("c_min"));
+  c_max = static_cast<double>(element->getAttribute("c_max"));
+
+  std::vector<double> c_data_vec, shape_vec;
+
+  auto x = static_cast<std::string>(element->getAttribute("c"));
+  auto y = static_cast<std::string>(element->getAttribute("shape"));
+
+  c_data_vec = GRM::get<std::vector<double>>((*context)[x]);
+  shape_vec = GRM::get<std::vector<double>>((*context)[y]);
+  c_data_length = c_data_vec.size();
+  i = shape_vec.size();
+
+  cols = (int)shape_vec[0];
+  rows = (int)shape_vec[1];
+
+  std::vector<int> img_data(c_data_length);
+
+  k = 0;
+  for (j = 0; j < rows; ++j)
+    {
+      for (i = 0; i < cols; ++i)
+        {
+          img_data[k++] = 1000 + (int)grm_round((1.0 * c_data_vec[j * cols + i] - c_min) / (c_max - c_min) * 255);
+        }
+    }
+
+  int id_int = static_cast<int>(global_root->getAttribute("id"));
+  global_root->setAttribute("id", ++id_int);
+  std::string id = std::to_string(id_int);
+
+  auto x_tmp = static_cast<double *>(malloc((cols) * sizeof(double)));
+  auto y_tmp = static_cast<double *>(malloc((rows) * sizeof(double)));
+  linspace(0, cols - 1, cols, x_tmp);
+  linspace(0, rows - 1, rows, y_tmp);
+
+  std::vector<double> x_vec(x_tmp, x_tmp + cols);
+  (*context)["x" + id] = x_vec;
+  element->setAttribute("x", "x" + id);
+  std::vector<double> y_vec(y_tmp, y_tmp + rows);
+  (*context)["y" + id] = y_vec;
+  element->setAttribute("y", "y" + id);
+  (*context)["z" + id] = c_data_vec;
+  element->setAttribute("z", "z" + id);
+  (*context)["img_data_key" + id] = img_data;
+  element->setAttribute("img_data_key", "img_data_key" + id);
+
+  global_render->setSelntran(element, 0);
+  global_render->setScale(element, 0);
+  processScale(element);
+  processSelntran(element);
+
+  double x_min, x_max, y_min, y_max;
+  double vp[4];
+  int scale;
+  std::string image_data_key = static_cast<std::string>(element->getAttribute("img_data_key"));
+  std::shared_ptr<GRM::Element> ancestor = element->parentElement();
+  bool vp_found = false;
+
+  // Get vp from ancestor GRM::element, usually the q"plot-group"
+  while (ancestor->localName() != "figure")
+    {
+      if (ancestor->hasAttribute("vp"))
+        {
+          vp[0] = static_cast<double>(ancestor->getAttribute("vp_xmin"));
+          vp[1] = static_cast<double>(ancestor->getAttribute("vp_xmax"));
+          vp[2] = static_cast<double>(ancestor->getAttribute("vp_ymin"));
+          vp[3] = static_cast<double>(ancestor->getAttribute("vp_ymax"));
+          vp_found = true;
+          break;
+        }
+      else
+        {
+          ancestor = ancestor->parentElement();
+        }
+    }
+  if (!vp_found)
+    {
+      throw NotFoundError("No vp was found within ancestors");
+    }
+
+  gr_inqscale(&scale);
+
+  if (cols * (vp[3] - vp[2]) < rows * (vp[1] - vp[0]))
+    {
+      double w = (double)cols / (double)rows * (vp[3] - vp[2]);
+      x_min = grm_max(0.5 * (vp[0] + vp[1] - w), vp[0]);
+      x_max = grm_min(0.5 * (vp[0] + vp[1] + w), vp[1]);
+      y_min = vp[2];
+      y_max = vp[3];
+    }
+  else
+    {
+      double h = (double)rows / (double)cols * (vp[1] - vp[0]);
+      x_min = vp[0];
+      x_max = vp[1];
+      y_min = grm_max(0.5 * (vp[3] + vp[2] - h), vp[2]);
+      y_max = grm_min(0.5 * (vp[3] + vp[2] + h), vp[3]);
+    }
+
+  if (scale & GR_OPTION_FLIP_X)
+    {
+      double tmp = x_max;
+      x_max = x_min;
+      x_min = tmp;
+    }
+  if (scale & GR_OPTION_FLIP_Y)
+    {
+      double tmp = y_max;
+      y_max = y_min;
+      y_min = tmp;
+    }
+  if (grplot)
+    {
+      double tmp = y_min;
+      y_min = y_max;
+      y_max = tmp;
+    }
+
+  /* remove old cell arrays if they exist */
+  auto imshow_elements = element->children();
+  for (auto &imshow_element : imshow_elements)
+    {
+      if (static_cast<std::string>(imshow_element->getAttribute("name")) == "imshow") imshow_element->remove();
+    }
+
+  auto temp = global_render->createCellArray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, image_data_key,
+                                             std::nullopt);
+  temp->setAttribute("name", "imshow");
+
+  element->append(temp);
+}
+
 static void text(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
-   * Processing funcions for text
+   * Processing function for text
    *
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
@@ -4228,19 +4287,22 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
   static std::map<std::string,
                   std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)>>
       seriesNameToFunc{
-          {std::string("contour"), contour},       {std::string("contourf"), contourf},
-          {std::string("hexbin"), hexbin},         {std::string("isosurface"), drawIsosurface3},
-          {std::string("polar"), polar},           {std::string("quiver"), quiver},
-          {std::string("scatter"), scatter},       {std::string("scatter3"), scatter3},
-          {std::string("shade"), shadePoints},     {std::string("stem"), stem},
-          {std::string("surface"), surface},       {std::string("tricontour"), triContour},
-          {std::string("trisurface"), triSurface}, {std::string("volume"), volume},
+          {std::string("contour"), contour},
+          {std::string("contourf"), contourf},
+          {std::string("hexbin"), hexbin},
+          {std::string("imshow"), imshow},
+          {std::string("isosurface"), drawIsosurface3},
+          {std::string("polar"), polar},
+          {std::string("quiver"), quiver},
+          {std::string("scatter"), scatter},
+          {std::string("scatter3"), scatter3},
+          {std::string("shade"), shadePoints},
+          {std::string("stem"), stem},
+          {std::string("surface"), surface},
+          {std::string("tricontour"), triContour},
+          {std::string("trisurface"), triSurface},
+          {std::string("volume"), volume},
       };
-  //<series name="scatter_series" markertype="-7">
-  //      <polymarker bbox_id="18" bbox_xmax="570.000000" bbox_xmin="75.000000" bbox_ymax="219.375000"
-  //      bbox_ymin="45.000000" x="3x" y="3y">
-  //      </polymarker>
-  //    </series>
 
 
   try
@@ -6402,22 +6464,6 @@ void GRM::Render::setOriginPosition3d(const std::shared_ptr<GRM::Element> &eleme
 {
   setOriginPosition(element, x_org_pos, y_org_pos);
   element->setAttribute("z_org_pos", z_org_pos);
-}
-
-void GRM::Render::setImshowInformation(const std::shared_ptr<GRM::Element> &element, unsigned int cols,
-                                       unsigned int rows, std::string img_data_key,
-                                       std::optional<std::vector<int>> img_data,
-                                       const std::shared_ptr<GRM::Context> &extContext)
-{
-  auto useContext = (extContext == nullptr) ? context : extContext;
-  if (img_data != std::nullopt)
-    {
-      (*useContext)[img_data_key] = *img_data;
-    }
-  element->setAttribute("image_data_key", img_data_key);
-  element->setAttribute("cols", (int)cols);
-  element->setAttribute("rows", (int)rows);
-  element->setAttribute("imshow_information", true);
 }
 
 void GRM::Render::setGR3LightParameters(const std::shared_ptr<GRM::Element> &element, double ambient, double diffuse,

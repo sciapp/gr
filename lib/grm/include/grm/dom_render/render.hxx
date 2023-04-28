@@ -321,10 +321,6 @@ public:
   void setOriginPosition3d(const std::shared_ptr<GRM::Element> &element, std::string x_org_pos, std::string y_org_pos,
                            std::string z_org_pos);
 
-  void setImshowInformation(const std::shared_ptr<GRM::Element> &element, unsigned int cols, unsigned int rows,
-                            std::string img_data_key, std::optional<std::vector<int>> img_data,
-                            const std::shared_ptr<GRM::Context> &extContext);
-
   void setGR3LightParameters(const std::shared_ptr<GRM::Element> &element, double ambient, double diffuse,
                              double specular, double specular_power);
 
