@@ -3963,6 +3963,96 @@ static void surface(const std::shared_ptr<GRM::Element> &element, const std::sha
     }
 }
 
+static void line(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Processing function for line
+   *
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   */
+  std::string orientation;
+  std::vector<double> x_vec, y_vec;
+  unsigned int x_length = 0, y_length = 0;
+
+  orientation = static_cast<std::string>(element->getAttribute("orientation"));
+
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+  y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  y_length = y_vec.size();
+
+  int allocated_x = 0;
+  int mask;
+  if (!element->hasAttribute("x"))
+    {
+      int i;
+      double *x = nullptr;
+      x = static_cast<double *>(malloc(y_length * sizeof(double)));
+      x_length = y_length;
+      allocated_x = 1;
+      for (i = 0; i < y_length; ++i) /* julia starts with 1, so GRM starts with 1 to be consistent */
+        {
+          x[i] = i + 1;
+        }
+      x_vec.insert(x_vec.end(), x, x + x_length);
+    }
+  else
+    {
+      auto x = static_cast<std::string>(element->getAttribute("x"));
+      x_vec = GRM::get<std::vector<double>>((*context)[x]);
+      x_length = x_vec.size();
+    }
+
+  auto spec = static_cast<std::string>(element->getAttribute("spec"));
+  const char *spec_char = spec.c_str();
+  mask = gr_uselinespec((char *)spec_char);
+
+  // clear old line
+  for (auto elem : element->children())
+    {
+      if (elem->localName() == "polyline") elem->remove();
+    }
+
+  if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
+    {
+      int current_line_colorind;
+      gr_inqlinecolorind(&current_line_colorind);
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      std::shared_ptr<GRM::Element> line;
+      if (orientation == "horizontal")
+        {
+          line = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
+        }
+      else
+        {
+          line = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
+        }
+      global_root->setAttribute("id", ++id);
+      line->setAttribute("linecolorind", current_line_colorind);
+      element->append(line);
+    }
+  if (mask & 2)
+    {
+      int current_marker_colorind;
+      gr_inqmarkercolorind(&current_marker_colorind);
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      std::shared_ptr<GRM::Element> line;
+      if (orientation == "horizontal")
+        {
+          line = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
+        }
+      else
+        {
+          line = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
+        }
+      global_root->setAttribute("id", ++id);
+      line->setAttribute("markercolorind", current_marker_colorind);
+      element->append(line);
+    }
+}
+
 static void imshow(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
@@ -4292,6 +4382,7 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
           {std::string("hexbin"), hexbin},
           {std::string("imshow"), imshow},
           {std::string("isosurface"), drawIsosurface3},
+          {std::string("line"), line},
           {std::string("polar"), polar},
           {std::string("quiver"), quiver},
           {std::string("scatter"), scatter},

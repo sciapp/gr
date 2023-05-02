@@ -2039,84 +2039,45 @@ err_t plot_line(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       double *x = nullptr, *y = nullptr;
-      int allocated_x = 0;
       unsigned int x_length = 0, y_length = 0;
-      std::vector<double> x_vec;
-      std::vector<double> y_vec;
       char *spec;
-      int mask;
-      auto subGroup = global_render->createSeries("line_series");
+      auto subGroup = global_render->createSeries("line");
       group->append(subGroup);
+
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      auto context = global_render->getContext();
+
       cleanup_and_set_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length),
                                ERROR_PLOT_MISSING_DATA);
-      if (!grm_args_first_value(*current_series, "x", "D", &x, &x_length))
+
+      if (y_length > 0)
         {
-          int i;
-          x = static_cast<double *>(malloc(y_length * sizeof(double)));
-          cleanup_and_set_error_if(x == nullptr, ERROR_MALLOC);
-          x_length = y_length;
-          allocated_x = 1;
-          for (i = 0; i < y_length; ++i) /* julia starts with 1, so GRM starts with 1 to be consistent */
-            {
-              x[i] = i + 1;
-            }
+          std::vector<double> y_vec(y, y + y_length);
+          (*context)["y" + str] = y_vec;
+          subGroup->setAttribute("y", "y" + str);
+        }
+      if (grm_args_first_value(*current_series, "x", "D", &x, &x_length))
+        {
+          std::vector<double> x_vec(x, x + x_length);
+          (*context)["x" + str] = x_vec;
+          subGroup->setAttribute("x", "x" + str);
         }
       cleanup_and_set_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      x_vec.insert(x_vec.end(), x, x + x_length);
-      y_vec.insert(y_vec.end(), y, y + y_length);
+
+      subGroup->setAttribute("orientation", orientation);
       grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
-      mask = gr_uselinespec(spec);
-      if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
-        {
-          int current_line_colorind;
-          gr_inqlinecolorind(&current_line_colorind);
-          int id = static_cast<int>(global_root->getAttribute("id"));
-          std::string str = std::to_string(id);
-          std::shared_ptr<GRM::Element> element;
-          if (strcmp(orientation, "horizontal") == 0)
-            {
-              element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
-            }
-          else
-            {
-              element = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
-            }
-          global_root->setAttribute("id", ++id);
-          element->setAttribute("linecolorind", current_line_colorind);
-          subGroup->append(element);
-        }
-      if (mask & 2)
-        {
-          int current_marker_colorind;
-          gr_inqmarkercolorind(&current_marker_colorind);
-          int id = static_cast<int>(global_root->getAttribute("id"));
-          std::string str = std::to_string(id);
-          std::shared_ptr<GRM::Element> element;
-          if (strcmp(orientation, "horizontal") == 0)
-            {
-              element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
-            }
-          else
-            {
-              element = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
-            }
-          global_root->setAttribute("id", ++id);
-          element->setAttribute("markercolorind", current_marker_colorind);
-          subGroup->append(element);
-        }
+      subGroup->setAttribute("spec", spec);
+
+      global_root->setAttribute("id", ++id);
       grm_args_push(*current_series, "orientation", "s", orientation);
       error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
       cleanup_if_error;
       ++current_series;
 
     cleanup:
-      if (allocated_x)
-        {
-          free(x);
-        }
       x = y = nullptr;
       x_length = y_length = 0;
-      allocated_x = 0;
 
       if (error != ERROR_NONE)
         {
