@@ -1207,8 +1207,8 @@ static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem
 
           int i;
           double y_max = 0;
-          std::vector<double> plot =
-              GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("plot"))]);
+          std::vector<double> z =
+              GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("z"))]);
           std::vector<double> y =
               GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("y"))]);
           std::vector<double> xi =
@@ -1229,14 +1229,13 @@ static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem
               if (is_vertical)
                 {
                   y[(is_vertical ? y_length : x_length) - i - 1] =
-                      std::isnan(plot[xind + i * x_length]) ? 0 : plot[xind + i * x_length];
+                      std::isnan(z[xind + i * x_length]) ? 0 : z[xind + i * x_length];
                   y_max = grm_max(y_max, y[(is_vertical ? y_length : x_length) - i - 1]);
                 }
               else
                 {
-                  y[i] = std::isnan(plot[x_length * (y_length - 1 - yind) + i])
-                             ? 0
-                             : plot[x_length * (y_length - 1 - yind) + i];
+                  y[i] =
+                      std::isnan(z[x_length * (y_length - 1 - yind) + i]) ? 0 : z[x_length * (y_length - 1 - yind) + i];
                   y_max = grm_max(y_max, y[i]);
                 }
             }
@@ -3836,6 +3835,167 @@ static void scatter3(const std::shared_ptr<GRM::Element> &element, const std::sh
   element->append(temp);
 }
 
+static void stairs(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Processing function for stairs
+   *
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   */
+  std::string kind, orientation, spec;
+  double xmin, xmax, ymin, ymax;
+  int is_vertical;
+  unsigned int x_length, y_length, mask, i;
+  std::vector<double> x_vec, y_vec;
+
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+
+  x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  x_length = x_vec.size();
+  y_length = y_vec.size();
+
+  kind = static_cast<std::string>(element->getAttribute("kind"));
+  orientation = static_cast<std::string>(element->getAttribute("orientation"));
+  spec = static_cast<std::string>(element->getAttribute("spec"));
+  is_vertical = orientation == "vertical";
+
+  int id = static_cast<int>(global_root->getAttribute("id"));
+  std::string str = std::to_string(id);
+  global_root->setAttribute("id", id + 1);
+
+  // clear old marker and lines
+  for (auto elem : element->children())
+    {
+      if (elem->localName() == "polymarker") elem->remove();
+      if (elem->localName() == "polyline") elem->remove();
+    }
+
+  if (element->parentElement()->hasAttribute("marginalheatmap_kind"))
+    {
+      double y_max = 0, c_min, c_max;
+      unsigned int z_length = 0;
+      std::vector<double> z_vec;
+
+      element->setAttribute("calc_window_and_viewport_from_parent", 1);
+
+      auto z = static_cast<std::string>(element->getAttribute("z"));
+      z_vec = GRM::get<std::vector<double>>((*context)[z]);
+      z_length = z_vec.size();
+
+      std::vector<double> xi_vec((is_vertical ? y_length : x_length));
+      (*context)["xi" + str] = xi_vec;
+      element->setAttribute("xi", "xi" + str);
+
+      processCalcWindowAndViewportFromParent(element);
+      processMarginalheatmapKind(element->parentElement());
+    }
+  else
+    {
+      const char *spec_char = spec.c_str();
+      mask = gr_uselinespec((char *)spec_char);
+
+      if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
+        {
+          auto where = static_cast<std::string>(element->getAttribute("step_where"));
+          if (where == "pre")
+            {
+              std::vector<double> x_step_boundaries(2 * x_length - 1);
+              std::vector<double> y_step_values(2 * x_length - 1);
+
+              x_step_boundaries[0] = x_vec[0];
+              for (i = 1; i < 2 * x_length - 2; i += 2)
+                {
+                  x_step_boundaries[i] = x_vec[i / 2];
+                  x_step_boundaries[i + 1] = x_vec[i / 2 + 1];
+                }
+              y_step_values[0] = y_vec[0];
+              for (i = 1; i < 2 * x_length - 1; i += 2)
+                {
+                  y_step_values[i] = y_step_values[i + 1] = y_vec[i / 2 + 1];
+                }
+
+              if (is_vertical)
+                {
+                  element->append(
+                      global_render->createPolyline(str + "x", y_step_values, str + "y", x_step_boundaries));
+                }
+              else
+                {
+                  element->append(
+                      global_render->createPolyline(str + "x", x_step_boundaries, str + "y", y_step_values));
+                }
+            }
+          else if (where == "post")
+            {
+              std::vector<double> x_step_boundaries(2 * x_length - 1);
+              std::vector<double> y_step_values(2 * x_length - 1);
+              for (i = 0; i < 2 * x_length - 2; i += 2)
+                {
+                  x_step_boundaries[i] = x_vec[i / 2];
+                  x_step_boundaries[i + 1] = x_vec[i / 2 + 1];
+                }
+              x_step_boundaries[2 * x_length - 2] = x_vec[x_length - 1];
+              for (i = 0; i < 2 * x_length - 2; i += 2)
+                {
+                  y_step_values[i] = y_step_values[i + 1] = y_vec[i / 2];
+                }
+              y_step_values[2 * x_length - 2] = y_vec[x_length - 1];
+
+              if (is_vertical)
+                {
+                  element->append(
+                      global_render->createPolyline(str + "x", y_step_values, str + "y", x_step_boundaries));
+                }
+              else
+                {
+                  element->append(
+                      global_render->createPolyline(str + "x", x_step_boundaries, str + "y", y_step_values));
+                }
+            }
+          else if (where == "mid")
+            {
+              std::vector<double> x_step_boundaries(2 * x_length);
+              std::vector<double> y_step_values(2 * x_length);
+              x_step_boundaries[0] = x_vec[0];
+              for (i = 1; i < 2 * x_length - 2; i += 2)
+                {
+                  x_step_boundaries[i] = x_step_boundaries[i + 1] = (x_vec[i / 2] + x_vec[i / 2 + 1]) / 2.0;
+                }
+              x_step_boundaries[2 * x_length - 1] = x_vec[x_length - 1];
+              for (i = 0; i < 2 * x_length - 1; i += 2)
+                {
+                  y_step_values[i] = y_step_values[i + 1] = y_vec[i / 2];
+                }
+
+              if (is_vertical)
+                {
+                  element->append(
+                      global_render->createPolyline(str + "x", y_step_values, str + "y", x_step_boundaries));
+                }
+              else
+                {
+                  element->append(
+                      global_render->createPolyline(str + "x", x_step_boundaries, str + "y", y_step_values));
+                }
+            }
+        }
+      if (mask & 2)
+        {
+          if (is_vertical)
+            {
+              element->append(global_render->createPolyline(str + "x", y_vec, str + "y", x_vec));
+            }
+          else
+            {
+              element->append(global_render->createPolyline(str + "x", x_vec, str + "y", y_vec));
+            }
+        }
+    }
+}
+
 static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
@@ -4388,13 +4548,13 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
           {std::string("scatter"), scatter},
           {std::string("scatter3"), scatter3},
           {std::string("shade"), shadePoints},
+          {std::string("stairs"), stairs},
           {std::string("stem"), stem},
           {std::string("surface"), surface},
           {std::string("tricontour"), triContour},
           {std::string("trisurface"), triSurface},
           {std::string("volume"), volume},
       };
-
 
   try
     {

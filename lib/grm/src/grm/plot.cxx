@@ -2100,9 +2100,8 @@ err_t plot_stairs(grm_args_t *subplot_args)
 
   grm_args_t **current_series;
   char *kind, *orientation;
-  double *x_step_boundaries = nullptr, *y_step_values = nullptr;
   double xmin, xmax, ymin, ymax;
-  double *y = nullptr, *xi = nullptr;
+  double *x = nullptr, *y = nullptr, *xi;
   int is_vertical;
   err_t error = ERROR_NONE;
 
@@ -2117,211 +2116,64 @@ err_t plot_stairs(grm_args_t *subplot_args)
   std::shared_ptr<GRM::Element> element; // declare element here for multiple usages / assignments later
   while (*current_series != nullptr)
     {
-      double *x = nullptr;
-      unsigned int x_length, y_length, mask, i;
+      unsigned int x_length, y_length;
       char *spec;
-      auto subGroup = global_render->createSeries("step_series");
+      const char *where;
+      auto subGroup = global_render->createSeries("stairs");
       group->append(subGroup);
+
+      subGroup->setAttribute("kind", kind);
+      subGroup->setAttribute("orientation", orientation);
 
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length) && x_length < 1,
                       ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
-      cleanup_and_set_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length) && x_length < 1,
-                               ERROR_PLOT_MISSING_DATA);
-      cleanup_and_set_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length),
-                               ERROR_PLOT_MISSING_DATA);
+
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      auto context = global_render->getContext();
+
+      std::vector<double> x_vec(x, x + x_length);
+      (*context)["x" + str] = x_vec;
+      subGroup->setAttribute("x", "x" + str);
+
+      std::vector<double> y_vec(y, y + y_length);
+      (*context)["y" + str] = y_vec;
+      subGroup->setAttribute("y", "y" + str);
+
       if (subGroup->parentElement()->hasAttribute("marginalheatmap_kind"))
         {
           double y_max = 0, *plot, c_min, c_max;
           unsigned int n = 0;
 
-          subGroup->setAttribute("calc_window_and_viewport_from_parent", 1);
-          subGroup->setAttribute("orientation", orientation);
-
           grm_args_values(*current_series, "xrange", "dd", &xmin, &xmax);
+          group->parentElement()->setAttribute("xrange_min", xmin);
+          group->parentElement()->setAttribute("xrange_max", xmax);
           grm_args_values(*current_series, "yrange", "dd", &ymin, &ymax);
+          group->parentElement()->setAttribute("yrange_min", ymin);
+          group->parentElement()->setAttribute("yrange_max", ymax);
           grm_args_values(subplot_args, "_zlim", "dd", &c_min, &c_max);
+          subGroup->setAttribute("c_min", c_min);
+          subGroup->setAttribute("c_max", c_max);
           grm_args_first_value(*current_series, "z", "D", &plot, &n);
 
-          std::vector<double> plot_vec(plot, plot + n);
-          int id = static_cast<int>(global_root->getAttribute("id"));
-          global_root->setAttribute("id", id + 1);
-          std::string str = std::to_string(id);
-
-          // Store "raw" data in Context / marginalheatmap element for later usage e.g. interaction
-          auto context = global_render->getContext();
-          (*context)["plot" + str] = plot_vec;
-          subGroup->setAttribute("plot", "plot" + str);
-
-          y = static_cast<double *>(malloc((is_vertical ? y_length : x_length) * sizeof(double)));
-          cleanup_and_set_error_if(y == nullptr, ERROR_MALLOC);
-
-          std::vector<double> y_vec(y, y + (is_vertical ? y_length : x_length));
-          (*context)["y" + str] = y_vec;
-          subGroup->setAttribute("y", "y" + str);
-
-          xi = static_cast<double *>(malloc((is_vertical ? y_length : x_length) * sizeof(double)));
-          std::vector<double> xi_vec(xi, xi + (is_vertical ? y_length : x_length));
-          (*context)["xi" + str] = xi_vec;
-          subGroup->setAttribute("xi", "xi" + str);
-          cleanup_and_set_error_if(xi == nullptr, ERROR_MALLOC);
-
-          std::vector<double> x_vec(x, x + x_length);
-          (*context)["x" + str] = x_vec;
-          subGroup->setAttribute("x", "x" + str);
+          std::vector<double> z_vec(plot, plot + n);
+          (*context)["z" + str] = z_vec;
+          subGroup->setAttribute("z", "z" + str);
         }
       else
         {
           return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
         }
+
       grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
-      mask = gr_uselinespec(spec);
-      if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
-        {
-          const char *where;
-          grm_args_values(*current_series, "step_where", "s", &where); /* `spec` is always set */
-          if (strcmp(where, "pre") == 0)
-            {
-              x_step_boundaries = static_cast<double *>(calloc(2 * x_length - 1, sizeof(double)));
-              cleanup_and_set_error_if(x_step_boundaries == nullptr, ERROR_MALLOC);
-              y_step_values = static_cast<double *>(calloc(2 * x_length - 1, sizeof(double)));
-              cleanup_and_set_error_if(y_step_values == nullptr, ERROR_MALLOC);
-              x_step_boundaries[0] = x[0];
-              for (i = 1; i < 2 * x_length - 2; i += 2)
-                {
-                  x_step_boundaries[i] = x[i / 2];
-                  x_step_boundaries[i + 1] = x[i / 2 + 1];
-                }
-              y_step_values[0] = y[0];
-              for (i = 1; i < 2 * x_length - 1; i += 2)
-                {
-                  y_step_values[i] = y_step_values[i + 1] = y[i / 2 + 1];
-                }
-              int id = static_cast<int>(global_root->getAttribute("id"));
-              std::string str = std::to_string(id);
-              std::vector<double> x_vec(x_step_boundaries, x_step_boundaries + 2 * x_length - 1);
-              std::vector<double> y_vec(y_step_values, y_step_values + 2 * x_length - 1);
-              if (is_vertical)
-                {
-                  element = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
-                }
-              else
-                {
-                  element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
-                }
-              global_root->setAttribute("id", ++id);
-              subGroup->append(element);
-            }
-          else if (strcmp(where, "post") == 0)
-            {
-              x_step_boundaries = static_cast<double *>(calloc(2 * x_length - 1, sizeof(double)));
-              cleanup_and_set_error_if(x_step_boundaries == nullptr, ERROR_MALLOC);
-              y_step_values = static_cast<double *>(calloc(2 * x_length - 1, sizeof(double)));
-              cleanup_and_set_error_if(y_step_values == nullptr, ERROR_MALLOC);
-              for (i = 0; i < 2 * x_length - 2; i += 2)
-                {
-                  x_step_boundaries[i] = x[i / 2];
-                  x_step_boundaries[i + 1] = x[i / 2 + 1];
-                }
-              x_step_boundaries[2 * x_length - 2] = x[x_length - 1];
-              for (i = 0; i < 2 * x_length - 2; i += 2)
-                {
-                  y_step_values[i] = y_step_values[i + 1] = y[i / 2];
-                }
-              y_step_values[2 * x_length - 2] = y[x_length - 1];
-              int id = static_cast<int>(global_root->getAttribute("id"));
-              std::string str = std::to_string(id);
-              std::vector<double> x_vec(x_step_boundaries, x_step_boundaries + 2 * x_length - 1);
-              std::vector<double> y_vec(y_step_values, y_step_values + 2 * x_length - 1);
+      subGroup->setAttribute("spec", spec);
 
-              if (is_vertical)
-                {
-                  element = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
-                }
-              else
-                {
-                  element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
-                }
-              global_root->setAttribute("id", id + 1);
-              subGroup->append(element);
-            }
-          else if (strcmp(where, "mid") == 0)
-            {
-              x_step_boundaries = static_cast<double *>(calloc(2 * x_length, sizeof(double)));
-              cleanup_and_set_error_if(x_step_boundaries == nullptr, ERROR_MALLOC);
-              y_step_values = static_cast<double *>(calloc(2 * x_length, sizeof(double)));
-              cleanup_and_set_error_if(y_step_values == nullptr, ERROR_MALLOC);
-              x_step_boundaries[0] = x[0];
-              for (i = 1; i < 2 * x_length - 2; i += 2)
-                {
-                  x_step_boundaries[i] = x_step_boundaries[i + 1] = (x[i / 2] + x[i / 2 + 1]) / 2.0;
-                }
-              x_step_boundaries[2 * x_length - 1] = x[x_length - 1];
-              for (i = 0; i < 2 * x_length - 1; i += 2)
-                {
-                  y_step_values[i] = y_step_values[i + 1] = y[i / 2];
-                }
-              int id = static_cast<int>(global_root->getAttribute("id"));
-              std::string str = std::to_string(id);
-              std::vector<double> x_vec(x_step_boundaries, x_step_boundaries + 2 * x_length);
-              std::vector<double> y_vec(y_step_values, y_step_values + 2 * x_length);
-              global_root->setAttribute("id", id + 1);
+      if (grm_args_values(*current_series, "step_where", "s", &where)) subGroup->setAttribute("step_where", where);
 
-              if (is_vertical)
-                {
-                  element = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
-                }
-              else
-                {
-                  element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
-                }
-              subGroup->append(element);
-            }
-          free(x_step_boundaries);
-          free(y_step_values);
-          x_step_boundaries = y_step_values = nullptr;
-        }
-      if (mask & 2)
-        {
-          std::vector<double> x_vec(x, x + x_length);
-          std::vector<double> y_vec(y, y + y_length);
-
-          int id = static_cast<int>(global_root->getAttribute("id"));
-          std::string str = std::to_string(id);
-          global_root->setAttribute("id", id + 1);
-
-          if (is_vertical)
-            {
-              element = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
-            }
-          else
-            {
-              element = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
-            }
-          subGroup->append(element);
-        }
       ++current_series;
-      if (strcmp(kind, "marginalheatmap") == 0)
-        {
-          free(y);
-          free(xi);
-          y = xi = nullptr;
-        }
     }
   return ERROR_NONE;
-
-cleanup:
-  if (strcmp(kind, "marginalheatmap") == 0)
-    {
-      free(y);
-      free(xi);
-    }
-  free(x_step_boundaries);
-  free(y_step_values);
-
-  return error;
 }
 
 err_t plot_scatter(grm_args_t *subplot_args)
