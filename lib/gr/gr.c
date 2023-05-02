@@ -12296,19 +12296,44 @@ void gr_selectcontext(int context)
     }
 }
 
-void gr_savestateincontext(int context)
+void gr_savecontext(int context)
 {
   int errind;
+  int id;
 
   check_autoinit;
 
   if (context >= 1 && context <= GR_MAX_CONTEXT)
     {
-      int id = context - 1;
+      if (app_context == NULL)
+        {
+          int i;
+          app_context = (state_list_vector *)xmalloc(sizeof(state_list_vector));
+          app_context->max_non_null_id = -1;
+          app_context->capacity = max(CONTEXT_VECTOR_INCREMENT, context);
+          app_context->buf = (state_list **)xmalloc(app_context->capacity * sizeof(state_list));
+          for (i = 0; i < app_context->capacity; ++i)
+            {
+              app_context->buf[i] = NULL;
+            }
+        }
+      else if (app_context->capacity < context)
+        {
+          int i = app_context->capacity;
+          app_context->capacity = max(app_context->capacity + CONTEXT_VECTOR_INCREMENT, context);
+          app_context->buf = (state_list **)xrealloc(app_context->buf, app_context->capacity * sizeof(state_list));
+          for (; i < app_context->capacity; ++i)
+            {
+              app_context->buf[i] = NULL;
+            }
+        }
+      id = context - 1;
       if (app_context->buf[id] == NULL)
         {
           app_context->buf[id] = (state_list *)xmalloc(sizeof(state_list));
+          app_context->max_non_null_id = max(app_context->max_non_null_id, id);
         }
+
       gks_inq_pline_linetype(&errind, &app_context->buf[id]->ltype);
       gks_inq_pline_linewidth(&errind, &app_context->buf[id]->lwidth);
       gks_inq_pline_color_index(&errind, &app_context->buf[id]->plcoli);

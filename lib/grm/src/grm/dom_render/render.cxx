@@ -252,7 +252,7 @@ void PushDrawableToZQueue::operator()(const std::shared_ptr<GRM::Element> elemen
   else
     {
       contextID = grContextIDManager.getUnusedGRContextId();
-      gr_savestateincontext(contextID);
+      gr_savecontext(contextID);
       parent_to_context[parent] = contextID;
     }
   auto drawable =
