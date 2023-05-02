@@ -12284,6 +12284,78 @@ void gr_selectcontext(int context)
     }
 }
 
+void gr_savecontext(int context)
+{
+  int errind;
+  int id;
+
+  check_autoinit;
+
+  if (context >= 1 && context <= MAX_CONTEXT)
+    {
+      if (app_context == NULL)
+        {
+          int i;
+          app_context = (state_list_vector *)xmalloc(sizeof(state_list_vector));
+          app_context->max_non_null_id = -1;
+          app_context->capacity = max(CONTEXT_VECTOR_INCREMENT, context);
+          app_context->buf = (state_list **)xmalloc(app_context->capacity * sizeof(state_list));
+          for (i = 0; i < app_context->capacity; ++i)
+            {
+              app_context->buf[i] = NULL;
+            }
+        }
+      else if (app_context->capacity < context)
+        {
+          int i = app_context->capacity;
+          app_context->capacity = max(app_context->capacity + CONTEXT_VECTOR_INCREMENT, context);
+          app_context->buf = (state_list **)xrealloc(app_context->buf, app_context->capacity * sizeof(state_list));
+          for (; i < app_context->capacity; ++i)
+            {
+              app_context->buf[i] = NULL;
+            }
+        }
+      id = context - 1;
+      if (app_context->buf[id] == NULL)
+        {
+          app_context->buf[id] = (state_list *)xmalloc(sizeof(state_list));
+          app_context->max_non_null_id = max(app_context->max_non_null_id, id);
+        }
+
+      gks_inq_pline_linetype(&errind, &app_context->buf[id]->ltype);
+      gks_inq_pline_linewidth(&errind, &app_context->buf[id]->lwidth);
+      gks_inq_pline_color_index(&errind, &app_context->buf[id]->plcoli);
+      gks_inq_pmark_type(&errind, &app_context->buf[id]->mtype);
+      gks_inq_pmark_size(&errind, &app_context->buf[id]->mszsc);
+      gks_inq_pmark_color_index(&errind, &app_context->buf[id]->pmcoli);
+      gks_inq_text_fontprec(&errind, &app_context->buf[id]->txfont, &app_context->buf[id]->txprec);
+      gks_inq_text_expfac(&errind, &app_context->buf[id]->chxp);
+      gks_inq_text_spacing(&errind, &app_context->buf[id]->chsp);
+      gks_inq_text_color_index(&errind, &app_context->buf[id]->txcoli);
+      gks_inq_text_height(&errind, &app_context->buf[id]->chh);
+      gks_inq_text_upvec(&errind, &app_context->buf[id]->chup[0], &app_context->buf[id]->chup[1]);
+      gks_inq_text_path(&errind, &app_context->buf[id]->txp);
+      gks_inq_text_align(&errind, &app_context->buf[id]->txal[0], &app_context->buf[id]->txal[1]);
+      gks_inq_fill_int_style(&errind, &app_context->buf[id]->ints);
+      gks_inq_fill_style_index(&errind, &app_context->buf[id]->styli);
+      gks_inq_fill_color_index(&errind, &app_context->buf[id]->facoli);
+
+      gks_inq_current_xformno(&errind, &app_context->buf[id]->tnr);
+      gks_inq_xform(WC, &errind, app_context->buf[id]->wn, app_context->buf[id]->vp);
+
+      app_context->buf[id]->scale_options = lx.scale_options;
+
+      gks_inq_border_width(&errind, &app_context->buf[id]->bwidth);
+      gks_inq_border_color_index(&errind, &app_context->buf[id]->bcoli);
+      gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
+      gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
+    }
+  else
+    {
+      fprintf(stderr, "invalid context id\n");
+    }
+}
+
 void gr_destroycontext(int context)
 {
   int id;
