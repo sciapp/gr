@@ -12256,6 +12256,53 @@ void gr_selectcontext(int context)
     }
 }
 
+void gr_savestateincontext(int context)
+{
+  int errind;
+
+  check_autoinit;
+
+  if (context >= 1 && context <= MAX_CONTEXT)
+    {
+      int id = context - 1;
+      if (app_context[id] == NULL)
+        {
+          app_context[id] = (state_list *)xmalloc(sizeof(state_list));
+        }
+      gks_inq_pline_linetype(&errind, &app_context[id]->ltype);
+      gks_inq_pline_linewidth(&errind, &app_context[id]->lwidth);
+      gks_inq_pline_color_index(&errind, &app_context[id]->plcoli);
+      gks_inq_pmark_type(&errind, &app_context[id]->mtype);
+      gks_inq_pmark_size(&errind, &app_context[id]->mszsc);
+      gks_inq_pmark_color_index(&errind, &app_context[id]->pmcoli);
+      gks_inq_text_fontprec(&errind, &app_context[id]->txfont, &app_context[id]->txprec);
+      gks_inq_text_expfac(&errind, &app_context[id]->chxp);
+      gks_inq_text_spacing(&errind, &app_context[id]->chsp);
+      gks_inq_text_color_index(&errind, &app_context[id]->txcoli);
+      gks_inq_text_height(&errind, &app_context[id]->chh);
+      gks_inq_text_upvec(&errind, &app_context[id]->chup[0], &app_context[id]->chup[1]);
+      gks_inq_text_path(&errind, &app_context[id]->txp);
+      gks_inq_text_align(&errind, &app_context[id]->txal[0], &app_context[id]->txal[1]);
+      gks_inq_fill_int_style(&errind, &app_context[id]->ints);
+      gks_inq_fill_style_index(&errind, &app_context[id]->styli);
+      gks_inq_fill_color_index(&errind, &app_context[id]->facoli);
+
+      gks_inq_current_xformno(&errind, &app_context[id]->tnr);
+      gks_inq_xform(WC, &errind, app_context[id]->wn, app_context[id]->vp);
+
+      app_context[id]->scale_options = lx.scale_options;
+
+      gks_inq_border_width(&errind, &app_context[id]->bwidth);
+      gks_inq_border_color_index(&errind, &app_context[id]->bcoli);
+      gks_inq_clip_xform(&errind, &app_context[id]->clip_tnr);
+      gks_inq_resize_behaviour(&app_context[id]->resize_behaviour);
+    }
+  else
+    {
+      fprintf(stderr, "invalid context id\n");
+    }
+}
+
 void gr_destroycontext(int context)
 {
   int id;

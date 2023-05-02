@@ -232,6 +232,7 @@ DLLEXPORT void gr_setregenflags(int);
 DLLEXPORT int gr_inqregenflags(void);
 DLLEXPORT void gr_savestate(void);
 DLLEXPORT void gr_restorestate(void);
+DLLEXPORT void gr_savestateincontext(int);
 DLLEXPORT void gr_selectcontext(int);
 DLLEXPORT void gr_destroycontext(int);
 DLLEXPORT int gr_uselinespec(char *);
