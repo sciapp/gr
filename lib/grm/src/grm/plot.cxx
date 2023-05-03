@@ -2147,11 +2147,11 @@ err_t plot_stairs(grm_args_t *subplot_args)
           unsigned int n = 0;
 
           grm_args_values(*current_series, "xrange", "dd", &xmin, &xmax);
-          group->parentElement()->setAttribute("xrange_min", xmin);
-          group->parentElement()->setAttribute("xrange_max", xmax);
+          global_root->lastChildElement()->setAttribute("xrange_min", xmin);
+          global_root->lastChildElement()->setAttribute("xrange_max", xmax);
           grm_args_values(*current_series, "yrange", "dd", &ymin, &ymax);
-          group->parentElement()->setAttribute("yrange_min", ymin);
-          group->parentElement()->setAttribute("yrange_max", ymax);
+          global_root->lastChildElement()->setAttribute("yrange_min", ymin);
+          global_root->lastChildElement()->setAttribute("yrange_max", ymax);
           grm_args_values(subplot_args, "_zlim", "dd", &c_min, &c_max);
           subGroup->setAttribute("c_min", c_min);
           subGroup->setAttribute("c_max", c_max);
@@ -2351,7 +2351,7 @@ err_t plot_stem(grm_args_t *subplot_args)
       (*context)["y" + str] = y_vec;
       subGroup->setAttribute("y", "y" + str);
 
-      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max)) subGroup->setAttribute("yrange_min", y_min);
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max)) group->setAttribute("yrange_min", y_min);
 
       grm_args_values(*current_series, "spec", "s", &spec);
       subGroup->setAttribute("spec", spec);
@@ -2371,7 +2371,6 @@ err_t plot_hist(grm_args_t *subplot_args)
   int bar_color_index = 989, i;
   double bar_color_rgb[3] = {-1};
   err_t error = ERROR_NONE;
-  char *marginalheatmap_kind;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   if (!global_root->lastChildElement()->hasAttribute("name"))
@@ -2381,16 +2380,6 @@ err_t plot_hist(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]);
   grm_args_values(subplot_args, "bar_color", "i", &bar_color_index);
-
-  if (bar_color_rgb[0] != -1)
-    {
-      for (i = 0; i < 3; i++)
-        {
-          cleanup_and_set_error_if((bar_color_rgb[i] > 1 || bar_color_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
-        }
-      bar_color_index = 1000;
-      global_render->setColorRep(group, bar_color_index, bar_color_rgb[0], bar_color_rgb[1], bar_color_rgb[2]);
-    }
 
   while (*current_series != nullptr)
     {
@@ -2402,71 +2391,43 @@ err_t plot_hist(grm_args_t *subplot_args)
       char *orientation;
       int is_horizontal;
 
-      auto subGroup = global_render->createSeries("hist_series");
+      auto subGroup = global_render->createSeries("hist");
       group->append(subGroup);
+
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      auto context = global_render->getContext();
+
+      std::vector<double> bar_color_rgb_vec(bar_color_rgb, bar_color_rgb + 3);
+      (*context)["bar_color_rgb" + str] = bar_color_rgb_vec;
+      subGroup->setAttribute("bar_color_rgb", "bar_color_rgb" + str);
+      subGroup->setAttribute("bar_color_index", bar_color_index);
 
       grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
       grm_args_values(*current_series, "edge_color", "i", &edge_color_index);
-      if (edge_color_rgb[0] != -1)
-        {
-          for (i = 0; i < 3; i++)
-            {
-              cleanup_and_set_error_if((edge_color_rgb[i] > 1 || edge_color_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
-            }
-          edge_color_index = 1001;
-          global_render->setColorRep(subGroup, edge_color_index, edge_color_rgb[0], edge_color_rgb[1],
-                                     edge_color_rgb[2]);
-        }
+      std::vector<double> edge_color_rgb_vec(edge_color_rgb, edge_color_rgb + 3);
+      (*context)["edge_color_rgb" + str] = edge_color_rgb_vec;
+      subGroup->setAttribute("edge_color_rgb", "edge_color_rgb" + str);
+      subGroup->setAttribute("edge_color_index", edge_color_index);
 
       grm_args_first_value(*current_series, "bins", "D", &bins, &num_bins);
+      std::vector<double> bins_vec(bins, bins + num_bins);
+      (*context)["bins" + str] = bins_vec;
+      subGroup->setAttribute("bins", "bins" + str);
+
       grm_args_values(subplot_args, "orientation", "s", &orientation);
-      is_horizontal = strcmp(orientation, "horizontal") == 0;
+      subGroup->setAttribute("orientation", orientation);
+
       grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
+      global_root->lastChildElement()->setAttribute("xrange_min", x_min);
+      global_root->lastChildElement()->setAttribute("xrange_max", x_max);
+
       grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
-      if (grm_args_values(subplot_args, "marginalheatmap_kind", "s", &marginalheatmap_kind))
-        {
-          subGroup->setAttribute("calc_window_and_viewport_from_parent", 1);
-          subGroup->setAttribute("orientation", orientation);
-          y_min = 0.0;
-        }
+      global_root->lastChildElement()->setAttribute("yrange_min", y_min);
 
       bar_width = (x_max - x_min) / num_bins;
 
-      // Use of two groups does not produce the same results as julia...
-      // std::shared_ptr<GRM::Element> innerFillGroup = global_render->createGroup("innerFillGroup");
-      // std::shared_ptr<GRM::Element> outerFillGroup = global_render->createGroup("outerFillGroup");
-
-      for (i = 1; i < num_bins + 1; ++i)
-        {
-          double x = x_min + (i - 1) * bar_width;
-          std::shared_ptr<GRM::Element> fillRect, drawRect;
-
-          if (is_horizontal)
-            {
-              fillRect = global_render->createFillRect(x, x + bar_width, y_min, bins[i - 1]);
-              global_render->setFillColorInd(fillRect, bar_color_index);
-            }
-          else
-            {
-              fillRect = global_render->createFillRect(y_min, bins[i - 1], x, x + bar_width);
-              global_render->setFillColorInd(fillRect, bar_color_index);
-            }
-          global_render->setFillIntStyle(fillRect, GKS_K_INTSTYLE_SOLID);
-          subGroup->append(fillRect);
-
-          if (is_horizontal)
-            {
-              drawRect = global_render->createDrawRect(x, x + bar_width, y_min, bins[i - 1]);
-            }
-          else
-            {
-              drawRect = global_render->createDrawRect(y_min, bins[i - 1], x, x + bar_width);
-            }
-
-          global_render->setLineColorInd(drawRect, edge_color_index);
-          subGroup->append(drawRect);
-        }
-
+      // TODO: Move this into render
       if (grm_args_contains(*current_series, "error"))
         {
           bar_centers = static_cast<double *>(malloc(num_bins * sizeof(double)));
@@ -2478,6 +2439,7 @@ err_t plot_hist(grm_args_t *subplot_args)
           free(bar_centers);
           bar_centers = nullptr;
         }
+      global_root->setAttribute("id", ++id);
       ++current_series;
     }
 
@@ -3616,7 +3578,7 @@ err_t plot_hexbin(grm_args_t *subplot_args)
 
       auto x_vec = std::vector<double>(x, x + x_length);
       auto y_vec = std::vector<double>(y, y + y_length);
-      auto hexbin = global_render->createHexbin(x_length, "x" + id, x_vec, "y" + id, y_vec, nbins);
+      auto hexbin = global_render->createHexbin("x" + id, x_vec, "y" + id, y_vec, nbins);
       group->append(hexbin);
 
       currentDomElement = hexbin; /* so that the colorbar will be a child of the hexbin_series */

@@ -2444,6 +2444,8 @@ static void contour(const std::shared_ptr<GRM::Element> &element, const std::sha
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+
+  // TODO: still has to much in plot.cxx
   auto px = static_cast<std::string>(element->getAttribute("px"));
   auto py = static_cast<std::string>(element->getAttribute("py"));
   auto h = static_cast<std::string>(element->getAttribute("h"));
@@ -2475,6 +2477,8 @@ static void contourf(const std::shared_ptr<GRM::Element> &element, const std::sh
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+
+  // TODO: still has to much in plot.cxx
   auto px = static_cast<std::string>(element->getAttribute("px"));
   auto py = static_cast<std::string>(element->getAttribute("py"));
   auto h = static_cast<std::string>(element->getAttribute("h"));
@@ -2552,6 +2556,7 @@ static void drawImage(const std::shared_ptr<GRM::Element> &element, const std::s
 
 static void drawIsosurface3(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
 {
+  // TODO: MOve the rest from plot.cxx here
   auto nx = static_cast<int>(elem->getAttribute("nx"));
   auto ny = static_cast<int>(elem->getAttribute("ny"));
   auto nz = static_cast<int>(elem->getAttribute("nz"));
@@ -3251,14 +3256,20 @@ static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
    * \param[in] context The GRM::Context that contains the actual data
    */
 
+  if (!element->hasAttribute("x")) throw NotFoundError("Hexbin series is missing required attribute x-data.\n");
   auto x = static_cast<std::string>(element->getAttribute("x"));
+  if (!element->hasAttribute("y")) throw NotFoundError("Hexbin series is missing required attribute y-data.\n");
   auto y = static_cast<std::string>(element->getAttribute("y"));
   int nbins = static_cast<int>(element->getAttribute("nbins"));
 
-  int x_length = static_cast<int>(element->getAttribute("x_length"));
-
   double *x_p = &(GRM::get<std::vector<double>>((*context)[x])[0]);
   double *y_p = &(GRM::get<std::vector<double>>((*context)[y])[0]);
+
+  std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  int x_length = x_vec.size();
+  int y_length = y_vec.size();
+  if (x_length != y_length) throw std::length_error("For Hexbin x- and y-data must have the same size\n.");
 
   int cntmax = gr_hexbin(x_length, x_p, y_p, nbins);
   auto colorbar = element->querySelectors("colorbar");
@@ -3266,6 +3277,132 @@ static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
   double c_max = cntmax;
   colorbar->setAttribute("lim_cmin", c_min);
   colorbar->setAttribute("lim_cmax", c_max);
+}
+
+static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Processing function for hist
+   *
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   */
+
+  double *bar_centers = nullptr;
+  int bar_color_index = 989, i;
+  std::vector<double> bar_color_rgb_vec = {-1, -1, -1};
+  std::shared_ptr<GRM::Element> plot_parent;
+
+  auto bar_color_rgb = static_cast<std::string>(element->getAttribute("bar_color_rgb"));
+  bar_color_rgb_vec = GRM::get<std::vector<double>>((*context)[bar_color_rgb]);
+
+  bar_color_index = static_cast<int>(element->getAttribute("bar_color_index"));
+
+  if (element->parentElement()->localName() != "plot")
+    {
+      plot_parent = element->parentElement()->parentElement();
+    }
+  else
+    {
+      plot_parent = element->parentElement();
+    }
+
+  if (bar_color_rgb_vec[0] != -1)
+    {
+      for (i = 0; i < 3; i++)
+        {
+          if (bar_color_rgb_vec[i] > 1 || bar_color_rgb_vec[i] < 0)
+            throw std::out_of_range("For hist series bar_color_rgb must be inside [0, 1].\n");
+        }
+      bar_color_index = 1000;
+      global_render->setColorRep(plot_parent, bar_color_index, bar_color_rgb[0], bar_color_rgb[1], bar_color_rgb[2]);
+      processColorRep(plot_parent);
+    }
+
+  int edge_color_index = 1;
+  std::vector<double> edge_color_rgb_vec = {-1, -1, -1};
+  double x_min, x_max, bar_width, y_min;
+  std::vector<double> bins_vec;
+  unsigned int num_bins;
+  std::string orientation;
+  int is_horizontal;
+
+  auto edge_color_rgb = static_cast<std::string>(element->getAttribute("edge_color_rgb"));
+  edge_color_rgb_vec = GRM::get<std::vector<double>>((*context)[edge_color_rgb]);
+
+  edge_color_index = static_cast<int>(element->getAttribute("edge_color_index"));
+  if (edge_color_rgb_vec[0] != -1)
+    {
+      for (i = 0; i < 3; i++)
+        {
+          if (edge_color_rgb_vec[i] > 1 || edge_color_rgb_vec[i] < 0)
+            throw std::out_of_range("For hist series edge_color_rgb must be inside [0, 1].\n");
+        }
+      edge_color_index = 1001;
+      global_render->setColorRep(plot_parent, edge_color_index, edge_color_rgb[0], edge_color_rgb[1],
+                                 edge_color_rgb[2]);
+      processColorRep(plot_parent);
+    }
+
+  auto bins = static_cast<std::string>(element->getAttribute("bins"));
+  bins_vec = GRM::get<std::vector<double>>((*context)[bins]);
+  num_bins = bins_vec.size();
+  orientation = static_cast<std::string>(element->getAttribute("orientation"));
+  is_horizontal = orientation == "horizontal";
+  x_min = static_cast<double>(plot_parent->getAttribute("xrange_min"));
+  x_max = static_cast<double>(plot_parent->getAttribute("xrange_max"));
+  y_min = static_cast<double>(plot_parent->getAttribute("yrange_min"));
+
+  if (element->parentElement()->hasAttribute("marginalheatmap_kind"))
+    {
+      element->setAttribute("calc_window_and_viewport_from_parent", 1);
+      y_min = 0.0;
+      processCalcWindowAndViewportFromParent(element);
+      processMarginalheatmapKind(element->parentElement());
+    }
+
+  bar_width = (x_max - x_min) / num_bins;
+
+  // Use of two groups does not produce the same results as julia...
+  // std::shared_ptr<GRM::Element> innerFillGroup = global_render->createGroup("innerFillGroup");
+  // std::shared_ptr<GRM::Element> outerFillGroup = global_render->createGroup("outerFillGroup");
+
+  // clear old rects
+  for (auto elem : element->children())
+    {
+      if (elem->localName() == "fillrect") elem->remove();
+      if (elem->localName() == "drawrect") elem->remove();
+    }
+
+  for (i = 1; i < num_bins + 1; ++i)
+    {
+      double x = x_min + (i - 1) * bar_width;
+      std::shared_ptr<GRM::Element> fillRect, drawRect;
+
+      if (is_horizontal)
+        {
+          fillRect = global_render->createFillRect(x, x + bar_width, y_min, bins_vec[i - 1]);
+          global_render->setFillColorInd(fillRect, bar_color_index);
+        }
+      else
+        {
+          fillRect = global_render->createFillRect(y_min, bins_vec[i - 1], x, x + bar_width);
+          global_render->setFillColorInd(fillRect, bar_color_index);
+        }
+      global_render->setFillIntStyle(fillRect, GKS_K_INTSTYLE_SOLID);
+      element->append(fillRect);
+
+      if (is_horizontal)
+        {
+          drawRect = global_render->createDrawRect(x, x + bar_width, y_min, bins_vec[i - 1]);
+        }
+      else
+        {
+          drawRect = global_render->createDrawRect(y_min, bins_vec[i - 1], x, x + bar_width);
+        }
+      global_render->setLineColorInd(drawRect, edge_color_index);
+      element->append(drawRect);
+    }
 }
 
 static void isosurfaceRender(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
@@ -3381,13 +3518,13 @@ static void piePlotTitleRender(const std::shared_ptr<GRM::Element> &elem, const 
     }
   if (!vp_found)
     {
-      throw NotFoundError("No vp was found within ancestors");
+      throw NotFoundError("No vp was found within ancestors.\n");
     }
 
   render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument());
   if (!render)
     {
-      throw NotFoundError("No render-document found for element\n");
+      throw NotFoundError("No render-document found for element.\n");
     }
 
   std::string title = static_cast<std::string>(elem->getAttribute("pie_plot_title"));
@@ -3468,7 +3605,6 @@ static void polyline3d(const std::shared_ptr<GRM::Element> &element, const std::
   std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
   std::vector<double> z_vec = GRM::get<std::vector<double>>((*context)[z]);
 
-
   double *x_p = &(x_vec[0]);
   double *y_p = &(y_vec[0]);
   double *z_p = &(z_vec[0]);
@@ -3542,7 +3678,6 @@ static void polymarker3d(const std::shared_ptr<GRM::Element> &element, const std
   std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
   std::vector<double> z_vec = GRM::get<std::vector<double>>((*context)[z]);
 
-
   double *x_p = &(x_vec[0]);
   double *y_p = &(y_vec[0]);
   double *z_p = &(z_vec[0]);
@@ -3570,22 +3705,36 @@ static void quiver(const std::shared_ptr<GRM::Element> &element, const std::shar
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+  if (!element->hasAttribute("x")) throw NotFoundError("Quiver series is missing required attribute x-data.\n");
   auto x = static_cast<std::string>(element->getAttribute("x"));
+  if (!element->hasAttribute("y")) throw NotFoundError("Quiver series is missing required attribute y-data.\n");
   auto y = static_cast<std::string>(element->getAttribute("y"));
+  if (!element->hasAttribute("u")) throw NotFoundError("Quiver series is missing required attribute u-data.\n");
   auto u = static_cast<std::string>(element->getAttribute("u"));
+  if (!element->hasAttribute("v")) throw NotFoundError("Quiver series is missing required attribute v-data.\n");
   auto v = static_cast<std::string>(element->getAttribute("v"));
   int color = static_cast<int>(element->getAttribute("color"));
 
   std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x]);
   std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  std::vector<double> u_vec = GRM::get<std::vector<double>>((*context)[u]);
+  std::vector<double> v_vec = GRM::get<std::vector<double>>((*context)[v]);
+  int x_length = x_vec.size();
+  int y_length = y_vec.size();
+  int u_length = u_vec.size();
+  int v_length = v_vec.size();
 
+  if (x_length * y_length != u_length)
+    throw std::length_error("For quiver series x_length * y_length must be u_length.\n");
+  if (x_length * y_length != v_length)
+    throw std::length_error("For quiver series x_length * y_length must be v_length.\n");
 
   double *x_p = &(x_vec[0]);
   double *y_p = &(y_vec[0]);
   double *u_p = &(GRM::get<std::vector<double>>((*context)[u])[0]);
   double *v_p = &(GRM::get<std::vector<double>>((*context)[v])[0]);
 
-  gr_quiver(x_vec.size(), y_vec.size(), x_p, y_p, u_p, v_p, color);
+  gr_quiver(x_length, y_length, x_p, y_p, u_p, v_p, color);
 }
 
 static void polar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -3611,12 +3760,16 @@ static void polar(const std::shared_ptr<GRM::Element> &element, const std::share
   r_max = r_min + n * tick;
 
 
+  if (!element->hasAttribute("x")) throw NotFoundError("Polar series is missing required attribute x-data (theta).\n");
   auto x_key = static_cast<std::string>(element->getAttribute("x"));
+  if (!element->hasAttribute("y")) throw NotFoundError("Polar series is missing required attribute y-data (rho).\n");
   auto y_key = static_cast<std::string>(element->getAttribute("y"));
   theta_vec = GRM::get<std::vector<double>>((*context)[x_key]);
   rho_vec = GRM::get<std::vector<double>>((*context)[y_key]);
   theta_length = theta_vec.size();
   rho_length = rho_vec.size();
+  if (rho_length != theta_length)
+    throw std::length_error("For polar series y(rho)- and x(theta)-data must have the same size.\n");
 
   std::vector<double> x(rho_length);
   std::vector<double> y(rho_length);
@@ -3653,17 +3806,22 @@ static void scatter(const std::shared_ptr<GRM::Element> &element, const std::sha
   std::vector<double> markerSizesVec;
   std::vector<double> x_vec, y_vec, z_vec, c_vec;
 
+  if (!element->hasAttribute("x")) throw NotFoundError("Scatter series is missing required attribute x-data.\n");
   auto x = static_cast<std::string>(element->getAttribute("x"));
+  if (!element->hasAttribute("y")) throw NotFoundError("Scatter series is missing required attribute y-data.\n");
   auto y = static_cast<std::string>(element->getAttribute("y"));
   x_vec = GRM::get<std::vector<double>>((*context)[x]);
   y_vec = GRM::get<std::vector<double>>((*context)[y]);
   x_length = x_vec.size();
   y_length = y_vec.size();
+  if (x_length != y_length) throw std::length_error("For scatter series x- and y-data must have the same size.\n");
+
   if (element->hasAttribute("z"))
     {
       auto z = static_cast<std::string>(element->getAttribute("z"));
       z_vec = GRM::get<std::vector<double>>((*context)[z]);
       z_length = z_vec.size();
+      if (x_length != z_length) throw std::length_error("For scatter series x- and z-data must have the same size.\n");
     }
   if (element->hasAttribute("c"))
     {
@@ -3776,8 +3934,11 @@ static void scatter3(const std::shared_ptr<GRM::Element> &element, const std::sh
   unsigned int x_length, y_length, z_length, c_length, i, c_index;
   std::vector<double> x_vec, y_vec, z_vec, c_vec;
 
+  if (!element->hasAttribute("x")) throw NotFoundError("Scatter3 series is missing required attribute x-data.\n");
   auto x = static_cast<std::string>(element->getAttribute("x"));
+  if (!element->hasAttribute("y")) throw NotFoundError("Scatter3 series is missing required attribute y-data.\n");
   auto y = static_cast<std::string>(element->getAttribute("y"));
+  if (!element->hasAttribute("z")) throw NotFoundError("Scatter3 series is missing required attribute z-data.\n");
   auto z = static_cast<std::string>(element->getAttribute("z"));
   x_vec = GRM::get<std::vector<double>>((*context)[x]);
   y_vec = GRM::get<std::vector<double>>((*context)[y]);
@@ -3785,6 +3946,8 @@ static void scatter3(const std::shared_ptr<GRM::Element> &element, const std::sh
   x_length = x_vec.size();
   y_length = y_vec.size();
   z_length = z_vec.size();
+  if (x_length != y_length || x_length != z_length)
+    throw std::length_error("For scatter3 series x-, y- and z-data must have the same size.\n");
 
   std::vector<int> markerCVec;
 
@@ -3849,7 +4012,9 @@ static void stairs(const std::shared_ptr<GRM::Element> &element, const std::shar
   unsigned int x_length, y_length, mask, i;
   std::vector<double> x_vec, y_vec;
 
+  if (!element->hasAttribute("x")) throw NotFoundError("Stairs series is missing required attribute x-data.\n");
   auto x = static_cast<std::string>(element->getAttribute("x"));
+  if (!element->hasAttribute("y")) throw NotFoundError("Stairs series is missing required attribute y-data.\n");
   auto y = static_cast<std::string>(element->getAttribute("y"));
 
   x_vec = GRM::get<std::vector<double>>((*context)[x]);
@@ -3894,6 +4059,8 @@ static void stairs(const std::shared_ptr<GRM::Element> &element, const std::shar
     }
   else
     {
+      if (x_length != y_length) throw std::length_error("For stairs series x- and y-data must have the same size.\n");
+
       const char *spec_char = spec.c_str();
       mask = gr_uselinespec((char *)spec_char);
 
@@ -4012,7 +4179,9 @@ static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared
   unsigned int i;
   std::vector<double> x_vec, y_vec;
 
+  if (!element->hasAttribute("x")) throw NotFoundError("Stem series is missing required attribute x-data.\n");
   auto x = static_cast<std::string>(element->getAttribute("x"));
+  if (!element->hasAttribute("y")) throw NotFoundError("Stem series is missing required attribute y-data.\n");
   auto y = static_cast<std::string>(element->getAttribute("y"));
   orientation = static_cast<std::string>(element->getAttribute("orientation"));
   spec = static_cast<std::string>(element->getAttribute("spec"));
@@ -4022,6 +4191,7 @@ static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared
   y_vec = GRM::get<std::vector<double>>((*context)[y]);
   x_length = x_vec.size();
   y_length = y_vec.size();
+  if (x_length != y_length) throw std::length_error("For stem series x- and y-data must have the same size.\n");
 
   if (element->parentElement()->hasAttribute("yrange_min"))
     stem_y[0] = static_cast<double>(element->parentElement()->getAttribute("yrange_min"));
@@ -4059,6 +4229,7 @@ static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared
 
 static void shadePoints(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
+  // TODO: Move the rest from plot.cxx here
   int xform, w, h, n;
   std::string xx, yy;
   double *x, *y;
@@ -4087,6 +4258,7 @@ static void surface(const std::shared_ptr<GRM::Element> &element, const std::sha
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+  // TODO: Move the rest from plot.cxx here
   auto px = static_cast<std::string>(element->getAttribute("px"));
   auto py = static_cast<std::string>(element->getAttribute("py"));
   auto pz = static_cast<std::string>(element->getAttribute("pz"));
@@ -4102,7 +4274,6 @@ static void surface(const std::shared_ptr<GRM::Element> &element, const std::sha
 
   if (!accelerate)
     {
-
       double *px_p = &(px_vec[0]);
       double *py_p = &(py_vec[0]);
       double *pz_p = &(pz_vec[0]);
@@ -4137,6 +4308,7 @@ static void line(const std::shared_ptr<GRM::Element> &element, const std::shared
 
   orientation = static_cast<std::string>(element->getAttribute("orientation"));
 
+  if (!element->hasAttribute("y")) throw NotFoundError("Line series is missing required attribute y-data.\n");
   auto y = static_cast<std::string>(element->getAttribute("y"));
   y_vec = GRM::get<std::vector<double>>((*context)[y]);
   y_length = y_vec.size();
@@ -4162,6 +4334,7 @@ static void line(const std::shared_ptr<GRM::Element> &element, const std::shared
       x_vec = GRM::get<std::vector<double>>((*context)[x]);
       x_length = x_vec.size();
     }
+  if (x_length != y_length) throw std::length_error("For line series x- and y-data must have the same size.\n");
 
   auto spec = static_cast<std::string>(element->getAttribute("spec"));
   const char *spec_char = spec.c_str();
@@ -4227,18 +4400,26 @@ static void imshow(const std::shared_ptr<GRM::Element> &element, const std::shar
   int rows, cols;
 
   grplot = element->parentElement()->hasAttribute("grplot");
+  if (!element->hasAttribute("c_min")) throw NotFoundError("Imshow series is missing required attribute c_min.\n");
   c_min = static_cast<double>(element->getAttribute("c_min"));
+  if (!element->hasAttribute("c_max")) throw NotFoundError("Imshow series is missing required attribute c_max.\n");
   c_max = static_cast<double>(element->getAttribute("c_max"));
+  logger((stderr, "Got min, max %lf %lf\n", c_min, c_max));
 
   std::vector<double> c_data_vec, shape_vec;
 
+  if (!element->hasAttribute("c")) throw NotFoundError("Imshow series is missing required attribute c-data.\n");
   auto x = static_cast<std::string>(element->getAttribute("c"));
+  if (!element->hasAttribute("shape")) throw NotFoundError("Imshow series is missing required attribute shape-data.\n");
   auto y = static_cast<std::string>(element->getAttribute("shape"));
 
   c_data_vec = GRM::get<std::vector<double>>((*context)[x]);
   shape_vec = GRM::get<std::vector<double>>((*context)[y]);
   c_data_length = c_data_vec.size();
   i = shape_vec.size();
+  if (i != 2) throw std::length_error("The size of shape data from imshow has to be 2.\n");
+  if (shape_vec[0] * shape_vec[1] != c_data_length)
+    throw std::length_error("For imshow shape[0] * shape[1] must be c_data_length.\n");
 
   cols = (int)shape_vec[0];
   rows = (int)shape_vec[1];
@@ -4305,7 +4486,7 @@ static void imshow(const std::shared_ptr<GRM::Element> &element, const std::shar
     }
   if (!vp_found)
     {
-      throw NotFoundError("No vp was found within ancestors");
+      throw NotFoundError("No vp was found within ancestors\n");
     }
 
   gr_inqscale(&scale);
@@ -4441,8 +4622,11 @@ static void triContour(const std::shared_ptr<GRM::Element> &element, const std::
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+  if (!element->hasAttribute("px")) throw NotFoundError("Tricontour series is missing required attribute px-data.\n");
   auto px = static_cast<std::string>(element->getAttribute("px"));
+  if (!element->hasAttribute("py")) throw NotFoundError("Tricontour series is missing required attribute py-data.\n");
   auto py = static_cast<std::string>(element->getAttribute("py"));
+  if (!element->hasAttribute("pz")) throw NotFoundError("Tricontour series is missing required attribute pz-data.\n");
   auto pz = static_cast<std::string>(element->getAttribute("pz"));
   auto levels = static_cast<std::string>(element->getAttribute("levels"));
 
@@ -4450,6 +4634,9 @@ static void triContour(const std::shared_ptr<GRM::Element> &element, const std::
   std::vector<double> py_vec = GRM::get<std::vector<double>>((*context)[py]);
   std::vector<double> pz_vec = GRM::get<std::vector<double>>((*context)[pz]);
   std::vector<double> l_vec = GRM::get<std::vector<double>>((*context)[levels]);
+
+  if (px_vec.size() != py_vec.size() || px_vec.size() != pz_vec.size())
+    throw std::length_error("For tricontour series the x-, y- and z-data must have the same size.\n");
 
   int nx = px_vec.size();
   int nl = l_vec.size();
@@ -4470,8 +4657,11 @@ static void triSurface(const std::shared_ptr<GRM::Element> &element, const std::
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+  if (!element->hasAttribute("px")) throw NotFoundError("Trisurface series is missing required attribute px-data.\n");
   auto px = static_cast<std::string>(element->getAttribute("px"));
+  if (!element->hasAttribute("py")) throw NotFoundError("Trisurface series is missing required attribute py-data.\n");
   auto py = static_cast<std::string>(element->getAttribute("py"));
+  if (!element->hasAttribute("pz")) throw NotFoundError("Trisurface series is missing required attribute pz-data.\n");
   auto pz = static_cast<std::string>(element->getAttribute("pz"));
 
   std::vector<double> px_vec = GRM::get<std::vector<double>>((*context)[px]);
@@ -4480,6 +4670,9 @@ static void triSurface(const std::shared_ptr<GRM::Element> &element, const std::
 
   int nx = px_vec.size();
   int ny = py_vec.size();
+  int nz = pz_vec.size();
+  if (nx != ny || nx != nz)
+    throw std::length_error("For trisurface series x-, y- and z-data must have the same size.\n");
 
   double *px_p = &(px_vec[0]);
   double *py_p = &(py_vec[0]);
@@ -4490,6 +4683,7 @@ static void triSurface(const std::shared_ptr<GRM::Element> &element, const std::
 
 static void volume(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
+  // TODO: Move the rest from plot.cxx here
   int nx, ny, nz, algorithm;
   std::string dmin_key, dmax_key;
   double dmin, dmax;
@@ -4540,6 +4734,7 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
           {std::string("contour"), contour},
           {std::string("contourf"), contourf},
           {std::string("hexbin"), hexbin},
+          {std::string("hist"), hist},
           {std::string("imshow"), imshow},
           {std::string("isosurface"), drawIsosurface3},
           {std::string("line"), line},
@@ -4634,7 +4829,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
         }
       catch (std::bad_function_call &e)
         {
-          throw NotFoundError("No dom render function found for element with local name: " + element->localName());
+          throw NotFoundError("No dom render function found for element with local name: " + element->localName() +
+                              "\n");
         }
     }
 }
@@ -5497,10 +5693,9 @@ std::shared_ptr<GRM::Element> GRM::Render::createQuiver(const std::string &x_key
   return element;
 }
 
-std::shared_ptr<GRM::Element> GRM::Render::createHexbin(int x_length, const std::string &x_key,
-                                                        std::optional<std::vector<double>> x, const std::string &y_key,
-                                                        std::optional<std::vector<double>> y, int nbins,
-                                                        const std::shared_ptr<GRM::Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createHexbin(const std::string &x_key, std::optional<std::vector<double>> x,
+                                                        const std::string &y_key, std::optional<std::vector<double>> y,
+                                                        int nbins, const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
    * This function can be used to create a hexbin GRM::Element
@@ -5508,7 +5703,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createHexbin(int x_length, const std:
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
 
   auto element = createSeries("hexbin");
-  element->setAttribute("x_length", x_length);
   element->setAttribute("x", x_key);
   element->setAttribute("y", y_key);
   element->setAttribute("nbins", nbins);

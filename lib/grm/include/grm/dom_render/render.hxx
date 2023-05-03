@@ -113,7 +113,7 @@ public:
                                         const std::string &v_key, std::optional<std::vector<double>> v, int color,
                                         const std::shared_ptr<Context> &extContext = nullptr);
 
-  std::shared_ptr<Element> createHexbin(int x_length, const std::string &x_key, std::optional<std::vector<double>> x,
+  std::shared_ptr<Element> createHexbin(const std::string &x_key, std::optional<std::vector<double>> x,
                                         const std::string &y_key, std::optional<std::vector<double>> y, int nbins,
                                         const std::shared_ptr<Context> &extContext = nullptr);
 
