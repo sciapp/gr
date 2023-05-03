@@ -3965,7 +3965,7 @@ static void scatter3(const std::shared_ptr<GRM::Element> &element, const std::sh
         {
           if (i < c_length)
             {
-              c_index = 1000 + (int)(255.0 * (c[i] - c_min) / (c_max - c_min) + 0.5);
+              c_index = 1000 + (int)(255.0 * (c_vec[i] - c_min) / (c_max - c_min) + 0.5);
             }
           else
             {
