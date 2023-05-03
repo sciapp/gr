@@ -4313,20 +4313,15 @@ static void line(const std::shared_ptr<GRM::Element> &element, const std::shared
   y_vec = GRM::get<std::vector<double>>((*context)[y]);
   y_length = y_vec.size();
 
-  int allocated_x = 0;
   int mask;
   if (!element->hasAttribute("x"))
     {
       int i;
-      double *x = nullptr;
-      x = static_cast<double *>(malloc(y_length * sizeof(double)));
       x_length = y_length;
-      allocated_x = 1;
       for (i = 0; i < y_length; ++i) /* julia starts with 1, so GRM starts with 1 to be consistent */
         {
-          x[i] = i + 1;
+          x_vec.push_back(i + 1);
         }
-      x_vec.insert(x_vec.end(), x, x + x_length);
     }
   else
     {

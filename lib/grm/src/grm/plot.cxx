@@ -2062,8 +2062,8 @@ err_t plot_line(grm_args_t *subplot_args)
           std::vector<double> x_vec(x, x + x_length);
           (*context)["x" + str] = x_vec;
           subGroup->setAttribute("x", "x" + str);
+          cleanup_and_set_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
         }
-      cleanup_and_set_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
 
       subGroup->setAttribute("orientation", orientation);
       grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
