@@ -1,6 +1,8 @@
 #ifndef GRPLOT_WIDGET_H_INCLUDED
 #define GRPLOT_WIDGET_H_INCLUDED
 
+#include <memory>
+
 #include <QMenu>
 #include <QMenuBar>
 #include <QRubberBand>
@@ -82,7 +84,7 @@ private:
   grm_args_t *args_;
   MouseState mouseState;
   QRubberBand *rubberBand;
-  grm_tooltip_info_t *tooltip;
+  std::vector<std::unique_ptr<grm_tooltip_info_t, decltype(&std::free)>> tooltips;
   QTextDocument label;
   Receiver_Thread *receiver_thread;
 

@@ -58,7 +58,7 @@ extern "C" void cmd_callback_wrapper(const grm_event_t *event)
 
 
 GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
-    : QWidget(parent), args_(nullptr), rubberBand(nullptr), pixmap(), redraw_pixmap(false), tooltip(nullptr)
+    : QWidget(parent), args_(nullptr), rubberBand(nullptr), pixmap(), redraw_pixmap(false)
 {
   const char *kind;
   unsigned int z_length;
@@ -332,47 +332,51 @@ void GRPlotWidget::paintEvent(QPaintEvent *event)
 
   painter.begin(this);
   painter.drawPixmap(0, 0, pixmap);
-  if (tooltip != nullptr)
+  if (!tooltips.empty())
     {
-      if (tooltip->x_px > 0 && tooltip->y_px > 0)
+      for (const auto &tooltip : tooltips)
         {
-          QColor background(224, 224, 224, 128);
-          char c_info[BUFSIZ];
-          QPainterPath triangle;
-          std::string x_label = tooltip->xlabel, y_label = tooltip->ylabel;
-
-          if (util::startsWith(x_label, "$") && util::endsWith(x_label, "$"))
+          if (tooltip->x_px > 0 && tooltip->y_px > 0)
             {
-              x_label = "x";
-            }
-          if (util::startsWith(y_label, "$") && util::endsWith(y_label, "$"))
-            {
-              y_label = "y";
-            }
-          std::snprintf(c_info, BUFSIZ, tooltipTemplate, tooltip->label, x_label.c_str(), tooltip->x, y_label.c_str(),
-                        tooltip->y);
-          std::string info(c_info);
-          label.setDefaultStyleSheet(style);
-          label.setHtml(info.c_str());
-          grm_args_values(args_, "kind", "s", &kind);
-          if (strcmp(kind, "heatmap") == 0 || strcmp(kind, "marginalheatmap") == 0)
-            {
-              background.setAlpha(224);
-            }
-          painter.fillRect(tooltip->x_px + 8, (int)(tooltip->y_px - label.size().height() / 2),
-                           (int)label.size().width(), (int)label.size().height(), QBrush(background, Qt::SolidPattern));
+              QColor background(224, 224, 224, 128);
+              char c_info[BUFSIZ];
+              QPainterPath triangle;
+              std::string x_label = tooltip->xlabel, y_label = tooltip->ylabel;
 
-          triangle.moveTo(tooltip->x_px, tooltip->y_px);
-          triangle.lineTo(tooltip->x_px + 8, tooltip->y_px + 6);
-          triangle.lineTo(tooltip->x_px + 8, tooltip->y_px - 6);
-          triangle.closeSubpath();
-          background.setRgb(128, 128, 128, 128);
-          painter.fillPath(triangle, QBrush(background, Qt::SolidPattern));
+              if (util::startsWith(x_label, "$") && util::endsWith(x_label, "$"))
+                {
+                  x_label = "x";
+                }
+              if (util::startsWith(y_label, "$") && util::endsWith(y_label, "$"))
+                {
+                  y_label = "y";
+                }
+              std::snprintf(c_info, BUFSIZ, tooltipTemplate, tooltip->label, x_label.c_str(), tooltip->x,
+                            y_label.c_str(), tooltip->y);
+              std::string info(c_info);
+              label.setDefaultStyleSheet(style);
+              label.setHtml(info.c_str());
+              grm_args_values(args_, "kind", "s", &kind);
+              if (strcmp(kind, "heatmap") == 0 || strcmp(kind, "marginalheatmap") == 0)
+                {
+                  background.setAlpha(224);
+                }
+              painter.fillRect(tooltip->x_px + 8, (int)(tooltip->y_px - label.size().height() / 2),
+                               (int)label.size().width(), (int)label.size().height(),
+                               QBrush(background, Qt::SolidPattern));
 
-          painter.save();
-          painter.translate(tooltip->x_px + 8, tooltip->y_px - label.size().height() / 2);
-          label.drawContents(&painter);
-          painter.restore();
+              triangle.moveTo(tooltip->x_px, tooltip->y_px);
+              triangle.lineTo(tooltip->x_px + 8, tooltip->y_px + 6);
+              triangle.lineTo(tooltip->x_px + 8, tooltip->y_px - 6);
+              triangle.closeSubpath();
+              background.setRgb(128, 128, 128, 128);
+              painter.fillPath(triangle, QBrush(background, Qt::SolidPattern));
+
+              painter.save();
+              painter.translate(tooltip->x_px + 8, tooltip->y_px - label.size().height() / 2);
+              label.drawContents(&painter);
+              painter.restore();
+            }
         }
     }
   painter.end();
@@ -425,7 +429,25 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
     {
       if (grm_args_values(args_, "kind", "s", &kind))
         {
-          tooltip = grm_get_tooltip(event->pos().x(), event->pos().y());
+          if (QApplication::keyboardModifiers() != Qt::ShiftModifier)
+            {
+              tooltips.clear();
+            }
+          auto current_tooltip = std::unique_ptr<grm_tooltip_info_t, decltype(&std::free)>(
+              grm_get_tooltip(event->pos().x(), event->pos().y()), std::free);
+          bool found_current_tooltip = false;
+          for (const auto &tooltip : tooltips)
+            {
+              if (tooltip->x == current_tooltip->x && tooltip->y == current_tooltip->y)
+                {
+                  found_current_tooltip = true;
+                  break;
+                }
+            }
+          if (!found_current_tooltip)
+            {
+              tooltips.push_back(std::move(current_tooltip));
+            }
 
           if (strcmp(kind, "marginalheatmap") == 0)
             {
