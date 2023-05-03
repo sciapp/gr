@@ -4394,7 +4394,10 @@ static void imshow(const std::shared_ptr<GRM::Element> &element, const std::shar
   int grplot = 0;
   int rows, cols;
 
-  grplot = element->parentElement()->hasAttribute("grplot");
+  if (element->parentElement()->hasAttribute("grplot"))
+    {
+      grplot = static_cast<int>(element->parentElement()->getAttribute("grplot"));
+    }
   if (!element->hasAttribute("c_min")) throw NotFoundError("Imshow series is missing required attribute c_min.\n");
   c_min = static_cast<double>(element->getAttribute("c_min"));
   if (!element->hasAttribute("c_max")) throw NotFoundError("Imshow series is missing required attribute c_max.\n");

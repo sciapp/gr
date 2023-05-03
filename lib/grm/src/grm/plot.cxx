@@ -4440,7 +4440,6 @@ err_t plot_imshow(grm_args_t *subplot_args)
   unsigned int *shape;
   int grplot = 0;
 
-
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "imshow");
 
