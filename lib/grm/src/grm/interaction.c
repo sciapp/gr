@@ -460,35 +460,37 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
         }
       for (i = 0; i < x_length; i++)
         {
-          if ((x_series[i] < x_range_min || x_series[i] > x_range_max || y_series[i] < y_range_min ||
-               y_series[i] > y_range_max) &&
-              !str_equals_any(kind, 6, "heatmap", "marginalheatmap", "contour", "imshow", "contourf", "quiver"))
+          if (!str_equals_any(kind, 6, "heatmap", "marginalheatmap", "contour", "imshow", "contourf", "quiver"))
             {
-              continue;
-            }
-          x_px = x_series[i];
-          y_px = y_series[i];
-          gr_wctondc(&x_px, &y_px);
-          x_px = (x_px * max_width_height);
-          y_px = (height - y_px * max_width_height);
-          diff = sqrt((x_px - mouse_x) * (x_px - mouse_x) + (y_px - mouse_y) * (y_px - mouse_y));
-          if (diff < mindiff && diff <= 50)
-            {
-              mindiff = diff;
-              info->x = x_series[i];
-              info->y = y_series[i];
-              info->x_px = (int)x_px;
-              info->y_px = (int)y_px;
-              if (num_labels > series_i)
+              if (x_series[i] < x_range_min || x_series[i] > x_range_max || y_series[i] < y_range_min ||
+                  y_series[i] > y_range_max)
                 {
-                  info->label = labels[series_i];
+                  continue;
                 }
-              else
+              x_px = x_series[i];
+              y_px = y_series[i];
+              gr_wctondc(&x_px, &y_px);
+              x_px = (x_px * max_width_height);
+              y_px = (height - y_px * max_width_height);
+              diff = sqrt((x_px - mouse_x) * (x_px - mouse_x) + (y_px - mouse_y) * (y_px - mouse_y));
+              if (diff < mindiff && diff <= 50)
                 {
-                  info->label = "";
+                  mindiff = diff;
+                  info->x = x_series[i];
+                  info->y = y_series[i];
+                  info->x_px = (int)x_px;
+                  info->y_px = (int)y_px;
+                  if (num_labels > series_i)
+                    {
+                      info->label = labels[series_i];
+                    }
+                  else
+                    {
+                      info->label = "";
+                    }
                 }
             }
-          else if (str_equals_any(kind, 6, "heatmap", "marginalheatmap", "contour", "imshow", "contourf", "quiver"))
+          else
             {
               static char output[50];
               double num;
@@ -509,11 +511,6 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
 
               x_step = (x_end - x_0) / x_length;
               y_step = (y_end - y_0) / y_length;
-              if (strcmp(kind, "quiver") == 0)
-                {
-                  grm_args_first_value(*current_series, "u", "D", &u_series, &u_length);
-                  grm_args_first_value(*current_series, "v", "D", &v_series, &v_length);
-                }
 
               mindiff = 0;
               x_series_idx = (mouse_x - x_0) / x_step;
@@ -525,8 +522,11 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                 }
               if (strcmp(kind, "quiver") == 0)
                 {
+                  grm_args_first_value(*current_series, "u", "D", &u_series, &u_length);
+                  grm_args_first_value(*current_series, "v", "D", &v_series, &v_length);
                   info->xlabel = "u";
                   info->ylabel = "v";
+                  info->label = "";
                   info->x = u_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
                   info->y = v_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
                 }
@@ -534,20 +534,12 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                 {
                   info->x = x_series[(int)x_series_idx];
                   info->y = y_series[(int)y_series_idx];
-                }
-              info->x_px = mouse_x;
-              info->y_px = mouse_y;
-
-              if (strcmp(kind, "quiver") == 0)
-                {
-                  info->label = "";
-                }
-              else
-                {
                   num = z_series[(int)y_series_idx * x_length + (int)x_series_idx];
                   snprintf(output, 50, "%f", num);
                   info->label = output;
                 }
+              info->x_px = mouse_x;
+              info->y_px = mouse_y;
             }
         }
       ++series_i;
