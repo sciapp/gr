@@ -12312,6 +12312,7 @@ void gr_destroycontext(int context)
       id = context - 1;
       if (app_context[id] != NULL) free(app_context[id]);
 
+      if (ctx == app_context[id]) ctx = NULL;
       app_context[id] = NULL;
     }
   else
