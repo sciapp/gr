@@ -35,22 +35,24 @@ var Module = {
         }
     },
     set_dpr: function() {
-      var _dpr = window.devicePixelRatio || 1;
-      if (!(this.canvas.id in this.dpr_per_canvas)) {
-        this.dpr_per_canvas[this.canvas.id] = _dpr;
-      }
-      this.canvas.width = parseInt(this.canvas.clientWidth * _dpr, 10);
-      this.canvas.height = parseInt(this.canvas.clientHeight * _dpr, 10);
-      this.context.setTransform(_dpr, 0, 0, _dpr, 0, 0);
-      this.dpr_per_canvas[this.canvas.id] = _dpr;
-      if (this.dpr != this.dpr_per_canvas[this.canvas.id]) {
-        this.dpr = this.dpr_per_canvas[this.canvas.id];
-      }
+        var _dpr = window.devicePixelRatio || 1;
+        if (!this.original_canvas_size) {
+            this.original_canvas_size = [
+                parseInt(this.canvas.clientWidth, 10),
+                parseInt(this.canvas.clientHeight, 10)
+            ];
+        }
+        if (_dpr !== this.dpr) {
+            this.canvas.width = this.original_canvas_size[0] * _dpr;
+            this.canvas.height = this.original_canvas_size[1] * _dpr;
+            this.context.setTransform(_dpr, 0, 0, _dpr, 0, 0);
+            this.dpr = _dpr;
+        }
     },
     canvas: null,
     context: null,
     dpr: 1,
-    dpr_per_canvas: [],
+    original_canvas_size: null,
     setStatus: function(text) {},
     totalDependencies: 0,
     get_dash_list: function(linetype) {
