@@ -2143,7 +2143,7 @@ err_t plot_stairs(grm_args_t *subplot_args)
 
       if (subGroup->parentElement()->hasAttribute("marginalheatmap_kind"))
         {
-          double y_max = 0, *plot, c_min, c_max;
+          double y_max = 0, *plot;
           unsigned int n = 0;
 
           grm_args_values(*current_series, "xrange", "dd", &xmin, &xmax);
@@ -2152,9 +2152,6 @@ err_t plot_stairs(grm_args_t *subplot_args)
           grm_args_values(*current_series, "yrange", "dd", &ymin, &ymax);
           global_root->lastChildElement()->setAttribute("yrange_min", ymin);
           global_root->lastChildElement()->setAttribute("yrange_max", ymax);
-          grm_args_values(subplot_args, "_zlim", "dd", &c_min, &c_max);
-          subGroup->setAttribute("c_min", c_min);
-          subGroup->setAttribute("c_max", c_max);
           grm_args_first_value(*current_series, "z", "D", &plot, &n);
 
           std::vector<double> z_vec(plot, plot + n);
@@ -3286,10 +3283,8 @@ cleanup:
 
 err_t plot_contour(grm_args_t *subplot_args)
 {
-  double z_min, z_max;
   int num_levels;
   double *h;
-  double *gridit_x = nullptr, *gridit_y = nullptr, *gridit_z = nullptr;
   grm_args_t **current_series;
   int i;
   err_t error = ERROR_NONE;
@@ -3297,17 +3292,7 @@ err_t plot_contour(grm_args_t *subplot_args)
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "contour");
 
-  grm_args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
-  gr_setprojectiontype(0);
-  gr_setspace(z_min, z_max, 0, 90);
   grm_args_values(subplot_args, "levels", "i", &num_levels);
-  h = static_cast<double *>(malloc(num_levels * sizeof(double)));
-  if (h == nullptr)
-    {
-      debug_print_malloc_error();
-      error = ERROR_MALLOC;
-      goto cleanup;
-    }
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
@@ -3318,111 +3303,37 @@ err_t plot_contour(grm_args_t *subplot_args)
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
       auto subGroup = global_render->createSeries("contour");
       group->append(subGroup);
-      if (x_length == y_length && x_length == z_length)
-        {
-          if (gridit_x == nullptr)
-            {
-              gridit_x = static_cast<double *>(malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double)));
-              gridit_y = static_cast<double *>(malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double)));
-              gridit_z = static_cast<double *>(malloc(PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N * sizeof(double)));
-              if (gridit_x == nullptr || gridit_y == nullptr || gridit_z == nullptr)
-                {
-                  debug_print_malloc_error();
-                  error = ERROR_MALLOC;
-                  goto cleanup;
-                }
-            }
-          gr_gridit(x_length, x, y, z, PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, gridit_x, gridit_y, gridit_z);
-          for (i = 0; i < PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N; i++)
-            {
-              z_min = grm_min(gridit_z[i], z_min);
-              z_max = grm_max(gridit_z[i], z_max);
-            }
-          for (i = 0; i < num_levels; ++i)
-            {
-              h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
-            }
 
-          int id = (int)global_root->getAttribute("id");
-          global_root->setAttribute("id", id + 1);
-          global_render->setSpace(group, z_min, z_max, 0, 90);
-          std::string str = std::to_string(id);
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      auto context = global_render->getContext();
 
-          std::vector<double> px_vec = std::vector<double>(gridit_x, gridit_x + PLOT_CONTOUR_GRIDIT_N);
-          std::vector<double> py_vec = std::vector<double>(gridit_y, gridit_y + PLOT_CONTOUR_GRIDIT_N);
-          std::vector<double> h_vec = std::vector<double>(h, h + num_levels);
-          std::vector<double> pz_vec =
-              std::vector<double>(gridit_z, gridit_z + PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N);
+      std::vector<double> x_vec(x, x + x_length);
+      (*context)["x" + str] = x_vec;
+      subGroup->setAttribute("x", "x" + str);
 
-          auto context = global_render->getContext();
+      std::vector<double> y_vec(y, y + y_length);
+      (*context)["y" + str] = y_vec;
+      subGroup->setAttribute("y", "y" + str);
 
-          (*context)["px" + str] = px_vec;
-          subGroup->setAttribute("px", "px" + str);
-          (*context)["py" + str] = py_vec;
-          subGroup->setAttribute("py", "py" + str);
-          (*context)["pz" + str] = pz_vec;
-          subGroup->setAttribute("pz", "pz" + str);
-          (*context)["h" + str] = h_vec;
-          subGroup->setAttribute("h", "h" + str);
+      std::vector<double> z_vec(z, z + z_length);
+      (*context)["z" + str] = z_vec;
+      subGroup->setAttribute("z", "z" + str);
 
-          subGroup->setAttribute("major_h", 1000);
-        }
-      else
-        {
-          if (x_length * y_length != z_length)
-            {
-              error = ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
-              goto cleanup;
-            }
-          for (i = 0; i < num_levels; ++i)
-            {
-              h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
-            }
+      subGroup->setAttribute("levels", num_levels);
 
-          int id = (int)global_root->getAttribute("id");
-          global_root->setAttribute("id", id + 1);
-          std::string str = std::to_string(id);
-
-          std::vector<double> px_vec = std::vector<double>(x, x + x_length);
-          std::vector<double> py_vec = std::vector<double>(y, y + y_length);
-          std::vector<double> h_vec = std::vector<double>(h, h + num_levels);
-          std::vector<double> pz_vec = std::vector<double>(z, z + x_length * y_length);
-
-          auto context = global_render->getContext();
-
-          (*context)["px" + str] = px_vec;
-          subGroup->setAttribute("px", "px" + str);
-          (*context)["py" + str] = py_vec;
-          subGroup->setAttribute("py", "py" + str);
-          (*context)["pz" + str] = pz_vec;
-          subGroup->setAttribute("pz", "pz" + str);
-          (*context)["h" + str] = h_vec;
-          subGroup->setAttribute("h", "h" + str);
-
-          subGroup->setAttribute("major_h", 1000);
-        }
+      global_root->setAttribute("id", ++id);
       ++current_series;
     }
-  if ((error = plot_draw_colorbar(subplot_args, 0.0, num_levels)) != ERROR_NONE)
-    {
-      goto cleanup;
-    }
-
-cleanup:
-  free(h);
-  free(gridit_x);
-  free(gridit_y);
-  free(gridit_z);
+  error = plot_draw_colorbar(subplot_args, 0.0, num_levels);
 
   return error;
 }
 
 err_t plot_contourf(grm_args_t *subplot_args)
 {
-  double z_min, z_max;
   int num_levels, scale;
   double *h;
-  double *gridit_x = nullptr, *gridit_y = nullptr, *gridit_z = nullptr;
   grm_args_t **current_series;
   int i;
   err_t error = ERROR_NONE;
@@ -3430,17 +3341,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "contourf");
 
-  grm_args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
-  global_render->setProjectionType(group, 0);
-  global_render->setSpace(group, z_min, z_max, 0, 90);
   grm_args_values(subplot_args, "levels", "i", &num_levels);
-  h = static_cast<double *>(malloc(num_levels * sizeof(double)));
-  if (h == nullptr)
-    {
-      debug_print_malloc_error();
-      error = ERROR_MALLOC;
-      goto cleanup;
-    }
   grm_args_values(subplot_args, "scale", "i", &scale);
   global_render->setScale(group, scale);
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -3453,103 +3354,29 @@ err_t plot_contourf(grm_args_t *subplot_args)
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
-      gr_setlinecolorind(1);
-      currentDomElement = subGroup; /* so that the colorbar will be a child of the contourf_series */
-      if ((error = plot_draw_colorbar(subplot_args, 0.0, num_levels)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
-      global_render->setLineColorInd(subGroup, 1);
-      if (x_length == y_length && x_length == z_length)
-        {
-          if (gridit_x == nullptr)
-            {
-              gridit_x = static_cast<double *>(malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double)));
-              gridit_y = static_cast<double *>(malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double)));
-              gridit_z = static_cast<double *>(malloc(PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N * sizeof(double)));
-              if (gridit_x == nullptr || gridit_y == nullptr || gridit_z == nullptr)
-                {
-                  debug_print_malloc_error();
-                  error = ERROR_MALLOC;
-                  goto cleanup;
-                }
-            }
-          gr_gridit(x_length, x, y, z, PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, gridit_x, gridit_y, gridit_z);
-          for (i = 0; i < PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N; i++)
-            {
-              z_min = grm_min(gridit_z[i], z_min);
-              z_max = grm_max(gridit_z[i], z_max);
-            }
-          for (i = 0; i < num_levels; ++i)
-            {
-              h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
-            }
-          int id = (int)global_root->getAttribute("id");
-          global_root->setAttribute("id", id + 1);
-          global_render->setLineColorInd(subGroup, 989);
-          std::string str = std::to_string(id);
 
-          std::vector<double> px_vec = std::vector<double>(gridit_x, gridit_x + PLOT_CONTOUR_GRIDIT_N);
-          std::vector<double> py_vec = std::vector<double>(gridit_y, gridit_y + PLOT_CONTOUR_GRIDIT_N);
-          std::vector<double> h_vec = std::vector<double>(h, h + num_levels);
-          std::vector<double> pz_vec =
-              std::vector<double>(gridit_z, gridit_z + PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N);
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      auto context = global_render->getContext();
 
-          auto context = global_render->getContext();
+      std::vector<double> x_vec(x, x + x_length);
+      (*context)["x" + str] = x_vec;
+      subGroup->setAttribute("x", "x" + str);
 
-          (*context)["px" + str] = px_vec;
-          subGroup->setAttribute("px", "px" + str);
-          (*context)["py" + str] = py_vec;
-          subGroup->setAttribute("py", "py" + str);
-          (*context)["pz" + str] = pz_vec;
-          subGroup->setAttribute("pz", "pz" + str);
-          (*context)["h" + str] = h_vec;
-          subGroup->setAttribute("h", "h" + str);
+      std::vector<double> y_vec(y, y + y_length);
+      (*context)["y" + str] = y_vec;
+      subGroup->setAttribute("y", "y" + str);
 
-          subGroup->setAttribute("major_h", 0);
-        }
-      else
-        {
-          if (x_length * y_length != z_length)
-            {
-              error = ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
-              goto cleanup;
-            }
-          for (i = 0; i < num_levels; ++i)
-            {
-              h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
-            }
-          int id = (int)global_root->getAttribute("id");
-          global_root->setAttribute("id", id + 1);
-          global_render->setLineColorInd(subGroup, 989);
-          std::string str = std::to_string(id);
+      std::vector<double> z_vec(z, z + z_length);
+      (*context)["z" + str] = z_vec;
+      subGroup->setAttribute("z", "z" + str);
 
-          std::vector<double> px_vec = std::vector<double>(x, x + x_length);
-          std::vector<double> py_vec = std::vector<double>(y, y + y_length);
-          std::vector<double> h_vec = std::vector<double>(h, h + num_levels);
-          std::vector<double> pz_vec = std::vector<double>(z, z + x_length * y_length);
+      subGroup->setAttribute("levels", num_levels);
 
-          auto context = global_render->getContext();
-
-          (*context)["px" + str] = px_vec;
-          subGroup->setAttribute("px", "px" + str);
-          (*context)["py" + str] = py_vec;
-          subGroup->setAttribute("py", "py" + str);
-          (*context)["pz" + str] = pz_vec;
-          subGroup->setAttribute("pz", "pz" + str);
-          (*context)["h" + str] = h_vec;
-          subGroup->setAttribute("h", "h" + str);
-
-          subGroup->setAttribute("major_h", 0);
-        }
+      global_root->setAttribute("id", ++id);
       ++current_series;
     }
-
-cleanup:
-  free(h);
-  free(gridit_x);
-  free(gridit_y);
-  free(gridit_z);
+  error = plot_draw_colorbar(subplot_args, 0.0, num_levels);
 
   return error;
 }

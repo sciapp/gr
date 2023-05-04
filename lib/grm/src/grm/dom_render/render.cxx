@@ -2444,29 +2444,113 @@ static void contour(const std::shared_ptr<GRM::Element> &element, const std::sha
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+  double z_min, z_max;
+  int num_levels;
+  int i;
+  unsigned int x_length, y_length, z_length;
+  std::vector<double> x_vec, y_vec, z_vec;
+  std::vector<double> px_vec, py_vec, pz_vec;
+  int major_h = 1000;
 
-  // TODO: still has to much in plot.cxx
-  auto px = static_cast<std::string>(element->getAttribute("px"));
-  auto py = static_cast<std::string>(element->getAttribute("py"));
-  auto h = static_cast<std::string>(element->getAttribute("h"));
-  auto pz = static_cast<std::string>(element->getAttribute("pz"));
-  int major_h = static_cast<int>(element->getAttribute("major_h"));
+  z_min = static_cast<double>(element->parentElement()->getAttribute("lim_zmin"));
+  z_max = static_cast<double>(element->parentElement()->getAttribute("lim_zmax"));
+  num_levels = static_cast<int>(element->getAttribute("levels"));
 
-  std::vector<double> px_vec = GRM::get<std::vector<double>>((*context)[px]);
-  std::vector<double> py_vec = GRM::get<std::vector<double>>((*context)[py]);
-  std::vector<double> h_vec = GRM::get<std::vector<double>>((*context)[h]);
-  std::vector<double> pz_vec = GRM::get<std::vector<double>>((*context)[pz]);
+  gr_setprojectiontype(0);
+  gr_setspace(z_min, z_max, 0, 90);
+
+  std::vector<double> h(num_levels);
+
+  if (!element->hasAttribute("px") || !element->hasAttribute("py") || !element->hasAttribute("pz"))
+    {
+      if (!element->hasAttribute("x")) throw NotFoundError("Contour series is missing required attribute x-data.\n");
+      auto x = static_cast<std::string>(element->getAttribute("x"));
+      if (!element->hasAttribute("y")) throw NotFoundError("Contour series is missing required attribute y-data.\n");
+      auto y = static_cast<std::string>(element->getAttribute("y"));
+      if (!element->hasAttribute("z")) throw NotFoundError("Contour series is missing required attribute z-data.\n");
+      auto z = static_cast<std::string>(element->getAttribute("z"));
+
+      x_vec = GRM::get<std::vector<double>>((*context)[x]);
+      y_vec = GRM::get<std::vector<double>>((*context)[y]);
+      z_vec = GRM::get<std::vector<double>>((*context)[z]);
+      x_length = x_vec.size();
+      y_length = y_vec.size();
+      z_length = z_vec.size();
+
+      int id = (int)global_root->getAttribute("id");
+      global_root->setAttribute("id", id + 1);
+      std::string str = std::to_string(id);
+
+      if (x_length == y_length && x_length == z_length)
+        {
+          std::vector<double> gridit_x_vec(PLOT_CONTOUR_GRIDIT_N);
+          std::vector<double> gridit_y_vec(PLOT_CONTOUR_GRIDIT_N);
+          std::vector<double> gridit_z_vec(PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N);
+
+          double *gridit_x = &(gridit_x_vec[0]);
+          double *gridit_y = &(gridit_y_vec[0]);
+          double *gridit_z = &(gridit_z_vec[0]);
+          double *x_p = &(x_vec[0]);
+          double *y_p = &(y_vec[0]);
+          double *z_p = &(z_vec[0]);
+
+          gr_gridit(x_length, x_p, y_p, z_p, PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, gridit_x, gridit_y,
+                    gridit_z);
+          for (i = 0; i < PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N; i++)
+            {
+              z_min = grm_min(gridit_z[i], z_min);
+              z_max = grm_max(gridit_z[i], z_max);
+            }
+
+          global_render->setSpace(element->parentElement(), z_min, z_max, 0, 90);
+          processSpace(element->parentElement());
+
+          px_vec = std::vector<double>(gridit_x, gridit_x + PLOT_CONTOUR_GRIDIT_N);
+          py_vec = std::vector<double>(gridit_y, gridit_y + PLOT_CONTOUR_GRIDIT_N);
+          pz_vec = std::vector<double>(gridit_z, gridit_z + PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N);
+        }
+      else
+        {
+          if (x_length * y_length != z_length)
+            throw std::length_error("For contour series x_length * y_length must be z_length.\n");
+
+          px_vec = x_vec;
+          py_vec = y_vec;
+          pz_vec = z_vec;
+        }
+
+      (*context)["px" + str] = px_vec;
+      element->setAttribute("px", "px" + str);
+      (*context)["py" + str] = py_vec;
+      element->setAttribute("py", "py" + str);
+      (*context)["pz" + str] = pz_vec;
+      element->setAttribute("pz", "pz" + str);
+    }
+  else
+    {
+      auto px = static_cast<std::string>(element->getAttribute("px"));
+      auto py = static_cast<std::string>(element->getAttribute("py"));
+      auto pz = static_cast<std::string>(element->getAttribute("pz"));
+
+      px_vec = GRM::get<std::vector<double>>((*context)[px]);
+      py_vec = GRM::get<std::vector<double>>((*context)[py]);
+      pz_vec = GRM::get<std::vector<double>>((*context)[pz]);
+    }
+
+  for (i = 0; i < num_levels; ++i)
+    {
+      h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
+    }
 
   int nx = px_vec.size();
   int ny = py_vec.size();
-  int nh = h_vec.size();
 
   double *px_p = &(px_vec[0]);
   double *py_p = &(py_vec[0]);
-  double *h_p = &(h_vec[0]);
+  double *h_p = &(h[0]);
   double *pz_p = &(pz_vec[0]);
 
-  gr_contour(nx, ny, nh, px_p, py_p, h_p, pz_p, major_h);
+  gr_contour(nx, ny, num_levels, px_p, py_p, h_p, pz_p, major_h);
 }
 
 static void contourf(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -2477,29 +2561,118 @@ static void contourf(const std::shared_ptr<GRM::Element> &element, const std::sh
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+  double z_min, z_max;
+  int num_levels;
+  int i;
+  unsigned int x_length, y_length, z_length;
+  std::vector<double> x_vec, y_vec, z_vec;
+  std::vector<double> px_vec, py_vec, pz_vec;
+  int major_h = 0;
 
-  // TODO: still has to much in plot.cxx
-  auto px = static_cast<std::string>(element->getAttribute("px"));
-  auto py = static_cast<std::string>(element->getAttribute("py"));
-  auto h = static_cast<std::string>(element->getAttribute("h"));
-  auto pz = static_cast<std::string>(element->getAttribute("pz"));
-  int major_h = static_cast<int>(element->getAttribute("major_h"));
+  z_min = static_cast<double>(element->parentElement()->getAttribute("lim_zmin"));
+  z_max = static_cast<double>(element->parentElement()->getAttribute("lim_zmax"));
+  num_levels = static_cast<int>(element->getAttribute("levels"));
 
-  std::vector<double> px_vec = GRM::get<std::vector<double>>((*context)[px]);
-  std::vector<double> py_vec = GRM::get<std::vector<double>>((*context)[py]);
-  std::vector<double> h_vec = GRM::get<std::vector<double>>((*context)[h]);
-  std::vector<double> pz_vec = GRM::get<std::vector<double>>((*context)[pz]);
+  global_render->setProjectionType(element->parentElement(), 0);
+  global_render->setSpace(element->parentElement(), z_min, z_max, 0, 90);
+
+  std::vector<double> h(num_levels);
+
+  if (!element->hasAttribute("px") || !element->hasAttribute("py") || !element->hasAttribute("pz"))
+    {
+      if (!element->hasAttribute("x")) throw NotFoundError("Contourf series is missing required attribute x-data.\n");
+      auto x = static_cast<std::string>(element->getAttribute("x"));
+      if (!element->hasAttribute("y")) throw NotFoundError("Contourf series is missing required attribute y-data.\n");
+      auto y = static_cast<std::string>(element->getAttribute("y"));
+      if (!element->hasAttribute("z")) throw NotFoundError("Contourf series is missing required attribute z-data.\n");
+      auto z = static_cast<std::string>(element->getAttribute("z"));
+
+      x_vec = GRM::get<std::vector<double>>((*context)[x]);
+      y_vec = GRM::get<std::vector<double>>((*context)[y]);
+      z_vec = GRM::get<std::vector<double>>((*context)[z]);
+      x_length = x_vec.size();
+      y_length = y_vec.size();
+      z_length = z_vec.size();
+
+      int id = (int)global_root->getAttribute("id");
+      global_root->setAttribute("id", id + 1);
+      std::string str = std::to_string(id);
+
+      gr_setlinecolorind(1);
+      global_render->setLineColorInd(element, 1);
+
+      if (x_length == y_length && x_length == z_length)
+        {
+          std::vector<double> gridit_x_vec(PLOT_CONTOUR_GRIDIT_N);
+          std::vector<double> gridit_y_vec(PLOT_CONTOUR_GRIDIT_N);
+          std::vector<double> gridit_z_vec(PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N);
+
+          double *gridit_x = &(gridit_x_vec[0]);
+          double *gridit_y = &(gridit_y_vec[0]);
+          double *gridit_z = &(gridit_z_vec[0]);
+          double *x_p = &(x_vec[0]);
+          double *y_p = &(y_vec[0]);
+          double *z_p = &(z_vec[0]);
+
+          gr_gridit(x_length, x_p, y_p, z_p, PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, gridit_x, gridit_y,
+                    gridit_z);
+          for (i = 0; i < PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N; i++)
+            {
+              z_min = grm_min(gridit_z[i], z_min);
+              z_max = grm_max(gridit_z[i], z_max);
+            }
+
+          global_render->setLineColorInd(element, 989);
+
+          px_vec = std::vector<double>(gridit_x, gridit_x + PLOT_CONTOUR_GRIDIT_N);
+          py_vec = std::vector<double>(gridit_y, gridit_y + PLOT_CONTOUR_GRIDIT_N);
+          pz_vec = std::vector<double>(gridit_z, gridit_z + PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N);
+        }
+      else
+        {
+          if (x_length * y_length != z_length)
+            throw std::length_error("For contourf series x_length * y_length must be z_length.\n");
+
+          global_render->setLineColorInd(element, 989);
+
+          px_vec = x_vec;
+          py_vec = y_vec;
+          pz_vec = z_vec;
+        }
+
+      (*context)["px" + str] = px_vec;
+      element->setAttribute("px", "px" + str);
+      (*context)["py" + str] = py_vec;
+      element->setAttribute("py", "py" + str);
+      (*context)["pz" + str] = pz_vec;
+      element->setAttribute("pz", "pz" + str);
+      processLineColorInd(element);
+    }
+  else
+    {
+      auto px = static_cast<std::string>(element->getAttribute("px"));
+      auto py = static_cast<std::string>(element->getAttribute("py"));
+      auto pz = static_cast<std::string>(element->getAttribute("pz"));
+
+      px_vec = GRM::get<std::vector<double>>((*context)[px]);
+      py_vec = GRM::get<std::vector<double>>((*context)[py]);
+      pz_vec = GRM::get<std::vector<double>>((*context)[pz]);
+    }
+
+  for (i = 0; i < num_levels; ++i)
+    {
+      h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
+    }
 
   int nx = px_vec.size();
   int ny = py_vec.size();
-  int nh = h_vec.size();
 
   double *px_p = &(px_vec[0]);
   double *py_p = &(py_vec[0]);
-  double *h_p = &(h_vec[0]);
+  double *h_p = &(h[0]);
   double *pz_p = &(pz_vec[0]);
 
-  gr_contourf(nx, ny, nh, px_p, py_p, h_p, pz_p, major_h);
+  gr_contourf(nx, ny, num_levels, px_p, py_p, h_p, pz_p, major_h);
 }
 
 static void drawArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -4040,7 +4213,7 @@ static void stairs(const std::shared_ptr<GRM::Element> &element, const std::shar
 
   if (element->parentElement()->hasAttribute("marginalheatmap_kind"))
     {
-      double y_max = 0, c_min, c_max;
+      double y_max = 0;
       unsigned int z_length = 0;
       std::vector<double> z_vec;
 
@@ -4620,6 +4793,7 @@ static void triContour(const std::shared_ptr<GRM::Element> &element, const std::
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+  // TODO: Move the rest from plot.cxx
   if (!element->hasAttribute("px")) throw NotFoundError("Tricontour series is missing required attribute px-data.\n");
   auto px = static_cast<std::string>(element->getAttribute("px"));
   if (!element->hasAttribute("py")) throw NotFoundError("Tricontour series is missing required attribute py-data.\n");
