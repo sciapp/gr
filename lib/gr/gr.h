@@ -32,6 +32,8 @@ extern "C" {
 #define GR_2PASS_CLEANUP 1
 #define GR_2PASS_RENDER 2
 
+#define GR_MAX_CONTEXT 8
+
 typedef struct
 {
   double x, y;

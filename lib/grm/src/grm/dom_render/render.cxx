@@ -25,6 +25,8 @@
 #include <grm/dom_render/graphics_tree/util.hxx>
 #include <grm/dom_render/render.hxx>
 #include <grm/dom_render/NotFoundError.hxx>
+#include <grm/dom_render/GRMaxContextReachedError.hxx>
+#include <grm/dom_render/ParentHasToBeProcessedBeforeChildError.hxx>
 #include <grm/dom_render/context.hxx>
 #include "gks.h"
 #include "gr.h"
@@ -34,6 +36,10 @@
 
 std::shared_ptr<GRM::Element> global_root;
 std::shared_ptr<GRM::Render> global_render;
+std::priority_queue<std::shared_ptr<GRM::Element>, std::vector<std::shared_ptr<GRM::Element>>, CompareZIndex> z_queue;
+bool z_queue_is_being_rendered = false;
+int current_z_index = 0;
+ManageGRContextIds grContextIDManager;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {"group",           "layout_grid", "layout_gridelement",
@@ -51,6 +57,53 @@ static int bounding_id = 0;
 static std::map<int, std::shared_ptr<GRM::Element>> bounding_map;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+void ManageGRContextIds::destroyGRContexts()
+{
+  for (int id = 1; id <= no_currently_allocated_gr_contexts; ++id)
+    {
+      gr_destroycontext(id);
+    }
+  available_gr_context_ids = {};
+  no_currently_allocated_gr_contexts = 0;
+}
+
+int ManageGRContextIds::getUnusedGRContextId()
+{
+  if (available_gr_context_ids.empty())
+    {
+      if (no_currently_allocated_gr_contexts + 1 > GR_MAX_CONTEXT)
+        {
+          throw GRMaxContextReachedError("Internal Error: All gr context ids are being used");
+        }
+      available_gr_context_ids.push(++no_currently_allocated_gr_contexts);
+    }
+  int context_id = available_gr_context_ids.front();
+  available_gr_context_ids.pop();
+  return context_id;
+}
+
+void ManageGRContextIds::markIdAsUnused(int id)
+{
+  if (id <= no_currently_allocated_gr_contexts)
+    {
+      available_gr_context_ids.push(id);
+    }
+}
+
+bool CompareZIndex::operator()(std::shared_ptr<GRM::Element> const &lhs, std::shared_ptr<GRM::Element> const &rhs)
+{
+  int lhs_z = 0, rhs_z = 0;
+  if (lhs->hasAttribute("z_index"))
+    {
+      lhs_z = static_cast<int>(lhs->getAttribute("z_index"));
+    }
+  if (rhs->hasAttribute("z_index"))
+    {
+      rhs_z = static_cast<int>(rhs->getAttribute("z_index"));
+    }
+  return lhs_z > rhs_z;
+}
 
 static void markerHelper(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context,
                          const std::string &str)
@@ -5009,6 +5062,33 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ render functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+static bool pushToZQueue(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  if (!element->hasAttribute("z_index"))
+    {
+      return false;
+    }
+  int z_index = static_cast<int>(element->getAttribute("z_index"));
+  if (z_queue_is_being_rendered)
+    {
+      if (z_index < current_z_index)
+        {
+          throw ParentHasToBeProcessedBeforeChildError(
+              "The z-index of a child can`t be smaller than it`s parents z-index");
+        }
+      /* check if element is already in z_queue */
+      if (element == z_queue.top())
+        {
+          return false;
+        }
+    }
+  int gr_context_id = grContextIDManager.getUnusedGRContextId();
+  gr_savestateincontext(gr_context_id);
+  element->setAttribute("_grcontext", gr_context_id);
+  z_queue.push(element);
+  return true;
+}
+
 static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
@@ -5020,28 +5100,50 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
    * \param[in] context A GRM::Context
    */
   gr_savestate();
-  bool bounding_boxes = getenv("GRPLOT_ENABLE_EDITOR");
 
-  if (bounding_boxes && element->hasAttributes())
+  if (!pushToZQueue(element, context))
     {
-      gr_begin_grm_selection(bounding_id, &receiverfunction);
-      bounding_map[bounding_id] = element;
-      bounding_id++;
-    }
+      bool bounding_boxes = getenv("GRPLOT_ENABLE_EDITOR");
 
-  processElement(element, context);
-  if (element->hasChildNodes() && parentTypes.count(element->localName()))
-    {
-      for (const auto &child : element->children())
+      if (bounding_boxes && element->hasAttributes())
         {
-          renderHelper(child, context);
+          gr_begin_grm_selection(bounding_id, &receiverfunction);
+          bounding_map[bounding_id] = element;
+          bounding_id++;
+        }
+
+      processElement(element, context);
+      if (element->hasChildNodes() && parentTypes.count(element->localName()))
+        {
+          for (const auto &child : element->children())
+            {
+              renderHelper(child, context);
+            }
+        }
+      if (bounding_boxes && element->hasAttributes())
+        {
+          gr_end_grm_selection();
         }
     }
-  if (bounding_boxes && element->hasAttributes())
-    {
-      gr_end_grm_selection();
-    }
+
   gr_restorestate();
+}
+
+static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
+{
+  z_queue_is_being_rendered = true;
+  for (; !z_queue.empty(); z_queue.pop())
+    {
+      auto element = z_queue.top();
+      int gr_context_id = static_cast<int>(element->getAttribute("_grcontext"));
+      gr_selectcontext(gr_context_id);
+      current_z_index = static_cast<int>(element->getAttribute("z_index"));
+      renderHelper(element, context);
+      element->removeAttribute("_grcontext");
+      grContextIDManager.markIdAsUnused(gr_context_id);
+    }
+  z_queue_is_being_rendered = false;
+  grContextIDManager.destroyGRContexts();
 }
 
 static void initializeGridElements(const std::shared_ptr<GRM::Element> &element, grm::Grid *grid)
@@ -5196,6 +5298,7 @@ void GRM::Render::render()
   std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' ')}) << "\n";
   if (static_cast<int>(root->getAttribute("clearws"))) gr_clearws();
   renderHelper(root, this->context);
+  renderZQueue(this->context);
   if (static_cast<int>(root->getAttribute("updatews"))) gr_updatews();
   std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' ')}) << "\n";
 }

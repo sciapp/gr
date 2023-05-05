@@ -279,9 +279,7 @@ static int predef_colors[20] = {9, 2, 0, 1, 16, 3, 15, 8, 6, 10, 11, 4, 12, 13, 
 
 static state_list *state = NULL;
 
-#define MAX_CONTEXT 8
-
-static state_list *ctx, *app_context[MAX_CONTEXT] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+static state_list *ctx, *app_context[GR_MAX_CONTEXT] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 static void (*previous_handler)(int);
 
@@ -12173,7 +12171,7 @@ void gr_selectcontext(int context)
 
   check_autoinit;
 
-  if (context >= 1 && context <= MAX_CONTEXT)
+  if (context >= 1 && context <= GR_MAX_CONTEXT)
     {
       id = context - 1;
       if (app_context[id] == NULL)
@@ -12262,7 +12260,7 @@ void gr_savestateincontext(int context)
 
   check_autoinit;
 
-  if (context >= 1 && context <= MAX_CONTEXT)
+  if (context >= 1 && context <= GR_MAX_CONTEXT)
     {
       int id = context - 1;
       if (app_context[id] == NULL)
@@ -12309,7 +12307,7 @@ void gr_destroycontext(int context)
 
   check_autoinit;
 
-  if (context >= 1 && context <= MAX_CONTEXT)
+  if (context >= 1 && context <= GR_MAX_CONTEXT)
     {
       id = context - 1;
       if (app_context[id] != NULL) free(app_context[id]);
