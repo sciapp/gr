@@ -12151,6 +12151,10 @@ void gr_restorestate(void)
       gks_select_xform(s->tnr);
       gks_set_window(WC, s->wn[0], s->wn[1], s->wn[2], s->wn[3]);
       gks_set_viewport(WC, s->vp[0], s->vp[1], s->vp[2], s->vp[3]);
+      vxmin = s->vp[0];
+      vxmax = s->vp[1];
+      vymin = s->vp[2];
+      vymax = s->vp[3];
 
       setscale(s->scale_options);
 
@@ -12239,6 +12243,10 @@ void gr_selectcontext(int context)
       gks_select_xform(ctx->tnr);
       gks_set_window(WC, ctx->wn[0], ctx->wn[1], ctx->wn[2], ctx->wn[3]);
       gks_set_viewport(WC, ctx->vp[0], ctx->vp[1], ctx->vp[2], ctx->vp[3]);
+      vxmin = ctx->vp[0];
+      vxmax = ctx->vp[1];
+      vymin = ctx->vp[2];
+      vymax = ctx->vp[3];
 
       setscale(ctx->scale_options);
 
