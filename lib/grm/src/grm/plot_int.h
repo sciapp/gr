@@ -265,7 +265,8 @@ int set_next_color(const grm_args_t *args, const char *key, gr_color_type_t colo
 void set_text_color_for_background(double r, double g, double b, const std::shared_ptr<GRM::Element> &element);
 void draw_xticklabel(double x1, double x2, const char *label, double available_width,
                      const std::shared_ptr<GRM::Element> &element);
-double auto_tick_polar(double rmax, int rings, const std::string &norm);
+
+double auto_tick_rings_polar(double rmax, int &rings, const std::string &norm);
 
 
 #endif

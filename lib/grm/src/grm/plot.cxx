@@ -1636,6 +1636,10 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
     }
   else if (strcmp(kind, "polar_histogram") == 0)
     {
+
+      // todo: xlim ylim in render???
+      auto temp = global_root->lastChildElement();
+      //      temp->setAttribute("")
       grm_args_push(subplot_args, "_xlim", "dd", -1.0, 1.0);
       grm_args_push(subplot_args, "_ylim", "dd", -1.0, 1.0);
     }
@@ -4679,6 +4683,7 @@ err_t plot_polar(grm_args_t *subplot_args)
  * */
 err_t plot_polar_histogram(grm_args_t *subplot_args)
 {
+  unsigned int resample;
   unsigned int num_bins;
   unsigned int length;
   double max;
@@ -4700,7 +4705,7 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   err_t error = ERROR_NONE;
 
   std::shared_ptr<GRM::Element> group = global_root->lastChildElement();
-  group->setAttribute("kind", "polarhistogram");
+  group->setAttribute("kind", "polar_histogram");
 
   // Call classes -> set attributes and data
   classes_polar_histogram(subplot_args);
@@ -4711,9 +4716,11 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   global_root->setAttribute("id", id + 1);
   std::string str = std::to_string(id);
 
-  group->setAttribute("name", "polarhistogram");
+  group->setAttribute("name", "polar_histogram");
   grm_args_values(subplot_args, "series", "A", &series);
 
+  gr_inqresamplemethod(&resample);
+  group->setAttribute("original_resample", static_cast<int>(resample));
   //  grm_args_first_value(*series, "classes", "D", &classes, &length);
   //  std::vector<double> classes_vec(classes, classes + length);
   //  (*context)["classes" + str] = classes_vec;
@@ -5319,7 +5326,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
   if (strcmp(kind, "polar_histogram") == 0)
     {
       // todo: move series/data dependent code into the renderer.
-      group = global_render->createDrawPolarAxes(angle_ticks, kind, phiflip, norm, 1.0);
+      subGroup = global_render->createDrawPolarAxes(angle_ticks, kind, phiflip, norm, 1.0);
       //      grm_args_values(args, "r_max", "d", &r_max);
       //      group->setAttribute("r_max", r_max);
     }
@@ -6366,7 +6373,7 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
     {
       grm_args_first_value(*series, "x", "I", &bin_counts, &length);
       std::vector<int> bin_counts_vec(bin_counts, bin_counts + length);
-      (*context)["bin_counts" + str];
+      (*context)["bin_counts" + str] = bin_counts_vec;
       group->setAttribute("bin_counts", "bin_counts" + str);
 
       is_bin_counts = 1;
@@ -6381,8 +6388,8 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
       grm_args_values(subplot_args, "phiflip", "i", &phiflip);
       group->setAttribute("phiflip", phiflip);
       group->setAttribute("philim", true);
-      group->setAttribute("phi_min", philim[0]);
-      group->setAttribute("phi_max", philim[1]);
+      group->setAttribute("phimin", philim[0]);
+      group->setAttribute("phimax", philim[1]);
     }
 
 
@@ -7522,13 +7529,67 @@ int set_next_color(const grm_args_t *args, const char *key, gr_color_type_t colo
   return color_index;
 }
 
-double auto_tick_polar(double rmax, int rings, const std::string &norm)
+
+double auto_tick_rings_polar(double rmax, int &rings, const std::string &norm)
 {
+  double scale;
+  bool small = false;
+
+  std::vector<int> largeRings = {6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+  std::vector<int> normalRings = {3, 4, 5, 6, 7};
+
+  std::vector<int> *whichVector;
+
+  // -1 --> auto rings
+  if (rings == -1)
+    {
+
+      if (norm == "cdf")
+        {
+          rings = 4;
+          return 1.0 / rings;
+        }
+
+      if (rmax > 20)
+        {
+          whichVector = &largeRings;
+        }
+      else
+        {
+          whichVector = &normalRings;
+        }
+      scale = ceil(abs(log10(rmax)));
+      if (rmax < 1.0)
+        {
+          small = true;
+          rmax = static_cast<int>(ceil(rmax * pow(10.0, scale)));
+        }
+
+      // ToDo: if rmax is high -> more rings
+      while (true)
+        {
+          for (int i : *whichVector)
+            {
+              if (static_cast<int>(rmax) % i == 0)
+                {
+                  if (small)
+                    {
+                      rmax = rmax / pow(10.0, scale);
+                    }
+                  rings = i;
+                  return rmax / rings;
+                }
+            }
+          // rmax not divisible by whichVector
+          ++rmax;
+        }
+    }
+
+  // given rings
   if (norm == "cdf")
     {
       return 1.0 / rings;
     }
-  double scale;
 
   if (rmax > rings)
     {
