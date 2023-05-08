@@ -4721,9 +4721,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
   gr_inqresamplemethod(&resample);
   group->setAttribute("original_resample", static_cast<int>(resample));
-  //  grm_args_first_value(*series, "classes", "D", &classes, &length);
-  //  std::vector<double> classes_vec(classes, classes + length);
-  //  (*context)["classes" + str] = classes_vec;
 
   /* edge_color */
   if (grm_args_values(*series, "edge_color", "i", &edge_color) == 0)
@@ -4746,43 +4743,17 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
     }
   group->setAttribute("face_alpha", face_alpha);
 
-  //  grm_args_values(*series, "nbins", "i", &num_bins);
-  //  group->setAttribute("nbins", static_cast<int>(num_bins));
-
-  //  max = static_cast<double>(group->getAttribute("r_max"));
-
   if (grm_args_values(subplot_args, "phiflip", "i", &phiflip) == 0)
     {
       phiflip = 0;
     }
   group->setAttribute("phiflip", phiflip);
 
-  //  if (grm_args_values(subplot_args, "normalization", "s", &norm) == 0)
-  //    {
-  //      norm = "count";
-  //    }
-  //  group->setAttribute(norm, "count");
-
   if (grm_args_values(*series, "draw_edges", "i", &draw_edges) == 0)
     {
       draw_edges = 0;
     }
   group->setAttribute("draw_edges", draw_edges);
-
-  //  if (grm_args_first_value(*series, "bin_edges", "D", &bin_edges, &num_bin_edges) == 0)
-  //    {
-  //      bin_edges = nullptr;
-  //      num_bin_edges = 0;
-  //      grm_args_values(*series, "bin_width", "d", &bin_width);
-  //    }
-  //  else
-  //    {
-  //      std::vector<double> bin_edges_vec(bin_edges, bin_edges + num_bin_edges);
-  //      (*context)["bin_edges" + str] = bin_edges_vec;
-  //      grm_args_first_value(*series, "bin_widths", "D", &bin_widths, &num_bins);
-  //      std::vector<double> bin_widths_vec(bin_widths, bin_widths + num_bins);
-  //      (*context)["bin_widths" + str] = bin_widths_vec;
-  //    }
 
 
   if (grm_args_values(*series, "stairs", "i", &stairs) == 0)
@@ -7533,7 +7504,7 @@ int set_next_color(const grm_args_t *args, const char *key, gr_color_type_t colo
 double auto_tick_rings_polar(double rmax, int &rings, const std::string &norm)
 {
   double scale;
-  bool small = false;
+  bool decimal = false;
 
   std::vector<int> largeRings = {6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
   std::vector<int> normalRings = {3, 4, 5, 6, 7};
@@ -7543,7 +7514,6 @@ double auto_tick_rings_polar(double rmax, int &rings, const std::string &norm)
   // -1 --> auto rings
   if (rings == -1)
     {
-
       if (norm == "cdf")
         {
           rings = 4;
@@ -7561,18 +7531,17 @@ double auto_tick_rings_polar(double rmax, int &rings, const std::string &norm)
       scale = ceil(abs(log10(rmax)));
       if (rmax < 1.0)
         {
-          small = true;
+          decimal = true;
           rmax = static_cast<int>(ceil(rmax * pow(10.0, scale)));
         }
 
-      // ToDo: if rmax is high -> more rings
       while (true)
         {
           for (int i : *whichVector)
             {
               if (static_cast<int>(rmax) % i == 0)
                 {
-                  if (small)
+                  if (decimal)
                     {
                       rmax = rmax / pow(10.0, scale);
                     }

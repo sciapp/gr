@@ -1314,11 +1314,9 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
   classes = &(classes_vec[0]);
   length = classes_vec.size();
 
-  //  grm_args_first_value(*series, "classes", "D", &classes, &length);
 
   /* edge_color */
   if (group->hasAttribute("edge_color") == 0)
-    //  if (grm_args_values(*series, "edge_color", "i", &edge_color) == 0)
     {
       edge_color = 1;
     }
@@ -1329,7 +1327,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
 
   /* face_color */
   if (group->hasAttribute("face_color") == 0)
-    //  if (grm_args_values(*series, "face_color", "i", &face_color) == 0)
     {
       face_color = 989;
     }
@@ -1340,7 +1337,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
 
   /* face_alpha */
   if (group->hasAttribute("face_alpha") == 0)
-    //  if (grm_args_values(*series, "face_alpha", "d", &face_alpha) == 0)
     {
       face_alpha = 0.75;
     }
@@ -1352,10 +1348,8 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
   global_render->setTransparency(group, face_alpha);
 
   num_bins = static_cast<int>(group->getAttribute("nbins"));
-  //  grm_args_values(*series, "nbins", "i", &num_bins);
 
   if (group->hasAttribute("normalization") == 0)
-    //  if (grm_args_values(subplot_args, "normalization", "s", &norm) == 0)
     {
       norm = "count";
     }
@@ -1376,7 +1370,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
   group->setAttribute("rings", rings);
 
   if (group->hasAttribute("phiflip") == 0)
-    //  if (grm_args_values(subplot_args, "phiflip", "i", &phiflip) == 0)
     {
       phiflip = 0;
     }
@@ -1386,7 +1379,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
     }
 
   if (group->hasAttribute("draw_edges") == 0)
-    //  if (grm_args_values(*series, "draw_edges", "i", &draw_edges) == 0)
     {
       draw_edges = 0;
     }
@@ -1396,7 +1388,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
     }
 
   if (group->hasAttribute("bin_edges") == 0)
-    //  if (grm_args_first_value(*series, "bin_edges", "D", &bin_edges, &num_bin_edges) == 0)
     {
       bin_edges = nullptr;
       num_bin_edges = 0;
@@ -1404,7 +1395,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
         {
           bin_width = static_cast<double>(group->getAttribute("bin_width"));
         }
-      //      grm_args_values(*series, "bin_width", "d", &bin_width);
     }
   else
     {
@@ -1417,18 +1407,15 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
       bin_widths_vec = GRM::get<std::vector<double>>((*context)[bin_widths_key]);
       bin_widths = &(bin_widths_vec[0]);
       num_bins = bin_widths_vec.size();
-      //      grm_args_first_value(*series, "bin_widths", "D", &bin_widths, &num_bins);
     }
 
   if (group->hasAttribute("stairs") == 0)
-    //  if (grm_args_values(*series, "stairs", "i", &stairs) == 0)
     {
       stairs = 0;
     }
   else
     {
       stairs = static_cast<int>(group->getAttribute("stairs"));
-      // added if stairs, just in case
       if (stairs)
         {
           if (draw_edges != 0)
@@ -1455,7 +1442,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
     }
 
   if (group->hasAttribute("rlim") == 0)
-    //  if (grm_args_first_value(*series, "rlim", "D", &rlim, &dummy) == 0)
     {
       rlim = nullptr;
     }
@@ -1498,8 +1484,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
     }
 
   if (!(group->hasAttribute("xcolormap") && group->hasAttribute("ycolormap")))
-    //  if (!grm_args_values(*series, "xcolormap", "i", &xcolormap) ||
-    //      !grm_args_values(*series, "ycolormap", "i", &ycolormap))
     {
       colormap = nullptr;
       if (draw_edges != 0)
@@ -2364,7 +2348,6 @@ cleanup:
   free(liste2);
   free(colormap);
 }
-
 
 
 static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem)
@@ -3384,7 +3367,7 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
     }
   else
     {
-      // ?
+      throw NotFoundError("no context / render found for given element");
     }
 
   //! define keys for later usages;
@@ -3431,11 +3414,8 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
 
       if (philim[1] < philim[0])
         {
-          //          double temp = philim[1];
           int phiflip = 0;
           std::swap(philim[0], philim[1]);
-          //          philim[1] = philim[0];
-          //          philim[0] = temp;
 
           group->setAttribute("phiflip", 1);
         }
@@ -3452,13 +3432,10 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
 
   /* bin_edges and nbins */
   if (group->hasAttribute("bin_edges") == 0)
-    //  if (grm_args_first_value(*series, "bin_edges", "D", &bin_edges, &num_bin_edges) == 0)
     {
       if (group->hasAttribute("nbins") == 0)
-        //      if (grm_args_values(*series, "nbins", "i", &num_bins) == 0)
         {
           num_bins = grm_min(12, (int)(length * 1.0 / 2) - 1);
-          //          grm_args_push(*series, "nbins", "i", num_bins);
           group->setAttribute("nbins", static_cast<int>(num_bins));
         }
       else
@@ -3467,7 +3444,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
           if (num_bins <= 0 || num_bins > 200)
             {
               num_bins = grm_min(12, (int)(length * 1.0 / 2) - 1);
-              //              grm_args_push(*series, "nbins", "i", num_bins);
               group->setAttribute("nbins", static_cast<int>(num_bins));
             }
         }
@@ -3481,7 +3457,7 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
           cleanup_and_set_error_if(bin_edges == nullptr, ERROR_MALLOC);
           linspace(philim[0], philim[1], num_bins + 1, bin_edges);
           num_bin_edges = num_bins + 1;
-          std::vector<double> bin_edges_vec(bin_edges, bin_edges + num_bin_edges);
+          bin_edges_vec = std::vector<double>(bin_edges, bin_edges + num_bin_edges);
           (*context)[bin_edges_key] = bin_edges_vec;
           group->setAttribute("bin_edges", bin_edges_key);
         }
@@ -3528,7 +3504,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
             }
           num_bins = num_bin_edges - 1;
           group->setAttribute("nbins", static_cast<int>(num_bins));
-          //          grm_args_push(*series, "nbins", "i", num_bins);
         }
       /* with philim and binedges */
       else
@@ -3572,16 +3547,12 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
               group->setAttribute("bin_edges", bin_edges_key);
               std::vector<double> bin_edges_vec(bin_edges, bin_edges + num_bin_edges);
               (*context)[bin_edges_key] = bin_edges_vec;
-
-              //              grm_args_push(*series, "nbins", "i", num_bins);
-              //              grm_args_push(*series, "bin_edges", "nD", num_bin_edges, bin_edges);
             }
         }
     }
 
 
   if (group->hasAttribute("normalization") == 0)
-    //  if (grm_args_values(subplot_args, "normalization", "s", &norm) == 0)
     {
       norm = "count";
     }
@@ -3596,7 +3567,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
     }
 
   if (group->hasAttribute("bin_width") == 0)
-    //  if (grm_args_values(*series, "bin_width", "d", &bin_width) == 0)
     {
       if (num_bin_edges > 0)
         {
@@ -3611,13 +3581,11 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
           std::vector<double> bin_widths_vec(bin_widths, bin_widths + num_bins);
           group->setAttribute("bin_widths", bin_widths_key);
           (*context)[bin_widths_key] = bin_widths_vec;
-          //          grm_args_push(*series, "bin_widths", "nD", num_bins, bin_widths);
         }
       else
         {
           bin_width = 2 * M_PI / num_bins;
           group->setAttribute("bin_width", bin_width);
-          //          grm_args_push(*series, "bin_width", "d", bin_width);
         }
     }
   /* bin_width is given*/
@@ -3628,7 +3596,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
       int n = 0;
       int temp;
 
-      // TODO: check this case again
       if (num_bin_edges > 0 && *philim == -1.0)
         {
           int i;
@@ -3645,7 +3612,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
           std::vector<double> bin_widths_vec(bin_widths, bin_widths + num_bins);
           group->setAttribute("bin_widths", bin_widths_key);
           (*context)[bin_widths_key] = bin_widths_vec;
-          //          grm_args_push(*series, "bin_widths", "nD", num_bins, bin_widths);
         }
 
       /* with philim (with bin_width) */
@@ -3710,15 +3676,12 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
           linspace(0, n * bin_width, n + 1, bin_edges);
         }
       group->setAttribute("nbins", n);
-      //      grm_args_push(*series, "nbins", "i", n);
       num_bin_edges = n + 1;
       num_bins = n;
       std::vector<double> bin_edges_vec(bin_edges, bin_edges + num_bin_edges);
       group->setAttribute("bin_edges", bin_edges_key);
       (*context)[bin_edges_key] = bin_edges_vec;
-      //      grm_args_push(*series, "bin_edges", "nD", num_bin_edges, bin_edges);
       group->setAttribute("bin_width", bin_width);
-      //      grm_args_push(*series, "bin_width", "d", bin_width);
       bin_widths = static_cast<double *>(malloc(num_bins * sizeof(double)));
       cleanup_and_set_error_if(bin_widths == nullptr, ERROR_MALLOC);
 
@@ -3729,7 +3692,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
       std::vector<double> bin_widths_vec(bin_widths, bin_widths + num_bins);
       group->setAttribute("bin_widths", bin_widths_key);
       (*context)[bin_widths_key] = bin_widths_vec;
-      //      grm_args_push(*series, "bin_widths", "nD", num_bins, bin_widths);
     }
 
 
@@ -3818,7 +3780,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
       std::vector<double> classes_vec(classes, classes + total * num_bins);
       (*context)[classes_key] = classes_vec;
 
-      //      grm_args_push(*series, "classes", "nD", total * num_bins, classes);
       if (strcmp(norm, "probability") == 0)
         max = temp_max_bc * 1.0 / total;
       else if (strcmp(norm, "cdf") == 0)
@@ -3872,7 +3833,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
               std::vector<double> classes_vec(classes, classes + num_bins * length);
               group->setAttribute("classes", classes_key);
               (*context)[classes_key] = classes_vec;
-              //              grm_args_push(*series, "classes", "nD", num_bins * length, classes);
             }
           else if (str_equals_any(norm, 2, "cdf", "cumcount"))
             {
@@ -3923,7 +3883,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
               std::vector<double> classes_vec(classes, classes + num_bins * length);
               group->setAttribute("classes", classes_key);
               (*context)[classes_key] = classes_vec;
-              //              grm_args_push(*series, "classes", "nD", num_bins * length, classes);
             }
 
           if (str_equals_any(norm, 2, "probability", "cdf"))
@@ -4000,7 +3959,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
               std::vector<double> classes_vec(classes, classes + num_bins * length);
               group->setAttribute("classes", classes_key);
               (*context)[classes_key] = classes_vec;
-              //              grm_args_push(*series, "classes", "nD", num_bins * length, classes);
             }
           else if (str_equals_any(norm, 2, "cdf", "cumcount"))
             {
@@ -4050,7 +4008,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
               std::vector<double> classes_vec(classes, classes + num_bins * length);
               group->setAttribute("classes", classes_key);
               (*context)[classes_key] = classes_vec;
-              //              grm_args_push(*series, "classes", "nD", num_bins * length, classes);
             }
 
           if (str_equals_any(norm, 2, "probability", "cdf"))
@@ -4060,12 +4017,7 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
         }
     }
 
-  // todo: check if this is correct
   group->setAttribute("r_max", max);
-  //  if (r_max != nullptr)
-  //    {
-  //      *r_max = max;
-  //    }
 
 cleanup:
   free(bin_edges_buf);
@@ -5006,8 +4958,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
 
   angle_ticks = static_cast<int>(elem->getAttribute("angle_ticks"));
 
-  kind = static_cast<std::string>(elem->parentElement()->getAttribute("kind"));
-  //  kind = static_cast<std::string>(elem->getAttribute("kind"));
+  kind = static_cast<std::string>(subplotElement->getAttribute("kind"));
 
   render->setCharHeight(newGroup, charheight);
   render->setLineType(newGroup, GKS_K_LINETYPE_SOLID);
@@ -5015,12 +4966,12 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
   if (kind == "polar_histogram")
     {
       // polar_histogram: needed attributes are calculated prior to drawPolarAxes in parent
-      rings = static_cast<int>(elem->parentElement()->getAttribute("rings"));
+      rings = static_cast<int>(subplotElement->getAttribute("rings"));
       r_min = 0.0;
 
-      r_max = static_cast<double>(elem->parentElement()->getAttribute("r_max"));
+      r_max = static_cast<double>(subplotElement->getAttribute("r_max"));
       norm = static_cast<std::string>(elem->getAttribute("norm"));
-      tick = static_cast<double>(elem->parentElement()->getAttribute("tick"));
+      tick = static_cast<double>(subplotElement->getAttribute("tick"));
     }
   else
     {
@@ -5060,13 +5011,13 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
               newGroup->append(temp);
               render->setLineColorInd(temp, 88);
             }
-//          render->setTextAlign(newGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-//          x[0] = 0.05;
-//          y[0] = r;
-//          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + tick * i);
-//          auto temp = render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC);
-//          temp->setAttribute("name", "polar_axes");
-//          newGroup->append(temp);
+          //          render->setTextAlign(newGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+          //          x[0] = 0.05;
+          //          y[0] = r;
+          //          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + tick * i);
+          //          auto temp = render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC);
+          //          temp->setAttribute("name", "polar_axes");
+          //          newGroup->append(temp);
         }
       else
         {
