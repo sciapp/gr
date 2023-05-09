@@ -127,6 +127,10 @@ static const int predef_styli[] = {1, 1, 1, 2, 3};
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
+#ifndef max
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+#endif
+
 inline void WC_to_NDC(double xw, double yw, int tnr, double &xn, double &yn)
 {
   xn = a[tnr] * xw + b[tnr];
@@ -731,7 +735,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 {
   double x, y;
   double scale, xr, yr, x1, x2, y1, y2;
-  int pc, op, i;
+  int pc, op, i, color;
   double r;
 
 #include "marker.h"
@@ -758,11 +762,16 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
       switch (op)
         {
         case 1: /* point */
-          p->renderer.blend_pixel((int)round(x), (int)round(y), p->fill_col, agg::cover_full);
+          p->path.move_to(x, y);
+          p->path.arc_rel(p->nominal_size / 2, p->nominal_size / 2, 0, false, false, 0, -p->nominal_size);
+          p->path.arc_rel(p->nominal_size / 2, p->nominal_size / 2, 0, false, false, 0, p->nominal_size);
+          fill_path(p->path);
           break;
 
         case 2: /* line */
           {
+            p->stroke.width(max(gkss->bwidth, gkss->lwidth) * p->nominal_size);
+
             x1 = scale * marker[mtype][pc + 1];
             y1 = scale * marker[mtype][pc + 2];
             seg_xform_rel(x1, y1);
@@ -779,68 +788,86 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 3: /* polyline */
+        case 9: /* border polyline */
+          if (op == 3 || gkss->bwidth > 0)
+            {
+              color = op == 3 ? mcolor : gkss->bcoli;
+              for (i = 0; i < marker[mtype][pc + 1]; i++)
+                {
+                  xr = scale * marker[mtype][pc + 2 + 2 * i];
+                  yr = -scale * marker[mtype][pc + 3 + 2 * i];
+                  seg_xform_rel(xr, yr);
+
+                  if (i == 0)
+                    p->path.move_to(x - xr, y + yr);
+                  else
+                    p->path.line_to(x - xr, y + yr);
+                }
+
+              p->stroke_col = agg::rgba(p->rgb[color][0], p->rgb[color][1], p->rgb[color][2], p->transparency);
+              stroke_path(p->path);
+            }
+          pc += 1 + 2 * marker[mtype][pc + 1];
+          break;
+
         case 4: /* filled polygon */
         case 5: /* hollow polygon */
           {
-            xr = scale * marker[mtype][pc + 2];
-            yr = -scale * marker[mtype][pc + 3];
-            seg_xform_rel(xr, yr);
-
-            p->path.move_to(x - xr, y + yr);
-            for (i = 1; i < marker[mtype][pc + 1]; i++)
+            color = op == 4 ? mcolor : 0;
+            p->fill_col = agg::rgba(p->rgb[color][0], p->rgb[color][1], p->rgb[color][2], p->transparency);
+            for (i = 0; i < marker[mtype][pc + 1]; i++)
               {
                 xr = scale * marker[mtype][pc + 2 + 2 * i];
                 yr = -scale * marker[mtype][pc + 3 + 2 * i];
                 seg_xform_rel(xr, yr);
 
-                p->path.line_to(x - xr, y + yr);
+                if (i == 0)
+                  p->path.move_to(x - xr, y + yr);
+                else
+                  p->path.line_to(x - xr, y + yr);
               }
 
-            if (op == 4)
+            if (op == 4 && gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
               {
-                if (gkss->bcoli != gkss->pmcoli)
-                  {
-                    p->stroke_col = agg::rgba(p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2],
-                                              p->transparency);
-                    fill_stroke_path(p->path);
-                  }
-                else
-                  {
-                    fill_path(p->path);
-                  }
+                p->stroke_col =
+                    agg::rgba(p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency);
+                fill_stroke_path(p->path);
               }
             else
               {
-                stroke_path(p->path, true);
+                fill_path(p->path);
               }
-
             pc += 1 + 2 * marker[mtype][pc + 1];
           }
           break;
 
         case 6: /* arc */
-        case 7: /* filled arc */
-        case 8: /* hollow arc */
           p->path.move_to(x, y + r);
           p->path.arc_rel(r, r, 0, false, false, 0, -2 * r);
           p->path.arc_rel(r, r, 0, false, false, 0, 2 * r);
 
-          if (op == 7)
+          p->stroke.width(max(gkss->bwidth, gkss->lwidth) * p->nominal_size);
+          stroke_path(p->path, true);
+          break;
+
+        case 7: /* filled arc */
+        case 8: /* hollow arc */
+          color = op == 7 ? mcolor : 0;
+          p->fill_col = agg::rgba(p->rgb[color][0], p->rgb[color][1], p->rgb[color][2], p->transparency);
+
+          p->path.move_to(x, y + r);
+          p->path.arc_rel(r, r, 0, false, false, 0, -2 * r);
+          p->path.arc_rel(r, r, 0, false, false, 0, 2 * r);
+
+          if (op == 7 && gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
             {
-              if (gkss->bcoli != gkss->pmcoli)
-                {
-                  p->stroke_col = agg::rgba(p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2],
-                                            p->transparency);
-                  fill_stroke_path(p->path);
-                }
-              else
-                {
-                  fill_path(p->path);
-                }
+              p->stroke_col =
+                  agg::rgba(p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency);
+              fill_stroke_path(p->path);
             }
           else
             {
-              stroke_path(p->path, true);
+              fill_path(p->path);
             }
           break;
 
