@@ -160,11 +160,6 @@ public:
                                                      std::optional<std::vector<int>> color,
                                                      const std::shared_ptr<Context> &extContext = nullptr);
 
-  std::shared_ptr<Element> createSurface(const std::string &px_key, std::optional<std::vector<double>> px,
-                                         const std::string &py_key, std::optional<std::vector<double>> py,
-                                         const std::string &pz_key, std::optional<std::vector<double>> pz, int option,
-                                         int accelerate, const std::shared_ptr<Context> &extContext = nullptr);
-
   std::shared_ptr<Element> createGrid3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org,
                                         double z_org, int major_x, int major_y, int major_z);
 
@@ -201,12 +196,6 @@ public:
                                             const std::string &pz_key, std::optional<std::vector<double>> pz,
                                             const std::shared_ptr<Context> &extContext = nullptr);
 
-  std::shared_ptr<Element> createTriContour(const std::string &px_key, std::optional<std::vector<double>> px,
-                                            const std::string &py_key, std::optional<std::vector<double>> py,
-                                            const std::string &pz_key, std::optional<std::vector<double>> pz,
-                                            const std::string &levels_key, std::optional<std::vector<double>> levels,
-                                            const std::shared_ptr<Context> &extContext = nullptr);
-
   std::shared_ptr<Element> createTitles3d(const std::string &x, const std::string &y, const std::string &z);
 
   std::shared_ptr<Element> createGR3Clear();
@@ -215,10 +204,6 @@ public:
 
   std::shared_ptr<Element> createGR3DrawImage(double xmin, double xmax, double ymin, double ymax, int width, int height,
                                               int drawable_type);
-
-  std::shared_ptr<Element> createShadePoints(const std::string &x_key, std::optional<std::vector<double>> x,
-                                             const std::string &y_key, std::optional<std::vector<double>> y, int xform,
-                                             int w, int h, const std::shared_ptr<Context> &extContext = nullptr);
 
   std::shared_ptr<Element> createLayoutGrid(const grm::Grid &grid);
 

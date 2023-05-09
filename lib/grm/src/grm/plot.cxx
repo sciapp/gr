@@ -3640,13 +3640,23 @@ err_t plot_heatmap(grm_args_t *subplot_args)
 {
   const char *kind = nullptr;
   grm_args_t **current_series;
-  int icmap[256], *rgba = nullptr, *data = nullptr, zlog = 0;
+  int zlog = 0;
   unsigned int i, cols, rows, z_length;
-  double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv, tmp;
+  double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max;
   err_t error = ERROR_NONE;
+  std::shared_ptr<GRM::Element> plot_parent;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   if (!group->hasAttribute("name")) group->setAttribute("name", "heatmap");
+
+  if (group->localName() == "plot")
+    {
+      plot_parent = group;
+    }
+  else
+    {
+      plot_parent = group->parentElement();
+    }
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
@@ -3655,201 +3665,62 @@ err_t plot_heatmap(grm_args_t *subplot_args)
     {
       int is_uniform_heatmap;
       x = y = nullptr;
-      auto subGroup = global_render->createSeries("heatmap_series");
+      auto subGroup = global_render->createSeries("heatmap");
       group->append(subGroup);
       grm_args_first_value(*current_series, "x", "D", &x, &cols);
       grm_args_first_value(*current_series, "y", "D", &y, &rows);
       is_uniform_heatmap =
           (x == nullptr || is_equidistant_array(cols, x)) && (y == nullptr || is_equidistant_array(rows, y));
-      cleanup_and_set_error_if(!is_uniform_heatmap && (x == nullptr || y == nullptr), ERROR_PLOT_MISSING_DATA);
-      cleanup_and_set_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length),
-                               ERROR_PLOT_MISSING_DATA);
+      return_error_if(!is_uniform_heatmap && (x == nullptr || y == nullptr), ERROR_PLOT_MISSING_DATA);
+      return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
+
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      auto context = global_render->getContext();
+
+      std::vector<double> x_vec(x, x + rows);
+      (*context)["x" + str] = x_vec;
+      subGroup->setAttribute("x", "x" + str);
+
+      std::vector<double> y_vec(y, y + cols);
+      (*context)["y" + str] = y_vec;
+      subGroup->setAttribute("y", "y" + str);
+
+      std::vector<double> z_vec(z, z + z_length);
+      (*context)["z" + str] = z_vec;
+      subGroup->setAttribute("z", "z" + str);
+
+      plot_parent->setAttribute("zlog", zlog);
+
       if (x == nullptr && y == nullptr)
         {
           /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
-          cleanup_and_set_error_if(!grm_args_values(*current_series, "z_dims", "ii", &rows, &cols),
-                                   ERROR_PLOT_MISSING_DIMENSIONS);
-        }
-      else if (x == nullptr)
-        {
-          cols = z_length / rows;
-        }
-      else if (y == nullptr)
-        {
-          rows = z_length / cols;
+          return_error_if(!grm_args_values(*current_series, "z_dims", "ii", &rows, &cols),
+                          ERROR_PLOT_MISSING_DIMENSIONS);
+          subGroup->setAttribute("zdims_min", (int)rows);
+          subGroup->setAttribute("zdims_max", (int)cols);
         }
       if (x == nullptr)
         {
           grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
+          plot_parent->setAttribute("xrange_min", x_min);
+          plot_parent->setAttribute("xrange_max", x_max);
         }
-      else
-        {
-          x_min = x[0];
-          x_max = x[cols - 1];
-        }
-      if (x == nullptr)
+      if (y == nullptr)
         {
           grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
-        }
-      else
-        {
-          y_min = y[0];
-          y_max = y[rows - 1];
+          plot_parent->setAttribute("yrange_min", y_min);
+          plot_parent->setAttribute("yrange_max", y_max);
         }
       grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max);
-      if (!grm_args_values(*current_series, "crange", "dd", &c_min, &c_max))
+      plot_parent->setAttribute("zrange_min", z_min);
+      plot_parent->setAttribute("zrange_max", z_max);
+      if (grm_args_values(*current_series, "crange", "dd", &c_min, &c_max))
         {
-          c_min = z_min;
-          c_max = z_max;
+          subGroup->setAttribute("crange_min", c_min);
+          subGroup->setAttribute("crange_max", c_max);
         }
-
-      if (zlog)
-        {
-          z_min = log(z_min);
-          z_max = log(z_max);
-          c_min = log(c_min);
-          c_max = log(c_max);
-        }
-
-      if (!is_uniform_heatmap)
-        {
-          --cols;
-          --rows;
-        }
-      for (i = 0; i < 256; i++)
-        {
-          gr_inqcolor(1000 + i, icmap + i);
-        }
-
-      data = static_cast<int *>(malloc(rows * cols * sizeof(int)));
-      cleanup_and_set_error_if(data == nullptr, ERROR_MALLOC);
-      if (z_max > z_min)
-        {
-          for (i = 0; i < cols * rows; i++)
-            {
-              if (zlog)
-                {
-                  zv = log(z[i]);
-                }
-              else
-                {
-                  zv = z[i];
-                }
-
-              if (zv > z_max || zv < z_min || grm_isnan(zv))
-                {
-                  data[i] = -1;
-                }
-              else
-                {
-                  data[i] = (int)((zv - c_min) / (c_max - c_min) * 255 + 0.5);
-                  if (data[i] >= 255)
-                    {
-                      data[i] = 255;
-                    }
-                  else if (data[i] < 0)
-                    {
-                      data[i] = 0;
-                    }
-                }
-            }
-        }
-      else
-        {
-          for (i = 0; i < cols * rows; i++)
-            {
-              data[i] = 0;
-            }
-        }
-      rgba = static_cast<int *>(malloc(rows * cols * sizeof(int)));
-      cleanup_and_set_error_if(rgba == nullptr, ERROR_MALLOC);
-      if (is_uniform_heatmap)
-        {
-          for (i = 0; i < rows * cols; i++)
-            {
-              if (data[i] == -1)
-                {
-                  rgba[i] = 0;
-                }
-              else
-                {
-                  rgba[i] = (255 << 24) + icmap[data[i]];
-                }
-            }
-          int id = (int)global_root->getAttribute("id");
-          global_root->setAttribute("id", id + 1);
-          std::string str = std::to_string(id);
-
-          // Store "raw" data in Context / heatmap element for later usage e.g. interaction
-          auto context = global_render->getContext();
-
-          if (is_uniform_heatmap)
-            {
-              double *x_tmp, *y_tmp;
-
-              x_tmp = static_cast<double *>(malloc((cols) * sizeof(double)));
-              y_tmp = static_cast<double *>(malloc((rows) * sizeof(double)));
-              linspace(x_min, x_max, cols, x_tmp);
-              linspace(y_min, y_max, rows, y_tmp);
-
-              std::vector<double> x_vec(x_tmp, x_tmp + cols);
-              (*context)["x" + str] = x_vec;
-              subGroup->setAttribute("x", "x" + str);
-              std::vector<double> y_vec(y_tmp, y_tmp + rows);
-              (*context)["y" + str] = y_vec;
-              subGroup->setAttribute("y", "y" + str);
-            }
-          else
-            {
-              std::vector<double> x_vec(x, x + cols);
-              (*context)["x" + str] = x_vec;
-              subGroup->setAttribute("x", "x" + str);
-              std::vector<double> y_vec(y, y + rows);
-              (*context)["y" + str] = y_vec;
-              subGroup->setAttribute("y", "y" + str);
-            }
-
-          std::vector<double> z_vec(z, z + z_length);
-          (*context)["z" + str] = z_vec;
-          subGroup->setAttribute("z", "z" + str);
-
-          std::vector<int> rgba_vec = std::vector<int>(rgba, rgba + cols * rows);
-
-          auto drawImage =
-              global_render->createDrawImage(x_min, x_max, y_max, y_min, cols, rows, "rgba" + str, rgba_vec, 0);
-          subGroup->append(drawImage);
-        }
-      else
-        {
-          for (i = 0; i < rows * cols; i++)
-            {
-              if (data[i] == -1)
-                {
-                  rgba[i] = 1256 + 1; /* Invalid color index -> gr_nonuniformcellarray draws a transparent rectangle */
-                }
-              else
-                {
-                  rgba[i] = data[i] + 1000;
-                }
-            }
-          int id = (int)global_root->getAttribute("id");
-          global_root->setAttribute("id", id + 1);
-          std::string str = std::to_string(id);
-
-          std::vector<int> rgba_vec = std::vector<int>(rgba, rgba + cols * rows);
-          std::vector<double> x_vec = std::vector<double>(x, x + cols + 1);
-          std::vector<double> y_vec = std::vector<double>(y, y + rows + 1);
-          std::vector<int> color_vec = std::vector<int>(rgba, rgba + cols * rows);
-
-          auto nuca = global_render->createNonUniformCellArray("x" + str, x_vec, "y" + str, y_vec, cols, rows, 1, 1,
-                                                               cols, rows, "color" + str, color_vec);
-          subGroup->append(nuca);
-        }
-
-      free(rgba);
-      free(data);
-      rgba = nullptr;
-      data = nullptr;
+      global_root->setAttribute("id", ++id);
 
       ++current_series;
     }
@@ -3859,10 +3730,6 @@ err_t plot_heatmap(grm_args_t *subplot_args)
       gr_setlinecolorind(1);
       plot_draw_colorbar(subplot_args, 0.0, 256);
     }
-
-cleanup:
-  free(rgba);
-  free(data);
 
   return error;
 }
@@ -4014,7 +3881,6 @@ cleanup:
 
 err_t plot_wireframe(grm_args_t *subplot_args)
 {
-  double *gridit_x = nullptr, *gridit_y = nullptr, *gridit_z = nullptr;
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
 
@@ -4027,80 +3893,44 @@ err_t plot_wireframe(grm_args_t *subplot_args)
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
 
-      auto subGroup = global_render->createSeries("wireframe_series");
+      auto subGroup = global_render->createSeries("wireframe");
       group->append(subGroup);
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
 
-      global_render->setFillColorInd(subGroup, 0);
-      if (x_length == y_length && x_length == z_length)
-        {
-          if (gridit_x == nullptr)
-            {
-              gridit_x = static_cast<double *>(malloc(PLOT_WIREFRAME_GRIDIT_N * sizeof(double)));
-              gridit_y = static_cast<double *>(malloc(PLOT_WIREFRAME_GRIDIT_N * sizeof(double)));
-              gridit_z =
-                  static_cast<double *>(malloc(PLOT_WIREFRAME_GRIDIT_N * PLOT_WIREFRAME_GRIDIT_N * sizeof(double)));
-              if (gridit_x == nullptr || gridit_y == nullptr || gridit_z == nullptr)
-                {
-                  debug_print_malloc_error();
-                  error = ERROR_MALLOC;
-                  goto cleanup;
-                }
-            }
-          gr_gridit(x_length, x, y, z, PLOT_WIREFRAME_GRIDIT_N, PLOT_WIREFRAME_GRIDIT_N, gridit_x, gridit_y, gridit_z);
-          std::vector<double> grid_x_vec = std::vector<double>(gridit_x, gridit_x + PLOT_WIREFRAME_GRIDIT_N);
-          std::vector<double> grid_y_vec = std::vector<double>(gridit_y, gridit_y + PLOT_WIREFRAME_GRIDIT_N);
-          std::vector<double> grid_z_vec = std::vector<double>(gridit_z, gridit_z + PLOT_WIREFRAME_GRIDIT_N);
-          int id_int = static_cast<int>(global_root->getAttribute("id"));
-          global_root->setAttribute("id", ++id_int);
-          std::string id = std::to_string(id_int);
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      auto context = global_render->getContext();
 
-          auto temp = global_render->createSurface("x" + id, grid_x_vec, "y" + id, grid_y_vec, "z" + id, grid_z_vec,
-                                                   GR_OPTION_FILLED_MESH, false);
-          subGroup->append(temp);
-        }
-      else
-        {
-          if (x_length * y_length != z_length)
-            {
-              error = ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
-              goto cleanup;
-            }
-          std::vector<double> x_vec = std::vector<double>(x, x + x_length);
-          std::vector<double> y_vec = std::vector<double>(y, y + y_length);
-          std::vector<double> z_vec = std::vector<double>(z, z + z_length);
-          int id_int = static_cast<int>(global_root->getAttribute("id"));
-          global_root->setAttribute("id", ++id_int);
-          std::string id = std::to_string(id_int);
+      std::vector<double> x_vec(x, x + x_length);
+      (*context)["x" + str] = x_vec;
+      subGroup->setAttribute("x", "x" + str);
 
-          auto temp = global_render->createSurface("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec,
-                                                   GR_OPTION_FILLED_MESH, false);
-          subGroup->append(temp);
-        }
+      std::vector<double> y_vec(y, y + y_length);
+      (*context)["y" + str] = y_vec;
+      subGroup->setAttribute("y", "y" + str);
+
+      std::vector<double> z_vec(z, z + z_length);
+      (*context)["z" + str] = z_vec;
+      subGroup->setAttribute("z", "z" + str);
+
+      global_root->setAttribute("id", ++id);
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
-
-cleanup:
-  free(gridit_x);
-  free(gridit_y);
-  free(gridit_z);
 
   return error;
 }
 
 err_t plot_surface(grm_args_t *subplot_args)
 {
-  double *gridit_x = nullptr, *gridit_y = nullptr, *gridit_z = nullptr;
-  double **value_array_ptrs[2] = {nullptr, nullptr};
-  int allocated_array[2] = {0, 0};
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
   int accelerate; /* this argument decides if GR3 or GRM is used to plot the surface */
   std::vector<double> x_vec, y_vec, z_vec;
+  double xmin, xmax, ymin, ymax;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "surface");
@@ -4112,114 +3942,53 @@ err_t plot_surface(grm_args_t *subplot_args)
     {
       double *x = nullptr, *y = nullptr, *z = nullptr;
       unsigned int x_length, y_length, z_length;
-      const char *range_keys[] = {"xrange", "yrange"};
 
-      value_array_ptrs[0] = &x;
-      value_array_ptrs[1] = &y;
-      allocated_array[0] = allocated_array[1] = 0;
+      auto subGroup = global_render->createSeries("surface");
+      group->append(subGroup);
+      subGroup->setAttribute("accelerate", accelerate);
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
-      cleanup_and_set_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length),
-                               ERROR_PLOT_MISSING_DATA);
+      return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
 
-      if (x == nullptr && y == nullptr)
+      if (grm_args_values(*current_series, "z_dims", "ii", &y_length, &x_length))
         {
-          /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
-          cleanup_and_set_error_if(!grm_args_values(*current_series, "z_dims", "ii", &y_length, &x_length),
-                                   ERROR_PLOT_MISSING_DIMENSIONS);
+          subGroup->setAttribute("zdims_min", (int)x_length);
+          subGroup->setAttribute("zdims_max", (int)y_length);
         }
-      else if (x == nullptr)
+      if (!grm_args_values(*current_series, "xrange", "dd", &xmin, &xmax))
         {
-          x_length = z_length / y_length;
+          group->setAttribute("xrange_min", xmin);
+          group->setAttribute("xrange_max", xmax);
         }
-      else if (y == nullptr)
+      if (!grm_args_values(*current_series, "yrange", "dd", &ymin, &ymax))
         {
-          y_length = z_length / x_length;
-        }
-
-      unsigned int lengths[] = {x_length, y_length};
-      for (int i = 0; i < array_size(value_array_ptrs); ++i)
-        {
-          if (*value_array_ptrs[i] == nullptr)
-            {
-              double value_min, value_max;
-              if (!grm_args_values(*current_series, range_keys[i], "dd", &value_min, &value_max))
-                {
-                  value_min = 1.0;
-                  value_max = lengths[i];
-                }
-              *value_array_ptrs[i] = static_cast<double *>(malloc(lengths[i] * sizeof(double)));
-              cleanup_and_set_error_if(*value_array_ptrs[i] == nullptr, ERROR_MALLOC);
-              allocated_array[i] = 1;
-              for (int j = 0; j < lengths[i]; ++j)
-                {
-                  (*value_array_ptrs[i])[j] = (int)(value_min + (value_max - value_min) / lengths[i] * j + 0.5);
-                }
-            }
-        }
-
-      if (x_length == y_length && x_length == z_length)
-        {
-          logger((stderr, "Create a %d x %d grid for \"surface\" with \"gridit\"\n", PLOT_SURFACE_GRIDIT_N,
-                  PLOT_CONTOUR_GRIDIT_N));
-          if (gridit_x == nullptr)
-            {
-              gridit_x = static_cast<double *>(malloc(PLOT_SURFACE_GRIDIT_N * sizeof(double)));
-              cleanup_and_set_error_if(gridit_x == nullptr, ERROR_MALLOC);
-              gridit_y = static_cast<double *>(malloc(PLOT_SURFACE_GRIDIT_N * sizeof(double)));
-              cleanup_and_set_error_if(gridit_y == nullptr, ERROR_MALLOC);
-              gridit_z = static_cast<double *>(malloc(PLOT_SURFACE_GRIDIT_N * PLOT_SURFACE_GRIDIT_N * sizeof(double)));
-              cleanup_and_set_error_if(gridit_z == nullptr, ERROR_MALLOC);
-            }
-          gr_gridit(x_length, x, y, z, PLOT_SURFACE_GRIDIT_N, PLOT_SURFACE_GRIDIT_N, gridit_x, gridit_y, gridit_z);
-
-          x_vec = std::vector<double>(gridit_x, gridit_x + PLOT_SURFACE_GRIDIT_N);
-          y_vec = std::vector<double>(gridit_y, gridit_y + PLOT_SURFACE_GRIDIT_N);
-          z_vec = std::vector<double>(gridit_z, gridit_z + PLOT_SURFACE_GRIDIT_N * PLOT_SURFACE_GRIDIT_N);
-        }
-      else
-        {
-          logger((stderr, "x_length; %u, y_length: %u, z_length: %u\n", x_length, y_length, z_length));
-          cleanup_and_set_error_if(x_length * y_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-
-          x_vec = std::vector<double>(x, x + x_length);
-          y_vec = std::vector<double>(y, y + y_length);
-          z_vec = std::vector<double>(z, z + z_length);
+          group->setAttribute("yrange_min", ymin);
+          group->setAttribute("yrange_max", ymax);
         }
 
       int id_int = static_cast<int>(global_root->getAttribute("id"));
       global_root->setAttribute("id", ++id_int);
-      std::string id = std::to_string(id_int);
-      auto temp = global_render->createSurface("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec,
-                                               GR_OPTION_COLORED_MESH, accelerate);
-      group->append(temp);
+      std::string str = std::to_string(id_int);
+      auto context = global_render->getContext();
 
-      for (int i = 0; i < array_size(value_array_ptrs); ++i)
-        {
-          if (allocated_array[i])
-            {
-              free(*value_array_ptrs[i]);
-              allocated_array[i] = 0;
-            }
-        }
+      std::vector<double> x_vec(x, x + x_length);
+      (*context)["x" + str] = x_vec;
+      subGroup->setAttribute("x", "x" + str);
+
+      std::vector<double> y_vec(y, y + y_length);
+      (*context)["y" + str] = y_vec;
+      subGroup->setAttribute("y", "y" + str);
+
+      std::vector<double> z_vec(z, z + z_length);
+      (*context)["z" + str] = z_vec;
+      subGroup->setAttribute("z", "z" + str);
+
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
   plot_draw_colorbar(subplot_args, 0.05, 256);
-
-cleanup:
-  for (int i = 0; i < array_size(value_array_ptrs); ++i)
-    {
-      if (allocated_array[i])
-        {
-          free(*value_array_ptrs[i]);
-        }
-    }
-  free(gridit_x);
-  free(gridit_y);
-  free(gridit_z);
 
   return error;
 }
@@ -4235,23 +4004,30 @@ err_t plot_plot3(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
-      auto subGroup = global_render->createSeries("plot3_series");
+      auto subGroup = global_render->createSeries("plot3");
       group->append(subGroup);
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
 
-      std::vector<double> x_vec = std::vector<double>(x, x + x_length);
-      std::vector<double> y_vec = std::vector<double>(y, y + y_length);
-      std::vector<double> z_vec = std::vector<double>(z, z + z_length);
       int id_int = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id_int);
+      auto context = global_render->getContext();
+
+      std::vector<double> x_vec(x, x + x_length);
+      (*context)["x" + str] = x_vec;
+      subGroup->setAttribute("x", "x" + str);
+
+      std::vector<double> y_vec(y, y + y_length);
+      (*context)["y" + str] = y_vec;
+      subGroup->setAttribute("y", "y" + str);
+
+      std::vector<double> z_vec(z, z + z_length);
+      (*context)["z" + str] = z_vec;
+      subGroup->setAttribute("z", "z" + str);
+
       global_root->setAttribute("id", ++id_int);
-      std::string id = std::to_string(id_int);
-
-      auto temp = global_render->createPolyline3d("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec);
-
-      subGroup->append(temp);
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
@@ -4385,7 +4161,6 @@ err_t plot_isosurface(grm_args_t *subplot_args)
 
   while (*current_series != nullptr)
     {
-
       auto subGroup = global_render->createSeries("isosurface");
       group->append(subGroup);
       return_error_if(!grm_args_first_value(*current_series, "c", "D", &orig_data, &data_length),
@@ -4483,7 +4258,6 @@ err_t plot_isosurface(grm_args_t *subplot_args)
 err_t plot_volume(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
-  const char *kind;
   double dlim[2] = {INFINITY, -INFINITY};
   err_t error;
 
@@ -4491,9 +4265,10 @@ err_t plot_volume(grm_args_t *subplot_args)
   group->setAttribute("name", "volume");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "kind", "s", &kind);
   while (*current_series != nullptr)
     {
+      auto subGroup = global_render->createSeries("volume");
+      group->append(subGroup);
       const double *c;
       unsigned int data_length, dims;
       unsigned int *shape;
@@ -4508,6 +4283,19 @@ err_t plot_volume(grm_args_t *subplot_args)
       return_error_if(dims != 3, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       return_error_if(shape[0] * shape[1] * shape[2] != data_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       return_error_if(data_length <= 0, ERROR_PLOT_MISSING_DATA);
+
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      auto context = global_render->getContext();
+
+      std::vector<double> c_data_vec(c, c + data_length);
+      std::vector<double> shape_vec(shape, shape + dims);
+
+      (*context)["c" + str] = c_data_vec;
+      subGroup->setAttribute("c", "c" + str);
+      (*context)["cdims_shape" + str] = shape_vec;
+      subGroup->setAttribute("cdims_shape", "cdims_shape" + str);
+      subGroup->setAttribute("cdims_size", (int)dims);
 
       if (!grm_args_values(*current_series, "algorithm", "i", &algorithm))
         {
@@ -4542,25 +4330,22 @@ err_t plot_volume(grm_args_t *subplot_args)
           logger((stderr, "Got unknown volume algorithm \"%d\"\n", algorithm));
           return ERROR_PLOT_UNKNOWN_ALGORITHM;
         }
+      subGroup->setAttribute("algorithm", algorithm);
 
       dmin = dmax = -1.0;
       grm_args_values(*current_series, "dmin", "d", &dmin);
       grm_args_values(*current_series, "dmax", "d", &dmax);
+      subGroup->setAttribute("dmin", dmin);
+      subGroup->setAttribute("dmax", dmax);
 
-      int id = static_cast<int>(global_root->getAttribute("id"));
-      global_root->setAttribute("id", id + 1);
-      std::string str = std::to_string(id);
-      auto data_vec = std::vector<double>(c, c + data_length);
-
-      auto volume =
-          global_render->createVolume(shape[0], shape[1], shape[2], "data" + str, data_vec, algorithm, dmin, dmax);
-      group->append(volume);
-
+      global_root->setAttribute("id", ++id);
       ++current_series;
     }
 
   logger((stderr, "dmin, dmax: (%lf, %lf)\n", dlim[0], dlim[1]));
   grm_args_push(subplot_args, "_clim", "dd", dlim[0], dlim[1]);
+  group->setAttribute("dlim_min", dlim[0]);
+  group->setAttribute("dlim_max", dlim[1]);
 
   error = plot_draw_axes(subplot_args, 2);
   return_if_error;
@@ -4950,42 +4735,42 @@ err_t plot_tricont(grm_args_t *subplot_args)
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "tricont");
 
-  grm_args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
   grm_args_values(subplot_args, "levels", "i", &num_levels);
-  levels = static_cast<double *>(malloc(num_levels * sizeof(double)));
-  if (levels == nullptr)
-    {
-      debug_print_malloc_error();
-      return ERROR_MALLOC;
-    }
-  for (i = 0; i < num_levels; ++i)
-    {
-      levels[i] = z_min + ((1.0 * i) / (num_levels - 1)) * (z_max - z_min);
-    }
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
+      auto subGroup = global_render->createSeries("tricontour");
+      group->append(subGroup);
+
       return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
 
       int id = (int)global_root->getAttribute("id");
-      global_root->setAttribute("id", id + 1);
       std::string str = std::to_string(id);
+      auto context = global_render->getContext();
 
-      std::vector<double> x_vec(x, x + x_length), y_vec(y, y + x_length), z_vec(z, z + x_length),
-          l_vec(levels, levels + num_levels);
-      auto temp = global_render->createTriContour("px" + str, x_vec, "py" + str, y_vec, "pz" + str, z_vec,
-                                                  "levels" + str, l_vec);
+      std::vector<double> x_vec(x, x + x_length);
+      (*context)["px" + str] = x_vec;
+      subGroup->setAttribute("px", "px" + str);
 
-      group->append(temp);
+      std::vector<double> y_vec(y, y + y_length);
+      (*context)["py" + str] = y_vec;
+      subGroup->setAttribute("py", "py" + str);
+
+      std::vector<double> z_vec(z, z + z_length);
+      (*context)["pz" + str] = z_vec;
+      subGroup->setAttribute("pz", "pz" + str);
+
+      subGroup->setAttribute("levels", num_levels);
+
+      global_root->setAttribute("id", id + 1);
       ++current_series;
     }
   plot_draw_colorbar(subplot_args, 0.0, 256);
-  free(levels);
 
   return ERROR_NONE;
 }
@@ -4993,24 +4778,34 @@ err_t plot_tricont(grm_args_t *subplot_args)
 err_t plot_shade(grm_args_t *subplot_args)
 {
   grm_args_t **current_shader;
-  const char *data_component_names[] = {"x", "y", nullptr};
-  double *components[2];
   /* char *spec = ""; TODO: read spec from data! */
   int xform, xbins, ybins;
-  double **current_component = components;
-  const char **current_component_name = data_component_names;
-  unsigned int point_count;
+  double *x, *y;
+  unsigned int x_length, y_length;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "shade");
 
   grm_args_values(subplot_args, "series", "A", &current_shader);
-  while (*current_component_name != nullptr)
-    {
-      grm_args_first_value(*current_shader, *current_component_name, "D", current_component, &point_count);
-      ++current_component_name;
-      ++current_component;
-    }
+  auto subGroup = global_render->createSeries("shade");
+  group->append(subGroup);
+
+  grm_args_first_value(*current_shader, "x", "D", &x, &x_length);
+  grm_args_first_value(*current_shader, "y", "D", &y, &y_length);
+
+  int id = static_cast<int>(global_root->getAttribute("id"));
+  std::string str = std::to_string(id);
+  global_root->setAttribute("id", ++id);
+  auto context = global_render->getContext();
+
+  std::vector<double> x_vec(x, x + x_length);
+  std::vector<double> y_vec(y, y + y_length);
+
+  (*context)["x" + str] = x_vec;
+  subGroup->setAttribute("x", "x" + str);
+  (*context)["y" + str] = y_vec;
+  subGroup->setAttribute("y", "y" + str);
+
   if (!grm_args_values(subplot_args, "xform", "i", &xform))
     {
       xform = 5;
@@ -5023,16 +4818,10 @@ err_t plot_shade(grm_args_t *subplot_args)
     {
       ybins = 1200;
     }
+  subGroup->setAttribute("xform", xform);
+  subGroup->setAttribute("xbins", xbins);
+  subGroup->setAttribute("ybins", ybins);
 
-  int id = (int)global_root->getAttribute("id");
-  global_root->setAttribute("id", id + 1);
-  auto str = std::to_string(id);
-
-  std::vector<double> c0(components[0], components[0] + point_count);
-  std::vector<double> c1(components[1], components[1] + point_count);
-
-  auto temp = global_render->createShadePoints("x" + str, c0, "y" + str, c1, xform, xbins, ybins);
-  group->append(temp);
   return ERROR_NONE;
 }
 

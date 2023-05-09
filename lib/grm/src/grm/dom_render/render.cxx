@@ -4622,7 +4622,7 @@ static void drawImage(const std::shared_ptr<GRM::Element> &element, const std::s
   int height = static_cast<int>(element->getAttribute("height"));
   int model = static_cast<int>(element->getAttribute("model"));
   auto data = static_cast<std::string>(element->getAttribute("data"));
-  gr_drawimage(xmin, ymin, xmax, ymax, width, height, (int *)&(GRM::get<std::vector<int>>((*context)[data])[0]), model);
+  gr_drawimage(xmin, xmax, ymax, ymin, width, height, (int *)&(GRM::get<std::vector<int>>((*context)[data])[0]), model);
 }
 
 static void drawIsosurface3(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
@@ -5330,6 +5330,220 @@ static void grid3d(const std::shared_ptr<GRM::Element> &element, const std::shar
   gr_grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, abs(x_major), abs(y_major), abs(z_major));
 }
 
+static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Processing function for heatmap
+   *
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   */
+
+  int icmap[256], zlog = 0;
+  unsigned int i, cols, rows, z_length;
+  double x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv;
+  int is_uniform_heatmap;
+  std::shared_ptr<GRM::Element> plot_parent;
+  std::vector<int> data, rgba;
+  std::vector<double> x_vec, y_vec, z_vec;
+
+  if (element->parentElement()->localName() == "plot")
+    {
+      plot_parent = element->parentElement();
+    }
+  else
+    {
+      plot_parent = element->parentElement()->parentElement();
+    }
+  zlog = static_cast<int>(plot_parent->getAttribute("zlog"));
+
+  if (element->hasAttribute("x"))
+    {
+      auto x = static_cast<std::string>(element->getAttribute("x"));
+      x_vec = GRM::get<std::vector<double>>((*context)[x]);
+      cols = x_vec.size();
+    }
+  if (element->hasAttribute("y"))
+    {
+      auto y = static_cast<std::string>(element->getAttribute("y"));
+      y_vec = GRM::get<std::vector<double>>((*context)[y]);
+      rows = y_vec.size();
+    }
+
+  is_uniform_heatmap = (x_vec.empty() || is_equidistant_array(cols, &(x_vec[0]))) &&
+                       (y_vec.empty() || is_equidistant_array(rows, &(y_vec[0])));
+  if (!is_uniform_heatmap && (x_vec.empty() || y_vec.empty()))
+    throw NotFoundError("Heatmap series is missing x- or y-data or the data has to be uniform.\n");
+  if (!element->hasAttribute("z")) throw NotFoundError("Heatmap series is missing required attribute z-data.\n");
+  auto z = static_cast<std::string>(element->getAttribute("z"));
+  z_vec = GRM::get<std::vector<double>>((*context)[z]);
+  z_length = z_vec.size();
+
+  if (x_vec.empty() && y_vec.empty())
+    {
+      /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
+      if (!element->hasAttribute("zdims_min") || !element->hasAttribute("zdims_max"))
+        throw NotFoundError("Heatmap series is missing required attribute zdims.\n");
+      rows = static_cast<int>(element->getAttribute("zdims_min"));
+      cols = static_cast<int>(element->getAttribute("zdims_max"));
+    }
+  else if (x_vec.empty())
+    {
+      cols = z_length / rows;
+    }
+  else if (y_vec.empty())
+    {
+      rows = z_length / cols;
+    }
+  if (x_vec.empty())
+    {
+      x_min = static_cast<double>(plot_parent->getAttribute("xrange_min"));
+      x_max = static_cast<double>(plot_parent->getAttribute("xrange_max"));
+    }
+  else
+    {
+      x_min = x_vec[0];
+      x_max = x_vec[cols - 1];
+    }
+  if (y_vec.empty())
+    {
+      y_min = static_cast<double>(plot_parent->getAttribute("yrange_min"));
+      y_max = static_cast<double>(plot_parent->getAttribute("yrange_max"));
+    }
+  else
+    {
+      y_min = y_vec[0];
+      y_max = y_vec[rows - 1];
+    }
+  z_min = static_cast<double>(plot_parent->getAttribute("zrange_min"));
+  z_max = static_cast<double>(plot_parent->getAttribute("zrange_max"));
+  if (!element->hasAttribute("crange_min") || !element->hasAttribute("crange_max"))
+    {
+      c_min = z_min;
+      c_max = z_max;
+    }
+  else
+    {
+      c_min = static_cast<double>(element->getAttribute("crange_min"));
+      c_max = static_cast<double>(element->getAttribute("crange_max"));
+    }
+
+  if (zlog)
+    {
+      z_min = log(z_min);
+      z_max = log(z_max);
+      c_min = log(c_min);
+      c_max = log(c_max);
+    }
+
+  if (!is_uniform_heatmap)
+    {
+      --cols;
+      --rows;
+    }
+  for (i = 0; i < 256; i++)
+    {
+      gr_inqcolor(1000 + i, icmap + i);
+    }
+
+  data = std::vector<int>(rows * cols);
+  if (z_max > z_min)
+    {
+      for (i = 0; i < cols * rows; i++)
+        {
+          if (zlog)
+            {
+              zv = log(z_vec[i]);
+            }
+          else
+            {
+              zv = z_vec[i];
+            }
+
+          if (zv > z_max || zv < z_min || grm_isnan(zv))
+            {
+              data[i] = -1;
+            }
+          else
+            {
+              data[i] = (int)((zv - c_min) / (c_max - c_min) * 255 + 0.5);
+              if (data[i] >= 255)
+                {
+                  data[i] = 255;
+                }
+              else if (data[i] < 0)
+                {
+                  data[i] = 0;
+                }
+            }
+        }
+    }
+  else
+    {
+      for (i = 0; i < cols * rows; i++)
+        {
+          data[i] = 0;
+        }
+    }
+  rgba = std::vector<int>(rows * cols);
+
+  //   clear old heatmaps
+  for (auto elem : element->children())
+    {
+      if (elem->localName() == "drawimage") elem->remove();
+      if (elem->localName() == "nonuniformcellarray") elem->remove();
+    }
+
+  int id = (int)global_root->getAttribute("id");
+  global_root->setAttribute("id", id + 1);
+  std::string str = std::to_string(id);
+  if (is_uniform_heatmap)
+    {
+      for (i = 0; i < rows * cols; i++)
+        {
+          if (data[i] == -1)
+            {
+              rgba[i] = 0;
+            }
+          else
+            {
+              rgba[i] = (255 << 24) + icmap[data[i]];
+            }
+        }
+
+      auto x_tmp = static_cast<double *>(malloc((cols) * sizeof(double)));
+      auto y_tmp = static_cast<double *>(malloc((rows) * sizeof(double)));
+      linspace(x_min, x_max, cols, x_tmp);
+      linspace(y_min, y_max, rows, y_tmp);
+
+      std::vector<double> x_vec_tmp(x_tmp, x_tmp + cols);
+      (*context)["x" + str] = x_vec_tmp;
+      element->setAttribute("x", "x" + str);
+      std::vector<double> y_vec_tmp(y_tmp, y_tmp + rows);
+      (*context)["y" + str] = y_vec_tmp;
+      element->setAttribute("y", "y" + str);
+
+      element->append(global_render->createDrawImage(x_min, y_min, x_max, y_max, cols, rows, "rgba" + str, rgba, 0));
+    }
+  else
+    {
+      for (i = 0; i < rows * cols; i++)
+        {
+          if (data[i] == -1)
+            {
+              rgba[i] = 1256 + 1; /* Invalid color index -> gr_nonuniformcellarray draws a transparent rectangle */
+            }
+          else
+            {
+              rgba[i] = data[i] + 1000;
+            }
+        }
+
+      element->append(global_render->createNonUniformCellArray("x" + str, x_vec, "y" + str, y_vec, cols, rows, 1, 1,
+                                                               cols, rows, "color" + str, rgba));
+    }
+}
+
 static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
@@ -5892,7 +6106,6 @@ static void polar(const std::shared_ptr<GRM::Element> &element, const std::share
   n = (int)ceil((r_max - r_min) / tick);
   r_max = r_min + n * tick;
 
-
   if (!element->hasAttribute("x")) throw NotFoundError("Polar series is missing required attribute x-data (theta).\n");
   auto x_key = static_cast<std::string>(element->getAttribute("x"));
   if (!element->hasAttribute("y")) throw NotFoundError("Polar series is missing required attribute y-data (rho).\n");
@@ -6360,27 +6573,32 @@ static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared
     }
 }
 
-static void shadePoints(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void shade(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
-  // TODO: Move the rest from plot.cxx here
-  int xform, w, h, n;
-  std::string xx, yy;
-  double *x, *y;
+  /* char *spec = ""; TODO: read spec from data! */
+  int xform = 5, xbins = 1200, ybins = 1200, n;
+  unsigned int point_count;
+  unsigned int x_length, y_length;
+  std::vector<double> x_vec, y_vec;
+  double *x_p, *y_p;
 
-  xform = (int)element->getAttribute("xform");
-  w = (int)element->getAttribute("w");
-  h = (int)element->getAttribute("h");
-  xx = (std::string)element->getAttribute("x");
-  yy = (std::string)element->getAttribute("y");
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  auto y = static_cast<std::string>(element->getAttribute("y"));
 
-  auto x_vec = GRM::get<std::vector<double>>((*context)[xx]);
-  auto y_vec = GRM::get<std::vector<double>>((*context)[yy]);
+  x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  x_length = x_vec.size();
+  y_length = y_vec.size();
 
-  x = &(x_vec[0]);
-  y = &(y_vec[0]);
+  if (element->hasAttribute("xform")) xform = static_cast<int>(element->getAttribute("xform"));
+  if (element->hasAttribute("xbins")) xbins = static_cast<int>(element->getAttribute("xbins"));
+  if (element->hasAttribute("ybins")) ybins = static_cast<int>(element->getAttribute("ybins"));
+
+  x_p = &(x_vec[0]);
+  y_p = &(y_vec[0]);
   n = std::min(x_vec.size(), y_vec.size());
 
-  gr_shadepoints(n, x, y, xform, w, h);
+  gr_shadepoints(n, x_p, y_p, xform, xbins, ybins);
 }
 
 static void surface(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -6391,39 +6609,133 @@ static void surface(const std::shared_ptr<GRM::Element> &element, const std::sha
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
-  // TODO: Move the rest from plot.cxx here
-  auto px = static_cast<std::string>(element->getAttribute("px"));
-  auto py = static_cast<std::string>(element->getAttribute("py"));
-  auto pz = static_cast<std::string>(element->getAttribute("pz"));
-  int option = static_cast<int>(element->getAttribute("option"));
-  int accelerate = static_cast<int>(element->getAttribute("accelerate"));
+  int accelerate; /* this argument decides if GR3 or GRM is used to plot the surface */
+  std::vector<double> x_vec, y_vec, z_vec;
+  unsigned int x_length, y_length, z_length;
+  double x_min, x_max, y_min, y_max;
 
-  std::vector<double> px_vec = GRM::get<std::vector<double>>((*context)[px]);
-  std::vector<double> py_vec = GRM::get<std::vector<double>>((*context)[py]);
-  std::vector<double> pz_vec = GRM::get<std::vector<double>>((*context)[pz]);
+  accelerate = static_cast<int>(element->getAttribute("accelerate"));
 
-  int nx = px_vec.size();
-  int ny = py_vec.size();
-
-  if (!accelerate)
+  if (element->hasAttribute("x"))
     {
-      double *px_p = &(px_vec[0]);
-      double *py_p = &(py_vec[0]);
-      double *pz_p = &(pz_vec[0]);
+      auto x = static_cast<std::string>(element->getAttribute("x"));
+      x_vec = GRM::get<std::vector<double>>((*context)[x]);
+      x_length = x_vec.size();
+    }
+  if (element->hasAttribute("y"))
+    {
+      auto y = static_cast<std::string>(element->getAttribute("y"));
+      y_vec = GRM::get<std::vector<double>>((*context)[y]);
+      y_length = y_vec.size();
+    }
 
-      gr_surface(nx, ny, px_p, py_p, pz_p, option);
+  if (!element->hasAttribute("z")) throw NotFoundError("Surface series is missing required attribute z-data.\n");
+
+  auto z = static_cast<std::string>(element->getAttribute("z"));
+  z_vec = GRM::get<std::vector<double>>((*context)[z]);
+  z_length = z_vec.size();
+
+  if (x_vec.empty() && y_vec.empty())
+    {
+      /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
+      if (!element->hasAttribute("zdims_min") || !element->hasAttribute("zdims_max"))
+        throw NotFoundError("Surface series is missing required attribute zdims.\n");
+      x_length = static_cast<int>(element->getAttribute("zdims_min"));
+      y_length = static_cast<int>(element->getAttribute("zdims_max"));
+    }
+  else if (x_vec.empty())
+    {
+      x_length = z_length / y_length;
+    }
+  else if (y_vec.empty())
+    {
+      y_length = z_length / x_length;
+    }
+
+  if (x_vec.empty())
+    {
+      x_min = static_cast<double>(element->parentElement()->getAttribute("xrange_min"));
+      x_max = static_cast<double>(element->parentElement()->getAttribute("xrange_max"));
     }
   else
     {
-      std::vector<float> px_vec_f(px_vec.begin(), px_vec.end());
-      std::vector<float> py_vec_f(py_vec.begin(), py_vec.end());
-      std::vector<float> pz_vec_f(pz_vec.begin(), pz_vec.end());
+      x_min = x_vec[0];
+      x_max = x_vec[x_length - 1];
+    }
+  if (y_vec.empty())
+    {
+      y_min = static_cast<double>(element->parentElement()->getAttribute("yrange_min"));
+      y_max = static_cast<double>(element->parentElement()->getAttribute("yrange_max"));
+    }
+  else
+    {
+      y_min = y_vec[0];
+      y_max = y_vec[y_length - 1];
+    }
+
+  if (x_vec.empty())
+    {
+      for (int j = 0; j < x_length; ++j)
+        {
+          x_vec[j] = (int)(x_min + (x_max - x_min) / x_length * j + 0.5);
+        }
+    }
+  if (y_vec.empty())
+    {
+      for (int j = 0; j < y_length; ++j)
+        {
+          y_vec[j] = (int)(y_min + (y_max - y_min) / y_length * j + 0.5);
+        }
+    }
+
+  if (x_length == y_length && x_length == z_length)
+    {
+      logger((stderr, "Create a %d x %d grid for \"surface\" with \"gridit\"\n", PLOT_SURFACE_GRIDIT_N,
+              PLOT_CONTOUR_GRIDIT_N));
+
+      std::vector<double> gridit_x_vec(PLOT_SURFACE_GRIDIT_N);
+      std::vector<double> gridit_y_vec(PLOT_SURFACE_GRIDIT_N);
+      std::vector<double> gridit_z_vec(PLOT_SURFACE_GRIDIT_N * PLOT_SURFACE_GRIDIT_N);
+
+      double *gridit_x = &(gridit_x_vec[0]);
+      double *gridit_y = &(gridit_y_vec[0]);
+      double *gridit_z = &(gridit_z_vec[0]);
+      double *x_p = &(x_vec[0]);
+      double *y_p = &(y_vec[0]);
+      double *z_p = &(z_vec[0]);
+      gr_gridit(x_length, x_p, y_p, z_p, PLOT_SURFACE_GRIDIT_N, PLOT_SURFACE_GRIDIT_N, gridit_x, gridit_y, gridit_z);
+
+      x_vec = std::vector<double>(gridit_x, gridit_x + PLOT_SURFACE_GRIDIT_N);
+      y_vec = std::vector<double>(gridit_y, gridit_y + PLOT_SURFACE_GRIDIT_N);
+      z_vec = std::vector<double>(gridit_z, gridit_z + PLOT_SURFACE_GRIDIT_N * PLOT_SURFACE_GRIDIT_N);
+    }
+  else
+    {
+      logger((stderr, "x_length; %u, y_length: %u, z_length: %u\n", x_length, y_length, z_length));
+      if (x_length * y_length != z_length)
+        throw std::length_error("For surface series x_length * y_length must be z_length.\n");
+    }
+
+
+  if (!accelerate)
+    {
+      double *px_p = &(x_vec[0]);
+      double *py_p = &(y_vec[0]);
+      double *pz_p = &(z_vec[0]);
+
+      gr_surface(x_length, y_length, px_p, py_p, pz_p, GR_OPTION_COLORED_MESH);
+    }
+  else
+    {
+      std::vector<float> px_vec_f(x_vec.begin(), x_vec.end());
+      std::vector<float> py_vec_f(y_vec.begin(), y_vec.end());
+      std::vector<float> pz_vec_f(z_vec.begin(), z_vec.end());
 
       float *px_p = &(px_vec_f[0]);
       float *py_p = &(py_vec_f[0]);
       float *pz_p = &(pz_vec_f[0]);
 
-      gr3_surface(nx, ny, px_p, py_p, pz_p, option);
+      gr3_surface(x_length, y_length, px_p, py_p, pz_p, GR_OPTION_COLORED_MESH);
     }
 }
 
@@ -6512,6 +6824,47 @@ static void line(const std::shared_ptr<GRM::Element> &element, const std::shared
       line->setAttribute("markercolorind", current_marker_colorind);
       element->append(line);
     }
+}
+
+static void plot3(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Processing function for plot3
+   *
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   */
+  unsigned int x_length, y_length, z_length;
+
+  if (!element->hasAttribute("x")) throw NotFoundError("Plot3 series is missing required attribute x-data.\n");
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  auto x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  x_length = x_vec.size();
+
+  if (!element->hasAttribute("y")) throw NotFoundError("Plot3 series is missing required attribute y-data.\n");
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+  auto y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  y_length = y_vec.size();
+
+  if (!element->hasAttribute("z")) throw NotFoundError("Plot3 series is missing required attribute z-data.\n");
+  auto z = static_cast<std::string>(element->getAttribute("z"));
+  auto z_vec = GRM::get<std::vector<double>>((*context)[z]);
+  z_length = z_vec.size();
+
+  if (x_length != y_length || x_length != z_length)
+    throw std::length_error("For plot3 series x-, y- and z-data must have the same size.\n");
+
+  // clear old line
+  for (auto elem : element->children())
+    {
+      if (elem->localName() == "polyline3d") elem->remove();
+    }
+
+  int id_int = static_cast<int>(global_root->getAttribute("id"));
+  global_root->setAttribute("id", ++id_int);
+  std::string id = std::to_string(id_int);
+
+  element->append(global_render->createPolyline3d("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec));
 }
 
 static void imshow(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -6753,32 +7106,46 @@ static void triContour(const std::shared_ptr<GRM::Element> &element, const std::
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
-  // TODO: Move the rest from plot.cxx
+  double z_min, z_max;
+  int num_levels;
+  int i;
+  unsigned int x_length, y_length, z_length;
+  std::vector<double> x_vec, y_vec, z_vec;
+
+  z_min = static_cast<double>(element->parentElement()->getAttribute("lim_zmin"));
+  z_max = static_cast<double>(element->parentElement()->getAttribute("lim_zmax"));
+  num_levels = static_cast<int>(element->getAttribute("levels"));
+
+  std::vector<double> levels(num_levels);
+
+  for (i = 0; i < num_levels; ++i)
+    {
+      levels[i] = z_min + ((1.0 * i) / (num_levels - 1)) * (z_max - z_min);
+    }
+
   if (!element->hasAttribute("px")) throw NotFoundError("Tricontour series is missing required attribute px-data.\n");
-  auto px = static_cast<std::string>(element->getAttribute("px"));
+  auto x = static_cast<std::string>(element->getAttribute("px"));
   if (!element->hasAttribute("py")) throw NotFoundError("Tricontour series is missing required attribute py-data.\n");
-  auto py = static_cast<std::string>(element->getAttribute("py"));
+  auto y = static_cast<std::string>(element->getAttribute("py"));
   if (!element->hasAttribute("pz")) throw NotFoundError("Tricontour series is missing required attribute pz-data.\n");
-  auto pz = static_cast<std::string>(element->getAttribute("pz"));
-  auto levels = static_cast<std::string>(element->getAttribute("levels"));
+  auto z = static_cast<std::string>(element->getAttribute("pz"));
 
-  std::vector<double> px_vec = GRM::get<std::vector<double>>((*context)[px]);
-  std::vector<double> py_vec = GRM::get<std::vector<double>>((*context)[py]);
-  std::vector<double> pz_vec = GRM::get<std::vector<double>>((*context)[pz]);
-  std::vector<double> l_vec = GRM::get<std::vector<double>>((*context)[levels]);
+  x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  z_vec = GRM::get<std::vector<double>>((*context)[z]);
+  x_length = x_vec.size();
+  y_length = y_vec.size();
+  z_length = z_vec.size();
 
-  if (px_vec.size() != py_vec.size() || px_vec.size() != pz_vec.size())
-    throw std::length_error("For tricontour series the x-, y- and z-data must have the same size.\n");
+  if (x_length != y_length || x_length != z_length)
+    throw std::length_error("For tricontour series x-, y- and z-data must have the same size.\n");
 
-  int nx = px_vec.size();
-  int nl = l_vec.size();
+  double *px_p = &(x_vec[0]);
+  double *py_p = &(y_vec[0]);
+  double *pz_p = &(z_vec[0]);
+  double *l_p = &(levels[0]);
 
-  double *px_p = &(px_vec[0]);
-  double *py_p = &(py_vec[0]);
-  double *pz_p = &(pz_vec[0]);
-  double *l_p = &(l_vec[0]);
-
-  gr_tricontour(nx, px_p, py_p, pz_p, nl, l_p);
+  gr_tricontour(x_length, px_p, py_p, pz_p, num_levels, l_p);
 }
 
 static void triSurface(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -6815,33 +7182,86 @@ static void triSurface(const std::shared_ptr<GRM::Element> &element, const std::
 
 static void volume(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
-  // TODO: Move the rest from plot.cxx here
-  int nx, ny, nz, algorithm;
-  std::string dmin_key, dmax_key;
+  double dlim[2] = {INFINITY, -INFINITY};
+  unsigned int c_length, dims;
+  int algorithm;
+  std::string algorithm_str;
   double dmin, dmax;
-  double dlim[2];
   int width, height;
   double device_pixel_ratio;
 
-  auto data = static_cast<std::string>(element->getAttribute("data"));
-  nx = static_cast<int>(element->getAttribute("nx"));
-  ny = static_cast<int>(element->getAttribute("ny"));
-  nz = static_cast<int>(element->getAttribute("nz"));
-  algorithm = static_cast<int>(element->getAttribute("algorithm"));
-  dmin = static_cast<double>(element->getAttribute("dmin"));
-  dmax = static_cast<double>(element->getAttribute("dmax"));
+  if (!element->hasAttribute("c")) throw NotFoundError("Volume series is missing required attribute c-data.\n");
+  auto c = static_cast<std::string>(element->getAttribute("c"));
+  auto c_vec = GRM::get<std::vector<double>>((*context)[c]);
+  c_length = c_vec.size();
 
-  std::vector<double> data_vec = GRM::get<std::vector<double>>((*context)[data]);
+  if (!element->hasAttribute("cdims_size") || !element->hasAttribute("cdims_shape"))
+    throw NotFoundError("Volume series is missing required attribute cdims.\n");
+  auto cdims_shape = static_cast<std::string>(element->getAttribute("cdims_shape"));
+  auto shape_vec = GRM::get<std::vector<double>>((*context)[cdims_shape]);
+  dims = shape_vec.size();
+
+  if (dims != 3) throw std::length_error("For volume series the cdims_size has to be 3.\n");
+  if (shape_vec[0] * shape_vec[1] * shape_vec[2] != c_length)
+    throw std::length_error("For volume series shape[0] * shape[1] * shape[2] must be c_length.\n");
+  if (c_length <= 0) throw NotFoundError("For volume series the size of c has to be greater than 0.\n");
+
+  if (!element->hasAttribute("algorithm"))
+    {
+      logger((stderr, "No volume algorithm given! Aborting the volume routine\n"));
+      throw NotFoundError("Volume series is missing attribute algorithm.\n");
+    }
+  else
+    {
+      if (element->getAttribute("algorithm").isInt())
+        {
+          algorithm = static_cast<int>(element->getAttribute("algorithm"));
+        }
+      else if (element->getAttribute("algorithm").isString())
+        {
+          algorithm_str = static_cast<std::string>(element->getAttribute("algorithm"));
+          if (algorithm_str == "emission")
+            {
+              algorithm = GR_VOLUME_EMISSION;
+            }
+          else if (algorithm_str == "absorption")
+            {
+              algorithm = GR_VOLUME_ABSORPTION;
+            }
+          else if (algorithm_str == "mip" || algorithm_str == "maximum")
+            {
+              algorithm = GR_VOLUME_MIP;
+            }
+          else
+            {
+              logger((stderr, "Got unknown volume algorithm \"%s\"\n", algorithm_str.c_str()));
+              throw std::logic_error("For volume series the given algorithm is unknown.\n");
+            }
+        }
+      else
+        {
+          throw NotFoundError("Volume series is missing attribute algorithm.\n");
+        }
+    }
+  if (algorithm != GR_VOLUME_ABSORPTION && algorithm != GR_VOLUME_EMISSION && algorithm != GR_VOLUME_MIP)
+    {
+      logger((stderr, "Got unknown volume algorithm \"%d\"\n", algorithm));
+      throw std::logic_error("For volume series the given algorithm is unknown.\n");
+    }
+
+  dmin = dmax = -1.0;
+  if (element->hasAttribute("dmin")) dmin = static_cast<double>(element->getAttribute("dmin"));
+  if (element->hasAttribute("dmax")) dmax = static_cast<double>(element->getAttribute("dmax"));
 
   gr_inqvpsize(&width, &height, &device_pixel_ratio);
   gr_setpicturesizeforvolume((int)(width * device_pixel_ratio), (int)(height * device_pixel_ratio));
-  gr_volume(nx, ny, nz, &(data_vec[0]), algorithm, &dmin, &dmax);
+  gr_volume(shape_vec[0], shape_vec[1], shape_vec[2], &(c_vec[0]), algorithm, &dmin, &dmax);
 
-  auto subplot_element = getSubplotElement(element);
-  if (subplot_element->hasAttribute("dlim_min") && subplot_element->hasAttribute("dlim_max"))
+  auto parent_element = element->parentElement();
+  if (parent_element->hasAttribute("dlim_min") && parent_element->hasAttribute("dlim_max"))
     {
-      dlim[0] = static_cast<double>(subplot_element->getAttribute("dlim_min"));
-      dlim[1] = static_cast<double>(subplot_element->getAttribute("dlim_max"));
+      dlim[0] = static_cast<double>(parent_element->getAttribute("dlim_min"));
+      dlim[1] = static_cast<double>(parent_element->getAttribute("dlim_max"));
       dlim[0] = grm_min(dlim[0], dmin);
       dlim[1] = grm_max(dlim[1], dmax);
     }
@@ -6850,12 +7270,72 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
       dlim[0] = dmin;
       dlim[1] = dmax;
     }
-  subplot_element->setAttribute("dlim_min", dlim[0]);
-  subplot_element->setAttribute("dlim_max", dlim[1]);
+  parent_element->setAttribute("dlim_min", dlim[0]);
+  parent_element->setAttribute("dlim_max", dlim[1]);
 
-  auto colorbar = subplot_element->querySelectors("colorbar");
+  auto colorbar = parent_element->querySelectors("colorbar");
   colorbar->setAttribute("lim_cmin", dlim[0]);
   colorbar->setAttribute("lim_cmax", dlim[1]);
+}
+
+static void wireframe(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Processing function for wireframe
+   *
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   */
+  unsigned int x_length, y_length, z_length;
+
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+  auto z = static_cast<std::string>(element->getAttribute("z"));
+
+  std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  std::vector<double> z_vec = GRM::get<std::vector<double>>((*context)[z]);
+  x_length = x_vec.size();
+  y_length = y_vec.size();
+  z_length = z_vec.size();
+
+  global_render->setFillColorInd(element, 0);
+  processFillColorInd(element);
+
+  int id_int = static_cast<int>(global_root->getAttribute("id"));
+  global_root->setAttribute("id", ++id_int);
+  std::string id = std::to_string(id_int);
+
+  if (x_length == y_length && x_length == z_length)
+    {
+      std::vector<double> gridit_x_vec(PLOT_WIREFRAME_GRIDIT_N);
+      std::vector<double> gridit_y_vec(PLOT_WIREFRAME_GRIDIT_N);
+      std::vector<double> gridit_z_vec(PLOT_WIREFRAME_GRIDIT_N * PLOT_WIREFRAME_GRIDIT_N);
+
+      double *gridit_x = &(gridit_x_vec[0]);
+      double *gridit_y = &(gridit_y_vec[0]);
+      double *gridit_z = &(gridit_z_vec[0]);
+      double *x_p = &(x_vec[0]);
+      double *y_p = &(y_vec[0]);
+      double *z_p = &(z_vec[0]);
+
+      gr_gridit(x_length, x_p, y_p, z_p, PLOT_WIREFRAME_GRIDIT_N, PLOT_WIREFRAME_GRIDIT_N, gridit_x, gridit_y,
+                gridit_z);
+
+      x_vec = std::vector<double>(gridit_x, gridit_x + PLOT_WIREFRAME_GRIDIT_N);
+      y_vec = std::vector<double>(gridit_y, gridit_y + PLOT_WIREFRAME_GRIDIT_N);
+      z_vec = std::vector<double>(gridit_z, gridit_z + PLOT_WIREFRAME_GRIDIT_N * PLOT_WIREFRAME_GRIDIT_N);
+    }
+  else
+    {
+      if (x_length * y_length != z_length)
+        throw std::length_error("For wireframe series x_length * y_length must be z_length.\n");
+    }
+
+  double *px_p = &(x_vec[0]);
+  double *py_p = &(y_vec[0]);
+  double *pz_p = &(z_vec[0]);
+  gr_surface(x_length, y_length, px_p, py_p, pz_p, GR_OPTION_FILLED_MESH);
 }
 
 static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -6865,22 +7345,25 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
       seriesNameToFunc{
           {std::string("contour"), contour},
           {std::string("contourf"), contourf},
+          {std::string("heatmap"), heatmap},
           {std::string("hexbin"), hexbin},
           {std::string("hist"), hist},
           {std::string("imshow"), imshow},
           {std::string("isosurface"), drawIsosurface3},
           {std::string("line"), line},
+          {std::string("plot3"), plot3},
           {std::string("polar"), polar},
           {std::string("quiver"), quiver},
           {std::string("scatter"), scatter},
           {std::string("scatter3"), scatter3},
-          {std::string("shade"), shadePoints},
+          {std::string("shade"), shade},
           {std::string("stairs"), stairs},
           {std::string("stem"), stem},
           {std::string("surface"), surface},
           {std::string("tricontour"), triContour},
           {std::string("trisurface"), triSurface},
           {std::string("volume"), volume},
+          {std::string("wireframe"), wireframe},
       };
 
   try
@@ -8174,36 +8657,6 @@ GRM::Render::createNonUniformCellArray(const std::string &x_key, std::optional<s
   return element;
 }
 
-std::shared_ptr<GRM::Element>
-GRM::Render::createSurface(const std::string &px_key, std::optional<std::vector<double>> px, const std::string &py_key,
-                           std::optional<std::vector<double>> py, const std::string &pz_key,
-                           std::optional<std::vector<double>> pz, int option, int accelerate,
-                           const std::shared_ptr<GRM::Context> &extContext)
-{
-  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
-  auto element = createSeries("surface");
-  element->setAttribute("px", px_key);
-  element->setAttribute("py", py_key);
-  element->setAttribute("pz", pz_key);
-  element->setAttribute("option", option);
-  element->setAttribute("accelerate", accelerate);
-
-  if (px != std::nullopt)
-    {
-      (*useContext)[px_key] = *px;
-    }
-  if (py != std::nullopt)
-    {
-      (*useContext)[py_key] = *py;
-    }
-  if (pz != std::nullopt)
-    {
-      (*useContext)[pz_key] = *pz;
-    }
-
-  return element;
-}
-
 std::shared_ptr<GRM::Element> GRM::Render::createGrid3d(double x_tick, double y_tick, double z_tick, double x_org,
                                                         double y_org, double z_org, int x_major, int y_major,
                                                         int z_major)
@@ -8395,40 +8848,6 @@ GRM::Render::createTriSurface(const std::string &px_key, std::optional<std::vect
   return element;
 }
 
-std::shared_ptr<GRM::Element>
-GRM::Render::createTriContour(const std::string &px_key, std::optional<std::vector<double>> px,
-                              const std::string &py_key, std::optional<std::vector<double>> py,
-                              const std::string &pz_key, std::optional<std::vector<double>> pz,
-                              const std::string &levels_key, std::optional<std::vector<double>> levels,
-                              const std::shared_ptr<GRM::Context> &extContext)
-{
-  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
-  auto element = createSeries("tricontour");
-  element->setAttribute("px", px_key);
-  element->setAttribute("py", py_key);
-  element->setAttribute("pz", pz_key);
-  element->setAttribute("levels", levels_key);
-
-  if (px != std::nullopt)
-    {
-      (*useContext)[px_key] = *px;
-    }
-  if (py != std::nullopt)
-    {
-      (*useContext)[py_key] = *py;
-    }
-  if (pz != std::nullopt)
-    {
-      (*useContext)[pz_key] = *pz;
-    }
-  if (levels != std::nullopt)
-    {
-      (*useContext)[levels_key] = *levels;
-    }
-
-  return element;
-}
-
 std::shared_ptr<GRM::Element> GRM::Render::createTitles3d(const std::string &x, const std::string &y,
                                                           const std::string &z)
 {
@@ -8439,7 +8858,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createTitles3d(const std::string &x, 
 
   return element;
 }
-
 
 std::shared_ptr<GRM::Element> GRM::Render::createGR3Clear()
 {
@@ -8465,30 +8883,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createGR3DrawImage(double xmin, doubl
   element->setAttribute("width", width);
   element->setAttribute("height", height);
   element->setAttribute("drawable_type", drawable_type);
-  return element;
-}
-
-std::shared_ptr<GRM::Element> GRM::Render::createShadePoints(const std::string &x_key,
-                                                             std::optional<std::vector<double>> x,
-                                                             const std::string &y_key,
-                                                             std::optional<std::vector<double>> y, int xform, int w,
-                                                             int h, const std::shared_ptr<GRM::Context> &extContext)
-{
-  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
-  auto element = createSeries("shade");
-  if (x != std::nullopt)
-    {
-      (*useContext)[x_key] = *x;
-    }
-  element->setAttribute("x", x_key);
-  if (y != std::nullopt)
-    {
-      (*useContext)[y_key] = *y;
-    }
-  element->setAttribute("y", y_key);
-  element->setAttribute("xform", xform);
-  element->setAttribute("w", w);
-  element->setAttribute("h", h);
   return element;
 }
 
