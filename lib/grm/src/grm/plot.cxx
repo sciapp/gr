@@ -4181,11 +4181,20 @@ err_t plot_isosurface(grm_args_t *subplot_args)
       return_error_if(shape[0] * shape[1] * shape[2] != data_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       return_error_if(data_length <= 0, ERROR_PLOT_MISSING_DATA);
 
-      isovalue = 0.5;
-      foreground_colors[0] = 0.0;
-      foreground_colors[1] = 0.5;
-      foreground_colors[2] = 0.8;
-      grm_args_values(*current_series, "isovalue", "d", &isovalue);
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      auto context = global_render->getContext();
+
+      std::vector<double> c_data_vec(orig_data, orig_data + data_length);
+      std::vector<double> shape_vec(shape, shape + dims);
+
+      (*context)["c" + str] = c_data_vec;
+      subGroup->setAttribute("c", "c" + str);
+      (*context)["cdims_shape" + str] = shape_vec;
+      subGroup->setAttribute("cdims_shape", "cdims_shape" + str);
+      subGroup->setAttribute("cdims_size", (int)dims);
+
+      if (grm_args_values(*current_series, "isovalue", "d", &isovalue)) subGroup->setAttribute("isovalue", isovalue);
       /*
        * We need to convert the double values to floats, as GR3 expects floats, but an argument can only contain
        * doubles.
@@ -4193,73 +4202,12 @@ err_t plot_isosurface(grm_args_t *subplot_args)
       if (grm_args_first_value(*current_series, "foreground_color", "D", &temp_colors, &i))
         {
           return_error_if(i != 3, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-          while (i-- > 0)
-            {
-              foreground_colors[i] = (float)temp_colors[i];
-            }
-        }
-      logger((stderr, "Colors; %f %f %f\n", foreground_colors[0], foreground_colors[1], foreground_colors[2]));
-
-      /* Check if any value is finite in array, also calculation of real min and max */
-      c_min = c_max = *orig_data;
-      for (i = 0; i < data_length; ++i)
-        {
-          if (isfinite(orig_data[i]))
-            {
-              if (grm_isnan(c_min) || c_min > orig_data[i])
-                {
-                  c_min = orig_data[i];
-                }
-              if (grm_isnan(c_max) || c_max < orig_data[i])
-                {
-                  c_max = orig_data[i];
-                }
-            }
-        }
-      return_error_if(c_min == c_max || !isfinite(c_min) || !isfinite(c_max), ERROR_PLOT_MISSING_DATA);
-
-      logger((stderr, "c_min %lf c_max %lf isovalue %lf\n ", c_min, c_max, isovalue));
-      conv_data = static_cast<float *>(malloc(sizeof(float) * data_length));
-      return_error_if(conv_data == nullptr, ERROR_MALLOC);
-
-      for (i = 0; i < data_length; ++i)
-        {
-          conv_data[i] = static_cast<float>(orig_data[i]);
+          std::vector<double> foreground_vec(temp_colors, temp_colors + i);
+          (*context)["foreground_color" + str] = foreground_vec;
+          subGroup->setAttribute("foreground_color", "foreground_color" + str);
         }
 
-      strides[0] = shape[1] * shape[2];
-      strides[1] = shape[2];
-      strides[2] = 1;
-
-      {
-        float light_parameters[4];
-
-        auto conv_data_vec = std::vector<double>(conv_data, conv_data + data_length);
-        auto foreground_colors_vec =
-            std::vector<double>(foreground_colors, foreground_colors + array_size(foreground_colors));
-        auto strides_vec = std::vector<int>(strides, strides + array_size(strides));
-
-        int id = static_cast<int>(global_root->getAttribute("id"));
-        global_root->setAttribute("id", id + 1);
-        std::string id_str = std::to_string(id);
-        auto context = global_render->getContext();
-
-        (*context)["data" + id_str] = conv_data_vec;
-        subGroup->setAttribute("data", "data" + id_str);
-        (*context)["color" + id_str] = foreground_colors_vec;
-        subGroup->setAttribute("color", "color" + id_str);
-        (*context)["strides" + id_str] = strides_vec;
-        subGroup->setAttribute("strides", "strides" + id_str);
-        subGroup->setAttribute("nx", (const int)shape[0]);
-        subGroup->setAttribute("ny", (const int)shape[1]);
-        subGroup->setAttribute("nz", (const int)shape[2]);
-        subGroup->setAttribute("isovalue", isovalue);
-
-        global_render->setGR3LightParameters(subGroup, 0.2, 0.8, 0.7, 128);
-      }
-
-      free(conv_data);
-      conv_data = nullptr;
+      global_root->setAttribute("id", ++id);
       ++current_series;
     }
 

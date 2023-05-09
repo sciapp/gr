@@ -4625,33 +4625,87 @@ static void drawImage(const std::shared_ptr<GRM::Element> &element, const std::s
   gr_drawimage(xmin, xmax, ymax, ymin, width, height, (int *)&(GRM::get<std::vector<int>>((*context)[data])[0]), model);
 }
 
-static void drawIsosurface3(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
+static void isosurface(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
-  // TODO: MOve the rest from plot.cxx here
-  auto nx = static_cast<int>(elem->getAttribute("nx"));
-  auto ny = static_cast<int>(elem->getAttribute("ny"));
-  auto nz = static_cast<int>(elem->getAttribute("nz"));
-  auto data_key = static_cast<std::string>(elem->getAttribute("data"));
-  float isovalue = static_cast<double>(elem->getAttribute("isovalue"));
-  auto color_key = static_cast<std::string>(elem->getAttribute("color"));
-  auto strides_key = static_cast<std::string>(elem->getAttribute("strides"));
+  std::vector<double> c_vec, temp_colors;
+  unsigned int i, c_length, dims;
+  int strides[3];
+  double c_min, c_max, isovalue;
+  float foreground_colors[3];
 
-  float ambient = static_cast<double>(elem->getAttribute("ambient"));
-  float diffuse = static_cast<double>(elem->getAttribute("diffuse"));
-  float specular = static_cast<double>(elem->getAttribute("specular"));
-  float specular_power = static_cast<double>(elem->getAttribute("specular_power"));
+  if (!element->hasAttribute("c")) throw NotFoundError("Isosurface series is missing required attribute c-data.\n");
+  auto c = static_cast<std::string>(element->getAttribute("c"));
+  c_vec = GRM::get<std::vector<double>>((*context)[c]);
+  c_length = c_vec.size();
 
-  auto data_vec = GRM::get<std::vector<double>>((*context)[data_key]);
-  auto color_vec = GRM::get<std::vector<double>>((*context)[color_key]);
-  auto strides_vec = GRM::get<std::vector<int>>((*context)[strides_key]);
+  if (!element->hasAttribute("cdims_shape") || !element->hasAttribute("cdims_size"))
+    throw NotFoundError("Isosurface series is missing required attribute cdims.\n");
+  auto cdims_shape = static_cast<std::string>(element->getAttribute("cdims_shape"));
+  auto shape_vec = GRM::get<std::vector<int>>((*context)[cdims_shape]);
+  dims = shape_vec.size();
 
-  std::vector<float> data_vec_f(data_vec.begin(), data_vec.end());
-  std::vector<float> color_vec_f(color_vec.begin(), color_vec.end());
+  if (dims != 3) throw std::length_error("For isosurface series the cdims_size has to be 3.\n");
+  if (shape_vec[0] * shape_vec[1] * shape_vec[2] != c_length)
+    throw std::length_error("For isosurface series shape[0] * shape[1] * shape[2] must be c_length.\n");
+  if (c_length <= 0) throw NotFoundError("For isosurface series the size of c has to be greater than 0.\n");
 
-  float *data = &data_vec_f[0];
-  float *color = &color_vec_f[0];
-  int *strides = &strides_vec[0];
+  isovalue = 0.5;
+  foreground_colors[0] = 0.0;
+  foreground_colors[1] = 0.5;
+  foreground_colors[2] = 0.8;
+  if (element->hasAttribute("isovalue")) isovalue = static_cast<double>(element->getAttribute("isovalue"));
+  element->setAttribute("isovalue", isovalue);
+  /*
+   * We need to convert the double values to floats, as GR3 expects floats, but an argument can only contain
+   * doubles.
+   */
+  if (element->hasAttribute("foreground_color"))
+    {
+      auto temp_c = static_cast<std::string>(element->getAttribute("foreground_color"));
+      temp_colors = GRM::get<std::vector<double>>((*context)[temp_c]);
+      i = temp_colors.size();
+      if (i != 3) throw std::length_error("For isosurface series the foreground colors must have size 3.\n");
+      while (i-- > 0)
+        {
+          foreground_colors[i] = (float)temp_colors[i];
+        }
+    }
+  logger((stderr, "Colors; %f %f %f\n", foreground_colors[0], foreground_colors[1], foreground_colors[2]));
 
+  /* Check if any value is finite in array, also calculation of real min and max */
+  c_min = c_max = c_vec[0];
+  for (i = 0; i < c_length; ++i)
+    {
+      if (std::isfinite(c_vec[i]))
+        {
+          if (grm_isnan(c_min) || c_min > c_vec[i])
+            {
+              c_min = c_vec[i];
+            }
+          if (grm_isnan(c_max) || c_max < c_vec[i])
+            {
+              c_max = c_vec[i];
+            }
+        }
+    }
+  if (c_min == c_max || !std::isfinite(c_min) || !std::isfinite(c_max))
+    throw NotFoundError("For isosurface series the given c-data isn't enough.\n");
+
+  logger((stderr, "c_min %lf c_max %lf isovalue %lf\n ", c_min, c_max, isovalue));
+  std::vector<float> conv_data(c_vec.begin(), c_vec.end());
+
+  strides[0] = shape_vec[1] * shape_vec[2];
+  strides[1] = shape_vec[2];
+  strides[2] = 1;
+
+  global_render->setGR3LightParameters(element, 0.2, 0.8, 0.7, 128);
+
+  float ambient = static_cast<double>(element->getAttribute("ambient"));
+  float diffuse = static_cast<double>(element->getAttribute("diffuse"));
+  float specular = static_cast<double>(element->getAttribute("specular"));
+  float specular_power = static_cast<double>(element->getAttribute("specular_power"));
+
+  float *data = &(conv_data[0]);
   float light_parameters[4];
 
   gr3_clear();
@@ -4660,7 +4714,7 @@ static void drawIsosurface3(const std::shared_ptr<GRM::Element> &elem, const std
   gr3_getlightparameters(&light_parameters[0], &light_parameters[1], &light_parameters[2], &light_parameters[3]);
   gr3_setlightparameters(ambient, diffuse, specular, specular_power);
 
-  gr3_isosurface(nx, ny, nz, data, isovalue, color, strides);
+  gr3_isosurface(shape_vec[0], shape_vec[1], shape_vec[2], data, (float)isovalue, foreground_colors, strides);
 
   gr3_setlightparameters(light_parameters[0], light_parameters[1], light_parameters[2], light_parameters[3]);
 }
@@ -7203,7 +7257,7 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
   if (!element->hasAttribute("cdims_size") || !element->hasAttribute("cdims_shape"))
     throw NotFoundError("Volume series is missing required attribute cdims.\n");
   auto cdims_shape = static_cast<std::string>(element->getAttribute("cdims_shape"));
-  auto shape_vec = GRM::get<std::vector<double>>((*context)[cdims_shape]);
+  auto shape_vec = GRM::get<std::vector<int>>((*context)[cdims_shape]);
   dims = shape_vec.size();
 
   if (dims != 3) throw std::length_error("For volume series the cdims_size has to be 3.\n");
@@ -7354,7 +7408,7 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
           {std::string("hexbin"), hexbin},
           {std::string("hist"), hist},
           {std::string("imshow"), imshow},
-          {std::string("isosurface"), drawIsosurface3},
+          {std::string("isosurface"), isosurface},
           {std::string("line"), line},
           {std::string("plot3"), plot3},
           {std::string("polar"), polar},
