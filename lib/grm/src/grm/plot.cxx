@@ -3678,13 +3678,19 @@ err_t plot_heatmap(grm_args_t *subplot_args)
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
-      std::vector<double> x_vec(x, x + rows);
-      (*context)["x" + str] = x_vec;
-      subGroup->setAttribute("x", "x" + str);
+      if (x != nullptr)
+        {
+          std::vector<double> x_vec(x, x + rows);
+          (*context)["x" + str] = x_vec;
+          subGroup->setAttribute("x", "x" + str);
+        }
 
-      std::vector<double> y_vec(y, y + cols);
-      (*context)["y" + str] = y_vec;
-      subGroup->setAttribute("y", "y" + str);
+      if (y != nullptr)
+        {
+          std::vector<double> y_vec(y, y + cols);
+          (*context)["y" + str] = y_vec;
+          subGroup->setAttribute("y", "y" + str);
+        }
 
       std::vector<double> z_vec(z, z + z_length);
       (*context)["z" + str] = z_vec;
@@ -3929,7 +3935,6 @@ err_t plot_surface(grm_args_t *subplot_args)
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
   int accelerate; /* this argument decides if GR3 or GRM is used to plot the surface */
-  std::vector<double> x_vec, y_vec, z_vec;
   double xmin, xmax, ymin, ymax;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
@@ -3957,12 +3962,12 @@ err_t plot_surface(grm_args_t *subplot_args)
           subGroup->setAttribute("zdims_min", (int)x_length);
           subGroup->setAttribute("zdims_max", (int)y_length);
         }
-      if (!grm_args_values(*current_series, "xrange", "dd", &xmin, &xmax))
+      if (grm_args_values(*current_series, "xrange", "dd", &xmin, &xmax))
         {
           group->setAttribute("xrange_min", xmin);
           group->setAttribute("xrange_max", xmax);
         }
-      if (!grm_args_values(*current_series, "yrange", "dd", &ymin, &ymax))
+      if (grm_args_values(*current_series, "yrange", "dd", &ymin, &ymax))
         {
           group->setAttribute("yrange_min", ymin);
           group->setAttribute("yrange_max", ymax);
@@ -3973,13 +3978,19 @@ err_t plot_surface(grm_args_t *subplot_args)
       std::string str = std::to_string(id_int);
       auto context = global_render->getContext();
 
-      std::vector<double> x_vec(x, x + x_length);
-      (*context)["x" + str] = x_vec;
-      subGroup->setAttribute("x", "x" + str);
+      if (x != nullptr)
+        {
+          std::vector<double> x_vec(x, x + x_length);
+          (*context)["x" + str] = x_vec;
+          subGroup->setAttribute("x", "x" + str);
+        }
 
-      std::vector<double> y_vec(y, y + y_length);
-      (*context)["y" + str] = y_vec;
-      subGroup->setAttribute("y", "y" + str);
+      if (y != nullptr)
+        {
+          std::vector<double> y_vec(y, y + y_length);
+          (*context)["y" + str] = y_vec;
+          subGroup->setAttribute("y", "y" + str);
+        }
 
       std::vector<double> z_vec(z, z + z_length);
       (*context)["z" + str] = z_vec;
@@ -4275,8 +4286,6 @@ err_t plot_volume(grm_args_t *subplot_args)
       int algorithm;
       const char *algorithm_str;
       double dmin, dmax;
-      int width, height;
-      double device_pixel_ratio;
 
       return_error_if(!grm_args_first_value(*current_series, "c", "D", &c, &data_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!grm_args_first_value(*current_series, "c_dims", "I", &shape, &dims), ERROR_PLOT_MISSING_DATA);

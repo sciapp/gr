@@ -6675,23 +6675,27 @@ static void surface(const std::shared_ptr<GRM::Element> &element, const std::sha
 
   if (x_vec.empty())
     {
+      std::vector<double> tmp(x_length);
       for (int j = 0; j < x_length; ++j)
         {
-          x_vec[j] = (int)(x_min + (x_max - x_min) / x_length * j + 0.5);
+          tmp[j] = (int)(x_min + (x_max - x_min) / x_length * j + 0.5);
         }
+      x_vec = tmp;
     }
   if (y_vec.empty())
     {
+      std::vector<double> tmp(y_length);
       for (int j = 0; j < y_length; ++j)
         {
-          y_vec[j] = (int)(y_min + (y_max - y_min) / y_length * j + 0.5);
+          tmp[j] = (int)(y_min + (y_max - y_min) / y_length * j + 0.5);
         }
+      y_vec = tmp;
     }
 
   if (x_length == y_length && x_length == z_length)
     {
       logger((stderr, "Create a %d x %d grid for \"surface\" with \"gridit\"\n", PLOT_SURFACE_GRIDIT_N,
-              PLOT_CONTOUR_GRIDIT_N));
+              PLOT_SURFACE_GRIDIT_N));
 
       std::vector<double> gridit_x_vec(PLOT_SURFACE_GRIDIT_N);
       std::vector<double> gridit_y_vec(PLOT_SURFACE_GRIDIT_N);
@@ -6708,6 +6712,8 @@ static void surface(const std::shared_ptr<GRM::Element> &element, const std::sha
       x_vec = std::vector<double>(gridit_x, gridit_x + PLOT_SURFACE_GRIDIT_N);
       y_vec = std::vector<double>(gridit_y, gridit_y + PLOT_SURFACE_GRIDIT_N);
       z_vec = std::vector<double>(gridit_z, gridit_z + PLOT_SURFACE_GRIDIT_N * PLOT_SURFACE_GRIDIT_N);
+
+      x_length = y_length = PLOT_SURFACE_GRIDIT_N;
     }
   else
     {
@@ -6715,7 +6721,6 @@ static void surface(const std::shared_ptr<GRM::Element> &element, const std::sha
       if (x_length * y_length != z_length)
         throw std::length_error("For surface series x_length * y_length must be z_length.\n");
     }
-
 
   if (!accelerate)
     {
