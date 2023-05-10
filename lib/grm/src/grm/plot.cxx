@@ -3430,9 +3430,9 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
 {
   const char *kind = nullptr;
   grm_args_t **current_series;
-  int icmap[256], *rgba = nullptr, *data = nullptr, zlog = 0;
+  int zlog = 0;
   unsigned int i, cols, rows, z_length;
-  double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv;
+  double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max;
   err_t error = ERROR_NONE;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
@@ -3444,174 +3444,75 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       int is_uniform_heatmap;
-      auto subGroup = global_render->createSeries("polarheatmap_series");
+      auto subGroup = global_render->createSeries("polar_heatmap");
       group->append(subGroup);
+
       grm_args_first_value(*current_series, "x", "D", &x, &cols);
       grm_args_first_value(*current_series, "y", "D", &y, &rows);
       is_uniform_heatmap = is_equidistant_array(cols, x) && is_equidistant_array(rows, y);
-      if (strcmp(kind, "nonuniformpolar_heatmap") == 0)
+      if (strcmp(kind, "nonuniformpolar_heatmap") == 0) is_uniform_heatmap = 0;
+      return_error_if(!is_uniform_heatmap && (x == nullptr || y == nullptr), ERROR_PLOT_MISSING_DATA);
+      return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
+
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
+      auto context = global_render->getContext();
+
+      if (x != nullptr)
         {
-          is_uniform_heatmap = 0;
+          std::vector<double> x_vec(x, x + cols);
+          (*context)["x" + str] = x_vec;
+          subGroup->setAttribute("x", "x" + str);
         }
-      cleanup_and_set_error_if(!is_uniform_heatmap && (x == nullptr || y == nullptr), ERROR_PLOT_MISSING_DATA);
-      cleanup_and_set_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length),
-                               ERROR_PLOT_MISSING_DATA);
+
+      if (y != nullptr)
+        {
+          std::vector<double> y_vec(y, y + rows);
+          (*context)["y" + str] = y_vec;
+          subGroup->setAttribute("y", "y" + str);
+        }
+
+      std::vector<double> z_vec(z, z + z_length);
+      (*context)["z" + str] = z_vec;
+      subGroup->setAttribute("z", "z" + str);
+
+      group->setAttribute("zlog", zlog);
+      group->setAttribute("kind", kind);
+
       if (x == nullptr && y == nullptr)
         {
           /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
-          cleanup_and_set_error_if(!grm_args_values(*current_series, "z_dims", "ii", &rows, &cols),
-                                   ERROR_PLOT_MISSING_DIMENSIONS);
-        }
-      else if (x == nullptr)
-        {
-          cols = z_length / rows;
-        }
-      else if (y == nullptr)
-        {
-          rows = z_length / cols;
+          return_error_if(!grm_args_values(*current_series, "z_dims", "ii", &rows, &cols),
+                          ERROR_PLOT_MISSING_DIMENSIONS);
+          subGroup->setAttribute("zdims_min", (int)rows);
+          subGroup->setAttribute("zdims_max", (int)cols);
         }
       if (x == nullptr)
         {
           grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
-        }
-      else
-        {
-          x_min = x[0];
-          x_max = x[cols - 1];
+          group->setAttribute("xrange_min", x_min);
+          group->setAttribute("xrange_max", x_max);
         }
       if (y == nullptr)
         {
           grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
+          group->setAttribute("yrange_min", y_min);
+          group->setAttribute("yrange_max", y_max);
         }
-      else
-        {
-          y_min = y[0];
-          y_max = y[rows - 1];
-        }
-      grm_args_push(subplot_args, "yrange", "dd", y_min, y_max);
       grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max);
-      if (!grm_args_values(*current_series, "crange", "dd", &c_min, &c_max))
+      group->setAttribute("zrange_min", z_min);
+      group->setAttribute("zrange_max", z_max);
+      if (grm_args_values(*current_series, "crange", "dd", &c_min, &c_max))
         {
-          c_min = z_min;
-          c_max = z_max;
+          subGroup->setAttribute("crange_min", c_min);
+          subGroup->setAttribute("crange_max", c_max);
         }
 
-      if (zlog)
-        {
-          z_min = log(z_min);
-          z_max = log(z_max);
-          c_min = log(c_min);
-          c_max = log(c_max);
-        }
-
-      if (!is_uniform_heatmap)
-        {
-          --cols;
-          --rows;
-        }
-      for (i = 0; i < 256; i++)
-        {
-          gr_inqcolor(1000 + i, icmap + i);
-        }
-
-      data = static_cast<int *>(malloc(rows * cols * sizeof(int)));
-      cleanup_and_set_error_if(data == nullptr, ERROR_MALLOC);
-      if (z_max > z_min)
-        {
-          for (i = 0; i < cols * rows; i++)
-            {
-              if (zlog)
-                {
-                  zv = log(z[i]);
-                }
-              else
-                {
-                  zv = z[i];
-                }
-
-              if (zv > z_max || zv < z_min || grm_isnan(zv))
-                {
-                  data[i] = -1;
-                }
-              else
-                {
-                  data[i] = 1000 + (int)(255.0 * (zv - c_min) / (c_max - c_min) + 0.5);
-                  if (data[i] >= 1255)
-                    {
-                      data[i] = 1255;
-                    }
-                  else if (data[i] < 1000)
-                    {
-                      data[i] = 1000;
-                    }
-                }
-            }
-        }
-      else
-        {
-          for (i = 0; i < cols * rows; i++)
-            {
-              data[i] = 0;
-            }
-        }
-
-      if (is_uniform_heatmap)
-        {
-          int id = (int)global_root->getAttribute("id");
-          global_root->setAttribute("id", id + 1);
-          std::string str = std::to_string(id);
-
-          std::vector<int> data_vec = std::vector<int>(data, data + cols * rows);
-
-          auto polarCellArray = global_render->createPolarCellArray(0, 0, 0, 360, 0, 1, cols, rows, 1, 1, cols, rows,
-                                                                    "color" + str, data_vec);
-          subGroup->append(polarCellArray);
-        }
-      else
-        {
-          const double *window;
-          grm_args_values(subplot_args, "window", "D", &window);
-          y_min = window[2];
-          y_max = window[3];
-
-          int id = (int)global_root->getAttribute("id");
-          global_root->setAttribute("id", id + 1);
-          std::string str = std::to_string(id);
-
-          std::vector<int> color_vec = std::vector<int>(data, data + cols * rows);
-
-          std::vector<double> rho, phi;
-          for (i = 0; i <= ((cols > rows) ? cols : rows); ++i)
-            {
-              if (i <= cols)
-                {
-                  phi.push_back(x[i] * 180 / M_PI);
-                }
-              if (i <= rows)
-                {
-                  rho.push_back(y_min + y[i] / (y_max - y_min));
-                }
-            }
-
-          auto nupca = global_render->createNonUniformPolarCellArray(0, 0, "phi" + str, phi, "rho" + str, rho, -cols,
-                                                                     -rows, 1, 1, cols, rows, "color" + str, color_vec);
-          subGroup->append(nupca);
-        }
-
-      plot_draw_colorbar(subplot_args, 0.025, 256);
-
-      free(rgba);
-      free(data);
-      rgba = nullptr;
-      data = nullptr;
-
+      global_root->setAttribute("id", ++id);
       ++current_series;
     }
 
-cleanup:
-  free(rgba);
-  free(data);
-
+  plot_draw_colorbar(subplot_args, 0.025, 256);
   return error;
 }
 
@@ -3659,14 +3560,14 @@ err_t plot_heatmap(grm_args_t *subplot_args)
 
       if (x != nullptr)
         {
-          std::vector<double> x_vec(x, x + rows);
+          std::vector<double> x_vec(x, x + cols);
           (*context)["x" + str] = x_vec;
           subGroup->setAttribute("x", "x" + str);
         }
 
       if (y != nullptr)
         {
-          std::vector<double> y_vec(y, y + cols);
+          std::vector<double> y_vec(y, y + rows);
           (*context)["y" + str] = y_vec;
           subGroup->setAttribute("y", "y" + str);
         }

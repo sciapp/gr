@@ -5424,10 +5424,6 @@ static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::sha
       rows = y_vec.size();
     }
 
-  is_uniform_heatmap = (x_vec.empty() || is_equidistant_array(cols, &(x_vec[0]))) &&
-                       (y_vec.empty() || is_equidistant_array(rows, &(y_vec[0])));
-  if (!is_uniform_heatmap && (x_vec.empty() || y_vec.empty()))
-    throw NotFoundError("Heatmap series is missing x- or y-data or the data has to be uniform.\n");
   if (!element->hasAttribute("z")) throw NotFoundError("Heatmap series is missing required attribute z-data.\n");
   auto z = static_cast<std::string>(element->getAttribute("z"));
   z_vec = GRM::get<std::vector<double>>((*context)[z]);
@@ -5449,6 +5445,12 @@ static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::sha
     {
       rows = z_length / cols;
     }
+
+  is_uniform_heatmap = (x_vec.empty() || is_equidistant_array(cols, &(x_vec[0]))) &&
+                       (y_vec.empty() || is_equidistant_array(rows, &(y_vec[0])));
+  if (!is_uniform_heatmap && (x_vec.empty() || y_vec.empty()))
+    throw NotFoundError("Heatmap series is missing x- or y-data or the data has to be uniform.\n");
+
   if (x_vec.empty())
     {
       x_min = static_cast<double>(plot_parent->getAttribute("xrange_min"));
@@ -6188,6 +6190,198 @@ static void polar(const std::shared_ptr<GRM::Element> &element, const std::share
 
   auto temp = global_render->createPolyline("x" + std::to_string(id), x, "y" + std::to_string(id), y);
   element->append(temp);
+}
+
+static void polar_heatmap(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Processing function for polar_heatmap
+   *
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   */
+
+  std::string kind;
+  int icmap[256], zlog = 0;
+  unsigned int i, cols, rows, z_length;
+  double x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv;
+  int is_uniform_heatmap;
+  std::vector<int> data;
+  std::vector<double> x_vec, y_vec, z_vec;
+
+  kind = static_cast<std::string>(element->parentElement()->getAttribute("kind"));
+  zlog = static_cast<int>(element->parentElement()->getAttribute("zlog"));
+
+  if (element->hasAttribute("x"))
+    {
+      auto x = static_cast<std::string>(element->getAttribute("x"));
+      x_vec = GRM::get<std::vector<double>>((*context)[x]);
+      cols = x_vec.size();
+    }
+  if (element->hasAttribute("y"))
+    {
+      auto y = static_cast<std::string>(element->getAttribute("y"));
+      y_vec = GRM::get<std::vector<double>>((*context)[y]);
+      rows = y_vec.size();
+    }
+
+  if (!element->hasAttribute("z")) throw NotFoundError("Polar-heatmap series is missing required attribute z-data.\n");
+  auto z = static_cast<std::string>(element->getAttribute("z"));
+  z_vec = GRM::get<std::vector<double>>((*context)[z]);
+  z_length = z_vec.size();
+
+  if (x_vec.empty() && y_vec.empty())
+    {
+      /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
+      if (!element->hasAttribute("zdims_min") || !element->hasAttribute("zdims_max"))
+        throw NotFoundError("Polar-heatmap series is missing required attribute zdims.\n");
+      rows = static_cast<int>(element->getAttribute("zdims_min"));
+      cols = static_cast<int>(element->getAttribute("zdims_max"));
+    }
+  else if (x_vec.empty())
+    {
+      cols = z_length / rows;
+    }
+  else if (y_vec.empty())
+    {
+      rows = z_length / cols;
+    }
+
+  is_uniform_heatmap = is_equidistant_array(cols, &(x_vec[0])) && is_equidistant_array(rows, &(y_vec[0]));
+  if (kind == "nonuniformpolar_heatmap") is_uniform_heatmap = 0;
+
+  if (!is_uniform_heatmap && (x_vec.empty() || y_vec.empty()))
+    throw NotFoundError("Polar-heatmap series is missing x- or y-data or the data has to be uniform.\n");
+
+  if (x_vec.empty())
+    {
+      x_min = static_cast<double>(element->parentElement()->getAttribute("xrange_min"));
+      x_max = static_cast<double>(element->parentElement()->getAttribute("xrange_max"));
+    }
+  else
+    {
+      x_min = x_vec[0];
+      x_max = x_vec[cols - 1];
+    }
+  if (y_vec.empty())
+    {
+      y_min = static_cast<double>(element->parentElement()->getAttribute("yrange_min"));
+      y_max = static_cast<double>(element->parentElement()->getAttribute("yrange_max"));
+    }
+  else
+    {
+      y_min = y_vec[0];
+      y_max = y_vec[rows - 1];
+    }
+
+  z_min = static_cast<double>(element->parentElement()->getAttribute("zrange_min"));
+  z_max = static_cast<double>(element->parentElement()->getAttribute("zrange_max"));
+  if (!element->hasAttribute("crange_min") || !element->hasAttribute("crange_max"))
+    {
+      c_min = z_min;
+      c_max = z_max;
+    }
+  else
+    {
+      c_min = static_cast<double>(element->getAttribute("crange_min"));
+      c_max = static_cast<double>(element->getAttribute("crange_max"));
+    }
+
+  if (zlog)
+    {
+      z_min = log(z_min);
+      z_max = log(z_max);
+      c_min = log(c_min);
+      c_max = log(c_max);
+    }
+
+  if (!is_uniform_heatmap)
+    {
+      --cols;
+      --rows;
+    }
+  for (i = 0; i < 256; i++)
+    {
+      gr_inqcolor(1000 + i, icmap + i);
+    }
+
+  data = std::vector<int>(rows * cols);
+  if (z_max > z_min)
+    {
+      for (i = 0; i < cols * rows; i++)
+        {
+          if (zlog)
+            {
+              zv = log(z_vec[i]);
+            }
+          else
+            {
+              zv = z_vec[i];
+            }
+
+          if (zv > z_max || zv < z_min || grm_isnan(zv))
+            {
+              data[i] = -1;
+            }
+          else
+            {
+              data[i] = 1000 + (int)(255.0 * (zv - c_min) / (c_max - c_min) + 0.5);
+              if (data[i] >= 1255)
+                {
+                  data[i] = 1255;
+                }
+              else if (data[i] < 1000)
+                {
+                  data[i] = 1000;
+                }
+            }
+        }
+    }
+  else
+    {
+      for (i = 0; i < cols * rows; i++)
+        {
+          data[i] = 0;
+        }
+    }
+
+  int id = (int)global_root->getAttribute("id");
+  global_root->setAttribute("id", id + 1);
+  std::string str = std::to_string(id);
+
+  //   clear old polar_heatmaps
+  for (const auto &elem : element->children())
+    {
+      if (elem->localName() == "polarcellarray") elem->remove();
+      if (elem->localName() == "nonuniform_polarcellarray") elem->remove();
+    }
+
+  if (is_uniform_heatmap)
+    {
+      element->append(
+          global_render->createPolarCellArray(0, 0, 0, 360, 0, 1, cols, rows, 1, 1, cols, rows, "color" + str, data));
+    }
+  else
+    {
+      y_min = static_cast<double>(element->parentElement()->getAttribute("window_ymin"));
+      y_max = static_cast<double>(element->parentElement()->getAttribute("window_ymax"));
+
+      std::vector<double> rho, phi;
+      for (i = 0; i <= ((cols > rows) ? cols : rows); ++i)
+        {
+          if (i <= cols)
+            {
+              phi.push_back(x_vec[i] * 180 / M_PI);
+            }
+          if (i <= rows)
+            {
+              rho.push_back(y_min + y_vec[i] / (y_max - y_min));
+            }
+        }
+
+      element->append(global_render->createNonUniformPolarCellArray(0, 0, "phi" + str, phi, "rho" + str, rho, -cols,
+                                                                    -rows, 1, 1, cols, rows, "color" + str, data));
+    }
 }
 
 static void scatter(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -7411,6 +7605,7 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
           {std::string("line"), line},
           {std::string("plot3"), plot3},
           {std::string("polar"), polar},
+          {std::string("polar_heatmap"), polar_heatmap},
           {std::string("quiver"), quiver},
           {std::string("scatter"), scatter},
           {std::string("scatter3"), scatter3},
