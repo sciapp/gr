@@ -3479,7 +3479,7 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
           x_min = x[0];
           x_max = x[cols - 1];
         }
-      if (x == nullptr)
+      if (y == nullptr)
         {
           grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
         }
@@ -3535,14 +3535,14 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
                 }
               else
                 {
-                  data[i] = (int)((zv - c_min) / (c_max - c_min) * 255);
-                  if (data[i] >= 255)
+                  data[i] = 1000 + (int)(255.0 * (zv - c_min) / (c_max - c_min) + 0.5);
+                  if (data[i] >= 1255)
                     {
-                      data[i] = 255;
+                      data[i] = 1255;
                     }
-                  else if (data[i] < 0)
+                  else if (data[i] < 1000)
                     {
-                      data[i] = 0;
+                      data[i] = 1000;
                     }
                 }
             }
@@ -3555,51 +3555,30 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
             }
         }
 
-      rgba = static_cast<int *>(malloc(rows * cols * sizeof(int)));
-      cleanup_and_set_error_if(rgba == nullptr, ERROR_MALLOC);
-      std::vector<double> vec;
       if (is_uniform_heatmap)
         {
-          for (i = 0; i < rows * cols; i++)
-            {
-              vec.push_back(data[i]);
-              if (data[i] == -1)
-                {
-                  rgba[i] = 1256 + 1; /* Invalid color index -> gr_nonuniformcellarray draws a transparent rectangle */
-                }
-              else
-                {
-                  rgba[i] = data[i] + 1000;
-                }
-            }
           int id = (int)global_root->getAttribute("id");
           global_root->setAttribute("id", id + 1);
           std::string str = std::to_string(id);
 
-          std::vector<int> rgba_vec = std::vector<int>(rgba, rgba + cols * rows);
+          std::vector<int> data_vec = std::vector<int>(data, data + cols * rows);
 
           auto polarCellArray = global_render->createPolarCellArray(0, 0, 0, 360, 0, 1, cols, rows, 1, 1, cols, rows,
-                                                                    "color" + str, rgba_vec);
+                                                                    "color" + str, data_vec);
           subGroup->append(polarCellArray);
         }
       else
         {
-          for (i = 0; i < rows * cols; i++)
-            {
-              if (data[i] == -1)
-                {
-                  rgba[i] = 1256 + 1; /* Invalid color index -> gr_nonuniformcellarray draws a transparent rectangle */
-                }
-              else
-                {
-                  rgba[i] = data[i] + 1000;
-                }
-            }
+          const double *window;
+          grm_args_values(subplot_args, "window", "D", &window);
+          y_min = window[2];
+          y_max = window[3];
+
           int id = (int)global_root->getAttribute("id");
           global_root->setAttribute("id", id + 1);
           std::string str = std::to_string(id);
 
-          std::vector<int> color_vec = std::vector<int>(rgba, rgba + cols * rows);
+          std::vector<int> color_vec = std::vector<int>(data, data + cols * rows);
 
           std::vector<double> rho, phi;
           for (i = 0; i <= ((cols > rows) ? cols : rows); ++i)
@@ -3614,8 +3593,8 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
                 }
             }
 
-          auto nupca = global_render->createNonUniformPolarCellArray(0, 0, "phi" + str, phi, "rho" + str, rho, cols,
-                                                                     rows, 1, 1, cols, rows, "color" + str, color_vec);
+          auto nupca = global_render->createNonUniformPolarCellArray(0, 0, "phi" + str, phi, "rho" + str, rho, -cols,
+                                                                     -rows, 1, 1, cols, rows, "color" + str, color_vec);
           subGroup->append(nupca);
         }
 

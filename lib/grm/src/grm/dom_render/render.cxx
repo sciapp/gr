@@ -7437,7 +7437,6 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
     }
 }
 
-
 static void processElement(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
