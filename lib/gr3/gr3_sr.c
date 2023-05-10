@@ -8,6 +8,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 #include "gks.h"
 
 #ifdef _MSC_VER
@@ -29,7 +30,6 @@
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MAXTHREE(a, b, c) MAX(MAX(a, b), c)
-
 /* the following macro enables BACKFACE_CULLING */
 /*#define BACKFACE_CULLING*/
 
@@ -37,7 +37,7 @@ static int queue_destroy(queue *queue);
 static queue *queue_new(void);
 static void *queue_dequeue(queue *queue);
 static int queue_enqueue(queue *queue, void *data);
-static void create_queues_and_pixmaps(int width, int height);
+static void create_queues_and_pixmaps(int width, int height, int use_transparency);
 static void merge_pixmaps(int width, int starty, int endy);
 static void initialise_consumer(queue *queues[MAX_NUM_THREADS], int height, int width);
 
@@ -68,22 +68,28 @@ static float triangle_surface_2d(float dif_a_b_x, float dif_a_b_y, float cy, flo
 static args *malloc_arg(int thread_idx, int mesh, matrix model_mat, matrix view_mat, matrix projection_mat,
                         matrix viewport, matrix3x3 model_view_3x3, matrix3x3 normal_view_3x3, const float *colors,
                         const float *scales, int width, int height, int id, int idxstart, int idxend,
-                        vertex_fp *vertices_fp, GR3_LightSource_t_ *light_sources, int num_light_sources);
+                        vertex_fp *vertices_fp, GR3_LightSource_t_ *light_sources, int num_light_sources,
+                        int alpha_mode, float *alphas);
 static void *draw_triangle_indexbuffer(void *v_arguments);
 static void draw_triangle(unsigned char *pixels, float *dep_buf, int width, int height, vertex_fp *v_fp[3],
                           const float *colors, const GR3_LightSource_t_ *light_sources, int num_lights,
-                          float ambient_str, float diffuse_str, float specular_str, float specular_exp);
+                          float ambient_str, float diffuse_str, float specular_str, float specular_exp,
+                          TransparencyVector *transparency_buffer, int alpha_mode, float *alphas);
 static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int width, int height, vertex_fp *v_fp[3],
-                                     color line_color, color fill_color);
+                                     color line_color, color fill_color, TransparencyVector *transparency_buffer,
+                                     int alpha_mode, float *alphas);
 static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int height, const float *colors,
                           vertex_fp **v_fp_sorted, vertex_fp **v_fp, float A12, float A20, float A01, float B12,
                           float B20, float B01, const GR3_LightSource_t_ *light_sources, int num_lights,
-                          float ambient_str, float diffuse_str, float specular_str, float specular_exp);
+                          float ambient_str, float diffuse_str, float specular_str, float specular_exp,
+                          TransparencyVector *transparency_buffer, int alpha_mode, float *alphas);
 static void draw_line(unsigned char *pixels, float *dep_buf, int width, const float *colors, int startx, int y,
                       int endx, vertex_fp *v_fp[3], float A12, float A20, float A01, float w0, float w1, float w2,
                       float sum_inv, const GR3_LightSource_t_ *light_sources, int num_lights, float ambient_str,
-                      float diffuse_str, float specular_str, float specular_exp);
-static void color_pixel(unsigned char *pixels, float *depth_buffer, float depth, int width, int x, int y, color *col);
+                      float diffuse_str, float specular_str, float specular_exp,
+                      TransparencyVector *transparency_buffer, int alpha_mode, float *alphas);
+static void color_pixel(unsigned char *pixels, float *depth_buffer, TransparencyVector *transparency_buffer,
+                        float depth, int width, int x, int y, color *col, color_float alpha);
 static color calc_colors(color_float col_one, color_float col_two, color_float col_three, float fac_one, float fac_two,
                          float fac_three, vertex_fp *v_fp[3], const float *colors,
                          const GR3_LightSource_t_ *light_sources, int num_light_sources, int *discard, int front_facing,
@@ -94,8 +100,14 @@ static void gr3_dodrawmesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int 
                                             struct _GR3_DrawList_t_ *draw, int id);
 static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, float *model, float *view,
                                       const float *colors_facs, const float *scales, int width, int height, int id,
-                                      struct _GR3_DrawList_t_ *draw, int draw_id);
+                                      struct _GR3_DrawList_t_ *draw, int draw_id, float *alphas);
 static void downsample(unsigned char *pixels_high, unsigned char *pixels_low, int width, int height, int ssaa_factor);
+static void insertsort_transparency_buffer(_TransparencyObject *pixel_transparency_buffer, int nr_of_objects);
+static void mergesort_transparency_buffer(_TransparencyObject *pixel_transparency_buffer, int l, int r,
+                                          _TransparencyObject *copy_memory);
+static void merge(_TransparencyObject *pixel_transparency_buffer, int l, int m, int r,
+                  _TransparencyObject *copy_memory);
+
 
 /* The following variables are essential for the communication of the threads. The Mesh is divided into parts
  * and every thread draws one of them. If a thread is done with its part of a mesh, it increments the value of
@@ -225,44 +237,68 @@ static int queue_enqueue(queue *queue, void *data)
  * \param [in] width width of the pixmap
  * \param [in] height height of the pixmap
  */
-static void create_queues_and_pixmaps(int width, int height)
+static void create_queues_and_pixmaps(int width, int height, int use_transparency)
 {
   int i;
+  int x;
+  int y;
+  if (use_transparency)
+    {
+      context_struct_.transparency_buffer[0] =
+          (TransparencyVector *)realloc(context_struct_.transparency_buffer[0],
+                                        width * height * context_struct_.num_threads * sizeof(TransparencyVector));
+      assert(context_struct_.transparency_buffer[0]);
+    }
+  else
+    {
+      if (context_struct_.transparency_buffer[0])
+        {
+          free(context_struct_.transparency_buffer[0]);
+        }
+      context_struct_.transparency_buffer[0] = NULL;
+    }
   for (i = 0; i < context_struct_.num_threads; i++)
     {
-      if (context_struct_.queues[i])
-        {
-#ifndef NO_THREADS
-          args *arg = malloc_arg(i, 0, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL,
-                                 MAT3x3_INIT_NUL, MAT3x3_INIT_NUL, NULL, NULL, 0, 0, 2, 0, 0, NULL, NULL, 0);
-          queue_enqueue(context_struct_.queues[i], arg);
-
-          pthread_join(context_struct_.threads[i], NULL);
-#endif
-          queue_destroy(context_struct_.queues[i]);
-        }
       context_struct_.queues[i] = queue_new();
-      if (i != 0)
+      if (!use_transparency)
         {
-          if (context_struct_.pixmaps[i])
+          if (i != 0)
             {
               context_struct_.pixmaps[i] =
                   (unsigned char *)realloc(context_struct_.pixmaps[i], width * height * 4 * sizeof(unsigned char));
+              assert(context_struct_.pixmaps[i]);
               memset(context_struct_.pixmaps[i], 0, width * height * 4 * sizeof(unsigned char));
             }
-          else
-            {
-              context_struct_.pixmaps[i] = (unsigned char *)calloc(width * height * 4, sizeof(unsigned char));
-            }
-        }
-      if (context_struct_.depth_buffers[i])
-        {
           context_struct_.depth_buffers[i] =
               (float *)realloc(context_struct_.depth_buffers[i], width * height * sizeof(float));
+          assert(context_struct_.depth_buffers[i]);
+          context_struct_.transparency_buffer[i] = NULL;
         }
       else
         {
-          context_struct_.depth_buffers[i] = (float *)malloc(width * height * sizeof(float));
+          if (i != 0)
+            {
+              if (context_struct_.pixmaps[i])
+                {
+                  free(context_struct_.pixmaps[i]);
+                }
+              context_struct_.pixmaps[i] = NULL;
+            }
+          if (context_struct_.depth_buffers[i])
+            {
+              free(context_struct_.depth_buffers[i]);
+            }
+          context_struct_.depth_buffers[i] = NULL;
+          context_struct_.transparency_buffer[i] = context_struct_.transparency_buffer[0] + width * height * i;
+          for (y = 0; y < height; y++)
+            {
+              for (x = 0; x < width; x++)
+                {
+                  context_struct_.transparency_buffer[i][y * width + x].size = 0;
+                  context_struct_.transparency_buffer[i][y * width + x].max_size = 0;
+                  context_struct_.transparency_buffer[i][y * width + x].obj = NULL;
+                }
+            }
         }
     }
   context_struct_.last_height = height;
@@ -283,31 +319,194 @@ static void create_queues_and_pixmaps(int width, int height)
  */
 static void merge_pixmaps(int width, int starty, int endy)
 {
-  int iy, ix, minind, i;
+  int i, ix, iy, j;
+  int *nr_of_objects_per_thread = NULL;
+  if (context_struct_.use_transparency)
+    {
+      nr_of_objects_per_thread = (int *)malloc(context_struct_.num_threads * sizeof(int));
+      assert(nr_of_objects_per_thread);
+    }
   for (iy = starty; iy < endy; iy++)
     {
       for (ix = 0; ix < width; ix++)
         {
-          minind = 0;
-          for (i = 1; i < context_struct_.num_threads; i++)
+          if (context_struct_.use_transparency)
             {
-              if (context_struct_.depth_buffers[i][iy * width + ix] <
-                  context_struct_.depth_buffers[minind][iy * width + ix])
+              int nr_of_objects = 0, ind = 0;
+              float r = 0, g = 0, b = 0, t1 = 1, t2 = 1, t3 = 1, a = 0.f, alphaT1 = 0, alphaT2 = 0, alphaT3 = 0;
+              unsigned char *pixels = context_struct_.pixmaps[0];
+              for (i = 0; i < context_struct_.num_threads; i++)
                 {
-                  minind = i;
+                  nr_of_objects_per_thread[i] = context_struct_.transparency_buffer[i][iy * width + ix].size;
                 }
+              for (i = 0; i < context_struct_.num_threads; i++)
+                {
+                  nr_of_objects += nr_of_objects_per_thread[i];
+                }
+              _TransparencyObject *transparency_sort_buffer =
+                  (_TransparencyObject *)malloc(nr_of_objects * sizeof(_TransparencyObject));
+              assert(transparency_sort_buffer);
+              for (i = 0; i < context_struct_.num_threads; i++)
+                {
+                  if (nr_of_objects_per_thread[i] > 0)
+                    {
+                      memcpy(transparency_sort_buffer + ind,
+                             context_struct_.transparency_buffer[i][iy * width + ix].obj,
+                             nr_of_objects_per_thread[i] * sizeof(_TransparencyObject));
+                      ind += nr_of_objects_per_thread[i];
+                    }
+                }
+              mergesort_transparency_buffer(transparency_sort_buffer, 0, nr_of_objects - 1, NULL);
+
+              for (j = 0; j < nr_of_objects; ++j)
+                {
+                  r += t1 * transparency_sort_buffer[j].r * transparency_sort_buffer[j].tr;
+                  g += t2 * transparency_sort_buffer[j].g * transparency_sort_buffer[j].tg;
+                  b += t3 * transparency_sort_buffer[j].b * transparency_sort_buffer[j].tb;
+                  t1 *= 1 - transparency_sort_buffer[j].tr;
+                  t2 *= 1 - transparency_sort_buffer[j].tg;
+                  t3 *= 1 - transparency_sort_buffer[j].tb;
+                  alphaT1 = alphaT1 + transparency_sort_buffer[j].tr - alphaT1 * transparency_sort_buffer[j].tr;
+                  alphaT2 = alphaT2 + transparency_sort_buffer[j].tg - alphaT2 * transparency_sort_buffer[j].tg;
+                  alphaT3 = alphaT3 + transparency_sort_buffer[j].tb - alphaT3 * transparency_sort_buffer[j].tb;
+                }
+              a = (alphaT1 + alphaT2 + alphaT3) / 3;
+              a = (a + context_struct_.background_color[3] - a * context_struct_.background_color[3]) * 255;
+
+              r += t1 * context_struct_.background_color[0] * 255;
+              g += t2 * context_struct_.background_color[1] * 255;
+              b += t3 * context_struct_.background_color[2] * 255;
+
+              pixels[iy * width * 4 + ix * 4 + 0] = (r > 255.0 ? 255 : (unsigned char)floor(r));
+              pixels[iy * width * 4 + ix * 4 + 1] = (g > 255.0 ? 255 : (unsigned char)floor(g));
+              pixels[iy * width * 4 + ix * 4 + 2] = (b > 255.0 ? 255 : (unsigned char)floor(b));
+              pixels[iy * width * 4 + ix * 4 + 3] = (a > 255.0 ? 255 : (unsigned char)floor(a));
+              free(transparency_sort_buffer);
             }
-          context_struct_.pixmaps[0][iy * width * 4 + ix * 4 + 0] =
-              context_struct_.pixmaps[minind][iy * width * 4 + ix * 4 + 0];
-          context_struct_.pixmaps[0][iy * width * 4 + ix * 4 + 1] =
-              context_struct_.pixmaps[minind][iy * width * 4 + ix * 4 + 1];
-          context_struct_.pixmaps[0][iy * width * 4 + ix * 4 + 2] =
-              context_struct_.pixmaps[minind][iy * width * 4 + ix * 4 + 2];
-          context_struct_.pixmaps[0][iy * width * 4 + ix * 4 + 3] =
-              context_struct_.pixmaps[minind][iy * width * 4 + ix * 4 + 3];
+          else
+            {
+              int minind = 0;
+              for (i = 1; i < context_struct_.num_threads; i++)
+                {
+                  if (context_struct_.depth_buffers[i][iy * width + ix] <
+                      context_struct_.depth_buffers[minind][iy * width + ix])
+                    {
+                      minind = i;
+                    }
+                }
+              context_struct_.pixmaps[0][iy * width * 4 + ix * 4 + 0] =
+                  context_struct_.pixmaps[minind][iy * width * 4 + ix * 4 + 0];
+              context_struct_.pixmaps[0][iy * width * 4 + ix * 4 + 1] =
+                  context_struct_.pixmaps[minind][iy * width * 4 + ix * 4 + 1];
+              context_struct_.pixmaps[0][iy * width * 4 + ix * 4 + 2] =
+                  context_struct_.pixmaps[minind][iy * width * 4 + ix * 4 + 2];
+              context_struct_.pixmaps[0][iy * width * 4 + ix * 4 + 3] =
+                  context_struct_.pixmaps[minind][iy * width * 4 + ix * 4 + 3];
+            }
         }
     }
+  if (context_struct_.use_transparency)
+    {
+      free(nr_of_objects_per_thread);
+    }
 }
+
+
+static void insertsort_transparency_buffer(_TransparencyObject *pixel_transparency_buffer, int nr_of_objects)
+{
+  int i, j;
+  _TransparencyObject key;
+  for (i = 1; i < nr_of_objects; i++)
+    {
+      key = pixel_transparency_buffer[i];
+      for (j = i - 1; j >= 0 && pixel_transparency_buffer[j].depth > key.depth; j--)
+        {
+          pixel_transparency_buffer[j + 1] = pixel_transparency_buffer[j];
+        }
+      pixel_transparency_buffer[j + 1] = key;
+    }
+}
+
+
+static void merge(_TransparencyObject *source_buffer, int l, int m, int r, _TransparencyObject *destination_buffer)
+{
+  int i, j, k;
+  int n1 = m - l + 1;
+  int n2 = r - m;
+  _TransparencyObject *L = source_buffer + l;
+  _TransparencyObject *R = source_buffer + m + 1;
+  /* Merge the temp arrays back into arr[l..r]*/
+  i = 0;
+  j = 0;
+  k = l;
+  while (i < n1 && j < n2)
+    {
+      if (L[i].depth <= R[j].depth)
+        {
+          destination_buffer[k] = L[i];
+          i++;
+        }
+      else
+        {
+          destination_buffer[k] = R[j];
+          j++;
+        }
+      k++;
+    }
+  while (i < n1)
+    {
+      destination_buffer[k] = L[i];
+      i++;
+      k++;
+    }
+  while (j < n2)
+    {
+      destination_buffer[k] = R[j];
+      j++;
+      k++;
+    }
+}
+
+
+static void mergesort_transparency_buffer(_TransparencyObject *pixel_transparency_buffer, int l, int r,
+                                          _TransparencyObject *copy_memory)
+{
+  int is_alloc = 0;
+  if (copy_memory == NULL)
+    {
+      if (r - l + 1 <= 55)
+        {
+          insertsort_transparency_buffer(pixel_transparency_buffer + l, r - l + 1);
+          return;
+        }
+      copy_memory = malloc((r - l + 1) * sizeof(_TransparencyObject));
+      assert(copy_memory);
+      memcpy(copy_memory, pixel_transparency_buffer, (r - l + 1) * sizeof(_TransparencyObject));
+      is_alloc = 1;
+    }
+  if (r - l + 1 <= 15 && !is_alloc)
+    {
+      memcpy(pixel_transparency_buffer + l, copy_memory + l, (r - l + 1) * sizeof(_TransparencyObject));
+      insertsort_transparency_buffer(pixel_transparency_buffer + l, r - l + 1);
+      return;
+    }
+  if (l < r)
+    {
+      int m = l + (r - l) / 2;
+      mergesort_transparency_buffer(copy_memory, l, m, pixel_transparency_buffer);
+      mergesort_transparency_buffer(copy_memory, m + 1, r, pixel_transparency_buffer);
+      merge(copy_memory, l, m, r, pixel_transparency_buffer);
+    }
+  else
+    {
+      copy_memory[r] = pixel_transparency_buffer[r];
+    }
+  if (is_alloc)
+    {
+      free(copy_memory);
+    }
+}
+
 
 /*!
  * This method is called simultaneously by many threads meaning this is the worker method. Every thread
@@ -393,6 +592,7 @@ static void initialise_consumer(queue *queues[MAX_NUM_THREADS], int height, int 
   for (i = 0; i < context_struct_.num_threads; i++)
     {
       struct queue_merge_area *queue_and_merge_area = malloc(sizeof(struct queue_merge_area));
+      assert(queue_and_merge_area);
       queue_and_merge_area->starty = height_start_end[i];
       queue_and_merge_area->endy = height_start_end[i + 1];
       queue_and_merge_area->queue = queues[i];
@@ -756,9 +956,11 @@ GR3API int gr3_initSR_()
 static args *malloc_arg(int thread_idx, int mesh, matrix model_mat, matrix view_mat, matrix projection_mat,
                         matrix viewport, matrix3x3 model_view_3x3, matrix3x3 normal_view_3x3, const float *colors,
                         const float *scales, int width, int height, int id, int idxstart, int idxend,
-                        vertex_fp *vertices_fp, GR3_LightSource_t_ *light_sources, int num_light_sources)
+                        vertex_fp *vertices_fp, GR3_LightSource_t_ *light_sources, int num_light_sources,
+                        int alpha_mode, float *alphas)
 {
   args *arg = malloc(sizeof(args));
+  assert(arg);
   arg->thread_idx = thread_idx;
   arg->mesh = mesh;
   arg->model_mat = model_mat;
@@ -775,6 +977,8 @@ static args *malloc_arg(int thread_idx, int mesh, matrix model_mat, matrix view_
   arg->idxstart = idxstart;
   arg->idxend = idxend;
   arg->vertices_fp = vertices_fp;
+  arg->alpha_mode = alpha_mode;
+  arg->alphas = alphas;
   if (light_sources)
     {
       int i;
@@ -816,7 +1020,8 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
           draw_triangle(context_struct_.pixmaps[arg->thread_idx], context_struct_.depth_buffers[arg->thread_idx],
                         arg->width, arg->height, vertex_fpp, arg->colors, arg->light_sources, arg->num_lights,
                         context_struct_.light_parameters.ambient, context_struct_.light_parameters.diffuse,
-                        context_struct_.light_parameters.specular, context_struct_.light_parameters.specular_exponent);
+                        context_struct_.light_parameters.specular, context_struct_.light_parameters.specular_exponent,
+                        context_struct_.transparency_buffer[arg->thread_idx], arg->alpha_mode, arg->alphas);
         }
     }
   else
@@ -903,11 +1108,13 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
 
           if (context_struct_.option > 2)
             {
+
               draw_triangle(context_struct_.pixmaps[arg->thread_idx], context_struct_.depth_buffers[arg->thread_idx],
                             arg->width, arg->height, vertex_fpp, arg->colors, arg->light_sources, arg->num_lights,
                             context_struct_.light_parameters.ambient, context_struct_.light_parameters.diffuse,
                             context_struct_.light_parameters.specular,
-                            context_struct_.light_parameters.specular_exponent);
+                            context_struct_.light_parameters.specular_exponent,
+                            context_struct_.transparency_buffer[arg->thread_idx], arg->alpha_mode, arg->alphas);
             }
           else
             { /* the mesh should be drawn represented by lines */
@@ -943,9 +1150,10 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
                       vertices_fp[1].normal.y = tmp.z;
                     }
                 }
-              draw_triangle_with_edges(context_struct_.pixmaps[arg->thread_idx],
-                                       context_struct_.depth_buffers[arg->thread_idx], arg->width, arg->height,
-                                       vertex_fpp, line_color, fill_color);
+              draw_triangle_with_edges(
+                  context_struct_.pixmaps[arg->thread_idx], context_struct_.depth_buffers[arg->thread_idx], arg->width,
+                  arg->height, vertex_fpp, line_color, fill_color, context_struct_.transparency_buffer[arg->thread_idx],
+                  arg->alpha_mode, arg->alphas);
             }
         }
     }
@@ -967,7 +1175,8 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
  * \param [in] color fill_color Color to fill the triangles with
  */
 static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int width, int height, vertex_fp *v_fp[3],
-                                     color line_color, color fill_color)
+                                     color line_color, color fill_color, TransparencyVector *transparency_buffer,
+                                     int alpha_mode, float *alphas)
 {
   int x, y;
   int x_min = ceil(MINTHREE(v_fp[0]->x, v_fp[1]->x, v_fp[2]->x));
@@ -1019,7 +1228,7 @@ static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int 
             }
           area_2 = sqrt(tmp_2);
           depth = (area_0 * v_fp[1]->z + area_1 * v_fp[2]->z + area_2 * v_fp[0]->z) * (1 / (area_0 + area_1 + area_2));
-          if (depth < dep_buf[y * width + x])
+          if (context_struct_.use_transparency || depth < dep_buf[y * width + x])
             {
               /* initialise distances with values that are definitly bigger than the linewidth so the default
                * is, that they are not colored in line color */
@@ -1259,7 +1468,26 @@ static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int 
               if (d1 < v_fp[0]->normal.x || d2 < v_fp[1]->normal.x || d3 < v_fp[2]->normal.x ||
                   d4 < v_fp[1]->normal.z || d5 < -v_fp[1]->normal.z)
                 {
-                  color_pixel(pixels, dep_buf, depth, width, x, y, &line_color);
+                  color_float alpha;
+                  if (alpha_mode == 1)
+                    {
+                      alpha.r = alphas[0];
+                      alpha.g = alphas[0];
+                      alpha.b = alphas[0];
+                    }
+                  else if (alpha_mode == 2)
+                    {
+                      alpha.r = alphas[0];
+                      alpha.g = alphas[1];
+                      alpha.b = alphas[2];
+                    }
+                  else
+                    {
+                      alpha.r = 1.;
+                      alpha.g = 1.;
+                      alpha.b = 1.;
+                    }
+                  color_pixel(pixels, dep_buf, transparency_buffer, depth, width, x, y, &line_color, alpha);
                 }
               else
                 {
@@ -1295,8 +1523,27 @@ static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int 
                   w2 = 1.0f - w0 - w1;
                   if ((w0 > 0 && w1 > 0 && w2 > 0))
                     {
+                      color_float alpha;
+                      if (alpha_mode == 1)
+                        {
+                          alpha.r = alphas[0];
+                          alpha.g = alphas[0];
+                          alpha.b = alphas[0];
+                        }
+                      else if (alpha_mode == 2)
+                        {
+                          alpha.r = alphas[0];
+                          alpha.g = alphas[1];
+                          alpha.b = alphas[2];
+                        }
+                      else
+                        {
+                          alpha.r = 1.;
+                          alpha.g = 1.;
+                          alpha.b = 1.;
+                        }
                       /* the pixel does not belong to a line, but lies inside a triangle => fill color */
-                      color_pixel(pixels, dep_buf, depth, width, x, y, &fill_color);
+                      color_pixel(pixels, dep_buf, transparency_buffer, depth, width, x, y, &fill_color, alpha);
                     }
                 }
             }
@@ -1311,7 +1558,8 @@ static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int 
  */
 static void draw_triangle(unsigned char *pixels, float *dep_buf, int width, int height, vertex_fp *v_fp[3],
                           const float *colors, const GR3_LightSource_t_ *light_sources, int num_lights,
-                          float ambient_str, float diffuse_str, float specular_str, float specular_exp)
+                          float ambient_str, float diffuse_str, float specular_str, float specular_exp,
+                          TransparencyVector *transparency_buffer, int alpha_mode, float *alphas)
 {
   vertex_fp *v_fp_sorted_y[3];
   float A12, A20, A01, B12, B20, B01;
@@ -1351,7 +1599,8 @@ static void draw_triangle(unsigned char *pixels, float *dep_buf, int width, int 
   B20 = v_fp[0]->x - v_fp[2]->x;
   B01 = v_fp[1]->x - v_fp[0]->x;
   fill_triangle(pixels, dep_buf, width, height, colors, v_fp_sorted_y, v_fp, A12, A20, A01, B12, B20, B01,
-                light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp);
+                light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp, transparency_buffer,
+                alpha_mode, alphas);
 }
 
 /*!
@@ -1361,17 +1610,17 @@ static void draw_triangle(unsigned char *pixels, float *dep_buf, int width, int 
 static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int height, const float *colors,
                           vertex_fp **v_fp_sorted, vertex_fp **v_fp, float A12, float A20, float A01, float B12,
                           float B20, float B01, const GR3_LightSource_t_ *light_sources, int num_lights,
-                          float ambient_str, float diffuse_str, float specular_str, float specular_exp)
+                          float ambient_str, float diffuse_str, float specular_str, float specular_exp,
+                          TransparencyVector *transparency_buffer, int alpha_mode, float *alphas)
 {
   float invslope_short_1 = (v_fp_sorted[1]->x - v_fp_sorted[0]->x) / (v_fp_sorted[1]->y - v_fp_sorted[0]->y);
   float invslope_short_2 = (v_fp_sorted[2]->x - v_fp_sorted[1]->x) / (v_fp_sorted[2]->y - v_fp_sorted[1]->y);
   float invslope_long = (v_fp_sorted[2]->x - v_fp_sorted[0]->x) / (v_fp_sorted[2]->y - v_fp_sorted[0]->y);
   int scanlineY = ceil(v_fp_sorted[0]->y) > 0 ? ceil(v_fp_sorted[0]->y) : 0;
-
   int starty = scanlineY;
   int left_pointing =
       (v_fp_sorted[2]->x - ((v_fp_sorted[2]->y - v_fp_sorted[1]->y) * invslope_long)) > v_fp_sorted[1]->x;
-  float curx1;
+  float curx1 = 0;
   float curx2 = v_fp_sorted[0]->x + (scanlineY - v_fp_sorted[0]->y) * invslope_long;
   int curx, dif, first_x = 0;
   float w0 = 0, w1 = 0, w2 = 0, sum_inv = 0;
@@ -1380,21 +1629,37 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
     {
       if (scanlineY < (int)(v_fp_sorted[1]->y))
         {
+          if (invslope_short_1 == invslope_short_1 + 1)
+            {
+              continue;
+            }
           curx1 = v_fp_sorted[0]->x + invslope_short_1 * (scanlineY - v_fp_sorted[0]->y);
         }
       else if (scanlineY == (int)(v_fp_sorted[1]->y))
         {
           if (scanlineY > (v_fp_sorted[1]->y))
             {
+              if (invslope_short_2 == invslope_short_2 + 1)
+                {
+                  continue;
+                }
               curx1 = v_fp_sorted[1]->x + invslope_short_2 * (scanlineY - v_fp_sorted[1]->y);
             }
           else
             {
+              if (invslope_short_1 == invslope_short_1 + 1)
+                {
+                  continue;
+                }
               curx1 = v_fp_sorted[0]->x + invslope_short_1 * (scanlineY - v_fp_sorted[0]->y);
             }
         }
       else
         {
+          if (invslope_short_2 == invslope_short_2 + 1)
+            {
+              continue;
+            }
           curx1 = v_fp_sorted[1]->x + invslope_short_2 * (scanlineY - v_fp_sorted[1]->y);
         }
       if (scanlineY == starty)
@@ -1424,7 +1689,8 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
           w1 += dif * A20;
           w2 += dif * A01;
           draw_line(pixels, dep_buf, width, colors, curx, (int)scanlineY, (int)curx2, v_fp, A12, A20, A01, w0, w1, w2,
-                    sum_inv, light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp);
+                    sum_inv, light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp,
+                    transparency_buffer, alpha_mode, alphas);
         }
       else
         {
@@ -1434,7 +1700,8 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
           w1 += dif * A20;
           w2 += dif * A01;
           draw_line(pixels, dep_buf, width, colors, curx, (int)scanlineY, (int)curx1, v_fp, A12, A20, A01, w0, w1, w2,
-                    sum_inv, light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp);
+                    sum_inv, light_sources, num_lights, ambient_str, diffuse_str, specular_str, specular_exp,
+                    transparency_buffer, alpha_mode, alphas);
         }
       first_x = curx;
       curx2 += invslope_long;
@@ -1452,7 +1719,8 @@ static void fill_triangle(unsigned char *pixels, float *dep_buf, int width, int 
 static void draw_line(unsigned char *pixels, float *dep_buf, int width, const float *colors, int startx, int y,
                       int endx, vertex_fp *v_fp[3], float A12, float A20, float A01, float w0, float w1, float w2,
                       float sum_inv, const GR3_LightSource_t_ *light_sources, int num_lights, float ambient_str,
-                      float diffuse_str, float specular_str, float specular_exp)
+                      float diffuse_str, float specular_str, float specular_exp,
+                      TransparencyVector *transparency_buffer, int alpha_mode, float *alphas)
 {
   color col;
   int x;
@@ -1475,14 +1743,33 @@ static void draw_line(unsigned char *pixels, float *dep_buf, int width, const fl
         }
 #endif
       depth = (w0 * v_fp[0]->z + w1 * v_fp[1]->z + w2 * v_fp[2]->z) * sum_inv;
-      if (depth < dep_buf[y * width + x])
+      if (context_struct_.use_transparency || depth < dep_buf[y * width + x])
         {
           int discard = 0;
           col = calc_colors(v_fp[0]->c, v_fp[1]->c, v_fp[2]->c, w0, w1, w2, v_fp, colors, light_sources, num_lights,
                             &discard, front_facing, ambient_str, diffuse_str, specular_str, specular_exp);
           if (!discard)
             {
-              color_pixel(pixels, dep_buf, depth, width, x, y, &col);
+              color_float alpha;
+              if (alpha_mode == 1)
+                {
+                  alpha.r = alphas[0];
+                  alpha.g = alphas[0];
+                  alpha.b = alphas[0];
+                }
+              else if (alpha_mode == 2)
+                {
+                  alpha.r = alphas[0];
+                  alpha.g = alphas[1];
+                  alpha.b = alphas[2];
+                }
+              else
+                {
+                  alpha.r = 1;
+                  alpha.g = 1;
+                  alpha.b = 1;
+                }
+              color_pixel(pixels, dep_buf, transparency_buffer, depth, width, x, y, &col, alpha);
             }
         }
       w0 += A12;
@@ -1501,13 +1788,50 @@ static void draw_line(unsigned char *pixels, float *dep_buf, int width, const fl
  * \param [in] y y-coordinate of the pixel to be colored
  * \param [in] col color for the pixel
  */
-static void color_pixel(unsigned char *pixels, float *depth_buffer, float depth, int width, int x, int y, color *col)
+static void color_pixel(unsigned char *pixels, float *depth_buffer, TransparencyVector *transparency_buffer,
+                        float depth, int width, int x, int y, color *col, color_float alpha)
 {
-  pixels[y * width * 4 + x * 4 + 0] = col->r;
-  pixels[y * width * 4 + x * 4 + 1] = col->g;
-  pixels[y * width * 4 + x * 4 + 2] = col->b;
-  pixels[y * width * 4 + x * 4 + 3] = col->a;
-  depth_buffer[y * width + x] = depth;
+  if (context_struct_.use_transparency)
+    {
+      int nr_of_objects;
+      nr_of_objects = transparency_buffer[y * width + x].size;
+      if (nr_of_objects == transparency_buffer[y * width + x].max_size)
+        {
+          int exp_size_boost = (int)ceil(transparency_buffer[y * width + x].max_size * 0.2);
+          if (5 > exp_size_boost)
+            {
+              transparency_buffer[y * width + x].max_size += 5;
+            }
+          else
+            {
+              transparency_buffer[y * width + x].max_size += exp_size_boost;
+            }
+          transparency_buffer[y * width + x].obj = (_TransparencyObject *)realloc(
+              transparency_buffer[y * width + x].obj,
+              (transparency_buffer[y * width + x].max_size) * sizeof(_TransparencyObject));
+          assert(transparency_buffer[y * width + x].obj);
+        }
+
+      transparency_buffer[y * width + x].obj[nr_of_objects].r = col->r;
+      transparency_buffer[y * width + x].obj[nr_of_objects].g = col->g;
+      transparency_buffer[y * width + x].obj[nr_of_objects].b = col->b;
+      transparency_buffer[y * width + x].obj[nr_of_objects].depth = depth;
+
+      transparency_buffer[y * width + x].obj[nr_of_objects].tr = alpha.r;
+      transparency_buffer[y * width + x].obj[nr_of_objects].tg = alpha.g;
+      transparency_buffer[y * width + x].obj[nr_of_objects].tb = alpha.b;
+
+
+      transparency_buffer[y * width + x].size += 1;
+    }
+  else
+    {
+      pixels[y * width * 4 + x * 4 + 0] = col->r;
+      pixels[y * width * 4 + x * 4 + 1] = col->g;
+      pixels[y * width * 4 + x * 4 + 2] = col->b;
+      pixels[y * width * 4 + x * 4 + 3] = col->a;
+      depth_buffer[y * width + x] = depth;
+    }
 }
 
 
@@ -1547,7 +1871,7 @@ static color calc_colors(color_float col_one, color_float col_two, color_float c
   vector view_space_position;
   vector view_dir;
   vector specular_sum;
-  color res_float;
+  color res_color;
 
   specular_sum.x = 0;
   specular_sum.y = 0;
@@ -1573,12 +1897,6 @@ static color calc_colors(color_float col_one, color_float col_two, color_float c
       norm.y = -norm.y;
       norm.z = -norm.z;
     }
-  color_float norm_color;
-  norm_color.r = fabs(norm.x);
-  norm_color.g = fabs(norm.y);
-  norm_color.b = fabs(norm.z);
-  norm_color.a = 1.0;
-  /*return color_float_to_color(norm_color);*/
   /* clipping */
   world_space_position = linearcombination(&v_fp[0]->world_space_position, &v_fp[1]->world_space_position,
                                            &v_fp[2]->world_space_position, fac_one, fac_two, fac_three);
@@ -1640,8 +1958,9 @@ static color calc_colors(color_float col_one, color_float col_two, color_float c
   res.r = res.r > 1 ? 1 : res.r;
   res.g = res.g > 1 ? 1 : res.g;
   res.b = res.b > 1 ? 1 : res.b;
-  res_float = color_float_to_color(res);
-  return res_float;
+  res_color = color_float_to_color(res);
+
+  return res_color;
 }
 
 /*!
@@ -1657,6 +1976,8 @@ static color calc_colors(color_float col_one, color_float col_two, color_float c
 GR3API void gr3_getpixmap_softwarerendered(char *pixmap, int width, int height, int ssaa_factor)
 {
   int i, iy, ix;
+  int use_transparency = 0;
+  GR3_DrawList_t_ *draw;
   unsigned char b_r = (unsigned char)(context_struct_.background_color[0] * 255);
   unsigned char b_g = (unsigned char)(context_struct_.background_color[1] * 255);
   unsigned char b_b = (unsigned char)(context_struct_.background_color[2] * 255);
@@ -1670,23 +1991,55 @@ GR3API void gr3_getpixmap_softwarerendered(char *pixmap, int width, int height, 
   pthread_cond_init(&wait_after_merge, NULL);
   threads_done = 0;
 #endif
-  if (width != context_struct_.last_width || height != context_struct_.last_height)
+  int j;
+  for (j = 0; j < context_struct_.num_threads; ++j)
     {
-      create_queues_and_pixmaps(width, height);
+      if (context_struct_.transparency_buffer[j])
+        {
+          for (i = 0; i < context_struct_.last_width * context_struct_.last_height; i++)
+            {
+              if (context_struct_.transparency_buffer[j][i].obj)
+                {
+                  free(context_struct_.transparency_buffer[j][i].obj);
+                }
+              context_struct_.transparency_buffer[j][i].size = 0;
+              context_struct_.transparency_buffer[j][i].max_size = 0;
+              context_struct_.transparency_buffer[j][i].obj = NULL;
+            }
+        }
     }
 
-  for (i = 0; i < width * height; i++)
+  for (draw = context_struct_.draw_list_; draw && use_transparency == 0; draw = draw->next)
     {
-      context_struct_.depth_buffers[0][i] = 1.0f;
+      if (draw->alpha_mode != 0)
+        {
+          use_transparency = 1;
+        }
     }
 
-  for (i = 1; i < context_struct_.num_threads; i++)
+  if (width != context_struct_.last_width || height != context_struct_.last_height ||
+      use_transparency != context_struct_.use_transparency)
     {
-      memset(context_struct_.depth_buffers[i], 127, width * height * 4);
+      create_queues_and_pixmaps(width, height, use_transparency);
+    }
+  context_struct_.use_transparency = use_transparency;
+
+  if (!use_transparency)
+    {
+      for (i = 0; i < width * height; i++)
+        {
+          context_struct_.depth_buffers[0][i] = 1.0f;
+        }
+
+      for (i = 1; i < context_struct_.num_threads; i++)
+        {
+          memset(context_struct_.depth_buffers[i], 127, width * height * 4);
+        }
     }
   if (ssaa_factor != 1)
     {
       context_struct_.pixmaps[0] = malloc(width * height * 4);
+      assert(context_struct_.pixmaps[0]);
     }
   else
     {
@@ -1702,6 +2055,7 @@ GR3API void gr3_getpixmap_softwarerendered(char *pixmap, int width, int height, 
           context_struct_.pixmaps[0][iy * width * 4 + ix * 4 + 3] = b_a;
         }
     }
+
   context_struct_.software_renderer_pixmaps_initalised = 1;
   gr3_draw_softwarerendered(context_struct_.queues, width, height);
 #ifdef NO_THREADS
@@ -1723,6 +2077,8 @@ GR3API void gr3_getpixmap_softwarerendered(char *pixmap, int width, int height, 
   if (ssaa_factor != 1)
     {
       downsample(context_struct_.pixmaps[0], (unsigned char *)pixmap, width, height, ssaa_factor);
+      free(context_struct_.pixmaps[0]);
+      context_struct_.pixmaps[0] = NULL;
     }
 }
 
@@ -1746,10 +2102,11 @@ static int gr3_draw_softwarerendered(queue *queues[MAX_NUM_THREADS], int width, 
       for (i = 0; i < context_struct_.num_threads; i++)
         {
           args *arg = malloc_arg(i, 0, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL,
-                                 MAT3x3_INIT_NUL, MAT3x3_INIT_NUL, NULL, NULL, 0, 0, 1, 0, 0, NULL, NULL, 0);
+                                 MAT3x3_INIT_NUL, MAT3x3_INIT_NUL, NULL, NULL, 0, 0, 1, 0, 0, NULL, NULL, 0, 0, NULL);
           queue_enqueue(context_struct_.queues[i], arg);
         }
     }
+
   while (draw)
     {
       if (draw->next == NULL)
@@ -1768,6 +2125,7 @@ static int gr3_draw_softwarerendered(queue *queues[MAX_NUM_THREADS], int width, 
           free(draw->vertices_fp);
         }
       draw->vertices_fp = malloc(draw->n * sizeof(vertex_fp *));
+      assert(draw->vertices_fp);
       for (i = 0; i < draw->n; i++)
         {
           draw->vertices_fp[i] = NULL;
@@ -1797,7 +2155,7 @@ static void gr3_dodrawmesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int 
   int n = draw->n;
   float *scales = draw->scales;
   float *colors = draw->colors;
-
+  float *alphas = draw->alphas;
   float forward[3], up[3], left[3];
   float *model_matrix = calloc(16, sizeof(float));
   float *view = malloc(sizeof(float) * 16);
@@ -1866,8 +2224,23 @@ static void gr3_dodrawmesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int 
         {
           pass_id = 1;
         }
+      int alpha_storage_modifier;
+      if (context_struct_.alpha_mode == 0)
+        {
+          alpha_storage_modifier = 0;
+        }
+      else if (context_struct_.alpha_mode == 1)
+        {
+          alpha_storage_modifier = 1;
+        }
+      else
+        {
+          alpha_storage_modifier = 3;
+        }
+
+
       draw_mesh_softwarerendered(queues, mesh, model_matrix, view, colors + i * 3, scales + i * 3, width, height,
-                                 pass_id, draw, i);
+                                 pass_id, draw, i, alphas + i * alpha_storage_modifier);
     }
   free(view);
   free(model_matrix);
@@ -1881,7 +2254,7 @@ static void gr3_dodrawmesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int 
  */
 static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, float *model, float *view,
                                       const float *colors_facs, const float *scales, int width, int height, int id,
-                                      GR3_DrawList_t_ *draw, int draw_id)
+                                      GR3_DrawList_t_ *draw, int draw_id, float *alphas)
 {
   int thread_idx, i, j, numtri, tri_per_thread, index_start_end[MAX_NUM_THREADS + 1], rest, rest_distributed;
   matrix model_mat, view_mat, perspective, viewport;
@@ -1963,30 +2336,29 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
       float *colors = context_struct_.mesh_list_[mesh].data.colors;
       float *normals = context_struct_.mesh_list_[mesh].data.normals;
       float *vertices = context_struct_.mesh_list_[mesh].data.vertices;
-      int index = 0;
       vertex_fp tmp_v;
       vector normal_vector;
       draw->vertices_fp[draw_id] = malloc(sizeof(vertex_fp) * context_struct_.mesh_list_[mesh].data.number_of_indices);
+      assert(draw->vertices_fp[draw_id]);
       vertices_fp = draw->vertices_fp[draw_id];
-      for (i = 0; i < num_vertices * 3; i += 3)
+      for (i = 0; i < num_vertices; i += 1)
         {
-          c_tmp.r = colors[i];
-          c_tmp.g = colors[i + 1];
-          c_tmp.b = colors[i + 2];
+          c_tmp.r = colors[3 * i];
+          c_tmp.g = colors[3 * i + 1];
+          c_tmp.b = colors[3 * i + 2];
           c_tmp.a = 1.0f;
-          tmp_v.x = vertices[i];
-          tmp_v.y = vertices[i + 1];
-          tmp_v.z = vertices[i + 2];
+          tmp_v.x = vertices[3 * i];
+          tmp_v.y = vertices[3 * i + 1];
+          tmp_v.z = vertices[3 * i + 2];
           tmp_v.w = 1.0;
           tmp_v.w_div = 1.0;
-          normal_vector.x = normals[i];
-          normal_vector.y = normals[i + 1];
-          normal_vector.z = normals[i + 2];
+          normal_vector.x = normals[3 * i];
+          normal_vector.y = normals[3 * i + 1];
+          normal_vector.z = normals[3 * i + 2];
           tmp_v.normal = normal_vector;
 
           tmp_v.c = c_tmp;
-          index = (int)(i / 3);
-          vertices_fp[index] = tmp_v;
+          vertices_fp[i] = tmp_v;
         }
       for (i = 0; i < num_vertices; i++)
         {
@@ -2030,10 +2402,6 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
     }
   for (thread_idx = 0; thread_idx < context_struct_.num_threads; thread_idx++)
     {
-      vector camera_pos;
-      camera_pos.x = context_struct_.camera_x;
-      camera_pos.y = context_struct_.camera_y;
-      camera_pos.z = context_struct_.camera_z;
       GR3_LightSource_t_ light_sources[MAX_NUM_LIGHTS];
       int num_lights = context_struct_.num_lights;
       if (num_lights == 0)
@@ -2077,7 +2445,8 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
       queue_enqueue(queues[thread_idx],
                     malloc_arg(thread_idx, mesh, model_mat, view_mat, perspective, viewport, model_view_mat_3x3,
                                normal_view_mat_3x3, colors_facs, scales, width, height, id, index_start_end[thread_idx],
-                               index_start_end[thread_idx + 1], vertices_fp, light_sources, num_lights));
+                               index_start_end[thread_idx + 1], vertices_fp, light_sources, num_lights,
+                               draw->alpha_mode, alphas));
     }
   return 1;
 }
@@ -2133,16 +2502,51 @@ GR3API void gr3_terminateSR_()
 {
   int i;
   args *arg;
+  int j;
+  int height = context_struct_.last_height;
+  int width = context_struct_.last_width;
+  for (j = 0; j < context_struct_.num_threads; ++j)
+    {
+      if (context_struct_.transparency_buffer[j])
+        {
+          for (i = 0; i < width * height; i++)
+            {
+              if (context_struct_.transparency_buffer[j][i].obj)
+                {
+                  free(context_struct_.transparency_buffer[j][i].obj);
+                  context_struct_.transparency_buffer[j][i].obj = NULL;
+                }
+            }
+          if (j != 0)
+            {
+              context_struct_.transparency_buffer[j] = NULL;
+            }
+        }
+    }
+  if (context_struct_.transparency_buffer[0])
+    {
+      free(context_struct_.transparency_buffer[0]);
+      context_struct_.transparency_buffer[0] = NULL;
+    }
   for (i = 0; i < context_struct_.num_threads; i++)
     {
       if (i != 0)
         {
-          free(context_struct_.pixmaps[i]);
+          if (context_struct_.pixmaps[i])
+            {
+              free(context_struct_.pixmaps[i]);
+              context_struct_.pixmaps[i] = NULL;
+            }
         }
-      free(context_struct_.depth_buffers[i]);
+      if (context_struct_.depth_buffers[i])
+        {
+          free(context_struct_.depth_buffers[i]);
+          context_struct_.depth_buffers[i] = NULL;
+        }
+
 #ifndef NO_THREADS
       arg = malloc_arg(i, 0, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT3x3_INIT_NUL,
-                       MAT3x3_INIT_NUL, NULL, NULL, 0, 0, 2, 0, 0, NULL, NULL, 0);
+                       MAT3x3_INIT_NUL, NULL, NULL, 0, 0, 2, 0, 0, NULL, NULL, 0, 0, NULL);
       queue_enqueue(context_struct_.queues[i], arg);
       pthread_join(context_struct_.threads[i], NULL);
 #endif

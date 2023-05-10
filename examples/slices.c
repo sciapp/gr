@@ -55,7 +55,6 @@ int main(void)
   gr_setcolormap(1);
   gr3_init(NULL);
   gr3_setlightparameters(0, 1, 0, 0);
-
   gr3_createisosurfacemesh(&mesh, data, 40000, nx, ny, nz, stride_x, stride_y, stride_z, step_x, step_y, step_z,
                            offset_x, offset_y, offset_z);
   gr3_cameralookat(-3, 3, -4, 0, 0, 0, -1, 0, 0);
