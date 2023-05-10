@@ -4186,13 +4186,12 @@ err_t plot_isosurface(grm_args_t *subplot_args)
       auto context = global_render->getContext();
 
       std::vector<double> c_data_vec(orig_data, orig_data + data_length);
-      std::vector<double> shape_vec(shape, shape + dims);
+      std::vector<int> shape_vec(shape, shape + dims);
 
       (*context)["c" + str] = c_data_vec;
       subGroup->setAttribute("c", "c" + str);
-      (*context)["cdims_shape" + str] = shape_vec;
-      subGroup->setAttribute("cdims_shape", "cdims_shape" + str);
-      subGroup->setAttribute("cdims_size", (int)dims);
+      (*context)["c_dims" + str] = shape_vec;
+      subGroup->setAttribute("c_dims", "c_dims" + str);
 
       if (grm_args_values(*current_series, "isovalue", "d", &isovalue)) subGroup->setAttribute("isovalue", isovalue);
       /*
@@ -4246,13 +4245,12 @@ err_t plot_volume(grm_args_t *subplot_args)
       auto context = global_render->getContext();
 
       std::vector<double> c_data_vec(c, c + data_length);
-      std::vector<double> shape_vec(shape, shape + dims);
+      std::vector<int> shape_vec(shape, shape + dims);
 
       (*context)["c" + str] = c_data_vec;
       subGroup->setAttribute("c", "c" + str);
-      (*context)["cdims_shape" + str] = shape_vec;
-      subGroup->setAttribute("cdims_shape", "cdims_shape" + str);
-      subGroup->setAttribute("cdims_size", (int)dims);
+      (*context)["c_dims" + str] = shape_vec;
+      subGroup->setAttribute("c_dims", "c_dims" + str);
 
       if (!grm_args_values(*current_series, "algorithm", "i", &algorithm))
         {

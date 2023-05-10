@@ -4638,13 +4638,13 @@ static void isosurface(const std::shared_ptr<GRM::Element> &element, const std::
   c_vec = GRM::get<std::vector<double>>((*context)[c]);
   c_length = c_vec.size();
 
-  if (!element->hasAttribute("cdims_shape") || !element->hasAttribute("cdims_size"))
-    throw NotFoundError("Isosurface series is missing required attribute cdims.\n");
-  auto cdims_shape = static_cast<std::string>(element->getAttribute("cdims_shape"));
-  auto shape_vec = GRM::get<std::vector<int>>((*context)[cdims_shape]);
+  if (!element->hasAttribute("c_dims"))
+    throw NotFoundError("Isosurface series is missing required attribute c_dims.\n");
+  auto c_dims = static_cast<std::string>(element->getAttribute("c_dims"));
+  auto shape_vec = GRM::get<std::vector<int>>((*context)[c_dims]);
   dims = shape_vec.size();
 
-  if (dims != 3) throw std::length_error("For isosurface series the cdims_size has to be 3.\n");
+  if (dims != 3) throw std::length_error("For isosurface series the size of c_dims has to be 3.\n");
   if (shape_vec[0] * shape_vec[1] * shape_vec[2] != c_length)
     throw std::length_error("For isosurface series shape[0] * shape[1] * shape[2] must be c_length.\n");
   if (c_length <= 0) throw NotFoundError("For isosurface series the size of c has to be greater than 0.\n");
@@ -7254,13 +7254,12 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
   auto c_vec = GRM::get<std::vector<double>>((*context)[c]);
   c_length = c_vec.size();
 
-  if (!element->hasAttribute("cdims_size") || !element->hasAttribute("cdims_shape"))
-    throw NotFoundError("Volume series is missing required attribute cdims.\n");
-  auto cdims_shape = static_cast<std::string>(element->getAttribute("cdims_shape"));
-  auto shape_vec = GRM::get<std::vector<int>>((*context)[cdims_shape]);
+  if (!element->hasAttribute("c_dims")) throw NotFoundError("Volume series is missing required attribute c_dims.\n");
+  auto c_dims = static_cast<std::string>(element->getAttribute("c_dims"));
+  auto shape_vec = GRM::get<std::vector<int>>((*context)[c_dims]);
   dims = shape_vec.size();
 
-  if (dims != 3) throw std::length_error("For volume series the cdims_size has to be 3.\n");
+  if (dims != 3) throw std::length_error("For volume series the size of c_dims has to be 3.\n");
   if (shape_vec[0] * shape_vec[1] * shape_vec[2] != c_length)
     throw std::length_error("For volume series shape[0] * shape[1] * shape[2] must be c_length.\n");
   if (c_length <= 0) throw NotFoundError("For volume series the size of c has to be greater than 0.\n");
