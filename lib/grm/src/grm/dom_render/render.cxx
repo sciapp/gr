@@ -5056,7 +5056,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
   for (i = 0; i <= n; i++)
     {
       double r = 1.0 / n * i;
-      if ((i % 2 == 0 && n % 2 == 0) || (i % 2 == 1 && n % 2 == 1))
+      if (i % 2 == 0)
         {
           if (i > 0)
             {
@@ -5118,7 +5118,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
   for (i = 0; i <= n; i++)
     {
       double r = 1.0 / n * i;
-      if (i % 2 == 0 || i == n)
+      if (i % 2 == 0)
         {
           x[0] = 0.05;
           y[0] = r;
