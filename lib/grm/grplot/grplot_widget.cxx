@@ -271,6 +271,47 @@ void GRPlotWidget::redraw()
   update();
 }
 
+void GRPlotWidget::collectTooltips()
+{
+  QPoint mouse_pos = this->mapFromGlobal(QCursor::pos());
+  Qt::KeyboardModifiers keyboard_modifiers = QApplication::queryKeyboardModifiers();
+
+  if (keyboard_modifiers == Qt::ShiftModifier)
+    {
+      unsigned int current_tooltips_count;
+      auto current_tooltips = std::unique_ptr<grm_tooltip_info_t *, decltype(&std::free)>(
+          grm_get_tooltips_x(mouse_pos.x(), mouse_pos.y(), &current_tooltips_count), std::free);
+      tooltips.clear();
+      for (int i = 0; i < current_tooltips_count; ++i)
+        {
+          tooltips.push_back(
+              std::unique_ptr<grm_tooltip_info_t, decltype(&std::free)>(current_tooltips.get()[i], std::free));
+        }
+    }
+  else
+    {
+      if (keyboard_modifiers != Qt::AltModifier)
+        {
+          tooltips.clear();
+        }
+      auto current_tooltip = std::unique_ptr<grm_tooltip_info_t, decltype(&std::free)>(
+          grm_get_tooltip(mouse_pos.x(), mouse_pos.y()), std::free);
+      bool found_current_tooltip = false;
+      for (const auto &tooltip : tooltips)
+        {
+          if (tooltip->x == current_tooltip->x && tooltip->y == current_tooltip->y)
+            {
+              found_current_tooltip = true;
+              break;
+            }
+        }
+      if (!found_current_tooltip)
+        {
+          tooltips.push_back(std::move(current_tooltip));
+        }
+    }
+}
+
 #define style \
   "\
     .gr-label {\n\
@@ -395,6 +436,17 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
       grm_args_delete(args);
       redraw();
     }
+  else
+    {
+      collectTooltips();
+      update();
+    }
+}
+
+void GRPlotWidget::keyReleaseEvent(QKeyEvent *event)
+{
+  collectTooltips();
+  update();
 }
 
 void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
@@ -427,28 +479,9 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
     }
   else
     {
+      collectTooltips();
       if (grm_args_values(args_, "kind", "s", &kind))
         {
-          if (QApplication::keyboardModifiers() != Qt::ShiftModifier)
-            {
-              tooltips.clear();
-            }
-          auto current_tooltip = std::unique_ptr<grm_tooltip_info_t, decltype(&std::free)>(
-              grm_get_tooltip(event->pos().x(), event->pos().y()), std::free);
-          bool found_current_tooltip = false;
-          for (const auto &tooltip : tooltips)
-            {
-              if (tooltip->x == current_tooltip->x && tooltip->y == current_tooltip->y)
-                {
-                  found_current_tooltip = true;
-                  break;
-                }
-            }
-          if (!found_current_tooltip)
-            {
-              tooltips.push_back(std::move(current_tooltip));
-            }
-
           if (strcmp(kind, "marginalheatmap") == 0)
             {
               grm_args_t *input_args;
@@ -458,9 +491,9 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
               grm_args_push(input_args, "y", "i", event->pos().y());
               grm_input(input_args);
             }
-
           redraw();
         }
+      update();
     }
 }
 

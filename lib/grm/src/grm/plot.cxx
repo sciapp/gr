@@ -17,6 +17,7 @@ extern "C" {
 #include "gks.h"
 #include "gr.h"
 #include "gr3.h"
+#include "interaction_int.h"
 #include "logging_int.h"
 #include "plot_int.h"
 #include "util_int.h"
