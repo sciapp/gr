@@ -19,7 +19,8 @@ struct SocketFunction
     is_alive = 3,
     close_window = 4,
     is_running = 5,
-    inq_ws_state = 6
+    inq_ws_state = 6,
+    sample_locator = 7
   };
 };
 

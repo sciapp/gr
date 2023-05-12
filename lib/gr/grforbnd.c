@@ -280,6 +280,11 @@ void FORTRAN(gr_closeseg)(void)
   gr_closeseg();
 }
 
+void FORTRAN(gr_samplelocator)(double *x, double *y, int *state)
+{
+  gr_samplelocator(x, y, state);
+}
+
 void FORTRAN(gr_emergencyclosegks)(void)
 {
   gr_emergencyclosegks();

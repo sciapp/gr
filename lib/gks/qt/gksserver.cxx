@@ -154,6 +154,30 @@ void GKSConnection::readClient()
             socket_function = SocketFunction::unknown;
           }
           break;
+        case SocketFunction::sample_locator:
+          {
+            char reply[1 + sizeof(gks_locator_t)];
+            double x, y;
+            int state;
+            reply[0] = static_cast<char>(SocketFunction::sample_locator);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+            if (widget != NULL)
+              {
+                QPoint mouse_pos = widget->mapFromGlobal(QCursor::pos());
+                x = (double)mouse_pos.x() / widget->width();
+                y = 1.0 - (double)mouse_pos.y() / widget->height();
+                state = QGuiApplication::mouseButtons();
+              }
+            else
+#endif
+              {
+                x = y = state = 0;
+              }
+            *reinterpret_cast<gks_locator_t *>(&reply[1]) = gks_locator_t{x, y, state};
+            socket->write(reply, sizeof(reply));
+            socket_function = SocketFunction::unknown;
+          }
+          break;
         default:
           break;
         }
