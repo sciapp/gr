@@ -7113,6 +7113,7 @@ static int set_next_color(std::string key, gr_color_type_t color_type, const std
           color_rgb_values.clear();
           return 0;
         }
+      return 0;
     }
 
   if (last_array_index < 0 && !color_rgb_values.empty())
@@ -7169,20 +7170,11 @@ static void pie(const std::shared_ptr<GRM::Element> &element, const std::shared_
    */
   unsigned int x_length;
   int color_index;
-  int inq_color;
-  unsigned char color_rgb[4];
   double start_angle, middle_angle, end_angle;
   double text_pos[2];
   char text[80];
   std::string title;
   unsigned int i;
-  static unsigned int color_array_length = -1;
-  std::vector<int> color_indices;
-  std::vector<double> color_rgb_values;
-  std::string color_indices_key;
-  std::string color_rgb_values_key;
-  std::vector<int> color_indices_vec;
-  std::vector<double> color_rgb_values_vec;
 
   global_render->setFillIntStyle(element, GKS_K_INTSTYLE_SOLID);
   global_render->setTextAlign(element, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
@@ -7197,30 +7189,8 @@ static void pie(const std::shared_ptr<GRM::Element> &element, const std::shared_
   std::vector<unsigned int> normalized_x_int(x_length);
   GRM::normalize_vec_int(x_vec, &normalized_x_int, 1000);
 
-  if (element->hasAttribute("color_indices"))
-    {
-      auto c = static_cast<std::string>(element->getAttribute("color_indices"));
-      color_indices = GRM::get<std::vector<int>>((*context)[c]);
-      color_array_length = color_indices.size();
-
-      global_render->setNextColor(element, c, color_indices);
-    }
-  else if (element->hasAttribute("color_rgb_values"))
-    {
-      auto c = static_cast<std::string>(element->getAttribute("color_rgb_values"));
-      color_rgb_values = GRM::get<std::vector<double>>((*context)[c]);
-      color_array_length = color_rgb_values.size();
-
-      global_render->setNextColor(element, c, color_rgb_values);
-    }
-  else
-    {
-      // fallback case of setNextColor
-      global_render->setNextColor(element);
-    }
-
-  color_index = set_next_color("c", GR_COLOR_FILL, element, context);
   start_angle = 90;
+  color_index = set_next_color("c", GR_COLOR_FILL, element, context);
 
   // clear old pie
   for (auto elem : element->children())
@@ -7234,10 +7204,7 @@ static void pie(const std::shared_ptr<GRM::Element> &element, const std::shared_
       auto temp = global_render->createFillArc(0.05, 0.95, 0.05, 0.95, start_angle, end_angle);
       element->append(temp);
 
-      if (i > 0)
-        {
-          color_index = set_next_color("", GR_COLOR_FILL, temp, context);
-        }
+      color_index = set_next_color("", GR_COLOR_FILL, temp, context);
       processFillColorInd(temp);
 
       middle_angle = (start_angle + end_angle) / 2.0;
