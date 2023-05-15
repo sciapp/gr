@@ -25,8 +25,6 @@
 #include <grm/dom_render/graphics_tree/util.hxx>
 #include <grm/dom_render/render.hxx>
 #include <grm/dom_render/NotFoundError.hxx>
-#include <grm/dom_render/GRMaxContextReachedError.hxx>
-#include <grm/dom_render/ParentHasToBeProcessedBeforeChildError.hxx>
 #include <grm/dom_render/context.hxx>
 #include "gks.h"
 #include "gr.h"
@@ -38,6 +36,10 @@
 extern "C" {
 #include "grm/datatype/string_map_int.h"
 }
+
+#include "grm/dom_render/ManageZIndex.hxx"
+#include "grm/dom_render/Drawable.hxx"
+#include "grm/dom_render/ManageGRContextIds.hxx"
 
 /* ------------------------- re-implementation of x_lin/x_log ------------------------------------------------------- */
 
@@ -55,10 +57,9 @@ extern "C" {
 std::shared_ptr<GRM::Element> global_root;
 std::shared_ptr<GRM::Element> active_figure;
 std::shared_ptr<GRM::Render> global_render;
-std::priority_queue<std::shared_ptr<GRM::Element>, std::vector<std::shared_ptr<GRM::Element>>, CompareZIndex> z_queue;
-bool z_queue_is_being_rendered = false;
-int current_z_index = 0;
+std::priority_queue<std::shared_ptr<Drawable>, std::vector<std::shared_ptr<Drawable>>, CompareZIndex> z_queue;
 ManageGRContextIds grContextIDManager;
+ManageZIndex zIndexManager;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {
@@ -135,51 +136,57 @@ static string_map_t *fmt_map = string_map_new_with_data(array_size(kind_to_fmt),
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void ManageGRContextIds::destroyGRContexts()
+int getVolumeAlgorithm(const std::shared_ptr<GRM::Element> element)
 {
-  for (int id = 1; id <= no_currently_allocated_gr_contexts; ++id)
-    {
-      gr_destroycontext(id);
-    }
-  available_gr_context_ids = {};
-  no_currently_allocated_gr_contexts = 0;
-}
+  int algorithm;
+  std::string algorithm_str;
 
-int ManageGRContextIds::getUnusedGRContextId()
-{
-  if (available_gr_context_ids.empty())
+  if (element->getAttribute("algorithm").isInt())
     {
-      if (no_currently_allocated_gr_contexts + 1 > GR_MAX_CONTEXT)
+      algorithm = static_cast<int>(element->getAttribute("algorithm"));
+    }
+  else if (element->getAttribute("algorithm").isString())
+    {
+      algorithm_str = static_cast<std::string>(element->getAttribute("algorithm"));
+      if (algorithm_str == "emission")
         {
-          throw GRMaxContextReachedError("Internal Error: All gr context ids are being used");
+          algorithm = GR_VOLUME_EMISSION;
         }
-      available_gr_context_ids.push(++no_currently_allocated_gr_contexts);
+      else if (algorithm_str == "absorption")
+        {
+          algorithm = GR_VOLUME_ABSORPTION;
+        }
+      else if (algorithm_str == "mip" || algorithm_str == "maximum")
+        {
+          algorithm = GR_VOLUME_MIP;
+        }
+      else
+        {
+          logger((stderr, "Got unknown volume algorithm \"%s\"\n", algorithm_str.c_str()));
+          throw std::logic_error("For volume series the given algorithm is unknown.\n");
+        }
     }
-  int context_id = available_gr_context_ids.front();
-  available_gr_context_ids.pop();
-  return context_id;
+  else
+    {
+      throw NotFoundError("Volume series is missing attribute algorithm.\n");
+    }
+  return algorithm;
 }
 
-void ManageGRContextIds::markIdAsUnused(int id)
+PushDrawableToZQueue::PushDrawableToZQueue(
+    std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> drawFunction)
+    : drawFunction(drawFunction)
 {
-  if (id <= no_currently_allocated_gr_contexts)
-    {
-      available_gr_context_ids.push(id);
-    }
+  ;
 }
 
-bool CompareZIndex::operator()(std::shared_ptr<GRM::Element> const &lhs, std::shared_ptr<GRM::Element> const &rhs)
+void PushDrawableToZQueue::operator()(const std::shared_ptr<GRM::Element> element,
+                                      const std::shared_ptr<GRM::Context> context)
 {
-  int lhs_z = 0, rhs_z = 0;
-  if (lhs->hasAttribute("z_index"))
-    {
-      lhs_z = static_cast<int>(lhs->getAttribute("z_index"));
-    }
-  if (rhs->hasAttribute("z_index"))
-    {
-      rhs_z = static_cast<int>(rhs->getAttribute("z_index"));
-    }
-  return lhs_z > rhs_z;
+  auto drawable = std::shared_ptr<Drawable>(new Drawable(element, context, grContextIDManager.getUnusedGRContextId(),
+                                                         zIndexManager.getZIndex(), drawFunction));
+  drawable->insertionIndex = z_queue.size();
+  z_queue.push(drawable);
 }
 
 static void getPlotParent(std::shared_ptr<GRM::Element> &element)
@@ -3571,6 +3578,12 @@ static void processYlabel(const std::shared_ptr<GRM::Element> &elem)
     }
 }
 
+static void processZIndex(const std::shared_ptr<GRM::Element> &element)
+{
+  int zIndex = static_cast<int>(element->getAttribute("z_index"));
+  zIndexManager.setZIndex(zIndex);
+}
+
 static void processAttributes(const std::shared_ptr<GRM::Element> &element)
 {
   /*!
@@ -3624,6 +3637,7 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("xlabel"), processXlabel},
       {std::string("xticklabels"), processXTickLabels},
       {std::string("ylabel"), processYlabel},
+      {std::string("z_index"), processZIndex},
   };
 
   static std::map<std::string, std::function<void(const std::shared_ptr<GRM::Element> &)>> attrStringToFuncPost{
@@ -6004,6 +6018,37 @@ static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+  int nbins = static_cast<int>(element->getAttribute("nbins"));
+
+  double *x_p = &(GRM::get<std::vector<double>>((*context)[x])[0]);
+  double *y_p = &(GRM::get<std::vector<double>>((*context)[y])[0]);
+
+  std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  int x_length = x_vec.size();
+
+  if (element->hasAttribute("_hexbin_context_address"))
+    {
+      auto address = static_cast<std::string>(element->getAttribute("_hexbin_context_address"));
+      long hex_address = stol(address, 0, 16);
+      const hexbin_2pass_t *hexbinContext = (hexbin_2pass_t *)hex_address;
+      bool cleanup = hexbinContext->action & GR_2PASS_CLEANUP;
+      gr_hexbin_2pass(x_length, x_p, y_p, nbins, hexbinContext);
+      if (cleanup)
+        {
+          element->removeAttribute("_hexbin_context_address");
+        }
+    }
+  else
+    {
+      gr_hexbin(x_length, x_p, y_p, nbins);
+    }
+}
+
+static void processHexbin(const std::shared_ptr<GRM::Element> element, const std::shared_ptr<GRM::Context> context)
+{
   int nbins = PLOT_DEFAULT_HEXBIN_NBINS;
 
   if (!element->hasAttribute("x")) throw NotFoundError("Hexbin series is missing required attribute x-data.\n");
@@ -6028,15 +6073,22 @@ static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
   int y_length = y_vec.size();
   if (x_length != y_length) throw std::length_error("For Hexbin x- and y-data must have the same size\n.");
 
-  int cntmax = gr_hexbin(x_length, x_p, y_p, nbins);
+  const hexbin_2pass_t *hexbinContext = gr_hexbin_2pass(x_length, x_p, y_p, nbins, nullptr);
+
+  std::ostringstream get_address;
+  get_address << hexbinContext;
+  element->setAttribute("_hexbin_context_address", get_address.str());
+
   auto colorbar = element->querySelectors("colorbar");
   double c_min = 0.0;
-  double c_max = cntmax;
+  double c_max = hexbinContext->cntmax;
   auto plot_parent = element->parentElement();
 
   getPlotParent(plot_parent);
   plot_parent->setAttribute("_clim_min", c_min);
   plot_parent->setAttribute("_clim_max", c_max);
+  PushDrawableToZQueue pushHexbinToZQueue(hexbin);
+  pushHexbinToZQueue(element, context);
 }
 
 static void histBins(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -6077,7 +6129,7 @@ static void histBins(const std::shared_ptr<GRM::Element> &element, const std::sh
   global_root->setAttribute("_id", ++id);
 }
 
-static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processHist(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for hist
@@ -6554,7 +6606,7 @@ static void quiver(const std::shared_ptr<GRM::Element> &element, const std::shar
   gr_quiver(x_length, y_length, x_p, y_p, u_p, v_p, color);
 }
 
-static void polar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processPolar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for polar
@@ -7347,7 +7399,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
   group->parentElement()->setAttribute("r_max", max);
 }
 
-static void scatter(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processScatter(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for scatter
@@ -7495,7 +7547,7 @@ static void scatter(const std::shared_ptr<GRM::Element> &element, const std::sha
     }
 }
 
-static void scatter3(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processScatter3(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for scatter3
@@ -7574,7 +7626,7 @@ static void scatter3(const std::shared_ptr<GRM::Element> &element, const std::sh
   element->append(temp);
 }
 
-static void stairs(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processStairs(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for stairs
@@ -7764,7 +7816,7 @@ static void stairs(const std::shared_ptr<GRM::Element> &element, const std::shar
     }
 }
 
-static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processStem(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for stem
@@ -8029,7 +8081,7 @@ static void surface(const std::shared_ptr<GRM::Element> &element, const std::sha
     }
 }
 
-static void line(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processLine(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for line
@@ -8597,7 +8649,7 @@ static void plot3(const std::shared_ptr<GRM::Element> &element, const std::share
   element->append(global_render->createPolyline3d("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec));
 }
 
-static void imshow(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processImshow(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for imshow
@@ -8922,6 +8974,36 @@ static void triSurface(const std::shared_ptr<GRM::Element> &element, const std::
 
 static void volume(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
+  int width, height;
+  double device_pixel_ratio;
+  double dmin = -1, dmax = -1;
+
+  auto c = static_cast<std::string>(element->getAttribute("c"));
+  auto c_vec = GRM::get<std::vector<double>>((*context)[c]);
+  auto c_dims = static_cast<std::string>(element->getAttribute("c_dims"));
+  auto shape_vec = GRM::get<std::vector<int>>((*context)[c_dims]);
+  int algorithm = getVolumeAlgorithm(element);
+  if (element->hasAttribute("dmin")) dmin = static_cast<double>(element->getAttribute("dmin"));
+  if (element->hasAttribute("dmax")) dmax = static_cast<double>(element->getAttribute("dmax"));
+
+  gr_inqvpsize(&width, &height, &device_pixel_ratio);
+  gr_setpicturesizeforvolume((int)(width * device_pixel_ratio), (int)(height * device_pixel_ratio));
+  if (element->hasAttribute("_volume_context_address"))
+    {
+      auto address = static_cast<std::string>(element->getAttribute("_volume_context_address"));
+      long volume_address = stol(address, 0, 16);
+      const gr3_volume_2pass_t *volume_context = (gr3_volume_2pass_t *)volume_address;
+      gr_volume_2pass(shape_vec[0], shape_vec[1], shape_vec[2], &(c_vec[0]), algorithm, &dmin, &dmax, volume_context);
+      element->removeAttribute("_hexbin_context_address");
+    }
+  else
+    {
+      gr_volume(shape_vec[0], shape_vec[1], shape_vec[2], &(c_vec[0]), algorithm, &dmin, &dmax);
+    }
+}
+
+static void processVolume(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
   double dlim[2] = {INFINITY, -INFINITY};
   unsigned int c_length, dims;
   int algorithm = PLOT_DEFAULT_VOLUME_ALGORITHM;
@@ -8951,35 +9033,7 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
     }
   else
     {
-      if (element->getAttribute("algorithm").isInt())
-        {
-          algorithm = static_cast<int>(element->getAttribute("algorithm"));
-        }
-      else if (element->getAttribute("algorithm").isString())
-        {
-          algorithm_str = static_cast<std::string>(element->getAttribute("algorithm"));
-          if (algorithm_str == "emission")
-            {
-              algorithm = GR_VOLUME_EMISSION;
-            }
-          else if (algorithm_str == "absorption")
-            {
-              algorithm = GR_VOLUME_ABSORPTION;
-            }
-          else if (algorithm_str == "mip" || algorithm_str == "maximum")
-            {
-              algorithm = GR_VOLUME_MIP;
-            }
-          else
-            {
-              logger((stderr, "Got unknown volume algorithm \"%s\"\n", algorithm_str.c_str()));
-              throw std::logic_error("For volume series the given algorithm is unknown.\n");
-            }
-        }
-      else
-        {
-          throw NotFoundError("Volume series is missing attribute algorithm.\n");
-        }
+      algorithm = getVolumeAlgorithm(element);
     }
   if (algorithm != GR_VOLUME_ABSORPTION && algorithm != GR_VOLUME_EMISSION && algorithm != GR_VOLUME_MIP)
     {
@@ -8993,7 +9047,12 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
 
   gr_inqvpsize(&width, &height, &device_pixel_ratio);
   gr_setpicturesizeforvolume((int)(width * device_pixel_ratio), (int)(height * device_pixel_ratio));
-  gr_volume(shape_vec[0], shape_vec[1], shape_vec[2], &(c_vec[0]), algorithm, &dmin, &dmax);
+  const gr3_volume_2pass_t *volumeContext =
+      gr_volume_2pass(shape_vec[0], shape_vec[1], shape_vec[2], &(c_vec[0]), algorithm, &dmin, &dmax, nullptr);
+
+  std::ostringstream get_address;
+  get_address << volumeContext;
+  element->setAttribute("_volume_context_address", get_address.str());
 
   auto parent_element = element->parentElement();
   if (parent_element->hasAttribute("lim_cmin") && parent_element->hasAttribute("lim_cmax"))
@@ -9008,12 +9067,12 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
       dlim[0] = dmin;
       dlim[1] = dmax;
     }
-  parent_element->setAttribute("lim_cmin", dlim[0]);
-  parent_element->setAttribute("lim_cmax", dlim[1]);
 
   auto colorbar = parent_element->querySelectors("colorbar");
   parent_element->setAttribute("_clim_min", dlim[0]);
   parent_element->setAttribute("_clim_max", dlim[1]);
+  PushDrawableToZQueue pushVolumeToZQueue(volume);
+  pushVolumeToZQueue(element, context);
 }
 
 static void wireframe(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -9730,36 +9789,36 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
     }
 }
 
-static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void ProcessSeries(const std::shared_ptr<GRM::Element> element, const std::shared_ptr<GRM::Context> context)
 {
   static std::map<std::string,
-                  std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)>>
+                  std::function<void(const std::shared_ptr<GRM::Element>, const std::shared_ptr<GRM::Context>)>>
       seriesNameToFunc{
           {std::string("barplot"), barplot},
-          {std::string("contour"), contour},
-          {std::string("contourf"), contourf},
+          {std::string("contour"), PushDrawableToZQueue(contour)},
+          {std::string("contourf"), PushDrawableToZQueue(contourf)},
           {std::string("heatmap"), heatmap},
-          {std::string("hexbin"), hexbin},
-          {std::string("hist"), hist},
-          {std::string("imshow"), imshow},
-          {std::string("isosurface"), isosurface},
-          {std::string("line"), line},
+          {std::string("hexbin"), processHexbin},
+          {std::string("hist"), processHist},
+          {std::string("imshow"), processImshow},
+          {std::string("isosurface"), PushDrawableToZQueue(isosurface)},
+          {std::string("line"), processLine},
           {std::string("marginalheatmap"), marginalheatmap},
           {std::string("pie"), pie},
           {std::string("plot3"), plot3},
-          {std::string("polar"), polar},
+          {std::string("polar"), processPolar},
           {std::string("polar_heatmap"), polarHeatmap},
           {std::string("polar_histogram"), polarHistogram},
-          {std::string("quiver"), quiver},
-          {std::string("scatter"), scatter},
-          {std::string("scatter3"), scatter3},
-          {std::string("shade"), shade},
-          {std::string("stairs"), stairs},
-          {std::string("stem"), stem},
-          {std::string("surface"), surface},
-          {std::string("tricontour"), triContour},
-          {std::string("trisurface"), triSurface},
-          {std::string("volume"), volume},
+          {std::string("quiver"), PushDrawableToZQueue(quiver)},
+          {std::string("scatter"), processScatter},
+          {std::string("scatter3"), processScatter3},
+          {std::string("shade"), PushDrawableToZQueue(shade)},
+          {std::string("stairs"), processStairs},
+          {std::string("stem"), processStem},
+          {std::string("surface"), PushDrawableToZQueue(surface)},
+          {std::string("tricontour"), PushDrawableToZQueue(triContour)},
+          {std::string("trisurface"), PushDrawableToZQueue(triSurface)},
+          {std::string("volume"), processVolume},
           {std::string("wireframe"), wireframe},
       };
 
@@ -9787,42 +9846,42 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
 
   //! Map used for processing all kinds of elements
   static std::map<std::string,
-                  std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)>>
+                  std::function<void(const std::shared_ptr<GRM::Element>, const std::shared_ptr<GRM::Context>)>>
       elemStringToFunc{
-          {std::string("axes"), axes},
-          {std::string("axes3d"), axes3d},
-          {std::string("cellarray"), cellArray},
+          {std::string("axes"), PushDrawableToZQueue(axes)},
+          {std::string("axes3d"), PushDrawableToZQueue(axes3d)},
+          {std::string("cellarray"), PushDrawableToZQueue(cellArray)},
           {std::string("colorbar"), colorbar},
           {std::string("errorbars"), errorbars},
-          {std::string("legend"), legend},
+          {std::string("legend"), PushDrawableToZQueue(legend)},
           {std::string("polar_axes"), drawPolarAxes},
-          {std::string("drawarc"), drawArc},
-          {std::string("drawgraphics"), drawGraphics},
-          {std::string("drawimage"), drawImage},
-          {std::string("drawrect"), drawRect},
-          {std::string("fillarc"), fillArc},
-          {std::string("fillarea"), fillArea},
-          {std::string("fillrect"), fillRect},
-          {std::string("gr3clear"), gr3Clear},
-          {std::string("gr3deletemesh"), gr3DeleteMesh},
-          {std::string("gr3drawimage"), gr3DrawImage},
-          {std::string("gr3drawmesh"), gr3DrawMesh},
-          {std::string("grid"), grid},
-          {std::string("grid3d"), grid3d},
-          {std::string("isosurface_render"), isosurfaceRender},
-          {std::string("layout_grid"), layoutGrid},
-          {std::string("layout_gridelement"), layoutGridElement},
+          {std::string("drawarc"), PushDrawableToZQueue(drawArc)},
+          {std::string("drawgraphics"), PushDrawableToZQueue(drawGraphics)},
+          {std::string("drawimage"), PushDrawableToZQueue(drawImage)},
+          {std::string("drawrect"), PushDrawableToZQueue(drawRect)},
+          {std::string("fillarc"), PushDrawableToZQueue(fillArc)},
+          {std::string("fillarea"), PushDrawableToZQueue(fillArea)},
+          {std::string("fillrect"), PushDrawableToZQueue(fillRect)},
+          {std::string("gr3clear"), PushDrawableToZQueue(gr3Clear)},
+          {std::string("gr3deletemesh"), PushDrawableToZQueue(gr3DeleteMesh)},
+          {std::string("gr3drawimage"), PushDrawableToZQueue(gr3DrawImage)},
+          {std::string("gr3drawmesh"), PushDrawableToZQueue(gr3DrawMesh)},
+          {std::string("grid"), PushDrawableToZQueue(grid)},
+          {std::string("grid3d"), PushDrawableToZQueue(grid3d)},
+          {std::string("isosurface_render"), PushDrawableToZQueue(isosurfaceRender)},
+          {std::string("layout_grid"), PushDrawableToZQueue(layoutGrid)},
+          {std::string("layout_gridelement"), PushDrawableToZQueue(layoutGridElement)},
           {std::string("nonuniform_polarcellarray"), nonUniformPolarCellArray},
-          {std::string("nonuniformcellarray"), nonuniformcellarray},
-          {std::string("panzoom"), panzoom},
+          {std::string("nonuniformcellarray"), PushDrawableToZQueue(nonuniformcellarray)},
+          {std::string("panzoom"), PushDrawableToZQueue(panzoom)},
           {std::string("polarcellarray"), polarCellArray},
-          {std::string("polyline"), polyline},
-          {std::string("polyline3d"), polyline3d},
-          {std::string("polymarker"), polymarker},
-          {std::string("polymarker3d"), polymarker3d},
+          {std::string("polyline"), PushDrawableToZQueue(polyline)},
+          {std::string("polyline3d"), PushDrawableToZQueue(polyline3d)},
+          {std::string("polymarker"), PushDrawableToZQueue(polymarker)},
+          {std::string("polymarker3d"), PushDrawableToZQueue(polymarker3d)},
           {std::string("series"), ProcessSeries},
-          {std::string("text"), text},
-          {std::string("titles3d"), titles3d},
+          {std::string("text"), PushDrawableToZQueue(text)},
+          {std::string("titles3d"), PushDrawableToZQueue(titles3d)},
       };
 
   /*! Modifier */
@@ -9874,33 +9933,6 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ render functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static bool pushToZQueue(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
-{
-  if (!element->hasAttribute("z_index"))
-    {
-      return false;
-    }
-  int z_index = static_cast<int>(element->getAttribute("z_index"));
-  if (z_queue_is_being_rendered)
-    {
-      if (z_index < current_z_index)
-        {
-          throw ParentHasToBeProcessedBeforeChildError(
-              "The z-index of a child can`t be smaller than it`s parents z-index");
-        }
-      /* check if element is already in z_queue */
-      if (element == z_queue.top())
-        {
-          return false;
-        }
-    }
-  int gr_context_id = grContextIDManager.getUnusedGRContextId();
-  gr_savestateincontext(gr_context_id);
-  element->setAttribute("_grcontext", gr_context_id);
-  z_queue.push(element);
-  return true;
-}
-
 static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
@@ -9912,50 +9944,45 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
    * \param[in] context A GRM::Context
    */
   gr_savestate();
+  zIndexManager.savestate();
 
-  if (!pushToZQueue(element, context))
+  bool bounding_boxes = getenv("GRPLOT_ENABLE_EDITOR");
+
+  if (bounding_boxes && element->hasAttributes())
     {
-      bool bounding_boxes = getenv("GRPLOT_ENABLE_EDITOR");
-
-      if (bounding_boxes && element->hasAttributes())
-        {
-          gr_begin_grm_selection(bounding_id, &receiverfunction);
-          bounding_map[bounding_id] = element;
-          bounding_id++;
-        }
-
-      processElement(element, context);
-      if (element->hasChildNodes() && parentTypes.count(element->localName()))
-        {
-          for (const auto &child : element->children())
-            {
-              renderHelper(child, context);
-            }
-        }
-      if (bounding_boxes && element->hasAttributes())
-        {
-          gr_end_grm_selection();
-        }
+      gr_begin_grm_selection(bounding_id, &receiverfunction);
+      bounding_map[bounding_id] = element;
+      bounding_id++;
     }
 
+  processElement(element, context);
+  if (element->hasChildNodes() && parentTypes.count(element->localName()))
+    {
+      for (const auto &child : element->children())
+        {
+          renderHelper(child, context);
+        }
+    }
+  if (bounding_boxes && element->hasAttributes())
+    {
+      gr_end_grm_selection();
+    }
+
+  zIndexManager.restorestate();
   gr_restorestate();
 }
 
 static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
 {
-  z_queue_is_being_rendered = true;
+  gr_savestate();
   for (; !z_queue.empty(); z_queue.pop())
     {
-      auto element = z_queue.top();
-      int gr_context_id = static_cast<int>(element->getAttribute("_grcontext"));
-      gr_selectcontext(gr_context_id);
-      current_z_index = static_cast<int>(element->getAttribute("z_index"));
-      renderHelper(element, context);
-      element->removeAttribute("_grcontext");
-      grContextIDManager.markIdAsUnused(gr_context_id);
+      auto drawable = z_queue.top();
+      drawable->draw();
+      grContextIDManager.markIdAsUnused(drawable->getGrContextId());
     }
-  z_queue_is_being_rendered = false;
   grContextIDManager.destroyGRContexts();
+  gr_restorestate();
 }
 
 static void initializeGridElements(const std::shared_ptr<GRM::Element> &element, grm::Grid *grid)

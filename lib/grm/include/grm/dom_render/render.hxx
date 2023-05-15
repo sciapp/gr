@@ -4,6 +4,8 @@
 #include <iostream>
 #include <optional>
 #include <queue>
+#include <stack>
+#include <functional>
 
 #include <grm/dom_render/context.hxx>
 #include <grm/dom_render/graphics_tree/Element.hxx>
@@ -100,22 +102,15 @@ enum class EXPORT CoordinateSpace
 /* ========================= classes ================================================================================ */
 
 
-class CompareZIndex
+class PushDrawableToZQueue
 {
 public:
-  bool operator()(std::shared_ptr<GRM::Element> const &lhs, std::shared_ptr<GRM::Element> const &rhs);
-};
-
-class ManageGRContextIds
-{
-public:
-  void destroyGRContexts();
-  int getUnusedGRContextId();
-  void markIdAsUnused(int id);
+  PushDrawableToZQueue(
+      std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> drawFunction);
+  void operator()(const std::shared_ptr<GRM::Element> element, const std::shared_ptr<GRM::Context> context);
 
 private:
-  std::queue<int, std::deque<int>> available_gr_context_ids = {};
-  int no_currently_allocated_gr_contexts = 0;
+  std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> drawFunction;
 };
 
 EXPORT void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::string &attr,

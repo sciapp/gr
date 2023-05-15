@@ -510,6 +510,9 @@ set(GRM_SOURCES
     lib/grm/src/grm/datatype/uint_map.c
     lib/grm/src/grm/dom_render/context.cxx
     lib/grm/src/grm/dom_render/render.cxx
+    lib/grm/src/grm/dom_render/ManageZIndex.cxx
+    lib/grm/src/grm/dom_render/Drawable.cxx
+    lib/grm/src/grm/dom_render/ManageGRContextIds.cxx
     lib/grm/src/grm/dom_render/graphics_tree/Comment.cxx
     lib/grm/src/grm/dom_render/graphics_tree/Document.cxx
     lib/grm/src/grm/dom_render/graphics_tree/Element.cxx

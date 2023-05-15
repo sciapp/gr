@@ -2,6 +2,7 @@
 #define GR_GRMAXCONTEXTREACHEDERROR_HXX
 
 #include <stdexcept>
+#include <grm/util.h>
 
 class GRMaxContextReachedError : public std::length_error
 {
