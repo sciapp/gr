@@ -149,6 +149,7 @@ DLLEXPORT void gr_copysegws(int);
 DLLEXPORT void gr_redrawsegws(void);
 DLLEXPORT void gr_setsegtran(int, double, double, double, double, double, double, double);
 DLLEXPORT void gr_closeseg(void);
+DLLEXPORT void gr_samplelocator(double *, double *, int *);
 DLLEXPORT void gr_emergencyclosegks(void);
 DLLEXPORT void gr_updategks(void);
 DLLEXPORT int gr_setspace(double, double, int, int);

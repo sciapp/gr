@@ -3146,6 +3146,39 @@ void gks_inq_vp_size(int wkid, int *errind, int *width, int *height, double *dev
     *errind = GKS_K_ERROR;
 }
 
+void gks_sample_locator(int wkid, int *errind, double *x, double *y, int *buttons)
+{
+  gks_list_t *element;
+  ws_list_t *ws;
+
+  if ((element = gks_list_find(open_ws, wkid)) != NULL)
+    {
+      ws = (ws_list_t *)element->ptr;
+
+      switch (ws->wtype)
+        {
+#ifndef EMSCRIPTEN
+        case 411:
+        case 412:
+        case 413:
+          gks_drv_socket(SAMPLE_LOCATOR, 1, 1, 1, i_arr, 1, f_arr_1, 1, f_arr_2, 0, c_arr, &ws->ptr);
+          *x = f_arr_1[0];
+          *y = f_arr_2[0];
+          *buttons = i_arr[0];
+          *errind = GKS_K_NO_ERROR;
+          break;
+#endif
+        default:
+          *x = *y = 0;
+          *buttons = 0;
+          *errind = GKS_K_ERROR;
+          break;
+        }
+    }
+  else
+    *errind = GKS_K_ERROR;
+}
+
 void gks_emergency_close(void)
 {
   static int closing = 0;
