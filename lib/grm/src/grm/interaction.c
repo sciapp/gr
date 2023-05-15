@@ -449,12 +449,96 @@ grm_tooltip_info_t **grm_get_tooltips_x(int mouse_x, int mouse_y, unsigned int *
 error_cleanup:
   if (tooltip_array != NULL)
     {
-      if (tooltip_list != NULL && tooltip_array[tooltip_list->size] != NULL)
+      if (tooltip_list != NULL)
         {
           free(tooltip_array[tooltip_list->size]);
         }
       free(tooltip_array);
     }
+  if (tooltip_list != NULL)
+    {
+      tooltip_reflist_node = tooltip_list->head;
+      while (tooltip_reflist_node != NULL)
+        {
+          free(tooltip_reflist_node->entry);
+          tooltip_reflist_node = tooltip_reflist_node->next;
+        }
+      tooltip_reflist_delete(tooltip_list);
+      tooltip_list = NULL;
+    }
+
+  return NULL;
+}
+
+grm_accumulated_tooltip_info_t *grm_get_accumulated_tooltip_x(int mouse_x, int mouse_y)
+{
+  double *y = NULL, *y_ptr = NULL;
+  char **ylabels = NULL, **ylabels_ptr = NULL;
+  unsigned int min_dist = UINT_MAX;
+  grm_tooltip_info_t *nearest_tooltip = NULL;
+  tooltip_reflist_node_t *tooltip_reflist_node = NULL;
+  grm_accumulated_tooltip_info_t *accumulated_tooltip = NULL;
+
+  tooltip_list = tooltip_reflist_new();
+  error_cleanup_if(tooltip_list == NULL);
+
+  error_cleanup_if(get_tooltips(mouse_x, mouse_y, collect_tooltips) != ERROR_NONE);
+
+  y = malloc(tooltip_list->size * sizeof(double));
+  error_cleanup_if(y == NULL);
+  ylabels = malloc((tooltip_list->size + 1) * sizeof(char *));
+  error_cleanup_if(ylabels == NULL);
+
+  y_ptr = y;
+  ylabels_ptr = ylabels;
+  tooltip_reflist_node = tooltip_list->head;
+  while (tooltip_reflist_node != NULL)
+    {
+      grm_tooltip_info_t *current_tooltip = tooltip_reflist_node->entry;
+      unsigned int current_dist = (current_tooltip->x_px - mouse_x) * (current_tooltip->x_px - mouse_x) +
+                                  (current_tooltip->y_px - mouse_y) * (current_tooltip->y_px - mouse_y);
+      if (current_dist < min_dist)
+        {
+          nearest_tooltip = current_tooltip;
+          min_dist = current_dist;
+        }
+      *y_ptr = current_tooltip->y;
+      *ylabels_ptr = current_tooltip->label;
+      ++y_ptr;
+      ++ylabels_ptr;
+      tooltip_reflist_node = tooltip_reflist_node->next;
+    }
+  error_cleanup_if(nearest_tooltip == NULL);
+  *ylabels_ptr = NULL; /* terminate the ylabels array with a NULL pointer to simplify loops */
+
+  accumulated_tooltip = malloc(sizeof(grm_accumulated_tooltip_info_t));
+  error_cleanup_if(accumulated_tooltip == NULL);
+  accumulated_tooltip->n = tooltip_list->size;
+  accumulated_tooltip->x = nearest_tooltip->x;
+  accumulated_tooltip->x_px = nearest_tooltip->x_px;
+  accumulated_tooltip->xlabel = nearest_tooltip->xlabel;
+  accumulated_tooltip->y = y;
+  accumulated_tooltip->y_px = nearest_tooltip->y_px;
+  accumulated_tooltip->ylabels = ylabels;
+
+  if (tooltip_list != NULL)
+    {
+      tooltip_reflist_node = tooltip_list->head;
+      while (tooltip_reflist_node != NULL)
+        {
+          free(tooltip_reflist_node->entry);
+          tooltip_reflist_node = tooltip_reflist_node->next;
+        }
+      tooltip_reflist_delete(tooltip_list);
+      tooltip_list = NULL;
+    }
+
+  return accumulated_tooltip;
+
+error_cleanup:
+  free(y);
+  free(ylabels);
+  free(accumulated_tooltip);
   if (tooltip_list != NULL)
     {
       tooltip_reflist_node = tooltip_list->head;

@@ -2,6 +2,7 @@
 #define GRPLOT_WIDGET_H_INCLUDED
 
 #include <memory>
+#include <variant>
 
 #include <QMenu>
 #include <QMenuBar>
@@ -12,6 +13,7 @@
 
 #include "qtterm/receiver_thread.h"
 #include "qtterm/grm_args_t_wrapper.h"
+#include "util.hxx"
 #include <grm.h>
 
 class GRPlotWidget : public QWidget
@@ -81,12 +83,77 @@ private:
     QPoint pressed;
     QPoint anchor;
   };
+
+  class TooltipWrapper
+  {
+  public:
+    TooltipWrapper(grm_tooltip_info_t *tooltip) : tooltip_(tooltip) {}
+    TooltipWrapper(grm_accumulated_tooltip_info_t *accumulated_tooltip) : tooltip_(accumulated_tooltip) {}
+
+    TooltipWrapper(const TooltipWrapper &) = delete;
+    TooltipWrapper &operator=(const TooltipWrapper &) = delete;
+
+    TooltipWrapper(TooltipWrapper &&tooltip_wrapper) { *this = std::move(tooltip_wrapper); }
+    TooltipWrapper &operator=(TooltipWrapper &&tooltip_wrapper)
+    {
+      tooltip_ = std::move(tooltip_wrapper.tooltip_);
+      tooltip_wrapper.tooltip_ = static_cast<grm_tooltip_info_t *>(nullptr);
+      return *this;
+    }
+
+    ~TooltipWrapper()
+    {
+      if (holds_alternative<grm_accumulated_tooltip_info_t>())
+        {
+          auto &accumulated_tooltip = get<grm_accumulated_tooltip_info_t>();
+          std::free(accumulated_tooltip->y);
+          std::free(accumulated_tooltip->ylabels);
+        }
+      std::visit([](auto *x) { std::free(x); }, tooltip_);
+    }
+
+    template <typename T> T *&get() { return std::get<T *>(tooltip_); };
+    template <typename T> const T *const &get() const { return std::get<T *>(tooltip_); };
+
+    template <typename T> bool holds_alternative() const { return std::holds_alternative<T *>(tooltip_); };
+
+    int n() const
+    {
+      return std::visit(util::overloaded{[](const grm_tooltip_info_t *tooltip) { return 1; },
+                                         [](const grm_accumulated_tooltip_info_t *tooltip) { return tooltip->n; }},
+                        tooltip_);
+    };
+
+    double x() const
+    {
+      return std::visit([](const auto *tooltip) { return tooltip->x; }, tooltip_);
+    };
+
+    int x_px() const
+    {
+      return std::visit([](const auto *tooltip) { return tooltip->x_px; }, tooltip_);
+    };
+
+    int y_px() const
+    {
+      return std::visit([](const auto *tooltip) { return tooltip->y_px; }, tooltip_);
+    };
+
+    const char *xlabel() const
+    {
+      return std::visit([](const auto *tooltip) { return tooltip->xlabel; }, tooltip_);
+    };
+
+  private:
+    std::variant<grm_tooltip_info_t *, grm_accumulated_tooltip_info_t *> tooltip_;
+  };
+
   QPixmap pixmap;
   bool redraw_pixmap;
   grm_args_t *args_;
   MouseState mouseState;
   QRubberBand *rubberBand;
-  std::vector<std::unique_ptr<grm_tooltip_info_t, decltype(&std::free)>> tooltips;
+  std::vector<TooltipWrapper> tooltips;
   QTextDocument label;
   Receiver_Thread *receiver_thread;
 
