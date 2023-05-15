@@ -132,19 +132,6 @@ typedef enum
   GR_OPTION_3D_MESH = 7
 } gr_option_t;
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-typedef enum
-{
-  GR_COLOR_RESET = 0,
-  GR_COLOR_LINE = 1 << 0,
-  GR_COLOR_MARKER = 1 << 1,
-  GR_COLOR_FILL = 1 << 2,
-  GR_COLOR_TEXT = 1 << 3,
-  GR_COLOR_BORDER = 1 << 4
-} gr_color_type_t;
-
-
 /* ========================= functions ============================================================================== */
 
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
@@ -229,8 +216,6 @@ err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_len
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 double find_max_step(unsigned int n, const double *x);
-double *normalize(unsigned int n, const double *x);
-unsigned int *normalize_int(unsigned int n, const double *x, unsigned int sum);
 const char *next_fmt_key(const char *fmt) UNUSED;
 const char *get_compatible_format(const char *key, const char *given_format);
 int get_id_from_args(const grm_args_t *args, int *plot_id, int *subplot_id, int *series_id);
@@ -249,19 +234,11 @@ err_t classes_polar_histogram(grm_args_t *subplot_args);
 double get_lightness_from_rbg(double r, double g, double b);
 void set_text_color_for_background(double r, double g, double b);
 void draw_xticklabel(double x1, double x2, const char *label, double available_width);
-void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type);
 double auto_tick(double amin, double amax);
 
 
 #ifdef __cplusplus
 }
-int set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type,
-                   const std::shared_ptr<GRM::Element> &element);
-// void set_nect_color(std::optional<std::vector<int>> color_indices, std::optional<std::vector<double>>
-// color_rgb_values,
-//                     const std::string &key, gr_color_type_t color_type, const std::shared_ptr<GRM::Element>
-//                     &element);
-
 void set_text_color_for_background(double r, double g, double b, const std::shared_ptr<GRM::Element> &element);
 void draw_xticklabel(double x1, double x2, const char *label, double available_width,
                      const std::shared_ptr<GRM::Element> &element);

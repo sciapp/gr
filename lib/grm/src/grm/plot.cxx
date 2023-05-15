@@ -2116,7 +2116,7 @@ err_t plot_stairs(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
-  if (!global_root->lastChildElement()->hasAttribute("name")) group->setAttribute("name", "step");
+  if (!global_root->lastChildElement()->hasAttribute("name")) group->setAttribute("name", "stairs");
 
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "orientation", "s", &orientation);
@@ -4017,8 +4017,8 @@ err_t plot_imshow(grm_args_t *subplot_args)
 
       (*context)["c" + str] = c_data_vec;
       subGroup->setAttribute("c", "c" + str);
-      (*context)["shape" + str] = shape_vec;
-      subGroup->setAttribute("shape", "shape" + str);
+      (*context)["cdims" + str] = shape_vec;
+      subGroup->setAttribute("cdims", "cdims" + str);
 
       ++current_series;
     }
@@ -4405,31 +4405,20 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   return ERROR_NONE;
 }
 
-
 err_t plot_pie(grm_args_t *subplot_args)
 {
   grm_args_t *series;
   double *x;
-  double *normalized_x = nullptr;
-  unsigned int *normalized_x_int = nullptr;
   unsigned int x_length;
   int color_index;
-  int inq_color;
   unsigned char color_rgb[4];
-  double start_angle, middle_angle, end_angle;
-  double text_pos[2];
-  char text[80];
   const char *title;
-  unsigned int i;
   err_t error = ERROR_NONE;
-
   static unsigned int color_array_length = -1;
   const int *color_indices = nullptr;
   const double *color_rgb_values = nullptr;
-
   std::string color_indices_key;
   std::string color_rgb_values_key;
-
   std::vector<int> color_indices_vec;
   std::vector<double> color_rgb_values_vec;
 
@@ -4438,26 +4427,18 @@ err_t plot_pie(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
 
-  auto subGroup = global_render->createSeries("pie_series");
+  auto subGroup = global_render->createSeries("pie");
   group->append(subGroup);
-
-  global_render->setFillIntStyle(group, GKS_K_INTSTYLE_SOLID);
-
-  global_render->setTextAlign(group, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
 
   int id = static_cast<int>(global_root->getAttribute("id"));
   global_root->setAttribute("id", id + 1);
   std::string str = std::to_string(id);
+  auto context = global_render->getContext();
 
-  cleanup_and_set_error_if(!grm_args_first_value(series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
-  normalized_x = normalize(x_length, x);
-  cleanup_and_set_error_if(normalized_x == nullptr, ERROR_MALLOC);
-  normalized_x_int = normalize_int(x_length, x, 1000);
-  cleanup_and_set_error_if(normalized_x_int == nullptr, ERROR_MALLOC);
+  return_error_if(!grm_args_first_value(series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
 
   if (x_length > 0)
     {
-      auto context = global_render->getContext();
       std::vector<double> x_vec(x, x + x_length);
       (*context)["x" + str] = x_vec;
       subGroup->setAttribute("x", "x" + str);
@@ -4465,65 +4446,20 @@ err_t plot_pie(grm_args_t *subplot_args)
 
   if (grm_args_first_value(series, "c", "I", &color_indices, &color_array_length))
     {
-      color_indices_key = "color_indices" + std::to_string(id);
-      color_indices_vec = std::vector<int>(color_indices, color_indices + color_array_length);
-      global_render->setNextColor(group, color_indices_key, color_indices_vec);
+      std::vector<double> color_indec_vec(color_indices, color_indices + color_array_length);
+      (*context)["color_indices" + str] = color_indec_vec;
+      subGroup->setAttribute("color_indices", "color_indices" + str);
     }
   else if (grm_args_first_value(series, "c", "D", &color_rgb_values, &color_array_length))
     {
-      color_rgb_values_key = "color_rgb_values" + std::to_string(id);
-      color_rgb_values_vec = std::vector<double>(color_rgb_values, color_rgb_values + color_array_length);
-      global_render->setNextColor(group, color_rgb_values_key, color_rgb_values_vec);
+      std::vector<double> color_rgb_vec(color_rgb_values, color_rgb_values + color_array_length);
+      (*context)["color_rgb_values" + str] = color_rgb_vec;
+      subGroup->setAttribute("color_rgb_values", "color_rgb_values" + str);
     }
-  else
-    {
-      // fallback case of setNextColor
-      global_render->setNextColor(group);
-    }
-
-  color_index = set_next_color(series, "c", GR_COLOR_FILL, group);
-  start_angle = 90;
-  for (i = 0; i < x_length; ++i)
-    {
-      end_angle = start_angle - normalized_x[i] * 360.0;
-      auto temp = global_render->createFillArc(0.05, 0.95, 0.05, 0.95, start_angle, end_angle);
-      group->append(temp);
-
-      if (i > 0)
-        {
-          color_index = set_next_color(nullptr, nullptr, GR_COLOR_FILL, temp);
-        }
-
-      middle_angle = (start_angle + end_angle) / 2.0;
-
-      text_pos[0] = 0.5 + 0.25 * cos(middle_angle * M_PI / 180.0);
-      text_pos[1] = 0.5 + 0.25 * sin(middle_angle * M_PI / 180.0);
-
-      snprintf(text, 80, "%.2lf\n%.1lf %%", x[i], normalized_x_int[i] / 10.0);
-
-      auto text_elem = global_render->createText(text_pos[0], text_pos[1], text, CoordinateSpace::WC);
-      text_elem->setAttribute("color_index", color_index);
-      group->append(text_elem);
-
-      text_elem->setAttribute("set_text_color_for_background", true);
-
-      start_angle = end_angle;
-      if (start_angle < 0)
-        {
-          start_angle += 360.0;
-        }
-    }
-  set_next_color(nullptr, nullptr, GR_COLOR_RESET, group);
-
   if (grm_args_values(subplot_args, "title", "s", &title))
     {
-      auto titleRenderElem = global_render->createPiePlotTitleRenderElement(title);
-      group->append(titleRenderElem);
+      group->setAttribute("title", title);
     }
-
-cleanup:
-  free(normalized_x);
-  free(normalized_x_int);
 
   return error;
 }
@@ -5278,112 +5214,6 @@ double find_max_step(unsigned int n, const double *x)
   return max_step;
 }
 
-/*!
- * Normalize a given array of doubles so all values sum up to 1.0
- *
- * \param[in] n The number of array elements.
- * \param[in] x A pointer to the array elements.
- * \return A pointer to newly allocated heap memory with the normalized values.
- */
-double *normalize(unsigned int n, const double *x)
-{
-  double sum;
-  double *normalized_x;
-  unsigned int i;
-
-  sum = 0.0;
-  for (i = 0; i < n; ++i)
-    {
-      sum += x[i];
-    }
-
-  normalized_x = static_cast<double *>(malloc(n * sizeof(double)));
-  if (normalized_x == nullptr)
-    {
-      debug_print_malloc_error();
-      return nullptr;
-    }
-
-  for (i = 0; i < n; ++i)
-    {
-      normalized_x[i] = x[i] / sum;
-    }
-
-  return normalized_x;
-}
-
-/*!
- * Normalize a given array of doubles so all values sum up to `sum`.
- * All values are converted to unsigned integers. It is guaranteed that
- * the sum of all values is always `sum` (rounding errors are handled).
- *
- * \param[in] n The number of array elements.
- * \param[in] x A pointer to the array elements.
- * \return A pointer to newly allocated heap memory with the normalized values.
- */
-unsigned int *normalize_int(unsigned int n, const double *x, unsigned int sum)
-{
-  double sum_x;
-  unsigned int *normalized_x;
-  unsigned int actual_sum;
-  int rounding_error;
-  double normalized_x_without_rounding;
-  double current_relative_error;
-  double min_relative_error;
-  unsigned int min_relative_error_index;
-  unsigned int i;
-
-  sum_x = 0.0;
-  for (i = 0; i < n; ++i)
-    {
-      sum_x += x[i];
-    }
-
-  normalized_x = static_cast<unsigned int *>(malloc(n * sizeof(unsigned int)));
-  if (normalized_x == nullptr)
-    {
-      debug_print_malloc_error();
-      return nullptr;
-    }
-
-  for (i = 0; i < n; ++i)
-    {
-      normalized_x[i] = (int)((x[i] * sum / sum_x) + 0.5);
-    }
-
-  actual_sum = 0;
-  for (i = 0; i < n; ++i)
-    {
-      actual_sum += normalized_x[i];
-    }
-  rounding_error = sum - actual_sum;
-
-  if (rounding_error != 0)
-    {
-      /*
-       * Find the data value which gets the lowest relative error
-       * when the rounding error is added.
-       */
-      min_relative_error = INFINITY;
-      min_relative_error_index = 0;
-      for (i = 0; i < n; ++i)
-        {
-          normalized_x_without_rounding = x[i] * sum / sum_x;
-          current_relative_error =
-              fabs(normalized_x[i] + rounding_error - normalized_x_without_rounding) / normalized_x_without_rounding;
-          if (current_relative_error < min_relative_error)
-            {
-              min_relative_error = current_relative_error;
-              min_relative_error_index = i;
-            }
-        }
-      /* Apply the rounding error to the previously found data value */
-      normalized_x[min_relative_error_index] += rounding_error;
-    }
-
-  return normalized_x;
-}
-
 const char *next_fmt_key(const char *kind)
 {
   static const char *saved_fmt = nullptr;
@@ -6133,110 +5963,6 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
 
   /* draw the rest */
   gr_text(x1, x2, new_label + cur_start);
-}
-
-/*!
- * \brief Set colors from color index or rgb arrays.
- *
- * Call the function first with an argument container and a key. Afterwards, call the `set_next_color` with `nullptr`
- * pointers to iterate through the color arrays. If `key` does not exist in `args`, the function falls back to default
- * colors.
- *
- * \param args The argument container which stores the color values.
- * \param key The key of the colors in the argument container. The key may reference integer or double arrays.
- *            Integer arrays describe colors of the GKS color table (0 - 1255). Double arrays contain RGB tuples in the
- *            range [0.0, 1.0]. If key does not exist, the routine falls back to default colors (taken from
- *            `gr_uselinespec`).
- * \param color_type The color type to set. Can be one of `GR_COLOR_LINE`, `GR_COLOR_MARKER`, `GR_COLOR_FILL`,
- *                   `GR_COLOR_TEXT`, `GR_COLOR_BORDER` or any combination of them (combined with OR). The special value
- *                   `GR_COLOR_RESET` resets all color modifications.
- */
-void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type)
-{
-  const static int fallback_color_indices[] = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
-                                               991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
-  static double saved_color[3];
-  static int last_array_index = -1;
-  static const int *color_indices = nullptr;
-  static const double *color_rgb_values = nullptr;
-  static unsigned int color_array_length = -1;
-  int current_array_index = last_array_index + 1;
-  int color_index = 0;
-  int reset = (color_type == GR_COLOR_RESET);
-  int gks_errind = GKS_K_NO_ERROR;
-
-  if (reset || (args != nullptr && key != nullptr))
-    {
-      if (last_array_index >= 0 && color_rgb_values != nullptr)
-        {
-          gr_setcolorrep(PLOT_CUSTOM_COLOR_INDEX, saved_color[0], saved_color[1], saved_color[2]);
-        }
-      last_array_index = -1;
-      if (!reset && args != nullptr && key != nullptr)
-        {
-          if (!grm_args_first_value(args, key, "I", &color_indices, &color_array_length) &&
-              !grm_args_first_value(args, key, "D", &color_rgb_values, &color_array_length))
-            {
-              /* use fallback colors if `key` cannot be read from `args` */
-              logger((stderr, "Cannot read \"%s\" from args, falling back to default colors\n", key));
-              color_indices = fallback_color_indices;
-              color_array_length = array_size(fallback_color_indices);
-            }
-        }
-      else
-        {
-          color_indices = nullptr;
-          color_rgb_values = nullptr;
-          color_array_length = -1;
-        }
-
-      if (reset)
-        {
-          return;
-        }
-    }
-
-  if (last_array_index < 0 && color_rgb_values != nullptr)
-    {
-      gks_inq_color_rep(1, PLOT_CUSTOM_COLOR_INDEX, GKS_K_VALUE_SET, &gks_errind, &saved_color[0], &saved_color[1],
-                        &saved_color[2]);
-    }
-
-  current_array_index %= color_array_length;
-
-  if (color_indices != nullptr)
-    {
-      color_index = color_indices[current_array_index];
-      last_array_index = current_array_index;
-    }
-  else if (color_rgb_values != nullptr)
-    {
-      gr_setcolorrep(PLOT_CUSTOM_COLOR_INDEX, color_rgb_values[current_array_index],
-                     color_rgb_values[current_array_index + 1], color_rgb_values[current_array_index + 2]);
-      color_index = PLOT_CUSTOM_COLOR_INDEX;
-      last_array_index = current_array_index + 2;
-    }
-
-  if (color_type & GR_COLOR_LINE)
-    {
-      gr_setlinecolorind(color_index);
-    }
-  if (color_type & GR_COLOR_MARKER)
-    {
-      gr_setmarkercolorind(color_index);
-    }
-  if (color_type & GR_COLOR_FILL)
-    {
-      gr_setfillcolorind(color_index);
-    }
-  if (color_type & GR_COLOR_TEXT)
-    {
-      gr_settextcolorind(color_index);
-    }
-  if (color_type & GR_COLOR_BORDER)
-    {
-      gr_setbordercolorind(color_index);
-    }
 }
 
 double auto_tick(double amin, double amax)
@@ -7016,114 +6742,6 @@ void set_text_color_for_background(double r, double g, double b, const std::shar
       global_render->setTextColorInd(element, 1);
     }
 }
-
-
-/*!
- * \brief Set colors from color index or rgb arrays. The render version
- *
- * Call the function first with an argument container and a key. Afterwards, call the `set_next_color` with `nullptr`
- * pointers to iterate through the color arrays. If `key` does not exist in `args`, the function falls back to default
- * colors.
- *
- * \param args The argument container which stores the color values.
- * \param key The key of the colors in the argument container. The key may reference integer or double arrays.
- *            Integer arrays describe colors of the GKS color table (0 - 1255). Double arrays contain RGB tuples in the
- *            range [0.0, 1.0]. If key does not exist, the routine falls back to default colors (taken from
- *            `gr_uselinespec`).
- * \param color_type The color type to set. Can be one of `GR_COLOR_LINE`, `GR_COLOR_MARKER`, `GR_COLOR_FILL`,
- *                   `GR_COLOR_TEXT`, `GR_COLOR_BORDER` or any combination of them (combined with OR). The special value
- *                   `GR_COLOR_RESET` resets all color modifications.
- */
-int set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type,
-                   const std::shared_ptr<GRM::Element> &element)
-{
-  const static int fallback_color_indices[] = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
-                                               991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
-  static double saved_color[3];
-  static int last_array_index = -1;
-  static const int *color_indices = nullptr;
-  static const double *color_rgb_values = nullptr;
-  static unsigned int color_array_length = -1;
-  int current_array_index = last_array_index + 1;
-  int color_index = 0;
-  int reset = (color_type == GR_COLOR_RESET);
-  int gks_errind = GKS_K_NO_ERROR;
-
-  if (reset || (args != nullptr && key != nullptr))
-    {
-      if (last_array_index >= 0 && color_rgb_values != nullptr)
-        {
-          gr_setcolorrep(PLOT_CUSTOM_COLOR_INDEX, saved_color[0], saved_color[1], saved_color[2]);
-        }
-      last_array_index = -1;
-      if (!reset && args != nullptr && key != nullptr)
-        {
-          if (!grm_args_first_value(args, key, "I", &color_indices, &color_array_length) &&
-              !grm_args_first_value(args, key, "D", &color_rgb_values, &color_array_length))
-            {
-              /* use fallback colors if `key` cannot be read from `args` */
-              logger((stderr, "Cannot read \"%s\" from args, falling back to default colors\n", key));
-              color_indices = fallback_color_indices;
-              color_array_length = array_size(fallback_color_indices);
-            }
-        }
-      else
-        {
-          color_indices = nullptr;
-          color_rgb_values = nullptr;
-          color_array_length = -1;
-        }
-
-      if (reset)
-        {
-          return 0;
-        }
-    }
-
-  if (last_array_index < 0 && color_rgb_values != nullptr)
-    {
-      gks_inq_color_rep(1, PLOT_CUSTOM_COLOR_INDEX, GKS_K_VALUE_SET, &gks_errind, &saved_color[0], &saved_color[1],
-                        &saved_color[2]);
-    }
-
-  current_array_index %= color_array_length;
-
-  if (color_indices != nullptr)
-    {
-      color_index = color_indices[current_array_index];
-      last_array_index = current_array_index;
-    }
-  else if (color_rgb_values != nullptr)
-    {
-      color_index = PLOT_CUSTOM_COLOR_INDEX;
-      last_array_index = current_array_index + 2;
-      global_render->setColorRep(element, PLOT_CUSTOM_COLOR_INDEX, color_rgb_values[current_array_index],
-                                 color_rgb_values[current_array_index + 1], color_rgb_values[current_array_index + 2]);
-    }
-
-  if (color_type & GR_COLOR_LINE)
-    {
-      global_render->setLineColorInd(element, color_index);
-    }
-  if (color_type & GR_COLOR_MARKER)
-    {
-      global_render->setMarkerColorInd(element, color_index);
-    }
-  if (color_type & GR_COLOR_FILL)
-    {
-      global_render->setFillColorInd(element, color_index);
-    }
-  if (color_type & GR_COLOR_TEXT)
-    {
-      global_render->setTextColorInd(element, color_index);
-    }
-  if (color_type & GR_COLOR_BORDER)
-    {
-      global_render->setBorderColorInd(element, color_index);
-    }
-  return color_index;
-}
-
 
 double auto_tick_rings_polar(double rmax, int &rings, const std::string &norm)
 {

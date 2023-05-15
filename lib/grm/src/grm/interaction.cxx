@@ -503,7 +503,6 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       double max_x = 0.95, min_x = 0.05, max_y = 0.05, min_y = 0.95;
       int center_x, center_y;
       double radius;
-      double *normalized_x = nullptr;
       double start_angle, end_angle, act_angle;
 
       gr_wctondc(&max_x, &max_y);
@@ -523,9 +522,9 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       std::vector<double> x_series_vec;
       x_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);
 
-      x_series = &x_series_vec[0];
       x_length = x_series_vec.size();
-      normalized_x = normalize(x_length, x_series);
+      std::vector<double> normalized_x(x_length);
+      GRM::normalize_vec(x_series_vec, &normalized_x);
       start_angle = 90.0;
       for (i = 0; i < x_length; ++i)
         {

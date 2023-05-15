@@ -24,6 +24,9 @@ EXPORT std::string toupper(std::string string);
 EXPORT std::vector<std::string> split(const std::string &string, const std::string &token);
 EXPORT std::string strip(const std::string &string);
 
+EXPORT void normalize_vec(std::vector<double> x, std::vector<double> *normalized_x);
+EXPORT void normalize_vec_int(std::vector<double> x, std::vector<unsigned int> *normalized_x, unsigned int sum);
+
 class EXPORT Selector
 {
 public:

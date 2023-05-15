@@ -12,6 +12,16 @@
 #include "grm/layout.hxx"
 #include <grm/util.h>
 
+typedef enum
+{
+  GR_COLOR_RESET = 0,
+  GR_COLOR_LINE = 1 << 0,
+  GR_COLOR_MARKER = 1 << 1,
+  GR_COLOR_FILL = 1 << 2,
+  GR_COLOR_TEXT = 1 << 3,
+  GR_COLOR_BORDER = 1 << 4
+} gr_color_type_t;
+
 enum class EXPORT CoordinateSpace
 {
   WC,
@@ -208,8 +218,6 @@ public:
   std::shared_ptr<Element> createLayoutGrid(const grm::Grid &grid);
 
   std::shared_ptr<Element> createLayoutGridElement(const grm::GridElement &gridElement, const grm::Slice &slice);
-
-  std::shared_ptr<Element> createPiePlotTitleRenderElement(std::string title);
 
   std::shared_ptr<Element> createIsoSurfaceRenderElement(int drawable_type);
 

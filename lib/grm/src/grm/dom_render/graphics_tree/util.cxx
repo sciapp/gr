@@ -5,6 +5,7 @@
 #include <grm/dom_render/graphics_tree/TypeError.hxx>
 #include <sstream>
 #include <algorithm>
+#include <cmath>
 
 static void nodeToXML(std::stringstream &os, const std::shared_ptr<const GRM::Node> &node,
                       const GRM::SerializerOptions &options, const std::string &indent);
@@ -168,6 +169,88 @@ bool GRM::Selector::matchElement(
   bool result = doMatchElement(element, match_map);
   match_map[std::tuple<const GRM::Element *, const GRM::Selector *>{element_ptr, this}] = result;
   return result;
+}
+
+/*!
+ * Normalize a given vector of doubles so all values sum up to 1.0
+ *
+ * \param[in] x A vector that should be normalized
+ */
+void GRM::normalize_vec(std::vector<double> x, std::vector<double> *normalized_x)
+{
+  double sum;
+  int n = size(x);
+  unsigned int i;
+
+  sum = 0.0;
+  for (i = 0; i < n; ++i)
+    {
+      sum += x[i];
+    }
+
+  for (i = 0; i < n; ++i)
+    {
+      normalized_x[0][i] = x[i] / sum;
+    }
+}
+
+/*!
+ * Normalize a vector array of doubles so all values sum up to `sum`.
+ * All values are converted to unsigned integers. It is guaranteed that
+ * the sum of all values is always `sum` (rounding errors are handled).
+ */
+void GRM::normalize_vec_int(std::vector<double> x, std::vector<unsigned int> *normalized_x, unsigned int sum)
+{
+  double sum_x;
+  unsigned int actual_sum;
+  int rounding_error;
+  double normalized_x_without_rounding;
+  double current_relative_error;
+  double min_relative_error;
+  unsigned int min_relative_error_index;
+  unsigned int i;
+  int n = size(x);
+
+  sum_x = 0.0;
+  for (i = 0; i < n; ++i)
+    {
+      sum_x += x[i];
+    }
+
+  for (i = 0; i < n; ++i)
+    {
+      normalized_x[0][i] = (int)((x[i] * sum / sum_x) + 0.5);
+    }
+
+  actual_sum = 0;
+  for (i = 0; i < n; ++i)
+    {
+      actual_sum += normalized_x[0][i];
+    }
+  rounding_error = sum - actual_sum;
+
+  if (rounding_error != 0)
+    {
+      /*
+       * Find the data value which gets the lowest relative error
+       * when the rounding error is added.
+       */
+      min_relative_error = INFINITY;
+      min_relative_error_index = 0;
+      for (i = 0; i < n; ++i)
+        {
+          normalized_x_without_rounding = x[i] * sum / sum_x;
+          current_relative_error =
+              fabs(normalized_x[0][i] + rounding_error - normalized_x_without_rounding) / normalized_x_without_rounding;
+          if (current_relative_error < min_relative_error)
+            {
+              min_relative_error = current_relative_error;
+              min_relative_error_index = i;
+            }
+        }
+      /* Apply the rounding error to the previously found data value */
+      normalized_x[0][min_relative_error_index] += rounding_error;
+    }
 }
 
 namespace GRM
