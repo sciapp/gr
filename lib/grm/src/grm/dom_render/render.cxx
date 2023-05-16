@@ -43,8 +43,8 @@ ManageGRContextIds grContextIDManager;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {
-    "group",    "layout_grid", "layout_gridelement", "draw_legend", "polar_axes", "draw_pie_legend", "figure", "hexbin",
-    "colorbar", "plot",        "coordinate_system",  "series",      "axes"};
+    "group",    "layout_grid", "layout_gridelement", "polar_axes", "legend", "draw_pie_legend", "figure", "hexbin",
+    "colorbar", "plot",        "coordinate_system",  "series",     "axes"};
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
@@ -4730,7 +4730,7 @@ static void isosurface(const std::shared_ptr<GRM::Element> &element, const std::
   gr3_setlightparameters(light_parameters[0], light_parameters[1], light_parameters[2], light_parameters[3]);
 }
 
-static void drawLegend(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
+static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
 {
   double viewport[4];
   int location;
@@ -4800,27 +4800,27 @@ static void drawLegend(const std::shared_ptr<GRM::Element> &elem, const std::sha
           child->remove();
         }
     }
-  auto newGroup = render->createGroup("groupCreatedDuringRender");
-  elem->append(newGroup);
 
-  render->setSelntran(newGroup, 0);
-  render->setScale(newGroup, 0);
+  gr_selntran(1);
+
+  render->setSelntran(elem, 0);
+  render->setScale(elem, 0);
 
   auto fr = render->createFillRect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
-  newGroup->append(fr);
+  elem->append(fr);
 
-  render->setFillIntStyle(newGroup, GKS_K_INTSTYLE_SOLID);
-  render->setFillColorInd(newGroup, 0);
+  render->setFillIntStyle(elem, GKS_K_INTSTYLE_SOLID);
+  render->setFillColorInd(elem, 0);
 
   auto dr = render->createDrawRect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
-  newGroup->append(dr);
+  elem->append(dr);
 
   render->setLineType(dr, GKS_K_INTSTYLE_SOLID);
   render->setLineColorInd(dr, 1);
   render->setLineWidth(dr, 1);
 
   i = 0;
-  render->setLineSpec(newGroup, const_cast<char *>(" "));
+  render->setLineSpec(elem, const_cast<char *>(" "));
 
   for (std::string spec : specs)
     {
@@ -4846,7 +4846,7 @@ static void drawLegend(const std::shared_ptr<GRM::Element> &elem, const std::sha
           legend_symbol_y[1] = py;
           auto pl =
               render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0], legend_symbol_y[1]);
-          newGroup->append(pl);
+          elem->append(pl);
           render->setLineSpec(pl, spec);
         }
       if (mask & 2)
@@ -4857,23 +4857,26 @@ static void drawLegend(const std::shared_ptr<GRM::Element> &elem, const std::sha
           legend_symbol_y[1] = py;
           auto pl =
               render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0], legend_symbol_y[1]);
-          newGroup->append(pl);
+          elem->append(pl);
           render->setLineSpec(pl, spec);
         }
       if (i < labels.size())
         {
           auto tx = render->createText(px, py, labels[i].data());
-          newGroup->append(tx);
+          elem->append(tx);
           render->setTextAlign(tx, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
           py -= 0.5 * dy;
           i += 1;
         }
       py -= 0.03;
     }
-  auto resetGroup = render->createGroup("reset_selntran");
-  render->setSelntran(resetGroup, 1);
-  elem->append(resetGroup);
   gr_restorestate();
+
+  processSelntran(elem);
+  processFillIntStyle(elem);
+  processFillColorInd(elem);
+  processScale(elem);
+  processLineSpec(elem);
 }
 
 static void drawPieLegend(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
@@ -7802,7 +7805,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("axes3d"), axes3d},
           {std::string("cellarray"), cellArray},
           {std::string("colorbar"), colorbar},
-          {std::string("draw_legend"), drawLegend},
+          {std::string("legend"), legend},
           {std::string("draw_pie_legend"), drawPieLegend},
           {std::string("polar_axes"), drawPolarAxes},
           {std::string("drawarc"), drawArc},
@@ -8470,15 +8473,15 @@ std::shared_ptr<GRM::Element> GRM::Render::createEmptyAxes(int tick_orientation)
   return element;
 }
 
-std::shared_ptr<GRM::Element> GRM::Render::createDrawLegend(const std::string &labels_key,
-                                                            std::optional<std::vector<std::string>> labels,
-                                                            int location, const std::string &specs_key,
-                                                            std::optional<std::vector<std::string>> specs,
-                                                            const std::shared_ptr<GRM::Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createLegend(const std::string &labels_key,
+                                                        std::optional<std::vector<std::string>> labels, int location,
+                                                        const std::string &specs_key,
+                                                        std::optional<std::vector<std::string>> specs,
+                                                        const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
-   * This function can be used for creating a DrawLegend GRM::Element
-   * This element is different compared to most of Render's GRM::Element, the DrawLegend GRM::Element will incorporate
+   * This function can be used for creating a legend GRM::Element
+   * This element is different compared to most of Render's GRM::Element, the legend GRM::Element will incorporate
    * plot_draw_legend code from plot.cxx and will create new GRM::Elements as child nodes in the render document
    *
    * \param[in] labels_key A std::string for the labels vector
@@ -8487,7 +8490,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawLegend(const std::string &l
    * \param[in] spec An std::string
    */
 
-  auto element = createElement("draw_legend");
+  auto element = createElement("legend");
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   element->setAttribute("location", location);
   element->setAttribute("specs", specs_key);
@@ -8654,7 +8657,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createFillArc(double xmin, double xma
   element->setAttribute("ymax", ymax);
   element->setAttribute("a1", a1);
   element->setAttribute("a2", a2);
-
 
   if (fillintstyle != 0)
     {

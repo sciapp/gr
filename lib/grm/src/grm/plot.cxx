@@ -4903,7 +4903,7 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
       ++current_series;
     }
 
-  auto subGroup = global_render->createDrawLegend(labels_key, labels_vec, location, specs_key, specs_vec);
+  auto subGroup = global_render->createLegend(labels_key, labels_vec, location, specs_key, specs_vec);
   group->append(subGroup);
 
   return ERROR_NONE;
