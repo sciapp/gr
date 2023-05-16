@@ -2386,14 +2386,12 @@ static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem
             {
               if (is_vertical)
                 {
-                  y[(is_vertical ? y_length : x_length) - i - 1] =
-                      std::isnan(z[xind + i * x_length]) ? 0 : z[xind + i * x_length];
-                  y_max = grm_max(y_max, y[(is_vertical ? y_length : x_length) - i - 1]);
+                  y[i] = std::isnan(z[xind + i * x_length]) ? 0 : z[xind + i * x_length];
+                  y_max = grm_max(y_max, y[i]);
                 }
               else
                 {
-                  y[i] =
-                      std::isnan(z[x_length * (y_length - 1 - yind) + i]) ? 0 : z[x_length * (y_length - 1 - yind) + i];
+                  y[i] = std::isnan(z[x_length * yind + i]) ? 0 : z[x_length * yind + i];
                   y_max = grm_max(y_max, y[i]);
                 }
             }
