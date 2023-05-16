@@ -43,8 +43,9 @@ ManageGRContextIds grContextIDManager;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {
-    "group",    "layout_grid", "layout_gridelement", "polar_axes", "legend", "draw_pie_legend", "figure", "hexbin",
-    "colorbar", "plot",        "coordinate_system",  "series",     "axes"};
+    "group",    "layout_grid", "layout_gridelement", "polar_axes", "legend", "figure", "hexbin",
+    "colorbar", "plot",        "coordinate_system",  "series",     "axes",   "label",
+};
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
@@ -4733,168 +4734,11 @@ static void isosurface(const std::shared_ptr<GRM::Element> &element, const std::
 static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
 {
   double viewport[4];
-  int location;
   double px, py, w, h;
   double tbx[4], tby[4];
-  double legend_symbol_x[2], legend_symbol_y[2];
-  int i;
   std::shared_ptr<GRM::Render> render;
-  gr_savestate();
-  gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
-  auto labels_key = static_cast<std::string>(elem->getAttribute("labels"));
-  auto specs_key = static_cast<std::string>(elem->getAttribute("specs"));
-
-  render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument());
-  if (!render)
-    {
-      throw NotFoundError("No render-document found for element\n");
-    }
-  std::vector<std::string> labels = GRM::get<std::vector<std::string>>((*context)[labels_key]);
-  std::vector<std::string> specs = GRM::get<std::vector<std::string>>((*context)[specs_key]);
-
-  location = static_cast<int>(elem->getAttribute("location"));
-
-  legend_size(labels, &w, &h);
-
-  if (int_equals_any(location, 3, 11, 12, 13))
-    {
-      px = viewport[1] + 0.11;
-    }
-  else if (int_equals_any(location, 3, 8, 9, 10))
-    {
-      px = 0.5 * (viewport[0] + viewport[1] - w + 0.05);
-    }
-  else if (int_equals_any(location, 3, 2, 3, 6))
-    {
-      px = viewport[0] + 0.11;
-    }
-  else
-    {
-      px = viewport[1] - 0.05 - w;
-    }
-  if (int_equals_any(location, 5, 5, 6, 7, 10, 12))
-    {
-      py = 0.5 * (viewport[2] + viewport[3] + h) - 0.03;
-    }
-  else if (location == 13)
-    {
-      py = viewport[2] + h;
-    }
-  else if (int_equals_any(location, 3, 3, 4, 8))
-    {
-      py = viewport[2] + h + 0.03;
-    }
-  else if (location == 11)
-    {
-      py = viewport[3] - 0.03;
-    }
-  else
-    {
-      py = viewport[3] - 0.06;
-    }
-
-  if (elem->hasChildNodes())
-    {
-      for (const auto &child : elem->children())
-        {
-          child->remove();
-        }
-    }
-
-  gr_selntran(1);
-
-  render->setSelntran(elem, 0);
-  render->setScale(elem, 0);
-
-  auto fr = render->createFillRect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
-  elem->append(fr);
-
-  render->setFillIntStyle(elem, GKS_K_INTSTYLE_SOLID);
-  render->setFillColorInd(elem, 0);
-
-  auto dr = render->createDrawRect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
-  elem->append(dr);
-
-  render->setLineType(dr, GKS_K_INTSTYLE_SOLID);
-  render->setLineColorInd(dr, 1);
-  render->setLineWidth(dr, 1);
-
-  i = 0;
-  render->setLineSpec(elem, const_cast<char *>(" "));
-
-  for (std::string spec : specs)
-    {
-      int mask;
-      double dy;
-
-      if (i <= labels.size())
-        {
-          gr_inqtext(0, 0, labels[i].data(), tbx, tby);
-          dy = grm_max((tby[2] - tby[0]) - 0.03, 0);
-          py -= 0.5 * dy;
-        }
-
-      gr_savestate();
-      mask = gr_uselinespec(spec.data());
-      gr_restorestate();
-
-      if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
-        {
-          legend_symbol_x[0] = px - 0.07;
-          legend_symbol_x[1] = px - 0.01;
-          legend_symbol_y[0] = py;
-          legend_symbol_y[1] = py;
-          auto pl =
-              render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0], legend_symbol_y[1]);
-          elem->append(pl);
-          render->setLineSpec(pl, spec);
-        }
-      if (mask & 2)
-        {
-          legend_symbol_x[0] = px - 0.06;
-          legend_symbol_x[1] = px - 0.02;
-          legend_symbol_y[0] = py;
-          legend_symbol_y[1] = py;
-          auto pl =
-              render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0], legend_symbol_y[1]);
-          elem->append(pl);
-          render->setLineSpec(pl, spec);
-        }
-      if (i < labels.size())
-        {
-          auto tx = render->createText(px, py, labels[i].data());
-          elem->append(tx);
-          render->setTextAlign(tx, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-          py -= 0.5 * dy;
-          i += 1;
-        }
-      py -= 0.03;
-    }
-  gr_restorestate();
-
-  processSelntran(elem);
-  processFillIntStyle(elem);
-  processFillColorInd(elem);
-  processScale(elem);
-  processLineSpec(elem);
-}
-
-static void drawPieLegend(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
-{
-  double viewport[4];
-  double px, py, w, h;
-  double tbx[4], tby[4];
   std::string labels_key = static_cast<std::string>(elem->getAttribute("labels"));
   auto labels = GRM::get<std::vector<std::string>>((*context)[labels_key]);
-  unsigned int num_labels = labels.size();
-  std::shared_ptr<GRM::Render> render;
-  std::string color_indices_key;
-  std::string color_rgb_values_key;
-
-  std::vector<int> color_indices_vec;
-  std::vector<double> color_rgb_values_vec;
-
-  gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
 
   render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument());
   if (!render)
@@ -4902,87 +4746,234 @@ static void drawPieLegend(const std::shared_ptr<GRM::Element> &elem, const std::
       throw NotFoundError("No render-document found for element\n");
     }
 
-  if (elem->hasChildNodes())
+  gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
+
+  if (static_cast<std::string>(elem->parentElement()->getAttribute("kind")) != "pie")
     {
-      for (const auto &child : elem->children())
+      int location;
+      double legend_symbol_x[2], legend_symbol_y[2];
+      int i;
+
+      gr_savestate();
+
+      auto specs_key = static_cast<std::string>(elem->getAttribute("specs"));
+      std::vector<std::string> specs = GRM::get<std::vector<std::string>>((*context)[specs_key]);
+      location = static_cast<int>(elem->getAttribute("location"));
+
+      legend_size(labels, &w, &h);
+
+      if (int_equals_any(location, 3, 11, 12, 13))
         {
-          child->remove();
+          px = viewport[1] + 0.11;
         }
-    }
-
-  for (const auto &child : elem->parentElement()->children())
-    {
-      if (child->localName() == "series")
+      else if (int_equals_any(location, 3, 8, 9, 10))
         {
-          if (child->hasAttribute("color_indices"))
-            {
-              color_indices_key = static_cast<std::string>(child->getAttribute("color_indices"));
-              color_indices_vec = GRM::get<std::vector<int>>((*context)[color_indices_key]);
-            }
-          else if (child->hasAttribute("color_rgb_values"))
-            {
-              color_rgb_values_key = static_cast<std::string>(child->getAttribute("color_rgb_values"));
-              color_rgb_values_vec = GRM::get<std::vector<double>>((*context)[color_rgb_values_key]);
-            }
-          break;
+          px = 0.5 * (viewport[0] + viewport[1] - w + 0.05);
         }
+      else if (int_equals_any(location, 3, 2, 3, 6))
+        {
+          px = viewport[0] + 0.11;
+        }
+      else
+        {
+          px = viewport[1] - 0.05 - w;
+        }
+      if (int_equals_any(location, 5, 5, 6, 7, 10, 12))
+        {
+          py = 0.5 * (viewport[2] + viewport[3] + h) - 0.03;
+        }
+      else if (location == 13)
+        {
+          py = viewport[2] + h;
+        }
+      else if (int_equals_any(location, 3, 3, 4, 8))
+        {
+          py = viewport[2] + h + 0.03;
+        }
+      else if (location == 11)
+        {
+          py = viewport[3] - 0.03;
+        }
+      else
+        {
+          py = viewport[3] - 0.06;
+        }
+
+      if (elem->hasChildNodes())
+        {
+          for (const auto &child : elem->children())
+            {
+              child->remove();
+            }
+        }
+
+      gr_selntran(1);
+
+      render->setSelntran(elem, 0);
+      render->setScale(elem, 0);
+
+      auto fr = render->createFillRect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
+      elem->append(fr);
+
+      render->setFillIntStyle(elem, GKS_K_INTSTYLE_SOLID);
+      render->setFillColorInd(elem, 0);
+
+      auto dr = render->createDrawRect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
+      elem->append(dr);
+
+      render->setLineType(dr, GKS_K_INTSTYLE_SOLID);
+      render->setLineColorInd(dr, 1);
+      render->setLineWidth(dr, 1);
+
+      i = 0;
+      render->setLineSpec(elem, const_cast<char *>(" "));
+
+      for (std::string spec : specs)
+        {
+          int mask;
+          double dy;
+
+          if (i <= labels.size())
+            {
+              gr_inqtext(0, 0, labels[i].data(), tbx, tby);
+              dy = grm_max((tby[2] - tby[0]) - 0.03, 0);
+              py -= 0.5 * dy;
+            }
+
+          gr_savestate();
+          mask = gr_uselinespec(spec.data());
+          gr_restorestate();
+
+          if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
+            {
+              legend_symbol_x[0] = px - 0.07;
+              legend_symbol_x[1] = px - 0.01;
+              legend_symbol_y[0] = py;
+              legend_symbol_y[1] = py;
+              auto pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                               legend_symbol_y[1]);
+              elem->append(pl);
+              render->setLineSpec(pl, spec);
+            }
+          if (mask & 2)
+            {
+              legend_symbol_x[0] = px - 0.06;
+              legend_symbol_x[1] = px - 0.02;
+              legend_symbol_y[0] = py;
+              legend_symbol_y[1] = py;
+              auto pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                               legend_symbol_y[1]);
+              elem->append(pl);
+              render->setLineSpec(pl, spec);
+            }
+          if (i < labels.size())
+            {
+              auto tx = render->createText(px, py, labels[i].data());
+              elem->append(tx);
+              render->setTextAlign(tx, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+              py -= 0.5 * dy;
+              i += 1;
+            }
+          py -= 0.03;
+        }
+      gr_restorestate();
+
+      processLineSpec(elem);
     }
-
-  auto subGroup = render->createGroup("drawPieLegendSubGroup");
-  elem->append(subGroup);
-
-  render->setSelntran(subGroup, 0);
-  render->setScale(subGroup, 0);
-  w = 0;
-  h = 0;
-  for (auto current_label : labels)
+  else
     {
-      gr_inqtext(0, 0, current_label.data(), tbx, tby);
-      w += tbx[2] - tbx[0];
-      h = grm_max(h, tby[2] - tby[0]);
+      unsigned int num_labels = labels.size();
+      std::string color_indices_key;
+      std::string color_rgb_values_key;
+
+      std::vector<int> color_indices_vec;
+      std::vector<double> color_rgb_values_vec;
+
+      if (elem->hasChildNodes())
+        {
+          for (const auto &child : elem->children())
+            {
+              child->remove();
+            }
+        }
+
+      for (const auto &child : elem->parentElement()->children())
+        {
+          if (child->localName() == "series")
+            {
+              if (child->hasAttribute("color_indices"))
+                {
+                  color_indices_key = static_cast<std::string>(child->getAttribute("color_indices"));
+                  color_indices_vec = GRM::get<std::vector<int>>((*context)[color_indices_key]);
+                }
+              else if (child->hasAttribute("color_rgb_values"))
+                {
+                  color_rgb_values_key = static_cast<std::string>(child->getAttribute("color_rgb_values"));
+                  color_rgb_values_vec = GRM::get<std::vector<double>>((*context)[color_rgb_values_key]);
+                }
+              break;
+            }
+        }
+
+      gr_selntran(1);
+
+      render->setSelntran(elem, 0);
+      render->setScale(elem, 0);
+      w = 0;
+      h = 0;
+      for (auto current_label : labels)
+        {
+          gr_inqtext(0, 0, current_label.data(), tbx, tby);
+          w += tbx[2] - tbx[0];
+          h = grm_max(h, tby[2] - tby[0]);
+        }
+      w += num_labels * 0.03 + (num_labels - 1) * 0.02;
+
+      px = 0.5 * (viewport[0] + viewport[1] - w);
+      py = viewport[2] - 0.75 * h;
+
+      auto fr = render->createFillRect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
+      elem->append(fr);
+      render->setFillIntStyle(elem, GKS_K_INTSTYLE_SOLID);
+      render->setFillColorInd(elem, 0);
+      auto dr = render->createDrawRect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
+      elem->append(dr);
+      render->setLineType(elem, GKS_K_INTSTYLE_SOLID);
+      render->setLineColorInd(elem, 1);
+      render->setLineWidth(elem, 1);
+
+      auto subsubGroup = render->createGroup("labels_group");
+      elem->append(subsubGroup);
+      render->setLineSpec(subsubGroup, const_cast<char *>(" "));
+      render->setTextAlign(subsubGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+      // reset setNextColor
+      setNextColor(GR_COLOR_RESET, color_indices_vec, color_rgb_values_vec, elem);
+
+      for (auto &current_label : labels)
+        {
+          auto labelGroup = render->createElement("label");
+          subsubGroup->append(labelGroup);
+          render->setLineColorInd(labelGroup, 1);
+          setNextColor(GR_COLOR_FILL, color_indices_vec, color_rgb_values_vec, labelGroup);
+
+          labelGroup->append(render->createFillRect(px, px + 0.02, py - 0.01, py + 0.01));
+          labelGroup->append(render->createDrawRect(px, px + 0.02, py - 0.01, py + 0.01));
+          labelGroup->append(render->createText(px + 0.03, py, current_label));
+
+          gr_inqtext(0, 0, current_label.data(), tbx, tby);
+          px += tbx[2] - tbx[0] + 0.05;
+        }
+      // reset setNextColor
+      setNextColor(GR_COLOR_RESET, color_indices_vec, color_rgb_values_vec, elem);
+
+      processLineColorInd(elem);
+      processLineWidth(elem);
+      processLineType(elem);
     }
-  w += num_labels * 0.03 + (num_labels - 1) * 0.02;
-
-  px = 0.5 * (viewport[0] + viewport[1] - w);
-  py = viewport[2] - 0.75 * h;
-
-  auto fr = render->createFillRect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
-  subGroup->append(fr);
-  render->setFillIntStyle(subGroup, GKS_K_INTSTYLE_SOLID);
-  render->setFillColorInd(subGroup, 0);
-  auto dr = render->createDrawRect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
-  subGroup->append(dr);
-  render->setLineType(subGroup, GKS_K_INTSTYLE_SOLID);
-  render->setLineColorInd(subGroup, 1);
-  render->setLineWidth(subGroup, 1);
-
-  auto subsubGroup = render->createGroup("labels_group");
-  subGroup->append(subsubGroup);
-  render->setLineSpec(subsubGroup, const_cast<char *>(" "));
-  render->setTextAlign(subsubGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-  // reset setNextColor
-  setNextColor(GR_COLOR_RESET, color_indices_vec, color_rgb_values_vec, subGroup);
-
-  for (auto &current_label : labels)
-    {
-      auto labelGroup = render->createGroup("label");
-      subsubGroup->append(labelGroup);
-      render->setLineColorInd(labelGroup, 1);
-      setNextColor(GR_COLOR_FILL, color_indices_vec, color_rgb_values_vec, labelGroup);
-
-      labelGroup->append(render->createFillRect(px, px + 0.02, py - 0.01, py + 0.01));
-      labelGroup->append(render->createDrawRect(px, px + 0.02, py - 0.01, py + 0.01));
-      labelGroup->append(render->createText(px + 0.03, py, current_label));
-
-      gr_inqtext(0, 0, current_label.data(), tbx, tby);
-      px += tbx[2] - tbx[0] + 0.05;
-    }
-  // reset setNextColor
-  setNextColor(GR_COLOR_RESET, color_indices_vec, color_rgb_values_vec, subGroup);
-
-  auto reset_group = render->createGroup("reset_group");
-  render->setSelntran(reset_group, 1);
-  elem->append(reset_group);
+  processSelntran(elem);
+  processScale(elem);
+  processFillIntStyle(elem);
+  processFillColorInd(elem);
 }
 
 static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
@@ -7806,7 +7797,6 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("cellarray"), cellArray},
           {std::string("colorbar"), colorbar},
           {std::string("legend"), legend},
-          {std::string("draw_pie_legend"), drawPieLegend},
           {std::string("polar_axes"), drawPolarAxes},
           {std::string("drawarc"), drawArc},
           {std::string("drawgraphics"), drawGraphics},
@@ -7838,7 +7828,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("y_line"), drawYLine},
       };
   /*! Modifier */
-  if (str_equals_any(element->localName().c_str(), 4, "group", "figure", "plot", "coordinate_system"))
+  if (str_equals_any(element->localName().c_str(), 5, "group", "figure", "plot", "coordinate_system", "label"))
     {
       processAttributes(element);
     }
@@ -8530,11 +8520,11 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawPolarAxes(int angle_ticks, 
   return element;
 }
 
-std::shared_ptr<GRM::Element> GRM::Render::createDrawPieLegend(const std::string &labels_key,
-                                                               std::optional<std::vector<std::string>> labels,
-                                                               const std::shared_ptr<GRM::Context> &extContext)
+std::shared_ptr<GRM::Element> GRM::Render::createPieLegend(const std::string &labels_key,
+                                                           std::optional<std::vector<std::string>> labels,
+                                                           const std::shared_ptr<GRM::Context> &extContext)
 {
-  auto element = createElement("draw_pie_legend");
+  auto element = createElement("legend");
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   element->setAttribute("labels", labels_key);
 

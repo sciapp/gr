@@ -4930,7 +4930,7 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
   std::string labels_key = "labels" + std::to_string(id);
   std::vector<std::string> labels_vec(labels, labels + num_labels);
 
-  auto drawPieLegendElement = global_render->createDrawPieLegend(labels_key, labels_vec);
+  auto drawPieLegendElement = global_render->createPieLegend(labels_key, labels_vec);
   group->append(drawPieLegendElement);
 
   return ERROR_NONE;

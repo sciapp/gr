@@ -108,18 +108,18 @@ public:
 
   std::shared_ptr<GRM::Element> createEmptyDoubleAxes();
 
-  std::shared_ptr<Element> createDrawLegend(const std::string &labels_key,
-                                            std::optional<std::vector<std::string>> labels, int location,
-                                            const std::string &specs_key, std::optional<std::vector<std::string>> specs,
-                                            const std::shared_ptr<GRM::Context> &extContext = nullptr);
+  std::shared_ptr<Element> createLegend(const std::string &labels_key, std::optional<std::vector<std::string>> labels,
+                                        int location, const std::string &specs_key,
+                                        std::optional<std::vector<std::string>> specs,
+                                        const std::shared_ptr<GRM::Context> &extContext = nullptr);
 
   std::shared_ptr<Element> createDrawPolarAxes(int angle_ticks, const std::string &kind, int phiflip,
                                                const std::string &norm = "", double tick = 0.0,
                                                double line_width = 0.0);
 
-  std::shared_ptr<Element> createDrawPieLegend(const std::string &labels_key,
-                                               std::optional<std::vector<std::string>> labels,
-                                               const std::shared_ptr<GRM::Context> &extContext = nullptr);
+  std::shared_ptr<Element> createPieLegend(const std::string &labels_key,
+                                           std::optional<std::vector<std::string>> labels,
+                                           const std::shared_ptr<GRM::Context> &extContext = nullptr);
 
 
   std::shared_ptr<Element> createGrid(double x_tick, double y_tick, double x_org, double y_org, int major_x,
