@@ -10,6 +10,7 @@
 #include <sstream>
 #include <algorithm>
 #include <map>
+#include <iostream>
 
 /* ========================= static variables ======================================================================= */
 
@@ -120,7 +121,8 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
 {
   std::string line;
   std::string token;
-  std::ifstream file(path);
+  std::ifstream file_path(path);
+  std::istream &cin_path = std::cin;
   std::list<int> columns;
   bool depth_change = true;
   int depth = 0, max_col = -1;
@@ -192,6 +194,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
       ranges->ymin = *columns.begin();
     }
 
+  std::istream &file = (path == "-") ? cin_path : file_path;
   /* read the lines from the file */
   while (getline(file, line))
     {
@@ -484,7 +487,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       return 0;
     }
 
-  if (!file_exists(file_args->file_path))
+  if (file_args->file_path != "-" && !file_exists(file_args->file_path))
     {
       fprintf(stderr, "File not found (%s)\n", file_args->file_path.c_str());
       return 0;
