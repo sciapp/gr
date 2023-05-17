@@ -238,6 +238,19 @@ static void gksterm_get_state(gks_ws_state_t *state, int window)
   });
 }
 
+static void gksterm_get_locator(gks_locator_t *locator, int window)
+{
+  size_t request_len = 1 + sizeof(int);
+  char request[1 + sizeof(int)];
+  request[0] = GKSTERM_FUNCTION_INQ_LOCATOR;
+  *(int *)(request + 1) = window;
+
+  gksterm_communicate(request, request_len, GKSTERM_DEFAULT_TIMEOUT, YES, ^(char *reply, size_t reply_len) {
+    assert(reply_len == sizeof(gks_locator_t));
+    memcpy((void *)locator, reply, reply_len);
+  });
+}
+
 @interface gks_quartz_thread : NSObject
 + (void)update:(id)param;
 @end
@@ -358,6 +371,7 @@ void gks_quartzplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, dou
   ws_state_list *wss = (ws_state_list *)*ptr;
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
   gks_ws_state_t state;
+  gks_locator_t locator;
 
   switch (fctid)
     {
@@ -542,6 +556,23 @@ void gks_quartzplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, dou
             {
               r1[0] = 1.0;
             }
+        }
+      [mutex unlock];
+      break;
+    case SAMPLE_LOCATOR:
+      [mutex lock];
+      if (wss->win != -1)
+        {
+          gksterm_get_locator(&locator, wss->win);
+          r1[0] = locator.x;
+          r2[0] = locator.y;
+          ia[0] = locator.status;
+        }
+      else
+        {
+          r1[0] = 0.0;
+          r2[0] = 0.0;
+          ia[0] = 0;
         }
       [mutex unlock];
       break;

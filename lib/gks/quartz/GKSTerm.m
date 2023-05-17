@@ -117,6 +117,22 @@ static void handle_get_state(GKSTerm *gksterm, void *socket, unsigned char *data
   send_message(socket, reply, sizeof(reply));
 }
 
+static void handle_get_locator(GKSTerm *gksterm, void *socket, unsigned char *data)
+{
+  int window = *(int *)data;
+  __block gks_locator_t locator;
+  dispatch_sync(dispatch_get_main_queue(), ^{
+    @synchronized(gksterm)
+    {
+      locator = [gksterm GKSQuartzGetLocator:window];
+    }
+  });
+  char reply[1 + sizeof(gks_locator_t)];
+  reply[0] = GKSTERM_FUNCTION_INQ_LOCATOR;
+  memcpy(reply + 1, (void *)&locator, sizeof(gks_locator_t));
+  send_message(socket, reply, sizeof(reply));
+}
+
 static void handle_unknown(void *socket, unsigned char *data)
 {
   (void)data;
@@ -151,6 +167,9 @@ static void handle_message(GKSTerm *gksterm, void *socket)
       break;
     case GKSTERM_FUNCTION_INQ_WS_STATE:
       handle_get_state(gksterm, socket, data + 1);
+      break;
+    case GKSTERM_FUNCTION_INQ_LOCATOR:
+      handle_get_locator(gksterm, socket, data + 1);
       break;
     default:
       handle_unknown(socket, data + 1);
@@ -372,6 +391,28 @@ static bool initialized = NO;
     }
 
   return state;
+}
+
+- (gks_locator_t)GKSQuartzGetLocator:(int)win
+{
+  __block gks_locator_t locator;
+  if (view[win] && window[win])
+    {
+      NSPoint cursor_position = [window[win] mouseLocationOutsideOfEventStream];
+      CGPoint origin = view[win].bounds.origin;
+      CGSize size = view[win].bounds.size;
+      locator.x = (cursor_position.x - origin.x) / size.width;
+      locator.y = (cursor_position.y - origin.y) / size.height;
+      locator.status = [NSEvent pressedMouseButtons];
+    }
+  else
+    {
+      locator.x = 0;
+      locator.y = 0;
+      locator.status = 0;
+    }
+
+  return locator;
 }
 
 - (IBAction)cascadeWindows:(id)sender
