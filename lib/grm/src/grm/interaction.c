@@ -15,6 +15,16 @@
 #include "gr.h"
 
 
+/* ######################### internal implementation ################################################################ */
+
+/* ========================= static variables ======================================================================= */
+
+/* ------------------------- tooltips ------------------------------------------------------------------------------- */
+
+static tooltip_reflist_t *tooltip_list = NULL;
+static grm_tooltip_info_t *nearest_tooltip = NULL;
+
+
 /* ========================= macros ================================================================================= */
 
 /* ------------------------- math ----------------------------------------------------------------------------------- */
@@ -22,6 +32,40 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+/* ------------------------- tooltips ------------------------------------------------------------------------------- */
+
+#define MAX_MOUSE_DIST 50
+
+
+/* ========================= methods ================================================================================ */
+
+/* ------------------------- tooltip list --------------------------------------------------------------------------- */
+
+DEFINE_LIST_METHODS(tooltip)
+
+err_t tooltip_list_entry_copy(tooltip_list_entry_t *copy, tooltip_list_const_entry_t entry)
+{
+  tooltip_list_entry_t _copy;
+
+  _copy = malloc(sizeof(grm_tooltip_info_t));
+  if (_copy == NULL)
+    {
+      return ERROR_MALLOC;
+    }
+
+  memcpy(_copy, entry, sizeof(grm_tooltip_info_t));
+  *copy = _copy;
+
+  return ERROR_NONE;
+}
+
+err_t tooltip_list_entry_delete(tooltip_list_entry_t entry)
+{
+  free(entry);
+  return ERROR_NONE;
+}
+
 
 /* ######################### public implementation ################################################################## */
 
@@ -320,11 +364,201 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   return 1;
 }
 
-grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
+static err_t find_nearest_tooltip(int mouse_x, int mouse_y, grm_tooltip_info_t *tooltip_info)
 {
-  grm_tooltip_info_t *info = malloc(sizeof(grm_tooltip_info_t));
-  double *x_series, *y_series, *z_series, x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
-  double x_range_min, x_range_max, y_range_min, y_range_max, x_px, y_px;
+  if (nearest_tooltip == NULL)
+    {
+      nearest_tooltip = tooltip_info;
+    }
+  else
+    {
+      int old_distance = (mouse_x - nearest_tooltip->x_px) * (mouse_x - nearest_tooltip->x_px) +
+                         (mouse_y - nearest_tooltip->y_px) * (mouse_y - nearest_tooltip->y_px);
+      int current_distance = (mouse_x - tooltip_info->x_px) * (mouse_x - tooltip_info->x_px) +
+                             (mouse_y - tooltip_info->y_px) * (mouse_y - tooltip_info->y_px);
+      if (current_distance < old_distance)
+        {
+          free(nearest_tooltip);
+          nearest_tooltip = tooltip_info;
+        }
+      else
+        {
+          free(tooltip_info);
+        }
+    }
+
+  return ERROR_NONE;
+}
+
+grm_tooltip_info_t *grm_get_tooltip(int mouse_x, int mouse_y)
+{
+  nearest_tooltip = NULL;
+  get_tooltips(mouse_x, mouse_y, find_nearest_tooltip);
+  if ((mouse_x - nearest_tooltip->x_px) * (mouse_x - nearest_tooltip->x_px) +
+          (mouse_y - nearest_tooltip->y_px) * (mouse_y - nearest_tooltip->y_px) >
+      MAX_MOUSE_DIST)
+    {
+      nearest_tooltip->x_px = -1;
+      nearest_tooltip->y_px = -1;
+    }
+  return nearest_tooltip;
+}
+
+static err_t collect_tooltips(int mouse_x, int mouse_y, grm_tooltip_info_t *tooltip_info)
+{
+  return tooltip_reflist_push_back(tooltip_list, tooltip_info);
+}
+
+grm_tooltip_info_t **grm_get_tooltips_x(int mouse_x, int mouse_y, unsigned int *array_length)
+{
+  grm_tooltip_info_t **tooltip_array = NULL, **tooltip_ptr = NULL;
+  tooltip_reflist_node_t *tooltip_reflist_node = NULL;
+
+  tooltip_list = tooltip_reflist_new();
+  error_cleanup_if(tooltip_list == NULL);
+
+  error_cleanup_if(get_tooltips(mouse_x, mouse_y, collect_tooltips) != ERROR_NONE);
+
+  tooltip_array = calloc(tooltip_list->size + 1, sizeof(grm_tooltip_info_t *));
+  error_cleanup_if(tooltip_array == NULL);
+
+  tooltip_ptr = tooltip_array;
+  tooltip_reflist_node = tooltip_list->head;
+  while (tooltip_reflist_node != NULL)
+    {
+      *tooltip_ptr = tooltip_reflist_node->entry;
+      ++tooltip_ptr;
+      tooltip_reflist_node = tooltip_reflist_node->next;
+    }
+  *tooltip_ptr = calloc(1, sizeof(grm_tooltip_info_t));
+  error_cleanup_if(*tooltip_ptr == NULL);
+  (*tooltip_ptr)->label = NULL;
+  if (array_length != NULL)
+    {
+      *array_length = tooltip_list->size;
+    }
+
+  if (tooltip_list != NULL)
+    {
+      tooltip_reflist_delete(tooltip_list);
+      tooltip_list = NULL;
+    }
+
+  return tooltip_array;
+
+error_cleanup:
+  if (tooltip_array != NULL)
+    {
+      if (tooltip_list != NULL)
+        {
+          free(tooltip_array[tooltip_list->size]);
+        }
+      free(tooltip_array);
+    }
+  if (tooltip_list != NULL)
+    {
+      tooltip_reflist_node = tooltip_list->head;
+      while (tooltip_reflist_node != NULL)
+        {
+          free(tooltip_reflist_node->entry);
+          tooltip_reflist_node = tooltip_reflist_node->next;
+        }
+      tooltip_reflist_delete(tooltip_list);
+      tooltip_list = NULL;
+    }
+
+  return NULL;
+}
+
+grm_accumulated_tooltip_info_t *grm_get_accumulated_tooltip_x(int mouse_x, int mouse_y)
+{
+  double *y = NULL, *y_ptr = NULL;
+  char **ylabels = NULL, **ylabels_ptr = NULL;
+  unsigned int min_dist = UINT_MAX;
+  grm_tooltip_info_t *nearest_tooltip = NULL;
+  tooltip_reflist_node_t *tooltip_reflist_node = NULL;
+  grm_accumulated_tooltip_info_t *accumulated_tooltip = NULL;
+
+  tooltip_list = tooltip_reflist_new();
+  error_cleanup_if(tooltip_list == NULL);
+
+  error_cleanup_if(get_tooltips(mouse_x, mouse_y, collect_tooltips) != ERROR_NONE);
+
+  y = malloc(tooltip_list->size * sizeof(double));
+  error_cleanup_if(y == NULL);
+  ylabels = malloc((tooltip_list->size + 1) * sizeof(char *));
+  error_cleanup_if(ylabels == NULL);
+
+  y_ptr = y;
+  ylabels_ptr = ylabels;
+  tooltip_reflist_node = tooltip_list->head;
+  while (tooltip_reflist_node != NULL)
+    {
+      grm_tooltip_info_t *current_tooltip = tooltip_reflist_node->entry;
+      unsigned int current_dist = (current_tooltip->x_px - mouse_x) * (current_tooltip->x_px - mouse_x) +
+                                  (current_tooltip->y_px - mouse_y) * (current_tooltip->y_px - mouse_y);
+      if (current_dist < min_dist)
+        {
+          nearest_tooltip = current_tooltip;
+          min_dist = current_dist;
+        }
+      *y_ptr = current_tooltip->y;
+      *ylabels_ptr = current_tooltip->label;
+      ++y_ptr;
+      ++ylabels_ptr;
+      tooltip_reflist_node = tooltip_reflist_node->next;
+    }
+  error_cleanup_if(nearest_tooltip == NULL);
+  *ylabels_ptr = NULL; /* terminate the ylabels array with a NULL pointer to simplify loops */
+
+  accumulated_tooltip = malloc(sizeof(grm_accumulated_tooltip_info_t));
+  error_cleanup_if(accumulated_tooltip == NULL);
+  accumulated_tooltip->n = tooltip_list->size;
+  accumulated_tooltip->x = nearest_tooltip->x;
+  accumulated_tooltip->x_px = nearest_tooltip->x_px;
+  accumulated_tooltip->xlabel = nearest_tooltip->xlabel;
+  accumulated_tooltip->y = y;
+  accumulated_tooltip->y_px = nearest_tooltip->y_px;
+  accumulated_tooltip->ylabels = ylabels;
+
+  if (tooltip_list != NULL)
+    {
+      tooltip_reflist_node = tooltip_list->head;
+      while (tooltip_reflist_node != NULL)
+        {
+          free(tooltip_reflist_node->entry);
+          tooltip_reflist_node = tooltip_reflist_node->next;
+        }
+      tooltip_reflist_delete(tooltip_list);
+      tooltip_list = NULL;
+    }
+
+  return accumulated_tooltip;
+
+error_cleanup:
+  free(y);
+  free(ylabels);
+  free(accumulated_tooltip);
+  if (tooltip_list != NULL)
+    {
+      tooltip_reflist_node = tooltip_list->head;
+      while (tooltip_reflist_node != NULL)
+        {
+          free(tooltip_reflist_node->entry);
+          tooltip_reflist_node = tooltip_reflist_node->next;
+        }
+      tooltip_reflist_delete(tooltip_list);
+      tooltip_list = NULL;
+    }
+
+  return NULL;
+}
+
+err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *))
+{
+  grm_tooltip_info_t *info = NULL;
+  double *x_series, *y_series, *z_series, x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff, dummy;
+  double x_range_min, x_range_max, x_px, y_px;
   int width, height, max_width_height;
   unsigned int num_labels = 0;
   char *kind, **labels;
@@ -332,6 +566,16 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   unsigned int x_length, y_length, z_length, series_i = 0, i;
   char *orientation;
   int is_vertical = 0;
+
+  info = malloc(sizeof(grm_tooltip_info_t));
+  return_error_if(info == NULL, ERROR_MALLOC);
+  info->x_px = -1;
+  info->y_px = -1;
+  info->x = 0;
+  info->y = 0;
+  info->xlabel = "x";
+  info->ylabel = "y";
+  info->label = "";
 
   get_figure_size(NULL, &width, &height, NULL, NULL);
   max_width_height = grm_max(width, height);
@@ -348,14 +592,8 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   if (subplot_args == NULL || !str_equals_any(kind, 13, "line", "scatter", "stem", "step", "heatmap", "marginalheatmap",
                                               "contour", "imshow", "contourf", "pie", "hexbin", "shade", "quiver"))
     {
-      info->x_px = -1;
-      info->y_px = -1;
-      info->x = 0;
-      info->y = 0;
-      info->xlabel = "x";
-      info->ylabel = "y";
-      info->label = "";
-      return info;
+      tooltip_callback(mouse_x, mouse_y, info);
+      return ERROR_NONE;
     }
   plot_process_viewport(subplot_args);
   plot_process_window(subplot_args);
@@ -372,19 +610,15 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
 
   x_range_min = (double)(mouse_x - 50) / max_width_height;
   x_range_max = (double)(mouse_x + 50) / max_width_height;
-  y_range_min = (double)(height - (mouse_y + 50)) / max_width_height;
-  y_range_max = (double)(height - (mouse_y - 50)) / max_width_height;
-  gr_ndctowc(&x_range_min, &y_range_min);
-  gr_ndctowc(&x_range_max, &y_range_max);
+  gr_ndctowc(&x_range_min, &dummy);
+  gr_ndctowc(&x_range_max, &dummy);
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "_xlim", "dd", &x_min, &x_max);
   grm_args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
 
   x_range_min = (x_min > x_range_min) ? x_min : x_range_min;
-  y_range_min = (y_min > y_range_min) ? y_min : y_range_min;
   x_range_max = (x_max < x_range_max) ? x_max : x_range_max;
-  y_range_max = (y_max < y_range_max) ? y_max : y_range_max;
   grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels);
 
   if (strcmp(kind, "pie") == 0)
@@ -434,16 +668,21 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
           info->x_px = mouse_x;
           info->y_px = mouse_y;
           info->label = output;
-          return info;
         }
-      else
-        {
-          mindiff = DBL_MAX;
-        }
+      tooltip_callback(mouse_x, mouse_y, info);
+      return ERROR_NONE;
     }
 
-  while (*current_series != NULL && strcmp(kind, "pie") != 0)
+  if (*current_series == NULL)
     {
+      tooltip_callback(mouse_x, mouse_y, info);
+      return ERROR_NONE;
+    }
+
+  while (*current_series != NULL)
+    {
+      mindiff = DBL_MAX;
+      info->label = (series_i < num_labels) ? labels[series_i] : "";
       if (is_vertical)
         {
           grm_args_first_value(*current_series, "x", "D", &y_series, &y_length);
@@ -460,35 +699,28 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
         }
       for (i = 0; i < x_length; i++)
         {
-          if ((x_series[i] < x_range_min || x_series[i] > x_range_max || y_series[i] < y_range_min ||
-               y_series[i] > y_range_max) &&
-              !str_equals_any(kind, 6, "heatmap", "marginalheatmap", "contour", "imshow", "contourf", "quiver"))
+          if (!str_equals_any(kind, 6, "heatmap", "marginalheatmap", "contour", "imshow", "contourf", "quiver"))
             {
-              continue;
-            }
-          x_px = x_series[i];
-          y_px = y_series[i];
-          gr_wctondc(&x_px, &y_px);
-          x_px = (x_px * max_width_height);
-          y_px = (height - y_px * max_width_height);
-          diff = sqrt((x_px - mouse_x) * (x_px - mouse_x) + (y_px - mouse_y) * (y_px - mouse_y));
-          if (diff < mindiff && diff <= 50)
-            {
-              mindiff = diff;
-              info->x = x_series[i];
-              info->y = y_series[i];
-              info->x_px = (int)x_px;
-              info->y_px = (int)y_px;
-              if (num_labels > series_i)
+              if (x_series[i] < x_range_min || x_series[i] > x_range_max)
                 {
-                  info->label = labels[series_i];
+                  continue;
                 }
-              else
+              x_px = x_series[i];
+              y_px = y_series[i];
+              gr_wctondc(&x_px, &y_px);
+              x_px = (x_px * max_width_height);
+              y_px = (height - y_px * max_width_height);
+              diff = fabs(x_px - mouse_x);
+              if (diff < mindiff && diff <= MAX_MOUSE_DIST)
                 {
-                  info->label = "";
+                  mindiff = diff;
+                  info->x = x_series[i];
+                  info->y = y_series[i];
+                  info->x_px = (int)x_px;
+                  info->y_px = (int)y_px;
                 }
             }
-          else if (str_equals_any(kind, 6, "heatmap", "marginalheatmap", "contour", "imshow", "contourf", "quiver"))
+          else
             {
               static char output[50];
               double num;
@@ -509,11 +741,6 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
 
               x_step = (x_end - x_0) / x_length;
               y_step = (y_end - y_0) / y_length;
-              if (strcmp(kind, "quiver") == 0)
-                {
-                  grm_args_first_value(*current_series, "u", "D", &u_series, &u_length);
-                  grm_args_first_value(*current_series, "v", "D", &v_series, &v_length);
-                }
 
               mindiff = 0;
               x_series_idx = (mouse_x - x_0) / x_step;
@@ -525,8 +752,11 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                 }
               if (strcmp(kind, "quiver") == 0)
                 {
+                  grm_args_first_value(*current_series, "u", "D", &u_series, &u_length);
+                  grm_args_first_value(*current_series, "v", "D", &v_series, &v_length);
                   info->xlabel = "u";
                   info->ylabel = "v";
+                  info->label = "";
                   info->x = u_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
                   info->y = v_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
                 }
@@ -534,32 +764,36 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                 {
                   info->x = x_series[(int)x_series_idx];
                   info->y = y_series[(int)y_series_idx];
-                }
-              info->x_px = mouse_x;
-              info->y_px = mouse_y;
-
-              if (strcmp(kind, "quiver") == 0)
-                {
-                  info->label = "";
-                }
-              else
-                {
                   num = z_series[(int)y_series_idx * x_length + (int)x_series_idx];
                   snprintf(output, 50, "%f", num);
                   info->label = output;
                 }
+              info->x_px = mouse_x;
+              info->y_px = mouse_y;
             }
+        }
+      tooltip_callback(mouse_x, mouse_y, info);
+      if (current_series[1] != NULL)
+        {
+          info = malloc(sizeof(grm_tooltip_info_t));
+          info->x_px = -1;
+          info->y_px = -1;
+          info->x = 0;
+          info->y = 0;
+          if (!grm_args_values(subplot_args, "xlabel", "s", &info->xlabel))
+            {
+              info->xlabel = "x";
+            }
+          if (!grm_args_values(subplot_args, "ylabel", "s", &info->ylabel))
+            {
+              info->ylabel = "y";
+            }
+          info->label = "";
+          return_error_if(info == NULL, ERROR_MALLOC);
         }
       ++series_i;
       ++current_series;
     }
-  if (mindiff == DBL_MAX)
-    {
-      info->x_px = -1;
-      info->y_px = -1;
-      info->x = 0;
-      info->y = 0;
-      info->label = "";
-    }
-  return info;
+
+  return ERROR_NONE;
 }
