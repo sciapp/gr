@@ -3158,6 +3158,13 @@ void gks_sample_locator(int wkid, int *errind, double *x, double *y, int *button
       switch (ws->wtype)
         {
 #ifndef EMSCRIPTEN
+        case 400:
+          gks_quartz_plugin(SAMPLE_LOCATOR, 1, 1, 1, i_arr, 1, f_arr_1, 1, f_arr_2, 0, c_arr, &ws->ptr);
+          *x = f_arr_1[0];
+          *y = f_arr_2[0];
+          *buttons = i_arr[0];
+          *errind = GKS_K_NO_ERROR;
+          break;
         case 411:
         case 412:
         case 413:
