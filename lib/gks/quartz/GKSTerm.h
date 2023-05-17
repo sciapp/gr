@@ -28,4 +28,5 @@
 - (int)GKSQuartzIsAlive:(int)win;
 - (void)GKSQuartzCloseWindow:(int)win;
 - (gks_ws_state_t)GKSQuartzGetState:(int)win;
+- (gks_locator_t)GKSQuartzGetLocator:(int)win;
 @end

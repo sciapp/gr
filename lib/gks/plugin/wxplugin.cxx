@@ -423,6 +423,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 3: /* polygon */
+        case 9: /* border polygon */
           points = new wxPoint[marker[mtype][pc + 1]];
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {

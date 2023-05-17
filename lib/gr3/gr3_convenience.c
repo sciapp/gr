@@ -669,13 +669,17 @@ GR3API void gr3_drawheightmap(const float *heightmap, int num_columns, int num_r
   float ups[3] = {0, 1, 0};
   float colors[3] = {1, 1, 1};
   float pos[3];
+  int alpha_mode;
   GR3_DO_INIT;
 
   pos[0] = positions[0] - scales[0] / 2;
   pos[1] = positions[1] - scales[1] / 2;
   pos[2] = positions[2] - scales[2] / 2;
   mesh = gr3_createheightmapmesh((float *)heightmap, num_columns, num_rows);
+  gr3_getalphamode(&alpha_mode);
+  gr3_setalphamode(GR3_TRANSPARENCY_OPAQUE);
   gr3_drawmesh(mesh, 1, pos, directions, ups, colors, scales);
+  gr3_setalphamode(alpha_mode);
   gr3_deletemesh(mesh);
 }
 
@@ -1420,12 +1424,16 @@ int gr3_drawtubemesh(int n, float *points, float *colors, float *radii, int num_
 {
   int result;
   int mesh;
+  int alpha_mode;
   float position[] = {0, 0, 0};
   float direction[] = {0, 0, 1};
   float up[] = {0, 1, 0};
   float color[] = {1, 1, 1};
+  gr3_getalphamode(&alpha_mode);
   result = gr3_createtubemesh(&mesh, n, points, colors, radii, num_steps, num_segments);
+  gr3_setalphamode(GR3_TRANSPARENCY_OPAQUE);
   gr3_drawmesh(mesh, 1, position, direction, up, color, color);
+  gr3_setalphamode(alpha_mode);
   gr3_deletemesh(mesh);
   return result;
 }

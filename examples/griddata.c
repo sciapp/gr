@@ -40,4 +40,5 @@ int main(void)
   gr_axes(0.25, 0.25, -2, -2, 2, 2, 0.01);
 
   gr_updatews();
+  getchar();
 }

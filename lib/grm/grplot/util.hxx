@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <fstream>
+#include <vector>
 
 #ifdef _WIN64
 #include <stdlib.h>
@@ -195,6 +196,30 @@ bool
 void
 #endif
 setGrdir(bool force = false);
+
+template <typename... Args> std::string string_format(const std::string &format, Args... args)
+{
+  // Modified version of <https://stackoverflow.com/a/26221725/5958465>
+  const int needed_bytes = std::snprintf(nullptr, 0, format.c_str(), args...) + 1; // Extra space for '\0'
+  if (needed_bytes <= 0)
+    {
+#ifdef NO_EXCEPTIONS
+      return "";
+#else
+      throw std::runtime_error("Error during formatting.");
+#endif
+    }
+  std::vector<char> buf(needed_bytes);
+  std::snprintf(buf.data(), needed_bytes, format.c_str(), args...);
+  return std::string(buf.data());
+}
+
+// `overloaded` utility taken from <https://en.cppreference.com/w/cpp/utility/variant/visit>
+template <class... Ts> struct overloaded : Ts...
+{
+  using Ts::operator()...;
+};
+template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 } // namespace util
 
 #endif /* ifndef UTIL_HXX_INCLUDED */

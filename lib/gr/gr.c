@@ -4143,6 +4143,15 @@ void gr_closeseg(void)
   gks_close_seg();
 }
 
+void gr_samplelocator(double *x, double *y, int *state)
+{
+  int wkid = 1, errind;
+
+  check_autoinit;
+
+  gks_sample_locator(wkid, &errind, x, y, state);
+}
+
 void gr_emergencyclosegks(void)
 {
   gks_emergency_close();
