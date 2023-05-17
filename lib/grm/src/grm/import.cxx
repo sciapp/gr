@@ -815,6 +815,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       for (col = 0; col < cols; col++)
         {
           x[col] = filedata[depth][col][0];
+          if (!labels.empty())
+            {
+              labels_c.push_back(labels[col].c_str());
+            }
         }
 
       grm_args_push(args, "x", "nD", cols, x.data());
