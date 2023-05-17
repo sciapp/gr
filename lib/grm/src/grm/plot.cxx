@@ -5034,28 +5034,15 @@ err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_len
   grm_args_t *error_container;
   arg_t *arg_ptr;
   err_t error;
-  char *orientation;
-  int is_horizontal;
 
-  double *absolute_upwards, *absolute_downwards, *relative_upwards, *relative_downwards;
+  double *absolute_upwards = nullptr, *absolute_downwards = nullptr, *relative_upwards = nullptr,
+         *relative_downwards = nullptr;
   double absolute_upwards_flt, relative_upwards_flt, absolute_downwards_flt, relative_downwards_flt;
   unsigned int upwards_length, downwards_length, i;
-  int scale_options, color_upwardscap, color_downwardscap, color_errorbar;
+  int color_upwardscap, color_downwardscap, color_errorbar;
 
-  double marker_size, xmin, xmax, ymin, ymax, tick, a, b, e_upwards, e_downwards, x_value;
-  double line_x[2], line_y[2];
-  absolute_upwards = absolute_downwards = relative_upwards = relative_downwards = nullptr;
-  absolute_upwards_flt = absolute_downwards_flt = relative_upwards_flt = relative_downwards_flt = FLT_MAX;
-
-  auto group = global_render->createGroup("draw_errorbars");
-  if (currentDomElement)
-    {
-      currentDomElement->append(group);
-    }
-  else
-    {
-      global_root->lastChildElement()->append(group);
-    }
+  std::shared_ptr<GRM::Element> group =
+      (currentDomElement) ? currentDomElement->lastChildElement() : global_root->lastChildElement()->lastChildElement();
 
   arg_ptr = args_at(series_args, "error");
   if (!arg_ptr)
@@ -5063,6 +5050,23 @@ err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_len
       return ERROR_NONE;
     }
   error_container = nullptr;
+
+  auto subGroup = global_render->createElement("errorbars");
+  group->append(subGroup);
+
+  int id = static_cast<int>(global_root->getAttribute("id"));
+  std::string str = std::to_string(id);
+  global_root->setAttribute("id", ++id);
+  auto context = global_render->getContext();
+
+  std::vector<double> x_vec(x, x + x_length);
+  std::vector<double> y_vec(y, y + x_length);
+
+  (*context)["x" + str] = x_vec;
+  subGroup->setAttribute("x", "x" + str);
+  (*context)["y" + str] = y_vec;
+  subGroup->setAttribute("y", "y" + str);
+
   if (strcmp(arg_ptr->value_format, "a") == 0 || strcmp(arg_ptr->value_format, "nA") == 0)
     {
       return_error_if(!grm_args_values(series_args, "error", "a", &error_container), ERROR_INTERNAL);
@@ -5090,106 +5094,44 @@ err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_len
     {
       return ERROR_PLOT_MISSING_DATA;
     }
-  grm_args_values(series_args, "orientation", "s", &orientation);
-  is_horizontal = strcmp(orientation, "horizontal") == 0;
+  if (absolute_upwards != nullptr)
+    {
+      std::vector<double> absolute_upwards_vec(absolute_upwards, absolute_upwards + upwards_length);
+      (*context)["absolute_upwards" + str] = absolute_upwards_vec;
+      subGroup->setAttribute("absolute_upwards", "absolute_upwards" + str);
+    }
+  if (relative_upwards != nullptr)
+    {
+      std::vector<double> relative_upwards_vec(relative_upwards, relative_upwards + upwards_length);
+      (*context)["relative_upwards" + str] = relative_upwards_vec;
+      subGroup->setAttribute("relative_upwards", "relative_upwards" + str);
+    }
+  if (absolute_downwards != nullptr)
+    {
+      std::vector<double> absolute_downwards_vec(absolute_downwards, absolute_downwards + downwards_length);
+      (*context)["absolute_downwards" + str] = absolute_downwards_vec;
+      subGroup->setAttribute("absolute_downwards", "absolute_downwards" + str);
+    }
+  if (relative_downwards != nullptr)
+    {
+      std::vector<double> relative_downwards_vec(relative_downwards, relative_downwards + downwards_length);
+      (*context)["relative_downwards" + str] = relative_downwards_vec;
+      subGroup->setAttribute("relative_downwards", "relative_downwards" + str);
+    }
+  if (absolute_downwards_flt != FLT_MAX) subGroup->setAttribute("absolute_downwards_flt", absolute_downwards_flt);
+  if (relative_downwards_flt != FLT_MAX) subGroup->setAttribute("relative_downwards_flt", relative_downwards_flt);
+  if (absolute_upwards_flt != FLT_MAX) subGroup->setAttribute("absolute_upwards_flt", absolute_upwards_flt);
+  if (relative_upwards_flt != FLT_MAX) subGroup->setAttribute("relative_upwards_flt", relative_upwards_flt);
 
-  /* Getting GRM options and sizes. See gr_verrorbars. */
-  gr_savestate();
-  gr_inqmarkersize(&marker_size);
-  gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
-  gr_inqscale(&scale_options);
-  tick = marker_size * 0.0075 * (xmax - xmin);
-  a = (xmax - xmin) / log10(xmax / xmin);
-  b = xmin - a * log10(xmin);
-
-  gr_inqlinecolorind(&color_errorbar);
-  color_upwardscap = color_downwardscap = color_errorbar;
   if (error_container != nullptr)
     {
-      grm_args_values(error_container, "upwardscap_color", "i", &color_upwardscap);
-      grm_args_values(error_container, "downwardscap_color", "i", &color_downwardscap);
-      grm_args_values(error_container, "errorbar_color", "i", &color_errorbar);
+      if (grm_args_values(error_container, "upwardscap_color", "i", &color_upwardscap))
+        subGroup->setAttribute("upwardscap_color", color_upwardscap);
+      if (grm_args_values(error_container, "downwardscap_color", "i", &color_downwardscap))
+        subGroup->setAttribute("downwardscap_color", color_downwardscap);
+      if (grm_args_values(error_container, "errorbar_color", "i", &color_errorbar))
+        subGroup->setAttribute("errorbar_color", color_errorbar);
     }
-
-  /* Actual drawing of bars */
-  e_upwards = e_downwards = FLT_MAX;
-  for (i = 0; i < x_length; i++)
-    {
-      if (absolute_upwards != nullptr || relative_upwards != nullptr || absolute_upwards_flt != FLT_MAX ||
-          relative_upwards_flt != FLT_MAX)
-        {
-          e_upwards = y[i] * (1. + (relative_upwards != nullptr
-                                        ? relative_upwards[i]
-                                        : (relative_upwards_flt != FLT_MAX ? relative_upwards_flt : 0))) +
-                      (absolute_upwards != nullptr ? absolute_upwards[i]
-                                                   : (absolute_upwards_flt != FLT_MAX ? absolute_upwards_flt : 0.));
-        }
-
-      if (absolute_downwards != nullptr || relative_downwards != nullptr || absolute_downwards_flt != FLT_MAX ||
-          relative_downwards_flt != FLT_MAX)
-        {
-          e_downwards =
-              y[i] * (1. - (relative_downwards != nullptr
-                                ? relative_downwards[i]
-                                : (relative_downwards_flt != FLT_MAX ? relative_downwards_flt : 0))) -
-              (absolute_downwards != nullptr ? absolute_downwards[i]
-                                             : (absolute_downwards_flt != FLT_MAX ? absolute_downwards_flt : 0.));
-        }
-
-      /* See gr_verrorbars for reference */
-      x_value = x[i];
-      line_x[0] = X_LOG(X_LIN(x_value - tick, scale_options, xmin, xmax, a, b), scale_options, xmin, xmax, a, b);
-      line_x[1] = X_LOG(X_LIN(x_value + tick, scale_options, xmin, xmax, a, b), scale_options, xmin, xmax, a, b);
-      if (e_upwards != FLT_MAX && color_upwardscap >= 0)
-        {
-          line_y[0] = e_upwards;
-          line_y[1] = e_upwards;
-          if (is_horizontal)
-            {
-              group->append(
-                  global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, color_upwardscap));
-            }
-          else
-            {
-              group->append(
-                  global_render->createPolyline(line_y[0], line_y[1], line_x[0], line_x[1], 0, 0.0, color_upwardscap));
-            }
-        }
-
-      if (e_downwards != FLT_MAX && color_downwardscap >= 0)
-        {
-          line_y[0] = e_downwards;
-          line_y[1] = e_downwards;
-          if (is_horizontal)
-            {
-              group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0,
-                                                          color_downwardscap));
-            }
-          else
-            {
-              group->append(global_render->createPolyline(line_y[0], line_y[1], line_x[0], line_x[1], 0, 0.0,
-                                                          color_downwardscap));
-            }
-        }
-
-      if (color_errorbar >= 0)
-        {
-          line_x[0] = x_value;
-          line_x[1] = x_value;
-          line_y[0] = e_upwards != FLT_MAX ? e_upwards : y[i];
-          line_y[1] = e_downwards != FLT_MAX ? e_downwards : y[i];
-          if (is_horizontal)
-            {
-              group->append(
-                  global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, color_errorbar));
-            }
-          else
-            {
-              global_render->createPolyline(line_y[0], line_y[1], line_x[0], line_x[1], 0, 0.0, color_errorbar);
-            }
-        }
-    }
-  gr_restorestate();
 
   return ERROR_NONE;
 }

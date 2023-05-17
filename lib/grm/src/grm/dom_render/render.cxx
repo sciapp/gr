@@ -34,6 +34,18 @@
 #include "grm/layout.hxx"
 #include "grm/plot_int.h"
 
+/* ------------------------- re-implementation of x_lin/x_log ------------------------------------------------------- */
+
+#define X_FLIP_IF(x, scale_options, xmin, xmax) \
+  (GR_OPTION_FLIP_X & scale_options ? xmin + xmax : 0) + (GR_OPTION_FLIP_X & scale_options ? -1 : 1) * x
+
+#define X_LIN(x, scale_options, xmin, xmax, a, b) \
+  X_FLIP_IF((GR_OPTION_X_LOG & scale_options ? (x > 0 ? a * log10(x) + b : -FLT_MAX) : x), scale_options, xmin, xmax)
+
+#define X_LOG(x, scale_options, xmin, xmax, a, b)                                                             \
+  (GR_OPTION_X_LOG & scale_options ? (pow(10.0, (double)((X_FLIP_IF(x, scale_options, xmin, xmax) - b) / a))) \
+                                   : X_FLIP_IF(x, scale_options, xmin, xmax))
+
 std::shared_ptr<GRM::Element> global_root;
 std::shared_ptr<GRM::Render> global_render;
 std::priority_queue<std::shared_ptr<GRM::Element>, std::vector<std::shared_ptr<GRM::Element>>, CompareZIndex> z_queue;
@@ -44,7 +56,7 @@ ManageGRContextIds grContextIDManager;
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {
     "group",    "layout_grid", "layout_gridelement", "polar_axes", "legend", "figure", "hexbin",
-    "colorbar", "plot",        "coordinate_system",  "series",     "axes",   "label",
+    "colorbar", "plot",        "coordinate_system",  "series",     "axes",   "label",  "errorbars",
 };
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
@@ -4637,6 +4649,192 @@ static void drawImage(const std::shared_ptr<GRM::Element> &element, const std::s
   gr_drawimage(xmin, xmax, ymax, ymin, width, height, (int *)&(GRM::get<std::vector<int>>((*context)[data])[0]), model);
 }
 
+static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  std::string orientation, kind;
+  int is_horizontal;
+  std::vector<double> absolute_upwards_vec, absolute_downwards_vec, relative_upwards_vec, relative_downwards_vec;
+  std::string absolute_upwards, absolute_downwards, relative_upwards, relative_downwards;
+  double absolute_upwards_flt, relative_upwards_flt, absolute_downwards_flt, relative_downwards_flt;
+  unsigned int upwards_length, downwards_length, i;
+  int scale_options, color_upwardscap, color_downwardscap, color_errorbar;
+  double marker_size, xmin, xmax, ymin, ymax, tick, a, b, e_upwards, e_downwards, x_value;
+  double line_x[2], line_y[2];
+  std::vector<double> x_vec, y_vec;
+  unsigned int x_length;
+  std::string x, y;
+  std::shared_ptr<GRM::Element> series;
+
+  absolute_upwards_flt = absolute_downwards_flt = relative_upwards_flt = relative_downwards_flt = FLT_MAX;
+  if (static_cast<std::string>(element->parentElement()->parentElement()->localName()) == "plot")
+    {
+      series = element->parentElement();
+    }
+  else
+    {
+      series = element->parentElement()->parentElement(); // marginalheatmap
+    }
+
+  if (!element->hasAttribute("x")) throw NotFoundError("Errorbars are missing required attribute x-data.\n");
+  x = static_cast<std::string>(element->getAttribute("x"));
+  if (!element->hasAttribute("y")) throw NotFoundError("Errorbars are missing required attribute y-data.\n");
+  y = static_cast<std::string>(element->getAttribute("y"));
+
+  x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  x_length = x_vec.size();
+  kind = static_cast<std::string>(series->parentElement()->getAttribute("kind"));
+  orientation = static_cast<std::string>(series->getAttribute("orientation"));
+
+  if (!element->hasAttribute("absolute_downwards") && !element->hasAttribute("relative_downwards"))
+    throw NotFoundError("Errorbars are missing required attribute downwards.\n");
+  if (!element->hasAttribute("absolute_upwards") && !element->hasAttribute("relative_upwards"))
+    throw NotFoundError("Errorbars are missing required attribute upwards.\n");
+  if (element->hasAttribute("absolute_downwards"))
+    {
+      absolute_downwards = static_cast<std::string>(element->getAttribute("absolute_downwards"));
+      absolute_downwards_vec = GRM::get<std::vector<double>>((*context)[absolute_downwards]);
+      downwards_length = absolute_downwards_vec.size();
+    }
+  if (element->hasAttribute("relative_downwards"))
+    {
+      relative_downwards = static_cast<std::string>(element->getAttribute("relative_downwards"));
+      relative_downwards_vec = GRM::get<std::vector<double>>((*context)[relative_downwards]);
+      downwards_length = absolute_downwards_vec.size();
+    }
+  if (element->hasAttribute("absolute_upwards"))
+    {
+      absolute_upwards = static_cast<std::string>(element->getAttribute("absolute_upwards"));
+      absolute_upwards_vec = GRM::get<std::vector<double>>((*context)[absolute_upwards]);
+      upwards_length = absolute_upwards_vec.size();
+    }
+  if (element->hasAttribute("relative_upwards"))
+    {
+      relative_upwards = static_cast<std::string>(element->getAttribute("relative_upwards"));
+      relative_upwards_vec = GRM::get<std::vector<double>>((*context)[relative_upwards]);
+      upwards_length = absolute_upwards_vec.size();
+    }
+  if (!element->hasAttribute("absolute_downwards_flt"))
+    throw NotFoundError("Errorbars are missing required attribute absolute_downwards_flt.\n");
+  absolute_downwards_flt = static_cast<double>(element->getAttribute("absolute_downwards_flt"));
+  if (!element->hasAttribute("absolute_upwards_flt"))
+    throw NotFoundError("Errorbars are missing required attribute absolute_upwards_flt.\n");
+  absolute_upwards_flt = static_cast<double>(element->getAttribute("absolute_upwards_flt"));
+  if (!element->hasAttribute("relative_downwards_flt"))
+    throw NotFoundError("Errorbars are missing required attribute relative_downwards_flt.\n");
+  relative_downwards_flt = static_cast<double>(element->getAttribute("relative_downwards_flt"));
+  if (!element->hasAttribute("relative_upwards_flt"))
+    throw NotFoundError("Errorbars are missing required attribute relative_upwards_flt.\n");
+  relative_upwards_flt = static_cast<double>(element->getAttribute("relative_upwards_flt"));
+
+  is_horizontal = orientation == "horizontal";
+
+  /* Getting GRM options and sizes. See gr_verrorbars. */
+  gr_savestate();
+  gr_inqmarkersize(&marker_size);
+  gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
+  gr_inqscale(&scale_options);
+  tick = marker_size * 0.0075 * (xmax - xmin);
+  a = (xmax - xmin) / log10(xmax / xmin);
+  b = xmin - a * log10(xmin);
+
+  gr_inqlinecolorind(&color_errorbar);
+  color_upwardscap = color_downwardscap = color_errorbar;
+  if (element->hasAttribute("upwardscap_color"))
+    color_upwardscap = static_cast<int>(element->getAttribute("upwardscap_color"));
+  if (element->hasAttribute("downwardscap_color"))
+    color_downwardscap = static_cast<int>(element->getAttribute("downwardscap_color"));
+  if (element->hasAttribute("errorbar_color"))
+    color_errorbar = static_cast<int>(element->getAttribute("errorbar_color"));
+
+  //   clear old lines
+  for (auto elem : element->children())
+    {
+      if (elem->localName() == "polyline") elem->remove();
+    }
+
+  /* Actual drawing of bars */
+  e_upwards = e_downwards = FLT_MAX;
+  for (i = 0; i < x_length; i++)
+    {
+      if (!absolute_upwards.empty() || !relative_upwards.empty() || absolute_upwards_flt != FLT_MAX ||
+          relative_upwards_flt != FLT_MAX)
+        {
+          e_upwards = y_vec[i] * (1. + (!relative_upwards.empty()
+                                            ? relative_upwards_vec[i]
+                                            : (relative_upwards_flt != FLT_MAX ? relative_upwards_flt : 0))) +
+                      (!absolute_upwards.empty() ? absolute_upwards_vec[i]
+                                                 : (absolute_upwards_flt != FLT_MAX ? absolute_upwards_flt : 0.));
+        }
+
+      if (!absolute_downwards.empty() || !relative_downwards.empty() || absolute_downwards_flt != FLT_MAX ||
+          relative_downwards_flt != FLT_MAX)
+        {
+          e_downwards =
+              y_vec[i] * (1. - (!relative_downwards.empty()
+                                    ? relative_downwards_vec[i]
+                                    : (relative_downwards_flt != FLT_MAX ? relative_downwards_flt : 0))) -
+              (!absolute_downwards.empty() ? absolute_downwards_vec[i]
+                                           : (absolute_downwards_flt != FLT_MAX ? absolute_downwards_flt : 0.));
+        }
+
+      /* See gr_verrorbars for reference */
+      x_value = x_vec[i];
+      line_x[0] = X_LOG(X_LIN(x_value - tick, scale_options, xmin, xmax, a, b), scale_options, xmin, xmax, a, b);
+      line_x[1] = X_LOG(X_LIN(x_value + tick, scale_options, xmin, xmax, a, b), scale_options, xmin, xmax, a, b);
+      if (e_upwards != FLT_MAX && color_upwardscap >= 0)
+        {
+          line_y[0] = e_upwards;
+          line_y[1] = e_upwards;
+          if (is_horizontal)
+            {
+              element->append(
+                  global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, color_upwardscap));
+            }
+          else
+            {
+              element->append(
+                  global_render->createPolyline(line_y[0], line_y[1], line_x[0], line_x[1], 0, 0.0, color_upwardscap));
+            }
+        }
+
+      if (e_downwards != FLT_MAX && color_downwardscap >= 0)
+        {
+          line_y[0] = e_downwards;
+          line_y[1] = e_downwards;
+          if (is_horizontal)
+            {
+              element->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0,
+                                                            color_downwardscap));
+            }
+          else
+            {
+              element->append(global_render->createPolyline(line_y[0], line_y[1], line_x[0], line_x[1], 0, 0.0,
+                                                            color_downwardscap));
+            }
+        }
+
+      if (color_errorbar >= 0)
+        {
+          line_x[0] = x_value;
+          line_x[1] = x_value;
+          line_y[0] = e_upwards != FLT_MAX ? e_upwards : y_vec[i];
+          line_y[1] = e_downwards != FLT_MAX ? e_downwards : y_vec[i];
+          if (is_horizontal)
+            {
+              element->append(
+                  global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, color_errorbar));
+            }
+          else
+            {
+              element->append(
+                  global_render->createPolyline(line_y[0], line_y[1], line_x[0], line_x[1], 0, 0.0, color_errorbar));
+            }
+        }
+    }
+  gr_restorestate();
+}
+
 static void isosurface(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   std::vector<double> c_vec, temp_colors;
@@ -7796,6 +7994,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("axes3d"), axes3d},
           {std::string("cellarray"), cellArray},
           {std::string("colorbar"), colorbar},
+          {std::string("errorbars"), errorbars},
           {std::string("legend"), legend},
           {std::string("polar_axes"), drawPolarAxes},
           {std::string("drawarc"), drawArc},
