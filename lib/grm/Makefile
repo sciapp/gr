@@ -50,7 +50,7 @@ LIBXML2_CONFIG = false
     LIBXML2INC = `$(LIBXML2_CONFIG) --cflags 2>/dev/null`
    LIBXML2LIBS = `$(LIBXML2_CONFIG) --libs 2>/dev/null`
 
-     DEFINES = -DBUILDING_GR $(EXPATDEFS) $(LIBXML2DEFS)
+     DEFINES = -DBUILDING_GR -DGRDIR=\"$(GRDIR)\" $(EXPATDEFS) $(LIBXML2DEFS)
     INCLUDES = -I./include \
                -I./src \
                -I../gks \

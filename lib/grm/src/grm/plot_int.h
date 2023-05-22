@@ -26,7 +26,7 @@ extern "C" {
 
 /* ######################### internal interface ##################################################################### */
 
-/* ========================= global varibales ======================================================================= */
+/* ========================= global variables ======================================================================= */
 
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
 
@@ -261,7 +261,20 @@ int set_next_color(const grm_args_t *args, const char *key, gr_color_type_t colo
 void set_text_color_for_background(double r, double g, double b, const std::shared_ptr<GR::Element> &element);
 void draw_xticklabel(double x1, double x2, const char *label, double available_width,
                      const std::shared_ptr<GR::Element> &element);
-
-
 #endif
+
+/* ------------------------- xml ------------------------------------------------------------------------------------ */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifndef NO_LIBXML2
+err_t validate_graphics_tree_xml(void);
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* ifndef GRM_PLOT_INT_H_INCLUDED */
