@@ -25,8 +25,10 @@ extern "C" {
 #include "gr3.h"
 #include "logging_int.h"
 
-// TODO: Use libxml2 if available!
-#ifndef NO_EXPAT
+#ifndef NO_LIBXML2
+#include <libxml/globals.h>
+#include <libxml/xmlreader.h>
+#elif !defined(NO_EXPAT)
 #include <expat.h>
 #endif
 }
@@ -45,6 +47,11 @@ extern "C" {
 
 
 /* ######################### private interface ###################################################################### */
+
+/* ========================= constants ============================================================================== */
+
+static const std::string SCHEMA_REL_FILEPATH = "share/xml/GRM/grm_graphics_tree_schema.xsd";
+static const std::string DISABLE_XML_VALIDATION_ENV_KEY = "GRM_SKIP_VALIDATION";
 
 /* ========================= datatypes ============================================================================== */
 
@@ -4778,6 +4785,70 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
   return error;
 }
 
+
+/* ------------------------- xml ------------------------------------------------------------------------------------ */
+
+#ifndef NO_LIBXML2
+static void schema_parse_error_handler(void *has_schema_errors, xmlErrorPtr error)
+{
+  logger((stderr, "XML validation error at line %d, column %d: %s\n", error->line, error->int2, error->message));
+  *((bool *)has_schema_errors) = true;
+}
+
+err_t validate_graphics_tree(void)
+{
+  char *gr_dir = get_gr_dir();
+  std::string schema_filepath{std::string(gr_dir) + "/" + SCHEMA_REL_FILEPATH};
+  free(reinterpret_cast<void *>(gr_dir));
+  xmlSchemaParserCtxtPtr schema_parser_ctxt = nullptr;
+  xmlSchemaPtr schema = nullptr;
+  bool has_schema_errors = false;
+  xmlSchemaValidCtxtPtr valid_ctxt = nullptr;
+  xmlDocPtr doc = nullptr;
+  err_t error = ERROR_NONE;
+
+  xmlInitParser();
+
+  if (!file_exists(schema_filepath.c_str()))
+    {
+      return ERROR_PARSE_XML_NO_SCHEMA_FILE;
+    }
+  schema_parser_ctxt = xmlSchemaNewParserCtxt(schema_filepath.c_str());
+  cleanup_and_set_error_if(schema_parser_ctxt == nullptr, ERROR_PARSE_XML_INVALID_SCHEMA);
+  schema = xmlSchemaParse(schema_parser_ctxt);
+  cleanup_and_set_error_if(schema == nullptr, ERROR_PARSE_XML_INVALID_SCHEMA);
+  xmlSchemaFreeParserCtxt(schema_parser_ctxt);
+  schema_parser_ctxt = nullptr;
+  valid_ctxt = xmlSchemaNewValidCtxt(schema);
+  doc = xmlReadDoc(BAD_CAST toXML(global_root).c_str(), nullptr, nullptr, 0);
+  cleanup_and_set_error_if(doc == nullptr, ERROR_PARSE_XML_PARSING);
+  xmlSchemaSetValidStructuredErrors(valid_ctxt, schema_parse_error_handler, &has_schema_errors);
+  xmlSchemaValidateDoc(valid_ctxt, doc);
+  cleanup_and_set_error_if(has_schema_errors, ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION);
+
+cleanup:
+  if (doc != nullptr)
+    {
+      xmlFreeDoc(doc);
+    }
+  if (valid_ctxt != nullptr)
+    {
+      xmlSchemaFreeValidCtxt(valid_ctxt);
+    }
+  if (schema != nullptr)
+    {
+      xmlSchemaFree(schema);
+    }
+  if (schema_parser_ctxt != nullptr)
+    {
+      xmlSchemaFreeParserCtxt(schema_parser_ctxt);
+    }
+  xmlCleanupParser();
+
+  return error;
+}
+#endif
+
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- args set ------------------------------------------------------------------------------- */
@@ -4911,7 +4982,122 @@ char *grm_dump_graphics_tree_str(void)
   return graphics_tree_cstr;
 }
 
-#ifndef NO_EXPAT
+#ifndef NO_LIBXML2
+int grm_load_graphics_tree(FILE *file)
+{
+  char *gr_dir = get_gr_dir();
+  std::string schema_filepath{std::string(gr_dir) + "/" + SCHEMA_REL_FILEPATH};
+  free(reinterpret_cast<void *>(gr_dir));
+  bool xml_validation_enabled = false, use_xml_schema = false;
+  xmlSchemaParserCtxtPtr schema_parser_ctxt = nullptr;
+  xmlSchemaPtr schema = nullptr;
+  bool has_schema_errors = false;
+  int ret = -1;
+  xmlSchemaValidCtxtPtr valid_ctxt = nullptr;
+  xmlTextReaderPtr reader = nullptr;
+  std::shared_ptr<GRM::Element> insertion_parent, current_gr_element;
+  err_t error = ERROR_NONE;
+
+  error = plot_init_static_variables();
+  cleanup_if_error;
+
+  xmlInitParser();
+  xml_validation_enabled = (getenv(DISABLE_XML_VALIDATION_ENV_KEY.c_str()) == NULL ||
+                            !str_equals_any(getenv(DISABLE_XML_VALIDATION_ENV_KEY.c_str()), 7, "1", "on", "ON", "true",
+                                            "TRUE", "yes", "YES"));
+  use_xml_schema = xml_validation_enabled && file_exists(schema_filepath.c_str());
+  if (use_xml_schema)
+    {
+      schema_parser_ctxt = xmlSchemaNewParserCtxt(schema_filepath.c_str());
+      cleanup_and_set_error_if(schema_parser_ctxt == nullptr, ERROR_PARSE_XML_INVALID_SCHEMA);
+      schema = xmlSchemaParse(schema_parser_ctxt);
+      cleanup_and_set_error_if(schema == nullptr, ERROR_PARSE_XML_INVALID_SCHEMA);
+      xmlSchemaFreeParserCtxt(schema_parser_ctxt);
+      schema_parser_ctxt = nullptr;
+      valid_ctxt = xmlSchemaNewValidCtxt(schema);
+    }
+  reader = xmlReaderForFd(fileno(file), nullptr, nullptr, 0);
+  cleanup_and_set_error_if(reader == nullptr, ERROR_PARSE_XML_PARSING);
+
+  if (use_xml_schema)
+    {
+      xmlTextReaderSchemaValidateCtxt(reader, valid_ctxt, 0);
+      xmlSchemaSetValidStructuredErrors(valid_ctxt, schema_parse_error_handler, &has_schema_errors);
+    }
+
+  ret = xmlTextReaderRead(reader);
+  cleanup_and_set_error_if(has_schema_errors, ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION);
+  while (ret == 1)
+    {
+      xmlNodePtr node = xmlTextReaderCurrentNode(reader);
+      int node_type = xmlTextReaderNodeType(reader);
+      const xmlChar *node_name = xmlTextReaderConstName(reader);
+      if (node_type == XML_READER_TYPE_ELEMENT)
+        {
+          if (xmlStrEqual(node_name, BAD_CAST "root"))
+            {
+              global_root = global_render->createElement("root");
+              global_render->replaceChildren(global_root);
+              insertion_parent = nullptr;
+              current_gr_element = global_root;
+            }
+          else
+            {
+              current_gr_element = global_render->createElement(reinterpret_cast<const char *>(node_name));
+            }
+          for (xmlAttrPtr attr = node->properties; attr != nullptr; attr = attr->next)
+            {
+              const xmlChar *attr_name = attr->name;
+              xmlChar *attr_value = xmlNodeListGetString(node->doc, attr->children, 1);
+
+              current_gr_element->setAttribute(reinterpret_cast<const char *>(attr_name),
+                                               reinterpret_cast<const char *>(attr_value));
+              xmlFree(reinterpret_cast<void *>(attr_value));
+            }
+          if (insertion_parent != nullptr)
+            {
+              insertion_parent->appendChild(current_gr_element);
+            }
+          insertion_parent = current_gr_element;
+        }
+      else if (node_type == XML_READER_TYPE_END_ELEMENT)
+        {
+          insertion_parent = insertion_parent->parentElement();
+        }
+      ret = xmlTextReaderRead(reader);
+      cleanup_and_set_error_if(has_schema_errors, ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION);
+    }
+
+  if (ret != 0)
+    {
+      xmlErrorPtr xml_error = xmlGetLastError();
+      logger((stderr, "%s: failed to parse in line %d, col %d. Error %d: %s\n", xml_error->file, xml_error->line,
+              xml_error->int2, xml_error->code, xml_error->message));
+      cleanup_and_set_error(ERROR_PARSE_XML_PARSING);
+    }
+
+cleanup:
+  if (reader != nullptr)
+    {
+      xmlFreeTextReader(reader);
+    }
+  if (valid_ctxt != nullptr)
+    {
+      xmlSchemaFreeValidCtxt(valid_ctxt);
+    }
+  if (schema != nullptr)
+    {
+      xmlSchemaFree(schema);
+    }
+  if (schema_parser_ctxt)
+    {
+      xmlSchemaFreeParserCtxt(schema_parser_ctxt);
+    }
+  xmlCleanupParser();
+
+  return error == ERROR_NONE;
+}
+#elif !defined(NO_EXPAT)
 static void xml_parse_start_handler(void *data, const XML_Char *tagName, const XML_Char **attr)
 {
   std::shared_ptr<GRM::Element> *insertionParent = (std::shared_ptr<GRM::Element> *)data;
@@ -4944,7 +5130,7 @@ static void xml_parse_end_handler(void *data, const char *tagName)
   *((std::shared_ptr<GRM::Element> *)data) = (*currentNode)->parentElement();
 }
 
-void grm_load_graphics_tree(FILE *file)
+int grm_load_graphics_tree(FILE *file)
 {
   std::string xmlstring;
   XML_Parser parser = XML_ParserCreate(nullptr);
@@ -4963,10 +5149,12 @@ void grm_load_graphics_tree(FILE *file)
   if (XML_Parse(parser, xmlstring.c_str(), xmlstring.length(), XML_TRUE) == XML_STATUS_ERROR)
     {
       logger((stderr, "Cannot parse XML-String\n"));
-      return;
+      return 0;
     }
 
   XML_ParserFree(parser);
+
+  return 1;
 }
 #endif
 
@@ -5251,6 +5439,31 @@ int grm_plot(const grm_args_t *args)
       grm_dump(global_root_args, stderr);
       grm_dump_graphics_tree(stderr);
     }
+#ifndef NO_LIBXML2
+  bool xml_validation_enabled = (getenv(DISABLE_XML_VALIDATION_ENV_KEY.c_str()) == NULL ||
+                                 !str_equals_any(getenv(DISABLE_XML_VALIDATION_ENV_KEY.c_str()), 7, "1", "on", "ON",
+                                                 "true", "TRUE", "yes", "YES"));
+  if (xml_validation_enabled)
+    {
+      err_t validation_error = validate_graphics_tree();
+      if (validation_error == ERROR_PARSE_XML_NO_SCHEMA_FILE)
+        {
+          if (logger_enabled())
+            {
+              logger((stderr, "No schema found, XML validation not possible!\n"));
+            }
+        }
+      else if (validation_error != ERROR_NONE)
+        {
+          if (logger_enabled())
+            {
+              logger((stderr, "XML validation failed with error \"%d\" (\"%s\")!\n", validation_error,
+                      error_names[validation_error]));
+            }
+          return 0;
+        }
+    }
+#endif
 #endif
 
   return 1;

@@ -131,6 +131,12 @@ char *str_filter(const char *str, const char *filter_chars);
 int is_homogenous_string_of_char(const char *str, char c);
 const char *private_name(const char *public_name);
 unsigned long next_or_equal_power2(unsigned long num);
+int file_exists(const char *file_path);
+char *get_gr_dir(void);
+#ifdef _WIN32
+char *convert_wstring_to_utf8(const wchar_t *wstring);
+wchar_t *convert_utf8_to_wstring(const char *utf8_bytes);
+#endif
 
 #ifdef __cplusplus
 }

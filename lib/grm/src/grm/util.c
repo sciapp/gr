@@ -1,5 +1,5 @@
 #ifdef __unix__
-#define _POSIX_C_SOURCE 200112L
+#define _POSIX_C_SOURCE 200809L
 #endif
 
 /* ######################### includes ############################################################################### */
@@ -10,6 +10,12 @@
 #include <limits.h>
 #include <math.h>
 #include <string.h>
+#if defined __unix__ || defined __APPLE__
+#include <sys/stat.h>
+#elif defined _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 
 #include "gkscore.h"
 
@@ -286,6 +292,119 @@ unsigned long next_or_equal_power2(unsigned long num)
   return power;
 #endif
 }
+
+int file_exists(const char *file_path)
+{
+#ifdef _WIN32
+  LPWSTR file_path_wide = convert_utf8_to_wstring(file_path);
+  if (file_path_wide == NULL)
+    {
+      return 0;
+    }
+  DWORD fileAttributes = GetFileAttributesW(file_path_wide);
+  free(file_path_wide);
+  return (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
+#else
+  struct stat file_stat;
+  return stat(file_path, &file_stat) == 0 && S_ISREG(file_stat.st_mode);
+#endif
+}
+
+char *get_gr_dir(void)
+{
+#ifdef _WIN32
+  DWORD env_variable_char_count;
+  LPWSTR env_variable_value_wide = NULL;
+  LPSTR env_variable_value_utf8 = NULL;
+  DWORD error;
+
+  env_variable_char_count = GetEnvironmentVariableW(L"GRDIR", NULL, 0) + 1;
+  error = GetLastError();
+  if (error == ERROR_ENVVAR_NOT_FOUND)
+    {
+      return _strdup(GRDIR);
+    }
+  else if (error != ERROR_SUCCESS)
+    {
+      goto error_cleanup;
+    }
+  env_variable_value_wide = malloc(sizeof(wchar_t) * env_variable_char_count);
+  error_cleanup_if(env_variable_value_wide == NULL);
+  GetEnvironmentVariableW(L"GRDIR", env_variable_value_wide, env_variable_char_count);
+  error_cleanup_if(GetLastError() != ERROR_SUCCESS);
+
+  env_variable_value_utf8 = convert_wstring_to_utf8(env_variable_value_wide);
+  error_cleanup_if(env_variable_value_utf8 == NULL);
+
+  free(env_variable_value_wide);
+
+  return env_variable_value_utf8;
+
+error_cleanup:
+  free(env_variable_value_wide);
+  free(env_variable_value_utf8);
+
+  return NULL;
+
+#else
+  const char *env_variable_value;
+  if ((env_variable_value = getenv("GRDIR")) != NULL)
+    {
+      return strdup(env_variable_value);
+    }
+  else
+    {
+      return strdup(GRDIR);
+    }
+#endif
+}
+
+#ifdef _WIN32
+char *convert_wstring_to_utf8(const wchar_t *wstring)
+{
+  int utf8_byte_count;
+  char *utf8_bytes;
+
+  if ((utf8_byte_count = WideCharToMultiByte(CP_UTF8, 0, wstring, -1, NULL, 0, NULL, NULL)) == 0)
+    {
+      return NULL;
+    }
+  if ((utf8_bytes = malloc(utf8_byte_count)) == NULL)
+    {
+      return NULL;
+    }
+
+  if (WideCharToMultiByte(CP_UTF8, 0, wstring, -1, utf8_bytes, utf8_byte_count, NULL, NULL) == 0)
+    {
+      free(utf8_bytes);
+      return NULL;
+    }
+
+  return utf8_bytes;
+}
+
+wchar_t *convert_utf8_to_wstring(const char *utf8_bytes)
+{
+  int wide_char_count;
+  wchar_t *wide_chars;
+
+  if ((wide_char_count = MultiByteToWideChar(CP_UTF8, 0, utf8_bytes, -1, NULL, 0)) == 0)
+    {
+      return NULL;
+    }
+  if ((wide_chars = malloc(sizeof(wchar_t) * wide_char_count)) == NULL)
+    {
+      return NULL;
+    }
+  if (MultiByteToWideChar(CP_UTF8, 0, utf8_bytes, -1, wide_chars, wide_char_count) == 0)
+    {
+      free(wide_chars);
+      return NULL;
+    }
+
+  return wide_chars;
+}
+#endif
 
 
 /* ######################### public implementation ################################################################## */
