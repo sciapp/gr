@@ -3548,8 +3548,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
       if (x == nullptr && y == nullptr)
         {
           /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
-          return_error_if(!grm_args_values(*current_series, "z_dims", "ii", &rows, &cols),
-                          ERROR_PLOT_MISSING_DIMENSIONS);
+          grm_args_values(*current_series, "z_dims", "ii", &rows, &cols);
           subGroup->setAttribute("zdims_min", (int)rows);
           subGroup->setAttribute("zdims_max", (int)cols);
         }
@@ -3580,7 +3579,6 @@ err_t plot_heatmap(grm_args_t *subplot_args)
 
   if (strcmp(kind, "marginalheatmap") != 0)
     {
-      gr_setlinecolorind(1);
       plot_draw_colorbar(subplot_args, 0.0, 256);
     }
 
@@ -4087,21 +4085,8 @@ err_t plot_volume(grm_args_t *subplot_args)
 
       if (!grm_args_values(*current_series, "algorithm", "i", &algorithm))
         {
-          if (grm_args_values(*current_series, "algorithm", "s", &algorithm_str))
-            {
-              if (strcmp(algorithm_str, "emission") == 0)
-                {
-                  algorithm = GR_VOLUME_EMISSION;
-                }
-              else if (strcmp(algorithm_str, "absorption") == 0)
-                {
-                  algorithm = GR_VOLUME_ABSORPTION;
-                }
-              else if (str_equals_any(algorithm_str, 2, "mip", "maximum"))
-                {
-                  algorithm = GR_VOLUME_MIP;
-                }
-            }
+          grm_args_values(*current_series, "algorithm", "s", &algorithm_str);
+          subGroup->setAttribute("algorithm", algorithm_str);
         }
       subGroup->setAttribute("algorithm", algorithm);
 
@@ -4243,13 +4228,8 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   double *rlim = nullptr;
   unsigned int dummy;
   int stairs;
-  int xcolormap;
-  int ycolormap;
-  int draw_edges = 0;
-  int phiflip = 0;
-  int edge_color = 1;
-  int face_color = 989;
-  double face_alpha = 0.75;
+  int xcolormap, ycolormap;
+  int draw_edges, phiflip, edge_color, face_color, face_alpha;
   grm_args_t **series;
   err_t error = ERROR_NONE;
 
@@ -4274,47 +4254,37 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   /* edge_color */
   if (grm_args_values(*series, "edge_color", "i", &edge_color) == 0)
     {
-      edge_color = 1;
+      group->setAttribute("edge_color", edge_color);
     }
-  group->setAttribute("edge_color", edge_color);
 
   /* face_color */
   if (grm_args_values(*series, "face_color", "i", &face_color) == 0)
     {
-      face_color = 989;
+      group->setAttribute("face_color", face_color);
     }
-  group->setAttribute("face_color", face_color);
 
   /* face_alpha */
   if (grm_args_values(*series, "face_alpha", "d", &face_alpha) == 0)
     {
-      face_alpha = 0.75;
+      group->setAttribute("face_alpha", face_alpha);
     }
-  group->setAttribute("face_alpha", face_alpha);
 
   if (grm_args_values(subplot_args, "phiflip", "i", &phiflip) == 0)
     {
-      phiflip = 0;
+      group->setAttribute("phiflip", phiflip);
     }
-  group->setAttribute("phiflip", phiflip);
 
   if (grm_args_values(*series, "draw_edges", "i", &draw_edges) == 0)
     {
-      draw_edges = 0;
+      group->setAttribute("draw_edges", draw_edges);
     }
-  group->setAttribute("draw_edges", draw_edges);
 
   if (grm_args_values(*series, "stairs", "i", &stairs) == 0)
     {
-      stairs = 0;
+      group->setAttribute("stairs", stairs);
     }
-  group->setAttribute("stairs", stairs);
 
-  if (grm_args_first_value(*series, "rlim", "D", &rlim, &dummy) == 0)
-    {
-      rlim = nullptr;
-    }
-  else
+  if (grm_args_first_value(*series, "rlim", "D", &rlim, &dummy))
     {
       group->setAttribute("rlim", true);
       group->setAttribute("rlim0", rlim[0]);
@@ -4503,21 +4473,18 @@ err_t plot_shade(grm_args_t *subplot_args)
   (*context)["y" + str] = y_vec;
   subGroup->setAttribute("y", "y" + str);
 
-  if (!grm_args_values(subplot_args, "xform", "i", &xform))
+  if (grm_args_values(subplot_args, "xform", "i", &xform))
     {
-      xform = 5;
+      subGroup->setAttribute("xform", xform);
     }
-  if (!grm_args_values(subplot_args, "xbins", "i", &xbins))
+  if (grm_args_values(subplot_args, "xbins", "i", &xbins))
     {
-      xbins = 1200;
+      subGroup->setAttribute("xbins", xbins);
     }
-  if (!grm_args_values(subplot_args, "ybins", "i", &ybins))
+  if (grm_args_values(subplot_args, "ybins", "i", &ybins))
     {
-      ybins = 1200;
+      subGroup->setAttribute("ybins", ybins);
     }
-  subGroup->setAttribute("xform", xform);
-  subGroup->setAttribute("xbins", xbins);
-  subGroup->setAttribute("ybins", ybins);
 
   return ERROR_NONE;
 }
