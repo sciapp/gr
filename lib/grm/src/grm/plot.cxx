@@ -938,10 +938,9 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
 
   logger((stderr, "Set plot attribute defaults\n"));
 
-  args_setdefault(plot_args, "clear", "i", PLOT_DEFAULT_CLEAR);
-  args_setdefault(plot_args, "update", "i", PLOT_DEFAULT_UPDATE);
   if (!grm_args_contains(plot_args, "figsize"))
     {
+      // TODO: Remove this default
       args_setdefault(plot_args, "size", "dd", PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT);
     }
 
@@ -950,88 +949,40 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
     {
       args_setdefault(*current_subplot, "kind", "s", PLOT_DEFAULT_KIND);
       grm_args_values(*current_subplot, "kind", "s", &kind);
-      if (grm_args_contains(*current_subplot, "labels"))
-        {
-          args_setdefault(*current_subplot, "location", "i", PLOT_DEFAULT_LOCATION);
-        }
-      args_setdefault(*current_subplot, "subplot", "dddd", PLOT_DEFAULT_SUBPLOT_MIN_X, PLOT_DEFAULT_SUBPLOT_MAX_X,
-                      PLOT_DEFAULT_SUBPLOT_MIN_Y, PLOT_DEFAULT_SUBPLOT_MAX_Y);
-      args_setdefault(*current_subplot, "xlog", "i", PLOT_DEFAULT_XLOG);
-      args_setdefault(*current_subplot, "ylog", "i", PLOT_DEFAULT_YLOG);
-      args_setdefault(*current_subplot, "zlog", "i", PLOT_DEFAULT_ZLOG);
-      args_setdefault(*current_subplot, "xflip", "i", PLOT_DEFAULT_XFLIP);
-      args_setdefault(*current_subplot, "yflip", "i", PLOT_DEFAULT_YFLIP);
-      args_setdefault(*current_subplot, "zflip", "i", PLOT_DEFAULT_ZFLIP);
-      args_setdefault(*current_subplot, "xgrid", "i", PLOT_DEFAULT_XGRID);
-      args_setdefault(*current_subplot, "ygrid", "i", PLOT_DEFAULT_YGRID);
-      args_setdefault(*current_subplot, "zgrid", "i", PLOT_DEFAULT_ZGRID);
-      args_setdefault(*current_subplot, "resample_method", "i", PLOT_DEFAULT_RESAMPLE_METHOD);
-      if (str_equals_any(kind, 2, "heatmap", "marginalheatmap"))
-        {
-          args_setdefault(*current_subplot, "adjust_xlim", "i", 0);
-          args_setdefault(*current_subplot, "adjust_ylim", "i", 0);
-        }
-      else
-        {
-          args_setdefault(
-              *current_subplot, "adjust_xlim", "i",
-              (grm_args_values(*current_subplot, "xlim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_XLIM));
-          args_setdefault(
-              *current_subplot, "adjust_ylim", "i",
-              (grm_args_values(*current_subplot, "ylim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
-          args_setdefault(
-              *current_subplot, "adjust_zlim", "i",
-              (grm_args_values(*current_subplot, "zlim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
-        }
-      args_setdefault(*current_subplot, "colormap", "i", PLOT_DEFAULT_COLORMAP);
-      args_setdefault(*current_subplot, "font", "i", PLOT_DEFAULT_FONT);
-      args_setdefault(*current_subplot, "font_precision", "i", PLOT_DEFAULT_FONT_PRECISION);
-      args_setdefault(*current_subplot, "rotation", "d", PLOT_DEFAULT_ROTATION);
-      args_setdefault(*current_subplot, "tilt", "d", PLOT_DEFAULT_TILT);
-      args_setdefault(*current_subplot, "keep_aspect_ratio", "i", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
+      args_setdefault(*current_subplot, "xlog", "i", PLOT_DEFAULT_XLOG);   // TODO: xlog isn't in DOM yet
+      args_setdefault(*current_subplot, "ylog", "i", PLOT_DEFAULT_YLOG);   // TODO: ylog isn't in DOM yet
+      args_setdefault(*current_subplot, "zlog", "i", PLOT_DEFAULT_ZLOG);   // TODO: zlog isn't in DOM yet
+      args_setdefault(*current_subplot, "xflip", "i", PLOT_DEFAULT_XFLIP); // TODO: Remove this default
+      args_setdefault(*current_subplot, "yflip", "i", PLOT_DEFAULT_YFLIP); // TODO: Remove this default
+      args_setdefault(*current_subplot, "zflip", "i", PLOT_DEFAULT_ZFLIP); // TODO: Remove this default
+      args_setdefault(*current_subplot, "xgrid", "i", PLOT_DEFAULT_XGRID); // This arg is only used in plot.cxx
+      args_setdefault(*current_subplot, "ygrid", "i", PLOT_DEFAULT_YGRID); // This arg is only used in plot.cxx
+      args_setdefault(*current_subplot, "zgrid", "i", PLOT_DEFAULT_ZGRID); // This arg is only used in plot.cxx
+      args_setdefault(*current_subplot, "resample_method", "i",
+                      PLOT_DEFAULT_RESAMPLE_METHOD); // TODO: Move this default and the method into render
+      args_setdefault(*current_subplot, "colormap", "i", PLOT_DEFAULT_COLORMAP); // This arg is only used in plot.cxx
+      args_setdefault(*current_subplot, "font", "i", PLOT_DEFAULT_FONT);         // This arg is only used in plot.cxx
+      args_setdefault(*current_subplot, "font_precision", "i",
+                      PLOT_DEFAULT_FONT_PRECISION); // This arg is only used in plot.cxx
 
-      if (str_equals_any(kind, 2, "contour", "contourf"))
-        {
-          args_setdefault(*current_subplot, "levels", "i", PLOT_DEFAULT_CONTOUR_LEVELS);
-        }
-      else if (strcmp(kind, "tricont") == 0)
-        {
-          args_setdefault(*current_subplot, "levels", "i", PLOT_DEFAULT_TRICONT_LEVELS);
-        }
-      else if (strcmp(kind, "marginalheatmap") == 0)
+      if (strcmp(kind, "marginalheatmap") == 0) // TODO: when marginalheatmap got moved, move these defaults
         {
           args_setdefault(*current_subplot, "xind", "i", -1);
           args_setdefault(*current_subplot, "yind", "i", -1);
           args_setdefault(*current_subplot, "marginalheatmap_kind", "s", "all");
         }
-      else if (str_equals_any(kind, 1, "surface"))
-        {
-          args_setdefault(*current_subplot, "accelerate", "i", 1);
-        }
       if (str_equals_any(kind, 6, "barplot", "hist", "line", "scatter", "stairs", "stem"))
         {
-          args_setdefault(*current_subplot, "orientation", "s", PLOT_DEFAULT_ORIENTATION);
+          args_setdefault(*current_subplot, "orientation", "s", PLOT_DEFAULT_ORIENTATION); // TODO: Remove this default
         }
 
       grm_args_values(*current_subplot, "series", "A", &current_series);
       while (*current_series != nullptr)
         {
-          args_setdefault(*current_series, "spec", "s", SERIES_DEFAULT_SPEC);
-          if (strcmp(kind, "stairs") == 0)
+          if (strcmp(kind, "marginalheatmap") == 0)
             {
-              args_setdefault(*current_series, "step_where", "s", PLOT_DEFAULT_STEP_WHERE);
-            }
-          else if (strcmp(kind, "hexbin") == 0)
-            {
-              args_setdefault(*current_series, "nbins", "i", PLOT_DEFAULT_HEXBIN_NBINS);
-            }
-          else if (strcmp(kind, "volume") == 0)
-            {
-              args_setdefault(*current_series, "algorithm", "i", PLOT_DEFAULT_VOLUME_ALGORITHM);
-            }
-          else if (strcmp(kind, "marginalheatmap") == 0)
-            {
-              args_setdefault(*current_series, "algorithm", "s", "sum");
+              args_setdefault(*current_series, "algorithm", "s",
+                              "sum"); // TODO: when marginalheatmap got moved, move these defaults
             }
           ++current_series;
         }
@@ -1046,9 +997,11 @@ void plot_pre_plot(grm_args_t *plot_args)
   logger((stderr, "Pre plot processing\n"));
 
   plot_set_text_encoding();
-  grm_args_values(plot_args, "clear", "i", &clear);
-  logger((stderr, "Got keyword \"clear\" with value %d\n", clear));
-  global_root->setAttribute("clearws", clear);
+  if (grm_args_values(plot_args, "clear", "i", &clear))
+    {
+      logger((stderr, "Got keyword \"clear\" with value %d\n", clear));
+      global_root->setAttribute("clearws", clear);
+    }
   plot_process_wswindow_wsviewport(plot_args);
 }
 
@@ -1413,16 +1366,16 @@ void plot_process_window(grm_args_t *subplot_args)
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
       group->setAttribute("adjust_zlim", true);
-      grm_args_values(subplot_args, "rotation", "d", &rotation);
-      grm_args_values(subplot_args, "tilt", "d", &tilt);
-      global_render->setSpace3d(group, rotation, tilt, 30.0, 0.0);
+      global_render->setSpace3d(group, 30.0, 0.0);
+      if (grm_args_values(subplot_args, "rotation", "d", &rotation)) group->setAttribute("space3d_phi", rotation);
+      if (grm_args_values(subplot_args, "tilt", "d", &tilt)) group->setAttribute("space3d_theta", tilt);
     }
   else if (strcmp(kind, "isosurface") == 0)
     {
-      grm_args_values(subplot_args, "rotation", "d", &rotation);
-      grm_args_values(subplot_args, "tilt", "d", &tilt);
       global_render->setWindow3d(group, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
-      global_render->setSpace3d(group, rotation, tilt, 45.0, 2.5);
+      global_render->setSpace3d(group, 45.0, 2.5);
+      if (grm_args_values(subplot_args, "rotation", "d", &rotation)) group->setAttribute("space3d_phi", rotation);
+      if (grm_args_values(subplot_args, "tilt", "d", &tilt)) group->setAttribute("space3d_theta", tilt);
     }
 
   grm_args_push(subplot_args, "scale", "i", scale);
@@ -1635,7 +1588,6 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
     }
   else if (strcmp(kind, "polar_histogram") == 0)
     {
-
       // todo: xlim ylim in render???
       auto temp = global_root->lastChildElement();
       //      temp->setAttribute("")
@@ -1902,9 +1854,11 @@ void plot_post_plot(grm_args_t *plot_args)
 
   logger((stderr, "Post plot processing\n"));
 
-  grm_args_values(plot_args, "update", "i", &update);
-  logger((stderr, "Got keyword \"update\" with value %d\n", update));
-  global_root->setAttribute("updatews", update);
+  if (grm_args_values(plot_args, "update", "i", &update))
+    {
+      logger((stderr, "Got keyword \"update\" with value %d\n", update));
+      global_root->setAttribute("updatews", update);
+    }
   plot_restore_text_encoding();
 }
 
@@ -2072,8 +2026,7 @@ err_t plot_line(grm_args_t *subplot_args)
         }
 
       subGroup->setAttribute("orientation", orientation);
-      grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
-      subGroup->setAttribute("spec", spec);
+      if (grm_args_values(*current_series, "spec", "s", &spec)) subGroup->setAttribute("spec", spec);
 
       global_root->setAttribute("id", ++id);
       grm_args_push(*current_series, "orientation", "s", orientation);
@@ -2155,8 +2108,7 @@ err_t plot_stairs(grm_args_t *subplot_args)
           subGroup->setAttribute("z", "z" + str);
         }
 
-      grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
-      subGroup->setAttribute("spec", spec);
+      if (grm_args_values(*current_series, "spec", "s", &spec)) subGroup->setAttribute("spec", spec);
 
       if (grm_args_values(*current_series, "step_where", "s", &where)) subGroup->setAttribute("step_where", where);
 
@@ -2336,8 +2288,7 @@ err_t plot_stem(grm_args_t *subplot_args)
 
       if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max)) group->setAttribute("yrange_min", y_min);
 
-      grm_args_values(*current_series, "spec", "s", &spec);
-      subGroup->setAttribute("spec", spec);
+      if (grm_args_values(*current_series, "spec", "s", &spec)) subGroup->setAttribute("spec", spec);
 
       global_root->setAttribute("id", ++id);
       ++current_series;
@@ -3269,7 +3220,7 @@ cleanup:
 
 err_t plot_contour(grm_args_t *subplot_args)
 {
-  int num_levels;
+  int num_levels = 20;
   double *h;
   grm_args_t **current_series;
   int i;
@@ -3278,7 +3229,7 @@ err_t plot_contour(grm_args_t *subplot_args)
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "contour");
 
-  grm_args_values(subplot_args, "levels", "i", &num_levels);
+  bool has_levels = grm_args_values(subplot_args, "levels", "i", &num_levels);
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
@@ -3306,7 +3257,7 @@ err_t plot_contour(grm_args_t *subplot_args)
       (*context)["z" + str] = z_vec;
       subGroup->setAttribute("z", "z" + str);
 
-      subGroup->setAttribute("levels", num_levels);
+      if (has_levels) subGroup->setAttribute("levels", num_levels);
 
       global_root->setAttribute("id", ++id);
       ++current_series;
@@ -3318,7 +3269,7 @@ err_t plot_contour(grm_args_t *subplot_args)
 
 err_t plot_contourf(grm_args_t *subplot_args)
 {
-  int num_levels, scale;
+  int num_levels = 20, scale;
   double *h;
   grm_args_t **current_series;
   int i;
@@ -3327,7 +3278,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "contourf");
 
-  grm_args_values(subplot_args, "levels", "i", &num_levels);
+  bool has_levels = grm_args_values(subplot_args, "levels", "i", &num_levels);
   grm_args_values(subplot_args, "scale", "i", &scale);
   global_render->setScale(group, scale);
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -3357,7 +3308,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
       (*context)["z" + str] = z_vec;
       subGroup->setAttribute("z", "z" + str);
 
-      subGroup->setAttribute("levels", num_levels);
+      if (has_levels) subGroup->setAttribute("levels", num_levels);
 
       global_root->setAttribute("id", ++id);
       ++current_series;
@@ -3382,7 +3333,6 @@ err_t plot_hexbin(grm_args_t *subplot_args)
       int cntmax, nbins;
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
-      grm_args_values(*current_series, "nbins", "i", &nbins);
 
       int id_int = static_cast<int>(global_root->getAttribute("id"));
       global_root->setAttribute("id", ++id_int);
@@ -3390,10 +3340,11 @@ err_t plot_hexbin(grm_args_t *subplot_args)
 
       auto x_vec = std::vector<double>(x, x + x_length);
       auto y_vec = std::vector<double>(y, y + y_length);
-      auto hexbin = global_render->createHexbin("x" + id, x_vec, "y" + id, y_vec, nbins);
-      group->append(hexbin);
+      auto subGroup = global_render->createHexbin("x" + id, x_vec, "y" + id, y_vec);
+      if (grm_args_values(*current_series, "nbins", "i", &nbins)) subGroup->setAttribute("nbins", nbins);
+      group->append(subGroup);
 
-      currentDomElement = hexbin; /* so that the colorbar will be a child of the hexbin_series */
+      currentDomElement = subGroup; /* so that the colorbar will be a child of the hexbin_series */
       plot_draw_colorbar(subplot_args, 0.0, 256);
 
       ++current_series;
@@ -3785,7 +3736,7 @@ err_t plot_surface(grm_args_t *subplot_args)
   group->setAttribute("name", "surface");
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "accelerate", "i", &accelerate);
+  bool has_accelerate = grm_args_values(subplot_args, "accelerate", "i", &accelerate);
 
   while (*current_series != nullptr)
     {
@@ -3794,7 +3745,7 @@ err_t plot_surface(grm_args_t *subplot_args)
 
       auto subGroup = global_render->createSeries("surface");
       group->append(subGroup);
-      subGroup->setAttribute("accelerate", accelerate);
+      if (has_accelerate) subGroup->setAttribute("accelerate", accelerate);
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -4085,10 +4036,13 @@ err_t plot_volume(grm_args_t *subplot_args)
 
       if (!grm_args_values(*current_series, "algorithm", "i", &algorithm))
         {
-          grm_args_values(*current_series, "algorithm", "s", &algorithm_str);
-          subGroup->setAttribute("algorithm", algorithm_str);
+          if (grm_args_values(*current_series, "algorithm", "s", &algorithm_str))
+            subGroup->setAttribute("algorithm", algorithm_str);
         }
-      subGroup->setAttribute("algorithm", algorithm);
+      else
+        {
+          subGroup->setAttribute("algorithm", algorithm);
+        }
 
       dmin = dmax = -1.0;
       grm_args_values(*current_series, "dmin", "d", &dmin);
@@ -4149,8 +4103,7 @@ err_t plot_polar(grm_args_t *subplot_args)
       (*context)["y" + str] = rho_vec;
       subGroup->setAttribute("y", "y" + str);
 
-      grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
-      subGroup->setAttribute("spec", spec);
+      if (grm_args_values(*current_series, "spec", "s", &spec)) subGroup->setAttribute("spec", spec);
       ++current_series;
     }
 
@@ -4403,7 +4356,7 @@ err_t plot_tricont(grm_args_t *subplot_args)
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "tricont");
 
-  grm_args_values(subplot_args, "levels", "i", &num_levels);
+  bool has_levels = grm_args_values(subplot_args, "levels", "i", &num_levels);
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
@@ -4432,7 +4385,7 @@ err_t plot_tricont(grm_args_t *subplot_args)
       (*context)["pz" + str] = z_vec;
       subGroup->setAttribute("pz", "pz" + str);
 
-      subGroup->setAttribute("levels", num_levels);
+      if (has_levels) subGroup->setAttribute("levels", num_levels);
 
       global_root->setAttribute("id", id + 1);
       ++current_series;
@@ -4525,7 +4478,6 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   char *title;
   char *x_label, *y_label, *z_label;
   int tick_orientation = 1;
-  int keep_aspect_ratio;
   std::shared_ptr<GRM::Element> group;
 
   if (global_render->getElementsByTagName("coordinate_system").empty())
@@ -4547,7 +4499,6 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   grm_args_values(args, "kind", "s", &kind);
   grm_args_values(args, "xgrid", "i", &x_grid);
   grm_args_values(args, "ygrid", "i", &y_grid);
-  grm_args_values(args, "keep_aspect_ratio", "i", &keep_aspect_ratio); // todo needed?
 
   global_render->setLineColorInd(group, 1);
   global_render->setLineWidth(group, 1);
@@ -4777,7 +4728,6 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
 
   return_error_if(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   logger((stderr, "Draw a legend with %d labels\n", num_labels));
-  grm_args_values(subplot_args, "location", "i", &location);
   grm_args_first_value(subplot_args, "series", "A", &current_series, &num_series);
 
   int id = static_cast<int>(global_root->getAttribute("id"));
@@ -4791,12 +4741,22 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       char *spec;
-      grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
-      specs_vec.push_back(std::string(spec));
+      if (grm_args_values(*current_series, "spec", "s", &spec))
+        {
+          specs_vec.emplace_back(spec);
+        }
+      else
+        {
+          specs_vec.emplace_back("");
+        }
       ++current_series;
     }
 
-  auto subGroup = global_render->createLegend(labels_key, labels_vec, location, specs_key, specs_vec);
+  auto subGroup = global_render->createLegend(labels_key, labels_vec, specs_key, specs_vec);
+  if (grm_args_values(subplot_args, "location", "i", &location))
+    {
+      group->setAttribute("location", location);
+    }
   group->append(subGroup);
 
   return ERROR_NONE;
@@ -5692,6 +5652,7 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
   char *ylabel, *xlabel, *title, *kind;
   int keep_aspect_ratio, location, adjust_xlim, adjust_ylim;
   double *subplot;
+  int xlim, ylim, zlim;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   grm_args_values(subplot_args, "kind", "s", &kind);
@@ -5730,6 +5691,18 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
       group->setAttribute("subplot_xmax", subplot[1]);
       group->setAttribute("subplot_ymin", subplot[2]);
       group->setAttribute("subplot_ymax", subplot[3]);
+    }
+  if (grm_args_values(subplot_args, "xlim", "i", &xlim))
+    {
+      group->setAttribute("input_xlim", xlim);
+    }
+  if (grm_args_values(subplot_args, "ylim", "i", &ylim))
+    {
+      group->setAttribute("input_ylim", ylim);
+    }
+  if (grm_args_values(subplot_args, "zlim", "i", &zlim))
+    {
+      group->setAttribute("input_zlim", zlim);
     }
   if (grm_args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim))
     {

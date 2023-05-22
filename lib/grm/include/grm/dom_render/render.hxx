@@ -12,6 +12,27 @@
 #include "grm/layout.hxx"
 #include <grm/util.h>
 
+#define PLOT_DEFAULT_CLEAR 1
+#define PLOT_DEFAULT_UPDATE 1
+#define PLOT_DEFAULT_LOCATION 1
+#define PLOT_DEFAULT_SUBPLOT_MIN_X 0.0
+#define PLOT_DEFAULT_SUBPLOT_MAX_X 1.0
+#define PLOT_DEFAULT_SUBPLOT_MIN_Y 0.0
+#define PLOT_DEFAULT_SUBPLOT_MAX_Y 1.0
+#define PLOT_DEFAULT_ROTATION 40.0
+#define PLOT_DEFAULT_TILT 60.0
+#define PLOT_DEFAULT_KEEP_ASPECT_RATIO 0
+#define PLOT_DEFAULT_TRICONT_LEVELS 20
+#define PLOT_DEFAULT_CONTOUR_LEVELS 20
+#define PLOT_DEFAULT_ACCELERATE 1
+#define PLOT_DEFAULT_SPEC ""
+#define PLOT_DEFAULT_STEP_WHERE "mid"
+#define PLOT_DEFAULT_HEXBIN_NBINS 40
+#define PLOT_DEFAULT_VOLUME_ALGORITHM GR_VOLUME_EMISSION
+#define PLOT_DEFAULT_ADJUST_XLIM 1
+#define PLOT_DEFAULT_ADJUST_YLIM 1
+#define PLOT_DEFAULT_ADJUST_ZLIM 1
+
 typedef enum
 {
   GR_COLOR_RESET = 0,
@@ -109,8 +130,7 @@ public:
   std::shared_ptr<GRM::Element> createEmptyDoubleAxes();
 
   std::shared_ptr<Element> createLegend(const std::string &labels_key, std::optional<std::vector<std::string>> labels,
-                                        int location, const std::string &specs_key,
-                                        std::optional<std::vector<std::string>> specs,
+                                        const std::string &specs_key, std::optional<std::vector<std::string>> specs,
                                         const std::shared_ptr<GRM::Context> &extContext = nullptr);
 
   std::shared_ptr<Element> createDrawPolarAxes(int angle_ticks, const std::string &kind, int phiflip,
@@ -154,11 +174,7 @@ public:
                                         const std::shared_ptr<Context> &extContext = nullptr);
 
   std::shared_ptr<Element> createHexbin(const std::string &x_key, std::optional<std::vector<double>> x,
-                                        const std::string &y_key, std::optional<std::vector<double>> y, int nbins,
-                                        const std::shared_ptr<Context> &extContext = nullptr);
-
-  std::shared_ptr<Element> createVolume(int nx, int ny, int nz, const std::string &data_key,
-                                        std::optional<std::vector<double>> data, int algorithm, int dmin, int dmax,
+                                        const std::string &y_key, std::optional<std::vector<double>> y,
                                         const std::shared_ptr<Context> &extContext = nullptr);
 
   std::shared_ptr<Element> createColorbar(unsigned int colors, const std::shared_ptr<Context> &extContext = nullptr);
@@ -304,8 +320,7 @@ public:
   void setWindow3d(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax,
                    double zmin, double zmax);
 
-  void setSpace3d(const std::shared_ptr<Element> &element, double phi, double theta, double fov,
-                  double camera_distance);
+  void setSpace3d(const std::shared_ptr<Element> &element, double fov, double camera_distance);
 
   void setSpace(const std::shared_ptr<Element> &element, double zmin, double zmax, int rotation, int tilt);
 

@@ -3012,9 +3012,24 @@ static void processSpace(const std::shared_ptr<GRM::Element> &elem)
 
 static void processSpace3d(const std::shared_ptr<GRM::Element> &elem)
 {
-  double phi, theta, fov, camera_distance;
-  phi = (double)elem->getAttribute("space3d_phi");
-  theta = (double)elem->getAttribute("space3d_theta");
+  double phi = PLOT_DEFAULT_ROTATION, theta = PLOT_DEFAULT_TILT, fov, camera_distance;
+
+  if (elem->hasAttribute("space3d_phi"))
+    {
+      phi = (double)elem->getAttribute("space3d_phi");
+    }
+  else
+    {
+      elem->setAttribute("space3d_phi", phi);
+    }
+  if (elem->hasAttribute("space3d_theta"))
+    {
+      theta = (double)elem->getAttribute("space3d_theta");
+    }
+  else
+    {
+      elem->setAttribute("space3d_theta", theta);
+    }
   fov = (double)elem->getAttribute("space3d_fov");
   camera_distance = (double)elem->getAttribute("space3d_camera_distance");
 
@@ -3151,17 +3166,20 @@ static void processSubplot(const std::shared_ptr<GRM::Element> &elem)
   if (str_equals_any(kind.c_str(), 4, "line", "stairs", "scatter", "stem"))
     {
       double w, h;
-      int location;
-      GRM::Value locationValue = elem->getAttribute("location");
-
-      if (!locationValue.isUndefined())
+      int location = PLOT_DEFAULT_LOCATION;
+      if (elem->hasAttribute("location"))
         {
-          location = (int)locationValue;
-          if (location == 11 || location == 12 || location == 13)
-            {
-              legend_size(elem, &w, &h);
-              viewport[1] -= w + 0.1;
-            }
+          location = static_cast<int>(elem->getAttribute("location"));
+        }
+      else
+        {
+          elem->setAttribute("location", location);
+        }
+
+      if (location == 11 || location == 12 || location == 13)
+        {
+          legend_size(elem, &w, &h);
+          viewport[1] -= w + 0.1;
         }
     }
 
@@ -4614,7 +4632,7 @@ static void contour(const std::shared_ptr<GRM::Element> &element, const std::sha
    * \param[in] context The GRM::Context that contains the actual data
    */
   double z_min, z_max;
-  int num_levels;
+  int num_levels = PLOT_DEFAULT_CONTOUR_LEVELS;
   int i;
   unsigned int x_length, y_length, z_length;
   std::vector<double> x_vec, y_vec, z_vec;
@@ -4623,7 +4641,14 @@ static void contour(const std::shared_ptr<GRM::Element> &element, const std::sha
 
   z_min = static_cast<double>(element->parentElement()->getAttribute("lim_zmin"));
   z_max = static_cast<double>(element->parentElement()->getAttribute("lim_zmax"));
-  num_levels = static_cast<int>(element->getAttribute("levels"));
+  if (element->hasAttribute("levels"))
+    {
+      num_levels = static_cast<int>(element->getAttribute("levels"));
+    }
+  else
+    {
+      element->setAttribute("levels", num_levels);
+    }
 
   gr_setprojectiontype(0);
   gr_setspace(z_min, z_max, 0, 90);
@@ -4731,7 +4756,7 @@ static void contourf(const std::shared_ptr<GRM::Element> &element, const std::sh
    * \param[in] context The GRM::Context that contains the actual data
    */
   double z_min, z_max;
-  int num_levels;
+  int num_levels = PLOT_DEFAULT_CONTOUR_LEVELS;
   int i;
   unsigned int x_length, y_length, z_length;
   std::vector<double> x_vec, y_vec, z_vec;
@@ -4740,7 +4765,14 @@ static void contourf(const std::shared_ptr<GRM::Element> &element, const std::sh
 
   z_min = static_cast<double>(element->parentElement()->getAttribute("lim_zmin"));
   z_max = static_cast<double>(element->parentElement()->getAttribute("lim_zmax"));
-  num_levels = static_cast<int>(element->getAttribute("levels"));
+  if (element->hasAttribute("levels"))
+    {
+      num_levels = static_cast<int>(element->getAttribute("levels"));
+    }
+  else
+    {
+      element->setAttribute("levels", num_levels);
+    }
 
   global_render->setProjectionType(element->parentElement(), 0);
   global_render->setSpace(element->parentElement(), z_min, z_max, 0, 90);
@@ -4898,7 +4930,7 @@ static void drawImage(const std::shared_ptr<GRM::Element> &element, const std::s
 
 static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
-  std::string orientation, kind;
+  std::string orientation = PLOT_DEFAULT_ORIENTATION, kind;
   int is_horizontal;
   std::vector<double> absolute_upwards_vec, absolute_downwards_vec, relative_upwards_vec, relative_downwards_vec;
   std::string absolute_upwards, absolute_downwards, relative_upwards, relative_downwards;
@@ -4931,7 +4963,14 @@ static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::s
   y_vec = GRM::get<std::vector<double>>((*context)[y]);
   x_length = x_vec.size();
   kind = static_cast<std::string>(series->parentElement()->getAttribute("kind"));
-  orientation = static_cast<std::string>(series->getAttribute("orientation"));
+  if (element->hasAttribute("orientation"))
+    {
+      orientation = static_cast<std::string>(element->getAttribute("orientation"));
+    }
+  else
+    {
+      element->setAttribute("orientation", orientation);
+    }
 
   if (!element->hasAttribute("absolute_downwards") && !element->hasAttribute("relative_downwards"))
     throw NotFoundError("Errorbars are missing required attribute downwards.\n");
@@ -5195,7 +5234,7 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
 
   if (static_cast<std::string>(elem->parentElement()->getAttribute("kind")) != "pie")
     {
-      int location;
+      int location = PLOT_DEFAULT_LOCATION;
       double legend_symbol_x[2], legend_symbol_y[2];
       int i;
 
@@ -5203,7 +5242,14 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
 
       auto specs_key = static_cast<std::string>(elem->getAttribute("specs"));
       std::vector<std::string> specs = GRM::get<std::vector<std::string>>((*context)[specs_key]);
-      location = static_cast<int>(elem->getAttribute("location"));
+      if (elem->hasAttribute("location"))
+        {
+          location = static_cast<int>(elem->getAttribute("location"));
+        }
+      else
+        {
+          elem->setAttribute("location", location);
+        }
 
       legend_size(labels, &w, &h);
 
@@ -5623,12 +5669,19 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &elem, const std::shar
   auto draw_axes_element = elem->parentElement();
   double x_tick, x_org_low, x_org_high;
   double y_tick, y_org_low, y_org_high;
-  int x_major;
-  int y_major;
+  int x_major, y_major;
+  std::string orientation = PLOT_DEFAULT_ORIENTATION;
 
   getAxesInformation(elem, "low", "low", x_org_low, y_org_low, x_major, y_major, x_tick, y_tick);
   getAxesInformation(elem, "high", "high", x_org_high, y_org_high, x_major, y_major, x_tick, y_tick);
-  auto orientation = static_cast<std::string>(elem->getAttribute("orientation"));
+  if (elem->hasAttribute("orientation"))
+    {
+      orientation = static_cast<std::string>(elem->getAttribute("orientation"));
+    }
+  else
+    {
+      elem->setAttribute("orientation", orientation);
+    }
   int is_vertical = orientation == "vertical";
 
   double x[2] = {x_org_low, x_org_high};
@@ -6063,12 +6116,20 @@ static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+  int nbins = PLOT_DEFAULT_HEXBIN_NBINS;
 
   if (!element->hasAttribute("x")) throw NotFoundError("Hexbin series is missing required attribute x-data.\n");
   auto x = static_cast<std::string>(element->getAttribute("x"));
   if (!element->hasAttribute("y")) throw NotFoundError("Hexbin series is missing required attribute y-data.\n");
   auto y = static_cast<std::string>(element->getAttribute("y"));
-  int nbins = static_cast<int>(element->getAttribute("nbins"));
+  if (element->hasAttribute("nbins"))
+    {
+      nbins = static_cast<int>(element->getAttribute("nbins"));
+    }
+  else
+    {
+      element->setAttribute("nbins", nbins);
+    }
 
   double *x_p = &(GRM::get<std::vector<double>>((*context)[x])[0]);
   double *y_p = &(GRM::get<std::vector<double>>((*context)[y])[0]);
@@ -6132,7 +6193,7 @@ static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared
   double x_min, x_max, bar_width, y_min;
   std::vector<double> bins_vec;
   unsigned int num_bins;
-  std::string orientation;
+  std::string orientation = PLOT_DEFAULT_ORIENTATION;
   int is_horizontal;
 
   auto edge_color_rgb = static_cast<std::string>(element->getAttribute("edge_color_rgb"));
@@ -6155,7 +6216,14 @@ static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared
   auto bins = static_cast<std::string>(element->getAttribute("bins"));
   bins_vec = GRM::get<std::vector<double>>((*context)[bins]);
   num_bins = bins_vec.size();
-  orientation = static_cast<std::string>(element->getAttribute("orientation"));
+  if (element->hasAttribute("orientation"))
+    {
+      orientation = static_cast<std::string>(element->getAttribute("orientation"));
+    }
+  else
+    {
+      element->setAttribute("orientation", orientation);
+    }
   is_horizontal = orientation == "horizontal";
   x_min = static_cast<double>(plot_parent->getAttribute("xrange_min"));
   x_max = static_cast<double>(plot_parent->getAttribute("xrange_max"));
@@ -6549,11 +6617,18 @@ static void polar(const std::shared_ptr<GRM::Element> &element, const std::share
   double r_min, r_max, tick;
   int n;
   unsigned int rho_length, theta_length;
-  std::string spec;
+  std::string spec = SERIES_DEFAULT_SPEC;
   unsigned int i;
   std::vector<double> theta_vec, rho_vec;
 
-  spec = static_cast<std::string>(element->getAttribute("spec"));
+  if (element->hasAttribute("spec"))
+    {
+      spec = static_cast<std::string>(element->getAttribute("spec"));
+    }
+  else
+    {
+      element->setAttribute("spec", spec);
+    }
   r_min = static_cast<double>(element->getAttribute("r_min"));
   r_max = static_cast<double>(element->getAttribute("r_max"));
   tick = 0.5 * auto_tick(r_min, r_max);
@@ -6790,7 +6865,7 @@ static void scatter(const std::shared_ptr<GRM::Element> &element, const std::sha
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
-  std::string orientation;
+  std::string orientation = PLOT_DEFAULT_ORIENTATION;
   double c_min, c_max;
   unsigned int x_length, y_length, z_length, c_length;
   int i, c_index = -1, markertype;
@@ -6821,7 +6896,14 @@ static void scatter(const std::shared_ptr<GRM::Element> &element, const std::sha
       c_vec = GRM::get<std::vector<double>>((*context)[c]);
       c_length = c_vec.size();
     }
-  orientation = static_cast<std::string>(element->getAttribute("orientation"));
+  if (element->hasAttribute("orientation"))
+    {
+      orientation = static_cast<std::string>(element->getAttribute("orientation"));
+    }
+  else
+    {
+      element->setAttribute("orientation", orientation);
+    }
 
   markertype = static_cast<int>(element->getAttribute("markertype"));
   global_render->setMarkerType(element, markertype);
@@ -6998,7 +7080,7 @@ static void stairs(const std::shared_ptr<GRM::Element> &element, const std::shar
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
-  std::string kind, orientation, spec;
+  std::string kind, orientation = PLOT_DEFAULT_ORIENTATION, spec = SERIES_DEFAULT_SPEC;
   double xmin, xmax, ymin, ymax;
   int is_vertical;
   unsigned int x_length, y_length, mask, i;
@@ -7015,8 +7097,22 @@ static void stairs(const std::shared_ptr<GRM::Element> &element, const std::shar
   y_length = y_vec.size();
 
   kind = static_cast<std::string>(element->getAttribute("kind"));
-  orientation = static_cast<std::string>(element->getAttribute("orientation"));
-  spec = static_cast<std::string>(element->getAttribute("spec"));
+  if (element->hasAttribute("orientation"))
+    {
+      orientation = static_cast<std::string>(element->getAttribute("orientation"));
+    }
+  else
+    {
+      element->setAttribute("orientation", orientation);
+    }
+  if (element->hasAttribute("spec"))
+    {
+      spec = static_cast<std::string>(element->getAttribute("spec"));
+    }
+  else
+    {
+      element->setAttribute("spec", spec);
+    }
   is_vertical = orientation == "vertical";
 
   int id = static_cast<int>(global_root->getAttribute("id"));
@@ -7058,7 +7154,15 @@ static void stairs(const std::shared_ptr<GRM::Element> &element, const std::shar
 
       if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
         {
-          auto where = static_cast<std::string>(element->getAttribute("step_where"));
+          std::string where = PLOT_DEFAULT_STEP_WHERE;
+          if (element->hasAttribute("step_where"))
+            {
+              where = static_cast<std::string>(element->getAttribute("step_where"));
+            }
+          else
+            {
+              element->setAttribute("step_where", where);
+            }
           if (where == "pre")
             {
               std::vector<double> x_step_boundaries(2 * x_length - 1);
@@ -7164,7 +7268,7 @@ static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared
    * \param[in] context The GRM::Context that contains the actual data
    */
   double stem_x[2], stem_y[2] = {0.0};
-  std::string orientation, spec;
+  std::string orientation = PLOT_DEFAULT_ORIENTATION, spec = SERIES_DEFAULT_SPEC;
   int is_vertical;
   double x_min, x_max, y_min, y_max;
   unsigned int x_length, y_length;
@@ -7175,8 +7279,22 @@ static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared
   auto x = static_cast<std::string>(element->getAttribute("x"));
   if (!element->hasAttribute("y")) throw NotFoundError("Stem series is missing required attribute y-data.\n");
   auto y = static_cast<std::string>(element->getAttribute("y"));
-  orientation = static_cast<std::string>(element->getAttribute("orientation"));
-  spec = static_cast<std::string>(element->getAttribute("spec"));
+  if (element->hasAttribute("orientation"))
+    {
+      orientation = static_cast<std::string>(element->getAttribute("orientation"));
+    }
+  else
+    {
+      element->setAttribute("orientation", orientation);
+    }
+  if (element->hasAttribute("spec"))
+    {
+      spec = static_cast<std::string>(element->getAttribute("spec"));
+    }
+  else
+    {
+      element->setAttribute("spec", spec);
+    }
 
   is_vertical = orientation == "vertical";
   x_vec = GRM::get<std::vector<double>>((*context)[x]);
@@ -7255,12 +7373,19 @@ static void surface(const std::shared_ptr<GRM::Element> &element, const std::sha
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
-  int accelerate; /* this argument decides if GR3 or GRM is used to plot the surface */
+  int accelerate = PLOT_DEFAULT_ACCELERATE; /* this argument decides if GR3 or GRM is used to plot the surface */
   std::vector<double> x_vec, y_vec, z_vec;
   unsigned int x_length, y_length, z_length;
   double x_min, x_max, y_min, y_max;
 
-  accelerate = static_cast<int>(element->getAttribute("accelerate"));
+  if (element->hasAttribute("accelerate"))
+    {
+      accelerate = static_cast<int>(element->getAttribute("accelerate"));
+    }
+  else
+    {
+      element->setAttribute("accelerate", accelerate);
+    }
 
   if (element->hasAttribute("x"))
     {
@@ -7398,11 +7523,18 @@ static void line(const std::shared_ptr<GRM::Element> &element, const std::shared
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
-  std::string orientation;
+  std::string orientation = PLOT_DEFAULT_ORIENTATION, spec = SERIES_DEFAULT_SPEC;
   std::vector<double> x_vec, y_vec;
   unsigned int x_length = 0, y_length = 0;
 
-  orientation = static_cast<std::string>(element->getAttribute("orientation"));
+  if (element->hasAttribute("orientation"))
+    {
+      orientation = static_cast<std::string>(element->getAttribute("orientation"));
+    }
+  else
+    {
+      element->setAttribute("orientation", orientation);
+    }
 
   if (!element->hasAttribute("y")) throw NotFoundError("Line series is missing required attribute y-data.\n");
   auto y = static_cast<std::string>(element->getAttribute("y"));
@@ -7427,7 +7559,14 @@ static void line(const std::shared_ptr<GRM::Element> &element, const std::shared
     }
   if (x_length != y_length) throw std::length_error("For line series x- and y-data must have the same size.\n");
 
-  auto spec = static_cast<std::string>(element->getAttribute("spec"));
+  if (element->hasAttribute("spec"))
+    {
+      spec = static_cast<std::string>(element->getAttribute("spec"));
+    }
+  else
+    {
+      element->setAttribute("spec", spec);
+    }
   const char *spec_char = spec.c_str();
   mask = gr_uselinespec((char *)spec_char);
 
@@ -7951,14 +8090,21 @@ static void triContour(const std::shared_ptr<GRM::Element> &element, const std::
    * \param[in] context The GRM::Context that contains the actual data
    */
   double z_min, z_max;
-  int num_levels;
+  int num_levels = PLOT_DEFAULT_TRICONT_LEVELS;
   int i;
   unsigned int x_length, y_length, z_length;
   std::vector<double> x_vec, y_vec, z_vec;
 
   z_min = static_cast<double>(element->parentElement()->getAttribute("lim_zmin"));
   z_max = static_cast<double>(element->parentElement()->getAttribute("lim_zmax"));
-  num_levels = static_cast<int>(element->getAttribute("levels"));
+  if (element->hasAttribute("levels"))
+    {
+      num_levels = static_cast<int>(element->getAttribute("levels"));
+    }
+  else
+    {
+      element->setAttribute("levels", num_levels);
+    }
 
   std::vector<double> levels(num_levels);
 
@@ -8028,7 +8174,7 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
 {
   double dlim[2] = {INFINITY, -INFINITY};
   unsigned int c_length, dims;
-  int algorithm;
+  int algorithm = PLOT_DEFAULT_VOLUME_ALGORITHM;
   std::string algorithm_str;
   double dmin, dmax;
   int width, height;
@@ -8051,8 +8197,7 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
 
   if (!element->hasAttribute("algorithm"))
     {
-      logger((stderr, "No volume algorithm given! Aborting the volume routine\n"));
-      throw NotFoundError("Volume series is missing attribute algorithm.\n");
+      element->setAttribute("algorithm", algorithm);
     }
   else
     {
@@ -8459,6 +8604,72 @@ static void finalizeGrid(const std::shared_ptr<GRM::Element> &root)
     }
 }
 
+static void applyRootDefaults(std::shared_ptr<GRM::Element> root)
+{
+  if (!root->hasAttribute("clearws")) root->setAttribute("clearws", PLOT_DEFAULT_CLEAR);
+  if (!root->hasAttribute("updatews")) root->setAttribute("updatews", PLOT_DEFAULT_UPDATE);
+  if (!root->hasAttribute("size"))
+    {
+      global_root->setAttribute("size_x", PLOT_DEFAULT_WIDTH);
+      global_root->setAttribute("size_y", PLOT_DEFAULT_HEIGHT);
+      global_root->setAttribute("size_x_type", "double");
+      global_root->setAttribute("size_y_type", "double");
+      global_root->setAttribute("size_x_unit", "px");
+      global_root->setAttribute("size_y_unit", "px");
+    }
+
+  for (auto child : root->children())
+    {
+      if (child->localName() == "plot")
+        {
+          if (!child->hasAttribute("kind")) child->setAttribute("kind", PLOT_DEFAULT_KIND);
+          if (!child->hasAttribute("keep_aspect_ratio"))
+            child->setAttribute("keep_aspect_ratio", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
+          if (!child->hasAttribute("subplot"))
+            {
+              child->setAttribute("subplot", true);
+              child->setAttribute("subplot_xmin", PLOT_DEFAULT_SUBPLOT_MIN_X);
+              child->setAttribute("subplot_xmax", PLOT_DEFAULT_SUBPLOT_MAX_X);
+              child->setAttribute("subplot_ymin", PLOT_DEFAULT_SUBPLOT_MIN_Y);
+              child->setAttribute("subplot_ymax", PLOT_DEFAULT_SUBPLOT_MAX_Y);
+            }
+          auto kind = static_cast<std::string>(child->getAttribute("kind"));
+          if (!child->hasAttribute("adjust_xlim"))
+            {
+              if (kind == "heatmap" || kind == "marginalheatmap")
+                {
+                  child->setAttribute("adjust_xlim", 0);
+                }
+              else
+                {
+                  child->setAttribute("adjust_xlim",
+                                      (child->hasAttribute("input_xlim") ? 0 : PLOT_DEFAULT_ADJUST_XLIM));
+                }
+            }
+          if (!child->hasAttribute("adjust_ylim"))
+            {
+              if (kind == "heatmap" || kind == "marginalheatmap")
+                {
+                  child->setAttribute("adjust_ylim", 0);
+                }
+              else
+                {
+                  child->setAttribute("adjust_ylim",
+                                      (child->hasAttribute("input_ylim") ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
+                }
+            }
+          if (!child->hasAttribute("adjust_zlim"))
+            {
+              if (kind != "heatmap" && kind != "marginalheatmap")
+                {
+                  child->setAttribute("adjust_zlim",
+                                      (child->hasAttribute("input_zlim") ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
+                }
+            }
+        }
+    }
+}
+
 void GRM::Render::render(const std::shared_ptr<GRM::Document> &document,
                          const std::shared_ptr<GRM::Context> &extContext)
 {
@@ -8531,6 +8742,7 @@ void GRM::Render::render()
   global_render = (std::dynamic_pointer_cast<GRM::Render>(root->ownerDocument()))
                       ? std::dynamic_pointer_cast<GRM::Render>(root->ownerDocument())
                       : GRM::Render::createRender();
+  applyRootDefaults(root);
   std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' ')}) << "\n";
   if (static_cast<int>(root->getAttribute("clearws"))) gr_clearws();
   renderHelper(root, this->context);
@@ -8910,7 +9122,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createEmptyAxes(int tick_orientation)
 }
 
 std::shared_ptr<GRM::Element> GRM::Render::createLegend(const std::string &labels_key,
-                                                        std::optional<std::vector<std::string>> labels, int location,
+                                                        std::optional<std::vector<std::string>> labels,
                                                         const std::string &specs_key,
                                                         std::optional<std::vector<std::string>> specs,
                                                         const std::shared_ptr<GRM::Context> &extContext)
@@ -8922,13 +9134,11 @@ std::shared_ptr<GRM::Element> GRM::Render::createLegend(const std::string &label
    *
    * \param[in] labels_key A std::string for the labels vector
    * \param[in] labels May be an std::vector<std::string>> containing the labels
-   * \param[in] location An int value
    * \param[in] spec An std::string
    */
 
   auto element = createElement("legend");
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
-  element->setAttribute("location", location);
   element->setAttribute("specs", specs_key);
   element->setAttribute("labels", labels_key);
 
@@ -9185,7 +9395,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createQuiver(const std::string &x_key
 
 std::shared_ptr<GRM::Element> GRM::Render::createHexbin(const std::string &x_key, std::optional<std::vector<double>> x,
                                                         const std::string &y_key, std::optional<std::vector<double>> y,
-                                                        int nbins, const std::shared_ptr<GRM::Context> &extContext)
+                                                        const std::shared_ptr<GRM::Context> &extContext)
 {
   /*!
    * This function can be used to create a hexbin GRM::Element
@@ -9195,7 +9405,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createHexbin(const std::string &x_key
   auto element = createSeries("hexbin");
   element->setAttribute("x", x_key);
   element->setAttribute("y", y_key);
-  element->setAttribute("nbins", nbins);
 
   if (x != std::nullopt)
     {
@@ -9204,32 +9413,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createHexbin(const std::string &x_key
   if (y != std::nullopt)
     {
       (*useContext)[y_key] = *y;
-    }
-
-  return element;
-}
-
-std::shared_ptr<GRM::Element> GRM::Render::createVolume(int nx, int ny, int nz, const std::string &data_key,
-                                                        std::optional<std::vector<double>> data, int algorithm,
-                                                        int dmin, int dmax, const std::shared_ptr<Context> &extContext)
-{
-  /*!
-   * This function can be used to create a volume GRM::Element
-   */
-  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
-
-  auto element = createSeries("volume");
-  element->setAttribute("nx", nx);
-  element->setAttribute("ny", ny);
-  element->setAttribute("nz", nz);
-  element->setAttribute("data", data_key);
-  element->setAttribute("algorithm", algorithm);
-  element->setAttribute("dmin", dmin);
-  element->setAttribute("dmax", dmax);
-
-  if (data != std::nullopt)
-    {
-      (*useContext)[data_key] = *data;
     }
 
   return element;
@@ -10221,8 +10404,7 @@ void GRM::Render::setWindow3d(const std::shared_ptr<GRM::Element> &element, doub
   element->setAttribute("window_zmax", zmax);
 }
 
-void GRM::Render::setSpace3d(const std::shared_ptr<GRM::Element> &element, double phi, double theta, double fov,
-                             double camera_distance)
+void GRM::Render::setSpace3d(const std::shared_ptr<GRM::Element> &element, double fov, double camera_distance)
 {
   /*! This function can be used to set the space3d of a GRM::Element
    *
@@ -10235,8 +10417,6 @@ void GRM::Render::setSpace3d(const std::shared_ptr<GRM::Element> &element, doubl
    */
 
   element->setAttribute("space3d", true);
-  element->setAttribute("space3d_phi", phi);
-  element->setAttribute("space3d_theta", theta);
   element->setAttribute("space3d_fov", fov);
   element->setAttribute("space3d_camera_distance", camera_distance);
 }
