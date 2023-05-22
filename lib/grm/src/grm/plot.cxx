@@ -16,7 +16,6 @@ extern "C" {
 #include <limits.h>
 #include <math.h>
 #include <stdio.h>
-#include <cm.h>
 
 #include "base64_int.h"
 #include <grm/dump.h>
@@ -4304,24 +4303,17 @@ err_t plot_polar(grm_args_t *subplot_args)
 err_t plot_polar_histogram(grm_args_t *subplot_args)
 {
   unsigned int resample;
-  unsigned int num_bins;
-  unsigned int length;
-  double max;
   double *rlim = nullptr;
   unsigned int dummy;
   int stairs;
-  double r_min = 0.0;
-  double r_max = 1.0;
   int xcolormap;
   int ycolormap;
-  int *colormap = nullptr;
   int draw_edges = 0;
   int phiflip = 0;
   int edge_color = 1;
   int face_color = 989;
   double face_alpha = 0.75;
   grm_args_t **series;
-  int *bin_counts = nullptr;
   err_t error = ERROR_NONE;
 
   std::shared_ptr<GRM::Element> group = global_root->lastChildElement();
@@ -4374,7 +4366,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
       draw_edges = 0;
     }
   group->setAttribute("draw_edges", draw_edges);
-
 
   if (grm_args_values(*series, "stairs", "i", &stairs) == 0)
     {
@@ -5427,81 +5418,6 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
   return 1;
 }
 
-int get_focus_and_factor(const int x1, const int y1, const int x2, const int y2, const int keep_aspect_ratio,
-                         double *factor_x, double *factor_y, double *focus_x, double *focus_y,
-                         grm_args_t **subplot_args)
-{
-  double ndc_box_x[4], ndc_box_y[4];
-  double ndc_left, ndc_top, ndc_right, ndc_bottom;
-  const double *wswindow, *viewport;
-  int width, height, max_width_height;
-
-  get_figure_size(nullptr, &width, &height, nullptr, nullptr);
-  max_width_height = grm_max(width, height);
-
-  if (x1 <= x2)
-    {
-      ndc_left = (double)x1 / max_width_height;
-      ndc_right = (double)x2 / max_width_height;
-    }
-  else
-    {
-      ndc_left = (double)x2 / max_width_height;
-      ndc_right = (double)x1 / max_width_height;
-    }
-  if (y1 <= y2)
-    {
-      ndc_top = (double)(height - y1) / max_width_height;
-      ndc_bottom = (double)(height - y2) / max_width_height;
-    }
-  else
-    {
-      ndc_top = (double)(height - y2) / max_width_height;
-      ndc_bottom = (double)(height - y1) / max_width_height;
-    }
-
-  ndc_box_x[0] = ndc_left;
-  ndc_box_y[0] = ndc_bottom;
-  ndc_box_x[1] = ndc_right;
-  ndc_box_y[1] = ndc_bottom;
-  ndc_box_x[2] = ndc_left;
-  ndc_box_y[2] = ndc_top;
-  ndc_box_x[3] = ndc_right;
-  ndc_box_y[3] = ndc_top;
-  *subplot_args = get_subplot_from_ndc_points(array_size(ndc_box_x), ndc_box_x, ndc_box_y);
-  if (*subplot_args == nullptr)
-    {
-      return 0;
-    }
-  grm_args_values(*subplot_args, "viewport", "D", &viewport);
-  grm_args_values(active_plot_args, "wswindow", "D", &wswindow);
-
-  *factor_x = abs(x1 - x2) / (width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0]));
-  *factor_y = abs(y1 - y2) / (height * (viewport[3] - viewport[2]) / (wswindow[3] - wswindow[2]));
-  if (keep_aspect_ratio)
-    {
-      if (*factor_x <= *factor_y)
-        {
-          *factor_x = *factor_y;
-          if (x1 > x2)
-            {
-              ndc_left = ndc_right - *factor_x * (viewport[1] - viewport[0]);
-            }
-        }
-      else
-        {
-          *factor_y = *factor_x;
-          if (y1 > y2)
-            {
-              ndc_top = ndc_bottom + *factor_y * (viewport[3] - viewport[2]);
-            }
-        }
-    }
-  *focus_x = (ndc_left - *factor_x * viewport[0]) / (1 - *factor_x) - (viewport[0] + viewport[1]) / 2.0;
-  *focus_y = (ndc_top - *factor_y * viewport[3]) / (1 - *factor_y) - (viewport[2] + viewport[3]) / 2.0;
-  return 1;
-}
-
 grm_args_t *get_subplot_from_ndc_point(double x, double y)
 {
   grm_args_t **subplot_args;
@@ -5540,177 +5456,19 @@ grm_args_t *get_subplot_from_ndc_points(unsigned int n, const double *x, const d
   return subplot_args;
 }
 
-double *moivre(double r, int x, int n)
-{
-  double *result = static_cast<double *>(malloc(2 * sizeof(double)));
-  if (result != nullptr)
-    {
-      if (n != 0)
-        {
-          *result = pow(r, (1.0 / n)) * (cos(2.0 * x * M_PI / n));
-          *(result + 1) = pow(r, (1.0 / n)) * (sin(2.0 * x * M_PI / n));
-        }
-      else
-        {
-          *result = 1.0;
-          *(result + 1) = 0.0;
-        }
-    }
-  return result;
-}
-
-
-/* like python list comprehension [factor * func(element) for element in list] saves values in result starting at start
- * index */
-
-double *listcomprehension(double factor, double (*pFunction)(double), double *list, int num, int start, double *result)
-{
-  int i;
-  if (result == nullptr)
-    {
-      result = static_cast<double *>(malloc(num * sizeof(double)));
-      if (result == nullptr)
-        {
-          return nullptr;
-        }
-    }
-
-  for (i = 0; i < num; ++i)
-    {
-      result[start] = factor * (*pFunction)(list[i]);
-      start++;
-    }
-
-  return result;
-}
-
-/*
- * mixes gr colormaps with size = size * size. If x and or y < 0
- * */
-int *create_colormap(int x, int y, int size)
-{
-  int r, g, b, a;
-  int outer, inner;
-  int r1, g1, b1;
-  int r2, g2, b2;
-  int *colormap = nullptr;
-  if (x > 47 || y > 47)
-    {
-      logger((stderr, "values for the keyword \"colormap\" can not be greater than 47\n"));
-      return nullptr;
-    }
-
-  colormap = static_cast<int *>(malloc(size * size * sizeof(int)));
-  if (colormap == nullptr)
-    {
-      debug_print_malloc_error();
-      return nullptr;
-    }
-  if (x >= 0 && y < 0)
-    {
-      for (outer = 0; outer < size; outer++)
-        {
-          for (inner = 0; inner < size; inner++)
-            {
-              a = 255;
-              r = ((cmap_h[x][(int)(inner * 255.0 / size)] >> 16) & 0xff);
-              g = ((cmap_h[x][(int)(inner * 255.0 / size)] >> 8) & 0xff);
-              b = (cmap_h[x][(int)(inner * 255.0 / size)] & 0xff);
-
-              colormap[outer * size + inner] = (a << 24) + (b << 16) + (g << 8) + (r);
-            }
-        }
-      return colormap;
-    }
-
-  if (x < 0 && y >= 0)
-    {
-      gr_setcolormap(y);
-      for (outer = 0; outer < size; outer++)
-        {
-          for (inner = 0; inner < size; inner++)
-            {
-              a = 255;
-              r = ((cmap_h[y][(int)(inner * 255.0 / size)] >> 16) & 0xff);
-              g = ((cmap_h[y][(int)(inner * 255.0 / size)] >> 8) & 0xff);
-              b = (cmap_h[y][(int)(inner * 255.0 / size)] & 0xff);
-
-              colormap[inner * size + outer] = (a << 24) + (b << 16) + (g << 8) + (r);
-            }
-        }
-
-
-      return colormap;
-    }
-
-  if ((x >= 0 && y >= 0) || (x < 0 && y < 0))
-    {
-      if (x < 0 && y < 0)
-        {
-          x = y = 0;
-        }
-      gr_setcolormap(x);
-      for (outer = 0; outer < size; outer++)
-        {
-          for (inner = 0; inner < size; inner++)
-            {
-              a = 255;
-              r1 = ((cmap_h[x][(int)(inner * 255.0 / size)] >> 16) & 0xff);
-              g1 = ((cmap_h[x][(int)(inner * 255.0 / size)] >> 8) & 0xff);
-              b1 = (cmap_h[x][(int)(inner * 255.0 / size)] & 0xff);
-
-              r2 = ((cmap_h[y][(int)(outer * 255.0 / size)] >> 16) & 0xff);
-              g2 = ((cmap_h[y][(int)(outer * 255.0 / size)] >> 8) & 0xff);
-              b2 = (cmap_h[y][(int)(outer * 255.0 / size)] & 0xff);
-
-              colormap[outer * size + inner] =
-                  (a << 24) + (((b1 + b2) / 2) << 16) + (((g1 + g2) / 2) << 8) + ((r1 + r2) / 2);
-            }
-        }
-      return colormap;
-    }
-  return nullptr;
-}
-
-
 /*
  * Calculates the classes for polar histogram
  * */
 err_t classes_polar_histogram(grm_args_t *subplot_args)
 {
   unsigned int num_bins;
-  double *theta = nullptr;
-  unsigned int length;
+  unsigned int length, num_bin_edges, dummy;
   const char *norm;
-  double *classes = nullptr;
-
-  double interval;
-  double start;
-  double *p;
-  double max;
-  double temp_max;
-
-  double *bin_edges = nullptr;
-  double *bin_edges_buf = nullptr;
-  unsigned int num_bin_edges;
-
+  double *bin_edges = nullptr, *philim = nullptr, *theta = nullptr;
   double bin_width;
-
-  double *bin_widths = nullptr;
-
   int is_bin_counts;
   int *bin_counts = nullptr;
-
-  double false_ = -1;
-
-  double *philim = nullptr;
-  unsigned int dummy;
-
-  double *new_theta = nullptr;
-  double *new_edges = nullptr;
-
   grm_args_t **series;
-
   err_t error = ERROR_NONE;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
@@ -5759,7 +5517,6 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
       group->setAttribute("phimax", philim[1]);
     }
 
-
   /* bin_edges and nbins */
   if (grm_args_first_value(*series, "bin_edges", "D", &bin_edges, &num_bin_edges) == 0)
     {
@@ -5791,144 +5548,6 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
   return error;
 }
 
-/*!
- * Convert an RGB triple to a luminance value following the CCIR 601 format.
- *
- * \param[in] r The red component of the RGB triple in the range [0.0, 1.0].
- * \param[in] g The green component of the RGB triple in the range [0.0, 1.0].
- * \param[in] b The blue component of the RGB triple in the range [0.0, 1.0].
- * \return The luminance of the given RGB triple in the range [0.0, 1.0].
- */
-double get_lightness_from_rbg(double r, double g, double b)
-{
-  return 0.299 * r + 0.587 * g + 0.114 * b;
-}
-
-/*!
- * Set the text color either to black or white depending on the given background color.
- *
- * \param[in] r The red component of the RGB triple in the range [0.0, 1.0].
- * \param[in] g The green component of the RGB triple in the range [0.0, 1.0].
- * \param[in] b The blue component of the RGB triple in the range [0.0, 1.0].
- * \return The luminance of the given RGB triple.
- */
-void set_text_color_for_background(double r, double g, double b)
-{
-  double color_lightness;
-
-  color_lightness = get_lightness_from_rbg(r, g, b);
-  if (color_lightness < 0.4)
-    {
-      gr_settextcolorind(0);
-    }
-  else
-    {
-      gr_settextcolorind(1);
-    }
-}
-
-
-/*!
- * Draw an xticklabel at the specified position while trying to stay in the available space.
- * Every space character (' ') is seen as a possible position to break the label into the next line.
- * The label will not break into the next line when enough space is available.
- * If a label or a part of it does not fit in the available space but doesnt have a space character to break it up
- * it will get drawn anyway.
- *
- * \param[in] x1 The X coordinate of starting position of the label.
- * \param[in] x2 The Y coordinate of starting position of the label.
- * \param[in] label The label to be drawn.
- * \param[in] available_width The available space in X direction around the starting position.
- */
-void draw_xticklabel(double x1, double x2, const char *label, double available_width)
-{
-  char new_label[256];
-  int breakpoint_positions[128];
-  int cur_num_breakpoints = 0;
-  int i = 0;
-  int cur_start = 0;
-  double tbx[4], tby[4];
-  double width;
-  double charheight;
-
-  gr_inqcharheight(&charheight);
-
-
-  for (i = 0; i == 0 || label[i - 1] != '\0'; ++i)
-    {
-      if (label[i] == ' ' || label[i] == '\0')
-        {
-          /* calculate width of the next part of the label to be drawn */
-          new_label[i] = '\0';
-          gr_inqtext(x1, x2, new_label + cur_start, tbx, tby);
-          gr_wctondc(&tbx[0], &tby[0]);
-          gr_wctondc(&tbx[2], &tby[2]);
-          width = tbx[2] - tbx[0];
-          new_label[i] = ' ';
-
-          /* add possible breakpoint */
-          breakpoint_positions[cur_num_breakpoints++] = i;
-
-          if (width > available_width)
-            {
-              /* part is too big but doesnt have a breakpoint in it */
-              if (cur_num_breakpoints == 1)
-                {
-                  new_label[i] = '\0';
-                  gr_text(x1, x2, new_label + cur_start);
-
-                  cur_start = i + 1;
-                  cur_num_breakpoints = 0;
-                }
-              /* part is too big and has breakpoints in it */
-              else
-                {
-                  /* break label at last breakpoint that still allowed the text to fit */
-                  new_label[breakpoint_positions[cur_num_breakpoints - 2]] = '\0';
-                  gr_text(x1, x2, new_label + cur_start);
-
-                  cur_start = breakpoint_positions[cur_num_breakpoints - 2] + 1;
-                  breakpoint_positions[0] = breakpoint_positions[cur_num_breakpoints - 1];
-                  cur_num_breakpoints = 1;
-                }
-              x2 -= charheight * 1.5;
-            }
-        }
-      else
-        {
-          new_label[i] = label[i];
-        }
-    }
-
-  /* 0-terminate the new label */
-  new_label[i] = '\0';
-
-  /* draw the rest */
-  gr_text(x1, x2, new_label + cur_start);
-}
-
-double auto_tick(double amin, double amax)
-{
-  double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
-  double scale, tick;
-  int i, n;
-
-  scale = pow(10.0, (int)(log10(amax - amin)));
-  tick = 1.0;
-  for (i = 0; i < 9; i++)
-    {
-      n = (amax - amin) / scale / tick_size[i];
-      if (n > 7)
-        {
-          tick = tick_size[i - 1];
-          break;
-        }
-    }
-  tick *= scale;
-  return tick;
-}
-
-
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- args set ------------------------------------------------------------------------------- */
@@ -5954,7 +5573,6 @@ int args_set_entry_equals(args_set_const_entry_t entry1, args_set_const_entry_t 
 {
   return entry1 == entry2;
 }
-
 
 /* ------------------------- string-to-plot_func map ---------------------------------------------------------------- */
 
@@ -6177,7 +5795,6 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "kind", "s", &kind);
   group->setAttribute("kind", kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-
 
   if (plot_pre_subplot(subplot_args) != ERROR_NONE)
     {
@@ -6436,7 +6053,6 @@ int grm_switch(unsigned int id)
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ c++ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-
 int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
                     const std::shared_ptr<GRM::Element> &parentDomElement)
 {
@@ -6660,108 +6276,4 @@ int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, cons
   *focus_x = (ndc_left - *factor_x * viewport[0]) / (1 - *factor_x) - (viewport[0] + viewport[1]) / 2.0;
   *focus_y = (ndc_top - *factor_y * viewport[3]) / (1 - *factor_y) - (viewport[2] + viewport[3]) / 2.0;
   return 1;
-}
-
-/*!
- * Set the text color either to black or white depending on the given background color.
- *
- * \param[in] r The red component of the RGB triple in the range [0.0, 1.0].
- * \param[in] g The green component of the RGB triple in the range [0.0, 1.0].
- * \param[in] b The blue component of the RGB triple in the range [0.0, 1.0].
- * \return The luminance of the given RGB triple.
- */
-void set_text_color_for_background(double r, double g, double b, const std::shared_ptr<GRM::Element> &element)
-{
-  double color_lightness;
-
-  color_lightness = get_lightness_from_rbg(r, g, b);
-  if (color_lightness < 0.4)
-    {
-      global_render->setTextColorInd(element, 0);
-    }
-  else
-    {
-      global_render->setTextColorInd(element, 1);
-    }
-}
-
-double auto_tick_rings_polar(double rmax, int &rings, const std::string &norm)
-{
-  double scale;
-  bool decimal = false;
-
-  std::vector<int> largeRings = {6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-  std::vector<int> normalRings = {3, 4, 5, 6, 7};
-
-  std::vector<int> *whichVector;
-
-  // -1 --> auto rings
-  if (rings == -1)
-    {
-      if (norm == "cdf")
-        {
-          rings = 4;
-          return 1.0 / rings;
-        }
-
-      if (rmax > 20)
-        {
-          whichVector = &largeRings;
-        }
-      else
-        {
-          whichVector = &normalRings;
-        }
-      scale = ceil(abs(log10(rmax)));
-      if (rmax < 1.0)
-        {
-          decimal = true;
-          rmax = static_cast<int>(ceil(rmax * pow(10.0, scale)));
-        }
-
-      while (true)
-        {
-          for (int i : *whichVector)
-            {
-              if (static_cast<int>(rmax) % i == 0)
-                {
-                  if (decimal)
-                    {
-                      rmax = rmax / pow(10.0, scale);
-                    }
-                  rings = i;
-                  return rmax / rings;
-                }
-            }
-          // rmax not divisible by whichVector
-          ++rmax;
-        }
-    }
-
-  // given rings
-  if (norm == "cdf")
-    {
-      return 1.0 / rings;
-    }
-
-  if (rmax > rings)
-    {
-      return (static_cast<int>(rmax) + (rings - (static_cast<int>(rmax) % rings))) / rings;
-    }
-  else if (rmax > (rings * 0.6))
-    {
-      // returns rings / rings -> 1.0 so that rmax = rings * tick -> rings. Number of rings is rmax then
-      return 1.0;
-    }
-  scale = ceil(abs(log10(rmax)));
-  rmax = static_cast<int>(rmax * pow(10.0, scale));
-  if (static_cast<int>(rmax) % rings == 0)
-    {
-      rmax = rmax / pow(10.0, scale);
-      return rmax / rings;
-    }
-  rmax += rings - (static_cast<int>(rmax) % rings);
-  rmax = rmax / pow(10.0, scale);
-
-  return rmax / rings;
 }

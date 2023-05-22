@@ -200,7 +200,6 @@ err_t plot_trisurf(grm_args_t *subplot_args);
 err_t plot_tricont(grm_args_t *subplot_args);
 err_t plot_shade(grm_args_t *subplot_args);
 err_t plot_raw(grm_args_t *subplot_args);
-err_t plot_polar_heatmap(grm_args_t *subplot_args);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ auxiliary drawing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -221,30 +220,12 @@ const char *get_compatible_format(const char *key, const char *given_format);
 int get_id_from_args(const grm_args_t *args, int *plot_id, int *subplot_id, int *series_id);
 int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_height, double *metric_width,
                     double *metric_height);
-int get_focus_and_factor(const int top, const int right, const int bottom, const int left, const int keep_aspect_ratio,
-                         double *factor_x, double *factor_y, double *focus_x, double *focus_y,
-                         grm_args_t **subplot_args);
 grm_args_t *get_subplot_from_ndc_point(double x, double y);
 grm_args_t *get_subplot_from_ndc_points(unsigned int n, const double *x, const double *y);
-double *moivre(double r, int x, int n);
-double *listcomprehension(double count, double (*pFunction)(double), double *pDouble, int num, int start,
-                          double *result);
-int *create_colormap(int x, int y, int size);
 err_t classes_polar_histogram(grm_args_t *subplot_args);
-double get_lightness_from_rbg(double r, double g, double b);
-void set_text_color_for_background(double r, double g, double b);
-void draw_xticklabel(double x1, double x2, const char *label, double available_width);
-double auto_tick(double amin, double amax);
-
 
 #ifdef __cplusplus
 }
-void set_text_color_for_background(double r, double g, double b, const std::shared_ptr<GRM::Element> &element);
-void draw_xticklabel(double x1, double x2, const char *label, double available_width,
-                     const std::shared_ptr<GRM::Element> &element);
-
-double auto_tick_rings_polar(double rmax, int &rings, const std::string &norm);
-
 
 #endif
 #endif /* ifndef GRM_PLOT_INT_H_INCLUDED */

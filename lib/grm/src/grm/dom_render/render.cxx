@@ -33,6 +33,7 @@
 #include "gr3.h"
 #include "grm/layout.hxx"
 #include "grm/plot_int.h"
+#include <cm.h>
 
 /* ------------------------- re-implementation of x_lin/x_log ------------------------------------------------------- */
 
@@ -114,6 +115,252 @@ bool CompareZIndex::operator()(std::shared_ptr<GRM::Element> const &lhs, std::sh
       rhs_z = static_cast<int>(rhs->getAttribute("z_index"));
     }
   return lhs_z > rhs_z;
+}
+
+static double auto_tick(double amin, double amax)
+{
+  double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
+  double scale, tick;
+  int i, n;
+
+  scale = pow(10.0, (int)(log10(amax - amin)));
+  tick = 1.0;
+  for (i = 0; i < 9; i++)
+    {
+      n = (amax - amin) / scale / tick_size[i];
+      if (n > 7)
+        {
+          tick = tick_size[i - 1];
+          break;
+        }
+    }
+  tick *= scale;
+  return tick;
+}
+
+static double auto_tick_rings_polar(double rmax, int &rings, const std::string &norm)
+{
+  double scale;
+  bool decimal = false;
+
+  std::vector<int> largeRings = {6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+  std::vector<int> normalRings = {3, 4, 5, 6, 7};
+
+  std::vector<int> *whichVector;
+
+  // -1 --> auto rings
+  if (rings == -1)
+    {
+      if (norm == "cdf")
+        {
+          rings = 4;
+          return 1.0 / rings;
+        }
+
+      if (rmax > 20)
+        {
+          whichVector = &largeRings;
+        }
+      else
+        {
+          whichVector = &normalRings;
+        }
+      scale = ceil(abs(log10(rmax)));
+      if (rmax < 1.0)
+        {
+          decimal = true;
+          rmax = static_cast<int>(ceil(rmax * pow(10.0, scale)));
+        }
+
+      while (true)
+        {
+          for (int i : *whichVector)
+            {
+              if (static_cast<int>(rmax) % i == 0)
+                {
+                  if (decimal)
+                    {
+                      rmax = rmax / pow(10.0, scale);
+                    }
+                  rings = i;
+                  return rmax / rings;
+                }
+            }
+          // rmax not divisible by whichVector
+          ++rmax;
+        }
+    }
+
+  // given rings
+  if (norm == "cdf")
+    {
+      return 1.0 / rings;
+    }
+
+  if (rmax > rings)
+    {
+      return (static_cast<int>(rmax) + (rings - (static_cast<int>(rmax) % rings))) / rings;
+    }
+  else if (rmax > (rings * 0.6))
+    {
+      // returns rings / rings -> 1.0 so that rmax = rings * tick -> rings. Number of rings is rmax then
+      return 1.0;
+    }
+  scale = ceil(abs(log10(rmax)));
+  rmax = static_cast<int>(rmax * pow(10.0, scale));
+  if (static_cast<int>(rmax) % rings == 0)
+    {
+      rmax = rmax / pow(10.0, scale);
+      return rmax / rings;
+    }
+  rmax += rings - (static_cast<int>(rmax) % rings);
+  rmax = rmax / pow(10.0, scale);
+
+  return rmax / rings;
+}
+
+/*!
+ * Convert an RGB triple to a luminance value following the CCIR 601 format.
+ *
+ * \param[in] r The red component of the RGB triple in the range [0.0, 1.0].
+ * \param[in] g The green component of the RGB triple in the range [0.0, 1.0].
+ * \param[in] b The blue component of the RGB triple in the range [0.0, 1.0].
+ * \return The luminance of the given RGB triple in the range [0.0, 1.0].
+ */
+static double get_lightness_from_rbg(double r, double g, double b)
+{
+  return 0.299 * r + 0.587 * g + 0.114 * b;
+}
+
+/*
+ * mixes gr colormaps with size = size * size. If x and or y < 0
+ * */
+static int *create_colormap(int x, int y, int size)
+{
+  int r, g, b, a;
+  int outer, inner;
+  int r1, g1, b1;
+  int r2, g2, b2;
+  int *colormap = nullptr;
+  if (x > 47 || y > 47)
+    {
+      logger((stderr, "values for the keyword \"colormap\" can not be greater than 47\n"));
+      return nullptr;
+    }
+
+  colormap = static_cast<int *>(malloc(size * size * sizeof(int)));
+  if (colormap == nullptr)
+    {
+      debug_print_malloc_error();
+      return nullptr;
+    }
+  if (x >= 0 && y < 0)
+    {
+      for (outer = 0; outer < size; outer++)
+        {
+          for (inner = 0; inner < size; inner++)
+            {
+              a = 255;
+              r = ((cmap_h[x][(int)(inner * 255.0 / size)] >> 16) & 0xff);
+              g = ((cmap_h[x][(int)(inner * 255.0 / size)] >> 8) & 0xff);
+              b = (cmap_h[x][(int)(inner * 255.0 / size)] & 0xff);
+
+              colormap[outer * size + inner] = (a << 24) + (b << 16) + (g << 8) + (r);
+            }
+        }
+      return colormap;
+    }
+
+  if (x < 0 && y >= 0)
+    {
+      gr_setcolormap(y);
+      for (outer = 0; outer < size; outer++)
+        {
+          for (inner = 0; inner < size; inner++)
+            {
+              a = 255;
+              r = ((cmap_h[y][(int)(inner * 255.0 / size)] >> 16) & 0xff);
+              g = ((cmap_h[y][(int)(inner * 255.0 / size)] >> 8) & 0xff);
+              b = (cmap_h[y][(int)(inner * 255.0 / size)] & 0xff);
+
+              colormap[inner * size + outer] = (a << 24) + (b << 16) + (g << 8) + (r);
+            }
+        }
+
+
+      return colormap;
+    }
+
+  if ((x >= 0 && y >= 0) || (x < 0 && y < 0))
+    {
+      if (x < 0 && y < 0)
+        {
+          x = y = 0;
+        }
+      gr_setcolormap(x);
+      for (outer = 0; outer < size; outer++)
+        {
+          for (inner = 0; inner < size; inner++)
+            {
+              a = 255;
+              r1 = ((cmap_h[x][(int)(inner * 255.0 / size)] >> 16) & 0xff);
+              g1 = ((cmap_h[x][(int)(inner * 255.0 / size)] >> 8) & 0xff);
+              b1 = (cmap_h[x][(int)(inner * 255.0 / size)] & 0xff);
+
+              r2 = ((cmap_h[y][(int)(outer * 255.0 / size)] >> 16) & 0xff);
+              g2 = ((cmap_h[y][(int)(outer * 255.0 / size)] >> 8) & 0xff);
+              b2 = (cmap_h[y][(int)(outer * 255.0 / size)] & 0xff);
+
+              colormap[outer * size + inner] =
+                  (a << 24) + (((b1 + b2) / 2) << 16) + (((g1 + g2) / 2) << 8) + ((r1 + r2) / 2);
+            }
+        }
+      return colormap;
+    }
+  return nullptr;
+}
+
+/* like python list comprehension [factor * func(element) for element in list] saves values in result starting at start
+ * index */
+static double *listcomprehension(double factor, double (*pFunction)(double), double *list, int num, int start,
+                                 double *result)
+{
+  int i;
+  if (result == nullptr)
+    {
+      result = static_cast<double *>(malloc(num * sizeof(double)));
+      if (result == nullptr)
+        {
+          return nullptr;
+        }
+    }
+
+  for (i = 0; i < num; ++i)
+    {
+      result[start] = factor * (*pFunction)(list[i]);
+      start++;
+    }
+
+  return result;
+}
+
+static double *moivre(double r, int x, int n)
+{
+  double *result = static_cast<double *>(malloc(2 * sizeof(double)));
+  if (result != nullptr)
+    {
+      if (n != 0)
+        {
+          *result = pow(r, (1.0 / n)) * (cos(2.0 * x * M_PI / n));
+          *(result + 1) = pow(r, (1.0 / n)) * (sin(2.0 * x * M_PI / n));
+        }
+      else
+        {
+          *result = 1.0;
+          *(result + 1) = 0.0;
+        }
+    }
+  return result;
 }
 
 static void markerHelper(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context,
