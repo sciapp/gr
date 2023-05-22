@@ -2056,8 +2056,7 @@ err_t plot_line(grm_args_t *subplot_args)
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
-      cleanup_and_set_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length),
-                               ERROR_PLOT_MISSING_DATA);
+      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
 
       if (y_length > 0)
         {
@@ -2070,7 +2069,6 @@ err_t plot_line(grm_args_t *subplot_args)
           std::vector<double> x_vec(x, x + x_length);
           (*context)["x" + str] = x_vec;
           subGroup->setAttribute("x", "x" + str);
-          cleanup_and_set_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
         }
 
       subGroup->setAttribute("orientation", orientation);
@@ -2080,17 +2078,8 @@ err_t plot_line(grm_args_t *subplot_args)
       global_root->setAttribute("id", ++id);
       grm_args_push(*current_series, "orientation", "s", orientation);
       error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
-      cleanup_if_error;
+      return_if_error;
       ++current_series;
-
-    cleanup:
-      x = y = nullptr;
-      x_length = y_length = 0;
-
-      if (error != ERROR_NONE)
-        {
-          break;
-        }
     }
 
   return error;
@@ -2133,9 +2122,8 @@ err_t plot_stairs(grm_args_t *subplot_args)
       subGroup->setAttribute("kind", kind);
       subGroup->setAttribute("orientation", orientation);
 
-      return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length) && x_length < 1,
-                      ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
+      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
+      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
 
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string str = std::to_string(id);
@@ -2165,10 +2153,6 @@ err_t plot_stairs(grm_args_t *subplot_args)
           std::vector<double> z_vec(plot, plot + n);
           (*context)["z" + str] = z_vec;
           subGroup->setAttribute("z", "z" + str);
-        }
-      else
-        {
-          return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
         }
 
       grm_args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
@@ -2213,9 +2197,8 @@ err_t plot_scatter(grm_args_t *subplot_args)
       unsigned int x_length, y_length, z_length, c_length;
       int i, c_index = -1, markertype;
 
-      return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
+      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
 
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string str = std::to_string(id);
@@ -2231,8 +2214,6 @@ err_t plot_scatter(grm_args_t *subplot_args)
       subGroup->setAttribute("y", "y" + str);
       if (grm_args_first_value(*current_series, "z", "D", &z, &z_length))
         {
-          return_error_if(x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-
           std::vector<double> z_vec(z, z + z_length);
 
           (*context)["z" + str] = z_vec;
@@ -2292,12 +2273,10 @@ err_t plot_quiver(grm_args_t *subplot_args)
     {
       double *x = nullptr, *y = nullptr, *u = nullptr, *v = nullptr;
       unsigned int x_length, y_length, u_length, v_length;
-      return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "u", "D", &u, &u_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "v", "D", &v, &v_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(x_length * y_length != u_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      return_error_if(x_length * y_length != v_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
+      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
+      grm_args_first_value(*current_series, "u", "D", &u, &u_length);
+      grm_args_first_value(*current_series, "v", "D", &v, &v_length);
 
       std::vector<double> x_vec(x, x + x_length);
       std::vector<double> y_vec(y, y + y_length);
@@ -2340,9 +2319,8 @@ err_t plot_stem(grm_args_t *subplot_args)
 
       subGroup->setAttribute("orientation", orientation);
 
-      return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
+      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
 
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string str = std::to_string(id);
@@ -3402,9 +3380,8 @@ err_t plot_hexbin(grm_args_t *subplot_args)
       double *x, *y;
       unsigned int x_length, y_length;
       int cntmax, nbins;
-      return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
+      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_values(*current_series, "nbins", "i", &nbins);
 
       int id_int = static_cast<int>(global_root->getAttribute("id"));
@@ -3442,16 +3419,12 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "zlog", "i", &zlog);
   while (*current_series != nullptr)
     {
-      int is_uniform_heatmap;
       auto subGroup = global_render->createSeries("polar_heatmap");
       group->append(subGroup);
 
       grm_args_first_value(*current_series, "x", "D", &x, &cols);
       grm_args_first_value(*current_series, "y", "D", &y, &rows);
-      is_uniform_heatmap = is_equidistant_array(cols, x) && is_equidistant_array(rows, y);
-      if (strcmp(kind, "nonuniformpolar_heatmap") == 0) is_uniform_heatmap = 0;
-      return_error_if(!is_uniform_heatmap && (x == nullptr || y == nullptr), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
+      grm_args_first_value(*current_series, "z", "D", &z, &z_length);
 
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string str = std::to_string(id);
@@ -3481,8 +3454,7 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
       if (x == nullptr && y == nullptr)
         {
           /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
-          return_error_if(!grm_args_values(*current_series, "z_dims", "ii", &rows, &cols),
-                          ERROR_PLOT_MISSING_DIMENSIONS);
+          grm_args_values(*current_series, "z_dims", "ii", &rows, &cols);
           subGroup->setAttribute("zdims_min", (int)rows);
           subGroup->setAttribute("zdims_max", (int)cols);
         }
@@ -3542,16 +3514,12 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "zlog", "i", &zlog);
   while (*current_series != nullptr)
     {
-      int is_uniform_heatmap;
       x = y = nullptr;
       auto subGroup = global_render->createSeries("heatmap");
       group->append(subGroup);
       grm_args_first_value(*current_series, "x", "D", &x, &cols);
       grm_args_first_value(*current_series, "y", "D", &y, &rows);
-      is_uniform_heatmap =
-          (x == nullptr || is_equidistant_array(cols, x)) && (y == nullptr || is_equidistant_array(rows, y));
-      return_error_if(!is_uniform_heatmap && (x == nullptr || y == nullptr), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
+      grm_args_first_value(*current_series, "z", "D", &z, &z_length);
 
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string str = std::to_string(id);
@@ -3658,8 +3626,7 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
       grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
       if (!grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max))
         {
-          cleanup_and_set_error_if(!grm_args_values(subplot_args, "_zlim", "dd", &c_min, &c_max),
-                                   ERROR_PLOT_MISSING_DATA);
+          grm_args_values(subplot_args, "_zlim", "dd", &c_min, &c_max);
           group->setAttribute("lim_zmin", c_min);
           group->setAttribute("lim_zmax", c_max);
         }
@@ -3834,7 +3801,7 @@ err_t plot_surface(grm_args_t *subplot_args)
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
-      return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
+      grm_args_first_value(*current_series, "z", "D", &z, &z_length);
 
       if (grm_args_values(*current_series, "z_dims", "ii", &y_length, &x_length))
         {
@@ -3896,10 +3863,9 @@ err_t plot_plot3(grm_args_t *subplot_args)
       unsigned int x_length, y_length, z_length;
       auto subGroup = global_render->createSeries("plot3");
       group->append(subGroup);
-      return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
+      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
+      grm_args_first_value(*current_series, "z", "D", &z, &z_length);
 
       int id_int = static_cast<int>(global_root->getAttribute("id"));
       std::string str = std::to_string(id_int);
@@ -3939,10 +3905,9 @@ err_t plot_scatter3(grm_args_t *subplot_args)
     {
       auto subGroup = global_render->createSeries("scatter3");
       group->append(subGroup);
-      return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
+      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
+      grm_args_first_value(*current_series, "z", "D", &z, &z_length);
 
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string str = std::to_string(id);
@@ -3992,7 +3957,7 @@ err_t plot_imshow(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "grplot", "i", &grplot);
-  return_error_if(!grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max), ERROR_PLOT_MISSING_DATA);
+  grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max);
   while (*current_series != nullptr)
     {
       auto subGroup = global_render->createSeries("imshow");
@@ -4001,11 +3966,8 @@ err_t plot_imshow(grm_args_t *subplot_args)
       subGroup->setAttribute("c_min", c_min);
       subGroup->setAttribute("c_max", c_max);
 
-      return_error_if(!grm_args_first_value(*current_series, "c", "D", &c_data, &c_data_length),
-                      ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "c_dims", "I", &shape, &i), ERROR_PLOT_MISSING_DATA);
-      return_error_if(i != 2, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      return_error_if(shape[0] * shape[1] != c_data_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      grm_args_first_value(*current_series, "c", "D", &c_data, &c_data_length);
+      grm_args_first_value(*current_series, "c_dims", "I", &shape, &i);
 
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string str = std::to_string(id);
@@ -4053,12 +4015,8 @@ err_t plot_isosurface(grm_args_t *subplot_args)
     {
       auto subGroup = global_render->createSeries("isosurface");
       group->append(subGroup);
-      return_error_if(!grm_args_first_value(*current_series, "c", "D", &orig_data, &data_length),
-                      ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "c_dims", "I", &shape, &dims), ERROR_PLOT_MISSING_DATA);
-      return_error_if(dims != 3, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      return_error_if(shape[0] * shape[1] * shape[2] != data_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      return_error_if(data_length <= 0, ERROR_PLOT_MISSING_DATA);
+      grm_args_first_value(*current_series, "c", "D", &orig_data, &data_length);
+      grm_args_first_value(*current_series, "c_dims", "I", &shape, &dims);
 
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string str = std::to_string(id);
@@ -4079,7 +4037,6 @@ err_t plot_isosurface(grm_args_t *subplot_args)
        */
       if (grm_args_first_value(*current_series, "foreground_color", "D", &temp_colors, &i))
         {
-          return_error_if(i != 3, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
           std::vector<double> foreground_vec(temp_colors, temp_colors + i);
           (*context)["foreground_color" + str] = foreground_vec;
           subGroup->setAttribute("foreground_color", "foreground_color" + str);
@@ -4113,11 +4070,8 @@ err_t plot_volume(grm_args_t *subplot_args)
       const char *algorithm_str;
       double dmin, dmax;
 
-      return_error_if(!grm_args_first_value(*current_series, "c", "D", &c, &data_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "c_dims", "I", &shape, &dims), ERROR_PLOT_MISSING_DATA);
-      return_error_if(dims != 3, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      return_error_if(shape[0] * shape[1] * shape[2] != data_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      return_error_if(data_length <= 0, ERROR_PLOT_MISSING_DATA);
+      grm_args_first_value(*current_series, "c", "D", &c, &data_length);
+      grm_args_first_value(*current_series, "c_dims", "I", &shape, &dims);
 
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string str = std::to_string(id);
@@ -4147,22 +4101,7 @@ err_t plot_volume(grm_args_t *subplot_args)
                 {
                   algorithm = GR_VOLUME_MIP;
                 }
-              else
-                {
-                  logger((stderr, "Got unknown volume algorithm \"%s\"\n", algorithm_str));
-                  return ERROR_PLOT_UNKNOWN_ALGORITHM;
-                }
             }
-          else
-            {
-              logger((stderr, "No volume algorithm given! Aborting the volume routine\n"));
-              return ERROR_PLOT_MISSING_ALGORITHM;
-            }
-        }
-      if (algorithm != GR_VOLUME_ABSORPTION && algorithm != GR_VOLUME_EMISSION && algorithm != GR_VOLUME_MIP)
-        {
-          logger((stderr, "Got unknown volume algorithm \"%d\"\n", algorithm));
-          return ERROR_PLOT_UNKNOWN_ALGORITHM;
         }
       subGroup->setAttribute("algorithm", algorithm);
 
@@ -4210,9 +4149,8 @@ err_t plot_polar(grm_args_t *subplot_args)
       subGroup->setAttribute("r_min", r_min);
       subGroup->setAttribute("r_max", r_max);
 
-      return_error_if(!grm_args_first_value(*current_series, "x", "D", &theta, &theta_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "y", "D", &rho, &rho_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(rho_length != theta_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      grm_args_first_value(*current_series, "x", "D", &theta, &theta_length);
+      grm_args_first_value(*current_series, "y", "D", &rho, &rho_length);
 
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string str = std::to_string(id);
@@ -4233,7 +4171,6 @@ err_t plot_polar(grm_args_t *subplot_args)
 
   return ERROR_NONE;
 }
-
 
 /*!
  * Plot a polar histogram.
@@ -4426,7 +4363,7 @@ err_t plot_pie(grm_args_t *subplot_args)
   std::string str = std::to_string(id);
   auto context = global_render->getContext();
 
-  return_error_if(!grm_args_first_value(series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
+  grm_args_first_value(series, "x", "D", &x, &x_length);
 
   if (x_length > 0)
     {
@@ -4466,10 +4403,9 @@ err_t plot_trisurf(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
-      return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
+      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
+      grm_args_first_value(*current_series, "z", "D", &z, &z_length);
 
       int id = (int)global_root->getAttribute("id");
       global_root->setAttribute("id", id + 1);
@@ -4506,10 +4442,9 @@ err_t plot_tricont(grm_args_t *subplot_args)
       auto subGroup = global_render->createSeries("tricontour");
       group->append(subGroup);
 
-      return_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
+      grm_args_first_value(*current_series, "y", "D", &y, &y_length);
+      grm_args_first_value(*current_series, "z", "D", &z, &z_length);
 
       int id = (int)global_root->getAttribute("id");
       std::string str = std::to_string(id);
