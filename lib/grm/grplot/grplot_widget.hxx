@@ -105,15 +105,15 @@ private:
     {
       if (holds_alternative<grm_accumulated_tooltip_info_t>())
         {
-          auto &accumulated_tooltip = get<grm_accumulated_tooltip_info_t>();
+          auto accumulated_tooltip = get<grm_accumulated_tooltip_info_t>();
           std::free(accumulated_tooltip->y);
           std::free(accumulated_tooltip->ylabels);
         }
       std::visit([](auto *x) { std::free(x); }, tooltip_);
     }
 
-    template <typename T> T *&get() { return std::get<T *>(tooltip_); };
-    template <typename T> const T *const &get() const { return std::get<T *>(tooltip_); };
+    template <typename T> T *get() { return std::get<T *>(tooltip_); };
+    template <typename T> const T *get() const { return std::get<T *>(tooltip_); };
 
     template <typename T> bool holds_alternative() const { return std::holds_alternative<T *>(tooltip_); };
 
