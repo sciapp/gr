@@ -1260,6 +1260,11 @@ static bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, d
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ attribute processing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+static void processAlpha(const std::shared_ptr<GRM::Element> &elem)
+{
+  gr_settransparency(static_cast<double>(elem->getAttribute("alpha")));
+}
+
 static void processBorderColorInd(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setbordercolorind(static_cast<int>(elem->getAttribute("bordercolorind")));
@@ -1361,6 +1366,14 @@ static void processColorbarPosition(const std::shared_ptr<GRM::Element> &elem)
   gr_setviewport(viewport[1] + offset, viewport[1] + offset + width, viewport[2], viewport[3]);
 }
 
+static void processColormap(const std::shared_ptr<GRM::Element> &elem)
+{
+  int colormap;
+
+  gr_setcolormap(static_cast<int>(elem->getAttribute("colormap")));
+  /* TODO: Implement other datatypes for `colormap` */
+}
+
 static void processColorRep(const std::shared_ptr<GRM::Element> &elem)
 {
   int index, hex_int;
@@ -1424,6 +1437,21 @@ static void processFlip(const std::shared_ptr<GRM::Element> &elem)
     {
       options = options & ~GR_OPTION_FLIP_X;
     }
+}
+
+static void processFont(const std::shared_ptr<GRM::Element> &elem)
+{
+  int font, font_precision;
+
+  /* `font` and `font_precision` are always set */
+  if (elem->hasAttribute("font_precision"))
+    {
+      font = static_cast<int>(elem->getAttribute("font"));
+      font_precision = static_cast<int>(elem->getAttribute("font_precision"));
+      logger((stderr, "Using font: %d with precision %d\n", font, font_precision));
+      gr_settextfontprec(font, font_precision);
+    }
+  /* TODO: Implement other datatypes for `font` and `font_precision` */
 }
 
 static void processGROptionFlipX(const std::shared_ptr<GRM::Element> &elem)
@@ -2985,7 +3013,33 @@ static void processRelativeCharHeight(const std::shared_ptr<GRM::Element> &elem)
 
 static void processResampleMethod(const std::shared_ptr<GRM::Element> &elem)
 {
-  gr_setresamplemethod(static_cast<int>(elem->getAttribute("resamplemethod")));
+  unsigned int resample_method_flag;
+  if (!elem->getAttribute("resample_method").isInt())
+    {
+      auto resample_method_str = static_cast<std::string>(elem->getAttribute("resample_method"));
+
+      if (resample_method_str == "nearest")
+        {
+          resample_method_flag = GKS_K_RESAMPLE_NEAREST;
+        }
+      else if (resample_method_str == "linear")
+        {
+          resample_method_flag = GKS_K_RESAMPLE_LINEAR;
+        }
+      else if (resample_method_str == "lanczos")
+        {
+          resample_method_flag = GKS_K_RESAMPLE_LANCZOS;
+        }
+      else
+        {
+          resample_method_flag = GKS_K_RESAMPLE_DEFAULT;
+        }
+    }
+  else
+    {
+      resample_method_flag = static_cast<int>(elem->getAttribute("resample_method"));
+    }
+  gr_setresamplemethod(resample_method_flag);
 }
 
 static void processScale(const std::shared_ptr<GRM::Element> &elem)
@@ -3408,10 +3462,25 @@ static void processTransparency(const std::shared_ptr<GRM::Element> &elem)
 
 static void processWindow(const std::shared_ptr<GRM::Element> &elem)
 {
+  int scale = 0;
   double xmin = static_cast<double>(elem->getAttribute("window_xmin"));
   double xmax = static_cast<double>(elem->getAttribute("window_xmax"));
   double ymin = static_cast<double>(elem->getAttribute("window_ymin"));
   double ymax = static_cast<double>(elem->getAttribute("window_ymax"));
+
+  auto kind = static_cast<std::string>(elem->getAttribute("kind"));
+  if (kind != "pie" && kind != "polar" && kind != "polar_histogram" && kind != "polar_heatmap" &&
+      kind != "nonuniformpolar_heatmap")
+    {
+      scale |= static_cast<int>(elem->getAttribute("xlog")) ? GR_OPTION_X_LOG : 0;
+      scale |= static_cast<int>(elem->getAttribute("ylog")) ? GR_OPTION_Y_LOG : 0;
+      scale |= static_cast<int>(elem->getAttribute("zlog")) ? GR_OPTION_Z_LOG : 0;
+      scale |= static_cast<int>(elem->getAttribute("xflip")) ? GR_OPTION_FLIP_X : 0;
+      scale |= static_cast<int>(elem->getAttribute("yflip")) ? GR_OPTION_FLIP_Y : 0;
+      scale |= static_cast<int>(elem->getAttribute("zflip")) ? GR_OPTION_FLIP_Z : 0;
+    }
+  elem->setAttribute("scale", scale);
+  processScale(elem);
 
   gr_setwindow(xmin, xmax, ymin, ymax);
 }
@@ -4327,6 +4396,7 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
 
   //! Map used for processing all kinds of attributes
   static std::map<std::string, std::function<void(const std::shared_ptr<GRM::Element> &)>> attrStringToFunc{
+      {std::string("alpha"), processAlpha},
       {std::string("bordercolorind"), processBorderColorInd},
       {std::string("calc_window_and_viewport_from_parent"), processCalcWindowAndViewportFromParent},
       {std::string("charexpan"), processCharExpan},
@@ -4334,11 +4404,13 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("charup"), processCharUp},
       {std::string("clipxform"), processClipXForm},
       {std::string("colorbar_position"), processColorbarPosition},
+      {std::string("colormap"), processColormap},
       {std::string("colorrep"), processColorRep},
       {std::string("fillcolorind"), processFillColorInd},
       {std::string("fillintstyle"), processFillIntStyle},
       {std::string("fillstyle"), processFillStyle},
       {std::string("flip"), processFlip},
+      {std::string("font"), processFont},
       {std::string("gr_option_flip_x"), processGROptionFlipX},
       {std::string("gr_option_flip_y"), processGROptionFlipY},
       {std::string("gr3backgroundcolor"), processGR3BackgroundColor},
@@ -4354,7 +4426,7 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("markertype"), processMarkerType},
       {std::string("projectiontype"), processProjectionType},
       {std::string("relative_charheight"), processRelativeCharHeight},
-      {std::string("resamplemethod"), processResampleMethod},
+      {std::string("resample_method"), processResampleMethod},
       {std::string("selntran"), processSelntran},
       {std::string("space"), processSpace},
       {std::string("space3d"), processSpace3d},
@@ -8666,6 +8738,16 @@ static void applyRootDefaults(std::shared_ptr<GRM::Element> root)
                                       (child->hasAttribute("input_zlim") ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
                 }
             }
+          if (!child->hasAttribute("linespec")) child->setAttribute("linespec", " ");
+          if (!child->hasAttribute("xlog")) child->setAttribute("xlog", PLOT_DEFAULT_XLOG);
+          if (!child->hasAttribute("ylog")) child->setAttribute("ylog", PLOT_DEFAULT_YLOG);
+          if (!child->hasAttribute("zlog")) child->setAttribute("zlog", PLOT_DEFAULT_ZLOG);
+          if (!child->hasAttribute("resample_method"))
+            child->setAttribute("resample_method", (int)PLOT_DEFAULT_RESAMPLE_METHOD);
+          if (!child->hasAttribute("font")) child->setAttribute("font", PLOT_DEFAULT_FONT);
+          if (!child->hasAttribute("font_precision"))
+            child->setAttribute("font_precision", PLOT_DEFAULT_FONT_PRECISION);
+          if (!child->hasAttribute("colormap")) child->setAttribute("colormap", PLOT_DEFAULT_COLORMAP);
         }
     }
 }
@@ -10564,7 +10646,7 @@ void GRM::Render::setResampleMethod(const std::shared_ptr<GRM::Element> &element
    * \param[in] resample The resample method
    */
 
-  element->setAttribute("resamplemethod", resample);
+  element->setAttribute("resample_method", resample);
 }
 
 void GRM::Render::setTextEncoding(const std::shared_ptr<Element> &element, int encoding)

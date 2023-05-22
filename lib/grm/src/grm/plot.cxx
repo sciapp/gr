@@ -949,21 +949,12 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
     {
       args_setdefault(*current_subplot, "kind", "s", PLOT_DEFAULT_KIND);
       grm_args_values(*current_subplot, "kind", "s", &kind);
-      args_setdefault(*current_subplot, "xlog", "i", PLOT_DEFAULT_XLOG);   // TODO: xlog isn't in DOM yet
-      args_setdefault(*current_subplot, "ylog", "i", PLOT_DEFAULT_YLOG);   // TODO: ylog isn't in DOM yet
-      args_setdefault(*current_subplot, "zlog", "i", PLOT_DEFAULT_ZLOG);   // TODO: zlog isn't in DOM yet
       args_setdefault(*current_subplot, "xflip", "i", PLOT_DEFAULT_XFLIP); // TODO: Remove this default
       args_setdefault(*current_subplot, "yflip", "i", PLOT_DEFAULT_YFLIP); // TODO: Remove this default
       args_setdefault(*current_subplot, "zflip", "i", PLOT_DEFAULT_ZFLIP); // TODO: Remove this default
       args_setdefault(*current_subplot, "xgrid", "i", PLOT_DEFAULT_XGRID); // This arg is only used in plot.cxx
       args_setdefault(*current_subplot, "ygrid", "i", PLOT_DEFAULT_YGRID); // This arg is only used in plot.cxx
       args_setdefault(*current_subplot, "zgrid", "i", PLOT_DEFAULT_ZGRID); // This arg is only used in plot.cxx
-      args_setdefault(*current_subplot, "resample_method", "i",
-                      PLOT_DEFAULT_RESAMPLE_METHOD); // TODO: Move this default and the method into render
-      args_setdefault(*current_subplot, "colormap", "i", PLOT_DEFAULT_COLORMAP); // This arg is only used in plot.cxx
-      args_setdefault(*current_subplot, "font", "i", PLOT_DEFAULT_FONT);         // This arg is only used in plot.cxx
-      args_setdefault(*current_subplot, "font_precision", "i",
-                      PLOT_DEFAULT_FONT_PRECISION); // This arg is only used in plot.cxx
 
       if (strcmp(kind, "marginalheatmap") == 0) // TODO: when marginalheatmap got moved, move these defaults
         {
@@ -1064,12 +1055,13 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
   const char *kind;
   double alpha;
   err_t error = ERROR_NONE;
+  auto group = global_root->lastChildElement();
 
   logger((stderr, "Pre subplot processing\n"));
 
   grm_args_values(subplot_args, "kind", "s", &kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-  error = plot_store_coordinate_ranges(subplot_args);
+  error = plot_store_coordinate_ranges(subplot_args); // TODO: Move this into render
   return_if_error;
   plot_process_window(subplot_args);
 
@@ -1086,12 +1078,9 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
       plot_draw_axes(subplot_args, 1);
     }
 
-  gr_uselinespec(const_cast<char *>(" "));
-
-  gr_savestate();
   if (grm_args_values(subplot_args, "alpha", "d", &alpha))
     {
-      gr_settransparency(alpha);
+      group->setAttribute("alpha", alpha);
     }
 
   return ERROR_NONE;
@@ -1100,26 +1089,19 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
 void plot_process_colormap(grm_args_t *subplot_args)
 {
   int colormap;
+  auto group = global_root->lastChildElement();
 
-  if (grm_args_values(subplot_args, "colormap", "i", &colormap))
-    {
-      gr_setcolormap(colormap);
-    }
-  /* TODO: Implement other datatypes for `colormap` */
+  if (grm_args_values(subplot_args, "colormap", "i", &colormap)) group->setAttribute("colormap", colormap);
 }
 
 void plot_process_font(grm_args_t *subplot_args)
 {
   int font, font_precision;
+  auto group = global_root->lastChildElement();
 
-  /* `font` and `font_precision` are always set */
-  if (grm_args_values(subplot_args, "font", "i", &font) &&
-      grm_args_values(subplot_args, "font_precision", "i", &font_precision))
-    {
-      logger((stderr, "Using font: %d with precision %d\n", font, font_precision));
-      gr_settextfontprec(font, font_precision);
-    }
-  /* TODO: Implement other datatypes for `font` and `font_precision` */
+  if (grm_args_values(subplot_args, "font", "i", &font)) group->setAttribute("font", font);
+  if (grm_args_values(subplot_args, "font_precision", "i", &font_precision))
+    group->setAttribute("font_precision", font_precision);
 }
 
 err_t plot_process_grid_arguments(const grm_args_t *args)
@@ -1276,29 +1258,19 @@ err_t plot_process_grid_arguments(const grm_args_t *args)
 
 void plot_process_resample_method(grm_args_t *subplot_args)
 {
-  unsigned int resample_method_flag;
+  int resample_method_flag;
+  auto group = global_root->lastChildElement();
+
   if (!grm_args_values(subplot_args, "resample_method", "i", &resample_method_flag))
     {
       const char *resample_method_str;
-      grm_args_values(subplot_args, "resample_method", "s", &resample_method_str);
-      if (strcmp(resample_method_str, "nearest") == 0)
-        {
-          resample_method_flag = GKS_K_RESAMPLE_NEAREST;
-        }
-      else if (strcmp(resample_method_str, "linear") == 0)
-        {
-          resample_method_flag = GKS_K_RESAMPLE_LINEAR;
-        }
-      else if (strcmp(resample_method_str, "lanczos") == 0)
-        {
-          resample_method_flag = GKS_K_RESAMPLE_LANCZOS;
-        }
-      else
-        {
-          resample_method_flag = GKS_K_RESAMPLE_DEFAULT;
-        }
+      if (grm_args_values(subplot_args, "resample_method", "s", &resample_method_str))
+        group->setAttribute("resample_method", resample_method_str);
     }
-  gr_setresamplemethod(resample_method_flag);
+  else
+    {
+      group->setAttribute("resample_method", resample_method_flag);
+    }
 }
 
 static void legend_size(grm_args_t *subplot_args, double *w, double *h)
@@ -1332,22 +1304,12 @@ void plot_process_window(grm_args_t *subplot_args)
   auto group = global_root->lastChildElement();
 
   grm_args_values(subplot_args, "kind", "s", &kind);
-  grm_args_values(subplot_args, "xlog", "i", &xlog);
-  grm_args_values(subplot_args, "ylog", "i", &ylog);
-  grm_args_values(subplot_args, "zlog", "i", &zlog);
-  grm_args_values(subplot_args, "xflip", "i", &xflip);
-  grm_args_values(subplot_args, "yflip", "i", &yflip);
-  grm_args_values(subplot_args, "zflip", "i", &zflip);
-
-  if (!str_equals_any(kind, 5, "pie", "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
-    {
-      scale |= xlog ? GR_OPTION_X_LOG : 0;
-      scale |= ylog ? GR_OPTION_Y_LOG : 0;
-      scale |= zlog ? GR_OPTION_Z_LOG : 0;
-      scale |= xflip ? GR_OPTION_FLIP_X : 0;
-      scale |= yflip ? GR_OPTION_FLIP_Y : 0;
-      scale |= zflip ? GR_OPTION_FLIP_Z : 0;
-    }
+  if (grm_args_values(subplot_args, "xlog", "i", &xlog)) group->setAttribute("xlog", xlog);
+  if (grm_args_values(subplot_args, "ylog", "i", &ylog)) group->setAttribute("ylog", ylog);
+  if (grm_args_values(subplot_args, "zlog", "i", &zlog)) group->setAttribute("zlog", zlog);
+  if (grm_args_values(subplot_args, "xflip", "i", &xflip)) group->setAttribute("xflip", xflip);
+  if (grm_args_values(subplot_args, "yflip", "i", &yflip)) group->setAttribute("yflip", yflip);
+  if (grm_args_values(subplot_args, "zflip", "i", &zflip)) group->setAttribute("zflip", zflip);
 
   grm_args_values(subplot_args, "_xlim", "dd", &x_min, &x_max);
   grm_args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
@@ -1378,8 +1340,8 @@ void plot_process_window(grm_args_t *subplot_args)
       if (grm_args_values(subplot_args, "tilt", "d", &tilt)) group->setAttribute("space3d_theta", tilt);
     }
 
-  grm_args_push(subplot_args, "scale", "i", scale);
-  global_render->setScale(global_root->lastChildElement(), scale);
+  if (grm_args_values(subplot_args, "scale", "i", scale))
+    global_render->setScale(global_root->lastChildElement(), scale);
 }
 
 err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
@@ -3279,8 +3241,6 @@ err_t plot_contourf(grm_args_t *subplot_args)
   group->setAttribute("name", "contourf");
 
   bool has_levels = grm_args_values(subplot_args, "levels", "i", &num_levels);
-  grm_args_values(subplot_args, "scale", "i", &scale);
-  global_render->setScale(group, scale);
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {

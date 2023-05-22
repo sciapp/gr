@@ -55,19 +55,12 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_DEFAULT_WIDTH 600.0
 #define PLOT_DEFAULT_HEIGHT 450.0
 #define PLOT_DEFAULT_KIND "line"
-#define PLOT_DEFAULT_XLOG 0
-#define PLOT_DEFAULT_YLOG 0
-#define PLOT_DEFAULT_ZLOG 0
 #define PLOT_DEFAULT_XFLIP 0
 #define PLOT_DEFAULT_YFLIP 0
 #define PLOT_DEFAULT_ZFLIP 0
 #define PLOT_DEFAULT_XGRID 1
 #define PLOT_DEFAULT_YGRID 1
 #define PLOT_DEFAULT_ZGRID 1
-#define PLOT_DEFAULT_RESAMPLE_METHOD GKS_K_RESAMPLE_DEFAULT
-#define PLOT_DEFAULT_COLORMAP 44                                 /* VIRIDIS */
-#define PLOT_DEFAULT_FONT 232                                    /* CMUSerif-Math */
-#define PLOT_DEFAULT_FONT_PRECISION GKS_K_TEXT_PRECISION_OUTLINE /* hardware font rendering */
 #define PLOT_DEFAULT_XLABEL ""
 #define PLOT_DEFAULT_YLABEL ""
 #define PLOT_DEFAULT_ZLABEL ""
@@ -94,24 +87,6 @@ typedef err_t (*plot_func_t)(grm_args_t *args);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ options ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-typedef enum
-{
-  GR_OPTION_X_LOG = 1 << 0,
-  GR_OPTION_Y_LOG = 1 << 1,
-  GR_OPTION_Z_LOG = 1 << 2,
-  GR_OPTION_FLIP_X = 1 << 3,
-  GR_OPTION_FLIP_Y = 1 << 4,
-  GR_OPTION_FLIP_Z = 1 << 5,
-  GR_OPTION_LINES = 0,
-  GR_OPTION_MESH = 1,
-  GR_OPTION_FILLED_MESH = 2,
-  GR_OPTION_Z_SHADED_MESH = 3,
-  GR_OPTION_COLORED_MESH = 4,
-  GR_OPTION_CELL_ARRAY = 5,
-  GR_OPTION_SHADED_MESH = 6,
-  GR_OPTION_3D_MESH = 7
-} gr_option_t;
 
 /* ========================= functions ============================================================================== */
 
