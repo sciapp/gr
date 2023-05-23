@@ -956,27 +956,11 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
       args_setdefault(*current_subplot, "ygrid", "i", PLOT_DEFAULT_YGRID); // This arg is only used in plot.cxx
       args_setdefault(*current_subplot, "zgrid", "i", PLOT_DEFAULT_ZGRID); // This arg is only used in plot.cxx
 
-      if (strcmp(kind, "marginalheatmap") == 0) // TODO: when marginalheatmap got moved, move these defaults
-        {
-          args_setdefault(*current_subplot, "xind", "i", -1);
-          args_setdefault(*current_subplot, "yind", "i", -1);
-          args_setdefault(*current_subplot, "marginalheatmap_kind", "s", "all");
-        }
       if (str_equals_any(kind, 6, "barplot", "hist", "line", "scatter", "stairs", "stem"))
         {
           args_setdefault(*current_subplot, "orientation", "s", PLOT_DEFAULT_ORIENTATION); // TODO: Remove this default
         }
 
-      grm_args_values(*current_subplot, "series", "A", &current_series);
-      while (*current_series != nullptr)
-        {
-          if (strcmp(kind, "marginalheatmap") == 0)
-            {
-              args_setdefault(*current_series, "algorithm", "s",
-                              "sum"); // TODO: when marginalheatmap got moved, move these defaults
-            }
-          ++current_series;
-        }
       ++current_subplot;
     }
 }
@@ -2032,24 +2016,6 @@ err_t plot_stairs(grm_args_t *subplot_args)
       std::vector<double> y_vec(y, y + y_length);
       (*context)["y" + str] = y_vec;
       subGroup->setAttribute("y", "y" + str);
-
-      if (subGroup->parentElement()->hasAttribute("marginalheatmap_kind"))
-        {
-          double y_max = 0, *plot;
-          unsigned int n = 0;
-
-          grm_args_values(*current_series, "xrange", "dd", &xmin, &xmax);
-          global_root->lastChildElement()->setAttribute("xrange_min", xmin);
-          global_root->lastChildElement()->setAttribute("xrange_max", xmax);
-          grm_args_values(*current_series, "yrange", "dd", &ymin, &ymax);
-          global_root->lastChildElement()->setAttribute("yrange_min", ymin);
-          global_root->lastChildElement()->setAttribute("yrange_max", ymax);
-          grm_args_first_value(*current_series, "z", "D", &plot, &n);
-
-          std::vector<double> z_vec(plot, plot + n);
-          (*context)["z" + str] = z_vec;
-          subGroup->setAttribute("z", "z" + str);
-        }
 
       if (grm_args_values(*current_series, "spec", "s", &spec)) subGroup->setAttribute("spec", spec);
 
@@ -3479,144 +3445,55 @@ err_t plot_heatmap(grm_args_t *subplot_args)
 
 err_t plot_marginalheatmap(grm_args_t *subplot_args)
 {
-  double c_min, c_max;
-  int flip, options, xind, yind;
-  unsigned int i, j, k;
-  grm_args_t **current_series;
-  char *algorithm, *marginalheatmap_kind;
-  double *bins = nullptr;
-  unsigned int num_bins_x = 0, num_bins_y = 0, n = 0;
-  double *xi, *yi, *plot;
+  int k, xind = -1, yind = -1, zlog;
+  const char *marginalheatmap_kind = "all";
   err_t error = ERROR_NONE;
-  std::string mkind;
+  grm_args_t **current_series;
+  double *x, *y, *plot;
+  unsigned int num_bins_x, num_bins_y, n;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "marginalheatmap");
-  auto subGroup = global_render->createSeries("marginalheatmap_series");
+  auto subGroup = global_render->createSeries("marginalheatmap");
   group->append(subGroup);
   currentDomElement = subGroup;
 
-  plot_heatmap(subplot_args);
+  grm_args_values(subplot_args, "zlog", "i", &zlog);
+  group->setAttribute("zlog", zlog);
 
-  grm_args_values(subplot_args, "marginalheatmap_kind", "s", &marginalheatmap_kind);
-  grm_args_values(subplot_args, "xind", "i", &xind);
-  grm_args_values(subplot_args, "yind", "i", &yind);
+  if (grm_args_values(subplot_args, "marginalheatmap_kind", "s", &marginalheatmap_kind))
+    subGroup->setAttribute("marginalheatmap_kind", marginalheatmap_kind);
+  if (grm_args_values(subplot_args, "xind", "i", &xind)) subGroup->setAttribute("xind", xind);
+  if (grm_args_values(subplot_args, "yind", "i", &yind)) subGroup->setAttribute("yind", yind);
 
-  subGroup->setAttribute("marginalheatmap_kind", marginalheatmap_kind);
-  subGroup->setAttribute("xind", xind);
-  subGroup->setAttribute("yind", yind);
+  grm_args_values(subplot_args, "series", "A", &current_series);
+  grm_args_first_value(*current_series, "x", "D", &x, &num_bins_x);
+  grm_args_first_value(*current_series, "y", "D", &y, &num_bins_y);
+  grm_args_first_value(*current_series, "z", "D", &plot, &n);
 
-  for (k = 0; k < 2; k++)
+  int id = static_cast<int>(global_root->getAttribute("id"));
+  std::string str = std::to_string(id);
+  auto context = global_render->getContext();
+
+  std::vector<double> x_vec(x, x + num_bins_x);
+  (*context)["x" + str] = x_vec;
+  subGroup->setAttribute("x", "x" + str);
+
+  std::vector<double> y_vec(y, y + num_bins_y);
+  (*context)["y" + str] = y_vec;
+  subGroup->setAttribute("y", "y" + str);
+
+  std::vector<double> z_vec(plot, plot + n);
+  (*context)["z" + str] = z_vec;
+  subGroup->setAttribute("z", "z" + str);
+
+  if (strcmp(marginalheatmap_kind, "all") == 0)
     {
-      double x_min, x_max, y_min, y_max, value, bin_max = 0;
-
-      grm_args_values(subplot_args, "series", "A", &current_series);
-      grm_args_values(*current_series, "algorithm", "s", &algorithm);
-      grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
-      grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
-      if (!grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max))
-        {
-          grm_args_values(subplot_args, "_zlim", "dd", &c_min, &c_max);
-          group->setAttribute("lim_zmin", c_min);
-          group->setAttribute("lim_zmax", c_max);
-        }
-      else
-        {
-          group->setAttribute("lim_cmin", c_min);
-          group->setAttribute("lim_cmax", c_max);
-        }
-
-      grm_args_first_value(*current_series, "x", "D", &xi, &num_bins_x);
-      grm_args_first_value(*current_series, "y", "D", &yi, &num_bins_y);
-      grm_args_first_value(*current_series, "z", "D", &plot, &n);
-
-      if (strcmp(marginalheatmap_kind, "all") == 0)
-        {
-          unsigned int x_len = num_bins_x, y_len = num_bins_y;
-
-          bins = static_cast<double *>(malloc(((k == 0) ? num_bins_y : num_bins_x) * sizeof(double)));
-          cleanup_and_set_error_if(bins == nullptr, ERROR_MALLOC);
-          grm_args_push(subplot_args, "kind", "s", "hist");
-
-          for (i = 0; i < ((k == 0) ? num_bins_y : num_bins_x); i++)
-            {
-              bins[i] = 0;
-            }
-          for (i = 0; i < y_len; i++)
-            {
-              for (j = 0; j < x_len; j++)
-                {
-                  value = (grm_isnan(plot[i * num_bins_x + j])) ? 0 : plot[i * num_bins_x + j];
-                  if (strcmp(algorithm, "sum") == 0)
-                    {
-                      bins[(k == 0) ? i : j] += value;
-                    }
-                  else if (strcmp(algorithm, "max") == 0)
-                    {
-                      bins[(k == 0) ? i : j] = grm_max(bins[(k == 0) ? i : j], value);
-                    }
-                }
-              if (k == 0)
-                {
-                  bin_max = grm_max(bin_max, bins[i]);
-                }
-            }
-          if (k == 1)
-            {
-              for (i = 0; i < x_len; i++)
-                {
-                  bin_max = grm_max(bin_max, bins[i]);
-                }
-            }
-          for (i = 0; i < ((k == 0) ? y_len : x_len); i++)
-            {
-              bins[i] = (bin_max == 0) ? 0 : bins[i] / bin_max * (c_max / 15);
-            }
-
-          grm_args_push(*current_series, "bins", "nD", ((k == 0) ? num_bins_y : num_bins_x), bins);
-
-          free(bins);
-          bins = nullptr;
-        }
-
-      if (grm_args_values(subplot_args, "xflip", "i", &flip) && flip)
-        {
-          subGroup->setAttribute("gr_option_flip_y", 1);
-          subGroup->setAttribute("gr_option_flip_x", 0);
-        }
-      else if (grm_args_values(subplot_args, "yflip", "i", &flip) && flip)
-        {
-          subGroup->setAttribute("gr_option_flip_y", 0);
-          subGroup->setAttribute("gr_option_flip_x", 0);
-        }
-      else
-        {
-          subGroup->setAttribute("gr_option_flip_x", 0);
-        }
-
-      if (k == 0)
-        {
-          grm_args_push(subplot_args, "orientation", "s", "vertical");
-        }
-      else
-        {
-          grm_args_push(subplot_args, "orientation", "s", "horizontal");
-        }
-
-      if (strcmp(marginalheatmap_kind, "all") == 0)
-        {
-          plot_hist(subplot_args);
-        }
-      else if (strcmp(marginalheatmap_kind, "line") == 0 && xind != -1 && yind != -1)
-        {
-          plot_stairs(subplot_args);
-        }
+      const char *algorithm;
+      if (grm_args_values(subplot_args, "algorithm", "s", &algorithm)) subGroup->setAttribute("algorithm", algorithm);
     }
   grm_args_push(subplot_args, "kind", "s", "marginalheatmap");
-
-cleanup:
-  free(bins);
-  currentDomElement = nullptr;
+  global_root->setAttribute("id", ++id);
 
   return error;
 }
@@ -5593,7 +5470,9 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
   char *ylabel, *xlabel, *title, *kind;
   int keep_aspect_ratio, location, adjust_xlim, adjust_ylim;
   double *subplot;
-  int xlim_min, xlim_max, ylim_min, ylim_max, zlim_min, zlim_max;
+  double xlim_min, xlim_max, ylim_min, ylim_max, zlim_min, zlim_max;
+  double x_min, x_max, y_min, y_max, z_min, z_max;
+  grm_args_t **current_series;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   grm_args_values(subplot_args, "kind", "s", &kind);
@@ -5633,21 +5512,39 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
       group->setAttribute("subplot_ymin", subplot[2]);
       group->setAttribute("subplot_ymax", subplot[3]);
     }
-  if (grm_args_values(subplot_args, "xlim", "dd", &xlim_min, &xlim_max))
+
+  grm_args_values(subplot_args, "series", "A", &current_series);
+  if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+    {
+      group->setAttribute("xrange_min", x_min);
+      group->setAttribute("xrange_max", x_max);
+    }
+  if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+    {
+      group->setAttribute("yrange_min", y_min);
+      group->setAttribute("yrange_max", y_max);
+    }
+  if (grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max))
+    {
+      group->setAttribute("zrange_min", z_min);
+      group->setAttribute("zrange_max", z_max);
+    }
+  if (grm_args_values(*current_series, "xlim", "dd", &xlim_min, &xlim_max))
     {
       group->setAttribute("xlim_min", xlim_min);
       group->setAttribute("xlim_max", xlim_max);
     }
-  if (grm_args_values(subplot_args, "ylim", "dd", &ylim_min, &ylim_max))
+  if (grm_args_values(*current_series, "ylim", "dd", &ylim_min, &ylim_max))
     {
       group->setAttribute("ylim_min", ylim_min);
       group->setAttribute("ylim_max", ylim_max);
     }
-  if (grm_args_values(subplot_args, "zlim", "dd", &zlim_min, &zlim_max))
+  if (grm_args_values(*current_series, "zlim", "dd", &zlim_min, &zlim_max))
     {
       group->setAttribute("zlim_min", zlim_min);
       group->setAttribute("zlim_max", zlim_max);
     }
+
   if (grm_args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim))
     {
       group->setAttribute("adjust_xlim", adjust_xlim);

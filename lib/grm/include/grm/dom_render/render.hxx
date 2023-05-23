@@ -39,6 +39,9 @@
 #define PLOT_DEFAULT_COLORMAP 44                                 /* VIRIDIS */
 #define PLOT_DEFAULT_FONT 232                                    /* CMUSerif-Math */
 #define PLOT_DEFAULT_FONT_PRECISION GKS_K_TEXT_PRECISION_OUTLINE /* hardware font rendering */
+#define PLOT_DEFAULT_MARGINAL_INDEX -1
+#define PLOT_DEFAULT_MARGINAL_KIND "all"
+#define PLOT_DEFAULT_MARGINAL_ALGORITHM "sum"
 
 typedef enum
 {

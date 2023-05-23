@@ -2654,13 +2654,13 @@ static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem
           int i;
           double y_max = 0;
           std::vector<double> z =
-              GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("z"))]);
+              GRM::get<std::vector<double>>((*context)[static_cast<std::string>(elem->getAttribute("z"))]);
           std::vector<double> y =
-              GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("y"))]);
+              GRM::get<std::vector<double>>((*context)[static_cast<std::string>(elem->getAttribute("y"))]);
           std::vector<double> xi =
               GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("xi"))]);
           std::vector<double> x =
-              GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("x"))]);
+              GRM::get<std::vector<double>>((*context)[static_cast<std::string>(elem->getAttribute("x"))]);
 
           int y_length = y.size();
           int x_length = xi.size();
@@ -5978,6 +5978,7 @@ static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::sha
   double x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv;
   int is_uniform_heatmap;
   std::shared_ptr<GRM::Element> plot_parent;
+  std::shared_ptr<GRM::Element> element_context = element;
   std::vector<int> data, rgba;
   std::vector<double> x_vec, y_vec, z_vec;
 
@@ -5987,25 +5988,28 @@ static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::sha
     }
   else
     {
+      element_context = element->parentElement();
       plot_parent = element->parentElement()->parentElement();
     }
   zlog = static_cast<int>(plot_parent->getAttribute("zlog"));
 
-  if (element->hasAttribute("x"))
+
+  if (element_context->hasAttribute("x"))
     {
-      auto x = static_cast<std::string>(element->getAttribute("x"));
+      auto x = static_cast<std::string>(element_context->getAttribute("x"));
       x_vec = GRM::get<std::vector<double>>((*context)[x]);
       cols = x_vec.size();
     }
-  if (element->hasAttribute("y"))
+  if (element_context->hasAttribute("y"))
     {
-      auto y = static_cast<std::string>(element->getAttribute("y"));
+      auto y = static_cast<std::string>(element_context->getAttribute("y"));
       y_vec = GRM::get<std::vector<double>>((*context)[y]);
       rows = y_vec.size();
     }
 
-  if (!element->hasAttribute("z")) throw NotFoundError("Heatmap series is missing required attribute z-data.\n");
-  auto z = static_cast<std::string>(element->getAttribute("z"));
+  if (!element_context->hasAttribute("z"))
+    throw NotFoundError("Heatmap series is missing required attribute z-data.\n");
+  auto z = static_cast<std::string>(element_context->getAttribute("z"));
   z_vec = GRM::get<std::vector<double>>((*context)[z]);
   z_length = z_vec.size();
 
@@ -7157,11 +7161,14 @@ static void stairs(const std::shared_ptr<GRM::Element> &element, const std::shar
   int is_vertical;
   unsigned int x_length, y_length, mask, i;
   std::vector<double> x_vec, y_vec;
+  std::shared_ptr<GRM::Element> element_context = element;
 
-  if (!element->hasAttribute("x")) throw NotFoundError("Stairs series is missing required attribute x-data.\n");
-  auto x = static_cast<std::string>(element->getAttribute("x"));
-  if (!element->hasAttribute("y")) throw NotFoundError("Stairs series is missing required attribute y-data.\n");
-  auto y = static_cast<std::string>(element->getAttribute("y"));
+  if (element->parentElement()->hasAttribute("marginalheatmap_kind")) element_context = element->parentElement();
+
+  if (!element_context->hasAttribute("x")) throw NotFoundError("Stairs series is missing required attribute x-data.\n");
+  auto x = static_cast<std::string>(element_context->getAttribute("x"));
+  if (!element_context->hasAttribute("y")) throw NotFoundError("Stairs series is missing required attribute y-data.\n");
+  auto y = static_cast<std::string>(element_context->getAttribute("y"));
 
   x_vec = GRM::get<std::vector<double>>((*context)[x]);
   y_vec = GRM::get<std::vector<double>>((*context)[y]);
@@ -7206,7 +7213,7 @@ static void stairs(const std::shared_ptr<GRM::Element> &element, const std::shar
 
       element->setAttribute("calc_window_and_viewport_from_parent", 1);
 
-      auto z = static_cast<std::string>(element->getAttribute("z"));
+      auto z = static_cast<std::string>(element_context->getAttribute("z"));
       z_vec = GRM::get<std::vector<double>>((*context)[z]);
       z_length = z_vec.size();
 
@@ -7685,6 +7692,216 @@ static void line(const std::shared_ptr<GRM::Element> &element, const std::shared
       global_root->setAttribute("id", ++id);
       line->setAttribute("markercolorind", current_marker_colorind);
       element->append(line);
+    }
+}
+
+static void marginalheatmap(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Processing function for marginalheatmap
+   *
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   */
+
+  double c_min, c_max;
+  int flip, options;
+  int xind = PLOT_DEFAULT_MARGINAL_INDEX, yind = PLOT_DEFAULT_MARGINAL_INDEX;
+  unsigned int i, j, k;
+  std::string algorithm = PLOT_DEFAULT_MARGINAL_ALGORITHM, marginalheatmap_kind = PLOT_DEFAULT_MARGINAL_KIND;
+  std::vector<double> bins;
+  unsigned int num_bins_x = 0, num_bins_y = 0, n = 0;
+  std::shared_ptr<GRM::Element> subGroup;
+
+  if (element->hasAttribute("xind"))
+    {
+      xind = static_cast<int>(element->getAttribute("xind"));
+    }
+  else
+    {
+      element->setAttribute("xind", xind);
+    }
+  if (element->hasAttribute("yind"))
+    {
+      yind = static_cast<int>(element->getAttribute("yind"));
+    }
+  else
+    {
+      element->setAttribute("yind", yind);
+    }
+  if (element->hasAttribute("algorithm"))
+    {
+      algorithm = static_cast<std::string>(element->getAttribute("algorithm"));
+    }
+  else
+    {
+      element->setAttribute("algorithm", algorithm);
+    }
+  if (element->hasAttribute("marginalheatmap_kind"))
+    {
+      marginalheatmap_kind = static_cast<std::string>(element->getAttribute("marginalheatmap_kind"));
+    }
+  else
+    {
+      element->setAttribute("marginalheatmap_kind", marginalheatmap_kind);
+    }
+
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  auto x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  num_bins_x = x_vec.size();
+
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+  auto y_vec = GRM::get<std::vector<double>>((*context)[y]);
+  num_bins_y = y_vec.size();
+
+  auto plot = static_cast<std::string>(element->getAttribute("z"));
+  auto plot_vec = GRM::get<std::vector<double>>((*context)[plot]);
+  n = plot_vec.size();
+
+  // remove all old entry's
+  for (const auto &child : element->children())
+    {
+      child->remove();
+    }
+
+  int id = static_cast<int>(global_root->getAttribute("id"));
+  std::string str = std::to_string(id);
+
+  auto heatmap = global_render->createSeries("heatmap");
+  element->append(heatmap);
+
+  for (k = 0; k < 2; k++)
+    {
+      double x_min, x_max, y_min, y_max, value, bin_max = 0;
+      int bar_color_index = 989;
+      double bar_color_rgb[3] = {-1};
+      int edge_color_index = 1;
+      double edge_color_rgb[3] = {-1};
+
+      x_min = static_cast<double>(element->parentElement()->getAttribute("xrange_min"));
+      x_max = static_cast<double>(element->parentElement()->getAttribute("xrange_max"));
+      y_min = static_cast<double>(element->parentElement()->getAttribute("yrange_min"));
+      y_max = static_cast<double>(element->parentElement()->getAttribute("yrange_max"));
+      if (element->parentElement()->hasAttribute("lim_cmin"))
+        {
+          c_min = static_cast<double>(element->parentElement()->getAttribute("lim_cmin"));
+        }
+      else
+        {
+          c_min = static_cast<double>(element->parentElement()->getAttribute("lim_zmin"));
+        }
+      if (element->parentElement()->hasAttribute("lim_cmax"))
+        {
+          c_max = static_cast<double>(element->parentElement()->getAttribute("lim_cmax"));
+        }
+      else
+        {
+          c_max = static_cast<double>(element->parentElement()->getAttribute("lim_zmax"));
+        }
+
+      if (marginalheatmap_kind == "all")
+        {
+          unsigned int x_len = num_bins_x, y_len = num_bins_y;
+
+          bins = std::vector<double>((k == 0) ? num_bins_y : num_bins_x);
+
+          for (i = 0; i < ((k == 0) ? num_bins_y : num_bins_x); i++)
+            {
+              bins[i] = 0;
+            }
+          for (i = 0; i < y_len; i++)
+            {
+              for (j = 0; j < x_len; j++)
+                {
+                  value = (grm_isnan(plot[i * num_bins_x + j])) ? 0 : plot_vec[i * num_bins_x + j];
+                  if (algorithm == "sum")
+                    {
+                      bins[(k == 0) ? i : j] += value;
+                    }
+                  else if (algorithm == "max")
+                    {
+                      bins[(k == 0) ? i : j] = grm_max(bins[(k == 0) ? i : j], value);
+                    }
+                }
+              if (k == 0)
+                {
+                  bin_max = grm_max(bin_max, bins[i]);
+                }
+            }
+          if (k == 1)
+            {
+              for (i = 0; i < x_len; i++)
+                {
+                  bin_max = grm_max(bin_max, bins[i]);
+                }
+            }
+          for (i = 0; i < ((k == 0) ? y_len : x_len); i++)
+            {
+              bins[i] = (bin_max == 0) ? 0 : bins[i] / bin_max * (c_max / 15);
+            }
+
+          subGroup = global_render->createSeries("hist");
+          element->append(subGroup);
+
+          std::vector<double> bar_color_rgb_vec(bar_color_rgb, bar_color_rgb + 3);
+          (*context)["bar_color_rgb" + str] = bar_color_rgb_vec;
+          subGroup->setAttribute("bar_color_rgb", "bar_color_rgb" + str);
+          subGroup->setAttribute("bar_color_index", bar_color_index);
+
+          std::vector<double> edge_color_rgb_vec(edge_color_rgb, edge_color_rgb + 3);
+          (*context)["edge_color_rgb" + str] = edge_color_rgb_vec;
+          subGroup->setAttribute("edge_color_rgb", "edge_color_rgb" + str);
+          subGroup->setAttribute("edge_color_index", edge_color_index);
+
+          (*context)["bins" + str] = bins;
+          subGroup->setAttribute("bins", "bins" + str);
+        }
+      else if (marginalheatmap_kind == "line" && xind != -1 && yind != -1)
+        {
+          subGroup = global_render->createSeries("stairs");
+          element->append(subGroup);
+
+          subGroup->setAttribute("kind", "marginalheatmap");
+          subGroup->setAttribute("spec", "");
+        }
+
+      if (k == 0)
+        {
+          subGroup->setAttribute("orientation", "vertical");
+        }
+      else
+        {
+          subGroup->setAttribute("orientation", "horizontal");
+        }
+
+      for (const auto &child : element->children())
+        {
+          if (static_cast<std::string>(child->getAttribute("name")) == "hist" ||
+              static_cast<std::string>(child->getAttribute("name")) == "stairs")
+            {
+              if (element->parentElement()->hasAttribute("xflip"))
+                {
+                  if (static_cast<int>(element->getAttribute("xflip")))
+                    {
+                      child->setAttribute("gr_option_flip_y", 1);
+                      child->setAttribute("gr_option_flip_x", 0);
+                    }
+                }
+              else if (element->parentElement()->hasAttribute("yflip"))
+                {
+                  if (static_cast<int>(element->getAttribute("yflip")))
+                    {
+                      child->setAttribute("gr_option_flip_y", 0);
+                      child->setAttribute("gr_option_flip_x", 0);
+                    }
+                }
+              else
+                {
+                  child->setAttribute("gr_option_flip_x", 0);
+                }
+            }
+        }
+      global_root->setAttribute("id", ++id);
     }
 }
 
@@ -8411,6 +8628,7 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
           {std::string("imshow"), imshow},
           {std::string("isosurface"), isosurface},
           {std::string("line"), line},
+          {std::string("marginalheatmap"), marginalheatmap},
           {std::string("pie"), pie},
           {std::string("plot3"), plot3},
           {std::string("polar"), polar},
