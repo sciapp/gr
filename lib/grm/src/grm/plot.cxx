@@ -1273,25 +1273,6 @@ void plot_process_resample_method(grm_args_t *subplot_args)
     }
 }
 
-static void legend_size(grm_args_t *subplot_args, double *w, double *h)
-{
-  double tbx[4], tby[4];
-  const char **labels, **current_label;
-  unsigned int num_labels;
-
-  *w = 0;
-  *h = 0;
-  if (grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels))
-    {
-      for (current_label = labels; *current_label != nullptr; ++current_label)
-        {
-          gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
-          *w = grm_max(*w, tbx[2] - tbx[0]);
-          *h += grm_max(tby[2] - tby[0], 0.03);
-        }
-    }
-}
-
 void plot_process_window(grm_args_t *subplot_args)
 {
   int scale = 0;
@@ -5612,7 +5593,7 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
   char *ylabel, *xlabel, *title, *kind;
   int keep_aspect_ratio, location, adjust_xlim, adjust_ylim;
   double *subplot;
-  int xlim, ylim, zlim;
+  int xlim_min, xlim_max, ylim_min, ylim_max, zlim_min, zlim_max;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   grm_args_values(subplot_args, "kind", "s", &kind);
@@ -5652,17 +5633,20 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
       group->setAttribute("subplot_ymin", subplot[2]);
       group->setAttribute("subplot_ymax", subplot[3]);
     }
-  if (grm_args_values(subplot_args, "xlim", "i", &xlim))
+  if (grm_args_values(subplot_args, "xlim", "dd", &xlim_min, &xlim_max))
     {
-      group->setAttribute("input_xlim", xlim);
+      group->setAttribute("xlim_min", xlim_min);
+      group->setAttribute("xlim_max", xlim_max);
     }
-  if (grm_args_values(subplot_args, "ylim", "i", &ylim))
+  if (grm_args_values(subplot_args, "ylim", "dd", &ylim_min, &ylim_max))
     {
-      group->setAttribute("input_ylim", ylim);
+      group->setAttribute("ylim_min", ylim_min);
+      group->setAttribute("ylim_max", ylim_max);
     }
-  if (grm_args_values(subplot_args, "zlim", "i", &zlim))
+  if (grm_args_values(subplot_args, "zlim", "dd", &zlim_min, &zlim_max))
     {
-      group->setAttribute("input_zlim", zlim);
+      group->setAttribute("zlim_min", zlim_min);
+      group->setAttribute("zlim_max", zlim_max);
     }
   if (grm_args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim))
     {

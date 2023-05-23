@@ -8714,8 +8714,7 @@ static void applyRootDefaults(std::shared_ptr<GRM::Element> root)
                 }
               else
                 {
-                  child->setAttribute("adjust_xlim",
-                                      (child->hasAttribute("input_xlim") ? 0 : PLOT_DEFAULT_ADJUST_XLIM));
+                  child->setAttribute("adjust_xlim", (child->hasAttribute("xlim_min") ? 0 : PLOT_DEFAULT_ADJUST_XLIM));
                 }
             }
           if (!child->hasAttribute("adjust_ylim"))
@@ -8726,22 +8725,23 @@ static void applyRootDefaults(std::shared_ptr<GRM::Element> root)
                 }
               else
                 {
-                  child->setAttribute("adjust_ylim",
-                                      (child->hasAttribute("input_ylim") ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
+                  child->setAttribute("adjust_ylim", (child->hasAttribute("ylim_min") ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
                 }
             }
           if (!child->hasAttribute("adjust_zlim"))
             {
               if (kind != "heatmap" && kind != "marginalheatmap")
                 {
-                  child->setAttribute("adjust_zlim",
-                                      (child->hasAttribute("input_zlim") ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
+                  child->setAttribute("adjust_zlim", (child->hasAttribute("zlim_min") ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
                 }
             }
           if (!child->hasAttribute("linespec")) child->setAttribute("linespec", " ");
           if (!child->hasAttribute("xlog")) child->setAttribute("xlog", PLOT_DEFAULT_XLOG);
           if (!child->hasAttribute("ylog")) child->setAttribute("ylog", PLOT_DEFAULT_YLOG);
           if (!child->hasAttribute("zlog")) child->setAttribute("zlog", PLOT_DEFAULT_ZLOG);
+          if (!child->hasAttribute("xflip")) child->setAttribute("xflip", PLOT_DEFAULT_XFLIP);
+          if (!child->hasAttribute("yflip")) child->setAttribute("yflip", PLOT_DEFAULT_YFLIP);
+          if (!child->hasAttribute("zflip")) child->setAttribute("zflip", PLOT_DEFAULT_ZFLIP);
           if (!child->hasAttribute("resample_method"))
             child->setAttribute("resample_method", (int)PLOT_DEFAULT_RESAMPLE_METHOD);
           if (!child->hasAttribute("font")) child->setAttribute("font", PLOT_DEFAULT_FONT);
