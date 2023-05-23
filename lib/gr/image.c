@@ -16,7 +16,6 @@ static int read_jpeg_image(char *path, int *width, int *height, int **data)
 {
   FILE *stream;
   unsigned int i;
-  int x, y;
   struct jpeg_decompress_struct cinfo;
   struct jpeg_error_mgr jerr;
   JSAMPARRAY buffer;
@@ -40,11 +39,9 @@ static int read_jpeg_image(char *path, int *width, int *height, int **data)
       row_stride = cinfo.output_width * cinfo.output_components;
       buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo, JPOOL_IMAGE, row_stride, 1);
       bpix = cinfo.output_components;
-      y = 0;
       while (cinfo.output_scanline < cinfo.output_height)
         {
           jpeg_read_scanlines(&cinfo, buffer, 1);
-          x = 0;
           for (i = 0; i < bpix * cinfo.output_width; i += bpix)
             {
               r = buffer[0][i];
@@ -55,9 +52,7 @@ static int read_jpeg_image(char *path, int *width, int *height, int **data)
               else
                 a = 255 << 24;
               *dataP++ = r | g | b | a;
-              x++;
             }
-          y++;
         }
       jpeg_finish_decompress(&cinfo);
 

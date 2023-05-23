@@ -20,6 +20,10 @@
 #include "grplot_widget.hxx"
 #include "util.hxx"
 
+#ifndef GR_UNUSED
+#define GR_UNUSED(x) (void)(x)
+#endif
+
 static std::string file_export;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
@@ -58,7 +62,7 @@ extern "C" void cmd_callback_wrapper(const grm_event_t *event)
 
 
 GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
-    : QWidget(parent), args_(nullptr), rubberBand(nullptr), pixmap(), redraw_pixmap(false)
+    : QWidget(parent), pixmap(), redraw_pixmap(false), args_(nullptr), rubberBand(nullptr)
 {
   const char *kind;
   unsigned int z_length;
@@ -278,7 +282,6 @@ void GRPlotWidget::collectTooltips()
 
   if (keyboard_modifiers == Qt::ShiftModifier)
     {
-      unsigned int current_tooltips_count;
       auto accumulated_tooltip = grm_get_accumulated_tooltip_x(mouse_pos.x(), mouse_pos.y());
       tooltips.clear();
       tooltips.push_back(accumulated_tooltip);
@@ -473,6 +476,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
 
 void GRPlotWidget::keyReleaseEvent(QKeyEvent *event)
 {
+  GR_UNUSED(event);
   collectTooltips();
   update();
 }
@@ -597,6 +601,7 @@ void GRPlotWidget::wheelEvent(QWheelEvent *event)
 
 void GRPlotWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
+  GR_UNUSED(event);
   grm_args_t *args = grm_args_new();
   QPoint pos = mapFromGlobal(QCursor::pos());
   grm_args_push(args, "key", "s", "r");

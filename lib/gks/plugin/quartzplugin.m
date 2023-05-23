@@ -67,7 +67,7 @@ static NSTask *task = NULL;
 @synthesize wss;
 @end
 
-static bool gksterm_is_running();
+static bool gksterm_is_running(void);
 
 static void gksterm_communicate(const char *request, size_t request_len, int timeout, bool only_if_running,
                                 void (^reply_handler)(char *, size_t))
@@ -104,7 +104,7 @@ static void gksterm_communicate(const char *request, size_t request_len, int tim
       rc = zmq_msg_send(&message, socket, ZMQ_DONTWAIT);
     }
   while (rc == -1 && (errno == EINTR || errno == EAGAIN));
-  assert(rc == request_len);
+  assert((size_t)rc == request_len);
   zmq_msg_close(&message);
 
   zmq_msg_init(&message);
@@ -138,7 +138,7 @@ static void gksterm_communicate(const char *request, size_t request_len, int tim
   zmq_ctx_term(context);
 }
 
-static bool gksterm_is_running()
+static bool gksterm_is_running(void)
 {
   size_t request_len = 1;
   char request[1];
@@ -175,7 +175,7 @@ static bool gksterm_is_alive(int window)
   return result;
 }
 
-static int gksterm_create_window()
+static int gksterm_create_window(void)
 {
   size_t request_len = 1;
   char request[1];

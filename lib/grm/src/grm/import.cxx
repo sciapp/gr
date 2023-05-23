@@ -130,7 +130,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
 
   /* read the columns from the colms string also converts slicing into numbers */
   std::stringstream scol(colms);
-  for (size_t col = 0; std::getline(scol, token, ',') && token.length(); col++)
+  while (std::getline(scol, token, ',') && token.length())
     {
       if (token.find(':') != std::string::npos)
         {
@@ -722,10 +722,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     {
       std::vector<double> x(rows);
       double xmin, xmax, ymin, ymax;
-      char *orientation;
       grm_args_t *error;
-      char **xlabels;
-      unsigned int num_xlabels;
 
       if (strcmp(kind, "barplot") == 0)
         {

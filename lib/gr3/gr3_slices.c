@@ -7,7 +7,7 @@
 #define SLICE_OFFSET 0.001
 
 static float colormap[768];
-static float *getcolormap()
+static float *getcolormap(void)
 {
   int i;
   for (i = 0; i < 255; i++)

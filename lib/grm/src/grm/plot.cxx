@@ -1249,7 +1249,7 @@ void plot_process_viewport(grm_args_t *subplot_args)
     {
       unsigned int rows, cols, i;
       unsigned int *shape;
-      double w, h, x_min, x_max, y_min, y_max, *x, *y;
+      double w, h, x_min, x_max, y_min, y_max;
       grm_args_t **current_series;
 
       grm_args_values(subplot_args, "series", "A", &current_series);
@@ -3658,7 +3658,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
           if (*curr_series != nullptr)
             {
               double *bar_centers;
-              double *x, *err_x;
+              double *x;
               unsigned int x_length;
               grm_args_first_value(*curr_series, "x", "D", &x, &x_length);
               bar_centers = static_cast<double *>(malloc(x_length * sizeof(double)));
@@ -4087,7 +4087,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   grm_args_t **current_series;
   int icmap[256], *rgba = nullptr, *data = nullptr, zlog = 0;
   unsigned int i, cols, rows, z_length;
-  double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv, tmp;
+  double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv;
   err_t error = ERROR_NONE;
 
   grm_args_values(subplot_args, "series", "A", &current_series);

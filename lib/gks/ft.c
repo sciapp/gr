@@ -184,7 +184,7 @@ static size_t ft_open_font(ft_path_char_t *fname)
   return size;
 }
 
-static void ft_close_all_fonts()
+static void ft_close_all_fonts(void)
 {
   int i;
   for (i = 0; i < ft_num_font_files; i++)
@@ -206,7 +206,7 @@ static const ft_path_char_t *user_font_directories[] = {
 
 static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous, FT_Vector *pen, FT_Bool vertical,
                           FT_Matrix *rotation, FT_Vector *bearing, FT_Int halign, FT_GlyphSlot *glyph_slot_ptr);
-static void gks_ft_init_fallback_faces();
+static void gks_ft_init_fallback_faces(void);
 static void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, FT_UInt *length);
 static FT_Long ft_min(FT_Long a, FT_Long b);
 static FT_Long ft_max(FT_Long a, FT_Long b);
@@ -748,7 +748,7 @@ static ft_path_char_t *gks_ft_get_font_path(const char *font_name, const char *f
   return font_path;
 }
 
-static void gks_ft_init_fallback_faces()
+static void gks_ft_init_fallback_faces(void)
 {
   FT_Error error;
   unsigned int i;
