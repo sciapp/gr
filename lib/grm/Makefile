@@ -5,6 +5,7 @@ endif
        GRDIR = /usr/local/gr
       LIBDIR = $(DESTDIR)$(GRDIR)/lib
       INCDIR = $(DESTDIR)$(GRDIR)/include
+    SHAREDIR = $(DESTDIR)$(GRDIR)/share
 
 UNAME := $(shell uname)
 
@@ -136,6 +137,8 @@ install:
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p include/grm.h $(INCDIR)
 	cp -rp include/grm $(INCDIR)/
+	@if [ ! -d $(SHAREDIR)/xml/GRM ]; then mkdir -m 755 -p $(SHAREDIR)/xml/GRM; fi
+	cp -p src/grm/dom_render/graphics_tree/schema.xsd $(SHAREDIR)/xml/GRM/grm_graphics_tree_schema.xsd
 ifeq ($(UNAME), Darwin)
 	@if [ -d grplot/grplot.app ]; then \
 		$(MAKE) -C grplot -f makefile.mak install; \
