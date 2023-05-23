@@ -141,7 +141,7 @@ GR3API const char *gr3_getrenderpathstring(void);
 GR3API const char *gr3_geterrorstring(int error);
 GR3API void gr3_setlogcallback(void (*gr3_log_func)(const char *log_message));
 GR3API int gr3_clear(void);
-GR3API void gr3_usecurrentframebuffer();
+GR3API void gr3_usecurrentframebuffer(void);
 GR3API void gr3_useframebuffer(unsigned int framebuffer);
 
 GR3API int gr3_setquality(int quality);
@@ -275,7 +275,7 @@ GR3API int gr3_setlightsources(int num_lights, float *positions, float *colors);
 
 GR3API void gr3_setlightparameters(float ambient, float diffuse, float specular, float specular_power);
 GR3API void gr3_getlightparameters(float *ambient, float *diffuse, float *specular, float *specular_power);
-GR3API void gr3_setdefaultlightparameters();
+GR3API void gr3_setdefaultlightparameters(void);
 
 GR3API int gr3_getalphamode(int *mode);
 GR3API void gr3_setalphamode(int mode);

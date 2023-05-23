@@ -119,8 +119,8 @@ typedef struct
   float *alphas;
 } args;
 
-GR3API int gr3_initSR_();
+GR3API int gr3_initSR_(void);
 GR3API void gr3_getpixmap_softwarerendered(char *pixmap, int width, int height, int ssaa_factor);
-GR3API void gr3_terminateSR_();
+GR3API void gr3_terminateSR_(void);
 
 #endif

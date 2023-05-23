@@ -375,7 +375,7 @@ static void resample_vertical_rgba_nearest(const double *source_image, unsigned 
     }
 }
 
-static unsigned int get_default_resampling_method()
+static unsigned int get_default_resampling_method(void)
 {
   unsigned int resample_method = GKS_K_RESAMPLE_NEAREST;
   char *env;

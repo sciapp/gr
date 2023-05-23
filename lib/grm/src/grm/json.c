@@ -1160,7 +1160,6 @@ err_t tojson_stringify_args_value(memwriter_t *memwriter, grm_args_t *args)
 
 int tojson_get_member_count(const char *data_desc)
 {
-  int nested_level = 0;
   int member_count = 0;
   if (data_desc == NULL || *data_desc == '\0')
     {
@@ -1168,19 +1167,9 @@ int tojson_get_member_count(const char *data_desc)
     }
   while (*data_desc != 0)
     {
-      switch (*data_desc)
+      if (*data_desc == ',')
         {
-        case '(':
-          ++nested_level;
-          break;
-        case ')':
-          --nested_level;
-          break;
-        case ',':
           ++member_count;
-          break;
-        default:
-          break;
         }
       ++data_desc;
     }
