@@ -1219,6 +1219,11 @@ endif()
 
 if(GR_INSTALL)
   install(FILES LICENSE.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/)
+  install(
+    FILES lib/grm/src/grm/dom_render/graphics_tree/schema.xsd
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/xml/GRM
+    RENAME grm_graphics_tree_schema.xsd
+  )
   include(CMakePackageConfigHelpers)
   configure_package_config_file(
     "cmake/Config.cmake.in" "GRConfig.cmake" INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
