@@ -119,7 +119,7 @@ private:
 
     int n() const
     {
-      return std::visit(util::overloaded{[](const grm_tooltip_info_t *tooltip) { return 1; },
+      return std::visit(util::overloaded{[](const grm_tooltip_info_t *) { return 1; },
                                          [](const grm_accumulated_tooltip_info_t *tooltip) { return tooltip->n; }},
                         tooltip_);
     };

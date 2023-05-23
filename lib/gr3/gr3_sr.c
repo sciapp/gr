@@ -903,7 +903,7 @@ static float triangle_surface_2d(float dif_a_b_x, float dif_a_b_y, float ay, flo
  * because the main thread needs its own core. The software-renderer is initialised and the method get_pixmap
  * can be invoked.
  */
-GR3API int gr3_initSR_()
+GR3API int gr3_initSR_(void)
 {
 #ifdef _WIN32
 #ifndef _SC_NPROCESSORS_ONLN
@@ -2498,7 +2498,7 @@ static void downsample(unsigned char *pixels_high, unsigned char *pixels_low, in
 /*!
  * Terminates the software-renderer and deletes all the memory that was allocated to use it.
  * */
-GR3API void gr3_terminateSR_()
+GR3API void gr3_terminateSR_(void)
 {
   int i;
   args *arg;

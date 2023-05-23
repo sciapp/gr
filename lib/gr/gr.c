@@ -1532,7 +1532,7 @@ void gr_initgr(void)
     }
 }
 
-int gr_debug()
+int gr_debug(void)
 {
   return debug != NULL;
 }
@@ -6300,7 +6300,7 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
     }
 }
 
-static double text3d_get_height()
+static double text3d_get_height(void)
 {
   double focus_point_x, focus_point_y, focus_point_z, focus_up_x, focus_up_y, focus_up_z;
   /* Calculate char height */
@@ -14332,7 +14332,7 @@ static void ray_casting_thread(void *arg)
     }
 }
 
-static int system_processor_count()
+static int system_processor_count(void)
 {
 #ifdef _WIN32
 #ifndef _SC_NPROCESSORS_ONLN

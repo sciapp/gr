@@ -49,7 +49,7 @@ static int a_count;
 /*
  * Set up the 'byte output' routine
  */
-static void char_init()
+static void char_init(void)
 {
   a_count = 0;
 }
@@ -62,7 +62,7 @@ static char accum[256];
 /*
  * Flush the packet to disk, and reset the accumulator
  */
-static void flush_char()
+static void flush_char(void)
 {
   int i;
 
@@ -152,7 +152,7 @@ static void cl_hash(register long hsize) /* reset code table */
 }
 
 
-static void cl_block() /* table clear for block compress */
+static void cl_block(void) /* table clear for block compress */
 {
   /* Clear out the hash table */
 
