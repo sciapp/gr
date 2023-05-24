@@ -386,6 +386,7 @@ err_t sender_init_for_socket(net_handle_t *handle, const char *hostname, unsigne
 {
   char port_str[PORT_MAX_STRING_LENGTH];
   struct addrinfo *addr_result = NULL, *addr_ptr = NULL, addr_hints;
+  int socket_opt;
   int error;
 #ifdef _WIN32
   int wsa_startup_error = 0;
@@ -452,6 +453,19 @@ err_t sender_init_for_socket(net_handle_t *handle, const char *hostname, unsigne
           psocketerror("socket creation failed");
           return ERROR_NETWORK_SOCKET_CREATION;
         }
+        /* Set `SO_REUSEADDR` to reuse address / port combinations, even if in `TIME_WAIT` state. This can happen
+         * since the same address / port combination is used before to test connectivity to grplot */
+#ifdef SO_REUSEADDR
+      socket_opt = 1;
+      if (setsockopt(handle->sender_receiver.sender.comm.socket.client_socket, SOL_SOCKET, SO_REUSEADDR,
+                     (char *)&socket_opt, sizeof(socket_opt)) < 0)
+        {
+          psocketerror("setting socket options failed");
+          freeaddrinfo(addr_result);
+          return ERROR_NETWORK_SOCKET_CREATION;
+        }
+#endif
+
       /* Connect to server */
       if (connect(handle->sender_receiver.sender.comm.socket.client_socket, addr_ptr->ai_addr,
                   (int)addr_ptr->ai_addrlen))
