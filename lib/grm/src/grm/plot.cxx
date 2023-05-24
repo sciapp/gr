@@ -2307,21 +2307,12 @@ err_t plot_barplot(grm_args_t *subplot_args)
   double *y;
   unsigned int y_length;
   unsigned int fixed_y_length = 0;
-  grm_args_t **ind_bar_color = nullptr;
-  double(*pos_ind_bar_color)[3] = nullptr;
-  grm_args_t **ind_edge_color = nullptr;
-  double(*pos_ind_edge_color)[3] = nullptr;
-  grm_args_t **ind_edge_width = nullptr;
-  double *pos_ind_edge_width = nullptr;
   int series_index = 0;
   double wfac;
   int len_std_colors = 20;
   int std_colors[20] = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
                         991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
   int color_save_spot = 1000;
-  int change_bar_color = 0;
-  int change_edge_color = 0;
-  int change_edge_width = 0;
   unsigned int i;
   err_t error = ERROR_NONE;
   double *y_lightness = nullptr;
@@ -2364,142 +2355,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
       ++current_series;
     }
 
-  /* ind_bar_color */
-  if (grm_args_values(subplot_args, "ind_bar_color", "A", &ind_bar_color))
-    {
-      pos_ind_bar_color = static_cast<double(*)[3]>(malloc(3 * fixed_y_length * sizeof(double)));
-      cleanup_and_set_error_if(pos_ind_bar_color == nullptr, ERROR_MALLOC);
-      change_bar_color = 1;
-      for (i = 0; i < fixed_y_length; ++i)
-        {
-          pos_ind_bar_color[i][0] = -1;
-        }
-      while (*ind_bar_color != nullptr)
-        {
-          int *indices = nullptr;
-          unsigned int indices_length;
-          int index;
-          double rgb[3];
-          unsigned int j;
-          cleanup_and_set_error_if(!(grm_args_first_value(*ind_bar_color, "indices", "I", &indices, &indices_length) ||
-                                     grm_args_values(*ind_bar_color, "indices", "i", &index)),
-                                   ERROR_PLOT_MISSING_DATA);
-          cleanup_and_set_error_if(!grm_args_values(*ind_bar_color, "rgb", "ddd", &rgb[0], &rgb[1], &rgb[2]),
-                                   ERROR_PLOT_MISSING_DATA);
-          for (j = 0; j < 3; j++)
-            {
-              cleanup_and_set_error_if((rgb[j] > 1 || rgb[j] < 0), ERROR_PLOT_OUT_OF_RANGE);
-            }
-
-          if (indices != nullptr)
-            {
-              for (j = 0; j < indices_length; ++j)
-                {
-                  cleanup_and_set_error_if(indices[j] - 1 >= (int)fixed_y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-                  pos_ind_bar_color[indices[j] - 1][0] = rgb[0];
-                  pos_ind_bar_color[indices[j] - 1][1] = rgb[1];
-                  pos_ind_bar_color[indices[j] - 1][2] = rgb[2];
-                }
-            }
-          else
-            {
-              cleanup_and_set_error_if(index - 1 >= (int)fixed_y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-              pos_ind_bar_color[index - 1][0] = rgb[0];
-              pos_ind_bar_color[index - 1][1] = rgb[1];
-              pos_ind_bar_color[index - 1][2] = rgb[2];
-            }
-          ind_bar_color++;
-        }
-    }
-
-  /* ind_edge_color */
-  if (grm_args_values(subplot_args, "ind_edge_color", "A", &ind_edge_color))
-    {
-      pos_ind_edge_color = static_cast<double(*)[3]>(malloc(3 * fixed_y_length * sizeof(double)));
-      cleanup_and_set_error_if(pos_ind_edge_color == nullptr, ERROR_MALLOC);
-      change_edge_color = 1;
-      for (i = 0; i < fixed_y_length; ++i)
-        {
-          pos_ind_edge_color[i][0] = -1;
-        }
-      while (*ind_edge_color != nullptr)
-        {
-          int *indices = nullptr;
-          unsigned int indices_length;
-          int index;
-          double rgb[3];
-          unsigned int j;
-          cleanup_and_set_error_if(!(grm_args_first_value(*ind_edge_color, "indices", "I", &indices, &indices_length) ||
-                                     grm_args_values(*ind_edge_color, "indices", "i", &index)),
-                                   ERROR_PLOT_MISSING_DATA);
-          cleanup_and_set_error_if(!grm_args_values(*ind_edge_color, "rgb", "ddd", &rgb[0], &rgb[1], &rgb[2]),
-                                   ERROR_PLOT_MISSING_DATA);
-          for (j = 0; j < 3; j++)
-            {
-              cleanup_and_set_error_if((rgb[j] > 1 || rgb[j] < 0), ERROR_PLOT_OUT_OF_RANGE);
-            }
-
-          if (indices != nullptr)
-            {
-              for (j = 0; j < indices_length; ++j)
-                {
-                  cleanup_and_set_error_if(indices[j] - 1 >= (int)fixed_y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-                  pos_ind_edge_color[indices[j] - 1][0] = rgb[0];
-                  pos_ind_edge_color[indices[j] - 1][1] = rgb[1];
-                  pos_ind_edge_color[indices[j] - 1][2] = rgb[2];
-                }
-            }
-          else
-            {
-              cleanup_and_set_error_if(index - 1 >= (int)fixed_y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-              pos_ind_edge_color[index - 1][0] = rgb[0];
-              pos_ind_edge_color[index - 1][1] = rgb[1];
-              pos_ind_edge_color[index - 1][2] = rgb[2];
-            }
-          ind_edge_color++;
-        }
-    }
-
-  /* ind_edge_width */
-  if (grm_args_values(subplot_args, "ind_edge_width", "A", &ind_edge_width))
-    {
-      pos_ind_edge_width = static_cast<double *>(malloc(sizeof(double) * fixed_y_length));
-      cleanup_and_set_error_if(pos_ind_edge_width == nullptr, ERROR_MALLOC);
-      for (i = 0; i < fixed_y_length; ++i)
-        {
-          pos_ind_edge_width[i] = -1;
-        }
-      change_edge_width = 1;
-      while (*ind_edge_width != nullptr)
-        {
-          int *indices = nullptr;
-          unsigned int indices_length;
-          int index;
-          double width;
-          unsigned int j;
-          cleanup_and_set_error_if(!(grm_args_first_value(*ind_edge_width, "indices", "I", &indices, &indices_length) ||
-                                     grm_args_values(*ind_edge_width, "indices", "i", &index)),
-                                   ERROR_PLOT_MISSING_DATA);
-          cleanup_and_set_error_if(!grm_args_values(*ind_edge_width, "width", "d", &width), ERROR_PLOT_MISSING_DATA);
-          cleanup_and_set_error_if(width < 0, ERROR_PLOT_OUT_OF_RANGE);
-
-          if (indices != nullptr)
-            {
-              for (j = 0; j < indices_length; ++j)
-                {
-                  cleanup_and_set_error_if(indices[j] - 1 >= (int)fixed_y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-                  pos_ind_edge_width[indices[j] - 1] = width;
-                }
-            }
-          else
-            {
-              cleanup_and_set_error_if(index - 1 >= (int)fixed_y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-              pos_ind_edge_width[index - 1] = width;
-            }
-          ind_edge_width++;
-        }
-    }
-
   grm_args_values(subplot_args, "series", "A", &current_series);
   wfac = 0.9 * bar_width;
   while (*current_series != nullptr)
@@ -2515,16 +2370,13 @@ err_t plot_barplot(grm_args_t *subplot_args)
       double *c_rgb = nullptr;
       unsigned int c_rgb_length;
       char **ylabels = nullptr;
-      unsigned int ylabels_left = 0;
-      unsigned int ylabels_length = 0;
-      unsigned int y_lightness_to_get = 0;
+      unsigned int ylabels_left = 0, ylabels_length = 0, y_lightness_to_get = 0;
       unsigned char rgb[sizeof(int)];
       int use_y_notations_from_inner_series = 1;
       double Y;
       int color;
       /* Style Varianz */
-      double pos_vertical_change = 0;
-      double neg_vertical_change = 0;
+      double pos_vertical_change = 0, neg_vertical_change = 0;
       double x1, x2, y1, y2;
       double x_min = 0, x_max, y_min = 0, y_max;
 
@@ -2652,15 +2504,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
               global_render->setColorRep(temp, color_save_spot, c_rgb[i * 3], c_rgb[i * 3 + 1], c_rgb[i * 3 + 2]);
               global_render->setFillColorInd(temp, color_save_spot);
             }
-          else if (change_bar_color)
-            {
-              if (*pos_ind_bar_color[i] != -1)
-                {
-                  global_render->setColorRep(temp, color_save_spot, pos_ind_bar_color[i][0], pos_ind_bar_color[i][1],
-                                             pos_ind_bar_color[i][2]);
-                  global_render->setFillColorInd(temp, color_save_spot);
-                }
-            }
           if (y_lightness_to_get > 0 && y_lightness != nullptr)
             {
               if (temp->hasAttribute("fillcolorind"))
@@ -2731,14 +2574,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
             }
 
           global_render->setLineWidth(temp, edge_width);
-          if (change_edge_width)
-            {
-              if (pos_ind_edge_width[i] != -1)
-                {
-                  double width = pos_ind_edge_width[i];
-                  global_render->setLineWidth(temp, width);
-                }
-            }
           if (edge_color_rgb[0] != -1)
             {
               global_render->setColorRep(temp, color_save_spot, edge_color_rgb[0], edge_color_rgb[1],
@@ -2746,15 +2581,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
               edge_color = color_save_spot;
             }
           global_render->setLineColorInd(temp, edge_color);
-          if (change_edge_color)
-            {
-              if (*pos_ind_edge_color[i] != -1)
-                {
-                  global_render->setColorRep(temp, color_save_spot, pos_ind_edge_color[i][0], pos_ind_edge_color[i][1],
-                                             pos_ind_edge_color[i][2]);
-                  global_render->setLineColorInd(temp, color_save_spot);
-                }
-            }
         }
 
       pos_vertical_change = 0;
@@ -2849,16 +2675,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
                                          c_rgb[inner_series_index * 3 + 1], c_rgb[inner_series_index * 3 + 2]);
               global_render->setFillColorInd(inner_group, color_save_spot);
             }
-          else if (change_bar_color)
-            {
-              if (*pos_ind_bar_color[inner_series_index] != -1)
-                {
-                  global_render->setColorRep(inner_group, color_save_spot, pos_ind_bar_color[inner_series_index][0],
-                                             pos_ind_bar_color[inner_series_index][1],
-                                             pos_ind_bar_color[inner_series_index][2]);
-                  global_render->setFillColorInd(inner_group, color_save_spot);
-                }
-            }
           if (grm_args_first_value(inner_series[inner_series_index], "c", "I", &inner_c, &inner_c_length))
             {
               cleanup_and_set_error_if(inner_c_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
@@ -2933,14 +2749,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
 
           /* Draw edges from inner_series */
           global_render->setLineWidth(inner_edges, edge_width);
-          if (change_edge_width)
-            {
-              if (pos_ind_edge_width[inner_series_index] != -1)
-                {
-                  double width = pos_ind_edge_width[inner_series_index];
-                  global_render->setLineWidth(inner_edges, width);
-                }
-            }
           if (edge_color_rgb[0] != -1)
             {
               global_render->setColorRep(inner_edges, color_save_spot, edge_color_rgb[0], edge_color_rgb[1],
@@ -2948,16 +2756,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
               edge_color = color_save_spot;
             }
           global_render->setLineColorInd(inner_edges, edge_color);
-          if (change_edge_color)
-            {
-              if (*pos_ind_edge_color[inner_series_index] != -1)
-                {
-                  global_render->setColorRep(inner_edges, color_save_spot, pos_ind_edge_color[inner_series_index][0],
-                                             pos_ind_edge_color[inner_series_index][1],
-                                             pos_ind_edge_color[inner_series_index][2]);
-                  global_render->setLineColorInd(inner_edges, color_save_spot);
-                }
-            }
 
           for (i = 0; i < y_length; i++)
             {
@@ -3108,18 +2906,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
 
 
 cleanup:
-  if (pos_ind_bar_color != nullptr)
-    {
-      free(pos_ind_bar_color);
-    }
-  if (pos_ind_edge_color != nullptr)
-    {
-      free(pos_ind_edge_color);
-    }
-  if (pos_ind_edge_width != nullptr)
-    {
-      free(pos_ind_edge_width);
-    }
   if (y_lightness != nullptr)
     {
       free(y_lightness);
