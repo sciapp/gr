@@ -10,10 +10,12 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <windows.h>
 #else
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <time.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -134,7 +136,7 @@ err_t receiver_init_for_custom(net_handle_t *handle, const char *name, unsigned 
 err_t receiver_init_for_socket(net_handle_t *handle, const char *hostname, unsigned int port)
 {
   char port_str[PORT_MAX_STRING_LENGTH];
-  struct addrinfo *addr_result = NULL, addr_hints;
+  struct addrinfo *addr_info = NULL, addr_hints;
   struct sockaddr_in client_addr;
   socklen_t client_addrlen = sizeof(client_addr);
   int error;
@@ -178,7 +180,7 @@ err_t receiver_init_for_socket(net_handle_t *handle, const char *hostname, unsig
   addr_hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG;
 
   /* Query a list of ip addresses for the given hostname */
-  if ((error = getaddrinfo(hostname, port_str, &addr_hints, &addr_result)) != 0)
+  if ((error = getaddrinfo(hostname, port_str, &addr_hints, &addr_info)) != 0)
     {
 #ifdef _WIN32
       psocketerror("getaddrinfo failed with error");
@@ -197,10 +199,10 @@ err_t receiver_init_for_socket(net_handle_t *handle, const char *hostname, unsig
 
   /* Create a socket for listening */
   if ((handle->sender_receiver.receiver.comm.socket.server_socket =
-           socket(addr_result->ai_family, addr_result->ai_socktype, addr_result->ai_protocol)) < 0)
+           socket(addr_info->ai_family, addr_info->ai_socktype, addr_info->ai_protocol)) < 0)
     {
       psocketerror("socket creation failed");
-      freeaddrinfo(addr_result);
+      freeaddrinfo(addr_info);
       return ERROR_NETWORK_SOCKET_CREATION;
     }
     /* Set SO_REUSEADDR if available on this system */
@@ -210,19 +212,19 @@ err_t receiver_init_for_socket(net_handle_t *handle, const char *hostname, unsig
                  (char *)&socket_opt, sizeof(socket_opt)) < 0)
     {
       psocketerror("setting socket options failed");
-      freeaddrinfo(addr_result);
+      freeaddrinfo(addr_info);
       return ERROR_NETWORK_SOCKET_CREATION;
     }
 #endif
 
   /* Bind the socket to given ip address and port */
-  if (bind(handle->sender_receiver.receiver.comm.socket.server_socket, addr_result->ai_addr, addr_result->ai_addrlen))
+  if (bind(handle->sender_receiver.receiver.comm.socket.server_socket, addr_info->ai_addr, addr_info->ai_addrlen))
     {
       psocketerror("bind failed");
-      freeaddrinfo(addr_result);
+      freeaddrinfo(addr_info);
       return ERROR_NETWORK_SOCKET_BIND;
     }
-  freeaddrinfo(addr_result);
+  freeaddrinfo(addr_info);
 
   /* Listen for incoming connections */
   if (listen(handle->sender_receiver.receiver.comm.socket.server_socket, 1))
@@ -385,12 +387,24 @@ err_t sender_init_for_custom(net_handle_t *handle, const char *name, unsigned in
 err_t sender_init_for_socket(net_handle_t *handle, const char *hostname, unsigned int port)
 {
   char port_str[PORT_MAX_STRING_LENGTH];
-  struct addrinfo *addr_result = NULL, *addr_ptr = NULL, addr_hints;
+  struct addrinfo *addr_info = NULL, addr_hints;
+  int socket_opt;
   int error;
 #ifdef _WIN32
   int wsa_startup_error = 0;
   WSADATA wsa_data;
 #endif
+  size_t retry_count, max_retry_count = 50;
+  int s;
+
+  /* In order to not sleep an excessive amount start with a short sleep time and then ramp
+     it up to `max_sleep_time` */
+  int sleep_ms;
+  int ms_to_ns = 1000000;
+  int initial_sleep_time_ms[] = {5, 10, 25, 50, 100};
+  int max_sleep_time_ms = 300;
+  size_t n_initial_times = sizeof(initial_sleep_time_ms) / sizeof(initial_sleep_time_ms[0]);
+  max_retry_count += n_initial_times;
 
   snprintf(port_str, PORT_MAX_STRING_LENGTH, "%u", port);
 
@@ -417,12 +431,17 @@ err_t sender_init_for_socket(net_handle_t *handle, const char *hostname, unsigne
 #endif
 
   memset(&addr_hints, 0, sizeof(addr_hints));
-  addr_hints.ai_family = AF_UNSPEC;
+  addr_hints.ai_family = AF_INET;
   addr_hints.ai_socktype = SOCK_STREAM;
-  addr_hints.ai_protocol = IPPROTO_TCP;
 
   /* Query a list of ip addresses for the given hostname */
-  if ((error = getaddrinfo(hostname, port_str, &addr_hints, &addr_result)) != 0)
+  if ((error = getaddrinfo(hostname, port_str, &addr_hints, &addr_info)) != 0)
+    {
+      addr_hints.ai_family = AF_INET6;
+      error = getaddrinfo(hostname, port_str, &addr_hints, &addr_info);
+    }
+
+  if (error != 0)
     {
 #ifdef _WIN32
       psocketerror("getaddrinfo failed with error");
@@ -439,32 +458,69 @@ err_t sender_init_for_socket(net_handle_t *handle, const char *hostname, unsigne
       return ERROR_NETWORK_HOSTNAME_RESOLUTION;
     }
 
-  /* Attempt to connect to an address until one succeeds */
-  handle->sender_receiver.sender.comm.socket.client_socket = -1;
-  for (addr_ptr = addr_result; addr_ptr != NULL && handle->sender_receiver.sender.comm.socket.client_socket < 0;
-       addr_ptr = addr_ptr->ai_next)
+  /* Create a socket for connecting to server */
+  handle->sender_receiver.sender.comm.socket.client_socket =
+      socket(addr_info->ai_family, addr_info->ai_socktype, addr_info->ai_protocol);
+  if (handle->sender_receiver.sender.comm.socket.client_socket < 0)
     {
-      /* Create a socket for connecting to server */
-      handle->sender_receiver.sender.comm.socket.client_socket =
-          socket(addr_ptr->ai_family, addr_ptr->ai_socktype, addr_ptr->ai_protocol);
-      if (handle->sender_receiver.sender.comm.socket.client_socket < 0)
-        {
-          psocketerror("socket creation failed");
-          return ERROR_NETWORK_SOCKET_CREATION;
-        }
-      /* Connect to server */
-      if (connect(handle->sender_receiver.sender.comm.socket.client_socket, addr_ptr->ai_addr,
-                  (int)addr_ptr->ai_addrlen))
-        {
-#ifdef _WIN32
-          closesocket(handle->sender_receiver.sender.comm.socket.client_socket);
-#else
-          close(handle->sender_receiver.sender.comm.socket.client_socket);
-#endif
-          handle->sender_receiver.sender.comm.socket.client_socket = -1;
-        }
+      psocketerror("socket creation failed");
+
+      return ERROR_NETWORK_SOCKET_CREATION;
     }
-  freeaddrinfo(addr_result);
+
+    /* Set `SO_REUSEADDR` to reuse address / port combinations, even if in `TIME_WAIT` state. This can happen
+     * since the same address / port combination is used before to test connectivity to grplot */
+#ifdef SO_REUSEADDR
+  socket_opt = 1;
+  if (setsockopt(handle->sender_receiver.sender.comm.socket.client_socket, SOL_SOCKET, SO_REUSEADDR,
+                 (char *)&socket_opt, sizeof(socket_opt)) < 0)
+    {
+      psocketerror("setting SO_REUSEADDR socket option failed");
+      freeaddrinfo(addr_info);
+      return ERROR_NETWORK_SOCKET_CREATION;
+    }
+#endif
+#ifdef SO_SNDBUF
+  socket_opt = 128 * 128 * 16;
+  if (setsockopt(handle->sender_receiver.sender.comm.socket.client_socket, SOL_SOCKET, SO_SNDBUF, (char *)&socket_opt,
+                 sizeof(socket_opt)) < 0)
+    {
+      psocketerror("setting SO_SNDBUF socket option failed");
+      freeaddrinfo(addr_info);
+      return ERROR_NETWORK_SOCKET_CREATION;
+    }
+#endif
+  /* Connect to server */
+  for (retry_count = 1; retry_count <= max_retry_count; retry_count++)
+    {
+      if ((s = connect(handle->sender_receiver.sender.comm.socket.client_socket, addr_info->ai_addr,
+                       (int)addr_info->ai_addrlen)) == -1)
+        {
+          sleep_ms = retry_count <= n_initial_times ? initial_sleep_time_ms[retry_count - 1] : max_sleep_time_ms;
+#ifndef _WIN32
+          struct timespec delay;
+          delay.tv_sec = 0;
+          delay.tv_nsec = sleep_ms * ms_to_ns;
+          while (nanosleep(&delay, &delay) == -1)
+            ;
+#else
+          Sleep(sleep_ms);
+#endif
+        }
+      else
+        break;
+    }
+
+  if (s == -1)
+    {
+#ifdef _WIN32
+      closesocket(handle->sender_receiver.sender.comm.socket.client_socket);
+#else
+      close(handle->sender_receiver.sender.comm.socket.client_socket);
+#endif
+      handle->sender_receiver.sender.comm.socket.client_socket = -1;
+    }
+  freeaddrinfo(addr_info);
 
   if (handle->sender_receiver.sender.comm.socket.client_socket < 0)
     {

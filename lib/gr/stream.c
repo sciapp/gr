@@ -318,7 +318,7 @@ static DWORD WINAPI grplot_thread(LPVOID parm)
   STARTUPINFOW startupInfo;
   PROCESS_INFORMATION processInformation;
 
-  StringCbPrintfW(w_cmd_line, CMD_LINE_LEN, L"cmd /c \"%ls\" --listen", cmd);
+  StringCbPrintfW(w_cmd_line, CMD_LINE_LEN, L"cmd /c \"%ls\"", cmd);
 
   ZeroMemory(&startupInfo, sizeof(startupInfo));
   startupInfo.cb = sizeof(startupInfo);
