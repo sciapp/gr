@@ -502,11 +502,11 @@ int gr_startlistener(void)
     {
       if (!GetEnvironmentVariableW(L"GRDIR", w_env, MAXPATHLEN))
         {
-          StringCbPrintfW(command, CMD_LINE_LEN, L"%wS\\bin\\grplot.exe --listen", GRDIR);
+          StringCbPrintfW(command, CMD_LINE_LEN, L"%S\\bin\\grplot.exe --listen", GRDIR);
         }
       else
         {
-          StringCbPrintfW(command, CMD_LINE_LEN, L"%ws\\bin\\grplot.exe --listen", w_env);
+          StringCbPrintfW(command, CMD_LINE_LEN, L"%s\\bin\\grplot.exe --listen", w_env);
         }
     }
 #else
