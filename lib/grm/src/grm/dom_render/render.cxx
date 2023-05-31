@@ -34,6 +34,9 @@
 #include "grm/layout.hxx"
 #include "grm/plot_int.h"
 #include <cm.h>
+extern "C" {
+#include "grm/datatype/string_map_int.h"
+}
 
 /* ------------------------- re-implementation of x_lin/x_log ------------------------------------------------------- */
 
@@ -67,6 +70,30 @@ static std::map<std::string, double> symbol_to_meters_per_unit{
 
 static int bounding_id = 0;
 static std::map<int, std::shared_ptr<GRM::Element>> bounding_map;
+static struct
+{
+  double _xlim_min, _ylim_min, _zlim_min, _clim_min;
+  double _xlim_max, _ylim_max, _zlim_max, _clim_max;
+  double _xrange_min, _yrange_min, _zrange_min, _crange_min;
+  double _xrange_max, _yrange_max, _zrange_max, _crange_max;
+} _coordinate_ranges = {NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN};
+
+static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},           {"hexbin", "xys"},
+                                           {"polar", "xys"},          {"shade", "xys"},
+                                           {"stem", "xys"},           {"stairs", "xys"},
+                                           {"contour", "xyzc"},       {"contourf", "xyzc"},
+                                           {"tricont", "xyzc"},       {"trisurf", "xyzc"},
+                                           {"surface", "xyzc"},       {"wireframe", "xyzc"},
+                                           {"plot3", "xyzc"},         {"scatter", "xyzc"},
+                                           {"scatter3", "xyzc"},      {"quiver", "xyuv"},
+                                           {"heatmap", "xyzc"},       {"hist", "x"},
+                                           {"barplot", "y"},          {"isosurface", "c"},
+                                           {"imshow", "c"},           {"nonuniformheatmap", "xyzc"},
+                                           {"polar_histogram", "x"},  {"pie", "x"},
+                                           {"volume", "c"},           {"marginalheatmap", "xyzc"},
+                                           {"polar_heatmap", "xyzc"}, {"nonuniformpolar_heatmap", "xyzc"}};
+
+static string_map_t *fmt_map = string_map_new_with_data(array_size(kind_to_fmt), kind_to_fmt);
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -1240,15 +1267,15 @@ void receiverfunction(int id, double x_min, double x_max, double y_min, double y
 static bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, double &c_min, double &c_max)
 {
   bool limits_found = true;
-  if (element->hasAttribute("lim_cmin") && element->hasAttribute("lim_cmax"))
+  if (!std::isnan(_coordinate_ranges._clim_min) && !std::isnan(_coordinate_ranges._clim_max))
     {
-      c_min = static_cast<double>(element->getAttribute("lim_cmin"));
-      c_max = static_cast<double>(element->getAttribute("lim_cmax"));
+      c_min = _coordinate_ranges._clim_min;
+      c_max = _coordinate_ranges._clim_max;
     }
-  else if (element->hasAttribute("lim_zmin") && element->hasAttribute("lim_zmax"))
+  else if (!std::isnan(_coordinate_ranges._zlim_min) && !std::isnan(_coordinate_ranges._zlim_max))
     {
-      c_min = static_cast<double>(element->getAttribute("lim_zmin"));
-      c_max = static_cast<double>(element->getAttribute("lim_zmax"));
+      c_min = _coordinate_ranges._zlim_min;
+      c_max = _coordinate_ranges._zlim_max;
     }
   else
     {
@@ -1256,6 +1283,23 @@ static bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, d
     }
 
   return limits_found;
+}
+
+static double find_max_step(unsigned int n, std::vector<double> x)
+{
+  double max_step = 0.0;
+  unsigned int i;
+
+  if (n < 2)
+    {
+      return 0.0;
+    }
+  for (i = 1; i < n; ++i)
+    {
+      max_step = grm_max(x[i] - x[i - 1], max_step);
+    }
+
+  return max_step;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ attribute processing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1284,25 +1328,25 @@ static void processCalcWindowAndViewportFromParent(const std::shared_ptr<GRM::El
       viewport[1] = static_cast<double>(plot_group->getAttribute("viewport_xmax"));
       viewport[2] = static_cast<double>(plot_group->getAttribute("viewport_ymin"));
       viewport[3] = static_cast<double>(plot_group->getAttribute("viewport_ymax"));
-      x_min = static_cast<double>(plot_group->getAttribute("lim_xmin"));
-      x_max = static_cast<double>(plot_group->getAttribute("lim_xmax"));
-      y_min = static_cast<double>(plot_group->getAttribute("lim_ymin"));
-      y_max = static_cast<double>(plot_group->getAttribute("lim_ymax"));
-      if (plot_group->hasAttribute("lim_cmin"))
+      x_min = _coordinate_ranges._xlim_min;
+      x_max = _coordinate_ranges._xlim_max;
+      y_min = _coordinate_ranges._ylim_min;
+      y_max = _coordinate_ranges._ylim_max;
+      if (!std::isnan(_coordinate_ranges._clim_min))
         {
-          c_min = static_cast<double>(plot_group->getAttribute("lim_cmin"));
+          c_min = _coordinate_ranges._clim_min;
         }
       else
         {
-          c_min = static_cast<double>(plot_group->getAttribute("lim_zmin"));
+          c_min = _coordinate_ranges._zlim_min;
         }
-      if (plot_group->hasAttribute("lim_cmax"))
+      if (!std::isnan(_coordinate_ranges._clim_max))
         {
-          c_max = static_cast<double>(plot_group->getAttribute("lim_cmax"));
+          c_max = _coordinate_ranges._clim_max;
         }
       else
         {
-          c_max = static_cast<double>(plot_group->getAttribute("lim_zmax"));
+          c_max = _coordinate_ranges._zlim_max;
         }
 
       if (orientation == "vertical")
@@ -2648,8 +2692,8 @@ static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem
 
           auto plot_group = elem->parentElement();
 
-          double c_min = static_cast<double>(plot_group->getAttribute("lim_zmin"));
-          double c_max = static_cast<double>(plot_group->getAttribute("lim_zmax"));
+          double c_min = _coordinate_ranges._zlim_min;
+          double c_max = _coordinate_ranges._zlim_max;
 
           int i;
           double y_max = 0;
@@ -2665,10 +2709,10 @@ static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem
           int y_length = y.size();
           int x_length = xi.size();
 
-          double xmin = static_cast<double>(plot_group->getAttribute("lim_xmin"));
-          double xmax = static_cast<double>(plot_group->getAttribute("lim_xmax"));
-          double ymin = static_cast<double>(plot_group->getAttribute("lim_ymin"));
-          double ymax = static_cast<double>(plot_group->getAttribute("lim_ymax"));
+          double xmin = _coordinate_ranges._xlim_min;
+          double xmax = _coordinate_ranges._xlim_max;
+          double ymin = _coordinate_ranges._ylim_min;
+          double ymax = _coordinate_ranges._ylim_max;
           // plot step in marginal
           for (i = 0; i < (is_vertical ? y_length : x_length); i++)
             {
@@ -2799,10 +2843,10 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &elem)
 
   int scale = static_cast<int>(elem->getAttribute("scale"));
 
-  double xmin = static_cast<double>(elem->getAttribute("lim_xmin"));
-  double xmax = static_cast<double>(elem->getAttribute("lim_xmax"));
-  double ymin = static_cast<double>(elem->getAttribute("lim_ymin"));
-  double ymax = static_cast<double>(elem->getAttribute("lim_ymax"));
+  double xmin = _coordinate_ranges._xlim_min;
+  double xmax = _coordinate_ranges._xlim_max;
+  double ymin = _coordinate_ranges._ylim_min;
+  double ymax = _coordinate_ranges._ylim_max;
 
   if (elem->hasAttribute("reset_ranges") && static_cast<int>(elem->getAttribute("reset_ranges")))
     {
@@ -2879,10 +2923,10 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &elem)
       elem->removeChild(panzoom_element);
     }
 
-  elem->setAttribute("lim_xmin", xmin);
-  elem->setAttribute("lim_xmax", xmax);
-  elem->setAttribute("lim_ymin", ymin);
-  elem->setAttribute("lim_ymax", ymax);
+  _coordinate_ranges._xlim_min = xmin;
+  _coordinate_ranges._xlim_max = xmax;
+  _coordinate_ranges._ylim_min = ymin;
+  _coordinate_ranges._ylim_max = ymax;
 
   if (!(scale & GR_OPTION_X_LOG))
     {
@@ -2908,8 +2952,8 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &elem)
 
   if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume", "isosurface"))
     {
-      double zmin = static_cast<double>(elem->getAttribute("lim_zmin"));
-      double zmax = static_cast<double>(elem->getAttribute("lim_zmax"));
+      double zmin = _coordinate_ranges._zlim_min;
+      double zmax = _coordinate_ranges._zlim_max;
       if (zmax > 0)
         {
           if (!(scale & GR_OPTION_Z_LOG))
@@ -4505,6 +4549,38 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ element processing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+static void drawYLine(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
+{
+  auto draw_axes_element = elem->parentElement();
+  double x_tick, x_org_low, x_org_high;
+  double y_tick, y_org_low, y_org_high;
+  int x_major, y_major;
+  std::string orientation = PLOT_DEFAULT_ORIENTATION;
+
+  getAxesInformation(elem, "low", "low", x_org_low, y_org_low, x_major, y_major, x_tick, y_tick);
+  getAxesInformation(elem, "high", "high", x_org_high, y_org_high, x_major, y_major, x_tick, y_tick);
+  if (elem->hasAttribute("orientation"))
+    {
+      orientation = static_cast<std::string>(elem->getAttribute("orientation"));
+    }
+  else
+    {
+      elem->setAttribute("orientation", orientation);
+    }
+  int is_vertical = orientation == "vertical";
+
+  double x[2] = {x_org_low, x_org_high};
+  double y[2] = {y_org_low, y_org_low};
+
+  gr_setlinecolorind(1);
+  if (is_vertical)
+    {
+      x[1] = y_org_low;
+      y[1] = y_org_high;
+    }
+  gr_polyline(2, x, y);
+}
+
 static void axes(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
@@ -4550,6 +4626,15 @@ static void axes(const std::shared_ptr<GRM::Element> &element, const std::shared
 
   getTickSize(element, tick_size);
   tick_size *= tick_orientation;
+
+  if (static_cast<std::string>(element->parentElement()->parentElement()->getAttribute("kind")) == "barplot")
+    {
+      /* negative values */
+      if (_coordinate_ranges._ylim_min < 0)
+        {
+          drawYLine(element, context);
+        }
+    }
 
   gr_axes(x_tick, y_tick, x_org, y_org, x_major, y_major, tick_size);
 }
@@ -4711,8 +4796,8 @@ static void contour(const std::shared_ptr<GRM::Element> &element, const std::sha
   std::vector<double> px_vec, py_vec, pz_vec;
   int major_h = 1000;
 
-  z_min = static_cast<double>(element->parentElement()->getAttribute("lim_zmin"));
-  z_max = static_cast<double>(element->parentElement()->getAttribute("lim_zmax"));
+  z_min = _coordinate_ranges._zlim_min;
+  z_max = _coordinate_ranges._zlim_max;
   if (element->hasAttribute("levels"))
     {
       num_levels = static_cast<int>(element->getAttribute("levels"));
@@ -4835,8 +4920,8 @@ static void contourf(const std::shared_ptr<GRM::Element> &element, const std::sh
   std::vector<double> px_vec, py_vec, pz_vec;
   int major_h = 0;
 
-  z_min = static_cast<double>(element->parentElement()->getAttribute("lim_zmin"));
-  z_max = static_cast<double>(element->parentElement()->getAttribute("lim_zmax"));
+  z_min = _coordinate_ranges._zlim_min;
+  z_max = _coordinate_ranges._zlim_max;
   if (element->hasAttribute("levels"))
     {
       num_levels = static_cast<int>(element->getAttribute("levels"));
@@ -5581,8 +5666,8 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
                    (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
   charheight = grm_max(0.018 * diag, 0.012);
 
-  r_min = static_cast<double>(subplot->getAttribute("lim_ymin"));
-  r_max = static_cast<double>(subplot->getAttribute("lim_ymax"));
+  r_min = _coordinate_ranges._ylim_min;
+  r_max = _coordinate_ranges._ylim_max;
 
   angle_ticks = static_cast<int>(elem->getAttribute("angle_ticks"));
 
@@ -5734,38 +5819,6 @@ static void drawRect(const std::shared_ptr<GRM::Element> &element, const std::sh
   double ymin = static_cast<double>(element->getAttribute("ymin"));
   double ymax = static_cast<double>(element->getAttribute("ymax"));
   gr_drawrect(xmin, xmax, ymin, ymax);
-}
-
-static void drawYLine(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
-{
-  auto draw_axes_element = elem->parentElement();
-  double x_tick, x_org_low, x_org_high;
-  double y_tick, y_org_low, y_org_high;
-  int x_major, y_major;
-  std::string orientation = PLOT_DEFAULT_ORIENTATION;
-
-  getAxesInformation(elem, "low", "low", x_org_low, y_org_low, x_major, y_major, x_tick, y_tick);
-  getAxesInformation(elem, "high", "high", x_org_high, y_org_high, x_major, y_major, x_tick, y_tick);
-  if (elem->hasAttribute("orientation"))
-    {
-      orientation = static_cast<std::string>(elem->getAttribute("orientation"));
-    }
-  else
-    {
-      elem->setAttribute("orientation", orientation);
-    }
-  int is_vertical = orientation == "vertical";
-
-  double x[2] = {x_org_low, x_org_high};
-  double y[2] = {y_org_low, y_org_low};
-
-  gr_setlinecolorind(1);
-  if (is_vertical)
-    {
-      x[1] = y_org_low;
-      y[1] = y_org_high;
-    }
-  gr_polyline(2, x, y);
 }
 
 static void fillArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -6037,8 +6090,10 @@ static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::sha
 
   if (x_vec.empty())
     {
-      x_min = static_cast<double>(plot_parent->getAttribute("xrange_min"));
-      x_max = static_cast<double>(plot_parent->getAttribute("xrange_max"));
+      x_min = (element->hasAttribute("xrange_min")) ? static_cast<double>(element->getAttribute("xrange_min"))
+                                                    : _coordinate_ranges._xrange_min;
+      x_max = (element->hasAttribute("xrange_max")) ? static_cast<double>(element->getAttribute("xrange_max"))
+                                                    : _coordinate_ranges._xrange_max;
     }
   else
     {
@@ -6047,16 +6102,20 @@ static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::sha
     }
   if (y_vec.empty())
     {
-      y_min = static_cast<double>(plot_parent->getAttribute("yrange_min"));
-      y_max = static_cast<double>(plot_parent->getAttribute("yrange_max"));
+      y_min = (element->hasAttribute("yrange_min")) ? static_cast<double>(element->getAttribute("yrange_min"))
+                                                    : _coordinate_ranges._yrange_min;
+      y_max = (element->hasAttribute("yrange_max")) ? static_cast<double>(element->getAttribute("yrange_max"))
+                                                    : _coordinate_ranges._yrange_max;
     }
   else
     {
       y_min = y_vec[0];
       y_max = y_vec[rows - 1];
     }
-  z_min = static_cast<double>(plot_parent->getAttribute("zrange_min"));
-  z_max = static_cast<double>(plot_parent->getAttribute("zrange_max"));
+  z_min = (element->hasAttribute("zrange_min")) ? static_cast<double>(element->getAttribute("zrange_min"))
+                                                : _coordinate_ranges._zrange_min;
+  z_max = (element->hasAttribute("zrange_max")) ? static_cast<double>(element->getAttribute("zrange_max"))
+                                                : _coordinate_ranges._zrange_max;
   if (!element->hasAttribute("crange_min") || !element->hasAttribute("crange_max"))
     {
       c_min = z_min;
@@ -6220,8 +6279,8 @@ static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
   auto colorbar = element->querySelectors("colorbar");
   double c_min = 0.0;
   double c_max = cntmax;
-  colorbar->setAttribute("lim_cmin", c_min);
-  colorbar->setAttribute("lim_cmax", c_max);
+  _coordinate_ranges._clim_min = c_min;
+  _coordinate_ranges._clim_max = c_max;
 }
 
 static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -6301,9 +6360,13 @@ static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared
       element->setAttribute("orientation", orientation);
     }
   is_horizontal = orientation == "horizontal";
-  x_min = static_cast<double>(plot_parent->getAttribute("xrange_min"));
-  x_max = static_cast<double>(plot_parent->getAttribute("xrange_max"));
-  y_min = static_cast<double>(plot_parent->getAttribute("yrange_min"));
+  x_min = (element->hasAttribute("xrange_min")) ? static_cast<double>(element->getAttribute("xrange_min"))
+                                                : _coordinate_ranges._xrange_min;
+  x_max = (element->hasAttribute("xrange_max")) ? static_cast<double>(element->getAttribute("xrange_max"))
+                                                : _coordinate_ranges._xrange_max;
+  y_min = (element->hasAttribute("yrange_min")) ? static_cast<double>(element->getAttribute("yrange_min"))
+                                                : _coordinate_ranges._yrange_min;
+  if (isnan(y_min)) y_min = 0.0;
 
   if (element->parentElement()->hasAttribute("marginalheatmap_kind"))
     {
@@ -6705,8 +6768,10 @@ static void polar(const std::shared_ptr<GRM::Element> &element, const std::share
     {
       element->setAttribute("spec", spec);
     }
-  r_min = static_cast<double>(element->getAttribute("r_min"));
-  r_max = static_cast<double>(element->getAttribute("r_max"));
+  r_min = _coordinate_ranges._ylim_min;
+  element->setAttribute("r_min", r_min);
+  r_max = _coordinate_ranges._ylim_max;
+  element->setAttribute("r_max", r_max);
   tick = 0.5 * auto_tick(r_min, r_max);
   n = (int)ceil((r_max - r_min) / tick);
   r_max = r_min + n * tick;
@@ -6804,8 +6869,10 @@ static void polar_heatmap(const std::shared_ptr<GRM::Element> &element, const st
 
   if (x_vec.empty())
     {
-      x_min = static_cast<double>(element->parentElement()->getAttribute("xrange_min"));
-      x_max = static_cast<double>(element->parentElement()->getAttribute("xrange_max"));
+      x_min = (element->hasAttribute("xrange_min")) ? static_cast<double>(element->getAttribute("xrange_min"))
+                                                    : _coordinate_ranges._xrange_min;
+      x_max = (element->hasAttribute("xrange_max")) ? static_cast<double>(element->getAttribute("xrange_max"))
+                                                    : _coordinate_ranges._xrange_max;
     }
   else
     {
@@ -6814,8 +6881,10 @@ static void polar_heatmap(const std::shared_ptr<GRM::Element> &element, const st
     }
   if (y_vec.empty())
     {
-      y_min = static_cast<double>(element->parentElement()->getAttribute("yrange_min"));
-      y_max = static_cast<double>(element->parentElement()->getAttribute("yrange_max"));
+      y_min = (element->hasAttribute("yrange_min")) ? static_cast<double>(element->getAttribute("yrange_min"))
+                                                    : _coordinate_ranges._yrange_min;
+      y_max = (element->hasAttribute("yrange_max")) ? static_cast<double>(element->getAttribute("yrange_max"))
+                                                    : _coordinate_ranges._yrange_max;
     }
   else
     {
@@ -6823,8 +6892,10 @@ static void polar_heatmap(const std::shared_ptr<GRM::Element> &element, const st
       y_max = y_vec[rows - 1];
     }
 
-  z_min = static_cast<double>(element->parentElement()->getAttribute("zrange_min"));
-  z_max = static_cast<double>(element->parentElement()->getAttribute("zrange_max"));
+  z_min = (element->hasAttribute("zrange_min")) ? static_cast<double>(element->getAttribute("zrange_min"))
+                                                : _coordinate_ranges._zrange_min;
+  z_max = (element->hasAttribute("zrange_max")) ? static_cast<double>(element->getAttribute("zrange_max"))
+                                                : _coordinate_ranges._zrange_max;
   if (!element->hasAttribute("crange_min") || !element->hasAttribute("crange_max"))
     {
       c_min = z_min;
@@ -7007,8 +7078,8 @@ static void scatter(const std::shared_ptr<GRM::Element> &element, const std::sha
 
   if (!z_vec.empty() || !c_vec.empty())
     {
-      c_min = static_cast<double>(element->getAttribute("c_min"));
-      c_max = static_cast<double>(element->getAttribute("c_max"));
+      c_min = _coordinate_ranges._clim_min;
+      c_max = _coordinate_ranges._clim_max;
 
       for (i = 0; i < x_length; i++)
         {
@@ -7108,8 +7179,8 @@ static void scatter3(const std::shared_ptr<GRM::Element> &element, const std::sh
       auto c = static_cast<std::string>(element->getAttribute("c"));
       c_vec = GRM::get<std::vector<double>>((*context)[c]);
       c_length = c_vec.size();
-      c_min = static_cast<double>(element->getAttribute("c_min"));
-      c_max = static_cast<double>(element->getAttribute("c_max"));
+      c_min = _coordinate_ranges._clim_min;
+      c_max = _coordinate_ranges._clim_max;
 
       for (i = 0; i < x_length; i++)
         {
@@ -7382,11 +7453,12 @@ static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared
   y_length = y_vec.size();
   if (x_length != y_length) throw std::length_error("For stem series x- and y-data must have the same size.\n");
 
-  if (element->parentElement()->hasAttribute("yrange_min"))
-    stem_y[0] = static_cast<double>(element->parentElement()->getAttribute("yrange_min"));
+  if (element->hasAttribute("yrange_min")) stem_y[0] = static_cast<double>(element->getAttribute("yrange_min"));
 
   global_render->setLineSpec(element, spec);
-  element->append(global_render->createYLine());
+  gr_savestate();
+  drawYLine(element, context);
+  gr_restorestate();
 
   for (i = 0; i < x_length; ++i)
     {
@@ -7504,8 +7576,10 @@ static void surface(const std::shared_ptr<GRM::Element> &element, const std::sha
 
   if (x_vec.empty())
     {
-      x_min = static_cast<double>(element->parentElement()->getAttribute("xrange_min"));
-      x_max = static_cast<double>(element->parentElement()->getAttribute("xrange_max"));
+      x_min = (element->hasAttribute("xrange_min")) ? static_cast<double>(element->getAttribute("xrange_min"))
+                                                    : _coordinate_ranges._xrange_min;
+      x_max = (element->hasAttribute("xrange_max")) ? static_cast<double>(element->getAttribute("xrange_max"))
+                                                    : _coordinate_ranges._xrange_max;
     }
   else
     {
@@ -7514,8 +7588,10 @@ static void surface(const std::shared_ptr<GRM::Element> &element, const std::sha
     }
   if (y_vec.empty())
     {
-      y_min = static_cast<double>(element->parentElement()->getAttribute("yrange_min"));
-      y_max = static_cast<double>(element->parentElement()->getAttribute("yrange_max"));
+      y_min = (element->hasAttribute("yrange_min")) ? static_cast<double>(element->getAttribute("yrange_min"))
+                                                    : _coordinate_ranges._yrange_min;
+      y_max = (element->hasAttribute("yrange_max")) ? static_cast<double>(element->getAttribute("yrange_max"))
+                                                    : _coordinate_ranges._yrange_max;
     }
   else
     {
@@ -7650,7 +7726,7 @@ static void line(const std::shared_ptr<GRM::Element> &element, const std::shared
   mask = gr_uselinespec((char *)spec_char);
 
   // clear old line
-  for (auto elem : element->children())
+  for (const auto &elem : element->children())
     {
       if (elem->localName() == "polyline") elem->remove();
     }
@@ -7778,25 +7854,29 @@ static void marginalheatmap(const std::shared_ptr<GRM::Element> &element, const 
       int edge_color_index = 1;
       double edge_color_rgb[3] = {-1};
 
-      x_min = static_cast<double>(element->parentElement()->getAttribute("xrange_min"));
-      x_max = static_cast<double>(element->parentElement()->getAttribute("xrange_max"));
-      y_min = static_cast<double>(element->parentElement()->getAttribute("yrange_min"));
-      y_max = static_cast<double>(element->parentElement()->getAttribute("yrange_max"));
-      if (element->parentElement()->hasAttribute("lim_cmin"))
+      x_min = (element->hasAttribute("xrange_min")) ? static_cast<double>(element->getAttribute("xrange_min"))
+                                                    : _coordinate_ranges._xrange_min;
+      x_max = (element->hasAttribute("xrange_max")) ? static_cast<double>(element->getAttribute("xrange_max"))
+                                                    : _coordinate_ranges._xrange_max;
+      y_min = (element->hasAttribute("yrange_min")) ? static_cast<double>(element->getAttribute("yrange_min"))
+                                                    : _coordinate_ranges._yrange_min;
+      y_max = (element->hasAttribute("yrange_max")) ? static_cast<double>(element->getAttribute("yrange_max"))
+                                                    : _coordinate_ranges._yrange_max;
+      if (!std::isnan(_coordinate_ranges._clim_min))
         {
-          c_min = static_cast<double>(element->parentElement()->getAttribute("lim_cmin"));
+          c_min = _coordinate_ranges._clim_min;
         }
       else
         {
-          c_min = static_cast<double>(element->parentElement()->getAttribute("lim_zmin"));
+          c_min = _coordinate_ranges._zlim_min;
         }
-      if (element->parentElement()->hasAttribute("lim_cmax"))
+      if (!std::isnan(_coordinate_ranges._clim_max))
         {
-          c_max = static_cast<double>(element->parentElement()->getAttribute("lim_cmax"));
+          c_max = _coordinate_ranges._clim_max;
         }
       else
         {
-          c_max = static_cast<double>(element->parentElement()->getAttribute("lim_zmax"));
+          c_max = _coordinate_ranges._zlim_max;
         }
 
       if (marginalheatmap_kind == "all")
@@ -7855,6 +7935,9 @@ static void marginalheatmap(const std::shared_ptr<GRM::Element> &element, const 
 
           (*context)["bins" + str] = bins;
           subGroup->setAttribute("bins", "bins" + str);
+
+          (*context)["x" + str] = x_vec;
+          subGroup->setAttribute("x", "x" + str);
         }
       else if (marginalheatmap_kind == "line" && xind != -1 && yind != -1)
         {
@@ -8157,10 +8240,12 @@ static void imshow(const std::shared_ptr<GRM::Element> &element, const std::shar
     {
       grplot = static_cast<int>(element->parentElement()->getAttribute("grplot"));
     }
-  if (!element->hasAttribute("c_min")) throw NotFoundError("Imshow series is missing required attribute c_min.\n");
-  c_min = static_cast<double>(element->getAttribute("c_min"));
-  if (!element->hasAttribute("c_max")) throw NotFoundError("Imshow series is missing required attribute c_max.\n");
-  c_max = static_cast<double>(element->getAttribute("c_max"));
+  if (std::isnan(_coordinate_ranges._clim_min))
+    throw NotFoundError("Imshow series is missing required attribute clim.\n");
+  c_min = _coordinate_ranges._clim_min;
+  if (std::isnan(_coordinate_ranges._clim_max))
+    throw NotFoundError("Imshow series is missing required attribute clim.\n");
+  c_max = _coordinate_ranges._clim_max;
   logger((stderr, "Got min, max %lf %lf\n", c_min, c_max));
 
   std::vector<double> c_data_vec, shape_vec;
@@ -8384,8 +8469,8 @@ static void triContour(const std::shared_ptr<GRM::Element> &element, const std::
   unsigned int x_length, y_length, z_length;
   std::vector<double> x_vec, y_vec, z_vec;
 
-  z_min = static_cast<double>(element->parentElement()->getAttribute("lim_zmin"));
-  z_max = static_cast<double>(element->parentElement()->getAttribute("lim_zmax"));
+  z_min = _coordinate_ranges._zlim_min;
+  z_max = _coordinate_ranges._zlim_max;
   if (element->hasAttribute("levels"))
     {
       num_levels = static_cast<int>(element->getAttribute("levels"));
@@ -8402,12 +8487,12 @@ static void triContour(const std::shared_ptr<GRM::Element> &element, const std::
       levels[i] = z_min + ((1.0 * i) / (num_levels - 1)) * (z_max - z_min);
     }
 
-  if (!element->hasAttribute("px")) throw NotFoundError("Tricontour series is missing required attribute px-data.\n");
-  auto x = static_cast<std::string>(element->getAttribute("px"));
-  if (!element->hasAttribute("py")) throw NotFoundError("Tricontour series is missing required attribute py-data.\n");
-  auto y = static_cast<std::string>(element->getAttribute("py"));
-  if (!element->hasAttribute("pz")) throw NotFoundError("Tricontour series is missing required attribute pz-data.\n");
-  auto z = static_cast<std::string>(element->getAttribute("pz"));
+  if (!element->hasAttribute("x")) throw NotFoundError("Tricontour series is missing required attribute px-data.\n");
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  if (!element->hasAttribute("y")) throw NotFoundError("Tricontour series is missing required attribute py-data.\n");
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+  if (!element->hasAttribute("z")) throw NotFoundError("Tricontour series is missing required attribute pz-data.\n");
+  auto z = static_cast<std::string>(element->getAttribute("z"));
 
   x_vec = GRM::get<std::vector<double>>((*context)[x]);
   y_vec = GRM::get<std::vector<double>>((*context)[y]);
@@ -8435,12 +8520,12 @@ static void triSurface(const std::shared_ptr<GRM::Element> &element, const std::
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
-  if (!element->hasAttribute("px")) throw NotFoundError("Trisurface series is missing required attribute px-data.\n");
-  auto px = static_cast<std::string>(element->getAttribute("px"));
-  if (!element->hasAttribute("py")) throw NotFoundError("Trisurface series is missing required attribute py-data.\n");
-  auto py = static_cast<std::string>(element->getAttribute("py"));
-  if (!element->hasAttribute("pz")) throw NotFoundError("Trisurface series is missing required attribute pz-data.\n");
-  auto pz = static_cast<std::string>(element->getAttribute("pz"));
+  if (!element->hasAttribute("x")) throw NotFoundError("Trisurface series is missing required attribute px-data.\n");
+  auto px = static_cast<std::string>(element->getAttribute("x"));
+  if (!element->hasAttribute("y")) throw NotFoundError("Trisurface series is missing required attribute py-data.\n");
+  auto py = static_cast<std::string>(element->getAttribute("y"));
+  if (!element->hasAttribute("z")) throw NotFoundError("Trisurface series is missing required attribute pz-data.\n");
+  auto pz = static_cast<std::string>(element->getAttribute("z"));
 
   std::vector<double> px_vec = GRM::get<std::vector<double>>((*context)[px]);
   std::vector<double> py_vec = GRM::get<std::vector<double>>((*context)[py]);
@@ -8551,8 +8636,8 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
   parent_element->setAttribute("dlim_max", dlim[1]);
 
   auto colorbar = parent_element->querySelectors("colorbar");
-  colorbar->setAttribute("lim_cmin", dlim[0]);
-  colorbar->setAttribute("lim_cmax", dlim[1]);
+  _coordinate_ranges._clim_min = dlim[0];
+  _coordinate_ranges._clim_max = dlim[1];
 }
 
 static void wireframe(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -8613,6 +8698,651 @@ static void wireframe(const std::shared_ptr<GRM::Element> &element, const std::s
   double *py_p = &(y_vec[0]);
   double *pz_p = &(z_vec[0]);
   gr_surface(x_length, y_length, px_p, py_p, pz_p, GR_OPTION_FILLED_MESH);
+}
+
+static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
+                                 const std::shared_ptr<GRM::Context> &context)
+{
+  std::string kind, style;
+  const char *fmt;
+  unsigned int series_count = 0;
+  std::vector<std::string> data_component_names = {"x", "y", "z", "c", ""};
+  std::vector<std::string>::iterator current_component_name;
+  std::vector<double> current_component;
+  unsigned int current_point_count = 0;
+  struct
+  {
+    const char *subplot;
+    const char *series;
+  } * current_range_keys,
+      range_keys[] = {{"xlim", "xrange"}, {"ylim", "yrange"}, {"zlim", "zrange"}, {"clim", "crange"}};
+  std::vector<double> bins;
+  unsigned int i;
+
+  logger((stderr, "Storing coordinate ranges\n"));
+
+  /* If a pan and/or zoom was performed before, do not overwrite limits
+   * -> the user fully controls limits by interaction */
+  if (element->hasAttribute("original_xlim"))
+    {
+      logger((stderr, "Panzoom active, do not modify limits...\n"));
+    }
+  else
+    {
+      _coordinate_ranges = {NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN, NAN};
+      kind = static_cast<std::string>(element->getAttribute("kind"));
+      if (!string_map_at(fmt_map, static_cast<const char *>(kind.c_str()), static_cast<const char **>(&fmt)))
+        throw NotFoundError("Invalid kind was given.\n");
+      if (!str_equals_any(kind.c_str(), 2, "pie", "polar_histogram"))
+        {
+          current_component_name = data_component_names.begin();
+          current_range_keys = range_keys;
+          while (!(*current_component_name).empty())
+            {
+              double min_component = DBL_MAX;
+              double max_component = -DBL_MAX;
+              double step = -DBL_MAX;
+
+              if (static_cast<std::string>(fmt).find(*current_component_name) == std::string::npos)
+                {
+                  ++current_range_keys;
+                  ++current_component_name;
+                  continue;
+                }
+              /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
+              if (!element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_min") ||
+                  !element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_max") ||
+                  str_equals_any(kind.c_str(), 3, "heatmap", "marginalheatmap", "polar_heatmap"))
+                {
+                  for (const auto &series : element->children())
+                    {
+                      if (series->localName() != "series") continue;
+                      if (series->hasAttribute("style"))
+                        style = static_cast<std::string>(series->getAttribute("style"));
+                      double current_min_component = DBL_MAX, current_max_component = -DBL_MAX;
+                      if (!series->hasAttribute(static_cast<std::string>(current_range_keys->series) + "_min") ||
+                          !series->hasAttribute((static_cast<std::string>(current_range_keys->series) + "_max")))
+                        {
+                          if (series->hasAttribute(*current_component_name))
+                            {
+                              auto key = static_cast<std::string>(series->getAttribute(*current_component_name));
+                              current_component = GRM::get<std::vector<double>>((*context)[key]);
+                              current_point_count = current_component.size();
+                              if (style == "stacked")
+                                {
+                                  current_max_component = 0.0;
+                                  current_min_component = 0.0;
+                                  for (i = 0; i < current_point_count; i++)
+                                    {
+                                      if (current_component[i] > 0)
+                                        {
+                                          current_max_component += current_component[i];
+                                        }
+                                      else
+                                        {
+                                          current_min_component += current_component[i];
+                                        }
+                                    }
+                                }
+                              else
+                                {
+                                  if (kind == "barplot")
+                                    {
+                                      current_min_component = 0.0;
+                                      current_max_component = 0.0;
+                                    }
+                                  for (i = 0; i < current_point_count; i++)
+                                    {
+                                      if (!std::isnan(current_component[i]))
+                                        {
+                                          current_min_component = grm_min(current_component[i], current_min_component);
+                                          current_max_component = grm_max(current_component[i], current_max_component);
+                                        }
+                                    }
+                                }
+                            }
+                          /* TODO: Add more plot types which can omit `x` */
+                          else if (kind == "line" && *current_component_name == "x")
+                            {
+                              unsigned int y_length;
+                              if (!series->hasAttribute("y"))
+                                throw NotFoundError("Series is missing required attribute y.\n");
+                              auto key = static_cast<std::string>(series->getAttribute("y"));
+                              auto y_vec = GRM::get<std::vector<double>>((*context)[key]);
+                              y_length = y_vec.size();
+                              current_min_component = 0.0;
+                              current_max_component = y_length - 1;
+                            }
+                          else if (str_equals_any(kind.c_str(), 4, "heatmap", "marginalheatmap", "polar_heatmap",
+                                                  "surface") &&
+                                   str_equals_any((*current_component_name).c_str(), 2, "x", "y"))
+                            {
+                              /* in this case `x` or `y` (or both) are missing
+                               * -> set the current grm_min/max_component to the dimensions of `z`
+                               *    (shifted by half a unit to center color blocks) */
+                              const char *other_component_name = (*current_component_name == "x") ? "y" : "x";
+                              std::vector<double> other_component;
+                              unsigned int other_point_count;
+                              if (series->hasAttribute(other_component_name))
+                                {
+                                  /* The other component is given -> the missing dimension can be calculated */
+                                  unsigned int z_length;
+
+                                  auto key = static_cast<std::string>(series->getAttribute(other_component_name));
+                                  other_component = GRM::get<std::vector<double>>((*context)[key]);
+                                  other_point_count = other_component.size();
+
+                                  if (!series->hasAttribute("z"))
+                                    throw NotFoundError("Series is missing required attribute z.\n");
+                                  auto z_key = static_cast<std::string>(series->getAttribute("z"));
+                                  auto z_vec = GRM::get<std::vector<double>>((*context)[z_key]);
+                                  z_length = z_vec.size();
+                                  current_point_count = z_length / other_point_count;
+                                }
+                              else
+                                {
+                                  /* A heatmap/surface without `x` and `y` values
+                                   * -> dimensions can only be read from `z_dims` */
+                                  int rows, cols;
+                                  if (!series->hasAttribute("zdims_min") || !series->hasAttribute("zdims_max"))
+                                    throw NotFoundError("Series is missing attribute zdims.\n");
+                                  rows = static_cast<int>(series->getAttribute("zdims_min"));
+                                  cols = static_cast<int>(series->getAttribute("zdims_max"));
+                                  current_point_count = (*current_component_name == "x") ? cols : rows;
+                                }
+                              current_min_component = 0.5;
+                              current_max_component = current_point_count + 0.5;
+                            }
+                          else if (series->hasAttribute("indices"))
+                            {
+                              auto indices_key = static_cast<std::string>(series->getAttribute("indices"));
+                              auto indices = GRM::get<std::vector<int>>((*context)[indices_key]);
+
+                              if (series->hasAttribute(*current_component_name))
+                                {
+                                  int index_sum = 0;
+                                  auto key = static_cast<std::string>(series->getAttribute(*current_component_name));
+                                  current_component = GRM::get<std::vector<double>>((*context)[key]);
+                                  current_point_count = current_component.size();
+
+                                  current_max_component = 0;
+                                  current_min_component = 0;
+                                  auto act_index = indices.begin();
+                                  index_sum += *act_index;
+                                  for (i = 0; i < current_point_count; i++)
+                                    {
+                                      if (!std::isnan(current_component[i]))
+                                        {
+                                          if (current_component[i] > 0)
+                                            {
+                                              current_max_component += current_component[i];
+                                            }
+                                          else
+                                            {
+                                              current_min_component += current_component[i];
+                                            }
+                                        }
+                                      if (i + 1 == index_sum)
+                                        {
+                                          max_component = grm_max(current_max_component, max_component);
+                                          min_component = grm_min(current_min_component, min_component);
+
+                                          current_max_component = 0;
+                                          current_min_component = 0;
+                                          ++act_index;
+                                          index_sum += *act_index;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                      else
+                        {
+                          current_min_component = static_cast<double>(
+                              series->getAttribute(static_cast<std::string>(current_range_keys->series) + "_min"));
+                          current_max_component = static_cast<double>(
+                              series->getAttribute(static_cast<std::string>(current_range_keys->series) + "_max"));
+                        }
+
+                      if (current_min_component != DBL_MAX && current_max_component != -DBL_MAX)
+                        {
+                          if (static_cast<std::string>(current_range_keys->series) == "xrange")
+                            {
+                              series->setAttribute("xrange_min", current_min_component);
+                              series->setAttribute("xrange_max", current_max_component);
+                            }
+                          else if (static_cast<std::string>(current_range_keys->series) == "yrange")
+                            {
+                              series->setAttribute("yrange_min", current_min_component);
+                              series->setAttribute("yrange_max", current_max_component);
+                            }
+                          else if (static_cast<std::string>(current_range_keys->series) == "zrange")
+                            {
+                              series->setAttribute("zrange_min", current_min_component);
+                              series->setAttribute("zrange_max", current_max_component);
+                            }
+                          else if (static_cast<std::string>(current_range_keys->series) == "crange")
+                            {
+                              series->setAttribute("crange_min", current_min_component);
+                              series->setAttribute("crange_max", current_max_component);
+                            }
+                        }
+                      min_component = grm_min(current_min_component, min_component);
+                      max_component = grm_max(current_max_component, max_component);
+                      series_count++;
+                    }
+                }
+              if (element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_min") &&
+                  element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_max"))
+                {
+                  min_component = static_cast<double>(
+                      element->getAttribute(static_cast<std::string>(current_range_keys->subplot) + "_min"));
+                  max_component = static_cast<double>(
+                      element->getAttribute(static_cast<std::string>(current_range_keys->subplot) + "_max"));
+                  if (static_cast<std::string>(current_range_keys->subplot) == "xlim")
+                    {
+                      _coordinate_ranges._xlim_min = min_component;
+                      _coordinate_ranges._xlim_max = max_component;
+                    }
+                  else if (static_cast<std::string>(current_range_keys->subplot) == "ylim")
+                    {
+                      _coordinate_ranges._ylim_min = min_component;
+                      _coordinate_ranges._ylim_max = max_component;
+                    }
+                  else if (static_cast<std::string>(current_range_keys->subplot) == "zlim")
+                    {
+                      _coordinate_ranges._zlim_min = min_component;
+                      _coordinate_ranges._zlim_max = max_component;
+                    }
+                  else if (static_cast<std::string>(current_range_keys->subplot) == "clim")
+                    {
+                      _coordinate_ranges._clim_min = min_component;
+                      _coordinate_ranges._clim_max = max_component;
+                    }
+                }
+              else if (min_component != DBL_MAX && max_component != -DBL_MAX)
+                {
+                  if (kind == "quiver")
+                    {
+                      step = grm_max(find_max_step(current_point_count, current_component), step);
+                      if (step > 0.0)
+                        {
+                          min_component -= step;
+                          max_component += step;
+                        }
+                    }
+                  if (static_cast<std::string>(current_range_keys->subplot) == "xlim")
+                    {
+                      _coordinate_ranges._xlim_min = min_component;
+                      _coordinate_ranges._xlim_max = max_component;
+                    }
+                  else if (static_cast<std::string>(current_range_keys->subplot) == "ylim")
+                    {
+                      _coordinate_ranges._ylim_min = min_component;
+                      _coordinate_ranges._ylim_max = max_component;
+                    }
+                  else if (static_cast<std::string>(current_range_keys->subplot) == "zlim")
+                    {
+                      _coordinate_ranges._zlim_min = min_component;
+                      _coordinate_ranges._zlim_max = max_component;
+                    }
+                  else if (static_cast<std::string>(current_range_keys->subplot) == "clim")
+                    {
+                      _coordinate_ranges._clim_min = min_component;
+                      _coordinate_ranges._clim_max = max_component;
+                    }
+                }
+              ++current_range_keys;
+              ++current_component_name;
+            }
+        }
+      else if (kind == "polar_histogram")
+        {
+          _coordinate_ranges._xlim_min = -1.0;
+          _coordinate_ranges._xlim_max = 1.0;
+          _coordinate_ranges._ylim_min = -1.0;
+          _coordinate_ranges._ylim_max = 1.0;
+        }
+
+      /* For quiver plots use u^2 + v^2 as z value */
+      if (kind == "quiver")
+        {
+          double min_component = DBL_MAX;
+          double max_component = -DBL_MAX;
+          if (!element->hasAttribute("zlim_min") || !element->hasAttribute("zlim_max"))
+            {
+              for (const auto &series : element->children())
+                {
+                  if (series->localName() != "series") continue;
+                  double current_min_component = DBL_MAX;
+                  double current_max_component = -DBL_MAX;
+                  if (!series->hasAttribute("zrange_min") || !series->hasAttribute("zrange_max"))
+                    {
+                      unsigned int u_length, v_length;
+                      if (!element->hasAttribute("u"))
+                        throw NotFoundError("Quiver series is missing required attribute u-data.\n");
+                      auto u_key = static_cast<std::string>(series->getAttribute("u"));
+                      if (!element->hasAttribute("v"))
+                        throw NotFoundError("Quiver series is missing required attribute v-data.\n");
+                      auto v_key = static_cast<std::string>(series->getAttribute("v"));
+
+                      std::vector<double> u = GRM::get<std::vector<double>>((*context)[u_key]);
+                      std::vector<double> v = GRM::get<std::vector<double>>((*context)[v_key]);
+                      u_length = u.size();
+                      v_length = v.size();
+                      if (u_length != v_length)
+                        throw std::length_error("For quiver series the shape of u and v must be the same.\n");
+
+                      for (i = 0; i < u_length; i++)
+                        {
+                          double z = u[i] * u[i] + v[i] * v[i];
+                          current_min_component = grm_min(z, current_min_component);
+                          current_max_component = grm_max(z, current_max_component);
+                        }
+                      current_min_component = sqrt(current_min_component);
+                      current_max_component = sqrt(current_max_component);
+                    }
+                  else
+                    {
+                      current_min_component = static_cast<double>(series->getAttribute("zrange_min"));
+                      current_max_component = static_cast<double>(series->getAttribute("zrange_max"));
+                    }
+                  min_component = grm_min(current_min_component, min_component);
+                  max_component = grm_max(current_max_component, max_component);
+                }
+            }
+          else
+            {
+              min_component = static_cast<double>(element->getAttribute("zlim_min"));
+              max_component = static_cast<double>(element->getAttribute("zlim_max"));
+            }
+          _coordinate_ranges._zlim_min = min_component;
+          _coordinate_ranges._zlim_max = max_component;
+        }
+      else if (str_equals_any(kind.c_str(), 3, "imshow", "isosurface", "volume"))
+        {
+          /* Iterate over `x` and `y` range keys (and `z` depending on `kind`) */
+          current_range_keys = range_keys;
+          for (i = 0; i < (kind == "imshow" ? 2 : 3); i++)
+            {
+              double min_component = (kind == "imshow" ? 0.0 : -1.0);
+              double max_component = 1.0;
+              if (element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_min") &&
+                  element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_max"))
+                {
+                  min_component = static_cast<double>(
+                      element->getAttribute(static_cast<std::string>(current_range_keys->subplot) + "_min"));
+                  max_component = static_cast<double>(
+                      element->getAttribute(static_cast<std::string>(current_range_keys->subplot) + "_max"));
+                }
+              if (static_cast<std::string>(current_range_keys->subplot) == "xlim")
+                {
+                  _coordinate_ranges._xlim_min = min_component;
+                  _coordinate_ranges._xlim_max = max_component;
+                }
+              else if (static_cast<std::string>(current_range_keys->subplot) == "ylim")
+                {
+                  _coordinate_ranges._ylim_min = min_component;
+                  _coordinate_ranges._ylim_max = max_component;
+                }
+              else if (static_cast<std::string>(current_range_keys->subplot) == "zlim")
+                {
+                  _coordinate_ranges._zlim_min = min_component;
+                  _coordinate_ranges._zlim_max = max_component;
+                }
+              else if (static_cast<std::string>(current_range_keys->subplot) == "clim")
+                {
+                  _coordinate_ranges._clim_min = min_component;
+                  _coordinate_ranges._clim_max = max_component;
+                }
+              ++current_range_keys;
+            }
+        }
+      else if (kind == "barplot")
+        {
+          double x_min = 0.0, x_max = -DBL_MAX, y_min = DBL_MAX, y_max = -DBL_MAX;
+          std::string orientation = PLOT_DEFAULT_ORIENTATION;
+
+          if (!element->hasAttribute("xlim_min") || !element->hasAttribute("xlim_max"))
+            {
+              double xmin, xmax, ymin, ymax;
+
+              for (const auto &series : element->children())
+                {
+                  if (series->localName() != "series") continue;
+                  if (series->hasAttribute("style")) style = static_cast<std::string>(series->getAttribute("style"));
+                  if (str_equals_any(style.c_str(), 2, "lined", "stacked"))
+                    {
+                      x_max = series_count + 1;
+                    }
+                  else
+                    {
+                      auto key = static_cast<std::string>(series->getAttribute("y"));
+                      auto y = GRM::get<std::vector<double>>((*context)[key]);
+                      current_point_count = y.size();
+                      x_max = grm_max(current_point_count + 1, x_max);
+                    }
+                }
+
+              for (const auto &series : element->children())
+                {
+                  if (series->hasAttribute("orientation"))
+                    orientation = static_cast<std::string>(series->getAttribute("orientation"));
+                  if (series->localName() != "series") continue;
+                  if (series->hasAttribute("style")) style = static_cast<std::string>(series->getAttribute("style"));
+                  auto key = static_cast<std::string>(series->getAttribute("y"));
+                  auto y = GRM::get<std::vector<double>>((*context)[key]);
+                  current_point_count = y.size();
+
+                  if (series->hasAttribute("xrange_min") && series->hasAttribute("xrange_max"))
+                    {
+                      x_min = static_cast<double>(series->getAttribute("xrange_min"));
+                      x_max = static_cast<double>(series->getAttribute("xrange_max"));
+                      double step_x = (xmax - xmin) / (current_point_count - 1);
+                      if (!str_equals_any(style.c_str(), 2, "lined", "stacked"))
+                        {
+                          x_min = xmin - step_x;
+                          x_max = xmax + step_x;
+                        }
+                      else
+                        {
+                          x_min = xmin - (x_max - 1);
+                          x_max = xmin + (x_max - 1);
+                        }
+                    }
+
+                  if (series->hasAttribute("yrange_min") && series->hasAttribute("yrange_max"))
+                    {
+                      y_min = static_cast<double>(series->getAttribute("yrange_min"));
+                      y_max = static_cast<double>(series->getAttribute("yrange_max"));
+                      y_min = grm_min(y_min, ymin);
+                      if (style == "stacked")
+                        {
+                          double tmp_ymax;
+                          tmp_ymax = ymin;
+                          for (i = 0; i < current_point_count; i++)
+                            {
+                              if (y_min < 0)
+                                {
+                                  tmp_ymax += fabs(y[i]);
+                                }
+                              else
+                                {
+                                  tmp_ymax += y[i] - y_min;
+                                }
+                            }
+                          y_max = grm_max(y_max, tmp_ymax);
+                        }
+                      else
+                        {
+                          y_max = grm_max(y_max, ymax);
+                        }
+                    }
+                  else
+                    {
+                      y_min = static_cast<double>(element->getAttribute("ylim_min"));
+                      y_max = static_cast<double>(element->getAttribute("ylim_max"));
+                    }
+                }
+            }
+          else
+            {
+              x_min = static_cast<double>(element->getAttribute("xlim_min"));
+              x_max = static_cast<double>(element->getAttribute("xlim_max"));
+            }
+
+          if (orientation == "horizontal")
+            {
+              _coordinate_ranges._xlim_min = x_min;
+              _coordinate_ranges._xlim_max = x_max;
+              _coordinate_ranges._ylim_min = y_min;
+              _coordinate_ranges._ylim_max = y_max;
+            }
+          else
+            {
+              _coordinate_ranges._xlim_min = y_min;
+              _coordinate_ranges._xlim_max = y_max;
+              _coordinate_ranges._ylim_min = x_min;
+              _coordinate_ranges._ylim_max = x_max;
+            }
+        }
+      else if (kind == "hist")
+        {
+          double x_min = 0.0, x_max = 0.0, y_min = 0.0, y_max = 0.0;
+          std::string orientation = PLOT_DEFAULT_ORIENTATION;
+          int is_horizontal;
+
+          if (!element->hasAttribute("ylim_min") || !element->hasAttribute("ylim_max"))
+            {
+              for (const auto &series : element->children())
+                {
+                  if (series->hasAttribute("orientation"))
+                    orientation = static_cast<std::string>(series->getAttribute("orientation"));
+                  is_horizontal = orientation == "horizontal";
+                  if (series->localName() != "series") continue;
+                  double current_y_min = DBL_MAX, current_y_max = -DBL_MAX;
+                  double *tmp_bins;
+                  std::vector<double> x, weights;
+                  unsigned int num_bins = 0, num_weights;
+                  if (!series->hasAttribute("x"))
+                    throw NotFoundError("Hist series is missing required attribute x-data.\n");
+                  auto key = static_cast<std::string>(series->getAttribute("x"));
+                  x = GRM::get<std::vector<double>>((*context)[key]);
+                  current_point_count = x.size();
+
+                  if (series->hasAttribute("nbins")) num_bins = static_cast<int>(series->getAttribute("nbins"));
+                  if (series->hasAttribute("weights"))
+                    {
+                      auto weights_key = static_cast<std::string>(series->getAttribute("weights"));
+                      weights = GRM::get<std::vector<double>>((*context)[weights_key]);
+                      num_weights = weights.size();
+                    }
+                  if (!weights.empty() && current_point_count != num_weights)
+                    throw std::length_error("For hist series the size of data and weights must be the same.\n");
+                  if (num_bins <= 1)
+                    {
+                      num_bins = (int)(3.3 * log10(current_point_count) + 0.5) + 1;
+                    }
+                  bins = std::vector<double>(num_bins);
+                  double *x_p = &(x[0]);
+                  double *weights_p = (weights.empty()) ? nullptr : &(weights[0]);
+                  tmp_bins = &(bins[0]);
+                  bin_data(current_point_count, x_p, num_bins, tmp_bins, weights_p);
+                  std::vector<double> tmp(tmp_bins, tmp_bins + num_bins);
+
+                  for (i = 0; i < num_bins; i++)
+                    {
+                      current_y_min = grm_min(current_y_min, bins[i]);
+                      current_y_max = grm_max(current_y_max, bins[i]);
+                    }
+
+                  int id = static_cast<int>(global_root->getAttribute("id"));
+                  std::string str = std::to_string(id);
+                  (*context)["bins" + str] = tmp;
+                  series->setAttribute("bins", "bins" + str);
+                  global_root->setAttribute("id", ++id);
+
+                  y_min = grm_min(current_y_min, y_min);
+                  y_max = grm_max(current_y_max, y_max);
+                  x_max = current_point_count - 1;
+                  if (series->hasAttribute("yrange_min") && series->hasAttribute("yrange_max"))
+                    {
+                      y_min = static_cast<double>(series->getAttribute("yrange_min"));
+                      y_max = static_cast<double>(series->getAttribute("yrange_max"));
+                    }
+                  if (series->hasAttribute("xrange_min") && series->hasAttribute("xrange_max"))
+                    {
+                      x_min = static_cast<double>(series->getAttribute("xrange_min"));
+                      x_max = static_cast<double>(series->getAttribute("xrange_max"));
+                    }
+                }
+              if (is_horizontal)
+                {
+                  _coordinate_ranges._xlim_min = x_min;
+                  _coordinate_ranges._xlim_max = x_max;
+                  _coordinate_ranges._ylim_min = y_min;
+                  _coordinate_ranges._ylim_max = y_max;
+                }
+              else
+                {
+                  _coordinate_ranges._xlim_min = y_min;
+                  _coordinate_ranges._xlim_max = y_max;
+                  _coordinate_ranges._ylim_min = x_min;
+                  _coordinate_ranges._ylim_max = x_max;
+                }
+            }
+          else
+            {
+              y_min = static_cast<double>(element->getAttribute("ylim_min"));
+              y_max = static_cast<double>(element->getAttribute("ylim_max"));
+            }
+        }
+      else if (str_equals_any(kind.c_str(), 2, "stem", "stairs"))
+        {
+          double x_min = 0.0, x_max = 0.0, y_min = 0.0, y_max = 0.0;
+          std::string orientation;
+          int is_horizontal;
+
+          for (const auto &series : element->children())
+            {
+              if (series->hasAttribute("orientation"))
+                orientation = static_cast<std::string>(series->getAttribute("orientation"));
+              is_horizontal = orientation == "horizontal";
+              if (series->localName() != "series") continue;
+              if (series->hasAttribute("xrange_min") && series->hasAttribute("xrange_max"))
+                {
+                  x_min = static_cast<double>(series->getAttribute("xrange_min"));
+                  x_max = static_cast<double>(series->getAttribute("xrange_max"));
+                  if (is_horizontal)
+                    {
+                      _coordinate_ranges._xlim_min = x_min;
+                      _coordinate_ranges._xlim_max = x_max;
+                    }
+                  else
+                    {
+                      _coordinate_ranges._ylim_min = x_min;
+                      _coordinate_ranges._ylim_max = x_max;
+                    }
+                }
+              if (series->hasAttribute("yrange_min") && series->hasAttribute("yrange_max"))
+                {
+                  y_min = static_cast<double>(series->getAttribute("yrange_min"));
+                  y_max = static_cast<double>(series->getAttribute("yrange_max"));
+                  if (is_horizontal)
+                    {
+                      _coordinate_ranges._ylim_min = y_min;
+                      _coordinate_ranges._ylim_max = y_max;
+                    }
+                  else
+                    {
+                      _coordinate_ranges._xlim_min = y_min;
+                      _coordinate_ranges._xlim_max = y_max;
+                    }
+                }
+            }
+        }
+    }
+  element->setAttribute("limits", 1); // Needed atm for window calculation, should be removed
 }
 
 static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -8706,11 +9436,11 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("series"), ProcessSeries},
           {std::string("text"), text},
           {std::string("titles3d"), titles3d},
-          {std::string("y_line"), drawYLine},
       };
   /*! Modifier */
   if (str_equals_any(element->localName().c_str(), 5, "group", "figure", "plot", "coordinate_system", "label"))
     {
+      if (element->localName() == "plot") plotCoordinateRanges(element, context);
       processAttributes(element);
     }
   else
@@ -10127,9 +10857,9 @@ GRM::Render::createTriSurface(const std::string &px_key, std::optional<std::vect
 {
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   auto element = createSeries("trisurface");
-  element->setAttribute("px", px_key);
-  element->setAttribute("py", py_key);
-  element->setAttribute("pz", pz_key);
+  element->setAttribute("x", px_key);
+  element->setAttribute("y", py_key);
+  element->setAttribute("z", pz_key);
 
   if (px != std::nullopt)
     {
@@ -10262,12 +10992,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createPanzoom(double x, double y, dou
   element->setAttribute("y", y);
   element->setAttribute("xzoom", xzoom);
   element->setAttribute("yzoom", yzoom);
-  return element;
-}
-
-std::shared_ptr<GRM::Element> GRM::Render::createYLine()
-{
-  auto element = createElement("y_line");
   return element;
 }
 

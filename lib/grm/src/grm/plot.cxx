@@ -38,7 +38,6 @@ extern "C" {
 #include "util_int.h"
 
 #include "datatype/double_map_int.h"
-#include "datatype/string_map_int.h"
 #include "datatype/string_array_map_int.h"
 #include "datatype/template/map_int.h"
 #include "datatype/template/set_int.h"
@@ -1045,7 +1044,7 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "kind", "s", &kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-  error = plot_store_coordinate_ranges(subplot_args); // TODO: Move this into render
+  error = plot_store_coordinate_ranges(subplot_args);
   return_if_error;
   plot_process_window(subplot_args);
 
@@ -1263,7 +1262,6 @@ void plot_process_window(grm_args_t *subplot_args)
   const char *kind;
   int xlog, ylog, zlog;
   int xflip, yflip, zflip;
-  double x_min, x_max, y_min, y_max, z_min, z_max;
   double rotation, tilt;
 
   auto group = global_root->lastChildElement();
@@ -1275,20 +1273,6 @@ void plot_process_window(grm_args_t *subplot_args)
   if (grm_args_values(subplot_args, "xflip", "i", &xflip)) group->setAttribute("xflip", xflip);
   if (grm_args_values(subplot_args, "yflip", "i", &yflip)) group->setAttribute("yflip", yflip);
   if (grm_args_values(subplot_args, "zflip", "i", &zflip)) group->setAttribute("zflip", zflip);
-
-  grm_args_values(subplot_args, "_xlim", "dd", &x_min, &x_max);
-  grm_args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
-  group->setAttribute("limits", true);
-  group->setAttribute("lim_xmin", x_min);
-  group->setAttribute("lim_xmax", x_max);
-  group->setAttribute("lim_ymin", y_min);
-  group->setAttribute("lim_ymax", y_max);
-
-  if (grm_args_values(subplot_args, "_zlim", "dd", &z_min, &z_max))
-    {
-      group->setAttribute("lim_zmin", z_min);
-      group->setAttribute("lim_zmax", z_max);
-    }
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
@@ -1312,465 +1296,39 @@ void plot_process_window(grm_args_t *subplot_args)
 err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
 {
   const char *kind;
-  const char *style = "";
-  const char *fmt;
-  grm_args_t **current_series;
-  unsigned int series_count;
-  grm_args_t **inner_series;
-  unsigned int inner_series_count;
-  const char *data_component_names[] = {"x", "y", "z", "c", nullptr};
-  const char **current_component_name;
-  double *current_component = nullptr;
-  unsigned int current_point_count = 0;
-  struct
-  {
-    const char *subplot;
-    const char *series;
-  } * current_range_keys,
-      range_keys[] = {{"xlim", "xrange"}, {"ylim", "yrange"}, {"zlim", "zrange"}, {"clim", "crange"}};
-  double *bins = nullptr;
-  unsigned int i;
   err_t error = ERROR_NONE;
+  double x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max;
 
-  logger((stderr, "Storing coordinate ranges\n"));
+  auto group = global_root->lastChildElement();
 
-  /* If a pan and/or zoom was performed before, do not overwrite limits
-   * -> the user fully controls limits by interaction */
   if (grm_args_contains(subplot_args, "_original_xlim"))
     {
-      logger((stderr, "Panzoom active, do not modify limits...\n"));
-      return ERROR_NONE;
+      group->setAttribute("original_xlim", true);
     }
 
   grm_args_values(subplot_args, "kind", "s", &kind);
-  grm_args_values(subplot_args, "style", "s", &style);
-  cleanup_and_set_error_if(!string_map_at(fmt_map, kind, static_cast<const char **>(&fmt)), ERROR_PLOT_UNKNOWN_KIND);
-  if (!str_equals_any(kind, 2, "pie", "polar_histogram"))
+  group->setAttribute("kind", kind);
+
+  if (grm_args_values(subplot_args, "xlim", "dd", &x_min, &x_max))
     {
-      current_component_name = data_component_names;
-      current_range_keys = range_keys;
-      while (*current_component_name != nullptr)
-        {
-          double min_component = DBL_MAX;
-          double max_component = -DBL_MAX;
-          double step = -DBL_MAX;
-          if (strchr(fmt, **current_component_name) == nullptr)
-            {
-              ++current_range_keys;
-              ++current_component_name;
-              continue;
-            }
-          /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
-          if (!grm_args_contains(subplot_args, current_range_keys->subplot) ||
-              str_equals_any(kind, 3, "heatmap", "marginalheatmap", "polar_heatmap"))
-            {
-              grm_args_first_value(subplot_args, "series", "A", &current_series, &series_count);
-              while (*current_series != nullptr)
-                {
-                  double current_min_component = DBL_MAX, current_max_component = -DBL_MAX;
-                  if (!grm_args_values(*current_series, current_range_keys->series, "dd", &current_min_component,
-                                       &current_max_component))
-                    {
-                      if (grm_args_first_value(*current_series, *current_component_name, "D", &current_component,
-                                               &current_point_count))
-                        {
-                          if (strcmp(style, "stacked") == 0)
-                            {
-                              current_max_component = 0.0;
-                              current_min_component = 0.0;
-                              for (i = 0; i < current_point_count; i++)
-                                {
-                                  if (current_component[i] > 0)
-                                    {
-                                      current_max_component += current_component[i];
-                                    }
-                                  else
-                                    {
-                                      current_min_component += current_component[i];
-                                    }
-                                }
-                            }
-                          else
-                            {
-                              if (strcmp(kind, "barplot") == 0)
-                                {
-                                  current_min_component = 0.0;
-                                  current_max_component = 0.0;
-                                }
-                              for (i = 0; i < current_point_count; i++)
-                                {
-                                  if (!is_nan(current_component[i]))
-                                    {
-                                      current_min_component = grm_min(current_component[i], current_min_component);
-                                      current_max_component = grm_max(current_component[i], current_max_component);
-                                    }
-                                }
-                            }
-                        }
-                      /* TODO: Add more plot types which can omit `x` */
-                      else if (str_equals_any(kind, 1, "line") && strcmp(*current_component_name, "x") == 0)
-                        {
-                          double *y;
-                          unsigned int y_length;
-                          cleanup_and_set_error_if(!grm_args_first_value(*current_series, "y", "D", &y, &y_length),
-                                                   ERROR_PLOT_MISSING_DATA);
-                          current_min_component = 0.0;
-                          current_max_component = y_length - 1;
-                        }
-                      else if (str_equals_any(kind, 4, "heatmap", "marginalheatmap", "polar_heatmap", "surface") &&
-                               str_equals_any(*current_component_name, 2, "x", "y"))
-                        {
-                          /* in this case `x` or `y` (or both) are missing
-                           * -> set the current grm_min/max_component to the dimensions of `z`
-                           *    (shifted by half a unit to center color blocks) */
-                          const char *other_component_name = (strcmp(*current_component_name, "x") == 0) ? "y" : "x";
-                          double *other_component;
-                          unsigned int other_point_count;
-                          if (grm_args_first_value(*current_series, other_component_name, "D", &other_component,
-                                                   &other_point_count))
-                            {
-                              /* The other component is given -> the missing dimension can be calculated */
-                              double *z;
-                              unsigned int z_length;
-                              cleanup_and_set_error_if(!grm_args_first_value(*current_series, "z", "D", &z, &z_length),
-                                                       ERROR_PLOT_MISSING_DATA);
-                              current_point_count = z_length / other_point_count;
-                            }
-                          else
-                            {
-                              /* A heatmap/surface without `x` and `y` values
-                               * -> dimensions can only be read from `z_dims` */
-                              int rows, cols;
-                              cleanup_and_set_error_if(!grm_args_values(*current_series, "z_dims", "ii", &rows, &cols),
-                                                       ERROR_PLOT_MISSING_DIMENSIONS);
-                              current_point_count = (strcmp(*current_component_name, "x") == 0) ? cols : rows;
-                            }
-                          current_min_component = 0.5;
-                          current_max_component = current_point_count + 0.5;
-                        }
-                      else if (grm_args_first_value(*current_series, "inner_series", "nA", &inner_series,
-                                                    &inner_series_count))
-                        {
-                          while (*inner_series != nullptr)
-                            {
-                              if (grm_args_first_value(*inner_series, *current_component_name, "D", &current_component,
-                                                       &current_point_count))
-                                {
-                                  current_max_component = 0;
-                                  current_min_component = 0;
-                                  for (i = 0; i < current_point_count; i++)
-                                    {
-                                      if (!is_nan(current_component[i]))
-                                        {
-
-                                          if (current_component[i] > 0)
-                                            {
-                                              current_max_component += current_component[i];
-                                            }
-                                          else
-                                            {
-                                              current_min_component += current_component[i];
-                                            }
-                                        }
-                                    }
-                                  max_component = grm_max(current_max_component, max_component);
-                                  min_component = grm_min(current_min_component, min_component);
-                                }
-                              inner_series++;
-                            }
-                        }
-                    }
-                  if (current_min_component != DBL_MAX && current_max_component != -DBL_MAX)
-                    {
-                      grm_args_push(*current_series, current_range_keys->series, "dd", current_min_component,
-                                    current_max_component);
-                    }
-                  min_component = grm_min(current_min_component, min_component);
-                  max_component = grm_max(current_max_component, max_component);
-                  ++current_series;
-                }
-            }
-          if (grm_args_values(subplot_args, current_range_keys->subplot, "dd", &min_component, &max_component))
-            {
-              grm_args_push(subplot_args, private_name(current_range_keys->subplot), "dd", min_component,
-                            max_component);
-            }
-          else if (min_component != DBL_MAX && max_component != -DBL_MAX)
-            {
-              if (strcmp(kind, "quiver") == 0)
-                {
-                  step = grm_max(find_max_step(current_point_count, current_component), step);
-                  if (step > 0.0)
-                    {
-                      min_component -= step;
-                      max_component += step;
-                    }
-                }
-              grm_args_push(subplot_args, private_name(current_range_keys->subplot), "dd", min_component,
-                            max_component);
-            }
-          ++current_range_keys;
-          ++current_component_name;
-        }
+      group->setAttribute("xlim_min", x_min);
+      group->setAttribute("xlim_max", x_max);
     }
-  else if (strcmp(kind, "polar_histogram") == 0)
+  if (grm_args_values(subplot_args, "ylim", "dd", &y_min, &y_max))
     {
-      // todo: xlim ylim in render???
-      auto temp = global_root->lastChildElement();
-      //      temp->setAttribute("")
-      grm_args_push(subplot_args, "_xlim", "dd", -1.0, 1.0);
-      grm_args_push(subplot_args, "_ylim", "dd", -1.0, 1.0);
+      group->setAttribute("ylim_min", y_min);
+      group->setAttribute("ylim_max", y_max);
     }
-
-  /* For quiver plots use u^2 + v^2 as z value */
-  if (strcmp(kind, "quiver") == 0)
+  if (grm_args_values(subplot_args, "zlim", "dd", &z_min, &z_max))
     {
-      double min_component = DBL_MAX;
-      double max_component = -DBL_MAX;
-      if (!grm_args_values(subplot_args, "zlim", "dd", &min_component, &max_component))
-        {
-          grm_args_values(subplot_args, "series", "A", &current_series);
-          while (*current_series != nullptr)
-            {
-              double current_min_component = DBL_MAX;
-              double current_max_component = -DBL_MAX;
-              if (!grm_args_values(*current_series, "zrange", "dd", &current_min_component, &current_max_component))
-                {
-                  double *u, *v;
-                  unsigned int u_length, v_length;
-                  cleanup_and_set_error_if(!grm_args_first_value(*current_series, "u", "D", &u, &u_length),
-                                           ERROR_PLOT_MISSING_DATA);
-                  cleanup_and_set_error_if(!grm_args_first_value(*current_series, "v", "D", &v, &v_length),
-                                           ERROR_PLOT_MISSING_DATA);
-                  cleanup_and_set_error_if(u_length != v_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-                  for (i = 0; i < u_length; i++)
-                    {
-                      double z = u[i] * u[i] + v[i] * v[i];
-                      current_min_component = grm_min(z, current_min_component);
-                      current_max_component = grm_max(z, current_max_component);
-                    }
-                  current_min_component = sqrt(current_min_component);
-                  current_max_component = sqrt(current_max_component);
-                }
-              min_component = grm_min(current_min_component, min_component);
-              max_component = grm_max(current_max_component, max_component);
-              ++current_series;
-            }
-        }
-      grm_args_push(subplot_args, "_zlim", "dd", min_component, max_component);
+      group->setAttribute("zlim_min", z_min);
+      group->setAttribute("zlim_max", z_max);
     }
-  else if (str_equals_any(kind, 3, "imshow", "isosurface", "volume"))
+  if (grm_args_values(subplot_args, "clim", "dd", &c_min, &c_max))
     {
-      /* Iterate over `x` and `y` range keys (and `z` depending on `kind`) */
-      current_range_keys = range_keys;
-      for (i = 0; i < (strcmp(kind, "imshow") == 0 ? 2 : 3); i++)
-        {
-          double min_component = (strcmp(kind, "imshow") == 0 ? 0.0 : -1.0);
-          double max_component = 1.0;
-          grm_args_values(subplot_args, current_range_keys->subplot, "dd", &min_component, &max_component);
-          grm_args_push(subplot_args, private_name(current_range_keys->subplot), "dd", min_component, max_component);
-          ++current_range_keys;
-        }
+      group->setAttribute("clim_min", c_min);
+      group->setAttribute("clim_max", c_max);
     }
-  else if (strcmp(kind, "barplot") == 0)
-    {
-      double x_min = 0.0, x_max = -DBL_MAX, y_min = DBL_MAX, y_max = -DBL_MAX;
-      char *orientation;
-
-      grm_args_values(subplot_args, "orientation", "s", &orientation);
-      if (!grm_args_values(subplot_args, "xlim", "dd", &x_min, &x_max))
-        {
-          double xmin, xmax, ymin, ymax;
-          if (str_equals_any(style, 2, "lined", "stacked"))
-            {
-              x_max = series_count + 1;
-            }
-          else
-            {
-              grm_args_values(subplot_args, "series", "A", &current_series);
-              while (*current_series != nullptr)
-                {
-                  double *y;
-                  grm_args_first_value(*current_series, "y", "D", &y, &current_point_count);
-                  x_max = grm_max(current_point_count + 1, x_max);
-                  ++current_series;
-                }
-            }
-
-          grm_args_values(subplot_args, "series", "A", &current_series);
-          while (*current_series != nullptr)
-            {
-              double *y;
-              grm_args_first_value(*current_series, "y", "D", &y, &current_point_count);
-
-              if (grm_args_values(*current_series, "xrange", "dd", &xmin, &xmax))
-                {
-                  double step_x = (xmax - xmin) / (current_point_count - 1);
-                  if (!str_equals_any(style, 2, "lined", "stacked"))
-                    {
-                      x_min = xmin - step_x;
-                      x_max = xmax + step_x;
-                    }
-                  else
-                    {
-                      x_min = xmin - (x_max - 1);
-                      x_max = xmin + (x_max - 1);
-                    }
-                }
-
-              if (grm_args_values(*current_series, "yrange", "dd", &ymin, &ymax))
-                {
-                  y_min = grm_min(y_min, ymin);
-                  if (strcmp(style, "stacked") == 0)
-                    {
-                      double tmp_ymax;
-                      tmp_ymax = ymin;
-                      for (i = 0; i < current_point_count; i++)
-                        {
-                          if (y_min < 0)
-                            {
-                              tmp_ymax += fabs(y[i]);
-                            }
-                          else
-                            {
-                              tmp_ymax += y[i] - y_min;
-                            }
-                        }
-                      y_max = grm_max(y_max, tmp_ymax);
-                    }
-                  else
-                    {
-                      y_max = grm_max(y_max, ymax);
-                    }
-                }
-              else
-                {
-                  grm_args_values(*current_series, "ylim", "dd", &y_min, &ymax);
-                }
-              ++current_series;
-            }
-        }
-
-      if (strcmp(orientation, "horizontal") == 0)
-        {
-          grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
-          grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
-        }
-      else
-        {
-          grm_args_push(subplot_args, "_xlim", "dd", y_min, y_max);
-          grm_args_push(subplot_args, "_ylim", "dd", x_min, x_max);
-        }
-    }
-  else if (strcmp(kind, "hist") == 0)
-    {
-      double x_min = 0.0, x_max = 0.0, y_min = 0.0, y_max = 0.0;
-      char *orientation;
-      int is_horizontal;
-      double xmin, xmax;
-
-      if (!grm_args_values(subplot_args, "ylim", "dd", &y_min, &y_max))
-        {
-          grm_args_values(subplot_args, "series", "A", &current_series);
-          grm_args_values(subplot_args, "orientation", "s", &orientation);
-          is_horizontal = strcmp(orientation, "horizontal") == 0;
-          while (*current_series != nullptr)
-            {
-              double current_y_min = DBL_MAX, current_y_max = -DBL_MAX;
-              {
-                double *x = nullptr, *weights = nullptr;
-                unsigned int num_bins = 0, num_weights;
-                cleanup_and_set_error_if(!grm_args_first_value(*current_series, "x", "D", &x, &current_point_count),
-                                         ERROR_PLOT_MISSING_DATA);
-                grm_args_values(*current_series, "nbins", "i", &num_bins);
-                grm_args_first_value(*current_series, "weights", "D", &weights, &num_weights);
-                if (weights != nullptr)
-                  {
-                    cleanup_and_set_error_if(current_point_count != num_weights, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-                  }
-                if (num_bins <= 1)
-                  {
-                    num_bins = (int)(3.3 * log10(current_point_count) + 0.5) + 1;
-                  }
-                bins = static_cast<double *>(malloc(num_bins * sizeof(double)));
-                cleanup_and_set_error_if(bins == nullptr, ERROR_MALLOC);
-                bin_data(current_point_count, x, num_bins, bins, weights);
-                for (i = 0; i < num_bins; i++)
-                  {
-                    current_y_min = grm_min(current_y_min, bins[i]);
-                    current_y_max = grm_max(current_y_max, bins[i]);
-                  }
-                grm_args_push(*current_series, "bins", "nD", num_bins, bins);
-                free(bins);
-                bins = nullptr;
-              }
-              y_min = grm_min(current_y_min, y_min);
-              y_max = grm_max(current_y_max, y_max);
-              x_max = current_point_count - 1;
-              if (grm_args_values(*current_series, "yrange", "dd", &current_y_min, &current_y_max))
-                {
-                  y_min = current_y_min;
-                  y_max = current_y_max;
-                }
-              if (grm_args_values(*current_series, "xrange", "dd", &xmin, &xmax))
-                {
-                  x_min = xmin;
-                  x_max = xmax;
-                }
-              current_series++;
-            }
-          if (is_horizontal)
-            {
-              grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
-              grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
-            }
-          else
-            {
-              grm_args_push(subplot_args, "_xlim", "dd", y_min, y_max);
-              grm_args_push(subplot_args, "_ylim", "dd", x_min, x_max);
-            }
-        }
-    }
-  else if (strcmp(kind, "polar_histogram") == 0)
-    {
-      // todo: move series/data dependent code to render.cxx
-      //      double r_max;
-      //      error = classes_polar_histogram(subplot_args, &r_max);
-      //      cleanup_if_error;
-      //      global_root->lastChildElement()->setAttribute("r_max", r_max);
-      //      grm_args_push(subplot_args, "r_max", "d", r_max);
-    }
-  else if (str_equals_any(kind, 2, "stem", "stairs"))
-    {
-      double x_min = 0.0, x_max = 0.0, y_min = 0.0, y_max = 0.0;
-      char *orientation;
-      int is_horizontal;
-
-      grm_args_values(subplot_args, "series", "A", &current_series);
-      grm_args_values(subplot_args, "orientation", "s", &orientation);
-      is_horizontal = strcmp(orientation, "horizontal") == 0;
-      while (*current_series != nullptr)
-        {
-          if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
-            {
-              if (is_horizontal)
-                grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
-              else
-                grm_args_push(subplot_args, "_ylim", "dd", x_min, x_max);
-            }
-          if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
-            {
-              if (is_horizontal)
-                grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
-              else
-                grm_args_push(subplot_args, "_xlim", "dd", y_min, y_max);
-            }
-          current_series++;
-        }
-    }
-
-cleanup:
-  free(bins);
 
   return error;
 }
@@ -1930,6 +1488,7 @@ err_t plot_line(grm_args_t *subplot_args)
       double *x = nullptr, *y = nullptr;
       unsigned int x_length = 0, y_length = 0;
       char *spec;
+      double x_min, x_max, y_min, y_max;
       auto subGroup = global_render->createSeries("line");
       group->append(subGroup);
 
@@ -1953,6 +1512,18 @@ err_t plot_line(grm_args_t *subplot_args)
         }
 
       subGroup->setAttribute("orientation", orientation);
+
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          subGroup->setAttribute("xrange_min", x_min);
+          subGroup->setAttribute("xrange_max", x_max);
+        }
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
+        }
+
       if (grm_args_values(*current_series, "spec", "s", &spec)) subGroup->setAttribute("spec", spec);
 
       global_root->setAttribute("id", ++id);
@@ -1977,7 +1548,7 @@ err_t plot_stairs(grm_args_t *subplot_args)
 
   grm_args_t **current_series;
   char *kind, *orientation;
-  double xmin, xmax, ymin, ymax;
+  double x_min, x_max, y_min, y_max;
   double *x = nullptr, *y = nullptr, *xi;
   int is_vertical;
   err_t error = ERROR_NONE;
@@ -2017,10 +1588,22 @@ err_t plot_stairs(grm_args_t *subplot_args)
       (*context)["y" + str] = y_vec;
       subGroup->setAttribute("y", "y" + str);
 
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          subGroup->setAttribute("xrange_min", x_min);
+          subGroup->setAttribute("xrange_max", x_max);
+        }
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
+        }
+
       if (grm_args_values(*current_series, "spec", "s", &spec)) subGroup->setAttribute("spec", spec);
 
       if (grm_args_values(*current_series, "step_where", "s", &where)) subGroup->setAttribute("step_where", where);
 
+      global_root->setAttribute("id", ++id);
       ++current_series;
     }
   return ERROR_NONE;
@@ -2057,6 +1640,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
       double *x = nullptr, *y = nullptr, *z = nullptr, *c = nullptr, c_min, c_max;
       unsigned int x_length, y_length, z_length, c_length;
       int i, c_index = -1, markertype;
+      double x_min, x_max, y_min, y_max;
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -2107,9 +1691,22 @@ err_t plot_scatter(grm_args_t *subplot_args)
 
       if (z != nullptr || c != nullptr)
         {
-          grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max);
-          subGroup->setAttribute("c_min", c_min);
-          subGroup->setAttribute("c_max", c_max);
+          if (grm_args_values(subplot_args, "clim", "dd", &c_min, &c_max))
+            {
+              group->setAttribute("clim_min", c_min);
+              group->setAttribute("clim_max", c_max);
+            }
+        }
+
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          subGroup->setAttribute("xrange_min", x_min);
+          subGroup->setAttribute("xrange_max", x_max);
+        }
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
         }
 
       grm_args_push(*current_series, "orientation", "s", orientation);
@@ -2134,6 +1731,7 @@ err_t plot_quiver(grm_args_t *subplot_args)
     {
       double *x = nullptr, *y = nullptr, *u = nullptr, *v = nullptr;
       unsigned int x_length, y_length, u_length, v_length;
+      double x_min, x_max, y_min, y_max;
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "u", "D", &u, &u_length);
@@ -2147,8 +1745,20 @@ err_t plot_quiver(grm_args_t *subplot_args)
       int id = (int)global_root->getAttribute("id");
       std::string str = std::to_string(id);
       global_root->setAttribute("id", id + 1);
-      group->append(
-          global_render->createQuiver("x" + str, x_vec, "y" + str, y_vec, "u" + str, u_vec, "v" + str, v_vec, 1));
+      auto temp =
+          global_render->createQuiver("x" + str, x_vec, "y" + str, y_vec, "u" + str, u_vec, "v" + str, v_vec, 1);
+
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          temp->setAttribute("xrange_min", x_min);
+          temp->setAttribute("xrange_max", x_max);
+        }
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          temp->setAttribute("yrange_min", y_min);
+          temp->setAttribute("yrange_max", y_max);
+        }
+      group->append(temp);
 
       ++current_series;
     }
@@ -2195,7 +1805,7 @@ err_t plot_stem(grm_args_t *subplot_args)
       (*context)["y" + str] = y_vec;
       subGroup->setAttribute("y", "y" + str);
 
-      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max)) group->setAttribute("yrange_min", y_min);
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max)) subGroup->setAttribute("yrange_min", y_min);
 
       if (grm_args_values(*current_series, "spec", "s", &spec)) subGroup->setAttribute("spec", spec);
 
@@ -2229,8 +1839,8 @@ err_t plot_hist(grm_args_t *subplot_args)
       int edge_color_index = 1;
       double edge_color_rgb[3] = {-1};
       double x_min, x_max, bar_width, y_min, y_max;
-      double *bins;
-      unsigned int num_bins;
+      double *bins, *x, *weights;
+      unsigned int num_bins, x_length, num_weights;
       char *orientation;
       int is_horizontal;
 
@@ -2254,19 +1864,29 @@ err_t plot_hist(grm_args_t *subplot_args)
       subGroup->setAttribute("edge_color_index", edge_color_index);
 
       grm_args_first_value(*current_series, "bins", "D", &bins, &num_bins);
-      std::vector<double> bins_vec(bins, bins + num_bins);
-      (*context)["bins" + str] = bins_vec;
-      subGroup->setAttribute("bins", "bins" + str);
 
       grm_args_values(subplot_args, "orientation", "s", &orientation);
       subGroup->setAttribute("orientation", orientation);
 
-      grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
-      global_root->lastChildElement()->setAttribute("xrange_min", x_min);
-      global_root->lastChildElement()->setAttribute("xrange_max", x_max);
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          subGroup->setAttribute("xrange_min", x_min);
+          subGroup->setAttribute("xrange_max", x_max);
+        }
 
-      grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
-      global_root->lastChildElement()->setAttribute("yrange_min", y_min);
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max)) subGroup->setAttribute("yrange_min", y_min);
+
+      grm_args_first_value(*current_series, "x", "D", &x, &x_length);
+      std::vector<double> x_vec(x, x + x_length);
+      (*context)["x" + str] = x_vec;
+      subGroup->setAttribute("x", "x" + str);
+
+      if (grm_args_first_value(*current_series, "weights", "D", &weights, &num_weights))
+        {
+          std::vector<double> weights_vec(weights, weights + num_weights);
+          (*context)["weights" + str] = weights_vec;
+          subGroup->setAttribute("weights", "weights" + str);
+        }
 
       bar_width = (x_max - x_min) / num_bins;
 
@@ -2930,6 +2550,7 @@ err_t plot_contour(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
+      double x_min, x_max, y_min, y_max, z_min, z_max;
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
@@ -2951,6 +2572,22 @@ err_t plot_contour(grm_args_t *subplot_args)
       std::vector<double> z_vec(z, z + z_length);
       (*context)["z" + str] = z_vec;
       subGroup->setAttribute("z", "z" + str);
+
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          subGroup->setAttribute("xrange_min", x_min);
+          subGroup->setAttribute("xrange_max", x_max);
+        }
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
+        }
+      if (grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max))
+        {
+          subGroup->setAttribute("zrange_min", z_min);
+          subGroup->setAttribute("zrange_max", z_max);
+        }
 
       if (has_levels) subGroup->setAttribute("levels", num_levels);
 
@@ -2979,6 +2616,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
+      double x_min, x_max, y_min, y_max, z_min, z_max;
       auto subGroup = global_render->createSeries("contourf");
       group->append(subGroup);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -3000,6 +2638,22 @@ err_t plot_contourf(grm_args_t *subplot_args)
       std::vector<double> z_vec(z, z + z_length);
       (*context)["z" + str] = z_vec;
       subGroup->setAttribute("z", "z" + str);
+
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          subGroup->setAttribute("xrange_min", x_min);
+          subGroup->setAttribute("xrange_max", x_max);
+        }
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
+        }
+      if (grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max))
+        {
+          subGroup->setAttribute("zrange_min", z_min);
+          subGroup->setAttribute("zrange_max", z_max);
+        }
 
       if (has_levels) subGroup->setAttribute("levels", num_levels);
 
@@ -3024,6 +2678,7 @@ err_t plot_hexbin(grm_args_t *subplot_args)
       double *x, *y;
       unsigned int x_length, y_length;
       int cntmax, nbins;
+      double x_min, x_max, y_min, y_max;
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
 
@@ -3036,6 +2691,17 @@ err_t plot_hexbin(grm_args_t *subplot_args)
       auto subGroup = global_render->createHexbin("x" + id, x_vec, "y" + id, y_vec);
       if (grm_args_values(*current_series, "nbins", "i", &nbins)) subGroup->setAttribute("nbins", nbins);
       group->append(subGroup);
+
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          subGroup->setAttribute("xrange_min", x_min);
+          subGroup->setAttribute("xrange_max", x_max);
+        }
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
+        }
 
       currentDomElement = subGroup; /* so that the colorbar will be a child of the hexbin_series */
       plot_draw_colorbar(subplot_args, 0.0, 256);
@@ -3104,19 +2770,25 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
         }
       if (x == nullptr)
         {
-          grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
-          group->setAttribute("xrange_min", x_min);
-          group->setAttribute("xrange_max", x_max);
+          if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+            {
+              subGroup->setAttribute("xrange_min", x_min);
+              subGroup->setAttribute("xrange_max", x_max);
+            }
         }
       if (y == nullptr)
         {
-          grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
-          group->setAttribute("yrange_min", y_min);
-          group->setAttribute("yrange_max", y_max);
+          if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+            {
+              subGroup->setAttribute("yrange_min", y_min);
+              subGroup->setAttribute("yrange_max", y_max);
+            }
         }
-      grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max);
-      group->setAttribute("zrange_min", z_min);
-      group->setAttribute("zrange_max", z_max);
+      if (grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max))
+        {
+          subGroup->setAttribute("zrange_min", z_min);
+          subGroup->setAttribute("zrange_max", z_max);
+        }
       if (grm_args_values(*current_series, "crange", "dd", &c_min, &c_max))
         {
           subGroup->setAttribute("crange_min", c_min);
@@ -3198,19 +2870,25 @@ err_t plot_heatmap(grm_args_t *subplot_args)
         }
       if (x == nullptr)
         {
-          grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max);
-          plot_parent->setAttribute("xrange_min", x_min);
-          plot_parent->setAttribute("xrange_max", x_max);
+          if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+            {
+              subGroup->setAttribute("xrange_min", x_min);
+              subGroup->setAttribute("xrange_max", x_max);
+            }
         }
       if (y == nullptr)
         {
-          grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max);
-          plot_parent->setAttribute("yrange_min", y_min);
-          plot_parent->setAttribute("yrange_max", y_max);
+          if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+            {
+              subGroup->setAttribute("yrange_min", y_min);
+              subGroup->setAttribute("yrange_max", y_max);
+            }
         }
-      grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max);
-      plot_parent->setAttribute("zrange_min", z_min);
-      plot_parent->setAttribute("zrange_max", z_max);
+      if (grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max))
+        {
+          subGroup->setAttribute("zrange_min", z_min);
+          subGroup->setAttribute("zrange_max", z_max);
+        }
       if (grm_args_values(*current_series, "crange", "dd", &c_min, &c_max))
         {
           subGroup->setAttribute("crange_min", c_min);
@@ -3297,6 +2975,7 @@ err_t plot_wireframe(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
+      double x_min, x_max, y_min, y_max;
 
       auto subGroup = global_render->createSeries("wireframe");
       group->append(subGroup);
@@ -3320,6 +2999,17 @@ err_t plot_wireframe(grm_args_t *subplot_args)
       std::vector<double> z_vec(z, z + z_length);
       (*context)["z" + str] = z_vec;
       subGroup->setAttribute("z", "z" + str);
+
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          subGroup->setAttribute("xrange_min", x_min);
+          subGroup->setAttribute("xrange_max", x_max);
+        }
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
+        }
 
       global_root->setAttribute("id", ++id);
       ++current_series;
@@ -3363,13 +3053,13 @@ err_t plot_surface(grm_args_t *subplot_args)
         }
       if (grm_args_values(*current_series, "xrange", "dd", &xmin, &xmax))
         {
-          group->setAttribute("xrange_min", xmin);
-          group->setAttribute("xrange_max", xmax);
+          subGroup->setAttribute("xrange_min", xmin);
+          subGroup->setAttribute("xrange_max", xmax);
         }
       if (grm_args_values(*current_series, "yrange", "dd", &ymin, &ymax))
         {
-          group->setAttribute("yrange_min", ymin);
-          group->setAttribute("yrange_max", ymax);
+          subGroup->setAttribute("yrange_min", ymin);
+          subGroup->setAttribute("yrange_max", ymax);
         }
 
       int id_int = static_cast<int>(global_root->getAttribute("id"));
@@ -3414,6 +3104,7 @@ err_t plot_plot3(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
+      double x_min, x_max, y_min, y_max, z_min, z_max;
       auto subGroup = global_render->createSeries("plot3");
       group->append(subGroup);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -3436,6 +3127,22 @@ err_t plot_plot3(grm_args_t *subplot_args)
       (*context)["z" + str] = z_vec;
       subGroup->setAttribute("z", "z" + str);
 
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          subGroup->setAttribute("xrange_min", x_min);
+          subGroup->setAttribute("xrange_max", x_max);
+        }
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
+        }
+      if (grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max))
+        {
+          subGroup->setAttribute("zrange_min", z_min);
+          subGroup->setAttribute("zrange_max", z_max);
+        }
+
       global_root->setAttribute("id", ++id_int);
       ++current_series;
     }
@@ -3456,6 +3163,7 @@ err_t plot_scatter3(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
+      double x_min, x_max, y_min, y_max, z_min, z_max;
       auto subGroup = global_render->createSeries("scatter3");
       group->append(subGroup);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -3478,15 +3186,33 @@ err_t plot_scatter3(grm_args_t *subplot_args)
       (*context)["z" + str] = z_vec;
       subGroup->setAttribute("z", "z" + str);
 
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          subGroup->setAttribute("xrange_min", x_min);
+          subGroup->setAttribute("xrange_max", x_max);
+        }
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
+        }
+      if (grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max))
+        {
+          subGroup->setAttribute("zrange_min", z_min);
+          subGroup->setAttribute("zrange_max", z_max);
+        }
+
       if (grm_args_first_value(*current_series, "c", "D", &c, &c_length))
         {
           std::vector<double> c_vec(c, c + c_length);
           (*context)["c" + str] = c_vec;
           subGroup->setAttribute("c", "c" + str);
 
-          grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max);
-          subGroup->setAttribute("c_min", c_min);
-          subGroup->setAttribute("c_max", c_max);
+          if (grm_args_values(subplot_args, "clim", "dd", &c_min, &c_max))
+            {
+              group->setAttribute("clim_min", c_min);
+              group->setAttribute("clim_max", c_max);
+            }
         }
       ++current_series;
     }
@@ -3510,14 +3236,16 @@ err_t plot_imshow(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "grplot", "i", &grplot);
-  grm_args_values(subplot_args, "_clim", "dd", &c_min, &c_max);
+  if (grm_args_values(subplot_args, "clim", "dd", &c_min, &c_max))
+    {
+      group->setAttribute("clim_min", c_min);
+      group->setAttribute("clim_max", c_max);
+    }
   while (*current_series != nullptr)
     {
       auto subGroup = global_render->createSeries("imshow");
       group->append(subGroup);
       group->setAttribute("grplot", grplot);
-      subGroup->setAttribute("c_min", c_min);
-      subGroup->setAttribute("c_max", c_max);
 
       grm_args_first_value(*current_series, "c", "D", &c_data, &c_data_length);
       grm_args_first_value(*current_series, "c_dims", "I", &shape, &i);
@@ -3622,6 +3350,7 @@ err_t plot_volume(grm_args_t *subplot_args)
       int algorithm;
       const char *algorithm_str;
       double dmin, dmax;
+      double x_min, x_max, y_min, y_max, z_min, z_max;
 
       grm_args_first_value(*current_series, "c", "D", &c, &data_length);
       grm_args_first_value(*current_series, "c_dims", "I", &shape, &dims);
@@ -3654,12 +3383,28 @@ err_t plot_volume(grm_args_t *subplot_args)
       subGroup->setAttribute("dmin", dmin);
       subGroup->setAttribute("dmax", dmax);
 
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          subGroup->setAttribute("xrange_min", x_min);
+          subGroup->setAttribute("xrange_max", x_max);
+        }
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
+        }
+      if (grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max))
+        {
+          subGroup->setAttribute("zrange_min", z_min);
+          subGroup->setAttribute("zrange_max", z_max);
+        }
+
       global_root->setAttribute("id", ++id);
       ++current_series;
     }
 
   logger((stderr, "dmin, dmax: (%lf, %lf)\n", dlim[0], dlim[1]));
-  grm_args_push(subplot_args, "_clim", "dd", dlim[0], dlim[1]);
+  grm_args_push(subplot_args, "clim", "dd", dlim[0], dlim[1]);
   group->setAttribute("dlim_min", dlim[0]);
   group->setAttribute("dlim_max", dlim[1]);
 
@@ -3673,13 +3418,11 @@ err_t plot_volume(grm_args_t *subplot_args)
 
 err_t plot_polar(grm_args_t *subplot_args)
 {
-  double r_min, r_max;
   grm_args_t **current_series;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "polar");
 
-  grm_args_values(subplot_args, "_ylim", "dd", &r_min, &r_max);
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
     {
@@ -3688,9 +3431,6 @@ err_t plot_polar(grm_args_t *subplot_args)
       char *spec;
       auto subGroup = global_render->createSeries("polar");
       group->append(subGroup);
-
-      subGroup->setAttribute("r_min", r_min);
-      subGroup->setAttribute("r_max", r_max);
 
       grm_args_first_value(*current_series, "x", "D", &theta, &theta_length);
       grm_args_first_value(*current_series, "y", "D", &rho, &rho_length);
@@ -3930,6 +3670,7 @@ err_t plot_trisurf(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
+      double x_min, x_max, y_min, y_max, z_min, z_max;
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
@@ -3939,7 +3680,24 @@ err_t plot_trisurf(grm_args_t *subplot_args)
       std::string str = std::to_string(id);
 
       std::vector<double> x_vec(x, x + x_length), y_vec(y, y + x_length), z_vec(z, z + x_length);
-      auto temp = global_render->createTriSurface("px" + str, x_vec, "py" + str, y_vec, "pz" + str, z_vec);
+      auto temp = global_render->createTriSurface("x" + str, x_vec, "y" + str, y_vec, "z" + str, z_vec);
+
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          temp->setAttribute("xrange_min", x_min);
+          temp->setAttribute("xrange_max", x_max);
+        }
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          temp->setAttribute("yrange_min", y_min);
+          temp->setAttribute("yrange_max", y_max);
+        }
+      if (grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max))
+        {
+          temp->setAttribute("zrange_min", z_min);
+          temp->setAttribute("zrange_max", z_max);
+        }
+
       group->append(temp);
       ++current_series;
     }
@@ -3966,6 +3724,7 @@ err_t plot_tricont(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
+      double x_min, x_max, y_min, y_max, z_min, z_max;
       auto subGroup = global_render->createSeries("tricontour");
       group->append(subGroup);
 
@@ -3978,16 +3737,32 @@ err_t plot_tricont(grm_args_t *subplot_args)
       auto context = global_render->getContext();
 
       std::vector<double> x_vec(x, x + x_length);
-      (*context)["px" + str] = x_vec;
-      subGroup->setAttribute("px", "px" + str);
+      (*context)["x" + str] = x_vec;
+      subGroup->setAttribute("x", "x" + str);
 
       std::vector<double> y_vec(y, y + y_length);
-      (*context)["py" + str] = y_vec;
-      subGroup->setAttribute("py", "py" + str);
+      (*context)["y" + str] = y_vec;
+      subGroup->setAttribute("y", "y" + str);
 
       std::vector<double> z_vec(z, z + z_length);
-      (*context)["pz" + str] = z_vec;
-      subGroup->setAttribute("pz", "pz" + str);
+      (*context)["z" + str] = z_vec;
+      subGroup->setAttribute("z", "z" + str);
+
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          subGroup->setAttribute("xrange_min", x_min);
+          subGroup->setAttribute("xrange_max", x_max);
+        }
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
+        }
+      if (grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max))
+        {
+          subGroup->setAttribute("zrange_min", z_min);
+          subGroup->setAttribute("zrange_max", z_max);
+        }
 
       if (has_levels) subGroup->setAttribute("levels", num_levels);
 
@@ -4006,6 +3781,7 @@ err_t plot_shade(grm_args_t *subplot_args)
   int xform, xbins, ybins;
   double *x, *y;
   unsigned int x_length, y_length;
+  double x_min, x_max, y_min, y_max;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
   group->setAttribute("name", "shade");
@@ -4041,6 +3817,17 @@ err_t plot_shade(grm_args_t *subplot_args)
   if (grm_args_values(subplot_args, "ybins", "i", &ybins))
     {
       subGroup->setAttribute("ybins", ybins);
+    }
+
+  if (grm_args_values(*current_shader, "xrange", "dd", &x_min, &x_max))
+    {
+      subGroup->setAttribute("xrange_min", x_min);
+      subGroup->setAttribute("xrange_max", x_max);
+    }
+  if (grm_args_values(*current_shader, "yrange", "dd", &y_min, &y_max))
+    {
+      subGroup->setAttribute("yrange_min", y_min);
+      subGroup->setAttribute("yrange_max", y_max);
     }
 
   return ERROR_NONE;
@@ -4175,9 +3962,6 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
               /* xticklabels */
               char **xticklabels = nullptr;
               unsigned int xticklabels_length;
-              double y_min, y_max;
-
-              grm_args_values(args, "_ylim", "dd", &y_min, &y_max);
 
               if (grm_args_first_value(args, "xticklabels", "S", &xticklabels, &xticklabels_length))
                 {
@@ -4186,12 +3970,6 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                   std::string key = "xticklabels" + std::to_string(id);
                   global_root->setAttribute("id", ++id);
                   global_render->setXTickLabels(group, key, xticklabels_vec);
-                }
-
-              /* negative values */
-              if (y_min < 0)
-                {
-                  group->append(global_render->createYLine());
                 }
             }
         }
@@ -4395,7 +4173,6 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
 
 err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colors)
 {
-  double c_min, c_max;
   int *data;
   int scale, flip, options;
   unsigned int i;
@@ -4595,23 +4372,6 @@ err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_len
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-double find_max_step(unsigned int n, const double *x)
-{
-  double max_step = 0.0;
-  unsigned int i;
-
-  if (n < 2)
-    {
-      return 0.0;
-    }
-  for (i = 1; i < n; ++i)
-    {
-      max_step = grm_max(x[i] - x[i - 1], max_step);
-    }
-
-  return max_step;
-}
 
 const char *next_fmt_key(const char *kind)
 {
@@ -5299,33 +5059,17 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
       group->setAttribute("subplot_ymax", subplot[3]);
     }
 
-  grm_args_values(subplot_args, "series", "A", &current_series);
-  if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
-    {
-      group->setAttribute("xrange_min", x_min);
-      group->setAttribute("xrange_max", x_max);
-    }
-  if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
-    {
-      group->setAttribute("yrange_min", y_min);
-      group->setAttribute("yrange_max", y_max);
-    }
-  if (grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max))
-    {
-      group->setAttribute("zrange_min", z_min);
-      group->setAttribute("zrange_max", z_max);
-    }
-  if (grm_args_values(*current_series, "xlim", "dd", &xlim_min, &xlim_max))
+  if (grm_args_values(subplot_args, "xlim", "dd", &xlim_min, &xlim_max))
     {
       group->setAttribute("xlim_min", xlim_min);
       group->setAttribute("xlim_max", xlim_max);
     }
-  if (grm_args_values(*current_series, "ylim", "dd", &ylim_min, &ylim_max))
+  if (grm_args_values(subplot_args, "ylim", "dd", &ylim_min, &ylim_max))
     {
       group->setAttribute("ylim_min", ylim_min);
       group->setAttribute("ylim_max", ylim_max);
     }
-  if (grm_args_values(*current_series, "zlim", "dd", &zlim_min, &zlim_max))
+  if (grm_args_values(subplot_args, "zlim", "dd", &zlim_min, &zlim_max))
     {
       group->setAttribute("zlim_min", zlim_min);
       group->setAttribute("zlim_max", zlim_max);

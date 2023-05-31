@@ -170,7 +170,6 @@ err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_len
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-double find_max_step(unsigned int n, const double *x);
 const char *next_fmt_key(const char *fmt) UNUSED;
 const char *get_compatible_format(const char *key, const char *given_format);
 int get_id_from_args(const grm_args_t *args, int *plot_id, int *subplot_id, int *series_id);
