@@ -45,3 +45,32 @@ bool ends_with(const std::string &str, const std::string &suffix)
 {
   return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
 }
+
+void linspace(double start, double end, int n, std::vector<double> &x)
+{
+  int i;
+  for (i = 0; i < n; i++)
+    {
+      x[i] = (start + i * (end - start) / (n - 1));
+    }
+}
+
+void listcomprehension(double factor, double (*pFunction)(double), std::vector<double> &list, int num, int start,
+                       std::vector<double> &result)
+{
+  int i;
+  if (result.size() < num)
+    {
+      result.resize(num);
+    }
+
+  for (i = 0; i < num; ++i)
+    {
+      // just in case if start + num + 1 exceeds the size of the vector
+      if (i + start >= result.size())
+        {
+          break;
+        }
+      result[i + start] = factor * (*pFunction)(list[i]);
+    }
+}

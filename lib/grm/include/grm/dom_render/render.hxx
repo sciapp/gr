@@ -181,7 +181,7 @@ public:
 
   std::shared_ptr<Element> createSeries(const std::string &name);
 
-  std::shared_ptr<Element> createDrawImage(double xmin, double ymin, double xmax, double ymax, int width, int height,
+  std::shared_ptr<Element> createDrawImage(double xmin, double xmax, double ymin, double ymax, int width, int height,
                                            const std::string &data_key, std::optional<std::vector<int>> data, int model,
                                            const std::shared_ptr<Context> &extContext = nullptr);
 

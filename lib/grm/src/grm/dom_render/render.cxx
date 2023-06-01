@@ -16,6 +16,7 @@
 #include <set>
 #include <sstream>
 #include <algorithm>
+#include <numeric>
 #include <cmath>
 #include <cfloat>
 #include <climits>
@@ -1598,11 +1599,13 @@ static void processGR3CameraLookAt(const std::shared_ptr<GRM::Element> &elem)
   gr3_cameralookat(camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z);
 }
 
-static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
+
+static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   unsigned int num_bins;
-  double *classes = nullptr;
-  unsigned int length;
+  std::vector<int> classes;
+  unsigned int maxObservations;
+  unsigned int totalObservations = 0;
   double max;
   double *inner = nullptr, *outer = nullptr;
   double r;
@@ -1611,13 +1614,14 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
   double liste0;
   double liste1;
   double *liste2 = nullptr;
-  double *mlist = nullptr;
-  double *rectlist = nullptr;
+  std::vector<double> mlist;
+  std::vector<double> rectlist;
   const char *norm = nullptr;
   double bin_width = -1.0;
-  double *bin_edges = nullptr;
+  std::vector<double> bin_edges;
+
   unsigned int num_bin_edges;
-  double *bin_widths = nullptr;
+  std::vector<double> bin_widths;
   double *philim = nullptr;
   double *rlim = nullptr;
   unsigned int dummy;
@@ -1626,47 +1630,47 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
   int stairs;
   double r_min = 0.0;
   double r_max = 1.0;
-  double *phi_array = nullptr;
-  double *arc_2_x = nullptr;
-  double *arc_2_y = nullptr;
+  std::vector<double> phi_vec;
+
+  std::vector<double> arc_2_x, arc_2_y;
+
+  //  double *arc_2_x = nullptr;
+  //  double *arc_2_y = nullptr;
   int xcolormap;
   int ycolormap;
   int *colormap = nullptr;
-  double *angles = nullptr;
+  std::vector<double> angles;
   int draw_edges = 0;
   int phiflip = 0;
   int x;
-  const double convert = 180 / M_PI;
+  const double convert = 180.0 / M_PI;
   int edge_color = 1;
   int face_color = 989;
   double face_alpha = 0.75;
   unsigned int resample = 0;
-  int *lineardata = nullptr;
-  int *bin_counts = nullptr;
-  double *f1 = nullptr;
-  double *f2 = nullptr;
-  int freeable_bin_widths = 0;
-  int freeable_bin_edges = 0;
-  int freeable_angles = 0;
+  std::vector<int> lineardata;
+  std::vector<int> bin_counts;
+
+  std::vector<double> f1, f2;
+  //  double *f1 = nullptr;
+  //  double *f2 = nullptr;
   err_t error = ERROR_NONE;
 
-  std::vector<double> bin_edges_vec;
-  std::vector<double> bin_widths_vec;
   std::vector<double> r_lim_vec;
 
   std::shared_ptr<GRM::Element> group = element;
-  std::shared_ptr<GRM::Context> context;
-
-  if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()))
-    {
-      context = render->getContext();
-
-      std::cout << toXML(render->firstChildElement()) << "\n";
-    }
-  else
-    {
-      throw NotFoundError("Render-document not found for element\n");
-    }
+//  std::shared_ptr<GRM::Context> context;
+//
+//  if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()))
+//    {
+//      context = render->getContext();
+//
+//      std::cout << toXML(render->firstChildElement()) << "\n";
+//    }
+//  else
+//    {
+//      throw NotFoundError("Render-document not found for element\n");
+//    }
 
   std::shared_ptr<GRM::Element> temp_elem;
   std::string str;
@@ -1676,9 +1680,8 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
   global_render->setResampleMethod(group, 0x2020202);
 
   auto classes_key = static_cast<std::string>(group->getAttribute("classes"));
-  auto classes_vec = GRM::get<std::vector<double>>((*context)[classes_key]);
-  classes = &(classes_vec[0]);
-  length = classes_vec.size();
+  classes = GRM::get<std::vector<int>>((*context)[classes_key]);
+  totalObservations = static_cast<int>(group->getAttribute("total"));
 
   /* edge_color */
   if (group->hasAttribute("edge_color") == 0)
@@ -1728,10 +1731,11 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
   int rings = -1;
 
   double tick = auto_tick_rings_polar(max, rings, norm);
-  group->setAttribute("tick", tick);
+  group->parentElement()->setAttribute("tick", tick);
   max = tick * rings;
-  group->setAttribute("r_max", max);
-  group->setAttribute("rings", rings);
+  group->parentElement()->setAttribute("r_max", max);
+  group->parentElement()->setAttribute("rings", rings);
+
 
   if (group->hasAttribute("phiflip") == 0)
     {
@@ -1753,7 +1757,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
 
   if (group->hasAttribute("bin_edges") == 0)
     {
-      bin_edges = nullptr;
       num_bin_edges = 0;
       if (group->hasAttribute("bin_width"))
         {
@@ -1763,14 +1766,12 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
   else
     {
       auto bin_edges_key = static_cast<std::string>(group->getAttribute("bin_edges"));
-      bin_edges_vec = GRM::get<std::vector<double>>((*context)[bin_edges_key]);
-      bin_edges = &(bin_edges_vec[0]);
-      num_bin_edges = bin_edges_vec.size();
+      bin_edges = GRM::get<std::vector<double>>((*context)[bin_edges_key]);
+      num_bin_edges = bin_edges.size();
 
       auto bin_widths_key = static_cast<std::string>(group->getAttribute("bin_widths"));
-      bin_widths_vec = GRM::get<std::vector<double>>((*context)[bin_widths_key]);
-      bin_widths = &(bin_widths_vec[0]);
-      num_bins = bin_widths_vec.size();
+      bin_widths = GRM::get<std::vector<double>>((*context)[bin_widths_key]);
+      num_bins = bin_widths.size();
     }
 
   if (group->hasAttribute("stairs") == 0)
@@ -1785,13 +1786,11 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
           if (draw_edges != 0)
             {
               logger((stderr, "stairs is not compatible with draw_edges / colormap\n"));
-              cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
             }
           /* no bin_edges */
           else if (num_bin_edges == 0)
             {
-              mlist = static_cast<double *>(malloc(num_bins * 4 * sizeof(double)));
-              cleanup_and_set_error_if(mlist == nullptr, ERROR_MALLOC);
+              mlist.resize(num_bins * 4);
               if (stairs != 0)
                 {
                   stairs = 1;
@@ -1799,8 +1798,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
             }
           else
             {
-              rectlist = static_cast<double *>(malloc(num_bins * sizeof(double)));
-              cleanup_and_set_error_if(rectlist == nullptr, ERROR_MALLOC);
+              rectlist.resize(num_bins);
             }
         }
     }
@@ -1816,8 +1814,8 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
       rlim = &(r_lim_vec[0]);
 
       /* TODO: Potential memory leak, s. `malloc` in line 3788 */
-      mlist = static_cast<double *>(malloc((num_bins + 1) * 4 * sizeof(double)));
-      cleanup_and_set_error_if(mlist == nullptr, ERROR_MALLOC);
+      //      mlist = static_cast<double *>(malloc((num_bins + 1) * 4 * sizeof(double)));
+      mlist.resize((num_bins + 1) * 4);
       if (rlim[0] > rlim[1])
         {
           r_min = rlim[1];
@@ -1835,16 +1833,14 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
         {
           r_max = 1.0;
           logger((stderr, "the max value of rlim can not exceed 1.0\n"));
-          cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
         }
       if (r_min < 0.0) r_min = 0.0;
     }
 
-  length /= num_bins;
-  outer = classes;
+  //  maxObservations /= num_bins;
   if (phiflip != 0)
     {
-      outer += (num_bins - 1) * length;
+      std::reverse(classes.begin(), classes.end());
     }
 
   if (!(group->hasAttribute("xcolormap") && group->hasAttribute("ycolormap")))
@@ -1853,7 +1849,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
       if (draw_edges != 0)
         {
           logger((stderr, "draw_edges can only be used with colormap\n"));
-          cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
         }
     }
   else
@@ -1864,7 +1859,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
       if (-1 > xcolormap || xcolormap > 47 || ycolormap < -1 || ycolormap > 47)
         {
           logger((stderr, "the value for keyword \"colormap\" must contain two integer between -1 and 47\n"));
-          cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
         }
       else
         {
@@ -1879,28 +1873,20 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
           int count = 0;
           double max_radius;
 
-          lineardata = static_cast<int *>(calloc(image_size * image_size, sizeof(int)));
-          cleanup_and_set_error_if(lineardata == nullptr, ERROR_MALLOC);
-
-          bin_counts = static_cast<int *>(malloc(num_bins * sizeof(int)));
-          cleanup_and_set_error_if(bin_counts == nullptr, ERROR_MALLOC);
+          lineardata.resize(image_size * image_size);
+          bin_counts.resize(num_bins);
 
           colormap = create_colormap(xcolormap, ycolormap, colormap_size);
-          cleanup_and_set_error_if(colormap == nullptr, ERROR_PLOT_COLORMAP);
 
           if (num_bin_edges == 0)
             {
-              angles = static_cast<double *>(malloc((num_bins + 1) * sizeof(double)));
-              cleanup_and_set_error_if(angles == nullptr, ERROR_MALLOC);
-              freeable_angles = 1;
-              linspace(0, M_PI * 2, num_bins + 1, angles);
+              angles.resize(num_bins + 1);
+              linspace(0.0, M_PI * 2, num_bins + 1, angles);
             }
           else
             {
               angles = bin_edges;
             }
-
-          outer = classes;
 
           center_x = image_size / 2;
           center_y = image_size / 2;
@@ -1908,26 +1894,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
 
           max_radius = center;
 
-          for (temp1 = 0; temp1 < num_bins; temp1++)
-            {
-              temp = 0;
-              for (temp2 = 0; temp2 < length; temp2++)
-                {
-                  if (classes[temp1 * length + temp2] == -1) break;
-                  ++temp;
-                }
-              bin_counts[temp1] = temp;
-            }
-
-          if (str_equals_any(norm, 2, "probability", "pdf"))
-            {
-              for (temp1 = 0; temp1 < num_bins; ++temp1)
-                {
-                  total += bin_counts[temp1];
-                }
-            }
-          else if (strcmp(norm, "cdf") == 0)
-            total = bin_counts[num_bins - 1];
+          total = static_cast<int>(group->getAttribute("total"));
 
           if (str_equals_any(norm, 2, "probability", "cdf"))
             norm_factor = total;
@@ -1962,7 +1929,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
                     {
                       if (angle > angles[q] && angle <= angles[q + 1])
                         {
-                          count = bin_counts[q];
+                          count = classes[q];
                           if (strcmp(norm, "pdf") == 0 && num_bin_edges > 0)
                             {
                               norm_factor = total * bin_widths[q];
@@ -1994,30 +1961,21 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
           int id = (int)global_root->getAttribute("id");
           global_root->setAttribute("id", id + 1);
           str = std::to_string(id);
-          std::vector<int> l_vec(lineardata, lineardata + image_size * image_size);
 
           temp_elem =
-              global_render->createDrawImage(-1.0, 1.0, -1.0, 1.0, image_size, image_size, "data" + str, l_vec, 0);
+              global_render->createDrawImage(-1.0, 1.0, -1.0, 1.0, image_size, image_size, "data" + str, lineardata, 0);
           group->append(temp_elem);
-          free(lineardata);
-          free(bin_counts);
-          lineardata = nullptr;
-          bin_counts = nullptr;
         } /* end colormap calculation*/
 
     } /* end colormap condition */
 
-  outer = classes;
-  if (phiflip != 0) outer += (num_bins - 1) * length;
 
+  // todo: Maybe move this block above colormap block
   if (phiflip != 0 && num_bin_edges > 0)
     {
-      double *temp = nullptr;
-      double *temp2 = nullptr;
-      temp = static_cast<double *>(malloc(num_bin_edges * sizeof(double)));
-      cleanup_and_set_error_if(temp == nullptr, ERROR_MALLOC);
-      temp2 = static_cast<double *>(malloc(num_bins * sizeof(double)));
-      cleanup_and_set_error_if(temp2 == nullptr, ERROR_MALLOC);
+      std::vector<double> temp(num_bin_edges);
+      std::vector<double> temp2(num_bins);
+
       int u;
       for (u = 0; u < num_bin_edges; u++)
         {
@@ -2028,19 +1986,15 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
           temp2[u] = bin_widths[num_bins - 1 - u];
         }
       bin_widths = temp2;
-      freeable_bin_widths = 1;
       bin_edges = temp;
-      temp = temp2 = nullptr;
-      freeable_bin_edges = 1;
     }
 
   /* no colormap or colormap combined with draw_edges */
   if (colormap == nullptr || draw_edges == 1)
     {
-      for (x = 0; x < num_bins; ++x)
+      for (x = 0; x < classes.size(); ++x)
         {
           double count;
-          int y;
 
           /*
            * free memory from the previous iteration
@@ -2056,41 +2010,30 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
           free(r_min_list2);
           r_min_list2 = nullptr;
 
-          count = 0.0;
-          inner = outer;
+          count = classes[x];
 
-          if (*inner == -1)
+          if (classes[x] == 0)
             {
               /* stairs bin_edges / philim  */
-              if (rectlist != nullptr && philim != nullptr)
+              if (!rectlist.empty() && philim != nullptr)
                 rectlist[x] = r_min;
-              else if (rectlist != nullptr)
+              else if (!rectlist.empty())
                 rectlist[x] = 0.0;
-            }
-
-
-          for (y = 0; y < length; ++y)
-            {
-              if (*inner != -1)
-                {
-                  count++;
-                  inner++;
-                }
             }
 
           if (str_equals_any(norm, 2, "probability", "cdf"))
             {
-              count /= length;
+              count /= totalObservations;
             }
           else if (strcmp(norm, "pdf") == 0)
             {
               if (num_bin_edges == 0)
                 {
-                  count /= length * bin_width;
+                  count /= totalObservations * bin_width;
                 }
               else
                 {
-                  count /= (length * *(bin_widths + x));
+                  count /= (totalObservations * bin_widths[x]);
                 }
             }
           else if (strcmp(norm, "countdensity") == 0)
@@ -2101,13 +2044,15 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
                 }
               else
                 {
-                  count /= *(bin_widths + x);
+                  count /= bin_widths[x];
                 }
             }
 
           /* no stairs*/
           if (stairs == 0)
             {
+              /* perform calculations for later usages */
+
               r = pow((count / max), num_bins * 2);
               liste = moivre(r, 2 * x, num_bins * 2);
               cleanup_and_set_error_if(liste == nullptr, ERROR_MALLOC);
@@ -2122,16 +2067,17 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
                   liste2 = moivre(r, (2 * x + 2), (num_bins * 2));
                   cleanup_and_set_error_if(liste2 == nullptr, ERROR_MALLOC);
 
-                  *(mlist + x * 4) = liste0;
-                  *(mlist + x * 4 + 1) = liste1;
-                  *(mlist + x * 4 + 2) = *(liste2);
-                  *(mlist + x * 4 + 3) = *(liste2 + 1);
+                  mlist[x * 4] = liste0;
+                  mlist[x * 4 + 1] = liste1;
+                  mlist[x * 4 + 2] = *(liste2);
+                  mlist[x * 4 + 3] = *(liste2 + 1);
 
                   r_min_list = moivre(pow((r_min), (num_bins * 2)), (x * 2), num_bins * 2);
                   cleanup_and_set_error_if(r_min_list == nullptr, ERROR_MALLOC);
                   r_min_list2 = moivre(pow((r_min), (num_bins * 2)), (x * 2 + 2), num_bins * 2);
                   cleanup_and_set_error_if(r_min_list2 == nullptr, ERROR_MALLOC);
 
+                  /* check if the segment is higher than rmax? */
                   for (i = 0; i < 2; ++i)
                     {
                       temporary = fabs(sqrt(pow(mlist[x * 4 + 2 - i * 2], 2) + pow(mlist[x * 4 + 3 - i * 2], 2)));
@@ -2166,10 +2112,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
 
                       if (r <= r_min)
                         {
-                          if (phiflip == 1)
-                            outer -= length;
-                          else
-                            outer += length;
                           continue;
                         }
 
@@ -2177,60 +2119,60 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
                       end_angle = (x + 1) * (360.0 / num_bins) / convert;
 
                       diff_angle = end_angle - start_angle;
+
+                      // determine number of angles for arc approximations
                       num_angle = (int)(diff_angle / (0.2 / convert));
 
-                      phi_array = static_cast<double *>(malloc(num_angle * sizeof(double)));
-                      cleanup_and_set_error_if(phi_array == nullptr, ERROR_MALLOC);
-                      linspace(start_angle, end_angle, num_angle, phi_array);
+                      phi_vec.resize(num_angle);
+                      linspace(start_angle, end_angle, num_angle, phi_vec);
 
-                      f1 = static_cast<double *>(malloc((4 + 2 * num_angle) * sizeof(double)));
-                      cleanup_and_set_error_if(f1 == nullptr, ERROR_MALLOC);
+                      // 4 because of the 4 corner coordinates and 2 * num_angle for the arc approximations, top and
+                      // bottom
+                      f1.resize(4 + 2 * num_angle);
                       /* line_1_x[0] and [1]*/
                       f1[0] = r_min_list[0];
                       f1[1] = mlist[4 * x];
                       /* arc_1_x */
-                      listcomprehension(r, cos, phi_array, num_angle, 2, f1);
+                      listcomprehension(r, cos, phi_vec, num_angle, 2, f1);
                       /* reversed line_2_x [0] and [1] */
                       f1[2 + num_angle + 1] = r_min_list2[0];
                       f1[2 + num_angle] = mlist[4 * x + 2];
                       /* reversed arc_2_x */
-                      arc_2_x = listcomprehension(r_min, cos, phi_array, num_angle, 0, nullptr);
-                      cleanup_and_set_error_if(arc_2_x == nullptr, ERROR_MALLOC);
+                      listcomprehension(r_min, cos, phi_vec, num_angle, 0, arc_2_x);
                       for (i = 0; i < num_angle; ++i)
                         {
                           f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
                         }
-                      free(arc_2_x);
-                      arc_2_x = nullptr;
+                      arc_2_x.clear();
 
-                      f2 = static_cast<double *>(malloc((4 + 2 * num_angle) * sizeof(double)));
-                      cleanup_and_set_error_if(f2 == nullptr, ERROR_MALLOC);
+                      f2.resize(4 + 2 * num_angle);
                       /* line_1_y[0] and [1] */
                       f2[0] = r_min_list[1];
                       f2[1] = mlist[4 * x + 1];
                       /*arc_1_y */
-                      listcomprehension(r, sin, phi_array, num_angle, 2, f2);
+                      listcomprehension(r, sin, phi_vec, num_angle, 2, f2);
                       /* reversed line_2_y [0] and [1] */
                       f2[2 + num_angle + 1] = r_min_list2[1];
                       f2[2 + num_angle] = mlist[4 * x + 3];
                       /* reversed arc_2_y */
-                      arc_2_y = listcomprehension(r_min, sin, phi_array, num_angle, 0, nullptr);
-                      cleanup_and_set_error_if(arc_2_y == nullptr, ERROR_MALLOC);
+                      listcomprehension(r_min, sin, phi_vec, num_angle, 0, arc_2_y);
                       for (i = 0; i < num_angle; ++i)
                         {
                           f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
                         }
-                      free(arc_2_y);
-                      arc_2_y = nullptr;
 
+                      arc_2_y.clear();
                       if (draw_edges == 0)
                         {
+                          // with rlim gr_fillarc cant be used because it will always draw from the origin
+                          // instead use gr_fillarea and approximate line segment with calculations from above.
                           int id = (int)global_root->getAttribute("id");
                           global_root->setAttribute("id", id + 1);
-                          std::vector<double> f1_vec(f1, f1 + 4 + 2 * num_angle), f2_vec(f2, f2 + 4 + 2 * num_angle);
+                          //                          std::vector<double> f1_vec(f1, f1 + 4 + 2 * num_angle), f2_vec(f2,
+                          //                          f2 + 4 + 2 * num_angle);
                           str = std::to_string(id);
 
-                          temp_elem = global_render->createFillArea("x" + str, f1_vec, "y" + str, f2_vec);
+                          temp_elem = global_render->createFillArea("x" + str, f1, "y" + str, f2);
                           group->append(temp_elem);
                           global_render->setFillColorInd(temp_elem, face_color);
                           global_render->setFillIntStyle(temp_elem, 1);
@@ -2244,21 +2186,19 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
                         {
                           int id = (int)global_root->getAttribute("id");
                           global_root->setAttribute("id", id + 1);
-                          std::vector<double> f1_vec(f1, f1 + 4 + 2 * num_angle), f2_vec(f2, f2 + 4 + 2 * num_angle);
                           str = std::to_string(id);
 
-                          temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
+                          temp_elem = global_render->createFillArea("x" + str, f1, "y" + str, f2);
                           group->append(temp_elem);
                           global_render->setFillColorInd(temp_elem, edge_color);
                           global_render->setFillIntStyle(temp_elem, 0);
                         }
-
-                      free(f1);
-                      f1 = nullptr;
-                      free(f2);
-                      f2 = nullptr;
-                      free(phi_array);
-                      phi_array = nullptr;
+                      /* clean up vectors for next iteration */
+                      phi_vec.clear();
+                      f1.clear();
+                      f2.clear();
+                      //                      arc_2_x.clear();
+                      //                      arc_2_y.clear();
                     } /* end rlim condition */
                   /* no rlim */
                   else
@@ -2296,10 +2236,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
 
                       if (r <= r_min)
                         {
-                          if (phiflip != 0)
-                            outer -= length;
-                          else
-                            outer += length;
                           continue;
                         }
 
@@ -2308,58 +2244,50 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
 
                       diff_angle = end_angle - start_angle;
                       num_angle = (int)(diff_angle / (0.2 / convert));
-                      phi_array = static_cast<double *>(malloc(num_angle * sizeof(double)));
-                      cleanup_and_set_error_if(phi_array == nullptr, ERROR_MALLOC);
-                      linspace(start_angle, end_angle, num_angle, phi_array);
+                      phi_vec.resize(num_angle);
+                      linspace(start_angle, end_angle, num_angle, phi_vec);
 
-                      f1 = static_cast<double *>(malloc((4 + 2 * num_angle) * sizeof(double)));
-                      cleanup_and_set_error_if(f1 == nullptr, ERROR_MALLOC);
+                      //                      f1 = static_cast<double *>(malloc((4 + 2 * num_angle) * sizeof(double)));
+                      //                      cleanup_and_set_error_if(f1 == nullptr, ERROR_MALLOC);
+                      f1.resize(4 + 2 * num_angle);
                       /* line_1_x[0] and [1]*/
                       f1[0] = cos(bin_edges[x]) * r_min;
                       f1[1] = grm_min(rect, r_max) * cos(bin_edges[x]);
                       /*arc_1_x */
-                      listcomprehension(r, cos, phi_array, num_angle, 2, f1);
+                      listcomprehension(r, cos, phi_vec, num_angle, 2, f1);
                       /* reversed line_2_x [0] and [1] */
                       f1[2 + num_angle + 1] = cos(bin_edges[x + 1]) * r_min;
                       f1[2 + num_angle] = grm_min(rect, r_max) * cos(bin_edges[x + 1]);
                       /* reversed arc_2_x */
-                      arc_2_x = listcomprehension(r_min, cos, phi_array, num_angle, 0, nullptr);
-                      cleanup_and_set_error_if(arc_2_x == nullptr, ERROR_MALLOC);
+                      listcomprehension(r_min, cos, phi_vec, num_angle, 0, arc_2_x);
                       for (i = 0; i < num_angle; ++i)
                         {
                           f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
                         }
-                      free(arc_2_x);
-                      arc_2_x = nullptr;
 
-                      f2 = static_cast<double *>(malloc((4 + 2 * num_angle) * sizeof(double)));
-                      cleanup_and_set_error_if(f2 == nullptr, ERROR_MALLOC);
+                      f2.resize(4 + 2 * num_angle);
                       /* line_1_y[0] and [1] */
                       f2[0] = r_min * sin(bin_edges[x]);
                       f2[1] = grm_min(rect, r_max) * sin(bin_edges[x]);
                       /*arc_1_y */
-                      listcomprehension(r, sin, phi_array, num_angle, 2, f2);
+                      listcomprehension(r, sin, phi_vec, num_angle, 2, f2);
                       /* reversed line_2_y [0] and [1] */
                       f2[2 + num_angle + 1] = r_min * sin(bin_edges[x + 1]);
                       f2[2 + num_angle] = grm_min(rect, r_max) * sin(bin_edges[x + 1]);
                       /* reversed arc_2_y */
-                      arc_2_y = listcomprehension(r_min, sin, phi_array, num_angle, 0, nullptr);
-                      cleanup_and_set_error_if(arc_2_y == nullptr, ERROR_MALLOC);
+                      listcomprehension(r_min, sin, phi_vec, num_angle, 0, arc_2_y);
                       for (i = 0; i < num_angle; ++i)
                         {
                           f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
                         }
-                      free(arc_2_y);
-                      arc_2_y = nullptr;
 
                       if (draw_edges == 0)
                         {
                           int id = (int)global_root->getAttribute("id");
                           global_root->setAttribute("id", id + 1);
-                          std::vector<double> f1_vec(f1, f1 + 4 + 2 * num_angle), f2_vec(f2, f2 + 4 + 2 * num_angle);
                           str = std::to_string(id);
 
-                          temp_elem = global_render->createFillArea("x" + str, f1_vec, "y" + str, f2_vec);
+                          temp_elem = global_render->createFillArea("x" + str, f1, "y" + str, f2);
                           group->append(temp_elem);
                           global_render->setFillColorInd(temp_elem, face_color);
                           global_render->setFillIntStyle(temp_elem, 1);
@@ -2373,21 +2301,13 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
                         {
                           int id = (int)global_root->getAttribute("id");
                           global_root->setAttribute("id", id + 1);
-                          std::vector<double> f1_vec(f1, f1 + 4 + 2 * num_angle), f2_vec(f2, f2 + 4 + 2 * num_angle);
                           str = std::to_string(id);
 
-                          temp_elem = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
+                          temp_elem = global_render->createFillArea("x" + str, f1, "y" + str, f2);
                           group->append(temp_elem);
                           global_render->setFillColorInd(temp_elem, edge_color);
                           global_render->setFillIntStyle(temp_elem, 0);
                         }
-
-                      free(f1);
-                      f1 = nullptr;
-                      free(f2);
-                      f2 = nullptr;
-                      free(phi_array);
-                      phi_array = nullptr;
                     }
                   /* no rlim */
                   else
@@ -2427,10 +2347,10 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
               /*  no bin_edges */
               if (num_bin_edges == 0)
                 {
-                  *(mlist + x * 4) = *liste;
-                  *(mlist + x * 4 + 1) = *(liste + 1);
-                  *(mlist + x * 4 + 2) = *(liste2);
-                  *(mlist + x * 4 + 3) = *(liste2 + 1);
+                  mlist[x * 4] = *liste;
+                  mlist[x * 4 + 1] = *(liste + 1);
+                  mlist[x * 4 + 2] = *(liste2);
+                  mlist[x * 4 + 3] = *(liste2 + 1);
 
                   if (rlim != nullptr)
                     {
@@ -2496,29 +2416,24 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
                   /* no rlim */
                   else
                     {
-                      *(rectlist + x) = rect;
+                      rectlist[x] = rect;
+                      //                      *(rectlist + x) = rect;
                       if (x == num_bin_edges - 1)
                         {
                           break;
                         }
-                      group->append(global_render->createDrawArc(-rect, rect, -rect, rect, *(bin_edges + x) * convert,
-                                                                 *(bin_edges + x + 1) * convert));
+                      group->append(global_render->createDrawArc(-rect, rect, -rect, rect, bin_edges[x] * convert,
+                                                                 bin_edges[x + 1] * convert));
                     }
                 }
             }
 
-          if (phiflip == 0)
-            outer += length;
-          else
-            {
-              outer -= length;
-            }
         } /* end of classes for loop */
 
       if (stairs != 0 && draw_edges == 0)
         {
           /* stairs without binedges, rlim */
-          if (mlist != nullptr && rlim == nullptr && rectlist == nullptr)
+          if (!mlist.empty() && rlim == nullptr && rectlist.empty())
             {
               int s;
               double line_x[2];
@@ -2527,22 +2442,32 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
                 {
                   if (s > 2 && s % 4 == 0)
                     {
-                      line_x[0] = *(mlist + s);
-                      line_x[1] = *(mlist + s - 2);
-                      line_y[0] = *(mlist + s + 1);
-                      line_y[1] = *(mlist + s - 1);
+                      line_x[0] = mlist[s];
+                      line_x[1] = mlist[s - 2];
+                      line_y[0] = mlist[s + 1];
+                      line_y[1] = mlist[s - 1];
+
+                      //                      line_x[0] = *(mlist + s);
+                      //                      line_x[1] = *(mlist + s - 2);
+                      //                      line_y[0] = *(mlist + s + 1);
+                      //                      line_y[1] = *(mlist + s - 1);
                       group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
                     }
                 }
-              line_x[0] = *(mlist);
-              line_x[1] = *(mlist + (num_bins - 1) * 4 + 2);
-              line_y[0] = *(mlist + 1);
-              line_y[1] = *(mlist + (num_bins - 1) * 4 + 3);
+              line_x[0] = mlist[0];
+              line_x[1] = mlist[(num_bins - 1) * 4 + 2];
+              line_y[0] = mlist[1];
+              line_y[1] = mlist[(num_bins - 1) * 4 + 3];
+
+              //              line_x[0] = *(mlist);
+              //              line_x[1] = *(mlist + (num_bins - 1) * 4 + 2);
+              //              line_y[0] = *(mlist + 1);
+              //              line_y[1] = *(mlist + (num_bins - 1) * 4 + 3);
               group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
             }
 
           /* stairs without bin_edges with rlim*/
-          else if (mlist != nullptr && rlim != nullptr && rectlist == nullptr)
+          else if (!mlist.empty() && rlim != nullptr && rectlist.empty())
             {
               double line_x[2], line_y[2];
               double rect1, rect2;
@@ -2580,7 +2505,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
             }
 
           /* stairs with binedges without rlim */
-          else if (rectlist != nullptr && rlim == nullptr)
+          else if (!rectlist.empty() && rlim == nullptr)
             {
               double startx = 0.0, starty = 0.0;
               double line_x[2], line_y[2];
@@ -2588,39 +2513,39 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
               for (x = 0; x < num_bin_edges - 1; ++x)
                 {
                   line_x[0] = startx;
-                  line_x[1] = *(rectlist + x) * cos(*(bin_edges + x));
+                  line_x[1] = rectlist[x] * cos(bin_edges[x]);
                   line_y[0] = starty;
-                  line_y[1] = *(rectlist + x) * sin(*(bin_edges + x));
+                  line_y[1] = rectlist[x] * sin(bin_edges[x]);
 
-                  startx = *(rectlist + x) * cos(*(bin_edges + x + 1));
-                  starty = *(rectlist + x) * sin(*(bin_edges + x + 1));
+                  startx = rectlist[x] * cos(bin_edges[x + 1]);
+                  starty = rectlist[x] * sin(bin_edges[x + 1]);
 
-                  if (!(*bin_edges == 0.0 && *(bin_edges + num_bin_edges - 1) > 1.96 * M_PI) || x > 0)
+                  if (!(bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI) || x > 0)
                     {
                       group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
                     }
                 }
 
-              if (*bin_edges == 0.0 && *(bin_edges + num_bin_edges - 1) > 1.96 * M_PI)
+              if (bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI)
                 {
-                  line_x[0] = *rectlist * cos(*bin_edges);
+                  line_x[0] = rectlist[0] * cos(bin_edges[0]);
                   line_x[1] = startx;
-                  line_y[0] = *rectlist * sin(*bin_edges);
+                  line_y[0] = rectlist[0] * sin(bin_edges[0]);
                   line_y[1] = starty;
                   group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
                 }
               else
                 {
-                  line_x[0] = *(rectlist + num_bin_edges - 2) * cos(*(bin_edges + num_bin_edges - 1));
+                  line_x[0] = rectlist[num_bin_edges - 2] * cos(bin_edges[num_bin_edges - 1]);
                   line_x[1] = 0.0;
-                  line_y[0] = *(rectlist + num_bin_edges - 2) * sin(*(bin_edges + num_bin_edges - 1));
+                  line_y[0] = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
                   line_y[1] = 0.0;
                   group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
                 }
             }
 
           /* stairs with bin_edges and rlim */
-          else if (rectlist != nullptr && rlim != nullptr)
+          else if (!rectlist.empty() && rlim != nullptr)
             {
               double startx = grm_max(rectlist[0] * cos(bin_edges[0]), r_min * cos(bin_edges[0]));
               double starty = grm_max(rectlist[0] * sin(bin_edges[0]), r_min * sin(bin_edges[0]));
@@ -2631,37 +2556,37 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
               for (x = 0; x < num_bin_edges - 1; ++x)
                 {
                   *line_x = startx;
-                  *(line_x + 1) = *(rectlist + x) * cos(*(bin_edges + x));
+                  *(line_x + 1) = rectlist[x] * cos(bin_edges[x]);
                   *line_y = starty;
-                  *(line_y + 1) = *(rectlist + x) * sin(*(bin_edges + x));
+                  *(line_y + 1) = rectlist[x] * sin(bin_edges[x]);
 
-                  startx = *(rectlist + x) * cos(*(bin_edges + x + 1));
-                  starty = *(rectlist + x) * sin(*(bin_edges + x + 1));
+                  startx = rectlist[x] * cos(bin_edges[x + 1]);
+                  starty = rectlist[x] * sin(bin_edges[x + 1]);
 
                   if (((phiflip == 0) &&
-                       (!((*bin_edges > 0.0 && *bin_edges < 0.001) && *(bin_edges + num_bin_edges - 1) > 1.96 * M_PI) ||
+                       (!((bin_edges[0] > 0.0 && bin_edges[0] < 0.001) && bin_edges[num_bin_edges - 1] > 1.96 * M_PI) ||
                         x > 0)) ||
-                      ((*bin_edges > 1.96 * M_PI &&
-                        !(*(bin_edges + num_bin_edges - 1) > 0.0 && *(bin_edges + num_bin_edges - 1) < 0.001)) ||
+                      ((bin_edges[0] > 1.96 * M_PI &&
+                        !(bin_edges[num_bin_edges - 1] > 0.0 && bin_edges[num_bin_edges - 1] < 0.001)) ||
                        x > 0))
                     {
                       group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
                     }
                 }
 
-              if (*bin_edges == 0.0 && *(bin_edges + num_bin_edges - 1) > 1.96 * M_PI)
+              if (bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI)
                 {
-                  *line_x = *rectlist * cos(*bin_edges);
+                  *line_x = rectlist[0] * cos(bin_edges[0]);
                   *(line_x + 1) = rectlist[num_bin_edges - 2] * cos(bin_edges[num_bin_edges - 1]);
-                  *line_y = *rectlist * sin(*bin_edges);
+                  *line_y = rectlist[0] * sin(bin_edges[0]);
                   *(line_y + 1) = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
                   group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
                 }
               else
                 {
-                  *line_x = *(rectlist + num_bin_edges - 2) * cos(*(bin_edges + num_bin_edges - 1));
+                  *line_x = rectlist[num_bin_edges - 2] * cos(bin_edges[num_bin_edges - 1]);
                   *(line_x + 1) = r_min * cos(bin_edges[num_bin_edges - 1]);
-                  *line_y = *(rectlist + num_bin_edges - 2) * sin(*(bin_edges + num_bin_edges - 1));
+                  *line_y = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
                   *(line_y + 1) = r_min * sin(bin_edges[num_bin_edges - 1]);
 
                   group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
@@ -2680,29 +2605,8 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element)
   gr_setresamplemethod(resample);
 
 cleanup:
-  free(mlist);
-  free(rectlist);
-  free(lineardata);
-  free(bin_counts);
-  if (freeable_bin_widths == 1)
-    {
-      free(bin_widths);
-    }
-  if (freeable_bin_edges == 1)
-    {
-      free(bin_edges);
-    }
-  if (freeable_angles == 1)
-    {
-      free(angles);
-    }
-  free(phi_array);
   free(r_min_list);
   free(r_min_list2);
-  free(f1);
-  free(f2);
-  free(arc_2_x);
-  free(arc_2_y);
   free(liste);
   free(liste2);
   free(colormap);
@@ -2862,14 +2766,6 @@ static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem
     }
 }
 
-static void processKind(const std::shared_ptr<GRM::Element> &elem)
-{
-  std::string kind = static_cast<std::string>(elem->getAttribute("kind"));
-  if (kind == "polar_histogram")
-    {
-      polarHistogram(elem);
-    }
-}
 
 void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &elem)
 {
@@ -3774,10 +3670,11 @@ static void processYlabel(const std::shared_ptr<GRM::Element> &elem)
 static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &element)
 {
   unsigned int num_bins;
-  double *theta = nullptr;
+  //  double *theta = nullptr;
+  std::vector<double> theta;
   unsigned int length;
   const char *norm;
-  double *classes = nullptr;
+  std::vector<int> classes;
 
   double interval;
   double start;
@@ -3785,23 +3682,26 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
   double max;
   double temp_max;
 
-  double *bin_edges = nullptr;
-  double *bin_edges_buf = nullptr;
+  int observations = 0;
+  int maxObservations = 0;
+  int totalObservations = 0;
+
+  std::vector<double> bin_edges;
   unsigned int num_bin_edges;
 
   double bin_width;
 
-  double *bin_widths = nullptr;
+  std::vector<double> bin_widths;
 
   int is_bin_counts = 0;
-  int *bin_counts = nullptr;
+  std::vector<int> bin_counts;
 
   double *philim = nullptr;
   double philim_arr[2];
   unsigned int dummy;
 
-  double *new_theta = nullptr;
-  double *new_edges = nullptr;
+  std::vector<double> new_theta;
+  std::vector<double> new_edges;
 
   err_t error = ERROR_NONE;
 
@@ -3824,28 +3724,21 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
   std::string bin_counts_key;
   std::string classes_key = "classes" + str;
 
-  //! define vectors for later usages
-  std::vector<double> theta_vec;
-  std::vector<int> bin_counts_vec;
-  std::vector<double> bin_edges_vec;
-
   if (group->hasAttribute("bin_counts"))
     {
       is_bin_counts = 1;
       bin_counts_key = static_cast<std::string>(group->getAttribute("bin_counts"));
-      bin_counts_vec = GRM::get<std::vector<int>>((*context)[bin_counts_key]);
+      bin_counts = GRM::get<std::vector<int>>((*context)[bin_counts_key]);
 
-      bin_counts = &(bin_counts_vec[0]);
-      length = bin_counts_vec.size();
+      length = bin_counts.size();
       num_bins = length;
       group->setAttribute("nbins", static_cast<int>(num_bins));
     }
   else if (group->hasAttribute("theta"))
     {
       auto theta_key = static_cast<std::string>(group->getAttribute("theta"));
-      theta_vec = GRM::get<std::vector<double>>((*context)[theta_key]);
-      theta = &(theta_vec[0]);
-      length = theta_vec.size();
+      theta = GRM::get<std::vector<double>>((*context)[theta_key]);
+      length = theta.size();
     }
 
   if (!group->hasAttribute("philim"))
@@ -3868,7 +3761,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
       if (philim[0] < 0.0 || philim[1] > 2 * M_PI)
         {
           logger((stderr, "philim must be between 0 and 2 * pi\n"));
-          cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
         }
       group->setAttribute("philim", true);
       group->setAttribute("phi_min", philim[0]);
@@ -3898,12 +3790,10 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
       else
         {
           //! if philim is given, it will create equidistant bin_edges from phi_min to phi_max
-          bin_edges = bin_edges_buf = static_cast<double *>(malloc((num_bins + 1) * sizeof(double)));
-          cleanup_and_set_error_if(bin_edges == nullptr, ERROR_MALLOC);
+          bin_edges.resize(num_bins + 1);
           linspace(philim[0], philim[1], num_bins + 1, bin_edges);
           num_bin_edges = num_bins + 1;
-          bin_edges_vec = std::vector<double>(bin_edges, bin_edges + num_bin_edges);
-          (*context)[bin_edges_key] = bin_edges_vec;
+          (*context)[bin_edges_key] = bin_edges;
           group->setAttribute("bin_edges", bin_edges_key);
         }
     }
@@ -3911,18 +3801,15 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
   else
     {
       bin_edges_key = static_cast<std::string>(group->getAttribute("bin_edges"));
-      bin_edges_vec = GRM::get<std::vector<double>>((*context)[bin_edges_key]);
-      bin_edges = &(bin_edges_vec[0]);
-      num_bin_edges = bin_edges_vec.size();
+      bin_edges = GRM::get<std::vector<double>>((*context)[bin_edges_key]);
+      num_bin_edges = bin_edges.size();
       /* no philim */
       if (philim == nullptr)
         {
-
           /* filter bin_edges */
           int temp = 0;
           int i;
-          new_edges = static_cast<double *>(malloc(num_bin_edges * sizeof(double)));
-          cleanup_and_set_error_if(new_edges == nullptr, ERROR_MALLOC);
+          new_edges.resize(num_bin_edges);
 
           for (i = 0; i < num_bin_edges; ++i)
             {
@@ -3934,14 +3821,14 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
               else
                 {
                   logger((stderr, "Only values between 0 and 2 * pi allowed\n"));
-                  cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
                 }
             }
           if (num_bin_edges > temp)
             {
               num_bin_edges = temp;
-              bin_edges = bin_edges_buf = (double *)realloc(new_edges, temp * sizeof(double));
-              cleanup_and_set_error_if(bin_edges == nullptr, ERROR_MALLOC);
+              //              bin_edges = bin_edges_buf = (double *)realloc(new_edges, temp * sizeof(double));
+              bin_edges.resize(temp);
+              //              cleanup_and_set_error_if(bin_edges == nullptr, ERROR_MALLOC);
             }
           else
             {
@@ -3955,8 +3842,7 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
         {
           /* filter bin_edges */
           int temp = 0;
-          new_edges = static_cast<double *>(malloc(num_bin_edges * sizeof(double)));
-          cleanup_and_set_error_if(new_edges == nullptr, ERROR_MALLOC);
+          new_edges.resize(num_bin_edges);
 
           int i;
           for (i = 0; i < num_bin_edges; ++i)
@@ -3972,7 +3858,8 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
               if (num_bin_edges > temp)
                 {
                   num_bin_edges = temp;
-                  bin_edges = bin_edges_buf = (double *)realloc(new_edges, temp * sizeof(double));
+                  //                  bin_edges = bin_edges_buf = (double *)realloc(new_edges, temp * sizeof(double));
+                  bin_edges.resize(temp);
                 }
               else
                 {
@@ -3983,15 +3870,13 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
             {
               logger(
                   (stderr, "given philim and given bin_edges are not compatible --> filtered len(bin_edges) == 1\n"));
-              cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
             }
           else
             {
               num_bins = num_bin_edges - 1;
               group->setAttribute("nbins", static_cast<int>(num_bins));
               group->setAttribute("bin_edges", bin_edges_key);
-              std::vector<double> bin_edges_vec(bin_edges, bin_edges + num_bin_edges);
-              (*context)[bin_edges_key] = bin_edges_vec;
+              (*context)[bin_edges_key] = bin_edges;
             }
         }
     }
@@ -4006,7 +3891,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
       if (!str_equals_any(norm, 6, "count", "countdensity", "pdf", "probability", "cumcount", "cdf"))
         {
           logger((stderr, "Got keyword \"norm\"  with invalid value \"%s\"\n", norm));
-          cleanup_and_set_error(ERROR_PLOT_NORMALIZATION);
         }
     }
 
@@ -4015,16 +3899,13 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
       if (num_bin_edges > 0)
         {
           int i;
-          bin_widths = static_cast<double *>(malloc((num_bins + 1) * sizeof(double)));
-          cleanup_and_set_error_if(bin_widths == nullptr, ERROR_MALLOC);
-
+          bin_widths.resize(num_bins + 1);
           for (i = 1; i <= num_bin_edges - 1; ++i)
             {
-              *(bin_widths + i - 1) = *(bin_edges + i) - *(bin_edges + i - 1);
+              bin_widths[i - 1] = bin_edges[i] - bin_edges[i - 1];
             }
-          std::vector<double> bin_widths_vec(bin_widths, bin_widths + num_bins);
           group->setAttribute("bin_widths", bin_widths_key);
-          (*context)[bin_widths_key] = bin_widths_vec;
+          (*context)[bin_widths_key] = bin_widths;
         }
       else
         {
@@ -4044,18 +3925,15 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
         {
           int i;
           logger((stderr, "bin_width is not compatible with bin_edges\n"));
-          cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
 
-          bin_widths = static_cast<double *>(malloc(num_bins * sizeof(double)));
-          cleanup_and_set_error_if(bin_widths == nullptr, ERROR_MALLOC);
+          bin_widths.resize(num_bins);
 
           for (i = 1; i <= num_bin_edges - 1; ++i)
             {
-              *(bin_widths + i - 1) = *(bin_edges + i) - *(bin_edges + i - 1);
+              bin_widths[i - 1] = bin_edges[i] - bin_edges[i - 1];
             }
-          std::vector<double> bin_widths_vec(bin_widths, bin_widths + num_bins);
           group->setAttribute("bin_widths", bin_widths_key);
-          (*context)[bin_widths_key] = bin_widths_vec;
+          (*context)[bin_widths_key] = bin_widths;
         }
 
       /* with philim (with bin_width) */
@@ -4064,12 +3942,10 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
           if (bin_width < 0 || bin_width > 2 * M_PI)
             {
               logger((stderr, "bin_width must be between 0 and 2 * Pi\n"));
-              cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
             }
           if (philim[1] - philim[0] < bin_width)
             {
               logger((stderr, "the given philim range does not work with the given bin_width\n"));
-              cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
             }
           else
             {
@@ -4080,13 +3956,10 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
                     {
                       logger((stderr,
                               "bin_width does not work with this specific bin_count. Nbins do not fit bin_width\n"));
-                      cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
                     }
                   n = num_bins;
                 }
-              bin_edges = bin_edges_buf = static_cast<double *>(malloc((n + 1) * sizeof(double)));
-              cleanup_and_set_error_if(bin_edges == nullptr, ERROR_MALLOC);
-
+              bin_edges.resize(n + 1);
               linspace(philim[0], n * bin_width, n + 1, bin_edges);
             }
         }
@@ -4096,7 +3969,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
           if (bin_width <= 0 || bin_width > 2 * M_PI)
             {
               logger((stderr, "bin_width must be between 0 (exclusive) and 2 * Pi\n"));
-              cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
             }
           else if ((int)(2 * M_PI / bin_width) > 200)
             {
@@ -4110,32 +3982,26 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
                 {
                   logger(
                       (stderr, "bin_width does not work with this specific bin_count. Nbins do not fit bin_width\n"));
-                  cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
                 }
               n = num_bins;
             }
-          bin_edges = bin_edges_buf = static_cast<double *>(malloc((n + 1) * sizeof(double)));
-          cleanup_and_set_error_if(bin_edges == nullptr, ERROR_MALLOC);
-
-          linspace(0, n * bin_width, n + 1, bin_edges);
+          bin_edges.resize(n + 1);
+          linspace(0.0, n * bin_width, n + 1, bin_edges);
         }
       group->setAttribute("nbins", n);
       num_bin_edges = n + 1;
       num_bins = n;
-      std::vector<double> bin_edges_vec(bin_edges, bin_edges + num_bin_edges);
       group->setAttribute("bin_edges", bin_edges_key);
-      (*context)[bin_edges_key] = bin_edges_vec;
+      (*context)[bin_edges_key] = bin_edges;
       group->setAttribute("bin_width", bin_width);
-      bin_widths = static_cast<double *>(malloc(num_bins * sizeof(double)));
-      cleanup_and_set_error_if(bin_widths == nullptr, ERROR_MALLOC);
+      bin_widths.resize(num_bins);
 
       for (temp = 0; temp < num_bins; ++temp)
         {
           bin_widths[temp] = bin_width;
         }
-      std::vector<double> bin_widths_vec(bin_widths, bin_widths + num_bins);
       group->setAttribute("bin_widths", bin_widths_key);
-      (*context)[bin_widths_key] = bin_widths_vec;
+      (*context)[bin_widths_key] = bin_widths;
     }
 
   /* is_bin_counts */
@@ -4150,16 +4016,12 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
       if (num_bin_edges > 0 && num_bins != num_bin_edges - 1)
         {
           logger((stderr, "Number of bin_edges must be number of bin_counts + 1\n"));
-          cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
         }
 
-      /* total number of observations */
+      total = std::reduce(bin_counts.begin(), bin_counts.end());
       for (i = 0; i < num_bins; ++i)
         {
-          total += bin_counts[i];
-        }
-      for (i = 0; i < num_bins; ++i)
-        {
+          // temp_max_bc is a potential maximum for all bins respecting the given norm
           if (num_bin_edges > 0) bin_width = bin_widths[i];
 
           if (strcmp(norm, "pdf") == 0)
@@ -4182,46 +4044,32 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
             }
         }
 
-      /* double classes[num_bins][total]; */
-      classes = static_cast<double *>(malloc((num_bins * total) * sizeof(double)));
-      cleanup_and_set_error_if(classes == nullptr, ERROR_MALLOC);
+      classes.resize(num_bins);
 
-      length = (int)temp_max_bc;
-      p = classes;
-
-      for (i = 0; i < (num_bins * total); ++i)
+      // bin_counts is affected by cumulative norms --> bin_counts are summed in later bins
+      if (str_equals_any(norm, 2, "cdf", "cumcount"))
         {
-          *p = -1.0;
-          p++;
+          for (i = 0; i < num_bins; ++i)
+            {
+              if (i == 0)
+                {
+                  classes[0] = bin_counts[0];
+                }
+              else
+                {
+                  classes[i] = bin_counts[i] + classes[i - 1];
+                }
+            }
         }
-
-      /* fill classes with bin counts */
-      for (i = 0; i < num_bins; ++i)
+      else
         {
-          p = classes + i * total;
-          if (str_equals_any(norm, 2, "cdf", "cumcount"))
-            {
-              prev += bin_counts[i];
-              for (j = 0; j < prev; ++j)
-                {
-                  *p = 1.0;
-                  ++p;
-                }
-            }
-
-          else
-            {
-              for (j = 0; j < bin_counts[i]; ++j)
-                {
-                  *p = 1.0;
-                  ++p;
-                }
-            }
+          classes = bin_counts;
         }
 
       group->setAttribute("classes", classes_key);
-      std::vector<double> classes_vec(classes, classes + total * num_bins);
-      (*context)[classes_key] = classes_vec;
+      (*context)[classes_key] = classes;
+      group->setAttribute("total", total);
+
 
       if (strcmp(norm, "probability") == 0)
         max = temp_max_bc * 1.0 / total;
@@ -4232,242 +4080,131 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
       else
         max = temp_max_bc;
     }
-
   /* no is_bin_counts */
   else
     {
       int x;
 
-      /* no bin_edges */
-      if (num_bin_edges == 0)
+      max = 0.0;
+      classes.resize(num_bins);
+      int i;
+
+      // prepare bin_edges
+      if (num_bin_edges == 0) // no bin_edges --> create bin_edges for uniform code later
         {
-          max = 0.0;
-          start = 0;
-          interval = 2 * M_PI / num_bins;
-          if (str_equals_any(norm, 4, "count", "pdf", "countdensity", "probability"))
+          // linspace the bin_edges
+          bin_edges.resize(num_bins + 1);
+          linspace(0.0, 2 * M_PI, num_bins + 1, bin_edges);
+        }
+      else // bin_edges given
+        {
+          // filter theta
+          double edge_min = bin_edges[0];
+          double edge_max = bin_edges[num_bin_edges - 1];
+          auto it = std::remove_if(theta.begin(), theta.end(), [edge_min, edge_max](double angle) {
+            return (angle < edge_min || angle > edge_max);
+          });
+          theta.erase(it, theta.end());
+        }
+
+      // calc classes
+      for (x = 0; x < num_bins; ++x)
+        {
+          int y;
+          observations = 0;
+
+          // iterate theta --> filter angles for current bin
+          for (y = 0; y < length; ++y)
             {
-              /*double classes[num_bins][length];*/
-              classes = static_cast<double *>(malloc(num_bins * length * sizeof(double)));
-              cleanup_and_set_error_if(classes == nullptr, ERROR_MALLOC);
-              p = classes;
-              int i;
-              for (i = 0; i < (num_bins * length); ++i)
+              if (bin_edges[x] <= theta[y] && theta[y] < bin_edges[x + 1])
                 {
-                  *p = -1.0;
-                  p++;
+                  ++observations;
                 }
-              for (x = 0; x < num_bins; ++x)
-                {
-                  int y;
-                  p = classes + x * length;
-                  temp_max = 0.0;
-                  for (y = 0; y < length; ++y)
-                    {
-                      if (start <= theta[y] && theta[y] < (start + interval))
-                        {
-                          temp_max++;
-                          *p = theta[y];
-                          p++;
-                          if (max < temp_max) max = temp_max;
-                        }
-                    }
-                  start += interval;
-                }
-              std::vector<double> classes_vec(classes, classes + num_bins * length);
-              group->setAttribute("classes", classes_key);
-              (*context)[classes_key] = classes_vec;
-            }
-          else if (str_equals_any(norm, 2, "cdf", "cumcount"))
-            {
-              /*double classes[num_bins][length];*/
-              classes = static_cast<double *>(malloc(num_bins * length * sizeof(double)));
-              cleanup_and_set_error_if(classes == nullptr, ERROR_MALLOC);
-              int i;
-              int prev;
-              p = classes;
-
-              for (i = 0; i < (num_bins * length); ++i)
-                {
-                  *p = -1;
-                  p++;
-                }
-
-              prev = 0;
-              for (x = 0; x < num_bins; ++x)
-                {
-                  p = classes + x * length;
-
-                  if (x > 0)
-                    {
-                      double *prev_list;
-                      int y;
-                      /*prev_list = classes[x - 1];*/
-                      prev_list = classes + (x - 1) * length;
-                      for (y = 0; y < prev; ++y)
-                        {
-                          *p = *prev_list;
-                          p++;
-                          prev_list++;
-                        }
-                    }
-                  for (i = 0; i < length; ++i)
-                    {
-                      if (start <= theta[i] && theta[i] < (start + interval))
-                        {
-                          *p = theta[i];
-                          p++;
-                          prev++;
-                        }
-                    }
-                  start += interval;
-                }
-              max = length;
-
-              std::vector<double> classes_vec(classes, classes + num_bins * length);
-              group->setAttribute("classes", classes_key);
-              (*context)[classes_key] = classes_vec;
             }
 
+          // differentiate between cumulative and non-cumulative norms
+          if (str_equals_any(norm, 2, "cdf", "cumcount"))
+            {
+              if (x == 0)
+                {
+                  classes[0] = observations;
+                }
+              else
+                {
+                  classes[x] = observations + classes[x - 1];
+                }
+            }
+          else
+            {
+              classes[x] = observations;
+            }
+          // update the total number of observations; used for some norms;
+          totalObservations += observations;
+        }
+
+      // get maximum number of observation from all bins
+      maxObservations = *std::max_element(classes.begin(), classes.end());
+
+      group->setAttribute("classes", classes_key);
+      (*context)[classes_key] = classes;
+      group->setAttribute("total", totalObservations);
+
+      // calculate the maximum from maxObservations respecting the norms;
+      if (num_bin_edges == 0) // no given bin_edges
+        {
           if (str_equals_any(norm, 2, "probability", "cdf"))
             {
-              max = max / length;
+              max = maxObservations * 1.0 / totalObservations;
             }
           else if (strcmp(norm, "pdf") == 0)
             {
-              max = max / (length * bin_width);
+              max = maxObservations * 1.0 / (totalObservations * bin_width);
+            }
+          else
+            {
+              max = maxObservations * 1.0;
             }
         }
-      /* bin_edges */
-      else
+      else // calc maximum with given bin_edges
         {
-          /* filter theta list */
-          int filter;
-          int temp = 0;
-          double bin_min = *bin_edges;
-          double bin_max = bin_edges[num_bin_edges - 1];
-          new_theta = static_cast<double *>(malloc(length * sizeof(double)));
-          cleanup_and_set_error_if(new_theta == nullptr, ERROR_MALLOC);
-          for (filter = 0; filter < length; ++filter)
+          if (str_equals_any(norm, 2, "pdf", "countdensity"))
             {
-              if (theta[filter] >= bin_min && theta[filter] < bin_max)
+              for (i = 0; i < num_bins; ++i)
                 {
-                  new_theta[temp] = theta[filter];
-                  temp++;
-                }
-            }
-          theta = new_theta;
-          length = temp;
-
-          max = 0.0;
-          if (str_equals_any(norm, 4, "count", "pdf", "countdensity", "probability"))
-            {
-              int a;
-              /* double classes[num_bins][length]; */
-              classes = static_cast<double *>(malloc(num_bins * length * sizeof(double)));
-              cleanup_and_set_error_if(classes == nullptr, ERROR_MALLOC);
-              p = classes;
-              for (a = 0; a < (num_bins * length); ++a)
-                {
-                  *p = -1;
-                  p++;
-                }
-              for (x = 0; x < num_bins; ++x)
-                {
-                  int b;
-                  p = classes + x * length;
-                  temp_max = 0.0;
-                  for (b = 0; b < length; ++b)
-                    {
-                      if (x == num_bin_edges - 1) break;
-                      if (*bin_edges <= theta[b] && theta[b] < *(bin_edges + 1))
-                        {
-                          temp_max++;
-                          *p = theta[b];
-                          p++;
-                        }
-                    }
+                  // temporary maximum respecting norm
+                  temp_max = classes[i];
                   if (strcmp(norm, "pdf") == 0)
                     {
-                      temp_max /= length * *(bin_widths + x);
+                      temp_max /= totalObservations * bin_widths[x];
                     }
                   else if (strcmp(norm, "countdensity") == 0)
                     {
-                      temp_max /= *(bin_widths + x);
+                      temp_max /= bin_widths[x];
                     }
+                  //                  // cdf?
+                  //                  else if (strcmp(norm, "cdf") == 0)
+                  //                    {
+                  //                      temp_max /= length * bin_widths[x];
+                  //                    }
 
-                  if (max < temp_max) max = temp_max;
-
-                  bin_edges++;
-                }
-              std::vector<double> classes_vec(classes, classes + num_bins * length);
-              group->setAttribute("classes", classes_key);
-              (*context)[classes_key] = classes_vec;
-            }
-          else if (str_equals_any(norm, 2, "cdf", "cumcount"))
-            {
-              int c;
-              int prev;
-              int d;
-              classes = static_cast<double *>(malloc(num_bins * length * sizeof(double)));
-              cleanup_and_set_error_if(classes == nullptr, ERROR_MALLOC);
-              p = classes;
-              for (c = 0; c < (num_bins * length); ++c)
-                {
-                  *p = -1;
-                  p++;
-                }
-
-              prev = 0;
-              for (d = 0; d < num_bins; ++d)
-                {
-                  int i;
-                  p = classes + d * num_bins;
-
-                  if (d > 0)
+                  if (temp_max > max)
                     {
-                      double *prev_list;
-                      int y;
-                      prev_list = classes + (d - 1) * num_bins;
-
-                      for (y = 0; y < prev; ++y)
-                        {
-                          *p = *prev_list;
-                          p++;
-                          prev_list++;
-                        }
+                      max = temp_max;
                     }
-                  for (i = 0; i < length; ++i)
-                    {
-                      if (*bin_edges <= theta[i] && theta[i] < *(bin_edges + 1))
-                        {
-                          *p = theta[i];
-                          p++;
-                          prev++;
-                        }
-                    }
-                  bin_edges++;
                 }
-              max = length;
-              std::vector<double> classes_vec(classes, classes + num_bins * length);
-              group->setAttribute("classes", classes_key);
-              (*context)[classes_key] = classes_vec;
             }
-
-          if (str_equals_any(norm, 2, "probability", "cdf"))
+          else if (str_equals_any(norm, 2, "probability", "cdf"))
             {
-              max = max / length;
+              max = maxObservations * 1.0 / totalObservations;
+            }
+          else
+            {
+              max = maxObservations * 1.0;
             }
         }
-    }
+    } /* end classes and maximum */
 
   group->setAttribute("r_max", max);
-
-cleanup:
-  free(bin_edges_buf);
-  free(bin_widths);
-  free(classes);
-  free(new_theta);
-  free(new_edges);
 }
 
 static void processAttributes(const std::shared_ptr<GRM::Element> &element)
@@ -4499,8 +4236,6 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("gr_option_flip_y"), processGROptionFlipY},
       {std::string("gr3backgroundcolor"), processGR3BackgroundColor},
       {std::string("gr3cameralookat"), processGR3CameraLookAt},
-      {std::string("kind"), processKind},
-      {std::string("linecolorind"), processLineColorInd},
       {std::string("linespec"), processLineSpec},
       {std::string("linetype"), processLineType},
       {std::string("linewidth"), processLineWidth},
@@ -5122,7 +4857,7 @@ static void drawImage(const std::shared_ptr<GRM::Element> &element, const std::s
   int height = static_cast<int>(element->getAttribute("height"));
   int model = static_cast<int>(element->getAttribute("model"));
   auto data = static_cast<std::string>(element->getAttribute("data"));
-  gr_drawimage(xmin, xmax, ymax, ymin, width, height, (int *)&(GRM::get<std::vector<int>>((*context)[data])[0]), model);
+  gr_drawimage(xmin, xmax, ymin, ymax, width, height, (int *)&(GRM::get<std::vector<int>>((*context)[data])[0]), model);
 }
 
 static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -5718,6 +5453,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
 
   if (kind == "polar_histogram")
     {
+      // todo: zqueue here -> needs calculations from series.
       // polar_histogram: needed attributes are calculated prior to drawPolarAxes in parent
       rings = static_cast<int>(subplotElement->getAttribute("rings"));
       r_min = 0.0;
@@ -9403,6 +9139,7 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
           {std::string("plot3"), plot3},
           {std::string("polar"), polar},
           {std::string("polar_heatmap"), polar_heatmap},
+          {std::string("polar_histogram"), polarHistogram},
           {std::string("quiver"), quiver},
           {std::string("scatter"), scatter},
           {std::string("scatter3"), scatter3},
@@ -10314,7 +10051,8 @@ std::shared_ptr<GRM::Element> GRM::Render::createSeries(const std::string &name)
   return element;
 }
 
-std::shared_ptr<GRM::Element> GRM::Render::createDrawImage(double xmin, double ymin, double xmax, double ymax,
+
+std::shared_ptr<GRM::Element> GRM::Render::createDrawImage(double xmin, double xmax, double ymin, double ymax,
                                                            int width, int height, const std::string &data_key,
                                                            std::optional<std::vector<int>> data, int model,
                                                            const std::shared_ptr<GRM::Context> &extContext)
