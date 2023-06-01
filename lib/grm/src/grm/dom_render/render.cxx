@@ -34,6 +34,7 @@
 #include "grm/layout.hxx"
 #include "grm/plot_int.h"
 #include <cm.h>
+#include "grm/utilcpp_int.hxx"
 extern "C" {
 #include "grm/datatype/string_map_int.h"
 }
@@ -59,8 +60,47 @@ ManageGRContextIds grContextIDManager;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {
-    "group",    "layout_grid", "layout_gridelement", "polar_axes", "legend", "figure", "hexbin",
-    "colorbar", "plot",        "coordinate_system",  "series",     "axes",   "label",  "errorbars",
+    "group",
+    "layout_grid",
+    "layout_gridelement",
+    "polar_axes",
+    "legend",
+    "figure",
+    "hexbin",
+    "colorbar",
+    "plot",
+    "coordinate_system",
+    "series_barplot",
+    "series_contour",
+    "series_contourf",
+    "series_heatmap",
+    "series_hexbin",
+    "series_hist",
+    "series_imshow",
+    "series_isosurface",
+    "series_line",
+    "series_marginalheatmap",
+    "series_nonuniformheatmap",
+    "series_nonuniformpolar_heatmap",
+    "series_pie",
+    "series_plot3",
+    "series_polar",
+    "series_polar_heatmap",
+    "series_polar_histogram",
+    "series_quiver",
+    "series_scatter",
+    "series_scatter3",
+    "series_shade",
+    "series_stairs",
+    "series_stem",
+    "series_surface",
+    "series_tricontour",
+    "series_trisurface",
+    "series_volume",
+    "series_wireframe",
+    "axes",
+    "label",
+    "errorbars",
 };
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
@@ -3425,7 +3465,7 @@ static void processTitle(const std::shared_ptr<GRM::Element> &elem)
   double viewport[4], vp[4];
 
   auto subplot_element = getSubplotElement(elem);
-  std::string name = (std::string)subplot_element->getAttribute("name");
+  std::string name = (std::string)subplot_element->getAttribute("kind");
   if (name != "polarhistogram" && name != "pie")
     {
       viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
@@ -5547,7 +5587,7 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
 
       for (const auto &child : elem->parentElement()->children())
         {
-          if (child->localName() == "series")
+          if (starts_with(child->localName(), "series"))
             {
               if (child->hasAttribute("color_indices"))
                 {
@@ -7959,8 +7999,8 @@ static void marginalheatmap(const std::shared_ptr<GRM::Element> &element, const 
 
       for (const auto &child : element->children())
         {
-          if (static_cast<std::string>(child->getAttribute("name")) == "hist" ||
-              static_cast<std::string>(child->getAttribute("name")) == "stairs")
+          if (static_cast<std::string>(child->getAttribute("kind")) == "hist" ||
+              static_cast<std::string>(child->getAttribute("kind")) == "stairs")
             {
               if (element->parentElement()->hasAttribute("xflip"))
                 {
@@ -8373,12 +8413,12 @@ static void imshow(const std::shared_ptr<GRM::Element> &element, const std::shar
   auto imshow_elements = element->children();
   for (auto &imshow_element : imshow_elements)
     {
-      if (static_cast<std::string>(imshow_element->getAttribute("name")) == "imshow") imshow_element->remove();
+      if (static_cast<std::string>(imshow_element->getAttribute("kind")) == "imshow") imshow_element->remove();
     }
 
   auto temp = global_render->createCellArray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, image_data_key,
                                              std::nullopt);
-  temp->setAttribute("name", "imshow");
+  temp->setAttribute("kind", "imshow");
 
   element->append(temp);
 }
@@ -8756,7 +8796,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                 {
                   for (const auto &series : element->children())
                     {
-                      if (series->localName() != "series") continue;
+                      if (!starts_with(series->localName(), "series")) continue;
                       if (series->hasAttribute("style"))
                         style = static_cast<std::string>(series->getAttribute("style"));
                       double current_min_component = DBL_MAX, current_max_component = -DBL_MAX;
@@ -9013,7 +9053,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
             {
               for (const auto &series : element->children())
                 {
-                  if (series->localName() != "series") continue;
+                  if (!starts_with(series->localName(), "series")) continue;
                   double current_min_component = DBL_MAX;
                   double current_max_component = -DBL_MAX;
                   if (!series->hasAttribute("zrange_min") || !series->hasAttribute("zrange_max"))
@@ -9109,7 +9149,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
 
               for (const auto &series : element->children())
                 {
-                  if (series->localName() != "series") continue;
+                  if (!starts_with(series->localName(), "series")) continue;
                   if (series->hasAttribute("style")) style = static_cast<std::string>(series->getAttribute("style"));
                   if (str_equals_any(style.c_str(), 2, "lined", "stacked"))
                     {
@@ -9128,7 +9168,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                 {
                   if (series->hasAttribute("orientation"))
                     orientation = static_cast<std::string>(series->getAttribute("orientation"));
-                  if (series->localName() != "series") continue;
+                  if (!starts_with(series->localName(), "series")) continue;
                   if (series->hasAttribute("style")) style = static_cast<std::string>(series->getAttribute("style"));
                   auto key = static_cast<std::string>(series->getAttribute("y"));
                   auto y = GRM::get<std::vector<double>>((*context)[key]);
@@ -9219,7 +9259,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                   if (series->hasAttribute("orientation"))
                     orientation = static_cast<std::string>(series->getAttribute("orientation"));
                   is_horizontal = orientation == "horizontal";
-                  if (series->localName() != "series") continue;
+                  if (!starts_with(series->localName(), "series")) continue;
                   double current_y_min = DBL_MAX, current_y_max = -DBL_MAX;
                   double *tmp_bins;
                   std::vector<double> x, weights;
@@ -9308,7 +9348,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               if (series->hasAttribute("orientation"))
                 orientation = static_cast<std::string>(series->getAttribute("orientation"));
               is_horizontal = orientation == "horizontal";
-              if (series->localName() != "series") continue;
+              if (!starts_with(series->localName(), "series")) continue;
               if (series->hasAttribute("xrange_min") && series->hasAttribute("xrange_max"))
                 {
                   x_min = static_cast<double>(series->getAttribute("xrange_min"));
@@ -9379,7 +9419,7 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
   try
     {
       std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> f =
-          seriesNameToFunc[static_cast<std::string>(element->getAttribute("name"))];
+          seriesNameToFunc[static_cast<std::string>(element->getAttribute("kind"))];
       f(element, context);
     }
   catch (std::bad_function_call &e)
@@ -9445,12 +9485,14 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
     }
   else
     {
+      std::string local_name = element->localName();
       /*! Drawnodes */
+      if (starts_with(element->localName(), "series")) local_name = "series";
       processAttributes(element);
       try
         {
           std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> f =
-              elemStringToFunc[element->localName()];
+              elemStringToFunc[local_name];
           f(element, context);
         }
       catch (std::bad_function_call &e)
@@ -10267,8 +10309,8 @@ std::shared_ptr<GRM::Element> GRM::Render::createGroup(const std::string &name)
 
 std::shared_ptr<GRM::Element> GRM::Render::createSeries(const std::string &name)
 {
-  auto element = createElement("series");
-  element->setAttribute("name", name);
+  auto element = createElement("series_" + name);
+  element->setAttribute("kind", name);
   return element;
 }
 

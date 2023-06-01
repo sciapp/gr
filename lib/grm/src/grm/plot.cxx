@@ -2000,7 +2000,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
       double x1, x2, y1, y2;
       double x_min = 0, x_max, y_min = 0, y_max;
 
-      auto subGroup = global_render->createSeries("bar_series");
+      auto subGroup = global_render->createSeries("barplot_series");
       group->append(subGroup);
 
       grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
@@ -3724,7 +3724,7 @@ err_t plot_tricont(grm_args_t *subplot_args)
     {
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
-      double x_min, x_max, y_min, y_max, z_min, z_max;
+      double x_min, x_max, y_min, y_max;
       auto subGroup = global_render->createSeries("tricontour");
       group->append(subGroup);
 

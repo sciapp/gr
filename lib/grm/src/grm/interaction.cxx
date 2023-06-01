@@ -102,7 +102,7 @@ int grm_input(const grm_args_t *input_args)
           kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
           if (kind == "marginalheatmap")
             {
-              auto current_series = subplot_element->querySelectorsAll("series[name=\"heatmap\"]")[0];
+              auto current_series = subplot_element->querySelectorsAll("series_heatmap[\"]")[0];
 
               unsigned int x_length, y_length;
               double x_0, x_end, y_0, y_end, x_step, y_step;
@@ -517,7 +517,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       center_x = (int)(max_x - radius);
       center_y = (int)(max_y - radius);
 
-      auto current_series = subplot_element->querySelectorsAll("series[name=\"" + kind + "\"]")[0];
+      auto current_series = subplot_element->querySelectorsAll("series_" + kind + "[\"]")[0];
       auto x_key = static_cast<std::string>(current_series->getAttribute("x"));
       std::vector<double> x_series_vec;
       x_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);
@@ -558,7 +558,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
     }
   else
     {
-      auto current_series_group_vec = subplot_element->querySelectorsAll("series[name=\"" + kind + "\"]");
+      auto current_series_group_vec = subplot_element->querySelectorsAll("series_" + kind + "[\"]");
       std::vector<std::shared_ptr<GRM::Element>> current_series_vec;
       for (const auto &current_series_group : current_series_group_vec)
         {

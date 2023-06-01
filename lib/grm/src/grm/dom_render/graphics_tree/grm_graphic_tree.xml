@@ -651,7 +651,6 @@
         </xs:complexType>
     </xs:element>
 
-
     <!-- definition of hist -->
     <xs:element name="series_hist">
         <xs:complexType>
@@ -694,7 +693,6 @@
         </xs:complexType>
     </xs:element>
 
-
     <!-- definition of isosurface -->
     <xs:element name="series_isosurface">
         <xs:complexType>
@@ -726,7 +724,6 @@
             <xs:attribute name="spec" type="xs:string"/>
         </xs:complexType>
     </xs:element>
-
 
     <!-- definition of marginalheatmap -->
     <xs:element name="series_marginalheatmap">
@@ -784,7 +781,6 @@
             <xs:attribute name="color_rgb_values" type="xs:string"/>
         </xs:complexType>
     </xs:element>
-
 
     <!-- definition of plot3 -->
     <xs:element name="series_plot3">
