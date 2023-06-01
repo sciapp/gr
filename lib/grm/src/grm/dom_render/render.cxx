@@ -5590,7 +5590,7 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
       render->setLineColorInd(elem, 1);
       render->setLineWidth(elem, 1);
 
-      auto subsubGroup = render->createGroup("labels_group");
+      auto subsubGroup = render->createElement("labels_group");
       elem->append(subsubGroup);
       render->setLineSpec(subsubGroup, const_cast<char *>(" "));
       render->setTextAlign(subsubGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
