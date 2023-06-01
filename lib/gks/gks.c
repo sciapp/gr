@@ -1583,6 +1583,14 @@ void gks_set_text_fontprec(int font, int prec)
     {
       if (font != 0)
         {
+#ifdef NO_FT
+          if (prec == GKS_K_TEXT_PRECISION_OUTLINE)
+            {
+              /* text prec is invalid since no FreeType support was built in */
+              gks_report_error(SET_TEXT_FONTPREC, 71);
+              return;
+            }
+#endif
           if (font != s->txfont || prec != s->txprec)
             {
               if ((prec == GKS_K_TEXT_PRECISION_STROKE || prec == GKS_K_TEXT_PRECISION_CHAR) && fontfile == 0)
