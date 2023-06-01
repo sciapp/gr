@@ -6406,7 +6406,7 @@ static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared
                                                 : _coordinate_ranges._xrange_max;
   y_min = (element->hasAttribute("yrange_min")) ? static_cast<double>(element->getAttribute("yrange_min"))
                                                 : _coordinate_ranges._yrange_min;
-  if (isnan(y_min)) y_min = 0.0;
+  if (std::isnan(y_min)) y_min = 0.0;
 
   if (element->parentElement()->hasAttribute("marginalheatmap_kind"))
     {
