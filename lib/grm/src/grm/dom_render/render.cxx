@@ -1659,19 +1659,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
   std::vector<double> r_lim_vec;
 
   std::shared_ptr<GRM::Element> group = element;
-//  std::shared_ptr<GRM::Context> context;
-//
-//  if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()))
-//    {
-//      context = render->getContext();
-//
-//      std::cout << toXML(render->firstChildElement()) << "\n";
-//    }
-//  else
-//    {
-//      throw NotFoundError("Render-document not found for element\n");
-//    }
-
   std::shared_ptr<GRM::Element> temp_elem;
   std::string str;
 

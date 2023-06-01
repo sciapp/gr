@@ -3530,8 +3530,10 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   grm_args_t **series;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GRM::Element> group = global_root->lastChildElement();
-  group->setAttribute("kind", "polar_histogram");
+
+  std::shared_ptr<GRM::Element> series_group = global_render->createSeries("polar_histogram");
+  global_root->lastChildElement()->append(series_group);
+  series_group->setAttribute("kind", "polar_histogram");
 
   // Call classes -> set attributes and data
   classes_polar_histogram(subplot_args);
@@ -3542,59 +3544,59 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   global_root->setAttribute("id", id + 1);
   std::string str = std::to_string(id);
 
-  group->setAttribute("name", "polar_histogram");
+  series_group->setAttribute("name", "polar_histogram");
   grm_args_values(subplot_args, "series", "A", &series);
 
   gr_inqresamplemethod(&resample);
-  group->setAttribute("original_resample", static_cast<int>(resample));
+  series_group->setAttribute("original_resample", static_cast<int>(resample));
 
   /* edge_color */
-  if (grm_args_values(*series, "edge_color", "i", &edge_color) == 0)
+  if (grm_args_values(*series, "edge_color", "i", &edge_color))
     {
-      group->setAttribute("edge_color", edge_color);
+      series_group->setAttribute("edge_color", edge_color);
     }
 
   /* face_color */
-  if (grm_args_values(*series, "face_color", "i", &face_color) == 0)
+  if (grm_args_values(*series, "face_color", "i", &face_color))
     {
-      group->setAttribute("face_color", face_color);
+      series_group->setAttribute("face_color", face_color);
     }
 
   /* face_alpha */
-  if (grm_args_values(*series, "face_alpha", "d", &face_alpha) == 0)
+  if (grm_args_values(*series, "face_alpha", "d", &face_alpha))
     {
-      group->setAttribute("face_alpha", face_alpha);
+      series_group->setAttribute("face_alpha", face_alpha);
     }
 
-  if (grm_args_values(subplot_args, "phiflip", "i", &phiflip) == 0)
+  if (grm_args_values(subplot_args, "phiflip", "i", &phiflip))
     {
-      group->setAttribute("phiflip", phiflip);
+      series_group->setAttribute("phiflip", phiflip);
     }
 
-  if (grm_args_values(*series, "draw_edges", "i", &draw_edges) == 0)
+  if (grm_args_values(*series, "draw_edges", "i", &draw_edges))
     {
-      group->setAttribute("draw_edges", draw_edges);
+      series_group->setAttribute("draw_edges", draw_edges);
     }
 
-  if (grm_args_values(*series, "stairs", "i", &stairs) == 0)
+  if (grm_args_values(*series, "stairs", "i", &stairs))
     {
-      group->setAttribute("stairs", stairs);
+      series_group->setAttribute("stairs", stairs);
     }
 
   if (grm_args_first_value(*series, "rlim", "D", &rlim, &dummy))
     {
-      group->setAttribute("rlim", true);
-      group->setAttribute("rlim0", rlim[0]);
-      group->setAttribute("rlim1", rlim[1]);
+      series_group->setAttribute("rlim", true);
+      series_group->setAttribute("rlim0", rlim[0]);
+      series_group->setAttribute("rlim1", rlim[1]);
     }
 
   if (grm_args_values(*series, "xcolormap", "i", &xcolormap))
     {
-      group->setAttribute("xcolormap", xcolormap);
+      series_group->setAttribute("xcolormap", xcolormap);
     }
   if (grm_args_values(*series, "ycolormap", "i", &ycolormap))
     {
-      group->setAttribute("ycolormap", ycolormap);
+      series_group->setAttribute("ycolormap", ycolormap);
     }
 
   return ERROR_NONE;
@@ -4697,17 +4699,18 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
   grm_args_t **series;
   err_t error = ERROR_NONE;
 
-  std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
+  std::shared_ptr<GRM::Element> series_group = global_root->lastChildElement()->lastChildElement();
+
   std::shared_ptr<GRM::Context> context = global_render->getContext();
 
-  group->setAttribute("polar_histogram_classes", true);
+  series_group->setAttribute("polar_histogram_classes", true);
 
   int id = static_cast<int>(global_root->getAttribute("id"));
   global_root->setAttribute("id", id + 1);
   auto str = std::to_string(id);
 
   //! store id string in group for later usages in render.cxx
-  group->setAttribute("id", str);
+  series_group->setAttribute("id", str);
 
   grm_args_values(subplot_args, "series", "A", &series);
 
@@ -4718,29 +4721,29 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
       grm_args_first_value(*series, "x", "D", &theta, &length);
       std::vector<double> theta_vec(theta, theta + length);
       (*context)["theta" + str] = theta_vec;
-      group->setAttribute("theta", "theta" + str);
+      series_group->setAttribute("theta", "theta" + str);
     }
   else
     {
       grm_args_first_value(*series, "x", "I", &bin_counts, &length);
       std::vector<int> bin_counts_vec(bin_counts, bin_counts + length);
       (*context)["bin_counts" + str] = bin_counts_vec;
-      group->setAttribute("bin_counts", "bin_counts" + str);
+      series_group->setAttribute("bin_counts", "bin_counts" + str);
 
       is_bin_counts = 1;
       num_bins = length;
       grm_args_push(*series, "nbins", "i", num_bins);
-      group->setAttribute("nbins", static_cast<int>(num_bins));
+      series_group->setAttribute("nbins", static_cast<int>(num_bins));
     }
 
   if (grm_args_first_value(*series, "philim", "D", &philim, &dummy))
     {
       int phiflip;
       grm_args_values(subplot_args, "phiflip", "i", &phiflip);
-      group->setAttribute("phiflip", phiflip);
-      group->setAttribute("philim", true);
-      group->setAttribute("phimin", philim[0]);
-      group->setAttribute("phimax", philim[1]);
+      series_group->setAttribute("phiflip", phiflip);
+      series_group->setAttribute("philim", true);
+      series_group->setAttribute("phimin", philim[0]);
+      series_group->setAttribute("phimax", philim[1]);
     }
 
   /* bin_edges and nbins */
@@ -4749,7 +4752,7 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
 
       if (grm_args_values(*series, "nbins", "i", &num_bins))
         {
-          group->setAttribute("nbins", static_cast<int>(num_bins));
+          series_group->setAttribute("nbins", static_cast<int>(num_bins));
         }
     }
   /* with bin_edges */
@@ -4757,18 +4760,18 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
     {
       std::vector<double> bin_edges_vec(bin_edges, bin_edges + num_bin_edges);
       (*context)["bin_edges" + str] = bin_edges_vec;
-      group->setAttribute("bin_edges", "bin_edges" + str);
+      series_group->setAttribute("bin_edges", "bin_edges" + str);
     }
 
   if (grm_args_values(subplot_args, "normalization", "s", &norm) == 0)
     {
       norm = "count";
     }
-  group->setAttribute("normalization", norm);
+  series_group->setAttribute("normalization", norm);
 
   if (grm_args_values(*series, "bin_width", "d", &bin_width))
     {
-      group->setAttribute("bin_width", bin_width);
+      series_group->setAttribute("bin_width", bin_width);
     }
 
   return error;
