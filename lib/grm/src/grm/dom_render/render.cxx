@@ -9019,10 +9019,10 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                   if (!series->hasAttribute("zrange_min") || !series->hasAttribute("zrange_max"))
                     {
                       unsigned int u_length, v_length;
-                      if (!element->hasAttribute("u"))
+                      if (!series->hasAttribute("u"))
                         throw NotFoundError("Quiver series is missing required attribute u-data.\n");
                       auto u_key = static_cast<std::string>(series->getAttribute("u"));
-                      if (!element->hasAttribute("v"))
+                      if (!series->hasAttribute("v"))
                         throw NotFoundError("Quiver series is missing required attribute v-data.\n");
                       auto v_key = static_cast<std::string>(series->getAttribute("v"));
 
