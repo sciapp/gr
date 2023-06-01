@@ -8476,18 +8476,22 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                     xn[0] = x[i - 1];
                     yn[0] = y[j];
                     zn[0] = Z(i - 1, j);
+                    if (is_nan(zn[0])) continue;
 
                     xn[1] = x[i - 1];
                     yn[1] = y[j - 1];
                     zn[1] = Z(i - 1, j - 1);
+                    if (is_nan(zn[1])) continue;
 
                     xn[2] = x[i];
                     yn[2] = y[j - 1];
                     zn[2] = Z(i, j - 1);
+                    if (is_nan(zn[2])) continue;
 
                     xn[3] = x[i];
                     yn[3] = y[j];
                     zn[3] = Z(i, j);
+                    if (is_nan(zn[3])) continue;
 
                     if (clsw == GKS_K_CLIP)
                       {
