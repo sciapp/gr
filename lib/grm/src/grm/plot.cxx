@@ -4738,7 +4738,7 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
 
   if (grm_args_first_value(*series, "philim", "D", &philim, &dummy))
     {
-      int phiflip;
+      int phiflip = 0;
       grm_args_values(subplot_args, "phiflip", "i", &phiflip);
       series_group->setAttribute("phiflip", phiflip);
       series_group->setAttribute("philim", true);
