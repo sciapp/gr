@@ -5851,10 +5851,22 @@ static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::sha
       y_min = y_vec[0];
       y_max = y_vec[rows - 1];
     }
-  z_min = (element->hasAttribute("zrange_min")) ? static_cast<double>(element->getAttribute("zrange_min"))
-                                                : _coordinate_ranges._zrange_min;
-  z_max = (element->hasAttribute("zrange_max")) ? static_cast<double>(element->getAttribute("zrange_max"))
-                                                : _coordinate_ranges._zrange_max;
+  if (element->parentElement()->hasAttribute("marginalheatmap_kind"))
+    {
+      z_min = (element->parentElement()->hasAttribute("zrange_min"))
+                  ? static_cast<double>(element->parentElement()->getAttribute("zrange_min"))
+                  : _coordinate_ranges._zrange_min;
+      z_max = (element->parentElement()->hasAttribute("zrange_max"))
+                  ? static_cast<double>(element->parentElement()->getAttribute("zrange_max"))
+                  : _coordinate_ranges._zrange_max;
+    }
+  else
+    {
+      z_min = (element->hasAttribute("zrange_min")) ? static_cast<double>(element->getAttribute("zrange_min"))
+                                                    : _coordinate_ranges._zrange_min;
+      z_max = (element->hasAttribute("zrange_max")) ? static_cast<double>(element->getAttribute("zrange_max"))
+                                                    : _coordinate_ranges._zrange_max;
+    }
   if (!element->hasAttribute("crange_min") || !element->hasAttribute("crange_max"))
     {
       c_min = z_min;
@@ -6109,6 +6121,12 @@ static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared
 
   if (element->parentElement()->hasAttribute("marginalheatmap_kind"))
     {
+      if (element->parentElement()->hasAttribute("xrange_min"))
+        x_min = static_cast<double>(element->parentElement()->getAttribute("xrange_min"));
+      if (element->parentElement()->hasAttribute("xrange_max"))
+        x_max = static_cast<double>(element->parentElement()->getAttribute("xrange_max"));
+      if (element->parentElement()->hasAttribute("yrange_min"))
+        y_min = static_cast<double>(element->parentElement()->getAttribute("yrange_min"));
       element->setAttribute("calc_window_and_viewport_from_parent", 1);
       y_min = 0.0;
       processCalcWindowAndViewportFromParent(element);

@@ -635,8 +635,6 @@
             <xs:attribute name="z" type="xs:string" use="required"/>
             <xs:attribute name="zdims_min" type="xs:string"/>
             <xs:attribute name="zdims_max" type="xs:string"/>
-            <xs:attribute name="crange_min" type="xs:string"/>
-            <xs:attribute name="crange_max" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -827,8 +825,6 @@
             <xs:attribute name="z" type="xs:string" use="required"/>
             <xs:attribute name="zdims_min" type="xs:string"/>
             <xs:attribute name="zdims_max" type="xs:string"/>
-            <xs:attribute name="crange_min" type="xs:string"/>
-            <xs:attribute name="crange_max" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
