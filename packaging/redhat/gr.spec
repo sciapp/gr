@@ -32,7 +32,7 @@ Source8:			https://gr-framework.org/downloads/3rdparty/cairo-1.16.0.tar.xz
 Source9:			https://gr-framework.org/downloads/3rdparty/pixman-0.40.0.tar.gz
 Source10:			https://gr-framework.org/downloads/3rdparty/tiff-4.0.10.tar.gz
 Source11:			https://gr-framework.org/downloads/3rdparty/libopenh264-2.0.0.tar.gz
-Source12:			https://gr-framework.org/downloads/3rdparty/expat-2.4.8.tar.xz
+Source12:			https://gr-framework.org/downloads/3rdparty/libxml2-2.10.4.tar.xz
 BuildRequires:		git
 BuildRequires:		gcc-c++
 BuildRequires:		libX11-devel

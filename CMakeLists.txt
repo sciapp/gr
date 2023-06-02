@@ -93,6 +93,10 @@ find_package(Fontconfig)
 find_package(OpenGL OPTIONAL_COMPONENTS OpenGL)
 find_package(Gs)
 find_package(Expat)
+# CMake ships with a `FindLibXml2.cmake` module which does not configure needed libxml2 dependencies.
+# Thus, use the `libxml2-config.cmake` config file shipped with libxml which configures dependencies correctly by
+# skipping module search mode.
+find_package(LibXml2 NO_MODULE)
 if(${CMAKE_VERSION} VERSION_GREATER "3.16.0")
   find_package(Qt6 OPTIONAL_COMPONENTS Widgets Core Network)
 endif()
@@ -511,9 +515,15 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GKS)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GR)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GR3)
-  if(Expat_FOUND)
+  if(TARGET LibXml2::LibXml2)
+    target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} LibXml2::LibXml2)
+  elseif(EXPAT_FOUND)
     target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} Expat::Expat)
-  else()
+  endif()
+  if(NOT TARGET LibXml2::LibXml2)
+    target_compile_definitions(${LIBRARY} PRIVATE NO_LIBXML2)
+  endif()
+  if(NOT EXPAT_FOUND OR TARGET LibXml2::LibXml2)
     target_compile_definitions(${LIBRARY} PRIVATE NO_EXPAT)
   endif()
   if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"))
@@ -528,6 +538,7 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/src/> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
   target_compile_definitions(${LIBRARY} PRIVATE BUILDING_GR)
+  target_compile_definitions(${LIBRARY} PRIVATE GRDIR="${GR_DIRECTORY}")
   target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     target_compile_options(${LIBRARY} PRIVATE /permissive-)
@@ -1208,6 +1219,11 @@ endif()
 
 if(GR_INSTALL)
   install(FILES LICENSE.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/)
+  install(
+    FILES lib/grm/src/grm/dom_render/graphics_tree/schema.xsd
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/xml/GRM
+    RENAME grm_graphics_tree_schema.xsd
+  )
   include(CMakePackageConfigHelpers)
   configure_package_config_file(
     "cmake/Config.cmake.in" "GRConfig.cmake" INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
