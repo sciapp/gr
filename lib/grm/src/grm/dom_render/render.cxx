@@ -1600,7 +1600,6 @@ static void processGR3CameraLookAt(const std::shared_ptr<GRM::Element> &elem)
   gr3_cameralookat(camera_x, camera_y, camera_z, center_x, center_y, center_z, up_x, up_y, up_z);
 }
 
-
 static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   unsigned int num_bins;
@@ -4225,6 +4224,7 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("gr_option_flip_y"), processGROptionFlipY},
       {std::string("gr3backgroundcolor"), processGR3BackgroundColor},
       {std::string("gr3cameralookat"), processGR3CameraLookAt},
+      {std::string("linecolorind"), processLineColorInd},
       {std::string("linespec"), processLineSpec},
       {std::string("linetype"), processLineType},
       {std::string("linewidth"), processLineWidth},
@@ -4820,7 +4820,7 @@ static void drawImage(const std::shared_ptr<GRM::Element> &element, const std::s
   int height = static_cast<int>(element->getAttribute("height"));
   int model = static_cast<int>(element->getAttribute("model"));
   auto data = static_cast<std::string>(element->getAttribute("data"));
-  gr_drawimage(xmin, xmax, ymin, ymax, width, height, (int *)&(GRM::get<std::vector<int>>((*context)[data])[0]), model);
+  gr_drawimage(xmin, xmax, ymax, ymin, width, height, (int *)&(GRM::get<std::vector<int>>((*context)[data])[0]), model);
 }
 
 static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -10023,8 +10023,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createSeries(const std::string &name)
   return element;
 }
 
-
-std::shared_ptr<GRM::Element> GRM::Render::createDrawImage(double xmin, double xmax, double ymin, double ymax,
+std::shared_ptr<GRM::Element> GRM::Render::createDrawImage(double xmin, double ymin, double xmax, double ymax,
                                                            int width, int height, const std::string &data_key,
                                                            std::optional<std::vector<int>> data, int model,
                                                            const std::shared_ptr<GRM::Context> &extContext)
