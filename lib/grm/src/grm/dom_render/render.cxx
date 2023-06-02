@@ -1438,7 +1438,8 @@ static void processColorbarPosition(const std::shared_ptr<GRM::Element> &elem)
   double width = static_cast<double>(elem->getAttribute("width"));
   double offset = static_cast<double>(elem->getAttribute("offset"));
 
-  if (!subplot_element->hasAttribute("viewport"))
+  if (!subplot_element->hasAttribute("viewport_xmin") || !subplot_element->hasAttribute("viewport_xmax") ||
+      !subplot_element->hasAttribute("viewport_ymin") || !subplot_element->hasAttribute("viewport_ymax"))
     {
       throw NotFoundError("Missing viewport\n");
     }
@@ -2824,8 +2825,10 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &elem)
       double yzoom = static_cast<double>(panzoom_element->getAttribute("yzoom"));
 
       /* Ensure the correct window is set in GRM */
-      bool window_exists = elem->hasAttribute("window") && static_cast<int>(elem->getAttribute("window"));
-      bool window3d_exists = elem->hasAttribute("window3d") && static_cast<int>(elem->getAttribute("window3d"));
+      bool window_exists = (elem->hasAttribute("window_xmin") && elem->hasAttribute("window_xmax") &&
+                            elem->hasAttribute("window_ymin") && elem->hasAttribute("window_ymax"));
+      bool window3d_exists = (elem->hasAttribute("window3d_xmin") && elem->hasAttribute("window3d_xmax") &&
+                              elem->hasAttribute("window3d_ymin") && elem->hasAttribute("window3d_ymax"));
       if (window_exists || window3d_exists)
         {
           double stored_window_xmin = static_cast<double>(elem->getAttribute("window_xmin"));
@@ -2959,7 +2962,8 @@ static void processRelativeCharHeight(const std::shared_ptr<GRM::Element> &elem)
   auto subplot_element = getSubplotElement(elem);
   double charheight, diagFactor, maxCharHeight;
 
-  if (!subplot_element->hasAttribute("viewport"))
+  if (!subplot_element->hasAttribute("viewport_xmin") || !subplot_element->hasAttribute("viewport_xmax") ||
+      !subplot_element->hasAttribute("viewport_ymin") || !subplot_element->hasAttribute("viewport_ymax"))
     {
       throw NotFoundError("Viewport not found\n");
     }
@@ -3242,12 +3246,10 @@ static void processSubplot(const std::shared_ptr<GRM::Element> &elem)
     }
 
   gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-  elem->setAttribute("viewport", true);
   elem->setAttribute("viewport_xmin", viewport[0]);
   elem->setAttribute("viewport_xmax", viewport[1]);
   elem->setAttribute("viewport_ymin", viewport[2]);
   elem->setAttribute("viewport_ymax", viewport[3]);
-  elem->setAttribute("vp", true);
   elem->setAttribute("vp_xmin", vp[0]);
   elem->setAttribute("vp_xmax", vp[1]);
   elem->setAttribute("vp_ymin", vp[2]);
@@ -4256,32 +4258,6 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("transparency"), processTransparency},
       {std::string("set_text_color_for_background"), processTextColorForBackground},
   };
-
-  static std::map<std::string, std::function<void(const std::shared_ptr<GRM::Element> &)>> attrStringToFuncPre{
-      /* This map contains functions for attributes that should be called before other attributes of the element are
-       * being processed. The attributes are being processed in the order of their appearance in the map.
-       * */
-      {std::string("subplot"), processSubplot},
-      {std::string("viewport"), GRM::Render::processViewport},
-      {std::string("charheight"), processCharHeight},
-      {std::string("limits"), GRM::Render::processLimits},
-      {std::string("window"), processWindow},
-      {std::string("window3d"), processWindow3d}, /* needs to be set before space3d is processed */
-      {std::string("scale"), processScale},       /* needs to be set before flip is processed */
-      {std::string("polar_histogram_classes"), processClassesPolarHistogram},
-
-  };
-
-  for (auto attributeToFunctionPair : attrStringToFuncPre)
-    /*
-     * Pre process attribute run
-     */
-    {
-      if (element->getAttributeNames().find(attributeToFunctionPair.first) != element->getAttributeNames().end())
-        {
-          attrStringToFuncPre[attributeToFunctionPair.first](element);
-        }
-    }
 
   for (auto attribute : element->getAttributeNames())
     {
@@ -8075,7 +8051,8 @@ static void imshow(const std::shared_ptr<GRM::Element> &element, const std::shar
   // Get vp from ancestor GRM::element, usually the q"plot-group"
   while (ancestor->localName() != "figure")
     {
-      if (ancestor->hasAttribute("vp"))
+      if (ancestor->hasAttribute("vp_xmin") && ancestor->hasAttribute("vp_xmax") && ancestor->hasAttribute("vp_ymin") &&
+          ancestor->hasAttribute("vp_ymax"))
         {
           vp[0] = static_cast<double>(ancestor->getAttribute("vp_xmin"));
           vp[1] = static_cast<double>(ancestor->getAttribute("vp_xmax"));
@@ -9105,7 +9082,20 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
             }
         }
     }
-  element->setAttribute("limits", 1); // Needed atm for window calculation, should be removed
+}
+
+static void ProcessPlot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  plotCoordinateRanges(element, context);
+  processSubplot(element);
+  GRM::Render::processViewport(element);
+  processCharHeight(element);
+  GRM::Render::processLimits(element);
+  processWindow(element);
+  processWindow3d(element); /* needs to be set before space3d is processed */
+  processScale(element);    /* needs to be set before flip is processed */
+  if (static_cast<std::string>(element->getAttribute("kind")) == "polar_histogram")
+    processClassesPolarHistogram(element);
 }
 
 static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -9204,7 +9194,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
   /*! Modifier */
   if (str_equals_any(element->localName().c_str(), 5, "group", "figure", "plot", "coordinate_system", "label"))
     {
-      if (element->localName() == "plot") plotCoordinateRanges(element, context);
+      if (element->localName() == "plot") ProcessPlot(element, context);
       processAttributes(element);
     }
   else
@@ -9376,7 +9366,6 @@ static void finalizeGrid(const std::shared_ptr<GRM::Element> &root)
               int nrows = static_cast<int>(child->getAttribute("nrows"));
               int ncols = static_cast<int>(child->getAttribute("ncols"));
               rootGrid = new grm::Grid(nrows, ncols);
-              child->setAttribute("subplot", true);
               child->setAttribute("subplot_xmin", 0);
               child->setAttribute("subplot_xmax", 1);
               child->setAttribute("subplot_ymin", 0);
@@ -9411,14 +9400,10 @@ static void applyRootDefaults(std::shared_ptr<GRM::Element> root)
           if (!child->hasAttribute("kind")) child->setAttribute("kind", PLOT_DEFAULT_KIND);
           if (!child->hasAttribute("keep_aspect_ratio"))
             child->setAttribute("keep_aspect_ratio", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
-          if (!child->hasAttribute("subplot"))
-            {
-              child->setAttribute("subplot", true);
-              child->setAttribute("subplot_xmin", PLOT_DEFAULT_SUBPLOT_MIN_X);
-              child->setAttribute("subplot_xmax", PLOT_DEFAULT_SUBPLOT_MAX_X);
-              child->setAttribute("subplot_ymin", PLOT_DEFAULT_SUBPLOT_MIN_Y);
-              child->setAttribute("subplot_ymax", PLOT_DEFAULT_SUBPLOT_MAX_Y);
-            }
+          if (!child->hasAttribute("subplot_xmin")) child->setAttribute("subplot_xmin", PLOT_DEFAULT_SUBPLOT_MIN_X);
+          if (!child->hasAttribute("subplot_xmax")) child->setAttribute("subplot_xmax", PLOT_DEFAULT_SUBPLOT_MAX_X);
+          if (!child->hasAttribute("subplot_ymin")) child->setAttribute("subplot_ymin", PLOT_DEFAULT_SUBPLOT_MIN_Y);
+          if (!child->hasAttribute("subplot_ymax")) child->setAttribute("subplot_ymax", PLOT_DEFAULT_SUBPLOT_MAX_Y);
           auto kind = static_cast<std::string>(child->getAttribute("kind"));
           if (!child->hasAttribute("adjust_xlim"))
             {
@@ -10777,7 +10762,6 @@ void GRM::Render::setViewport(const std::shared_ptr<GRM::Element> &element, doub
    * \param[in] ymax The top vertical coordinate of the viewport (ymin < ymax <= 1)
    */
 
-  element->setAttribute("viewport", true);
   element->setAttribute("viewport_xmin", xmin);
   element->setAttribute("viewport_xmax", xmax);
   element->setAttribute("viewport_ymin", ymin);
@@ -10817,7 +10801,6 @@ void GRM::Render::setWindow(const std::shared_ptr<Element> &element, double xmin
    * \param[in] ymax The top vertical coordinate of the window (ymin < ymax)
    */
 
-  element->setAttribute("window", true);
   element->setAttribute("window_xmin", xmin);
   element->setAttribute("window_xmax", xmax);
   element->setAttribute("window_ymin", ymin);
@@ -11186,7 +11169,6 @@ void GRM::Render::setWindow3d(const std::shared_ptr<GRM::Element> &element, doub
    * \param[in] zmax max z-value
    */
 
-  element->setAttribute("window3d", true);
   element->setAttribute("window_xmin", xmin);
   element->setAttribute("window_xmax", xmax);
   element->setAttribute("window_ymin", ymin);
@@ -11371,7 +11353,6 @@ void GRM::Render::setTextEncoding(const std::shared_ptr<Element> &element, int e
 void GRM::Render::setSubplot(const std::shared_ptr<GRM::Element> &element, double xmin, double xmax, double ymin,
                              double ymax)
 {
-  element->setAttribute("subplot", true);
   element->setAttribute("subplot_xmin", xmin);
   element->setAttribute("subplot_xmax", xmax);
   element->setAttribute("subplot_ymin", ymin);

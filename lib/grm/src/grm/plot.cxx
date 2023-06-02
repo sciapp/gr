@@ -5055,7 +5055,6 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
     }
   if (grm_args_values(subplot_args, "subplot", "D", &subplot))
     {
-      group->setAttribute("subplot", true);
       group->setAttribute("subplot_xmin", subplot[0]);
       group->setAttribute("subplot_xmax", subplot[1]);
       group->setAttribute("subplot_ymin", subplot[2]);
