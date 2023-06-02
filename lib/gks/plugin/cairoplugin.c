@@ -2240,7 +2240,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
 #endif
       p->mem = NULL;
 
-      if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146)
+      if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146 || p->wtype == 151)
         {
           p->mw = 0.28575;
           p->mh = 0.19685;
@@ -2326,16 +2326,6 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->dpi = 100;
           resize(400, 400);
           p->nominal_size = 0.8;
-        }
-      else if (p->wtype == 151)
-        {
-          p->mw = 0.28575;
-          p->mh = 0.19685;
-          p->w = 1920;
-          p->h = 1440;
-          p->dpi = 200;
-          resize(500, 500);
-          p->nominal_size = 1;
         }
       else
         {
