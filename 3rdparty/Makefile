@@ -1,5 +1,5 @@
  TARGETS = freetype jpeg libpng16 zlib qhull bzip2
-  EXTRAS = agg tiff ogg theora vpx openh264 ffmpeg glfw zeromq pixman cairo expat
+  EXTRAS = agg tiff ogg theora vpx openh264 ffmpeg glfw zeromq pixman cairo libxml2
      DIR =
 
 default:
