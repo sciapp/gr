@@ -1943,22 +1943,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
       for (x = 0; x < classes.size(); ++x)
         {
           double count;
-
-          /*
-           * free memory from the previous iteration
-           * (end of loop is not possible because of `continue` statements)
-           * last iteration memory is freed in the cleanup block
-           */
-          // todo do the complex numbers need to be cleared? probably not
-          //          free(liste);
-          //          liste = nullptr;
-          //          free(liste2);
-          //          liste2 = nullptr;
-          //          free(r_min_list);
-          //          r_min_list = nullptr;
-          //          free(r_min_list2);
-          //          r_min_list2 = nullptr;
-
           count = classes[x];
 
           if (classes[x] == 0)
