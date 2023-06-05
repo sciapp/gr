@@ -889,6 +889,7 @@
             <xs:attribute name="linecolorind" type="xs:string"/>
             <xs:attribute name="linewidth" type="xs:string"/>
             <xs:attribute name="classes" type="xs:string"/>
+            <xs:attribute name="transparency" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 

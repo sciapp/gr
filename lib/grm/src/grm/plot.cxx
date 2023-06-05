@@ -1638,7 +1638,6 @@ err_t plot_scatter(grm_args_t *subplot_args)
 
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string str = std::to_string(id);
-      global_root->setAttribute("id", ++id);
       auto context = global_render->getContext();
 
       std::vector<double> x_vec(x, x + x_length);
@@ -1702,6 +1701,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
 
       error = plot_draw_errorbars(*current_series, x_length);
       return_if_error;
+      global_root->setAttribute("id", id++);
       ++current_series;
     }
 
@@ -1733,7 +1733,6 @@ err_t plot_quiver(grm_args_t *subplot_args)
 
       int id = (int)global_root->getAttribute("id");
       std::string str = std::to_string(id);
-      global_root->setAttribute("id", id + 1);
       auto temp =
           global_render->createQuiver("x" + str, x_vec, "y" + str, y_vec, "u" + str, u_vec, "v" + str, v_vec, 1);
 
@@ -1749,6 +1748,7 @@ err_t plot_quiver(grm_args_t *subplot_args)
         }
       group->append(temp);
 
+      global_root->setAttribute("id", id++);
       ++current_series;
     }
   error = plot_draw_colorbar(subplot_args, 0.0, 256);
@@ -2657,13 +2657,12 @@ err_t plot_hexbin(grm_args_t *subplot_args)
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
 
-      int id_int = static_cast<int>(global_root->getAttribute("id"));
-      global_root->setAttribute("id", ++id_int);
-      std::string id = std::to_string(id_int);
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
 
       auto x_vec = std::vector<double>(x, x + x_length);
       auto y_vec = std::vector<double>(y, y + y_length);
-      auto subGroup = global_render->createHexbin("x" + id, x_vec, "y" + id, y_vec);
+      auto subGroup = global_render->createHexbin("x" + str, x_vec, "y" + str, y_vec);
       if (grm_args_values(*current_series, "nbins", "i", &nbins)) subGroup->setAttribute("nbins", nbins);
       group->append(subGroup);
 
@@ -2680,6 +2679,7 @@ err_t plot_hexbin(grm_args_t *subplot_args)
 
       plot_draw_colorbar(subplot_args, 0.0, 256);
 
+      global_root->setAttribute("id", id++);
       ++current_series;
     }
 
@@ -2866,8 +2866,8 @@ err_t plot_heatmap(grm_args_t *subplot_args)
           subGroup->setAttribute("crange_min", c_min);
           subGroup->setAttribute("crange_max", c_max);
         }
-      global_root->setAttribute("id", ++id);
 
+      global_root->setAttribute("id", ++id);
       ++current_series;
     }
 
@@ -3031,9 +3031,8 @@ err_t plot_surface(grm_args_t *subplot_args)
           subGroup->setAttribute("yrange_max", ymax);
         }
 
-      int id_int = static_cast<int>(global_root->getAttribute("id"));
-      global_root->setAttribute("id", ++id_int);
-      std::string str = std::to_string(id_int);
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
       if (x != nullptr)
@@ -3054,6 +3053,7 @@ err_t plot_surface(grm_args_t *subplot_args)
       (*context)["z" + str] = z_vec;
       subGroup->setAttribute("z", "z" + str);
 
+      global_root->setAttribute("id", id++);
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
@@ -3079,8 +3079,8 @@ err_t plot_plot3(grm_args_t *subplot_args)
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
 
-      int id_int = static_cast<int>(global_root->getAttribute("id"));
-      std::string str = std::to_string(id_int);
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
       std::vector<double> x_vec(x, x + x_length);
@@ -3111,7 +3111,7 @@ err_t plot_plot3(grm_args_t *subplot_args)
           subGroup->setAttribute("zrange_max", z_max);
         }
 
-      global_root->setAttribute("id", ++id_int);
+      global_root->setAttribute("id", ++id);
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
@@ -3139,7 +3139,6 @@ err_t plot_scatter3(grm_args_t *subplot_args)
 
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string str = std::to_string(id);
-      global_root->setAttribute("id", ++id);
       auto context = global_render->getContext();
 
       std::vector<double> x_vec(x, x + x_length);
@@ -3181,6 +3180,8 @@ err_t plot_scatter3(grm_args_t *subplot_args)
               group->setAttribute("clim_max", c_max);
             }
         }
+
+      global_root->setAttribute("id", id++);
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
@@ -3228,6 +3229,7 @@ err_t plot_imshow(grm_args_t *subplot_args)
       (*context)["cdims" + str] = shape_vec;
       subGroup->setAttribute("cdims", "cdims" + str);
 
+      global_root->setAttribute("id", id++);
       ++current_series;
     }
 
@@ -3411,6 +3413,8 @@ err_t plot_polar(grm_args_t *subplot_args)
       subGroup->setAttribute("y", "y" + str);
 
       if (grm_args_values(*current_series, "spec", "s", &spec)) subGroup->setAttribute("spec", spec);
+
+      global_root->setAttribute("id", id++);
       ++current_series;
     }
 
@@ -3503,7 +3507,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   auto context = global_render->getContext();
 
   int id = static_cast<int>(global_root->getAttribute("id"));
-  global_root->setAttribute("id", id + 1);
   std::string str = std::to_string(id);
 
   grm_args_values(subplot_args, "series", "A", &series);
@@ -3555,6 +3558,7 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
     {
       series_group->setAttribute("ycolormap", ycolormap);
     }
+  global_root->setAttribute("id", id++);
 
   return ERROR_NONE;
 }
@@ -3584,7 +3588,6 @@ err_t plot_pie(grm_args_t *subplot_args)
   group->append(subGroup);
 
   int id = static_cast<int>(global_root->getAttribute("id"));
-  global_root->setAttribute("id", id + 1);
   std::string str = std::to_string(id);
   auto context = global_render->getContext();
 
@@ -3613,6 +3616,7 @@ err_t plot_pie(grm_args_t *subplot_args)
     {
       group->setAttribute("title", title);
     }
+  global_root->setAttribute("id", id++);
 
   return error;
 }
@@ -3633,7 +3637,6 @@ err_t plot_trisurf(grm_args_t *subplot_args)
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
 
       int id = (int)global_root->getAttribute("id");
-      global_root->setAttribute("id", id + 1);
       std::string str = std::to_string(id);
 
       std::vector<double> x_vec(x, x + x_length), y_vec(y, y + x_length), z_vec(z, z + x_length);
@@ -3656,6 +3659,8 @@ err_t plot_trisurf(grm_args_t *subplot_args)
         }
 
       group->append(temp);
+
+      global_root->setAttribute("id", id++);
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
@@ -3722,7 +3727,7 @@ err_t plot_tricont(grm_args_t *subplot_args)
 
       if (has_levels) subGroup->setAttribute("levels", num_levels);
 
-      global_root->setAttribute("id", id + 1);
+      global_root->setAttribute("id", id++);
       ++current_series;
     }
   plot_draw_colorbar(subplot_args, 0.0, 256);
@@ -3750,7 +3755,6 @@ err_t plot_shade(grm_args_t *subplot_args)
 
   int id = static_cast<int>(global_root->getAttribute("id"));
   std::string str = std::to_string(id);
-  global_root->setAttribute("id", ++id);
   auto context = global_render->getContext();
 
   std::vector<double> x_vec(x, x + x_length);
@@ -3784,6 +3788,7 @@ err_t plot_shade(grm_args_t *subplot_args)
       subGroup->setAttribute("yrange_min", y_min);
       subGroup->setAttribute("yrange_max", y_max);
     }
+  global_root->setAttribute("id", id++);
 
   return ERROR_NONE;
 }
@@ -4113,7 +4118,7 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
 
   int id = static_cast<int>(global_root->getAttribute("id"));
-  global_root->setAttribute("id", id + 1);
+  global_root->setAttribute("id", id++);
   std::string labels_key = "labels" + std::to_string(id);
   std::vector<std::string> labels_vec(labels, labels + num_labels);
 
@@ -4647,7 +4652,7 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
 
 
   int id = static_cast<int>(global_root->getAttribute("id"));
-  global_root->setAttribute("id", id + 1);
+  global_root->setAttribute("id", id++);
   auto str = std::to_string(id);
 
   //! store id string in group for later usages in render.cxx
