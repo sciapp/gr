@@ -1634,8 +1634,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
 
   std::vector<double> arc_2_x, arc_2_y;
 
-  //  double *arc_2_x = nullptr;
-  //  double *arc_2_y = nullptr;
   int xcolormap;
   int ycolormap;
   int *colormap = nullptr;
@@ -1652,8 +1650,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
   std::vector<int> bin_counts;
 
   std::vector<double> f1, f2;
-  //  double *f1 = nullptr;
-  //  double *f2 = nullptr;
   err_t error = ERROR_NONE;
 
   std::vector<double> r_lim_vec;
@@ -1714,15 +1710,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
     }
 
   max = static_cast<double>(group->getAttribute("r_max"));
-
-  int rings = -1;
-
-  double tick = auto_tick_rings_polar(max, rings, norm);
-  group->parentElement()->setAttribute("tick", tick);
-  max = tick * rings;
-  group->parentElement()->setAttribute("r_max", max);
-  group->parentElement()->setAttribute("rings", rings);
-
 
   if (group->hasAttribute("phiflip") == 0)
     {
@@ -1800,8 +1787,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
       r_lim_vec.push_back(static_cast<double>(group->getAttribute("rlim1")));
       rlim = &(r_lim_vec[0]);
 
-      /* TODO: Potential memory leak, s. `malloc` in line 3788 */
-      //      mlist = static_cast<double *>(malloc((num_bins + 1) * 4 * sizeof(double)));
       mlist.resize((num_bins + 1) * 4);
       if (rlim[0] > rlim[1])
         {
@@ -1824,10 +1809,28 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
       if (r_min < 0.0) r_min = 0.0;
     }
 
-  //  maxObservations /= num_bins;
   if (phiflip != 0)
     {
       std::reverse(classes.begin(), classes.end());
+    }
+
+  /* if phiflip and bin_edges are given --> invert the angles*/
+  if (phiflip != 0 && num_bin_edges > 0)
+    {
+      std::vector<double> temp(num_bin_edges);
+      std::vector<double> temp2(num_bins);
+
+      int u;
+      for (u = 0; u < num_bin_edges; u++)
+        {
+          temp[u] = 2 * M_PI - bin_edges[num_bin_edges - 1 - u];
+        }
+      for (u = num_bins - 1; u >= 0; --u)
+        {
+          temp2[u] = bin_widths[num_bins - 1 - u];
+        }
+      bin_widths = temp2;
+      bin_edges = temp;
     }
 
   if (!(group->hasAttribute("xcolormap") && group->hasAttribute("ycolormap")))
@@ -1950,31 +1953,11 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
           str = std::to_string(id);
 
           temp_elem =
-              global_render->createDrawImage(-1.0, 1.0, -1.0, 1.0, image_size, image_size, "data" + str, lineardata, 0);
+              global_render->createDrawImage(-1.0, 1.0, 1.0, -1.0, image_size, image_size, "data" + str, lineardata, 0);
           group->append(temp_elem);
         } /* end colormap calculation*/
 
     } /* end colormap condition */
-
-
-  // todo: Maybe move this block above colormap block
-  if (phiflip != 0 && num_bin_edges > 0)
-    {
-      std::vector<double> temp(num_bin_edges);
-      std::vector<double> temp2(num_bins);
-
-      int u;
-      for (u = 0; u < num_bin_edges; u++)
-        {
-          temp[u] = 2 * M_PI - bin_edges[num_bin_edges - 1 - u];
-        }
-      for (u = num_bins - 1; u >= 0; --u)
-        {
-          temp2[u] = bin_widths[num_bins - 1 - u];
-        }
-      bin_widths = temp2;
-      bin_edges = temp;
-    }
 
   /* no colormap or colormap combined with draw_edges */
   if (colormap == nullptr || draw_edges == 1)
@@ -2039,7 +2022,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
           if (stairs == 0)
             {
               /* perform calculations for later usages */
-
               r = pow((count / max), num_bins * 2);
               liste = moivre(r, 2 * x, num_bins * 2);
               cleanup_and_set_error_if(liste == nullptr, ERROR_MALLOC);
@@ -2155,8 +2137,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
                           // instead use gr_fillarea and approximate line segment with calculations from above.
                           int id = (int)global_root->getAttribute("id");
                           global_root->setAttribute("id", id + 1);
-                          //                          std::vector<double> f1_vec(f1, f1 + 4 + 2 * num_angle), f2_vec(f2,
-                          //                          f2 + 4 + 2 * num_angle);
                           str = std::to_string(id);
 
                           temp_elem = global_render->createFillArea("x" + str, f1, "y" + str, f2);
@@ -2184,8 +2164,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
                       phi_vec.clear();
                       f1.clear();
                       f2.clear();
-                      //                      arc_2_x.clear();
-                      //                      arc_2_y.clear();
                     } /* end rlim condition */
                   /* no rlim */
                   else
@@ -2234,8 +2212,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
                       phi_vec.resize(num_angle);
                       linspace(start_angle, end_angle, num_angle, phi_vec);
 
-                      //                      f1 = static_cast<double *>(malloc((4 + 2 * num_angle) * sizeof(double)));
-                      //                      cleanup_and_set_error_if(f1 == nullptr, ERROR_MALLOC);
                       f1.resize(4 + 2 * num_angle);
                       /* line_1_x[0] and [1]*/
                       f1[0] = cos(bin_edges[x]) * r_min;
@@ -2404,7 +2380,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
                   else
                     {
                       rectlist[x] = rect;
-                      //                      *(rectlist + x) = rect;
                       if (x == num_bin_edges - 1)
                         {
                           break;
@@ -2434,10 +2409,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
                       line_y[0] = mlist[s + 1];
                       line_y[1] = mlist[s - 1];
 
-                      //                      line_x[0] = *(mlist + s);
-                      //                      line_x[1] = *(mlist + s - 2);
-                      //                      line_y[0] = *(mlist + s + 1);
-                      //                      line_y[1] = *(mlist + s - 1);
                       group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
                     }
                 }
@@ -2446,10 +2417,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
               line_y[0] = mlist[1];
               line_y[1] = mlist[(num_bins - 1) * 4 + 3];
 
-              //              line_x[0] = *(mlist);
-              //              line_x[1] = *(mlist + (num_bins - 1) * 4 + 2);
-              //              line_y[0] = *(mlist + 1);
-              //              line_y[1] = *(mlist + (num_bins - 1) * 4 + 3);
               group->append(global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]));
             }
 
@@ -3658,7 +3625,6 @@ static void processYlabel(const std::shared_ptr<GRM::Element> &elem)
 static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &element)
 {
   unsigned int num_bins;
-  //  double *theta = nullptr;
   std::vector<double> theta;
   unsigned int length;
   const char *norm;
@@ -3692,8 +3658,9 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
   std::vector<double> new_edges;
 
   err_t error = ERROR_NONE;
-
-  std::shared_ptr<GRM::Element> group = element;
+  // element is the plot element -> get the first series with polarhistogram
+  auto seriesList = element->querySelectorsAll("series_polar_histogram");
+  std::shared_ptr<GRM::Element> group = seriesList[0];
   std::shared_ptr<GRM::Context> context;
 
   if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()))
@@ -3814,9 +3781,7 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
           if (num_bin_edges > temp)
             {
               num_bin_edges = temp;
-              //              bin_edges = bin_edges_buf = (double *)realloc(new_edges, temp * sizeof(double));
               bin_edges.resize(temp);
-              //              cleanup_and_set_error_if(bin_edges == nullptr, ERROR_MALLOC);
             }
           else
             {
@@ -3846,7 +3811,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
               if (num_bin_edges > temp)
                 {
                   num_bin_edges = temp;
-                  //                  bin_edges = bin_edges_buf = (double *)realloc(new_edges, temp * sizeof(double));
                   bin_edges.resize(temp);
                 }
               else
@@ -4169,12 +4133,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
                     {
                       temp_max /= bin_widths[x];
                     }
-                  //                  // cdf?
-                  //                  else if (strcmp(norm, "cdf") == 0)
-                  //                    {
-                  //                      temp_max /= length * bin_widths[x];
-                  //                    }
-
                   if (temp_max > max)
                     {
                       max = temp_max;
@@ -4193,6 +4151,7 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
     } /* end classes and maximum */
 
   group->setAttribute("r_max", max);
+  group->parentElement()->setAttribute("r_max", max);
 }
 
 static void processAttributes(const std::shared_ptr<GRM::Element> &element)
@@ -5424,14 +5383,19 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
 
   if (kind == "polar_histogram")
     {
-      // todo: zqueue here -> needs calculations from series.
-      // polar_histogram: needed attributes are calculated prior to drawPolarAxes in parent
-      rings = static_cast<int>(subplotElement->getAttribute("rings"));
-      r_min = 0.0;
+      auto max = static_cast<double>(subplotElement->getAttribute("r_max"));
 
-      r_max = static_cast<double>(subplotElement->getAttribute("r_max"));
+      // check if rings are given
+      rings = -1;
       norm = static_cast<std::string>(elem->getAttribute("norm"));
-      tick = static_cast<double>(subplotElement->getAttribute("tick"));
+
+      tick = auto_tick_rings_polar(max, rings, norm);
+      subplotElement->setAttribute("tick", tick);
+      max = tick * rings;
+      subplotElement->setAttribute("r_max", max);
+      subplotElement->setAttribute("rings", rings);
+
+      r_min = 0.0;
     }
   else
     {
@@ -5471,13 +5435,6 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
               newGroup->append(temp);
               render->setLineColorInd(temp, 88);
             }
-          //          render->setTextAlign(newGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-          //          x[0] = 0.05;
-          //          y[0] = r;
-          //          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + tick * i);
-          //          auto temp = render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC);
-          //          temp->setAttribute("name", "polar_axes");
-          //          newGroup->append(temp);
         }
       else
         {
@@ -5524,7 +5481,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
   for (i = 0; i <= n; i++)
     {
       double r = 1.0 / n * i;
-      if (i % 2 == 0)
+      if (i % 2 == 0 || i == n)
         {
           x[0] = 0.05;
           y[0] = r;

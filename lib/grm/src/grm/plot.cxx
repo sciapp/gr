@@ -4089,10 +4089,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
 
   if (strcmp(kind, "polar_histogram") == 0)
     {
-      // todo: move series/data dependent code into the renderer.
       subGroup = global_render->createDrawPolarAxes(angle_ticks, kind, phiflip, norm, 1.0);
-      //      grm_args_values(args, "r_max", "d", &r_max);
-      //      group->setAttribute("r_max", r_max);
     }
   else
     {
@@ -4708,7 +4705,6 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
 
   std::shared_ptr<GRM::Context> context = global_render->getContext();
 
-  series_group->setAttribute("polar_histogram_classes", true);
 
   int id = static_cast<int>(global_root->getAttribute("id"));
   global_root->setAttribute("id", id + 1);
