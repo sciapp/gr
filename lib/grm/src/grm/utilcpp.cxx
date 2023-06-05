@@ -49,12 +49,18 @@ bool ends_with(const std::string &str, const std::string &suffix)
 void linspace(double start, double end, int n, std::vector<double> &x)
 {
   int i;
+  if (x.size() < n)
+    {
+      x.resize(n);
+    }
   for (i = 0; i < n; i++)
     {
       x[i] = (start + i * (end - start) / (n - 1));
     }
 }
 
+/* like python list comprehension [factor * func(element) for element in list] saves values in result starting at start
+ * index */
 void listcomprehension(double factor, double (*pFunction)(double), std::vector<double> &list, int num, int start,
                        std::vector<double> &result)
 {

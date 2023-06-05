@@ -303,25 +303,18 @@ static double get_lightness_from_rbg(double r, double g, double b)
 /*
  * mixes gr colormaps with size = size * size. If x and or y < 0
  * */
-static int *create_colormap(int x, int y, int size)
+void create_colormap(int x, int y, int size, std::vector<int> &colormap)
 {
   int r, g, b, a;
   int outer, inner;
   int r1, g1, b1;
   int r2, g2, b2;
-  int *colormap = nullptr;
   if (x > 47 || y > 47)
     {
       logger((stderr, "values for the keyword \"colormap\" can not be greater than 47\n"));
-      return nullptr;
     }
 
-  colormap = static_cast<int *>(malloc(size * size * sizeof(int)));
-  if (colormap == nullptr)
-    {
-      debug_print_malloc_error();
-      return nullptr;
-    }
+  colormap.resize(size * size);
   if (x >= 0 && y < 0)
     {
       for (outer = 0; outer < size; outer++)
@@ -336,7 +329,6 @@ static int *create_colormap(int x, int y, int size)
               colormap[outer * size + inner] = (a << 24) + (b << 16) + (g << 8) + (r);
             }
         }
-      return colormap;
     }
 
   if (x < 0 && y >= 0)
@@ -354,12 +346,9 @@ static int *create_colormap(int x, int y, int size)
               colormap[inner * size + outer] = (a << 24) + (b << 16) + (g << 8) + (r);
             }
         }
-
-
-      return colormap;
     }
 
-  if ((x >= 0 && y >= 0) || (x < 0 && y < 0))
+  else if ((x >= 0 && y >= 0) || (x < 0 && y < 0))
     {
       if (x < 0 && y < 0)
         {
@@ -383,35 +372,8 @@ static int *create_colormap(int x, int y, int size)
                   (a << 24) + (((b1 + b2) / 2) << 16) + (((g1 + g2) / 2) << 8) + ((r1 + r2) / 2);
             }
         }
-      return colormap;
     }
-  return nullptr;
 }
-
-/* like python list comprehension [factor * func(element) for element in list] saves values in result starting at start
- * index */
-static double *listcomprehension(double factor, double (*pFunction)(double), double *list, int num, int start,
-                                 double *result)
-{
-  int i;
-  if (result == nullptr)
-    {
-      result = static_cast<double *>(malloc(num * sizeof(double)));
-      if (result == nullptr)
-        {
-          return nullptr;
-        }
-    }
-
-  for (i = 0; i < num; ++i)
-    {
-      result[start] = factor * (*pFunction)(list[i]);
-      start++;
-    }
-
-  return result;
-}
-
 
 static void markerHelper(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context,
                          const std::string &str)
@@ -1612,9 +1574,9 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
 
   std::vector<double> arc_2_x, arc_2_y;
 
+  std::vector<int> colormap;
   int xcolormap;
   int ycolormap;
-  int *colormap = nullptr;
   std::vector<double> angles;
   int draw_edges = 0;
   int phiflip = 0;
@@ -1623,7 +1585,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
   int edge_color = 1;
   int face_color = 989;
   double face_alpha = 0.75;
-  unsigned int resample = 0;
   std::vector<int> lineardata;
   std::vector<int> bin_counts;
 
@@ -1635,10 +1596,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
   std::shared_ptr<GRM::Element> group = element;
   std::shared_ptr<GRM::Element> temp_elem;
   std::string str;
-
-  gr_inqresamplemethod(&resample);
-
-  global_render->setResampleMethod(group, 0x2020202);
 
   auto classes_key = static_cast<std::string>(group->getAttribute("classes"));
   classes = GRM::get<std::vector<int>>((*context)[classes_key]);
@@ -1813,7 +1770,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
 
   if (!(group->hasAttribute("xcolormap") && group->hasAttribute("ycolormap")))
     {
-      colormap = nullptr;
+      colormap.clear();
       if (draw_edges != 0)
         {
           logger((stderr, "draw_edges can only be used with colormap\n"));
@@ -1844,7 +1801,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
           lineardata.resize(image_size * image_size);
           bin_counts.resize(num_bins);
 
-          colormap = create_colormap(xcolormap, ycolormap, colormap_size);
+          create_colormap(xcolormap, ycolormap, colormap_size, colormap);
 
           if (num_bin_edges == 0)
             {
@@ -1930,15 +1887,21 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
           global_root->setAttribute("id", id + 1);
           str = std::to_string(id);
 
+          /* save resample method and reset because it isn't restored with gr_restorestate */
           temp_elem =
               global_render->createDrawImage(-1.0, 1.0, 1.0, -1.0, image_size, image_size, "data" + str, lineardata, 0);
           group->append(temp_elem);
+          unsigned int resample;
+          gr_inqresamplemethod(&resample);
+          global_render->setResampleMethod(temp_elem, static_cast<int>(0x2020202));
+          auto resetResample = global_render->createGroup("resetResample");
+          global_render->setResampleMethod(resetResample, static_cast<int>(resample));
         } /* end colormap calculation*/
 
     } /* end colormap condition */
 
   /* no colormap or colormap combined with draw_edges */
-  if (colormap == nullptr || draw_edges == 1)
+  if (colormap.empty() || draw_edges == 1)
     {
       for (x = 0; x < classes.size(); ++x)
         {
@@ -2250,7 +2213,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
                 }
             } /* end no stairs condition */
           /* stairs without draw_edges (not compatible) */
-          else if (draw_edges == 0 && colormap == nullptr)
+          else if (draw_edges == 0 && colormap.empty())
             {
               global_render->setFillColorInd(group, 0);
               global_render->setLineColorInd(group, edge_color);
@@ -2509,11 +2472,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
             }
         }
     }
-
-  gr_setresamplemethod(resample);
-
-cleanup:
-  free(colormap);
 }
 
 static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem)
@@ -5886,15 +5844,13 @@ static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::sha
             }
         }
 
-      auto x_tmp = static_cast<double *>(malloc((cols) * sizeof(double)));
-      auto y_tmp = static_cast<double *>(malloc((rows) * sizeof(double)));
-      linspace(x_min, x_max, cols, x_tmp);
-      linspace(y_min, y_max, rows, y_tmp);
 
-      std::vector<double> x_vec_tmp(x_tmp, x_tmp + cols);
+      std::vector<double> x_vec_tmp, y_vec_tmp;
+      linspace(x_min, x_max, cols, x_vec_tmp);
+      linspace(y_min, y_max, rows, y_vec_tmp);
+
       (*context)["x" + str] = x_vec_tmp;
       element->setAttribute("x", "x" + str);
-      std::vector<double> y_vec_tmp(y_tmp, y_tmp + rows);
       (*context)["y" + str] = y_vec_tmp;
       element->setAttribute("y", "y" + str);
 
@@ -7992,15 +7948,12 @@ static void imshow(const std::shared_ptr<GRM::Element> &element, const std::shar
   global_root->setAttribute("id", ++id_int);
   std::string id = std::to_string(id_int);
 
-  auto x_tmp = static_cast<double *>(malloc((cols) * sizeof(double)));
-  auto y_tmp = static_cast<double *>(malloc((rows) * sizeof(double)));
-  linspace(0, cols - 1, cols, x_tmp);
-  linspace(0, rows - 1, rows, y_tmp);
+  std::vector<double> x_vec, y_vec;
+  linspace(0, cols - 1, cols, x_vec);
+  linspace(0, rows - 1, rows, y_vec);
 
-  std::vector<double> x_vec(x_tmp, x_tmp + cols);
   (*context)["x" + id] = x_vec;
   element->setAttribute("x", "x" + id);
-  std::vector<double> y_vec(y_tmp, y_tmp + rows);
   (*context)["y" + id] = y_vec;
   element->setAttribute("y", "y" + id);
   (*context)["z" + id] = c_data_vec;
