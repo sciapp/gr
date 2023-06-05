@@ -4310,13 +4310,12 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &elem, const std::shar
   double x[2] = {x_org_low, x_org_high};
   double y[2] = {y_org_low, y_org_low};
 
-  gr_setlinecolorind(1);
   if (is_vertical)
     {
       x[1] = y_org_low;
       y[1] = y_org_high;
     }
-  gr_polyline(2, x, y);
+  elem->append(global_render->createPolyline(x[0], x[1], y[0], y[1], 0, 0.0, 1));
 }
 
 static void axes(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -4367,6 +4366,12 @@ static void axes(const std::shared_ptr<GRM::Element> &element, const std::shared
 
   if (static_cast<std::string>(element->parentElement()->parentElement()->getAttribute("kind")) == "barplot")
     {
+      // remove all old polylines
+      for (const auto &child : element->children())
+        {
+          if (child->localName() == "polyline") child->remove();
+        }
+
       /* negative values */
       if (_coordinate_ranges._ylim_min < 0)
         {
@@ -7213,6 +7218,13 @@ static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared
   if (x_length != y_length) throw std::length_error("For stem series x- and y-data must have the same size.\n");
 
   if (element->hasAttribute("yrange_min")) stem_y[0] = static_cast<double>(element->getAttribute("yrange_min"));
+
+  // remove all old polylines and -marker
+  for (const auto &child : element->children())
+    {
+      if (child->localName() == "polyline") child->remove();
+      if (child->localName() == "polymarker") child->remove();
+    }
 
   global_render->setLineSpec(element, spec);
   gr_savestate();
