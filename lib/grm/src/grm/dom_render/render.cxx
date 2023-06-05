@@ -4151,8 +4151,8 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("textfontprec"), processTextFontPrec},
       {std::string("textpath"), processTextPath},
       {std::string("title"), processTitle},
-      {std::string("wsviewport"), processWSViewport},
-      {std::string("wswindow"), processWSWindow},
+      {std::string("wsviewport_xmin"), processWSViewport}, // the xmin element can be used here cause all 4 are required
+      {std::string("wswindow_xmin"), processWSWindow},     // the xmin element can be used here cause all 4 are required
       {std::string("xlabel"), processXlabel},
       {std::string("xticklabels"), processXTickLabels},
       {std::string("ylabel"), processYlabel},
@@ -10756,7 +10756,6 @@ void GRM::Render::setWSViewport(const std::shared_ptr<GRM::Element> &element, do
    * \param[in] ymax The top vertical coordinate of the viewport (ymin < ymax <= 1)
    */
 
-  element->setAttribute("wsviewport", true);
   element->setAttribute("wsviewport_xmin", xmin);
   element->setAttribute("wsviewport_xmax", xmax);
   element->setAttribute("wsviewport_ymin", ymin);
@@ -10794,7 +10793,6 @@ void GRM::Render::setWSWindow(const std::shared_ptr<Element> &element, double xm
    * \param[in] ymax The top vertical coordinate of the window (ymin < ymax)
    */
 
-  element->setAttribute("wswindow", true);
   element->setAttribute("wswindow_xmin", xmin);
   element->setAttribute("wswindow_xmax", xmax);
   element->setAttribute("wswindow_ymin", ymin);
