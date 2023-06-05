@@ -868,7 +868,6 @@
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="original_resample" type="xs:string"/>
             <xs:attribute name="edge_color" type="xs:string"/>
             <xs:attribute name="face_color" type="xs:string"/>
             <xs:attribute name="face_alpha" type="xs:string"/>

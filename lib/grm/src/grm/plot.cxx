@@ -3555,9 +3555,6 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   series_group->setAttribute("name", "polar_histogram");
   grm_args_values(subplot_args, "series", "A", &series);
 
-  gr_inqresamplemethod(&resample);
-  series_group->setAttribute("original_resample", static_cast<int>(resample));
-
   /* edge_color */
   if (grm_args_values(*series, "edge_color", "i", &edge_color))
     {

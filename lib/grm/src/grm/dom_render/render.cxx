@@ -1662,7 +1662,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
   std::shared_ptr<GRM::Element> temp_elem;
   std::string str;
 
-  resample = static_cast<int>(group->getAttribute("original_resample"));
+  gr_inqresamplemethod(&resample);
 
   global_render->setResampleMethod(group, 0x2020202);
 
