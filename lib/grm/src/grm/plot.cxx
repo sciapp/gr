@@ -2678,7 +2678,6 @@ err_t plot_hexbin(grm_args_t *subplot_args)
           subGroup->setAttribute("yrange_max", y_max);
         }
 
-      currentDomElement = subGroup; /* so that the colorbar will be a child of the hexbin_series */
       plot_draw_colorbar(subplot_args, 0.0, 256);
 
       ++current_series;
