@@ -6527,7 +6527,7 @@ static void polar(const std::shared_ptr<GRM::Element> &element, const std::share
   element->append(temp);
 }
 
-static void polar_heatmap(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void polarHeatmap(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for polar_heatmap
@@ -9104,7 +9104,7 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
           {std::string("pie"), pie},
           {std::string("plot3"), plot3},
           {std::string("polar"), polar},
-          {std::string("polar_heatmap"), polar_heatmap},
+          {std::string("polar_heatmap"), polarHeatmap},
           {std::string("polar_histogram"), polarHistogram},
           {std::string("quiver"), quiver},
           {std::string("scatter"), scatter},

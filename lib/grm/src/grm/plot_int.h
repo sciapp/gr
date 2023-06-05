@@ -55,9 +55,6 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_DEFAULT_WIDTH 600.0
 #define PLOT_DEFAULT_HEIGHT 450.0
 #define PLOT_DEFAULT_KIND "line"
-#define PLOT_DEFAULT_XFLIP 0
-#define PLOT_DEFAULT_YFLIP 0
-#define PLOT_DEFAULT_ZFLIP 0
 #define PLOT_DEFAULT_XGRID 1
 #define PLOT_DEFAULT_YGRID 1
 #define PLOT_DEFAULT_ZGRID 1

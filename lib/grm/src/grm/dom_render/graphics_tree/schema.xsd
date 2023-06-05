@@ -67,7 +67,6 @@
                 <xs:element ref="series_volume" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_wireframe" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attribute name="name" type="xs:string" use="required"/>
             <xs:attribute name="adjust_xlim" type="xs:string" use="required"/>
             <xs:attribute name="adjust_ylim" type="xs:string" use="required"/>
             <xs:attribute name="keep_aspect_ratio" type="xs:string" use="required"/>
@@ -1069,6 +1068,8 @@
             <xs:attribute name="fillcolorind" type="xs:string"/>
         </xs:complexType>
     </xs:element>
+
+    <!-- ||||||||||||||||||||||||||||| attribute groups |||||||||||||||||||||||||||||||||||||||| -->
 
     <!-- definition of boundingbox attributes -->
     <xs:attributeGroup name="bbox">
