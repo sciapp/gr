@@ -6,6 +6,7 @@
 #include <grm/util.h>
 #include <string>
 #include <vector>
+#include <complex>
 
 
 /* ######################### internal interface ##################################################################### */
@@ -29,5 +30,7 @@ void linspace(double start, double end, int n, std::vector<double> &x);
 
 void listcomprehension(double factor, double (*pFunction)(double), std::vector<double> &list, int num, int start,
                        std::vector<double> &result);
+
+std::complex<double> moivre(double r, int x, int n);
 
 #endif // GRM_UTIL_INT_HXX_INCLUDED

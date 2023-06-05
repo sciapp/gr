@@ -412,24 +412,6 @@ static double *listcomprehension(double factor, double (*pFunction)(double), dou
   return result;
 }
 
-static double *moivre(double r, int x, int n)
-{
-  double *result = static_cast<double *>(malloc(2 * sizeof(double)));
-  if (result != nullptr)
-    {
-      if (n != 0)
-        {
-          *result = pow(r, (1.0 / n)) * (cos(2.0 * x * M_PI / n));
-          *(result + 1) = pow(r, (1.0 / n)) * (sin(2.0 * x * M_PI / n));
-        }
-      else
-        {
-          *result = 1.0;
-          *(result + 1) = 0.0;
-        }
-    }
-  return result;
-}
 
 static void markerHelper(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context,
                          const std::string &str)
@@ -1610,10 +1592,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
   double *inner = nullptr, *outer = nullptr;
   double r;
   double rect;
-  double *liste = nullptr;
-  double liste0;
-  double liste1;
-  double *liste2 = nullptr;
   std::vector<double> mlist;
   std::vector<double> rectlist;
   const char *norm = nullptr;
@@ -1625,8 +1603,8 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
   double *philim = nullptr;
   double *rlim = nullptr;
   unsigned int dummy;
-  double *r_min_list = nullptr;
-  double *r_min_list2 = nullptr;
+  std::complex<double> r_min_complex1, r_min_complex2;
+  std::complex<double> complex1, complex2;
   int stairs;
   double r_min = 0.0;
   double r_max = 1.0;
@@ -1709,7 +1687,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
       norm = static_cast<std::string>(group->getAttribute("normalization")).c_str();
     }
 
-  max = static_cast<double>(group->getAttribute("r_max"));
+  max = static_cast<double>(group->parentElement()->getAttribute("r_max"));
 
   if (group->hasAttribute("phiflip") == 0)
     {
@@ -1777,7 +1755,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
         }
     }
 
-  if (group->hasAttribute("rlim") == 0)
+  if (!(group->hasAttribute("rlim0") && group->hasAttribute("rlim1")))
     {
       rlim = nullptr;
     }
@@ -1971,14 +1949,15 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
            * (end of loop is not possible because of `continue` statements)
            * last iteration memory is freed in the cleanup block
            */
-          free(liste);
-          liste = nullptr;
-          free(liste2);
-          liste2 = nullptr;
-          free(r_min_list);
-          r_min_list = nullptr;
-          free(r_min_list2);
-          r_min_list2 = nullptr;
+          // todo do the complex numbers need to be cleared? probably not
+          //          free(liste);
+          //          liste = nullptr;
+          //          free(liste2);
+          //          liste2 = nullptr;
+          //          free(r_min_list);
+          //          r_min_list = nullptr;
+          //          free(r_min_list2);
+          //          r_min_list2 = nullptr;
 
           count = classes[x];
 
@@ -2023,28 +2002,23 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
             {
               /* perform calculations for later usages */
               r = pow((count / max), num_bins * 2);
-              liste = moivre(r, 2 * x, num_bins * 2);
-              cleanup_and_set_error_if(liste == nullptr, ERROR_MALLOC);
-              liste0 = liste[0];
-              liste1 = liste[1];
-              rect = sqrt(liste0 * liste0 + liste1 * liste1);
+              complex1 = moivre(r, 2 * x, num_bins * 2);
+
+              rect = sqrt(pow(real(complex1), 2) + pow(imag(complex1), 2));
 
               if (rlim != nullptr)
                 {
                   double temporary;
                   int i;
-                  liste2 = moivre(r, (2 * x + 2), (num_bins * 2));
-                  cleanup_and_set_error_if(liste2 == nullptr, ERROR_MALLOC);
+                  complex2 = moivre(r, 2 * x + 2, num_bins * 2);
 
-                  mlist[x * 4] = liste0;
-                  mlist[x * 4 + 1] = liste1;
-                  mlist[x * 4 + 2] = *(liste2);
-                  mlist[x * 4 + 3] = *(liste2 + 1);
+                  mlist[x * 4] = real(complex1);
+                  mlist[x * 4 + 1] = imag(complex1);
+                  mlist[x * 4 + 2] = real(complex2);
+                  mlist[x * 4 + 3] = imag(complex2);
 
-                  r_min_list = moivre(pow((r_min), (num_bins * 2)), (x * 2), num_bins * 2);
-                  cleanup_and_set_error_if(r_min_list == nullptr, ERROR_MALLOC);
-                  r_min_list2 = moivre(pow((r_min), (num_bins * 2)), (x * 2 + 2), num_bins * 2);
-                  cleanup_and_set_error_if(r_min_list2 == nullptr, ERROR_MALLOC);
+                  r_min_complex1 = moivre(pow((r_min), (num_bins * 2)), (x * 2), num_bins * 2);
+                  r_min_complex2 = moivre(pow((r_min), (num_bins * 2)), (x * 2 + 2), num_bins * 2);
 
                   /* check if the segment is higher than rmax? */
                   for (i = 0; i < 2; ++i)
@@ -2062,8 +2036,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
                     {
                       r = r_max;
                     }
-                  free(liste2);
-                  liste2 = nullptr;
                 }
 
               /*  no binedges */
@@ -2099,12 +2071,12 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
                       // bottom
                       f1.resize(4 + 2 * num_angle);
                       /* line_1_x[0] and [1]*/
-                      f1[0] = r_min_list[0];
+                      f1[0] = real(r_min_complex1);
                       f1[1] = mlist[4 * x];
                       /* arc_1_x */
                       listcomprehension(r, cos, phi_vec, num_angle, 2, f1);
                       /* reversed line_2_x [0] and [1] */
-                      f1[2 + num_angle + 1] = r_min_list2[0];
+                      f1[2 + num_angle + 1] = real(r_min_complex2);
                       f1[2 + num_angle] = mlist[4 * x + 2];
                       /* reversed arc_2_x */
                       listcomprehension(r_min, cos, phi_vec, num_angle, 0, arc_2_x);
@@ -2116,12 +2088,12 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
 
                       f2.resize(4 + 2 * num_angle);
                       /* line_1_y[0] and [1] */
-                      f2[0] = r_min_list[1];
+                      f2[0] = imag(r_min_complex1);
                       f2[1] = mlist[4 * x + 1];
                       /*arc_1_y */
                       listcomprehension(r, sin, phi_vec, num_angle, 2, f2);
                       /* reversed line_2_y [0] and [1] */
-                      f2[2 + num_angle + 1] = r_min_list2[1];
+                      f2[2 + num_angle + 1] = imag(r_min_complex2);
                       f2[2 + num_angle] = mlist[4 * x + 3];
                       /* reversed arc_2_y */
                       listcomprehension(r_min, sin, phi_vec, num_angle, 0, arc_2_y);
@@ -2301,19 +2273,17 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
               global_render->setLineWidth(group, 2.3);
 
               r = pow((count / max), (num_bins * 2));
-              liste = moivre(r, (2 * x), num_bins * 2);
-              cleanup_and_set_error_if(liste == nullptr, ERROR_MALLOC);
-              liste2 = moivre(r, (2 * x + 2), (num_bins * 2));
-              cleanup_and_set_error_if(liste2 == nullptr, ERROR_MALLOC);
-              rect = sqrt(*liste * *liste + *(liste + 1) * *(liste + 1));
+              complex1 = moivre(r, (2 * x), num_bins * 2);
+              complex2 = moivre(r, (2 * x + 2), (num_bins * 2));
+              rect = sqrt(pow(real(complex1), 2) + pow(imag(complex1), 2));
 
               /*  no bin_edges */
               if (num_bin_edges == 0)
                 {
-                  mlist[x * 4] = *liste;
-                  mlist[x * 4 + 1] = *(liste + 1);
-                  mlist[x * 4 + 2] = *(liste2);
-                  mlist[x * 4 + 3] = *(liste2 + 1);
+                  mlist[x * 4] = real(complex1);
+                  mlist[x * 4 + 1] = imag(complex1);
+                  mlist[x * 4 + 2] = real(complex2);
+                  mlist[x * 4 + 3] = imag(complex2);
 
                   if (rlim != nullptr)
                     {
@@ -2559,10 +2529,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
   gr_setresamplemethod(resample);
 
 cleanup:
-  free(r_min_list);
-  free(r_min_list2);
-  free(liste);
-  free(liste2);
   free(colormap);
 }
 
@@ -3696,7 +3662,7 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
       length = theta.size();
     }
 
-  if (!group->hasAttribute("philim"))
+  if (!group->hasAttribute("phi_min") && !group->hasAttribute("phi_max"))
     {
       philim = nullptr;
     }
@@ -3717,7 +3683,6 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
         {
           logger((stderr, "philim must be between 0 and 2 * pi\n"));
         }
-      group->setAttribute("philim", true);
       group->setAttribute("phi_min", philim[0]);
       group->setAttribute("phi_max", philim[1]);
     }
@@ -4149,8 +4114,7 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
             }
         }
     } /* end classes and maximum */
-
-  group->setAttribute("r_max", max);
+  // set r_max (radius_max) in parent for later usages in polar_axes and polar_histogram
   group->parentElement()->setAttribute("r_max", max);
 }
 

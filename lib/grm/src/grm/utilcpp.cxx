@@ -74,3 +74,15 @@ void listcomprehension(double factor, double (*pFunction)(double), std::vector<d
       result[i + start] = factor * (*pFunction)(list[i]);
     }
 }
+
+std::complex<double> moivre(double r, int x, int n)
+{
+  if (n != 0)
+    {
+      return {pow(r, (1.0 / n)) * (cos(2.0 * x * M_PI / n)), pow(r, (1.0 / n)) * (sin(2.0 * x * M_PI / n))};
+    }
+  else
+    {
+      return {1.0, 0.0};
+    }
+}
