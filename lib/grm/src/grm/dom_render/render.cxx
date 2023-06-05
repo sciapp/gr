@@ -4117,7 +4117,7 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("calc_window_and_viewport_from_parent"), processCalcWindowAndViewportFromParent},
       {std::string("charexpan"), processCharExpan},
       {std::string("charspace"), processCharSpace},
-      {std::string("charup"), processCharUp},
+      {std::string("charup_x"), processCharUp}, // the x elem can be used cause both must be set
       {std::string("clipxform"), processClipXForm},
       {std::string("colorbar_position"), processColorbarPosition},
       {std::string("colormap"), processColormap},
@@ -4129,7 +4129,7 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("font"), processFont},
       {std::string("gr_option_flip_x"), processGROptionFlipX},
       {std::string("gr_option_flip_y"), processGROptionFlipY},
-      {std::string("gr3backgroundcolor"), processGR3BackgroundColor},
+      {std::string("gr3backgroundcolor_red"), processGR3BackgroundColor}, // all other colors must be set too
       {std::string("gr3cameralookat"), processGR3CameraLookAt},
       {std::string("linecolorind"), processLineColorInd},
       {std::string("linespec"), processLineSpec},
@@ -4144,11 +4144,11 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("resample_method"), processResampleMethod},
       {std::string("selntran"), processSelntran},
       {std::string("space"), processSpace},
-      {std::string("space3d"), processSpace3d},
+      {std::string("space3d_fov"), processSpace3d}, // the fov elem can be used cause both must be set
       {std::string("textalign"), processTextAlign},
       {std::string("textcolorind"), processTextColorInd},
       {std::string("textencoding"), processTextEncoding},
-      {std::string("textfontprec"), processTextFontPrec},
+      {std::string("textfontprec_font"), processTextFontPrec}, // the font elem can be used cause both must be set
       {std::string("textpath"), processTextPath},
       {std::string("title"), processTitle},
       {std::string("wsviewport_xmin"), processWSViewport}, // the xmin element can be used here cause all 4 are required
@@ -10998,7 +10998,7 @@ void GRM::Render::setTextFontPrec(const std::shared_ptr<Element> &element, int f
    * \param[in] font An Integer value representing a font type
    * \param[in] prec An Integer value representing a font precision
    */
-  element->setAttribute("textfontprec", true);
+
   element->setAttribute("textfontprec_font", font);
   element->setAttribute("textfontprec_prec", prec);
 }
@@ -11012,7 +11012,7 @@ void GRM::Render::setCharUp(const std::shared_ptr<Element> &element, double ux, 
    * \param[in] ux  X coordinate of the text up vector
    * \param[in] uy  y coordinate of the text up vector
    */
-  element->setAttribute("charup", true);
+
   element->setAttribute("charup_ux", ux);
   element->setAttribute("charup_uy", uy);
 }
@@ -11161,7 +11161,6 @@ void GRM::Render::setSpace3d(const std::shared_ptr<GRM::Element> &element, doubl
    * radius of the object's smallest bounding sphere)
    */
 
-  element->setAttribute("space3d", true);
   element->setAttribute("space3d_fov", fov);
   element->setAttribute("space3d_camera_distance", camera_distance);
 }
@@ -11203,7 +11202,7 @@ void GRM::Render::setGR3BackgroundColor(const std::shared_ptr<GRM::Element> &ele
    *
    * \param[in] element A GRM::Element
    */
-  element->setAttribute("gr3backgroundcolor", true);
+
   element->setAttribute("gr3backgroundcolor_red", red);
   element->setAttribute("gr3backgroundcolor_green", green);
   element->setAttribute("gr3backgroundcolor_blue", blue);

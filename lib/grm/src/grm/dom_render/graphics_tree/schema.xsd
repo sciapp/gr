@@ -82,7 +82,6 @@
             <xs:attribute name="lim_zmax" type="xs:string"/>
             <xs:attribute name="lim_zmin" type="xs:string"/>
             <xs:attribute name="scale" type="xs:string" use="required"/>
-            <xs:attribute name="space3d" type="xs:string"/>
             <xs:attribute name="space3d_camera_distance" type="xs:string"/>
             <xs:attribute name="space3d_fov" type="xs:string"/>
             <xs:attribute name="space3d_phi" type="xs:string"/>
