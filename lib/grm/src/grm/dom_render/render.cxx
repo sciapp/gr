@@ -3877,7 +3877,7 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
           logger((stderr, "Number of bin_edges must be number of bin_counts + 1\n"));
         }
 
-      total = std::reduce(bin_counts.begin(), bin_counts.end());
+      total = std::accumulate(bin_counts.begin(), bin_counts.end(), 0);
       for (i = 0; i < num_bins; ++i)
         {
           // temp_max_bc is a potential maximum for all bins respecting the given norm
