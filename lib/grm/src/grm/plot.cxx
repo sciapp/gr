@@ -1479,7 +1479,6 @@ err_t plot_line(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
-  grm_args_values(subplot_args, "orientation", "s", &orientation);
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
   while (*current_series != nullptr)
@@ -1510,7 +1509,8 @@ err_t plot_line(grm_args_t *subplot_args)
           subGroup->setAttribute("x", "x" + str);
         }
 
-      subGroup->setAttribute("orientation", orientation);
+      if (grm_args_values(subplot_args, "orientation", "s", &orientation))
+        subGroup->setAttribute("orientation", orientation);
 
       if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
         {
@@ -1555,7 +1555,6 @@ err_t plot_stairs(grm_args_t *subplot_args)
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
   grm_args_values(subplot_args, "kind", "s", &kind);
-  grm_args_values(subplot_args, "orientation", "s", &orientation);
 
   std::shared_ptr<GRM::Element> element; // declare element here for multiple usages / assignments later
   while (*current_series != nullptr)
@@ -1567,7 +1566,8 @@ err_t plot_stairs(grm_args_t *subplot_args)
       group->append(subGroup);
 
       subGroup->setAttribute("kind", kind);
-      subGroup->setAttribute("orientation", orientation);
+      if (grm_args_values(subplot_args, "orientation", "s", &orientation))
+        subGroup->setAttribute("orientation", orientation);
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -1621,7 +1621,6 @@ err_t plot_scatter(grm_args_t *subplot_args)
   char *orientation;
   int *previous_marker_type = plot_scatter_markertypes;
 
-  grm_args_values(subplot_args, "orientation", "s", &orientation);
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
@@ -1630,7 +1629,8 @@ err_t plot_scatter(grm_args_t *subplot_args)
     {
       auto subGroup = global_render->createSeries("scatter");
       group->append(subGroup);
-      subGroup->setAttribute("orientation", orientation);
+      if (grm_args_values(subplot_args, "orientation", "s", &orientation))
+        subGroup->setAttribute("orientation", orientation);
 
       double *x = nullptr, *y = nullptr, *z = nullptr, *c = nullptr, c_min, c_max;
       unsigned int x_length, y_length, z_length, c_length;
@@ -1769,7 +1769,6 @@ err_t plot_stem(grm_args_t *subplot_args)
   char *orientation;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "orientation", "s", &orientation);
 
   while (*current_series != nullptr)
     {
@@ -1781,7 +1780,8 @@ err_t plot_stem(grm_args_t *subplot_args)
       auto subGroup = global_render->createSeries("stem");
       group->append(subGroup);
 
-      subGroup->setAttribute("orientation", orientation);
+      if (grm_args_values(subplot_args, "orientation", "s", &orientation))
+        subGroup->setAttribute("orientation", orientation);
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -1856,8 +1856,8 @@ err_t plot_hist(grm_args_t *subplot_args)
 
       grm_args_first_value(*current_series, "bins", "D", &bins, &num_bins);
 
-      grm_args_values(subplot_args, "orientation", "s", &orientation);
-      subGroup->setAttribute("orientation", orientation);
+      if (grm_args_values(subplot_args, "orientation", "s", &orientation))
+        subGroup->setAttribute("orientation", orientation);
 
       if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
         {
@@ -5283,7 +5283,6 @@ int grm_plot(const grm_args_t *args)
 
       if (grm_args_values(active_plot_args, "size", "dd", &tmp_size_d[0], &tmp_size_d[1]))
         {
-          global_root->setAttribute("size", true);
           for (int i = 0; i < 2; ++i)
             {
               global_root->setAttribute("size_" + vars[i], tmp_size_d[i]);
@@ -5293,7 +5292,6 @@ int grm_plot(const grm_args_t *args)
         }
       if (grm_args_values(active_plot_args, "size", "ii", &tmp_size_i[0], &tmp_size_i[1]))
         {
-          global_root->setAttribute("size", true);
           for (int i = 0; i < 2; ++i)
             {
               global_root->setAttribute("size_" + vars[i], tmp_size_i[i]);
@@ -5303,7 +5301,6 @@ int grm_plot(const grm_args_t *args)
         }
       if (grm_args_values(active_plot_args, "size", "aa", &tmp_size_a[0], &tmp_size_a[1]))
         {
-          global_root->setAttribute("size", true);
           for (int i = 0; i < 2; ++i)
             {
               if (grm_args_values(tmp_size_a[i], "unit", "s", &tmp_size_s[i]))
@@ -5335,7 +5332,6 @@ int grm_plot(const grm_args_t *args)
         }
       if (grm_args_values(active_plot_args, "figsize", "dd", &figsize_x, &figsize_y))
         {
-          global_root->setAttribute("figsize", true);
           global_root->setAttribute("figsize_x", figsize_x);
           global_root->setAttribute("figsize_y", figsize_y);
         }

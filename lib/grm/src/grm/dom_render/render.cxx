@@ -1126,7 +1126,7 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
   dpi[1] = dpm[1] * 0.0254;
 
   /* TODO: Overwork this calculation */
-  if (root->hasAttribute("figsize"))
+  if (root->hasAttribute("figsize_x") && root->hasAttribute("figsize_y"))
     {
       tmp_size_d[0] = (double)root->getAttribute("figsize_x");
       tmp_size_d[1] = (double)root->getAttribute("figsize_y");
@@ -1136,7 +1136,7 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
           metric_size[i] = tmp_size_d[i] / 0.0254;
         }
     }
-  else if (root->hasAttribute("size"))
+  else if (root->hasAttribute("size_x") && root->hasAttribute("size_y"))
     {
       for (i = 0; i < 2; ++i)
         {
@@ -8977,7 +8977,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
       else if (str_equals_any(kind.c_str(), 2, "stem", "stairs"))
         {
           double x_min = 0.0, x_max = 0.0, y_min = 0.0, y_max = 0.0;
-          std::string orientation;
+          std::string orientation = PLOT_DEFAULT_ORIENTATION;
           int is_horizontal;
 
           for (const auto &series : element->children())
@@ -9320,13 +9320,16 @@ static void applyRootDefaults(std::shared_ptr<GRM::Element> root)
 {
   if (!root->hasAttribute("clearws")) root->setAttribute("clearws", PLOT_DEFAULT_CLEAR);
   if (!root->hasAttribute("updatews")) root->setAttribute("updatews", PLOT_DEFAULT_UPDATE);
-  if (!root->hasAttribute("size"))
+  if (!root->hasAttribute("size_x"))
     {
       global_root->setAttribute("size_x", PLOT_DEFAULT_WIDTH);
-      global_root->setAttribute("size_y", PLOT_DEFAULT_HEIGHT);
       global_root->setAttribute("size_x_type", "double");
-      global_root->setAttribute("size_y_type", "double");
       global_root->setAttribute("size_x_unit", "px");
+    }
+  if (!root->hasAttribute("size_y"))
+    {
+      global_root->setAttribute("size_y", PLOT_DEFAULT_HEIGHT);
+      global_root->setAttribute("size_y_type", "double");
       global_root->setAttribute("size_y_unit", "px");
     }
 

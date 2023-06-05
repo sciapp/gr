@@ -58,9 +58,6 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_DEFAULT_XGRID 1
 #define PLOT_DEFAULT_YGRID 1
 #define PLOT_DEFAULT_ZGRID 1
-#define PLOT_DEFAULT_XLABEL ""
-#define PLOT_DEFAULT_YLABEL ""
-#define PLOT_DEFAULT_ZLABEL ""
 #define PLOT_DEFAULT_ORIENTATION "horizontal"
 #define SERIES_DEFAULT_SPEC ""
 #define PLOT_POLAR_AXES_TEXT_BUFFER 40
@@ -113,7 +110,6 @@ void plot_process_colormap(grm_args_t *subplot_args);
 void plot_process_font(grm_args_t *subplot_args);
 err_t plot_process_grid_arguments(const grm_args_t *args);
 void plot_process_resample_method(grm_args_t *subplot_args);
-void plot_process_viewport(grm_args_t *subplot_args);
 void plot_process_window(grm_args_t *subplot_args);
 err_t plot_store_coordinate_ranges(grm_args_t *subplot_args);
 void plot_post_plot(grm_args_t *plot_args);
