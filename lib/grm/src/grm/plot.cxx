@@ -1475,10 +1475,9 @@ err_t plot_line(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
-  const char *kind, *orientation;
+  const char *orientation;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "kind", "s", &kind);
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
   while (*current_series != nullptr)
@@ -1526,8 +1525,7 @@ err_t plot_line(grm_args_t *subplot_args)
       if (grm_args_values(*current_series, "spec", "s", &spec)) subGroup->setAttribute("spec", spec);
 
       global_root->setAttribute("id", ++id);
-      grm_args_push(*current_series, "orientation", "s", orientation);
-      error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
+      error = plot_draw_errorbars(*current_series, x_length);
       return_if_error;
       ++current_series;
     }
@@ -1617,12 +1615,10 @@ err_t plot_scatter(grm_args_t *subplot_args)
    */
   grm_args_t **current_series;
   err_t error;
-  char *kind;
   char *orientation;
   int *previous_marker_type = plot_scatter_markertypes;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "kind", "s", &kind);
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
   while (*current_series != nullptr)
@@ -1704,8 +1700,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
           subGroup->setAttribute("yrange_max", y_max);
         }
 
-      grm_args_push(*current_series, "orientation", "s", orientation);
-      error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
+      error = plot_draw_errorbars(*current_series, x_length);
       return_if_error;
       ++current_series;
     }
@@ -1811,7 +1806,6 @@ err_t plot_stem(grm_args_t *subplot_args)
 
 err_t plot_hist(grm_args_t *subplot_args)
 {
-  char *kind;
   grm_args_t **current_series;
   double *bar_centers = nullptr;
   int bar_color_index = 989, i;
@@ -1820,7 +1814,6 @@ err_t plot_hist(grm_args_t *subplot_args)
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
-  grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]);
   grm_args_values(subplot_args, "bar_color", "i", &bar_color_index);
@@ -1831,7 +1824,7 @@ err_t plot_hist(grm_args_t *subplot_args)
       double edge_color_rgb[3] = {-1};
       double x_min, x_max, bar_width, y_min, y_max;
       double *bins, *x, *weights;
-      unsigned int num_bins, x_length, num_weights;
+      unsigned int num_bins = 0, x_length, num_weights;
       char *orientation;
       int is_horizontal;
 
@@ -1881,17 +1874,13 @@ err_t plot_hist(grm_args_t *subplot_args)
 
       bar_width = (x_max - x_min) / num_bins;
 
-      // TODO: Move this into render
       if (grm_args_contains(*current_series, "error"))
         {
-          bar_centers = static_cast<double *>(malloc(num_bins * sizeof(double)));
-          cleanup_and_set_error_if(bar_centers == nullptr, ERROR_MALLOC);
-          linspace(x_min + 0.5 * bar_width, x_max - 0.5 * bar_width, num_bins, bar_centers);
-          grm_args_push(*current_series, "orientation", "s", orientation);
-          error = plot_draw_errorbars(*current_series, bar_centers, num_bins, bins, kind);
-          cleanup_if_error;
-          free(bar_centers);
-          bar_centers = nullptr;
+          if (num_bins <= 1)
+            {
+              num_bins = (int)(3.3 * log10(x_length) + 0.5) + 1;
+            }
+          error = plot_draw_errorbars(*current_series, num_bins);
         }
       global_root->setAttribute("id", ++id);
       ++current_series;
@@ -2502,8 +2491,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
                     }
                   x_length = y_length;
                 }
-              grm_args_push(*current_series, "orientation", "s", orientation);
-              error = plot_draw_errorbars(*current_series, bar_centers, x_length, y, "barplot");
+              error = plot_draw_errorbars(*current_series, x_length);
               cleanup_if_error;
               free(bar_centers);
               bar_centers = nullptr;
@@ -4228,7 +4216,7 @@ err_t extract_multi_type_argument(grm_args_t *error_container, const char *key, 
   return ERROR_NONE;
 }
 
-err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_length, double *y, const char *kind)
+err_t plot_draw_errorbars(grm_args_t *series_args, unsigned int x_length)
 {
   grm_args_t *error_container;
   arg_t *arg_ptr;
@@ -4257,14 +4245,6 @@ err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_len
   std::string str = std::to_string(id);
   global_root->setAttribute("id", ++id);
   auto context = global_render->getContext();
-
-  std::vector<double> x_vec(x, x + x_length);
-  std::vector<double> y_vec(y, y + x_length);
-
-  (*context)["x" + str] = x_vec;
-  subGroup->setAttribute("x", "x" + str);
-  (*context)["y" + str] = y_vec;
-  subGroup->setAttribute("y", "y" + str);
 
   if (strcmp(arg_ptr->value_format, "a") == 0 || strcmp(arg_ptr->value_format, "nA") == 0)
     {

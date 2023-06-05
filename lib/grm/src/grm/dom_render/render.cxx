@@ -4735,6 +4735,19 @@ static void drawImage(const std::shared_ptr<GRM::Element> &element, const std::s
   gr_drawimage(xmin, xmax, ymax, ymin, width, height, (int *)&(GRM::get<std::vector<int>>((*context)[data])[0]), model);
 }
 
+static void extendErrorbars(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context,
+                            std::vector<double> x, std::vector<double> y)
+{
+  int id = static_cast<int>(global_root->getAttribute("id"));
+  std::string str = std::to_string(id);
+  global_root->setAttribute("id", ++id);
+
+  (*context)["x" + str] = x;
+  element->setAttribute("x", "x" + str);
+  (*context)["y" + str] = y;
+  element->setAttribute("y", "y" + str);
+}
+
 static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   std::string orientation = PLOT_DEFAULT_ORIENTATION, kind;
@@ -4770,13 +4783,13 @@ static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::s
   y_vec = GRM::get<std::vector<double>>((*context)[y]);
   x_length = x_vec.size();
   kind = static_cast<std::string>(series->parentElement()->getAttribute("kind"));
-  if (element->hasAttribute("orientation"))
+  if (element->parentElement()->hasAttribute("orientation"))
     {
-      orientation = static_cast<std::string>(element->getAttribute("orientation"));
+      orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
     }
   else
     {
-      element->setAttribute("orientation", orientation);
+      element->parentElement()->setAttribute("orientation", orientation);
     }
 
   if (!element->hasAttribute("absolute_downwards") && !element->hasAttribute("relative_downwards"))
@@ -5955,7 +5968,6 @@ static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared
    * \param[in] context The GRM::Context that contains the actual data
    */
 
-  double *bar_centers = nullptr;
   int bar_color_index = 989, i;
   std::vector<double> bar_color_rgb_vec = {-1, -1, -1};
   std::shared_ptr<GRM::Element> plot_parent;
@@ -6086,6 +6098,17 @@ static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared
         }
       global_render->setLineColorInd(drawRect, edge_color_index);
       element->append(drawRect);
+    }
+
+  // errorbar handling
+  for (const auto &elem : element->children())
+    {
+      if (elem->localName() == "errorbars")
+        {
+          std::vector<double> bar_centers(num_bins);
+          linspace(x_min + 0.5 * bar_width, x_max - 0.5 * bar_width, num_bins, bar_centers);
+          extendErrorbars(elem, context, bar_centers, bins_vec);
+        }
     }
 }
 
@@ -6810,6 +6833,12 @@ static void scatter(const std::shared_ptr<GRM::Element> &element, const std::sha
       element->append(marker);
       global_root->setAttribute("id", ++id);
     }
+
+  // errorbar handling
+  for (const auto &elem : element->children())
+    {
+      if (elem->localName() == "errorbars") extendErrorbars(elem, context, x_vec, y_vec);
+    }
 }
 
 static void scatter3(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -7444,6 +7473,12 @@ static void line(const std::shared_ptr<GRM::Element> &element, const std::shared
       global_root->setAttribute("id", ++id);
       line->setAttribute("markercolorind", current_marker_colorind);
       element->append(line);
+    }
+
+  // errorbar handling
+  for (const auto &elem : element->children())
+    {
+      if (elem->localName() == "errorbars") extendErrorbars(elem, context, x_vec, y_vec);
     }
 }
 

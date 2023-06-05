@@ -335,7 +335,6 @@
             <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
-            <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="absolute_downwards" type="xs:string"/>
             <xs:attribute name="relative_downwards" type="xs:string"/>
             <xs:attribute name="absolute_upwards" type="xs:string"/>
