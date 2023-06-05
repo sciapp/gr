@@ -331,6 +331,21 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="orientation" type="xs:string"/>
+            <xs:attribute name="absolute_downwards" type="xs:string"/>
+            <xs:attribute name="relative_downwards" type="xs:string"/>
+            <xs:attribute name="absolute_upwards" type="xs:string"/>
+            <xs:attribute name="relative_upwards" type="xs:string"/>
+            <xs:attribute name="absolute_downwards_flt" type="xs:string"/>
+            <xs:attribute name="absolute_upwards_flt" type="xs:string"/>
+            <xs:attribute name="relative_downwards_flt" type="xs:string"/>
+            <xs:attribute name="relative_upwards_flt" type="xs:string"/>
+            <xs:attribute name="upwardscap_color" type="xs:string"/>
+            <xs:attribute name="downwardscap_color" type="xs:string"/>
+            <xs:attribute name="errorbar_color" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -581,6 +596,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="bar_color" type="xs:string"/>
             <xs:attribute name="bar_width" type="xs:string"/>
             <xs:attribute name="style" type="xs:string"/>
@@ -629,6 +645,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="nbins" type="xs:string"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string"/>
@@ -643,6 +660,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="nbins" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
@@ -659,6 +677,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="bar_color_rgb" type="xs:string"/>
             <xs:attribute name="bar_color_index" type="xs:string"/>
             <xs:attribute name="edge_color_rgb" type="xs:string"/>
@@ -677,6 +696,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="grplot" type="xs:string"/>
             <xs:attribute name="c_min" type="xs:string" use="required"/>
             <xs:attribute name="c_max" type="xs:string" use="required"/>
@@ -696,6 +716,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="c" type="xs:string" use="required"/>
             <xs:attribute name="c_dims" type="xs:string" use="required"/>
             <xs:attribute name="isovalue" type="xs:string"/>
@@ -716,6 +737,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="orientation" type="xs:string"/>
@@ -733,6 +755,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
@@ -772,6 +795,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="fillintstyle" type="xs:string"/>
             <xs:attribute name="textalign" type="xs:string"/>
@@ -788,6 +812,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
@@ -802,6 +827,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="r_min" type="xs:string"/>
             <xs:attribute name="r_max" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
@@ -820,6 +846,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
@@ -840,6 +867,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="original_resample" type="xs:string"/>
             <xs:attribute name="edge_color" type="xs:string"/>
             <xs:attribute name="face_color" type="xs:string"/>
@@ -871,6 +899,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="color" type="xs:string" use="required"/>
             <xs:attribute name="u" type="xs:string" use="required"/>
             <xs:attribute name="v" type="xs:string" use="required"/>
@@ -888,6 +917,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="v" type="xs:string" use="required"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
@@ -910,6 +940,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="v" type="xs:string" use="required"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
@@ -927,6 +958,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="xform" type="xs:string"/>
@@ -943,12 +975,12 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z" type="xs:string"/>
             <xs:attribute name="spec" type="xs:string"/>
             <xs:attribute name="orientation" type="xs:string"/>
-            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="step_where" type="xs:string"/>
             <xs:attribute name="calc_window_and_viewport_from_parent" type="xs:string"/>
             <xs:attribute name="xi" type="xs:string"/>
@@ -964,6 +996,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="spec" type="xs:string"/>
@@ -976,6 +1009,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="accelerate" type="xs:string" use="required"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string"/>
@@ -990,6 +1024,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="levels" type="xs:string" use="required"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
@@ -1002,6 +1037,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
@@ -1013,6 +1049,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="algorithm" type="xs:string" use="required"/>
             <xs:attribute name="c" type="xs:string" use="required"/>
             <xs:attribute name="c_dims" type="xs:string" use="required"/>
@@ -1026,6 +1063,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
@@ -1058,6 +1096,7 @@
     <xs:attributeGroup name="contour">
         <xs:attributeGroup ref="bbox"/>
         <xs:attributeGroup ref="ranges"/>
+        <xs:attribute name="kind" type="xs:string"/>
         <xs:attribute name="x" type="xs:string" use="required"/>
         <xs:attribute name="y" type="xs:string" use="required"/>
         <xs:attribute name="z" type="xs:string" use="required"/>

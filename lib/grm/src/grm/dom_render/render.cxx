@@ -4895,18 +4895,21 @@ static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::s
       relative_upwards_vec = GRM::get<std::vector<double>>((*context)[relative_upwards]);
       upwards_length = absolute_upwards_vec.size();
     }
-  if (!element->hasAttribute("absolute_downwards_flt"))
-    throw NotFoundError("Errorbars are missing required attribute absolute_downwards_flt.\n");
-  absolute_downwards_flt = static_cast<double>(element->getAttribute("absolute_downwards_flt"));
-  if (!element->hasAttribute("absolute_upwards_flt"))
-    throw NotFoundError("Errorbars are missing required attribute absolute_upwards_flt.\n");
-  absolute_upwards_flt = static_cast<double>(element->getAttribute("absolute_upwards_flt"));
-  if (!element->hasAttribute("relative_downwards_flt"))
-    throw NotFoundError("Errorbars are missing required attribute relative_downwards_flt.\n");
-  relative_downwards_flt = static_cast<double>(element->getAttribute("relative_downwards_flt"));
-  if (!element->hasAttribute("relative_upwards_flt"))
-    throw NotFoundError("Errorbars are missing required attribute relative_upwards_flt.\n");
-  relative_upwards_flt = static_cast<double>(element->getAttribute("relative_upwards_flt"));
+  if (element->hasAttribute("absolute_downwards_flt"))
+    absolute_downwards_flt = static_cast<double>(element->getAttribute("absolute_downwards_flt"));
+  if (element->hasAttribute("absolute_upwards_flt"))
+    absolute_upwards_flt = static_cast<double>(element->getAttribute("absolute_upwards_flt"));
+  if (element->hasAttribute("relative_downwards_flt"))
+    relative_downwards_flt = static_cast<double>(element->getAttribute("relative_downwards_flt"));
+  if (element->hasAttribute("relative_upwards_flt"))
+    relative_upwards_flt = static_cast<double>(element->getAttribute("relative_upwards_flt"));
+
+  if (absolute_upwards_vec.empty() && relative_upwards_vec.empty() && absolute_upwards_flt == FLT_MAX &&
+      relative_upwards_flt == FLT_MAX && absolute_downwards_vec.empty() && relative_downwards_vec.empty() &&
+      absolute_downwards_flt == FLT_MAX && relative_downwards_flt == FLT_MAX)
+    {
+      throw NotFoundError("Errorbar is missing required error-data.");
+    }
 
   is_horizontal = orientation == "horizontal";
 
@@ -5784,7 +5787,6 @@ static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::sha
       plot_parent = element->parentElement()->parentElement();
     }
   zlog = static_cast<int>(plot_parent->getAttribute("zlog"));
-
 
   if (element_context->hasAttribute("x"))
     {
