@@ -51,7 +51,7 @@ extern "C" {
 /* ========================= constants ============================================================================== */
 
 static const std::string SCHEMA_REL_FILEPATH = "share/xml/GRM/grm_graphics_tree_schema.xsd";
-static const std::string DISABLE_XML_VALIDATION_ENV_KEY = "GRM_SKIP_VALIDATION";
+static const std::string ENABLE_XML_VALIDATION_ENV_KEY = "GRM_VALIDATE";
 
 /* ========================= datatypes ============================================================================== */
 
@@ -4723,7 +4723,7 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
 #ifndef NO_LIBXML2
 static void schema_parse_error_handler(void *has_schema_errors, xmlErrorPtr error)
 {
-  logger((stderr, "XML validation error at line %d, column %d: %s\n", error->line, error->int2, error->message));
+  fprintf(stderr, "XML validation error at line %d, column %d: %s", error->line, error->int2, error->message);
   *((bool *)has_schema_errors) = true;
 }
 
@@ -4934,9 +4934,7 @@ int grm_load_graphics_tree(FILE *file)
   cleanup_if_error;
 
   xmlInitParser();
-  xml_validation_enabled = (getenv(DISABLE_XML_VALIDATION_ENV_KEY.c_str()) == NULL ||
-                            !str_equals_any(getenv(DISABLE_XML_VALIDATION_ENV_KEY.c_str()), 7, "1", "on", "ON", "true",
-                                            "TRUE", "yes", "YES"));
+  xml_validation_enabled = is_env_variable_enabled(ENABLE_XML_VALIDATION_ENV_KEY.c_str());
   use_xml_schema = xml_validation_enabled && file_exists(schema_filepath.c_str());
   if (use_xml_schema)
     {
@@ -5367,31 +5365,33 @@ int grm_plot(const grm_args_t *args)
       grm_dump(global_root_args, stderr);
       grm_dump_graphics_tree(stderr);
     }
-#ifndef NO_LIBXML2
-  bool xml_validation_enabled = (getenv(DISABLE_XML_VALIDATION_ENV_KEY.c_str()) == NULL ||
-                                 !str_equals_any(getenv(DISABLE_XML_VALIDATION_ENV_KEY.c_str()), 7, "1", "on", "ON",
-                                                 "true", "TRUE", "yes", "YES"));
-  if (xml_validation_enabled)
+  if (is_env_variable_enabled(ENABLE_XML_VALIDATION_ENV_KEY.c_str()) || logger_enabled())
     {
+#ifndef NO_LIBXML2
       err_t validation_error = validate_graphics_tree();
-      if (validation_error == ERROR_PARSE_XML_NO_SCHEMA_FILE)
+      if (validation_error == ERROR_NONE)
         {
-          if (logger_enabled())
-            {
-              logger((stderr, "No schema found, XML validation not possible!\n"));
-            }
+          fprintf(stderr, "The internal graphics tree passed the validity check.\n");
         }
-      else if (validation_error != ERROR_NONE)
+      else if (validation_error == ERROR_PARSE_XML_NO_SCHEMA_FILE)
         {
-          if (logger_enabled())
-            {
-              logger((stderr, "XML validation failed with error \"%d\" (\"%s\")!\n", validation_error,
-                      error_names[validation_error]));
-            }
+          fprintf(stderr, "No schema found, XML validation not possible!\n");
+        }
+      else if (validation_error == ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION)
+        {
+          fprintf(stderr, "Schema validation failed!\n");
+        }
+      else
+        {
+          fprintf(stderr, "XML validation failed with error \"%d\" (\"%s\")!\n", validation_error,
+                  error_names[validation_error]);
           return 0;
         }
-    }
+#else
+      fprintf(stderr, "No libxml2 support compiled in, no validation possible!\n");
 #endif
+    }
+
 #endif
 
   return 1;

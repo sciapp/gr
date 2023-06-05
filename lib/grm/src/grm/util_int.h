@@ -131,6 +131,7 @@ char *str_filter(const char *str, const char *filter_chars);
 int is_homogenous_string_of_char(const char *str, char c);
 const char *private_name(const char *public_name);
 unsigned long next_or_equal_power2(unsigned long num);
+int is_env_variable_enabled(const char *env_variable_name);
 int file_exists(const char *file_path);
 char *get_gr_dir(void);
 #ifdef _WIN32
