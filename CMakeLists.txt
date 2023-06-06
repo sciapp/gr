@@ -80,7 +80,7 @@ set(GR_SHARED_LIBRARY_SUFFIX
 find_package(Freetype)
 find_package(Jpeg REQUIRED)
 find_package(Libpng REQUIRED)
-find_package(Zlib REQUIRED)
+find_package(ZLIB REQUIRED)
 find_package(Qhull REQUIRED)
 find_package(Tiff)
 find_package(Ffmpeg 57.48.100)
@@ -242,7 +242,7 @@ foreach(LIBRARY gks_static gks_shared)
       NO_FT
     )
   endif()
-  target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} Zlib::Zlib)
+  target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} ZLIB::ZLIB)
   target_compile_definitions(
     ${LIBRARY}
     ${GKS_LINK_MODE}

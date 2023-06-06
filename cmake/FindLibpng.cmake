@@ -24,7 +24,7 @@
 # ``Libpng_FOUND``
 #   If false, do not try to use Libpng.
 
-find_package(Zlib)
+find_package(ZLIB)
 
 if(NOT LIBPNG_INCLUDE_DIR)
   find_path(LIBPNG_INCLUDE_DIR png.h)
@@ -51,7 +51,7 @@ find_package_handle_standard_args(
   REQUIRED_VARS
   LIBPNG_LIBRARY
   LIBPNG_INCLUDE_DIR
-  Zlib_FOUND
+  ZLIB_FOUND
   LIBPNG_VERSION_STRING
 )
 
@@ -66,7 +66,7 @@ if(Libpng_FOUND)
       PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${LIBPNG_INCLUDE_DIRS}"
                  IMPORTED_LINK_INTERFACE_LANGUAGES "C"
                  IMPORTED_LOCATION "${LIBPNG_LIBRARY}"
-                 INTERFACE_LINK_LIBRARIES "Zlib::Zlib"
+                 INTERFACE_LINK_LIBRARIES "ZLIB::ZLIB"
     )
   endif()
 elseif(${CMAKE_FIND_PACKAGE_NAME}_FIND_REQUIRED)

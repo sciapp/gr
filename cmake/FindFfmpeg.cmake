@@ -24,7 +24,7 @@
 # ``Ffmpeg_FOUND``
 #   If false, do not try to use Ffmpeg.
 
-find_package(Zlib)
+find_package(ZLIB)
 
 if(NOT FFMPEG_INCLUDE_DIR)
   find_path(FFMPEG_INCLUDE_DIR libavcodec/avcodec.h)
@@ -108,7 +108,7 @@ if(FFMPEG_INCLUDE_DIR
       PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_INCLUDE_DIRS}"
                  IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
                  IMPORTED_LOCATION "${FFMPEG_LIBRARY_AVFORMAT}"
-                 INTERFACE_LINK_LIBRARIES "Zlib::Zlib"
+                 INTERFACE_LINK_LIBRARIES "ZLIB::ZLIB"
     )
   endif()
 
@@ -119,7 +119,7 @@ if(FFMPEG_INCLUDE_DIR
       PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_INCLUDE_DIRS}"
                  IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
                  IMPORTED_LOCATION "${FFMPEG_LIBRARY_AVCODEC}"
-                 INTERFACE_LINK_LIBRARIES "Zlib::Zlib"
+                 INTERFACE_LINK_LIBRARIES "ZLIB::ZLIB"
     )
   endif()
 
@@ -171,7 +171,7 @@ if(FFMPEG_INCLUDE_DIR
         PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_INCLUDE_DIRS}"
                    IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
                    IMPORTED_LOCATION "${FFMPEG_LIBRARY_THEORA}"
-                   INTERFACE_LINK_LIBRARIES "Zlib::Zlib"
+                   INTERFACE_LINK_LIBRARIES "ZLIB::ZLIB"
       )
     endif()
 
