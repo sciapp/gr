@@ -71,14 +71,15 @@
             </xs:choice>
             <xs:attribute name="adjust_xlim" type="xs:string" use="required"/>
             <xs:attribute name="adjust_ylim" type="xs:string" use="required"/>
+            <xs:attribute name="adjust_zlim" type="xs:string"/>
             <xs:attribute name="keep_aspect_ratio" type="xs:string" use="required"/>
             <xs:attribute name="kind" type="xs:string" use="required"/>
             <xs:attribute name="lim_cmax" type="xs:string"/>
             <xs:attribute name="lim_cmin" type="xs:string"/>
-            <xs:attribute name="lim_xmax" type="xs:string" use="required"/>
-            <xs:attribute name="lim_xmin" type="xs:string" use="required"/>
-            <xs:attribute name="lim_ymax" type="xs:string" use="required"/>
-            <xs:attribute name="lim_ymin" type="xs:string" use="required"/>
+            <xs:attribute name="lim_xmax" type="xs:string"/>
+            <xs:attribute name="lim_xmin" type="xs:string"/>
+            <xs:attribute name="lim_ymax" type="xs:string"/>
+            <xs:attribute name="lim_ymin" type="xs:string"/>
             <xs:attribute name="lim_zmax" type="xs:string"/>
             <xs:attribute name="lim_zmin" type="xs:string"/>
             <xs:attribute name="scale" type="xs:string" use="required"/>
@@ -86,7 +87,6 @@
             <xs:attribute name="space3d_fov" type="xs:string"/>
             <xs:attribute name="space3d_phi" type="xs:string"/>
             <xs:attribute name="space3d_theta" type="xs:string"/>
-            <xs:attribute name="plot_id" type="xs:string" use="required"/>
             <xs:attribute name="plot_xmax" type="xs:string" use="required"/>
             <xs:attribute name="plot_xmin" type="xs:string" use="required"/>
             <xs:attribute name="plot_ymax" type="xs:string" use="required"/>
@@ -122,9 +122,21 @@
             <xs:attributeGroup ref="colorrep"/>
             <xs:attribute name="fillcolorind" type="xs:string"/>
             <xs:attribute name="fillintstyle" type="xs:string"/>
+            <xs:attribute name="xlog" type="xs:string"/>
+            <xs:attribute name="ylog" type="xs:string"/>
             <xs:attribute name="zlog" type="xs:string"/>
             <xs:attribute name="phiflip" type="xs:string"/>
             <xs:attribute name="rings" type="xs:string"/>
+            <xs:attribute name="colormap" type="xs:string"/>
+            <xs:attribute name="plotGroup" type="xs:string"/>
+            <xs:attribute name="xflip" type="xs:string"/>
+            <xs:attribute name="yflip" type="xs:string"/>
+            <xs:attribute name="zflip" type="xs:string"/>
+            <xs:attribute name="font" type="xs:string"/>
+            <xs:attribute name="font_precision" type="xs:string"/>
+            <xs:attribute name="location" type="xs:string"/>
+            <xs:attribute name="linespec" type="xs:string"/>
+            <xs:attribute name="resample_method" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -149,10 +161,10 @@
     <xs:element name="grid">
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
-            <xs:attribute name="x_major" type="xs:string" use="required"/>
-            <xs:attribute name="x_org_pos" type="xs:string" use="required"/>
-            <xs:attribute name="y_major" type="xs:string" use="required"/>
-            <xs:attribute name="y_org_pos" type="xs:string" use="required"/>
+            <xs:attribute name="x_major" type="xs:string"/>
+            <xs:attribute name="x_org_pos" type="xs:string"/>
+            <xs:attribute name="y_major" type="xs:string"/>
+            <xs:attribute name="y_org_pos" type="xs:string"/>
             <xs:attribute name="x_tick" type="xs:string"/>
             <xs:attribute name="y_tick" type="xs:string"/>
             <xs:attribute name="x_org" type="xs:string"/>
@@ -190,10 +202,10 @@
             <xs:attribute name="y_org_pos" type="xs:string" use="required"/>
             <xs:attribute name="x_tick" type="xs:string"/>
             <xs:attribute name="y_tick" type="xs:string"/>
-            <xs:attribute name="x_major" type="xs:string" use="required"/>
-            <xs:attribute name="y_major" type="xs:string" use="required"/>
-            <xs:attribute name="x_label" type="xs:string"/>
-            <xs:attribute name="y_label" type="xs:string"/>
+            <xs:attribute name="x_major" type="xs:string"/>
+            <xs:attribute name="y_major" type="xs:string"/>
+            <xs:attribute name="xlabel" type="xs:string"/>
+            <xs:attribute name="ylabel" type="xs:string"/>
             <xs:attribute name="tick_size" type="xs:string"/>
             <xs:attribute name="x_org" type="xs:string"/>
             <xs:attribute name="y_org" type="xs:string"/>
@@ -213,8 +225,8 @@
             <xs:attribute name="x_major" type="xs:string" use="required"/>
             <xs:attribute name="y_major" type="xs:string" use="required"/>
             <xs:attribute name="z_major" type="xs:string"/>
-            <xs:attribute name="x_label" type="xs:string"/>
-            <xs:attribute name="y_label" type="xs:string"/>
+            <xs:attribute name="xlabel" type="xs:string"/>
+            <xs:attribute name="ylabel" type="xs:string"/>
             <xs:attribute name="tick_size" type="xs:string"/>
             <xs:attribute name="x_org" type="xs:string"/>
             <xs:attribute name="y_org" type="xs:string"/>
@@ -228,6 +240,7 @@
             <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="space" type="xs:string"/>
             <xs:attribute name="text" type="xs:string" use="required"/>
+            <xs:attribute name="textalign" type="xs:string"/>
             <xs:attribute name="textalign_horizontal" type="xs:string"/>
             <xs:attribute name="textalign_vertical" type="xs:string"/>
             <xs:attribute name="x" type="xs:string"/>
@@ -363,7 +376,6 @@
     <!-- definition of polyline -->
     <xs:element name="polyline">
         <xs:complexType>
-            <xs:attribute name="name" type="xs:string" use="required"/>
             <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string"/>

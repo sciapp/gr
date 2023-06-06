@@ -4754,7 +4754,7 @@ err_t validate_graphics_tree(void)
   xmlSchemaFreeParserCtxt(schema_parser_ctxt);
   schema_parser_ctxt = nullptr;
   valid_ctxt = xmlSchemaNewValidCtxt(schema);
-  doc = xmlReadDoc(BAD_CAST toXML(global_root).c_str(), nullptr, nullptr, 0);
+  doc = xmlReadDoc(BAD_CAST toXML(global_root).c_str(), nullptr, nullptr, XML_PARSE_NOBLANKS);
   cleanup_and_set_error_if(doc == nullptr, ERROR_PARSE_XML_PARSING);
   xmlSchemaSetValidStructuredErrors(valid_ctxt, schema_parse_error_handler, &has_schema_errors);
   xmlSchemaValidateDoc(valid_ctxt, doc);
@@ -4948,7 +4948,7 @@ int grm_load_graphics_tree(FILE *file)
       schema_parser_ctxt = nullptr;
       valid_ctxt = xmlSchemaNewValidCtxt(schema);
     }
-  reader = xmlReaderForFd(fileno(file), nullptr, nullptr, 0);
+  reader = xmlReaderForFd(fileno(file), nullptr, nullptr, XML_PARSE_NOBLANKS);
   cleanup_and_set_error_if(reader == nullptr, ERROR_PARSE_XML_PARSING);
 
   if (use_xml_schema)
@@ -5176,10 +5176,10 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
     }
   if (grm_args_values(subplot_args, "subplot", "D", &subplot))
     {
-      group->setAttribute("subplot_xmin", subplot[0]);
-      group->setAttribute("subplot_xmax", subplot[1]);
-      group->setAttribute("subplot_ymin", subplot[2]);
-      group->setAttribute("subplot_ymax", subplot[3]);
+      group->setAttribute("plot_xmin", subplot[0]);
+      group->setAttribute("plot_xmax", subplot[1]);
+      group->setAttribute("plot_ymin", subplot[2]);
+      group->setAttribute("plot_ymax", subplot[3]);
     }
 
   if (grm_args_values(subplot_args, "xlim", "dd", &xlim_min, &xlim_max))
@@ -5343,7 +5343,7 @@ int grm_plot(const grm_args_t *args)
           while (*current_subplot_args != nullptr)
             {
               auto group = global_render->createElement("plot");
-              group->setAttribute("subplotGroup", true);
+              group->setAttribute("plotGroup", true);
               global_root->append(group);
               currentDomElement = group;
               if (!plot_process_subplot_args(*current_subplot_args))
@@ -5502,7 +5502,7 @@ std::shared_ptr<GRM::Element> get_subplot_from_ndc_point_using_dom_helper(std::s
                                                                           double x, double y)
 {
   bool elementIsSubplotGroup =
-      (element->hasAttribute("subplotGroup") && static_cast<int>(element->getAttribute("subplotGroup")));
+      (element->hasAttribute("plotGroup") && static_cast<int>(element->getAttribute("plotGroup")));
 
   if (element->localName() == "layout_gridelement" || elementIsSubplotGroup)
     {
@@ -5564,7 +5564,7 @@ std::shared_ptr<GRM::Element> get_subplot_from_ndc_points_using_dom(unsigned int
 void grm_set_attribute_on_all_subplots_helper(std::shared_ptr<GRM::Element> element, std::string attribute, int value)
 {
   bool elementIsSubplotGroup =
-      (element->hasAttribute("subplotGroup") && static_cast<int>(element->getAttribute("subplotGroup")));
+      (element->hasAttribute("plotGroup") && static_cast<int>(element->getAttribute("plotGroup")));
 
   if (element->localName() == "layout_gridelement" || elementIsSubplotGroup)
     {

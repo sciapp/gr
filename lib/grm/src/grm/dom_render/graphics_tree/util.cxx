@@ -40,12 +40,19 @@ static void elementToXML(std::stringstream &os, const std::shared_ptr<const GRM:
           os << " " << attribute_name << "=\"" << (std::string)element->getAttribute(attribute_name) << "\"";
         }
     }
-  os << ">\n";
-  for (const auto &child_node : element->childNodes())
+  if (element->hasChildNodes())
     {
-      nodeToXML(os, child_node, options, indent + options.indent);
+      os << ">\n";
+      for (const auto &child_node : element->childNodes())
+        {
+          nodeToXML(os, child_node, options, indent + options.indent);
+        }
+      os << indent << "</" << element->localName() << ">\n";
     }
-  os << indent << "</" << element->localName() << ">\n";
+  else
+    {
+      os << " />\n";
+    }
 }
 
 static void commentToXML(std::stringstream &os, const std::shared_ptr<const GRM::Comment> &comment,

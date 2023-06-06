@@ -641,7 +641,7 @@ static std::shared_ptr<GRM::Element> getSubplotElement(const std::shared_ptr<GRM
   while (ancestor->localName() != "figure")
     {
       bool ancestorIsSubplotGroup =
-          (ancestor->hasAttribute("subplotGroup") && static_cast<int>(ancestor->getAttribute("subplotGroup")));
+          (ancestor->hasAttribute("plotGroup") && static_cast<int>(ancestor->getAttribute("plotGroup")));
       if (ancestor->localName() == "layout_gridelement" || ancestorIsSubplotGroup)
         {
           return ancestor;
@@ -2955,10 +2955,10 @@ static void processSubplot(const std::shared_ptr<GRM::Element> &elem)
   double viewport[4] = {0.0, 0.0, 0.0, 0.0};
   int background_color_index;
 
-  subplot[0] = (double)elem->getAttribute("subplot_xmin");
-  subplot[1] = (double)elem->getAttribute("subplot_xmax");
-  subplot[2] = (double)elem->getAttribute("subplot_ymin");
-  subplot[3] = (double)elem->getAttribute("subplot_ymax");
+  subplot[0] = (double)elem->getAttribute("plot_xmin");
+  subplot[1] = (double)elem->getAttribute("plot_xmax");
+  subplot[2] = (double)elem->getAttribute("plot_ymin");
+  subplot[3] = (double)elem->getAttribute("plot_ymax");
   kind = (std::string)elem->getAttribute("kind");
   y_label_margin = (int)elem->getAttribute("ylabel_margin");
   x_label_margin = (int)elem->getAttribute("xlabel_margin");
@@ -6100,10 +6100,10 @@ static void isosurfaceRender(const std::shared_ptr<GRM::Element> &elem, const st
 static void layoutGrid(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   double xmin, xmax, ymin, ymax;
-  xmin = (double)element->getAttribute("subplot_xmin");
-  xmax = (double)element->getAttribute("subplot_xmax");
-  ymin = (double)element->getAttribute("subplot_ymin");
-  ymax = (double)element->getAttribute("subplot_ymax");
+  xmin = (double)element->getAttribute("plot_xmin");
+  xmax = (double)element->getAttribute("plot_xmax");
+  ymin = (double)element->getAttribute("plot_ymin");
+  ymax = (double)element->getAttribute("plot_ymax");
 
   gr_setviewport(xmin, xmax, ymin, ymax);
 }
@@ -6113,10 +6113,10 @@ static void layoutGridElement(const std::shared_ptr<GRM::Element> &element,
 {
   // todo is layoutgridelement actually needed? Can it be replaced by an ordinary group
   double xmin, xmax, ymin, ymax;
-  xmin = (double)element->getAttribute("subplot_xmin");
-  xmax = (double)element->getAttribute("subplot_xmax");
-  ymin = (double)element->getAttribute("subplot_ymin");
-  ymax = (double)element->getAttribute("subplot_ymax");
+  xmin = (double)element->getAttribute("plot_xmin");
+  xmax = (double)element->getAttribute("plot_xmax");
+  ymin = (double)element->getAttribute("plot_ymin");
+  ymax = (double)element->getAttribute("plot_ymax");
 
   //  gr_setviewport(xmin, xmax, ymin, ymax);
 }
@@ -9292,10 +9292,10 @@ static void finalizeGrid(const std::shared_ptr<GRM::Element> &root)
               int nrows = static_cast<int>(child->getAttribute("nrows"));
               int ncols = static_cast<int>(child->getAttribute("ncols"));
               rootGrid = new grm::Grid(nrows, ncols);
-              child->setAttribute("subplot_xmin", 0);
-              child->setAttribute("subplot_xmax", 1);
-              child->setAttribute("subplot_ymin", 0);
-              child->setAttribute("subplot_ymax", 1);
+              child->setAttribute("plot_xmin", 0);
+              child->setAttribute("plot_xmax", 1);
+              child->setAttribute("plot_ymin", 0);
+              child->setAttribute("plot_ymax", 1);
 
               initializeGridElements(child, rootGrid);
               rootGrid->finalizeSubplot();
@@ -9322,17 +9322,17 @@ static void applyRootDefaults(std::shared_ptr<GRM::Element> root)
       global_root->setAttribute("size_y_unit", "px");
     }
 
-  for (auto child : root->children())
+  for (const auto& child : root->children())
     {
       if (child->localName() == "plot")
         {
           if (!child->hasAttribute("kind")) child->setAttribute("kind", PLOT_DEFAULT_KIND);
           if (!child->hasAttribute("keep_aspect_ratio"))
             child->setAttribute("keep_aspect_ratio", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
-          if (!child->hasAttribute("subplot_xmin")) child->setAttribute("subplot_xmin", PLOT_DEFAULT_SUBPLOT_MIN_X);
-          if (!child->hasAttribute("subplot_xmax")) child->setAttribute("subplot_xmax", PLOT_DEFAULT_SUBPLOT_MAX_X);
-          if (!child->hasAttribute("subplot_ymin")) child->setAttribute("subplot_ymin", PLOT_DEFAULT_SUBPLOT_MIN_Y);
-          if (!child->hasAttribute("subplot_ymax")) child->setAttribute("subplot_ymax", PLOT_DEFAULT_SUBPLOT_MAX_Y);
+          if (!child->hasAttribute("plot_xmin")) child->setAttribute("plot_xmin", PLOT_DEFAULT_SUBPLOT_MIN_X);
+          if (!child->hasAttribute("plot_xmax")) child->setAttribute("plot_xmax", PLOT_DEFAULT_SUBPLOT_MAX_X);
+          if (!child->hasAttribute("plot_ymin")) child->setAttribute("plot_ymin", PLOT_DEFAULT_SUBPLOT_MIN_Y);
+          if (!child->hasAttribute("plot_ymax")) child->setAttribute("plot_ymax", PLOT_DEFAULT_SUBPLOT_MAX_Y);
           auto kind = static_cast<std::string>(child->getAttribute("kind"));
           if (!child->hasAttribute("adjust_xlim"))
             {
@@ -11278,10 +11278,10 @@ void GRM::Render::setTextEncoding(const std::shared_ptr<Element> &element, int e
 void GRM::Render::setSubplot(const std::shared_ptr<GRM::Element> &element, double xmin, double xmax, double ymin,
                              double ymax)
 {
-  element->setAttribute("subplot_xmin", xmin);
-  element->setAttribute("subplot_xmax", xmax);
-  element->setAttribute("subplot_ymin", ymin);
-  element->setAttribute("subplot_ymax", ymax);
+  element->setAttribute("plot_xmin", xmin);
+  element->setAttribute("plot_xmax", xmax);
+  element->setAttribute("plot_ymin", ymin);
+  element->setAttribute("plot_ymax", ymax);
 }
 
 void GRM::Render::setXTickLabels(std::shared_ptr<GRM::Element> group, const std::string &key,
