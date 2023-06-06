@@ -5280,9 +5280,6 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
       throw NotFoundError("No render-document for element found\n");
     }
 
-  auto newGroup = render->createGroup("groupCreatedDuringRender");
-  elem->append(newGroup);
-
   auto subplotElement = getSubplotElement(elem);
   vp[0] = static_cast<double>(subplotElement->getAttribute("vp_xmin"));
   vp[1] = static_cast<double>(subplotElement->getAttribute("vp_xmax"));
@@ -5300,8 +5297,8 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
 
   kind = static_cast<std::string>(subplotElement->getAttribute("kind"));
 
-  render->setCharHeight(newGroup, charheight);
-  render->setLineType(newGroup, GKS_K_LINETYPE_SOLID);
+  render->setCharHeight(elem, charheight);
+  render->setLineType(elem, GKS_K_LINETYPE_SOLID);
 
   if (kind == "polar_histogram")
     {
@@ -5354,7 +5351,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
             {
               auto temp = render->createDrawArc(-r, r, -r, r, 0, 360);
               temp->setAttribute("name", "polar_axes");
-              newGroup->append(temp);
+              elem->append(temp);
               render->setLineColorInd(temp, 88);
             }
         }
@@ -5362,7 +5359,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
         {
           auto temp = render->createDrawArc(-r, r, -r, r, 0, 360);
           temp->setAttribute("name", "polar_axes");
-          newGroup->append(temp);
+          elem->append(temp);
           render->setLineColorInd(temp, 90);
         }
     }
@@ -5377,7 +5374,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
 
       auto temp = render->createPolyline(x[0], x[1], y[0], y[1]);
       temp->setAttribute("name", "polar_axes");
-      newGroup->append(temp);
+      elem->append(temp);
       render->setLineColorInd(temp, 90 - i % 2 * 2);
 
       x[0] *= 1.1;
@@ -5395,11 +5392,11 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
         }
       temp = render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC);
       temp->setAttribute("name", "polar_axes");
-      newGroup->append(temp);
+      elem->append(temp);
       render->setTextAlign(temp, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
     }
   // Draw Text
-  render->setTextAlign(newGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+  render->setTextAlign(elem, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
   for (i = 0; i <= n; i++)
     {
       double r = 1.0 / n * i;
@@ -5408,7 +5405,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
           x[0] = 0.05;
           y[0] = r;
           snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + tick * i);
-          newGroup->append(render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC));
+          elem->append(render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC));
         }
     }
   title = static_cast<std::string>(elem->getAttribute("title"));
@@ -5430,6 +5427,9 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
           elem->appendChild(new_title_elem);
         }
     }
+  processCharHeight(elem);
+  processLineType(elem);
+  processTextAlign(elem);
 }
 
 static void drawRect(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -8049,7 +8049,7 @@ static void imshow(const std::shared_ptr<GRM::Element> &element, const std::shar
 
   auto temp = global_render->createCellArray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, image_data_key,
                                              std::nullopt);
-  temp->setAttribute("kind", "imshow");
+  temp->setAttribute("name", "imshow");
 
   element->append(temp);
 }
@@ -8291,10 +8291,10 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
   gr_volume(shape_vec[0], shape_vec[1], shape_vec[2], &(c_vec[0]), algorithm, &dmin, &dmax);
 
   auto parent_element = element->parentElement();
-  if (parent_element->hasAttribute("dlim_min") && parent_element->hasAttribute("dlim_max"))
+  if (parent_element->hasAttribute("lim_cmin") && parent_element->hasAttribute("lim_cmax"))
     {
-      dlim[0] = static_cast<double>(parent_element->getAttribute("dlim_min"));
-      dlim[1] = static_cast<double>(parent_element->getAttribute("dlim_max"));
+      dlim[0] = static_cast<double>(parent_element->getAttribute("lim_cmin"));
+      dlim[1] = static_cast<double>(parent_element->getAttribute("lim_cmax"));
       dlim[0] = grm_min(dlim[0], dmin);
       dlim[1] = grm_max(dlim[1], dmax);
     }
@@ -8303,8 +8303,8 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
       dlim[0] = dmin;
       dlim[1] = dmax;
     }
-  parent_element->setAttribute("dlim_min", dlim[0]);
-  parent_element->setAttribute("dlim_max", dlim[1]);
+  parent_element->setAttribute("lim_cmin", dlim[0]);
+  parent_element->setAttribute("lim_cmax", dlim[1]);
 
   auto colorbar = parent_element->querySelectors("colorbar");
   _coordinate_ranges._clim_min = dlim[0];

@@ -137,6 +137,8 @@
             <xs:attribute name="location" type="xs:string"/>
             <xs:attribute name="linespec" type="xs:string"/>
             <xs:attribute name="resample_method" type="xs:string"/>
+            <xs:attribute name="space" type="xs:string"/>
+            <xs:attribute name="grplot" type="xs:string"/> <!-- all plots are made with grplot or none -->
         </xs:complexType>
     </xs:element>
 
@@ -221,17 +223,20 @@
             <xs:attribute name="tick_orientation" type="xs:string" use="required"/>
             <xs:attribute name="x_org_pos" type="xs:string" use="required"/>
             <xs:attribute name="y_org_pos" type="xs:string" use="required"/>
+            <xs:attribute name="z_org_pos" type="xs:string"/>
             <xs:attribute name="x_tick" type="xs:string"/>
             <xs:attribute name="y_tick" type="xs:string"/>
             <xs:attribute name="z_tick" type="xs:string"/>
-            <xs:attribute name="x_major" type="xs:string" use="required"/>
-            <xs:attribute name="y_major" type="xs:string" use="required"/>
+            <xs:attribute name="x_major" type="xs:string"/>
+            <xs:attribute name="y_major" type="xs:string"/>
             <xs:attribute name="z_major" type="xs:string"/>
             <xs:attribute name="xlabel" type="xs:string"/>
             <xs:attribute name="ylabel" type="xs:string"/>
             <xs:attribute name="tick_size" type="xs:string"/>
             <xs:attribute name="x_org" type="xs:string"/>
             <xs:attribute name="y_org" type="xs:string"/>
+            <xs:attribute name="z_org" type="xs:string"/>
+            <xs:attribute name="z_index" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -265,6 +270,7 @@
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
+            <xs:attribute name="z_index" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -328,13 +334,11 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="angle_ticks" type="xs:string" use="required"/>
-            <xs:attribute name="kind" type="xs:string" use="required"/>
             <xs:attribute name="phiflip" type="xs:string" use="required"/>
             <xs:attribute name="rings" type="xs:string" use="required"/>
             <xs:attribute name="title" type="xs:string"/>
             <xs:attribute name="norm" type="xs:string"/>
             <xs:attribute name="tick" type="xs:string"/>
-            <!-- atm the following is groupCreatedDuringRender -->
             <xs:attribute name="charheight" type="xs:string"/>
             <xs:attribute name="linetype" type="xs:string"/>
             <xs:attribute name="textalign" type="xs:string"/>
@@ -369,7 +373,7 @@
     <!-- definition of polyline3d -->
     <xs:element name="polyline3d">
         <xs:complexType>
-            <xs:attribute name="name" type="xs:string" use="required"/>
+            <xs:attribute name="name" type="xs:string"/>
             <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string"/>
@@ -389,6 +393,7 @@
             <xs:attribute name="x2" type="xs:string"/>
             <xs:attribute name="y2" type="xs:string"/>
             <xs:attribute name="linecolorind" type="xs:string"/>
+            <xs:attribute name="name" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -703,6 +708,7 @@
             <xs:attribute name="bins" type="xs:string"/>
             <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="calc_window_and_viewport_from_parent" type="xs:string"/>
+            <xs:attribute name="weights" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -715,9 +721,8 @@
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="grplot" type="xs:string"/>
-            <xs:attribute name="c_min" type="xs:string" use="required"/>
-            <xs:attribute name="c_max" type="xs:string" use="required"/>
+            <xs:attribute name="c_min" type="xs:string"/>
+            <xs:attribute name="c_max" type="xs:string"/>
             <xs:attribute name="c" type="xs:string" use="required"/>
             <xs:attribute name="cdims" type="xs:string" use="required"/>
             <xs:attribute name="x" type="xs:string"/>
