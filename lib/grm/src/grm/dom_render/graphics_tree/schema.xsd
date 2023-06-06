@@ -139,6 +139,7 @@
             <xs:attribute name="resample_method" type="xs:string"/>
             <xs:attribute name="space" type="xs:string"/>
             <xs:attribute name="grplot" type="xs:string"/> <!-- all plots are made with grplot or none -->
+            <xs:attribute name="tick" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -335,7 +336,7 @@
             <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="angle_ticks" type="xs:string" use="required"/>
             <xs:attribute name="phiflip" type="xs:string" use="required"/>
-            <xs:attribute name="rings" type="xs:string" use="required"/>
+            <xs:attribute name="rings" type="xs:string"/>
             <xs:attribute name="title" type="xs:string"/>
             <xs:attribute name="norm" type="xs:string"/>
             <xs:attribute name="tick" type="xs:string"/>
@@ -916,6 +917,8 @@
             <xs:attribute name="linewidth" type="xs:string"/>
             <xs:attribute name="classes" type="xs:string"/>
             <xs:attribute name="transparency" type="xs:string"/>
+            <xs:attribute name="theta" type="xs:string"/>
+            <xs:attribute name="total" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -943,7 +946,6 @@
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="v" type="xs:string" use="required"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="c" type="xs:string"/>
@@ -966,9 +968,9 @@
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="v" type="xs:string" use="required"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="z" type="xs:string" use="required"/>
             <xs:attribute name="c" type="xs:string"/>
             <xs:attribute name="c_min" type="xs:string"/>
             <xs:attribute name="c_max" type="xs:string"/>

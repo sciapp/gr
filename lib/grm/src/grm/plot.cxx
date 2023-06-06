@@ -4651,9 +4651,6 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
   global_root->setAttribute("id", id++);
   auto str = std::to_string(id);
 
-  //! store id string in group for later usages in render.cxx
-  series_group->setAttribute("id", str);
-
   grm_args_values(subplot_args, "series", "A", &series);
 
   /* get theta or bin_counts */
