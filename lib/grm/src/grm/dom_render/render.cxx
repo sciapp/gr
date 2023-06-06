@@ -7136,6 +7136,7 @@ static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared
     }
 
   int id = static_cast<int>(global_root->getAttribute("id"));
+  global_root->setAttribute("id", id + 1);
   std::string str = std::to_string(id);
   if (is_vertical)
     {
