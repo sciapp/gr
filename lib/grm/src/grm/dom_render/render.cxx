@@ -1414,7 +1414,7 @@ static void processColorRep(const std::shared_ptr<GRM::Element> &elem)
   for (auto &attr : elem->getAttributeNames())
     {
       auto start = 0U;
-      auto end = attr.find('$');
+      auto end = attr.find('.');
       if (attr.substr(start, end) == "colorrep")
         {
           name = attr;
@@ -1450,22 +1450,25 @@ static void processFillStyle(const std::shared_ptr<GRM::Element> &elem)
 
 static void processFlip(const std::shared_ptr<GRM::Element> &elem)
 {
-  int options;
-  int xflip = static_cast<int>(elem->getAttribute("xflip"));
-  int yflip = static_cast<int>(elem->getAttribute("yflip"));
-  gr_inqscale(&options);
+  if (elem->localName() == "colorbar")
+    {
+      int options;
+      int xflip = static_cast<int>(elem->getAttribute("xflip"));
+      int yflip = static_cast<int>(elem->getAttribute("yflip"));
+      gr_inqscale(&options);
 
-  if (xflip)
-    {
-      options = (options | GR_OPTION_FLIP_Y) & ~GR_OPTION_FLIP_X;
-    }
-  else if (yflip)
-    {
-      options = options & ~GR_OPTION_FLIP_Y & ~GR_OPTION_FLIP_X;
-    }
-  else
-    {
-      options = options & ~GR_OPTION_FLIP_X;
+      if (xflip)
+        {
+          options = (options | GR_OPTION_FLIP_Y) & ~GR_OPTION_FLIP_X;
+        }
+      else if (yflip)
+        {
+          options = options & ~GR_OPTION_FLIP_Y & ~GR_OPTION_FLIP_X;
+        }
+      else
+        {
+          options = options & ~GR_OPTION_FLIP_X;
+        }
     }
 }
 
@@ -4083,7 +4086,7 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("fillcolorind"), processFillColorInd},
       {std::string("fillintstyle"), processFillIntStyle},
       {std::string("fillstyle"), processFillStyle},
-      {std::string("flip"), processFlip},
+      {std::string("xflip"), processFlip}, // yflip is also set
       {std::string("font"), processFont},
       {std::string("gr_option_flip_x"), processGROptionFlipX},
       {std::string("gr_option_flip_y"), processGROptionFlipY},
@@ -4127,7 +4130,7 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
   for (auto attribute : element->getAttributeNames())
     {
       auto start = 0U;
-      auto end = attribute.find('$');
+      auto end = attribute.find('.');
       if (end != std::string::npos)
         {
           attribute = attribute.substr(start, end);
@@ -7512,6 +7515,8 @@ static void marginalheatmap(const std::shared_ptr<GRM::Element> &element, const 
   std::string str = std::to_string(id);
 
   auto heatmap = global_render->createSeries("heatmap");
+  (*context)["z" + str] = plot_vec;
+  heatmap->setAttribute("z", "z" + str);
   element->append(heatmap);
 
   for (k = 0; k < 2; k++)
@@ -9322,7 +9327,7 @@ static void applyRootDefaults(std::shared_ptr<GRM::Element> root)
       global_root->setAttribute("size_y_unit", "px");
     }
 
-  for (const auto& child : root->children())
+  for (const auto &child : root->children())
     {
       if (child->localName() == "plot")
         {
@@ -11030,7 +11035,7 @@ void GRM::Render::setColorRep(const std::shared_ptr<Element> &element, int index
   std::string hex;
   stream << std::hex << (red_int << 16 | green_int << 8 | blue_int);
 
-  std::string name = "colorrep$" + std::to_string(index);
+  std::string name = "colorrep." + std::to_string(index);
 
   element->setAttribute(name, stream.str());
 }

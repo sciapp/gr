@@ -4136,7 +4136,6 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
   auto colorbar = global_render->createColorbar(colors);
   group->append(colorbar);
 
-  colorbar->setAttribute("flip", 1);
   colorbar->setAttribute("xflip", 0);
   colorbar->setAttribute("yflip", 0);
   if (grm_args_values(subplot_args, "xflip", "i", &flip) && flip)
