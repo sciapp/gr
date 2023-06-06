@@ -2477,7 +2477,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
 static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem)
 {
   std::string mkind = static_cast<std::string>(elem->getAttribute("marginalheatmap_kind"));
-  for (auto child : elem->children())
+  for (const auto &child : elem->children())
     {
       if (!child->hasAttribute("calc_window_and_viewport_from_parent")) continue;
       if (mkind == "line")
@@ -6020,7 +6020,7 @@ static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared
   // std::shared_ptr<GRM::Element> outerFillGroup = global_render->createGroup("outerFillGroup");
 
   // clear old rects
-  for (auto elem : element->children())
+  for (const auto &elem : element->children())
     {
       if (elem->localName() == "fillrect") elem->remove();
       if (elem->localName() == "drawrect") elem->remove();
@@ -6719,7 +6719,7 @@ static void scatter(const std::shared_ptr<GRM::Element> &element, const std::sha
     }
 
   // clear old marker
-  for (auto elem : element->children())
+  for (const auto &elem : element->children())
     {
       if (elem->localName() == "polymarker") elem->remove();
     }
@@ -6864,7 +6864,7 @@ static void scatter3(const std::shared_ptr<GRM::Element> &element, const std::sh
     }
 
   // clear old marker
-  for (auto elem : element->children())
+  for (const auto &elem : element->children())
     {
       if (elem->localName() == "polymarker3d") elem->remove();
     }
@@ -6924,7 +6924,7 @@ static void stairs(const std::shared_ptr<GRM::Element> &element, const std::shar
   global_root->setAttribute("id", id + 1);
 
   // clear old marker and lines
-  for (auto elem : element->children())
+  for (const auto &elem : element->children())
     {
       if (elem->localName() == "polymarker") elem->remove();
       if (elem->localName() == "polyline") elem->remove();

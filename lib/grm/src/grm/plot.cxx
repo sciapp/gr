@@ -1886,9 +1886,6 @@ err_t plot_hist(grm_args_t *subplot_args)
       ++current_series;
     }
 
-cleanup:
-  free(bar_centers);
-
   return error;
 }
 
@@ -1916,7 +1913,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
   unsigned int i;
   err_t error = ERROR_NONE;
   double *y_lightness = nullptr;
-  char *orientation = PLOT_DEFAULT_ORIENTATION;
+  const char *orientation = PLOT_DEFAULT_ORIENTATION;
   int is_vertical;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
