@@ -9027,7 +9027,11 @@ static void ProcessPlot(const std::shared_ptr<GRM::Element> &element, const std:
   plotCoordinateRanges(element, context);
   processSubplot(element);
   GRM::Render::processViewport(element);
-  processCharHeight(element);
+  // todo: there are cases that element does not have charheight set
+  if (element->hasAttribute("charheight"))
+    {
+      processCharHeight(element);
+    }
   GRM::Render::processLimits(element);
   processWindow(element);
   processWindow3d(element); /* needs to be set before space3d is processed */
