@@ -948,6 +948,7 @@
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="z" type="xs:string"/>
             <xs:attribute name="c" type="xs:string"/>
             <xs:attribute name="c_min" type="xs:string"/>
             <xs:attribute name="c_max" type="xs:string"/>
