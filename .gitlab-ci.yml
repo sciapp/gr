@@ -209,6 +209,7 @@ ubuntu-cmake-self-contained-test-snoop:
   - export LD_LIBRARY_PATH=`pwd`/artifacts-ubuntu2004-cmake/lib
   - export LIBC_RAND_DIRPATH=`pwd`
   - export GRM_SNOOP_EXECUTABLE_PATH=`pwd`/grm_snoop
+  - export GRM_VALIDATE=yes
   - lib/grm/test/public_api/grm/snoop/compare_grm_julia.sh || {
       mv lib/grm/test/public_api/grm/snoop/diff_images ./;
       exit 1;
