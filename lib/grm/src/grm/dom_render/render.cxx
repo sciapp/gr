@@ -1379,8 +1379,8 @@ static void processColorbarPosition(const std::shared_ptr<GRM::Element> &elem)
 
   auto subplot_element = getSubplotElement(elem);
 
-  double width = static_cast<double>(elem->getAttribute("colorbar_width"));
-  double offset = static_cast<double>(elem->getAttribute("colorbar_offset"));
+  double width = static_cast<double>(elem->getAttribute("width"));
+  double offset = static_cast<double>(elem->getAttribute("offset"));
 
   if (!subplot_element->hasAttribute("viewport_xmin") || !subplot_element->hasAttribute("viewport_xmax") ||
       !subplot_element->hasAttribute("viewport_ymin") || !subplot_element->hasAttribute("viewport_ymax"))
@@ -4080,7 +4080,7 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("charspace"), processCharSpace},
       {std::string("charup_x"), processCharUp}, // the x elem can be used cause both must be set
       {std::string("clipxform"), processClipXForm},
-      {std::string("colorbar_offset"), processColorbarPosition},
+      {std::string("offset"), processColorbarPosition},
       {std::string("colormap"), processColormap},
       {std::string("colorrep"), processColorRep},
       {std::string("fillcolorind"), processFillColorInd},
