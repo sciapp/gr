@@ -7515,6 +7515,7 @@ static void marginalheatmap(const std::shared_ptr<GRM::Element> &element, const 
   std::string str = std::to_string(id);
 
   auto heatmap = global_render->createSeries("heatmap");
+  // for validation
   (*context)["z" + str] = plot_vec;
   heatmap->setAttribute("z", "z" + str);
   element->append(heatmap);
@@ -7617,8 +7618,14 @@ static void marginalheatmap(const std::shared_ptr<GRM::Element> &element, const 
           subGroup = global_render->createSeries("stairs");
           element->append(subGroup);
 
-          subGroup->setAttribute("kind", "marginalheatmap");
           subGroup->setAttribute("spec", "");
+
+          // for validation
+          (*context)["y" + str] = y_vec;
+          subGroup->setAttribute("y", "y" + str);
+
+          (*context)["x" + str] = x_vec;
+          subGroup->setAttribute("x", "x" + str);
         }
 
       if (k == 0)

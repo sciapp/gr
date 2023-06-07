@@ -407,6 +407,7 @@
             <xs:attribute name="markertype" type="xs:string"/>
             <xs:attribute name="markersize" type="xs:string"/>
             <xs:attribute name="markercolorind" type="xs:string"/>
+            <xs:attribute name="name" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -1000,6 +1001,7 @@
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
