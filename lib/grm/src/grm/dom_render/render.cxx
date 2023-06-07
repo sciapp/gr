@@ -1379,8 +1379,8 @@ static void processColorbarPosition(const std::shared_ptr<GRM::Element> &elem)
 
   auto subplot_element = getSubplotElement(elem);
 
-  double width = static_cast<double>(elem->getAttribute("width"));
-  double offset = static_cast<double>(elem->getAttribute("offset"));
+  double width = static_cast<double>(elem->getAttribute("colorbar_width"));
+  double offset = static_cast<double>(elem->getAttribute("colorbar_offset"));
 
   if (!subplot_element->hasAttribute("viewport_xmin") || !subplot_element->hasAttribute("viewport_xmax") ||
       !subplot_element->hasAttribute("viewport_ymin") || !subplot_element->hasAttribute("viewport_ymax"))
@@ -4080,7 +4080,7 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("charspace"), processCharSpace},
       {std::string("charup_x"), processCharUp}, // the x elem can be used cause both must be set
       {std::string("clipxform"), processClipXForm},
-      {std::string("colorbar_position"), processColorbarPosition},
+      {std::string("colorbar_offset"), processColorbarPosition},
       {std::string("colormap"), processColormap},
       {std::string("colorrep"), processColorRep},
       {std::string("fillcolorind"), processFillColorInd},
@@ -4101,7 +4101,7 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("markersize"), processMarkerSize},
       {std::string("markertype"), processMarkerType},
       {std::string("projectiontype"), processProjectionType},
-      {std::string("relative_charheight"), processRelativeCharHeight},
+      {std::string("max_charheight"), processRelativeCharHeight},
       {std::string("resample_method"), processResampleMethod},
       {std::string("selntran"), processSelntran},
       {std::string("space"), processSpace},

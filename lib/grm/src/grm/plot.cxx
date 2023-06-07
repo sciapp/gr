@@ -4147,13 +4147,11 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
       colorbar->setAttribute("yflip", flip);
     }
 
-  colorbar->setAttribute("offset", off + 0.02);
-  colorbar->setAttribute("width", 0.03);
-  colorbar->setAttribute("colorbar_position", true);
+  colorbar->setAttribute("colorbar_offset", off + 0.02);
+  colorbar->setAttribute("colorbar_width", 0.03);
 
   colorbar->setAttribute("diag_factor", 0.016);
   colorbar->setAttribute("max_charheight", 0.012);
-  colorbar->setAttribute("relative_charheight", true);
 
   return ERROR_NONE;
 }
