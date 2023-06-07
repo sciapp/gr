@@ -1,3 +1,5 @@
+#define _USE_MATH_DEFINES
+
 #include "utilcpp_int.hxx"
 #include <cmath>
 #include <list>
