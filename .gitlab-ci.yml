@@ -95,6 +95,28 @@ ubuntu-cmake-self-contained:
     expire_in: 1 week
     paths:
       - artifacts-ubuntu2004-cmake/
+
+ubuntu-cmake-self-contained-debug:
+  stage: build
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
+  script:
+    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
+    - make -C 3rdparty default extras
+    - mkdir build
+    - cd build
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_DEMOS=ON
+    - make
+    - make install
+    - cd ..
+    - mv install artifacts-ubuntu2004-cmake
+    - mv build/grm_test_public_api/grm_test_snoop/snoop ./grm_snoop
+    - mv build/grm_test_public_api/grm_test_snoop/libc_rand.so ./
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - artifacts-ubuntu2004-cmake/
       - grm_snoop
       - libc_rand.so
 
@@ -110,7 +132,7 @@ ubuntu-cmake-self-contained-test:
     when: never
   - when: on_success
   needs:
-  - ubuntu-cmake-self-contained
+  - ubuntu-cmake-self-contained-debug
   script:
   - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
   - gr_test c `pwd`/test_result/
@@ -173,7 +195,7 @@ ubuntu-cmake-self-contained-test-snoop:
     when: never
   - when: on_success
   needs:
-  - ubuntu-cmake-self-contained
+  - ubuntu-cmake-self-contained-debug
   variables:
     JULIA_VERSION: 1.8.5
   before_script:
@@ -187,6 +209,7 @@ ubuntu-cmake-self-contained-test-snoop:
   - export LD_LIBRARY_PATH=`pwd`/artifacts-ubuntu2004-cmake/lib
   - export LIBC_RAND_DIRPATH=`pwd`
   - export GRM_SNOOP_EXECUTABLE_PATH=`pwd`/grm_snoop
+  - export GRM_VALIDATE=yes
   - lib/grm/test/public_api/grm/snoop/compare_grm_julia.sh || {
       mv lib/grm/test/public_api/grm/snoop/diff_images ./;
       exit 1;
