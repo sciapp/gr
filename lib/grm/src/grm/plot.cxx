@@ -5378,6 +5378,7 @@ int grm_plot(const grm_args_t *args)
       else if (validation_error == ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION)
         {
           fprintf(stderr, "Schema validation failed!\n");
+          return 0;
         }
       else
         {
