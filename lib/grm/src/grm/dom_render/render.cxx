@@ -5738,13 +5738,13 @@ static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::sha
       y_min = y_vec[0];
       y_max = y_vec[rows - 1];
     }
-  if (element->parentElement()->hasAttribute("marginalheatmap_kind"))
+  if (element_context->hasAttribute("marginalheatmap_kind"))
     {
-      z_min = (element->parentElement()->hasAttribute("zrange_min"))
-                  ? static_cast<double>(element->parentElement()->getAttribute("zrange_min"))
+      z_min = (element_context->hasAttribute("zrange_min"))
+                  ? static_cast<double>(element_context->getAttribute("zrange_min"))
                   : _coordinate_ranges._zrange_min;
-      z_max = (element->parentElement()->hasAttribute("zrange_max"))
-                  ? static_cast<double>(element->parentElement()->getAttribute("zrange_max"))
+      z_max = (element_context->hasAttribute("zrange_max"))
+                  ? static_cast<double>(element_context->getAttribute("zrange_max"))
                   : _coordinate_ranges._zrange_max;
     }
   else

@@ -2889,8 +2889,7 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
   group->append(subGroup);
   currentDomElement = subGroup;
 
-  grm_args_values(subplot_args, "zlog", "i", &zlog);
-  group->setAttribute("zlog", zlog);
+  group->setAttribute("zlog", 0);
 
   if (grm_args_values(subplot_args, "marginalheatmap_kind", "s", &marginalheatmap_kind))
     subGroup->setAttribute("marginalheatmap_kind", marginalheatmap_kind);
