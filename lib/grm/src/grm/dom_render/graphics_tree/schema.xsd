@@ -116,7 +116,7 @@
             <xs:attribute name="space_zmin" type="xs:string"/>
             <xs:attribute name="r_max" type="xs:string"/>
             <xs:attribute name="r_min" type="xs:string"/>
-            <xs:attribute name="resamplemethod" type="xs:string"/>
+            <xs:attribute name="resample_method" type="xs:string"/>
             <xs:attribute name="transparency" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attributeGroup ref="colorrep"/>
@@ -136,7 +136,6 @@
             <xs:attribute name="font_precision" type="xs:string"/>
             <xs:attribute name="location" type="xs:string"/>
             <xs:attribute name="linespec" type="xs:string"/>
-            <xs:attribute name="resample_method" type="xs:string"/>
             <xs:attribute name="space" type="xs:string"/>
             <xs:attribute name="grplot" type="xs:string"/> <!-- all plots are made with grplot or none -->
             <xs:attribute name="tick" type="xs:string"/>
@@ -567,7 +566,7 @@
             <xs:attribute name="xmin" type="xs:string" use="required"/>
             <xs:attribute name="ymax" type="xs:string" use="required"/>
             <xs:attribute name="ymin" type="xs:string" use="required"/>
-            <xs:attribute name="resample_method" type="xs:string" use="required"/> <!-- for polar histogram -->
+            <xs:attribute name="resample_method" type="xs:string"/> <!-- for polar histogram -->
         </xs:complexType>
     </xs:element>
 
@@ -911,7 +910,7 @@
             <xs:attribute name="rlim1" type="xs:string"/>
             <xs:attribute name="xcolormap" type="xs:string"/>
             <xs:attribute name="ycolormap" type="xs:string"/>
-            <xs:attribute name="resamplemethod" type="xs:string"/>
+            <xs:attribute name="resample_method" type="xs:string"/>
             <xs:attribute name="nbins" type="xs:string"/>
             <xs:attribute name="normalization" type="xs:string"/>
             <xs:attribute name="r_min" type="xs:string"/>
