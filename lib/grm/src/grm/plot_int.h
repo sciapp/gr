@@ -58,18 +58,6 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_DEFAULT_XGRID 1
 #define PLOT_DEFAULT_YGRID 1
 #define PLOT_DEFAULT_ZGRID 1
-#define PLOT_DEFAULT_ORIENTATION "horizontal"
-#define SERIES_DEFAULT_SPEC ""
-#define PLOT_POLAR_AXES_TEXT_BUFFER 40
-#define PLOT_CONTOUR_GRIDIT_N 200
-#define PLOT_WIREFRAME_GRIDIT_N 50
-#define PLOT_SURFACE_GRIDIT_N 200
-
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-#define PLOT_CUSTOM_COLOR_INDEX 979
-
 
 /* ========================= datatypes ============================================================================== */
 

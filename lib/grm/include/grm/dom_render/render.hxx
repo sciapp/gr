@@ -12,6 +12,12 @@
 #include "grm/layout.hxx"
 #include <grm/util.h>
 
+/* ========================= macros ================================================================================= */
+
+/* ------------------------- plot ----------------------------------------------------------------------------------- */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 #define PLOT_DEFAULT_CLEAR 1
 #define PLOT_DEFAULT_UPDATE 1
 #define PLOT_DEFAULT_LOCATION 1
@@ -25,7 +31,7 @@
 #define PLOT_DEFAULT_TRICONT_LEVELS 20
 #define PLOT_DEFAULT_CONTOUR_LEVELS 20
 #define PLOT_DEFAULT_ACCELERATE 1
-#define PLOT_DEFAULT_SPEC ""
+#define SERIES_DEFAULT_SPEC ""
 #define PLOT_DEFAULT_STEP_WHERE "mid"
 #define PLOT_DEFAULT_HEXBIN_NBINS 40
 #define PLOT_DEFAULT_VOLUME_ALGORITHM GR_VOLUME_EMISSION
@@ -39,12 +45,23 @@
 #define PLOT_DEFAULT_COLORMAP 44                                 /* VIRIDIS */
 #define PLOT_DEFAULT_FONT 232                                    /* CMUSerif-Math */
 #define PLOT_DEFAULT_FONT_PRECISION GKS_K_TEXT_PRECISION_OUTLINE /* hardware font rendering */
-#define PLOT_DEFAULT_MARGINAL_INDEX -1
+#define PLOT_DEFAULT_MARGINAL_INDEX (-1)
 #define PLOT_DEFAULT_MARGINAL_KIND "all"
 #define PLOT_DEFAULT_MARGINAL_ALGORITHM "sum"
 #define PLOT_DEFAULT_XFLIP 0
 #define PLOT_DEFAULT_YFLIP 0
 #define PLOT_DEFAULT_ZFLIP 0
+#define PLOT_POLAR_AXES_TEXT_BUFFER 40
+#define PLOT_CONTOUR_GRIDIT_N 200
+#define PLOT_WIREFRAME_GRIDIT_N 50
+#define PLOT_SURFACE_GRIDIT_N 200
+#define PLOT_DEFAULT_ORIENTATION "horizontal"
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+#define PLOT_CUSTOM_COLOR_INDEX 979
+
+/* ========================= Enums ================================================================================== */
 
 typedef enum
 {
@@ -79,6 +96,9 @@ enum class EXPORT CoordinateSpace
   WC,
   NDC
 };
+
+/* ========================= classes ================================================================================ */
+
 
 class CompareZIndex
 {

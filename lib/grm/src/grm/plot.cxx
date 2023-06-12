@@ -1891,7 +1891,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
   unsigned int i;
   err_t error = ERROR_NONE;
   double *y_lightness = nullptr;
-  const char *orientation = PLOT_DEFAULT_ORIENTATION;
+  const char *orientation = "horizontal";
   int is_vertical;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
