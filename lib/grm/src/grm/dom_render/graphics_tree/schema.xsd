@@ -854,6 +854,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="scatter"/>
             <xs:attribute name="markersizes" type="xs:string"/>
             <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="z" type="xs:string"/>
@@ -868,6 +869,7 @@
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="scatter"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>

@@ -7,6 +7,8 @@
 #define NOMINMAX
 #endif
 
+#define _USE_MATH_DEFINES
+
 
 #include <functional>
 #include <vector>
@@ -1740,7 +1742,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
       if (r_max > 1.0)
         {
           r_max = 1.0;
-          logger((stderr, "the max value of rlim can not exceed 1.0\n"));
+          logger((stderr, "The value of rlim_max can not exceed 1.0\n"));
         }
       if (r_min < 0.0) r_min = 0.0;
     }
