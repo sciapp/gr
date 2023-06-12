@@ -7822,7 +7822,7 @@ static void pie(const std::shared_ptr<GRM::Element> &element, const std::shared_
   color_index = set_next_color("c", GR_COLOR_FILL, element, context);
 
   // clear old pie
-  for (auto elem : element->children())
+  for (const auto &elem : element->children())
     {
       if (elem->localName() == "text") elem->remove();
       if (elem->localName() == "fillarc") elem->remove();
@@ -8815,8 +8815,8 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
 
                   if (series->hasAttribute("xrange_min") && series->hasAttribute("xrange_max"))
                     {
-                      x_min = static_cast<double>(series->getAttribute("xrange_min"));
-                      x_max = static_cast<double>(series->getAttribute("xrange_max"));
+                      xmin = static_cast<double>(series->getAttribute("xrange_min"));
+                      xmax = static_cast<double>(series->getAttribute("xrange_max"));
                       double step_x = (xmax - xmin) / (current_point_count - 1);
                       if (!str_equals_any(style.c_str(), 2, "lined", "stacked"))
                         {
@@ -8832,8 +8832,8 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
 
                   if (series->hasAttribute("yrange_min") && series->hasAttribute("yrange_max"))
                     {
-                      y_min = static_cast<double>(series->getAttribute("yrange_min"));
-                      y_max = static_cast<double>(series->getAttribute("yrange_max"));
+                      ymin = static_cast<double>(series->getAttribute("yrange_min"));
+                      ymax = static_cast<double>(series->getAttribute("yrange_max"));
                       y_min = grm_min(y_min, ymin);
                       if (style == "stacked")
                         {
