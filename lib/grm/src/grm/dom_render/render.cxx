@@ -7,8 +7,6 @@
 #define NOMINMAX
 #endif
 
-#define _USE_MATH_DEFINES
-
 
 #include <functional>
 #include <vector>
@@ -19,7 +17,6 @@
 #include <numeric>
 #include <cmath>
 #include <cfloat>
-#include <climits>
 #include <grm/dom_render/graphics_tree/Element.hxx>
 #include <grm/dom_render/graphics_tree/Document.hxx>
 #include <grm/dom_render/graphics_tree/Value.hxx>
@@ -43,14 +40,15 @@ extern "C" {
 /* ------------------------- re-implementation of x_lin/x_log ------------------------------------------------------- */
 
 #define X_FLIP_IF(x, scale_options, xmin, xmax) \
-  (GR_OPTION_FLIP_X & scale_options ? xmin + xmax : 0) + (GR_OPTION_FLIP_X & scale_options ? -1 : 1) * x
+  ((GR_OPTION_FLIP_X & (scale_options) ? (xmin) + (xmax) : 0) + (GR_OPTION_FLIP_X & (scale_options) ? -1 : 1) * (x))
 
-#define X_LIN(x, scale_options, xmin, xmax, a, b) \
-  X_FLIP_IF((GR_OPTION_X_LOG & scale_options ? (x > 0 ? a * log10(x) + b : -FLT_MAX) : x), scale_options, xmin, xmax)
+#define X_LIN(x, scale_options, xmin, xmax, a, b)                                                                 \
+  X_FLIP_IF((GR_OPTION_X_LOG & (scale_options) ? ((x) > 0 ? (a)*log10(x) + (b) : -FLT_MAX) : (x)), scale_options, \
+            xmin, xmax)
 
-#define X_LOG(x, scale_options, xmin, xmax, a, b)                                                             \
-  (GR_OPTION_X_LOG & scale_options ? (pow(10.0, (double)((X_FLIP_IF(x, scale_options, xmin, xmax) - b) / a))) \
-                                   : X_FLIP_IF(x, scale_options, xmin, xmax))
+#define X_LOG(x, scale_options, xmin, xmax, a, b)                                                                   \
+  (GR_OPTION_X_LOG & (scale_options) ? (pow(10.0, (double)((X_FLIP_IF(x, scale_options, xmin, xmax) - (b)) / (a)))) \
+                                     : X_FLIP_IF(x, scale_options, xmin, xmax))
 
 std::shared_ptr<GRM::Element> global_root;
 std::shared_ptr<GRM::Render> global_render;
@@ -61,17 +59,19 @@ ManageGRContextIds grContextIDManager;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {
+    "axes",
+    "colorbar",
+    "coordinate_system",
+    "errorbars",
+    "figure",
     "group",
+    "label",
+    "labels_group",
     "layout_grid",
     "layout_gridelement",
-    "polar_axes",
-    "labels_group",
     "legend",
-    "figure",
-    "hexbin",
-    "colorbar",
     "plot",
-    "coordinate_system",
+    "polar_axes",
     "series_barplot",
     "series_contour",
     "series_contourf",
@@ -100,9 +100,6 @@ static std::set<std::string> parentTypes = {
     "series_trisurface",
     "series_volume",
     "series_wireframe",
-    "axes",
-    "label",
-    "errorbars",
 };
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
@@ -1597,7 +1594,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
 
   std::vector<double> r_lim_vec;
 
-  std::shared_ptr<GRM::Element> group = element;
+  const std::shared_ptr<GRM::Element> &group = element;
   std::shared_ptr<GRM::Element> temp_elem;
   std::string str;
 
@@ -4819,7 +4816,7 @@ static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::s
     color_errorbar = static_cast<int>(element->getAttribute("errorbar_color"));
 
   //   clear old lines
-  for (auto elem : element->children())
+  for (const auto &elem : element->children())
     {
       if (elem->localName() == "polyline") elem->remove();
     }
@@ -5410,7 +5407,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
         }
     }
   title = static_cast<std::string>(elem->getAttribute("title"));
-  if (title != "")
+  if (!title.empty())
     {
       auto new_title_elem = render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
       new_title_elem->setAttribute("name", "title");
@@ -5825,7 +5822,7 @@ static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::sha
   rgba = std::vector<int>(rows * cols);
 
   //   clear old heatmaps
-  for (auto elem : element->children())
+  for (const auto &elem : element->children())
     {
       if (elem->localName() == "drawimage") elem->remove();
       if (elem->localName() == "nonuniformcellarray") elem->remove();
@@ -6213,7 +6210,6 @@ static void polyline(const std::shared_ptr<GRM::Element> &element, const std::sh
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
-  int n = static_cast<int>(element->getAttribute("n"));
   if (element->getAttribute("x").isString() && element->getAttribute("y").isString())
     {
       auto x = static_cast<std::string>(element->getAttribute("x"));
@@ -7892,7 +7888,7 @@ static void plot3(const std::shared_ptr<GRM::Element> &element, const std::share
     throw std::length_error("For plot3 series x-, y- and z-data must have the same size.\n");
 
   // clear old line
-  for (auto elem : element->children())
+  for (const auto &elem : element->children())
     {
       if (elem->localName() == "polyline3d") elem->remove();
     }
@@ -9271,11 +9267,11 @@ static void initializeGridElements(const std::shared_ptr<GRM::Element> &element,
           int rowStop = static_cast<int>(child->getAttribute("rowStop"));
           int colStart = static_cast<int>(child->getAttribute("colStart"));
           int colStop = static_cast<int>(child->getAttribute("colStop"));
-          grm::Slice *slice = new grm::Slice(rowStart, rowStop, colStart, colStop);
+          auto *slice = new grm::Slice(rowStart, rowStop, colStart, colStop);
 
           if (child->localName() == "layout_gridelement")
             {
-              grm::GridElement *curGridElement =
+              auto *curGridElement =
                   new grm::GridElement(absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight,
                                        fitParentsWidth, relativeHeight, relativeWidth, aspectRatio);
               curGridElement->elementInDOM = child;
@@ -9287,7 +9283,7 @@ static void initializeGridElements(const std::shared_ptr<GRM::Element> &element,
               int nrows = static_cast<int>(child->getAttribute("nrows"));
               int ncols = static_cast<int>(child->getAttribute("ncols"));
 
-              grm::Grid *curGrid =
+              auto *curGrid =
                   new grm::Grid(nrows, ncols, absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight,
                                 fitParentsWidth, relativeHeight, relativeWidth, aspectRatio);
               curGrid->elementInDOM = child;

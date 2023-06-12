@@ -1,6 +1,5 @@
 /* ######################### includes ############################################################################### */
 
-#include <grm/dom_render/graphics_tree/Document.hxx>
 #include <grm/dom_render/graphics_tree/Element.hxx>
 #include <grm/dom_render/graphics_tree/Comment.hxx>
 #include <grm/dom_render/graphics_tree/util.hxx>
@@ -95,25 +94,13 @@ DECLARE_MAP_TYPE(args_set, args_set_t *)
 /* ------------------------- args get ------------------------------------------------------------------------------- */
 
 #define ARGS_VALUE_ITERATOR_GET(value_it, length, array) \
-  if (value_it->next(value_it) == nullptr)               \
+  if ((value_it)->next(value_it) == nullptr)             \
     {                                                    \
       args_value_iterator_delete(value_it);              \
       return ERROR_INTERNAL;                             \
     }                                                    \
-  length = value_it->array_length;                       \
-  array = *(double **)value_it->value_ptr;
-
-/* ------------------------- re-implementation of x_lin/x_log ------------------------------------------------------- */
-
-#define X_FLIP_IF(x, scale_options, xmin, xmax) \
-  (GR_OPTION_FLIP_X & scale_options ? xmin + xmax : 0) + (GR_OPTION_FLIP_X & scale_options ? -1 : 1) * x
-
-#define X_LIN(x, scale_options, xmin, xmax, a, b) \
-  X_FLIP_IF((GR_OPTION_X_LOG & scale_options ? (x > 0 ? a * log10(x) + b : -FLT_MAX) : x), scale_options, xmin, xmax)
-
-#define X_LOG(x, scale_options, xmin, xmax, a, b)                                                             \
-  (GR_OPTION_X_LOG & scale_options ? (pow(10.0, (double)((X_FLIP_IF(x, scale_options, xmin, xmax) - b) / a))) \
-                                   : X_FLIP_IF(x, scale_options, xmin, xmax))
+  (length) = (value_it)->array_length;                   \
+  (array) = *(double **)(value_it)->value_ptr;
 
 /* ========================= methods ================================================================================ */
 
@@ -939,9 +926,7 @@ void plot_set_flag_defaults(void)
 
 void plot_set_attribute_defaults(grm_args_t *plot_args)
 {
-  const char *kind;
-  grm_args_t **current_subplot, **current_series;
-  double garbage0, garbage1;
+  grm_args_t **current_subplot;
 
   logger((stderr, "Set plot attribute defaults\n"));
 
@@ -955,7 +940,6 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
   while (*current_subplot != nullptr)
     {
       args_setdefault(*current_subplot, "kind", "s", PLOT_DEFAULT_KIND);
-      grm_args_values(*current_subplot, "kind", "s", &kind);
       args_setdefault(*current_subplot, "xgrid", "i", PLOT_DEFAULT_XGRID); // This arg is only used in plot.cxx
       args_setdefault(*current_subplot, "ygrid", "i", PLOT_DEFAULT_YGRID); // This arg is only used in plot.cxx
       args_setdefault(*current_subplot, "zgrid", "i", PLOT_DEFAULT_ZGRID); // This arg is only used in plot.cxx
@@ -1543,15 +1527,13 @@ err_t plot_stairs(grm_args_t *subplot_args)
    */
 
   grm_args_t **current_series;
-  char *kind, *orientation;
+  char *orientation;
   double x_min, x_max, y_min, y_max;
   double *x = nullptr, *y = nullptr, *xi;
   err_t error = ERROR_NONE;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
-
-  grm_args_values(subplot_args, "kind", "s", &kind);
 
   std::shared_ptr<GRM::Element> element; // declare element here for multiple usages / assignments later
   while (*current_series != nullptr)
@@ -1562,7 +1544,6 @@ err_t plot_stairs(grm_args_t *subplot_args)
       auto subGroup = global_render->createSeries("stairs");
       group->append(subGroup);
 
-      subGroup->setAttribute("kind", kind);
       if (grm_args_values(subplot_args, "orientation", "s", &orientation))
         subGroup->setAttribute("orientation", orientation);
 
@@ -1806,7 +1787,6 @@ err_t plot_stem(grm_args_t *subplot_args)
 err_t plot_hist(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
-  double *bar_centers = nullptr;
   int bar_color_index = 989, i;
   double bar_color_rgb[3] = {-1};
   err_t error = ERROR_NONE;
@@ -1825,7 +1805,6 @@ err_t plot_hist(grm_args_t *subplot_args)
       double *bins, *x, *weights;
       unsigned int num_bins = 0, x_length, num_weights;
       char *orientation;
-      int is_horizontal;
 
       auto subGroup = global_render->createSeries("hist");
       group->append(subGroup);
@@ -2510,9 +2489,7 @@ cleanup:
 err_t plot_contour(grm_args_t *subplot_args)
 {
   int num_levels = 20;
-  double *h;
   grm_args_t **current_series;
-  int i;
   err_t error = ERROR_NONE;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
@@ -2574,10 +2551,8 @@ err_t plot_contour(grm_args_t *subplot_args)
 
 err_t plot_contourf(grm_args_t *subplot_args)
 {
-  int num_levels = 20, scale;
-  double *h;
+  int num_levels = 20;
   grm_args_t **current_series;
-  int i;
   err_t error = ERROR_NONE;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
@@ -2684,7 +2659,6 @@ err_t plot_hexbin(grm_args_t *subplot_args)
 
 err_t plot_polar_heatmap(grm_args_t *subplot_args)
 {
-  const char *kind = nullptr;
   grm_args_t **current_series;
   int zlog = 0;
   unsigned int i, cols, rows, z_length;
@@ -2694,7 +2668,6 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "zlog", "i", &zlog);
   while (*current_series != nullptr)
     {
@@ -2728,7 +2701,6 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
       subGroup->setAttribute("z", "z" + str);
 
       group->setAttribute("zlog", zlog);
-      group->setAttribute("kind", kind);
 
       if (x == nullptr && y == nullptr)
         {
@@ -2877,7 +2849,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
 
 err_t plot_marginalheatmap(grm_args_t *subplot_args)
 {
-  int k, xind = -1, yind = -1, zlog;
+  int k, xind = -1, yind = -1, zlog = 0;
   const char *marginalheatmap_kind = "all";
   err_t error = ERROR_NONE;
   grm_args_t **current_series;
@@ -2889,7 +2861,8 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
   group->append(subGroup);
   currentDomElement = subGroup;
 
-  group->setAttribute("zlog", 0);
+  grm_args_values(subplot_args, "zlog", "i", &zlog);
+  group->setAttribute("zlog", zlog);
 
   if (grm_args_values(subplot_args, "marginalheatmap_kind", "s", &marginalheatmap_kind))
     subGroup->setAttribute("marginalheatmap_kind", marginalheatmap_kind);
@@ -3190,7 +3163,6 @@ err_t plot_imshow(grm_args_t *subplot_args)
   double *c_data;
   double c_min, c_max;
   unsigned int c_data_length, i, j, k;
-  int *img_data;
   unsigned int *shape;
   int grplot = 0;
 
@@ -3245,10 +3217,7 @@ err_t plot_isosurface(grm_args_t *subplot_args)
   double *orig_data, *temp_colors;
   unsigned int i, data_length, dims;
   unsigned int *shape;
-  int strides[3];
   double c_min, c_max, isovalue;
-  float foreground_colors[3];
-  float *conv_data = nullptr;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
@@ -3483,15 +3452,12 @@ err_t plot_polar(grm_args_t *subplot_args)
  * */
 err_t plot_polar_histogram(grm_args_t *subplot_args)
 {
-  unsigned int resample;
   double *rlim = nullptr;
   unsigned int dummy;
   int stairs;
   int xcolormap, ycolormap;
   int draw_edges, phiflip, edge_color, face_color, face_alpha;
   grm_args_t **series;
-  err_t error = ERROR_NONE;
-
 
   std::shared_ptr<GRM::Element> series_group = global_render->createSeries("polar_histogram");
   global_root->lastChildElement()->append(series_group);
@@ -3563,17 +3529,10 @@ err_t plot_pie(grm_args_t *subplot_args)
   grm_args_t *series;
   double *x;
   unsigned int x_length;
-  int color_index;
-  unsigned char color_rgb[4];
   const char *title;
-  err_t error = ERROR_NONE;
   static unsigned int color_array_length = -1;
   const int *color_indices = nullptr;
   const double *color_rgb_values = nullptr;
-  std::string color_indices_key;
-  std::string color_rgb_values_key;
-  std::vector<int> color_indices_vec;
-  std::vector<double> color_rgb_values_vec;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
@@ -3613,7 +3572,7 @@ err_t plot_pie(grm_args_t *subplot_args)
     }
   global_root->setAttribute("id", id++);
 
-  return error;
+  return ERROR_NONE;
 }
 
 err_t plot_trisurf(grm_args_t *subplot_args)
@@ -3818,9 +3777,7 @@ cleanup:
 err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 {
   const char *kind = nullptr;
-  int x_grid;
-  int y_grid;
-  int z_grid;
+  int x_grid, y_grid, z_grid;
   char *title;
   char *x_label, *y_label, *z_label;
   int tick_orientation = 1;
@@ -3956,9 +3913,9 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         }
       if (pass == 2 && title3d)
         {
-          auto title3d = global_render->createTitles3d(xlabel, ylabel, zlabel);
-          title3d->setAttribute("z_index", 2);
-          group->append(title3d);
+          auto title3d_group = global_render->createTitles3d(xlabel, ylabel, zlabel);
+          title3d_group->setAttribute("z_index", 2);
+          group->append(title3d_group);
         }
     }
   else
@@ -3986,18 +3943,9 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 
 err_t plot_draw_polar_axes(grm_args_t *args)
 {
-  double diag;
-  double charheight;
-  double r_min = 0.0, r_max = -1.0;
-  double tick;
-  double x[2], y[2];
-  int i, n;
-  double alpha;
-  char text_buffer[PLOT_POLAR_AXES_TEXT_BUFFER];
   char *kind;
-  int angle_ticks, rings;
+  int angle_ticks;
   int phiflip = 0;
-  double interval;
   const char *norm, *title;
   std::shared_ptr<GRM::Element> group, subGroup;
 
@@ -4049,14 +3997,10 @@ err_t plot_draw_polar_axes(grm_args_t *args)
 
 err_t plot_draw_legend(grm_args_t *subplot_args)
 {
-  const char **labels, **current_label;
+  const char **labels;
   unsigned int num_labels, num_series;
   grm_args_t **current_series;
   int location;
-  double px, py, w, h;
-  double tbx[4], tby[4];
-  double legend_symbol_x[2], legend_symbol_y[2];
-  int i;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
@@ -4102,11 +4046,6 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
   unsigned int num_labels;
   grm_args_t *series;
 
-  static const int *color_indices = nullptr;
-  static const double *color_rgb_values = nullptr;
-  static unsigned int color_array_length = -1;
-  int useFallback = 0;
-
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
 
   return_error_if(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
@@ -4126,7 +4065,7 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
 err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colors)
 {
   int *data;
-  int scale, flip, options;
+  int flip;
   unsigned int i;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : global_root->lastChildElement();
@@ -4313,28 +4252,6 @@ err_t plot_draw_errorbars(grm_args_t *series_args, unsigned int x_length)
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-const char *next_fmt_key(const char *kind)
-{
-  static const char *saved_fmt = nullptr;
-  static char fmt_key[2] = {0, 0};
-
-  if (kind != nullptr)
-    {
-      string_map_at(fmt_map, kind, static_cast<const char **>(&saved_fmt));
-    }
-  if (saved_fmt == nullptr)
-    {
-      return nullptr;
-    }
-  fmt_key[0] = *saved_fmt;
-  if (*saved_fmt != '\0')
-    {
-      ++saved_fmt;
-    }
-
-  return fmt_key;
-}
 
 const char *get_compatible_format(const char *key, const char *given_format)
 {
@@ -5024,7 +4941,7 @@ cleanup:
 #elif !defined(NO_EXPAT)
 static void xml_parse_start_handler(void *data, const XML_Char *tagName, const XML_Char **attr)
 {
-  std::shared_ptr<GRM::Element> *insertionParent = (std::shared_ptr<GRM::Element> *)data;
+  auto *insertionParent = (std::shared_ptr<GRM::Element> *)data;
   if (strcmp(tagName, "figure") == 0)
     {
       global_root = global_render->createElement("figure");
@@ -5464,7 +5381,7 @@ int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
     }
   else
     {
-      grm::Grid *currentGrid = reinterpret_cast<grm::Grid *>(gridElement);
+      auto *currentGrid = reinterpret_cast<grm::Grid *>(gridElement);
 
       auto gridDomElement = global_render->createLayoutGrid(*currentGrid);
       gridDomElement->setAttribute("rowStart", slice->rowStart);
@@ -5481,12 +5398,12 @@ int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
   return 0;
 }
 
-std::shared_ptr<GRM::Element> grm_get_document_root(void)
+std::shared_ptr<GRM::Element> grm_get_document_root()
 {
   return global_root;
 }
 
-std::shared_ptr<GRM::Render> grm_get_render(void)
+std::shared_ptr<GRM::Render> grm_get_render()
 {
   return global_render;
 }
