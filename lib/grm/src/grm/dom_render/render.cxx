@@ -1713,14 +1713,14 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
         }
     }
 
-  if (!(group->hasAttribute("rlim0") && group->hasAttribute("rlim1")))
+  if (!(group->hasAttribute("rlim_min") && group->hasAttribute("rlim_max")))
     {
       rlim = nullptr;
     }
   else
     {
-      r_lim_vec.push_back(static_cast<double>(group->getAttribute("rlim0")));
-      r_lim_vec.push_back(static_cast<double>(group->getAttribute("rlim1")));
+      r_lim_vec.push_back(static_cast<double>(group->getAttribute("rlim_min")));
+      r_lim_vec.push_back(static_cast<double>(group->getAttribute("rlim_max")));
       rlim = &(r_lim_vec[0]);
 
       mlist.resize((num_bins + 1) * 4);
@@ -3612,8 +3612,8 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
   else
     {
       philim = philim_arr;
-      philim[0] = static_cast<double>(group->getAttribute("phimin"));
-      philim[1] = static_cast<double>(group->getAttribute("phimax"));
+      philim[0] = static_cast<double>(group->getAttribute("philim_min"));
+      philim[1] = static_cast<double>(group->getAttribute("philim_max"));
 
       if (philim[1] < philim[0])
         {
@@ -6184,8 +6184,8 @@ static void polarCellArray(const std::shared_ptr<GRM::Element> &element, const s
 {
   double x_org = static_cast<double>(element->getAttribute("x_org"));
   double y_org = static_cast<double>(element->getAttribute("y_org"));
-  double phimin = static_cast<double>(element->getAttribute("phimin"));
-  double phimax = static_cast<double>(element->getAttribute("phimax"));
+  double phimin = static_cast<double>(element->getAttribute("philim_min"));
+  double phimax = static_cast<double>(element->getAttribute("philim_max"));
   double rmin = static_cast<double>(element->getAttribute("rmin"));
   double rmax = static_cast<double>(element->getAttribute("rmax"));
   int dimr = static_cast<int>(element->getAttribute("dimr"));
@@ -10229,8 +10229,8 @@ std::shared_ptr<GRM::Element> GRM::Render::createPolarCellArray(double x_org, do
   auto element = createElement("polarcellarray");
   element->setAttribute("x_org", x_org);
   element->setAttribute("y_org", y_org);
-  element->setAttribute("phimin", phimin);
-  element->setAttribute("phimax", phimax);
+  element->setAttribute("philim_min", phimin);
+  element->setAttribute("philim_max", phimax);
   element->setAttribute("rmin", rmin);
   element->setAttribute("rmax", rmax);
   element->setAttribute("dimphi", dimphi);

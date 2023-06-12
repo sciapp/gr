@@ -3507,8 +3507,8 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
   if (grm_args_first_value(*series, "rlim", "D", &rlim, &dummy))
     {
-      series_group->setAttribute("rlim0", rlim[0]);
-      series_group->setAttribute("rlim1", rlim[1]);
+      series_group->setAttribute("rlim_min", rlim[0]);
+      series_group->setAttribute("rlim_max", rlim[1]);
     }
 
   if (grm_args_values(*series, "xcolormap", "i", &xcolormap))
@@ -4593,8 +4593,8 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
       int phiflip = 0;
       grm_args_values(subplot_args, "phiflip", "i", &phiflip);
       series_group->setAttribute("phiflip", phiflip);
-      series_group->setAttribute("phimin", philim[0]);
-      series_group->setAttribute("phimax", philim[1]);
+      series_group->setAttribute("philim_min", philim[0]);
+      series_group->setAttribute("philim_max", philim[1]);
     }
 
   /* bin_edges and nbins */
