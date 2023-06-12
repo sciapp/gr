@@ -247,7 +247,6 @@
             <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="space" type="xs:string"/>
             <xs:attribute name="text" type="xs:string" use="required"/>
-            <xs:attribute name="textalign" type="xs:string"/>
             <xs:attribute name="textalign_horizontal" type="xs:string"/>
             <xs:attribute name="textalign_vertical" type="xs:string"/>
             <xs:attribute name="x" type="xs:string"/>
@@ -307,7 +306,6 @@
                 <xs:element ref="label" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attribute name="linespec" type="xs:string"/>
-            <xs:attribute name="textalign" type="xs:string"/>
             <xs:attribute name="textalign_horizontal" type="xs:string"/>
             <xs:attribute name="textalign_vertical" type="xs:string"/>
         </xs:complexType>
@@ -345,7 +343,6 @@
             <xs:attribute name="tick" type="xs:string"/>
             <xs:attribute name="charheight" type="xs:string"/>
             <xs:attribute name="linetype" type="xs:string"/>
-            <xs:attribute name="textalign" type="xs:string"/>
             <xs:attribute name="textalign_horizontal" type="xs:string"/>
             <xs:attribute name="textalign_vertical" type="xs:string"/>
         </xs:complexType>
@@ -829,7 +826,6 @@
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="fillintstyle" type="xs:string"/>
-            <xs:attribute name="textalign" type="xs:string"/>
             <xs:attribute name="color_indices" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="textalign_horizontal" type="xs:string"/>

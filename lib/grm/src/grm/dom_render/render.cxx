@@ -4103,8 +4103,8 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("resample_method"), processResampleMethod},
       {std::string("selntran"), processSelntran},
       {std::string("space"), processSpace},
-      {std::string("space3d_fov"), processSpace3d}, // the fov elem can be used cause both must be set
-      {std::string("textalign"), processTextAlign},
+      {std::string("space3d_fov"), processSpace3d},          // the fov elem can be used cause both must be set
+      {std::string("textalign_vertical"), processTextAlign}, // the alignment in both directions is set
       {std::string("textcolorind"), processTextColorInd},
       {std::string("textencoding"), processTextEncoding},
       {std::string("textfontprec_font"), processTextFontPrec}, // the font elem can be used cause both must be set
@@ -9525,9 +9525,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
            {std::string("text"), std::vector<std::string>{"Title", "The text diplayed by this node"}},
            {std::string("render_method"),
             std::vector<std::string>{"gr_text", "Render method used to display the text"}},
-           {std::string("textalign"), std::vector<std::string>{"1", "Use alignment"}},
-           {std::string("textalign_horizontal"), std::vector<std::string>{"2", "Horizontal alignment method"}},
-           {std::string("textalign_vertical"), std::vector<std::string>{"1", "Horizontal alignment method"}},
+           {std::string("textalign_horizontal"), std::vector<std::string>{"2", "Use horizontal alignment method"}},
+           {std::string("textalign_vertical"), std::vector<std::string>{"1", "Use vertical alignment method"}},
        }},
       {std::string("grid"),
        std::map<std::string, std::vector<std::string>>{
@@ -10994,7 +10993,6 @@ void GRM::Render::setTextAlign(const std::shared_ptr<Element> &element, int hori
    * \param[in] horizontal  Horizontal text alignment
    * \param[in] vertical Vertical text alignment
    */
-  element->setAttribute("textalign", true);
   element->setAttribute("textalign_horizontal", horizontal);
   element->setAttribute("textalign_vertical", vertical);
 }
