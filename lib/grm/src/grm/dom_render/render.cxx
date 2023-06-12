@@ -65,6 +65,7 @@ static std::set<std::string> parentTypes = {
     "layout_grid",
     "layout_gridelement",
     "polar_axes",
+    "labels_group",
     "legend",
     "figure",
     "hexbin",
@@ -9134,7 +9135,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("titles3d"), titles3d},
       };
   /*! Modifier */
-  if (str_equals_any(element->localName().c_str(), 5, "group", "figure", "plot", "coordinate_system", "label"))
+  if (str_equals_any(element->localName().c_str(), 6, "group", "figure", "plot", "coordinate_system", "label",
+                     "labels_group"))
     {
       if (element->localName() == "plot") ProcessPlot(element, context);
       processAttributes(element);

@@ -282,6 +282,8 @@
                 <xs:element ref="fillrect" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="drawrect" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="labels_group" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attribute name="fillcolorind" type="xs:string"/>
             <xs:attribute name="fillintstyle" type="xs:string"/>
@@ -295,6 +297,7 @@
             <xs:attribute name="location" type="xs:string"/>
             <xs:attribute name="color_indices" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
+            <xs:attribute name="linespec" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -321,6 +324,7 @@
             </xs:choice>
             <xs:attribute name="fillcolorind" type="xs:string"/>
             <xs:attribute name="linecolorind" type="xs:string"/>
+            <xs:attributeGroup ref="colorrep"/>
         </xs:complexType>
     </xs:element>
 
@@ -395,6 +399,7 @@
             <xs:attribute name="y2" type="xs:string"/>
             <xs:attribute name="linecolorind" type="xs:string"/>
             <xs:attribute name="name" type="xs:string"/>
+            <xs:attribute name="linespec" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -451,6 +456,7 @@
             <xs:attribute name="ymin" type="xs:string" use="required"/>
             <xs:attribute name="linecolorind" type="xs:string"/>
             <xs:attribute name="linewidth" type="xs:string"/>
+            <xs:attribute name="linetype" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -561,6 +567,7 @@
             <xs:attribute name="xmin" type="xs:string" use="required"/>
             <xs:attribute name="ymax" type="xs:string" use="required"/>
             <xs:attribute name="ymin" type="xs:string" use="required"/>
+            <xs:attribute name="resample_method" type="xs:string" use="required"/> <!-- for polar histogram -->
         </xs:complexType>
     </xs:element>
 
@@ -568,10 +575,10 @@
     <xs:element name="drawarc">
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
-            <xs:attribute name="name" type="xs:string" use="required"/>
+            <xs:attribute name="name" type="xs:string"/>
             <xs:attribute name="a1" type="xs:string" use="required"/>
             <xs:attribute name="a2" type="xs:string" use="required"/>
-            <xs:attribute name="linecolorind" type="xs:string" use="required"/>
+            <xs:attribute name="linecolorind" type="xs:string"/>
             <xs:attribute name="xmax" type="xs:string" use="required"/>
             <xs:attribute name="xmin" type="xs:string" use="required"/>
             <xs:attribute name="ymax" type="xs:string" use="required"/>
@@ -913,6 +920,7 @@
             <xs:attribute name="bin_edges" type="xs:string"/>
             <xs:attribute name="bin_width" type="xs:string"/>
             <xs:attribute name="bin_widths" type="xs:string"/>
+            <xs:attribute name="bin_counts" type="xs:string"/>
             <xs:attribute name="fillcolorind" type="xs:string"/>
             <xs:attribute name="linecolorind" type="xs:string"/>
             <xs:attribute name="linewidth" type="xs:string"/>
@@ -920,6 +928,8 @@
             <xs:attribute name="transparency" type="xs:string"/>
             <xs:attribute name="theta" type="xs:string"/>
             <xs:attribute name="total" type="xs:string"/>
+            <xs:attribute name="phimin" type="xs:string"/>
+            <xs:attribute name="phimax" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
