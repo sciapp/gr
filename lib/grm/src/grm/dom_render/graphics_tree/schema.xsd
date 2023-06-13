@@ -471,6 +471,8 @@
             <xs:attributeGroup ref="cellarray"/>
             <xs:attribute name="dimphi" type="xs:string" use="required"/>
             <xs:attribute name="dimr" type="xs:string" use="required"/>
+            <xs:attribute name="phimax" type="xs:string" use="required"/>
+            <xs:attribute name="phimin" type="xs:string" use="required"/>
             <xs:attribute name="rmax" type="xs:string" use="required"/>
             <xs:attribute name="rmin" type="xs:string" use="required"/>
             <xs:attribute name="x_org" type="xs:string" use="required"/>
