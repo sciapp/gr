@@ -53,6 +53,7 @@ extern "C" {
                                      : X_FLIP_IF(x, scale_options, xmin, xmax))
 
 std::shared_ptr<GRM::Element> global_root;
+std::shared_ptr<GRM::Element> active_figure;
 std::shared_ptr<GRM::Render> global_render;
 std::priority_queue<std::shared_ptr<GRM::Element>, std::vector<std::shared_ptr<GRM::Element>>, CompareZIndex> z_queue;
 bool z_queue_is_being_rendered = false;
@@ -74,6 +75,7 @@ static std::set<std::string> parentTypes = {
     "legend",
     "plot",
     "polar_axes",
+    "root",
     "series_barplot",
     "series_contour",
     "series_contourf",
@@ -1072,7 +1074,7 @@ static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_
   std::array<std::string, 2> vars = {"x", "y"};
   std::array<double, 2> default_size = {PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT};
 
-  std::shared_ptr<GRM::Element> root = global_root;
+  std::shared_ptr<GRM::Element> root = active_figure;
 
 #ifdef __EMSCRIPTEN__
   display_metric_width = 0.16384;
@@ -1886,8 +1888,8 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
               r_max = rlim[1];
             }
 
-          int id = (int)global_root->getAttribute("id");
-          global_root->setAttribute("id", id + 1);
+          int id = (int)global_root->getAttribute("_id");
+          global_root->setAttribute("_id", id + 1);
           str = std::to_string(id);
 
           /* save resample method and reset because it isn't restored with gr_restorestate */
@@ -2057,8 +2059,8 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
                         {
                           // with rlim gr_fillarc cant be used because it will always draw from the origin
                           // instead use gr_fillarea and approximate line segment with calculations from above.
-                          int id = (int)global_root->getAttribute("id");
-                          global_root->setAttribute("id", id + 1);
+                          int id = (int)global_root->getAttribute("_id");
+                          global_root->setAttribute("_id", id + 1);
                           str = std::to_string(id);
 
                           temp_elem = global_render->createFillArea("x" + str, f1, "y" + str, f2);
@@ -2073,8 +2075,8 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
                         }
                       else
                         {
-                          int id = (int)global_root->getAttribute("id");
-                          global_root->setAttribute("id", id + 1);
+                          int id = (int)global_root->getAttribute("_id");
+                          global_root->setAttribute("_id", id + 1);
                           str = std::to_string(id);
 
                           temp_elem = global_render->createFillArea("x" + str, f1, "y" + str, f2);
@@ -2168,8 +2170,8 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
 
                       if (draw_edges == 0)
                         {
-                          int id = (int)global_root->getAttribute("id");
-                          global_root->setAttribute("id", id + 1);
+                          int id = (int)global_root->getAttribute("_id");
+                          global_root->setAttribute("_id", id + 1);
                           str = std::to_string(id);
 
                           temp_elem = global_render->createFillArea("x" + str, f1, "y" + str, f2);
@@ -2184,8 +2186,8 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
                         }
                       else
                         {
-                          int id = (int)global_root->getAttribute("id");
-                          global_root->setAttribute("id", id + 1);
+                          int id = (int)global_root->getAttribute("_id");
+                          global_root->setAttribute("_id", id + 1);
                           str = std::to_string(id);
 
                           temp_elem = global_render->createFillArea("x" + str, f1, "y" + str, f2);
@@ -2562,8 +2564,8 @@ static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem
             }
           y_step_values[2 * len - 1] = y[len - 1];
 
-          int id = static_cast<int>(global_root->getAttribute("id"));
-          global_root->setAttribute("id", id + 1);
+          int id = static_cast<int>(global_root->getAttribute("_id"));
+          global_root->setAttribute("_id", id + 1);
           auto id_str = std::to_string(id);
 
           std::shared_ptr<GRM::Element> line_elem, marker_elem;
@@ -3584,7 +3586,7 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
     }
 
   //! define keys for later usages;
-  auto str = static_cast<std::string>(group->getAttribute("id"));
+  auto str = static_cast<std::string>(group->getAttribute("_id"));
   std::string bin_widths_key = "bin_widths" + str;
   std::string bin_edges_key = "bin_edges" + str;
   std::string bin_counts_key;
@@ -4363,9 +4365,9 @@ static void colorbar(const std::shared_ptr<GRM::Element> &element, const std::sh
       data = 1000 + (int)((255.0 * i) / (colors - 1) + 0.5);
       data_vec.push_back(data);
     }
-  int id = (int)global_root->getAttribute("id");
+  int id = (int)global_root->getAttribute("_id");
   std::string str = std::to_string(id);
-  global_root->setAttribute("id", id + 1);
+  global_root->setAttribute("_id", id + 1);
 
   auto cellArray =
       global_render->createCellArray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, "data" + str, data_vec);
@@ -4439,8 +4441,8 @@ static void contour(const std::shared_ptr<GRM::Element> &element, const std::sha
       y_length = y_vec.size();
       z_length = z_vec.size();
 
-      int id = (int)global_root->getAttribute("id");
-      global_root->setAttribute("id", id + 1);
+      int id = (int)global_root->getAttribute("_id");
+      global_root->setAttribute("_id", id + 1);
       std::string str = std::to_string(id);
 
       if (x_length == y_length && x_length == z_length)
@@ -4563,8 +4565,8 @@ static void contourf(const std::shared_ptr<GRM::Element> &element, const std::sh
       y_length = y_vec.size();
       z_length = z_vec.size();
 
-      int id = (int)global_root->getAttribute("id");
-      global_root->setAttribute("id", id + 1);
+      int id = (int)global_root->getAttribute("_id");
+      global_root->setAttribute("_id", id + 1);
       std::string str = std::to_string(id);
 
       gr_setlinecolorind(1);
@@ -4699,9 +4701,9 @@ static void drawImage(const std::shared_ptr<GRM::Element> &element, const std::s
 static void extendErrorbars(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context,
                             std::vector<double> x, std::vector<double> y)
 {
-  int id = static_cast<int>(global_root->getAttribute("id"));
+  int id = static_cast<int>(global_root->getAttribute("_id"));
   std::string str = std::to_string(id);
-  global_root->setAttribute("id", ++id);
+  global_root->setAttribute("_id", ++id);
 
   (*context)["x" + str] = x;
   element->setAttribute("x", "x" + str);
@@ -5830,8 +5832,8 @@ static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::sha
       if (elem->localName() == "nonuniformcellarray") elem->remove();
     }
 
-  int id = (int)global_root->getAttribute("id");
-  global_root->setAttribute("id", id + 1);
+  int id = (int)global_root->getAttribute("_id");
+  global_root->setAttribute("_id", id + 1);
   std::string str = std::to_string(id);
   if (is_uniform_heatmap)
     {
@@ -6449,8 +6451,8 @@ static void polar(const std::shared_ptr<GRM::Element> &element, const std::share
 
   global_render->setLineSpec(element, spec);
 
-  int id = (int)global_root->getAttribute("id");
-  global_root->setAttribute("id", id + 1);
+  int id = (int)global_root->getAttribute("_id");
+  global_root->setAttribute("_id", id + 1);
 
   auto temp = global_render->createPolyline("x" + std::to_string(id), x, "y" + std::to_string(id), y);
   element->append(temp);
@@ -6615,8 +6617,8 @@ static void polarHeatmap(const std::shared_ptr<GRM::Element> &element, const std
         }
     }
 
-  int id = (int)global_root->getAttribute("id");
-  global_root->setAttribute("id", id + 1);
+  int id = (int)global_root->getAttribute("_id");
+  global_root->setAttribute("_id", id + 1);
   std::string str = std::to_string(id);
 
   //   clear old polar_heatmaps
@@ -6768,9 +6770,9 @@ static void scatter(const std::shared_ptr<GRM::Element> &element, const std::sha
             }
         }
 
-      int id = static_cast<int>(global_root->getAttribute("id"));
+      int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
-      global_root->setAttribute("id", ++id);
+      global_root->setAttribute("_id", ++id);
 
       auto marker = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
       element->append(marker);
@@ -6785,11 +6787,11 @@ static void scatter(const std::shared_ptr<GRM::Element> &element, const std::sha
     }
   else
     {
-      int id = static_cast<int>(global_root->getAttribute("id"));
+      int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
       auto marker = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
       element->append(marker);
-      global_root->setAttribute("id", ++id);
+      global_root->setAttribute("_id", ++id);
     }
 
   // errorbar handling
@@ -6852,8 +6854,8 @@ static void scatter3(const std::shared_ptr<GRM::Element> &element, const std::sh
         }
     }
 
-  int id_int = static_cast<int>(global_root->getAttribute("id"));
-  global_root->setAttribute("id", ++id_int);
+  int id_int = static_cast<int>(global_root->getAttribute("_id"));
+  global_root->setAttribute("_id", ++id_int);
   std::string id = std::to_string(id_int);
 
   if (!markerCVec.empty())
@@ -6921,9 +6923,9 @@ static void stairs(const std::shared_ptr<GRM::Element> &element, const std::shar
     }
   is_vertical = orientation == "vertical";
 
-  int id = static_cast<int>(global_root->getAttribute("id"));
+  int id = static_cast<int>(global_root->getAttribute("_id"));
   std::string str = std::to_string(id);
-  global_root->setAttribute("id", id + 1);
+  global_root->setAttribute("_id", id + 1);
 
   // clear old marker and lines
   for (const auto &elem : element->children())
@@ -7137,8 +7139,8 @@ static void stem(const std::shared_ptr<GRM::Element> &element, const std::shared
         }
     }
 
-  int id = static_cast<int>(global_root->getAttribute("id"));
-  global_root->setAttribute("id", id + 1);
+  int id = static_cast<int>(global_root->getAttribute("_id"));
+  global_root->setAttribute("_id", id + 1);
   std::string str = std::to_string(id);
   if (is_vertical)
     {
@@ -7399,7 +7401,7 @@ static void line(const std::shared_ptr<GRM::Element> &element, const std::shared
     {
       int current_line_colorind;
       gr_inqlinecolorind(&current_line_colorind);
-      int id = static_cast<int>(global_root->getAttribute("id"));
+      int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
       std::shared_ptr<GRM::Element> line;
       if (orientation == "horizontal")
@@ -7410,7 +7412,7 @@ static void line(const std::shared_ptr<GRM::Element> &element, const std::shared
         {
           line = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
         }
-      global_root->setAttribute("id", ++id);
+      global_root->setAttribute("_id", ++id);
       line->setAttribute("linecolorind", current_line_colorind);
       element->append(line);
     }
@@ -7418,7 +7420,7 @@ static void line(const std::shared_ptr<GRM::Element> &element, const std::shared
     {
       int current_marker_colorind;
       gr_inqmarkercolorind(&current_marker_colorind);
-      int id = static_cast<int>(global_root->getAttribute("id"));
+      int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
       std::shared_ptr<GRM::Element> line;
       if (orientation == "horizontal")
@@ -7429,7 +7431,7 @@ static void line(const std::shared_ptr<GRM::Element> &element, const std::shared
         {
           line = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
         }
-      global_root->setAttribute("id", ++id);
+      global_root->setAttribute("_id", ++id);
       line->setAttribute("markercolorind", current_marker_colorind);
       element->append(line);
     }
@@ -7510,7 +7512,7 @@ static void marginalheatmap(const std::shared_ptr<GRM::Element> &element, const 
       child->remove();
     }
 
-  int id = static_cast<int>(global_root->getAttribute("id"));
+  int id = static_cast<int>(global_root->getAttribute("_id"));
   std::string str = std::to_string(id);
 
   auto heatmap = global_render->createSeries("heatmap");
@@ -7663,7 +7665,7 @@ static void marginalheatmap(const std::shared_ptr<GRM::Element> &element, const 
                 }
             }
         }
-      global_root->setAttribute("id", ++id);
+      global_root->setAttribute("_id", ++id);
     }
 }
 
@@ -7895,8 +7897,8 @@ static void plot3(const std::shared_ptr<GRM::Element> &element, const std::share
       if (elem->localName() == "polyline3d") elem->remove();
     }
 
-  int id_int = static_cast<int>(global_root->getAttribute("id"));
-  global_root->setAttribute("id", ++id_int);
+  int id_int = static_cast<int>(global_root->getAttribute("_id"));
+  global_root->setAttribute("_id", ++id_int);
   std::string id = std::to_string(id_int);
 
   element->append(global_render->createPolyline3d("x" + id, x_vec, "y" + id, y_vec, "z" + id, z_vec));
@@ -7956,8 +7958,8 @@ static void imshow(const std::shared_ptr<GRM::Element> &element, const std::shar
         }
     }
 
-  int id_int = static_cast<int>(global_root->getAttribute("id"));
-  global_root->setAttribute("id", ++id_int);
+  int id_int = static_cast<int>(global_root->getAttribute("_id"));
+  global_root->setAttribute("_id", ++id_int);
   std::string id = std::to_string(id_int);
 
   std::vector<double> x_vec, y_vec;
@@ -8341,8 +8343,8 @@ static void wireframe(const std::shared_ptr<GRM::Element> &element, const std::s
   global_render->setFillColorInd(element, 0);
   processFillColorInd(element);
 
-  int id_int = static_cast<int>(global_root->getAttribute("id"));
-  global_root->setAttribute("id", ++id_int);
+  int id_int = static_cast<int>(global_root->getAttribute("_id"));
+  global_root->setAttribute("_id", ++id_int);
   std::string id = std::to_string(id_int);
 
   if (x_length == y_length && x_length == z_length)
@@ -8933,11 +8935,11 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                       current_y_max = grm_max(current_y_max, bins[i]);
                     }
 
-                  int id = static_cast<int>(global_root->getAttribute("id"));
+                  int id = static_cast<int>(global_root->getAttribute("_id"));
                   std::string str = std::to_string(id);
                   (*context)["bins" + str] = tmp;
                   series->setAttribute("bins", "bins" + str);
-                  global_root->setAttribute("id", ++id);
+                  global_root->setAttribute("_id", ++id);
 
                   y_min = grm_min(current_y_min, y_min);
                   y_max = grm_max(current_y_max, y_max);
@@ -9133,8 +9135,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("titles3d"), titles3d},
       };
   /*! Modifier */
-  if (str_equals_any(element->localName().c_str(), 6, "group", "figure", "plot", "coordinate_system", "label",
-                     "labels_group"))
+  if (str_equals_any(element->localName().c_str(), 7, "group", "figure", "plot", "coordinate_system", "label",
+                     "labels_group", "root"))
     {
       if (element->localName() == "plot") ProcessPlot(element, context);
       processAttributes(element);
@@ -9325,73 +9327,83 @@ static void applyRootDefaults(std::shared_ptr<GRM::Element> root)
 {
   if (!root->hasAttribute("clearws")) root->setAttribute("clearws", PLOT_DEFAULT_CLEAR);
   if (!root->hasAttribute("updatews")) root->setAttribute("updatews", PLOT_DEFAULT_UPDATE);
-  if (!root->hasAttribute("size_x"))
-    {
-      root->setAttribute("size_x", PLOT_DEFAULT_WIDTH);
-      root->setAttribute("size_x_type", "double");
-      root->setAttribute("size_x_unit", "px");
-    }
-  if (!root->hasAttribute("size_y"))
-    {
-      root->setAttribute("size_y", PLOT_DEFAULT_HEIGHT);
-      root->setAttribute("size_y_type", "double");
-      root->setAttribute("size_y_unit", "px");
-    }
 
-  for (const auto &child : root->children())
+  for (const auto &figure : root->children())
     {
-      if (child->localName() == "plot")
+      if (figure->localName() == "figure")
         {
-          if (!child->hasAttribute("kind")) child->setAttribute("kind", PLOT_DEFAULT_KIND);
-          if (!child->hasAttribute("keep_aspect_ratio"))
-            child->setAttribute("keep_aspect_ratio", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
-          if (!child->hasAttribute("plot_xmin")) child->setAttribute("plot_xmin", PLOT_DEFAULT_SUBPLOT_MIN_X);
-          if (!child->hasAttribute("plot_xmax")) child->setAttribute("plot_xmax", PLOT_DEFAULT_SUBPLOT_MAX_X);
-          if (!child->hasAttribute("plot_ymin")) child->setAttribute("plot_ymin", PLOT_DEFAULT_SUBPLOT_MIN_Y);
-          if (!child->hasAttribute("plot_ymax")) child->setAttribute("plot_ymax", PLOT_DEFAULT_SUBPLOT_MAX_Y);
-          auto kind = static_cast<std::string>(child->getAttribute("kind"));
-          if (!child->hasAttribute("adjust_xlim"))
+          if (!figure->hasAttribute("size_x"))
             {
-              if (kind == "heatmap" || kind == "marginalheatmap")
+              figure->setAttribute("size_x", PLOT_DEFAULT_WIDTH);
+              figure->setAttribute("size_x_type", "double");
+              figure->setAttribute("size_x_unit", "px");
+            }
+          if (!figure->hasAttribute("size_y"))
+            {
+              figure->setAttribute("size_y", PLOT_DEFAULT_HEIGHT);
+              figure->setAttribute("size_y_type", "double");
+              figure->setAttribute("size_y_unit", "px");
+            }
+
+          for (const auto &child : figure->children())
+            {
+              if (child->localName() == "plot")
                 {
-                  child->setAttribute("adjust_xlim", 0);
-                }
-              else
-                {
-                  child->setAttribute("adjust_xlim", (child->hasAttribute("xlim_min") ? 0 : PLOT_DEFAULT_ADJUST_XLIM));
+                  if (!child->hasAttribute("kind")) child->setAttribute("kind", PLOT_DEFAULT_KIND);
+                  if (!child->hasAttribute("keep_aspect_ratio"))
+                    child->setAttribute("keep_aspect_ratio", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
+                  if (!child->hasAttribute("plot_xmin")) child->setAttribute("plot_xmin", PLOT_DEFAULT_SUBPLOT_MIN_X);
+                  if (!child->hasAttribute("plot_xmax")) child->setAttribute("plot_xmax", PLOT_DEFAULT_SUBPLOT_MAX_X);
+                  if (!child->hasAttribute("plot_ymin")) child->setAttribute("plot_ymin", PLOT_DEFAULT_SUBPLOT_MIN_Y);
+                  if (!child->hasAttribute("plot_ymax")) child->setAttribute("plot_ymax", PLOT_DEFAULT_SUBPLOT_MAX_Y);
+                  auto kind = static_cast<std::string>(child->getAttribute("kind"));
+                  if (!child->hasAttribute("adjust_xlim"))
+                    {
+                      if (kind == "heatmap" || kind == "marginalheatmap")
+                        {
+                          child->setAttribute("adjust_xlim", 0);
+                        }
+                      else
+                        {
+                          child->setAttribute("adjust_xlim",
+                                              (child->hasAttribute("xlim_min") ? 0 : PLOT_DEFAULT_ADJUST_XLIM));
+                        }
+                    }
+                  if (!child->hasAttribute("adjust_ylim"))
+                    {
+                      if (kind == "heatmap" || kind == "marginalheatmap")
+                        {
+                          child->setAttribute("adjust_ylim", 0);
+                        }
+                      else
+                        {
+                          child->setAttribute("adjust_ylim",
+                                              (child->hasAttribute("ylim_min") ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
+                        }
+                    }
+                  if (!child->hasAttribute("adjust_zlim"))
+                    {
+                      if (kind != "heatmap" && kind != "marginalheatmap")
+                        {
+                          child->setAttribute("adjust_zlim",
+                                              (child->hasAttribute("zlim_min") ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
+                        }
+                    }
+                  if (!child->hasAttribute("linespec")) child->setAttribute("linespec", " ");
+                  if (!child->hasAttribute("xlog")) child->setAttribute("xlog", PLOT_DEFAULT_XLOG);
+                  if (!child->hasAttribute("ylog")) child->setAttribute("ylog", PLOT_DEFAULT_YLOG);
+                  if (!child->hasAttribute("zlog")) child->setAttribute("zlog", PLOT_DEFAULT_ZLOG);
+                  if (!child->hasAttribute("xflip")) child->setAttribute("xflip", PLOT_DEFAULT_XFLIP);
+                  if (!child->hasAttribute("yflip")) child->setAttribute("yflip", PLOT_DEFAULT_YFLIP);
+                  if (!child->hasAttribute("zflip")) child->setAttribute("zflip", PLOT_DEFAULT_ZFLIP);
+                  if (!child->hasAttribute("resample_method"))
+                    child->setAttribute("resample_method", (int)PLOT_DEFAULT_RESAMPLE_METHOD);
+                  if (!child->hasAttribute("font")) child->setAttribute("font", PLOT_DEFAULT_FONT);
+                  if (!child->hasAttribute("font_precision"))
+                    child->setAttribute("font_precision", PLOT_DEFAULT_FONT_PRECISION);
+                  if (!child->hasAttribute("colormap")) child->setAttribute("colormap", PLOT_DEFAULT_COLORMAP);
                 }
             }
-          if (!child->hasAttribute("adjust_ylim"))
-            {
-              if (kind == "heatmap" || kind == "marginalheatmap")
-                {
-                  child->setAttribute("adjust_ylim", 0);
-                }
-              else
-                {
-                  child->setAttribute("adjust_ylim", (child->hasAttribute("ylim_min") ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
-                }
-            }
-          if (!child->hasAttribute("adjust_zlim"))
-            {
-              if (kind != "heatmap" && kind != "marginalheatmap")
-                {
-                  child->setAttribute("adjust_zlim", (child->hasAttribute("zlim_min") ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
-                }
-            }
-          if (!child->hasAttribute("linespec")) child->setAttribute("linespec", " ");
-          if (!child->hasAttribute("xlog")) child->setAttribute("xlog", PLOT_DEFAULT_XLOG);
-          if (!child->hasAttribute("ylog")) child->setAttribute("ylog", PLOT_DEFAULT_YLOG);
-          if (!child->hasAttribute("zlog")) child->setAttribute("zlog", PLOT_DEFAULT_ZLOG);
-          if (!child->hasAttribute("xflip")) child->setAttribute("xflip", PLOT_DEFAULT_XFLIP);
-          if (!child->hasAttribute("yflip")) child->setAttribute("yflip", PLOT_DEFAULT_YFLIP);
-          if (!child->hasAttribute("zflip")) child->setAttribute("zflip", PLOT_DEFAULT_ZFLIP);
-          if (!child->hasAttribute("resample_method"))
-            child->setAttribute("resample_method", (int)PLOT_DEFAULT_RESAMPLE_METHOD);
-          if (!child->hasAttribute("font")) child->setAttribute("font", PLOT_DEFAULT_FONT);
-          if (!child->hasAttribute("font_precision"))
-            child->setAttribute("font_precision", PLOT_DEFAULT_FONT_PRECISION);
-          if (!child->hasAttribute("colormap")) child->setAttribute("colormap", PLOT_DEFAULT_COLORMAP);
         }
     }
 }
@@ -9462,6 +9474,7 @@ void GRM::Render::render()
    */
   auto root = this->firstChildElement();
   global_root = root;
+  active_figure = global_root->children()[0];
   const unsigned int indent = 2;
 
   bounding_id = 0;

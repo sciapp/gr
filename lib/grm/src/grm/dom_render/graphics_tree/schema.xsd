@@ -3,16 +3,26 @@
            xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning"
            vc:minVersion="1.1">
 
+    <!-- definition of root -->
+    <xs:element name="root">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="figure" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attribute name="clearws" type="xs:string" use="required"/>
+            <xs:attribute name="updatews" type="xs:string" use="required"/>
+            <xs:attribute name="_id" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
     <!-- definition of figure -->
     <xs:element name="figure">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="plot" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attribute name="clearws" type="xs:string" use="required"/>
             <xs:attribute name="figsize_x" type="xs:string"/>
             <xs:attribute name="figsize_y" type="xs:string"/>
-            <xs:attribute name="id" type="xs:string" use="required"/>
             <xs:attribute name="size_x" type="xs:string"/>
             <xs:attribute name="size_x_type" type="xs:string"/>
             <xs:attribute name="size_x_unit" type="xs:string"/>
@@ -20,7 +30,6 @@
             <xs:attribute name="size_y_type" type="xs:string"/>
             <xs:attribute name="size_y_unit" type="xs:string"/>
             <xs:attribute name="textencoding" type="xs:string" use="required"/>
-            <xs:attribute name="updatews" type="xs:string" use="required"/>
             <xs:attribute name="wsviewport_xmax" type="xs:string" use="required"/>
             <xs:attribute name="wsviewport_xmin" type="xs:string" use="required"/>
             <xs:attribute name="wsviewport_ymax" type="xs:string" use="required"/>
