@@ -1576,9 +1576,9 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
   double r_min = 0.0;
   double r_max = 1.0;
   std::vector<double> phi_vec;
-
   std::vector<double> arc_2_x, arc_2_y;
 
+  unsigned int resample;
   std::vector<int> colormap;
   int xcolormap;
   int ycolormap;
@@ -1599,6 +1599,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
   std::vector<double> r_lim_vec;
 
   const std::shared_ptr<GRM::Element> &group = element;
+  std::shared_ptr<GRM::Element> plot_group = group->parentElement();
   std::shared_ptr<GRM::Element> temp_elem;
   std::string str;
 
@@ -1651,13 +1652,13 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
 
   max = static_cast<double>(group->parentElement()->getAttribute("r_max"));
 
-  if (group->hasAttribute("phiflip") == 0)
+  if (plot_group->hasAttribute("phiflip") == 0)
     {
       phiflip = 0;
     }
   else
     {
-      phiflip = static_cast<int>(group->getAttribute("phiflip"));
+      phiflip = static_cast<int>(plot_group->getAttribute("phiflip"));
     }
 
   if (group->hasAttribute("draw_edges") == 0)
@@ -1717,14 +1718,14 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
         }
     }
 
-  if (!(group->hasAttribute("rlim_min") && group->hasAttribute("rlim_max")))
+  if (!(plot_group->hasAttribute("rlim_min") && plot_group->hasAttribute("rlim_max")))
     {
       rlim = nullptr;
     }
   else
     {
-      r_lim_vec.push_back(static_cast<double>(group->getAttribute("rlim_min")));
-      r_lim_vec.push_back(static_cast<double>(group->getAttribute("rlim_max")));
+      r_lim_vec.push_back(static_cast<double>(plot_group->getAttribute("rlim_min")));
+      r_lim_vec.push_back(static_cast<double>(plot_group->getAttribute("rlim_max")));
       rlim = &(r_lim_vec[0]);
 
       mlist.resize((num_bins + 1) * 4);
@@ -1896,11 +1897,8 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
           temp_elem =
               global_render->createDrawImage(-1.0, 1.0, 1.0, -1.0, image_size, image_size, "data" + str, lineardata, 0);
           group->append(temp_elem);
-          unsigned int resample;
           gr_inqresamplemethod(&resample);
           global_render->setResampleMethod(temp_elem, static_cast<int>(0x2020202));
-          auto resetResample = global_render->createGroup("resetResample");
-          global_render->setResampleMethod(resetResample, static_cast<int>(resample));
         } /* end colormap calculation*/
 
     } /* end colormap condition */
@@ -2476,6 +2474,12 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
                 }
             }
         }
+    }
+
+  // reset resamplemethod on last element in polarhistogram
+  if (!colormap.empty())
+    {
+      global_render->setResampleMethod(group->lastChildElement(), static_cast<int>(resample));
     }
 }
 
@@ -3574,6 +3578,8 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
   // element is the plot element -> get the first series with polarhistogram
   auto seriesList = element->querySelectorsAll("series_polar_histogram");
   std::shared_ptr<GRM::Element> group = seriesList[0];
+  // element == plot_group for better readability
+  const std::shared_ptr<GRM::Element> &plot_group = element;
   std::shared_ptr<GRM::Context> context;
 
   if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()))
@@ -3609,29 +3615,29 @@ static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &el
       length = theta.size();
     }
 
-  if (!group->hasAttribute("phi_min") && !group->hasAttribute("phi_max"))
+  if (!plot_group->hasAttribute("philim_min") && !plot_group->hasAttribute("philim_max"))
     {
       philim = nullptr;
     }
   else
     {
       philim = philim_arr;
-      philim[0] = static_cast<double>(group->getAttribute("philim_min"));
-      philim[1] = static_cast<double>(group->getAttribute("philim_max"));
+      philim[0] = static_cast<double>(plot_group->getAttribute("philim_min"));
+      philim[1] = static_cast<double>(plot_group->getAttribute("philim_max"));
 
       if (philim[1] < philim[0])
         {
           int phiflip = 0;
           std::swap(philim[0], philim[1]);
 
-          group->setAttribute("phiflip", 1);
+          plot_group->setAttribute("phiflip", 1);
         }
       if (philim[0] < 0.0 || philim[1] > 2 * M_PI)
         {
           logger((stderr, "philim must be between 0 and 2 * pi\n"));
         }
-      group->setAttribute("phi_min", philim[0]);
-      group->setAttribute("phi_max", philim[1]);
+      plot_group->setAttribute("philim_min", philim[0]);
+      plot_group->setAttribute("philim_max", philim[1]);
     }
 
   /* bin_edges and nbins */
@@ -5341,7 +5347,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
     }
 
   n = rings;
-  phiflip = static_cast<int>(elem->getAttribute("phiflip"));
+  phiflip = static_cast<int>(subplotElement->getAttribute("phiflip"));
 
   // Draw rings
   for (i = 0; i <= n; i++)
@@ -5362,7 +5368,15 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
           auto temp = render->createDrawArc(-r, r, -r, r, 0, 360);
           temp->setAttribute("name", "polar_axes");
           elem->append(temp);
-          render->setLineColorInd(temp, 90);
+          // last ring should get the darker circle
+          if (i == n)
+            {
+              render->setLineColorInd(temp, 88);
+            }
+          else
+            {
+              render->setLineColorInd(temp, 90);
+            }
         }
     }
   // Draw sectorlines
@@ -9909,7 +9923,8 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawPolarAxes(int angle_ticks, 
       element->setAttribute("linewidth", line_width);
     }
   element->setAttribute("angle_ticks", angle_ticks);
-  element->setAttribute("phiflip", phiflip);
+  // todo should phiflip be passed when creating a polarAxesElement
+  //  element->setAttribute("phiflip", phiflip);
 
   return element;
 }

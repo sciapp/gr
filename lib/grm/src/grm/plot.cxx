@@ -3460,8 +3460,9 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   int draw_edges, phiflip, edge_color, face_color, face_alpha;
   grm_args_t **series;
 
+  std::shared_ptr<GRM::Element> plot_group = active_figure->lastChildElement();
   std::shared_ptr<GRM::Element> series_group = global_render->createSeries("polar_histogram");
-  active_figure->lastChildElement()->append(series_group);
+  plot_group->append(series_group);
 
   // Call classes -> set attributes and data
   classes_polar_histogram(subplot_args);
@@ -3493,7 +3494,7 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
   if (grm_args_values(subplot_args, "phiflip", "i", &phiflip))
     {
-      series_group->setAttribute("phiflip", phiflip);
+      plot_group->setAttribute("phiflip", phiflip);
     }
 
   if (grm_args_values(*series, "draw_edges", "i", &draw_edges))
@@ -3508,8 +3509,8 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
   if (grm_args_first_value(*series, "rlim", "D", &rlim, &dummy))
     {
-      series_group->setAttribute("rlim_min", rlim[0]);
-      series_group->setAttribute("rlim_max", rlim[1]);
+      plot_group->setAttribute("rlim_min", rlim[0]);
+      plot_group->setAttribute("rlim_max", rlim[1]);
     }
 
   if (grm_args_values(*series, "xcolormap", "i", &xcolormap))
@@ -4556,6 +4557,7 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
   grm_args_t **series;
   err_t error = ERROR_NONE;
 
+  std::shared_ptr<GRM::Element> plot_group = active_figure->lastChildElement();
   std::shared_ptr<GRM::Element> series_group = active_figure->lastChildElement()->lastChildElement();
 
   std::shared_ptr<GRM::Context> context = global_render->getContext();
@@ -4591,11 +4593,8 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
 
   if (grm_args_first_value(*series, "philim", "D", &philim, &dummy))
     {
-      int phiflip = 0;
-      grm_args_values(subplot_args, "phiflip", "i", &phiflip);
-      series_group->setAttribute("phiflip", phiflip);
-      series_group->setAttribute("philim_min", philim[0]);
-      series_group->setAttribute("philim_max", philim[1]);
+      plot_group->setAttribute("philim_min", philim[0]);
+      plot_group->setAttribute("philim_max", philim[1]);
     }
 
   /* bin_edges and nbins */
