@@ -9327,15 +9327,15 @@ static void applyRootDefaults(std::shared_ptr<GRM::Element> root)
   if (!root->hasAttribute("updatews")) root->setAttribute("updatews", PLOT_DEFAULT_UPDATE);
   if (!root->hasAttribute("size_x"))
     {
-      global_root->setAttribute("size_x", PLOT_DEFAULT_WIDTH);
-      global_root->setAttribute("size_x_type", "double");
-      global_root->setAttribute("size_x_unit", "px");
+      root->setAttribute("size_x", PLOT_DEFAULT_WIDTH);
+      root->setAttribute("size_x_type", "double");
+      root->setAttribute("size_x_unit", "px");
     }
   if (!root->hasAttribute("size_y"))
     {
-      global_root->setAttribute("size_y", PLOT_DEFAULT_HEIGHT);
-      global_root->setAttribute("size_y_type", "double");
-      global_root->setAttribute("size_y_unit", "px");
+      root->setAttribute("size_y", PLOT_DEFAULT_HEIGHT);
+      root->setAttribute("size_y_type", "double");
+      root->setAttribute("size_y_unit", "px");
     }
 
   for (const auto &child : root->children())
