@@ -5271,6 +5271,7 @@ int grm_plot(const grm_args_t *args)
         }
 
       plot_post_plot(active_plot_args);
+      global_render->setAutoUpdate(true);
       global_render->render();
     }
 
