@@ -6202,8 +6202,8 @@ static void polarCellArray(const std::shared_ptr<GRM::Element> &element, const s
 {
   double x_org = static_cast<double>(element->getAttribute("x_org"));
   double y_org = static_cast<double>(element->getAttribute("y_org"));
-  double phimin = static_cast<double>(element->getAttribute("philim_min"));
-  double phimax = static_cast<double>(element->getAttribute("philim_max"));
+  double phimin = static_cast<double>(element->getAttribute("phimin"));
+  double phimax = static_cast<double>(element->getAttribute("phimax"));
   double rmin = static_cast<double>(element->getAttribute("rmin"));
   double rmax = static_cast<double>(element->getAttribute("rmax"));
   int dimr = static_cast<int>(element->getAttribute("dimr"));
@@ -10259,8 +10259,8 @@ std::shared_ptr<GRM::Element> GRM::Render::createPolarCellArray(double x_org, do
   auto element = createElement("polarcellarray");
   element->setAttribute("x_org", x_org);
   element->setAttribute("y_org", y_org);
-  element->setAttribute("philim_min", phimin);
-  element->setAttribute("philim_max", phimax);
+  element->setAttribute("phimin", phimin);
+  element->setAttribute("phimax", phimax);
   element->setAttribute("rmin", rmin);
   element->setAttribute("rmax", rmax);
   element->setAttribute("dimphi", dimphi);
