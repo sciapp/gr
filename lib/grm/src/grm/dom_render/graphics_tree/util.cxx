@@ -6,6 +6,7 @@
 #include <sstream>
 #include <algorithm>
 #include <cmath>
+#include "grm/utilcpp_int.hxx"
 
 static void nodeToXML(std::stringstream &os, const std::shared_ptr<const GRM::Node> &node,
                       const GRM::SerializerOptions &options, const std::string &indent);
@@ -35,7 +36,7 @@ static void elementToXML(std::stringstream &os, const std::shared_ptr<const GRM:
     }
   for (const auto &attribute_name : attribute_names)
     {
-      if (attribute_name != "name")
+      if (attribute_name != "name" && !starts_with(attribute_name, "_"))
         {
           os << " " << attribute_name << "=\"" << (std::string)element->getAttribute(attribute_name) << "\"";
         }
