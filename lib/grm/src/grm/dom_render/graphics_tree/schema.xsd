@@ -323,7 +323,6 @@
             <xs:attribute name="charheight" type="xs:string"/>
             <xs:attribute name="linetype" type="xs:string"/>
             <xs:attribute name="norm" type="xs:string"/>
-            <xs:attribute name="phiflip" type="xs:string" use="required"/>
             <xs:attribute name="rings" type="xs:string"/>
             <xs:attribute name="textalign_horizontal" type="xs:string"/>
             <xs:attribute name="textalign_vertical" type="xs:string"/>
