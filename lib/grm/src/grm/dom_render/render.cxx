@@ -1415,31 +1415,37 @@ static void processColormap(const std::shared_ptr<GRM::Element> &elem)
   /* TODO: Implement other datatypes for `colormap` */
 }
 
-static void processColorRep(const std::shared_ptr<GRM::Element> &elem)
+static void processColorRep(const std::shared_ptr<GRM::Element> &elem, const std::string attribute)
 {
-  // Changed processColorRep so that it processes all colorreps of an element
   int index, hex_int;
   double red, green, blue;
-  std::stringstream stringstream;
   std::string name, hex_string;
+  std::stringstream stringstream;
 
+  auto end = attribute.find('.');
+  index = std::stoi(attribute.substr(end + 1, attribute.size()));
+
+  hex_int = 0;
+  hex_string = static_cast<std::string>(elem->getAttribute(attribute));
+  stringstream << std::hex << hex_string;
+  stringstream >> hex_int;
+
+  red = ((hex_int >> 16) & 0xFF) / 255.0;
+  green = ((hex_int >> 8) & 0xFF) / 255.0;
+  blue = ((hex_int)&0xFF) / 255.0;
+
+  gr_setcolorrep(index, red, green, blue);
+}
+
+static void processColorReps(const std::shared_ptr<GRM::Element> &elem)
+{
   for (auto &attr : elem->getAttributeNames())
     {
       auto start = 0U;
       auto end = attr.find('.');
       if (attr.substr(start, end) == "colorrep")
         {
-          hex_int = 0;
-          hex_string = static_cast<std::string>(elem->getAttribute(attr));
-          index = std::stoi(attr.substr(end + 1, attr.size()));
-          stringstream << std::hex << hex_string;
-          stringstream >> hex_int;
-
-          red = ((hex_int >> 16) & 0xFF) / 255.0;
-          green = ((hex_int >> 8) & 0xFF) / 255.0;
-          blue = ((hex_int)&0xFF) / 255.0;
-
-          gr_setcolorrep(index, red, green, blue);
+          processColorRep(elem, attr);
         }
     }
 }
@@ -3567,7 +3573,6 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("clipxform"), processClipXForm},
       {std::string("offset"), processColorbarPosition},
       {std::string("colormap"), processColormap},
-      {std::string("colorrep"), processColorRep},
       {std::string("fillcolorind"), processFillColorInd},
       {std::string("fillintstyle"), processFillIntStyle},
       {std::string("fillstyle"), processFillStyle},
@@ -3612,15 +3617,27 @@ static void processAttributes(const std::shared_ptr<GRM::Element> &element)
       {std::string("set_text_color_for_background"), processTextColorForBackground},
   };
 
+  static std::map<std::string, std::function<void(const std::shared_ptr<GRM::Element> &, const std::string attribute)>>
+      multiAttrStringToFunc{
+          /* This map contains functions for attributes of which an element can hold more than one e.g. colorrep
+           * */
+          {std::string("colorrep"), processColorRep},
+      };
+
   for (auto attribute : element->getAttributeNames())
     {
       auto start = 0U;
       auto end = attribute.find('.');
       if (end != std::string::npos)
         {
-          attribute = attribute.substr(start, end);
+          /* element can hold more than one attribute of this kind */
+          auto attributeKind = attribute.substr(start, end);
+          if (multiAttrStringToFunc.find(attributeKind) != multiAttrStringToFunc.end())
+            {
+              multiAttrStringToFunc[attributeKind](element, attribute);
+            }
         }
-      if (attrStringToFunc.find(attribute) != attrStringToFunc.end())
+      else if (attrStringToFunc.find(attribute) != attrStringToFunc.end())
         {
           attrStringToFunc[attribute](element);
         }
@@ -4071,7 +4088,7 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
   if (bar_color_rgb[0] != -1)
     {
       global_render->setColorRep(element, color_save_spot, bar_color_rgb[0], bar_color_rgb[1], bar_color_rgb[2]);
-      processColorRep(element);
+      processColorReps(element);
       bar_color = color_save_spot;
       global_render->setFillColorInd(element, bar_color);
       processFillColorInd(element);
@@ -6064,7 +6081,7 @@ static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared
       global_render->setColorRep(element, bar_color_index, bar_color_rgb_vec[0], bar_color_rgb_vec[1],
                                  bar_color_rgb_vec[2]);
       // processcolorrep has to be manually triggered.
-      processColorRep(element);
+      processColorReps(element);
     }
 
   int edge_color_index = 1;
@@ -6089,7 +6106,7 @@ static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared
       edge_color_index = 1001;
       global_render->setColorRep(element, edge_color_index, edge_color_rgb_vec[0], edge_color_rgb_vec[1],
                                  edge_color_rgb_vec[2]);
-      processColorRep(element);
+      processColorReps(element);
     }
 
   auto bins = static_cast<std::string>(element->getAttribute("bins"));
