@@ -294,13 +294,49 @@ const char *valid_subplot_keys[] = {"accelerate",
                                     "zlim",
                                     "zlog",
                                     nullptr};
-const char *valid_series_keys[] = {
-    "a",          "algorithm",    "bin_width",  "bin_edges",  "bin_counts", "c",      "c_dims",     "crange",
-    "draw_edges", "dmin",         "dmax",       "edge_color", "edge_width", "error",  "face_color", "foreground_color",
-    "indices",    "inner_series", "isovalue",   "markertype", "nbins",      "philim", "rgb",        "rlim",
-    "s",          "spec",         "step_where", "stairs",     "u",          "v",      "weights",    "x",
-    "xcolormap",  "xrange",       "y",          "ycolormap",  "ylabels",    "yrange", "z",          "z_dims",
-    "zrange",     nullptr};
+const char *valid_series_keys[] = {"a",
+                                   "algorithm",
+                                   "bin_width",
+                                   "bin_edges",
+                                   "bin_counts",
+                                   "c",
+                                   "c_dims",
+                                   "crange",
+                                   "draw_edges",
+                                   "dmin",
+                                   "dmax",
+                                   "edge_color",
+                                   "edge_width",
+                                   "error",
+                                   "face_alpha",
+                                   "face_color",
+                                   "foreground_color",
+                                   "indices",
+                                   "inner_series",
+                                   "isovalue",
+                                   "markertype",
+                                   "nbins",
+                                   "philim",
+                                   "rgb",
+                                   "rlim",
+                                   "s",
+                                   "spec",
+                                   "step_where",
+                                   "stairs",
+                                   "u",
+                                   "v",
+                                   "weights",
+                                   "x",
+                                   "xcolormap",
+                                   "xrange",
+                                   "y",
+                                   "ycolormap",
+                                   "ylabels",
+                                   "yrange",
+                                   "z",
+                                   "z_dims",
+                                   "zrange",
+                                   nullptr};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ valid types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -326,6 +362,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"edge_color", "D|i"},
                                               {"edge_width", "d"},
                                               {"error", "a"},
+                                              {"face_alpha", "d"},
                                               {"figsize", "D"},
                                               {"font", "i"},
                                               {"font_precision", "i"},
@@ -920,6 +957,7 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
               *current_subplot, "adjust_zlim", "i",
               (grm_args_values(*current_subplot, "zlim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
         }
+      args_setdefault(*current_subplot, "alpha", "d", PLOT_DEFAULT_ALPHA);
       args_setdefault(*current_subplot, "colormap", "i", PLOT_DEFAULT_COLORMAP);
       args_setdefault(*current_subplot, "font", "i", PLOT_DEFAULT_FONT);
       args_setdefault(*current_subplot, "font_precision", "i", PLOT_DEFAULT_FONT_PRECISION);
@@ -1076,10 +1114,8 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
   gr_uselinespec(const_cast<char *>(" "));
 
   gr_savestate();
-  if (grm_args_values(subplot_args, "alpha", "d", &alpha))
-    {
-      gr_settransparency(alpha);
-    }
+  grm_args_values(subplot_args, "alpha", "d", &alpha);
+  gr_settransparency(alpha);
 
   return ERROR_NONE;
 }
@@ -5118,7 +5154,7 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   const double convert = 180 / M_PI;
   int edge_color = 1;
   int face_color = 989;
-  double face_alpha = 0.75;
+  double alpha = 0.75;
   grm_args_t **series;
   unsigned int resample = 0;
   int *lineardata = nullptr;
@@ -5150,12 +5186,12 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
     }
 
   /* face_alpha */
-  if (grm_args_values(*series, "face_alpha", "d", &face_alpha) == 0)
+  if (grm_args_values(*series, "face_alpha", "d", &alpha) == 0)
     {
-      face_alpha = 0.75;
+      alpha = 0.75;
     }
 
-  gr_settransparency(face_alpha);
+  gr_settransparency(alpha);
 
   grm_args_values(*series, "nbins", "i", &num_bins);
 
@@ -6030,6 +6066,9 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   gr_setresamplemethod(resample);
 
 cleanup:
+  grm_args_values(subplot_args, "alpha", "d", &alpha);
+  gr_settransparency(alpha);
+
   free(mlist);
   free(rectlist);
   free(lineardata);
