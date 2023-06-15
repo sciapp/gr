@@ -1417,6 +1417,7 @@ static void processColormap(const std::shared_ptr<GRM::Element> &elem)
 
 static void processColorRep(const std::shared_ptr<GRM::Element> &elem)
 {
+  // Changed processColorRep so that it processes all colorreps of an element
   int index, hex_int;
   double red, green, blue;
   std::stringstream stringstream;
@@ -1428,20 +1429,19 @@ static void processColorRep(const std::shared_ptr<GRM::Element> &elem)
       auto end = attr.find('.');
       if (attr.substr(start, end) == "colorrep")
         {
-          name = attr;
+          hex_int = 0;
+          hex_string = static_cast<std::string>(elem->getAttribute(attr));
           index = std::stoi(attr.substr(end + 1, attr.size()));
+          stringstream << std::hex << hex_string;
+          stringstream >> hex_int;
+
+          red = ((hex_int >> 16) & 0xFF) / 255.0;
+          green = ((hex_int >> 8) & 0xFF) / 255.0;
+          blue = ((hex_int)&0xFF) / 255.0;
+
+          gr_setcolorrep(index, red, green, blue);
         }
     }
-
-  hex_string = static_cast<std::string>(elem->getAttribute(name));
-  stringstream << std::hex << hex_string;
-  stringstream >> hex_int;
-
-  red = ((hex_int >> 16) & 0xFF) / 255.0;
-  green = ((hex_int >> 8) & 0xFF) / 255.0;
-  blue = ((hex_int)&0xFF) / 255.0;
-
-  gr_setcolorrep(index, red, green, blue);
 }
 
 static void processFillColorInd(const std::shared_ptr<GRM::Element> &elem)
@@ -5975,8 +5975,10 @@ static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared
             throw std::out_of_range("For hist series bar_color_rgb must be inside [0, 1].\n");
         }
       bar_color_index = 1000;
-      global_render->setColorRep(plot_parent, bar_color_index, bar_color_rgb[0], bar_color_rgb[1], bar_color_rgb[2]);
-      processColorRep(plot_parent);
+      global_render->setColorRep(element, bar_color_index, bar_color_rgb_vec[0], bar_color_rgb_vec[1],
+                                 bar_color_rgb_vec[2]);
+      // processcolorrep has to be manually triggered.
+      processColorRep(element);
     }
 
   int edge_color_index = 1;
@@ -5999,9 +6001,9 @@ static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared
             throw std::out_of_range("For hist series edge_color_rgb must be inside [0, 1].\n");
         }
       edge_color_index = 1001;
-      global_render->setColorRep(plot_parent, edge_color_index, edge_color_rgb[0], edge_color_rgb[1],
-                                 edge_color_rgb[2]);
-      processColorRep(plot_parent);
+      global_render->setColorRep(element, edge_color_index, edge_color_rgb_vec[0], edge_color_rgb_vec[1],
+                                 edge_color_rgb_vec[2]);
+      processColorRep(element);
     }
 
   auto bins = static_cast<std::string>(element->getAttribute("bins"));

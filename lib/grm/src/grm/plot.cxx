@@ -1827,6 +1827,10 @@ err_t plot_hist(grm_args_t *subplot_args)
       subGroup->setAttribute("edge_color_index", edge_color_index);
 
       grm_args_first_value(*current_series, "bins", "D", &bins, &num_bins);
+      if (num_bins == 0)
+        {
+          grm_args_values(*current_series, "nbins", "i", &num_bins);
+        }
 
       if (grm_args_values(subplot_args, "orientation", "s", &orientation))
         subGroup->setAttribute("orientation", orientation);
@@ -1857,6 +1861,7 @@ err_t plot_hist(grm_args_t *subplot_args)
         {
           if (num_bins <= 1)
             {
+              // todo: make num_bins dependent on error length?
               num_bins = (int)(3.3 * log10(x_length) + 0.5) + 1;
             }
           error = plot_draw_errorbars(*current_series, num_bins);
