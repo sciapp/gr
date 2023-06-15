@@ -6063,9 +6063,8 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
         }
     }
 
-  gr_setresamplemethod(resample);
-
 cleanup:
+  gr_setresamplemethod(resample);
   grm_args_values(subplot_args, "alpha", "d", &alpha);
   gr_settransparency(alpha);
 
