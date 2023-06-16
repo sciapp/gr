@@ -1876,70 +1876,50 @@ err_t plot_hist(grm_args_t *subplot_args)
 err_t plot_barplot(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
-  grm_args_t **inner_series;
-  unsigned int inner_series_length;
-
-  /* Default */
-  int bar_color = 989, edge_color = 1;
-  double bar_color_rgb[3] = {-1};
-  double edge_color_rgb[3] = {-1};
-  double bar_width = 0.8, edge_width = 1.0, bar_shift = 1;
-  const char *style = "default";
-  double *y;
-  unsigned int y_length;
-  unsigned int fixed_y_length = 0;
+  int bar_color, edge_color;
+  double bar_color_rgb[3];
+  double edge_color_rgb[3];
+  double bar_width, edge_width;
+  const char *style;
   int series_index = 0;
-  double wfac;
-  int len_std_colors = 20;
-  int std_colors[20] = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
-                        991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
-  int color_save_spot = 1000;
   unsigned int i;
   err_t error = ERROR_NONE;
-  double *y_lightness = nullptr;
-  const char *orientation = "horizontal";
-  int is_vertical;
+  char *orientation;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : active_figure->lastChildElement();
   gr_savestate();
 
-  grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]);
-  grm_args_values(subplot_args, "bar_color", "i", &bar_color);
-  grm_args_values(subplot_args, "bar_width", "d", &bar_width);
-  grm_args_values(subplot_args, "style", "s", &style);
-  grm_args_values(subplot_args, "orientation", "s", &orientation);
-
-  is_vertical = strcmp(orientation, "vertical") == 0;
-
-  if (bar_color_rgb[0] != -1)
+  /* Push attributes on the subplot level to the tree */
+  auto context = global_render->getContext();
+  int id = static_cast<int>(global_root->getAttribute("id"));
+  std::string id_str = std::to_string(id);
+  if (grm_args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]))
     {
-      for (i = 0; i < 3; i++)
-        {
-          cleanup_and_set_error_if((bar_color_rgb[i] > 1 || bar_color_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
-        }
+      std::vector<double> bar_color_rgb_vec(bar_color_rgb, bar_color_rgb + 3);
+      (*context)["bar_color_rgb" + id_str] = bar_color_rgb_vec;
+      group->setAttribute("bar_color_rgb", "bar_color_rgb" + id_str);
     }
-
-  /* ind_parameter */
-  /* determine the length of y */
-  while (*current_series != nullptr)
+  if (grm_args_values(subplot_args, "bar_color", "i", &bar_color))
     {
-      if (!grm_args_first_value(*current_series, "y", "D", &y, &y_length))
-        {
-          cleanup_and_set_error_if(
-              !grm_args_first_value(*current_series, "inner_series", "A", &inner_series, &inner_series_length),
-              ERROR_PLOT_MISSING_DATA);
-          y_length = inner_series_length;
-        }
-      fixed_y_length = grm_max(y_length, fixed_y_length);
-      ++current_series;
+      group->setAttribute("bar_color", bar_color);
     }
+  if (grm_args_values(subplot_args, "bar_width", "d", &bar_width))
+    {
+      group->setAttribute("bar_width", bar_width);
+    }
+  if (grm_args_values(subplot_args, "style", "s", &style))
+    {
+      group->setAttribute("style", style);
+    }
+  if (grm_args_values(subplot_args, "orientation", "s", &orientation))
+    {
+      group->setAttribute("orientation", orientation);
+    }
+  global_root->setAttribute("id", ++id);
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  wfac = 0.9 * bar_width;
   while (*current_series != nullptr)
     {
-      /* Init */
       int inner_series_index;
       double *y = nullptr;
       unsigned int y_length = 0;
@@ -1950,495 +1930,193 @@ err_t plot_barplot(grm_args_t *subplot_args)
       double *c_rgb = nullptr;
       unsigned int c_rgb_length;
       char **ylabels = nullptr;
-      unsigned int ylabels_left = 0, ylabels_length = 0, y_lightness_to_get = 0;
-      unsigned char rgb[sizeof(int)];
-      int use_y_notations_from_inner_series = 1;
-      double Y;
-      int color;
-      /* Style Varianz */
-      double pos_vertical_change = 0, neg_vertical_change = 0;
-      double x1, x2, y1, y2;
-      double x_min = 0, x_max, y_min = 0, y_max;
+      unsigned int ylabels_length = 0;
+      std::vector<int> c_vec;
+      std::vector<double> c_rgb_vec;
 
-      auto subGroup = global_render->createSeries("barplot_series");
+      auto subGroup = global_render->createSeries("barplot");
       group->append(subGroup);
+      int id = static_cast<int>(global_root->getAttribute("id"));
+      std::string id_str = std::to_string(id);
 
-      grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
-      grm_args_values(*current_series, "edge_color", "i", &edge_color);
-      global_render->setTextAlign(subGroup, 2, 3);
-      global_render->selectClipXForm(subGroup, 1);
-
-      if (edge_color_rgb[0] != -1)
+      /* Push attributes on the series level to the tree */
+      if (grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1],
+                          &edge_color_rgb[2]))
         {
-          for (i = 0; i < 3; i++)
-            {
-              cleanup_and_set_error_if((edge_color_rgb[i] > 1 || edge_color_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
-            }
+          std::vector<double> edge_color_rgb_vec(edge_color_rgb, edge_color_rgb + 3);
+          (*context)["edge_color_rgb" + id_str] = edge_color_rgb_vec;
+          subGroup->setAttribute("edge_color_rgb", "edge_color_rgb" + id_str);
         }
-      grm_args_values(*current_series, "edge_width", "d", &edge_width);
-
-      grm_args_first_value(*current_series, "c", "I", &c, &c_length);
-      grm_args_first_value(*current_series, "c", "D", &c_rgb, &c_rgb_length);
-      grm_args_first_value(*current_series, "ylabels", "S", &ylabels, &ylabels_length);
-      ylabels_left = ylabels_length;
-      y_lightness_to_get = ylabels_length;
-
-      cleanup_and_set_error_if(
-          !(grm_args_first_value(*current_series, "y", "D", &y, &y_length) ||
-            (grm_args_first_value(*current_series, "inner_series", "A", &inner_series, &inner_series_length))),
-          ERROR_PLOT_MISSING_DATA);
-
-      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max) &&
-          grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+      if (grm_args_values(*current_series, "edge_color", "i", &edge_color))
         {
-          if (!grm_args_values(subplot_args, "bar_width", "d", &bar_width))
-            {
-              bar_width = (x_max - x_min) / (y_length - 1.0);
-              bar_shift = (x_max - x_min) / (y_length - 1.0);
-              x_min -= 1; // in the later calculation there is allways a +1 in combination with x
-              wfac = 0.9 * bar_width;
-            }
+          subGroup->setAttribute("edge_color", edge_color);
         }
-
-      cleanup_and_set_error_if(strcmp(style, "lined") && inner_series != nullptr, ERROR_UNSUPPORTED_OPERATION);
-      cleanup_and_set_error_if(y != nullptr && inner_series != nullptr, ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
-      if (c != nullptr)
+      if (grm_args_values(*current_series, "edge_width", "d", &edge_width))
         {
-          cleanup_and_set_error_if((c_length < y_length) && (c_length < inner_series_length),
-                                   ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+          subGroup->setAttribute("edge_width", edge_width);
         }
-      if (c_rgb != nullptr)
+      if (grm_args_first_value(*current_series, "ylabels", "S", &ylabels, &ylabels_length))
         {
-          cleanup_and_set_error_if((c_rgb_length < y_length * 3) && (c_rgb_length < inner_series_length * 3),
-                                   ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-          for (i = 0; i < y_length * 3; i++)
-            {
-              cleanup_and_set_error_if((c_rgb[i] > 1 || c_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
-            }
+          std::vector<std::string> ylabels_vec(ylabels, ylabels + ylabels_length);
+          (*context)["ylabels" + id_str] = ylabels_vec;
+          subGroup->setAttribute("ylabels", "ylabels" + id_str);
         }
-      if (ylabels != nullptr)
+      if (grm_args_first_value(*current_series, "c", "I", &c, &c_length))
         {
-          y_lightness = static_cast<double *>(malloc(sizeof(double) * y_lightness_to_get));
-          use_y_notations_from_inner_series = 0;
+          c_vec = std::vector<int>(c, c + c_length);
+          (*context)["c" + id_str] = c_vec;
+          subGroup->setAttribute("c", "c" + id_str);
+        }
+      if (grm_args_first_value(*current_series, "c", "D", &c_rgb, &c_rgb_length))
+        {
+          c_rgb_vec = std::vector<double>(c_rgb, c_rgb + c_rgb_length);
+          (*context)["c_rgb" + id_str] = c_rgb_vec;
+          subGroup->setAttribute("c_rgb", "c_rgb" + id_str);
         }
 
-      global_render->setFillIntStyle(subGroup, 1);
-      global_render->setFillColorInd(subGroup, bar_color);
-
-      if (bar_color_rgb[0] != -1)
+      std::vector<double> y_vec;
+      std::vector<int> indices_vec;
+      if ((grm_args_first_value(*current_series, "y", "D", &y, &y_length)))
         {
-          global_render->setColorRep(subGroup, color_save_spot, bar_color_rgb[0], bar_color_rgb[1], bar_color_rgb[2]);
-          bar_color = color_save_spot;
-          global_render->setFillColorInd(subGroup, bar_color);
+          /* Process data for a flat series (no inner_series) */
+          y_vec = std::vector<double>(y, y + y_length);
+          indices_vec = std::vector<int>(y_length, 1);
         }
-      /* Draw Bar */
-      for (i = 0; i < y_length; i++)
+      else if (grm_args_first_value(*current_series, "inner_series", "A", &inner_series, &inner_series_length))
         {
-          y1 = y_min;
-          y2 = y[i];
-
-          if (strcmp(style, "default") == 0)
-            {
-              x1 = (i * bar_shift) + 1 - 0.5 * bar_width;
-              x2 = (i * bar_shift) + 1 + 0.5 * bar_width;
-            }
-          else if (strcmp(style, "stacked") == 0)
-            {
-              x1 = series_index + 1 - 0.5 * bar_width;
-              x2 = series_index + 1 + 0.5 * bar_width;
-              if (y[i] > 0)
-                {
-                  y1 = ((i == 0) ? y_min : 0) + pos_vertical_change;
-                  pos_vertical_change += y[i] - ((i > 0) ? y_min : 0);
-                  y2 = pos_vertical_change;
-                }
-              else
-                {
-                  y1 = ((i == 0) ? y_min : 0) + neg_vertical_change;
-                  neg_vertical_change += y[i] - ((i > 0) ? y_min : 0);
-                  y2 = neg_vertical_change;
-                }
-            }
-          else if (strcmp(style, "lined") == 0)
-            {
-              bar_width = wfac / y_length;
-              x1 = series_index + 1 - 0.5 * wfac + bar_width * i;
-              x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * i;
-            }
-
-
-          auto temp = global_render->createFillRect(x1, x2, y1, y2);
-          subGroup->append(temp);
-
-          if (strcmp(style, "default") != 0)
-            {
-              int color_index = i % len_std_colors;
-              global_render->setFillColorInd(temp, std_colors[color_index]);
-            }
+          /* Flatten inner_series */
+          /* Since the data has to be processed the error handling is done here instead of in the renderer */
           if (c != nullptr)
             {
-              global_render->setFillColorInd(temp, c[i]);
+              cleanup_and_set_error_if((c_length < inner_series_length), ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
             }
-          else if (c_rgb != nullptr)
+          if (c_rgb != nullptr)
             {
-              global_render->setColorRep(temp, color_save_spot, c_rgb[i * 3], c_rgb[i * 3 + 1], c_rgb[i * 3 + 2]);
-              global_render->setFillColorInd(temp, color_save_spot);
+              cleanup_and_set_error_if((c_rgb_length < inner_series_length * 3), ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
             }
-          if (y_lightness_to_get > 0 && y_lightness != nullptr)
+
+          y_vec = {};
+          indices_vec = {};
+          c_vec = {};
+          c_rgb_vec = {};
+          std::vector<std::string> ylabels_vec = {};
+          bool inner_y_labels_exists = false;
+          bool inner_c_exists = false;
+          int cumulative_y_index = 0;
+          double *inner_y = nullptr;
+          unsigned int inner_y_length = 0;
+          int color_save_spot = 1000;
+
+          for (inner_series_index = 0; inner_series_index < inner_series_length; inner_series_index++)
             {
-              if (temp->hasAttribute("fillcolorind"))
+              int *inner_c = nullptr;
+              unsigned int inner_c_length;
+              double *inner_c_rgb = nullptr;
+              unsigned int inner_c_rgb_length;
+
+              /* Retrieve attributes from the inner_series level */
+              grm_args_first_value(inner_series[inner_series_index], "y", "D", &inner_y, &inner_y_length);
+              if (grm_args_first_value(inner_series[inner_series_index], "c", "I", &inner_c, &inner_c_length))
                 {
-                  color = (int)temp->getAttribute("fillcolorind");
+                  cleanup_and_set_error_if(inner_c_length != inner_y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+                  cleanup_and_set_error_if(c_rgb != nullptr, ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
                 }
-              else if (subGroup->hasAttribute("fillcolorind"))
+              if (grm_args_first_value(inner_series[inner_series_index], "c", "D", &inner_c_rgb, &inner_c_rgb_length))
                 {
-                  color = (int)subGroup->getAttribute("fillcolorind");
+                  cleanup_and_set_error_if((inner_c_rgb_length < inner_y_length * 3),
+                                           ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+                  cleanup_and_set_error_if(c != nullptr, ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
+                }
+              if (ylabels == nullptr)
+                {
+                  grm_args_first_value(inner_series[inner_series_index], "ylabels", "nS", &ylabels, &ylabels_length);
                 }
 
-              gr_inqcolor(color, (int *)rgb);
-              Y = (0.2126729 * rgb[0] / 255 + 0.7151522 * rgb[1] / 255 + 0.0721750 * rgb[2] / 255);
-              y_lightness[i] = 116 * pow(Y / 100, 1.0 / 3) - 16;
-              --y_lightness_to_get;
-            }
-        }
-
-      pos_vertical_change = 0;
-      neg_vertical_change = 0;
-      /* Draw Edge */
-      for (i = 0; i < y_length; i++)
-        {
-          if (strcmp(style, "default") == 0)
-            {
-              x1 = (i * bar_shift) + 1 - 0.5 * bar_width;
-              x2 = (i * bar_shift) + 1 + 0.5 * bar_width;
-              y1 = y_min;
-              y2 = y[i];
-            }
-          if (strcmp(style, "stacked") == 0)
-            {
-              x1 = series_index + 1 - 0.5 * bar_width;
-              x2 = series_index + 1 + 0.5 * bar_width;
-              if (y[i] > 0)
+              /* Push attributes from the inner_series into the corresponding vectors on the series level */
+              indices_vec.push_back(inner_y_length);
+              y_vec.insert(y_vec.end(), inner_y, inner_y + inner_y_length);
+              for (i = 0; i < inner_y_length; ++i)
                 {
-                  y1 = ((i == 0) ? y_min : 0) + pos_vertical_change;
-                  pos_vertical_change += y[i] - ((i > 0) ? y_min : 0);
-                  y2 = pos_vertical_change;
-                }
-              else
-                {
-                  y1 = ((i == 0) ? y_min : 0) + neg_vertical_change;
-                  neg_vertical_change += y[i] - ((i > 0) ? y_min : 0);
-                  y2 = neg_vertical_change;
-                }
-            }
-          if (strcmp(style, "lined") == 0)
-            {
-              bar_width = wfac / y_length;
-              x1 = series_index + 1 - 0.5 * wfac + bar_width * i;
-              x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * i;
-              y1 = y_min;
-              y2 = y[i];
-            }
-
-          std::shared_ptr<GRM::Element> temp;
-
-          if (is_vertical)
-            {
-              temp = global_render->createDrawRect(y1, y2, x1, x2);
-              subGroup->append(temp);
-            }
-          else
-            {
-              temp = global_render->createDrawRect(x1, x2, y1, y2);
-              subGroup->append(temp);
-            }
-
-          global_render->setLineWidth(temp, edge_width);
-          if (edge_color_rgb[0] != -1)
-            {
-              global_render->setColorRep(temp, color_save_spot, edge_color_rgb[0], edge_color_rgb[1],
-                                         edge_color_rgb[2]);
-              edge_color = color_save_spot;
-            }
-          global_render->setLineColorInd(temp, edge_color);
-        }
-
-      pos_vertical_change = 0;
-      neg_vertical_change = 0;
-      double width, height, available_width, available_height, x_text, y_text;
-      double tbx[4], tby[4];
-
-      /* Draw ylabels */
-      if (ylabels != nullptr)
-        {
-          for (i = 0; i < y_length; i++)
-            {
-              if (strcmp(style, "default") == 0)
-                {
-                  x1 = (i * bar_shift) + 1 - 0.5 * bar_width;
-                  x2 = (i * bar_shift) + 1 + 0.5 * bar_width;
-                  y1 = y_min;
-                  y2 = y[i];
-                }
-              if (strcmp(style, "stacked") == 0)
-                {
-                  x1 = series_index + 1 - 0.5 * bar_width;
-                  x2 = series_index + 1 + 0.5 * bar_width;
-                  if (y[i] > 0)
+                  if (inner_c != nullptr)
                     {
-                      y1 = ((i == 0) ? y_min : 0) + pos_vertical_change;
-                      pos_vertical_change += y[i] - ((i > 0) ? y_min : 0);
-                      y2 = pos_vertical_change;
+                      c_vec.push_back(inner_c[i]);
+                      inner_c_exists = true;
+                    }
+                  else if (inner_c_rgb != nullptr)
+                    {
+                      global_render->setColorRep(subGroup, color_save_spot, inner_c_rgb[i * 3], inner_c_rgb[i * 3 + 1],
+                                                 inner_c_rgb[i * 3 + 2]);
+                      c_vec.push_back(color_save_spot);
+                      ++color_save_spot;
+                      inner_c_exists = true;
                     }
                   else
                     {
-                      y1 = ((i == 0) ? y_min : 0) + neg_vertical_change;
-                      neg_vertical_change += y[i] - ((i > 0) ? y_min : 0);
-                      y2 = neg_vertical_change;
-                    }
-                }
-              if (strcmp(style, "lined") == 0)
-                {
-                  bar_width = wfac / y_length;
-                  x1 = series_index + 1 - 0.5 * wfac + bar_width * i;
-                  x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * i;
-                  y1 = y_min;
-                  y2 = y[i];
-                }
-
-              if (ylabels_left > 0)
-                {
-                  available_width = x2 - x1;
-                  available_height = y2 - y1;
-                  x_text = (x1 + x2) / 2;
-                  y_text = (y1 + y2) / 2;
-
-                  std::shared_ptr<GRM::Element> temp =
-                      global_render->createText(x_text, y_text, ylabels[i], CoordinateSpace::WC);
-                  global_render->setTextAlign(temp, 2, 3);
-                  global_render->setTextWidthAndHeight(temp, available_width, available_height);
-                  if (y_lightness[i] < 0.4)
-                    {
-                      global_render->setTextColorInd(temp, 0);
-                    }
-                  else
-                    {
-                      global_render->setTextColorInd(temp, 1);
-                    }
-                  subGroup->append(temp);
-                  --ylabels_left;
-                }
-            }
-        }
-
-      /* Draw inner_series */
-      for (inner_series_index = 0; inner_series_index < inner_series_length; inner_series_index++)
-        {
-          /* Draw bars from inner_series */
-          int *inner_c = nullptr;
-          unsigned int inner_c_length;
-          double *inner_c_rgb = nullptr;
-          unsigned int inner_c_rgb_length;
-          auto inner_group = global_render->createGroup("bar_inner_series");
-          subGroup->append(inner_group);
-
-          global_render->setFillColorInd(inner_group, std_colors[inner_series_index % len_std_colors]);
-          grm_args_first_value(inner_series[inner_series_index], "y", "D", &y, &y_length);
-          bar_width = wfac / fixed_y_length;
-          if (c != nullptr)
-            {
-              global_render->setFillColorInd(inner_group, c[inner_series_index]);
-            }
-          else if (c_rgb != nullptr)
-            {
-              global_render->setColorRep(inner_group, color_save_spot, c_rgb[inner_series_index * 3],
-                                         c_rgb[inner_series_index * 3 + 1], c_rgb[inner_series_index * 3 + 2]);
-              global_render->setFillColorInd(inner_group, color_save_spot);
-            }
-          if (grm_args_first_value(inner_series[inner_series_index], "c", "I", &inner_c, &inner_c_length))
-            {
-              cleanup_and_set_error_if(inner_c_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-            }
-          if (grm_args_first_value(inner_series[inner_series_index], "c", "D", &inner_c_rgb, &inner_c_rgb_length))
-            {
-              cleanup_and_set_error_if((inner_c_rgb_length < y_length * 3), ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-              for (i = 0; i < y_length * 3; i++)
-                {
-                  cleanup_and_set_error_if((inner_c_rgb[i] > 1 || inner_c_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
-                }
-            }
-          if (ylabels == nullptr)
-            {
-              grm_args_first_value(inner_series[inner_series_index], "ylabels", "nS", &ylabels, &ylabels_length);
-              ylabels_left = ylabels_length;
-              y_lightness_to_get = ylabels_length;
-              y_lightness = static_cast<double *>(malloc(sizeof(double) * y_lightness_to_get));
-            }
-          for (i = 0; i < y_length; i++)
-            {
-              x1 = series_index + 1 - 0.5 * wfac + bar_width * inner_series_index;
-              x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * inner_series_index;
-              if (y[i] > 0)
-                {
-                  y1 = ((i == 0) ? y_min : 0) + pos_vertical_change;
-                  pos_vertical_change += y[i] - ((i > 0) ? y_min : 0);
-                  y2 = pos_vertical_change;
-                }
-              else
-                {
-                  y1 = ((i == 0) ? y_min : 0) + neg_vertical_change;
-                  neg_vertical_change += y[i] - ((i > 0) ? y_min : 0);
-                  y2 = neg_vertical_change;
-                }
-              auto temp = global_render->createFillRect(x1, x2, y1, y2);
-              inner_group->append(temp);
-
-              if (inner_c != nullptr)
-                {
-                  global_render->setFillColorInd(temp, inner_c[i]);
-                }
-              if (inner_c_rgb != nullptr)
-                {
-                  global_render->setColorRep(temp, color_save_spot, inner_c_rgb[i * 3], inner_c_rgb[i * 3 + 1],
-                                             inner_c_rgb[i * 3 + 2]);
-                  global_render->setFillColorInd(temp, color_save_spot);
-                }
-
-              if (y_lightness_to_get > 0 && y_lightness != nullptr)
-                {
-                  if (temp->hasAttribute("fillcolorind"))
-                    {
-                      color = (int)temp->getAttribute("fillcolorind");
-                    }
-                  else if (subGroup->hasAttribute("fillcolorind"))
-                    {
-                      color = (int)inner_group->getAttribute("fillcolorind");
-                    }
-                  gr_inqcolor(color, (int *)rgb);
-                  Y = (0.2126729 * rgb[0] / 255 + 0.7151522 * rgb[1] / 255 + 0.0721750 * rgb[2] / 255);
-                  y_lightness[ylabels_length - y_lightness_to_get] = 116 * pow(Y / 100, 1.0 / 3) - 16;
-                  --y_lightness_to_get;
-                }
-            }
-          pos_vertical_change = 0;
-          neg_vertical_change = 0;
-
-
-          auto inner_edges = global_render->createGroup("bar_inner_edges");
-          inner_group->append(inner_edges);
-
-          /* Draw edges from inner_series */
-          global_render->setLineWidth(inner_edges, edge_width);
-          if (edge_color_rgb[0] != -1)
-            {
-              global_render->setColorRep(inner_edges, color_save_spot, edge_color_rgb[0], edge_color_rgb[1],
-                                         edge_color_rgb[2]);
-              edge_color = color_save_spot;
-            }
-          global_render->setLineColorInd(inner_edges, edge_color);
-
-          for (i = 0; i < y_length; i++)
-            {
-              x1 = series_index + 1 - 0.5 * wfac + bar_width * inner_series_index;
-              x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * inner_series_index;
-              if (y[i] > 0)
-                {
-                  y1 = ((i == 0) ? y_min : 0) + pos_vertical_change;
-                  pos_vertical_change += y[i] - ((i > 0) ? y_min : 0);
-                  y2 = pos_vertical_change;
-                }
-              else
-                {
-                  y1 = ((i == 0) ? y_min : 0) + neg_vertical_change;
-                  neg_vertical_change += y[i] - ((i > 0) ? y_min : 0);
-                  y2 = neg_vertical_change;
-                }
-              x1 += x_min;
-              x2 += x_min;
-
-              std::shared_ptr<GRM::Element> temp;
-              if (is_vertical)
-                {
-                  temp = global_render->createDrawRect(y1, y2, x1, x2);
-                  inner_edges->append(temp);
-                }
-              else
-                {
-                  temp = global_render->createDrawRect(x1, x2, y1, y2);
-                  inner_edges->append(temp);
-                }
-              global_render->setFillColorInd(temp, std_colors[inner_series_index % len_std_colors]);
-            }
-          pos_vertical_change = 0;
-          neg_vertical_change = 0;
-
-          /* Draw ynotations from inner_series */
-          if (ylabels != nullptr)
-            {
-              for (i = 0; i < y_length; i++)
-                {
-                  x1 = series_index + 1 - 0.5 * wfac + bar_width * inner_series_index;
-                  x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * inner_series_index;
-                  if (y[i] > 0)
-                    {
-                      y1 = ((i == 0) ? y_min : 0) + pos_vertical_change;
-                      pos_vertical_change += y[i] - ((i > 0) ? y_min : 0);
-                      y2 = pos_vertical_change;
-                    }
-                  else
-                    {
-                      y1 = ((i == 0) ? y_min : 0) + neg_vertical_change;
-                      neg_vertical_change += y[i] - ((i > 0) ? y_min : 0);
-                      y2 = neg_vertical_change;
-                    }
-
-                  if (ylabels_left > 0)
-                    {
-                      available_width = x2 - x1;
-                      available_height = y2 - y1;
-                      x_text = (x1 + x2) / 2;
-                      y_text = (y1 + y2) / 2;
-
-                      auto label_elem = global_render->createText(
-                          x_text, y_text, ylabels[ylabels_length - ylabels_left], CoordinateSpace::WC);
-                      global_render->setTextAlign(label_elem, 2, 3);
-                      global_render->setTextWidthAndHeight(label_elem, available_width, available_height);
-                      inner_group->append(label_elem);
-
-                      if (y_lightness[ylabels_length - ylabels_left] < 0.4)
+                      if (c != nullptr)
                         {
-                          global_render->setTextColorInd(label_elem, 0);
+                          c_vec.push_back(c[inner_series_index]);
+                        }
+                      else if (c_rgb != nullptr)
+                        {
+                          global_render->setColorRep(subGroup, color_save_spot, c_rgb[inner_series_index * 3],
+                                                     c_rgb[inner_series_index * 3 + 1],
+                                                     c_rgb[inner_series_index * 3 + 2]);
+                          c_vec.push_back(color_save_spot);
+                          ++color_save_spot;
                         }
                       else
                         {
-                          global_render->setTextColorInd(label_elem, 1);
+                          c_vec.push_back(-1);
                         }
-                      --ylabels_left;
+                    }
+
+                  cleanup_and_set_error_if(color_save_spot > 1256, ERROR_INTERNAL);
+
+                  if (cumulative_y_index + i < ylabels_length)
+                    {
+                      ylabels_vec.push_back(std::string(ylabels[cumulative_y_index + i]));
+                      inner_y_labels_exists = true;
+                    }
+                  else
+                    {
+                      ylabels_vec.push_back(std::string(""));
                     }
                 }
+              cumulative_y_index += inner_y_length;
             }
-          y_length = 0;
-          pos_vertical_change = 0;
-          neg_vertical_change = 0;
-
-          if (use_y_notations_from_inner_series)
+          if (inner_y_labels_exists)
             {
-              free(y_lightness);
-              y_lightness = nullptr;
-              ylabels = nullptr;
+              (*context)["ylabels" + id_str] = ylabels_vec;
+              subGroup->setAttribute("ylabels", "ylabels" + id_str);
+            }
+          /* Replace the previously pushed c or c_rgb vector by one containing the data of the  inner_series if such
+           * data exists */
+          if (inner_c_exists)
+            {
+              (*context)["c" + id_str] = c_vec;
+              subGroup->setAttribute("c", "c" + id_str);
+              subGroup->removeAttribute("c_rgb");
             }
         }
-
-      if (y_lightness != nullptr)
+      else
         {
-          free(y_lightness);
-          y_lightness = nullptr;
+          cleanup_and_set_error(ERROR_PLOT_MISSING_DATA);
         }
 
+      (*context)["y" + id_str] = y_vec;
+      subGroup->setAttribute("y", "y" + id_str);
+      (*context)["indices" + id_str] = indices_vec;
+      subGroup->setAttribute("indices", "indices" + id_str);
+      subGroup->setAttribute("series_index", series_index);
+
+      cleanup_and_set_error_if(y != nullptr && inner_series != nullptr, ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
+
+      /* Errorbars */
       if (grm_args_contains(*current_series, "error"))
         {
           grm_args_t **curr_series;
           grm_args_values(subplot_args, "series", "A", &curr_series);
+          double x_min, x1, x2, wfac;
           if (*curr_series != nullptr)
             {
               double *bar_centers;
@@ -2478,17 +2156,14 @@ err_t plot_barplot(grm_args_t *subplot_args)
               bar_centers = nullptr;
             }
         }
-      series_index++;
-      ++current_series;
-    }
-  gr_restorestate();
 
+      ++series_index;
+      ++current_series;
+      global_root->setAttribute("id", ++id);
+    }
 
 cleanup:
-  if (y_lightness != nullptr)
-    {
-      free(y_lightness);
-    }
+
   return error;
 }
 

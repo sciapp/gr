@@ -3548,538 +3548,6 @@ static void processYlabel(const std::shared_ptr<GRM::Element> &elem)
     }
 }
 
-static void processClassesPolarHistogram(const std::shared_ptr<GRM::Element> &element)
-{
-  unsigned int num_bins;
-  std::vector<double> theta;
-  unsigned int length;
-  const char *norm;
-  std::vector<int> classes;
-
-  double interval;
-  double start;
-  double *p;
-  double max;
-  double temp_max;
-
-  int observations = 0;
-  int maxObservations = 0;
-  int totalObservations = 0;
-
-  std::vector<double> bin_edges;
-  unsigned int num_bin_edges;
-
-  double bin_width;
-
-  std::vector<double> bin_widths;
-
-  int is_bin_counts = 0;
-  std::vector<int> bin_counts;
-
-  double *philim = nullptr;
-  double philim_arr[2];
-  unsigned int dummy;
-
-  std::vector<double> new_theta;
-  std::vector<double> new_edges;
-
-  err_t error = ERROR_NONE;
-  // element is the plot element -> get the first series with polarhistogram
-  auto seriesList = element->querySelectorsAll("series_polar_histogram");
-  std::shared_ptr<GRM::Element> group = seriesList[0];
-  // element == plot_group for better readability
-  const std::shared_ptr<GRM::Element> &plot_group = element;
-  std::shared_ptr<GRM::Context> context;
-
-  if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()))
-    {
-      context = render->getContext();
-    }
-  else
-    {
-      throw NotFoundError("no context / render found for given element");
-    }
-
-  //! define keys for later usages;
-  auto str = static_cast<std::string>(group->getAttribute("_id"));
-  std::string bin_widths_key = "bin_widths" + str;
-  std::string bin_edges_key = "bin_edges" + str;
-  std::string bin_counts_key;
-  std::string classes_key = "classes" + str;
-
-  if (group->hasAttribute("bin_counts"))
-    {
-      is_bin_counts = 1;
-      bin_counts_key = static_cast<std::string>(group->getAttribute("bin_counts"));
-      bin_counts = GRM::get<std::vector<int>>((*context)[bin_counts_key]);
-
-      length = bin_counts.size();
-      num_bins = length;
-      group->setAttribute("nbins", static_cast<int>(num_bins));
-    }
-  else if (group->hasAttribute("theta"))
-    {
-      auto theta_key = static_cast<std::string>(group->getAttribute("theta"));
-      theta = GRM::get<std::vector<double>>((*context)[theta_key]);
-      length = theta.size();
-    }
-
-  if (!plot_group->hasAttribute("philim_min") && !plot_group->hasAttribute("philim_max"))
-    {
-      philim = nullptr;
-    }
-  else
-    {
-      philim = philim_arr;
-      philim[0] = static_cast<double>(plot_group->getAttribute("philim_min"));
-      philim[1] = static_cast<double>(plot_group->getAttribute("philim_max"));
-
-      if (philim[1] < philim[0])
-        {
-          int phiflip = 0;
-          std::swap(philim[0], philim[1]);
-
-          plot_group->setAttribute("phiflip", 1);
-        }
-      if (philim[0] < 0.0 || philim[1] > 2 * M_PI)
-        {
-          logger((stderr, "philim must be between 0 and 2 * pi\n"));
-        }
-      plot_group->setAttribute("philim_min", philim[0]);
-      plot_group->setAttribute("philim_max", philim[1]);
-    }
-
-  /* bin_edges and nbins */
-  if (group->hasAttribute("bin_edges") == 0)
-    {
-      if (group->hasAttribute("nbins") == 0)
-        {
-          num_bins = grm_min(12, (int)(length * 1.0 / 2) - 1);
-          group->setAttribute("nbins", static_cast<int>(num_bins));
-        }
-      else
-        {
-          num_bins = static_cast<int>(group->getAttribute("nbins"));
-          if (num_bins <= 0 || num_bins > 200)
-            {
-              num_bins = grm_min(12, (int)(length * 1.0 / 2) - 1);
-              group->setAttribute("nbins", static_cast<int>(num_bins));
-            }
-        }
-      //! check philim again
-      if (philim == nullptr)
-        num_bin_edges = 0;
-      else
-        {
-          //! if philim is given, it will create equidistant bin_edges from phi_min to phi_max
-          bin_edges.resize(num_bins + 1);
-          linspace(philim[0], philim[1], num_bins + 1, bin_edges);
-          num_bin_edges = num_bins + 1;
-          (*context)[bin_edges_key] = bin_edges;
-          group->setAttribute("bin_edges", bin_edges_key);
-        }
-    }
-  /* with bin_edges */
-  else
-    {
-      bin_edges_key = static_cast<std::string>(group->getAttribute("bin_edges"));
-      bin_edges = GRM::get<std::vector<double>>((*context)[bin_edges_key]);
-      num_bin_edges = bin_edges.size();
-      /* no philim */
-      if (philim == nullptr)
-        {
-          /* filter bin_edges */
-          int temp = 0;
-          int i;
-          new_edges.resize(num_bin_edges);
-
-          for (i = 0; i < num_bin_edges; ++i)
-            {
-              if (0.0 <= bin_edges[i] && bin_edges[i] <= 2 * M_PI)
-                {
-                  new_edges[temp] = bin_edges[i];
-                  temp++;
-                }
-              else
-                {
-                  logger((stderr, "Only values between 0 and 2 * pi allowed\n"));
-                }
-            }
-          if (num_bin_edges > temp)
-            {
-              num_bin_edges = temp;
-              bin_edges.resize(temp);
-            }
-          else
-            {
-              bin_edges = new_edges;
-            }
-          num_bins = num_bin_edges - 1;
-          group->setAttribute("nbins", static_cast<int>(num_bins));
-        }
-      /* with philim and binedges */
-      else
-        {
-          /* filter bin_edges */
-          int temp = 0;
-          new_edges.resize(num_bin_edges);
-
-          int i;
-          for (i = 0; i < num_bin_edges; ++i)
-            {
-              if (philim[0] <= bin_edges[i] && bin_edges[i] <= philim[1])
-                {
-                  new_edges[temp] = bin_edges[i];
-                  temp++;
-                }
-            }
-          if (temp > 1)
-            {
-              if (num_bin_edges > temp)
-                {
-                  num_bin_edges = temp;
-                  bin_edges.resize(temp);
-                }
-              else
-                {
-                  bin_edges = new_edges;
-                }
-            }
-          if (num_bin_edges == 1)
-            {
-              logger(
-                  (stderr, "given philim and given bin_edges are not compatible --> filtered len(bin_edges) == 1\n"));
-            }
-          else
-            {
-              num_bins = num_bin_edges - 1;
-              group->setAttribute("nbins", static_cast<int>(num_bins));
-              group->setAttribute("bin_edges", bin_edges_key);
-              (*context)[bin_edges_key] = bin_edges;
-            }
-        }
-    }
-
-  if (group->hasAttribute("normalization") == 0)
-    {
-      norm = "count";
-    }
-  else
-    {
-      norm = static_cast<std::string>(group->getAttribute("normalization")).c_str();
-      if (!str_equals_any(norm, 6, "count", "countdensity", "pdf", "probability", "cumcount", "cdf"))
-        {
-          logger((stderr, "Got keyword \"norm\"  with invalid value \"%s\"\n", norm));
-        }
-    }
-
-  if (group->hasAttribute("bin_width") == 0)
-    {
-      if (num_bin_edges > 0)
-        {
-          int i;
-          bin_widths.resize(num_bins + 1);
-          for (i = 1; i <= num_bin_edges - 1; ++i)
-            {
-              bin_widths[i - 1] = bin_edges[i] - bin_edges[i - 1];
-            }
-          group->setAttribute("bin_widths", bin_widths_key);
-          (*context)[bin_widths_key] = bin_widths;
-        }
-      else
-        {
-          bin_width = 2 * M_PI / num_bins;
-          group->setAttribute("bin_width", bin_width);
-        }
-    }
-  /* bin_width is given*/
-  else
-    {
-      bin_width = static_cast<double>(group->getAttribute("bin_width"));
-
-      int n = 0;
-      int temp;
-
-      if (num_bin_edges > 0 && *philim == -1.0)
-        {
-          int i;
-          logger((stderr, "bin_width is not compatible with bin_edges\n"));
-
-          bin_widths.resize(num_bins);
-
-          for (i = 1; i <= num_bin_edges - 1; ++i)
-            {
-              bin_widths[i - 1] = bin_edges[i] - bin_edges[i - 1];
-            }
-          group->setAttribute("bin_widths", bin_widths_key);
-          (*context)[bin_widths_key] = bin_widths;
-        }
-
-      /* with philim (with bin_width) */
-      if (philim != nullptr)
-        {
-          if (bin_width < 0 || bin_width > 2 * M_PI)
-            {
-              logger((stderr, "bin_width must be between 0 and 2 * Pi\n"));
-            }
-          if (philim[1] - philim[0] < bin_width)
-            {
-              logger((stderr, "the given philim range does not work with the given bin_width\n"));
-            }
-          else
-            {
-              n = (int)((philim[1] - philim[0]) / bin_width);
-              if (is_bin_counts == 1)
-                {
-                  if (num_bins > n)
-                    {
-                      logger((stderr,
-                              "bin_width does not work with this specific bin_count. Nbins do not fit bin_width\n"));
-                    }
-                  n = num_bins;
-                }
-              bin_edges.resize(n + 1);
-              linspace(philim[0], n * bin_width, n + 1, bin_edges);
-            }
-        }
-      /* without philim */
-      else
-        {
-          if (bin_width <= 0 || bin_width > 2 * M_PI)
-            {
-              logger((stderr, "bin_width must be between 0 (exclusive) and 2 * Pi\n"));
-            }
-          else if ((int)(2 * M_PI / bin_width) > 200)
-            {
-              n = 200;
-              bin_width = 2 * M_PI / n;
-            }
-          n = (int)(2 * M_PI / bin_width);
-          if (is_bin_counts == 1)
-            {
-              if (num_bins > n)
-                {
-                  logger(
-                      (stderr, "bin_width does not work with this specific bin_count. Nbins do not fit bin_width\n"));
-                }
-              n = num_bins;
-            }
-          bin_edges.resize(n + 1);
-          linspace(0.0, n * bin_width, n + 1, bin_edges);
-        }
-      group->setAttribute("nbins", n);
-      num_bin_edges = n + 1;
-      num_bins = n;
-      group->setAttribute("bin_edges", bin_edges_key);
-      (*context)[bin_edges_key] = bin_edges;
-      group->setAttribute("bin_width", bin_width);
-      bin_widths.resize(num_bins);
-
-      for (temp = 0; temp < num_bins; ++temp)
-        {
-          bin_widths[temp] = bin_width;
-        }
-      group->setAttribute("bin_widths", bin_widths_key);
-      (*context)[bin_widths_key] = bin_widths;
-    }
-
-  /* is_bin_counts */
-  if (is_bin_counts == 1)
-    {
-      double temp_max_bc = 0.0;
-      int i;
-      int total = 0;
-      int j;
-      int prev = 0;
-
-      if (num_bin_edges > 0 && num_bins != num_bin_edges - 1)
-        {
-          logger((stderr, "Number of bin_edges must be number of bin_counts + 1\n"));
-        }
-
-      total = std::accumulate(bin_counts.begin(), bin_counts.end(), 0);
-      for (i = 0; i < num_bins; ++i)
-        {
-          // temp_max_bc is a potential maximum for all bins respecting the given norm
-          if (num_bin_edges > 0) bin_width = bin_widths[i];
-
-          if (strcmp(norm, "pdf") == 0)
-            {
-              if (bin_counts[i] * 1.0 / (total * bin_width) > temp_max_bc)
-                {
-                  temp_max_bc = bin_counts[i] * 1.0 / (total * bin_width);
-                }
-            }
-          else if (strcmp(norm, "countdensity") == 0)
-            {
-              if (bin_counts[i] * 1.0 / (bin_width) > temp_max_bc)
-                {
-                  temp_max_bc = bin_counts[i] * 1.0 / (bin_width);
-                }
-            }
-          else
-            {
-              if (bin_counts[i] > temp_max_bc) temp_max_bc = bin_counts[i];
-            }
-        }
-
-      classes.resize(num_bins);
-
-      // bin_counts is affected by cumulative norms --> bin_counts are summed in later bins
-      if (str_equals_any(norm, 2, "cdf", "cumcount"))
-        {
-          for (i = 0; i < num_bins; ++i)
-            {
-              if (i == 0)
-                {
-                  classes[0] = bin_counts[0];
-                }
-              else
-                {
-                  classes[i] = bin_counts[i] + classes[i - 1];
-                }
-            }
-        }
-      else
-        {
-          classes = bin_counts;
-        }
-
-      group->setAttribute("classes", classes_key);
-      (*context)[classes_key] = classes;
-      group->setAttribute("total", total);
-
-
-      if (strcmp(norm, "probability") == 0)
-        max = temp_max_bc * 1.0 / total;
-      else if (strcmp(norm, "cdf") == 0)
-        max = 1.0;
-      else if (strcmp(norm, "cumcount") == 0)
-        max = total * 1.0;
-      else
-        max = temp_max_bc;
-    }
-  /* no is_bin_counts */
-  else
-    {
-      int x;
-
-      max = 0.0;
-      classes.resize(num_bins);
-      int i;
-
-      // prepare bin_edges
-      if (num_bin_edges == 0) // no bin_edges --> create bin_edges for uniform code later
-        {
-          // linspace the bin_edges
-          bin_edges.resize(num_bins + 1);
-          linspace(0.0, 2 * M_PI, num_bins + 1, bin_edges);
-        }
-      else // bin_edges given
-        {
-          // filter theta
-          double edge_min = bin_edges[0];
-          double edge_max = bin_edges[num_bin_edges - 1];
-          auto it = std::remove_if(theta.begin(), theta.end(), [edge_min, edge_max](double angle) {
-            return (angle < edge_min || angle > edge_max);
-          });
-          theta.erase(it, theta.end());
-        }
-
-      // calc classes
-      for (x = 0; x < num_bins; ++x)
-        {
-          int y;
-          observations = 0;
-
-          // iterate theta --> filter angles for current bin
-          for (y = 0; y < length; ++y)
-            {
-              if (bin_edges[x] <= theta[y] && theta[y] < bin_edges[x + 1])
-                {
-                  ++observations;
-                }
-            }
-
-          // differentiate between cumulative and non-cumulative norms
-          if (str_equals_any(norm, 2, "cdf", "cumcount"))
-            {
-              if (x == 0)
-                {
-                  classes[0] = observations;
-                }
-              else
-                {
-                  classes[x] = observations + classes[x - 1];
-                }
-            }
-          else
-            {
-              classes[x] = observations;
-            }
-          // update the total number of observations; used for some norms;
-          totalObservations += observations;
-        }
-
-      // get maximum number of observation from all bins
-      maxObservations = *std::max_element(classes.begin(), classes.end());
-
-      group->setAttribute("classes", classes_key);
-      (*context)[classes_key] = classes;
-      group->setAttribute("total", totalObservations);
-
-      // calculate the maximum from maxObservations respecting the norms;
-      if (num_bin_edges == 0) // no given bin_edges
-        {
-          if (str_equals_any(norm, 2, "probability", "cdf"))
-            {
-              max = maxObservations * 1.0 / totalObservations;
-            }
-          else if (strcmp(norm, "pdf") == 0)
-            {
-              max = maxObservations * 1.0 / (totalObservations * bin_width);
-            }
-          else
-            {
-              max = maxObservations * 1.0;
-            }
-        }
-      else // calc maximum with given bin_edges
-        {
-          if (str_equals_any(norm, 2, "pdf", "countdensity"))
-            {
-              for (i = 0; i < num_bins; ++i)
-                {
-                  // temporary maximum respecting norm
-                  temp_max = classes[i];
-                  if (strcmp(norm, "pdf") == 0)
-                    {
-                      temp_max /= totalObservations * bin_widths[x];
-                    }
-                  else if (strcmp(norm, "countdensity") == 0)
-                    {
-                      temp_max /= bin_widths[x];
-                    }
-                  if (temp_max > max)
-                    {
-                      max = temp_max;
-                    }
-                }
-            }
-          else if (str_equals_any(norm, 2, "probability", "cdf"))
-            {
-              max = maxObservations * 1.0 / totalObservations;
-            }
-          else
-            {
-              max = maxObservations * 1.0;
-            }
-        }
-    } /* end classes and maximum */
-  // set r_max (radius_max) in parent for later usages in polar_axes and polar_histogram
-  group->parentElement()->setAttribute("r_max", max);
-}
-
 static void processAttributes(const std::shared_ptr<GRM::Element> &element)
 {
   /*!
@@ -4406,6 +3874,624 @@ static void colorbar(const std::shared_ptr<GRM::Element> &element, const std::sh
   axes->setAttribute("name", "colorbar");
   global_render->setLineColorInd(axes, 1);
   element->append(axes);
+}
+
+static void barplot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Processing function for barplot
+   *
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   */
+
+  /* subplot level */
+  int bar_color = 989, edge_color = 1;
+  std::vector<double> bar_color_rgb = {-1, -1, -1};
+  std::vector<double> edge_color_rgb = {-1, -1, -1};
+  double bar_width = 0.8, edge_width = 1.0, bar_shift = 1;
+  std::string style = "default", orientation = PLOT_DEFAULT_ORIENTATION;
+  double wfac;
+  int len_std_colors = 20;
+  int std_colors[20] = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
+                        991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
+  int color_save_spot = PLOT_CUSTOM_COLOR_INDEX;
+  unsigned int i;
+
+  /* series level */
+  unsigned int y_length;
+  std::vector<int> c;
+  unsigned int c_length;
+  std::vector<double> c_rgb;
+  unsigned int c_rgb_length;
+  std::vector<std::string> ylabels;
+  unsigned int ylabels_left = 0, ylabels_length = 0, y_lightness_to_get = 0;
+  unsigned char rgb[sizeof(int)];
+  int use_y_notations_from_inner_series = 1;
+  double Y;
+  int color;
+  /* Style Varianz */
+  double pos_vertical_change = 0, neg_vertical_change = 0;
+  double x1, x2, y1, y2;
+  double x_min = 0, x_max, y_min = 0, y_max;
+  std::vector<double> y_lightness = {};
+  int is_vertical;
+  bool inner_series;
+  bool inner_c = false;
+  bool inner_c_rgb = false;
+
+  /* retrieve attributes from the subplot level */
+  auto subplot = element->parentElement();
+  int series_index = static_cast<int>(element->getAttribute("series_index"));
+  int fixed_y_length = static_cast<int>(subplot->getAttribute("max_y_length"));
+
+  if (subplot->hasAttribute("bar_color_rgb"))
+    {
+      auto bar_color_rgb_key = static_cast<std::string>(subplot->getAttribute("bar_color_rgb"));
+      bar_color_rgb = GRM::get<std::vector<double>>((*context)[bar_color_rgb_key]);
+    }
+  if (subplot->hasAttribute("bar_color")) bar_color = static_cast<int>(subplot->getAttribute("bar_color"));
+  if (subplot->hasAttribute("bar_width")) bar_width = static_cast<double>(subplot->getAttribute("bar_width"));
+  if (subplot->hasAttribute("style")) style = static_cast<std::string>(subplot->getAttribute("style"));
+  if (subplot->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(subplot->getAttribute("orientation"));
+
+  is_vertical = orientation == "vertical";
+
+  if (bar_color_rgb[0] != -1)
+    {
+      for (i = 0; i < 3; i++)
+        {
+          if (bar_color_rgb[i] > 1 || bar_color_rgb[i] < 0)
+            throw std::out_of_range("For barplot series bar_color_rgb must be inside [0, 1].\n");
+        }
+    }
+
+  /* retrieve attributes form the series level */
+  if (!element->hasAttribute("y")) throw NotFoundError("Barplot series is missing y.\n");
+
+  auto y_key = static_cast<std::string>(element->getAttribute("y"));
+  std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y_key]);
+  y_length = size(y_vec);
+
+  if (!element->hasAttribute("indices")) throw NotFoundError("Barplot series is missing indices\n");
+  auto indices = static_cast<std::string>(element->getAttribute("indices"));
+  std::vector<int> indices_vec = GRM::get<std::vector<int>>((*context)[indices]);
+
+  inner_series = size(indices_vec) != y_length;
+
+  wfac = 0.9 * bar_width;
+
+  if (element->hasAttribute("edge_color_rgb"))
+    {
+      auto edge_color_rgb_key = static_cast<std::string>(element->getAttribute("edge_color_rgb"));
+      edge_color_rgb = GRM::get<std::vector<double>>((*context)[edge_color_rgb_key]);
+    }
+  if (element->hasAttribute("edge_color")) edge_color = static_cast<int>(element->getAttribute("edge_color"));
+  if (element->hasAttribute("edge_width")) edge_width = static_cast<double>(element->getAttribute("edge_width"));
+  global_render->setTextAlign(element, 2, 3);
+  global_render->selectClipXForm(element, 1);
+
+  if (edge_color_rgb[0] != -1)
+    {
+      for (i = 0; i < 3; i++)
+        {
+          if (edge_color_rgb[i] > 1 || edge_color_rgb[i] < 0)
+            throw std::out_of_range("For barplot series edge_color_rgb must be inside [0, 1].\n");
+        }
+    }
+
+  if (element->hasAttribute("c"))
+    {
+      auto c_key = static_cast<std::string>(element->getAttribute("c"));
+      c = GRM::get<std::vector<int>>((*context)[c_key]);
+      c_length = size(c);
+    }
+  if (element->hasAttribute("c_rgb"))
+    {
+      auto c_rgb_key = static_cast<std::string>(element->getAttribute("c_rgb"));
+      c_rgb = GRM::get<std::vector<double>>((*context)[c_rgb_key]);
+      c_rgb_length = size(c_rgb);
+    }
+  if (element->hasAttribute("ylabels"))
+    {
+      auto ylabels_key = static_cast<std::string>(element->getAttribute("ylabels"));
+      ylabels = GRM::get<std::vector<std::string>>((*context)[ylabels_key]);
+      ylabels_length = size(ylabels);
+
+      ylabels_left = ylabels_length;
+      y_lightness_to_get = ylabels_length;
+    }
+
+  if (element->hasAttribute("xrange_min") && element->hasAttribute("xrange_max") &&
+      element->hasAttribute("yrange_min") && element->hasAttribute("yrange_max"))
+    {
+      x_min = static_cast<double>(element->parentElement()->getAttribute("xrange_min"));
+      x_max = static_cast<double>(element->parentElement()->getAttribute("xrange_max"));
+      y_min = static_cast<double>(element->parentElement()->getAttribute("yrange_min"));
+      y_max = static_cast<double>(element->parentElement()->getAttribute("yrange_max"));
+      if (!element->hasAttribute("bar_width"))
+        {
+          bar_width = (x_max - x_min) / (y_length - 1.0);
+          bar_shift = (x_max - x_min) / (y_length - 1.0);
+          x_min -= 1; // in the later calculation there is allways a +1 in combination with x
+          wfac = 0.9 * bar_width;
+        }
+    }
+
+  if (style != "lined" && inner_series) throw TypeError("Unsuported operation for barplot series.\n");
+  if (!c.empty())
+    {
+      if (!inner_series && (c_length < y_length))
+        throw std::length_error("For a barplot series c_length must be >= y_length.\n");
+      if (inner_series)
+        {
+          if (c_length == y_length)
+            {
+              inner_c = true;
+            }
+          else if (c_length != size(indices_vec))
+            {
+              throw std::length_error("For a barplot series c_length must be >= y_length.\n");
+            }
+        }
+    }
+  if (!c_rgb.empty())
+    {
+      if (!inner_series && (c_rgb_length < y_length * 3))
+        throw std::length_error("For a barplot series c_rgb_length must be >= y_length * 3.\n");
+      if (inner_series)
+        {
+          if (c_rgb_length == y_length * 3)
+            {
+              inner_c_rgb = true;
+            }
+          else if (c_rgb_length != size(indices_vec) * 3)
+            {
+              throw std::length_error("For a barplot series c_rgb_length must be >= y_length * 3\n");
+            }
+        }
+      for (i = 0; i < y_length * 3; i++)
+        {
+          if ((c_rgb[i] > 1 || c_rgb[i] < 0) && c_rgb[i] != -1)
+            throw std::out_of_range("For barplot series c_rgb must be inside [0, 1] or -1.\n");
+        }
+    }
+  if (!ylabels.empty())
+    {
+      use_y_notations_from_inner_series = 0;
+    }
+
+  global_render->setFillIntStyle(element, 1);
+  processFillIntStyle(element);
+  global_render->setFillColorInd(element, bar_color);
+  processFillColorInd(element);
+
+  /* overrides bar_color */
+  if (bar_color_rgb[0] != -1)
+    {
+      global_render->setColorRep(element, color_save_spot, bar_color_rgb[0], bar_color_rgb[1], bar_color_rgb[2]);
+      processColorRep(element);
+      bar_color = color_save_spot;
+      global_render->setFillColorInd(element, bar_color);
+      processFillColorInd(element);
+    }
+  double available_width, available_height, x_text, y_text;
+  if (!inner_series)
+    {
+      /* Draw Bar */
+      for (i = 0; i < y_length; i++)
+        {
+          y1 = y_min;
+          y2 = y_vec[i];
+
+          if (style == "default")
+            {
+              x1 = (i * bar_shift) + 1 - 0.5 * bar_width;
+              x2 = (i * bar_shift) + 1 + 0.5 * bar_width;
+            }
+          else if (style == "stacked")
+            {
+              x1 = series_index + 1 - 0.5 * bar_width;
+              x2 = series_index + 1 + 0.5 * bar_width;
+              if (y_vec[i] > 0)
+                {
+                  y1 = ((i == 0) ? y_min : 0) + pos_vertical_change;
+                  pos_vertical_change += y_vec[i] - ((i > 0) ? y_min : 0);
+                  y2 = pos_vertical_change;
+                }
+              else
+                {
+                  y1 = ((i == 0) ? y_min : 0) + neg_vertical_change;
+                  neg_vertical_change += y_vec[i] - ((i > 0) ? y_min : 0);
+                  y2 = neg_vertical_change;
+                }
+            }
+          else if (style == "lined")
+            {
+              bar_width = wfac / y_length;
+              x1 = series_index + 1 - 0.5 * wfac + bar_width * i;
+              x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * i;
+            }
+
+          auto temp = global_render->createFillRect(x1, x2, y1, y2);
+          element->append(temp);
+
+          if (style != "default")
+            {
+              int color_index = i % len_std_colors;
+              global_render->setFillColorInd(temp, std_colors[color_index]);
+            }
+          if (!c.empty() && c[i] != -1)
+            {
+              global_render->setFillColorInd(temp, c[i]);
+            }
+          else if (!c_rgb.empty() && c_rgb[i * 3] != -1)
+            {
+              global_render->setColorRep(temp, color_save_spot, c_rgb[i * 3], c_rgb[i * 3 + 1], c_rgb[i * 3 + 2]);
+              global_render->setFillColorInd(temp, color_save_spot);
+            }
+          if (y_lightness_to_get > 0)
+            {
+              if (temp->hasAttribute("fillcolorind"))
+                {
+                  color = (int)temp->getAttribute("fillcolorind");
+                }
+              else if (element->hasAttribute("fillcolorind"))
+                {
+                  color = (int)element->getAttribute("fillcolorind");
+                }
+
+              gr_inqcolor(color, (int *)rgb);
+              Y = (0.2126729 * rgb[0] / 255 + 0.7151522 * rgb[1] / 255 + 0.0721750 * rgb[2] / 255);
+              y_lightness.push_back(116 * pow(Y / 100, 1.0 / 3) - 16);
+              --y_lightness_to_get;
+            }
+        }
+
+      pos_vertical_change = 0;
+      neg_vertical_change = 0;
+      /* Draw Edge */
+      for (i = 0; i < y_length; i++)
+        {
+          if (style == "default")
+            {
+              x1 = (i * bar_shift) + 1 - 0.5 * bar_width;
+              x2 = (i * bar_shift) + 1 + 0.5 * bar_width;
+              y1 = y_min;
+              y2 = y_vec[i];
+            }
+          if (style == "stacked")
+            {
+              x1 = series_index + 1 - 0.5 * bar_width;
+              x2 = series_index + 1 + 0.5 * bar_width;
+              if (y_vec[i] > 0)
+                {
+                  y1 = ((i == 0) ? y_min : 0) + pos_vertical_change;
+                  pos_vertical_change += y_vec[i] - ((i > 0) ? y_min : 0);
+                  y2 = pos_vertical_change;
+                }
+              else
+                {
+                  y1 = ((i == 0) ? y_min : 0) + neg_vertical_change;
+                  neg_vertical_change += y_vec[i] - ((i > 0) ? y_min : 0);
+                  y2 = neg_vertical_change;
+                }
+            }
+          if (style == "lined")
+            {
+              bar_width = wfac / y_length;
+              x1 = series_index + 1 - 0.5 * wfac + bar_width * i;
+              x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * i;
+              y1 = y_min;
+              y2 = y_vec[i];
+            }
+
+          std::shared_ptr<GRM::Element> temp;
+
+          if (is_vertical)
+            {
+              temp = global_render->createDrawRect(y1, y2, x1, x2);
+              element->append(temp);
+            }
+          else
+            {
+              temp = global_render->createDrawRect(x1, x2, y1, y2);
+              element->append(temp);
+            }
+
+          global_render->setLineWidth(temp, edge_width);
+          if (edge_color_rgb[0] != -1)
+            {
+              global_render->setColorRep(temp, color_save_spot, edge_color_rgb[0], edge_color_rgb[1],
+                                         edge_color_rgb[2]);
+              edge_color = color_save_spot;
+            }
+          global_render->setLineColorInd(temp, edge_color);
+        }
+
+      pos_vertical_change = 0;
+      neg_vertical_change = 0;
+
+      /* Draw ylabels */
+      if (!ylabels.empty())
+        {
+          for (i = 0; i < y_length; i++)
+            {
+              if (style == "default")
+                {
+                  x1 = (i * bar_shift) + 1 - 0.5 * bar_width;
+                  x2 = (i * bar_shift) + 1 + 0.5 * bar_width;
+                  y1 = y_min;
+                  y2 = y_vec[i];
+                }
+              if (style == "stacked")
+                {
+                  x1 = series_index + 1 - 0.5 * bar_width;
+                  x2 = series_index + 1 + 0.5 * bar_width;
+                  if (y_vec[i] > 0)
+                    {
+                      y1 = ((i == 0) ? y_min : 0) + pos_vertical_change;
+                      pos_vertical_change += y_vec[i] - ((i > 0) ? y_min : 0);
+                      y2 = pos_vertical_change;
+                    }
+                  else
+                    {
+                      y1 = ((i == 0) ? y_min : 0) + neg_vertical_change;
+                      neg_vertical_change += y_vec[i] - ((i > 0) ? y_min : 0);
+                      y2 = neg_vertical_change;
+                    }
+                }
+              if (style == "lined")
+                {
+                  bar_width = wfac / y_length;
+                  x1 = series_index + 1 - 0.5 * wfac + bar_width * i;
+                  x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * i;
+                  y1 = y_min;
+                  y2 = y_vec[i];
+                }
+
+              if (ylabels_left > 0)
+                {
+                  available_width = x2 - x1;
+                  available_height = y2 - y1;
+                  x_text = (x1 + x2) / 2;
+                  y_text = (y1 + y2) / 2;
+
+                  std::shared_ptr<GRM::Element> temp =
+                      global_render->createText(x_text, y_text, ylabels[i], CoordinateSpace::WC);
+                  global_render->setTextAlign(temp, 2, 3);
+                  global_render->setTextWidthAndHeight(temp, available_width, available_height);
+                  if (y_lightness[i] < 0.4)
+                    {
+                      global_render->setTextColorInd(temp, 0);
+                    }
+                  else
+                    {
+                      global_render->setTextColorInd(temp, 1);
+                    }
+                  element->append(temp);
+                  --ylabels_left;
+                }
+            }
+        }
+    }
+  else
+    {
+
+      /* edge has the same with and color for every inner series */
+      global_render->setLineWidth(element, edge_width);
+      if (edge_color_rgb[0] != -1)
+        {
+          global_render->setColorRep(element, color_save_spot, edge_color_rgb[0], edge_color_rgb[1], edge_color_rgb[2]);
+          processFillColorInd(element);
+          edge_color = color_save_spot;
+        }
+      global_render->setLineColorInd(element, edge_color);
+      processLineWidth(element);
+      processLineColorInd(element);
+
+      int inner_y_start_index = 0;
+      /* Draw inner_series */
+      for (int inner_series_index = 0; inner_series_index < size(indices_vec); inner_series_index++)
+        {
+          /* Draw bars from inner_series */
+          color = std_colors[inner_series_index % len_std_colors];
+          int inner_y_length = indices_vec[inner_series_index];
+          std::vector<double> inner_y_vec(y_vec.begin() + inner_y_start_index,
+                                          y_vec.begin() + inner_y_start_index + inner_y_length);
+          bar_width = wfac / fixed_y_length;
+
+          for (i = 0; i < inner_y_length; i++)
+            {
+              x1 = series_index + 1 - 0.5 * wfac + bar_width * inner_series_index;
+              x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * inner_series_index;
+              if (inner_y_vec[i] > 0)
+                {
+                  y1 = ((i == 0) ? y_min : 0) + pos_vertical_change;
+                  pos_vertical_change += inner_y_vec[i] - ((i > 0) ? y_min : 0);
+                  y2 = pos_vertical_change;
+                }
+              else
+                {
+                  y1 = ((i == 0) ? y_min : 0) + neg_vertical_change;
+                  neg_vertical_change += inner_y_vec[i] - ((i > 0) ? y_min : 0);
+                  y2 = neg_vertical_change;
+                }
+
+              std::shared_ptr<GRM::Element> temp;
+              if (is_vertical)
+                {
+                  temp = global_render->createFillRect(y1, y2, x1, x2);
+                }
+              else
+                {
+                  temp = global_render->createFillRect(x1, x2, y1, y2);
+                }
+              element->append(temp);
+              global_render->setFillColorInd(temp, color);
+
+              if (!c.empty() && !inner_c && c[inner_series_index] != -1)
+                {
+                  global_render->setFillColorInd(temp, c[inner_series_index]);
+                }
+              if (!c_rgb.empty() && !inner_c_rgb && c_rgb[inner_series_index * 3] != -1)
+                {
+                  global_render->setColorRep(temp, color_save_spot, c_rgb[inner_series_index * 3],
+                                             c_rgb[inner_series_index * 3 + 1], c_rgb[inner_series_index * 3 + 2]);
+                  global_render->setFillColorInd(temp, color_save_spot);
+                }
+              if (inner_c && c[inner_y_start_index + i] != -1)
+                {
+                  global_render->setFillColorInd(temp, c[inner_y_start_index + i]);
+                }
+              if (inner_c_rgb && c_rgb[(inner_y_start_index + i) * 3] != -1)
+                {
+                  global_render->setColorRep(temp, color_save_spot, c_rgb[(inner_y_start_index + i) * 3],
+                                             c_rgb[(inner_y_start_index + i) * 3 + 1],
+                                             c_rgb[(inner_y_start_index + i) * 3 + 2]);
+                  global_render->setFillColorInd(temp, color_save_spot);
+                }
+
+              if (y_lightness_to_get > 0)
+                {
+                  if (temp->hasAttribute("fillcolorind"))
+                    {
+                      color = (int)temp->getAttribute("fillcolorind");
+                    }
+                  gr_inqcolor(color, (int *)rgb);
+                  Y = (0.2126729 * rgb[0] / 255 + 0.7151522 * rgb[1] / 255 + 0.0721750 * rgb[2] / 255);
+                  y_lightness.push_back(116 * pow(Y / 100, 1.0 / 3) - 16);
+                  --y_lightness_to_get;
+                }
+            }
+          pos_vertical_change = 0;
+          neg_vertical_change = 0;
+
+          /* Draw edges from inner_series */
+          for (i = 0; i < inner_y_length; i++)
+            {
+              x1 = series_index + 1 - 0.5 * wfac + bar_width * inner_series_index;
+              x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * inner_series_index;
+              if (inner_y_vec[i] > 0)
+                {
+                  y1 = ((i == 0) ? y_min : 0) + pos_vertical_change;
+                  pos_vertical_change += inner_y_vec[i] - ((i > 0) ? y_min : 0);
+                  y2 = pos_vertical_change;
+                }
+              else
+                {
+                  y1 = ((i == 0) ? y_min : 0) + neg_vertical_change;
+                  neg_vertical_change += inner_y_vec[i] - ((i > 0) ? y_min : 0);
+                  y2 = neg_vertical_change;
+                }
+              x1 += x_min;
+              x2 += x_min;
+
+              std::shared_ptr<GRM::Element> temp;
+              if (is_vertical)
+                {
+                  temp = global_render->createDrawRect(y1, y2, x1, x2);
+                }
+              else
+                {
+                  temp = global_render->createDrawRect(x1, x2, y1, y2);
+                }
+              element->append(temp);
+            }
+          pos_vertical_change = 0;
+          neg_vertical_change = 0;
+
+          /* Draw ynotations from inner_series */
+          if (!ylabels.empty())
+            {
+              for (i = 0; i < inner_y_length; i++)
+                {
+                  x1 = series_index + 1 - 0.5 * wfac + bar_width * inner_series_index;
+                  x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * inner_series_index;
+                  if (inner_y_vec[i] > 0)
+                    {
+                      y1 = ((i == 0) ? y_min : 0) + pos_vertical_change;
+                      pos_vertical_change += inner_y_vec[i] - ((i > 0) ? y_min : 0);
+                      y2 = pos_vertical_change;
+                    }
+                  else
+                    {
+                      y1 = ((i == 0) ? y_min : 0) + neg_vertical_change;
+                      neg_vertical_change += inner_y_vec[i] - ((i > 0) ? y_min : 0);
+                      y2 = neg_vertical_change;
+                    }
+
+                  if (ylabels_left > 0)
+                    {
+                      available_width = x2 - x1;
+                      available_height = y2 - y1;
+                      x_text = (x1 + x2) / 2;
+                      y_text = (y1 + y2) / 2;
+
+                      auto label_elem = global_render->createText(
+                          x_text, y_text, ylabels[ylabels_length - ylabels_left], CoordinateSpace::WC);
+                      global_render->setTextAlign(label_elem, 2, 3);
+                      global_render->setTextWidthAndHeight(label_elem, available_width, available_height);
+                      element->append(label_elem);
+
+                      if (y_lightness[ylabels_length - ylabels_left] < 0.4)
+                        {
+                          global_render->setTextColorInd(label_elem, 0);
+                        }
+                      else
+                        {
+                          global_render->setTextColorInd(label_elem, 1);
+                        }
+                      --ylabels_left;
+                    }
+                }
+            }
+          y_length = 0;
+          pos_vertical_change = 0;
+          neg_vertical_change = 0;
+
+          inner_y_start_index += inner_y_length;
+        }
+    }
+
+  if (element->hasAttribute("error"))
+    {
+      double *x, *err_x;
+      unsigned int x_length;
+      std::vector<double> bar_centers;
+      bar_width = wfac / y_length;
+      if (style == "default")
+        {
+          for (i = 0; i < y_length; i++)
+            {
+              x1 = (i * bar_shift) + 1 - 0.5 * bar_width;
+              x2 = (i * bar_shift) + 1 + 0.5 * bar_width;
+              bar_centers[i] = (x1 + x2) / 2.0;
+            }
+        }
+      else if (style == "lined")
+        {
+          for (i = 0; i < y_length; i++)
+            {
+              x1 = x_min + series_index + 1 - 0.5 * wfac + bar_width * i;
+              x2 = x_min + series_index + 1 - 0.5 * wfac + bar_width + bar_width * i;
+              bar_centers[i] = (x1 + x2) / 2.0;
+            }
+        }
+      else
+        {
+          for (i = 0; i < y_length; i++)
+            {
+              x1 = x_min + series_index + 1 - 0.5 * bar_width;
+              x2 = x_min + series_index + 1 + 0.5 * bar_width;
+              bar_centers[i] = (x1 + x2) / 2.0;
+            }
+        }
+      element->setAttribute("orientation", orientation);
+      // TODO: move plot_draw_errorbars into the renderer
+      //      error = plot_draw_errorbars(element, bar_centers, y_length, y_vec, "barplot");
+    }
 }
 
 static void contour(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -6670,6 +6756,543 @@ static void polarHeatmap(const std::shared_ptr<GRM::Element> &element, const std
       element->append(global_render->createNonUniformPolarCellArray(0, 0, "phi" + str, phi, "rho" + str, rho, -cols,
                                                                     -rows, 1, 1, cols, rows, "color" + str, data));
     }
+}
+
+static void preBarplot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  int max_y_length = 0;
+  for (auto series : element->querySelectorsAll("series[name=\"barplot\"]"))
+    {
+      if (!series->hasAttribute("indices")) throw NotFoundError("Barplot series is missing indices\n");
+      auto indices_key = static_cast<std::string>(series->getAttribute("indices"));
+      std::vector<int> indices_vec = GRM::get<std::vector<int>>((*context)[indices_key]);
+      int cur_y_length = indices_vec.size();
+      max_y_length = grm_max(cur_y_length, max_y_length);
+    }
+  element->setAttribute("max_y_length", max_y_length);
+}
+
+static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
+                              const std::shared_ptr<GRM::Context> &context)
+{
+  unsigned int num_bins;
+  std::vector<double> theta;
+  unsigned int length;
+  const char *norm;
+  std::vector<int> classes;
+
+  double interval;
+  double start;
+  double *p;
+  double max;
+  double temp_max;
+
+  int observations = 0;
+  int maxObservations = 0;
+  int totalObservations = 0;
+
+  std::vector<double> bin_edges;
+  unsigned int num_bin_edges;
+
+  double bin_width;
+
+  std::vector<double> bin_widths;
+
+  int is_bin_counts = 0;
+  std::vector<int> bin_counts;
+
+  double *philim = nullptr;
+  double philim_arr[2];
+  unsigned int dummy;
+
+  std::vector<double> new_theta;
+  std::vector<double> new_edges;
+
+  err_t error = ERROR_NONE;
+  // element is the plot element -> get the first series with polarhistogram
+  auto seriesList = element->querySelectorsAll("series_polar_histogram");
+  std::shared_ptr<GRM::Element> group = seriesList[0];
+  // element == plot_group for better readability
+  const std::shared_ptr<GRM::Element> &plot_group = element;
+
+  //! define keys for later usages;
+  auto str = static_cast<std::string>(group->getAttribute("_id"));
+  std::string bin_widths_key = "bin_widths" + str;
+  std::string bin_edges_key = "bin_edges" + str;
+  std::string bin_counts_key;
+  std::string classes_key = "classes" + str;
+
+  if (group->hasAttribute("bin_counts"))
+    {
+      is_bin_counts = 1;
+      bin_counts_key = static_cast<std::string>(group->getAttribute("bin_counts"));
+      bin_counts = GRM::get<std::vector<int>>((*context)[bin_counts_key]);
+
+      length = bin_counts.size();
+      num_bins = length;
+      group->setAttribute("nbins", static_cast<int>(num_bins));
+    }
+  else if (group->hasAttribute("theta"))
+    {
+      auto theta_key = static_cast<std::string>(group->getAttribute("theta"));
+      theta = GRM::get<std::vector<double>>((*context)[theta_key]);
+      length = theta.size();
+    }
+
+  if (!plot_group->hasAttribute("philim_min") && !plot_group->hasAttribute("philim_max"))
+    {
+      philim = nullptr;
+    }
+  else
+    {
+      philim = philim_arr;
+      philim[0] = static_cast<double>(plot_group->getAttribute("philim_min"));
+      philim[1] = static_cast<double>(plot_group->getAttribute("philim_max"));
+
+      if (philim[1] < philim[0])
+        {
+          int phiflip = 0;
+          std::swap(philim[0], philim[1]);
+
+          plot_group->setAttribute("phiflip", 1);
+        }
+      if (philim[0] < 0.0 || philim[1] > 2 * M_PI)
+        {
+          logger((stderr, "philim must be between 0 and 2 * pi\n"));
+        }
+      plot_group->setAttribute("philim_min", philim[0]);
+      plot_group->setAttribute("philim_max", philim[1]);
+    }
+
+  /* bin_edges and nbins */
+  if (group->hasAttribute("bin_edges") == 0)
+    {
+      if (group->hasAttribute("nbins") == 0)
+        {
+          num_bins = grm_min(12, (int)(length * 1.0 / 2) - 1);
+          group->setAttribute("nbins", static_cast<int>(num_bins));
+        }
+      else
+        {
+          num_bins = static_cast<int>(group->getAttribute("nbins"));
+          if (num_bins <= 0 || num_bins > 200)
+            {
+              num_bins = grm_min(12, (int)(length * 1.0 / 2) - 1);
+              group->setAttribute("nbins", static_cast<int>(num_bins));
+            }
+        }
+      //! check philim again
+      if (philim == nullptr)
+        num_bin_edges = 0;
+      else
+        {
+          //! if philim is given, it will create equidistant bin_edges from phi_min to phi_max
+          bin_edges.resize(num_bins + 1);
+          linspace(philim[0], philim[1], num_bins + 1, bin_edges);
+          num_bin_edges = num_bins + 1;
+          (*context)[bin_edges_key] = bin_edges;
+          group->setAttribute("bin_edges", bin_edges_key);
+        }
+    }
+  /* with bin_edges */
+  else
+    {
+      bin_edges_key = static_cast<std::string>(group->getAttribute("bin_edges"));
+      bin_edges = GRM::get<std::vector<double>>((*context)[bin_edges_key]);
+      num_bin_edges = bin_edges.size();
+      /* no philim */
+      if (philim == nullptr)
+        {
+          /* filter bin_edges */
+          int temp = 0;
+          int i;
+          new_edges.resize(num_bin_edges);
+
+          for (i = 0; i < num_bin_edges; ++i)
+            {
+              if (0.0 <= bin_edges[i] && bin_edges[i] <= 2 * M_PI)
+                {
+                  new_edges[temp] = bin_edges[i];
+                  temp++;
+                }
+              else
+                {
+                  logger((stderr, "Only values between 0 and 2 * pi allowed\n"));
+                }
+            }
+          if (num_bin_edges > temp)
+            {
+              num_bin_edges = temp;
+              bin_edges.resize(temp);
+            }
+          else
+            {
+              bin_edges = new_edges;
+            }
+          num_bins = num_bin_edges - 1;
+          group->setAttribute("nbins", static_cast<int>(num_bins));
+        }
+      /* with philim and binedges */
+      else
+        {
+          /* filter bin_edges */
+          int temp = 0;
+          new_edges.resize(num_bin_edges);
+
+          int i;
+          for (i = 0; i < num_bin_edges; ++i)
+            {
+              if (philim[0] <= bin_edges[i] && bin_edges[i] <= philim[1])
+                {
+                  new_edges[temp] = bin_edges[i];
+                  temp++;
+                }
+            }
+          if (temp > 1)
+            {
+              if (num_bin_edges > temp)
+                {
+                  num_bin_edges = temp;
+                  bin_edges.resize(temp);
+                }
+              else
+                {
+                  bin_edges = new_edges;
+                }
+            }
+          if (num_bin_edges == 1)
+            {
+              logger(
+                  (stderr, "given philim and given bin_edges are not compatible --> filtered len(bin_edges) == 1\n"));
+            }
+          else
+            {
+              num_bins = num_bin_edges - 1;
+              group->setAttribute("nbins", static_cast<int>(num_bins));
+              group->setAttribute("bin_edges", bin_edges_key);
+              (*context)[bin_edges_key] = bin_edges;
+            }
+        }
+    }
+
+  if (group->hasAttribute("normalization") == 0)
+    {
+      norm = "count";
+    }
+  else
+    {
+      norm = static_cast<std::string>(group->getAttribute("normalization")).c_str();
+      if (!str_equals_any(norm, 6, "count", "countdensity", "pdf", "probability", "cumcount", "cdf"))
+        {
+          logger((stderr, "Got keyword \"norm\"  with invalid value \"%s\"\n", norm));
+        }
+    }
+
+  if (group->hasAttribute("bin_width") == 0)
+    {
+      if (num_bin_edges > 0)
+        {
+          int i;
+          bin_widths.resize(num_bins + 1);
+          for (i = 1; i <= num_bin_edges - 1; ++i)
+            {
+              bin_widths[i - 1] = bin_edges[i] - bin_edges[i - 1];
+            }
+          group->setAttribute("bin_widths", bin_widths_key);
+          (*context)[bin_widths_key] = bin_widths;
+        }
+      else
+        {
+          bin_width = 2 * M_PI / num_bins;
+          group->setAttribute("bin_width", bin_width);
+        }
+    }
+  /* bin_width is given*/
+  else
+    {
+      bin_width = static_cast<double>(group->getAttribute("bin_width"));
+
+      int n = 0;
+      int temp;
+
+      if (num_bin_edges > 0 && *philim == -1.0)
+        {
+          int i;
+          logger((stderr, "bin_width is not compatible with bin_edges\n"));
+
+          bin_widths.resize(num_bins);
+
+          for (i = 1; i <= num_bin_edges - 1; ++i)
+            {
+              bin_widths[i - 1] = bin_edges[i] - bin_edges[i - 1];
+            }
+          group->setAttribute("bin_widths", bin_widths_key);
+          (*context)[bin_widths_key] = bin_widths;
+        }
+
+      /* with philim (with bin_width) */
+      if (philim != nullptr)
+        {
+          if (bin_width < 0 || bin_width > 2 * M_PI)
+            {
+              logger((stderr, "bin_width must be between 0 and 2 * Pi\n"));
+            }
+          if (philim[1] - philim[0] < bin_width)
+            {
+              logger((stderr, "the given philim range does not work with the given bin_width\n"));
+            }
+          else
+            {
+              n = (int)((philim[1] - philim[0]) / bin_width);
+              if (is_bin_counts == 1)
+                {
+                  if (num_bins > n)
+                    {
+                      logger((stderr,
+                              "bin_width does not work with this specific bin_count. Nbins do not fit bin_width\n"));
+                    }
+                  n = num_bins;
+                }
+              bin_edges.resize(n + 1);
+              linspace(philim[0], n * bin_width, n + 1, bin_edges);
+            }
+        }
+      /* without philim */
+      else
+        {
+          if (bin_width <= 0 || bin_width > 2 * M_PI)
+            {
+              logger((stderr, "bin_width must be between 0 (exclusive) and 2 * Pi\n"));
+            }
+          else if ((int)(2 * M_PI / bin_width) > 200)
+            {
+              n = 200;
+              bin_width = 2 * M_PI / n;
+            }
+          n = (int)(2 * M_PI / bin_width);
+          if (is_bin_counts == 1)
+            {
+              if (num_bins > n)
+                {
+                  logger(
+                      (stderr, "bin_width does not work with this specific bin_count. Nbins do not fit bin_width\n"));
+                }
+              n = num_bins;
+            }
+          bin_edges.resize(n + 1);
+          linspace(0.0, n * bin_width, n + 1, bin_edges);
+        }
+      group->setAttribute("nbins", n);
+      num_bin_edges = n + 1;
+      num_bins = n;
+      group->setAttribute("bin_edges", bin_edges_key);
+      (*context)[bin_edges_key] = bin_edges;
+      group->setAttribute("bin_width", bin_width);
+      bin_widths.resize(num_bins);
+
+      for (temp = 0; temp < num_bins; ++temp)
+        {
+          bin_widths[temp] = bin_width;
+        }
+      group->setAttribute("bin_widths", bin_widths_key);
+      (*context)[bin_widths_key] = bin_widths;
+    }
+
+  /* is_bin_counts */
+  if (is_bin_counts == 1)
+    {
+      double temp_max_bc = 0.0;
+      int i;
+      int total = 0;
+      int j;
+      int prev = 0;
+
+      if (num_bin_edges > 0 && num_bins != num_bin_edges - 1)
+        {
+          logger((stderr, "Number of bin_edges must be number of bin_counts + 1\n"));
+        }
+
+      total = std::accumulate(bin_counts.begin(), bin_counts.end(), 0);
+      for (i = 0; i < num_bins; ++i)
+        {
+          // temp_max_bc is a potential maximum for all bins respecting the given norm
+          if (num_bin_edges > 0) bin_width = bin_widths[i];
+
+          if (strcmp(norm, "pdf") == 0)
+            {
+              if (bin_counts[i] * 1.0 / (total * bin_width) > temp_max_bc)
+                {
+                  temp_max_bc = bin_counts[i] * 1.0 / (total * bin_width);
+                }
+            }
+          else if (strcmp(norm, "countdensity") == 0)
+            {
+              if (bin_counts[i] * 1.0 / (bin_width) > temp_max_bc)
+                {
+                  temp_max_bc = bin_counts[i] * 1.0 / (bin_width);
+                }
+            }
+          else
+            {
+              if (bin_counts[i] > temp_max_bc) temp_max_bc = bin_counts[i];
+            }
+        }
+
+      classes.resize(num_bins);
+
+      // bin_counts is affected by cumulative norms --> bin_counts are summed in later bins
+      if (str_equals_any(norm, 2, "cdf", "cumcount"))
+        {
+          for (i = 0; i < num_bins; ++i)
+            {
+              if (i == 0)
+                {
+                  classes[0] = bin_counts[0];
+                }
+              else
+                {
+                  classes[i] = bin_counts[i] + classes[i - 1];
+                }
+            }
+        }
+      else
+        {
+          classes = bin_counts;
+        }
+
+      group->setAttribute("classes", classes_key);
+      (*context)[classes_key] = classes;
+      group->setAttribute("total", total);
+
+
+      if (strcmp(norm, "probability") == 0)
+        max = temp_max_bc * 1.0 / total;
+      else if (strcmp(norm, "cdf") == 0)
+        max = 1.0;
+      else if (strcmp(norm, "cumcount") == 0)
+        max = total * 1.0;
+      else
+        max = temp_max_bc;
+    }
+  /* no is_bin_counts */
+  else
+    {
+      int x;
+
+      max = 0.0;
+      classes.resize(num_bins);
+      int i;
+
+      // prepare bin_edges
+      if (num_bin_edges == 0) // no bin_edges --> create bin_edges for uniform code later
+        {
+          // linspace the bin_edges
+          bin_edges.resize(num_bins + 1);
+          linspace(0.0, 2 * M_PI, num_bins + 1, bin_edges);
+        }
+      else // bin_edges given
+        {
+          // filter theta
+          double edge_min = bin_edges[0];
+          double edge_max = bin_edges[num_bin_edges - 1];
+          auto it = std::remove_if(theta.begin(), theta.end(), [edge_min, edge_max](double angle) {
+            return (angle < edge_min || angle > edge_max);
+          });
+          theta.erase(it, theta.end());
+        }
+
+      // calc classes
+      for (x = 0; x < num_bins; ++x)
+        {
+          int y;
+          observations = 0;
+
+          // iterate theta --> filter angles for current bin
+          for (y = 0; y < length; ++y)
+            {
+              if (bin_edges[x] <= theta[y] && theta[y] < bin_edges[x + 1])
+                {
+                  ++observations;
+                }
+            }
+
+          // differentiate between cumulative and non-cumulative norms
+          if (str_equals_any(norm, 2, "cdf", "cumcount"))
+            {
+              if (x == 0)
+                {
+                  classes[0] = observations;
+                }
+              else
+                {
+                  classes[x] = observations + classes[x - 1];
+                }
+            }
+          else
+            {
+              classes[x] = observations;
+            }
+          // update the total number of observations; used for some norms;
+          totalObservations += observations;
+        }
+
+      // get maximum number of observation from all bins
+      maxObservations = *std::max_element(classes.begin(), classes.end());
+
+      group->setAttribute("classes", classes_key);
+      (*context)[classes_key] = classes;
+      group->setAttribute("total", totalObservations);
+
+      // calculate the maximum from maxObservations respecting the norms;
+      if (num_bin_edges == 0) // no given bin_edges
+        {
+          if (str_equals_any(norm, 2, "probability", "cdf"))
+            {
+              max = maxObservations * 1.0 / totalObservations;
+            }
+          else if (strcmp(norm, "pdf") == 0)
+            {
+              max = maxObservations * 1.0 / (totalObservations * bin_width);
+            }
+          else
+            {
+              max = maxObservations * 1.0;
+            }
+        }
+      else // calc maximum with given bin_edges
+        {
+          if (str_equals_any(norm, 2, "pdf", "countdensity"))
+            {
+              for (i = 0; i < num_bins; ++i)
+                {
+                  // temporary maximum respecting norm
+                  temp_max = classes[i];
+                  if (strcmp(norm, "pdf") == 0)
+                    {
+                      temp_max /= totalObservations * bin_widths[x];
+                    }
+                  else if (strcmp(norm, "countdensity") == 0)
+                    {
+                      temp_max /= bin_widths[x];
+                    }
+                  if (temp_max > max)
+                    {
+                      max = temp_max;
+                    }
+                }
+            }
+          else if (str_equals_any(norm, 2, "probability", "cdf"))
+            {
+              max = maxObservations * 1.0 / totalObservations;
+            }
+          else
+            {
+              max = maxObservations * 1.0;
+            }
+        }
+    } /* end classes and maximum */
+  // set r_max (radius_max) in parent for later usages in polar_axes and polar_histogram
+  group->parentElement()->setAttribute("r_max", max);
 }
 
 static void scatter(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -9057,16 +9680,31 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
   processSubplot(element);
   GRM::Render::processViewport(element);
   // todo: there are cases that element does not have charheight set
+  // charheight is always calculated (and set in the gr) in processViewport
+  // it is however not stored on the element as it can be calculated from other attributes
   if (element->hasAttribute("charheight"))
     {
       processCharHeight(element);
     }
   GRM::Render::processLimits(element);
   processWindow(element);
+  // todo: window3d is always being processed?
   processWindow3d(element); /* needs to be set before space3d is processed */
   processScale(element);    /* needs to be set before flip is processed */
-  if (static_cast<std::string>(element->getAttribute("kind")) == "polar_histogram")
-    processClassesPolarHistogram(element);
+
+  /* Map for calculations on the plot level */
+  static std::map<std::string,
+                  std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)>>
+      kindNameToFunc{
+          {std::string("barplot"), preBarplot},
+          {std::string("polar_histogram"), prePolarHistogram},
+      };
+
+  auto kind = static_cast<std::string>(element->getAttribute("kind"));
+  if (kindNameToFunc.find(kind) != kindNameToFunc.end())
+    {
+      kindNameToFunc[kind](element, context);
+    }
 }
 
 static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -9074,6 +9712,7 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const st
   static std::map<std::string,
                   std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)>>
       seriesNameToFunc{
+          {std::string("barplot"), barplot},
           {std::string("contour"), contour},
           {std::string("contourf"), contourf},
           {std::string("heatmap"), heatmap},
