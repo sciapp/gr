@@ -1809,6 +1809,7 @@ err_t plot_hist(grm_args_t *subplot_args)
 
       auto subGroup = global_render->createSeries("hist");
       group->append(subGroup);
+      subGroup->setAttribute("_update_required", true);
 
       int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
@@ -1861,7 +1862,6 @@ err_t plot_hist(grm_args_t *subplot_args)
         {
           if (num_bins <= 1)
             {
-              // todo: make num_bins dependent on error length?
               num_bins = (int)(3.3 * log10(x_length) + 0.5) + 1;
             }
           error = plot_draw_errorbars(*current_series, num_bins);
