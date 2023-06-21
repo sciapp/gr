@@ -15,7 +15,9 @@
 #include <math.h>
 #include <float.h>
 #ifdef _MSC_VER
+#include <BaseTsd.h>
 typedef __int64 int64_t;
+typedef SSIZE_T ssize_t;
 #else
 #include <stdint.h>
 #endif
@@ -179,6 +181,13 @@ typedef struct
 
 typedef struct
 {
+  state_list **buf;
+  size_t capacity;
+  ssize_t max_non_null_id;
+} state_list_vector;
+
+typedef struct
+{
   int a, b, c;
   double sp;
 } triangle_with_distance;
@@ -277,9 +286,11 @@ static int predef_colors[20] = {9, 2, 0, 1, 16, 3, 15, 8, 6, 10, 11, 4, 12, 13, 
 
 #define MAX_SAVESTATE 16
 
-static state_list *state = NULL;
+static state_list_vector *app_context = NULL;
 
-static state_list *ctx, *app_context[GR_MAX_CONTEXT] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+static state_list *ctx = NULL, *state = NULL;
+
+#define CONTEXT_VECTOR_INCREMENT 8
 
 static void (*previous_handler)(int);
 
@@ -12177,11 +12188,34 @@ void gr_selectcontext(int context)
 
   if (context >= 1 && context <= GR_MAX_CONTEXT)
     {
-      id = context - 1;
-      if (app_context[id] == NULL)
+      if (app_context == NULL)
         {
-          app_context[id] = (state_list *)xmalloc(sizeof(state_list));
-          ctx = app_context[id];
+          int i;
+          app_context = (state_list_vector *)xmalloc(sizeof(state_list_vector));
+          app_context->max_non_null_id = -1;
+          app_context->capacity = max(CONTEXT_VECTOR_INCREMENT, context);
+          app_context->buf = (state_list **)xmalloc(app_context->capacity * sizeof(state_list));
+          for (i = 0; i < app_context->capacity; ++i)
+            {
+              app_context->buf[i] = NULL;
+            }
+        }
+      else if (app_context->capacity < context)
+        {
+          int i = app_context->capacity;
+          app_context->capacity = max(app_context->capacity + CONTEXT_VECTOR_INCREMENT, context);
+          app_context->buf = (state_list **)xrealloc(app_context->buf, app_context->capacity * sizeof(state_list));
+          for (; i < app_context->capacity; ++i)
+            {
+              app_context->buf[i] = NULL;
+            }
+        }
+      id = context - 1;
+      if (app_context->buf[id] == NULL)
+        {
+          app_context->buf[id] = (state_list *)xmalloc(sizeof(state_list));
+          app_context->max_non_null_id = max(app_context->max_non_null_id, id);
+          ctx = app_context->buf[id];
 
           ctx->ltype = GKS_K_LINETYPE_SOLID;
           ctx->lwidth = 1;
@@ -12219,7 +12253,7 @@ void gr_selectcontext(int context)
         }
       else
         {
-          ctx = app_context[id];
+          ctx = app_context->buf[id];
         }
 
       gks_set_pline_linetype(ctx->ltype);
@@ -12271,37 +12305,37 @@ void gr_savestateincontext(int context)
   if (context >= 1 && context <= GR_MAX_CONTEXT)
     {
       int id = context - 1;
-      if (app_context[id] == NULL)
+      if (app_context->buf[id] == NULL)
         {
-          app_context[id] = (state_list *)xmalloc(sizeof(state_list));
+          app_context->buf[id] = (state_list *)xmalloc(sizeof(state_list));
         }
-      gks_inq_pline_linetype(&errind, &app_context[id]->ltype);
-      gks_inq_pline_linewidth(&errind, &app_context[id]->lwidth);
-      gks_inq_pline_color_index(&errind, &app_context[id]->plcoli);
-      gks_inq_pmark_type(&errind, &app_context[id]->mtype);
-      gks_inq_pmark_size(&errind, &app_context[id]->mszsc);
-      gks_inq_pmark_color_index(&errind, &app_context[id]->pmcoli);
-      gks_inq_text_fontprec(&errind, &app_context[id]->txfont, &app_context[id]->txprec);
-      gks_inq_text_expfac(&errind, &app_context[id]->chxp);
-      gks_inq_text_spacing(&errind, &app_context[id]->chsp);
-      gks_inq_text_color_index(&errind, &app_context[id]->txcoli);
-      gks_inq_text_height(&errind, &app_context[id]->chh);
-      gks_inq_text_upvec(&errind, &app_context[id]->chup[0], &app_context[id]->chup[1]);
-      gks_inq_text_path(&errind, &app_context[id]->txp);
-      gks_inq_text_align(&errind, &app_context[id]->txal[0], &app_context[id]->txal[1]);
-      gks_inq_fill_int_style(&errind, &app_context[id]->ints);
-      gks_inq_fill_style_index(&errind, &app_context[id]->styli);
-      gks_inq_fill_color_index(&errind, &app_context[id]->facoli);
+      gks_inq_pline_linetype(&errind, &app_context->buf[id]->ltype);
+      gks_inq_pline_linewidth(&errind, &app_context->buf[id]->lwidth);
+      gks_inq_pline_color_index(&errind, &app_context->buf[id]->plcoli);
+      gks_inq_pmark_type(&errind, &app_context->buf[id]->mtype);
+      gks_inq_pmark_size(&errind, &app_context->buf[id]->mszsc);
+      gks_inq_pmark_color_index(&errind, &app_context->buf[id]->pmcoli);
+      gks_inq_text_fontprec(&errind, &app_context->buf[id]->txfont, &app_context->buf[id]->txprec);
+      gks_inq_text_expfac(&errind, &app_context->buf[id]->chxp);
+      gks_inq_text_spacing(&errind, &app_context->buf[id]->chsp);
+      gks_inq_text_color_index(&errind, &app_context->buf[id]->txcoli);
+      gks_inq_text_height(&errind, &app_context->buf[id]->chh);
+      gks_inq_text_upvec(&errind, &app_context->buf[id]->chup[0], &app_context->buf[id]->chup[1]);
+      gks_inq_text_path(&errind, &app_context->buf[id]->txp);
+      gks_inq_text_align(&errind, &app_context->buf[id]->txal[0], &app_context->buf[id]->txal[1]);
+      gks_inq_fill_int_style(&errind, &app_context->buf[id]->ints);
+      gks_inq_fill_style_index(&errind, &app_context->buf[id]->styli);
+      gks_inq_fill_color_index(&errind, &app_context->buf[id]->facoli);
 
-      gks_inq_current_xformno(&errind, &app_context[id]->tnr);
-      gks_inq_xform(WC, &errind, app_context[id]->wn, app_context[id]->vp);
+      gks_inq_current_xformno(&errind, &app_context->buf[id]->tnr);
+      gks_inq_xform(WC, &errind, app_context->buf[id]->wn, app_context->buf[id]->vp);
 
-      app_context[id]->scale_options = lx.scale_options;
+      app_context->buf[id]->scale_options = lx.scale_options;
 
-      gks_inq_border_width(&errind, &app_context[id]->bwidth);
-      gks_inq_border_color_index(&errind, &app_context[id]->bcoli);
-      gks_inq_clip_xform(&errind, &app_context[id]->clip_tnr);
-      gks_inq_resize_behaviour(&app_context[id]->resize_behaviour);
+      gks_inq_border_width(&errind, &app_context->buf[id]->bwidth);
+      gks_inq_border_color_index(&errind, &app_context->buf[id]->bcoli);
+      gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
+      gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
     }
   else
     {
@@ -12315,13 +12349,37 @@ void gr_destroycontext(int context)
 
   check_autoinit;
 
-  if (context >= 1 && context <= GR_MAX_CONTEXT)
+  if (context >= 1 && context <= app_context->capacity)
     {
       id = context - 1;
-      if (app_context[id] != NULL) free(app_context[id]);
-
-      if (ctx == app_context[id]) ctx = NULL;
-      app_context[id] = NULL;
+      if (app_context->buf[id] != NULL)
+        {
+          free(app_context->buf[id]);
+          if (ctx == app_context->buf[id])
+            {
+              ctx = NULL;
+            }
+          app_context->buf[id] = NULL;
+          if (id == app_context->max_non_null_id)
+            {
+              while (app_context->max_non_null_id >= 0 && app_context->buf[app_context->max_non_null_id] == NULL)
+                {
+                  --(app_context->max_non_null_id);
+                }
+              if (app_context->max_non_null_id < 0)
+                {
+                  free(app_context->buf);
+                  free(app_context);
+                  app_context = NULL;
+                  ctx = NULL;
+                }
+              else if (app_context->capacity - app_context->max_non_null_id - 1 >= CONTEXT_VECTOR_INCREMENT)
+                {
+                  app_context->capacity = ((size_t)ceil((double)app_context->capacity / CONTEXT_VECTOR_INCREMENT)) *
+                                          CONTEXT_VECTOR_INCREMENT;
+                }
+            }
+        }
     }
   else
     {
