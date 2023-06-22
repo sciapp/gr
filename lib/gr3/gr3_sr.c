@@ -93,7 +93,8 @@ static void color_pixel(unsigned char *pixels, float *depth_buffer, Transparency
 static color calc_colors(color_float col_one, color_float col_two, color_float col_three, float fac_one, float fac_two,
                          float fac_three, vertex_fp *v_fp[3], const float *colors,
                          const GR3_LightSource_t_ *light_sources, int num_light_sources, int *discard, int front_facing,
-                         float ambient_str, float diffuse_str, float specular_str, float specular_exp);
+                         float ambient_str, float diffuse_str, float specular_str, float specular_exp,
+                         int projection_type);
 
 static int gr3_draw_softwarerendered(queue *queues[MAX_NUM_THREADS], int width, int height);
 static void gr3_dodrawmesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int width, int height,
@@ -360,6 +361,7 @@ static void merge_pixmaps(int width, int starty, int endy)
 
               for (j = 0; j < nr_of_objects; ++j)
                 {
+
                   r += t1 * transparency_sort_buffer[j].r * transparency_sort_buffer[j].tr;
                   g += t2 * transparency_sort_buffer[j].g * transparency_sort_buffer[j].tg;
                   b += t3 * transparency_sort_buffer[j].b * transparency_sort_buffer[j].tb;
@@ -1228,7 +1230,7 @@ static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int 
             }
           area_2 = sqrt(tmp_2);
           depth = (area_0 * v_fp[1]->z + area_1 * v_fp[2]->z + area_2 * v_fp[0]->z) * (1 / (area_0 + area_1 + area_2));
-          if (context_struct_.use_transparency || depth < dep_buf[y * width + x])
+          if ((context_struct_.use_transparency || depth < dep_buf[y * width + x]) && depth >= 0 && depth <= 1)
             {
               /* initialise distances with values that are definitly bigger than the linewidth so the default
                * is, that they are not colored in line color */
@@ -1743,11 +1745,13 @@ static void draw_line(unsigned char *pixels, float *dep_buf, int width, const fl
         }
 #endif
       depth = (w0 * v_fp[0]->z + w1 * v_fp[1]->z + w2 * v_fp[2]->z) * sum_inv;
-      if (context_struct_.use_transparency || depth < dep_buf[y * width + x])
+      if ((context_struct_.use_transparency || depth < dep_buf[y * width + x]) && depth >= 0 && depth <= 1)
         {
           int discard = 0;
           col = calc_colors(v_fp[0]->c, v_fp[1]->c, v_fp[2]->c, w0, w1, w2, v_fp, colors, light_sources, num_lights,
-                            &discard, front_facing, ambient_str, diffuse_str, specular_str, specular_exp);
+                            &discard, front_facing, ambient_str, diffuse_str, specular_str, specular_exp,
+                            context_struct_.projection_type);
+
           if (!discard)
             {
               color_float alpha;
@@ -1852,18 +1856,14 @@ static void color_pixel(unsigned char *pixels, float *depth_buffer, Transparency
 static color calc_colors(color_float col_one, color_float col_two, color_float col_three, float fac_one, float fac_two,
                          float fac_three, vertex_fp *v_fp[3], const float *colors,
                          const GR3_LightSource_t_ *light_sources, int num_light_sources, int *discard, int front_facing,
-                         float ambient_str, float diffuse_str, float specular_str, float specular_exp)
+                         float ambient_str, float diffuse_str, float specular_str, float specular_exp,
+                         int projection_type)
 {
   /* correct barycentric coordinates
    * (https://github.com/ssloy/tinyrenderer/wiki/Technical-difficulties:-linear-interpolation-with-perspective-deformations)
    */
   int i;
-  float sum, diff;
-  float ambient = ambient_str;
-  /*set strength of specular highlight*/
-  float specular_strength = specular_str;
-  float diff_strength = diffuse_str;
-  float exponent = specular_exp;
+  float sum, diffuse, cos_normal_halfway;
   color_float res;
   vector norm;
   vector diffuse_sum;
@@ -1914,9 +1914,19 @@ static color calc_colors(color_float col_one, color_float col_two, color_float c
   /* interpolate position */
   view_space_position = linearcombination(&v_fp[0]->view_space_position, &v_fp[1]->view_space_position,
                                           &v_fp[2]->view_space_position, fac_one, fac_two, fac_three);
-  view_dir.x = -view_space_position.x;
-  view_dir.y = -view_space_position.y;
-  view_dir.z = -view_space_position.z;
+
+  if (projection_type == GR3_PROJECTION_ORTHOGRAPHIC)
+    {
+      view_dir.x = 0;
+      view_dir.y = 0;
+      view_dir.z = 1;
+    }
+  else
+    {
+      view_dir.x = -view_space_position.x;
+      view_dir.y = -view_space_position.y;
+      view_dir.z = -view_space_position.z;
+    }
   normalize_vector(&view_dir);
   for (i = 0; i < num_light_sources; ++i)
     {
@@ -1926,35 +1936,37 @@ static color calc_colors(color_float col_one, color_float col_two, color_float c
       light_dir.y = light_sources[i].y;
       light_dir.z = light_sources[i].z;
       normalize_vector(&light_dir);
+      /*calculate diffuse component*/
+      diffuse = MAX(0.0, dot_vector(&light_dir, &norm));
       /*Calculate halfway vector for blinn-phong-illumination model*/
       vector halfway;
-      halfway.x = view_dir.x - light_dir.x;
-      halfway.y = view_dir.y - light_dir.y;
-      halfway.z = view_dir.z - light_dir.z;
+      halfway.x = view_dir.x + light_dir.x;
+      halfway.y = view_dir.y + light_dir.y;
+      halfway.z = view_dir.z + light_dir.z;
       normalize_vector(&halfway);
-      float cos_normal_halfway = dot_vector(&norm, &halfway);
-      if (cos_normal_halfway < 0)
+      cos_normal_halfway = dot_vector(&norm, &halfway);
+      /*cutoff for specular component, when there is no diffuse lighting for consistency with pov-ray*/
+      if (cos_normal_halfway < 0 || diffuse == 0)
         {
           cos_normal_halfway = 0;
         }
-      /*exponantiate the dot by a value between 30 and 100*/
-      float spec_cos = pow(cos_normal_halfway, exponent);
+      /*exponentiate the dot by a value between 30 and 100*/
+      float spec_cos = pow(cos_normal_halfway, specular_exp);
       /*get specular component by multiply the dot and the specular strength*/
-      float specular = specular_strength * spec_cos;
-      /*calculate diffuse componant*/
-      float diff_tmp = -dot_vector(&light_dir, &norm);
-      diff = diff_tmp > 0.0 ? diff_tmp : 0.0;
-      /*update summs*/
+      float specular = specular_str * spec_cos;
+      /*update sums*/
       specular_sum.x += light_sources[i].r * specular;
       specular_sum.y += light_sources[i].g * specular;
       specular_sum.z += light_sources[i].b * specular;
-      diffuse_sum.x += light_sources[i].r * diff;
-      diffuse_sum.y += light_sources[i].g * diff;
-      diffuse_sum.z += light_sources[i].b * diff;
+      diffuse_sum.x += light_sources[i].r * diffuse;
+      diffuse_sum.y += light_sources[i].g * diffuse;
+      diffuse_sum.z += light_sources[i].b * diffuse;
     }
-  res.r = res.r * (diffuse_sum.x * diff_strength + ambient) * colors[0] + specular_sum.x;
-  res.g = res.g * (diffuse_sum.y * diff_strength + ambient) * colors[1] + specular_sum.y;
-  res.b = res.b * (diffuse_sum.z * diff_strength + ambient) * colors[2] + specular_sum.z;
+
+  res.r = res.r * (diffuse_sum.x * diffuse_str + ambient_str) * colors[0] + specular_sum.x;
+  res.g = res.g * (diffuse_sum.y * diffuse_str + ambient_str) * colors[1] + specular_sum.y;
+  res.b = res.b * (diffuse_sum.z * diffuse_str + ambient_str) * colors[2] + specular_sum.z;
+
   res.r = res.r > 1 ? 1 : res.r;
   res.g = res.g > 1 ? 1 : res.g;
   res.b = res.b > 1 ? 1 : res.b;
@@ -2403,13 +2415,18 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
   for (thread_idx = 0; thread_idx < context_struct_.num_threads; thread_idx++)
     {
       GR3_LightSource_t_ light_sources[MAX_NUM_LIGHTS];
+      vector light_dir;
       int num_lights = context_struct_.num_lights;
       if (num_lights == 0)
         {
           num_lights = 1;
-          light_sources[0].x = 0;
-          light_sources[0].y = 0;
-          light_sources[0].z = -1;
+          light_dir.x = context_struct_.camera_x;
+          light_dir.y = context_struct_.camera_y;
+          light_dir.z = context_struct_.camera_z;
+          mat_vec_mul_3x1(&view_mat_3x3, &light_dir);
+          light_sources[0].x = light_dir.x;
+          light_sources[0].y = light_dir.y;
+          light_sources[0].z = light_dir.z;
           light_sources[0].r = 1;
           light_sources[0].g = 1;
           light_sources[0].b = 1;
@@ -2419,24 +2436,22 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
           int i;
           for (i = 0; i < num_lights; i++)
             {
-              vector light_dir;
-              light_dir.x = context_struct_.light_sources[i].x;
-              light_dir.y = context_struct_.light_sources[i].y;
-              light_dir.z = context_struct_.light_sources[i].z;
               if (light_dir.x == 0 && light_dir.y == 0 && light_dir.z == 0)
                 {
-                  light_sources[i].x = 0;
-                  light_sources[i].y = 0;
-                  light_sources[i].z = -1;
+                  light_dir.x = context_struct_.camera_x;
+                  light_dir.y = context_struct_.camera_y;
+                  light_dir.z = context_struct_.camera_z;
                 }
               else
                 {
-                  normalize_vector(&light_dir);
-                  mat_vec_mul_3x1(&view_mat_3x3, &light_dir);
-                  light_sources[i].x = light_dir.x;
-                  light_sources[i].y = light_dir.y;
-                  light_sources[i].z = light_dir.z;
+                  light_dir.x = context_struct_.light_sources[i].x;
+                  light_dir.y = context_struct_.light_sources[i].y;
+                  light_dir.z = context_struct_.light_sources[i].z;
                 }
+              mat_vec_mul_3x1(&view_mat_3x3, &light_dir);
+              light_sources[i].x = light_dir.x;
+              light_sources[i].y = light_dir.y;
+              light_sources[i].z = light_dir.z;
               light_sources[i].r = context_struct_.light_sources[i].r;
               light_sources[i].g = context_struct_.light_sources[i].g;
               light_sources[i].b = context_struct_.light_sources[i].b;
