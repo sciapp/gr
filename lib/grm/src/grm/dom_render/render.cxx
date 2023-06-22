@@ -63,6 +63,7 @@ ManageGRContextIds grContextIDManager;
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {
     "axes",
+    "barplot_xtick",
     "colorbar",
     "coordinate_system",
     "errorbars",
@@ -3494,21 +3495,21 @@ static void processXTickLabels(const std::shared_ptr<GRM::Element> &elem)
       double x_left = 0, x_right = 1, null;
       double available_width;
       const double *window;
-      auto xtick_group = render->createGroup("barplot_xtick");
+      auto xtick_element = render->createElement("barplot_xtick");
 
-      elem->append(xtick_group);
+      elem->append(xtick_element);
 
       /* calculate width available for xticknotations */
       gr_wctondc(&x_left, &null);
       gr_wctondc(&x_right, &null);
       available_width = x_right - x_left;
-      render->setTextAlign(xtick_group, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+      render->setTextAlign(xtick_element, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
       for (int i = 1; i <= xticklabels.size(); i++)
         {
           x1 = i;
           gr_wctondc(&x1, &x2);
           x2 = viewport[2] - 0.5 * charheight;
-          draw_xticklabel(x1, x2, xticklabels[i - 1].c_str(), available_width, xtick_group, render);
+          draw_xticklabel(x1, x2, xticklabels[i - 1].c_str(), available_width, xtick_element, render);
         }
     }
 }
@@ -9819,8 +9820,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
       };
 
   /*! Modifier */
-  if (str_equals_any(element->localName().c_str(), 7, "group", "figure", "plot", "coordinate_system", "label",
-                     "labels_group", "root"))
+  if (str_equals_any(element->localName().c_str(), 8, "group", "figure", "plot", "coordinate_system", "label",
+                     "labels_group", "root", "barplot_xtick"))
     {
       if (element->localName() == "plot") processPlot(element, context);
       processAttributes(element);
