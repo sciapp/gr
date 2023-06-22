@@ -1299,6 +1299,19 @@ static double find_max_step(unsigned int n, std::vector<double> x)
   return max_step;
 }
 
+static void extendErrorbars(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context,
+                            std::vector<double> x, std::vector<double> y)
+{
+  int id = static_cast<int>(global_root->getAttribute("_id"));
+  std::string str = std::to_string(id);
+  global_root->setAttribute("_id", ++id);
+
+  (*context)["x" + str] = x;
+  element->setAttribute("x", "x" + str);
+  (*context)["y" + str] = y;
+  element->setAttribute("y", "y" + str);
+}
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ attribute processing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static void processAlpha(const std::shared_ptr<GRM::Element> &elem)
@@ -4473,42 +4486,34 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
         }
     }
 
-  if (element->hasAttribute("error"))
+  // errorbar handling
+  for (const auto &elem : element->children())
     {
-      double *x, *err_x;
-      unsigned int x_length;
-      std::vector<double> bar_centers;
-      bar_width = wfac / y_length;
-      if (style == "default")
+      if (elem->localName() == "errorbars")
         {
+          std::vector<double> bar_centers;
+          bar_width = wfac / y_length;
           for (i = 0; i < y_length; i++)
             {
-              x1 = (i * bar_shift) + 1 - 0.5 * bar_width;
-              x2 = (i * bar_shift) + 1 + 0.5 * bar_width;
-              bar_centers[i] = (x1 + x2) / 2.0;
+              if (style == "default")
+                {
+                  x1 = (i * bar_shift) + 1 - 0.5 * bar_width;
+                  x2 = (i * bar_shift) + 1 + 0.5 * bar_width;
+                }
+              else if (style == "lined")
+                {
+                  x1 = x_min + series_index + 1 - 0.5 * wfac + bar_width * i;
+                  x2 = x_min + series_index + 1 - 0.5 * wfac + bar_width + bar_width * i;
+                }
+              else
+                {
+                  x1 = x_min + series_index + 1 - 0.5 * bar_width;
+                  x2 = x_min + series_index + 1 + 0.5 * bar_width;
+                }
+              bar_centers.push_back((x1 + x2) / 2.0);
             }
+          extendErrorbars(elem, context, bar_centers, y_vec);
         }
-      else if (style == "lined")
-        {
-          for (i = 0; i < y_length; i++)
-            {
-              x1 = x_min + series_index + 1 - 0.5 * wfac + bar_width * i;
-              x2 = x_min + series_index + 1 - 0.5 * wfac + bar_width + bar_width * i;
-              bar_centers[i] = (x1 + x2) / 2.0;
-            }
-        }
-      else
-        {
-          for (i = 0; i < y_length; i++)
-            {
-              x1 = x_min + series_index + 1 - 0.5 * bar_width;
-              x2 = x_min + series_index + 1 + 0.5 * bar_width;
-              bar_centers[i] = (x1 + x2) / 2.0;
-            }
-        }
-      element->setAttribute("orientation", orientation);
-      // TODO: move plot_draw_errorbars into the renderer
-      //      error = plot_draw_errorbars(element, bar_centers, y_length, y_vec, "barplot");
     }
 }
 
@@ -4819,19 +4824,6 @@ static void drawImage(const std::shared_ptr<GRM::Element> &element, const std::s
   int model = static_cast<int>(element->getAttribute("model"));
   auto data = static_cast<std::string>(element->getAttribute("data"));
   gr_drawimage(xmin, xmax, ymax, ymin, width, height, (int *)&(GRM::get<std::vector<int>>((*context)[data])[0]), model);
-}
-
-static void extendErrorbars(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context,
-                            std::vector<double> x, std::vector<double> y)
-{
-  int id = static_cast<int>(global_root->getAttribute("_id"));
-  std::string str = std::to_string(id);
-  global_root->setAttribute("_id", ++id);
-
-  (*context)["x" + str] = x;
-  element->setAttribute("x", "x" + str);
-  (*context)["y" + str] = y;
-  element->setAttribute("y", "y" + str);
 }
 
 static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -9828,6 +9820,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
     }
   else
     {
+      /* TODO: Plotting a barplot with errorbars results in the condition being false (since the children aren`t empty)
+       * on the first run unless `_update_required` is set. Is this the wanted behavior? */
       if (!automatic_update || element->children().empty() ||
           (automatic_update && static_cast<int>(element->getAttribute("_update_required"))))
         {

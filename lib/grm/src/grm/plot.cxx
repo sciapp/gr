@@ -1887,7 +1887,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
   char *orientation;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : active_figure->lastChildElement();
-  gr_savestate();
 
   /* Push attributes on the subplot level to the tree */
   auto context = global_render->getContext();
@@ -1936,6 +1935,8 @@ err_t plot_barplot(grm_args_t *subplot_args)
 
       auto subGroup = global_render->createSeries("barplot");
       group->append(subGroup);
+      /* Added because otherwise the series is not being processed when having errorbars */
+      subGroup->setAttribute("_update_required", true);
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string id_str = std::to_string(id);
 
@@ -2111,51 +2112,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
 
       cleanup_and_set_error_if(y != nullptr && inner_series != nullptr, ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
 
-      /* Errorbars */
-      if (grm_args_contains(*current_series, "error"))
-        {
-          grm_args_t **curr_series;
-          grm_args_values(subplot_args, "series", "A", &curr_series);
-          double x_min, x1, x2, wfac;
-          if (*curr_series != nullptr)
-            {
-              double *bar_centers;
-              double *x, *err_x;
-              unsigned int x_length;
-              grm_args_first_value(*curr_series, "x", "D", &x, &x_length);
-              bar_centers = static_cast<double *>(malloc(x_length * sizeof(double)));
-              cleanup_and_set_error_if(bar_centers == nullptr, ERROR_MALLOC);
-              if (strcmp(style, "default") == 0)
-                {
-                  linspace(x_min + 1, x_length, x_length, bar_centers);
-                }
-              else if (strcmp(style, "lined") == 0)
-                {
-                  for (i = 0; i < y_length; i++)
-                    {
-                      bar_width = wfac / y_length;
-                      x1 = x_min + series_index + 1 - 0.5 * wfac + bar_width * i;
-                      x2 = x_min + series_index + 1 - 0.5 * wfac + bar_width + bar_width * i;
-                      bar_centers[i] = (x1 + x2) / 2.0;
-                    }
-                  x_length = y_length;
-                }
-              else
-                {
-                  for (i = 0; i < y_length; i++)
-                    {
-                      x1 = x_min + series_index + 1 - 0.5 * bar_width;
-                      x2 = x_min + series_index + 1 + 0.5 * bar_width;
-                      bar_centers[i] = (x1 + x2) / 2.0;
-                    }
-                  x_length = y_length;
-                }
-              error = plot_draw_errorbars(*current_series, x_length);
-              cleanup_if_error;
-              free(bar_centers);
-              bar_centers = nullptr;
-            }
-        }
+      error = plot_draw_errorbars(*current_series, y_length);
 
       ++series_index;
       ++current_series;
