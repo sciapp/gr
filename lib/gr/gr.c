@@ -15,7 +15,9 @@
 #include <math.h>
 #include <float.h>
 #ifdef _MSC_VER
+#include <BaseTsd.h>
 typedef __int64 int64_t;
+typedef SSIZE_T ssize_t;
 #else
 #include <stdint.h>
 #endif
@@ -179,6 +181,13 @@ typedef struct
 
 typedef struct
 {
+  state_list **buf;
+  size_t capacity;
+  ssize_t max_non_null_id;
+} state_list_vector;
+
+typedef struct
+{
   int a, b, c;
   double sp;
 } triangle_with_distance;
@@ -277,11 +286,12 @@ static int predef_colors[20] = {9, 2, 0, 1, 16, 3, 15, 8, 6, 10, 11, 4, 12, 13, 
 
 #define MAX_SAVESTATE 16
 
-static state_list *state = NULL;
+static state_list_vector *app_context = NULL;
 
-#define MAX_CONTEXT 8
+static state_list *ctx = NULL, *state = NULL;
 
-static state_list *ctx, *app_context[MAX_CONTEXT] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+#define MAX_CONTEXT 8192
+#define CONTEXT_VECTOR_INCREMENT 8
 
 static void (*previous_handler)(int);
 
@@ -12170,11 +12180,34 @@ void gr_selectcontext(int context)
 
   if (context >= 1 && context <= MAX_CONTEXT)
     {
-      id = context - 1;
-      if (app_context[id] == NULL)
+      if (app_context == NULL)
         {
-          app_context[id] = (state_list *)xmalloc(sizeof(state_list));
-          ctx = app_context[id];
+          int i;
+          app_context = (state_list_vector *)xmalloc(sizeof(state_list_vector));
+          app_context->max_non_null_id = -1;
+          app_context->capacity = max(CONTEXT_VECTOR_INCREMENT, context);
+          app_context->buf = (state_list **)xmalloc(app_context->capacity * sizeof(state_list));
+          for (i = 0; i < app_context->capacity; ++i)
+            {
+              app_context->buf[i] = NULL;
+            }
+        }
+      else if (app_context->capacity < context)
+        {
+          int i = app_context->capacity;
+          app_context->capacity = max(app_context->capacity + CONTEXT_VECTOR_INCREMENT, context);
+          app_context->buf = (state_list **)xrealloc(app_context->buf, app_context->capacity * sizeof(state_list));
+          for (; i < app_context->capacity; ++i)
+            {
+              app_context->buf[i] = NULL;
+            }
+        }
+      id = context - 1;
+      if (app_context->buf[id] == NULL)
+        {
+          app_context->buf[id] = (state_list *)xmalloc(sizeof(state_list));
+          app_context->max_non_null_id = max(app_context->max_non_null_id, id);
+          ctx = app_context->buf[id];
 
           ctx->ltype = GKS_K_LINETYPE_SOLID;
           ctx->lwidth = 1;
@@ -12212,7 +12245,7 @@ void gr_selectcontext(int context)
         }
       else
         {
-          ctx = app_context[id];
+          ctx = app_context->buf[id];
         }
 
       gks_set_pline_linetype(ctx->ltype);
@@ -12257,12 +12290,37 @@ void gr_destroycontext(int context)
 
   check_autoinit;
 
-  if (context >= 1 && context <= MAX_CONTEXT)
+  if (context >= 1 && context <= app_context->capacity)
     {
       id = context - 1;
-      if (app_context[id] != NULL) free(app_context[id]);
-
-      app_context[id] = NULL;
+      if (app_context->buf[id] != NULL)
+        {
+          free(app_context->buf[id]);
+          if (ctx == app_context->buf[id])
+            {
+              ctx = NULL;
+            }
+          app_context->buf[id] = NULL;
+          if (id == app_context->max_non_null_id)
+            {
+              while (app_context->max_non_null_id >= 0 && app_context->buf[app_context->max_non_null_id] == NULL)
+                {
+                  --(app_context->max_non_null_id);
+                }
+              if (app_context->max_non_null_id < 0)
+                {
+                  free(app_context->buf);
+                  free(app_context);
+                  app_context = NULL;
+                  ctx = NULL;
+                }
+              else if (app_context->capacity - app_context->max_non_null_id - 1 >= CONTEXT_VECTOR_INCREMENT)
+                {
+                  app_context->capacity = ((size_t)ceil((double)app_context->capacity / CONTEXT_VECTOR_INCREMENT)) *
+                                          CONTEXT_VECTOR_INCREMENT;
+                }
+            }
+        }
     }
   else
     {
