@@ -3,6 +3,8 @@
 #include <grm/dom_render/graphics_tree/util.hxx>
 #include <grm/dom_render/graphics_tree/HierarchyRequestError.hxx>
 #include <iterator>
+#include <grm/utilcpp_int.hxx>
+#include <grm/dom_render/graphics_tree/TypeError.hxx>
 
 GRM::Element::Element(std::string local_name, const std::shared_ptr<GRM::Document> &owner_document)
     : GRM::Node(GRM::Node::Type::ELEMENT_NODE, owner_document), m_local_name(tolower(std::move(local_name)))
@@ -53,7 +55,22 @@ GRM::Value GRM::Element::getAttribute(const std::string &qualifiedName) const
 
 void GRM::Element::setAttribute(const std::string &qualifiedName, const GRM::Value &value)
 {
+  void (*render)() = nullptr;
+  void (*update)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &) = nullptr;
+  ownerDocument()->getUpdateFct(&render, &update);
+  GRM::Value old_value;
+  if (hasAttribute(qualifiedName)) old_value = this->m_attributes[qualifiedName];
+
   this->m_attributes[qualifiedName] = value;
+  if (value != old_value && starts_with(this->localName(), "series"))
+    {
+      auto elem_p = std::static_pointer_cast<Element>(shared_from_this());
+      update(elem_p, qualifiedName, static_cast<std::string>(old_value));
+    }
+  if (value != old_value && starts_with(this->localName(), "series"))
+    {
+      render();
+    }
 }
 
 void GRM::Element::setAttribute(const std::string &qualifiedName, const std::string &value)
@@ -73,7 +90,12 @@ void GRM::Element::setAttribute(const std::string &qualifiedName, const int &val
 
 void GRM::Element::removeAttribute(const std::string &qualifiedName)
 {
+  //  void (* render)() = nullptr;
+  //  void (* update)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &) = nullptr;
+  //  ownerDocument()->getUpdateFct(render, update);
+  //    update(static_cast<const std::shared_ptr<Element>>(this), qualifiedName, "");
   this->m_attributes.erase(qualifiedName);
+  //  render();
 }
 
 bool GRM::Element::toggleAttribute(const std::string &qualifiedName)

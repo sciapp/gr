@@ -4798,6 +4798,7 @@ int grm_plot(const grm_args_t *args)
       global_render = GRM::Render::createRender();
       global_root = global_render->createElement("root");
       global_render->replaceChildren(global_root);
+      global_render->setAutoUpdate(false);
       global_root->setAttribute("_id", 0);
       active_figure = global_render->createElement("figure");
       global_root->append(active_figure);
@@ -4908,8 +4909,8 @@ int grm_plot(const grm_args_t *args)
         }
 
       plot_post_plot(active_plot_args);
-      global_render->setAutoUpdate(true);
       global_render->render();
+      global_render->setAutoUpdate(true);
     }
 
   process_events();

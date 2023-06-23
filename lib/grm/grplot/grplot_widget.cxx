@@ -455,8 +455,8 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
 
           for (const auto &cur_attr_name : current_selection->get_ref()->getAttributeNames())
             {
-              if (cur_attr_name == "bbox_id" || cur_attr_name == "bbox_xmin" || cur_attr_name == "bbox_xmax" ||
-                  cur_attr_name == "bbox_ymin" || cur_attr_name == "bbox_ymax")
+              if (cur_attr_name == "_bbox_id" || cur_attr_name == "_bbox_xmin" || cur_attr_name == "_bbox_xmax" ||
+                  cur_attr_name == "_bbox_ymin" || cur_attr_name == "_bbox_ymax")
                 {
                   continue;
                 }
@@ -1074,13 +1074,13 @@ void GRPlotWidget::extract_bounding_boxes_from_grm(QPainter &painter)
     {
       painter.setPen(QPen(QColor(255, 0, 0, 100)));
 
-      for (const auto &cur_child : global_root->querySelectorsAll("[bbox_id]"))
+      for (const auto &cur_child : global_root->querySelectorsAll("[_bbox_id]"))
         {
-          id = static_cast<int>(cur_child->getAttribute("bbox_id"));
-          xmin = static_cast<double>(cur_child->getAttribute("bbox_xmin"));
-          xmax = static_cast<double>(cur_child->getAttribute("bbox_xmax"));
-          ymin = static_cast<double>(cur_child->getAttribute("bbox_ymin"));
-          ymax = static_cast<double>(cur_child->getAttribute("bbox_ymax"));
+          id = static_cast<int>(cur_child->getAttribute("_bbox_id"));
+          xmin = static_cast<double>(cur_child->getAttribute("_bbox_xmin"));
+          xmax = static_cast<double>(cur_child->getAttribute("_bbox_xmax"));
+          ymin = static_cast<double>(cur_child->getAttribute("_bbox_ymin"));
+          ymax = static_cast<double>(cur_child->getAttribute("_bbox_ymax"));
 
           if (xmin == DBL_MAX || xmax == -DBL_MAX || ymin == DBL_MAX || ymax == -DBL_MAX)
             {

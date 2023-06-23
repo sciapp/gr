@@ -118,6 +118,9 @@ private:
   int no_currently_allocated_gr_contexts = 0;
 };
 
+EXPORT void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::string &attr,
+                         const std::string &value);
+EXPORT void renderCaller();
 namespace GRM
 {
 

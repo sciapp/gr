@@ -5,6 +5,8 @@
 #include <grm/dom_render/graphics_tree/HierarchyRequestError.hxx>
 #include <grm/dom_render/graphics_tree/NotSupportedError.hxx>
 
+static void (*render)() = nullptr;
+static void (*update)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &) = nullptr;
 GRM::Document::Document() : GRM::Node(GRM::Node::Type::DOCUMENT_NODE, nullptr) {}
 
 std::string GRM::Document::nodeName() const
@@ -230,4 +232,18 @@ std::shared_ptr<const GRM::Element> GRM::Document::querySelectors(const std::str
 {
   std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> match_map;
   return querySelectors_impl(parseSelectors(selectors), match_map);
+}
+
+void GRM::Document::setUpdateFct(void (*ren)(), void (*upt)(const std::shared_ptr<GRM::Element> &, const std::string &,
+                                                            const std::string &))
+{
+  render = ren;
+  update = upt;
+}
+
+void GRM::Document::getUpdateFct(void (**ren)(), void (**upt)(const std::shared_ptr<GRM::Element> &,
+                                                              const std::string &, const std::string &))
+{
+  *ren = render;
+  *upt = update;
 }

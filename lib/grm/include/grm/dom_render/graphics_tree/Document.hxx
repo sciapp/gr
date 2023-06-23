@@ -86,6 +86,11 @@ public:
   // virtual functions
   std::string nodeName() const override;
 
+  void setUpdateFct(void (*ren)(),
+                    void (*upt)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &));
+  void getUpdateFct(void (**ren)(),
+                    void (**upt)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &));
+
 protected:
   Document();
 

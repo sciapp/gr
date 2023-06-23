@@ -1248,11 +1248,14 @@ void receiverfunction(int id, double x_min, double x_max, double y_min, double y
 {
   if (!(x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX))
     {
-      bounding_map[id]->setAttribute("bbox_id", id);
-      bounding_map[id]->setAttribute("bbox_xmin", x_min);
-      bounding_map[id]->setAttribute("bbox_xmax", x_max);
-      bounding_map[id]->setAttribute("bbox_ymin", y_min);
-      bounding_map[id]->setAttribute("bbox_ymax", y_max);
+      bool old_state = automatic_update;
+      automatic_update = false;
+      bounding_map[id]->setAttribute("_bbox_id", id);
+      bounding_map[id]->setAttribute("_bbox_xmin", x_min);
+      bounding_map[id]->setAttribute("_bbox_xmax", x_max);
+      bounding_map[id]->setAttribute("_bbox_ymin", y_min);
+      bounding_map[id]->setAttribute("_bbox_ymax", y_max);
+      automatic_update = old_state;
     }
 }
 
@@ -6036,6 +6039,44 @@ static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
   plot_parent->setAttribute("_clim_max", c_max);
 }
 
+static void histBins(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  int current_point_count;
+  double *tmp_bins;
+  std::vector<double> x, weights;
+  unsigned int num_bins = 0, num_weights;
+  if (!element->hasAttribute("x")) throw NotFoundError("Hist series is missing required attribute x-data.\n");
+  auto key = static_cast<std::string>(element->getAttribute("x"));
+  x = GRM::get<std::vector<double>>((*context)[key]);
+  current_point_count = x.size();
+
+  if (element->hasAttribute("nbins")) num_bins = static_cast<int>(element->getAttribute("nbins"));
+  if (element->hasAttribute("weights"))
+    {
+      auto weights_key = static_cast<std::string>(element->getAttribute("weights"));
+      weights = GRM::get<std::vector<double>>((*context)[weights_key]);
+      num_weights = weights.size();
+    }
+  if (!weights.empty() && current_point_count != num_weights)
+    throw std::length_error("For hist series the size of data and weights must be the same.\n");
+  if (num_bins <= 1)
+    {
+      num_bins = (int)(3.3 * log10(current_point_count) + 0.5) + 1;
+    }
+  auto bins = std::vector<double>(num_bins);
+  double *x_p = &(x[0]);
+  double *weights_p = (weights.empty()) ? nullptr : &(weights[0]);
+  tmp_bins = &(bins[0]);
+  bin_data(current_point_count, x_p, num_bins, tmp_bins, weights_p);
+  std::vector<double> tmp(tmp_bins, tmp_bins + num_bins);
+
+  int id = static_cast<int>(global_root->getAttribute("_id"));
+  std::string str = std::to_string(id);
+  (*context)["bins" + str] = tmp;
+  element->setAttribute("bins", "bins" + str);
+  global_root->setAttribute("_id", ++id);
+}
+
 static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
@@ -6102,6 +6143,7 @@ static void hist(const std::shared_ptr<GRM::Element> &element, const std::shared
       processColorReps(element);
     }
 
+  if (!element->hasAttribute("bins")) histBins(element, context);
   auto bins = static_cast<std::string>(element->getAttribute("bins"));
   bins_vec = GRM::get<std::vector<double>>((*context)[bins]);
   num_bins = bins_vec.size();
@@ -8447,6 +8489,7 @@ static void pie(const std::shared_ptr<GRM::Element> &element, const std::shared_
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+  // TODO: color_rgb_values not needed?
   unsigned int x_length;
   int color_index;
   double start_angle, middle_angle, end_angle;
@@ -9560,46 +9603,17 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                   is_horizontal = orientation == "horizontal";
                   if (!starts_with(series->localName(), "series")) continue;
                   double current_y_min = DBL_MAX, current_y_max = -DBL_MAX;
-                  double *tmp_bins;
-                  std::vector<double> x, weights;
-                  unsigned int num_bins = 0, num_weights;
-                  if (!series->hasAttribute("x"))
-                    throw NotFoundError("Hist series is missing required attribute x-data.\n");
-                  auto key = static_cast<std::string>(series->getAttribute("x"));
-                  x = GRM::get<std::vector<double>>((*context)[key]);
-                  current_point_count = x.size();
 
-                  if (series->hasAttribute("nbins")) num_bins = static_cast<int>(series->getAttribute("nbins"));
-                  if (series->hasAttribute("weights"))
-                    {
-                      auto weights_key = static_cast<std::string>(series->getAttribute("weights"));
-                      weights = GRM::get<std::vector<double>>((*context)[weights_key]);
-                      num_weights = weights.size();
-                    }
-                  if (!weights.empty() && current_point_count != num_weights)
-                    throw std::length_error("For hist series the size of data and weights must be the same.\n");
-                  if (num_bins <= 1)
-                    {
-                      num_bins = (int)(3.3 * log10(current_point_count) + 0.5) + 1;
-                    }
-                  bins = std::vector<double>(num_bins);
-                  double *x_p = &(x[0]);
-                  double *weights_p = (weights.empty()) ? nullptr : &(weights[0]);
-                  tmp_bins = &(bins[0]);
-                  bin_data(current_point_count, x_p, num_bins, tmp_bins, weights_p);
-                  std::vector<double> tmp(tmp_bins, tmp_bins + num_bins);
+                  if (!series->hasAttribute("bins")) histBins(series, context);
+                  auto bins_key = static_cast<std::string>(series->getAttribute("bins"));
+                  bins = GRM::get<std::vector<double>>((*context)[bins_key]);
+                  int num_bins = size(bins);
 
                   for (i = 0; i < num_bins; i++)
                     {
                       current_y_min = grm_min(current_y_min, bins[i]);
                       current_y_max = grm_max(current_y_max, bins[i]);
                     }
-
-                  int id = static_cast<int>(global_root->getAttribute("_id"));
-                  std::string str = std::to_string(id);
-                  (*context)["bins" + str] = tmp;
-                  series->setAttribute("bins", "bins" + str);
-                  global_root->setAttribute("_id", ++id);
 
                   y_min = grm_min(current_y_min, y_min);
                   y_max = grm_max(current_y_max, y_max);
@@ -9820,10 +9834,16 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
     }
   else
     {
-      /* TODO: Plotting a barplot with errorbars results in the condition being false (since the children aren`t empty)
-       * on the first run unless `_update_required` is set. Is this the wanted behavior? */
-      if (!automatic_update || element->children().empty() ||
-          (automatic_update && static_cast<int>(element->getAttribute("_update_required"))))
+      // TODO: something like contour shouldnt be in this list
+      if (!automatic_update ||
+          str_equals_any(element->localName().c_str(), 25, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
+                         "drawimage", "drawrect", "errorbars", "fillarc", "fillarea", "fillrect", "grid", "grid3d",
+                         "legend", "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
+                         "polyline3d", "polymarker", "polymarker3d", "series_contour", "series_contourf", "text",
+                         "titles3d") ||
+          element->hasAttribute("calc_window_and_viewport_from_parent") || !element->hasChildNodes() ||
+          (automatic_update && element->hasAttribute("_update_required") &&
+           static_cast<int>(element->getAttribute("_update_required"))))
         {
           // elements without children are the draw-functions which need to be processed everytime, else there could be
           // problems with overlapping elements
@@ -10018,6 +10038,7 @@ static void applyRootDefaults(std::shared_ptr<GRM::Element> root)
 {
   if (!root->hasAttribute("clearws")) root->setAttribute("clearws", PLOT_DEFAULT_CLEAR);
   if (!root->hasAttribute("updatews")) root->setAttribute("updatews", PLOT_DEFAULT_UPDATE);
+  if (!root->hasAttribute("_modified")) root->setAttribute("_modified", false);
 
   for (const auto &figure : root->children())
     {
@@ -10109,6 +10130,7 @@ void GRM::Render::render(const std::shared_ptr<GRM::Document> &document,
    * \param[in] extContext A GRM::Context
    */
   auto root = document->firstChildElement();
+  global_root->setAttribute("_modified", false);
   if (root->hasChildNodes())
     {
       for (const auto &child : root->children())
@@ -10129,6 +10151,7 @@ void GRM::Render::render(std::shared_ptr<GRM::Document> const &document)
    * \param[in] document A GRM::Document that will be rendered
    */
   auto root = document->firstChildElement();
+  global_root->setAttribute("_modified", false);
   if (root->hasChildNodes())
     {
       for (const auto &child : root->children())
@@ -10149,6 +10172,7 @@ void GRM::Render::render(const std::shared_ptr<GRM::Context> &extContext)
    * \param[in] extContext A GRM::Context
    */
   auto root = this->firstChildElement();
+  global_root->setAttribute("_modified", false);
   if (root->hasChildNodes())
     {
       for (const auto &child : root->children())
@@ -10180,7 +10204,10 @@ void GRM::Render::render()
   if (static_cast<int>(root->getAttribute("clearws"))) gr_clearws();
   renderHelper(root, this->context);
   renderZQueue(this->context);
+  bool old_state = automatic_update;
+  automatic_update = false;
   global_root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
+  automatic_update = old_state;
   if (static_cast<int>(root->getAttribute("updatews"))) gr_updatews();
   std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' ')}) << "\n";
 }
@@ -10191,6 +10218,7 @@ std::shared_ptr<GRM::Render> GRM::Render::createRender()
    * This function can be used to create a Render object
    */
   auto render = std::shared_ptr<Render>(new Render());
+  render->ownerDocument()->setUpdateFct(&renderCaller, &updateFilter);
   return render;
 }
 
@@ -10673,6 +10701,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createSeries(const std::string &name)
 {
   auto element = createElement("series_" + name);
   element->setAttribute("kind", name);
+  element->setAttribute("_update_required", false);
   return element;
 }
 
@@ -10862,6 +10891,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createColorbar(unsigned int colors,
 
   auto element = createElement("colorbar");
   element->setAttribute("colors", static_cast<int>(colors));
+  element->setAttribute("_update_required", false);
 
   return element;
 }
@@ -12110,4 +12140,389 @@ void GRM::Render::setAutoUpdate(bool update)
 void GRM::Render::getAutoUpdate(bool *update)
 {
   update = &automatic_update;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ filter functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::string &attr, const std::string &value = "")
+{
+  std::vector<std::string> series_barplot{
+      "bar_color",      "bar_width",      "c",       "clipxform",    "edge_color",  "ind_bar_color",
+      "ind_edge_color", "ind_edge_width", "indices", "inner_series", "orientation", "rgb",
+      "style",          "width",          "y",       "ylabels",
+  };
+  std::vector<std::string> series_contour{
+      "levels", "px", "py", "pz", "x", "y", "z",
+  };
+  std::vector<std::string> series_contourf = series_contour;
+  std::vector<std::string> series_heatmap{
+      "x", "y", "z", "zrange_max", "zrange_min",
+  };
+  std::vector<std::string> series_hexbin{
+      "nbins",
+      "x",
+      "y",
+  };
+  std::vector<std::string> series_hist{
+      "bar_color_index", "bar_color_rgb", "bins", "edge_color_index", "edge_color_rgb", "orientation",
+  };
+  std::vector<std::string> series_imshow{
+      "c", "cdims", "img_data_key", "x", "y", "z",
+  };
+  std::vector<std::string> series_isosurface{
+      "ambient", "c", "c_dims", "diffuse", "foreground_color", "isovalue", "specular", "specular_power",
+  };
+  std::vector<std::string> series_line{
+      "orientation",
+      "spec",
+      "x",
+      "y",
+  };
+  std::vector<std::string> series_marginalheatmap{
+      "algorithm", "gr_option_flip_x", "gr_option_flip_y", "marginalheatmap_kind", "x", "y", "z",
+  };
+  std::vector<std::string> series_nonuniformheatmap = series_heatmap;
+  std::vector<std::string> series_nonuniformpolar_heatmap{
+      "x", "y", "z", "zrange_max", "zrange_min",
+  };
+  std::vector<std::string> series_pie{
+      "color_indices",
+      "x",
+  };
+  std::vector<std::string> series_plot3{
+      "x",
+      "y",
+      "z",
+  };
+  std::vector<std::string> series_polar{
+      "r_max", "r_min", "spec", "x", "y",
+  };
+  std::vector<std::string> series_polar_heatmap = series_nonuniformpolar_heatmap;
+  std::vector<std::string> series_polar_histogram{
+      "bin_counts", "bin_edges",  "bin_width", "bin_widths",    "classes",   "draw_edges", "edge_color",
+      "face_alpha", "face_color", "nbins",     "normalization", "r_max",     "r_min",      "stairs",
+      "theta",      "tick",       "total",     "transparency",  "xcolormap", "ycolormap",
+  };
+  std::vector<std::string> series_quiver{
+      "color", "u", "v", "x", "y",
+  };
+  std::vector<std::string> series_scatter{
+      "c", "c_index", "orientation", "x", "y", "z",
+  };
+  std::vector<std::string> series_scatter3{
+      "c",
+      "x",
+      "y",
+      "z",
+  };
+  std::vector<std::string> series_shade{
+      "x", "xbins", "xform", "y", "ybins",
+  };
+  std::vector<std::string> series_stairs{
+      "orientation", "step_where", "x", "y", "z",
+  };
+  std::vector<std::string> series_stem{
+      "orientation",
+      "x",
+      "y",
+      "yrange_min",
+  };
+  std::vector<std::string> series_surface{
+      "accelerate",
+      "x",
+      "y",
+      "z",
+  };
+  std::vector<std::string> series_tricontour{
+      "levels",
+      "x",
+      "y",
+      "z",
+  };
+  std::vector<std::string> series_trisurface{
+      "x",
+      "y",
+      "z",
+  };
+  std::vector<std::string> series_volume{
+      "c", "c_dims", "dmax", "dmin", "x", "y", "z",
+  };
+  std::vector<std::string> series_wireframe{
+      "x",
+      "y",
+      "z",
+  };
+  std::map<std::string, std::vector<std::string>> element_names{
+      {std::string("series_barplot"), series_barplot},
+      {std::string("series_contour"), series_contour},
+      {std::string("series_contourf"), series_contourf},
+      {std::string("series_heatmap"), series_heatmap},
+      {std::string("series_hexbin"), series_hexbin},
+      {std::string("series_hist"), series_hist},
+      {std::string("series_imshow"), series_imshow},
+      {std::string("series_isosurface"), series_isosurface},
+      {std::string("series_line"), series_line},
+      {std::string("series_marginalheatmap"), series_marginalheatmap},
+      {std::string("series_nonuniformheatmap"), series_nonuniformheatmap},
+      {std::string("series_nonuniformpolar_heatmap"), series_nonuniformpolar_heatmap},
+      {std::string("series_pie"), series_pie},
+      {std::string("series_plot3"), series_plot3},
+      {std::string("series_polar"), series_polar},
+      {std::string("series_polar_heatmap"), series_polar_heatmap},
+      {std::string("series_polar_histogram"), series_polar_histogram},
+      {std::string("series_quiver"), series_quiver},
+      {std::string("series_scatter"), series_scatter},
+      {std::string("series_scatter3"), series_scatter3},
+      {std::string("series_shade"), series_shade},
+      {std::string("series_stairs"), series_stairs},
+      {std::string("series_stem"), series_stem},
+      {std::string("series_surface"), series_surface},
+      {std::string("series_tricontour"), series_tricontour},
+      {std::string("series_trisurface"), series_trisurface},
+      {std::string("series_volume"), series_volume},
+      {std::string("series_wireframe"), series_wireframe},
+  };
+  // TODO: critical update in plot means critical update inside childs
+
+  // only do updates when there is a change made
+  if (automatic_update)
+    {
+      automatic_update = false;
+      if (attr == "kind")
+        {
+          // special case for kind attributes to support switching the kind of a plot
+          std::vector<std::string> line_group = {"line", "scatter"};
+          std::vector<std::string> heatmap_group = {"contour",         "contourf", "heatmap",  "imshow",
+                                                    "marginalheatmap", "surface",  "wireframe"};
+          std::vector<std::string> isosurface_group = {"isosurface", "volume"};
+          std::vector<std::string> plot3_group = {"plot3", "scatter", "scatter3", "tricont", "trisurf"};
+          std::vector<std::string> barplot_group = {"barplot", "hist", "stem", "stairs"};
+          std::vector<std::string> hexbin_group = {"hexbin", "shade"};
+          if (std::find(line_group.begin(), line_group.end(), value) != line_group.end() &&
+              std::find(line_group.begin(), line_group.end(),
+                        static_cast<std::string>(element->getAttribute("kind"))) != line_group.end())
+            {
+              auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
+              element->parentElement()->append(new_series);
+              new_series->setAttribute("x", element->getAttribute("x"));
+              new_series->setAttribute("y", element->getAttribute("y"));
+              for (const auto &child : element->children())
+                {
+                  if (child->localName() == "errorbars") new_series->append(child);
+                  child->remove();
+                }
+              element->remove();
+              new_series->setAttribute("_update_required", true);
+            }
+          else if (std::find(heatmap_group.begin(), heatmap_group.end(), value) != heatmap_group.end() &&
+                   std::find(heatmap_group.begin(), heatmap_group.end(),
+                             static_cast<std::string>(element->getAttribute("kind"))) != heatmap_group.end())
+            {
+              auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
+              element->parentElement()->append(new_series);
+              new_series->setAttribute("x", element->getAttribute("x"));
+              new_series->setAttribute("y", element->getAttribute("y"));
+              if (static_cast<std::string>(element->getAttribute("kind")) == "imshow")
+                {
+                  new_series->setAttribute("c", element->getAttribute("z"));
+
+                  auto context = global_render->getContext();
+                  int id = static_cast<int>(global_root->getAttribute("_id"));
+                  std::string str = std::to_string(id);
+                  auto x = static_cast<std::string>(element->getAttribute("x"));
+                  auto x_vec = GRM::get<std::vector<double>>((*context)[x]);
+                  int x_length = x_vec.size();
+                  auto y = static_cast<std::string>(element->getAttribute("y"));
+                  auto y_vec = GRM::get<std::vector<double>>((*context)[y]);
+                  int y_length = y_vec.size();
+                  std::vector<int> cdims_vec = {y_length, x_length};
+                  (*context)["cdims" + str] = cdims_vec;
+                  new_series->setAttribute("cdims", "cdims" + str);
+                  global_root->setAttribute("_id", id++);
+                }
+              else if (value == "imshow")
+                {
+                  new_series->setAttribute("z", element->getAttribute("c"));
+                }
+              else
+                {
+                  new_series->setAttribute("z", element->getAttribute("z"));
+                }
+              for (const auto &child : element->children())
+                {
+                  child->remove();
+                }
+              element->remove();
+              new_series->setAttribute("_update_required", true);
+            }
+          else if (std::find(isosurface_group.begin(), isosurface_group.end(), value) != isosurface_group.end() &&
+                   std::find(isosurface_group.begin(), isosurface_group.end(),
+                             static_cast<std::string>(element->getAttribute("kind"))) != isosurface_group.end())
+            {
+              auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
+              element->parentElement()->append(new_series);
+              new_series->setAttribute("c", element->getAttribute("c"));
+              new_series->setAttribute("c_dims", element->getAttribute("c_dims"));
+              for (const auto &child : element->children())
+                {
+                  child->remove();
+                }
+              element->remove();
+              new_series->setAttribute("_update_required", true);
+            }
+          else if (std::find(plot3_group.begin(), plot3_group.end(), value) != plot3_group.end() &&
+                   std::find(plot3_group.begin(), plot3_group.end(),
+                             static_cast<std::string>(element->getAttribute("kind"))) != plot3_group.end())
+            {
+              auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
+              element->parentElement()->append(new_series);
+              new_series->setAttribute("x", element->getAttribute("x"));
+              new_series->setAttribute("y", element->getAttribute("y"));
+              new_series->setAttribute("z", element->getAttribute("z"));
+              for (const auto &child : element->children())
+                {
+                  child->remove();
+                }
+              element->remove();
+              new_series->setAttribute("_update_required", true);
+            }
+          else if (std::find(barplot_group.begin(), barplot_group.end(), value) != barplot_group.end() &&
+                   std::find(barplot_group.begin(), barplot_group.end(),
+                             static_cast<std::string>(element->getAttribute("kind"))) != barplot_group.end())
+            {
+              auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
+              element->parentElement()->append(new_series);
+              new_series->setAttribute("x", element->getAttribute("x"));
+
+              if (static_cast<std::string>(element->getAttribute("kind")) == "barplot" ||
+                  static_cast<std::string>(element->getAttribute("kind")) == "stem")
+                {
+                  if (value == "hist")
+                    {
+                      new_series->setAttribute("y", element->getAttribute("weights"));
+                    }
+                  else if (value == "stairs")
+                    {
+                      new_series->setAttribute("y", element->getAttribute("z"));
+                    }
+                  else
+                    {
+                      new_series->setAttribute("y", element->getAttribute("y"));
+                    }
+                }
+              else if (static_cast<std::string>(element->getAttribute("kind")) == "hist")
+                {
+                  if (value == "stairs")
+                    {
+                      new_series->setAttribute("weights", element->getAttribute("z"));
+                    }
+                  else
+                    {
+                      new_series->setAttribute("weights", element->getAttribute("y"));
+                    }
+                }
+              else
+                {
+                  if (value == "hist")
+                    {
+                      new_series->setAttribute("z", element->getAttribute("weights"));
+                    }
+                  else
+                    {
+                      new_series->setAttribute("z", element->getAttribute("y"));
+                    }
+                }
+
+              for (const auto &child : element->children())
+                {
+                  if (child->localName() == "errorbars") new_series->append(child);
+                  child->remove();
+                }
+              element->remove();
+              new_series->setAttribute("_update_required", true);
+            }
+          else if (std::find(hexbin_group.begin(), hexbin_group.end(), value) != hexbin_group.end() &&
+                   std::find(hexbin_group.begin(), hexbin_group.end(),
+                             static_cast<std::string>(element->getAttribute("kind"))) != hexbin_group.end())
+            {
+              auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
+              element->parentElement()->append(new_series);
+              new_series->setAttribute("x", element->getAttribute("x"));
+              new_series->setAttribute("y", element->getAttribute("y"));
+              for (const auto &child : element->children())
+                {
+                  child->remove();
+                }
+              element->remove();
+              new_series->setAttribute("_update_required", true);
+            }
+          else
+            {
+              element->setAttribute("kind", value);
+              fprintf(stderr, "Update kind %s to %s is not possible\n",
+                      static_cast<std::string>(element->getAttribute("kind")).c_str(), value.c_str());
+            }
+        }
+      else
+        {
+          if (auto search = element_names.find(element->localName()); search != element_names.end())
+            {
+              // attributes which causes a critical update
+              if (std::find(search->second.begin(), search->second.end(), attr) != search->second.end())
+                {
+                  element->setAttribute("_update_required", true);
+                }
+            }
+          else if (starts_with(element->localName(), "series"))
+            {
+              // conditional critical attributes
+              auto kind = static_cast<std::string>(element->getAttribute("kind"));
+              if (kind == "heatmap" || kind == "polar_heatmap")
+                {
+                  if (element->hasAttribute("crange_max") && element->hasAttribute("crange_min"))
+                    {
+                      if (attr == "crange_max" || attr == "crange_min") element->setAttribute("_update_required", true);
+                    }
+                }
+              if (kind == "heatmap" || kind == "surface" || kind == "polar_heatmap")
+                {
+                  if (!element->hasAttribute("x") && !element->hasAttribute("y"))
+                    {
+                      if (attr == "zdims_max" || attr == "zdims_min") element->setAttribute("_update_required", true);
+                    }
+                  if (!element->hasAttribute("x"))
+                    {
+                      if (attr == "xrange_max" || attr == "xrange_min") element->setAttribute("_update_required", true);
+                    }
+                  if (!element->hasAttribute("y"))
+                    {
+                      if (attr == "yrange_max" || attr == "yrange_min") element->setAttribute("_update_required", true);
+                    }
+                }
+              else if (kind == "marginalheatmap" && (attr == "xind" || attr == "yind"))
+                {
+                  auto xind = static_cast<int>(element->getAttribute("xind"));
+                  auto yind = static_cast<int>(element->getAttribute("yind"));
+                  if (attr == "xind" && yind != -1) element->setAttribute("_update_required", true);
+                  if (attr == "yind" && xind != -1) element->setAttribute("_update_required", true);
+                }
+            }
+        }
+      global_root->setAttribute("_modified", true);
+
+      automatic_update = true;
+    }
+}
+
+void renderCaller()
+{
+  if (global_root && static_cast<int>(global_root->getAttribute("_modified")))
+    {
+      renderHelper(global_root, global_render->getContext());
+      renderZQueue(global_render->getContext());
+      bool old_state = automatic_update;
+      automatic_update = false;
+      global_root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
+      automatic_update = old_state;
+    }
 }

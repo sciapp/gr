@@ -602,7 +602,6 @@
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="heatmap"/>
             <xs:attributeGroup ref="ranges"/>
-            <xs:attribute name="nbins" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -650,8 +649,6 @@
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="c" type="xs:string" use="required"/>
-            <xs:attribute name="c_max" type="xs:string"/>
-            <xs:attribute name="c_min" type="xs:string"/>
             <xs:attribute name="cdims" type="xs:string" use="required"/>
             <xs:attribute name="img_data_key" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string"/>
@@ -814,7 +811,6 @@
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
-            <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="bin_counts" type="xs:string"/>
             <xs:attribute name="bin_edges" type="xs:string"/>
             <xs:attribute name="bin_width" type="xs:string"/>
@@ -1127,8 +1123,6 @@
     <xs:attributeGroup name="scatter">
         <xs:attribute name="c" type="xs:string"/>
         <xs:attribute name="c_index" type="xs:string"/>
-        <xs:attribute name="c_min" type="xs:string"/>
-        <xs:attribute name="c_max" type="xs:string"/>
         <xs:attribute name="kind" type="xs:string"/>
         <xs:attribute name="markercolorinds" type="xs:string"/>
         <xs:attribute name="markertype" type="xs:string"/>
