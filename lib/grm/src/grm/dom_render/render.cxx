@@ -33,13 +33,12 @@
 #include "grm/plot_int.h"
 #include <cm.h>
 #include "grm/utilcpp_int.hxx"
-extern "C" {
-#include "grm/datatype/string_map_int.h"
-}
-
 #include "grm/dom_render/ManageZIndex.hxx"
 #include "grm/dom_render/Drawable.hxx"
 #include "grm/dom_render/ManageGRContextIds.hxx"
+extern "C" {
+#include "grm/datatype/string_map_int.h"
+}
 
 /* ------------------------- re-implementation of x_lin/x_log ------------------------------------------------------- */
 

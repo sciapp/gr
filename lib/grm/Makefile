@@ -33,6 +33,9 @@ UNAME := $(shell uname)
                src/grm/datatype/string_map.o \
                src/grm/datatype/uint_map.o \
                src/grm/dom_render/context.o \
+               src/grm/dom_render/Drawable.o \
+               src/grm/dom_render/ManageGRContextIds.o \
+               src/grm/dom_render/ManageZIndex.o \
                src/grm/dom_render/render.o \
                src/grm/dom_render/graphics_tree/Comment.o \
                src/grm/dom_render/graphics_tree/Document.o \
