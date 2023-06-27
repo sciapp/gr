@@ -9,9 +9,10 @@ public:
   void destroyGRContexts();
   int getUnusedGRContextId();
   void markIdAsUnused(int id);
+  void markAllIdsAsUnused();
 
 private:
-  std::queue<int, std::deque<int>> available_gr_context_ids = {};
+  std::queue<int> available_gr_context_ids = {};
   int no_currently_allocated_gr_contexts = 0;
 };
 

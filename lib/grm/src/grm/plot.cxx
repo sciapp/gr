@@ -4419,6 +4419,7 @@ void grm_finalize(void)
       grid_delete(global_grid);
       global_grid = nullptr;
     }
+  GRM::Render::finalize();
 }
 
 int grm_clear(void)

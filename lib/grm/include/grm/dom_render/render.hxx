@@ -419,11 +419,12 @@ public:
   void render(const std::shared_ptr<Document> &document);  // external doc and render context
   static void render(const std::shared_ptr<Document> &document,
                      const std::shared_ptr<Context> &extContext); // external doc and external context; could be static
-
+  static void finalize();
   std::shared_ptr<Context> getContext();
 
   static void processViewport(const std::shared_ptr<GRM::Element> &elem);
   static void processLimits(const std::shared_ptr<GRM::Element> &elem);
+  static void processAttributes(const std::shared_ptr<GRM::Element> &element);
   static std::vector<std::string> getDefaultAndTooltip(const std::shared_ptr<Element> &element,
                                                        std::string attributeName);
 

@@ -1,5 +1,6 @@
 #include "grm/dom_render/Drawable.hxx"
 #include "gr.h"
+#include "grm/dom_render/render.hxx"
 
 Drawable::Drawable(
     const std::shared_ptr<GRM::Element> element, const std::shared_ptr<GRM::Context> context, int grContextId,
@@ -7,12 +8,13 @@ Drawable::Drawable(
     std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> drawFunction)
     : grContextId(grContextId), element(element), context(context), drawFunction(drawFunction), zIndex(zIndex)
 {
-  gr_savestateincontext(grContextId);
+  ;
 }
 
 void Drawable::draw()
 {
   gr_selectcontext(grContextId);
+  GRM::Render::processAttributes(element);
   drawFunction(element, context);
 }
 

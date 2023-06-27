@@ -58,6 +58,7 @@ std::shared_ptr<GRM::Element> global_root;
 std::shared_ptr<GRM::Element> active_figure;
 std::shared_ptr<GRM::Render> global_render;
 std::priority_queue<std::shared_ptr<Drawable>, std::vector<std::shared_ptr<Drawable>>, CompareZIndex> z_queue;
+std::map<std::shared_ptr<GRM::Element>, int> parent_to_context;
 ManageGRContextIds grContextIDManager;
 ManageZIndex zIndexManager;
 
@@ -108,6 +109,41 @@ static std::set<std::string> parentTypes = {
     "series_wireframe",
 };
 
+static std::set<std::string> drawableTypes = {
+    "axes",
+    "axes3d",
+    "cellarray",
+    "legend",
+    "drawarc",
+    "drawgraphics",
+    "drawimage",
+    "drawrect",
+    "fillarc",
+    "fillarea",
+    "fillrect",
+    "gr3clear",
+    "gr3deletemesh",
+    "gr3drawimage",
+    "gr3drawmesh",
+    "grid",
+    "grid3d",
+    "isosurface_render",
+    "layout_grid",
+    "layout_gridelement",
+    "nonuniformcellarray",
+    "panzoom",
+    "polyline",
+    "polyline3d",
+    "polymarker",
+    "polymarker3d",
+    "text",
+    "titles3d",
+};
+
+static std::set<std::string> drawableKinds = {
+    "contour", "contourf", "hexbin", "isosurface", "quiver", "shade", "surface", "tricontour", "trisurface", "volume",
+};
+
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
     {"\"", 0.0254}, {"ft", 0.3048}, {"'", 0.0254}, {"pc", 0.0254 / 6.0}, {"pt", 0.0254 / 72.0},
@@ -135,6 +171,31 @@ static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},           {"hexbin",
 static string_map_t *fmt_map = string_map_new_with_data(array_size(kind_to_fmt), kind_to_fmt);
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static std::string getLocalName(const std::shared_ptr<GRM::Element> element)
+{
+  std::string local_name = element->localName();
+  if (starts_with(element->localName(), "series")) local_name = "series";
+  return local_name;
+}
+
+static bool isDrawable(const std::shared_ptr<GRM::Element> element)
+{
+  auto local_name = getLocalName(element);
+  if (drawableTypes.find(local_name) != drawableTypes.end())
+    {
+      return true;
+    }
+  if (local_name == "series")
+    {
+      auto kind = static_cast<std::string>(element->getAttribute("kind"));
+      if (drawableKinds.find(kind) != drawableKinds.end())
+        {
+          return true;
+        }
+    }
+  return false;
+}
 
 int getVolumeAlgorithm(const std::shared_ptr<GRM::Element> element)
 {
@@ -183,8 +244,20 @@ PushDrawableToZQueue::PushDrawableToZQueue(
 void PushDrawableToZQueue::operator()(const std::shared_ptr<GRM::Element> element,
                                       const std::shared_ptr<GRM::Context> context)
 {
-  auto drawable = std::shared_ptr<Drawable>(new Drawable(element, context, grContextIDManager.getUnusedGRContextId(),
-                                                         zIndexManager.getZIndex(), drawFunction));
+  auto parent = element->parentElement();
+  int contextID;
+  if (auto search = parent_to_context.find(parent); search != parent_to_context.end())
+    {
+      contextID = search->second;
+    }
+  else
+    {
+      contextID = grContextIDManager.getUnusedGRContextId();
+      gr_savestateincontext(contextID);
+      parent_to_context[parent] = contextID;
+    }
+  auto drawable =
+      std::shared_ptr<Drawable>(new Drawable(element, context, contextID, zIndexManager.getZIndex(), drawFunction));
   drawable->insertionIndex = z_queue.size();
   z_queue.push(drawable);
 }
@@ -3584,7 +3657,7 @@ static void processZIndex(const std::shared_ptr<GRM::Element> &element)
   zIndexManager.setZIndex(zIndex);
 }
 
-static void processAttributes(const std::shared_ptr<GRM::Element> &element)
+void GRM::Render::processAttributes(const std::shared_ptr<GRM::Element> &element)
 {
   /*!
    * processing function for all kinds of attributes
@@ -9822,13 +9895,14 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> element, const std
           {std::string("wireframe"), wireframe},
       };
 
-  try
+  auto kind = static_cast<std::string>(element->getAttribute("kind"));
+
+  if (auto search = seriesNameToFunc.find(kind); search != seriesNameToFunc.end())
     {
-      std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> f =
-          seriesNameToFunc[static_cast<std::string>(element->getAttribute("kind"))];
+      auto f = search->second;
       f(element, context);
     }
-  catch (std::bad_function_call &e)
+  else
     {
       fprintf(stderr,
               "Series is not in render implemented yet\n"); // todo: when all kinds are implemented here throw an error
@@ -9889,7 +9963,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
                      "labels_group", "root", "barplot_xtick"))
     {
       if (element->localName() == "plot") processPlot(element, context);
-      processAttributes(element);
+      GRM::Render::processAttributes(element);
     }
   else
     {
@@ -9906,16 +9980,20 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
         {
           // elements without children are the draw-functions which need to be processed everytime, else there could be
           // problems with overlapping elements
-          std::string local_name = element->localName();
-          if (starts_with(element->localName(), "series")) local_name = "series";
-          processAttributes(element);
-          try
+          std::string local_name = getLocalName(element);
+
+          /* The attributes of drawables are being processed when the z_queue is being processed */
+          if (!isDrawable(element))
             {
-              std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> f =
-                  elemStringToFunc[local_name];
+              GRM::Render::processAttributes(element);
+            }
+
+          if (auto search = elemStringToFunc.find(local_name); search != elemStringToFunc.end())
+            {
+              auto f = search->second;
               f(element, context);
             }
-          catch (std::bad_function_call &e)
+          else
             {
               throw NotFoundError("No dom render function found for element with local name: " + element->localName() +
                                   "\n");
@@ -9926,7 +10004,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
         }
       else if (automatic_update && static_cast<int>(global_root->getAttribute("_modified")))
         {
-          processAttributes(element);
+          GRM::Render::processAttributes(element);
         }
     }
 }
@@ -9979,9 +10057,8 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
     {
       auto drawable = z_queue.top();
       drawable->draw();
-      grContextIDManager.markIdAsUnused(drawable->getGrContextId());
     }
-  grContextIDManager.destroyGRContexts();
+  grContextIDManager.markAllIdsAsUnused();
   gr_restorestate();
 }
 
@@ -10237,6 +10314,11 @@ void GRM::Render::render()
   automatic_update = old_state;
   if (static_cast<int>(root->getAttribute("updatews"))) gr_updatews();
   std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' ')}) << "\n";
+}
+
+void GRM::Render::finalize()
+{
+  grContextIDManager.destroyGRContexts();
 }
 
 std::shared_ptr<GRM::Render> GRM::Render::createRender()

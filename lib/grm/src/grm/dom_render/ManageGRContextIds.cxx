@@ -35,3 +35,12 @@ void ManageGRContextIds::markIdAsUnused(int id)
       available_gr_context_ids.push(id);
     }
 }
+
+void ManageGRContextIds::markAllIdsAsUnused()
+{
+  available_gr_context_ids = {};
+  for (int id = 1; id <= no_currently_allocated_gr_contexts; ++id)
+    {
+      available_gr_context_ids.push(id);
+    }
+}
