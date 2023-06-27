@@ -1,7 +1,7 @@
 #ifndef GR_MANAGEGRCONTEXTIDS_HXX
 #define GR_MANAGEGRCONTEXTIDS_HXX
 
-#include "queue"
+#include <queue>
 
 class ManageGRContextIds
 {

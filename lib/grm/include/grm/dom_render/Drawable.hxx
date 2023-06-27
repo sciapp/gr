@@ -1,6 +1,7 @@
 #ifndef GR_DRAWABLE_HXX
 #define GR_DRAWABLE_HXX
 
+#include <functional>
 #include "grm/dom_render/graphics_tree/Element.hxx"
 #include "grm/dom_render/context.hxx"
 
