@@ -3829,6 +3829,22 @@ static void axes(const std::shared_ptr<GRM::Element> &element, const std::shared
   getTickSize(element, tick_size);
   tick_size *= tick_orientation;
 
+  gr_axes(x_tick, y_tick, x_org, y_org, x_major, y_major, tick_size);
+}
+
+static void processAxes(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  auto subplot_element = getSubplotElement(element);
+
+  if (element->hasAttribute("xlabel"))
+    {
+      processXlabel(element);
+    }
+  if (element->hasAttribute("ylabel"))
+    {
+      processYlabel(element);
+    }
+
   if (static_cast<std::string>(subplot_element->getAttribute("kind")) == "barplot")
     {
       // remove all old polylines
@@ -3844,7 +3860,8 @@ static void axes(const std::shared_ptr<GRM::Element> &element, const std::shared
         }
     }
 
-  gr_axes(x_tick, y_tick, x_org, y_org, x_major, y_major, tick_size);
+  auto pushAxesToZQueue = PushDrawableToZQueue(axes);
+  pushAxesToZQueue(element, context);
 }
 
 static void axes3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -3903,6 +3920,21 @@ static void axes3d(const std::shared_ptr<GRM::Element> &element, const std::shar
   tick_size *= tick_orientation;
 
   gr_axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major, tick_size);
+}
+
+static void processAxes3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  if (element->hasAttribute("xlabel"))
+    {
+      processXlabel(element);
+    }
+  if (element->hasAttribute("ylabel"))
+    {
+      processYlabel(element);
+    }
+
+  auto pushAxes3dToZqueue = PushDrawableToZQueue(axes3d);
+  pushAxes3dToZqueue(element, context);
 }
 
 static void cellArray(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -9909,8 +9941,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
   static std::map<std::string,
                   std::function<void(const std::shared_ptr<GRM::Element>, const std::shared_ptr<GRM::Context>)>>
       elemStringToFunc{
-          {std::string("axes"), PushDrawableToZQueue(axes)},
-          {std::string("axes3d"), PushDrawableToZQueue(axes3d)},
+          {std::string("axes"), processAxes},
+          {std::string("axes3d"), processAxes3d},
           {std::string("cellarray"), PushDrawableToZQueue(cellArray)},
           {std::string("colorbar"), colorbar},
           {std::string("errorbars"), errorbars},
