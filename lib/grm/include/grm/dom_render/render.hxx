@@ -411,8 +411,8 @@ public:
   void setGR3LightParameters(const std::shared_ptr<GRM::Element> &element, double ambient, double diffuse,
                              double specular, double specular_power);
 
-  void setAutoUpdate(bool update);
-  void getAutoUpdate(bool *update);
+  static void setAutoUpdate(bool update);
+  static void getAutoUpdate(bool *update);
 
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context

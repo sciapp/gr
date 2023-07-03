@@ -3363,19 +3363,16 @@ static void processTitle(const std::shared_ptr<GRM::Element> &elem)
       if (title.empty()) return; // Empty title is pointless, no need to waste the space for nothing
       if (auto render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument()))
         {
-          auto new_title_elem = render->createText(x, y, title);
-          new_title_elem->setAttribute("name", "title");
-          render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
           auto title_elem = elem->querySelectors("[name=\"title\"]");
-          bool removed_elem = false;
-          if (title_elem && (std::string)title_elem->getAttribute("text") != title)
+          if (title_elem)
             {
-              title_elem->remove();
-              removed_elem = true;
+              title_elem->setAttribute("text", title);
             }
-          if (removed_elem || !title_elem)
+          else
             {
-              elem->appendChild(new_title_elem);
+              auto new_title_elem = render->createText(x, y, title);
+              new_title_elem->setAttribute("name", "title");
+              render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
             }
         }
     }
@@ -3399,19 +3396,17 @@ static void processTitle(const std::shared_ptr<GRM::Element> &elem)
         }
 
       std::string title = static_cast<std::string>(elem->getAttribute("title"));
-      auto new_title_elem = render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
-      render->setTextColorInd(new_title_elem, 1);
-      render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
 
       auto old_title_elem = elem->querySelectors("[name=\"title\"]");
-      bool removed_elem = false;
-      if (old_title_elem && (std::string)old_title_elem->getAttribute("text") != title)
+      if (old_title_elem)
         {
-          old_title_elem->remove();
-          removed_elem = true;
+          old_title_elem->setAttribute("text", title);
         }
-      if (removed_elem || !old_title_elem)
+      else
         {
+          auto new_title_elem = render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
+          render->setTextColorInd(new_title_elem, 1);
+          render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
           new_title_elem->setAttribute("name", "title");
           elem->appendChild(new_title_elem);
         }
@@ -5625,19 +5620,16 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
   title = static_cast<std::string>(elem->getAttribute("title"));
   if (!title.empty())
     {
-      auto new_title_elem = render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
-      new_title_elem->setAttribute("name", "title");
-      render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-
       auto old_title_elem = elem->querySelectors("[name=\"title\"]");
-      bool removed_elem = false;
-      if (old_title_elem && (std::string)old_title_elem->getAttribute("text") != title)
+      if (old_title_elem)
         {
-          old_title_elem->remove();
-          removed_elem = true;
+          old_title_elem->setAttribute("text", title);
         }
-      if (removed_elem || !old_title_elem)
+      else
         {
+          auto new_title_elem = render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
+          new_title_elem->setAttribute("name", "title");
+          render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
           elem->appendChild(new_title_elem);
         }
     }
@@ -9960,8 +9952,11 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
   if (str_equals_any(element->localName().c_str(), 8, "group", "figure", "plot", "coordinate_system", "label",
                      "labels_group", "root", "barplot_xtick"))
     {
+      bool old_state = automatic_update;
+      automatic_update = false;
       if (element->localName() == "plot") processPlot(element, context);
       GRM::Render::processAttributes(element);
+      automatic_update = old_state;
     }
   else
     {
@@ -9980,6 +9975,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           // problems with overlapping elements
           std::string local_name = getLocalName(element);
 
+          bool old_state = automatic_update;
+          automatic_update = false;
           /* The attributes of drawables are being processed when the z_queue is being processed */
           if (!isDrawable(element))
             {
@@ -9999,10 +9996,14 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
 
           // reset _update_required
           element->setAttribute("_update_required", false);
+          automatic_update = old_state;
         }
       else if (automatic_update && static_cast<int>(global_root->getAttribute("_modified")))
         {
+          bool old_state = automatic_update;
+          automatic_update = false;
           GRM::Render::processAttributes(element);
+          automatic_update = old_state;
         }
     }
 }
@@ -12246,7 +12247,7 @@ void GRM::Render::setAutoUpdate(bool update)
 
 void GRM::Render::getAutoUpdate(bool *update)
 {
-  update = &automatic_update;
+  *update = automatic_update;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ filter functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -12392,7 +12393,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
   // TODO: critical update in plot means critical update inside childs
 
   // only do updates when there is a change made
-  if (automatic_update)
+  if (automatic_update && !starts_with(attr, "_"))
     {
       automatic_update = false;
       if (attr == "kind")
@@ -12623,7 +12624,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
 
 void renderCaller()
 {
-  if (global_root && static_cast<int>(global_root->getAttribute("_modified")))
+  if (global_root && static_cast<int>(global_root->getAttribute("_modified")) && automatic_update)
     {
       renderHelper(global_root, global_render->getContext());
       renderZQueue(global_render->getContext());

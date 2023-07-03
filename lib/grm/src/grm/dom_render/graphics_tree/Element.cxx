@@ -62,13 +62,10 @@ void GRM::Element::setAttribute(const std::string &qualifiedName, const GRM::Val
   if (hasAttribute(qualifiedName)) old_value = this->m_attributes[qualifiedName];
 
   this->m_attributes[qualifiedName] = value;
-  if (value != old_value && starts_with(this->localName(), "series"))
+  if (value != old_value)
     {
       auto elem_p = std::static_pointer_cast<Element>(shared_from_this());
       update(elem_p, qualifiedName, static_cast<std::string>(old_value));
-    }
-  if (value != old_value && starts_with(this->localName(), "series"))
-    {
       render();
     }
 }

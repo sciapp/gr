@@ -14,8 +14,12 @@ Drawable::Drawable(
 void Drawable::draw()
 {
   gr_selectcontext(grContextId);
+  bool old_state;
+  GRM::Render::getAutoUpdate(&old_state);
+  GRM::Render::setAutoUpdate(false);
   GRM::Render::processAttributes(element);
   drawFunction(element, context);
+  GRM::Render::setAutoUpdate(old_state);
 }
 
 int Drawable::getGrContextId() const

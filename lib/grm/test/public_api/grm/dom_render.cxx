@@ -72,6 +72,7 @@ static void test_dom_render(void)
   printf("Press any key to continue...\n");
   getchar();
 
+  fprintf(stderr, "Change orientation of the lines\n");
   for (auto elem : root->querySelectorsAll("series_line"))
     {
       elem->setAttribute("orientation", "vertical");
@@ -108,9 +109,6 @@ static void test_dom_render(void)
     }
 
   grm_render();
-
-  printf("Press any key to continue...\n");
-  getchar();
 
   printf("Press any key to continue...\n");
   getchar();
