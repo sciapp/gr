@@ -10009,8 +10009,13 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
 
           bool old_state = automatic_update;
           automatic_update = false;
-          /* The attributes of drawables are being processed when the z_queue is being processed */
-          if (!isDrawable(element))
+          /* The attributes of drawables (except for the z_index itself) are being processed when the z_queue is being
+           * processed */
+          if (isDrawable(element))
+            {
+              if (element->hasAttribute("z_index")) processZIndex(element);
+            }
+          else
             {
               GRM::Render::processAttributes(element);
             }
