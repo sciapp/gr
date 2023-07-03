@@ -9903,8 +9903,7 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> element, const std
     }
   else
     {
-      fprintf(stderr,
-              "Series is not in render implemented yet\n"); // todo: when all kinds are implemented here throw an error
+      throw NotFoundError("Series is not in render implemented yet\n");
     }
 }
 

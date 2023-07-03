@@ -1809,7 +1809,6 @@ err_t plot_hist(grm_args_t *subplot_args)
 
       auto subGroup = global_render->createSeries("hist");
       group->append(subGroup);
-      subGroup->setAttribute("_update_required", true);
 
       int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
@@ -1935,8 +1934,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
 
       auto subGroup = global_render->createSeries("barplot");
       group->append(subGroup);
-      /* Added because otherwise the series is not being processed when having errorbars */
-      subGroup->setAttribute("_update_required", true);
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string id_str = std::to_string(id);
 
