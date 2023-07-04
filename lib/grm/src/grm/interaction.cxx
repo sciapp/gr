@@ -11,6 +11,7 @@
 #include "gr.h"
 #include "grm/dom_render/render.hxx"
 #include <grm/dom_render/graphics_tree/util.hxx>
+#include "utilcpp_int.hxx"
 
 
 /* ========================= macros ================================================================================= */
