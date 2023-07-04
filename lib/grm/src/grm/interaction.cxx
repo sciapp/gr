@@ -395,7 +395,7 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
 
 grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
 {
-  grm_tooltip_info_t *info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
+  auto info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
   double *x_series, *y_series, *z_series, x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
   double x_range_min, x_range_max, y_range_min, y_range_max, x_px, y_px;
   int width, height, max_width_height;
@@ -423,7 +423,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
         }
     }
   if (subplot_element == nullptr ||
-      !str_equals_any(kind.c_str(), 13, "line", "scatter", "stem", "step", "heatmap", "marginalheatmap", "contour",
+      !str_equals_any(kind.c_str(), 13, "line", "scatter", "stem", "stairs", "heatmap", "marginalheatmap", "contour",
                       "imshow", "contourf", "pie", "hexbin", "shade", "quiver"))
     {
       info->x_px = -1;
@@ -440,19 +440,19 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   GRM::Render::processLimits(subplot_element);
 
   gr_savestate();
-  for (const auto &elem : subplot_element->parentElement()->children())
+  if (subplot_element->hasAttribute("viewport_xmin"))
     {
-      if (elem->hasAttribute("viewport_xmin"))
-        {
-          gr_setviewport((double)elem->getAttribute("viewport_xmin"), (double)elem->getAttribute("viewport_xmax"),
-                         (double)elem->getAttribute("viewport_ymin"), (double)elem->getAttribute("viewport_ymax"));
-          gr_setwindow((double)elem->getAttribute("window_xmin"), (double)elem->getAttribute("window_xmax"),
-                       (double)elem->getAttribute("window_ymin"), (double)elem->getAttribute("window_ymax"));
-          break;
-        }
+      gr_setviewport((double)subplot_element->getAttribute("viewport_xmin"),
+                     (double)subplot_element->getAttribute("viewport_xmax"),
+                     (double)subplot_element->getAttribute("viewport_ymin"),
+                     (double)subplot_element->getAttribute("viewport_ymax"));
+      gr_setwindow(
+          (double)subplot_element->getAttribute("window_xmin"), (double)subplot_element->getAttribute("window_xmax"),
+          (double)subplot_element->getAttribute("window_ymin"), (double)subplot_element->getAttribute("window_ymax"));
     }
 
   gr_ndctowc(&x, &y);
+  // TODO: use xlabel, ylabel from axes where its really stored
   if (!subplot_element->hasAttribute("xlabel"))
     {
       info->xlabel = "x";
@@ -477,10 +477,10 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   gr_ndctowc(&x_range_min, &y_range_min);
   gr_ndctowc(&x_range_max, &y_range_max);
 
-  x_min = static_cast<double>(subplot_element->getAttribute("lim_xmin"));
-  x_max = static_cast<double>(subplot_element->getAttribute("lim_xmax"));
-  y_min = static_cast<double>(subplot_element->getAttribute("lim_ymin"));
-  y_max = static_cast<double>(subplot_element->getAttribute("lim_ymax"));
+  x_min = static_cast<double>(subplot_element->getAttribute("_xlim_min"));
+  x_max = static_cast<double>(subplot_element->getAttribute("_xlim_max"));
+  y_min = static_cast<double>(subplot_element->getAttribute("_ylim_min"));
+  y_max = static_cast<double>(subplot_element->getAttribute("_ylim_max"));
 
   x_range_min = (x_min > x_range_min) ? x_min : x_range_min;
   y_range_min = (y_min > y_range_min) ? y_min : y_range_min;
@@ -488,7 +488,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   y_range_max = (y_max < y_range_max) ? y_max : y_range_max;
 
   std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
-  auto draw_legend_element_vec = subplot_element->getElementsByClassName("draw-legend");
+  auto draw_legend_element_vec = subplot_element->getElementsByClassName("legend");
   num_labels = 0;
   if (!draw_legend_element_vec.empty())
     {
@@ -517,7 +517,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       center_x = (int)(max_x - radius);
       center_y = (int)(max_y - radius);
 
-      auto current_series = subplot_element->querySelectorsAll("series_" + kind + "[\"]")[0];
+      auto current_series = subplot_element->querySelectorsAll("series_" + kind)[0];
       auto x_key = static_cast<std::string>(current_series->getAttribute("x"));
       std::vector<double> x_series_vec;
       x_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);
@@ -558,11 +558,11 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
     }
   else
     {
-      auto current_series_group_vec = subplot_element->querySelectorsAll("series_" + kind + "[\"]");
+      auto current_series_group_vec = subplot_element->querySelectorsAll("series_" + kind);
       std::vector<std::shared_ptr<GRM::Element>> current_series_vec;
       for (const auto &current_series_group : current_series_group_vec)
         {
-          if (kind == "imshow")
+          if (str_equals_any(kind.c_str(), 7, "hexbin", "imshow", "contour", "contourf", "heatmap", "quiver", "shade"))
             {
               current_series_vec.push_back(current_series_group);
             }
@@ -570,7 +570,9 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
             {
               for (const auto &current_series_group_child : current_series_group->children())
                 {
-                  current_series_vec.push_back(current_series_group_child);
+                  if ((kind == "marginalheatmap" && current_series_group_child->localName() == "series_heatmap") ||
+                      kind != "marginalheatmap")
+                    current_series_vec.push_back(current_series_group_child);
                 }
             }
         }
@@ -589,11 +591,6 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
               z_key_string = "pz";
             }
 
-          if (kind == "heatmap")
-            {
-              current_series = current_series->parentElement();
-            }
-
           if (!current_series->hasAttribute(x_key_string) || !current_series->hasAttribute(y_key_string))
             {
               mindiff = DBL_MAX;
@@ -602,7 +599,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
           auto x_key = static_cast<std::string>(current_series->getAttribute(x_key_string));
           auto y_key = static_cast<std::string>(current_series->getAttribute(y_key_string));
 
-          if (kind != "quiver")
+          if (!str_equals_any(kind.c_str(), 7, "hexbin", "quiver", "line", "scatter", "stem", "stairs", "shade"))
             {
               if (!current_series->hasAttribute(z_key_string))
                 {

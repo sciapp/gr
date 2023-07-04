@@ -1691,7 +1691,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
 
       error = plot_draw_errorbars(*current_series, x_length);
       return_if_error;
-      global_root->setAttribute("_id", id++);
+      global_root->setAttribute("_id", ++id);
       ++current_series;
     }
 
@@ -5197,9 +5197,9 @@ std::shared_ptr<GRM::Element> get_subplot_from_ndc_point_using_dom_helper(std::s
 
 std::shared_ptr<GRM::Element> get_subplot_from_ndc_point_using_dom(double x, double y)
 {
-  if (global_root->hasChildNodes())
+  if (active_figure->hasChildNodes())
     {
-      for (const auto &child : global_root->children())
+      for (const auto &child : active_figure->children())
         {
           std::shared_ptr<GRM::Element> subplot_element = get_subplot_from_ndc_point_using_dom_helper(child, x, y);
           if (subplot_element != nullptr)
