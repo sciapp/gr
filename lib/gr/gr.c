@@ -12173,6 +12173,47 @@ void gr_restorestate(void)
       gks_set_border_color_index(s->bcoli);
       gks_select_clip_xform(s->clip_tnr);
       gks_set_resize_behaviour(s->resize_behaviour);
+
+      if (ctx)
+        {
+          ctx->ltype = s->ltype;
+          ctx->lwidth = s->lwidth;
+          ctx->plcoli = s->plcoli;
+          ctx->mtype = s->mtype;
+          ctx->mszsc = s->mszsc;
+          ctx->pmcoli = s->pmcoli;
+          ctx->txfont = s->txfont;
+          ctx->txprec = s->txprec;
+          ctx->chxp = s->chxp;
+          ctx->chsp = s->chsp;
+          ctx->txcoli = s->txcoli;
+          ctx->chh = s->chh;
+          ctx->chup[0] = s->chup[0];
+          ctx->chup[1] = s->chup[1];
+          ctx->txp = s->txp;
+          ctx->txal[0] = s->txal[0];
+          ctx->txal[1] = s->txal[1];
+          ctx->ints = s->ints;
+          ctx->styli = s->styli;
+          ctx->facoli = s->facoli;
+
+          ctx->tnr = s->tnr;
+          ctx->wn[0] = s->wn[0];
+          ctx->wn[2] = s->wn[2];
+          ctx->wn[1] = s->wn[1];
+          ctx->wn[3] = s->wn[3];
+          ctx->vp[0] = s->vp[0];
+          ctx->vp[2] = s->vp[2];
+          ctx->vp[1] = s->vp[1];
+          ctx->vp[3] = s->vp[3];
+
+          ctx->scale_options = s->scale_options;
+
+          ctx->bwidth = s->bwidth;
+          ctx->bcoli = s->bcoli;
+          ctx->clip_tnr = s->clip_tnr;
+          ctx->resize_behaviour = s->resize_behaviour;
+        }
     }
   else
     fprintf(stderr, "attempt to restore unsaved state\n");
