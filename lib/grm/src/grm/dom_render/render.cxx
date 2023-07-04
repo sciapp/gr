@@ -9954,6 +9954,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
     {
       bool old_state = automatic_update;
       automatic_update = false;
+      /* check if figure is active; skip inactive elements */
+      if (element->localName() == "figure" && !static_cast<int>(element->getAttribute("active"))) return;
       if (element->localName() == "plot") processPlot(element, context);
       GRM::Render::processAttributes(element);
       automatic_update = old_state;
@@ -12632,4 +12634,14 @@ void renderCaller()
       global_root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
       automatic_update = old_state;
     }
+}
+
+void GRM::Render::setActiveFigure(const std::shared_ptr<GRM::Element> element)
+{
+  auto result = this->firstChildElement()->querySelectorsAll("[active=1]");
+  for (auto &elem : result)
+    {
+      elem->setAttribute("active", 0);
+    }
+  element->setAttribute("active", 1);
 }

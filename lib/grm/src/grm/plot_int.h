@@ -160,6 +160,8 @@ grm_args_t *get_subplot_from_ndc_point(double x, double y);
 grm_args_t *get_subplot_from_ndc_points(unsigned int n, const double *x, const double *y);
 err_t classes_polar_histogram(grm_args_t *subplot_args);
 
+int get_free_id_from_figure_elements();
+
 #ifdef __cplusplus
 }
 
