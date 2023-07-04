@@ -12450,6 +12450,16 @@ void gr_destroycontext(int context)
     }
 }
 
+void gr_unselectcontext(void)
+{
+  check_autoinit;
+
+  if (ctx)
+    {
+      ctx = NULL;
+    }
+}
+
 int gr_uselinespec(char *linespec)
 {
   char *spec = linespec, lastspec = ' ';
