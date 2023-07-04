@@ -237,6 +237,7 @@ DLLEXPORT void gr_restorestate(void);
 DLLEXPORT void gr_savecontext(int);
 DLLEXPORT void gr_selectcontext(int);
 DLLEXPORT void gr_destroycontext(int);
+DLLEXPORT void gr_unselectcontext(void);
 DLLEXPORT int gr_uselinespec(char *);
 DLLEXPORT void gr_delaunay(int, const double *, const double *, int *, int **);
 DLLEXPORT void gr_reducepoints(int, const double *, const double *, int, double *, double *);

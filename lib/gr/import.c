@@ -110,6 +110,7 @@ static char *format[] = {
     "titles3d:sss",
     "tricont:iFFFiF",
     "trisurface:iFFF",
+    "unselectcontext:",
     "uselinespec:s",
     "verrorbars:iFFFF",
 };
@@ -564,9 +565,12 @@ static void gr(int id)
       gr_trisurface(i_arg[0], f_arr[0], f_arr[1], f_arr[2]);
       break;
     case 90:
-      gr_uselinespec(s_arg[0]);
+      gr_unselectcontext();
       break;
     case 91:
+      gr_uselinespec(s_arg[0]);
+      break;
+    case 92:
       gr_verrorbars(i_arg[0], f_arr[0], f_arr[1], f_arr[2], f_arr[3]);
       break;
     }
