@@ -9962,12 +9962,13 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
     {
       // TODO: something like contour shouldnt be in this list
       if (!automatic_update ||
-          str_equals_any(element->localName().c_str(), 25, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
-                         "drawimage", "drawrect", "errorbars", "fillarc", "fillarea", "fillrect", "grid", "grid3d",
-                         "legend", "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
-                         "polyline3d", "polymarker", "polymarker3d", "series_contour", "series_contourf", "text",
-                         "titles3d") ||
-          element->hasAttribute("calc_window_and_viewport_from_parent") || !element->hasChildNodes() ||
+          (static_cast<int>(global_root->getAttribute("_modified")) &&
+           (str_equals_any(element->localName().c_str(), 25, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
+                           "drawimage", "drawrect", "errorbars", "fillarc", "fillarea", "fillrect", "grid", "grid3d",
+                           "legend", "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
+                           "polyline3d", "polymarker", "polymarker3d", "series_contour", "series_contourf", "text",
+                           "titles3d") ||
+            element->hasAttribute("calc_window_and_viewport_from_parent") || !element->hasChildNodes())) ||
           (automatic_update && element->hasAttribute("_update_required") &&
            static_cast<int>(element->getAttribute("_update_required"))))
         {
@@ -10305,12 +10306,10 @@ void GRM::Render::render()
   applyRootDefaults(root);
   std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' ')}) << "\n";
   if (static_cast<int>(root->getAttribute("clearws"))) gr_clearws();
+  global_root->setAttribute("_modified", true);
   renderHelper(root, this->context);
   renderZQueue(this->context);
-  bool old_state = automatic_update;
-  automatic_update = false;
   global_root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
-  automatic_update = old_state;
   if (static_cast<int>(root->getAttribute("updatews"))) gr_updatews();
   std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' ')}) << "\n";
 }

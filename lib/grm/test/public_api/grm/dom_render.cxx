@@ -17,7 +17,7 @@
 
 static void test_dom_render(void)
 {
-  double plots[2][2][1000];
+  double plots[2][2][100];
   int n = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
   const char *labels[] = {"sin", "cos"};
   grm_args_t *args, *series[2];
@@ -102,10 +102,13 @@ static void test_dom_render(void)
 
   grm_render();
 
+  printf("Press any key to continue...\n");
+  getchar();
+
   fprintf(stderr, "Change markertype\n");
   for (auto elem : root->querySelectorsAll("series_scatter"))
     {
-      elem->setAttribute("markertype", "7");
+      elem->setAttribute("markertype", -7);
     }
 
   grm_render();
