@@ -1327,14 +1327,11 @@ void receiverfunction(int id, double x_min, double x_max, double y_min, double y
 {
   if (!(x_min == DBL_MAX || x_max == -DBL_MAX || y_min == DBL_MAX || y_max == -DBL_MAX))
     {
-      bool old_state = automatic_update;
-      automatic_update = false;
       bounding_map[id]->setAttribute("_bbox_id", id);
       bounding_map[id]->setAttribute("_bbox_xmin", x_min);
       bounding_map[id]->setAttribute("_bbox_xmax", x_max);
       bounding_map[id]->setAttribute("_bbox_ymin", y_min);
       bounding_map[id]->setAttribute("_bbox_ymax", y_max);
-      automatic_update = old_state;
     }
 }
 
@@ -7474,7 +7471,7 @@ static void processScatter(const std::shared_ptr<GRM::Element> &element, const s
   std::string orientation = PLOT_DEFAULT_ORIENTATION;
   double c_min, c_max;
   unsigned int x_length, y_length, z_length, c_length;
-  int i, c_index = -1, markertype;
+  int i, c_index = -1, markertype = -1;
   std::vector<int> markerColorIndsVec;
   std::vector<double> markerSizesVec;
   std::vector<double> x_vec, y_vec, z_vec, c_vec;
@@ -12629,10 +12626,7 @@ void renderCaller()
     {
       renderHelper(global_root, global_render->getContext());
       renderZQueue(global_render->getContext());
-      bool old_state = automatic_update;
-      automatic_update = false;
       global_root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
-      automatic_update = old_state;
     }
 }
 
