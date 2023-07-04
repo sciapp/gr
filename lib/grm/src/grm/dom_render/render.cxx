@@ -10095,6 +10095,8 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
       drawable->draw();
     }
   grContextIDManager.markAllIdsAsUnused();
+  parent_to_context = {};
+  gr_unselectcontext();
   gr_restorestate();
 }
 
