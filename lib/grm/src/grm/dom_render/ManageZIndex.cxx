@@ -17,6 +17,13 @@ void ManageZIndex::savestate()
 
 void ManageZIndex::restorestate()
 {
-  this->currentZIndex = this->state.top();
-  this->state.pop();
+  if (this->state.size() > 0)
+    {
+      this->currentZIndex = this->state.top();
+      this->state.pop();
+    }
+  else
+    {
+      printf("Tried to restore non existing zindex state!\n");
+    }
 }

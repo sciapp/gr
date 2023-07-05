@@ -57,6 +57,7 @@ std::shared_ptr<GRM::Element> global_root;
 std::shared_ptr<GRM::Element> active_figure;
 std::shared_ptr<GRM::Render> global_render;
 std::priority_queue<std::shared_ptr<Drawable>, std::vector<std::shared_ptr<Drawable>>, CompareZIndex> z_queue;
+bool zQueueIsBeingRendered = false;
 std::map<std::shared_ptr<GRM::Element>, int> parent_to_context;
 ManageGRContextIds grContextIDManager;
 ManageZIndex zIndexManager;
@@ -3644,8 +3645,11 @@ static void processYlabel(const std::shared_ptr<GRM::Element> &elem)
 
 static void processZIndex(const std::shared_ptr<GRM::Element> &element)
 {
-  int zIndex = static_cast<int>(element->getAttribute("z_index"));
-  zIndexManager.setZIndex(zIndex);
+  if (!zQueueIsBeingRendered)
+    {
+      int zIndex = static_cast<int>(element->getAttribute("z_index"));
+      zIndexManager.setZIndex(zIndex);
+    }
 }
 
 void GRM::Render::processAttributes(const std::shared_ptr<GRM::Element> &element)
@@ -10088,6 +10092,7 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
 
 static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
 {
+  zQueueIsBeingRendered = true;
   gr_savestate();
   for (; !z_queue.empty(); z_queue.pop())
     {
@@ -10098,6 +10103,7 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
   parent_to_context = {};
   gr_unselectcontext();
   gr_restorestate();
+  zQueueIsBeingRendered = false;
 }
 
 static void initializeGridElements(const std::shared_ptr<GRM::Element> &element, grm::Grid *grid)
