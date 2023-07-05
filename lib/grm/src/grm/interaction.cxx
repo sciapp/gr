@@ -11,7 +11,6 @@
 #include "gr.h"
 #include "grm/dom_render/render.hxx"
 #include <grm/dom_render/graphics_tree/util.hxx>
-#include "utilcpp_int.hxx"
 
 
 /* ========================= macros ================================================================================= */
@@ -453,22 +452,43 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
     }
 
   gr_ndctowc(&x, &y);
-  // TODO: use xlabel, ylabel from axes where its really stored
-  if (!subplot_element->hasAttribute("xlabel"))
+
+  auto axes_vec = subplot_element->querySelectorsAll("axes");
+  std::vector<std::shared_ptr<GRM::Element>> label_vec;
+  for (const auto &child : axes_vec)
+    {
+      if (child->hasAttribute("xlabel") && child->hasAttribute("ylabel"))
+        {
+          label_vec.push_back(child);
+          break;
+        }
+    }
+
+  if (label_vec.empty())
     {
       info->xlabel = "x";
-    }
-  else
-    {
-      info->xlabel = static_cast<std::string>(subplot_element->getAttribute("xlabel")).c_str();
-    }
-  if (!subplot_element->hasAttribute("ylabel"))
-    {
       info->ylabel = "y";
     }
   else
     {
-      info->ylabel = static_cast<std::string>(subplot_element->getAttribute("ylabel")).c_str();
+      if (!label_vec[0]->hasAttribute("xlabel"))
+        {
+          info->xlabel = "x";
+        }
+      else
+        {
+          static std::string xlabel = static_cast<std::string>(label_vec[0]->getAttribute("xlabel"));
+          info->xlabel = xlabel.c_str();
+        }
+      if (!label_vec[0]->hasAttribute("ylabel"))
+        {
+          info->ylabel = "y";
+        }
+      else
+        {
+          static std::string ylabel = static_cast<std::string>(label_vec[0]->getAttribute("ylabel"));
+          info->ylabel = ylabel.c_str();
+        }
     }
 
   x_range_min = (double)(mouse_x - 50) / max_width_height;
@@ -743,5 +763,6 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       info->y = 0;
       info->label = "";
     }
+  fprintf(stderr, "%s %s\n", info->xlabel, info->ylabel);
   return info;
 }
