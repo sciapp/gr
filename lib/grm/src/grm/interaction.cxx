@@ -102,7 +102,7 @@ int grm_input(const grm_args_t *input_args)
           kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
           if (kind == "marginalheatmap")
             {
-              auto current_series = subplot_element->querySelectorsAll("series_heatmap[\"]")[0];
+              auto current_series = subplot_element->querySelectorsAll("series_heatmap")[0];
 
               unsigned int x_length, y_length;
               double x_0, x_end, y_0, y_end, x_step, y_step;
@@ -158,17 +158,12 @@ int grm_input(const grm_args_t *input_args)
                   yind = -1;
                 }
 
-              subplot_element->setAttribute("xind", xind);
-              subplot_element->setAttribute("yind", yind);
+              current_series->parentElement()->setAttribute("xind", xind);
+              current_series->parentElement()->setAttribute("yind", yind);
 
-              for (auto &child : subplot_element->children())
+              for (auto &child : current_series->parentElement()->children())
                 {
                   std::string childKind = static_cast<std::string>(child->getAttribute("kind"));
-                  if (childKind == "line" || childKind == "hist")
-                    {
-                      child->setAttribute("xind", xind);
-                      child->setAttribute("yind", yind);
-                    }
                   if (childKind == "hist")
                     {
                       // reset bar colors
@@ -763,6 +758,5 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       info->y = 0;
       info->label = "";
     }
-  fprintf(stderr, "%s %s\n", info->xlabel, info->ylabel);
   return info;
 }
