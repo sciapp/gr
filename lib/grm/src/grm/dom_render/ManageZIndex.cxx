@@ -1,4 +1,5 @@
 #include "grm/dom_render/ManageZIndex.hxx"
+#include <stdio.h>
 
 int ManageZIndex::getZIndex()
 {
