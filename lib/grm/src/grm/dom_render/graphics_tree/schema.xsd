@@ -20,6 +20,7 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="plot" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
+            <xs:attribute name="active" type="xs:string"/>
             <xs:attribute name="figsize_x" type="xs:string"/>
             <xs:attribute name="figsize_y" type="xs:string"/>
             <xs:attribute name="id" type="xs:ID" use="required"/>
