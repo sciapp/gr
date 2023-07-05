@@ -9916,7 +9916,7 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> element, const std
           {std::string("tricontour"), PushDrawableToZQueue(triContour)},
           {std::string("trisurface"), PushDrawableToZQueue(triSurface)},
           {std::string("volume"), processVolume},
-          {std::string("wireframe"), wireframe},
+          {std::string("wireframe"), PushDrawableToZQueue(wireframe)},
       };
 
   auto kind = static_cast<std::string>(element->getAttribute("kind"));
