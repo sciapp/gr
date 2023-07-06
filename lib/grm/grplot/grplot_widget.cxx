@@ -1,3 +1,4 @@
+#include <QFile>
 #include <QPainter>
 #include <QPainterPath>
 #include <QResizeEvent>
@@ -25,6 +26,10 @@
 #endif
 
 static std::string file_export;
+static QString test_commands_file_path = "";
+static QFile *test_commands_file = nullptr;
+static QTextStream *test_commands_stream = nullptr;
+static Qt::KeyboardModifiers modifiers = Qt::NoModifier;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -126,6 +131,23 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
     }
   else
     {
+      if (strcmp(argv[1], "--test") == 0)
+        {
+          test_commands_file_path = argv[2];
+          argv += 2;
+          argc -= 2;
+          test_commands_file = new QFile(test_commands_file_path);
+          if (test_commands_file->open(QIODevice::ReadOnly))
+            {
+              test_commands_stream = new QTextStream(test_commands_file);
+              QTimer::singleShot(1000, this, &GRPlotWidget::processTestCommandsFile);
+            }
+          else
+            {
+              std::cerr << "Unable to open test commands file" << std::endl;
+              QApplication::quit();
+            }
+        }
       grm_args_push(args_, "keep_aspect_ratio", "i", 1);
       if (!grm_interactive_plot_from_file(args_, argc, argv))
         {
@@ -278,7 +300,7 @@ void GRPlotWidget::redraw()
 void GRPlotWidget::collectTooltips()
 {
   QPoint mouse_pos = this->mapFromGlobal(QCursor::pos());
-  Qt::KeyboardModifiers keyboard_modifiers = QApplication::queryKeyboardModifiers();
+  Qt::KeyboardModifiers keyboard_modifiers = GRPlotWidget::queryKeyboardModifiers();
 
   if (keyboard_modifiers == Qt::ShiftModifier)
     {
@@ -336,6 +358,11 @@ static const std::string accumulatedTooltipTemplate{"\
 void GRPlotWidget::paintEvent(QPaintEvent *event)
 {
   util::unused(event);
+  paint(this);
+}
+
+void GRPlotWidget::paint(QPaintDevice *paint_device)
+{
   QPainter painter;
   std::stringstream addresses;
   const char *kind;
@@ -371,7 +398,7 @@ void GRPlotWidget::paintEvent(QPaintEvent *event)
       redraw_pixmap = false;
     }
 
-  painter.begin(this);
+  painter.begin(paint_device);
   painter.drawPixmap(0, 0, pixmap);
   if (!tooltips.empty())
     {
@@ -859,4 +886,211 @@ void GRPlotWidget::cmd_callback(const grm_cmd_event_t *event)
     {
       QApplication::quit();
     }
+}
+
+Qt::KeyboardModifiers GRPlotWidget::queryKeyboardModifiers()
+{
+  return modifiers | QApplication::queryKeyboardModifiers();
+}
+
+void GRPlotWidget::processTestCommandsFile()
+{
+  while (test_commands_stream && !test_commands_stream->atEnd())
+    {
+      QString line = test_commands_stream->readLine();
+      QStringList words = line.split(",");
+      if (words.size())
+        {
+          if (words[0] == "keyPressEvent" && words.size() == 2 && words[1].size() == 1 && words[1][0] >= 'A' &&
+              words[1][0] <= 'Z')
+            {
+              QKeyEvent event(QEvent::KeyPress, words[1][0].digitValue(), modifiers);
+              keyPressEvent(&event);
+
+              QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
+              return;
+            }
+          else if (words[0] == "mouseMoveEvent" && words.size() == 3)
+            {
+              bool x_flag;
+              bool y_flag;
+              int x = words[1].toInt(&x_flag);
+              int y = words[2].toInt(&y_flag);
+              if (x_flag && y_flag)
+                {
+                  QPoint local_position(x, y);
+                  QPoint global_position = mapToGlobal(local_position);
+                  QMouseEvent event(QEvent::MouseMove, local_position, global_position, Qt::NoButton, Qt::NoButton,
+                                    modifiers);
+                  QCursor::setPos(global_position.x(), global_position.y());
+                  mouseMoveEvent(&event);
+
+                  QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
+                  return;
+                }
+              else
+                {
+                  std::cerr << "Failed to parse mouseMoveEvent: " << line.toStdString() << std::endl;
+                  break;
+                }
+            }
+          else if (words[0] == "mousePressEvent" && words.size() == 2)
+            {
+              Qt::MouseButton button;
+              if (words[1] == "left")
+                {
+                  button = Qt::MouseButton::LeftButton;
+                }
+              else if (words[1] == "right")
+                {
+                  button = Qt::MouseButton::RightButton;
+                }
+              else
+                {
+                  std::cerr << "Failed to parse mousePressEvent: " << line.toStdString() << std::endl;
+                  break;
+                }
+              QPoint global_position = QCursor::pos();
+              QPoint local_position = mapFromGlobal(global_position);
+              QMouseEvent event(QEvent::MouseButtonPress, local_position, global_position, button, Qt::NoButton,
+                                modifiers);
+              mousePressEvent(&event);
+            }
+          else if (words[0] == "mouseReleaseEvent" && words.size() == 2)
+            {
+              Qt::MouseButton button;
+              if (words[1] == "left")
+                {
+                  button = Qt::MouseButton::LeftButton;
+                }
+              else if (words[1] == "right")
+                {
+                  button = Qt::MouseButton::RightButton;
+                }
+              else
+                {
+                  std::cerr << "Failed to parse mousePressEvent: " << line.toStdString() << std::endl;
+                  break;
+                }
+              QPoint global_position = QCursor::pos();
+              QPoint local_position = mapFromGlobal(global_position);
+              QMouseEvent event(QEvent::MouseButtonRelease, local_position, global_position, button, Qt::NoButton,
+                                modifiers);
+              mouseReleaseEvent(&event);
+            }
+          else if (words[0] == "wheelEvent" && words.size() == 2)
+            {
+              bool delta_flag;
+              int delta = words[1].toInt(&delta_flag);
+              if (delta_flag)
+                {
+                  QPoint global_position = QCursor::pos();
+                  QPoint local_position = mapFromGlobal(global_position);
+#if QT_VERSION >= 0x060000
+                  QWheelEvent event(local_position, global_position, QPoint{}, QPoint{0, delta}, Qt::NoButton,
+                                    modifiers, Qt::NoScrollPhase, false, Qt::MouseEventSynthesizedByApplication);
+#else
+                  QWheelEvent event(local_position, global_position, QPoint{}, QPoint{0, delta}, delta, Qt::Vertical,
+                                    Qt::NoButton, modifiers, Qt::NoScrollPhase, Qt::MouseEventSynthesizedByApplication,
+                                    false);
+#endif
+                  wheelEvent(&event);
+
+                  QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
+                  return;
+                }
+              else
+                {
+                  std::cerr << "Failed to parse wheelEvent: " << line.toStdString() << std::endl;
+                  break;
+                }
+            }
+          else if (words[0] == "modifiers")
+            {
+              bool parsing_failed = false;
+              modifiers = Qt::NoModifier;
+              for (int i = 1; i < words.size(); i++)
+                {
+                  if (words[i] == "shift")
+                    {
+                      modifiers |= Qt::ShiftModifier;
+                    }
+                  else if (words[i] == "alt")
+                    {
+                      modifiers |= Qt::AltModifier;
+                    }
+                  else if (words[i] == "control")
+                    {
+                      modifiers |= Qt::ControlModifier;
+                    }
+                  else
+                    {
+                      parsing_failed = true;
+                    }
+                }
+              if (parsing_failed)
+                {
+                  std::cerr << "Failed to parse modifiers: " << line.toStdString() << std::endl;
+                  break;
+                }
+            }
+          else if (words[0] == "sleep" && words.size() == 2)
+            {
+              bool ms_flag;
+              int ms = words[1].toInt(&ms_flag);
+              if (ms_flag)
+                {
+                  QTimer::singleShot(ms, this, &GRPlotWidget::processTestCommandsFile);
+                  return;
+                }
+              else
+                {
+                  std::cerr << "Failed to parse sleep: " << line.toStdString() << std::endl;
+                  break;
+                }
+            }
+          else if (words[0] == "resize" && words.size() == 3)
+            {
+              bool width_flag;
+              bool height_flag;
+              int width = words[1].toInt(&width_flag);
+              int height = words[2].toInt(&height_flag);
+              if (width_flag && height_flag)
+                {
+                  window()->resize(width, height);
+
+                  QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
+                  return;
+                }
+              else
+                {
+                  std::cerr << "Failed to parse resize: " << line.toStdString() << std::endl;
+                  break;
+                }
+            }
+          else if (words[0] == "widgetToPNG" && words.size() == 2)
+            {
+              QPixmap pixmap(size());
+              pixmap.fill(Qt::transparent);
+              paint(&pixmap);
+              QFile file(words[1]);
+              if (file.open(QIODevice::WriteOnly))
+                {
+                  pixmap.save(&file, "PNG");
+                }
+              else
+                {
+                  std::cerr << "Failed to open: " << words[1].toStdString() << std::endl;
+                  break;
+                }
+            }
+          else
+            {
+              std::cerr << "Unknown test event: " << line.toStdString() << std::endl;
+              break;
+            }
+        }
+    }
+  test_commands_file->close();
+  QApplication::quit();
 }
