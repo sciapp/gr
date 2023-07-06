@@ -2738,7 +2738,10 @@ static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem
               if (cnt == (is_horizontal ? xind : yind))
                 {
                   rect->setAttribute("fillcolorind", 2);
-                  break;
+                }
+              else
+                {
+                  rect->setAttribute("fillcolorind", 989);
                 }
               cnt += 1;
             }
@@ -10003,7 +10006,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
                            "legend", "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
                            "polyline3d", "polymarker", "polymarker3d", "series_contour", "series_contourf", "text",
                            "titles3d") ||
-            element->hasAttribute("calc_window_and_viewport_from_parent") || !element->hasChildNodes())) ||
+            !element->hasChildNodes())) ||
           (automatic_update && element->hasAttribute("_update_required") &&
            static_cast<int>(element->getAttribute("_update_required"))))
         {
@@ -10039,7 +10042,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           element->setAttribute("_update_required", false);
           automatic_update = old_state;
         }
-      else if (automatic_update && static_cast<int>(global_root->getAttribute("_modified")))
+      else if (automatic_update && static_cast<int>(global_root->getAttribute("_modified")) ||
+               element->hasAttribute("calc_window_and_viewport_from_parent"))
         {
           bool old_state = automatic_update;
           automatic_update = false;
