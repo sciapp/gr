@@ -8473,13 +8473,16 @@ static void marginalheatmap(const std::shared_ptr<GRM::Element> &element, const 
           subGroup->setAttribute("x", "x" + str);
         }
 
-      if (k == 0)
+      if (marginalheatmap_kind == "all" || (marginalheatmap_kind == "line" && xind != -1 && yind != -1))
         {
-          subGroup->setAttribute("orientation", "vertical");
-        }
-      else
-        {
-          subGroup->setAttribute("orientation", "horizontal");
+          if (k == 0)
+            {
+              subGroup->setAttribute("orientation", "vertical");
+            }
+          else
+            {
+              subGroup->setAttribute("orientation", "horizontal");
+            }
         }
 
       for (const auto &child : element->children())
