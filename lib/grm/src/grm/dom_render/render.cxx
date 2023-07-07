@@ -9861,7 +9861,9 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
 
 static void processPlot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
-  plotCoordinateRanges(element, context);
+  if (!element->hasAttribute("_xlim_min") || !element->hasAttribute("_xlim_max") ||
+      !element->hasAttribute("_ylim_min") || !element->hasAttribute("_ylim_max"))
+    plotCoordinateRanges(element, context);
   processSubplot(element);
   GRM::Render::processViewport(element);
   // todo: there are cases that element does not have charheight set
