@@ -286,8 +286,10 @@ int grm_input(const grm_args_t *input_args)
                         {
                           tilt = 0;
                         }
+                      grm_get_render()->setAutoUpdate(false);
                       subplot_element->setAttribute("space3d_phi", rotation);
                       subplot_element->setAttribute("space3d_theta", tilt);
+                      grm_get_render()->setAutoUpdate(true);
                     }
                 }
               else
