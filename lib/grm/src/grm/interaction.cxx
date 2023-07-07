@@ -105,7 +105,7 @@ int grm_input(const grm_args_t *input_args)
               auto current_series = subplot_element->querySelectorsAll("series_heatmap")[0];
 
               unsigned int x_length, y_length;
-              double x_0, x_end, y_0, y_end, x_step, y_step;
+              double x_0, x_end, y_0, y_end, x_step, y_step, xind_d, yind_d;
 
               grm_args_values(input_args, "x", "i", &x);
               grm_args_values(input_args, "y", "i", &y);
@@ -149,20 +149,24 @@ int grm_input(const grm_args_t *input_args)
 
               x_step = (x_end - x_0) / x_length;
               y_step = (y_end - y_0) / y_length;
-              xind = (int)((x - x_0) / x_step);
-              yind = (int)((y - y_0) / y_step);
+              xind_d = (x - x_0) / x_step;
+              yind_d = (y - y_0) / y_step;
 
-              if (xind < 0 || xind >= x_length || yind < 0 || yind >= y_length)
+              if (xind_d < 0 || xind_d >= x_length || yind_d < 0 || yind_d >= y_length)
                 {
                   xind = -1;
                   yind = -1;
+                }
+              else
+                {
+                  xind = (int)xind_d;
+                  yind = (int)yind_d;
                 }
 
               current_series->parentElement()->setAttribute("xind", xind);
               current_series->parentElement()->setAttribute("yind", yind);
               if (static_cast<std::string>(current_series->parentElement()->getAttribute("marginalheatmap_kind")) ==
-                      "line" &&
-                  xind != -1 && yind != -1)
+                  "line")
                 current_series->parentElement()->setAttribute("_update_required", true);
 
               for (auto &child : current_series->parentElement()->children())
