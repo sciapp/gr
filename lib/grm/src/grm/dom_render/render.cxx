@@ -4076,16 +4076,29 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
   int series_index = static_cast<int>(element->getAttribute("series_index"));
   int fixed_y_length = static_cast<int>(subplot->getAttribute("max_y_length"));
 
-  if (subplot->hasAttribute("bar_color_rgb"))
+  if (element->hasAttribute("bar_color_rgb"))
     {
-      auto bar_color_rgb_key = static_cast<std::string>(subplot->getAttribute("bar_color_rgb"));
+      auto bar_color_rgb_key = static_cast<std::string>(element->getAttribute("bar_color_rgb"));
       bar_color_rgb = GRM::get<std::vector<double>>((*context)[bar_color_rgb_key]);
     }
-  if (subplot->hasAttribute("bar_color")) bar_color = static_cast<int>(subplot->getAttribute("bar_color"));
-  if (subplot->hasAttribute("bar_width")) bar_width = static_cast<double>(subplot->getAttribute("bar_width"));
-  if (subplot->hasAttribute("style")) style = static_cast<std::string>(subplot->getAttribute("style"));
-  if (subplot->hasAttribute("orientation"))
-    orientation = static_cast<std::string>(subplot->getAttribute("orientation"));
+  if (element->hasAttribute("bar_color")) bar_color = static_cast<int>(element->getAttribute("bar_color"));
+  if (element->hasAttribute("bar_width")) bar_width = static_cast<double>(element->getAttribute("bar_width"));
+  if (element->hasAttribute("style"))
+    {
+      style = static_cast<std::string>(element->getAttribute("style"));
+    }
+  else
+    {
+      element->setAttribute("style", style);
+    }
+  if (element->hasAttribute("orientation"))
+    {
+      orientation = static_cast<std::string>(element->getAttribute("orientation"));
+    }
+  else
+    {
+      element->setAttribute("orientation", orientation);
+    }
 
   is_vertical = orientation == "vertical";
 
@@ -4157,10 +4170,10 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
   if (element->hasAttribute("xrange_min") && element->hasAttribute("xrange_max") &&
       element->hasAttribute("yrange_min") && element->hasAttribute("yrange_max"))
     {
-      x_min = static_cast<double>(element->parentElement()->getAttribute("xrange_min"));
-      x_max = static_cast<double>(element->parentElement()->getAttribute("xrange_max"));
-      y_min = static_cast<double>(element->parentElement()->getAttribute("yrange_min"));
-      y_max = static_cast<double>(element->parentElement()->getAttribute("yrange_max"));
+      x_min = static_cast<double>(element->getAttribute("xrange_min"));
+      x_max = static_cast<double>(element->getAttribute("xrange_max"));
+      y_min = static_cast<double>(element->getAttribute("yrange_min"));
+      y_max = static_cast<double>(element->getAttribute("yrange_max"));
       if (!element->hasAttribute("bar_width"))
         {
           bar_width = (x_max - x_min) / (y_length - 1.0);
@@ -4170,7 +4183,7 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
         }
     }
 
-  if (style != "lined" && inner_series) throw TypeError("Unsuported operation for barplot series.\n");
+  if (style != "lined" && inner_series) throw TypeError("Unsupported operation for barplot series.\n");
   if (!c.empty())
     {
       if (!inner_series && (c_length < y_length))
@@ -4265,7 +4278,17 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
               x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * i;
             }
 
-          auto temp = global_render->createFillRect(x1, x2, y1, y2);
+          x1 += x_min;
+          x2 += x_min;
+          std::shared_ptr<GRM::Element> temp;
+          if (is_vertical)
+            {
+              temp = global_render->createFillRect(y1, y2, x1, x2);
+            }
+          else
+            {
+              temp = global_render->createFillRect(x1, x2, y1, y2);
+            }
           element->append(temp);
 
           if (style != "default")
@@ -4340,6 +4363,8 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
 
           std::shared_ptr<GRM::Element> temp;
 
+          x1 += x_min;
+          x2 += x_min;
           if (is_vertical)
             {
               temp = global_render->createDrawRect(y1, y2, x1, x2);
@@ -4402,6 +4427,8 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
                   y2 = y_vec[i];
                 }
 
+              x1 += x_min;
+              x2 += x_min;
               if (ylabels_left > 0)
                 {
                   available_width = x2 - x1;
@@ -4471,6 +4498,8 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
                 }
 
               std::shared_ptr<GRM::Element> temp;
+              x1 += x_min;
+              x2 += x_min;
               if (is_vertical)
                 {
                   temp = global_render->createFillRect(y1, y2, x1, x2);
@@ -4536,9 +4565,9 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
                   neg_vertical_change += inner_y_vec[i] - ((i > 0) ? y_min : 0);
                   y2 = neg_vertical_change;
                 }
+
               x1 += x_min;
               x2 += x_min;
-
               std::shared_ptr<GRM::Element> temp;
               if (is_vertical)
                 {
@@ -4573,6 +4602,8 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
                       y2 = neg_vertical_change;
                     }
 
+                  x1 += x_min;
+                  x2 += x_min;
                   if (ylabels_left > 0)
                     {
                       available_width = x2 - x1;
@@ -4617,8 +4648,8 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
             {
               if (style == "default")
                 {
-                  x1 = (i * bar_shift) + 1 - 0.5 * bar_width;
-                  x2 = (i * bar_shift) + 1 + 0.5 * bar_width;
+                  x1 = x_min + (i * bar_shift) + 1 - 0.5 * bar_width;
+                  x2 = x_min + (i * bar_shift) + 1 + 0.5 * bar_width;
                 }
               else if (style == "lined")
                 {
@@ -6312,6 +6343,7 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
   x_max = static_cast<double>(element->getAttribute("xrange_max"));
   y_min = static_cast<double>(element->getAttribute("yrange_min"));
   y_max = static_cast<double>(element->getAttribute("yrange_max"));
+  if (isnan(y_min)) y_min = 0.0;
 
   if (element->parentElement()->hasAttribute("marginalheatmap_kind"))
     {
@@ -6328,16 +6360,15 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
       processMarginalheatmapKind(element->parentElement());
     }
 
-  if (orientation == "vertical")
+  if (orientation == "vertical" && element->parentElement()->hasAttribute("marginalheatmap_kind"))
     {
       double tmp_min = x_min, tmp_max = x_max;
 
       x_min = y_min;
       x_max = y_max;
-      y_min = tmp_min;
+      y_min = 0.0;
       y_max = tmp_max;
     }
-  y_min = 0.0;
 
   bar_width = (x_max - x_min) / num_bins;
 

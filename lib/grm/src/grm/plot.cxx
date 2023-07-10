@@ -1850,7 +1850,11 @@ err_t plot_hist(grm_args_t *subplot_args)
           subGroup->setAttribute("xrange_max", x_max);
         }
 
-      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max)) subGroup->setAttribute("yrange_min", y_min);
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
+        }
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       std::vector<double> x_vec(x, x + x_length);
@@ -1898,31 +1902,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
 
   /* Push attributes on the subplot level to the tree */
   auto context = global_render->getContext();
-  int id = static_cast<int>(global_root->getAttribute("id"));
-  std::string id_str = std::to_string(id);
-  if (grm_args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]))
-    {
-      std::vector<double> bar_color_rgb_vec(bar_color_rgb, bar_color_rgb + 3);
-      (*context)["bar_color_rgb" + id_str] = bar_color_rgb_vec;
-      group->setAttribute("bar_color_rgb", "bar_color_rgb" + id_str);
-    }
-  if (grm_args_values(subplot_args, "bar_color", "i", &bar_color))
-    {
-      group->setAttribute("bar_color", bar_color);
-    }
-  if (grm_args_values(subplot_args, "bar_width", "d", &bar_width))
-    {
-      group->setAttribute("bar_width", bar_width);
-    }
-  if (grm_args_values(subplot_args, "style", "s", &style))
-    {
-      group->setAttribute("style", style);
-    }
-  if (grm_args_values(subplot_args, "orientation", "s", &orientation))
-    {
-      group->setAttribute("orientation", orientation);
-    }
-  global_root->setAttribute("id", ++id);
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != nullptr)
@@ -1940,11 +1919,35 @@ err_t plot_barplot(grm_args_t *subplot_args)
       unsigned int ylabels_length = 0;
       std::vector<int> c_vec;
       std::vector<double> c_rgb_vec;
+      double x_min, x_max, y_min, y_max;
 
       auto subGroup = global_render->createSeries("barplot");
       group->append(subGroup);
       int id = static_cast<int>(global_root->getAttribute("id"));
       std::string id_str = std::to_string(id);
+
+      if (grm_args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]))
+        {
+          std::vector<double> bar_color_rgb_vec(bar_color_rgb, bar_color_rgb + 3);
+          (*context)["bar_color_rgb" + id_str] = bar_color_rgb_vec;
+          subGroup->setAttribute("bar_color_rgb", "bar_color_rgb" + id_str);
+        }
+      if (grm_args_values(subplot_args, "bar_color", "i", &bar_color))
+        {
+          subGroup->setAttribute("bar_color", bar_color);
+        }
+      if (grm_args_values(subplot_args, "bar_width", "d", &bar_width))
+        {
+          subGroup->setAttribute("bar_width", bar_width);
+        }
+      if (grm_args_values(subplot_args, "style", "s", &style))
+        {
+          subGroup->setAttribute("style", style);
+        }
+      if (grm_args_values(subplot_args, "orientation", "s", &orientation))
+        {
+          subGroup->setAttribute("orientation", orientation);
+        }
 
       /* Push attributes on the series level to the tree */
       if (grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1],
@@ -1961,6 +1964,16 @@ err_t plot_barplot(grm_args_t *subplot_args)
       if (grm_args_values(*current_series, "edge_width", "d", &edge_width))
         {
           subGroup->setAttribute("edge_width", edge_width);
+        }
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          subGroup->setAttribute("xrange_min", x_min);
+          subGroup->setAttribute("xrange_max", x_max);
+        }
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
         }
       if (grm_args_first_value(*current_series, "ylabels", "S", &ylabels, &ylabels_length))
         {
