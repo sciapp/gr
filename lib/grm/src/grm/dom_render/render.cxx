@@ -2633,10 +2633,10 @@ static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem
           int y_length = y.size();
           int x_length = xi.size();
 
-          double xmin = static_cast<double>(plot_group->getAttribute("_xlim_min"));
-          double xmax = static_cast<double>(plot_group->getAttribute("_xlim_max"));
-          double ymin = static_cast<double>(plot_group->getAttribute("_ylim_min"));
-          double ymax = static_cast<double>(plot_group->getAttribute("_ylim_max"));
+          double xmin = static_cast<double>(elem->getAttribute("xrange_min"));
+          double xmax = static_cast<double>(elem->getAttribute("xrange_max"));
+          double ymin = static_cast<double>(elem->getAttribute("yrange_min"));
+          double ymax = static_cast<double>(elem->getAttribute("yrange_max"));
           // plot step in marginal
           for (i = 0; i < (is_vertical ? y_length : x_length); i++)
             {
@@ -2683,30 +2683,35 @@ static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem
 
           std::shared_ptr<GRM::Element> line_elem, marker_elem;
 
-          if (is_vertical)
+          if (!child->hasChildNodes())
             {
-              line_elem = global_render->createPolyline("x" + id_str, y_step_values, "y" + id_str, x_step_boundaries);
-              x_pos = (x_step_boundaries[yind * 2] + x_step_boundaries[yind * 2 + 1]) / 2;
-              y_pos = y[yind];
-              marker_elem = global_render->createPolymarker(y_pos, x_pos);
-            }
-          else
-            {
-              line_elem = global_render->createPolyline("x" + id_str, x_step_boundaries, "y" + id_str, y_step_values);
-              x_pos = (x_step_boundaries[xind * 2] + x_step_boundaries[xind * 2 + 1]) / 2;
-              y_pos = y[xind];
-              marker_elem = global_render->createPolymarker(x_pos, y_pos);
-            }
+              if (is_vertical)
+                {
+                  line_elem =
+                      global_render->createPolyline("x" + id_str, y_step_values, "y" + id_str, x_step_boundaries);
+                  x_pos = (x_step_boundaries[yind * 2] + x_step_boundaries[yind * 2 + 1]) / 2;
+                  y_pos = y[yind];
+                  marker_elem = global_render->createPolymarker(y_pos, x_pos);
+                }
+              else
+                {
+                  line_elem =
+                      global_render->createPolyline("x" + id_str, x_step_boundaries, "y" + id_str, y_step_values);
+                  x_pos = (x_step_boundaries[xind * 2] + x_step_boundaries[xind * 2 + 1]) / 2;
+                  y_pos = y[xind];
+                  marker_elem = global_render->createPolymarker(x_pos, y_pos);
+                }
 
-          global_render->setLineColorInd(line_elem, 989);
-          global_render->setMarkerColorInd(marker_elem, 2);
-          global_render->setMarkerType(marker_elem, -1);
-          global_render->setMarkerSize(marker_elem, 1.5 * (len / (is_vertical ? (ymax - ymin) : (xmax - xmin))));
+              global_render->setLineColorInd(line_elem, 989);
+              global_render->setMarkerColorInd(marker_elem, 2);
+              global_render->setMarkerType(marker_elem, -1);
+              global_render->setMarkerSize(marker_elem, 1.5 * (len / (is_vertical ? (ymax - ymin) : (xmax - xmin))));
 
-          marker_elem->setAttribute("name", "line");
-          line_elem->setAttribute("name", "line");
-          child->append(marker_elem);
-          child->append(line_elem);
+              marker_elem->setAttribute("name", "line");
+              line_elem->setAttribute("name", "line");
+              child->append(marker_elem);
+              child->append(line_elem);
+            }
         }
       else if (mkind == "all")
         {
