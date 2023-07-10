@@ -543,7 +543,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       center_x = (int)(max_x - radius);
       center_y = (int)(max_y - radius);
 
-      auto current_series = subplot_element->querySelectorsAll("series_" + kind)[0];
+      auto current_series = subplot_element->querySelectorsAll("series_pie")[0];
       auto x_key = static_cast<std::string>(current_series->getAttribute("x"));
       std::vector<double> x_series_vec;
       x_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);

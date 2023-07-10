@@ -605,9 +605,28 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       std::vector<double> x(rows);
       int err = 0;
 
+      adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)cols - 1.0);
+      adjust_ranges(&ranges.ymin, &ranges.ymax, 0.0, (double)rows - 1.0);
+      ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
+
       for (row = 0; row < rows; row++)
         {
-          x[row] = (double)row;
+          x[row] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)row / ((double)rows - 1));
+        }
+      if (ranges.ymax != INFINITY)
+        {
+          double min_val = *std::min_element(filedata[depth].data()->begin(), filedata[depth].data()->end());
+          double max_val = *std::max_element(filedata[depth].data()->begin(), filedata[depth].data()->end());
+
+          for (col = 0; col < cols; ++col)
+            {
+              for (row = 0; row < rows; row++)
+                {
+                  filedata[depth][col][row] = ranges.ymin + (ranges.ymax - ranges.ymin) *
+                                                                (filedata[depth][col][row] - min_val) /
+                                                                (max_val - min_val);
+                }
+            }
         }
       if (grm_args_values(args, "error", "a", &error))
         {

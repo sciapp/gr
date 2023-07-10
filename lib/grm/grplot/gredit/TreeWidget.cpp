@@ -69,7 +69,7 @@ void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, QTreeWid
   bool skip = false;
   QTreeWidgetItem *item = new QTreeWidgetItem(parent);
   item->setText(0, tr(ref->localName().c_str()));
-  std::string blacklist[] = {"name", "bbox_xmin", "bbox_xmax", "bbox_ymin", "bbox_ymax", "bbox_id"};
+  std::string blacklist[] = {"name", "_bbox_xmin", "_bbox_xmax", "_bbox_ymin", "_bbox_ymax", "_bbox_id"};
   item->setText(1, tr(static_cast<std::string>(ref->getAttribute(blacklist[0])).c_str()));
   for (const auto &cur_attr : ref->getAttributeNames())
     {

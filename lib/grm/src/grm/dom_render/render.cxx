@@ -6272,7 +6272,7 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
 
   int edge_color_index = 1;
   std::vector<double> edge_color_rgb_vec = {-1, -1, -1};
-  double x_min, x_max, bar_width, y_min;
+  double x_min, x_max, bar_width, y_min, y_max;
   std::vector<double> bins_vec;
   unsigned int num_bins;
   std::string orientation = PLOT_DEFAULT_ORIENTATION;
@@ -6311,7 +6311,7 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
   x_min = static_cast<double>(element->getAttribute("xrange_min"));
   x_max = static_cast<double>(element->getAttribute("xrange_max"));
   y_min = static_cast<double>(element->getAttribute("yrange_min"));
-  if (std::isnan(y_min)) y_min = 0.0;
+  y_max = static_cast<double>(element->getAttribute("yrange_max"));
 
   if (element->parentElement()->hasAttribute("marginalheatmap_kind"))
     {
@@ -6321,11 +6321,23 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
         x_max = static_cast<double>(element->parentElement()->getAttribute("xrange_max"));
       if (element->parentElement()->hasAttribute("yrange_min"))
         y_min = static_cast<double>(element->parentElement()->getAttribute("yrange_min"));
+      if (element->parentElement()->hasAttribute("yrange_max"))
+        y_max = static_cast<double>(element->parentElement()->getAttribute("yrange_max"));
       element->setAttribute("calc_window_and_viewport_from_parent", 1);
-      y_min = 0.0;
       processCalcWindowAndViewportFromParent(element);
       processMarginalheatmapKind(element->parentElement());
     }
+
+  if (orientation == "vertical")
+    {
+      double tmp_min = x_min, tmp_max = x_max;
+
+      x_min = y_min;
+      x_max = y_max;
+      y_min = tmp_min;
+      y_max = tmp_max;
+    }
+  y_min = 0.0;
 
   bar_width = (x_max - x_min) / num_bins;
 
