@@ -7589,6 +7589,7 @@ static void processScatter(const std::shared_ptr<GRM::Element> &element, const s
     {
       element->setAttribute("orientation", orientation);
     }
+  auto is_horizontal = orientation == "horizontal";
 
   markertype = static_cast<int>(element->getAttribute("markertype"));
   global_render->setMarkerType(element, markertype);
@@ -7663,7 +7664,15 @@ static void processScatter(const std::shared_ptr<GRM::Element> &element, const s
       std::string str = std::to_string(id);
       global_root->setAttribute("_id", ++id);
 
-      auto marker = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
+      std::shared_ptr<GRM::Element> marker;
+      if (is_horizontal)
+        {
+          marker = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
+        }
+      else
+        {
+          marker = global_render->createPolymarker(str + "x", y_vec, str + "y", x_vec);
+        }
       element->append(marker);
       if (!markerSizesVec.empty())
         {
@@ -7678,7 +7687,15 @@ static void processScatter(const std::shared_ptr<GRM::Element> &element, const s
     {
       int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
-      auto marker = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
+      std::shared_ptr<GRM::Element> marker;
+      if (is_horizontal)
+        {
+          marker = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
+        }
+      else
+        {
+          marker = global_render->createPolymarker(str + "x", y_vec, str + "y", x_vec);
+        }
       element->append(marker);
       global_root->setAttribute("_id", ++id);
     }
@@ -9559,15 +9576,39 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                           max_component += step;
                         }
                     }
+                  // TODO: Support mixed orientations
+                  std::string orientation = PLOT_DEFAULT_ORIENTATION;
+                  for (const auto &series : element->children())
+                    {
+                      if (series->hasAttribute("orientation"))
+                        orientation = static_cast<std::string>(series->getAttribute("orientation"));
+                      if (!starts_with(series->localName(), "series")) continue;
+                    }
                   if (static_cast<std::string>(current_range_keys->subplot) == "xlim")
                     {
-                      element->setAttribute("_xlim_min", min_component);
-                      element->setAttribute("_xlim_max", max_component);
+                      if (orientation == "horizontal")
+                        {
+                          element->setAttribute("_xlim_min", min_component);
+                          element->setAttribute("_xlim_max", max_component);
+                        }
+                      else
+                        {
+                          element->setAttribute("_ylim_min", min_component);
+                          element->setAttribute("_ylim_max", max_component);
+                        }
                     }
                   else if (static_cast<std::string>(current_range_keys->subplot) == "ylim")
                     {
-                      element->setAttribute("_ylim_min", min_component);
-                      element->setAttribute("_ylim_max", max_component);
+                      if (orientation == "horizontal")
+                        {
+                          element->setAttribute("_ylim_min", min_component);
+                          element->setAttribute("_ylim_max", max_component);
+                        }
+                      else
+                        {
+                          element->setAttribute("_xlim_min", min_component);
+                          element->setAttribute("_xlim_max", max_component);
+                        }
                     }
                   else if (static_cast<std::string>(current_range_keys->subplot) == "zlim")
                     {
