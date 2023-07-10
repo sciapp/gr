@@ -6358,16 +6358,17 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
       element->setAttribute("calc_window_and_viewport_from_parent", 1);
       processCalcWindowAndViewportFromParent(element);
       processMarginalheatmapKind(element->parentElement());
-    }
 
-  if (orientation == "vertical" && element->parentElement()->hasAttribute("marginalheatmap_kind"))
-    {
-      double tmp_min = x_min, tmp_max = x_max;
+      if (orientation == "vertical")
+        {
+          double tmp_min = x_min, tmp_max = x_max;
 
-      x_min = y_min;
-      x_max = y_max;
+          x_min = y_min;
+          x_max = y_max;
+          y_min = tmp_min;
+          y_max = tmp_max;
+        }
       y_min = 0.0;
-      y_max = tmp_max;
     }
 
   bar_width = (x_max - x_min) / num_bins;
