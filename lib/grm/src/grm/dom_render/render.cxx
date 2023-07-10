@@ -6343,7 +6343,7 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
   x_max = static_cast<double>(element->getAttribute("xrange_max"));
   y_min = static_cast<double>(element->getAttribute("yrange_min"));
   y_max = static_cast<double>(element->getAttribute("yrange_max"));
-  if (isnan(y_min)) y_min = 0.0;
+  if (std::isnan(y_min)) y_min = 0.0;
 
   if (element->parentElement()->hasAttribute("marginalheatmap_kind"))
     {
