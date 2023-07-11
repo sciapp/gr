@@ -6861,6 +6861,12 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   int id = (int)global_root->getAttribute("_id");
   global_root->setAttribute("_id", id + 1);
 
+  // clear old polylines
+  for (const auto &elem : element->children())
+    {
+      if (elem->localName() == "polyline") elem->remove();
+    }
+
   auto temp = global_render->createPolyline("x" + std::to_string(id), x, "y" + std::to_string(id), y);
   element->append(temp);
 }
@@ -7314,7 +7320,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
       int n = 0;
       int temp;
 
-      if (num_bin_edges > 0 && *philim == -1.0)
+      if (num_bin_edges > 0 && philim == nullptr)
         {
           int i;
           logger((stderr, "bin_width is not compatible with bin_edges\n"));
