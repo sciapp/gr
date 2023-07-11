@@ -163,10 +163,13 @@ int grm_input(const grm_args_t *input_args)
                   yind = (int)yind_d;
                 }
 
+              auto old_xind = static_cast<int>(current_series->parentElement()->getAttribute("xind"));
+              auto old_yind = static_cast<int>(current_series->parentElement()->getAttribute("yind"));
               current_series->parentElement()->setAttribute("xind", xind);
               current_series->parentElement()->setAttribute("yind", yind);
               if (static_cast<std::string>(current_series->parentElement()->getAttribute("marginalheatmap_kind")) ==
-                  "line")
+                      "line" &&
+                  ((old_xind == -1 || old_yind == -1) && xind != -1 && yind != -1))
                 current_series->parentElement()->setAttribute("_update_required", true);
 
               for (auto &child : current_series->parentElement()->children())

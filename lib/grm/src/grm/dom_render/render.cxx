@@ -2712,6 +2712,52 @@ static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem
               child->append(marker_elem);
               child->append(line_elem);
             }
+          else if (xind == -1 || yind == -1)
+            {
+              child->remove();
+            }
+          else
+            {
+              for (const auto &childchild : child->children())
+                {
+                  if (childchild->localName() == "polyline")
+                    {
+                      std::string x_key = "x" + id_str;
+                      std::string y_key = "y" + id_str;
+                      if (is_vertical)
+                        {
+                          (*context)[x_key] = y_step_values;
+                          (*context)[y_key] = x_step_boundaries;
+                        }
+                      else
+                        {
+                          (*context)[y_key] = y_step_values;
+                          (*context)[x_key] = x_step_boundaries;
+                        }
+                      childchild->setAttribute("x", x_key);
+                      childchild->setAttribute("y", y_key);
+                    }
+                  else if (childchild->localName() == "polymarker")
+                    {
+                      if (is_vertical)
+                        {
+                          x_pos = (x_step_boundaries[yind * 2] + x_step_boundaries[yind * 2 + 1]) / 2;
+                          y_pos = y[yind];
+                          childchild->setAttribute("x", y_pos);
+                          childchild->setAttribute("y", x_pos);
+                        }
+                      else
+                        {
+                          x_pos = (x_step_boundaries[xind * 2] + x_step_boundaries[xind * 2 + 1]) / 2;
+                          y_pos = y[xind];
+                          childchild->setAttribute("x", x_pos);
+                          childchild->setAttribute("y", y_pos);
+                        }
+                      global_render->setMarkerSize(childchild,
+                                                   1.5 * (len / (is_vertical ? (ymax - ymin) : (xmax - xmin))));
+                    }
+                }
+            }
         }
       else if (mkind == "all")
         {
