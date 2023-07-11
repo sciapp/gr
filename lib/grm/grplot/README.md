@@ -2,13 +2,13 @@
 
 ## Introduction
 
-This program allows to create plots from the command line while using simple key-value pairs as arguments. The latter are converted into GRM containers which will then be used to plot the data.
+This program allows to create plots from the command line while using simple key-value pairs as arguments. The latter are converted into GRM containers which will then be used to plot the data. Alternatively a sender receiver mechanic can be used. For that start the grplot with the parameter `--listen`. The executable will now display the elements the sender sends to it.
 
 ## Command line arguments
 
 The following parameters are key-value pairs which can be used for every plot type.
 
-- `file`: contains the data which should be displayed. If no file is referred this results in an error message. If this parameter is the first argument the `file` keyword may be omitted. More information about these files can be found under the subchapter `Data file`.
+- `file`: contains the data which should be displayed. If no file is referred this results in an error message. If this parameter is the first argument the `file` keyword may be omitted. More information about these files can be found under the subchapter `Data file`. A hyphen '-' in place of a file path normally means "read from standard input". Since 'grplot' does not read from standard input by default, use '-' to redirect the input. This way 'grplot' can be used in a pipe.
 - `kind`: defines the plot type that should be displayed. Possible options are: `barplot`, `contour`, `contourf`, `heatmap`, `hexbin`, `hist`, `imshow`, `isosurface`, `line`, `marginalheatmap`, `polar`, `polar_histogram`, `polar_heatmap`, `pie`, `plot3`, `scale`, `scatter`, `scatter3`, `shade`, `surface`, `stairs`, `stem`, `tricont`, `trisurf`, `quiver`, `volume`, `wireframe`. The default plot type is `line`.
 
   To get extra information about a specific plot type use:
@@ -50,6 +50,12 @@ An example for some parameters on the command line:
 
 ```shell
 file:covid19.csv kind:line columns:1:3,5
+```
+
+An example for using the stdin instead of the `file` keyword:
+
+```shell
+cat <data-file> | grplot -
 ```
 
 This is an advanced example for a command line, where container parameters are set:

@@ -26,7 +26,7 @@ default: grplot.exe
 $(GRMLIB):
 	$(MAKE) -C .. libGRM.lib
 
-grplot.exe: grplot.cxx grplot_mainwindow.cxx grplot_widget.cxx util.cxx gredit/Bounding_logic.cpp gredit/Bounding_object.cpp gredit/CustomTreeWidgetItem.cpp gredit/TreeWidget.cpp $(GRMLIB)
+grplot.exe: grplot.cxx grplot_mainwindow.cxx grplot_widget.cxx util.cxx gredit/Bounding_logic.cpp gredit/Bounding_object.cpp gredit/CustomTreeWidgetItem.cpp gredit/TreeWidget.cpp qtterm/grm_args_t_wrapper.cpp qtterm/receiver_thread.cpp $(GRMLIB)
 	wget https://gr-framework.org/downloads/3rdparty/qt5-runtime-Windows-$(ARCHITECTURE)-mingw81.tar.gz
 	tar xzf qt5-runtime-Windows-$(ARCHITECTURE)-mingw81.tar.gz
 	moc -DGRDIR=\"$(GRDIR)\" -Iinclude grplot_widget.hxx -o moc_grplot_widget.cxx
@@ -35,7 +35,9 @@ grplot.exe: grplot.cxx grplot_mainwindow.cxx grplot_widget.cxx util.cxx gredit/B
 	moc -DGRDIR=\"$(GRDIR)\" -Iinclude gredit/Bounding_object.h -o gredit/moc_Bounding_object.cpp
 	moc -DGRDIR=\"$(GRDIR)\" -Iinclude gredit/CustomTreeWidgetItem.h -o gredit/moc_CustomTreeWidgetItem.cpp
 	moc -DGRDIR=\"$(GRDIR)\" -Iinclude gredit/TreeWidget.h -o gredit/moc_TreeWidget.cpp
-	$(CXX) -fno-exceptions -Wl,--subsystem,console -mconsole -std=c++17 -DGRDIR=\"$(GRDIR)\" -DGR_STATIC_LIB -DLIBXML_STATIC $(INCLUDES) -Iinclude -Iinclude/QtGui -Iinclude/QtWidgets -Iinclude/QtCore -I../ -o $@ $^ moc_grplot_widget.cxx moc_grplot_mainwindow.cxx gredit/moc_Bounding_logic.cpp gredit/moc_Bounding_object.cpp gredit/moc_CustomTreeWidgetItem.cpp gredit/moc_TreeWidget.cpp Qt5Gui.dll Qt5Widgets.dll Qt5Core.dll \
+	moc -DGRDIR=\"$(GRDIR)\" -Iinclude qtterm/grm_args_t_wrapper.h -o qtterm/moc_grm_args_t_wrapper.cpp
+    moc -DGRDIR=\"$(GRDIR)\" -Iinclude qtterm/receiver_thread.h -o qtterm/moc_receiver_thread.cpp
+	$(CXX) -fno-exceptions -Wl,--subsystem,console -mconsole -std=c++17 -DGRDIR=\"$(GRDIR)\" -DGR_STATIC_LIB -DLIBXML_STATIC $(INCLUDES) -Iinclude -Iinclude/QtGui -Iinclude/QtWidgets -Iinclude/QtCore -I../ -o $@ $^ moc_grplot_widget.cxx moc_grplot_mainwindow.cxx gredit/moc_Bounding_logic.cpp gredit/moc_Bounding_object.cpp gredit/moc_CustomTreeWidgetItem.cpp gredit/moc_TreeWidget.cpp qtterm/moc_grm_args_t_wrapper.cpp qtterm/moc_receiver_thread.cpp Qt5Gui.dll Qt5Widgets.dll Qt5Core.dll \
 	$(LIBXML2LIBS) $(JPEGLIBS) $(FTLIBS) $(PNGLIBS) $(ZLIBS) $(QHLIBS) $(LIBS)
 
 

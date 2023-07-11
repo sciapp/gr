@@ -1180,6 +1180,8 @@ if((Qt6Widgets_FOUND
     lib/grm/grplot/grplot.cxx
     lib/grm/grplot/grplot_mainwindow.cxx
     lib/grm/grplot/grplot_widget.cxx
+    lib/grm/grplot/qtterm/grm_args_t_wrapper.cpp
+    lib/grm/grplot/qtterm/receiver_thread.cpp
     lib/grm/grplot/util.cxx
   )
   if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
@@ -1225,6 +1227,23 @@ if((Qt6Widgets_FOUND
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
     )
     add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h
+    )
+
+    add_custom_command(
       OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
       COMMAND
         ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
@@ -1263,6 +1282,8 @@ if((Qt6Widgets_FOUND
               ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
               ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
               ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
     )
   else()
     set_target_properties(grplot PROPERTIES AUTOMOC ON AUTORCC ON)
@@ -1274,6 +1295,8 @@ if((Qt6Widgets_FOUND
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h
     )
   endif()
   if(APPLE)

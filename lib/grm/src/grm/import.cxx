@@ -10,6 +10,7 @@
 #include <sstream>
 #include <algorithm>
 #include <map>
+#include <iostream>
 
 /* ========================= static variables ======================================================================= */
 
@@ -120,7 +121,8 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
 {
   std::string line;
   std::string token;
-  std::ifstream file(path);
+  std::ifstream file_path(path);
+  std::istream &cin_path = std::cin;
   std::list<int> columns;
   bool depth_change = true;
   int depth = 0, max_col = -1;
@@ -128,7 +130,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
 
   /* read the columns from the colms string also converts slicing into numbers */
   std::stringstream scol(colms);
-  for (size_t col = 0; std::getline(scol, token, ',') && token.length(); col++)
+  while (std::getline(scol, token, ',') && token.length())
     {
       if (token.find(':') != std::string::npos)
         {
@@ -192,6 +194,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
       ranges->ymin = *columns.begin();
     }
 
+  std::istream &file = (path == "-") ? cin_path : file_path;
   /* read the lines from the file */
   while (getline(file, line))
     {
@@ -484,7 +487,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       return 0;
     }
 
-  if (!file_exists(file_args->file_path))
+  if (file_args->file_path != "-" && !file_exists(file_args->file_path))
     {
       fprintf(stderr, "File not found (%s)\n", file_args->file_path.c_str());
       return 0;
@@ -513,7 +516,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   series.resize(cols);
 
   wstype = getenv("GKS_WSTYPE");
-  if (strcmp(wstype, "381") == 0 && (env = getenv("GR_DISPLAY")) != nullptr)
+  if (wstype != nullptr && strcmp(wstype, "381") == 0 && (env = getenv("GR_DISPLAY")) != nullptr)
     {
       handle = grm_open(GRM_SENDER, env, 8002, nullptr, nullptr);
       if (handle == nullptr)
@@ -630,6 +633,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 }
             }
         }
+
       if (grm_args_values(args, "error", "a", &error))
         {
           int i;
@@ -740,10 +744,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     {
       std::vector<double> x(rows);
       double xmin, xmax, ymin, ymax;
-      char *orientation;
       grm_args_t *error;
-      char **xlabels;
-      unsigned int num_xlabels;
 
       if (strcmp(kind, "barplot") == 0)
         {
@@ -833,6 +834,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       for (col = 0; col < cols; col++)
         {
           x[col] = filedata[depth][col][0];
+          if (!labels.empty())
+            {
+              labels_c.push_back(labels[col].c_str());
+            }
         }
 
       grm_args_push(args, "x", "nD", cols, x.data());
@@ -980,14 +985,14 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
   for (i = 1; i < argc; i++)
     {
       token = argv[i];
-      /* parameter needed for import.cxx are treated different than grm-parameters */
+      /* parameter needed for import.cxx are handled differently than grm-parameters */
       if (starts_with(token, "file:"))
         {
           file_args->file_path = token.substr(5, token.length() - 1);
         }
       else if (i == 1 && (token.find(delim) == std::string::npos || (token.find(delim) == 1 && token.find('/') == 2)))
         {
-          optional_file = token; /* its only getting used, when no "file:"-keyword was found */
+          optional_file = token; /* it's only used, if no "file:" keyword was found */
         }
       else if (starts_with(token, "columns:"))
         {
@@ -1000,7 +1005,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
             {
               found_key = token.substr(0, pos);
               found_key_size = found_key.size();
-              /* check if there exist a know alias and in case of replace the key */
+              /* replace the key if a known alias exists */
               if (auto search_alias = key_alias.find(found_key); search_alias != key_alias.end())
                 {
                   found_key = search_alias->second;

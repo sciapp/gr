@@ -27,15 +27,20 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv) : QMainWindow()
             fprintf(stderr, "No plot type with the name %s was found.\n", kind.c_str());
         }
       setCentralWidget(message);
+      resize(600, 450);
     }
   else
     {
       grplot_widget_ = new GRPlotWidget(this, argc, argv);
       setCentralWidget(grplot_widget_);
+      grplot_widget_->resize(600, 450);
     }
 
   setWindowTitle("GR Plot");
-  resize(600, 450);
+  if (strcmp(argv[1], "--listen") != 0)
+    {
+      resize(600, 450);
+    }
 }
 
 GRPlotMainWindow::~GRPlotMainWindow() = default;

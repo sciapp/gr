@@ -28,6 +28,17 @@ typedef struct
   const char *label;
 } grm_tooltip_info_t;
 
+typedef struct
+{
+  int n;
+  double x;
+  double *y;
+  int x_px;
+  int y_px;
+  char *xlabel;
+  char **ylabels;
+} grm_accumulated_tooltip_info_t;
+
 /* ========================= functions ============================================================================== */
 
 /* ------------------------- user interaction ----------------------------------------------------------------------- */
