@@ -66,6 +66,16 @@ This is an advanced example for a command line, where container parameters are s
 
 If wanted the plot can be exported as a `pdf`, `png`, `jpeg` or `svg` file using the interactive menu. Alternatively these files can directly be created from console line when the environment variable `GKS_WSTYPE` is set.
 
+## Test
+
+The plots created from 'grplot' support in most cases interactions. These interactions can be used manually or via test cases. Further on these test cases allow to automatically test all the functionalities of 'grplot'. The biggest use case for these test cases is to verify if any made change inflicts any existing interaction.
+
+To start 'grplot' with a test case you have to run:
+
+```shell
+grplot --test <command-file> <data-file> <parameter>
+```
+
 ## Data file
 
 These files contain the data that should be plotted. Besides the data these files can include parameters which modify the plot. The first lines define parameters just like the `title` and have the following pattern:

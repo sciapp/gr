@@ -608,15 +608,13 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       std::vector<double> x(rows);
       int err = 0;
 
-      adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)cols - 1.0);
-      adjust_ranges(&ranges.ymin, &ranges.ymax, 0.0, (double)rows - 1.0);
-      ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
+      adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)rows - 1.0);
 
       for (row = 0; row < rows; row++)
         {
           x[row] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)row / ((double)rows - 1));
         }
-      if (ranges.ymax != INFINITY)
+      if (ranges.ymax != INFINITY && ranges.ymin != INFINITY)
         {
           double min_val = INFINITY, max_val = -INFINITY;
           for (col = 0; col < cols - err; col++)

@@ -503,7 +503,7 @@ grm_accumulated_tooltip_info_t *grm_get_accumulated_tooltip_x(int mouse_x, int m
           min_dist = current_dist;
         }
       *y_ptr = current_tooltip->y;
-      *ylabels_ptr = current_tooltip->label;
+      *ylabels_ptr = (strcmp(current_tooltip->label, "") == 0) ? "y" : current_tooltip->label;
       ++y_ptr;
       ++ylabels_ptr;
       tooltip_reflist_node = tooltip_reflist_node->next;
