@@ -114,6 +114,7 @@ extern "C" {
 #define SET_BORDER_COLOR_INDEX 207
 #define SELECT_CLIP_XFORM 208
 #define INQ_WS_STATE 209
+#define SAMPLE_LOCATOR 210
 
 #define BEGIN_SELECTION 250
 #define END_SELECTION 251
@@ -228,6 +229,13 @@ typedef struct
   double device_pixel_ratio;
 } gks_ws_state_t;
 
+typedef struct
+{
+  double x;
+  double y;
+  int status;
+} gks_locator_t;
+
 int gks_open_font(void);
 void gks_lookup_font(int fd, int version, int font, int chr, stroke_data_t *buffer);
 void gks_close_font(int fd);
@@ -237,10 +245,9 @@ void gks_lookup_afm(int font, int chr, stroke_data_t *buffer);
 DLLEXPORT char *gks_malloc(int size);
 DLLEXPORT char *gks_realloc(void *ptr, int size);
 DLLEXPORT void gks_free(void *ptr);
-
 DLLEXPORT char *gks_strdup(const char *str);
 
-void gks_perror(const char *, ...);
+DLLEXPORT void gks_perror(const char *, ...);
 void gks_fatal_error(const char *, ...);
 const char *gks_function_name(int routine);
 void gks_report_error(int routine, int errnum);

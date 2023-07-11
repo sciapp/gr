@@ -85,6 +85,10 @@ DLLEXPORT void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
+#ifndef max
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+#endif
+
 static gks_state_list_t gkss_, *gkss = &gkss_;
 
 static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
@@ -506,25 +510,30 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               seg_xform_rel(&xr, &yr);
               (*p->points)[i] = QPointF(x - xr, y + yr);
             }
-          p->pixmap->setPen(QPen(marker_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
+          p->pixmap->setPen(
+              QPen(marker_color, max(gkss->bwidth, gkss->lwidth) * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawPolyline(p->points->constData(), 2);
           pc += 4;
           break;
 
         case 3: /* polygon */
-          points = new QPolygonF(marker[mtype][pc + 1]);
-          for (i = 0; i < marker[mtype][pc + 1]; i++)
+        case 9: /* border polygon */
+          if (op == 3 || gkss->bwidth > 0)
             {
-              xr = scale * marker[mtype][pc + 2 + 2 * i];
-              yr = -scale * marker[mtype][pc + 3 + 2 * i];
-              seg_xform_rel(&xr, &yr);
-              (*points)[i] = QPointF(x - xr, y + yr);
+              points = new QPolygonF(marker[mtype][pc + 1]);
+              for (i = 0; i < marker[mtype][pc + 1]; i++)
+                {
+                  xr = scale * marker[mtype][pc + 2 + 2 * i];
+                  yr = -scale * marker[mtype][pc + 3 + 2 * i];
+                  seg_xform_rel(&xr, &yr);
+                  (*points)[i] = QPointF(x - xr, y + yr);
+                }
+              p->pixmap->setPen(QPen(op == 3 ? marker_color : border_color, gkss->bwidth * p->nominal_size,
+                                     Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
+              p->pixmap->drawPolyline(points->constData(), marker[mtype][pc + 1]);
+              delete points;
             }
-          p->pixmap->setPen(
-              QPen(marker_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
-          p->pixmap->drawPolyline(points->constData(), marker[mtype][pc + 1]);
           pc += 1 + 2 * marker[mtype][pc + 1];
-          delete points;
           break;
 
         case 4: /* filled polygon */
@@ -533,7 +542,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (op == 4)
             {
               p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
-              if (gkss->bcoli != gkss->pmcoli)
+              if (gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
                 p->pixmap->setPen(
                     QPen(border_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
               else
@@ -554,7 +563,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 6: /* arc */
-          p->pixmap->setPen(QPen(marker_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
+          p->pixmap->setPen(
+              QPen(marker_color, max(gkss->bwidth, gkss->lwidth) * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawArc(QRectF(x - r, y - r, d, d), 0, 360 * 16);
           break;
 
@@ -563,7 +573,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (op == 7)
             {
               p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
-              if (gkss->bcoli != gkss->pmcoli)
+              if (gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
                 p->pixmap->setPen(QPen(border_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
               else
                 p->pixmap->setPen(Qt::NoPen);

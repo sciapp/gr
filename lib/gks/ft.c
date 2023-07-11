@@ -184,7 +184,7 @@ static size_t ft_open_font(ft_path_char_t *fname)
   return size;
 }
 
-static void ft_close_all_fonts()
+static void ft_close_all_fonts(void)
 {
   int i;
   for (i = 0; i < ft_num_font_files; i++)
@@ -206,7 +206,7 @@ static const ft_path_char_t *user_font_directories[] = {
 
 static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous, FT_Vector *pen, FT_Bool vertical,
                           FT_Matrix *rotation, FT_Vector *bearing, FT_Int halign, FT_GlyphSlot *glyph_slot_ptr);
-static void gks_ft_init_fallback_faces();
+static void gks_ft_init_fallback_faces(void);
 static void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, FT_UInt *length);
 static FT_Long ft_min(FT_Long a, FT_Long b);
 static FT_Long ft_max(FT_Long a, FT_Long b);
@@ -748,7 +748,7 @@ static ft_path_char_t *gks_ft_get_font_path(const char *font_name, const char *f
   return font_path;
 }
 
-static void gks_ft_init_fallback_faces()
+static void gks_ft_init_fallback_faces(void)
 {
   FT_Error error;
   unsigned int i;
@@ -1989,6 +1989,34 @@ int *gks_ft_render(int *x, int *y, int *width, int *height, gks_state_list_t *gk
   return NULL;
 }
 
+unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_state_list_t *gkss, const char *text,
+                                 int length)
+{
+  if (!init) gks_ft_init();
+  return NULL;
+}
+
+void *gks_ft_get_face(int textfont)
+{
+  if (!init) gks_ft_init();
+  return NULL;
+}
+
+int gks_ft_get_metrics(int font, double fontsize, unsigned int codepoint, unsigned int dpi, double *width,
+                       double *height, double *depth, double *advance, double *bearing, double *xmin, double *xmax,
+                       double *ymin, double *ymax)
+{
+  if (!init) gks_ft_init();
+  return 0;
+}
+
+double gks_ft_get_kerning(int font, double fontsize, unsigned int dpi, unsigned int first_codepoint,
+                          unsigned int second_codepoint)
+{
+  if (!init) gks_ft_init();
+  return 0.0;
+}
+
 void gks_ft_terminate(void) {}
 
 void gks_ft_text(double x, double y, char *text, gks_state_list_t *gkss,
@@ -2014,6 +2042,16 @@ void gks_ft_inq_text3d_extent(double x, double y, double z, char *text, int axis
                               double heightFactor, double *scaleFactors,
                               void (*gdp)(int, double *, double *, int, int, int *),
                               void (*wc3towc)(double *, double *, double *), double *bBoxX, double *bBoxY)
+{
+  if (!init) gks_ft_init();
+}
+
+void gks_ft_set_bearing_x_direction(int direction)
+{
+  if (!init) gks_ft_init();
+}
+
+void gks_ft_inq_bearing_x_direction(int *direction)
 {
   if (!init) gks_ft_init();
 }

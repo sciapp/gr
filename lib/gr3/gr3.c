@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
 #include "gr3.h"
 #include "gr3_internals.h"
 #include "gr3_sr.h"
@@ -71,14 +72,14 @@ const char *gr3_error_file_ = "";
   {                                                                                                                   \
     GR3_InitStruct_INITIALIZER, 0, 0, 0, NULL, 0, NULL, not_initialized_, NULL, NULL, 0, 0, {{0}}, 0, 0, 0, NAN, NAN, \
         NAN, NAN, 0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0, 0, 0, 4, 0, {0}, {0}, {0},   \
-        {0}, 0, 0, 0, 0, {0}, {0.2, 0.8, 128, 0.7}, 1, NAN, NAN, NAN, NAN, NAN, NAN                                   \
+        {0}, {0}, 0, 0, 0, 0, {0}, {0.2, 0.8, 128, 0.7}, 1, NAN, NAN, NAN, NAN, NAN, NAN, 0, 0                        \
   }
 #else
 #define GR3_ContextStruct_INITIALIZER                                                                                 \
   {                                                                                                                   \
     GR3_InitStruct_INITIALIZER, 0, 0, 0, NULL, 0, NULL, not_initialized_, NULL, NULL, 0, 0, {{0}}, 0, 0, 0, NAN, NAN, \
         NAN, NAN, 0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0, 0, 0, -1, 0, {0}, {0}, {0},  \
-        0, 0, 0, {0}, {0.2, 0.8, 128, 0.7}, 1, NAN, NAN, NAN, NAN, NAN, NAN                                           \
+        {0}, 0, 0, 0, {0}, {0.2, 0.8, 128, 0.7}, 1, NAN, NAN, NAN, NAN, NAN, NAN, 0, 0                                \
   }
 #endif
 GR3_ContextStruct_t_ context_struct_ = GR3_ContextStruct_INITIALIZER;
@@ -556,6 +557,10 @@ GR3API int gr3_clear(void)
           free(draw->directions);
           free(draw->ups);
           free(draw->colors);
+          if (draw->alphas)
+            {
+              free(draw->alphas);
+            }
           free(draw->scales);
           free(draw);
         }
@@ -1090,7 +1095,7 @@ GR3API void gr3_drawmesh(int mesh, int n, const float *positions, const float *d
                          const float *colors, const float *scales)
 {
   GR3_DrawList_t_ *p, *draw;
-
+  int alpha_storage_modifier;
   GR3_DO_INIT;
   if (gr3_geterror(0, NULL, NULL)) return;
   if (!context_struct_.is_initialized)
@@ -1099,6 +1104,7 @@ GR3API void gr3_drawmesh(int mesh, int n, const float *positions, const float *d
     }
 
   draw = malloc(sizeof(GR3_DrawList_t_));
+  assert(draw);
   draw->mesh = mesh;
   draw->positions = malloc(sizeof(float) * n * 3);
   memmove(draw->positions, positions, sizeof(float) * n * 3);
@@ -1106,8 +1112,61 @@ GR3API void gr3_drawmesh(int mesh, int n, const float *positions, const float *d
   memmove(draw->directions, directions, sizeof(float) * n * 3);
   draw->ups = malloc(sizeof(float) * n * 3);
   memmove(draw->ups, ups, sizeof(float) * n * 3);
+  draw->alpha_mode = context_struct_.alpha_mode;
+  if (draw->alpha_mode == 0)
+    {
+      alpha_storage_modifier = 0;
+    }
+  else if (draw->alpha_mode == 1)
+    {
+      alpha_storage_modifier = 1;
+    }
+  else
+    {
+      alpha_storage_modifier = 3;
+    }
+
+  if (alpha_storage_modifier == 0)
+    {
+      draw->alphas = NULL;
+    }
+  else
+    {
+      draw->alphas = malloc(sizeof(float) * n * alpha_storage_modifier);
+    }
+
   draw->colors = malloc(sizeof(float) * n * 3);
-  memmove(draw->colors, colors, sizeof(float) * n * 3);
+  assert(draw->colors);
+  if (draw->alpha_mode == 1)
+    {
+      int k;
+      for (k = 0; k < n; k++)
+        {
+          draw->colors[k * 3 + 0] = colors[4 * k + 0];
+          draw->colors[k * 3 + 1] = colors[4 * k + 1];
+          draw->colors[k * 3 + 2] = colors[4 * k + 2];
+          draw->alphas[k] = colors[4 * k + 3];
+        }
+    }
+  else if (draw->alpha_mode == 2)
+    {
+      int k;
+      for (k = 0; k < n; k++)
+        {
+          draw->colors[k * 3] = colors[6 * k + 0];
+          draw->colors[k * 3 + 1] = colors[6 * k + 1];
+          draw->colors[k * 3 + 2] = colors[6 * k + 2];
+          draw->alphas[k * 3 + 0] = colors[6 * k + 3];
+          draw->alphas[k * 3 + 1] = colors[6 * k + 4];
+          draw->alphas[k * 3 + 2] = colors[6 * k + 5];
+        }
+    }
+  else
+    {
+      memmove(draw->colors, colors, sizeof(float) * n * 3);
+    }
+
+
   draw->scales = malloc(sizeof(float) * n * 3);
   memmove(draw->scales, scales, sizeof(float) * n * 3);
   draw->n = n;
@@ -1418,6 +1477,34 @@ GR3API void gr3_setlightdirection(float x, float y, float z)
   context_struct_.light_sources[0].g = 1;
   context_struct_.light_sources[0].b = 1;
   context_struct_.num_lights = 1;
+}
+
+GR3API void gr3_setalphamode(int mode)
+{
+  GR3_DO_INIT;
+  if (gr3_geterror(0, NULL, NULL)) return;
+
+  if (!context_struct_.is_initialized)
+    {
+      return;
+    }
+  if (mode == 0 || mode == 1 || mode == 2)
+    {
+      context_struct_.alpha_mode = mode;
+    }
+}
+
+GR3API int gr3_getalphamode(int *mode)
+{
+  GR3_DO_INIT;
+  if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
+  if (!context_struct_.is_initialized)
+    {
+      RETURN_ERROR(GR3_ERROR_NOT_INITIALIZED);
+    }
+
+  *mode = context_struct_.alpha_mode;
+  RETURN_ERROR(GR3_ERROR_NONE);
 }
 
 /*!

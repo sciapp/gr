@@ -106,6 +106,10 @@ extern "C" {
           use the z-value directly as   \
           color index */
 
+#define GR3_TRANSPARENCY_OPAQUE 0
+#define GR3_TRANSPARENCY_TRANSMIT 1
+#define GR3_TRANSPARENCY_FILTER 2
+
 #define GR_VOLUME_EMISSION 0
 #define GR_VOLUME_ABSORPTION 1
 #define GR_VOLUME_MIP 2
@@ -137,7 +141,7 @@ GR3API const char *gr3_getrenderpathstring(void);
 GR3API const char *gr3_geterrorstring(int error);
 GR3API void gr3_setlogcallback(void (*gr3_log_func)(const char *log_message));
 GR3API int gr3_clear(void);
-GR3API void gr3_usecurrentframebuffer();
+GR3API void gr3_usecurrentframebuffer(void);
 GR3API void gr3_useframebuffer(unsigned int framebuffer);
 
 GR3API int gr3_setquality(int quality);
@@ -271,7 +275,10 @@ GR3API int gr3_setlightsources(int num_lights, float *positions, float *colors);
 
 GR3API void gr3_setlightparameters(float ambient, float diffuse, float specular, float specular_power);
 GR3API void gr3_getlightparameters(float *ambient, float *diffuse, float *specular, float *specular_power);
-GR3API void gr3_setdefaultlightparameters();
+GR3API void gr3_setdefaultlightparameters(void);
+
+GR3API int gr3_getalphamode(int *mode);
+GR3API void gr3_setalphamode(int mode);
 
 GR3API void gr3_setclipping(float xmin, float xmax, float ymin, float ymax, float zmin, float zmax);
 GR3API void gr3_getclipping(float *xmin, float *xmax, float *ymin, float *ymax, float *zmin, float *zmax);

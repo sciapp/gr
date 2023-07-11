@@ -105,9 +105,9 @@ static void *load_library(const char *name)
   return entry;
 }
 
-static const char *get_qt_version_string()
+static const char *get_qt_version_string(void)
 {
-  typedef const char *qversion_t();
+  typedef const char *qversion_t(void);
   qversion_t *qVersion = NULL;
 
 #ifdef _WIN32

@@ -415,6 +415,9 @@ void gks_report_error(int routine, int errnum)
     case 70:
       message = "Text font is invalid in routine %s";
       break;
+    case 71:
+      message = "Text precision OUTLINE is invalid in routine %s (no FreeType support built in)";
+      break;
     case 72:
       message = "Character expansion factor is invalid in\
  routine %s";

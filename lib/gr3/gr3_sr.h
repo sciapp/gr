@@ -89,6 +89,7 @@ typedef struct
   float w;
   float w_div;
   color_float c;
+  color_float a;
   vector normal;
   vector world_space_position;
   vector view_space_position;
@@ -114,10 +115,12 @@ typedef struct
   vertex_fp *vertices_fp;
   GR3_LightSource_t_ light_sources[MAX_NUM_LIGHTS];
   int num_lights;
+  int alpha_mode;
+  float *alphas;
 } args;
 
-GR3API int gr3_initSR_();
+GR3API int gr3_initSR_(void);
 GR3API void gr3_getpixmap_softwarerendered(char *pixmap, int width, int height, int ssaa_factor);
-GR3API void gr3_terminateSR_();
+GR3API void gr3_terminateSR_(void);
 
 #endif

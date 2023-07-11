@@ -660,6 +660,7 @@ DLLEXPORT void gks_inq_text_extent(int wkid, double px, double py, char *str, in
 DLLEXPORT void gks_inq_max_ds_size(int wtype, int *errind, int *dcunit, double *rx, double *ry, int *lx, int *ly);
 
 DLLEXPORT void gks_inq_vp_size(int wkid, int *errind, int *width, int *height, double *device_pixel_ratio);
+DLLEXPORT void gks_sample_locator(int wkid, int *errind, double *x, double *y, int *buttons);
 DLLEXPORT void gks_emergency_close(void);
 
 DLLEXPORT void gks_set_text_slant(double slant);

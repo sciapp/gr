@@ -1583,6 +1583,14 @@ void gks_set_text_fontprec(int font, int prec)
     {
       if (font != 0)
         {
+#ifdef NO_FT
+          if (prec == GKS_K_TEXT_PRECISION_OUTLINE)
+            {
+              /* text prec is invalid since no FreeType support was built in */
+              gks_report_error(SET_TEXT_FONTPREC, 71);
+              return;
+            }
+#endif
           if (font != s->txfont || prec != s->txprec)
             {
               if ((prec == GKS_K_TEXT_PRECISION_STROKE || prec == GKS_K_TEXT_PRECISION_CHAR) && fontfile == 0)
@@ -3141,6 +3149,46 @@ void gks_inq_vp_size(int wkid, int *errind, int *width, int *height, double *dev
           *height = i_arr[1] * (vp[3] - vp[2]);
         }
       *device_pixel_ratio = f_arr_1[0];
+    }
+  else
+    *errind = GKS_K_ERROR;
+}
+
+void gks_sample_locator(int wkid, int *errind, double *x, double *y, int *buttons)
+{
+  gks_list_t *element;
+  ws_list_t *ws;
+
+  if ((element = gks_list_find(open_ws, wkid)) != NULL)
+    {
+      ws = (ws_list_t *)element->ptr;
+
+      switch (ws->wtype)
+        {
+#ifndef EMSCRIPTEN
+        case 400:
+          gks_quartz_plugin(SAMPLE_LOCATOR, 1, 1, 1, i_arr, 1, f_arr_1, 1, f_arr_2, 0, c_arr, &ws->ptr);
+          *x = f_arr_1[0];
+          *y = f_arr_2[0];
+          *buttons = i_arr[0];
+          *errind = GKS_K_NO_ERROR;
+          break;
+        case 411:
+        case 412:
+        case 413:
+          gks_drv_socket(SAMPLE_LOCATOR, 1, 1, 1, i_arr, 1, f_arr_1, 1, f_arr_2, 0, c_arr, &ws->ptr);
+          *x = f_arr_1[0];
+          *y = f_arr_2[0];
+          *buttons = i_arr[0];
+          *errind = GKS_K_NO_ERROR;
+          break;
+#endif
+        default:
+          *x = *y = 0;
+          *buttons = 0;
+          *errind = GKS_K_ERROR;
+          break;
+        }
     }
   else
     *errind = GKS_K_ERROR;

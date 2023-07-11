@@ -335,7 +335,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
           set_line_width(p->nominal_size);
           set_color(mcolor);
-          cairo_rectangle(p->cr, round(x), round(y), 1.0, 1.0);
+          cairo_rectangle(p->cr, round(x), round(y), p->nominal_size, p->nominal_size);
           cairo_fill(p->cr);
           break;
 
@@ -349,7 +349,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           seg_xform_rel(&x2, &y2);
 
           cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
-          set_line_width(gkss->bwidth * p->nominal_size);
+          set_line_width(max(gkss->bwidth, gkss->lwidth) * p->nominal_size);
           set_color(mcolor);
           cairo_move_to(p->cr, x - x1, y - y1);
           cairo_line_to(p->cr, x - x2, y - y2);
@@ -358,65 +358,79 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 3: /* polyline */
+        case 9: /* border polygon */
+          if (op == 3 || gkss->bwidth > 0)
+            {
+              cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
+              cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
+              set_line_width(gkss->bwidth * p->nominal_size);
+              set_color(op == 3 ? mcolor : gkss->bcoli);
+              for (i = 0; i < marker[mtype][pc + 1]; i++)
+                {
+                  xr = scale * marker[mtype][pc + 2 + 2 * i];
+                  yr = -scale * marker[mtype][pc + 3 + 2 * i];
+                  seg_xform_rel(&xr, &yr);
+
+                  if (i == 0)
+                    cairo_move_to(p->cr, x - xr, y + yr);
+                  else
+                    cairo_line_to(p->cr, x - xr, y + yr);
+                }
+              cairo_close_path(p->cr);
+              cairo_stroke(p->cr);
+            }
+          pc += 1 + 2 * marker[mtype][pc + 1];
+          break;
+
         case 4: /* filled polygon */
         case 5: /* hollow polygon */
-          xr = scale * marker[mtype][pc + 2];
-          yr = -scale * marker[mtype][pc + 3];
-          seg_xform_rel(&xr, &yr);
-
-          cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
-          cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
-          set_line_width(gkss->bwidth * p->nominal_size);
-          set_color(mcolor);
-          cairo_move_to(p->cr, x - xr, y + yr);
-          for (i = 1; i < marker[mtype][pc + 1]; i++)
+          set_color(op == 4 ? mcolor : 0);
+          for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
               yr = -scale * marker[mtype][pc + 3 + 2 * i];
               seg_xform_rel(&xr, &yr);
 
-              cairo_line_to(p->cr, x - xr, y + yr);
+              if (i == 0)
+                cairo_move_to(p->cr, x - xr, y + yr);
+              else
+                cairo_line_to(p->cr, x - xr, y + yr);
             }
           cairo_close_path(p->cr);
 
-          if (op == 4)
+          if (op == 4 && gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
             {
-              if (gkss->bcoli != gkss->pmcoli)
-                {
-                  cairo_fill_preserve(p->cr);
-                  set_color(gkss->bcoli);
-                  set_line_width(gkss->bwidth * p->nominal_size);
-                  cairo_stroke(p->cr);
-                }
-              else
-                cairo_fill(p->cr);
+              cairo_fill_preserve(p->cr);
+              set_color(gkss->bcoli);
+              set_line_width(gkss->bwidth * p->nominal_size);
+              cairo_stroke(p->cr);
             }
           else
-            cairo_stroke(p->cr);
+            cairo_fill(p->cr);
 
           pc += 1 + 2 * marker[mtype][pc + 1];
           break;
 
         case 6: /* arc */
+          set_line_width(max(gkss->bwidth, gkss->lwidth) * p->nominal_size);
+          set_color(mcolor);
+          cairo_arc(p->cr, x, y, r, 0, 2 * M_PI);
+          cairo_stroke(p->cr);
+          break;
+
         case 7: /* filled arc */
         case 8: /* hollow arc */
+          set_color(op == 7 ? mcolor : 0);
           cairo_arc(p->cr, x, y, r, 0, 2 * M_PI);
-
-          set_color(mcolor);
-          if (op == 7)
+          if (op == 7 && gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
             {
-              if (gkss->bcoli != gkss->pmcoli)
-                {
-                  cairo_fill_preserve(p->cr);
-                  set_color(gkss->bcoli);
-                  set_line_width(gkss->bwidth * p->nominal_size);
-                  cairo_stroke(p->cr);
-                }
-              else
-                cairo_fill(p->cr);
+              cairo_fill_preserve(p->cr);
+              set_color(gkss->bcoli);
+              set_line_width(gkss->bwidth * p->nominal_size);
+              cairo_stroke(p->cr);
             }
           else
-            cairo_stroke(p->cr);
+            cairo_fill(p->cr);
           break;
 
         default:
@@ -1137,7 +1151,7 @@ static oct_node node_new(unsigned char idx, unsigned char depth, oct_node p)
   return x;
 }
 
-static void node_free()
+static void node_free(void)
 {
   oct_node p;
 
@@ -2226,7 +2240,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
 #endif
       p->mem = NULL;
 
-      if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146)
+      if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146 || p->wtype == 151)
         {
           p->mw = 0.28575;
           p->mh = 0.19685;
@@ -2312,16 +2326,6 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->dpi = 100;
           resize(400, 400);
           p->nominal_size = 0.8;
-        }
-      else if (p->wtype == 151)
-        {
-          p->mw = 0.28575;
-          p->mh = 0.19685;
-          p->w = 1920;
-          p->h = 1440;
-          p->dpi = 200;
-          resize(500, 500);
-          p->nominal_size = 1;
         }
       else
         {

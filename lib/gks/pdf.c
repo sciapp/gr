@@ -43,6 +43,10 @@ typedef unsigned long uLong;
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
+#ifndef max
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+#endif
+
 #define WC_to_NDC(xw, yw, tnr, xn, yn) \
   xn = a[tnr] * (xw) + b[tnr];         \
   yn = c[tnr] * (yw) + d[tnr]
@@ -1065,7 +1069,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 2: /* line */
-          set_linewidth(gkss->bwidth * p->nominal_size);
+          set_linewidth(max(gkss->bwidth, gkss->lwidth) * p->nominal_size);
           set_color(mcolor);
           for (i = 0; i < 2; i++)
             {
@@ -1082,19 +1086,23 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 3: /* polyline */
-          set_linewidth(gkss->bwidth * p->nominal_size);
-          set_color(mcolor);
-          for (i = 0; i < marker[mtype][pc + 1]; i++)
+        case 9: /* border polyline */
+          if (op == 3 || gkss->bwidth > 0)
             {
-              xr = scale * marker[mtype][pc + 2 + 2 * i];
-              yr = -scale * marker[mtype][pc + 3 + 2 * i];
-              seg_xform_rel(&xr, &yr);
-              if (i == 0)
-                pdf_moveto(p, x - xr, y - yr);
-              else
-                pdf_lineto(p, x - xr, y - yr);
+              set_linewidth(gkss->bwidth * p->nominal_size);
+              set_color(op == 3 ? mcolor : gkss->bcoli);
+              for (i = 0; i < marker[mtype][pc + 1]; i++)
+                {
+                  xr = scale * marker[mtype][pc + 2 + 2 * i];
+                  yr = -scale * marker[mtype][pc + 3 + 2 * i];
+                  seg_xform_rel(&xr, &yr);
+                  if (i == 0)
+                    pdf_moveto(p, x - xr, y - yr);
+                  else
+                    pdf_lineto(p, x - xr, y - yr);
+                }
+              pdf_stroke(p);
             }
-          pdf_stroke(p);
           pc += 1 + 2 * marker[mtype][pc + 1];
           break;
 
@@ -1103,7 +1111,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (op == 4)
             {
               set_fillcolor(mcolor);
-              if (gkss->bcoli != gkss->pmcoli)
+              if (gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
                 {
                   set_linewidth(gkss->bwidth * p->nominal_size);
                   set_color(gkss->bcoli);
@@ -1121,7 +1129,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               else
                 pdf_lineto(p, x - xr, y - yr);
             }
-          if (op == 4 && gkss->bcoli != gkss->pmcoli)
+          if (op == 4 && gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
             pdf_printf(p->content, "b*\n");
           else
             pdf_eofill(p);
@@ -1133,7 +1141,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           xr = 0;
           yr = -r;
           seg_xform_rel(&xr, &yr);
-          set_linewidth(gkss->bwidth * p->nominal_size);
+          set_linewidth(max(gkss->bwidth, gkss->lwidth) * p->nominal_size);
           set_color(mcolor);
           pdf_moveto(p, x - xr, y - yr);
           for (curve = 0; curve < 4; curve++)
@@ -1155,7 +1163,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (op == 7)
             {
               set_fillcolor(mcolor);
-              if (gkss->bcoli != gkss->pmcoli)
+              if (gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
                 {
                   set_linewidth(gkss->bwidth * p->nominal_size);
                   set_color(gkss->bcoli);

@@ -530,7 +530,7 @@ void gr_draw_contourf(int nx, int ny, int nh, double *px, double *py, double *h,
     {
       marching_squares(px, py, pz, nx, ny, h, nh, first_color, last_color, major_h == 0);
     }
-  if (major_h)
+  if (major_h && major_h != -1)
     {
       gr_inqspace(&z_space_min, &z_space_max, &rotation, &tilt);
       gr_setspace(zmin, zmax, 0, 90);
