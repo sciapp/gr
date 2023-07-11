@@ -608,10 +608,34 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       std::vector<double> x(rows);
       int err = 0;
 
+      adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)cols - 1.0);
+      adjust_ranges(&ranges.ymin, &ranges.ymax, 0.0, (double)rows - 1.0);
+      ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
+
       for (row = 0; row < rows; row++)
         {
-          x[row] = (double)row;
+          x[row] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)row / ((double)rows - 1));
         }
+      if (ranges.ymax != INFINITY)
+        {
+          double min_val = INFINITY, max_val = -INFINITY;
+          for (col = 0; col < cols - err; col++)
+            {
+              min_val = std::min(min_val, *std::min_element(&filedata[depth][col][0], &filedata[depth][col][rows]));
+              max_val = std::max(max_val, *std::max_element(&filedata[depth][col][0], &filedata[depth][col][rows]));
+            }
+
+          for (col = 0; col < cols; ++col)
+            {
+              for (row = 0; row < rows; row++)
+                {
+                  filedata[depth][col][row] = ranges.ymin + (ranges.ymax - ranges.ymin) *
+                                                                (filedata[depth][col][row] - min_val) /
+                                                                (max_val - min_val);
+                }
+            }
+        }
+
       if (grm_args_values(args, "error", "a", &error))
         {
           int i;
@@ -915,7 +939,24 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     }
   else if (str_equals_any(kind, 2, "hexbin", "shade"))
     {
+      double min_x, min_y, max_x, max_y;
       if (cols > 2) fprintf(stderr, "Only the first 2 columns get displayed\n");
+
+      adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)cols - 1.0);
+      adjust_ranges(&ranges.ymin, &ranges.ymax, 0.0, (double)rows - 1.0);
+      ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
+      min_x = *std::min_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
+      max_x = *std::max_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
+      min_y = *std::min_element(&filedata[depth][1][0], &filedata[depth][1][rows]);
+      max_y = *std::max_element(&filedata[depth][1][0], &filedata[depth][1][rows]);
+
+      for (row = 0; row < rows; row++)
+        {
+          filedata[depth][0][row] =
+              ranges.xmin + (ranges.xmax - ranges.xmin) * (filedata[depth][0][row] - min_x) / (max_x - min_x);
+          filedata[depth][1][row] =
+              ranges.ymin + (ranges.ymax - ranges.ymin) * (filedata[depth][0][row] - min_y) / (max_y - min_y);
+        }
       grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
       grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
     }
