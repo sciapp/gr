@@ -10217,7 +10217,7 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
 
   bool bounding_boxes = getenv("GRPLOT_ENABLE_EDITOR");
 
-  if (bounding_boxes && element->hasAttributes())
+  if (bounding_boxes && element->hasAttributes() && !isDrawable(element))
     {
       gr_begin_grm_selection(bounding_id, &receiverfunction);
       bounding_map[bounding_id] = element;
@@ -10232,7 +10232,7 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
           renderHelper(child, context);
         }
     }
-  if (bounding_boxes && element->hasAttributes())
+  if (bounding_boxes && element->hasAttributes() && !isDrawable(element))
     {
       gr_end_grm_selection();
     }
@@ -10244,11 +10244,27 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
 static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
 {
   zQueueIsBeingRendered = true;
+  bool bounding_boxes = getenv("GRPLOT_ENABLE_EDITOR");
+
   gr_savestate();
   for (; !z_queue.empty(); z_queue.pop())
     {
       auto drawable = z_queue.top();
+      auto element = drawable->getElement();
+
+      if (bounding_boxes && element->hasAttributes())
+        {
+          gr_begin_grm_selection(bounding_id, &receiverfunction);
+          bounding_map[bounding_id] = element;
+          bounding_id++;
+        }
+
       drawable->draw();
+
+      if (bounding_boxes && element->hasAttributes())
+        {
+          gr_end_grm_selection();
+        }
     }
   grContextIDManager.markAllIdsAsUnused();
   parent_to_context = {};

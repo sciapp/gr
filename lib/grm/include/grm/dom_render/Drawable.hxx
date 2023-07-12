@@ -16,6 +16,7 @@ public:
   int zIndex;
   int insertionIndex; /* used to order drawables with the same zIndex in the order of insertion */
   int getGrContextId() const;
+  const std::shared_ptr<GRM::Element> &getElement() const;
 
 private:
   int grContextId;
