@@ -578,6 +578,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
           info->x_px = mouse_x;
           info->y_px = mouse_y;
           info->label = output;
+          gr_restorestate();
           return info;
         }
       else
