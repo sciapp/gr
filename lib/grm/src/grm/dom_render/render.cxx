@@ -10100,7 +10100,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("cellarray"), PushDrawableToZQueue(cellArray)},
           {std::string("colorbar"), colorbar},
           {std::string("errorbars"), errorbars},
-          {std::string("legend"), PushDrawableToZQueue(legend)},
+          {std::string("legend"), legend},
           {std::string("polar_axes"), drawPolarAxes},
           {std::string("drawarc"), PushDrawableToZQueue(drawArc)},
           {std::string("drawgraphics"), PushDrawableToZQueue(drawGraphics)},
