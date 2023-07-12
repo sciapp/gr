@@ -24,6 +24,11 @@ void Drawable::draw()
   gr_restorestate();
 }
 
+const std::shared_ptr<GRM::Element> &Drawable::getElement() const
+{
+  return element;
+}
+
 int Drawable::getGrContextId() const
 {
   return grContextId;

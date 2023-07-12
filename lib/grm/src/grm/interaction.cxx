@@ -1101,6 +1101,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
           info->y_px = mouse_y;
           info->label = output;
           tooltip_callback(mouse_x, mouse_y, info);
+          gr_restorestate();
           return ERROR_NONE;
         }
       else
