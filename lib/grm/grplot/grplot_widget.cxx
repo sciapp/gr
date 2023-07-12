@@ -877,7 +877,7 @@ void GRPlotWidget::resizeEvent(QResizeEvent *event)
   mouse_move_selection = nullptr;
   amount_scrolled = 0;
   clicked.clear();
-  pixmap = nullptr;
+  reset_pixmap();
   arguments_changed = true;
 
   redraw();
@@ -887,83 +887,83 @@ void GRPlotWidget::wheelEvent(QWheelEvent *event)
 {
   if (event->angleDelta().y() != 0)
     {
-  int x, y;
-  getWheelPos(event, &x, &y);
-  QPoint numPixels = event->pixelDelta();
-  QPoint numDegrees = event->angleDelta();
+      int x, y;
+      getWheelPos(event, &x, &y);
+      QPoint numPixels = event->pixelDelta();
+      QPoint numDegrees = event->angleDelta();
 
-  if (enable_editor)
-    {
-      if (!numPixels.isNull())
+      if (enable_editor)
         {
-          // Scrolling with pixels (For high-res scrolling like on macOS)
+          if (!numPixels.isNull())
+            {
+              // Scrolling with pixels (For high-res scrolling like on macOS)
 
-          // Prevent flickering when scrolling fast
-          if (numPixels.y() > 0)
-            {
-              amount_scrolled += numPixels.y() < 10 ? numPixels.y() : 10;
-            }
-          else if (numPixels.y() < 0)
-            {
-              amount_scrolled += numPixels.y() > -10 ? numPixels.y() : -10;
-            }
-        }
-      else if (!numDegrees.isNull())
-        {
-          QPoint numSteps = numDegrees / 16;
-          // Scrolling with degrees
-          if (numSteps.y() != 0)
-            {
-              amount_scrolled += numSteps.y();
-            }
-        }
-
-      if (amount_scrolled > 50)
-        {
-          if (!clicked.empty() && current_selection != nullptr)
-            {
-              for (int i = 0; i < clicked.size(); i++)
+              // Prevent flickering when scrolling fast
+              if (numPixels.y() > 0)
                 {
-                  if (clicked[i].get_id() == current_selection->get_id())
+                  amount_scrolled += numPixels.y() < 10 ? numPixels.y() : 10;
+                }
+              else if (numPixels.y() < 0)
+                {
+                  amount_scrolled += numPixels.y() > -10 ? numPixels.y() : -10;
+                }
+            }
+          else if (!numDegrees.isNull())
+            {
+              QPoint numSteps = numDegrees / 16;
+              // Scrolling with degrees
+              if (numSteps.y() != 0)
+                {
+                  amount_scrolled += numSteps.y();
+                }
+            }
+
+          if (amount_scrolled > 50)
+            {
+              if (!clicked.empty() && current_selection != nullptr)
+                {
+                  for (int i = 0; i < clicked.size(); i++)
                     {
-                      if (i + 1 < clicked.size())
+                      if (clicked[i].get_id() == current_selection->get_id())
                         {
-                          current_selection = &clicked[i + 1];
-                          break;
+                          if (i + 1 < clicked.size())
+                            {
+                              current_selection = &clicked[i + 1];
+                              break;
+                            }
                         }
                     }
                 }
+              amount_scrolled = 0;
             }
-          amount_scrolled = 0;
-        }
-      else if (amount_scrolled < -50)
-        {
-          if (!clicked.empty() && current_selection != nullptr)
+          else if (amount_scrolled < -50)
             {
-              for (int i = clicked.size() - 1; i >= 0; i--)
+              if (!clicked.empty() && current_selection != nullptr)
                 {
-                  if (clicked[i].get_id() == current_selection->get_id())
+                  for (int i = clicked.size() - 1; i >= 0; i--)
                     {
-                      if (i - 1 > 0)
+                      if (clicked[i].get_id() == current_selection->get_id())
                         {
-                          current_selection = &clicked[i - 1];
-                          break;
+                          if (i - 1 > 0)
+                            {
+                              current_selection = &clicked[i - 1];
+                              break;
+                            }
                         }
                     }
                 }
+              amount_scrolled = 0;
             }
-          amount_scrolled = 0;
         }
-    }
-  else
-    {
-      grm_args_t *args = grm_args_new();
-      grm_args_push(args, "x", "i", x);
-      grm_args_push(args, "y", "i", y);
-      grm_args_push(args, "angle_delta", "d", (double)event->angleDelta().y());
-      grm_input(args);
-      grm_args_delete(args);
-    }
+      else
+        {
+          grm_args_t *args = grm_args_new();
+          grm_args_push(args, "x", "i", x);
+          grm_args_push(args, "y", "i", y);
+          grm_args_push(args, "angle_delta", "d", (double)event->angleDelta().y());
+          grm_input(args);
+          grm_args_delete(args);
+        }
 
       redraw();
     }
@@ -1272,7 +1272,7 @@ void GRPlotWidget::leaveEvent(QEvent *event)
 
 void GRPlotWidget::reset_pixmap()
 {
-  pixmap = nullptr;
+  redraw_pixmap = true;
   current_selection = nullptr;
   update();
 }
@@ -1409,11 +1409,10 @@ void GRPlotWidget::size_callback(const grm_event_t *new_size_object)
     }
 }
 
-void GRPlotWidget::cmd_callback(const grm_cmd_event_t *event)
+void GRPlotWidget::cmd_callback(const grm_request_event_t *event)
 {
-  if (strcmp(event->cmd, "close") == 0)
+  if (strcmp(event->request_string, "close") == 0)
     {
       QApplication::quit();
     }
 }
-

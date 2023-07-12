@@ -13,6 +13,16 @@
 #include <grm/dom_render/graphics_tree/util.hxx>
 
 
+/* ######################### internal implementation ################################################################ */
+
+/* ========================= static variables ======================================================================= */
+
+/* ------------------------- tooltips ------------------------------------------------------------------------------- */
+
+static tooltip_reflist_t *tooltip_list = nullptr;
+static grm_tooltip_info_t *nearest_tooltip = nullptr;
+
+
 /* ========================= macros ================================================================================= */
 
 /* ------------------------- math ----------------------------------------------------------------------------------- */
@@ -20,6 +30,326 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+/* ------------------------- tooltips ------------------------------------------------------------------------------- */
+
+#define MAX_MOUSE_DIST 50
+
+
+/* ========================= methods ================================================================================ */
+
+/* ------------------------- tooltip list --------------------------------------------------------------------------- */
+
+
+tooltip_list_t *tooltip_list_new(void)
+{
+  static const tooltip_list_vtable_t vt = {
+      tooltip_list_entry_copy,
+      tooltip_list_entry_delete,
+  };
+  tooltip_list_t *list;
+
+  list = static_cast<tooltip_list_t *>(malloc(sizeof(tooltip_list_t)));
+  if (list == nullptr)
+    {
+      return nullptr;
+    }
+  list->vt = &vt;
+  list->head = nullptr;
+  list->tail = nullptr;
+  list->size = 0;
+
+  return list;
+}
+
+void tooltip_list_delete(tooltip_list_t *list)
+{
+  tooltip_list_node_t *current_list_node;
+  tooltip_list_node_t *next_list_node;
+
+  current_list_node = list->head;
+  while (current_list_node != nullptr)
+    {
+      next_list_node = current_list_node->next;
+      list->vt->entry_delete(current_list_node->entry);
+      free(current_list_node);
+      current_list_node = next_list_node;
+    }
+  free(list);
+}
+
+err_t tooltip_list_push_front(tooltip_list_t *list, tooltip_list_const_entry_t entry)
+{
+  tooltip_list_node_t *new_list_node;
+  err_t error = ERROR_NONE;
+
+  new_list_node = static_cast<tooltip_list_node_t *>(malloc(sizeof(tooltip_list_node_t)));
+  error_cleanup_and_set_error_if(new_list_node == nullptr, ERROR_MALLOC);
+  error = list->vt->entry_copy(&new_list_node->entry, entry);
+  error_cleanup_if_error;
+  new_list_node->next = list->head;
+  list->head = new_list_node;
+  if (list->tail == nullptr)
+    {
+      list->tail = new_list_node;
+    }
+  ++(list->size);
+
+  return ERROR_NONE;
+
+error_cleanup:
+  free(new_list_node);
+  return error;
+}
+
+err_t tooltip_list_push_back(tooltip_list_t *list, tooltip_list_const_entry_t entry)
+{
+  tooltip_list_node_t *new_list_node;
+  err_t error = ERROR_NONE;
+
+  new_list_node = static_cast<tooltip_list_node_t *>(malloc(sizeof(tooltip_list_node_t)));
+  error_cleanup_and_set_error_if(new_list_node == nullptr, ERROR_MALLOC);
+  error = list->vt->entry_copy(&new_list_node->entry, entry);
+  error_cleanup_if_error;
+  new_list_node->next = nullptr;
+  if (list->head == nullptr)
+    {
+      list->head = new_list_node;
+    }
+  else
+    {
+      list->tail->next = new_list_node;
+    }
+  list->tail = new_list_node;
+  ++(list->size);
+
+  return ERROR_NONE;
+
+error_cleanup:
+  free(new_list_node);
+  return error;
+}
+
+tooltip_list_entry_t tooltip_list_pop_front(tooltip_list_t *list)
+{
+  tooltip_list_node_t *front_node;
+  tooltip_list_entry_t front_entry;
+
+  assert(list->head != nullptr);
+  front_node = list->head;
+  list->head = list->head->next;
+  if (list->tail == front_node)
+    {
+      list->tail = nullptr;
+    }
+  front_entry = front_node->entry;
+  free(front_node);
+  --(list->size);
+
+  return front_entry;
+}
+
+tooltip_list_entry_t tooltip_list_pop_back(tooltip_list_t *list)
+{
+  tooltip_list_node_t *last_node;
+  tooltip_list_node_t *next_to_last_node = nullptr;
+  tooltip_list_entry_t last_entry;
+
+  assert(list->tail != nullptr);
+  last_node = list->tail;
+  tooltip_list_find_previous_node(list, last_node, &next_to_last_node);
+  if (next_to_last_node == nullptr)
+    {
+      list->head = list->tail = nullptr;
+    }
+  else
+    {
+      list->tail = next_to_last_node;
+      next_to_last_node->next = nullptr;
+    }
+  last_entry = last_node->entry;
+  free(last_node);
+  --(list->size);
+
+  return last_entry;
+}
+
+err_t tooltip_list_push(tooltip_list_t *list, tooltip_list_const_entry_t entry)
+{
+  return tooltip_list_push_front(list, entry);
+}
+
+tooltip_list_entry_t tooltip_list_pop(tooltip_list_t *list)
+{
+  return tooltip_list_pop_front(list);
+}
+
+err_t tooltip_list_enqueue(tooltip_list_t *list, tooltip_list_const_entry_t entry)
+{
+  return tooltip_list_push_back(list, entry);
+}
+
+tooltip_list_entry_t tooltip_list_dequeue(tooltip_list_t *list)
+{
+  return tooltip_list_pop_front(list);
+}
+
+int tooltip_list_empty(tooltip_list_t *list)
+{
+  return list->size == 0;
+}
+
+int tooltip_list_find_previous_node(const tooltip_list_t *list, const tooltip_list_node_t *node,
+                                    tooltip_list_node_t **previous_node)
+{
+  tooltip_list_node_t *prev_node;
+  tooltip_list_node_t *current_node;
+
+  prev_node = nullptr;
+  current_node = list->head;
+  while (current_node != nullptr)
+    {
+      if (current_node == node)
+        {
+          if (previous_node != nullptr)
+            {
+              *previous_node = prev_node;
+            }
+          return 1;
+        }
+      prev_node = current_node;
+      current_node = current_node->next;
+    }
+
+  return 0;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~ ref list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+tooltip_reflist_t *tooltip_reflist_new(void)
+{
+  static const tooltip_reflist_vtable_t vt = {
+      tooltip_reflist_entry_copy,
+      tooltip_reflist_entry_delete,
+  };
+  tooltip_reflist_t *list;
+
+  list = (tooltip_reflist_t *)tooltip_list_new();
+  list->vt = &vt;
+
+  return list;
+}
+
+void tooltip_reflist_delete(tooltip_reflist_t *list)
+{
+  tooltip_list_delete((tooltip_list_t *)list);
+}
+
+void tooltip_reflist_delete_with_entries(tooltip_reflist_t *list)
+{
+  tooltip_reflist_node_t *current_reflist_node;
+  tooltip_reflist_node_t *next_reflist_node;
+
+  current_reflist_node = list->head;
+  while (current_reflist_node != nullptr)
+    {
+      next_reflist_node = current_reflist_node->next;
+      tooltip_list_entry_delete((tooltip_list_entry_t)current_reflist_node->entry);
+      free(current_reflist_node);
+      current_reflist_node = next_reflist_node;
+    }
+  free(list);
+}
+
+err_t tooltip_reflist_push_front(tooltip_reflist_t *list, tooltip_reflist_entry_t entry)
+{
+  return tooltip_list_push_front((tooltip_list_t *)list, (tooltip_list_entry_t)entry);
+}
+
+err_t tooltip_reflist_push_back(tooltip_reflist_t *list, tooltip_reflist_entry_t entry)
+{
+  return tooltip_list_push_back((tooltip_list_t *)list, (tooltip_list_entry_t)entry);
+}
+
+tooltip_reflist_entry_t tooltip_reflist_pop_front(tooltip_reflist_t *list)
+{
+  return tooltip_list_pop_front((tooltip_list_t *)list);
+}
+
+tooltip_reflist_entry_t tooltip_reflist_pop_back(tooltip_reflist_t *list)
+{
+  return tooltip_list_pop_back((tooltip_list_t *)list);
+}
+
+err_t tooltip_reflist_push(tooltip_reflist_t *list, tooltip_reflist_entry_t entry)
+{
+  return tooltip_list_push((tooltip_list_t *)list, (tooltip_list_entry_t)entry);
+}
+
+tooltip_reflist_entry_t tooltip_reflist_pop(tooltip_reflist_t *list)
+{
+  return tooltip_list_pop((tooltip_list_t *)list);
+}
+
+err_t tooltip_reflist_enqueue(tooltip_reflist_t *list, tooltip_reflist_entry_t entry)
+{
+  return tooltip_list_enqueue((tooltip_list_t *)list, (tooltip_list_entry_t)entry);
+}
+
+tooltip_reflist_entry_t tooltip_reflist_dequeue(tooltip_reflist_t *list)
+{
+  return tooltip_list_dequeue((tooltip_list_t *)list);
+}
+
+int tooltip_reflist_empty(tooltip_reflist_t *list)
+{
+  return tooltip_list_empty((tooltip_list_t *)list);
+}
+
+
+int tooltip_reflist_find_previous_node(const tooltip_reflist_t *list, const tooltip_reflist_node_t *node,
+                                       tooltip_reflist_node_t **previous_node)
+{
+  return tooltip_list_find_previous_node((tooltip_list_t *)list, (tooltip_list_node_t *)node,
+                                         (tooltip_list_node_t **)previous_node);
+}
+
+err_t tooltip_reflist_entry_copy(tooltip_reflist_entry_t *copy, tooltip_reflist_entry_t entry)
+{
+  *copy = entry;
+  return ERROR_NONE;
+}
+
+err_t tooltip_reflist_entry_delete(tooltip_reflist_entry_t entry UNUSED)
+{
+  return ERROR_NONE;
+}
+
+// DEFINE_LIST_METHODS(tooltip)
+
+
+err_t tooltip_list_entry_copy(tooltip_list_entry_t *copy, tooltip_list_const_entry_t entry)
+{
+  tooltip_list_entry_t _copy;
+
+  _copy = static_cast<tooltip_list_entry_t>(malloc(sizeof(grm_tooltip_info_t)));
+  if (_copy == nullptr)
+    {
+      return ERROR_MALLOC;
+    }
+
+  memcpy(_copy, entry, sizeof(grm_tooltip_info_t));
+  *copy = _copy;
+
+  return ERROR_NONE;
+}
+
+err_t tooltip_list_entry_delete(tooltip_list_entry_t entry)
+{
+  free(entry);
+  return ERROR_NONE;
+}
+
 
 /* ######################### public implementation ################################################################## */
 
@@ -401,7 +731,197 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   return 1;
 }
 
-grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
+static err_t find_nearest_tooltip(int mouse_x, int mouse_y, grm_tooltip_info_t *tooltip_info)
+{
+  if (nearest_tooltip == nullptr)
+    {
+      nearest_tooltip = tooltip_info;
+    }
+  else
+    {
+      int old_distance = (mouse_x - nearest_tooltip->x_px) * (mouse_x - nearest_tooltip->x_px) +
+                         (mouse_y - nearest_tooltip->y_px) * (mouse_y - nearest_tooltip->y_px);
+      int current_distance = (mouse_x - tooltip_info->x_px) * (mouse_x - tooltip_info->x_px) +
+                             (mouse_y - tooltip_info->y_px) * (mouse_y - tooltip_info->y_px);
+      if (current_distance < old_distance)
+        {
+          free(nearest_tooltip);
+          nearest_tooltip = tooltip_info;
+        }
+      else
+        {
+          //          free(tooltip_info);
+        }
+    }
+
+  return ERROR_NONE;
+}
+
+grm_tooltip_info_t *grm_get_tooltip(int mouse_x, int mouse_y)
+{
+  nearest_tooltip = nullptr;
+  get_tooltips(mouse_x, mouse_y, find_nearest_tooltip);
+  if ((mouse_x - nearest_tooltip->x_px) * (mouse_x - nearest_tooltip->x_px) +
+          (mouse_y - nearest_tooltip->y_px) * (mouse_y - nearest_tooltip->y_px) >
+      MAX_MOUSE_DIST)
+    {
+      nearest_tooltip->x_px = -1;
+      nearest_tooltip->y_px = -1;
+    }
+  return nearest_tooltip;
+}
+
+static err_t collect_tooltips(int mouse_x, int mouse_y, grm_tooltip_info_t *tooltip_info)
+{
+  return tooltip_reflist_push_back(tooltip_list, tooltip_info);
+}
+
+grm_tooltip_info_t **grm_get_tooltips_x(int mouse_x, int mouse_y, unsigned int *array_length)
+{
+  grm_tooltip_info_t **tooltip_array = nullptr, **tooltip_ptr = nullptr;
+  tooltip_reflist_node_t *tooltip_reflist_node = nullptr;
+
+  tooltip_list = tooltip_reflist_new();
+  error_cleanup_if(tooltip_list == nullptr);
+
+  error_cleanup_if(get_tooltips(mouse_x, mouse_y, collect_tooltips) != ERROR_NONE);
+
+  tooltip_array = static_cast<grm_tooltip_info_t **>(calloc(tooltip_list->size + 1, sizeof(grm_tooltip_info_t *)));
+  error_cleanup_if(tooltip_array == nullptr);
+
+  tooltip_ptr = tooltip_array;
+  tooltip_reflist_node = tooltip_list->head;
+  while (tooltip_reflist_node != nullptr)
+    {
+      *tooltip_ptr = tooltip_reflist_node->entry;
+      ++tooltip_ptr;
+      tooltip_reflist_node = tooltip_reflist_node->next;
+    }
+  *tooltip_ptr = static_cast<grm_tooltip_info_t *>(calloc(1, sizeof(grm_tooltip_info_t)));
+  error_cleanup_if(*tooltip_ptr == nullptr);
+  (*tooltip_ptr)->label = nullptr;
+  if (array_length != nullptr)
+    {
+      *array_length = tooltip_list->size;
+    }
+
+  if (tooltip_list != nullptr)
+    {
+      tooltip_reflist_delete(tooltip_list);
+      tooltip_list = nullptr;
+    }
+
+  return tooltip_array;
+
+error_cleanup:
+  if (tooltip_array != nullptr)
+    {
+      if (tooltip_list != nullptr)
+        {
+          free(tooltip_array[tooltip_list->size]);
+        }
+      free(tooltip_array);
+    }
+  if (tooltip_list != nullptr)
+    {
+      tooltip_reflist_node = tooltip_list->head;
+      while (tooltip_reflist_node != nullptr)
+        {
+          free(tooltip_reflist_node->entry);
+          tooltip_reflist_node = tooltip_reflist_node->next;
+        }
+      tooltip_reflist_delete(tooltip_list);
+      tooltip_list = nullptr;
+    }
+
+  return nullptr;
+}
+
+grm_accumulated_tooltip_info_t *grm_get_accumulated_tooltip_x(int mouse_x, int mouse_y)
+{
+  double *y = nullptr, *y_ptr = nullptr;
+  char **ylabels = nullptr, **ylabels_ptr = nullptr;
+  unsigned int min_dist = UINT_MAX;
+  grm_tooltip_info_t *nearest_tooltip = nullptr;
+  tooltip_reflist_node_t *tooltip_reflist_node = nullptr;
+  grm_accumulated_tooltip_info_t *accumulated_tooltip = nullptr;
+
+  tooltip_list = tooltip_reflist_new();
+  error_cleanup_if(tooltip_list == nullptr);
+
+  error_cleanup_if(get_tooltips(mouse_x, mouse_y, collect_tooltips) != ERROR_NONE);
+
+  y = static_cast<double *>(malloc(tooltip_list->size * sizeof(double)));
+  error_cleanup_if(y == nullptr);
+  ylabels = static_cast<char **>(malloc((tooltip_list->size + 1) * sizeof(char *)));
+  error_cleanup_if(ylabels == nullptr);
+
+  y_ptr = y;
+  ylabels_ptr = ylabels;
+  tooltip_reflist_node = tooltip_list->head;
+  while (tooltip_reflist_node != nullptr)
+    {
+      grm_tooltip_info_t *current_tooltip = tooltip_reflist_node->entry;
+      unsigned int current_dist = (current_tooltip->x_px - mouse_x) * (current_tooltip->x_px - mouse_x) +
+                                  (current_tooltip->y_px - mouse_y) * (current_tooltip->y_px - mouse_y);
+      if (current_dist < min_dist)
+        {
+          nearest_tooltip = current_tooltip;
+          min_dist = current_dist;
+        }
+      *y_ptr = current_tooltip->y;
+      *ylabels_ptr = current_tooltip->label;
+      ++y_ptr;
+      ++ylabels_ptr;
+      tooltip_reflist_node = tooltip_reflist_node->next;
+    }
+  error_cleanup_if(nearest_tooltip == nullptr);
+  *ylabels_ptr = nullptr; /* terminate the ylabels array with a nullptr pointer to simplify loops */
+
+  accumulated_tooltip = static_cast<grm_accumulated_tooltip_info_t *>(malloc(sizeof(grm_accumulated_tooltip_info_t)));
+  error_cleanup_if(accumulated_tooltip == nullptr);
+  accumulated_tooltip->n = tooltip_list->size;
+  accumulated_tooltip->x = nearest_tooltip->x;
+  accumulated_tooltip->x_px = nearest_tooltip->x_px;
+  accumulated_tooltip->xlabel = nearest_tooltip->xlabel;
+  accumulated_tooltip->y = y;
+  accumulated_tooltip->y_px = nearest_tooltip->y_px;
+  accumulated_tooltip->ylabels = ylabels;
+
+  if (tooltip_list != nullptr)
+    {
+      tooltip_reflist_node = tooltip_list->head;
+      while (tooltip_reflist_node != nullptr)
+        {
+          free(tooltip_reflist_node->entry);
+          tooltip_reflist_node = tooltip_reflist_node->next;
+        }
+      tooltip_reflist_delete(tooltip_list);
+      tooltip_list = nullptr;
+    }
+
+  return accumulated_tooltip;
+
+error_cleanup:
+  free(y);
+  free(ylabels);
+  free(accumulated_tooltip);
+  if (tooltip_list != nullptr)
+    {
+      tooltip_reflist_node = tooltip_list->head;
+      while (tooltip_reflist_node != nullptr)
+        {
+          free(tooltip_reflist_node->entry);
+          tooltip_reflist_node = tooltip_reflist_node->next;
+        }
+      tooltip_reflist_delete(tooltip_list);
+      tooltip_list = nullptr;
+    }
+
+  return nullptr;
+}
+
+err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *))
 {
   auto info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
   double *x_series, *y_series, *z_series, x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
@@ -413,6 +933,14 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   unsigned int x_length, y_length, z_length, series_i = 0, i;
   std::string orientation;
   int is_vertical = 0;
+
+  info->x_px = -1;
+  info->y_px = -1;
+  info->x = 0;
+  info->y = 0;
+  info->xlabel = "x";
+  info->ylabel = "y";
+  info->label = "";
 
   get_figure_size(nullptr, &width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
@@ -434,14 +962,8 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       !str_equals_any(kind.c_str(), 13, "line", "scatter", "stem", "stairs", "heatmap", "marginalheatmap", "contour",
                       "imshow", "contourf", "pie", "hexbin", "shade", "quiver"))
     {
-      info->x_px = -1;
-      info->y_px = -1;
-      info->x = 0;
-      info->y = 0;
-      info->xlabel = "x";
-      info->ylabel = "y";
-      info->label = "";
-      return info;
+      tooltip_callback(mouse_x, mouse_y, info);
+      return ERROR_NONE;
     }
 
   GRM::Render::processViewport(subplot_element);
@@ -486,7 +1008,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       else
         {
           static std::string xlabel = static_cast<std::string>(label_vec[0]->getAttribute("xlabel"));
-          info->xlabel = xlabel.c_str();
+          info->xlabel = (char *)xlabel.c_str();
         }
       if (!label_vec[0]->hasAttribute("ylabel"))
         {
@@ -495,7 +1017,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
       else
         {
           static std::string ylabel = static_cast<std::string>(label_vec[0]->getAttribute("ylabel"));
-          info->ylabel = ylabel.c_str();
+          info->ylabel = (char *)ylabel.c_str();
         }
     }
 
@@ -578,7 +1100,8 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
           info->x_px = mouse_x;
           info->y_px = mouse_y;
           info->label = output;
-          return info;
+          tooltip_callback(mouse_x, mouse_y, info);
+          return ERROR_NONE;
         }
       else
         {
@@ -683,7 +1206,7 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                   info->y_px = (int)y_px;
                   if (num_labels > series_i)
                     {
-                      info->label = labels[series_i].c_str();
+                      info->label = (char *)labels[series_i].c_str();
                     }
                   else
                     {
@@ -758,18 +1281,12 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
                       info->label = output;
                     }
                 }
+              tooltip_callback(mouse_x, mouse_y, info);
             }
           ++series_i;
         }
     }
   gr_restorestate();
-  if (mindiff == DBL_MAX)
-    {
-      info->x_px = -1;
-      info->y_px = -1;
-      info->x = 0;
-      info->y = 0;
-      info->label = "";
-    }
-  return info;
+  tooltip_callback(mouse_x, mouse_y, info);
+  return ERROR_NONE;
 }
