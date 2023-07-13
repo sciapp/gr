@@ -5013,11 +5013,20 @@ int grm_plot(const grm_args_t *args)
           int plot_id = 0;
           while (*current_subplot_args != nullptr)
             {
-              auto group = global_render->createElement("plot");
-              group->setAttribute("id", "plot" + std::to_string(plot_id));
-              group->setAttribute("plotGroup", true);
-              active_figure->append(group);
-              currentDomElement = group;
+              grm_args_t **series;
+              /* todo hold plots or using plot_id (now figure_id) -> don't create new group */
+              if (grm_args_values(*current_subplot_args, "series", "A", &series))
+                {
+                  auto group = global_render->createElement("plot");
+                  group->setAttribute("id", "plot" + std::to_string(plot_id));
+                  group->setAttribute("plotGroup", true);
+                  active_figure->append(group);
+                  currentDomElement = group;
+                }
+              else
+                {
+                  currentDomElement = active_figure->firstChildElement();
+                }
               if (!plot_process_subplot_args(*current_subplot_args))
                 {
                   return 0;

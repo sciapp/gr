@@ -65,6 +65,10 @@ void GRM::Element::setAttribute(const std::string &qualifiedName, const GRM::Val
   if (value != old_value)
     {
       auto elem_p = std::static_pointer_cast<Element>(shared_from_this());
+      if (qualifiedName == "kind")
+        {
+          ;
+        }
       update(elem_p, qualifiedName, static_cast<std::string>(old_value));
       render();
     }

@@ -12865,6 +12865,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               element->setAttribute("kind", value);
               fprintf(stderr, "Update kind %s to %s is not possible\n",
                       static_cast<std::string>(element->getAttribute("kind")).c_str(), value.c_str());
+              std::cerr << toXML(element->getRootNode(), GRM::SerializerOptions{std::string(2, ' ')}) << "\n";
             }
         }
       else
