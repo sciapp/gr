@@ -4487,10 +4487,13 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
       i = 0;
       render->setLineSpec(elem, const_cast<char *>(" "));
 
-      for (std::string spec : specs)
+      int spec_i = 0;
+      for (const auto &child : elem->parentElement()->children())
         {
           int mask;
           double dy;
+
+          if (child->localName() != "series_line" && child->localName() != "series_scatter") continue;
 
           if (i <= labels.size())
             {
@@ -4500,7 +4503,7 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
             }
 
           gr_savestate();
-          mask = gr_uselinespec(spec.data());
+          mask = gr_uselinespec(specs[spec_i].data());
           gr_restorestate();
 
           if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
@@ -4509,10 +4512,39 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
               legend_symbol_x[1] = px - 0.01;
               legend_symbol_y[0] = py;
               legend_symbol_y[1] = py;
-              auto pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
-                                               legend_symbol_y[1]);
-              elem->append(pl);
-              render->setLineSpec(pl, spec);
+              if (child->children()[0]->localName() == "polyline")
+                {
+                  auto pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                   legend_symbol_y[1]);
+                  elem->append(pl);
+                  render->setLineSpec(pl, specs[spec_i]);
+                  if (child->children()[0]->hasAttribute("linecolorind"))
+                    {
+                      render->setLineColorInd(pl, static_cast<int>(child->children()[0]->getAttribute("linecolorind")));
+                    }
+                  else
+                    {
+                      render->setLineColorInd(pl, static_cast<int>(child->getAttribute("linecolorind")));
+                    }
+                }
+              else if (child->children()[0]->localName() == "polymarker")
+                {
+                  int markertype;
+                  if (child->children()[0]->hasAttribute("markertype"))
+                    {
+                      markertype = static_cast<int>(child->children()[0]->getAttribute("markertype"));
+                    }
+                  else
+                    {
+                      markertype = static_cast<int>(child->getAttribute("markertype"));
+                    }
+                  auto pl = render->createPolymarker(legend_symbol_x[0] + 0.02, legend_symbol_y[0], markertype);
+                  elem->append(pl);
+                  render->setLineSpec(pl, specs[spec_i]);
+                  render->setMarkerColorInd(pl, (child->hasAttribute("markercolorind")
+                                                     ? static_cast<int>(child->getAttribute("markercolorind"))
+                                                     : 989));
+                }
             }
           if (mask & 2)
             {
@@ -4520,10 +4552,39 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
               legend_symbol_x[1] = px - 0.02;
               legend_symbol_y[0] = py;
               legend_symbol_y[1] = py;
-              auto pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
-                                               legend_symbol_y[1]);
-              elem->append(pl);
-              render->setLineSpec(pl, spec);
+              if (child->children()[0]->localName() == "polyline")
+                {
+                  auto pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                   legend_symbol_y[1]);
+                  elem->append(pl);
+                  render->setLineSpec(pl, specs[spec_i]);
+                  if (child->children()[0]->hasAttribute("linecolorind"))
+                    {
+                      render->setLineColorInd(pl, static_cast<int>(child->children()[0]->getAttribute("linecolorind")));
+                    }
+                  else
+                    {
+                      render->setLineColorInd(pl, static_cast<int>(child->getAttribute("linecolorind")));
+                    }
+                }
+              else if (child->children()[0]->localName() == "polymarker")
+                {
+                  int markertype;
+                  if (child->children()[0]->hasAttribute("markertype"))
+                    {
+                      markertype = static_cast<int>(child->children()[0]->getAttribute("markertype"));
+                    }
+                  else
+                    {
+                      markertype = static_cast<int>(child->getAttribute("markertype"));
+                    }
+                  auto pl = render->createPolymarker(legend_symbol_x[0] + 0.02, legend_symbol_y[0], markertype);
+                  elem->append(pl);
+                  render->setLineSpec(pl, specs[spec_i]);
+                  render->setMarkerColorInd(pl, (child->hasAttribute("markercolorind")
+                                                     ? static_cast<int>(child->getAttribute("markercolorind"))
+                                                     : 989));
+                }
             }
           if (i < labels.size())
             {
@@ -4534,6 +4595,7 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
               i += 1;
             }
           py -= 0.03;
+          spec_i += 1;
         }
       gr_restorestate();
 
@@ -12621,7 +12683,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                         static_cast<std::string>(element->getAttribute("kind"))) != line_group.end())
             {
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
-              element->parentElement()->append(new_series);
+              element->parentElement()->insertBefore(new_series, element);
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
               for (const auto &child : element->children())
@@ -12637,7 +12699,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                              static_cast<std::string>(element->getAttribute("kind"))) != heatmap_group.end())
             {
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
-              element->parentElement()->append(new_series);
+              element->parentElement()->insertBefore(new_series, element);
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
               if (static_cast<std::string>(element->getAttribute("kind")) == "imshow")
@@ -12678,7 +12740,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                              static_cast<std::string>(element->getAttribute("kind"))) != isosurface_group.end())
             {
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
-              element->parentElement()->append(new_series);
+              element->parentElement()->insertBefore(new_series, element);
               new_series->setAttribute("c", element->getAttribute("c"));
               new_series->setAttribute("c_dims", element->getAttribute("c_dims"));
               for (const auto &child : element->children())
@@ -12693,7 +12755,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                              static_cast<std::string>(element->getAttribute("kind"))) != plot3_group.end())
             {
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
-              element->parentElement()->append(new_series);
+              element->parentElement()->insertBefore(new_series, element);
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
               new_series->setAttribute("z", element->getAttribute("z"));
@@ -12709,7 +12771,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                              static_cast<std::string>(element->getAttribute("kind"))) != barplot_group.end())
             {
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
-              element->parentElement()->append(new_series);
+              element->parentElement()->insertBefore(new_series, element);
               new_series->setAttribute("x", element->getAttribute("x"));
 
               if (static_cast<std::string>(element->getAttribute("kind")) == "barplot" ||
@@ -12764,7 +12826,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                              static_cast<std::string>(element->getAttribute("kind"))) != hexbin_group.end())
             {
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
-              element->parentElement()->append(new_series);
+              element->parentElement()->insertBefore(new_series, element);
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
               for (const auto &child : element->children())
