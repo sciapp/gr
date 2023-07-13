@@ -750,7 +750,7 @@ static err_t find_nearest_tooltip(int mouse_x, int mouse_y, grm_tooltip_info_t *
         }
       else
         {
-          //          free(tooltip_info);
+          free(tooltip_info);
         }
     }
 
@@ -870,7 +870,7 @@ grm_accumulated_tooltip_info_t *grm_get_accumulated_tooltip_x(int mouse_x, int m
           min_dist = current_dist;
         }
       *y_ptr = current_tooltip->y;
-      *ylabels_ptr = current_tooltip->label;
+      *ylabels_ptr = (strcmp(current_tooltip->label, "") == 0) ? (char *)"y" : current_tooltip->label;
       ++y_ptr;
       ++ylabels_ptr;
       tooltip_reflist_node = tooltip_reflist_node->next;
@@ -923,7 +923,6 @@ error_cleanup:
 
 err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *))
 {
-  auto info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
   double *x_series, *y_series, *z_series, x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
   double x_range_min, x_range_max, y_range_min, y_range_max, x_px, y_px;
   int width, height, max_width_height;
@@ -934,13 +933,15 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
   std::string orientation;
   int is_vertical = 0;
 
+  auto info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
+  return_error_if(info == nullptr, ERROR_MALLOC);
   info->x_px = -1;
   info->y_px = -1;
   info->x = 0;
   info->y = 0;
-  info->xlabel = "x";
-  info->ylabel = "y";
-  info->label = "";
+  info->xlabel = (char *)"x";
+  info->ylabel = (char *)"y";
+  info->label = (char *)"";
 
   get_figure_size(nullptr, &width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
@@ -996,14 +997,14 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
   if (label_vec.empty())
     {
-      info->xlabel = "x";
-      info->ylabel = "y";
+      info->xlabel = (char *)"x";
+      info->ylabel = (char *)"y";
     }
   else
     {
       if (!label_vec[0]->hasAttribute("xlabel"))
         {
-          info->xlabel = "x";
+          info->xlabel = (char *)"x";
         }
       else
         {
@@ -1012,7 +1013,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
         }
       if (!label_vec[0]->hasAttribute("ylabel"))
         {
-          info->ylabel = "y";
+          info->ylabel = (char *)"y";
         }
       else
         {
@@ -1039,7 +1040,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
   y_range_max = (y_max < y_range_max) ? y_max : y_range_max;
 
   std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
-  auto draw_legend_element_vec = subplot_element->getElementsByClassName("legend");
+  auto draw_legend_element_vec = subplot_element->querySelectorsAll("legend");
   num_labels = 0;
   if (!draw_legend_element_vec.empty())
     {
@@ -1100,14 +1101,10 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
           info->x_px = mouse_x;
           info->y_px = mouse_y;
           info->label = output;
-          tooltip_callback(mouse_x, mouse_y, info);
-          gr_restorestate();
-          return ERROR_NONE;
         }
-      else
-        {
-          mindiff = DBL_MAX;
-        }
+      tooltip_callback(mouse_x, mouse_y, info);
+      gr_restorestate();
+      return ERROR_NONE;
     }
   else
     {
@@ -1137,6 +1134,8 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
           std::string z_key_string = "z";
           std::string z_key;
 
+          mindiff = DBL_MAX;
+
           if (kind == "contour" || kind == "contourf")
             {
               x_key_string = "px";
@@ -1146,7 +1145,6 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
           if (!current_series->hasAttribute(x_key_string) || !current_series->hasAttribute(y_key_string))
             {
-              mindiff = DBL_MAX;
               continue;
             }
           auto x_key = static_cast<std::string>(current_series->getAttribute(x_key_string));
@@ -1185,37 +1183,38 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
           for (i = 0; i < x_series_vec.size(); i++)
             {
-              if ((x_series_vec[i] < x_range_min || x_series_vec[i] > x_range_max || y_series_vec[i] < y_range_min ||
-                   y_series_vec[i] > y_range_max) &&
-                  !str_equals_any(kind.c_str(), 6, "heatmap", "marginalheatmap", "contour", "imshow", "contourf",
+              if (!str_equals_any(kind.c_str(), 6, "heatmap", "marginalheatmap", "contour", "imshow", "contourf",
                                   "quiver"))
                 {
-                  continue;
-                }
-              x_px = x_series_vec[i];
-              y_px = y_series_vec[i];
-              gr_wctondc(&x_px, &y_px);
-              x_px = (x_px * max_width_height);
-              y_px = (height - y_px * max_width_height);
-              diff = sqrt((x_px - mouse_x) * (x_px - mouse_x) + (y_px - mouse_y) * (y_px - mouse_y));
-              if (diff < mindiff && diff <= 50)
-                {
-                  mindiff = diff;
-                  info->x = x_series_vec[i];
-                  info->y = y_series_vec[i];
-                  info->x_px = (int)x_px;
-                  info->y_px = (int)y_px;
-                  if (num_labels > series_i)
+                  if (x_series_vec[i] < x_range_min || x_series_vec[i] > x_range_max)
                     {
-                      info->label = (char *)labels[series_i].c_str();
+                      continue;
                     }
-                  else
+                  x_px = x_series_vec[i];
+                  y_px = y_series_vec[i];
+                  gr_wctondc(&x_px, &y_px);
+                  x_px = (x_px * max_width_height);
+                  y_px = (height - y_px * max_width_height);
+                  diff = fabs(x_px - mouse_x);
+                  if (diff < mindiff && diff <= MAX_MOUSE_DIST)
                     {
-                      info->label = "";
+                      mindiff = diff;
+                      info->x = x_series_vec[i];
+                      info->y = y_series_vec[i];
+                      info->x_px = (int)x_px;
+                      info->y_px = (int)y_px;
+                      if (num_labels > series_i)
+                        {
+                          static std::vector<std::string> line_label = labels;
+                          info->label = (char *)line_label[series_i].c_str();
+                        }
+                      else
+                        {
+                          info->label = (char *)"";
+                        }
                     }
                 }
-              else if (str_equals_any(kind.c_str(), 6, "heatmap", "marginalheatmap", "contour", "imshow", "contourf",
-                                      "quiver"))
+              else
                 {
                   static char output[50];
                   double num;
@@ -1258,8 +1257,8 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                     }
                   if (kind == "quiver")
                     {
-                      info->xlabel = "u";
-                      info->ylabel = "v";
+                      info->xlabel = (char *)"u";
+                      info->ylabel = (char *)"v";
                       info->x = u_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
                       info->y = v_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
                     }
@@ -1273,7 +1272,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
                   if (kind == "quiver")
                     {
-                      info->label = "";
+                      info->label = (char *)"";
                     }
                   else
                     {
@@ -1282,12 +1281,47 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                       info->label = output;
                     }
                 }
-              tooltip_callback(mouse_x, mouse_y, info);
+            }
+          tooltip_callback(mouse_x, mouse_y, info);
+          if (current_series != nullptr)
+            {
+              info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
+              info->x_px = -1;
+              info->y_px = -1;
+              info->x = 0;
+              info->y = 0;
+              if (label_vec.empty())
+                {
+                  info->xlabel = (char *)"x";
+                  info->ylabel = (char *)"y";
+                }
+              else
+                {
+                  if (!label_vec[0]->hasAttribute("xlabel"))
+                    {
+                      info->xlabel = (char *)"x";
+                    }
+                  else
+                    {
+                      static std::string xlabel = static_cast<std::string>(label_vec[0]->getAttribute("xlabel"));
+                      info->xlabel = (char *)xlabel.c_str();
+                    }
+                  if (!label_vec[0]->hasAttribute("ylabel"))
+                    {
+                      info->ylabel = (char *)"y";
+                    }
+                  else
+                    {
+                      static std::string ylabel = static_cast<std::string>(label_vec[0]->getAttribute("ylabel"));
+                      info->ylabel = (char *)ylabel.c_str();
+                    }
+                }
+              info->label = (char *)"";
+              return_error_if(info == nullptr, ERROR_MALLOC);
             }
           ++series_i;
         }
     }
   gr_restorestate();
-  tooltip_callback(mouse_x, mouse_y, info);
   return ERROR_NONE;
 }
