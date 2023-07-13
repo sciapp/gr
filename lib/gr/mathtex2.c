@@ -2911,7 +2911,7 @@ static size_t convert_accent_to_box_model(ParserNode *node)
       0,
   };
   const double accent_bearing_factor[] = {
-      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, /* 1, */
+      1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, /* 1, */
       1,                                                    /* 1, */
       1,                                                    /* 1, */
       1,
