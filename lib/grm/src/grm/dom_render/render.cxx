@@ -8447,18 +8447,23 @@ static void processLine(const std::shared_ptr<GRM::Element> &element, const std:
       gr_inqmarkercolorind(&current_marker_colorind);
       int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
-      std::shared_ptr<GRM::Element> line;
+      std::shared_ptr<GRM::Element> marker;
       if (orientation == "horizontal")
         {
-          line = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
+          marker = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
         }
       else
         {
-          line = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
+          marker = global_render->createPolymarker(str + "x", y_vec, str + "y", x_vec);
+        }
+      marker->setAttribute("markercolorind", current_marker_colorind);
+      element->append(marker);
+
+      if (element->hasAttribute("markertype"))
+        {
+          marker->setAttribute("markertype", static_cast<int>(element->getAttribute("markertype")));
         }
       global_root->setAttribute("_id", ++id);
-      line->setAttribute("markercolorind", current_marker_colorind);
-      element->append(line);
     }
 
   // errorbar handling

@@ -1469,6 +1469,8 @@ err_t plot_line(grm_args_t *subplot_args)
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
   const char *orientation;
+  int markertype;
+  int *previous_marker_type = plot_scatter_markertypes;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : active_figure->lastChildElement();
@@ -1516,6 +1518,19 @@ err_t plot_line(grm_args_t *subplot_args)
         }
 
       if (grm_args_values(*current_series, "spec", "s", &spec)) subGroup->setAttribute("spec", spec);
+      if (grm_args_values(*current_series, "markertype", "i", &markertype))
+        {
+          subGroup->setAttribute("markertype", markertype);
+        }
+      else
+        {
+          subGroup->setAttribute("markertype", *previous_marker_type++);
+          if (*previous_marker_type == INT_MAX)
+            {
+              previous_marker_type = plot_scatter_markertypes;
+            }
+        }
+
 
       global_root->setAttribute("_id", ++id);
       error = plot_draw_errorbars(*current_series, x_length);
