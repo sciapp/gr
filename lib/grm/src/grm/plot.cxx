@@ -1843,8 +1843,25 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                       max_component += step;
                     }
                 }
-              grm_args_push(subplot_args, private_name(current_range_keys->subplot), "dd", min_component,
-                            max_component);
+              const char *orientation = PLOT_DEFAULT_ORIENTATION;
+
+              grm_args_values(subplot_args, "orientation", "s", &orientation);
+              if (strcmp(orientation, "vertical") == 0)
+                {
+                  if (strcmp(current_range_keys->subplot, "xlim") == 0)
+                    {
+                      grm_args_push(subplot_args, private_name("ylim"), "dd", min_component, max_component);
+                    }
+                  else if (strcmp(current_range_keys->subplot, "ylim") == 0)
+                    {
+                      grm_args_push(subplot_args, private_name("xlim"), "dd", min_component, max_component);
+                    }
+                }
+              else
+                {
+                  grm_args_push(subplot_args, private_name(current_range_keys->subplot), "dd", min_component,
+                                max_component);
+                }
             }
           ++current_range_keys;
           ++current_component_name;

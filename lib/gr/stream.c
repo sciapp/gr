@@ -502,11 +502,11 @@ int gr_startlistener(void)
     {
       if (!GetEnvironmentVariableW(L"GRDIR", w_env, MAXPATHLEN))
         {
-          StringCbPrintfW(command, CMD_LINE_LEN, L"%wS\\bin\\grplot.exe --listen", GRDIR);
+          StringCbPrintfW(command, CMD_LINE_LEN, L"%S\\bin\\grplot.exe --listen", GRDIR);
         }
       else
         {
-          StringCbPrintfW(command, CMD_LINE_LEN, L"%ws\\bin\\grplot.exe --listen", w_env);
+          StringCbPrintfW(command, CMD_LINE_LEN, L"%s\\bin\\grplot.exe --listen", w_env);
         }
     }
 #else
@@ -525,6 +525,14 @@ int gr_startlistener(void)
       command = cmd;
     }
 #endif
+  if (!gks_getenv("QT_AUTO_SCREEN_SCALE_FACTOR"))
+    {
+#ifdef _WIN32
+      putenv("QT_AUTO_SCREEN_SCALE_FACTOR=1");
+#else
+      setenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1", 1);
+#endif
+    }
 
   for (retry_count = 1; retry_count <= max_retry_count; retry_count++)
     {

@@ -294,6 +294,15 @@ static int open_socket(int wstype)
 #endif
     }
 
+  if (!gks_getenv("QT_AUTO_SCREEN_SCALE_FACTOR"))
+    {
+#ifdef _WIN32
+      putenv("QT_AUTO_SCREEN_SCALE_FACTOR=1");
+#else
+      setenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1", 1);
+#endif
+    }
+
   for (retry_count = 1; retry_count <= max_retry_count; retry_count++)
     {
       if ((s = connect_socket(retry_count != max_retry_count)) == -1)

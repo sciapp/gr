@@ -1,5 +1,5 @@
 #.rst:
-# FindZlib
+# FindZLIB
 # --------
 #
 # Find the Z compression library.
@@ -9,7 +9,7 @@
 #
 # This module defines the following :prop_tgt:`IMPORTED` target:
 #
-# ``Zlib::Zlib``
+# ``ZLIB::ZLIB``
 #   The Zlib library, if found.
 #
 # Result variables
@@ -21,7 +21,7 @@
 #   where to find zlib.h, etc.
 # ``ZLIB_LIBRARIES``
 #   the libraries to link against to use Zlib.
-# ``Zlib_FOUND``
+# ``ZLIB_FOUND``
 #   If false, do not try to use Zlib.
 
 if(NOT ZLIB_INCLUDE_DIR)
@@ -41,7 +41,7 @@ endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
-  Zlib
+  ZLIB
   VERSION_VAR
   ZLIB_VERSION_STRING
   REQUIRED_VARS
@@ -50,14 +50,14 @@ find_package_handle_standard_args(
   ZLIB_VERSION_STRING
 )
 
-if(Zlib_FOUND)
+if(ZLIB_FOUND)
   set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR})
   set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
 
-  if(NOT TARGET Zlib::Zlib)
-    add_library(Zlib::Zlib UNKNOWN IMPORTED)
+  if(NOT TARGET ZLIB::ZLIB)
+    add_library(ZLIB::ZLIB UNKNOWN IMPORTED)
     set_target_properties(
-      Zlib::Zlib
+      ZLIB::ZLIB
       PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}"
                  IMPORTED_LINK_INTERFACE_LANGUAGES "C"
                  IMPORTED_LOCATION "${ZLIB_LIBRARY}"
