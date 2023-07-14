@@ -325,9 +325,6 @@ err_t tooltip_reflist_entry_delete(tooltip_reflist_entry_t entry UNUSED)
   return ERROR_NONE;
 }
 
-// DEFINE_LIST_METHODS(tooltip)
-
-
 err_t tooltip_list_entry_copy(tooltip_list_entry_t *copy, tooltip_list_const_entry_t entry)
 {
   tooltip_list_entry_t _copy;

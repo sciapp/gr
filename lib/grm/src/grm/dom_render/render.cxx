@@ -4512,38 +4512,41 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
               legend_symbol_x[1] = px - 0.01;
               legend_symbol_y[0] = py;
               legend_symbol_y[1] = py;
-              if (child->children()[0]->localName() == "polyline")
+              for (const auto &childchild : child->children())
                 {
-                  auto pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
-                                                   legend_symbol_y[1]);
-                  elem->append(pl);
-                  render->setLineSpec(pl, specs[spec_i]);
-                  if (child->children()[0]->hasAttribute("linecolorind"))
+                  if (childchild->localName() == "polyline")
                     {
-                      render->setLineColorInd(pl, static_cast<int>(child->children()[0]->getAttribute("linecolorind")));
+                      auto pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                       legend_symbol_y[1]);
+                      elem->append(pl);
+                      render->setLineSpec(pl, specs[spec_i]);
+                      if (childchild->hasAttribute("linecolorind"))
+                        {
+                          render->setLineColorInd(pl, static_cast<int>(childchild->getAttribute("linecolorind")));
+                        }
+                      else
+                        {
+                          render->setLineColorInd(pl, static_cast<int>(child->getAttribute("linecolorind")));
+                        }
                     }
-                  else
+                  else if (childchild->localName() == "polymarker")
                     {
-                      render->setLineColorInd(pl, static_cast<int>(child->getAttribute("linecolorind")));
+                      int markertype;
+                      if (childchild->hasAttribute("markertype"))
+                        {
+                          markertype = static_cast<int>(childchild->getAttribute("markertype"));
+                        }
+                      else
+                        {
+                          markertype = static_cast<int>(child->getAttribute("markertype"));
+                        }
+                      auto pl = render->createPolymarker(legend_symbol_x[0] + 0.02, legend_symbol_y[0], markertype);
+                      elem->append(pl);
+                      render->setLineSpec(pl, specs[spec_i]);
+                      render->setMarkerColorInd(pl, (child->hasAttribute("markercolorind")
+                                                         ? static_cast<int>(child->getAttribute("markercolorind"))
+                                                         : 989));
                     }
-                }
-              else if (child->children()[0]->localName() == "polymarker")
-                {
-                  int markertype;
-                  if (child->children()[0]->hasAttribute("markertype"))
-                    {
-                      markertype = static_cast<int>(child->children()[0]->getAttribute("markertype"));
-                    }
-                  else
-                    {
-                      markertype = static_cast<int>(child->getAttribute("markertype"));
-                    }
-                  auto pl = render->createPolymarker(legend_symbol_x[0] + 0.02, legend_symbol_y[0], markertype);
-                  elem->append(pl);
-                  render->setLineSpec(pl, specs[spec_i]);
-                  render->setMarkerColorInd(pl, (child->hasAttribute("markercolorind")
-                                                     ? static_cast<int>(child->getAttribute("markercolorind"))
-                                                     : 989));
                 }
             }
           if (mask & 2)
@@ -4552,38 +4555,41 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
               legend_symbol_x[1] = px - 0.02;
               legend_symbol_y[0] = py;
               legend_symbol_y[1] = py;
-              if (child->children()[0]->localName() == "polyline")
+              for (const auto &childchild : child->children())
                 {
-                  auto pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
-                                                   legend_symbol_y[1]);
-                  elem->append(pl);
-                  render->setLineSpec(pl, specs[spec_i]);
-                  if (child->children()[0]->hasAttribute("linecolorind"))
+                  if (childchild->localName() == "polyline")
                     {
-                      render->setLineColorInd(pl, static_cast<int>(child->children()[0]->getAttribute("linecolorind")));
+                      auto pl = render->createPolyline(legend_symbol_x[0], legend_symbol_x[1], legend_symbol_y[0],
+                                                       legend_symbol_y[1]);
+                      elem->append(pl);
+                      render->setLineSpec(pl, specs[spec_i]);
+                      if (childchild->hasAttribute("linecolorind"))
+                        {
+                          render->setLineColorInd(pl, static_cast<int>(childchild->getAttribute("linecolorind")));
+                        }
+                      else
+                        {
+                          render->setLineColorInd(pl, static_cast<int>(child->getAttribute("linecolorind")));
+                        }
                     }
-                  else
+                  else if (childchild->localName() == "polymarker")
                     {
-                      render->setLineColorInd(pl, static_cast<int>(child->getAttribute("linecolorind")));
+                      int markertype;
+                      if (childchild->hasAttribute("markertype"))
+                        {
+                          markertype = static_cast<int>(childchild->getAttribute("markertype"));
+                        }
+                      else
+                        {
+                          markertype = static_cast<int>(child->getAttribute("markertype"));
+                        }
+                      auto pl = render->createPolymarker(legend_symbol_x[0] + 0.02, legend_symbol_y[0], markertype);
+                      elem->append(pl);
+                      render->setLineSpec(pl, specs[spec_i]);
+                      render->setMarkerColorInd(pl, (child->hasAttribute("markercolorind")
+                                                         ? static_cast<int>(child->getAttribute("markercolorind"))
+                                                         : 989));
                     }
-                }
-              else if (child->children()[0]->localName() == "polymarker")
-                {
-                  int markertype;
-                  if (child->children()[0]->hasAttribute("markertype"))
-                    {
-                      markertype = static_cast<int>(child->children()[0]->getAttribute("markertype"));
-                    }
-                  else
-                    {
-                      markertype = static_cast<int>(child->getAttribute("markertype"));
-                    }
-                  auto pl = render->createPolymarker(legend_symbol_x[0] + 0.02, legend_symbol_y[0], markertype);
-                  elem->append(pl);
-                  render->setLineSpec(pl, specs[spec_i]);
-                  render->setMarkerColorInd(pl, (child->hasAttribute("markercolorind")
-                                                     ? static_cast<int>(child->getAttribute("markercolorind"))
-                                                     : 989));
                 }
             }
           if (i < labels.size())
