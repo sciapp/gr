@@ -4831,6 +4831,7 @@ int grm_plot(const grm_args_t *args)
   else
     {
       int temp;
+      global_render->setAutoUpdate(false);
       if (grm_args_values(args, "hold_plots", "i", &temp))
         {
           hold_figures = temp;
