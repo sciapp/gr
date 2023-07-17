@@ -1577,7 +1577,7 @@ static void write_page(void)
           TIFFSetField(fp, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);
           TIFFSetField(fp, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
           TIFFSetField(fp, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
-          TIFFSetField(fp, TIFFTAG_COMPRESSION, COMPRESSION_DEFLATE);
+          TIFFSetField(fp, TIFFTAG_COMPRESSION, COMPRESSION_ADOBE_DEFLATE);
           TIFFSetField(fp, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(fp, stride));
           TIFFSetField(fp, TIFFTAG_SOFTWARE, "GKS Cairo Plugin");
           TIFFSetField(fp, TIFFTAG_XRESOLUTION, p->w * 0.0254 / p->mw);
