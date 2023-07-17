@@ -87,12 +87,7 @@ void GRM::Element::setAttribute(const std::string &qualifiedName, const int &val
 
 void GRM::Element::removeAttribute(const std::string &qualifiedName)
 {
-  //  void (* render)() = nullptr;
-  //  void (* update)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &) = nullptr;
-  //  ownerDocument()->getUpdateFct(render, update);
-  //    update(static_cast<const std::shared_ptr<Element>>(this), qualifiedName, "");
   this->m_attributes.erase(qualifiedName);
-  //  render();
 }
 
 bool GRM::Element::toggleAttribute(const std::string &qualifiedName)

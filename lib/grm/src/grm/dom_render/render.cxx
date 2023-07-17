@@ -10153,6 +10153,14 @@ static void ProcessSeries(const std::shared_ptr<GRM::Element> element, const std
     {
       throw NotFoundError("Series is not in render implemented yet\n");
     }
+
+  // special case where the data of a series could inflict the window
+  // its important that the series gets first processed so the changed data gets used inside plotCoordinateRanges
+  if (element->parentElement()->localName() == "plot" &&
+      !static_cast<int>(element->parentElement()->getAttribute("keep_window")))
+    {
+      plotCoordinateRanges(element->parentElement(), global_render->getContext());
+    }
 }
 
 static void processElement(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -10452,6 +10460,7 @@ static void applyRootDefaults(std::shared_ptr<GRM::Element> root)
                   if (!child->hasAttribute("kind")) child->setAttribute("kind", PLOT_DEFAULT_KIND);
                   if (!child->hasAttribute("keep_aspect_ratio"))
                     child->setAttribute("keep_aspect_ratio", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
+                  if (!child->hasAttribute("keep_window")) child->setAttribute("keep_window", PLOT_DEFAULT_KEEP_WINDOW);
                   if (!child->hasAttribute("plot_xmin")) child->setAttribute("plot_xmin", PLOT_DEFAULT_SUBPLOT_MIN_X);
                   if (!child->hasAttribute("plot_xmax")) child->setAttribute("plot_xmax", PLOT_DEFAULT_SUBPLOT_MAX_X);
                   if (!child->hasAttribute("plot_ymin")) child->setAttribute("plot_ymin", PLOT_DEFAULT_SUBPLOT_MIN_Y);

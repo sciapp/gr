@@ -92,6 +92,7 @@
             <xs:attribute name="grplot" type="xs:string"/> <!-- all plots are made with grplot or none -->
             <xs:attribute name="id" type="xs:ID" use="required"/>
             <xs:attribute name="keep_aspect_ratio" type="xs:string" use="required"/>
+            <xs:attribute name="keep_window" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string" use="required"/>
             <xs:attribute name="lim_cmax" type="xs:string"/>
             <xs:attribute name="lim_cmin" type="xs:string"/>
