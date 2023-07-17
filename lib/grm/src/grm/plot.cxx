@@ -3455,7 +3455,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   int tick_orientation = 1;
   std::shared_ptr<GRM::Element> group;
 
-  if (global_render->getElementsByTagName("coordinate_system").empty())
+  if (!currentDomElement || currentDomElement->getElementsByTagName("coordinate_system").empty())
     {
       group = global_render->createElement("coordinate_system");
       if (!currentDomElement)
