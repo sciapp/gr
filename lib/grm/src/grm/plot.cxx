@@ -4823,6 +4823,7 @@ int grm_plot(const grm_args_t *args)
       return 0;
     }
 
+  // TODO: hold append last test args = NULL; grm_switch(x) should bypass this if condition somehow
   if (args == nullptr && global_render->documentElement())
     {
       global_render->render();
@@ -4847,6 +4848,10 @@ int grm_plot(const grm_args_t *args)
         {
           figure_id = 0;
           figure_id_given = false;
+        }
+      else
+        {
+          figure_id_given = true;
         }
       /* check if given figure_id (even default 0) already exists in the render */
       auto figure_element = global_root->querySelectors("[id=figure" + std::to_string(figure_id) + "]");

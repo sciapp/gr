@@ -1777,7 +1777,6 @@ static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem
               line_elem->setAttribute("name", "line");
               child->append(marker_elem);
               child->append(line_elem);
-              marker_elem->setAttribute("z_index", 2);
             }
           else if (xind == -1 || yind == -1)
             {
@@ -8466,7 +8465,6 @@ static void processLine(const std::shared_ptr<GRM::Element> &element, const std:
         }
       marker->setAttribute("markercolorind", current_marker_colorind);
       element->append(marker);
-      marker->setAttribute("z_index", 2);
 
       if (element->hasAttribute("markertype"))
         {
@@ -11002,7 +11000,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createLegend(const std::string &label
    */
 
   auto element = createElement("legend");
-  element->setAttribute("z_index", 4);
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   element->setAttribute("specs", specs_key);
   element->setAttribute("labels", labels_key);
@@ -12656,7 +12653,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       "y",
       "z",
   };
-  std::map<std::string, std::vector<std::string>> element_names{
+  static std::map<std::string, std::vector<std::string>> element_names{
       {std::string("series_barplot"), series_barplot},
       {std::string("series_contour"), series_contour},
       {std::string("series_contourf"), series_contourf},
