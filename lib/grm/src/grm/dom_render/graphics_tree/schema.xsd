@@ -687,10 +687,12 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="errorbars" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="markertype" type="xs:string"/>
             <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="spec" type="xs:string"/>
             <xs:attribute name="x" type="xs:string"/>
