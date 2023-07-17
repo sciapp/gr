@@ -2485,21 +2485,15 @@ err_t plot_heatmap(grm_args_t *subplot_args)
           subGroup->setAttribute("zdims_min", (int)rows);
           subGroup->setAttribute("zdims_max", (int)cols);
         }
-      if (x == nullptr)
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
         {
-          if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
-            {
-              subGroup->setAttribute("xrange_min", x_min);
-              subGroup->setAttribute("xrange_max", x_max);
-            }
+          subGroup->setAttribute("xrange_min", x_min);
+          subGroup->setAttribute("xrange_max", x_max);
         }
-      if (y == nullptr)
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
         {
-          if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
-            {
-              subGroup->setAttribute("yrange_min", y_min);
-              subGroup->setAttribute("yrange_max", y_max);
-            }
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
         }
       if (grm_args_values(*current_series, "zrange", "dd", &z_min, &z_max))
         {
