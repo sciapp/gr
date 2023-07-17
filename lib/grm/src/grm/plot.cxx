@@ -1850,10 +1850,15 @@ err_t plot_hist(grm_args_t *subplot_args)
       subGroup->setAttribute("edge_color_rgb", "edge_color_rgb" + str);
       subGroup->setAttribute("edge_color_index", edge_color_index);
 
-      grm_args_first_value(*current_series, "bins", "D", &bins, &num_bins);
+      if (grm_args_first_value(*current_series, "bins", "D", &bins, &num_bins))
+        {
+          std::vector<double> bins_vec(bins, bins + num_bins);
+          (*context)["bins" + str] = bins_vec;
+          subGroup->setAttribute("bins", "bins" + str);
+        }
       if (num_bins == 0)
         {
-          grm_args_values(*current_series, "nbins", "i", &num_bins);
+          if (grm_args_values(*current_series, "nbins", "i", &num_bins)) subGroup->setAttribute("nbins", (int)num_bins);
         }
 
       if (grm_args_values(subplot_args, "orientation", "s", &orientation))
