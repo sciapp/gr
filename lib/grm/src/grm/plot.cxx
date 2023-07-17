@@ -3503,7 +3503,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           global_render->setOriginPosition3d(axes3d, "low", "low", "low");
           axes3d->setAttribute("y_tick", 0);
           axes3d->setAttribute("y_major", 0);
-          axes3d->setAttribute("z_index", 2);
+          axes3d->setAttribute("z_index", 7);
           group->append(axes3d);
           axes3d = global_render->createEmptyAxes3d(tick_orientation);
           global_render->setOriginPosition3d(axes3d, "high", "low", "low");
@@ -3511,7 +3511,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           axes3d->setAttribute("z_tick", 0);
           axes3d->setAttribute("x_major", 0);
           axes3d->setAttribute("z_major", 0);
-          axes3d->setAttribute("z_index", 2);
+          axes3d->setAttribute("z_index", 7);
           group->append(axes3d);
         }
     }
@@ -3535,11 +3535,11 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         {
           auto axes = global_render->createEmptyAxes(tick_orientation);
           global_render->setOriginPosition(axes, "low", "low");
-          if (pass == 2) axes->setAttribute("z_index", 2);
+          if (pass == 2) axes->setAttribute("z_index", 7);
           group->append(axes);
           axes = global_render->createEmptyAxes(-tick_orientation);
           global_render->setOriginPosition(axes, "high", "high");
-          if (pass == 2) axes->setAttribute("z_index", 2);
+          if (pass == 2) axes->setAttribute("z_index", 7);
           group->append(axes);
 
           if (strcmp("barplot", kind) == 0)
@@ -3587,7 +3587,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
       if (pass == 2 && title3d)
         {
           auto title3d_group = global_render->createTitles3d(xlabel, ylabel, zlabel);
-          title3d_group->setAttribute("z_index", 2);
+          title3d_group->setAttribute("z_index", 7);
           group->append(title3d_group);
         }
     }
@@ -3919,6 +3919,7 @@ err_t plot_draw_errorbars(grm_args_t *series_args, unsigned int x_length)
       if (grm_args_values(error_container, "errorbar_color", "i", &color_errorbar))
         subGroup->setAttribute("errorbar_color", color_errorbar);
     }
+  subGroup->setAttribute("z_index", 3);
 
   return ERROR_NONE;
 }
