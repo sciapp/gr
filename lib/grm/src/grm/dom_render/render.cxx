@@ -2475,7 +2475,7 @@ static void processTitle(const std::shared_ptr<GRM::Element> &elem)
 
       double x = 0.5 * (viewport[0] + viewport[1]);
       double y = vp[3];
-      std::string title = (std::string)elem->getAttribute("title");
+      std::string title = static_cast<std::string>(elem->getAttribute("title"));
 
       if (title.empty()) return; // Empty title is pointless, no need to waste the space for nothing
       if (auto render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument()))
@@ -2490,6 +2490,7 @@ static void processTitle(const std::shared_ptr<GRM::Element> &elem)
               auto new_title_elem = render->createText(x, y, title);
               new_title_elem->setAttribute("name", "title");
               render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+              subplot_element->append(new_title_elem);
             }
         }
     }
