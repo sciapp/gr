@@ -4936,7 +4936,8 @@ int grm_plot(const grm_args_t *args)
     }
   else
     {
-      if (!(hold_figures && append_figures && figure_id_given)) plot_set_attribute_defaults(active_plot_args);
+      if (!active_figure->hasChildNodes() || !hold_figures || (append_figures && !figure_id_given))
+        plot_set_attribute_defaults(active_plot_args);
 
       if (grm_args_values(active_plot_args, "size", "dd", &tmp_size_d[0], &tmp_size_d[1]))
         {
@@ -4977,11 +4978,11 @@ int grm_plot(const grm_args_t *args)
               else
                 {
                   /* If no value is given, fall back to default value */
-                  for (int i = 0; i < 2; ++i)
+                  for (int j = 0; j < 2; ++j)
                     {
-                      active_figure->setAttribute("size_" + vars[i], default_size[i]);
-                      active_figure->setAttribute("size_" + vars[i] + "_type", "double");
-                      active_figure->setAttribute("size_" + vars[i] + "_unit", "px");
+                      active_figure->setAttribute("size_" + vars[j], default_size[j]);
+                      active_figure->setAttribute("size_" + vars[j] + "_type", "double");
+                      active_figure->setAttribute("size_" + vars[j] + "_unit", "px");
                     }
                   return 0;
                 }
@@ -4992,7 +4993,7 @@ int grm_plot(const grm_args_t *args)
           active_figure->setAttribute("figsize_x", figsize_x);
           active_figure->setAttribute("figsize_y", figsize_y);
         }
-      if (!(hold_figures && append_figures && figure_id_given))
+      if (!active_figure->hasChildNodes() || !hold_figures || (append_figures && !figure_id_given))
         {
           if (plot_process_grid_arguments(active_plot_args) != ERROR_NONE)
             {
@@ -5005,7 +5006,7 @@ int grm_plot(const grm_args_t *args)
 
       plot_pre_plot(active_plot_args);
       grm_args_values(active_plot_args, "subplots", "A", &current_subplot_args);
-      if (!(hold_figures && append_figures && figure_id_given))
+      if (!active_figure->hasChildNodes() || !hold_figures || (append_figures && !figure_id_given))
         {
           if (!(nrows == 1 && ncols == 1 &&
                 currentGrid->getElement(0, 0) == nullptr)) // Check if Grid arguments in container
