@@ -4936,7 +4936,7 @@ int grm_plot(const grm_args_t *args)
     }
   else
     {
-      plot_set_attribute_defaults(active_plot_args);
+      if (!(hold_figures && append_figures && figure_id_given)) plot_set_attribute_defaults(active_plot_args);
 
       if (grm_args_values(active_plot_args, "size", "dd", &tmp_size_d[0], &tmp_size_d[1]))
         {
@@ -4992,59 +4992,61 @@ int grm_plot(const grm_args_t *args)
           active_figure->setAttribute("figsize_x", figsize_x);
           active_figure->setAttribute("figsize_y", figsize_y);
         }
-      if (plot_process_grid_arguments(active_plot_args) != ERROR_NONE)
+      if (!(hold_figures && append_figures && figure_id_given))
         {
-          return 0;
+          if (plot_process_grid_arguments(active_plot_args) != ERROR_NONE)
+            {
+              return 0;
+            }
         }
-
       currentGrid = reinterpret_cast<grm::Grid *>(global_grid);
       int nrows = currentGrid->getNRows();
       int ncols = currentGrid->getNCols();
 
       plot_pre_plot(active_plot_args);
       grm_args_values(active_plot_args, "subplots", "A", &current_subplot_args);
-
-      if (!(nrows == 1 && ncols == 1 &&
-            currentGrid->getElement(0, 0) == nullptr)) // Check if Grid arguments in container
+      if (!(hold_figures && append_figures && figure_id_given))
         {
-          auto gridDomElement = global_render->createLayoutGrid(*currentGrid);
-          active_figure->append(gridDomElement);
-
-          for (auto const &elementToSlice : currentGrid->getElementToPosition())
+          if (!(nrows == 1 && ncols == 1 &&
+                currentGrid->getElement(0, 0) == nullptr)) // Check if Grid arguments in container
             {
-              grm_plot_helper(elementToSlice.first, elementToSlice.second, gridDomElement);
-            }
-        }
-      else if (!(hold_figures && append_figures && figure_id_given))
-        {
-          std::cout << "No grid elements\n";
-          int plot_id = 0;
-          while (*current_subplot_args != nullptr)
-            {
-              grm_args_t **series;
-              /* todo hold plots or using plot_id (now figure_id) -> don't create new group */
-              if (grm_args_values(*current_subplot_args, "series", "A", &series))
-                {
-                  auto group = global_render->createElement("plot");
-                  group->setAttribute("id", "plot" + std::to_string(plot_id));
-                  group->setAttribute("plotGroup", true);
-                  active_figure->append(group);
-                  currentDomElement = group;
-                }
-              else
-                {
-                  currentDomElement = active_figure->firstChildElement();
-                }
-              if (!plot_process_subplot_args(*current_subplot_args))
-                {
-                  return 0;
-                }
-              ++plot_id;
-              ++current_subplot_args;
-            }
-        }
+              auto gridDomElement = global_render->createLayoutGrid(*currentGrid);
+              active_figure->append(gridDomElement);
 
-      plot_post_plot(active_plot_args);
+              for (auto const &elementToSlice : currentGrid->getElementToPosition())
+                {
+                  grm_plot_helper(elementToSlice.first, elementToSlice.second, gridDomElement);
+                }
+            }
+          else
+            {
+              std::cout << "No grid elements\n";
+              int plot_id = 0;
+              while (*current_subplot_args != nullptr)
+                {
+                  grm_args_t **series;
+                  if (grm_args_values(*current_subplot_args, "series", "A", &series))
+                    {
+                      auto group = global_render->createElement("plot");
+                      group->setAttribute("id", "plot" + std::to_string(plot_id));
+                      group->setAttribute("plotGroup", true);
+                      active_figure->append(group);
+                      currentDomElement = group;
+                    }
+                  else
+                    {
+                      currentDomElement = active_figure->firstChildElement();
+                    }
+                  if (!plot_process_subplot_args(*current_subplot_args))
+                    {
+                      return 0;
+                    }
+                  ++plot_id;
+                  ++current_subplot_args;
+                }
+            }
+          plot_post_plot(active_plot_args);
+        }
       global_render->render();
       global_render->setAutoUpdate(true);
     }
