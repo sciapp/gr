@@ -4818,13 +4818,13 @@ int grm_plot(const grm_args_t *args)
   const char *tmp_size_s[2];
   std::string vars[2] = {"x", "y"};
   double default_size[2] = {PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT};
+  bool figure_id_given = false;
 
   if (!grm_merge(args))
     {
       return 0;
     }
 
-  // TODO: hold append last test args = NULL; grm_switch(x) should bypass this if condition somehow
   if (!figure_switched)
     {
       if (args == nullptr && global_render->documentElement())
@@ -4845,14 +4845,8 @@ int grm_plot(const grm_args_t *args)
               append_figures = temp;
             }
 
-          int figure_id;
-          bool figure_id_given = true;
-          if (!grm_args_values(args, "plot_id", "i", &figure_id))
-            {
-              figure_id = 0;
-              figure_id_given = false;
-            }
-          else
+          int figure_id = 0;
+          if (grm_args_values(args, "plot_id", "i", &figure_id))
             {
               figure_id_given = true;
             }
@@ -5021,7 +5015,7 @@ int grm_plot(const grm_args_t *args)
               grm_plot_helper(elementToSlice.first, elementToSlice.second, gridDomElement);
             }
         }
-      else
+      else if (!(hold_figures && append_figures && figure_id_given))
         {
           std::cout << "No grid elements\n";
           int plot_id = 0;
