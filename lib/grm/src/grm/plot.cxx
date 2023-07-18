@@ -4931,6 +4931,7 @@ int grm_plot(const grm_args_t *args)
     }
   else
     {
+      global_render->setAutoUpdate(false);
       figure_switched = false;
     }
 
@@ -5129,6 +5130,8 @@ int grm_switch(unsigned int id)
   else
     {
       active_figure = figure_element;
+      global_render->setActiveFigure(active_figure);
+      figure_switched = true;
     }
 
   if (plot_init_static_variables() != ERROR_NONE)

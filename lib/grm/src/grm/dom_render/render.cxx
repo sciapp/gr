@@ -10313,6 +10313,7 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
     {
       for (const auto &child : element->children())
         {
+          if (child->localName() == "figure" && !static_cast<int>(child->getAttribute("active"))) continue;
           renderHelper(child, context);
         }
     }
@@ -10592,7 +10593,7 @@ void GRM::Render::render()
    */
   auto root = this->firstChildElement();
   global_root = root;
-  active_figure = global_root->children()[0];
+  active_figure = this->firstChildElement()->querySelectorsAll("[active=1]")[0];
   const unsigned int indent = 2;
 
   bounding_id = 0;
