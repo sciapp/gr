@@ -1147,7 +1147,7 @@ static void legend_size(const std::shared_ptr<GRM::Element> &elem, double *w, do
     }
 }
 
-static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height)
+void GRM::Render::get_figure_size(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height)
 {
   double display_metric_width, display_metric_height;
   int display_pixel_width, display_pixel_height;
@@ -2203,7 +2203,7 @@ static void processSubplot(const std::shared_ptr<GRM::Element> &elem)
   title_margin = (int)elem->getAttribute("title_margin");
   keep_aspect_ratio = static_cast<int>(elem->getAttribute("keep_aspect_ratio"));
 
-  get_figure_size(&pixel_width, &pixel_height, nullptr, nullptr);
+  GRM::Render::get_figure_size(&pixel_width, &pixel_height, nullptr, nullptr);
 
   aspect_ratio_ws = (double)pixel_width / pixel_height;
   memcpy(vp, subplot, sizeof(vp));
@@ -5629,7 +5629,7 @@ static void isosurfaceRender(const std::shared_ptr<GRM::Element> &elem, const st
   y_min = viewport[2];
   y_max = viewport[3];
 
-  get_figure_size(nullptr, &fig_width, &fig_height, nullptr, nullptr);
+  GRM::Render::get_figure_size(&fig_width, &fig_height, nullptr, nullptr);
   subplot_width = (int)(grm_max(fig_width, fig_height) * (x_max - x_min));
   subplot_height = (int)(grm_max(fig_width, fig_height) * (y_max - y_min));
 
@@ -5638,7 +5638,8 @@ static void isosurfaceRender(const std::shared_ptr<GRM::Element> &elem, const st
   logger((stderr, "subplot size: (%d, %d)\n", subplot_width, subplot_height));
   logger((stderr, "subplot ratio: %lf\n", ((double)subplot_width / (double)subplot_height)));
 
-  gr3_drawimage(x_min, x_max, y_min, y_max, subplot_width, subplot_height, GR3_DRAWABLE_GKS);
+  gr3_drawimage((float)x_min, (float)x_max, (float)y_min, (float)y_max, subplot_width, subplot_height,
+                GR3_DRAWABLE_GKS);
 }
 
 static void layoutGrid(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -9432,6 +9433,46 @@ static void wireframe(const std::shared_ptr<GRM::Element> &element, const std::s
   gr_surface(x_length, y_length, px_p, py_p, pz_p, GR_OPTION_FILLED_MESH);
 }
 
+void plotProcessWswindowWsviewport(const std::shared_ptr<GRM::Element> &element,
+                                   const std::shared_ptr<GRM::Context> &context)
+{
+  int pixel_width, pixel_height;
+  int previous_pixel_width, previous_pixel_height;
+  double metric_width, metric_height;
+  double aspect_ratio_ws_pixel, aspect_ratio_ws_metric;
+  double wsviewport[4] = {0.0, 0.0, 0.0, 0.0};
+  double wswindow[4] = {0.0, 0.0, 0.0, 0.0};
+
+  // set wswindow/wsviewport on active figure
+  auto group = active_figure;
+  GRM::Render::get_figure_size(&pixel_width, &pixel_height, &metric_width, &metric_height);
+
+  aspect_ratio_ws_pixel = (double)pixel_width / pixel_height;
+  aspect_ratio_ws_metric = metric_width / metric_height;
+  if (aspect_ratio_ws_pixel > 1)
+    {
+      wsviewport[1] = metric_width;
+      wsviewport[3] = metric_width / aspect_ratio_ws_metric;
+      wswindow[1] = 1.0;
+      wswindow[3] = 1.0 / (aspect_ratio_ws_pixel);
+    }
+  else
+    {
+      wsviewport[1] = metric_height * aspect_ratio_ws_metric;
+      wsviewport[3] = metric_height;
+      wswindow[1] = aspect_ratio_ws_pixel;
+      wswindow[3] = 1.0;
+    }
+  global_render->setWSViewport(group, wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
+  global_render->setWSWindow(group, wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
+
+  //  grm_args_push(plot_args, "previous_pixel_size", "ii", pixel_width, pixel_height);
+
+  logger((stderr, "Stored wswindow (%lf, %lf, %lf, %lf)\n", wswindow[0], wswindow[1], wswindow[2], wswindow[3]));
+  logger(
+      (stderr, "Stored wsviewport (%lf, %lf, %lf, %lf)\n", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]));
+}
+
 static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                                  const std::shared_ptr<GRM::Context> &context)
 {
@@ -10222,7 +10263,11 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
       bool old_state = automatic_update;
       automatic_update = false;
       /* check if figure is active; skip inactive elements */
-      if (element->localName() == "figure" && !static_cast<int>(element->getAttribute("active"))) return;
+      if (element->localName() == "figure")
+        {
+          if (!static_cast<int>(element->getAttribute("active"))) return;
+          if (global_root->querySelectorsAll("drawgraphics").empty()) plotProcessWswindowWsviewport(element, context);
+        }
       if (element->localName() == "plot") processPlot(element, context);
       GRM::Render::processAttributes(element);
       automatic_update = old_state;

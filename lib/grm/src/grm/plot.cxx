@@ -971,61 +971,21 @@ void plot_pre_plot(grm_args_t *plot_args)
       logger((stderr, "Got keyword \"clear\" with value %d\n", clear));
       global_root->setAttribute("clearws", clear);
     }
-  plot_process_wswindow_wsviewport(plot_args);
+
+  /* TODO: Is this enqueue important?*/
+  //  get_figure_size(plot_args, &pixel_width, &pixel_height, &metric_width, &metric_height);
+  //
+  //  if (!grm_args_values(plot_args, "previous_pixel_size", "ii", &previous_pixel_width, &previous_pixel_height) ||
+  //      (previous_pixel_width != pixel_width || previous_pixel_height != pixel_height))
+  //    {
+  //      /* TODO: handle error return value? */
+  //      event_queue_enqueue_size_event(event_queue, active_plot_index - 1, pixel_width, pixel_height);
+  //    }
 }
 
 void plot_set_text_encoding(void)
 {
   global_render->setTextEncoding(active_figure, ENCODING_UTF8);
-}
-
-void plot_process_wswindow_wsviewport(grm_args_t *plot_args)
-{
-  int pixel_width, pixel_height;
-  int previous_pixel_width, previous_pixel_height;
-  double metric_width, metric_height;
-  double aspect_ratio_ws_pixel, aspect_ratio_ws_metric;
-  double wsviewport[4] = {0.0, 0.0, 0.0, 0.0};
-  double wswindow[4] = {0.0, 0.0, 0.0, 0.0};
-
-  // set wswindow/wsviewport on root
-  auto group = active_figure;
-
-  get_figure_size(plot_args, &pixel_width, &pixel_height, &metric_width, &metric_height);
-
-  if (!grm_args_values(plot_args, "previous_pixel_size", "ii", &previous_pixel_width, &previous_pixel_height) ||
-      (previous_pixel_width != pixel_width || previous_pixel_height != pixel_height))
-    {
-      /* TODO: handle error return value? */
-      event_queue_enqueue_size_event(event_queue, active_plot_index - 1, pixel_width, pixel_height);
-    }
-
-  aspect_ratio_ws_pixel = (double)pixel_width / pixel_height;
-  aspect_ratio_ws_metric = metric_width / metric_height;
-  if (aspect_ratio_ws_pixel > 1)
-    {
-      wsviewport[1] = metric_width;
-      wsviewport[3] = metric_width / aspect_ratio_ws_metric;
-      wswindow[1] = 1.0;
-      wswindow[3] = 1.0 / (aspect_ratio_ws_pixel);
-    }
-  else
-    {
-      wsviewport[1] = metric_height * aspect_ratio_ws_metric;
-      wsviewport[3] = metric_height;
-      wswindow[1] = aspect_ratio_ws_pixel;
-      wswindow[3] = 1.0;
-    }
-  global_render->setWSViewport(group, wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
-  global_render->setWSWindow(group, wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
-
-  grm_args_push(plot_args, "wswindow", "dddd", wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
-  grm_args_push(plot_args, "wsviewport", "dddd", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
-  grm_args_push(plot_args, "previous_pixel_size", "ii", pixel_width, pixel_height);
-
-  logger((stderr, "Stored wswindow (%lf, %lf, %lf, %lf)\n", wswindow[0], wswindow[1], wswindow[2], wswindow[3]));
-  logger(
-      (stderr, "Stored wsviewport (%lf, %lf, %lf, %lf)\n", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]));
 }
 
 err_t plot_pre_subplot(grm_args_t *subplot_args)
@@ -4054,128 +4014,6 @@ int get_id_from_args(const grm_args_t *args, int *plot_id, int *subplot_id, int 
   return _plot_id > 0 || _subplot_id > 0 || _series_id > 0;
 }
 
-int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_height, double *metric_width,
-                    double *metric_height)
-{
-  double display_metric_width, display_metric_height;
-  int display_pixel_width, display_pixel_height;
-  double dpm[2], dpi[2];
-  int tmp_size_i[2], pixel_size[2];
-  double tmp_size_d[2], metric_size[2];
-  grm_args_ptr_t tmp_size_a[2];
-  const char *tmp_size_s[2];
-  int i;
-
-  if (plot_args == nullptr)
-    {
-      plot_args = active_plot_args;
-    }
-
-#ifdef __EMSCRIPTEN__
-  display_metric_width = 0.16384;
-  display_metric_height = 0.12288;
-  display_pixel_width = 640;
-  display_pixel_height = 480;
-#else
-  gr_inqdspsize(&display_metric_width, &display_metric_height, &display_pixel_width, &display_pixel_height);
-#endif
-  dpm[0] = display_pixel_width / display_metric_width;
-  dpm[1] = display_pixel_height / display_metric_height;
-  dpi[0] = dpm[0] * 0.0254;
-  dpi[1] = dpm[1] * 0.0254;
-
-  /* TODO: Overwork this calculation */
-  if (grm_args_values(plot_args, "figsize", "dd", &tmp_size_d[0], &tmp_size_d[1]))
-    {
-      for (i = 0; i < 2; ++i)
-        {
-          pixel_size[i] = (int)grm_round(tmp_size_d[i] * dpi[i]);
-          metric_size[i] = tmp_size_d[i] / 0.0254;
-        }
-    }
-  else if (grm_args_values(plot_args, "size", "dd", &tmp_size_d[0], &tmp_size_d[1]))
-    {
-      for (i = 0; i < 2; ++i)
-        {
-          pixel_size[i] = (int)grm_round(tmp_size_d[i]);
-          metric_size[i] = tmp_size_d[i] / dpm[i];
-        }
-    }
-  else if (grm_args_values(plot_args, "size", "ii", &tmp_size_i[0], &tmp_size_i[1]))
-    {
-      for (i = 0; i < 2; ++i)
-        {
-          pixel_size[i] = tmp_size_i[i];
-          metric_size[i] = tmp_size_i[i] / dpm[i];
-        }
-    }
-  else if (grm_args_values(plot_args, "size", "aa", &tmp_size_a[0], &tmp_size_a[1]))
-    {
-      for (i = 0; i < 2; ++i)
-        {
-          double pixels_per_unit = 1;
-          if (grm_args_values(tmp_size_a[i], "unit", "s", &tmp_size_s[i]))
-            {
-              if (strcmp(tmp_size_s[i], "px") != 0)
-                {
-                  double meters_per_unit;
-                  if (double_map_at(meters_per_unit_map, tmp_size_s[i], &meters_per_unit))
-                    {
-                      pixels_per_unit = meters_per_unit * dpm[i];
-                    }
-                  else
-                    {
-                      debug_print_error(("The unit %s is unknown.\n", tmp_size_s[i]));
-                    }
-                }
-            }
-          if (grm_args_values(tmp_size_a[i], "value", "i", &tmp_size_i[i]))
-            {
-              tmp_size_d[i] = tmp_size_i[i] * pixels_per_unit;
-            }
-          else if (grm_args_values(tmp_size_a[i], "value", "d", &tmp_size_d[i]))
-            {
-              tmp_size_d[i] = tmp_size_d[i] * pixels_per_unit;
-            }
-          else
-            {
-              /* If no value is given, fall back to default value */
-              return 0;
-            }
-          pixel_size[i] = (int)grm_round(tmp_size_d[i]);
-          metric_size[i] = tmp_size_d[i] / dpm[i];
-        }
-    }
-  else
-    {
-      /* If this branch is executed, there is an internal error (size has a default value if not set by the user) */
-      return 0;
-    }
-
-  logger((stderr, "figure pixel size: (%d, %d)\n", pixel_size[0], pixel_size[1]));
-  logger((stderr, "figure metric size: (%f, %f)\n", metric_size[0], metric_size[1]));
-  logger((stderr, "device dpi: (%lf, %lf)\n", dpi[0], dpi[1]));
-
-  if (pixel_width != nullptr)
-    {
-      *pixel_width = pixel_size[0];
-    }
-  if (pixel_height != nullptr)
-    {
-      *pixel_height = pixel_size[1];
-    }
-  if (metric_width != nullptr)
-    {
-      *metric_width = metric_size[0];
-    }
-  if (metric_height != nullptr)
-    {
-      *metric_height = metric_size[1];
-    }
-
-  return 1;
-}
-
 grm_args_t *get_subplot_from_ndc_point(double x, double y)
 {
   grm_args_t **subplot_args;
@@ -5329,7 +5167,7 @@ int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, cons
   double ndc_left, ndc_top, ndc_right, ndc_bottom;
   int width, height, max_width_height;
 
-  get_figure_size(nullptr, &width, &height, nullptr, nullptr);
+  GRM::Render::get_figure_size(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
 
   if (x1 <= x2)

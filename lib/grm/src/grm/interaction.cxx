@@ -379,7 +379,7 @@ int grm_input(const grm_args_t *input_args)
 
   logger((stderr, "Processing input\n"));
 
-  get_figure_size(nullptr, &width, &height, nullptr, nullptr);
+  GRM::Render::get_figure_size(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
   logger((stderr, "Using size (%d, %d)\n", width, height));
 
@@ -676,7 +676,7 @@ int grm_is3d(const int x, const int y)
   double ndc_x, ndc_y;
   const char *kind;
 
-  get_figure_size(nullptr, &width, &height, nullptr, nullptr);
+  GRM::Render::get_figure_size(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
   ndc_x = (double)x / max_width_height;
   ndc_y = (double)y / max_width_height;
@@ -702,7 +702,7 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   double viewport_mid_x, viewport_mid_y;
   double wswindow[4], viewport[4];
   std::shared_ptr<GRM::Element> subplot_element;
-  get_figure_size(nullptr, &width, &height, nullptr, nullptr);
+  GRM::Render::get_figure_size(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
   if (!get_focus_and_factor_from_dom(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x, &focus_y,
                                      subplot_element))
@@ -940,7 +940,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
   info->ylabel = (char *)"y";
   info->label = (char *)"";
 
-  get_figure_size(nullptr, &width, &height, nullptr, nullptr);
+  GRM::Render::get_figure_size(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
   x = (double)mouse_x / max_width_height;
   y = (double)(height - mouse_y) / max_width_height;

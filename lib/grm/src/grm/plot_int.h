@@ -154,8 +154,6 @@ err_t plot_draw_errorbars(grm_args_t *series_args, unsigned int x_length);
 const char *next_fmt_key(const char *fmt) UNUSED;
 const char *get_compatible_format(const char *key, const char *given_format);
 int get_id_from_args(const grm_args_t *args, int *plot_id, int *subplot_id, int *series_id);
-int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_height, double *metric_width,
-                    double *metric_height);
 grm_args_t *get_subplot_from_ndc_point(double x, double y);
 grm_args_t *get_subplot_from_ndc_points(unsigned int n, const double *x, const double *y);
 err_t classes_polar_histogram(grm_args_t *subplot_args);
