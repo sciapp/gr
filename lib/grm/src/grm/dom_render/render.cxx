@@ -6640,6 +6640,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
             return (angle < edge_min || angle > edge_max);
           });
           theta.erase(it, theta.end());
+          length = theta.size();
         }
 
       // calc classes
