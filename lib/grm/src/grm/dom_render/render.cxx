@@ -6778,6 +6778,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
   int edge_color = 1;
   int face_color = 989;
   double face_alpha = 0.75;
+  double edge_width = 1.0; /* only for stairs */
   std::vector<int> lineardata;
   std::vector<int> bin_counts;
 
@@ -6884,6 +6885,21 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
     }
   else
     {
+      /* Set default stairs line color width and alpha values */
+      if (!group->hasAttribute("edge_color"))
+        {
+          edge_color = 1;
+        }
+      if (!group->hasAttribute("face_alpha"))
+        {
+          face_alpha = 1.0;
+        }
+      if (!group->hasAttribute("edge_width"))
+        {
+          edge_width = 2.3;
+        }
+
+
       stairs = static_cast<int>(group->getAttribute("stairs"));
       if (stairs)
         {
@@ -7407,9 +7423,12 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
           /* stairs without draw_edges (not compatible) */
           else if (draw_edges == 0 && colormap.empty())
             {
-              global_render->setFillColorInd(group, 0);
+              global_render->setFillColorInd(group, 1);
               global_render->setLineColorInd(group, edge_color);
-              global_render->setLineWidth(group, 2.3);
+              global_render->setLineWidth(group, edge_width);
+              processLineColorInd(group);
+              processFillColorInd(group);
+              processLineWidth(group);
 
               r = pow((count / max), (num_bins * 2));
               complex1 = moivre(r, (2 * x), num_bins * 2);
