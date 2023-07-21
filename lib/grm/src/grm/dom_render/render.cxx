@@ -2463,7 +2463,7 @@ static void processTitle(const std::shared_ptr<GRM::Element> &elem)
 
   auto subplot_element = getSubplotElement(elem);
   std::string name = (std::string)subplot_element->getAttribute("kind");
-  if (name != "polarhistogram" && name != "pie")
+  if (name != "polar_histogram" && name != "pie")
     {
       viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
       viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
@@ -4751,7 +4751,6 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
 
   kind = static_cast<std::string>(subplotElement->getAttribute("kind"));
 
-  render->setCharHeight(elem, charheight);
   render->setLineType(elem, GKS_K_LINETYPE_SOLID);
 
   if (kind == "polar_histogram")
@@ -4859,6 +4858,9 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
     }
   // Draw Text
   render->setTextAlign(elem, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+  auto axesTextGroup = render->createGroup("axesTextGroup");
+  render->setCharHeight(axesTextGroup, charheight);
+  elem->append(axesTextGroup);
   for (i = 0; i <= n; i++)
     {
       double r = 1.0 / n * i;
@@ -4867,7 +4869,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
           x[0] = 0.05;
           y[0] = r;
           snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + tick * i);
-          elem->append(render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC));
+          axesTextGroup->append(render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC));
         }
     }
   title = static_cast<std::string>(elem->getAttribute("title"));

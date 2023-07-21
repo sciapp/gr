@@ -3613,16 +3613,17 @@ err_t plot_draw_polar_axes(grm_args_t *args)
 
   if (grm_args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
 
-  if (!grm_args_values(args, "title", "s", &title)) title = "";
-  group->parentElement()->setAttribute("title", title);
-
   if (strcmp(kind, "polar_histogram") == 0)
     {
       subGroup = global_render->createDrawPolarAxes(angle_ticks, kind, phiflip, norm, 1.0);
+      if (!grm_args_values(args, "title", "s", &title)) title = "";
+      subGroup->setAttribute("title", title);
     }
   else
     {
       subGroup = global_render->createDrawPolarAxes(angle_ticks, kind, phiflip, "");
+      if (!grm_args_values(args, "title", "s", &title)) title = "";
+      group->parentElement()->setAttribute("title", title);
     }
   group->append(subGroup);
   return ERROR_NONE;
