@@ -199,10 +199,6 @@ public:
 
   std::shared_ptr<GRM::Element> createEmptyGrid(bool x_grid, bool y_grid);
 
-  std::shared_ptr<Element> createGroup();
-
-  std::shared_ptr<Element> createGroup(const std::string &name);
-
   std::shared_ptr<Element> createSeries(const std::string &name);
 
   std::shared_ptr<Element> createDrawImage(double xmin, double ymin, double xmax, double ymax, int width, int height,

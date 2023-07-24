@@ -70,7 +70,7 @@ static std::set<std::string> parentTypes = {
     "coordinate_system",
     "errorbars",
     "figure",
-    "group",
+    "axes_text_group",
     "label",
     "labels_group",
     "layout_grid",
@@ -11159,23 +11159,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createEmptyGrid(bool x_grid, bool y_g
     {
       element->setAttribute("y_tick", 0);
     }
-  return element;
-}
-
-std::shared_ptr<GRM::Element> GRM::Render::createGroup()
-{
-  /*!
-   * This function can be used to create a group GRM::Element
-   *
-   * A group Element sets all attributes for its children
-   */
-  return createElement("group");
-}
-
-std::shared_ptr<GRM::Element> GRM::Render::createGroup(const std::string &name)
-{
-  auto element = createElement("group");
-  element->setAttribute("name", name);
   return element;
 }
 
