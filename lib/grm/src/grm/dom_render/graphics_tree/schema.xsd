@@ -320,6 +320,7 @@
                 <xs:element ref="fillarc" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="axes_text_group" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="angle_ticks" type="xs:string" use="required"/>
@@ -331,6 +332,17 @@
             <xs:attribute name="textalign_vertical" type="xs:string"/>
             <xs:attribute name="tick" type="xs:string"/>
             <xs:attribute name="title" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of axes_text_group -->
+    <xs:element name="axes_text_group">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attribute name="charheight" type="xs:string"/>
+            <xs:attribute name="name" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 

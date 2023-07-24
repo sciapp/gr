@@ -4856,9 +4856,10 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &elem, const std::
       elem->append(temp);
       render->setTextAlign(temp, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
     }
+
   // Draw Text
   render->setTextAlign(elem, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-  auto axesTextGroup = render->createGroup("axesTextGroup");
+  auto axesTextGroup = render->createElement("axes_text_group");
   render->setCharHeight(axesTextGroup, charheight);
   elem->append(axesTextGroup);
   for (i = 0; i <= n; i++)
