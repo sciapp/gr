@@ -121,7 +121,7 @@ ubuntu-cmake-self-contained-test:
 
 ubuntu-cmake-self-contained-test-grplot:
   stage: test
-  image: iffregistry.fz-juelich.de/florianrhiem/gr-test/grplot-testing
+  image: iffregistry.fz-juelich.de/verbov/gr-test/grplot-testing
   rules:
   - if: '$CI_MERGE_REQUEST_ID'
     when: never

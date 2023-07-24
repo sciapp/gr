@@ -14,6 +14,7 @@
 #include <QTimer>
 #include <QEvent>
 #include <QRubberBand>
+#include <QWheelEvent>
 #include <functional>
 
 #include <gr.h>
