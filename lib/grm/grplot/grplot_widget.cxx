@@ -910,6 +910,12 @@ void GRPlotWidget::processTestCommandsFile()
               QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
               return;
             }
+          else if (words[0] == "setArg" && words.size() == 3)
+            {
+              grm_args_push(args_, words[1].toUtf8().constData(), "s", words[2].toUtf8().constData());
+              grm_merge(args_);
+              redraw();
+            }
           else if (words[0] == "mouseMoveEvent" && words.size() == 3)
             {
               bool x_flag;
