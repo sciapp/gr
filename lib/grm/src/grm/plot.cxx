@@ -962,6 +962,7 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
 void plot_pre_plot(grm_args_t *plot_args)
 {
   int clear;
+  int previous_pixel_width, previous_pixel_height;
 
   logger((stderr, "Pre plot processing\n"));
 
@@ -972,15 +973,11 @@ void plot_pre_plot(grm_args_t *plot_args)
       global_root->setAttribute("clearws", clear);
     }
 
-  /* TODO: Is this enqueue important?*/
-  //  get_figure_size(plot_args, &pixel_width, &pixel_height, &metric_width, &metric_height);
-  //
-  //  if (!grm_args_values(plot_args, "previous_pixel_size", "ii", &previous_pixel_width, &previous_pixel_height) ||
-  //      (previous_pixel_width != pixel_width || previous_pixel_height != pixel_height))
-  //    {
-  //      /* TODO: handle error return value? */
-  //      event_queue_enqueue_size_event(event_queue, active_plot_index - 1, pixel_width, pixel_height);
-  //    }
+  if (grm_args_values(plot_args, "previous_pixel_size", "ii", &previous_pixel_width, &previous_pixel_height))
+    {
+      active_figure->setAttribute("_previous_pixel_width", previous_pixel_width);
+      active_figure->setAttribute("_previous_pixel_height", previous_pixel_height);
+    }
 }
 
 void plot_set_text_encoding(void)

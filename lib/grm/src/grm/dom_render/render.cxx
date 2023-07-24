@@ -9460,7 +9460,6 @@ void plotProcessWswindowWsviewport(const std::shared_ptr<GRM::Element> &element,
                                    const std::shared_ptr<GRM::Context> &context)
 {
   int pixel_width, pixel_height;
-  int previous_pixel_width, previous_pixel_height;
   double metric_width, metric_height;
   double aspect_ratio_ws_pixel, aspect_ratio_ws_metric;
   double wsviewport[4] = {0.0, 0.0, 0.0, 0.0};
@@ -9469,6 +9468,15 @@ void plotProcessWswindowWsviewport(const std::shared_ptr<GRM::Element> &element,
   // set wswindow/wsviewport on active figure
   auto group = active_figure;
   GRM::Render::get_figure_size(&pixel_width, &pixel_height, &metric_width, &metric_height);
+
+  if (!group->hasAttribute("_previous_pixel_width") || !group->hasAttribute("_previous_pixel_height") ||
+      (static_cast<int>(group->getAttribute("_previous_pixel_width")) != pixel_width ||
+       static_cast<int>(group->getAttribute("_previous_pixel_height")) != pixel_height))
+    {
+      /* TODO: handle error return value? */
+      event_queue_enqueue_size_event(event_queue, static_cast<int>(group->getAttribute("id")), pixel_width,
+                                     pixel_height);
+    }
 
   aspect_ratio_ws_pixel = (double)pixel_width / pixel_height;
   aspect_ratio_ws_metric = metric_width / metric_height;
@@ -9489,7 +9497,8 @@ void plotProcessWswindowWsviewport(const std::shared_ptr<GRM::Element> &element,
   global_render->setWSViewport(group, wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
   global_render->setWSWindow(group, wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
 
-  //  grm_args_push(plot_args, "previous_pixel_size", "ii", pixel_width, pixel_height);
+  group->setAttribute("_previous_pixel_width", pixel_width);
+  group->setAttribute("_previous_pixel_height", pixel_height);
 
   logger((stderr, "Stored wswindow (%lf, %lf, %lf, %lf)\n", wswindow[0], wswindow[1], wswindow[2], wswindow[3]));
   logger(
@@ -10280,7 +10289,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
       };
 
   /*! Modifier */
-  if (str_equals_any(element->localName().c_str(), 8, "group", "figure", "plot", "coordinate_system", "label",
+  if (str_equals_any(element->localName().c_str(), 8, "axes_text_group", "figure", "plot", "coordinate_system", "label",
                      "labels_group", "root", "barplot_xtick"))
     {
       bool old_state = automatic_update;
