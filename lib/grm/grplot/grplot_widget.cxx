@@ -14,7 +14,6 @@
 #include <QTimer>
 #include <QEvent>
 #include <QRubberBand>
-#include <QWheelEvent>
 #include <functional>
 
 #include <gr.h>
@@ -891,7 +890,7 @@ void GRPlotWidget::cmd_callback(const grm_cmd_event_t *event)
 
 Qt::KeyboardModifiers GRPlotWidget::queryKeyboardModifiers()
 {
-  return modifiers;
+  return modifiers | QApplication::queryKeyboardModifiers();
 }
 
 void GRPlotWidget::processTestCommandsFile()
@@ -987,8 +986,14 @@ void GRPlotWidget::processTestCommandsFile()
                 {
                   QPoint global_position = QCursor::pos();
                   QPoint local_position = mapFromGlobal(global_position);
+#if QT_VERSION >= 0x060000
                   QWheelEvent event(local_position, global_position, QPoint{}, QPoint{0, delta}, Qt::NoButton,
                                     modifiers, Qt::NoScrollPhase, false, Qt::MouseEventSynthesizedByApplication);
+#else
+                  QWheelEvent event(local_position, global_position, QPoint{}, QPoint{0, delta}, delta, Qt::Vertical,
+                                    Qt::NoButton, modifiers, Qt::NoScrollPhase, Qt::MouseEventSynthesizedByApplication,
+                                    false);
+#endif
                   wheelEvent(&event);
 
                   QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
