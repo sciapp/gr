@@ -265,10 +265,13 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
           type->addAction(shadeAct);
           type->addAction(hexbinAct);
         }
-      menu->addMenu(type);
-      menu->addMenu(algo);
+      if (strcmp(argv[1], "--test") != 0 && !test_commands_stream)
+        {
+          menu->addMenu(type);
+          menu->addMenu(algo);
+        }
     }
-  menu->addMenu(export_menu);
+  if (strcmp(argv[1], "--test") != 0 && !test_commands_stream) menu->addMenu(export_menu);
 }
 
 GRPlotWidget::~GRPlotWidget()
