@@ -904,7 +904,7 @@ void GRPlotWidget::processTestCommandsFile()
           if (words[0] == "keyPressEvent" && words.size() == 2 && words[1].size() == 1 && words[1][0] >= 'A' &&
               words[1][0] <= 'Z')
             {
-              QKeyEvent event(QEvent::KeyPress, words[1][0].digitValue(), modifiers);
+              QKeyEvent event(QEvent::KeyPress, words[1][0].unicode(), modifiers);
               keyPressEvent(&event);
 
               QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
