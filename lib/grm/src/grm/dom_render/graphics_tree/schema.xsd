@@ -232,8 +232,8 @@
     <xs:element name="text">
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
-            <xs:attribute name="charup_ux" type="xs:string"/>
-            <xs:attribute name="charup_uy" type="xs:string"/>
+            <xs:attribute name="charup_x" type="xs:string"/>
+            <xs:attribute name="charup_y" type="xs:string"/>
             <xs:attribute name="color_index" type="xs:string"/>
             <xs:attribute name="linecolorind" type="xs:string"/>
             <xs:attribute name="linewidth" type="xs:string"/>

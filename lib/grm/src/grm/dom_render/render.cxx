@@ -1469,8 +1469,8 @@ static void processCharSpace(const std::shared_ptr<GRM::Element> &elem)
 
 static void processCharUp(const std::shared_ptr<GRM::Element> &elem)
 {
-  gr_setcharup(static_cast<double>(elem->getAttribute("charup_ux")),
-               static_cast<double>(elem->getAttribute("charup_uy")));
+  gr_setcharup(static_cast<double>(elem->getAttribute("charup_x")),
+               static_cast<double>(elem->getAttribute("charup_y")));
 }
 
 static void processClipXForm(const std::shared_ptr<GRM::Element> &elem)
@@ -2749,6 +2749,7 @@ static void processYlabel(const std::shared_ptr<GRM::Element> &elem)
       auto text = render->createText(x, y, y_label);
       text->setAttribute("name", "ylabel");
       render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+      render->setCharUp(text, -1, 0);
       auto ylabel_elem = elem->querySelectors("[name=\"ylabel\"]");
       bool removed_elem = false;
       if (ylabel_elem && (std::string)ylabel_elem->getAttribute("text") != y_label)
@@ -2758,7 +2759,6 @@ static void processYlabel(const std::shared_ptr<GRM::Element> &elem)
         }
       if (removed_elem || !ylabel_elem)
         {
-          render->setCharUp(text, -1, 0);
           elem->appendChild(text);
         }
     }
@@ -12186,8 +12186,8 @@ void GRM::Render::setCharUp(const std::shared_ptr<Element> &element, double ux, 
    * \param[in] uy  y coordinate of the text up vector
    */
 
-  element->setAttribute("charup_ux", ux);
-  element->setAttribute("charup_uy", uy);
+  element->setAttribute("charup_x", ux);
+  element->setAttribute("charup_y", uy);
 }
 
 void GRM::Render::setTextAlign(const std::shared_ptr<Element> &element, int horizontal, int vertical)
