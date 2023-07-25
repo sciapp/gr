@@ -1473,6 +1473,7 @@ void GRPlotWidget::processTestCommandsFile()
             {
               grm_args_push(args_, words[1].toUtf8().constData(), "s", words[2].toUtf8().constData());
               grm_merge(args_);
+              arguments_changed = true;
               redraw();
             }
           else if (words[0] == "mouseMoveEvent" && words.size() == 3)
