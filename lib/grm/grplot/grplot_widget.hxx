@@ -42,6 +42,9 @@ protected:
   void wheelEvent(QWheelEvent *event) override;
   void mouseDoubleClickEvent(QMouseEvent *event) override;
   void leaveEvent(QEvent *event) override;
+  void paint(QPaintDevice *paint_device);
+  void processTestCommandsFile();
+  static Qt::KeyboardModifiers queryKeyboardModifiers();
 
 private slots:
   void heatmap();

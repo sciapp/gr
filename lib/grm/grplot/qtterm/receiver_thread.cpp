@@ -11,7 +11,7 @@ void Receiver_Thread::run()
       fflush(stdout);
       if (handle == nullptr)
         {
-          handle = grm_open(GRM_RECEIVER, "0.0.0.0", 8002, nullptr, nullptr);
+          handle = grm_open(GRM_RECEIVER, "127.0.0.1", 8002, nullptr, nullptr);
           if (handle == nullptr)
             {
               qCritical() << "receiver could not be created";
