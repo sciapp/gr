@@ -226,7 +226,7 @@ ubuntu-cmake-self-contained-rebuild-images-grplot:
     - git status
     - git add -A gr_test/grplot_data/
     - git commit -m "Rebuilt grplot images in build job $CI_JOB_ID"
-    - 'git push -o merge_request.description="Job initiator: @$GITLAB_USER_LOGIN" -o merge_request.label="auto-create" -o merge_request.label="reference-files-update" -o merge_request.remove_source_branch -o merge_request.create origin update-files/job-$CI_JOB_ID'
+    - 'git push -o merge_request.description="Job initiator: @$GITLAB_USER_LOGIN" -o merge_request.label="auto-create" -o merge_request.label="reference-files-update" -o merge_request.remove_source_branch -o merge_request.create origin update-files/job-$CI_JOB_ID -o merge_request.target=florianrhiem/gr-test:master'
 
 ubuntu-cmake-self-contained-test-snoop:
   stage: test
