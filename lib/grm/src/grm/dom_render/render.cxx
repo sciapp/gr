@@ -8588,6 +8588,7 @@ static void marginalheatmap(const std::shared_ptr<GRM::Element> &element, const 
   (*context)["z" + str] = plot_vec;
   heatmap->setAttribute("z", "z" + str);
   element->append(heatmap);
+  global_root->setAttribute("_id", ++id);
 
   for (k = 0; k < 2; k++)
     {
@@ -8596,6 +8597,9 @@ static void marginalheatmap(const std::shared_ptr<GRM::Element> &element, const 
       double bar_color_rgb[3] = {-1};
       int edge_color_index = 1;
       double edge_color_rgb[3] = {-1};
+
+      id = static_cast<int>(global_root->getAttribute("_id"));
+      str = std::to_string(id);
 
       x_min = static_cast<double>(element->getAttribute("xrange_min"));
       x_max = static_cast<double>(element->getAttribute("xrange_max"));
