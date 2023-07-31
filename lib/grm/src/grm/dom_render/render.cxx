@@ -2270,12 +2270,14 @@ static void processSubplot(const std::shared_ptr<GRM::Element> &elem)
     {
       top_margin = title_margin ? 0.075 + 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws)
                                 : 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws);
-      if (keep_aspect_ratio) right_margin += title_margin ? 0.075 : 0;
+      if (keep_aspect_ratio && !str_equals_any(kind.c_str(), 2, "surface", "volume"))
+        right_margin += title_margin ? 0.075 : 0;
     }
   else
     {
       top_margin = title_margin ? 0.075 : 0;
-      if (keep_aspect_ratio) right_margin -= 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws) - top_margin;
+      if (keep_aspect_ratio && !str_equals_any(kind.c_str(), 2, "surface", "volume"))
+        right_margin -= 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws) - top_margin;
     }
   if (kind == "imshow")
     {
