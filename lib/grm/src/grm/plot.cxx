@@ -1756,7 +1756,11 @@ err_t plot_stem(grm_args_t *subplot_args)
       (*context)["y" + str] = y_vec;
       subGroup->setAttribute("y", "y" + str);
 
-      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max)) subGroup->setAttribute("yrange_min", y_min);
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
+        }
 
       if (grm_args_values(*current_series, "spec", "s", &spec)) subGroup->setAttribute("spec", spec);
 

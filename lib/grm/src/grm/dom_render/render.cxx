@@ -2911,10 +2911,13 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &elem, const std::shar
 
   if (is_vertical)
     {
-      x[1] = y_org_low;
-      y[1] = y_org_high;
+      x[1] = y_org_high;
+      elem->append(global_render->createPolyline(y[0], y[1], x[0], x[1], 0, 0.0, 1));
     }
-  elem->append(global_render->createPolyline(x[0], x[1], y[0], y[1], 0, 0.0, 1));
+  else
+    {
+      elem->append(global_render->createPolyline(x[0], x[1], y[0], y[1], 0, 0.0, 1));
+    }
 }
 
 static void axes(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
