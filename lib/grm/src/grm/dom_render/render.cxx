@@ -2726,6 +2726,7 @@ static void processXTickLabels(const std::shared_ptr<GRM::Element> &elem)
 static void processYlabel(const std::shared_ptr<GRM::Element> &elem)
 {
   double viewport[4], vp[4], charheight;
+  int keep_aspect_ratio;
 
   auto subplot_element = getSubplotElement(elem);
 
@@ -2738,8 +2739,9 @@ static void processYlabel(const std::shared_ptr<GRM::Element> &elem)
   vp[1] = (double)subplot_element->getAttribute("vp_xmax");
   vp[2] = (double)subplot_element->getAttribute("vp_ymin");
   vp[3] = (double)subplot_element->getAttribute("vp_ymax");
+  keep_aspect_ratio = (int)subplot_element->getAttribute("keep_aspect_ratio");
 
-  double x = vp[0] + 0.5 * charheight;
+  double x = ((keep_aspect_ratio) ? 0.925 : 1) * vp[0] + 0.5 * charheight;
   double y = 0.5 * (viewport[2] + viewport[3]);
   std::string y_label = (std::string)elem->getAttribute("ylabel");
   if (y_label.empty()) return; // Empty ylabel is pointless, no need to waste the space for nothing
