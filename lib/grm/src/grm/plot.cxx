@@ -2522,7 +2522,8 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
   if (strcmp(marginalheatmap_kind, "all") == 0)
     {
       const char *algorithm;
-      if (grm_args_values(subplot_args, "algorithm", "s", &algorithm)) subGroup->setAttribute("algorithm", algorithm);
+      if (grm_args_values(*current_series, "algorithm", "s", &algorithm))
+        subGroup->setAttribute("algorithm", algorithm);
     }
   grm_args_push(subplot_args, "kind", "s", "marginalheatmap");
   global_root->setAttribute("_id", ++id);
