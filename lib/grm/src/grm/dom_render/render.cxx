@@ -1834,7 +1834,12 @@ static void processMarginalheatmapKind(const std::shared_ptr<GRM::Element> &elem
 
           if (xind == -1 && yind == -1)
             {
-              return;
+              for (const auto &rect : child->children())
+                {
+                  if (rect->hasAttribute("linecolorind")) continue;
+                  rect->setAttribute("fillcolorind", 989);
+                }
+              continue;
             }
 
           bool is_horizontal = static_cast<std::string>(child->getAttribute("orientation")) == "horizontal";

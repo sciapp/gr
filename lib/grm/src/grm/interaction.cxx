@@ -383,6 +383,13 @@ int grm_input(const grm_args_t *input_args)
   max_width_height = grm_max(width, height);
   logger((stderr, "Using size (%d, %d)\n", width, height));
 
+  auto marginalheatmap = grm_get_document_root()->querySelectorsAll("series_marginalheatmap");
+  if (!marginalheatmap.empty())
+    {
+      if (marginalheatmap[0]->hasAttribute("xind")) marginalheatmap[0]->setAttribute("xind", -1);
+      if (marginalheatmap[0]->hasAttribute("yind")) marginalheatmap[0]->setAttribute("yind", -1);
+    }
+
   if (grm_args_values(input_args, "x", "i", &x) && grm_args_values(input_args, "y", "i", &y))
     {
       double ndc_x, ndc_y;
