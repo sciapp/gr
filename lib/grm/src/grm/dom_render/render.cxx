@@ -10131,7 +10131,8 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                 orientation = static_cast<std::string>(series->getAttribute("orientation"));
               is_horizontal = orientation == "horizontal";
               if (!starts_with(series->localName(), "series")) continue;
-              if (series->hasAttribute("xrange_min") && series->hasAttribute("xrange_max"))
+              if (series->hasAttribute("xrange_min") && series->hasAttribute("xrange_max") &&
+                  !(element->hasAttribute("xlim_min") && element->hasAttribute("xlim_max")))
                 {
                   x_min = static_cast<double>(series->getAttribute("xrange_min"));
                   x_max = static_cast<double>(series->getAttribute("xrange_max"));
@@ -10146,7 +10147,8 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                       element->setAttribute("_ylim_max", x_max);
                     }
                 }
-              if (series->hasAttribute("yrange_min") && series->hasAttribute("yrange_max"))
+              if (series->hasAttribute("yrange_min") && series->hasAttribute("yrange_max") &&
+                  !(element->hasAttribute("ylim_min") && element->hasAttribute("ylim_max")))
                 {
                   y_min = static_cast<double>(series->getAttribute("yrange_min"));
                   y_max = static_cast<double>(series->getAttribute("yrange_max"));
