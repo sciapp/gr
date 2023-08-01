@@ -2889,13 +2889,9 @@ void GRM::Render::processAttributes(const std::shared_ptr<GRM::Element> &element
 static void drawYLine(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
 {
   auto draw_axes_element = elem->parentElement();
-  double x_tick, x_org_low, x_org_high;
-  double y_tick, y_org_low, y_org_high;
-  int x_major, y_major;
+  double window[4];
   std::string orientation = PLOT_DEFAULT_ORIENTATION;
 
-  getAxesInformation(elem, "low", "low", x_org_low, y_org_low, x_major, y_major, x_tick, y_tick);
-  getAxesInformation(elem, "high", "high", x_org_high, y_org_high, x_major, y_major, x_tick, y_tick);
   if (elem->hasAttribute("orientation"))
     {
       orientation = static_cast<std::string>(elem->getAttribute("orientation"));
@@ -2906,17 +2902,19 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &elem, const std::shar
     }
   int is_vertical = orientation == "vertical";
 
-  double x[2] = {x_org_low, x_org_high};
-  double y[2] = {y_org_low, y_org_low};
+  auto subplot_element = getSubplotElement(elem);
+  window[0] = (double)subplot_element->getAttribute("window_xmin");
+  window[1] = (double)subplot_element->getAttribute("window_xmax");
+  window[2] = (double)subplot_element->getAttribute("window_ymin");
+  window[3] = (double)subplot_element->getAttribute("window_ymax");
 
   if (is_vertical)
     {
-      x[1] = y_org_high;
-      elem->append(global_render->createPolyline(y[0], y[1], x[0], x[1], 0, 0.0, 1));
+      elem->append(global_render->createPolyline(window[0], window[0], window[2], window[3], 0, 0.0, 1));
     }
   else
     {
-      elem->append(global_render->createPolyline(x[0], x[1], y[0], y[1], 0, 0.0, 1));
+      elem->append(global_render->createPolyline(window[0], window[1], window[2], window[2], 0, 0.0, 1));
     }
 }
 
