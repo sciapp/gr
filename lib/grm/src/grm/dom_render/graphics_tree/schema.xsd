@@ -384,6 +384,7 @@
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="polyline"/>
             <xs:attribute name="linespec" type="xs:string"/>
+            <xs:attribute name="name" type="xs:string"/>
             <xs:attribute name="x1" type="xs:string"/>
             <xs:attribute name="x2" type="xs:string"/>
             <xs:attribute name="y1" type="xs:string"/>

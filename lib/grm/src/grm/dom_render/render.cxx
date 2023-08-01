@@ -2890,6 +2890,7 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &elem, const std::shar
 {
   auto draw_axes_element = elem->parentElement();
   double window[4];
+  double ymin;
   std::string orientation = PLOT_DEFAULT_ORIENTATION;
 
   if (elem->hasAttribute("orientation"))
@@ -2908,13 +2909,19 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &elem, const std::shar
   window[2] = (double)subplot_element->getAttribute("window_ymin");
   window[3] = (double)subplot_element->getAttribute("window_ymax");
 
+  if (elem->hasAttribute("yrange_min")) ymin = static_cast<double>(elem->getAttribute("yrange_min"));
+
   if (is_vertical)
     {
-      elem->append(global_render->createPolyline(window[0], window[0], window[2], window[3], 0, 0.0, 1));
+      auto line = global_render->createPolyline(ymin, ymin, window[2], window[3], 0, 0.0, 1);
+      line->setAttribute("name", "yline");
+      elem->append(line);
     }
   else
     {
-      elem->append(global_render->createPolyline(window[0], window[1], window[2], window[2], 0, 0.0, 1));
+      auto line = global_render->createPolyline(window[0], window[1], ymin, ymin, 0, 0.0, 1);
+      line->setAttribute("name", "yline");
+      elem->append(line);
     }
 }
 
@@ -10325,17 +10332,18 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
       // TODO: something like contour shouldnt be in this list
       if (!automatic_update ||
           (static_cast<int>(global_root->getAttribute("_modified")) &&
-           (str_equals_any(element->localName().c_str(), 25, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
+           (str_equals_any(element->localName().c_str(), 26, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
                            "drawimage", "drawrect", "errorbars", "fillarc", "fillarea", "fillrect", "grid", "grid3d",
                            "legend", "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
                            "polyline3d", "polymarker", "polymarker3d", "series_contour", "series_contourf", "text",
-                           "titles3d") ||
+                           "titles3d", "series_stem") ||
             !element->hasChildNodes())) ||
           (automatic_update && element->hasAttribute("_update_required") &&
            static_cast<int>(element->getAttribute("_update_required"))))
         {
           // elements without children are the draw-functions which need to be processed everytime, else there could be
           // problems with overlapping elements
+          // stem is in that list for the yline which is used inside of stem
           std::string local_name = getLocalName(element);
 
           bool old_state = automatic_update;
