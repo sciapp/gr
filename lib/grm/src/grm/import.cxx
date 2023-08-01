@@ -596,7 +596,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
 
       /* for imshow plot */
       grm_args_push(args, "c", "nD", rows * cols, zi.data());
-      grm_args_push(args, "c_dims", "ii", rows, cols);
+      grm_args_push(args, "c_dims", "ii", cols, rows);
 
       grm_args_push(args, "x", "nD", cols, xi.data());
       grm_args_push(args, "y", "nD", rows, yi.data());
