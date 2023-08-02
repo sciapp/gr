@@ -1881,8 +1881,19 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &elem)
    */
   int adjust_xlim, adjust_ylim;
   std::string kind = static_cast<std::string>(elem->getAttribute("kind"));
+  int scale = 0;
 
-  int scale = static_cast<int>(elem->getAttribute("scale"));
+  if (kind != "pie" && kind != "polar" && kind != "polar_histogram" && kind != "polar_heatmap" &&
+      kind != "nonuniformpolar_heatmap")
+    {
+      scale |= static_cast<int>(elem->getAttribute("xlog")) ? GR_OPTION_X_LOG : 0;
+      scale |= static_cast<int>(elem->getAttribute("ylog")) ? GR_OPTION_Y_LOG : 0;
+      scale |= static_cast<int>(elem->getAttribute("zlog")) ? GR_OPTION_Z_LOG : 0;
+      scale |= static_cast<int>(elem->getAttribute("xflip")) ? GR_OPTION_FLIP_X : 0;
+      scale |= static_cast<int>(elem->getAttribute("yflip")) ? GR_OPTION_FLIP_Y : 0;
+      scale |= static_cast<int>(elem->getAttribute("zflip")) ? GR_OPTION_FLIP_Z : 0;
+    }
+  elem->setAttribute("scale", scale);
 
   double xmin = static_cast<double>(elem->getAttribute("_xlim_min"));
   double xmax = static_cast<double>(elem->getAttribute("_xlim_max"));
@@ -2030,6 +2041,7 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &elem)
           global_render->setWindow(elem, xmin, xmax, ymin, ymax);
         }
     }
+  processScale(elem);
 }
 
 static void processLineColorInd(const std::shared_ptr<GRM::Element> &elem)
@@ -2130,7 +2142,7 @@ static void processResampleMethod(const std::shared_ptr<GRM::Element> &elem)
   gr_setresamplemethod(resample_method_flag);
 }
 
-static void processScale(const std::shared_ptr<GRM::Element> &elem)
+void GRM::Render::processScale(const std::shared_ptr<GRM::Element> &elem)
 {
   gr_setscale(static_cast<int>(elem->getAttribute("scale")));
 }
@@ -2544,41 +2556,26 @@ static void processTransparency(const std::shared_ptr<GRM::Element> &elem)
   gr_settransparency(static_cast<double>(elem->getAttribute("transparency")));
 }
 
-static void processWindow(const std::shared_ptr<GRM::Element> &elem)
+void GRM::Render::processWindow(const std::shared_ptr<GRM::Element> &elem)
 {
-  int scale = 0;
-  double xmin = static_cast<double>(elem->getAttribute("window_xmin"));
-  double xmax = static_cast<double>(elem->getAttribute("window_xmax"));
-  double ymin = static_cast<double>(elem->getAttribute("window_ymin"));
-  double ymax = static_cast<double>(elem->getAttribute("window_ymax"));
-
   auto kind = static_cast<std::string>(elem->getAttribute("kind"));
-  if (kind != "pie" && kind != "polar" && kind != "polar_histogram" && kind != "polar_heatmap" &&
-      kind != "nonuniformpolar_heatmap")
-    {
-      scale |= static_cast<int>(elem->getAttribute("xlog")) ? GR_OPTION_X_LOG : 0;
-      scale |= static_cast<int>(elem->getAttribute("ylog")) ? GR_OPTION_Y_LOG : 0;
-      scale |= static_cast<int>(elem->getAttribute("zlog")) ? GR_OPTION_Z_LOG : 0;
-      scale |= static_cast<int>(elem->getAttribute("xflip")) ? GR_OPTION_FLIP_X : 0;
-      scale |= static_cast<int>(elem->getAttribute("yflip")) ? GR_OPTION_FLIP_Y : 0;
-      scale |= static_cast<int>(elem->getAttribute("zflip")) ? GR_OPTION_FLIP_Z : 0;
-    }
-  elem->setAttribute("scale", scale);
-  processScale(elem);
 
-  gr_setwindow(xmin, xmax, ymin, ymax);
-}
-
-static void processWindow3d(const std::shared_ptr<GRM::Element> &elem)
-{
   double xmin = static_cast<double>(elem->getAttribute("window_xmin"));
   double xmax = static_cast<double>(elem->getAttribute("window_xmax"));
   double ymin = static_cast<double>(elem->getAttribute("window_ymin"));
   double ymax = static_cast<double>(elem->getAttribute("window_ymax"));
-  double zmin = static_cast<double>(elem->getAttribute("window_zmin"));
-  double zmax = static_cast<double>(elem->getAttribute("window_zmax"));
 
-  gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
+  if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume", "isosurface"))
+    {
+      double zmin = static_cast<double>(elem->getAttribute("window_zmin"));
+      double zmax = static_cast<double>(elem->getAttribute("window_zmax"));
+
+      gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
+    }
+  else
+    {
+      gr_setwindow(xmin, xmax, ymin, ymax);
+    }
 }
 
 static void processWSViewport(const std::shared_ptr<GRM::Element> &elem)
@@ -4717,7 +4714,7 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
       processLineType(elem);
     }
   processSelntran(elem);
-  processScale(elem);
+  GRM::Render::processScale(elem);
   processFillIntStyle(elem);
   processFillColorInd(elem);
 }
@@ -9066,7 +9063,7 @@ static void processImshow(const std::shared_ptr<GRM::Element> &element, const st
 
   global_render->setSelntran(element, 0);
   global_render->setScale(element, 0);
-  processScale(element);
+  GRM::Render::processScale(element);
   processSelntran(element);
 
   double x_min, x_max, y_min, y_max;
@@ -10203,10 +10200,8 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
       processCharHeight(element);
     }
   GRM::Render::processLimits(element);
-  processWindow(element);
-  // todo: window3d is always being processed?
-  processWindow3d(element); /* needs to be set before space3d is processed */
-  processScale(element);    /* needs to be set before flip is processed */
+  GRM::Render::processWindow(element); /* needs to be set before space3d is processed */
+  GRM::Render::processScale(element);  /* needs to be set before flip is processed */
 
   /* Map for calculations on the plot level */
   static std::map<std::string,

@@ -458,6 +458,7 @@ int grm_input(const grm_args_t *input_args)
 
               GRM::Render::processViewport(subplot_element);
               GRM::Render::processLimits(subplot_element);
+              GRM::Render::processWindow(subplot_element);
 
               gr_savestate();
               for (const auto &elem : subplot_element->parentElement()->children())
@@ -973,6 +974,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
   GRM::Render::processViewport(subplot_element);
   GRM::Render::processLimits(subplot_element);
+  GRM::Render::processWindow(subplot_element);
 
   gr_savestate();
   if (subplot_element->hasAttribute("viewport_xmin"))

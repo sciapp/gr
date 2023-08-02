@@ -430,6 +430,8 @@ public:
 
   static void processViewport(const std::shared_ptr<GRM::Element> &elem);
   static void processLimits(const std::shared_ptr<GRM::Element> &elem);
+  static void processWindow(const std::shared_ptr<GRM::Element> &elem);
+  static void processScale(const std::shared_ptr<GRM::Element> &elem);
   static void processAttributes(const std::shared_ptr<GRM::Element> &element);
   static std::vector<std::string> getDefaultAndTooltip(const std::shared_ptr<Element> &element,
                                                        std::string attributeName);
