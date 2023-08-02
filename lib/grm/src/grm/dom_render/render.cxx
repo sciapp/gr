@@ -9962,7 +9962,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
 
           if (!element->hasAttribute("xlim_min") || !element->hasAttribute("xlim_max"))
             {
-              double xmin, xmax, ymin, ymax;
+              double xmin, xmax;
               if (element->hasAttribute("style")) style = static_cast<std::string>(element->getAttribute("style"));
 
               for (const auto &series : element->children())
@@ -10006,6 +10006,26 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                           x_max = xmin + (x_max - 1);
                         }
                     }
+                }
+            }
+          else
+            {
+              x_min = static_cast<double>(element->getAttribute("xlim_min"));
+              x_max = static_cast<double>(element->getAttribute("xlim_max"));
+            }
+
+          if (!element->hasAttribute("ylim_min") || !element->hasAttribute("ylim_max"))
+            {
+              double ymin, ymax;
+              for (const auto &series : element->children())
+                {
+                  if (series->hasAttribute("orientation"))
+                    orientation = static_cast<std::string>(series->getAttribute("orientation"));
+                  if (!starts_with(series->localName(), "series")) continue;
+                  auto key = static_cast<std::string>(series->getAttribute("y"));
+                  auto y = GRM::get<std::vector<double>>((*context)[key]);
+                  current_point_count = y.size();
+
 
                   if (series->hasAttribute("yrange_min") && series->hasAttribute("yrange_max"))
                     {
@@ -10034,17 +10054,12 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                           y_max = grm_max(y_max, ymax);
                         }
                     }
-                  else
-                    {
-                      y_min = static_cast<double>(element->getAttribute("ylim_min"));
-                      y_max = static_cast<double>(element->getAttribute("ylim_max"));
-                    }
                 }
             }
           else
             {
-              x_min = static_cast<double>(element->getAttribute("xlim_min"));
-              x_max = static_cast<double>(element->getAttribute("xlim_max"));
+              y_min = static_cast<double>(element->getAttribute("ylim_min"));
+              y_max = static_cast<double>(element->getAttribute("ylim_max"));
             }
 
           if (orientation == "horizontal")
@@ -10341,9 +10356,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           (automatic_update && element->hasAttribute("_update_required") &&
            static_cast<int>(element->getAttribute("_update_required"))))
         {
-          // elements without children are the draw-functions which need to be processed everytime, else there could be
-          // problems with overlapping elements
-          // stem is in that list for the yline which is used inside of stem
+          // elements without children are the draw-functions which need to be processed everytime, else there could
+          // be problems with overlapping elements stem is in that list for the yline which is used inside of stem
           std::string local_name = getLocalName(element);
 
           bool old_state = automatic_update;
@@ -10385,7 +10399,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
     }
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ render functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ render functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
 
 static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
@@ -10801,7 +10816,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
     }
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ create functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ create functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
 
 std::shared_ptr<GRM::Element>
 GRM::Render::createPolymarker(const std::string &x_key, std::optional<std::vector<double>> x, const std::string &y_key,
@@ -10817,8 +10833,8 @@ GRM::Render::createPolymarker(const std::string &x_key, std::optional<std::vecto
    * \param[in] y A vector containing double values representing y coordinates
    * \param[in] extContext A GRM::Context that is used for storing the vectors. By default it uses GRM::Render's
    * GRM::Context object but an external GRM::Context can be used \param[in] marker_type An Integer setting the
-   * gr_markertype. By default it is 0 \param[in] marker_size A Double value setting the gr_markersize. By default it is
-   * 0.0 \param[in] marker_colorind An Integer setting the gr_markercolorind. By default it is 0
+   * gr_markertype. By default it is 0 \param[in] marker_size A Double value setting the gr_markersize. By default it
+   * is 0.0 \param[in] marker_colorind An Integer setting the gr_markercolorind. By default it is 0
    */
 
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
@@ -11918,7 +11934,8 @@ std::shared_ptr<GRM::Element> GRM::Render::createPanzoom(double x, double y, dou
   return element;
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ modifier functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ modifier functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
 
 void GRM::Render::setViewport(const std::shared_ptr<GRM::Element> &element, double xmin, double xmax, double ymin,
                               double ymax)
@@ -12132,8 +12149,8 @@ void GRM::Render::setLineWidth(const std::shared_ptr<Element> &element, const st
    * \param[in] element A GRM::Element
    * \param[in] widths_key A string used as a key for storing the widths
    * \param[in] widths A vector containing the LineWidths
-   * \param[in] extContext A GRM::Context used for storing widths. By default it uses GRM::Render's GRM::Context object
-   * but an external GRM::Context can be used
+   * \param[in] extContext A GRM::Context used for storing widths. By default it uses GRM::Render's GRM::Context
+   * object but an external GRM::Context can be used
    */
   std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
   if (widths != std::nullopt)
@@ -12631,7 +12648,8 @@ void GRM::Render::getAutoUpdate(bool *update)
   *update = automatic_update;
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ filter functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ filter functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
 
 void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::string &attr, const std::string &value = "")
 {
