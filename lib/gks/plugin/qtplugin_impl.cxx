@@ -1,3 +1,4 @@
+
 #ifndef NO_QT
 
 #include <stdio.h>
@@ -735,6 +736,7 @@ static void text(double px, double py, int nchars, char *chars)
       if ((tx_prec == GKS_K_TEXT_PRECISION_STROKE || tx_prec == GKS_K_TEXT_PRECISION_CHAR) && fontfile == 0)
         {
           fontfile = gks_open_font();
+          gkss->fontfile = fontfile;
         }
       gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
     }
@@ -1358,22 +1360,6 @@ static void memory_plugin_dl_render(int fctid, int dx, int dy, int dimx, int *ia
                            (void **)(&p->memory_plugin_ws_state_list));
         }
       return;
-    case 3:
-      if (fontfile > 0)
-        {
-          gks_close_font(fontfile);
-          fontfile = 0;
-        }
-      break;
-    case 14:
-      {
-        int tx_prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
-        if ((tx_prec == GKS_K_TEXT_PRECISION_STROKE || tx_prec == GKS_K_TEXT_PRECISION_CHAR) && fontfile == 0)
-          {
-            fontfile = gks_open_font();
-          }
-      }
-      break;
     case 54:
       if (!p->prevent_resize_by_dl || !p->interp_was_called)
         {
@@ -1449,15 +1435,8 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       init_norm_xform();
       init_colors();
 
+      gkss->fontfile = fontfile;
       gks_init_core(gkss);
-      break;
-
-    case 3:
-      if (fontfile > 0)
-        {
-          gks_close_font(fontfile);
-          fontfile = 0;
-        }
       break;
 
     case 12:
@@ -1797,7 +1776,7 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       if (fontfile > 0)
         {
           gks_close_font(fontfile);
-          fontfile = 0;
+          gkss->fontfile = fontfile = 0;
         }
       release_data();
 
