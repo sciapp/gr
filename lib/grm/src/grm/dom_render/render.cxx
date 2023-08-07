@@ -2634,7 +2634,7 @@ void GRM::Render::processViewport(const std::shared_ptr<GRM::Element> &elem)
     {
       charheight = grm_max(0.018 * diag, 0.012);
     }
-  gr_setcharheight(charheight);
+  elem->setAttribute("charheight", charheight);
 }
 
 static void processXlabel(const std::shared_ptr<GRM::Element> &elem)
@@ -2707,7 +2707,6 @@ static void processXTickLabels(const std::shared_ptr<GRM::Element> &elem)
       double x1, x2;
       double x_left = 0, x_right = 1, null;
       double available_width;
-      const double *window;
       auto xtick_element = render->createElement("barplot_xtick");
 
       elem->append(xtick_element);

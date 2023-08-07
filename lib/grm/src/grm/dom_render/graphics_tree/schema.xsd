@@ -83,6 +83,7 @@
             <xs:attribute name="adjust_xlim" type="xs:string" use="required"/>
             <xs:attribute name="adjust_ylim" type="xs:string" use="required"/>
             <xs:attribute name="adjust_zlim" type="xs:string"/>
+            <xs:attribute name="charheight" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="colormap" type="xs:string"/>
             <xs:attribute name="fillcolorind" type="xs:string"/>
