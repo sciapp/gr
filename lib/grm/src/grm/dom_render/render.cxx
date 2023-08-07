@@ -4564,6 +4564,7 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
                       render->setMarkerColorInd(pl, (child->hasAttribute("markercolorind")
                                                          ? static_cast<int>(child->getAttribute("markercolorind"))
                                                          : 989));
+                      processMarkerColorInd(pl);
                     }
                 }
             }
@@ -4607,6 +4608,7 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
                       render->setMarkerColorInd(pl, (child->hasAttribute("markercolorind")
                                                          ? static_cast<int>(child->getAttribute("markercolorind"))
                                                          : 989));
+                      processMarkerColorInd(pl);
                     }
                 }
             }
