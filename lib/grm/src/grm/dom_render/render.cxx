@@ -3516,6 +3516,7 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
               edge_color = color_save_spot;
             }
           global_render->setLineColorInd(temp, edge_color);
+          element->setAttribute("edge_color", edge_color);
           processLineColorInd(temp);
           processLineWidth(temp);
         }
@@ -3600,6 +3601,7 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
           edge_color = color_save_spot;
         }
       global_render->setLineColorInd(element, edge_color);
+      element->setAttribute("edge_color", edge_color);
       processLineWidth(element);
       processLineColorInd(element);
 
@@ -4211,6 +4213,8 @@ static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::s
   b = xmin - a * log10(xmin);
 
   gr_inqlinecolorind(&color_errorbar);
+  // special case for barplot
+  if (kind == "barplot") color_errorbar = static_cast<int>(element->parentElement()->getAttribute("edge_color"));
   color_upwardscap = color_downwardscap = color_errorbar;
   if (element->hasAttribute("upwardscap_color"))
     color_upwardscap = static_cast<int>(element->getAttribute("upwardscap_color"));
