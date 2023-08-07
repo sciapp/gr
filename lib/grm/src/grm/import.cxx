@@ -619,8 +619,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           double min_val = INFINITY, max_val = -INFINITY;
           for (col = 0; col < cols - err; col++)
             {
-              min_val = std::min(min_val, *std::min_element(&filedata[depth][col][0], &filedata[depth][col][rows]));
-              max_val = std::max(max_val, *std::max_element(&filedata[depth][col][0], &filedata[depth][col][rows]));
+              min_val =
+                  std::min<double>(min_val, *std::min_element(&filedata[depth][col][0], &filedata[depth][col][rows]));
+              max_val =
+                  std::max<double>(max_val, *std::max_element(&filedata[depth][col][0], &filedata[depth][col][rows]));
             }
 
           for (col = 0; col < cols; ++col)
