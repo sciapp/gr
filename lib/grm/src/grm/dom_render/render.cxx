@@ -10346,9 +10346,9 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
       // TODO: something like contour shouldnt be in this list
       if (!automatic_update ||
           (static_cast<int>(global_root->getAttribute("_modified")) &&
-           (str_equals_any(element->localName().c_str(), 26, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
-                           "drawimage", "drawrect", "errorbars", "fillarc", "fillarea", "fillrect", "grid", "grid3d",
-                           "legend", "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
+           (str_equals_any(element->localName().c_str(), 25, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
+                           "drawimage", "drawrect", "fillarc", "fillarea", "fillrect", "grid", "grid3d", "legend",
+                           "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
                            "polyline3d", "polymarker", "polymarker3d", "series_contour", "series_contourf", "text",
                            "titles3d", "series_stem") ||
             !element->hasChildNodes())) ||
