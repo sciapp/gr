@@ -4564,7 +4564,6 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
                         }
                       auto pl = render->createPolymarker(legend_symbol_x[0] + 0.02, legend_symbol_y[0], markertype);
                       elem->append(pl);
-                      render->setLineSpec(pl, specs[spec_i]);
                       render->setMarkerColorInd(pl, (child->hasAttribute("markercolorind")
                                                          ? static_cast<int>(child->getAttribute("markercolorind"))
                                                          : 989));
@@ -4608,7 +4607,6 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
                         }
                       auto pl = render->createPolymarker(legend_symbol_x[0] + 0.02, legend_symbol_y[0], markertype);
                       elem->append(pl);
-                      render->setLineSpec(pl, specs[spec_i]);
                       render->setMarkerColorInd(pl, (child->hasAttribute("markercolorind")
                                                          ? static_cast<int>(child->getAttribute("markercolorind"))
                                                          : 989));
