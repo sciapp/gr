@@ -3516,6 +3516,8 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
               edge_color = color_save_spot;
             }
           global_render->setLineColorInd(temp, edge_color);
+          processLineColorInd(temp);
+          processLineWidth(temp);
         }
 
       pos_vertical_change = 0;
