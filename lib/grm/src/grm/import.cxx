@@ -605,6 +605,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   else if (strcmp(kind, "line") == 0 || (strcmp(kind, "scatter") == 0 && !scatter_with_z))
     {
       grm_args_t *error;
+      std::vector<grm_args_t *> error_vec;
       std::vector<double> x(rows);
       int err = 0;
 
@@ -639,6 +640,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       if (grm_args_values(args, "error", "a", &error))
         {
           int i;
+          int color_up, color_down, color;
           std::vector<double> errors_up(rows);
           std::vector<double> errors_down(rows);
 
@@ -648,24 +650,37 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             }
           else
             {
-              for (i = 0; i < rows; i++)
+              err = floor(cols / 3);
+              error_vec.resize(err);
+              for (col = 0; col < err; col++)
                 {
-                  errors_up[i] = filedata[depth][1][i];
-                  errors_down[i] = filedata[depth][2][i];
+                  error_vec[col] = grm_args_new();
+                  for (i = 0; i < rows; i++)
+                    {
+                      errors_up[i] = filedata[depth][col + 1 + col * 2][i];
+                      errors_down[i] = filedata[depth][col + 2 + col * 2][i];
+                    }
+                  grm_args_push(error_vec[col], "relative", "nDD", rows, errors_up.data(), errors_down.data());
+                  if (grm_args_values(error, "errorbar_color", "i", &color))
+                    grm_args_push(error_vec[col], "errorbar_color", "i", color);
+                  if (grm_args_values(error, "downwardscap_color", "i", &color_down))
+                    grm_args_push(error_vec[col], "downwardscap_color", "i", color_down);
+                  if (grm_args_values(error, "upwardscap_color", "i", &color_up))
+                    grm_args_push(error_vec[col], "upwardscap_color", "i", color_up);
                 }
-              err = 2;
-              grm_args_push(error, "relative", "nDD", rows, errors_up.data(), errors_down.data());
+              err *= 2;
             }
         }
       for (col = 0; col < cols - err; col++)
         {
           series[col] = grm_args_new();
           grm_args_push(series[col], "x", "nD", rows, x.data());
-          grm_args_push(series[col], "y", "nD", rows, filedata[depth][col].data());
+          grm_args_push(series[col], "y", "nD", rows, filedata[depth][col + ((col < err / 2) ? col * 2 : err)].data());
           if (!labels.empty())
             {
               labels_c.push_back(labels[col].c_str());
             }
+          if (col < err / 2) grm_args_push(series[col], "error", "a", error_vec[col]);
         }
       grm_args_push(args, "series", "nA", cols - err, series.data());
       if (!labels_c.empty())

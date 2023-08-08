@@ -275,7 +275,7 @@ Possible parameters for the line plot are:
     - `downwardscap_color`: Defines the downward scap color of the error bars. The value of this parameter has to be an integer.
     - `upwardscap_color`: Defines the upward scap color of the error bars. The value of this parameter has to be an integer.
 
-      Note: If the error of the points is to be displayed, the last two columns of the data are used for the error. The syntax of this parameter is:
+      Note: If the error of the points is to be displayed, the last two columns of each pair of three columns from the data are used for the error. This means for a dataset with eight columns that columns 2, 3, 5, 6 are used for the errorbars. The syntax of this parameter is:
 
    `error:{{errorbar_color:`color_index`},{downwardscap_color:`color_index`},{upwardscap_color:`color_index`}}`
 
