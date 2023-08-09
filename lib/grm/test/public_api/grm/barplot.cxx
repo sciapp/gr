@@ -4,11 +4,12 @@
 #include <io.h>
 #endif
 #include "grm.h"
+#include "grm/dom_render/graphics_tree/util.hxx"
 
 #define N_SERIES 3
 #define INNER_N_SERIES 3
 
-int main()
+int main(void)
 {
   int n_y = 3;
   int n_yy = 3;
@@ -77,27 +78,26 @@ int main()
   sleep(3);
 
   /* Draw the bar plot with bars that have individual bar_color, edge_color, edge_with */
-  for (j = 0; j < 2; ++j)
+  auto root = grm_get_document_root();
+  auto render = grm_get_render();
+
+  /* Set individual edge_width and edge_color */
+  auto edges = root->querySelectorsAll("drawrect");
+  edges[2]->setAttribute("linewidth", 5.0);
+  render->setColorRep(edges[2], 979, 0.9, 0.6, 0.3);
+  edges[2]->setAttribute("linecolorind", 979);
+
+  /* Set individual bar_color */
+  auto bars = root->querySelectorsAll("fillrect");
+  for (int i; i < 2; ++i)
     {
-      ind_bar_color[j] = grm_args_new();
+      render->setColorRep(bars[i], 979, 0.0, 0.666, 0.333);
+      bars[i]->setAttribute("fillcolorind", 979);
     }
-  grm_args_push(ind_bar_color[0], "indices", "nI", 2, indices);
-  grm_args_push(ind_bar_color[0], "rgb", "ddd", 0.0, 0.666, 0.333);
-  grm_args_push(ind_bar_color[1], "indices", "i", 3);
-  grm_args_push(ind_bar_color[1], "rgb", "ddd", 0.111, 0.222, 0.333);
+  render->setColorRep(bars[2], 979, 0.111, 0.222, 0.333);
+  bars[2]->setAttribute("fillcolorind", 979);
 
-  ind_edge_color = grm_args_new();
-  grm_args_push(ind_edge_color, "indices", "i", 3);
-  grm_args_push(ind_edge_color, "rgb", "ddd", 0.9, 0.6, 0.3);
-
-  ind_edge_width = grm_args_new();
-  grm_args_push(ind_edge_width, "indices", "i", 3);
-  grm_args_push(ind_edge_width, "width", "d", 5.0);
-
-  grm_args_push(args, "ind_bar_color", "nA", 2, ind_bar_color);
-  grm_args_push(args, "ind_edge_color", "a", ind_edge_color);
-  grm_args_push(args, "ind_edge_width", "a", ind_edge_width);
-  grm_plot(args);
+  grm_render();
   sleep(3);
 
   /* Draw the bar plot with colorlist */
