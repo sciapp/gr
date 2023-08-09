@@ -122,7 +122,7 @@ ubuntu-cmake-self-contained-debug:
 
 ubuntu-cmake-self-contained-test:
   stage: test
-  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing
+  image: iffregistry.fz-juelich.de/koepke/gr-test/c-testing
   rules:
     - if: '$CI_MERGE_REQUEST_ID'
       when: never
