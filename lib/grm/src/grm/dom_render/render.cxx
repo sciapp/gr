@@ -2565,16 +2565,13 @@ void GRM::Render::processWindow(const std::shared_ptr<GRM::Element> &elem)
   double ymin = static_cast<double>(elem->getAttribute("window_ymin"));
   double ymax = static_cast<double>(elem->getAttribute("window_ymax"));
 
+  gr_setwindow(xmin, xmax, ymin, ymax);
   if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume", "isosurface"))
     {
       double zmin = static_cast<double>(elem->getAttribute("window_zmin"));
       double zmax = static_cast<double>(elem->getAttribute("window_zmax"));
 
       gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
-    }
-  else
-    {
-      gr_setwindow(xmin, xmax, ymin, ymax);
     }
 }
 
