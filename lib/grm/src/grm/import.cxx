@@ -608,6 +608,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       std::vector<grm_args_t *> error_vec;
       std::vector<double> x(rows);
       int err = 0;
+      const char *spec;
 
       adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)rows - 1.0);
 
@@ -681,6 +682,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
               labels_c.push_back(labels[col].c_str());
             }
           if (col < err / 2) grm_args_push(series[col], "error", "a", error_vec[col]);
+          if (grm_args_values(args, "spec", "s", &spec)) grm_args_push(series[col], "spec", "s", spec);
         }
       grm_args_push(args, "series", "nA", cols - err, series.data());
       if (!labels_c.empty())
