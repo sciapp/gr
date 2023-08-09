@@ -2849,7 +2849,7 @@ void GRM::Render::processAttributes(const std::shared_ptr<GRM::Element> &element
           {std::string("colorrep"), processColorRep},
       };
 
-  for (auto attribute : element->getAttributeNames())
+  for (const auto &attribute : element->getAttributeNames())
     {
       auto start = 0U;
       auto end = attribute.find('.');
@@ -2884,20 +2884,10 @@ void GRM::Render::processAttributes(const std::shared_ptr<GRM::Element> &element
 
 static void drawYLine(const std::shared_ptr<GRM::Element> &elem, const std::shared_ptr<GRM::Context> &context)
 {
-  auto draw_axes_element = elem->parentElement();
   double window[4];
   double ymin;
+  std::shared_ptr<GRM::Element> series = nullptr;
   std::string orientation = PLOT_DEFAULT_ORIENTATION;
-
-  if (elem->hasAttribute("orientation"))
-    {
-      orientation = static_cast<std::string>(elem->getAttribute("orientation"));
-    }
-  else
-    {
-      elem->setAttribute("orientation", orientation);
-    }
-  int is_vertical = orientation == "vertical";
 
   auto subplot_element = getSubplotElement(elem);
   window[0] = (double)subplot_element->getAttribute("window_xmin");
@@ -2905,7 +2895,28 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &elem, const std::shar
   window[2] = (double)subplot_element->getAttribute("window_ymin");
   window[3] = (double)subplot_element->getAttribute("window_ymax");
 
-  if (elem->hasAttribute("yrange_min")) ymin = static_cast<double>(elem->getAttribute("yrange_min"));
+  for (const auto &child : subplot_element->children())
+    {
+      if (child->localName() != "series_barplot" && child->localName() != "series_stem") continue;
+      series = child;
+      break;
+    }
+
+  if (series != nullptr)
+    {
+      if (series->hasAttribute("orientation"))
+        {
+          orientation = static_cast<std::string>(series->getAttribute("orientation"));
+        }
+      else
+        {
+          series->setAttribute("orientation", orientation);
+        }
+
+      if (series->hasAttribute("yrange_min")) ymin = static_cast<double>(series->getAttribute("yrange_min"));
+    }
+
+  int is_vertical = orientation == "vertical";
 
   if (is_vertical)
     {
@@ -2983,19 +2994,18 @@ static void processAxes(const std::shared_ptr<GRM::Element> &element, const std:
       processYlabel(element);
     }
 
-  if (static_cast<std::string>(subplot_element->getAttribute("kind")) == "barplot")
+  auto kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
+  if (kind == "barplot" || kind == "stem")
     {
+      auto coordinate_system = element->parentElement();
       // remove all old polylines
-      for (const auto &child : element->children())
+      for (const auto &child : coordinate_system->children())
         {
           if (child->localName() == "polyline") child->remove();
         }
 
-      /* negative values */
-      if (static_cast<double>(subplot_element->getAttribute("_ylim_min")) < 0)
-        {
-          drawYLine(element, context);
-        }
+      /* 0-line */
+      drawYLine(coordinate_system, context);
     }
 
   auto pushAxesToZQueue = PushDrawableToZQueue(axes);
@@ -8202,9 +8212,6 @@ static void processStem(const std::shared_ptr<GRM::Element> &element, const std:
     }
 
   global_render->setLineSpec(element, spec);
-  gr_savestate();
-  drawYLine(element, context);
-  gr_restorestate();
 
   for (i = 0; i < x_length; ++i)
     {

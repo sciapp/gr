@@ -168,6 +168,7 @@
                 <xs:element ref="grid" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="grid3d" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polar_axes" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="titles3d" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
