@@ -9593,8 +9593,8 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                   for (const auto &series : element->children())
                     {
                       if (!starts_with(series->localName(), "series")) continue;
-                      if (element->hasAttribute("style"))
-                        style = static_cast<std::string>(element->getAttribute("style"));
+                      if (series->hasAttribute("style"))
+                        style = static_cast<std::string>(series->getAttribute("style"));
                       double current_min_component = DBL_MAX, current_max_component = -DBL_MAX;
                       if (!series->hasAttribute(static_cast<std::string>(current_range_keys->series) + "_min") ||
                           !series->hasAttribute((static_cast<std::string>(current_range_keys->series) + "_max")))
@@ -9966,11 +9966,11 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
           if (!element->hasAttribute("xlim_min") || !element->hasAttribute("xlim_max"))
             {
               double xmin, xmax;
-              if (element->hasAttribute("style")) style = static_cast<std::string>(element->getAttribute("style"));
 
               for (const auto &series : element->children())
                 {
                   if (!starts_with(series->localName(), "series")) continue;
+                  if (series->hasAttribute("style")) style = static_cast<std::string>(series->getAttribute("style"));
                   if (str_equals_any(style.c_str(), 2, "lined", "stacked"))
                     {
                       x_max = series_count + 1;
@@ -9986,9 +9986,9 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
 
               for (const auto &series : element->children())
                 {
+                  if (!starts_with(series->localName(), "series")) continue;
                   if (series->hasAttribute("orientation"))
                     orientation = static_cast<std::string>(series->getAttribute("orientation"));
-                  if (!starts_with(series->localName(), "series")) continue;
                   auto key = static_cast<std::string>(series->getAttribute("y"));
                   auto y = GRM::get<std::vector<double>>((*context)[key]);
                   current_point_count = y.size();
@@ -10022,9 +10022,10 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               double ymin, ymax;
               for (const auto &series : element->children())
                 {
+                  if (!starts_with(series->localName(), "series")) continue;
+                  if (series->hasAttribute("style")) style = static_cast<std::string>(series->getAttribute("style"));
                   if (series->hasAttribute("orientation"))
                     orientation = static_cast<std::string>(series->getAttribute("orientation"));
-                  if (!starts_with(series->localName(), "series")) continue;
                   auto key = static_cast<std::string>(series->getAttribute("y"));
                   auto y = GRM::get<std::vector<double>>((*context)[key]);
                   current_point_count = y.size();
