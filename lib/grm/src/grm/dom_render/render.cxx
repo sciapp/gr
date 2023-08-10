@@ -2910,6 +2910,7 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &elem, const std::shar
 
       if (series->hasAttribute("yrange_min")) ymin = static_cast<double>(series->getAttribute("yrange_min"));
     }
+  if (series->localName() == "series_barplot" && ymin < 0) ymin = 0;
 
   int is_vertical = orientation == "vertical";
 
@@ -2918,12 +2919,14 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &elem, const std::shar
       auto line = global_render->createPolyline(ymin, ymin, window[2], window[3], 0, 0.0, 1);
       line->setAttribute("name", "yline");
       elem->append(line);
+      line->setAttribute("z_index", 4);
     }
   else
     {
       auto line = global_render->createPolyline(window[0], window[1], ymin, ymin, 0, 0.0, 1);
       line->setAttribute("name", "yline");
       elem->append(line);
+      line->setAttribute("z_index", 4);
     }
 }
 
@@ -2987,20 +2990,6 @@ static void processAxes(const std::shared_ptr<GRM::Element> &element, const std:
   if (element->hasAttribute("ylabel"))
     {
       processYlabel(element);
-    }
-
-  auto kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
-  if (kind == "barplot" || kind == "stem")
-    {
-      auto coordinate_system = element->parentElement();
-      // remove all old polylines
-      for (const auto &child : coordinate_system->children())
-        {
-          if (child->localName() == "polyline") child->remove();
-        }
-
-      /* 0-line */
-      drawYLine(coordinate_system, context);
     }
 
   auto pushAxesToZQueue = PushDrawableToZQueue(axes);
@@ -10194,6 +10183,23 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
     }
 }
 
+static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element,
+                                    const std::shared_ptr<GRM::Context> &context)
+{
+  auto kind = static_cast<std::string>(element->parentElement()->getAttribute("kind"));
+  if (kind == "barplot" || kind == "stem")
+    {
+      // remove all old polylines
+      for (const auto &child : element->children())
+        {
+          if (child->localName() == "polyline") child->remove();
+        }
+
+      /* 0-line */
+      drawYLine(element, context);
+    }
+}
+
 static void processPlot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   if (!element->hasAttribute("_xlim_min") || !element->hasAttribute("_xlim_max") ||
@@ -10298,6 +10304,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("axes3d"), processAxes3d},
           {std::string("cellarray"), PushDrawableToZQueue(cellArray)},
           {std::string("colorbar"), colorbar},
+          {std::string("coordinate_system"), processCoordinateSystem},
           {std::string("errorbars"), errorbars},
           {std::string("legend"), legend},
           {std::string("polar_axes"), drawPolarAxes},
@@ -10331,8 +10338,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
       };
 
   /*! Modifier */
-  if (str_equals_any(element->localName().c_str(), 8, "axes_text_group", "figure", "plot", "coordinate_system", "label",
-                     "labels_group", "root", "barplot_xtick"))
+  if (str_equals_any(element->localName().c_str(), 7, "axes_text_group", "figure", "plot", "label", "labels_group",
+                     "root", "barplot_xtick"))
     {
       bool old_state = automatic_update;
       automatic_update = false;
@@ -10351,11 +10358,11 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
       // TODO: something like contour shouldnt be in this list
       if (!automatic_update ||
           (static_cast<int>(global_root->getAttribute("_modified")) &&
-           (str_equals_any(element->localName().c_str(), 25, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
+           (str_equals_any(element->localName().c_str(), 26, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
                            "drawimage", "drawrect", "fillarc", "fillarea", "fillrect", "grid", "grid3d", "legend",
                            "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
                            "polyline3d", "polymarker", "polymarker3d", "series_contour", "series_contourf", "text",
-                           "titles3d", "series_stem") ||
+                           "titles3d", "series_stem", "coordinate_system") ||
             !element->hasChildNodes())) ||
           (automatic_update && element->hasAttribute("_update_required") &&
            static_cast<int>(element->getAttribute("_update_required"))))
