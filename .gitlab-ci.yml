@@ -122,7 +122,7 @@ ubuntu-cmake-self-contained-debug:
 
 ubuntu-cmake-self-contained-test:
   stage: test
-  image: iffregistry.fz-juelich.de/florianrhiem/gr-test/c-testing
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing
   rules:
     - if: '$CI_MERGE_REQUEST_ID'
       when: never
@@ -136,6 +136,27 @@ ubuntu-cmake-self-contained-test:
   script:
     - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
     - gr_test c `pwd`/test_result/
+  artifacts:
+    paths:
+      - test_result/
+    when: on_failure
+
+ubuntu-cmake-self-contained-test-cpp:
+  stage: test
+  image: iffregistry.fz-juelich.de/florianrhiem/gr-test/cpp-testing
+  rules:
+    - if: '$CI_MERGE_REQUEST_ID'
+      when: never
+    - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+      when: never
+    - if: '$GR_REBUILD_REFERENCE'
+      when: never
+    - when: on_success
+  needs:
+    - ubuntu-cmake-self-contained-debug
+  script:
+    - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+    - gr_test cpp `pwd`/test_result/
   artifacts:
     paths:
       - test_result/
