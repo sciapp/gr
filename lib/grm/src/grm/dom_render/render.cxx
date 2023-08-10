@@ -1955,9 +1955,7 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &elem)
       /* Ensure the correct window is set in GRM */
       bool window_exists = (elem->hasAttribute("window_xmin") && elem->hasAttribute("window_xmax") &&
                             elem->hasAttribute("window_ymin") && elem->hasAttribute("window_ymax"));
-      bool window3d_exists = (elem->hasAttribute("window3d_xmin") && elem->hasAttribute("window3d_xmax") &&
-                              elem->hasAttribute("window3d_ymin") && elem->hasAttribute("window3d_ymax"));
-      if (window_exists || window3d_exists)
+      if (window_exists)
         {
           double stored_window_xmin = static_cast<double>(elem->getAttribute("window_xmin"));
           double stored_window_xmax = static_cast<double>(elem->getAttribute("window_xmax"));
