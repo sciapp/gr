@@ -12298,7 +12298,8 @@ void GRM::Render::setColorRep(const std::shared_ptr<Element> &element, int index
    */
 
   int precision = 255;
-  int red_int = red * precision, green_int = green * precision, blue_int = blue * precision;
+  int red_int = int(red * precision + 0.5), green_int = int(green * precision + 0.5),
+      blue_int = int(blue * precision + 0.5);
 
   // Convert RGB to hex
   std::stringstream stream;
