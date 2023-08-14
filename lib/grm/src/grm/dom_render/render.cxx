@@ -2695,6 +2695,11 @@ static void processXTickLabels(const std::shared_ptr<GRM::Element> &elem)
 
   if (auto render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument()))
     {
+      /* clear old barplot xticks*/
+      for (const auto &child : elem->children())
+        {
+          if (child->localName() == "barplot_xtick") child->remove();
+        }
       std::shared_ptr<GRM::Context> context = render->getContext();
       std::string key = static_cast<std::string>(elem->getAttribute("xticklabels"));
       xticklabels = GRM::get<std::vector<std::string>>((*context)[key]);
