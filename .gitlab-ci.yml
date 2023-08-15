@@ -185,6 +185,29 @@ ubuntu-cmake-self-contained-test-grplot:
       - test_result/
     when: on_failure
 
+ubuntu-cmake-self-contained-test-grplot:
+  stage: test
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/grplot-testing
+  rules:
+  - if: '$CI_MERGE_REQUEST_ID'
+    when: never
+  - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+    when: never
+  - if: '$GR_REBUILD_REFERENCE'
+    when: never
+  - when: on_success
+  needs:
+  - ubuntu-cmake-self-contained
+  script:
+  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export LD_LIBRARY_PATH=$GRDIR/lib
+  - export PATH=$GRDIR/bin/:$PATH
+  - xvfb-run --server-args="-screen 0, 1920x1080x24" gr_test grplot `pwd`/test_result/
+  artifacts:
+    paths:
+    - test_result/
+    when: on_failure
+
 ubuntu-cmake-self-contained-rebuild-images:
   stage: test
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing:latest

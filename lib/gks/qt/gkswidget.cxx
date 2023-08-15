@@ -9,10 +9,12 @@
 #include <QtGui/QGuiApplication>
 #include <QtGui/QScreen>
 #include <QtWidgets/QWidget>
+#include <QtWidgets/QMainWindow>
 #else
 #include <QtGui/QApplication>
 #include <QtGui/QDesktopWidget>
 #include <QtGui/QWidget>
+#include <QtGui/QMainWindow>
 #endif
 #include <QtGui/QPainter>
 #include <QtGui/QPainterPath>
@@ -76,6 +78,8 @@ GKSWidget::GKSWidget(QWidget *parent)
 {
   widget_state_list = new ws_state_list;
   p = widget_state_list;
+  x = y = 0;
+  window_number = 0;
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
   p->device_pixel_ratio = this->devicePixelRatioF();
@@ -114,7 +118,6 @@ GKSWidget::~GKSWidget()
   delete[] dl;
 }
 
-
 void GKSWidget::paintEvent(QPaintEvent *)
 {
   if (!frame_decoration_size_.isValid() && !(frameGeometry().size() - size()).isNull())
@@ -147,6 +150,46 @@ void GKSWidget::paintEvent(QPaintEvent *)
               emit(rendererChanged(renderer_string));
             }
         }
+    }
+}
+
+void GKSWidget::keyPressEvent(QKeyEvent *event)
+{
+  double mwidth, mheight;
+  int width, height;
+
+  if (event->key() == Qt::Key_F)
+    {
+      inqdspsize(&mwidth, &mheight, &width, &height);
+
+      if (window_number == 0)
+        {
+          QRect rect = geometry();
+          x = rect.x() + p->width;
+          y = rect.y();
+        }
+      else
+        {
+          x += 30;
+          y += 30;
+        }
+      if (x > width - p->width) x = 52;
+      if (y > height - p->height) y = 52;
+
+      QMainWindow *window = new QMainWindow(this);
+      p = widget_state_list;
+      window_number++;
+      window->setWindowTitle(tr("GKS QtTerm ") + QString::number(window_number));
+      window->setFixedSize(QSize(p->width, p->height));
+      window->setGeometry(QRect(x, y, p->width, p->height));
+      window->setAttribute(Qt::WA_ShowWithoutActivating);
+
+      QPalette palette;
+      palette.setBrush(QPalette::Window, QBrush(*p->pm));
+      window->setPalette(palette);
+      window->show();
+
+      raise();
     }
 }
 
