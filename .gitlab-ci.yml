@@ -1,10 +1,10 @@
 stages:
-  - prebuild
-  - build
-  - test
-  - package
-  - sync
-  - deploy
+- prebuild
+- build
+- test
+- package
+- sync
+- deploy
 
 tag-type-check:
   stage: prebuild
@@ -18,21 +18,21 @@ code-style-check:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
-    - set +e
-    - for file in $(git diff $(git describe --tags --abbrev=0) HEAD --name-only --diff-filter=ACMR); do
+  - set +e
+  - for file in $(git diff $(git describe --tags --abbrev=0) HEAD --name-only --diff-filter=ACMR); do
       [[ "${file}" != 3rdparty* ]] && [[ "${file}" != apps* ]] || continue;
       [[ "${file}" =~ \.(c|cpp|cxx|m|h|hpp|hxx)$ ]] || continue;
       grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; exit 1; };
       file --mime "${file}" | grep "charset=us-ascii" >/dev/null || { echo "${file} must be encoded as ASCII text."; exit 1; };
       clang-format -verbose -style=file "${file}" > "${file}.formatted";
       if ! diff -q "${file}" "${file}.formatted"; then
-      diff "${file}" "${file}.formatted";
-      >&2 echo "The code style of file \"${file}\" does not follow the code style guideline of this project.";
-      exit 1;
+        diff "${file}" "${file}.formatted";
+        >&2 echo "The code style of file \"${file}\" does not follow the code style guideline of this project.";
+        exit 1;
       fi;
       rm -f "${file}.formatted";
-      done
-    - for file in $(git diff $(git describe --tags --abbrev=0) HEAD --name-only --diff-filter=ACMR); do
+    done
+  - for file in $(git diff $(git describe --tags --abbrev=0) HEAD --name-only --diff-filter=ACMR); do
       [[ "${file}" != 3rdparty* ]] && [[ "${file}" != apps* ]] || continue;
       [[ "${file}" =~ (^|/)CMakeLists.txt$ || "${file}" =~ \.cmake$ ]] || continue;
       grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; exit 1; };
@@ -40,39 +40,39 @@ code-style-check:
       echo "Formatting ${file}";
       cmake-format "${file}" > "${file}.formatted";
       if ! diff -q "${file}" "${file}.formatted"; then
-      diff "${file}" "${file}.formatted";
-      >&2 echo "The code style of file \"${file}\" does not follow the code style guideline of this project.";
-      exit 1;
+        diff "${file}" "${file}.formatted";
+        >&2 echo "The code style of file \"${file}\" does not follow the code style guideline of this project.";
+        exit 1;
       fi;
       rm -f "${file}.formatted";
-      done
-    - exit 0
+    done
+  - exit 0
 
 ubuntu-self-contained:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
-    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-    - make self GRDIR=/usr/local/gr
-    - mkdir artifacts
-    - cp lib/gks/demo artifacts/gksdemo
-    - cp lib/gks/qt/gksqt artifacts/gksqt
-    - cp lib/grm/grplot/grplot artifacts/grplot
-    - cp lib/grm/grplot/README.md artifacts/grplot.man.md
-    - cp lib/gr/demo artifacts/grdemo
-    - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
-      lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
-    - cp -r lib/gks/fonts artifacts/
-    - mkdir artifacts/include/
-    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-    - cp -r lib/grm/include/grm artifacts/include/
-    - mv artifacts artifacts-ubuntu2004
+  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
+  - make self GRDIR=/usr/local/gr
+  - mkdir artifacts
+  - cp lib/gks/demo artifacts/gksdemo
+  - cp lib/gks/qt/gksqt artifacts/gksqt
+  - cp lib/grm/grplot/grplot artifacts/grplot
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
+  - cp lib/gr/demo artifacts/grdemo
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
+       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
+  - cp -r lib/gks/fonts artifacts/
+  - mkdir artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp -r lib/grm/include/grm artifacts/include/
+  - mv artifacts artifacts-ubuntu2004
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-ubuntu2004/
+    - artifacts-ubuntu2004/
 
 ubuntu-cmake-self-contained:
   stage: build
@@ -124,21 +124,21 @@ ubuntu-cmake-self-contained-test:
   stage: test
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing
   rules:
-    - if: '$CI_MERGE_REQUEST_ID'
-      when: never
-    - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
-      when: never
-    - if: '$GR_REBUILD_REFERENCE'
-      when: never
-    - when: on_success
+  - if: '$CI_MERGE_REQUEST_ID'
+    when: never
+  - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+    when: never
+  - if: '$GR_REBUILD_REFERENCE'
+    when: never
+  - when: on_success
   needs:
   - ubuntu-cmake-self-contained-debug
   script:
-    - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
-    - gr_test c `pwd`/test_result/
+  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - gr_test c `pwd`/test_result/
   artifacts:
     paths:
-      - test_result/
+    - test_result/
     when: on_failure
 
 ubuntu-cmake-self-contained-test-cpp:
@@ -212,43 +212,43 @@ ubuntu-cmake-self-contained-rebuild-images:
   stage: test
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing:latest
   rules:
-    - if: '$CI_MERGE_REQUEST_ID'
-      when: never
-    - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
-      when: on_success
-    - if: '$GR_REBUILD_REFERENCE'
-      when: on_success
+  - if: '$CI_MERGE_REQUEST_ID'
+    when: never
+  - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+    when: on_success
+  - if: '$GR_REBUILD_REFERENCE'
+    when: on_success
   needs:
-    - ubuntu-cmake-self-contained-debug
+  - ubuntu-cmake-self-contained-debug
   script:
-    - apt-get update && apt-get install -y python3-venv
-    - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - apt-get update && apt-get install -y python3-venv
+  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
 
-    - mkdir -p ~/.ssh
-    - cat $SSH_KEY | base64 -d > ~/.ssh/id_rsa
-    - mv $SSH_KNOWN_HOSTS ~/.ssh/known_hosts
-    - chmod 600 ~/.ssh/id_rsa
-    - python3 -m venv env && source env/bin/activate
-    - git clone gitlab@iffgit.fz-juelich.de:scientific-it-systems/gr-test.git
-    - pip install -e gr-test/
-    - cd gr-test
-    - git checkout -b update-files/job-$CI_JOB_ID
+  - mkdir -p ~/.ssh
+  - cat $SSH_KEY | base64 -d > ~/.ssh/id_rsa
+  - mv $SSH_KNOWN_HOSTS ~/.ssh/known_hosts
+  - chmod 600 ~/.ssh/id_rsa
+  - python3 -m venv env && source env/bin/activate
+  - git clone gitlab@iffgit.fz-juelich.de:scientific-it-systems/gr-test.git
+  - pip install -e gr-test/
+  - cd gr-test
+  - git checkout -b update-files/job-$CI_JOB_ID
 
-    - if [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+  - if [[ -z "$GR_REBUILD_REFERENCE" ]]; then
       export GR_REBUILD_REFERENCE=`echo $CI_COMMIT_MESSAGE | sed 's/.*RebuildReferenceImages(\([][ ?*_a-zA-Z0-9-]*\)).*/\1/'` ;
-      fi
+    fi
 
-    - if [[ $GR_REBUILD_REFERENCE == "all" ]] || [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+  - if [[ $GR_REBUILD_REFERENCE == "all" ]] || [[ -z "$GR_REBUILD_REFERENCE" ]]; then
       gr_test --create=REFERENCE c ;
-      else
-      gr_test --create=REFERENCE --filter ${GR_REBUILD_REFERENCE} -- c ;
-      fi
-    - git config user.name "GR-Test Reference Bot"
-    - git config user.email "$GITLAB_USER_EMAIL"
-    - git status
-    - git add -A gr_test/c_data/
-    - git commit -m "Rebuilt c images in build job $CI_JOB_ID"
-    - 'git push -o merge_request.description="Job initiator: @$GITLAB_USER_LOGIN" -o merge_request.label="auto-create" -o merge_request.label="reference-files-update" -o merge_request.remove_source_branch -o merge_request.create origin update-files/job-$CI_JOB_ID'
+    else
+    gr_test --create=REFERENCE --filter ${GR_REBUILD_REFERENCE} -- c ;
+    fi
+  - git config user.name "GR-Test Reference Bot"
+  - git config user.email "$GITLAB_USER_EMAIL"
+  - git status
+  - git add -A gr_test/c_data/
+  - git commit -m "Rebuilt c images in build job $CI_JOB_ID"
+  - 'git push -o merge_request.description="Job initiator: @$GITLAB_USER_LOGIN" -o merge_request.label="auto-create" -o merge_request.label="reference-files-update" -o merge_request.remove_source_branch -o merge_request.create origin update-files/job-$CI_JOB_ID'
 
 ubuntu-cmake-self-contained-rebuild-images-grplot:
   stage: test
@@ -298,23 +298,23 @@ ubuntu-cmake-self-contained-test-snoop:
   stage: test
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
   rules:
-    - if: '$CI_MERGE_REQUEST_ID'
-      when: never
-    - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
-      when: never
-    - if: '$GR_REBUILD_REFERENCE'
-      when: never
-    - when: on_success
+  - if: '$CI_MERGE_REQUEST_ID'
+    when: never
+  - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+    when: never
+  - if: '$GR_REBUILD_REFERENCE'
+    when: never
+  - when: on_success
   needs:
   - ubuntu-cmake-self-contained-debug
   variables:
     JULIA_VERSION: 1.8.5
   before_script:
-    - apt-get update && apt-get install -y curl
-    - curl -fLO "https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_VERSION%.*}/julia-${JULIA_VERSION}-linux-x86_64.tar.gz"
-    - tar -C/usr/local --strip=1 -xf "julia-${JULIA_VERSION}-linux-x86_64.tar.gz"
-    - julia -e "using Pkg; Pkg.add(\"Images\")"
-    - julia -e "using Pkg; Pkg.add(name=\"GR\", rev=\"master\")"
+  - apt-get update && apt-get install -y curl
+  - curl -fLO "https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_VERSION%.*}/julia-${JULIA_VERSION}-linux-x86_64.tar.gz"
+  - tar -C/usr/local --strip=1 -xf "julia-${JULIA_VERSION}-linux-x86_64.tar.gz"
+  - julia -e "using Pkg; Pkg.add(\"Images\")"
+  - julia -e "using Pkg; Pkg.add(name=\"GR\", rev=\"master\")"
   script:
   - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
   - export LD_LIBRARY_PATH=`pwd`/artifacts-ubuntu2004-cmake/lib
@@ -324,10 +324,10 @@ ubuntu-cmake-self-contained-test-snoop:
   - lib/grm/test/public_api/grm/snoop/compare_grm_julia.sh || {
       mv lib/grm/test/public_api/grm/snoop/diff_images ./;
       exit 1;
-      }
+    }
   artifacts:
     paths:
-      - diff_images
+    - diff_images
     when: on_failure
 
 
@@ -335,7 +335,7 @@ ubuntu-system-dependencies:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
-    - make install GRDIR=/usr/local/gr
+  - make install GRDIR=/usr/local/gr
 
 ubuntu-cmake-system-dependencies:
   stage: build
@@ -355,27 +355,27 @@ debian-self-contained:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
-    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-    - make self GRDIR=/usr/local/gr
-    - mkdir artifacts
-    - cp lib/gks/demo artifacts/gksdemo
-    - cp lib/gks/qt/gksqt artifacts/gksqt
-    - cp lib/grm/grplot/grplot artifacts/grplot
-    - cp lib/grm/grplot/README.md artifacts/grplot.man.md
-    - cp lib/gr/demo artifacts/grdemo
-    - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
-      lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
-    - cp -r lib/gks/fonts artifacts/
-    - mkdir artifacts/include/
-    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-    - cp -r lib/grm/include/grm artifacts/include/
-    - mv artifacts artifacts-debian10
+  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
+  - make self GRDIR=/usr/local/gr
+  - mkdir artifacts
+  - cp lib/gks/demo artifacts/gksdemo
+  - cp lib/gks/qt/gksqt artifacts/gksqt
+  - cp lib/grm/grplot/grplot artifacts/grplot
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
+  - cp lib/gr/demo artifacts/grdemo
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
+       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
+  - cp -r lib/gks/fonts artifacts/
+  - mkdir artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp -r lib/grm/include/grm artifacts/include/
+  - mv artifacts artifacts-debian10
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-debian10/
+    - artifacts-debian10/
 
 debian-cmake-self-contained:
   stage: build
@@ -437,7 +437,7 @@ debian-self-contained-armhf:
     - cp lib/grm/grplot/README.md artifacts/grplot.man.md
     - cp lib/gr/demo artifacts/grdemo
     - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
-      lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
+         lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
     - cp -r lib/gks/fonts artifacts/
     - mkdir artifacts/include/
     - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
@@ -576,7 +576,7 @@ debian-system-dependencies:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
-    - make install GRDIR=/usr/local/gr
+  - make install GRDIR=/usr/local/gr
 
 debian-system-dependencies-armhf:
   stage: build
@@ -611,28 +611,28 @@ centos7-self-contained:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
-    - source /opt/rh/devtoolset-8/enable
-    - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-    - make self GRDIR=/usr/local/gr
-    - mkdir artifacts
-    - cp lib/gks/demo artifacts/gksdemo
-    - cp lib/gks/qt/gksqt artifacts/gksqt
-    - cp lib/grm/grplot/grplot artifacts/grplot
-    - cp lib/grm/grplot/README.md artifacts/grplot.man.md
-    - cp lib/gr/demo artifacts/grdemo
-    - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
-      lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
-    - cp -r lib/gks/fonts artifacts/
-    - mkdir artifacts/include/
-    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-    - cp -r lib/grm/include/grm artifacts/include/
-    - mv artifacts artifacts-centos7
+  - source /opt/rh/devtoolset-8/enable
+  - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
+  - make self GRDIR=/usr/local/gr
+  - mkdir artifacts
+  - cp lib/gks/demo artifacts/gksdemo
+  - cp lib/gks/qt/gksqt artifacts/gksqt
+  - cp lib/grm/grplot/grplot artifacts/grplot
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
+  - cp lib/gr/demo artifacts/grdemo
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
+       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
+  - cp -r lib/gks/fonts artifacts/
+  - mkdir artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp -r lib/grm/include/grm artifacts/include/
+  - mv artifacts artifacts-centos7
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-centos7/
+    - artifacts-centos7/
 
 centos7-cmake-self-contained:
   stage: build
@@ -660,8 +660,8 @@ centos7-system-dependencies:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
-    - source /opt/rh/devtoolset-8/enable
-    - make install GRDIR=/usr/local/gr
+  - source /opt/rh/devtoolset-8/enable
+  - make install GRDIR=/usr/local/gr
 
 centos7-cmake-system-dependencies:
   stage: build
@@ -706,7 +706,7 @@ centos7-32bit-self-contained:
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-centos7-32bit/
+    - artifacts-centos7-32bit/
 
 centos7-32bit-cmake-self-contained:
   stage: build
@@ -736,9 +736,9 @@ centos7-32bit-system-dependencies:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
-    - source /opt/gcc-8.5.0/enable
-    - EXTRA_LDFLAGS="-static-libstdc++ -static-libgcc"
-      make install GRDIR=/usr/local/gr
+  - source /opt/gcc-8.5.0/enable
+  - EXTRA_LDFLAGS="-static-libstdc++ -static-libgcc"
+    make install GRDIR=/usr/local/gr
 
 centos7-32bit-cmake-system-dependencies:
   stage: build
@@ -768,7 +768,7 @@ arch-self-contained:
     - cp lib/grm/grplot/README.md artifacts/grplot.man.md
     - cp lib/gr/demo artifacts/grdemo
     - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
-      lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
+         lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
     - cp -r lib/gks/fonts artifacts/
     - mkdir artifacts/include/
     - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
@@ -817,30 +817,30 @@ freebsd-self-contained:
   stage: build
   image: freebsd:13-gr-build
   tags:
-    - libvirt
+  - libvirt
   script:
-    - sudo mkdir /usr/local/gr
-    - sudo chown administrator:administrator /usr/local/gr
-    - export CPATH="/usr/local/include"
-    - export LIBRARY_PATH="/usr/local/lib"
-    - gmake self GRDIR=/usr/local/gr MAKE=gmake
-    - mkdir artifacts
-    - cp lib/gks/demo artifacts/gksdemo
-    - cp lib/gks/qt/gksqt artifacts/gksqt
-    - cp lib/grm/grplot/grplot artifacts/grplot
-    - cp lib/grm/grplot/README.md artifacts/grplot.man.md
-    - cp lib/gr/demo artifacts/grdemo
-    - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
-      lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
-    - cp -r lib/gks/fonts artifacts/
-    - mkdir artifacts/include/
-    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-    - cp -r lib/grm/include/grm artifacts/include/
-    - mv artifacts artifacts-freebsd13
+  - sudo mkdir /usr/local/gr
+  - sudo chown administrator:administrator /usr/local/gr
+  - export CPATH="/usr/local/include"
+  - export LIBRARY_PATH="/usr/local/lib"
+  - gmake self GRDIR=/usr/local/gr MAKE=gmake
+  - mkdir artifacts
+  - cp lib/gks/demo artifacts/gksdemo
+  - cp lib/gks/qt/gksqt artifacts/gksqt
+  - cp lib/grm/grplot/grplot artifacts/grplot
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
+  - cp lib/gr/demo artifacts/grdemo
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
+       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
+  - cp -r lib/gks/fonts artifacts/
+  - mkdir artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp -r lib/grm/include/grm artifacts/include/
+  - mv artifacts artifacts-freebsd13
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-freebsd13/
+    - artifacts-freebsd13/
 
 windows-32bit-cross:
   stage: build
@@ -902,7 +902,7 @@ windows-32bit-cross:
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-windows32/
+    - artifacts-windows32/
 
 windows-32bit-cmake-cross:
   stage: build
@@ -1025,7 +1025,7 @@ windows-64bit-cross:
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-windows64/
+    - artifacts-windows64/
 
 windows-64bit-cmake-cross:
   stage: build
@@ -1123,103 +1123,103 @@ darwin-self-contained-iff1600:
     - branches@Scientific-IT-Systems/gr
     - tags@Scientific-IT-Systems/gr
   script:
-    - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-macos-universal.tar.gz
-    - tar xf cmake-3.23.0-macos-universal.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.23.0-macos-universal/CMake.app/Contents/bin/cmake
-    - export MACOSX_DEPLOYMENT_TARGET=10.14
-    - rm -rf /usr/local/gr/*
-    - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake
-    - mkdir artifacts
-    - cp lib/gks/demo artifacts/gksdemo
-    - cp lib/gr/demo artifacts/grdemo
-    - cp lib/gks/libGKS.dylib lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.dylib lib/gr/libGR.a lib/gr3/libGR3.dylib
-      lib/grm/libGRM.a lib/grm/libGRM.dylib lib/gr/qtgr/*.dylib artifacts/
-    - cp -r lib/gks/fonts artifacts/
-    - mkdir artifacts/include/
-    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-    - cp -r lib/grm/include/grm artifacts/include/
-    - mkdir artifacts/Applications/
-    - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
-    - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
-    - mkdir -p artifacts/Applications/gksqt.app/Contents/Frameworks
-    - mkdir -p artifacts/Applications/gksqt.app/Contents/plugins/platforms
-    - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/gksqt.app/Contents/plugins/platforms
-    - cp lib/grm/grplot/README.md artifacts/grplot.man.md
-    - cp -r lib/grm/grplot/grplot.app artifacts/Applications/grplot.app
-    - mkdir -p artifacts/Applications/grplot.app/Contents/Frameworks
-    - mkdir -p artifacts/Applications/grplot.app/Contents/plugins/platforms
-    - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/grplot.app/Contents/plugins/platforms
-    - cd artifacts/Applications
-    - for BINARY in gksqt.app/Contents/plugins/platforms/libqcocoa.dylib gksqt.app/Contents/MacOS/gksqt; do
+  - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-macos-universal.tar.gz
+  - tar xf cmake-3.23.0-macos-universal.tar.gz
+  - export CMAKE_CMD=`pwd`/cmake-3.23.0-macos-universal/CMake.app/Contents/bin/cmake
+  - export MACOSX_DEPLOYMENT_TARGET=10.14
+  - rm -rf /usr/local/gr/*
+  - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake
+  - mkdir artifacts
+  - cp lib/gks/demo artifacts/gksdemo
+  - cp lib/gr/demo artifacts/grdemo
+  - cp lib/gks/libGKS.dylib lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.dylib lib/gr/libGR.a lib/gr3/libGR3.dylib
+       lib/grm/libGRM.a lib/grm/libGRM.dylib lib/gr/qtgr/*.dylib artifacts/
+  - cp -r lib/gks/fonts artifacts/
+  - mkdir artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp -r lib/grm/include/grm artifacts/include/
+  - mkdir artifacts/Applications/
+  - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
+  - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
+  - mkdir -p artifacts/Applications/gksqt.app/Contents/Frameworks
+  - mkdir -p artifacts/Applications/gksqt.app/Contents/plugins/platforms
+  - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/gksqt.app/Contents/plugins/platforms
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
+  - cp -r lib/grm/grplot/grplot.app artifacts/Applications/grplot.app
+  - mkdir -p artifacts/Applications/grplot.app/Contents/Frameworks
+  - mkdir -p artifacts/Applications/grplot.app/Contents/plugins/platforms
+  - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/grplot.app/Contents/plugins/platforms
+  - cd artifacts/Applications
+  - for BINARY in gksqt.app/Contents/plugins/platforms/libqcocoa.dylib gksqt.app/Contents/MacOS/gksqt; do
       for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
-      rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework gksqt.app/Contents/Frameworks/;
-      install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
+        rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework gksqt.app/Contents/Frameworks/;
+        install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
       done;
-      done
-    - for BINARY in grplot.app/Contents/plugins/platforms/libqcocoa.dylib grplot.app/Contents/MacOS/grplot; do
+    done
+  - for BINARY in grplot.app/Contents/plugins/platforms/libqcocoa.dylib grplot.app/Contents/MacOS/grplot; do
       for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
-      rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework grplot.app/Contents/Frameworks/;
-      install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
+        rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework grplot.app/Contents/Frameworks/;
+        install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
       done;
-      done
-    - cd ../../
-    - mv artifacts artifacts-darwin-iff1600
+    done
+  - cd ../../
+  - mv artifacts artifacts-darwin-iff1600
   tags:
-    - macos
+  - macos
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-darwin-iff1600/
+    - artifacts-darwin-iff1600/
 
 darwin-self-contained:
   stage: build
   image: macos:catalina-gr-build
   tags:
-    - libvirt
+  - libvirt
   script:
-    - export MACOSX_DEPLOYMENT_TARGET=10.14
-    - sudo mkdir /usr/local/gr
-    - sudo chown administrator:wheel /usr/local/gr
-    - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake QT6_QMAKE=/usr/local/qt6/bin/qmake
-    - mkdir artifacts
-    - cp lib/gks/demo artifacts/gksdemo
-    - cp lib/gr/demo artifacts/grdemo
-    - cp lib/gks/libGKS.dylib lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.dylib lib/gr/libGR.a lib/gr3/libGR3.dylib
+  - export MACOSX_DEPLOYMENT_TARGET=10.14
+  - sudo mkdir /usr/local/gr
+  - sudo chown administrator:wheel /usr/local/gr
+  - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake QT6_QMAKE=/usr/local/qt6/bin/qmake
+  - mkdir artifacts
+  - cp lib/gks/demo artifacts/gksdemo
+  - cp lib/gr/demo artifacts/grdemo
+  - cp lib/gks/libGKS.dylib lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.dylib lib/gr/libGR.a lib/gr3/libGR3.dylib
       lib/grm/libGRM.a lib/grm/libGRM.dylib lib/gr/qtgr/*.dylib artifacts/
-    - cp -r lib/gks/fonts artifacts/
-    - mkdir artifacts/include/
-    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-    - cp -r lib/grm/include/grm artifacts/include/
-    - mkdir artifacts/Applications/
-    - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
-    - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
-    - mkdir -p artifacts/Applications/gksqt.app/Contents/Frameworks
-    - mkdir -p artifacts/Applications/gksqt.app/Contents/plugins/platforms
-    - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/gksqt.app/Contents/plugins/platforms
-    - cp lib/grm/grplot/README.md artifacts/grplot.man.md
-    - cp -r lib/grm/grplot/grplot.app artifacts/Applications/grplot.app
-    - mkdir -p artifacts/Applications/grplot.app/Contents/Frameworks
-    - mkdir -p artifacts/Applications/grplot.app/Contents/plugins/platforms
-    - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/grplot.app/Contents/plugins/platforms
-    - cd artifacts/Applications
-    - for BINARY in gksqt.app/Contents/plugins/platforms/libqcocoa.dylib gksqt.app/Contents/MacOS/gksqt; do
+  - cp -r lib/gks/fonts artifacts/
+  - mkdir artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp -r lib/grm/include/grm artifacts/include/
+  - mkdir artifacts/Applications/
+  - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
+  - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
+  - mkdir -p artifacts/Applications/gksqt.app/Contents/Frameworks
+  - mkdir -p artifacts/Applications/gksqt.app/Contents/plugins/platforms
+  - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/gksqt.app/Contents/plugins/platforms
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
+  - cp -r lib/grm/grplot/grplot.app artifacts/Applications/grplot.app
+  - mkdir -p artifacts/Applications/grplot.app/Contents/Frameworks
+  - mkdir -p artifacts/Applications/grplot.app/Contents/plugins/platforms
+  - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/grplot.app/Contents/plugins/platforms
+  - cd artifacts/Applications
+  - for BINARY in gksqt.app/Contents/plugins/platforms/libqcocoa.dylib gksqt.app/Contents/MacOS/gksqt; do
       for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
-      rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework gksqt.app/Contents/Frameworks/;
-      install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
+        rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework gksqt.app/Contents/Frameworks/;
+        install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
       done;
-      done
-    - for BINARY in grplot.app/Contents/plugins/platforms/libqcocoa.dylib grplot.app/Contents/MacOS/grplot; do
+    done
+  - for BINARY in grplot.app/Contents/plugins/platforms/libqcocoa.dylib grplot.app/Contents/MacOS/grplot; do
       for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
-      rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework grplot.app/Contents/Frameworks/;
-      install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
+        rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework grplot.app/Contents/Frameworks/;
+        install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
       done;
-      done
-    - cd ../../
-    - mv artifacts artifacts-darwin
+    done
+  - cd ../../
+  - mv artifacts artifacts-darwin
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-darwin/
+    - artifacts-darwin/
 
 darwin-self-contained-iff1605:
   stage: build
@@ -1255,16 +1255,16 @@ darwin-self-contained-iff1605:
     - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/grplot.app/Contents/plugins/platforms
     - cd artifacts/Applications
     - for BINARY in gksqt.app/Contents/plugins/platforms/libqcocoa.dylib gksqt.app/Contents/MacOS/gksqt; do
-      for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
-      rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework gksqt.app/Contents/Frameworks/;
-      install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
-      done;
+        for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
+          rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework gksqt.app/Contents/Frameworks/;
+          install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
+        done;
       done
     - for BINARY in grplot.app/Contents/plugins/platforms/libqcocoa.dylib grplot.app/Contents/MacOS/grplot; do
-      for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
-      rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework grplot.app/Contents/Frameworks/;
-      install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
-      done;
+        for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
+          rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework grplot.app/Contents/Frameworks/;
+          install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
+        done;
       done
     - cd ../../
     - mv artifacts artifacts-darwin-aarch64
@@ -1279,15 +1279,15 @@ emscripten:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
-    - source /emsdk/emsdk_env.sh
-    - emmake make -C js
-    - mkdir artifacts
-    - cp js/gr.js artifacts/
-    - mv artifacts artifacts-js
+  - source /emsdk/emsdk_env.sh
+  - emmake make -C js
+  - mkdir artifacts
+  - cp js/gr.js artifacts/
+  - mv artifacts artifacts-js
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-js/
+    - artifacts-js/
 
 packages-tar:
   stage: package
@@ -1295,135 +1295,135 @@ packages-tar:
   variables:
     GIT_STRATEGY: none
   script:
-    - mkdir -p Windows-i686/gr/bin
-    - mkdir -p Windows-i686/gr/lib
-    - mkdir -p Windows-i686/gr/share/doc/grplot
-    - mv artifacts-windows32/*.dll Windows-i686/gr/bin/
-    - mv artifacts-windows32/*.lib Windows-i686/gr/bin/
-    - mv artifacts-windows32/gksqt.exe Windows-i686/gr/bin/
-    - mv artifacts-windows32/grplot.exe Windows-i686/gr/bin/
-    - mv artifacts-windows32/grplot.man.md Windows-i686/gr/share/doc/grplot/
-    - mv artifacts-windows32/platforms Windows-i686/gr/bin/
-    - mv artifacts-windows32/fonts Windows-i686/gr/
-    - mv artifacts-windows32/include Windows-i686/gr/
-    - cp artifacts-js/gr.js Windows-i686/gr/lib/
-    - rm -rf artifacts-windows32
-    - mkdir -p Windows-x86_64/gr/bin
-    - mkdir -p Windows-x86_64/gr/lib
-    - mkdir -p Windows-x86_64/gr/share/doc/grplot
-    - mv artifacts-windows64/*.dll Windows-x86_64/gr/bin/
-    - mv artifacts-windows64/*.lib Windows-x86_64/gr/bin/
-    - mv artifacts-windows64/gksqt.exe Windows-x86_64/gr/bin/
-    - mv artifacts-windows64/grplot.exe Windows-x86_64/gr/bin/
-    - mv artifacts-windows64/grplot.man.md Windows-x86_64/gr/share/doc/grplot/
-    - mv artifacts-windows64/platforms Windows-x86_64/gr/bin/
-    - mv artifacts-windows64/fonts Windows-x86_64/gr/
-    - mv artifacts-windows64/include Windows-x86_64/gr/
-    - cp artifacts-js/gr.js Windows-x86_64/gr/lib/
-    - rm -rf artifacts-windows64
-    - mkdir -p Windows-x86_64-msvc
-    - mv artifacts-windows-64bit-cmake-msvc Windows-x86_64-msvc/gr
-    - mkdir -p Debian-x86_64/gr/bin
-    - mkdir -p Debian-x86_64/gr/lib
-    - mkdir -p Debian-x86_64/gr/share/doc/grplot
-    - mv artifacts-debian10/*.so Debian-x86_64/gr/lib/
-    - mv artifacts-debian10/gksqt Debian-x86_64/gr/bin/
-    - mv artifacts-debian10/grplot Debian-x86_64/gr/bin/
-    - mv artifacts-debian10/grplot.man.md Debian-x86_64/gr/share/doc/grplot/
-    - mv artifacts-debian10/fonts Debian-x86_64/gr/
-    - mv artifacts-debian10/include Debian-x86_64/gr/
-    - cp artifacts-js/gr.js Debian-x86_64/gr/lib/
-    - rm -rf artifacts-debian10
-    - mkdir -p Debian-armhf/gr/bin
-    - mkdir -p Debian-armhf/gr/lib
-    - mkdir -p Debian-armhf/gr/share/doc/grplot
-    - mv artifacts-debian10-armhf/*.so Debian-armhf/gr/lib/
-    - mv artifacts-debian10-armhf/gksqt Debian-armhf/gr/bin/
-    - mv artifacts-debian10-armhf/grplot Debian-armhf/gr/bin/
-    - mv artifacts-debian10-armhf/grplot.man.md Debian-armhf/gr/share/doc/grplot/
-    - mv artifacts-debian10-armhf/fonts Debian-armhf/gr/
-    - mv artifacts-debian10-armhf/include Debian-armhf/gr/
-    - cp artifacts-js/gr.js Debian-armhf/gr/lib/
-    - rm -rf artifacts-debian10-armhf
-    - mkdir -p Debian-aarch64/gr/bin
-    - mkdir -p Debian-aarch64/gr/lib
-    - mkdir -p Debian-aarch64/gr/share/doc/grplot
-    - mv artifacts-debian10-aarch64/*.so Debian-aarch64/gr/lib/
-    - mv artifacts-debian10-aarch64/gksqt Debian-aarch64/gr/bin/
-    - mv artifacts-debian10-aarch64/grplot Debian-aarch64/gr/bin/
-    - mv artifacts-debian10-aarch64/grplot.man.md Debian-aarch64/gr/share/doc/grplot/
-    - mv artifacts-debian10-aarch64/fonts Debian-aarch64/gr/
-    - mv artifacts-debian10-aarch64/include Debian-aarch64/gr/
-    - cp artifacts-js/gr.js Debian-aarch64/gr/lib/
-    - rm -rf artifacts-debian10-aarch64
-    - mkdir -p Ubuntu-x86_64/gr/bin
-    - mkdir -p Ubuntu-x86_64/gr/lib
-    - mkdir -p Ubuntu-x86_64/gr/share/doc/grplot
-    - mv artifacts-ubuntu2004/*.so Ubuntu-x86_64/gr/lib/
-    - mv artifacts-ubuntu2004/gksqt Ubuntu-x86_64/gr/bin/
-    - mv artifacts-ubuntu2004/grplot Ubuntu-x86_64/gr/bin/
-    - mv artifacts-ubuntu2004/grplot.man.md Ubuntu-x86_64/gr/share/doc/grplot/
-    - mv artifacts-ubuntu2004/fonts Ubuntu-x86_64/gr/
-    - mv artifacts-ubuntu2004/include Ubuntu-x86_64/gr/
-    - cp artifacts-js/gr.js Ubuntu-x86_64/gr/lib/
-    - rm -rf artifacts-ubuntu2004
-    - mkdir -p CentOS-x86_64/gr/bin
-    - mkdir -p CentOS-x86_64/gr/lib
-    - mkdir -p CentOS-x86_64/gr/share/doc/grplot
-    - mv artifacts-centos7/*.so CentOS-x86_64/gr/lib/
-    - mv artifacts-centos7/gksqt CentOS-x86_64/gr/bin/
-    - mv artifacts-centos7/grplot CentOS-x86_64/gr/bin/
-    - mv artifacts-centos7/grplot.man.md CentOS-x86_64/gr/share/doc/grplot/
-    - mv artifacts-centos7/fonts CentOS-x86_64/gr/
-    - mv artifacts-centos7/include CentOS-x86_64/gr/
-    - cp artifacts-js/gr.js CentOS-x86_64/gr/lib/
-    - rm -rf artifacts-centos7
-    - cp -r CentOS-x86_64 Linux-x86_64
-    - mkdir -p Linux-i386/gr/bin
-    - mkdir -p Linux-i386/gr/lib
-    - mkdir -p Linux-i386/gr/share/doc/grplot
-    - mv artifacts-centos7-32bit/*.so Linux-i386/gr/lib/
-    - mv artifacts-centos7-32bit/gksqt Linux-i386/gr/bin/
-    - mv artifacts-centos7-32bit/grplot Linux-i386/gr/bin/
-    - mv artifacts-centos7-32bit/grplot.man.md Linux-i386/gr/share/doc/grplot/
-    - mv artifacts-centos7-32bit/fonts Linux-i386/gr/
-    - mv artifacts-centos7-32bit/include Linux-i386/gr/
-    - cp artifacts-js/gr.js Linux-i386/gr/lib/
-    - rm -rf artifacts-centos7-32bit
-    - mkdir -p ArchLinux-x86_64/gr/bin
-    - mkdir -p ArchLinux-x86_64/gr/lib
-    - mkdir -p ArchLinux-x86_64/gr/share/doc/grplot
-    - mv artifacts-arch/*.so ArchLinux-x86_64/gr/lib/
-    - mv artifacts-arch/gksqt ArchLinux-x86_64/gr/bin/
-    - mv artifacts-arch/grplot ArchLinux-x86_64/gr/bin/
-    - mv artifacts-arch/grplot.man.md ArchLinux-x86_64/gr/share/doc/grplot/
-    - mv artifacts-arch/fonts ArchLinux-x86_64/gr/
-    - mv artifacts-arch/include ArchLinux-x86_64/gr/
-    - cp artifacts-js/gr.js ArchLinux-x86_64/gr/lib/
-    - rm -rf artifacts-arch
-    - mkdir -p FreeBSD-x86_64/gr/bin
-    - mkdir -p FreeBSD-x86_64/gr/lib
-    - mkdir -p FreeBSD-x86_64/gr/share/doc/grplot
-    - mv artifacts-freebsd13/*.so FreeBSD-x86_64/gr/lib/
-    - mv artifacts-freebsd13/gksqt FreeBSD-x86_64/gr/bin/
-    - mv artifacts-freebsd13/grplot FreeBSD-x86_64/gr/bin/
-    - mv artifacts-freebsd13/grplot.man.md FreeBSD-x86_64/gr/share/doc/grplot/
-    - mv artifacts-freebsd13/fonts FreeBSD-x86_64/gr/
-    - mv artifacts-freebsd13/include FreeBSD-x86_64/gr/
-    - cp artifacts-js/gr.js FreeBSD-x86_64/gr/lib/
-    - rm -rf artifacts-freebsd13
-    - mkdir -p Darwin-x86_64/gr/bin
-    - mkdir -p Darwin-x86_64/gr/lib
-    - mkdir -p Darwin-x86_64/gr/share/doc/grplot
-    - mv artifacts-darwin/grplot.man.md Darwin-x86_64/gr/share/doc/grplot/
-    - mv artifacts-darwin/*.dylib Darwin-x86_64/gr/lib/
-    - mv artifacts-darwin/*.so Darwin-x86_64/gr/lib/
-    - mv artifacts-darwin/fonts Darwin-x86_64/gr/
-    - mv artifacts-darwin/include Darwin-x86_64/gr/
-    - mv artifacts-darwin/Applications Darwin-x86_64/gr/
-    - cp artifacts-js/gr.js Darwin-x86_64/gr/lib/
-    - rm -rf artifacts-darwin
-    - if [ -d artifacts-darwin-aarch64 ]; then
+  - mkdir -p Windows-i686/gr/bin
+  - mkdir -p Windows-i686/gr/lib
+  - mkdir -p Windows-i686/gr/share/doc/grplot
+  - mv artifacts-windows32/*.dll Windows-i686/gr/bin/
+  - mv artifacts-windows32/*.lib Windows-i686/gr/bin/
+  - mv artifacts-windows32/gksqt.exe Windows-i686/gr/bin/
+  - mv artifacts-windows32/grplot.exe Windows-i686/gr/bin/
+  - mv artifacts-windows32/grplot.man.md Windows-i686/gr/share/doc/grplot/
+  - mv artifacts-windows32/platforms Windows-i686/gr/bin/
+  - mv artifacts-windows32/fonts Windows-i686/gr/
+  - mv artifacts-windows32/include Windows-i686/gr/
+  - cp artifacts-js/gr.js Windows-i686/gr/lib/
+  - rm -rf artifacts-windows32
+  - mkdir -p Windows-x86_64/gr/bin
+  - mkdir -p Windows-x86_64/gr/lib
+  - mkdir -p Windows-x86_64/gr/share/doc/grplot
+  - mv artifacts-windows64/*.dll Windows-x86_64/gr/bin/
+  - mv artifacts-windows64/*.lib Windows-x86_64/gr/bin/
+  - mv artifacts-windows64/gksqt.exe Windows-x86_64/gr/bin/
+  - mv artifacts-windows64/grplot.exe Windows-x86_64/gr/bin/
+  - mv artifacts-windows64/grplot.man.md Windows-x86_64/gr/share/doc/grplot/
+  - mv artifacts-windows64/platforms Windows-x86_64/gr/bin/
+  - mv artifacts-windows64/fonts Windows-x86_64/gr/
+  - mv artifacts-windows64/include Windows-x86_64/gr/
+  - cp artifacts-js/gr.js Windows-x86_64/gr/lib/
+  - rm -rf artifacts-windows64
+  - mkdir -p Windows-x86_64-msvc
+  - mv artifacts-windows-64bit-cmake-msvc Windows-x86_64-msvc/gr
+  - mkdir -p Debian-x86_64/gr/bin
+  - mkdir -p Debian-x86_64/gr/lib
+  - mkdir -p Debian-x86_64/gr/share/doc/grplot
+  - mv artifacts-debian10/*.so Debian-x86_64/gr/lib/
+  - mv artifacts-debian10/gksqt Debian-x86_64/gr/bin/
+  - mv artifacts-debian10/grplot Debian-x86_64/gr/bin/
+  - mv artifacts-debian10/grplot.man.md Debian-x86_64/gr/share/doc/grplot/
+  - mv artifacts-debian10/fonts Debian-x86_64/gr/
+  - mv artifacts-debian10/include Debian-x86_64/gr/
+  - cp artifacts-js/gr.js Debian-x86_64/gr/lib/
+  - rm -rf artifacts-debian10
+  - mkdir -p Debian-armhf/gr/bin
+  - mkdir -p Debian-armhf/gr/lib
+  - mkdir -p Debian-armhf/gr/share/doc/grplot
+  - mv artifacts-debian10-armhf/*.so Debian-armhf/gr/lib/
+  - mv artifacts-debian10-armhf/gksqt Debian-armhf/gr/bin/
+  - mv artifacts-debian10-armhf/grplot Debian-armhf/gr/bin/
+  - mv artifacts-debian10-armhf/grplot.man.md Debian-armhf/gr/share/doc/grplot/
+  - mv artifacts-debian10-armhf/fonts Debian-armhf/gr/
+  - mv artifacts-debian10-armhf/include Debian-armhf/gr/
+  - cp artifacts-js/gr.js Debian-armhf/gr/lib/
+  - rm -rf artifacts-debian10-armhf
+  - mkdir -p Debian-aarch64/gr/bin
+  - mkdir -p Debian-aarch64/gr/lib
+  - mkdir -p Debian-aarch64/gr/share/doc/grplot
+  - mv artifacts-debian10-aarch64/*.so Debian-aarch64/gr/lib/
+  - mv artifacts-debian10-aarch64/gksqt Debian-aarch64/gr/bin/
+  - mv artifacts-debian10-aarch64/grplot Debian-aarch64/gr/bin/
+  - mv artifacts-debian10-aarch64/grplot.man.md Debian-aarch64/gr/share/doc/grplot/
+  - mv artifacts-debian10-aarch64/fonts Debian-aarch64/gr/
+  - mv artifacts-debian10-aarch64/include Debian-aarch64/gr/
+  - cp artifacts-js/gr.js Debian-aarch64/gr/lib/
+  - rm -rf artifacts-debian10-aarch64
+  - mkdir -p Ubuntu-x86_64/gr/bin
+  - mkdir -p Ubuntu-x86_64/gr/lib
+  - mkdir -p Ubuntu-x86_64/gr/share/doc/grplot
+  - mv artifacts-ubuntu2004/*.so Ubuntu-x86_64/gr/lib/
+  - mv artifacts-ubuntu2004/gksqt Ubuntu-x86_64/gr/bin/
+  - mv artifacts-ubuntu2004/grplot Ubuntu-x86_64/gr/bin/
+  - mv artifacts-ubuntu2004/grplot.man.md Ubuntu-x86_64/gr/share/doc/grplot/
+  - mv artifacts-ubuntu2004/fonts Ubuntu-x86_64/gr/
+  - mv artifacts-ubuntu2004/include Ubuntu-x86_64/gr/
+  - cp artifacts-js/gr.js Ubuntu-x86_64/gr/lib/
+  - rm -rf artifacts-ubuntu2004
+  - mkdir -p CentOS-x86_64/gr/bin
+  - mkdir -p CentOS-x86_64/gr/lib
+  - mkdir -p CentOS-x86_64/gr/share/doc/grplot
+  - mv artifacts-centos7/*.so CentOS-x86_64/gr/lib/
+  - mv artifacts-centos7/gksqt CentOS-x86_64/gr/bin/
+  - mv artifacts-centos7/grplot CentOS-x86_64/gr/bin/
+  - mv artifacts-centos7/grplot.man.md CentOS-x86_64/gr/share/doc/grplot/
+  - mv artifacts-centos7/fonts CentOS-x86_64/gr/
+  - mv artifacts-centos7/include CentOS-x86_64/gr/
+  - cp artifacts-js/gr.js CentOS-x86_64/gr/lib/
+  - rm -rf artifacts-centos7
+  - cp -r CentOS-x86_64 Linux-x86_64
+  - mkdir -p Linux-i386/gr/bin
+  - mkdir -p Linux-i386/gr/lib
+  - mkdir -p Linux-i386/gr/share/doc/grplot
+  - mv artifacts-centos7-32bit/*.so Linux-i386/gr/lib/
+  - mv artifacts-centos7-32bit/gksqt Linux-i386/gr/bin/
+  - mv artifacts-centos7-32bit/grplot Linux-i386/gr/bin/
+  - mv artifacts-centos7-32bit/grplot.man.md Linux-i386/gr/share/doc/grplot/
+  - mv artifacts-centos7-32bit/fonts Linux-i386/gr/
+  - mv artifacts-centos7-32bit/include Linux-i386/gr/
+  - cp artifacts-js/gr.js Linux-i386/gr/lib/
+  - rm -rf artifacts-centos7-32bit
+  - mkdir -p ArchLinux-x86_64/gr/bin
+  - mkdir -p ArchLinux-x86_64/gr/lib
+  - mkdir -p ArchLinux-x86_64/gr/share/doc/grplot
+  - mv artifacts-arch/*.so ArchLinux-x86_64/gr/lib/
+  - mv artifacts-arch/gksqt ArchLinux-x86_64/gr/bin/
+  - mv artifacts-arch/grplot ArchLinux-x86_64/gr/bin/
+  - mv artifacts-arch/grplot.man.md ArchLinux-x86_64/gr/share/doc/grplot/
+  - mv artifacts-arch/fonts ArchLinux-x86_64/gr/
+  - mv artifacts-arch/include ArchLinux-x86_64/gr/
+  - cp artifacts-js/gr.js ArchLinux-x86_64/gr/lib/
+  - rm -rf artifacts-arch
+  - mkdir -p FreeBSD-x86_64/gr/bin
+  - mkdir -p FreeBSD-x86_64/gr/lib
+  - mkdir -p FreeBSD-x86_64/gr/share/doc/grplot
+  - mv artifacts-freebsd13/*.so FreeBSD-x86_64/gr/lib/
+  - mv artifacts-freebsd13/gksqt FreeBSD-x86_64/gr/bin/
+  - mv artifacts-freebsd13/grplot FreeBSD-x86_64/gr/bin/
+  - mv artifacts-freebsd13/grplot.man.md FreeBSD-x86_64/gr/share/doc/grplot/
+  - mv artifacts-freebsd13/fonts FreeBSD-x86_64/gr/
+  - mv artifacts-freebsd13/include FreeBSD-x86_64/gr/
+  - cp artifacts-js/gr.js FreeBSD-x86_64/gr/lib/
+  - rm -rf artifacts-freebsd13
+  - mkdir -p Darwin-x86_64/gr/bin
+  - mkdir -p Darwin-x86_64/gr/lib
+  - mkdir -p Darwin-x86_64/gr/share/doc/grplot
+  - mv artifacts-darwin/grplot.man.md Darwin-x86_64/gr/share/doc/grplot/
+  - mv artifacts-darwin/*.dylib Darwin-x86_64/gr/lib/
+  - mv artifacts-darwin/*.so Darwin-x86_64/gr/lib/
+  - mv artifacts-darwin/fonts Darwin-x86_64/gr/
+  - mv artifacts-darwin/include Darwin-x86_64/gr/
+  - mv artifacts-darwin/Applications Darwin-x86_64/gr/
+  - cp artifacts-js/gr.js Darwin-x86_64/gr/lib/
+  - rm -rf artifacts-darwin
+  - if [ -d artifacts-darwin-aarch64 ]; then
       mkdir -p Darwin-aarch64/gr/lib;
       mv artifacts-darwin-aarch64/*.dylib Darwin-aarch64/gr/lib/;
       mv artifacts-darwin-aarch64/*.so Darwin-aarch64/gr/lib/;
@@ -1433,22 +1433,22 @@ packages-tar:
       cp artifacts-js/gr.js Darwin-aarch64/gr/lib/;
       rm -rf artifacts-darwin-aarch64;
       cd Darwin-aarch64 && tar czf gr.tar.gz gr && cd -;
-      fi
-    - cd Darwin-x86_64 && tar czf gr.tar.gz gr && cd -;
-    - cd Windows-i686 && tar czf gr.tar.gz gr && cd -
-    - cd Windows-x86_64 && tar czf gr.tar.gz gr && cd -
-    - cd Windows-x86_64-msvc && tar czf gr.tar.gz gr && cd -
-    - cd Debian-x86_64 && tar czf gr.tar.gz gr && cd -
-    - cd Debian-armhf && tar czf gr.tar.gz gr && cd -
-    - cd Debian-aarch64 && tar czf gr.tar.gz gr && cd -
-    - cd Ubuntu-x86_64 && tar czf gr.tar.gz gr && cd -
-    - cd CentOS-x86_64 && tar czf gr.tar.gz gr && cd -
-    - cd Linux-i386 && tar czf gr.tar.gz gr && cd -
-    - cd Linux-x86_64 && tar czf gr.tar.gz gr && cd -
-    - cd ArchLinux-x86_64 && tar czf gr.tar.gz gr && cd -
-    - cd FreeBSD-x86_64 && tar czf gr.tar.gz gr && cd -
-    - mkdir Downloads
-    - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+    fi
+  - cd Darwin-x86_64 && tar czf gr.tar.gz gr && cd -;
+  - cd Windows-i686 && tar czf gr.tar.gz gr && cd -
+  - cd Windows-x86_64 && tar czf gr.tar.gz gr && cd -
+  - cd Windows-x86_64-msvc && tar czf gr.tar.gz gr && cd -
+  - cd Debian-x86_64 && tar czf gr.tar.gz gr && cd -
+  - cd Debian-armhf && tar czf gr.tar.gz gr && cd -
+  - cd Debian-aarch64 && tar czf gr.tar.gz gr && cd -
+  - cd Ubuntu-x86_64 && tar czf gr.tar.gz gr && cd -
+  - cd CentOS-x86_64 && tar czf gr.tar.gz gr && cd -
+  - cd Linux-i386 && tar czf gr.tar.gz gr && cd -
+  - cd Linux-x86_64 && tar czf gr.tar.gz gr && cd -
+  - cd ArchLinux-x86_64 && tar czf gr.tar.gz gr && cd -
+  - cd FreeBSD-x86_64 && tar czf gr.tar.gz gr && cd -
+  - mkdir Downloads
+  - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
       export VERSION=`echo "$CI_COMMIT_TAG" | sed 's/^v//'`;
       cp Windows-i686/gr.tar.gz Downloads/gr-$VERSION-Windows-i686.tar.gz;
       cp Windows-x86_64/gr.tar.gz Downloads/gr-$VERSION-Windows-x86_64.tar.gz;
@@ -1465,11 +1465,11 @@ packages-tar:
       cp FreeBSD-x86_64/gr.tar.gz Downloads/gr-$VERSION-FreeBSD-x86_64.tar.gz;
       cp Darwin-x86_64/gr.tar.gz Downloads/gr-$VERSION-Darwin-x86_64.tar.gz;
       if [ -d Darwin-aarch64 ]; then
-      cp Darwin-aarch64/gr.tar.gz Downloads/gr-$VERSION-Darwin-aarch64.tar.gz;
+        cp Darwin-aarch64/gr.tar.gz Downloads/gr-$VERSION-Darwin-aarch64.tar.gz;
       fi;
       cp artifacts-js/gr.js Downloads/gr-$VERSION.js;
       cd Downloads && sha512sum -b gr-*.tar.gz > gr-$VERSION.sha512.txt && cd -;
-      else
+    else
       cp Windows-i686/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Windows-i686.tar.gz;
       cp Windows-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Windows-x86_64.tar.gz;
       cp Windows-x86_64-msvc/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Windows-x86_64-msvc.tar.gz;
@@ -1485,24 +1485,24 @@ packages-tar:
       cp FreeBSD-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-FreeBSD-x86_64.tar.gz;
       cp Darwin-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Darwin-x86_64.tar.gz;
       if [ -d Darwin-aarch64 ]; then
-      cp Darwin-aarch64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Darwin-aarch64.tar.gz;
+        cp Darwin-aarch64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Darwin-aarch64.tar.gz;
       fi;
       cp artifacts-js/gr.js Downloads/gr-$CI_COMMIT_SHA.js;
       for f in Windows-i686 Windows-x86_64 Windows-x86_64-msvc Darwin-x86_64 Debian-x86_64 Debian-armhf Debian-aarch64
-      Ubuntu-x86_64 CentOS-x86_64 Redhat-x86_64 Linux-i386 Linux-x86_64 ArchLinux-x86_64 FreeBSD-x86_64; do
-      ln -s gr-$CI_COMMIT_SHA-$f.tar.gz Downloads/gr-latest-$f.tar.gz;
+               Ubuntu-x86_64 CentOS-x86_64 Redhat-x86_64 Linux-i386 Linux-x86_64 ArchLinux-x86_64 FreeBSD-x86_64; do
+        ln -s gr-$CI_COMMIT_SHA-$f.tar.gz Downloads/gr-latest-$f.tar.gz;
       done;
       if [ -d Darwin-aarch64 ]; then
-      ln -s gr-$CI_COMMIT_SHA-Darwin-aarch64.tar.gz Downloads/gr-latest-Darwin-aarch64.tar.gz;
+        ln -s gr-$CI_COMMIT_SHA-Darwin-aarch64.tar.gz Downloads/gr-latest-Darwin-aarch64.tar.gz;
       fi;
       ln -s gr-$CI_COMMIT_SHA.js Downloads/gr-latest.js;
       cd Downloads && sha512sum -b gr-*.tar.gz > gr-$CI_COMMIT_SHA.sha512.txt && cd -;
       ln -s gr-$CI_COMMIT_SHA.sha512.txt Downloads/gr-latest.sha512.txt;
-      fi
+    fi
   artifacts:
     expire_in: 1 week
     paths:
-      - Downloads/
+    - Downloads/
 
 sync:
   stage: sync
@@ -1514,19 +1514,19 @@ sync:
     - develop@Scientific-IT-Systems/gr
     - tags@Scientific-IT-Systems/gr
   script:
-    - chmod 644 Downloads/*.tar.gz
-    - chmod 644 Downloads/*.js
-    - python3 -m pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@iffgit.fz-juelich.de/Scientific-IT-Systems/github-binary-upload.git
-    - mkdir --mode=700 ~/.ssh/
-    - (umask 0377 && echo "$SCIAPP_GR_PRIVATE_KEY" > ~/.ssh/id_rsa
-      && echo "github.com $GITHUB_HOST_KEY" >> ~/.ssh/known_hosts)
-    - git clone --mirror "$CI_REPOSITORY_URL" gr_mirror
-    - cd gr_mirror && git push --mirror git@github.com:sciapp/gr.git && cd -
-    - set +x
-    - sshpass -p $RSYNC_PASSWORD rsync -av ./Downloads/ rsync://$RSYNC_USERNAME@iffweb.iff.kfa-juelich.de/gr/
-    - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+  - chmod 644 Downloads/*.tar.gz
+  - chmod 644 Downloads/*.js
+  - python3 -m pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@iffgit.fz-juelich.de/Scientific-IT-Systems/github-binary-upload.git
+  - mkdir --mode=700 ~/.ssh/
+  - (umask 0377 && echo "$SCIAPP_GR_PRIVATE_KEY" > ~/.ssh/id_rsa
+                && echo "github.com $GITHUB_HOST_KEY" >> ~/.ssh/known_hosts)
+  - git clone --mirror "$CI_REPOSITORY_URL" gr_mirror
+  - cd gr_mirror && git push --mirror git@github.com:sciapp/gr.git && cd -
+  - set +x
+  - sshpass -p $RSYNC_PASSWORD rsync -av ./Downloads/ rsync://$RSYNC_USERNAME@iffweb.iff.kfa-juelich.de/gr/
+  - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
       echo "$SCIAPP_GR_ACCESS_TOKEN" | github-binary-upload --user jheinen sciapp/gr "$CI_COMMIT_TAG" Downloads/gr-*;
-      fi
+    fi
 
 deploy-to-obs:
   stage: deploy
@@ -1535,25 +1535,25 @@ deploy-to-obs:
     - develop@Scientific-IT-Systems/gr
     - tags@Scientific-IT-Systems/gr
   before_script:
-    - export OBS_PROJECT=science\:gr-framework
-    - if [[ -z "${CI_COMMIT_TAG}" ]]; then
+  - export OBS_PROJECT=science\:gr-framework
+  - if [[ -z "${CI_COMMIT_TAG}" ]]; then
       export OBS_PROJECT=${OBS_PROJECT}\:unstable;
       export VERSION="$(git describe --long --tags | sed 's/^v//;s/\(.*\)-\(.*\)-g\(.*\)/\1+\2~\3/;')";
       export REVISION=${CI_COMMIT_SHORT_SHA};
-      else
+    else
       export VERSION=`echo "$CI_COMMIT_TAG" | sed 's/^v//'`;
       export REVISION="tags\/${CI_COMMIT_TAG}";
-      fi;
+    fi;
   script:
-    - mkdir -p "${HOME}/.config/osc" && ln -s "${OSCRC}" "${HOME}/.config/osc/oscrc"
-    - osc co ${OBS_PROJECT}/gr
-    - sed 's/\(.*revision">\).*\(<.*\)/\1'$REVISION'\2/'
-      ${OBS_PROJECT}/gr/_service |
-      sed 's/\(.*version">\)[[:digit:]].*\(<.*\)/\1'$VERSION'\2/'
-      > ${OBS_PROJECT}/gr/_service.new &&
-      mv -f ${OBS_PROJECT}/gr/_service.new
-      ${OBS_PROJECT}/gr/_service
-    - osc commit ${OBS_PROJECT}/gr/_service -m "Release $REVISION"
+  - mkdir -p "${HOME}/.config/osc" && ln -s "${OSCRC}" "${HOME}/.config/osc/oscrc"
+  - osc co ${OBS_PROJECT}/gr
+  - sed 's/\(.*revision">\).*\(<.*\)/\1'$REVISION'\2/'
+    ${OBS_PROJECT}/gr/_service |
+    sed 's/\(.*version">\)[[:digit:]].*\(<.*\)/\1'$VERSION'\2/'
+    > ${OBS_PROJECT}/gr/_service.new &&
+    mv -f ${OBS_PROJECT}/gr/_service.new
+    ${OBS_PROJECT}/gr/_service
+  - osc commit ${OBS_PROJECT}/gr/_service -m "Release $REVISION"
 
 deploy-to-aur:
   stage: deploy
@@ -1562,49 +1562,49 @@ deploy-to-aur:
     - develop@Scientific-IT-Systems/gr
     - tags@Scientific-IT-Systems/gr
   script:
-    - git config --global --add safe.directory "$(pwd)"
-    - mkdir --mode=700 ~/.ssh/
-    - (umask 0377 && echo "$AUR_GR_PRIVATE_KEY" > ~/.ssh/id_rsa
-      && echo "aur.archlinux.org $AUR_HOST_KEY" >> ~/.ssh/known_hosts)
-    - if [[ -n "${CI_COMMIT_TAG}" ]]; then
+  - git config --global --add safe.directory "$(pwd)"
+  - mkdir --mode=700 ~/.ssh/
+  - (umask 0377 && echo "$AUR_GR_PRIVATE_KEY" > ~/.ssh/id_rsa
+                && echo "aur.archlinux.org $AUR_HOST_KEY" >> ~/.ssh/known_hosts)
+  - if [[ -n "${CI_COMMIT_TAG}" ]]; then
       if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-      for repo in "gr-framework" "gr-framework-js"; do
-      git clone "ssh://aur@aur.archlinux.org/${repo}.git";
-      cd "${repo}";
-      sed -i -e "/^pkgver=/c\pkgver=\"${CI_COMMIT_TAG#v}\"" -e "/^pkgrel=/c\pkgrel=\"1\"" PKGBUILD;
-      (
-      source PKGBUILD;
-      curl -o source -L "${source[0]}";
-      SHA256SUM="$(sha256sum source | awk '{ print $1 }')";
-      if [[ "${repo}" == "gr-framework" ]]; then
-      sed -i "/^sha256sums=/c\sha256sums=(\"${SHA256SUM}\")" PKGBUILD;
-      else
-      sed -i "/^sha256sums=/c\sha256sums=(\"${SHA256SUM}\" \\\\" PKGBUILD;
+        for repo in "gr-framework" "gr-framework-js"; do
+          git clone "ssh://aur@aur.archlinux.org/${repo}.git";
+          cd "${repo}";
+          sed -i -e "/^pkgver=/c\pkgver=\"${CI_COMMIT_TAG#v}\"" -e "/^pkgrel=/c\pkgrel=\"1\"" PKGBUILD;
+          (
+            source PKGBUILD;
+            curl -o source -L "${source[0]}";
+            SHA256SUM="$(sha256sum source | awk '{ print $1 }')";
+            if [[ "${repo}" == "gr-framework" ]]; then
+              sed -i "/^sha256sums=/c\sha256sums=(\"${SHA256SUM}\")" PKGBUILD;
+            else
+              sed -i "/^sha256sums=/c\sha256sums=(\"${SHA256SUM}\" \\\\" PKGBUILD;
+            fi;
+          );
+          makepkg --printsrcinfo > .SRCINFO;
+          if ! git diff --quiet; then
+            git commit -a -m "Update to version ${CI_COMMIT_TAG#v}";
+            git push;
+          else
+            echo "No changes to commit.";
+          fi;
+          cd ..;
+        done;
       fi;
-      );
-      makepkg --printsrcinfo > .SRCINFO;
-      if ! git diff --quiet; then
-      git commit -a -m "Update to version ${CI_COMMIT_TAG#v}";
-      git push;
-      else
-      echo "No changes to commit.";
-      fi;
-      cd ..;
-      done;
-      fi;
-      else
+    else
       PKGVERS="$(git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g')";
       for repo in "gr-framework-git" "gr-framework-js-git"; do
-      git clone "ssh://aur@aur.archlinux.org/${repo}.git";
-      cd "${repo}";
-      sed -i -e "/^pkgver=/c\pkgver=\"${PKGVERS}\"" -e "/^pkgrel=/c\pkgrel=\"1\"" PKGBUILD;
-      makepkg --printsrcinfo > .SRCINFO;
-      if ! git diff --quiet; then
-      git commit -a -m "Update to version ${PKGVERS}";
-      git push;
-      else
-      echo "No changes to commit.";
-      fi;
-      cd ..;
+        git clone "ssh://aur@aur.archlinux.org/${repo}.git";
+        cd "${repo}";
+        sed -i -e "/^pkgver=/c\pkgver=\"${PKGVERS}\"" -e "/^pkgrel=/c\pkgrel=\"1\"" PKGBUILD;
+        makepkg --printsrcinfo > .SRCINFO;
+        if ! git diff --quiet; then
+          git commit -a -m "Update to version ${PKGVERS}";
+          git push;
+        else
+          echo "No changes to commit.";
+        fi;
+        cd ..;
       done;
-      fi
+    fi
