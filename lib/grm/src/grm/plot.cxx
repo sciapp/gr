@@ -1296,17 +1296,6 @@ void plot_post_plot(grm_args_t *plot_args)
       logger((stderr, "Got keyword \"update\" with value %d\n", update));
       global_root->setAttribute("updatews", update);
     }
-  plot_restore_text_encoding();
-}
-
-void plot_restore_text_encoding(void)
-{
-  gr_inqtextencoding(&pre_plot_text_encoding);
-  if (pre_plot_text_encoding >= 0)
-    {
-      gr_settextencoding(pre_plot_text_encoding);
-      pre_plot_text_encoding = -1;
-    }
 }
 
 void plot_post_subplot(grm_args_t *subplot_args)
