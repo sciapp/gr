@@ -4959,9 +4959,13 @@ int grm_switch(unsigned int id)
       /* it is a new figure_id, but only with grm_switch will it be really active
        * active_figure is only set on this for creating the needed child_elements
        * without grm_switch it will not be rendered */
+      bool auto_update;
       active_figure = global_render->createElement("figure");
       global_root->append(active_figure);
+      global_render->getAutoUpdate(&auto_update);
+      global_render->setAutoUpdate(false);
       active_figure->setAttribute("id", "figure" + std::to_string(id));
+      global_render->setAutoUpdate(auto_update);
       global_render->setActiveFigure(active_figure);
       figure_switched = true;
     }
