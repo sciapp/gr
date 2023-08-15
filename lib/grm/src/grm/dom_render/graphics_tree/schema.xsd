@@ -166,7 +166,6 @@
                 <xs:element ref="axes" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="axes3d" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="barplot_xtick" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="barplot_ytick" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="grid" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="grid3d" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polar_axes" minOccurs="0" maxOccurs="unbounded"/>
@@ -403,6 +402,7 @@
             <xs:attribute name="x2" type="xs:string"/>
             <xs:attribute name="y1" type="xs:string"/>
             <xs:attribute name="y2" type="xs:string"/>
+            <xs:attribute name="z_index" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
