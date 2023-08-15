@@ -36,6 +36,7 @@
 #include "grm/dom_render/ManageZIndex.hxx"
 #include "grm/dom_render/Drawable.hxx"
 #include "grm/dom_render/ManageGRContextIds.hxx"
+#include "grm/dom_render/ManageCustomColorIndex.hxx"
 extern "C" {
 #include "grm/datatype/string_map_int.h"
 }
@@ -61,6 +62,7 @@ bool zQueueIsBeingRendered = false;
 std::map<std::shared_ptr<GRM::Element>, int> parent_to_context;
 ManageGRContextIds grContextIDManager;
 ManageZIndex zIndexManager;
+ManageCustomColorIndex customColorIndexManager;
 
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {
@@ -259,6 +261,7 @@ void PushDrawableToZQueue::operator()(const std::shared_ptr<GRM::Element> elemen
   auto drawable =
       std::shared_ptr<Drawable>(new Drawable(element, context, contextID, zIndexManager.getZIndex(), drawFunction));
   drawable->insertionIndex = z_queue.size();
+  customColorIndexManager.savecontext(contextID);
   z_queue.push(drawable);
 }
 
@@ -10430,6 +10433,7 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
    */
   gr_savestate();
   zIndexManager.savestate();
+  customColorIndexManager.savestate();
 
   bool bounding_boxes = getenv("GRPLOT_ENABLE_EDITOR");
 
@@ -10454,6 +10458,7 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
       gr_end_grm_selection();
     }
 
+  customColorIndexManager.restorestate();
   zIndexManager.restorestate();
   gr_restorestate();
 }
@@ -10476,6 +10481,7 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
           bounding_id++;
         }
 
+      customColorIndexManager.selectcontext(drawable->getGrContextId());
       drawable->draw();
 
       if (bounding_boxes && element->hasAttributes())
