@@ -58,7 +58,6 @@ static std::map<std::string, const char *> key_to_types{{"accelerate", "i"},
                                                         {"xcolormap", "i"},
                                                         {"xflip", "i"},
                                                         {"xform", "i"},
-                                                        {"xticklabels", "nS"},
                                                         {"ybins", "i"},
                                                         {"ycolormap", "i"},
                                                         {"yflip", "i"},
@@ -222,6 +221,22 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
           if (str_equals_any(key.c_str(), 5, "title", "xlabel", "ylabel", "zlabel", "resample_method"))
             {
               grm_args_push(args, key.c_str(), "s", value.c_str());
+            }
+          else if (str_equals_any(key.c_str(), 1, "xticklabels"))
+            {
+              std::vector<std::string> ticklabels;
+              std::stringstream sv(value);
+              for (size_t col = 0; std::getline(sv, token, ',') && token.length(); col++)
+                {
+                  ticklabels.push_back(token);
+                }
+
+              const char *c_ticklabel[ticklabels.size()];
+              for (int i = 0; i < ticklabels.size(); i++)
+                {
+                  c_ticklabel[i] = ticklabels[i].c_str();
+                }
+              grm_args_push(args, key.c_str(), "nS", ticklabels.size(), c_ticklabel);
             }
           else if (str_equals_any(key.c_str(), 7, "location", "xlog", "ylog", "zlog", "xgrid", "ygrid", "zgrid"))
             {
