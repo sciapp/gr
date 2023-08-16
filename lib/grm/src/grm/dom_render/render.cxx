@@ -4694,7 +4694,6 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
 
       auto subsubGroup = render->createElement("labels_group");
       elem->append(subsubGroup);
-      render->setLineSpec(subsubGroup, const_cast<char *>(" "));
       render->setTextAlign(subsubGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
       // reset setNextColor
       setNextColor(GR_COLOR_RESET, color_indices_vec, color_rgb_values_vec, elem);
@@ -4703,16 +4702,14 @@ static void legend(const std::shared_ptr<GRM::Element> &elem, const std::shared_
         {
           auto labelGroup = render->createElement("label");
           subsubGroup->append(labelGroup);
-          render->setLineColorInd(labelGroup, 1);
-          auto rect = render->createFillRect(px, px + 0.02, py - 0.01, py + 0.01);
-          labelGroup->append(rect);
+          setNextColor(GR_COLOR_FILL, color_indices_vec, color_rgb_values_vec, labelGroup);
+
+          labelGroup->append(render->createFillRect(px, px + 0.02, py - 0.01, py + 0.01));
           labelGroup->append(render->createDrawRect(px, px + 0.02, py - 0.01, py + 0.01));
           labelGroup->append(render->createText(px + 0.03, py, current_label));
 
           gr_inqtext(0, 0, current_label.data(), tbx, tby);
           px += tbx[2] - tbx[0] + 0.05;
-
-          setNextColor(GR_COLOR_FILL, color_indices_vec, color_rgb_values_vec, rect);
         }
       // reset setNextColor
       setNextColor(GR_COLOR_RESET, color_indices_vec, color_rgb_values_vec, elem);

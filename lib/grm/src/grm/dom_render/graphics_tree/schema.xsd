@@ -321,6 +321,7 @@
                 <xs:element ref="fillrect" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
+            <xs:attributeGroup ref="colorrep"/>
             <xs:attribute name="fillcolorind" type="xs:string"/>
             <xs:attribute name="linecolorind" type="xs:string"/>
         </xs:complexType>
@@ -428,7 +429,6 @@
     <xs:element name="fillrect">
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
-            <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="rect"/>
             <xs:attribute name="fillcolorind" type="xs:string"/>
             <xs:attribute name="fillintstyle" type="xs:string"/>
