@@ -65,7 +65,7 @@ ManageZIndex zIndexManager;
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {
     "axes",
-    "barplot_xtick",
+    "xticklabel_group",
     "colorbar",
     "coordinate_system",
     "errorbars",
@@ -810,16 +810,13 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
     {
       if (!(scale & GR_OPTION_X_LOG))
         {
-          if (kind == "barplot")
+          if (draw_axes_group->hasAttribute("xticklabels"))
             {
-              if (draw_axes_group->hasAttribute("xticklabels"))
-                {
-                  x_major = 0;
-                }
-              else
-                {
-                  x_major = 1;
-                }
+              x_major = 0;
+            }
+          else if (kind == "barplot")
+            {
+              x_major = 1;
             }
           else
             {
@@ -2698,7 +2695,7 @@ static void processXTickLabels(const std::shared_ptr<GRM::Element> &elem)
       /* clear old barplot xticks*/
       for (const auto &child : elem->children())
         {
-          if (child->localName() == "barplot_xtick") child->remove();
+          if (child->localName() == "xticklabel_group") child->remove();
         }
       std::shared_ptr<GRM::Context> context = render->getContext();
       std::string key = static_cast<std::string>(elem->getAttribute("xticklabels"));
@@ -2707,7 +2704,9 @@ static void processXTickLabels(const std::shared_ptr<GRM::Element> &elem)
       double x1, x2;
       double x_left = 0, x_right = 1, null;
       double available_width;
-      auto xtick_element = render->createElement("barplot_xtick");
+      auto xtick_element = render->createElement("xticklabel_group");
+      int offset = 1;
+      std::string kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
 
       elem->append(xtick_element);
 
@@ -2716,9 +2715,10 @@ static void processXTickLabels(const std::shared_ptr<GRM::Element> &elem)
       gr_wctondc(&x_right, &null);
       available_width = x_right - x_left;
       render->setTextAlign(xtick_element, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+      if (str_equals_any(kind.c_str(), 4, "barplot", "hist", "stem", "stairs")) offset = 0;
       for (int i = 1; i <= xticklabels.size(); i++)
         {
-          x1 = i;
+          x1 = i - offset;
           gr_wctondc(&x1, &x2);
           x2 = viewport[2] - 0.5 * charheight;
           draw_xticklabel(x1, x2, xticklabels[i - 1].c_str(), available_width, xtick_element, render);
@@ -10344,7 +10344,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
 
   /*! Modifier */
   if (str_equals_any(element->localName().c_str(), 7, "axes_text_group", "figure", "plot", "label", "labels_group",
-                     "root", "barplot_xtick"))
+                     "root", "xticklabel_group"))
     {
       bool old_state = automatic_update;
       automatic_update = false;

@@ -165,7 +165,7 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="axes" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="axes3d" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="barplot_xtick" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="xticklabel_group" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="grid" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="grid3d" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polar_axes" minOccurs="0" maxOccurs="unbounded"/>
@@ -231,8 +231,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of barplot_xtick -->
-    <xs:element name="barplot_xtick">
+    <!-- definition of xticklabel_group -->
+    <xs:element name="xticklabel_group">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>

@@ -3493,20 +3493,17 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           if (pass == 2) axes->setAttribute("z_index", 7);
           group->append(axes);
 
-          if (strcmp("barplot", kind) == 0)
-            {
-              /* xticklabels */
-              char **xticklabels = nullptr;
-              unsigned int xticklabels_length;
+          /* xticklabels */
+          char **xticklabels = nullptr;
+          unsigned int xticklabels_length;
 
-              if (grm_args_first_value(args, "xticklabels", "S", &xticklabels, &xticklabels_length))
-                {
-                  std::vector<std::string> xticklabels_vec(xticklabels, xticklabels + xticklabels_length);
-                  int id = static_cast<int>(global_root->getAttribute("_id"));
-                  std::string key = "xticklabels" + std::to_string(id);
-                  global_root->setAttribute("_id", ++id);
-                  global_render->setXTickLabels(group, key, xticklabels_vec);
-                }
+          if (grm_args_first_value(args, "xticklabels", "S", &xticklabels, &xticklabels_length))
+            {
+              std::vector<std::string> xticklabels_vec(xticklabels, xticklabels + xticklabels_length);
+              int id = static_cast<int>(global_root->getAttribute("_id"));
+              std::string key = "xticklabels" + std::to_string(id);
+              global_root->setAttribute("_id", ++id);
+              global_render->setXTickLabels(group, key, xticklabels_vec);
             }
         }
     }

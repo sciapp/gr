@@ -231,12 +231,13 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                   ticklabels.push_back(token);
                 }
 
-              const char *c_ticklabel[ticklabels.size()];
+              const int num = static_cast<const int>(ticklabels.size());
+              std::vector<const char *> c_ticklabel(num);
               for (int i = 0; i < ticklabels.size(); i++)
                 {
-                  c_ticklabel[i] = ticklabels[i].c_str();
+                  c_ticklabel[i] = (const char *)ticklabels[i].c_str();
                 }
-              grm_args_push(args, key.c_str(), "nS", ticklabels.size(), c_ticklabel);
+              grm_args_push(args, key.c_str(), "nS", ticklabels.size(), (const char *)c_ticklabel.data());
             }
           else if (str_equals_any(key.c_str(), 7, "location", "xlog", "ylog", "zlog", "xgrid", "ygrid", "zgrid"))
             {

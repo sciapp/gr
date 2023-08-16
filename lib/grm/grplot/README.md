@@ -29,7 +29,7 @@ For plots where multiple columns are read there is also a parameter that allows 
 
 There are more key-value parameters. These parameters only effect specific plot types. For example `bar_width` only makes sense, when bars are drawn. All possible parameters are:
 
-`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `c`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `grplot`, `isovalue`, `kind`, `levels`, `marginalheatmap_kind`, `markertype`, `nbins`, `normalization`, `orientation`, `phiflip`, `rotation`, `scatterz`, `spec`, `stairs`, `step_where`, `style`, `tilt`, `xbins`, `xcolormap`, `xflip`, `xform`, `xticklabels`, `ybins`, `ycolormap`, `yflip`, `ylabels`
+`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `c`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `grplot`, `isovalue`, `kind`, `levels`, `marginalheatmap_kind`, `markertype`, `nbins`, `normalization`, `orientation`, `phiflip`, `rotation`, `scatterz`, `spec`, `stairs`, `step_where`, `style`, `tilt`, `xbins`, `xcolormap`, `xflip`, `xform`, `ybins`, `ycolormap`, `yflip`, `ylabels`
 
 All parameters are separated by a blank. Some parameters are more complex than others. These parameters represent a container inside GRM.
 
@@ -95,6 +95,7 @@ Valid keys are:
 7. `philim`, `rlim`: defines which part of the specific polar axis should be displayed
 8. `xlim`, `ylim`, `zlim`: defines which part of the respective axis should be displayed
 9. `xrange`, `yrange`, `zrange`: defines the range of the values on the respective axis
+10. `xticklabels`: sets the custom labels for the x-axis ticks
 
 Values are seperated through commas (`,`), e.g. `3, 5`.
 
