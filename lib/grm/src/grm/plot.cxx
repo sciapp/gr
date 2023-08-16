@@ -317,6 +317,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "ylim",
                                     "ylog",
                                     "yind",
+                                    "yticklabels",
                                     "zflip",
                                     "zgrid",
                                     "zlabel",
@@ -3504,6 +3505,19 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
               std::string key = "xticklabels" + std::to_string(id);
               global_root->setAttribute("_id", ++id);
               global_render->setXTickLabels(group, key, xticklabels_vec);
+            }
+
+          /* yticklabels */
+          char **yticklabels = nullptr;
+          unsigned int yticklabels_length;
+
+          if (grm_args_first_value(args, "yticklabels", "S", &yticklabels, &yticklabels_length))
+            {
+              std::vector<std::string> yticklabels_vec(yticklabels, yticklabels + yticklabels_length);
+              int id = static_cast<int>(global_root->getAttribute("_id"));
+              std::string key = "yticklabels" + std::to_string(id);
+              global_root->setAttribute("_id", ++id);
+              global_render->setYTickLabels(group, key, yticklabels_vec);
             }
         }
     }

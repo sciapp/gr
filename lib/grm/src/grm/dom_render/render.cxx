@@ -67,7 +67,6 @@ ManageCustomColorIndex customColorIndexManager;
 //! This vector is used for storing element types which children get processed. Other types' children will be ignored
 static std::set<std::string> parentTypes = {
     "axes",
-    "xticklabel_group",
     "colorbar",
     "coordinate_system",
     "errorbars",
@@ -109,6 +108,8 @@ static std::set<std::string> parentTypes = {
     "series_trisurface",
     "series_volume",
     "series_wireframe",
+    "xticklabel_group",
+    "yticklabel_group",
 };
 
 static std::set<std::string> drawableTypes = {
@@ -897,7 +898,14 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
     {
       if (!(scale & GR_OPTION_Y_LOG))
         {
-          y_major = major_count;
+          if (draw_axes_group->hasAttribute("yticklabels"))
+            {
+              y_major = 0;
+            }
+          else
+            {
+              y_major = major_count;
+            }
         }
       else
         {
@@ -1049,12 +1057,12 @@ static void getAxes3dInformation(const std::shared_ptr<GRM::Element> &element, s
  * If a label or a part of it does not fit in the available space but doesnt have a space character to break it up
  * it will get drawn anyway.
  *
- * \param[in] x1 The X coordinate of starting position of the label.
- * \param[in] x2 The Y coordinate of starting position of the label.
+ * \param[in] x The X coordinate of starting position of the label.
+ * \param[in] y The Y coordinate of starting position of the label.
  * \param[in] label The label to be drawn.
  * \param[in] available_width The available space in X direction around the starting position.
  */
-void draw_xticklabel(double x1, double x2, const char *label, double available_width,
+void draw_xticklabel(double x, double y, const char *label, double available_width,
                      const std::shared_ptr<GRM::Element> &element, std::shared_ptr<GRM::Render> global_render)
 {
   char new_label[256];
@@ -1074,7 +1082,7 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
         {
           /* calculate width of the next part of the label to be drawn */
           new_label[i] = '\0';
-          gr_inqtext(x1, x2, new_label + cur_start, tbx, tby);
+          gr_inqtext(x, y, new_label + cur_start, tbx, tby);
           gr_wctondc(&tbx[0], &tby[0]);
           gr_wctondc(&tbx[1], &tby[1]);
           width = tbx[1] - tbx[0];
@@ -1089,7 +1097,7 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
               if (cur_num_breakpoints == 1)
                 {
                   new_label[i] = '\0';
-                  element->append(global_render->createText(x1, x2, new_label + cur_start));
+                  element->append(global_render->createText(x, y, new_label + cur_start));
 
                   cur_start = i + 1;
                   cur_num_breakpoints = 0;
@@ -1099,13 +1107,13 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
                 {
                   /* break label at last breakpoint that still allowed the text to fit */
                   new_label[breakpoint_positions[cur_num_breakpoints - 2]] = '\0';
-                  element->append(global_render->createText(x1, x2, new_label + cur_start));
+                  element->append(global_render->createText(x, y, new_label + cur_start));
 
                   cur_start = breakpoint_positions[cur_num_breakpoints - 2] + 1;
                   breakpoint_positions[0] = breakpoint_positions[cur_num_breakpoints - 1];
                   cur_num_breakpoints = 1;
                 }
-              x2 -= charheight * 1.5;
+              y -= charheight * 1.5;
             }
         }
       else
@@ -1118,7 +1126,85 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
   new_label[i] = '\0';
 
   /* draw the rest */
-  element->append(global_render->createText(x1, x2, std::string(new_label + cur_start)));
+  element->append(global_render->createText(x, y, std::string(new_label + cur_start)));
+}
+
+/*!
+ * Draw an yticklabel at the specified position while trying to stay in the available space.
+ * Every space character (' ') is seen as a possible position to break the label into the next line.
+ * The label will not break into the next line when enough space is available.
+ * If a label or a part of it does not fit in the available space but doesnt have a space character to break it up
+ * it will get drawn anyway.
+ *
+ * \param[in] x The X coordinate of starting position of the label.
+ * \param[in] y The Y coordinate of starting position of the label.
+ * \param[in] label The label to be drawn.
+ * \param[in] available_height The available space in Y direction around the starting position.
+ */
+void draw_yticklabel(double x, double y, const char *label, double available_height,
+                     const std::shared_ptr<GRM::Element> &element, std::shared_ptr<GRM::Render> global_render)
+{
+  char new_label[256];
+  int breakpoint_positions[128];
+  int cur_num_breakpoints = 0;
+  int i = 0;
+  int cur_start = 0;
+  double tbx[4], tby[4];
+  double height;
+  double charheight;
+
+  gr_inqcharheight(&charheight);
+
+  for (i = 0; i == 0 || label[i - 1] != '\0'; ++i)
+    {
+      if (label[i] == ' ' || label[i] == '\0')
+        {
+          /* calculate width of the next part of the label to be drawn */
+          new_label[i] = '\0';
+          gr_inqtext(x, y, new_label + cur_start, tbx, tby);
+          gr_wctondc(&tbx[0], &tby[0]);
+          gr_wctondc(&tbx[1], &tby[1]);
+          height = tby[1] - tby[0];
+          new_label[i] = ' ';
+
+          /* add possible breakpoint */
+          breakpoint_positions[cur_num_breakpoints++] = i;
+
+          if (height > available_height)
+            {
+              /* part is too big but doesn't have a breakpoint in it */
+              if (cur_num_breakpoints == 1)
+                {
+                  new_label[i] = '\0';
+                  element->append(global_render->createText(x, y, new_label + cur_start));
+
+                  cur_start = i + 1;
+                  cur_num_breakpoints = 0;
+                }
+              /* part is too big and has breakpoints in it */
+              else
+                {
+                  /* break label at last breakpoint that still allowed the text to fit */
+                  new_label[breakpoint_positions[cur_num_breakpoints - 2]] = '\0';
+                  element->append(global_render->createText(x, y, new_label + cur_start));
+
+                  cur_start = breakpoint_positions[cur_num_breakpoints - 2] + 1;
+                  breakpoint_positions[0] = breakpoint_positions[cur_num_breakpoints - 1];
+                  cur_num_breakpoints = 1;
+                }
+            }
+        }
+      else
+        {
+          new_label[i] = label[i];
+        }
+    }
+
+  /* 0-terminate the new label */
+  new_label[i] = '\0';
+
+  /* draw the rest */
+  element->append(global_render->createText(x, y, std::string(new_label + cur_start)));
 }
 
 static void legend_size(const std::shared_ptr<GRM::Element> &elem, double *w, double *h)
@@ -2674,7 +2760,7 @@ static void processXlabel(const std::shared_ptr<GRM::Element> &elem)
 
 static void processXTickLabels(const std::shared_ptr<GRM::Element> &elem)
 {
-  double viewport[4], vp[4], window[4], charheight;
+  double viewport[4], charheight;
   std::vector<std::string> xticklabels;
 
   auto subplot_element = getSubplotElement(elem);
@@ -2684,14 +2770,6 @@ static void processXTickLabels(const std::shared_ptr<GRM::Element> &elem)
   viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
   viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
   viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
-  vp[0] = (double)subplot_element->getAttribute("vp_xmin");
-  vp[1] = (double)subplot_element->getAttribute("vp_xmax");
-  vp[2] = (double)subplot_element->getAttribute("vp_ymin");
-  vp[3] = (double)subplot_element->getAttribute("vp_ymax");
-  window[0] = (double)subplot_element->getAttribute("window_xmin");
-  window[1] = (double)subplot_element->getAttribute("window_xmax");
-  window[2] = (double)subplot_element->getAttribute("window_ymin");
-  window[3] = (double)subplot_element->getAttribute("window_ymax");
 
   if (auto render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument()))
     {
@@ -2704,7 +2782,7 @@ static void processXTickLabels(const std::shared_ptr<GRM::Element> &elem)
       std::string key = static_cast<std::string>(elem->getAttribute("xticklabels"));
       xticklabels = GRM::get<std::vector<std::string>>((*context)[key]);
 
-      double x1, x2;
+      double x, y;
       double x_left = 0, x_right = 1, null;
       double available_width;
       auto xtick_element = render->createElement("xticklabel_group");
@@ -2721,10 +2799,57 @@ static void processXTickLabels(const std::shared_ptr<GRM::Element> &elem)
       if (str_equals_any(kind.c_str(), 4, "barplot", "hist", "stem", "stairs")) offset = 0;
       for (int i = 1; i <= xticklabels.size(); i++)
         {
-          x1 = i - offset;
-          gr_wctondc(&x1, &x2);
-          x2 = viewport[2] - 0.5 * charheight;
-          draw_xticklabel(x1, x2, xticklabels[i - 1].c_str(), available_width, xtick_element, render);
+          x = i - offset;
+          gr_wctondc(&x, &y);
+          y = viewport[2] - 0.5 * charheight;
+          draw_xticklabel(x, y, xticklabels[i - 1].c_str(), available_width, xtick_element, render);
+        }
+    }
+}
+
+static void processYTickLabels(const std::shared_ptr<GRM::Element> &elem)
+{
+  double viewport[4], charheight;
+  std::vector<std::string> yticklabels;
+
+  auto subplot_element = getSubplotElement(elem);
+
+  gr_inqcharheight(&charheight);
+  viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
+  viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
+  viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
+  viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
+
+  if (auto render = std::dynamic_pointer_cast<GRM::Render>(elem->ownerDocument()))
+    {
+      /* clear old barplot yticks*/
+      for (const auto &child : elem->children())
+        {
+          if (child->localName() == "yticklabel_group") child->remove();
+        }
+      std::shared_ptr<GRM::Context> context = render->getContext();
+      std::string key = static_cast<std::string>(elem->getAttribute("yticklabels"));
+      yticklabels = GRM::get<std::vector<std::string>>((*context)[key]);
+
+      double x, y;
+      double y_left = 0, y_right = 1, null;
+      double available_height;
+      auto ytick_element = render->createElement("yticklabel_group");
+
+      elem->append(ytick_element);
+
+      /* calculate width available for yticknotations */
+      gr_wctondc(&null, &y_left);
+      gr_wctondc(&null, &y_right);
+      available_height = y_right - y_left;
+      render->setTextAlign(ytick_element, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
+      for (int i = 1; i <= yticklabels.size(); i++)
+        {
+          y = i;
+          gr_wctondc(&x, &y);
+          y -= 0.55 * charheight;
+          x = viewport[0] - 1.5 * charheight; // correct would be charwidth here
+          draw_yticklabel(x, y, yticklabels[i - 1].c_str(), available_height, ytick_element, render);
         }
     }
 }
@@ -2834,6 +2959,7 @@ void GRM::Render::processAttributes(const std::shared_ptr<GRM::Element> &element
       {std::string("xlabel"), processXlabel},
       {std::string("xticklabels"), processXTickLabels},
       {std::string("ylabel"), processYlabel},
+      {std::string("yticklabels"), processYTickLabels},
       {std::string("z_index"), processZIndex},
   };
 
@@ -10343,8 +10469,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
       };
 
   /*! Modifier */
-  if (str_equals_any(element->localName().c_str(), 7, "axes_text_group", "figure", "plot", "label", "labels_group",
-                     "root", "xticklabel_group"))
+  if (str_equals_any(element->localName().c_str(), 8, "axes_text_group", "figure", "plot", "label", "labels_group",
+                     "root", "xticklabel_group", "yticklabel_group"))
     {
       bool old_state = automatic_update;
       automatic_update = false;
@@ -12563,7 +12689,7 @@ void GRM::Render::setSubplot(const std::shared_ptr<GRM::Element> &element, doubl
   element->setAttribute("plot_ymax", ymax);
 }
 
-void GRM::Render::setXTickLabels(std::shared_ptr<GRM::Element> group, const std::string &key,
+void GRM::Render::setXTickLabels(std::shared_ptr<GRM::Element> element, const std::string &key,
                                  std::optional<std::vector<std::string>> xticklabels,
                                  const std::shared_ptr<GRM::Context> &extContext)
 {
@@ -12581,7 +12707,28 @@ void GRM::Render::setXTickLabels(std::shared_ptr<GRM::Element> group, const std:
     {
       (*useContext)[key] = *xticklabels;
     }
-  group->setAttribute("xticklabels", key);
+  element->setAttribute("xticklabels", key);
+}
+
+void GRM::Render::setYTickLabels(std::shared_ptr<GRM::Element> element, const std::string &key,
+                                 std::optional<std::vector<std::string>> yticklabels,
+                                 const std::shared_ptr<GRM::Context> &extContext)
+{
+  /*!
+   * This function can be used to create a YTickLabel GRM::Element
+   *
+   * \param[in] key A string used for storing the yticklabels in GRM::Context
+   * \param[in] yticklabels A vector containing string values representing yticklabels
+   * \param[in] extContext A GRM::Context that is used for storing the vectors. By default it uses GRM::Render's
+   * GRM::Context object but an external GRM::Context can be used
+   */
+
+  std::shared_ptr<GRM::Context> useContext = (extContext == nullptr) ? context : extContext;
+  if (yticklabels != std::nullopt)
+    {
+      (*useContext)[key] = *yticklabels;
+    }
+  element->setAttribute("yticklabels", key);
 }
 
 void GRM::Render::setNextColor(const std::shared_ptr<GRM::Element> &element, const std::string &color_indices_key,

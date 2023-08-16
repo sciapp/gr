@@ -398,8 +398,12 @@ public:
 
   void setSubplot(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
-  void setXTickLabels(std::shared_ptr<GRM::Element> group, const std::string &key,
+  void setXTickLabels(std::shared_ptr<GRM::Element> element, const std::string &key,
                       std::optional<std::vector<std::string>> xticklabels,
+                      const std::shared_ptr<GRM::Context> &extContext = nullptr);
+
+  void setYTickLabels(std::shared_ptr<GRM::Element> element, const std::string &key,
+                      std::optional<std::vector<std::string>> yticklabels,
                       const std::shared_ptr<GRM::Context> &extContext = nullptr);
 
   void setOriginPosition(const std::shared_ptr<GRM::Element> &element, std::string x_org_pos, std::string y_org_pos);

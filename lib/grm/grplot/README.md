@@ -95,7 +95,7 @@ Valid keys are:
 7. `philim`, `rlim`: defines which part of the specific polar axis should be displayed
 8. `xlim`, `ylim`, `zlim`: defines which part of the respective axis should be displayed
 9. `xrange`, `yrange`, `zrange`: defines the range of the values on the respective axis
-10. `xticklabels`: sets the custom labels for the x-axis ticks
+10. `xticklabels`, `yticklabels`: sets the custom labels for the x-axis ticks
 
 Values are seperated through commas (`,`), e.g. `3, 5`.
 

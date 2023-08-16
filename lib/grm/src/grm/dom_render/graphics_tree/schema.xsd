@@ -165,12 +165,13 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="axes" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="axes3d" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="xticklabel_group" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="grid" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="grid3d" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polar_axes" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="titles3d" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="xticklabel_group" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="yticklabel_group" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="linecolorind" type="xs:string"/>
@@ -233,6 +234,18 @@
 
     <!-- definition of xticklabel_group -->
     <xs:element name="xticklabel_group">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="textalign_hrizontal" type="xs:string"/>
+            <xs:attribute name="textalign_vertical" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of yticklabel_group -->
+    <xs:element name="yticklabel_group">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>

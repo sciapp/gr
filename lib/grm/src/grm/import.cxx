@@ -222,7 +222,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
             {
               grm_args_push(args, key.c_str(), "s", value.c_str());
             }
-          else if (str_equals_any(key.c_str(), 1, "xticklabels"))
+          else if (str_equals_any(key.c_str(), 2, "xticklabels", "yticklabels"))
             {
               std::vector<std::string> ticklabels;
               std::stringstream sv(value);
