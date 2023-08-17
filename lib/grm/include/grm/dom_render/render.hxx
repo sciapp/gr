@@ -416,7 +416,7 @@ public:
 
   static void setAutoUpdate(bool update);
 
-  void setActiveFigure(std::shared_ptr<GRM::Element> element);
+  void setActiveFigure(const std::shared_ptr<GRM::Element> &element);
 
   /* ------------------------------- getter functions ----------------------------------------------------------------*/
 
