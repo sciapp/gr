@@ -4966,7 +4966,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &element, const st
       auto temp = render->createPolyline(x[0], x[1], y[0], y[1]);
       temp->setAttribute("name", "polar_axes");
       element->append(temp);
-      render->setLineColorInd(temp, 90 - i % 2 * 2);
+      render->setLineColorInd(temp, 88);
 
       x[0] *= 1.1;
       y[0] *= 1.1;
