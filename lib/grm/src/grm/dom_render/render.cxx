@@ -4950,15 +4950,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &element, const st
           auto temp = render->createDrawArc(-r, r, -r, r, 0, 360);
           temp->setAttribute("name", "polar_axes");
           element->append(temp);
-          // last ring should get the darker circle
-          if (i == n)
-            {
-              render->setLineColorInd(temp, 88);
-            }
-          else
-            {
-              render->setLineColorInd(temp, 90);
-            }
+          render->setLineColorInd(temp, 90);
         }
     }
 
