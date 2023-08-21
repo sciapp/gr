@@ -78,7 +78,7 @@ grplot --test <command-file> <data-file> <parameter>
 
 ## Data file
 
-These files contain the data that should be plotted. Besides the data these files can include parameters which modify the plot. The first lines define parameters just like the `title` and have the following pattern:
+These files contain the data that should be plotted. Besides the data these files can include parameters which modify the plot. Important to know is that the parameters which can stand in these files doesn't belong to a specific plot. They are atleast valid for all 2D or 3D plots for example. The first lines of teh datafile define parameters just like the `title` and have the following pattern:
 
 ```text
 # key : value
@@ -95,7 +95,7 @@ Valid keys are:
 7. `philim`, `rlim`: defines which part of the specific polar axis should be displayed
 8. `xlim`, `ylim`, `zlim`: defines which part of the respective axis should be displayed
 9. `xrange`, `yrange`, `zrange`: defines the range of the values on the respective axis
-10. `xticklabels`, `yticklabels`: sets the custom labels for the x-axis ticks
+10. `xticklabels`, `yticklabels`: sets the custom labels for the x-, y-axis ticks
 
 Values are seperated through commas (`,`), e.g. `3, 5`.
 
@@ -168,6 +168,7 @@ Possible parameters for the bar plot are:
     - `default`: All values are displayed with a separate bar.
     - `stacked`: The values are displayed with bars which are stacked over each other.
     - `lined`: The values are displayed with smaller bars next to each other.
+11. `ylabels`: This parameter allows the user to set labels to specific bars, which can for example display the value of the bar. The syntax of this parameter is `ylabels:{`label1`,`label2`,`...`}`.
 
 ### CONTOUR
 
