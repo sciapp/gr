@@ -175,14 +175,14 @@ static string_map_t *fmt_map = string_map_new_with_data(array_size(kind_to_fmt),
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::string getLocalName(const std::shared_ptr<GRM::Element> element)
+static std::string getLocalName(const std::shared_ptr<GRM::Element> &element)
 {
   std::string local_name = element->localName();
   if (starts_with(element->localName(), "series")) local_name = "series";
   return local_name;
 }
 
-static bool isDrawable(const std::shared_ptr<GRM::Element> element)
+static bool isDrawable(const std::shared_ptr<GRM::Element> &element)
 {
   auto local_name = getLocalName(element);
   if (drawableTypes.find(local_name) != drawableTypes.end())
@@ -200,7 +200,7 @@ static bool isDrawable(const std::shared_ptr<GRM::Element> element)
   return false;
 }
 
-int getVolumeAlgorithm(const std::shared_ptr<GRM::Element> element)
+int getVolumeAlgorithm(const std::shared_ptr<GRM::Element> &element)
 {
   int algorithm;
   std::string algorithm_str;
@@ -543,7 +543,7 @@ static void markerHelper(const std::shared_ptr<GRM::Element> &element, const std
       z_vec = *z_ptr;
     }
 
-  auto n = std::min(x_vec.size(), y_vec.size());
+  auto n = std::min<int>(x_vec.size(), y_vec.size());
 
   for (int i = 0; i < n; ++i)
     {
@@ -678,7 +678,7 @@ static void lineHelper(const std::shared_ptr<GRM::Element> &element, const std::
       z_vec = *z_ptr;
     }
 
-  int n = std::min(x_vec.size(), y_vec.size());
+  int n = std::min<int>(x_vec.size(), y_vec.size());
   for (int i = 0; i < n; ++i)
     {
       if (!type.empty())
@@ -2186,7 +2186,7 @@ static void processRelativeCharHeight(const std::shared_ptr<GRM::Element> &eleme
   double diag = std::sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
                           (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
 
-  charheight = std::max(diag * diagFactor, maxCharHeight);
+  charheight = std::max<double>(diag * diagFactor, maxCharHeight);
   gr_setcharheight(charheight);
 }
 
@@ -3893,9 +3893,9 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
     }
 
   // errorbar handling
-  for (const auto &element : element->children())
+  for (const auto &child : element->children())
     {
-      if (element->localName() == "errorbars")
+      if (child->localName() == "errorbars")
         {
           std::vector<double> bar_centers;
           bar_width = wfac / y_length;
@@ -3918,7 +3918,7 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
                 }
               bar_centers.push_back((x1 + x2) / 2.0);
             }
-          extendErrorbars(element, context, bar_centers, y_vec);
+          extendErrorbars(child, context, bar_centers, y_vec);
         }
     }
 }
@@ -5085,7 +5085,7 @@ static void fillArea(const std::shared_ptr<GRM::Element> &element, const std::sh
   std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x]);
   std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
 
-  int n = std::min(x_vec.size(), y_vec.size());
+  int n = std::min<int>(x_vec.size(), y_vec.size());
 
   gr_fillarea(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
 }
@@ -5481,7 +5481,7 @@ static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
   if (element->hasAttribute("_hexbin_context_address"))
     {
       auto address = static_cast<std::string>(element->getAttribute("_hexbin_context_address"));
-      long hex_address = stol(address, 0, 16);
+      long hex_address = stol(address, nullptr, 16);
       const hexbin_2pass_t *hexbinContext = (hexbin_2pass_t *)hex_address;
       bool cleanup = hexbinContext->action & GR_2PASS_CLEANUP;
       gr_hexbin_2pass(x_length, x_p, y_p, nbins, hexbinContext);
@@ -5496,7 +5496,7 @@ static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
     }
 }
 
-static void processHexbin(const std::shared_ptr<GRM::Element> element, const std::shared_ptr<GRM::Context> context)
+static void processHexbin(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   int nbins = PLOT_DEFAULT_HEXBIN_NBINS;
 
@@ -5892,7 +5892,7 @@ static void polyline(const std::shared_ptr<GRM::Element> &element, const std::sh
       std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x]);
       std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
 
-      int n = std::min(x_vec.size(), y_vec.size());
+      int n = std::min<int>(x_vec.size(), y_vec.size());
       auto group = element->parentElement();
       if ((element->hasAttribute("linetypes") || element->hasAttribute("linewidths") ||
            element->hasAttribute("linecolorinds")) ||
@@ -5969,7 +5969,7 @@ static void polymarker(const std::shared_ptr<GRM::Element> &element, const std::
       std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x]);
       std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y]);
 
-      int n = std::min(x_vec.size(), y_vec.size());
+      int n = std::min<int>(x_vec.size(), y_vec.size());
       auto group = element->parentElement();
       if ((element->hasAttribute("markertypes") || element->hasAttribute("markersizes") ||
            element->hasAttribute("markercolorinds")) ||
@@ -8357,7 +8357,7 @@ static void shade(const std::shared_ptr<GRM::Element> &element, const std::share
 
   x_p = &(x_vec[0]);
   y_p = &(y_vec[0]);
-  n = std::min(x_vec.size(), y_vec.size());
+  n = std::min<int>(x_vec.size(), y_vec.size());
 
   gr_shadepoints(n, x_p, y_p, xform, xbins, ybins);
 }
@@ -10198,7 +10198,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                   if (!series->hasAttribute("bins")) histBins(series, context);
                   auto bins_key = static_cast<std::string>(series->getAttribute("bins"));
                   bins = GRM::get<std::vector<double>>((*context)[bins_key]);
-                  int num_bins = size(bins);
+                  int num_bins = bins.size();
 
                   for (i = 0; i < num_bins; i++)
                     {
@@ -10340,7 +10340,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
     }
 }
 
-static void ProcessSeries(const std::shared_ptr<GRM::Element> element, const std::shared_ptr<GRM::Context> context)
+static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   static std::map<std::string,
                   std::function<void(const std::shared_ptr<GRM::Element>, const std::shared_ptr<GRM::Context>)>>
