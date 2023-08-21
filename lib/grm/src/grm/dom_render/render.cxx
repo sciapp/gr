@@ -2561,7 +2561,7 @@ static void processTitle(const std::shared_ptr<GRM::Element> &element)
 
   auto subplot_element = getSubplotElement(element);
   std::string name = (std::string)subplot_element->getAttribute("kind");
-  if (name != "polar_histogram" && name != "pie")
+  if (name != "pie")
     {
       viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
       viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
@@ -2593,7 +2593,7 @@ static void processTitle(const std::shared_ptr<GRM::Element> &element)
             }
         }
     }
-  else if (name == "pie")
+  else // pie
     {
       bool vp_found = false;
       std::shared_ptr<GRM::Render> render;
