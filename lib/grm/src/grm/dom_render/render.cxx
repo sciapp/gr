@@ -2561,71 +2561,33 @@ static void processTitle(const std::shared_ptr<GRM::Element> &element)
 
   auto subplot_element = getSubplotElement(element);
   std::string name = (std::string)subplot_element->getAttribute("kind");
-  if (name != "pie")
+  viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
+  viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
+  viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
+  viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
+  vp[0] = (double)subplot_element->getAttribute("vp_xmin");
+  vp[1] = (double)subplot_element->getAttribute("vp_xmax");
+  vp[2] = (double)subplot_element->getAttribute("vp_ymin");
+  vp[3] = (double)subplot_element->getAttribute("vp_ymax");
+
+  double x = 0.5 * (viewport[0] + viewport[1]);
+  double y = vp[3];
+  std::string title = static_cast<std::string>(element->getAttribute("title"));
+
+  if (title.empty()) return; // Empty title is pointless, no need to waste the space for nothing
+  if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()))
     {
-      viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
-      viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
-      viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
-      viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
-      vp[0] = (double)subplot_element->getAttribute("vp_xmin");
-      vp[1] = (double)subplot_element->getAttribute("vp_xmax");
-      vp[2] = (double)subplot_element->getAttribute("vp_ymin");
-      vp[3] = (double)subplot_element->getAttribute("vp_ymax");
-
-      double x = 0.5 * (viewport[0] + viewport[1]);
-      double y = vp[3];
-      std::string title = static_cast<std::string>(element->getAttribute("title"));
-
-      if (title.empty()) return; // Empty title is pointless, no need to waste the space for nothing
-      if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()))
+      auto title_elem = element->querySelectors("[name=\"title\"]");
+      if (title_elem)
         {
-          auto title_elem = element->querySelectors("[name=\"title\"]");
-          if (title_elem)
-            {
-              title_elem->setAttribute("text", title);
-            }
-          else
-            {
-              auto new_title_elem = render->createText(x, y, title);
-              new_title_elem->setAttribute("name", "title");
-              render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-              subplot_element->append(new_title_elem);
-            }
-        }
-    }
-  else // pie
-    {
-      bool vp_found = false;
-      std::shared_ptr<GRM::Render> render;
-      std::shared_ptr<GRM::Element> ancestor = element->parentElement();
-
-      gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
-
-      vp[0] = (double)subplot_element->getAttribute("vp_xmin");
-      vp[1] = (double)subplot_element->getAttribute("vp_xmax");
-      vp[2] = (double)subplot_element->getAttribute("vp_ymin");
-      vp[3] = (double)subplot_element->getAttribute("vp_ymax");
-
-      render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument());
-      if (!render)
-        {
-          throw NotFoundError("No render-document found for element.\n");
-        }
-
-      std::string title = static_cast<std::string>(element->getAttribute("title"));
-
-      auto old_title_elem = element->querySelectors("[name=\"title\"]");
-      if (old_title_elem)
-        {
-          old_title_elem->setAttribute("text", title);
+          title_elem->setAttribute("text", title);
         }
       else
         {
-          auto new_title_elem = render->createText(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
-          render->setTextColorInd(new_title_elem, 1);
-          render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          auto new_title_elem = render->createText(x, y, title);
           new_title_elem->setAttribute("name", "title");
-          element->appendChild(new_title_elem);
+          render->setTextAlign(new_title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          subplot_element->append(new_title_elem);
         }
     }
 }
@@ -9013,7 +8975,7 @@ static void pie(const std::shared_ptr<GRM::Element> &element, const std::shared_
   for (i = 0; i < x_length; ++i)
     {
       end_angle = start_angle - normalized_x[i] * 360.0;
-      auto temp = global_render->createFillArc(0.05, 0.95, 0.05, 0.95, start_angle, end_angle);
+      auto temp = global_render->createFillArc(0.035, 0.965, 0.07, 1.0, start_angle, end_angle);
       element->append(temp);
 
       color_index = set_next_color("", GR_COLOR_FILL, temp, context);
