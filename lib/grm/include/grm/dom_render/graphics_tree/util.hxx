@@ -16,8 +16,9 @@ class Node;
 struct EXPORT SerializerOptions
 {
   std::string indent;
+  bool show_hidden;
 };
-EXPORT std::string toXML(const std::shared_ptr<const Node> &node, const SerializerOptions &options = {});
+EXPORT std::string toXML(const std::shared_ptr<const Node> &node, const SerializerOptions &options = {"", false});
 
 EXPORT std::string tolower(std::string string);
 EXPORT std::string toupper(std::string string);

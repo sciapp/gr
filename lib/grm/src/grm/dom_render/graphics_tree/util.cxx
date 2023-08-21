@@ -36,7 +36,7 @@ static void elementToXML(std::stringstream &os, const std::shared_ptr<const GRM:
     }
   for (const auto &attribute_name : attribute_names)
     {
-      if (attribute_name != "name" && !starts_with(attribute_name, "_"))
+      if (attribute_name != "name" && (options.show_hidden || !starts_with(attribute_name, "_")))
         {
           os << " " << attribute_name << "=\"" << (std::string)element->getAttribute(attribute_name) << "\"";
         }

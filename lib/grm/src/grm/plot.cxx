@@ -4862,7 +4862,7 @@ int grm_plot(const grm_args_t *args)
             }
           else
             {
-              std::cout << "No grid elements\n";
+              logger((stderr, "No grid elements\n"));
               int plot_id = 0;
               while (*current_subplot_args != nullptr)
                 {
@@ -4900,7 +4900,6 @@ int grm_plot(const grm_args_t *args)
   if (logger_enabled())
     {
       grm_dump(global_root_args, stderr);
-      grm_dump_graphics_tree(stderr);
     }
   if (is_env_variable_enabled(ENABLE_XML_VALIDATION_ENV_KEY.c_str()) || logger_enabled())
     {

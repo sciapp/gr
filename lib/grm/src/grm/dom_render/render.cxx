@@ -10838,14 +10838,20 @@ void GRM::Render::render()
                       ? std::dynamic_pointer_cast<GRM::Render>(root->ownerDocument())
                       : GRM::Render::createRender();
   applyRootDefaults(root);
-  std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' ')}) << "\n";
+  if (logger_enabled())
+    {
+      std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '), true}) << "\n";
+    }
   if (static_cast<int>(root->getAttribute("clearws"))) gr_clearws();
   global_root->setAttribute("_modified", true);
   renderHelper(root, this->context);
   renderZQueue(this->context);
   global_root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
   if (static_cast<int>(root->getAttribute("updatews"))) gr_updatews();
-  std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' ')}) << "\n";
+  if (logger_enabled())
+    {
+      std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '), true}) << "\n";
+    }
 }
 
 void GRM::Render::finalize()
