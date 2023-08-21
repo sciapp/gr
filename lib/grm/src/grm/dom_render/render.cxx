@@ -7808,12 +7808,6 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
             }
         }
     }
-
-  // reset resamplemethod on last element in polarhistogram
-  if (!colormap.empty())
-    {
-      global_render->setResampleMethod(group->lastChildElement(), static_cast<int>(resample));
-    }
 }
 
 static void processScatter(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
