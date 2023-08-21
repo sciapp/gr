@@ -177,6 +177,7 @@ typedef struct
   int bcoli;
   int clip_tnr;
   int resize_behaviour;
+  double alpha;
 } state_list;
 
 typedef struct
@@ -11141,6 +11142,20 @@ void gr_settransparency(double alpha)
 }
 
 /*!
+ * Inquire the value of the alpha component associated with GR colors.
+ *
+ * \param[out] alpha A pointer to a double value which will hold the transparency value after the function call
+ */
+void gr_inqtransparency(double *alpha)
+{
+  int errind;
+
+  check_autoinit;
+
+  gks_inq_transparency(&errind, alpha);
+}
+
+/*!
  * Change the coordinate transformation according to the given matrix.
  *
  * \param[in] mat 2D transformation matrix
@@ -12128,6 +12143,7 @@ void gr_savestate(void)
       gks_inq_fill_int_style(&errind, &s->ints);
       gks_inq_fill_style_index(&errind, &s->styli);
       gks_inq_fill_color_index(&errind, &s->facoli);
+      gks_inq_transparency(&errind, &s->alpha);
 
       gks_inq_current_xformno(&errind, &s->tnr);
       gks_inq_xform(WC, &errind, s->wn, s->vp);
@@ -12173,6 +12189,7 @@ void gr_restorestate(void)
       gks_set_fill_int_style(s->ints);
       gks_set_fill_style_index(s->styli);
       gks_set_fill_color_index(s->facoli);
+      gks_set_transparency(s->alpha);
 
       gks_select_xform(s->tnr);
       gks_set_window(WC, s->wn[0], s->wn[1], s->wn[2], s->wn[3]);
@@ -12293,6 +12310,7 @@ void gr_selectcontext(int context)
           ctx->ints = GKS_K_INTSTYLE_HOLLOW;
           ctx->styli = 1;
           ctx->facoli = 1;
+          ctx->alpha = 1.0;
 
           ctx->tnr = WC;
           ctx->wn[0] = ctx->wn[2] = 0;
@@ -12329,6 +12347,7 @@ void gr_selectcontext(int context)
       gks_set_fill_int_style(ctx->ints);
       gks_set_fill_style_index(ctx->styli);
       gks_set_fill_color_index(ctx->facoli);
+      gks_set_transparency(ctx->alpha);
 
       gks_select_xform(ctx->tnr);
       gks_set_window(WC, ctx->wn[0], ctx->wn[1], ctx->wn[2], ctx->wn[3]);
@@ -12407,6 +12426,7 @@ void gr_savecontext(int context)
       gks_inq_fill_int_style(&errind, &app_context->buf[id]->ints);
       gks_inq_fill_style_index(&errind, &app_context->buf[id]->styli);
       gks_inq_fill_color_index(&errind, &app_context->buf[id]->facoli);
+      gks_inq_transparency(&errind, &app_context->buf[id]->alpha);
 
       gks_inq_current_xformno(&errind, &app_context->buf[id]->tnr);
       gks_inq_xform(WC, &errind, app_context->buf[id]->wn, app_context->buf[id]->vp);
@@ -12479,6 +12499,7 @@ void gr_destroycontext(int context)
       gks_inq_fill_int_style(&errind, &app_context->buf[id]->ints);
       gks_inq_fill_style_index(&errind, &app_context->buf[id]->styli);
       gks_inq_fill_color_index(&errind, &app_context->buf[id]->facoli);
+      gks_inq_transparency(&errind, &app_context->buf[id]->alpha);
 
       gks_inq_current_xformno(&errind, &app_context->buf[id]->tnr);
       gks_inq_xform(WC, &errind, app_context->buf[id]->wn, app_context->buf[id]->vp);

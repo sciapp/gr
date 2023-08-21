@@ -2936,6 +2936,12 @@ void gks_inq_fill_color_index(int *errind, int *coli)
     *coli = s->facoli;
 }
 
+void gks_inq_transparency(int *errind, double *alpha)
+{
+  *errind = GKS_K_NO_ERROR;
+  *alpha = s->alpha;
+}
+
 void gks_inq_open_segn(int *errind, int *segn)
 {
   if (state == GKS_K_SGOP)

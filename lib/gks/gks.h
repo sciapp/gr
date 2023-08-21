@@ -649,6 +649,7 @@ DLLEXPORT void gks_inq_text_align(int *errind, int *txalh, int *txalv);
 DLLEXPORT void gks_inq_fill_int_style(int *errind, int *ints);
 DLLEXPORT void gks_inq_fill_style_index(int *errind, int *styli);
 DLLEXPORT void gks_inq_fill_color_index(int *errind, int *coli);
+DLLEXPORT void gks_inq_transparency(int *errind, double *alpha);
 DLLEXPORT void gks_inq_open_segn(int *errind, int *segn);
 DLLEXPORT void gks_inq_current_xformno(int *errind, int *tnr);
 DLLEXPORT void gks_inq_xform(int tnr, int *errind, double *wn, double *vp);

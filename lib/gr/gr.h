@@ -215,6 +215,7 @@ DLLEXPORT void gr_drawimage(double, double, double, double, int, int, int *, int
 DLLEXPORT int gr_importgraphics(char *);
 DLLEXPORT void gr_setshadow(double, double, double);
 DLLEXPORT void gr_settransparency(double);
+DLLEXPORT void gr_inqtransparency(double *);
 DLLEXPORT void gr_setcoordxform(double[3][2]);
 DLLEXPORT void gr_begingraphics(char *);
 DLLEXPORT void gr_endgraphics(void);
