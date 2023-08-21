@@ -150,7 +150,6 @@ err_t plot_draw_errorbars(grm_args_t *series_args, unsigned int x_length);
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-const char *next_fmt_key(const char *fmt) UNUSED;
 const char *get_compatible_format(const char *key, const char *given_format);
 int get_id_from_args(const grm_args_t *args, int *plot_id, int *subplot_id, int *series_id);
 grm_args_t *get_subplot_from_ndc_point(double x, double y);
@@ -173,6 +172,7 @@ extern "C" {
 #ifndef NO_LIBXML2
 err_t validate_graphics_tree_xml(void);
 #endif
+int validate_graphics_tree_with_error_messages(void);
 
 #ifdef __cplusplus
 }

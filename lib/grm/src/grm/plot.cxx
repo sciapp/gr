@@ -4201,7 +4201,38 @@ cleanup:
 
   return error;
 }
+
 #endif
+
+int validate_graphics_tree_with_error_messages(void)
+{
+#ifndef NO_LIBXML2
+  err_t validation_error = validate_graphics_tree();
+  if (validation_error == ERROR_NONE)
+    {
+      fprintf(stderr, "The internal graphics tree passed the validity check.\n");
+    }
+  else if (validation_error == ERROR_PARSE_XML_NO_SCHEMA_FILE)
+    {
+      fprintf(stderr, "No schema found, XML validation not possible!\n");
+    }
+  else if (validation_error == ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION)
+    {
+      fprintf(stderr, "Schema validation failed!\n");
+      return 0;
+    }
+  else
+    {
+      fprintf(stderr, "XML validation failed with error \"%d\" (\"%s\")!\n", validation_error,
+              error_names[validation_error]);
+      return 0;
+    }
+#else
+  fprintf(stderr, "No libxml2 support compiled in, no validation possible!\n");
+#endif
+  return 1;
+}
+
 
 /* ========================= methods ================================================================================ */
 
@@ -4901,30 +4932,7 @@ int grm_plot(const grm_args_t *args)
     }
   if (is_env_variable_enabled(ENABLE_XML_VALIDATION_ENV_KEY.c_str()) || logger_enabled())
     {
-#ifndef NO_LIBXML2
-      err_t validation_error = validate_graphics_tree();
-      if (validation_error == ERROR_NONE)
-        {
-          fprintf(stderr, "The internal graphics tree passed the validity check.\n");
-        }
-      else if (validation_error == ERROR_PARSE_XML_NO_SCHEMA_FILE)
-        {
-          fprintf(stderr, "No schema found, XML validation not possible!\n");
-        }
-      else if (validation_error == ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION)
-        {
-          fprintf(stderr, "Schema validation failed!\n");
-          return 0;
-        }
-      else
-        {
-          fprintf(stderr, "XML validation failed with error \"%d\" (\"%s\")!\n", validation_error,
-                  error_names[validation_error]);
-          return 0;
-        }
-#else
-      fprintf(stderr, "No libxml2 support compiled in, no validation possible!\n");
-#endif
+      return validate_graphics_tree_with_error_messages();
     }
 
 #endif
@@ -4932,9 +4940,16 @@ int grm_plot(const grm_args_t *args)
   return 1;
 }
 
-void grm_render(void)
+int grm_render(void)
 {
   global_render->render();
+#ifndef NDEBUG
+  if (is_env_variable_enabled(ENABLE_XML_VALIDATION_ENV_KEY.c_str()) || logger_enabled())
+    {
+      return validate_graphics_tree_with_error_messages();
+    }
+#endif
+  return 1;
 }
 
 int grm_export(const char *file_path)
