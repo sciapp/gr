@@ -2112,13 +2112,6 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
     {
       logger((stderr, "Storing window (%lf, %lf, %lf, %lf)\n", xmin, xmax, ymin, ymax));
       // todo: grplot zoom etc. dont set -1 1 -1 1 window here --> use _xlim _ylim like in plot.cxx
-      if (str_equals_any(kind.c_str(), 4, "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
-        {
-          xmin = -1.0;
-          xmax = 1.0;
-          ymin = -1.0;
-          ymax = 1.0;
-        }
       global_render->setWindow(element, xmin, xmax, ymin, ymax);
     }
   processScale(element);
@@ -2606,7 +2599,14 @@ void GRM::Render::processWindow(const std::shared_ptr<GRM::Element> &element)
   double ymin = static_cast<double>(element->getAttribute("window_ymin"));
   double ymax = static_cast<double>(element->getAttribute("window_ymax"));
 
-  gr_setwindow(xmin, xmax, ymin, ymax);
+  if (str_equals_any(kind.c_str(), 4, "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
+    {
+      gr_setwindow(-1, 1, -1, 1);
+    }
+  else
+    {
+      gr_setwindow(xmin, xmax, ymin, ymax);
+    }
   if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume", "isosurface"))
     {
       double zmin = static_cast<double>(element->getAttribute("window_zmin"));
@@ -6274,13 +6274,13 @@ static void polarHeatmap(const std::shared_ptr<GRM::Element> &element, const std
       y_max = static_cast<double>(element->parentElement()->getAttribute("window_ymax"));
 
       std::vector<double> rho, phi;
-      for (i = 0; i <= ((cols > rows) ? cols : rows); ++i)
+      for (i = 0; i < ((cols > rows) ? cols : rows); ++i)
         {
-          if (i <= cols)
+          if (i < cols)
             {
               phi.push_back(x_vec[i] * 180 / M_PI);
             }
-          if (i <= rows)
+          if (i < rows)
             {
               rho.push_back(y_min + y_vec[i] / (y_max - y_min));
             }
@@ -10386,10 +10386,10 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("isosurface_render"), PushDrawableToZQueue(isosurfaceRender)},
           {std::string("layout_grid"), PushDrawableToZQueue(layoutGrid)},
           {std::string("layout_gridelement"), PushDrawableToZQueue(layoutGridElement)},
-          {std::string("nonuniform_polarcellarray"), nonUniformPolarCellArray},
+          {std::string("nonuniform_polarcellarray"), PushDrawableToZQueue(nonUniformPolarCellArray)},
           {std::string("nonuniformcellarray"), PushDrawableToZQueue(nonuniformcellarray)},
           {std::string("panzoom"), PushDrawableToZQueue(panzoom)},
-          {std::string("polarcellarray"), polarCellArray},
+          {std::string("polarcellarray"), PushDrawableToZQueue(polarCellArray)},
           {std::string("polyline"), PushDrawableToZQueue(polyline)},
           {std::string("polyline3d"), PushDrawableToZQueue(polyline3d)},
           {std::string("polymarker"), PushDrawableToZQueue(polymarker)},
