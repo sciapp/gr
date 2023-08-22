@@ -6202,11 +6202,6 @@ static void polarHeatmap(const std::shared_ptr<GRM::Element> &element, const std
       c_max = log(c_max);
     }
 
-  if (!is_uniform_heatmap)
-    {
-      --cols;
-      --rows;
-    }
   for (i = 0; i < 256; i++)
     {
       gr_inqcolor(1000 + i, icmap + i);
