@@ -19,6 +19,7 @@
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="plot" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="drawgraphics" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attribute name="active" type="xs:string"/>
             <xs:attribute name="figsize_x" type="xs:string"/>
@@ -30,15 +31,23 @@
             <xs:attribute name="size_y" type="xs:string"/>
             <xs:attribute name="size_y_type" type="xs:string"/>
             <xs:attribute name="size_y_unit" type="xs:string"/>
-            <xs:attribute name="textencoding" type="xs:string" use="required"/>
-            <xs:attribute name="wsviewport_xmax" type="xs:string" use="required"/>
-            <xs:attribute name="wsviewport_xmin" type="xs:string" use="required"/>
-            <xs:attribute name="wsviewport_ymax" type="xs:string" use="required"/>
-            <xs:attribute name="wsviewport_ymin" type="xs:string" use="required"/>
-            <xs:attribute name="wswindow_xmax" type="xs:string" use="required"/>
-            <xs:attribute name="wswindow_xmin" type="xs:string" use="required"/>
-            <xs:attribute name="wswindow_ymax" type="xs:string" use="required"/>
-            <xs:attribute name="wswindow_ymin" type="xs:string" use="required"/>
+            <xs:attribute name="textencoding" type="xs:string"/>
+            <xs:attribute name="wsviewport_xmax" type="xs:string"/>
+            <xs:attribute name="wsviewport_xmin" type="xs:string"/>
+            <xs:attribute name="wsviewport_ymax" type="xs:string"/>
+            <xs:attribute name="wsviewport_ymin" type="xs:string"/>
+            <xs:attribute name="wswindow_xmax" type="xs:string"/>
+            <xs:attribute name="wswindow_xmin" type="xs:string"/>
+            <xs:attribute name="wswindow_ymax" type="xs:string"/>
+            <xs:attribute name="wswindow_ymin" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of drawgraphics -->
+    <xs:element name="drawgraphics">
+        <xs:complexType>
+            <xs:attribute name="data" type="xs:string" use="required"/>
+            <xs:attribute name="name" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -105,6 +114,7 @@
             <xs:attribute name="lim_zmin" type="xs:string"/>
             <xs:attribute name="linespec" type="xs:string"/>
             <xs:attribute name="location" type="xs:string"/>
+            <xs:attribute name="max_y_length" type="xs:string"/>
             <xs:attribute name="phiflip" type="xs:string"/>
             <xs:attribute name="philim_max" type="xs:string"/>
             <xs:attribute name="philim_min" type="xs:string"/>
@@ -176,6 +186,8 @@
             <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="linecolorind" type="xs:string"/>
             <xs:attribute name="linewidth" type="xs:string"/>
+            <xs:attribute name="xticklabels" type="xs:string"/>
+            <xs:attribute name="yticklabels" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -216,6 +228,7 @@
             <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="linecolorind" type="xs:string"/>
             <xs:attribute name="name" type="xs:string"/>
+            <xs:attribute name="z_index" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -239,7 +252,7 @@
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
-            <xs:attribute name="textalign_hrizontal" type="xs:string"/>
+            <xs:attribute name="textalign_horizontal" type="xs:string"/>
             <xs:attribute name="textalign_vertical" type="xs:string"/>
         </xs:complexType>
     </xs:element>
@@ -263,6 +276,7 @@
             <xs:attribute name="charup_x" type="xs:string"/>
             <xs:attribute name="charup_y" type="xs:string"/>
             <xs:attribute name="color_index" type="xs:string"/>
+            <xs:attribute name="height" type="xs:string"/>
             <xs:attribute name="linecolorind" type="xs:string"/>
             <xs:attribute name="linewidth" type="xs:string"/>
             <xs:attribute name="name" type="xs:string"/>
@@ -272,6 +286,7 @@
             <xs:attribute name="textalign_horizontal" type="xs:string"/>
             <xs:attribute name="textalign_vertical" type="xs:string"/>
             <xs:attribute name="textcolorind" type="xs:string"/>
+            <xs:attribute name="width" type="xs:string"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string"/>
         </xs:complexType>
@@ -311,6 +326,7 @@
             <xs:attribute name="scale" type="xs:string"/>
             <xs:attribute name="selntran" type="xs:string"/>
             <xs:attribute name="specs" type="xs:string"/>
+            <xs:attribute name="z_index" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -394,6 +410,7 @@
             <xs:attribute name="upwardscap_color" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="z_index" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -426,6 +443,7 @@
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="polymarker"/>
             <xs:attribute name="name" type="xs:string"/>
+            <xs:attribute name="z_index" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -442,6 +460,7 @@
     <xs:element name="fillrect">
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="rect"/>
             <xs:attribute name="fillcolorind" type="xs:string"/>
             <xs:attribute name="fillintstyle" type="xs:string"/>
@@ -452,6 +471,7 @@
     <xs:element name="drawrect">
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="rect"/>
             <xs:attribute name="linecolorind" type="xs:string"/>
             <xs:attribute name="linetype" type="xs:string"/>
@@ -558,6 +578,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="arc"/>
             <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="colorrep"/>
             <xs:attribute name="linecolorind" type="xs:string"/>
         </xs:complexType>
     </xs:element>
@@ -577,6 +598,7 @@
     <xs:element name="fillarea">
         <xs:complexType>
             <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="colorrep"/>
             <xs:attribute name="fillcolorind" type="xs:string"/>
             <xs:attribute name="fillintstyle" type="xs:string"/>
             <xs:attribute name="fillstyle" type="xs:string"/>
@@ -594,15 +616,22 @@
                 <xs:element ref="errorbars" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="drawrect" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="fillrect" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="bar_color" type="xs:string"/>
+            <xs:attribute name="bar_color_rgb" type="xs:string"/>
             <xs:attribute name="bar_width" type="xs:string"/>
             <xs:attribute name="c" type="xs:string"/>
+            <xs:attribute name="c_rgb" type="xs:string"/>
             <xs:attribute name="clipxform" type="xs:string"/>
             <xs:attribute name="edge_color" type="xs:string"/>
+            <xs:attribute name="edge_color_rgb" type="xs:string"/>
+            <xs:attribute name="edge_width" type="xs:string"/>
             <xs:attribute name="fillcolorind" type="xs:string"/>
+            <xs:attribute name="fillintstyle" type="xs:string"/>
             <xs:attribute name="ind_bar_color" type="xs:string"/>
             <xs:attribute name="ind_edge_color" type="xs:string"/>
             <xs:attribute name="ind_edge_width" type="xs:string"/>
@@ -613,6 +642,7 @@
             <xs:attribute name="linewidth" type="xs:string"/>
             <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="rgb" type="xs:string"/>
+            <xs:attribute name="series_index" type="xs:string"/>
             <xs:attribute name="style" type="xs:string"/>
             <xs:attribute name="textalign_horizontal" type="xs:string"/>
             <xs:attribute name="textalign_vertical" type="xs:string"/>
@@ -671,6 +701,7 @@
                 <xs:element ref="fillrect" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="bar_color_index" type="xs:string"/>
             <xs:attribute name="bar_color_rgb" type="xs:string"/>
@@ -679,6 +710,7 @@
             <xs:attribute name="edge_color_index" type="xs:string"/>
             <xs:attribute name="edge_color_rgb" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="nbins" type="xs:string"/>
             <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="weights" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>

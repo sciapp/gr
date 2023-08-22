@@ -1895,7 +1895,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
 
       auto subGroup = global_render->createSeries("barplot");
       group->append(subGroup);
-      int id = static_cast<int>(global_root->getAttribute("id"));
+      int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string id_str = std::to_string(id);
 
       if (grm_args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]))
@@ -2107,7 +2107,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
 
       ++series_index;
       ++current_series;
-      global_root->setAttribute("id", ++id);
+      global_root->setAttribute("_id", ++id);
     }
 
 cleanup:
