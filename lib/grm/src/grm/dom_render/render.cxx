@@ -10424,7 +10424,15 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
                                 "titles3d", "series_stem", "coordinate_system") ||
                  !element->hasChildNodes())) ||
                (automatic_update && element->hasAttribute("_update_required") &&
-                static_cast<int>(element->getAttribute("_update_required")))))
+                static_cast<int>(element->getAttribute("_update_required")))) ||
+          ((!str_equals_any(element->localName().c_str(), 26, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
+                            "drawimage", "drawrect", "fillarc", "fillarea", "fillrect", "grid", "grid3d", "legend",
+                            "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
+                            "polyline3d", "polymarker", "polymarker3d", "series_contour", "series_contourf", "text",
+                            "titles3d", "series_stem", "coordinate_system") ||
+            !element->hasChildNodes()) &&
+           (automatic_update && element->hasAttribute("_update_required") &&
+            static_cast<int>(element->getAttribute("_update_required")))))
         {
           // elements without children are the draw-functions which need to be processed everytime, else there could
           // be problems with overlapping elements stem is in that list for the yline which is used inside of stem
