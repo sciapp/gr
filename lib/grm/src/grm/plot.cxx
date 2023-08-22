@@ -3385,7 +3385,7 @@ err_t plot_raw(grm_args_t *plot_args)
 
   global_root->setAttribute("clearws", 1);
   data_vec = std::vector<int>(graphics_data, graphics_data + strlen(graphics_data));
-  global_root->append(global_render->createDrawGraphics("graphics", data_vec));
+  active_figure->append(global_render->createDrawGraphics("graphics", data_vec));
   global_root->setAttribute("updatews", 1);
 
 cleanup:
