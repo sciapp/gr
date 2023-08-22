@@ -230,6 +230,48 @@ ubuntu-cmake-self-contained-rebuild-images-c:
   - git commit -m "Rebuilt c images in build job $CI_JOB_ID"
   - 'git push -o merge_request.description="Job initiator: @$GITLAB_USER_LOGIN" -o merge_request.label="auto-create" -o merge_request.label="reference-files-update" -o merge_request.remove_source_branch -o merge_request.create origin update-files/job-$CI_JOB_ID'
 
+ubuntu-cmake-self-contained-rebuild-images-cpp:
+  stage: test
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/cpp-testing:latest
+  rules:
+    - if: '$CI_MERGE_REQUEST_ID'
+      when: never
+    - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+      when: on_success
+    - if: '$GR_REBUILD_REFERENCE'
+      when: on_success
+  needs:
+    - ubuntu-cmake-self-contained-debug
+  script:
+    - apt-get update && apt-get install -y python3-venv
+    - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+
+    - mkdir -p ~/.ssh
+    - cat $SSH_KEY | base64 -d > ~/.ssh/id_rsa
+    - mv $SSH_KNOWN_HOSTS ~/.ssh/known_hosts
+    - chmod 600 ~/.ssh/id_rsa
+    - python3 -m venv env && source env/bin/activate
+    - git clone gitlab@iffgit.fz-juelich.de:scientific-it-systems/gr-test.git
+    - pip install -e gr-test/
+    - cd gr-test
+    - git checkout -b update-files/job-$CI_JOB_ID
+
+    - if [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+      export GR_REBUILD_REFERENCE=`echo $CI_COMMIT_MESSAGE | sed 's/.*RebuildReferenceImages(\([][ ?*_a-zA-Z0-9-]*\)).*/\1/'` ;
+      fi
+
+    - if [[ $GR_REBUILD_REFERENCE == "all" ]] || [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+      gr_test --create=REFERENCE cpp ;
+      else
+      gr_test --create=REFERENCE --filter ${GR_REBUILD_REFERENCE} -- cpp ;
+      fi
+    - git config user.name "GR-Test Reference Bot"
+    - git config user.email "$GITLAB_USER_EMAIL"
+    - git status
+    - git add -A gr_test/cpp_data/
+    - git commit -m "Rebuilt cpp images in build job $CI_JOB_ID"
+    - 'git push -o merge_request.description="Job initiator: @$GITLAB_USER_LOGIN" -o merge_request.label="auto-create" -o merge_request.label="reference-files-update" -o merge_request.remove_source_branch -o merge_request.create origin update-files/job-$CI_JOB_ID'
+
 ubuntu-cmake-self-contained-rebuild-images-grplot:
   stage: test
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/grplot-testing:latest
