@@ -154,6 +154,7 @@ static std::map<std::string, double> symbol_to_meters_per_unit{
 
 static int bounding_id = 0;
 static bool automatic_update = false;
+static bool redrawws = false;
 static std::map<int, std::shared_ptr<GRM::Element>> bounding_map;
 
 static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},           {"hexbin", "xys"},
@@ -10414,15 +10415,16 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
     {
       // TODO: something like contour shouldnt be in this list
       if (!automatic_update ||
-          (static_cast<int>(global_root->getAttribute("_modified")) &&
-           (str_equals_any(element->localName().c_str(), 26, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
-                           "drawimage", "drawrect", "fillarc", "fillarea", "fillrect", "grid", "grid3d", "legend",
-                           "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
-                           "polyline3d", "polymarker", "polymarker3d", "series_contour", "series_contourf", "text",
-                           "titles3d", "series_stem", "coordinate_system") ||
-            !element->hasChildNodes())) ||
-          (automatic_update && element->hasAttribute("_update_required") &&
-           static_cast<int>(element->getAttribute("_update_required"))))
+          redrawws &&
+              ((static_cast<int>(global_root->getAttribute("_modified")) &&
+                (str_equals_any(element->localName().c_str(), 26, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
+                                "drawimage", "drawrect", "fillarc", "fillarea", "fillrect", "grid", "grid3d", "legend",
+                                "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
+                                "polyline3d", "polymarker", "polymarker3d", "series_contour", "series_contourf", "text",
+                                "titles3d", "series_stem", "coordinate_system") ||
+                 !element->hasChildNodes())) ||
+               (automatic_update && element->hasAttribute("_update_required") &&
+                static_cast<int>(element->getAttribute("_update_required")))))
         {
           // elements without children are the draw-functions which need to be processed everytime, else there could
           // be problems with overlapping elements stem is in that list for the yline which is used inside of stem
@@ -10783,6 +10785,7 @@ void GRM::Render::render()
   active_figure = this->firstChildElement()->querySelectorsAll("[active=1]")[0];
   const unsigned int indent = 2;
 
+  redrawws = true;
   bounding_id = 0;
   global_render = (std::dynamic_pointer_cast<GRM::Render>(root->ownerDocument()))
                       ? std::dynamic_pointer_cast<GRM::Render>(root->ownerDocument())
@@ -10798,10 +10801,12 @@ void GRM::Render::render()
   renderZQueue(this->context);
   global_root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
   if (static_cast<int>(root->getAttribute("updatews"))) gr_updatews();
+  if (static_cast<int>(root->getAttribute("clearws"))) gr_clearws();
   if (logger_enabled())
     {
       std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '), true}) << "\n";
     }
+  redrawws = false;
 }
 
 void GRM::Render::finalize()

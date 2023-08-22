@@ -315,6 +315,7 @@
                 <xs:element ref="fillrect" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="labels_group" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attribute name="color_indices" type="xs:string"/>
