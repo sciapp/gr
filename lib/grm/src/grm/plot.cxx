@@ -4721,7 +4721,7 @@ int grm_plot(const grm_args_t *args)
               figure_id_given = true;
             }
           /* check if given figure_id (even default 0) already exists in the render */
-          auto figure_element = global_root->querySelectors("[id=figure" + std::to_string(figure_id) + "]");
+          auto figure_element = global_root->querySelectors("[figure_id=figure" + std::to_string(figure_id) + "]");
 
           if (append_figures && !figure_id_given)
             {
@@ -4734,7 +4734,7 @@ int grm_plot(const grm_args_t *args)
 
               /* also set a not given figure_id for identification */
               figure_id = get_free_id_from_figure_elements();
-              active_figure->setAttribute("id", "figure" + std::to_string(figure_id));
+              active_figure->setAttribute("figure_id", "figure" + std::to_string(figure_id));
             }
           else if (figure_id_given)
             {
@@ -4751,7 +4751,7 @@ int grm_plot(const grm_args_t *args)
                       figure_element->remove();
                       active_figure = global_render->createElement("figure");
                       global_root->append(active_figure);
-                      active_figure->setAttribute("id", "figure" + std::to_string(figure_id));
+                      active_figure->setAttribute("figure_id", "figure" + std::to_string(figure_id));
                     }
                 }
               else
@@ -4761,7 +4761,7 @@ int grm_plot(const grm_args_t *args)
                    * without grm_switch it will not be rendered */
                   active_figure = global_render->createElement("figure");
                   global_root->append(active_figure);
-                  active_figure->setAttribute("id", "figure" + std::to_string(figure_id));
+                  active_figure->setAttribute("figure_id", "figure" + std::to_string(figure_id));
                 }
             }
           else
@@ -4778,14 +4778,14 @@ int grm_plot(const grm_args_t *args)
                       global_root->removeChild(figure_element);
                       active_figure = global_render->createElement("figure");
                       global_root->append(active_figure);
-                      active_figure->setAttribute("id", "figure" + std::to_string(figure_id));
+                      active_figure->setAttribute("figure_id", "figure" + std::to_string(figure_id));
                     }
                 }
               else
                 {
                   active_figure = global_render->createElement("figure");
                   global_root->append(active_figure);
-                  active_figure->setAttribute("id", "figure" + std::to_string(figure_id));
+                  active_figure->setAttribute("figure_id", "figure" + std::to_string(figure_id));
                 }
               /* this case should always set active figure? */
               global_render->setActiveFigure(active_figure);
@@ -4899,7 +4899,7 @@ int grm_plot(const grm_args_t *args)
                   if (grm_args_values(*current_subplot_args, "series", "A", &series))
                     {
                       auto group = global_render->createElement("plot");
-                      group->setAttribute("id", "plot" + std::to_string(plot_id));
+                      group->setAttribute("plot_id", "plot" + std::to_string(plot_id));
                       group->setAttribute("plotGroup", true);
                       active_figure->append(group);
                       currentDomElement = group;
@@ -4965,7 +4965,7 @@ int grm_switch(unsigned int id)
   grm_args_t **args_array = nullptr;
   unsigned int args_array_length = 0;
 
-  auto figure_element = global_root->querySelectors("[id=figure" + std::to_string(id) + "]");
+  auto figure_element = global_root->querySelectors("[figure_id=figure" + std::to_string(id) + "]");
   if (figure_element == nullptr || !hold_figures)
     {
       /* it is a new figure_id, but only with grm_switch will it be really active
@@ -4976,7 +4976,7 @@ int grm_switch(unsigned int id)
       global_root->append(active_figure);
       global_render->getAutoUpdate(&auto_update);
       global_render->setAutoUpdate(false);
-      active_figure->setAttribute("id", "figure" + std::to_string(id));
+      active_figure->setAttribute("figure_id", "figure" + std::to_string(id));
       global_render->setAutoUpdate(auto_update);
       global_render->setActiveFigure(active_figure);
       figure_switched = true;
@@ -5074,7 +5074,7 @@ int get_free_id_from_figure_elements()
   std::vector<std::string> given_ids;
   for (auto &fig : global_root->children())
     {
-      given_ids.push_back(static_cast<std::string>(fig->getAttribute("id")));
+      given_ids.push_back(static_cast<std::string>(fig->getAttribute("figure_id")));
     }
   int free_id = 0;
   while (true)

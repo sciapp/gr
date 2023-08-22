@@ -9545,16 +9545,15 @@ void plotProcessWswindowWsviewport(const std::shared_ptr<GRM::Element> &element,
   double wswindow[4] = {0.0, 0.0, 0.0, 0.0};
 
   // set wswindow/wsviewport on active figure
-  auto group = active_figure;
   GRM::Render::get_figure_size(&pixel_width, &pixel_height, &metric_width, &metric_height);
 
-  if (!group->hasAttribute("_previous_pixel_width") || !group->hasAttribute("_previous_pixel_height") ||
-      (static_cast<int>(group->getAttribute("_previous_pixel_width")) != pixel_width ||
-       static_cast<int>(group->getAttribute("_previous_pixel_height")) != pixel_height))
+  if (!active_figure->hasAttribute("_previous_pixel_width") || !active_figure->hasAttribute("_previous_pixel_height") ||
+      (static_cast<int>(active_figure->getAttribute("_previous_pixel_width")) != pixel_width ||
+       static_cast<int>(active_figure->getAttribute("_previous_pixel_height")) != pixel_height))
     {
       /* TODO: handle error return value? */
-      event_queue_enqueue_size_event(event_queue, static_cast<int>(group->getAttribute("id")), pixel_width,
-                                     pixel_height);
+      event_queue_enqueue_size_event(event_queue, static_cast<int>(active_figure->getAttribute("figure_id")),
+                                     pixel_width, pixel_height);
     }
 
   aspect_ratio_ws_pixel = (double)pixel_width / pixel_height;
@@ -9573,11 +9572,11 @@ void plotProcessWswindowWsviewport(const std::shared_ptr<GRM::Element> &element,
       wswindow[1] = aspect_ratio_ws_pixel;
       wswindow[3] = 1.0;
     }
-  global_render->setWSViewport(group, wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
-  global_render->setWSWindow(group, wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
+  global_render->setWSViewport(active_figure, wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
+  global_render->setWSWindow(active_figure, wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
 
-  group->setAttribute("_previous_pixel_width", pixel_width);
-  group->setAttribute("_previous_pixel_height", pixel_height);
+  active_figure->setAttribute("_previous_pixel_width", pixel_width);
+  active_figure->setAttribute("_previous_pixel_height", pixel_height);
 
   logger((stderr, "Stored wswindow (%lf, %lf, %lf, %lf)\n", wswindow[0], wswindow[1], wswindow[2], wswindow[3]));
   logger(

@@ -24,7 +24,7 @@
             <xs:attribute name="active" type="xs:string"/>
             <xs:attribute name="figsize_x" type="xs:string"/>
             <xs:attribute name="figsize_y" type="xs:string"/>
-            <xs:attribute name="id" type="xs:ID" use="required"/>
+            <xs:attribute name="figure_id" type="xs:ID" use="required"/>
             <xs:attribute name="size_x" type="xs:string"/>
             <xs:attribute name="size_x_type" type="xs:string"/>
             <xs:attribute name="size_x_unit" type="xs:string"/>
@@ -41,6 +41,10 @@
             <xs:attribute name="wswindow_ymax" type="xs:string"/>
             <xs:attribute name="wswindow_ymin" type="xs:string"/>
         </xs:complexType>
+        <xs:unique name="plotidisunique">
+            <xs:selector xpath="plot"/>
+            <xs:field xpath="@plot_id"/>
+        </xs:unique>
     </xs:element>
 
     <!-- definition of drawgraphics -->
@@ -100,7 +104,6 @@
             <xs:attribute name="font" type="xs:string"/>
             <xs:attribute name="font_precision" type="xs:string"/>
             <xs:attribute name="grplot" type="xs:string"/> <!-- all plots are made with grplot or none -->
-            <xs:attribute name="id" type="xs:ID" use="required"/>
             <xs:attribute name="keep_aspect_ratio" type="xs:string" use="required"/>
             <xs:attribute name="keep_window" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string" use="required"/>
@@ -118,6 +121,7 @@
             <xs:attribute name="phiflip" type="xs:string"/>
             <xs:attribute name="philim_max" type="xs:string"/>
             <xs:attribute name="philim_min" type="xs:string"/>
+            <xs:attribute name="plot_id" type="xs:string" use="required"/>
             <xs:attribute name="plot_xmax" type="xs:string" use="required"/>
             <xs:attribute name="plot_xmin" type="xs:string" use="required"/>
             <xs:attribute name="plot_ymax" type="xs:string" use="required"/>
@@ -130,7 +134,7 @@
             <xs:attribute name="rings" type="xs:string"/>
             <xs:attribute name="rlim_max" type="xs:string"/>
             <xs:attribute name="rlim_min" type="xs:string"/>
-            <xs:attribute name="scale" type="xs:string" use="required"/>
+            <xs:attribute name="scale" type="xs:string"/>
             <xs:attribute name="space" type="xs:string"/>
             <xs:attribute name="space_rotation" type="xs:string"/>
             <xs:attribute name="space_tilt" type="xs:string"/>
