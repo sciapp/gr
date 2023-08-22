@@ -176,7 +176,7 @@ ubuntu-cmake-self-contained-test-grplot:
     when: never
   - when: on_success
   needs:
-  - ubuntu-cmake-self-contained
+  - ubuntu-cmake-self-contained-debug
   script:
   - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
   - export GRM_VALIDATE=yes
