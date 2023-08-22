@@ -229,7 +229,7 @@ const char *plot_clear_exclude_keys[] = {"array_index", "in_use", nullptr};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot merge ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-const char *plot_merge_ignore_keys[] = {"_id", "series_id", "subplot_id", "plot_id", "array_index", "in_use", nullptr};
+const char *plot_merge_ignore_keys[] = {"id", "series_id", "subplot_id", "plot_id", "array_index", "in_use", nullptr};
 const char *plot_merge_clear_keys[] = {"series", nullptr};
 
 
@@ -3951,7 +3951,7 @@ int get_id_from_args(const grm_args_t *args, int *plot_id, int *subplot_id, int 
   const char *combined_id;
   int _plot_id = -1, _subplot_id = 0, _series_id = 0;
 
-  if (grm_args_values(args, "_id", "s", &combined_id))
+  if (grm_args_values(args, "id", "s", &combined_id))
     {
       const char *valid_id_delims = ":.";
       int *id_ptrs[4], **current_id_ptr;
