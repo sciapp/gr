@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#include "error_int.h"
+#include "grm/error.h"
 #include "event_int.h"
 #include "plot_int.h"
 
@@ -249,24 +249,24 @@ error_cleanup:
   return error;
 }
 
-err_t event_queue_enqueue_cmd_event(event_queue_t *queue, const char *cmd)
+err_t event_queue_enqueue_request_event(event_queue_t *queue, const char *request_string)
 {
-  grm_cmd_event_t *cmd_event = NULL;
+  grm_request_event_t *request_event = NULL;
   err_t error = ERROR_NONE;
 
-  cmd_event = malloc(sizeof(grm_cmd_event_t));
-  error_cleanup_and_set_error_if(cmd_event == NULL, ERROR_MALLOC);
-  cmd_event->type = GRM_EVENT_CMD;
-  cmd_event->cmd = cmd; /* TODO: should `cmd` be copied? */
-  error = event_reflist_enqueue(queue->queue, (grm_event_t *)cmd_event);
+  request_event = malloc(sizeof(grm_request_event_t));
+  error_cleanup_and_set_error_if(request_event == NULL, ERROR_MALLOC);
+  request_event->type = GRM_EVENT_REQUEST;
+  request_event->request_string = request_string;
+  error = event_reflist_enqueue(queue->queue, (grm_event_t *)request_event);
   error_cleanup_if_error;
 
   return ERROR_NONE;
 
 error_cleanup:
-  if (cmd_event != NULL)
+  if (request_event != NULL)
     {
-      free(cmd_event);
+      free(request_event);
     }
 
   return error;

@@ -58,7 +58,6 @@ static std::map<std::string, const char *> key_to_types{{"accelerate", "i"},
                                                         {"xcolormap", "i"},
                                                         {"xflip", "i"},
                                                         {"xform", "i"},
-                                                        {"xticklabels", "nS"},
                                                         {"ybins", "i"},
                                                         {"ycolormap", "i"},
                                                         {"yflip", "i"},
@@ -222,6 +221,23 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
           if (str_equals_any(key.c_str(), 5, "title", "xlabel", "ylabel", "zlabel", "resample_method"))
             {
               grm_args_push(args, key.c_str(), "s", value.c_str());
+            }
+          else if (str_equals_any(key.c_str(), 2, "xticklabels", "yticklabels"))
+            {
+              std::vector<std::string> ticklabels;
+              std::stringstream sv(value);
+              for (size_t col = 0; std::getline(sv, token, ',') && token.length(); col++)
+                {
+                  ticklabels.push_back(token);
+                }
+
+              const int num = static_cast<const int>(ticklabels.size());
+              std::vector<const char *> c_ticklabel(num);
+              for (int i = 0; i < ticklabels.size(); i++)
+                {
+                  c_ticklabel[i] = (const char *)ticklabels[i].c_str();
+                }
+              grm_args_push(args, key.c_str(), "nS", ticklabels.size(), (const char *)c_ticklabel.data());
             }
           else if (str_equals_any(key.c_str(), 7, "location", "xlog", "ylog", "zlog", "xgrid", "ygrid", "zgrid"))
             {
@@ -596,7 +612,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
 
       /* for imshow plot */
       grm_args_push(args, "c", "nD", rows * cols, zi.data());
-      grm_args_push(args, "c_dims", "ii", rows, cols);
+      grm_args_push(args, "c_dims", "ii", cols, rows);
 
       grm_args_push(args, "x", "nD", cols, xi.data());
       grm_args_push(args, "y", "nD", rows, yi.data());
@@ -605,8 +621,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   else if (strcmp(kind, "line") == 0 || (strcmp(kind, "scatter") == 0 && !scatter_with_z))
     {
       grm_args_t *error;
+      std::vector<grm_args_t *> error_vec;
       std::vector<double> x(rows);
       int err = 0;
+      const char *spec;
 
       adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)rows - 1.0);
 
@@ -619,8 +637,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           double min_val = INFINITY, max_val = -INFINITY;
           for (col = 0; col < cols - err; col++)
             {
-              min_val = std::min(min_val, *std::min_element(&filedata[depth][col][0], &filedata[depth][col][rows]));
-              max_val = std::max(max_val, *std::max_element(&filedata[depth][col][0], &filedata[depth][col][rows]));
+              min_val =
+                  std::min<double>(min_val, *std::min_element(&filedata[depth][col][0], &filedata[depth][col][rows]));
+              max_val =
+                  std::max<double>(max_val, *std::max_element(&filedata[depth][col][0], &filedata[depth][col][rows]));
             }
 
           for (col = 0; col < cols; ++col)
@@ -637,6 +657,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       if (grm_args_values(args, "error", "a", &error))
         {
           int i;
+          int color_up, color_down, color;
           std::vector<double> errors_up(rows);
           std::vector<double> errors_down(rows);
 
@@ -646,24 +667,38 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             }
           else
             {
-              for (i = 0; i < rows; i++)
+              err = floor(cols / 3);
+              error_vec.resize(err);
+              for (col = 0; col < err; col++)
                 {
-                  errors_up[i] = filedata[depth][1][i];
-                  errors_down[i] = filedata[depth][2][i];
+                  error_vec[col] = grm_args_new();
+                  for (i = 0; i < rows; i++)
+                    {
+                      errors_up[i] = filedata[depth][col + 1 + col * 2][i];
+                      errors_down[i] = filedata[depth][col + 2 + col * 2][i];
+                    }
+                  grm_args_push(error_vec[col], "relative", "nDD", rows, errors_up.data(), errors_down.data());
+                  if (grm_args_values(error, "errorbar_color", "i", &color))
+                    grm_args_push(error_vec[col], "errorbar_color", "i", color);
+                  if (grm_args_values(error, "downwardscap_color", "i", &color_down))
+                    grm_args_push(error_vec[col], "downwardscap_color", "i", color_down);
+                  if (grm_args_values(error, "upwardscap_color", "i", &color_up))
+                    grm_args_push(error_vec[col], "upwardscap_color", "i", color_up);
                 }
-              err = 2;
-              grm_args_push(error, "relative", "nDD", rows, errors_up.data(), errors_down.data());
+              err *= 2;
             }
         }
       for (col = 0; col < cols - err; col++)
         {
           series[col] = grm_args_new();
           grm_args_push(series[col], "x", "nD", rows, x.data());
-          grm_args_push(series[col], "y", "nD", rows, filedata[depth][col].data());
+          grm_args_push(series[col], "y", "nD", rows, filedata[depth][col + ((col < err / 2) ? col * 2 : err)].data());
           if (!labels.empty())
             {
               labels_c.push_back(labels[col].c_str());
             }
+          if (col < err / 2) grm_args_push(series[col], "error", "a", error_vec[col]);
+          if (grm_args_values(args, "spec", "s", &spec)) grm_args_push(series[col], "spec", "s", spec);
         }
       grm_args_push(args, "series", "nA", cols - err, series.data());
       if (!labels_c.empty())
@@ -762,7 +797,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         {
           ymin = *std::min_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
           ymax = *std::max_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
-          adjust_ranges(&ranges.ymin, &ranges.ymax, std::min(0.0, ymin), ymax);
+          adjust_ranges(&ranges.ymin, &ranges.ymax, std::min<double>(0.0, ymin), ymax);
           grm_args_push(args, "yrange", "dd", ranges.ymin, ranges.ymax);
         }
       else

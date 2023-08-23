@@ -24,7 +24,7 @@ ifndef DEBUG
 else
     OPTS += -s ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=2
 endif
- DEFINES = -DEMSCRIPTEN -D__SVR4 -DGRDIR=\"\" -DNO_GL -DNO_THREADS
+ DEFINES = -DEMSCRIPTEN -D__SVR4 -DGRDIR=\"\" -DNO_GL -DNO_THREADS -DNO_LIBXML2
   CFLAGS = $(DEFINES) $(OPTS) $(EXTRA_CFLAGS)
 CXXFLAGS = $(DEFINES) $(OPTS) -std=c++17 $(EXTRA_CXXFLAGS)
  LDFLAGS = $(DEFINES) $(OPTS) $(EXTRA_LDFLAGS)
@@ -33,6 +33,7 @@ CXXFLAGS = $(DEFINES) $(OPTS) -std=c++17 $(EXTRA_CXXFLAGS)
  ZLIBDIR = ../3rdparty/zlib
 QHULLDIR = ../3rdparty/qhull
    FTDIR = ../3rdparty/freetype
+EXPATDIR = ../3rdparty/expat
   GKSDIR = ../lib/gks
    GRDIR = ../lib/gr
   GR3DIR = ../lib/gr3
@@ -47,43 +48,44 @@ INCLUDES = -I$(THIRDPARTYDIR)/include/ \
            -I$(PNGDIR) \
            -I$(ZLIBDIR) \
            -I$(QHULLDIR) \
-           -I$(FTDIR)
+           -I$(FTDIR) \
+           -I$(EXPATDIR)
  GKSOBJS = jsplugin.o \
-           $(GKSDIR)/gks.o \
-           $(GKSDIR)/font.o \
            $(GKSDIR)/afm.o \
-           $(GKSDIR)/util.o \
-           $(GKSDIR)/malloc.o \
            $(GKSDIR)/error.o \
-           $(GKSDIR)/wiss.o \
+           $(GKSDIR)/font.o \
+           $(GKSDIR)/ft.o \
+           $(GKSDIR)/gks.o \
            $(GKSDIR)/io.o \
-           $(GKSDIR)/ft.o
-  GROBJS = $(GRDIR)/gr.o \
-           $(GRDIR)/stream.o \
-           $(GRDIR)/text.o \
-           $(GRDIR)/gridit.o \
-           $(GRDIR)/strlib.o \
-           $(GRDIR)/contour.o \
-           $(GRDIR)/spline.o \
-           $(GRDIR)/import.o \
-           $(GRDIR)/grforbnd.o \
-           $(GRDIR)/md5.o \
-           $(GRDIR)/interp2.o \
-           $(GRDIR)/shade.o \
-           $(GRDIR)/delaunay.o \
+           $(GKSDIR)/malloc.o \
+           $(GKSDIR)/util.o \
+           $(GKSDIR)/wiss.o
+  GROBJS = $(GRDIR)/contour.o \
            $(GRDIR)/contourf.o \
+           $(GRDIR)/delaunay.o \
+           $(GRDIR)/gr.o \
+           $(GRDIR)/grforbnd.o \
+           $(GRDIR)/gridit.o \
            $(GRDIR)/image.o \
+           $(GRDIR)/import.o \
+           $(GRDIR)/interp2.o \
            $(GRDIR)/mathtex2.o \
+           $(GRDIR)/mathtex2.tab.o \
            $(GRDIR)/mathtex2_kerning.o \
-           $(GRDIR)/mathtex2.tab.o
+           $(GRDIR)/md5.o \
+           $(GRDIR)/shade.o \
+           $(GRDIR)/spline.o \
+           $(GRDIR)/stream.o \
+           $(GRDIR)/strlib.o \
+           $(GRDIR)/text.o
  GR3OBJS = $(GR3DIR)/gr3.o \
            $(GR3DIR)/gr3_convenience.o \
-           $(GR3DIR)/gr3_html.o \
-           $(GR3DIR)/gr3_povray.o \
-           $(GR3DIR)/gr3_png.o \
-           $(GR3DIR)/gr3_jpeg.o \
            $(GR3DIR)/gr3_gr.o \
+           $(GR3DIR)/gr3_html.o \
+           $(GR3DIR)/gr3_jpeg.o \
            $(GR3DIR)/gr3_mc.o \
+           $(GR3DIR)/gr3_png.o \
+           $(GR3DIR)/gr3_povray.o \
            $(GR3DIR)/gr3_sr.o
  GRMOBJS = $(GRMDIR)/src/grm/args.o \
            $(GRMDIR)/src/grm/base64.o \
@@ -93,6 +95,8 @@ INCLUDES = -I$(THIRDPARTYDIR)/include/ \
            $(GRMDIR)/src/grm/event.o \
            $(GRMDIR)/src/grm/interaction.o \
            $(GRMDIR)/src/grm/json.o \
+           $(GRMDIR)/src/grm/layout.o \
+           $(GRMDIR)/src/grm/layout_c.o \
            $(GRMDIR)/src/grm/logging.o \
            $(GRMDIR)/src/grm/memwriter.o \
            $(GRMDIR)/src/grm/net.o \
@@ -102,13 +106,22 @@ INCLUDES = -I$(THIRDPARTYDIR)/include/ \
            $(GRMDIR)/src/grm/datatype/string_array_map.o \
            $(GRMDIR)/src/grm/datatype/string_list.o \
            $(GRMDIR)/src/grm/datatype/string_map.o \
-           $(GRMDIR)/src/grm/datatype/uint_map.o
+           $(GRMDIR)/src/grm/datatype/uint_map.o \
+           $(GRMDIR)/src/grm/dom_render/context.o \
+           $(GRMDIR)/src/grm/dom_render/render.o \
+           $(GRMDIR)/src/grm/dom_render/graphics_tree/Comment.o \
+           $(GRMDIR)/src/grm/dom_render/graphics_tree/Document.o \
+           $(GRMDIR)/src/grm/dom_render/graphics_tree/Element.o \
+           $(GRMDIR)/src/grm/dom_render/graphics_tree/Node.o \
+           $(GRMDIR)/src/grm/dom_render/graphics_tree/Value.o \
+           $(GRMDIR)/src/grm/dom_render/graphics_tree/util.o
     OBJS = $(GRMOBJS) $(GR3OBJS) $(GROBJS) $(GKSOBJS)
     LIBS = $(JPEGDIR)/libjpeg.a \
            $(PNGDIR)/libpng.a \
            $(ZLIBDIR)/libz.a \
            $(QHULLDIR)/libqhull.a \
-           $(FTDIR)/libfreetype.a
+           $(FTDIR)/libfreetype.a \
+           $(EXPATDIR)/libexpat.a
 
 .PHONY: default clean .SECONDARY .FORCE
 
@@ -146,6 +159,9 @@ $(QHULLDIR)/libqhull.a:
 $(FTDIR)/libfreetype.a:
 	$(MAKE) -C $(FTDIR)
 
+$(EXPATDIR)/libexpat.a:
+	$(MAKE) -C $(EXPATDIR) libexpat.a
+
 $(GRDIR)/gr.o: ../lib/gr/gr_version.h
 
 %.o: %.c $(LIBS)
@@ -169,4 +185,5 @@ clean:
 	cd $(ZLIBDIR) && make clean
 	cd $(QHULLDIR) && make clean
 	cd $(FTDIR) && make clean
+	cd $(EXPATDIR) && make clean
 	rm -rf $(OBJS)

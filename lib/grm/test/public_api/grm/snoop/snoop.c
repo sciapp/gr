@@ -121,11 +121,12 @@ static double *mapxty(double (*func)(double, double), double *dest_buf, const do
 }
 
 
-static void test_line(void)
+static int test_line(void)
 {
   const int n = 200;
   double *x = NULL, *y = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x = lin_range(NULL, 0.0, 2 * M_PI, n, 1);
   cleanup_if(x == NULL);
@@ -139,7 +140,7 @@ static void test_line(void)
   grm_args_push(args, "kind", "s", "line");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x);
@@ -148,6 +149,8 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 
@@ -156,11 +159,12 @@ static double test_scatter_y(double x)
   return x - x * x;
 }
 
-static void test_scatter(void)
+static int test_scatter(void)
 {
   const int n = 51;
   double *x = NULL, *y = NULL, *sz = NULL, *c = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x = lin_range(NULL, 0.0, 1.0, n, 0);
   cleanup_if(x == NULL);
@@ -178,12 +182,13 @@ static void test_scatter(void)
   grm_args_push(args, "kind", "s", "scatter");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
+  cleanup_if(!was_successful);
 
   grm_args_push(args, "z", "nD", n, sz);
   grm_args_push(args, "c", "nD", n, c);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x);
@@ -194,14 +199,17 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 
-static void test_stem(void)
+static int test_stem(void)
 {
   const int n = 51;
   double *x = NULL, *y = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x = lin_range(NULL, 0.0, 1.0, n, 0);
   cleanup_if(x == NULL);
@@ -215,7 +223,7 @@ static void test_stem(void)
   grm_args_push(args, "kind", "s", "stem");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x);
@@ -224,14 +232,17 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 
-static void test_histogram(void)
+static int test_histogram(void)
 {
   const int n = 10000;
   double *x = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x = randn(NULL, n);
   cleanup_if(x == NULL);
@@ -241,7 +252,7 @@ static void test_histogram(void)
   grm_args_push(args, "kind", "s", "hist");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x);
@@ -249,15 +260,18 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 
-static void test_line_only_y(void)
+static int test_line_only_y(void)
 {
   const int n = 50;
   double *y[] = {randn(NULL, n), randn(NULL, n), randn(NULL, n), randn(NULL, n)};
   grm_args_t *args = NULL, *series[] = {NULL, NULL, NULL, NULL};
   int i;
+  int was_successful = 0;
 
   for (i = 0; i < (int)array_size(series); ++i)
     {
@@ -273,7 +287,8 @@ static void test_line_only_y(void)
   grm_args_push(args, "kind", "s", "line");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
+  cleanup_if(!was_successful);
 
   grm_args_delete(args);
   args = grm_args_new();
@@ -284,7 +299,7 @@ static void test_line_only_y(void)
   /* TODO: Use `hold_plots` for a real `oplot`! */
   /* grm_args_push(args, "hold_plots", "i", 1); */
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   for (i = 0; i < (int)array_size(y); ++i)
@@ -295,6 +310,8 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 
@@ -308,11 +325,12 @@ static double test_plot3d_z(double x)
   return sin(x) * x;
 }
 
-static void test_plot3d(void)
+static int test_plot3d(void)
 {
   const int n = 1000;
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x = lin_range(NULL, 0.0, 30.0, n, 0);
   cleanup_if(x == NULL);
@@ -329,7 +347,7 @@ static void test_plot3d(void)
   grm_args_push(args, "kind", "s", "plot3");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x);
@@ -339,13 +357,16 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
-static void test_polar(void)
+static int test_polar(void)
 {
   const int n = 40;
   double *angles = NULL, *radii = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   angles = lin_range(NULL, 0.0, 2 * M_PI, n, 0);
   cleanup_if(angles == NULL);
@@ -360,7 +381,7 @@ static void test_polar(void)
   grm_args_push(args, "kind", "s", "polar");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(angles);
@@ -369,6 +390,8 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 static double test_scatter3_x(double x)
@@ -381,12 +404,13 @@ static double test_scatter3_c(double c)
   return 999 * c + 1;
 }
 
-static void test_scatter3(void)
+static int test_scatter3(void)
 {
   const int n = 100;
   double *x_rand = NULL, *y_rand = NULL, *z_rand = NULL, *c_rand = NULL;
   double *x = NULL, *y = NULL, *z = NULL, *c = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x_rand = rand(NULL, n);
   cleanup_if(x_rand == NULL);
@@ -414,11 +438,12 @@ static void test_scatter3(void)
   grm_args_push(args, "kind", "s", "scatter3");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
+  cleanup_if(!was_successful);
 
   grm_args_push(args, "c", "nD", n, c);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x_rand);
@@ -431,13 +456,16 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
-static void test_hexbin(void)
+static int test_hexbin(void)
 {
   const int n = 100000;
   double *x = NULL, *y = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x = randn(NULL, n);
   cleanup_if(x == NULL);
@@ -451,7 +479,7 @@ static void test_hexbin(void)
   grm_args_push(args, "kind", "s", "hexbin");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x);
@@ -460,6 +488,8 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 static double test_contour1_x(double x)
@@ -472,12 +502,13 @@ static double test_contour1_z(double x, double y)
   return sin(x) + cos(y);
 }
 
-static void test_contour1(void)
+static int test_contour1(void)
 {
   const int n = 100;
   double *x_rand = NULL, *y_rand = NULL;
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x_rand = rand(NULL, n);
   cleanup_if(x_rand == NULL);
@@ -499,7 +530,8 @@ static void test_contour1(void)
   grm_args_push(args, "kind", "s", "contour");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
+  cleanup_if(!was_successful);
   grm_args_delete(args);
 
   args = grm_args_new();
@@ -522,13 +554,16 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
-static void test_contour2(void)
+static int test_contour2(void)
 {
   const int n = 40;
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x = lin_range(NULL, -2, 2, n, 0);
   cleanup_if(x == NULL);
@@ -545,7 +580,8 @@ static void test_contour2(void)
   grm_args_push(args, "kind", "s", "contour");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
+  cleanup_if(!was_successful);
   grm_args_delete(args);
 
   args = grm_args_new();
@@ -557,6 +593,7 @@ static void test_contour2(void)
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   grm_plot(args);
+
 cleanup:
   free(x);
   free(y);
@@ -565,6 +602,8 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 static double test_contourf1_x(double x)
@@ -577,12 +616,13 @@ static double test_contourf1_z(double x, double y)
   return sin(x) + cos(y);
 }
 
-static void test_contourf1(void)
+static int test_contourf1(void)
 {
   const int n = 100;
   double *x_rand = NULL, *y_rand = NULL;
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x_rand = rand(NULL, n);
   cleanup_if(x_rand == NULL);
@@ -604,7 +644,7 @@ static void test_contourf1(void)
   grm_args_push(args, "kind", "s", "contourf");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x_rand);
@@ -616,13 +656,16 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
-static void test_contourf2(void)
+static int test_contourf2(void)
 {
   const int n = 40;
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x = lin_range(NULL, -2, 2, n, 0);
   cleanup_if(x == NULL);
@@ -639,7 +682,7 @@ static void test_contourf2(void)
   grm_args_push(args, "kind", "s", "contourf");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x);
@@ -649,6 +692,8 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 static double test_tricont_x(double x)
@@ -661,12 +706,13 @@ static double test_tricont_z(double x, double y)
   return sin(x) + cos(y);
 }
 
-static void test_tricont(void)
+static int test_tricont(void)
 {
   const int n = 100;
   double *x_rand = NULL, *y_rand = NULL;
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x_rand = rand(NULL, n);
   cleanup_if(x_rand == NULL);
@@ -688,7 +734,7 @@ static void test_tricont(void)
   grm_args_push(args, "kind", "s", "tricont");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x_rand);
@@ -700,6 +746,8 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 static double test_surface1_x(double x)
@@ -712,12 +760,13 @@ static double test_surface1_z(double x, double y)
   return sin(x) + cos(y);
 }
 
-static void test_surface1(void)
+static int test_surface1(void)
 {
   const int n = 100;
   double *x_rand = NULL, *y_rand = NULL;
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x_rand = rand(NULL, n);
   cleanup_if(x_rand == NULL);
@@ -739,7 +788,7 @@ static void test_surface1(void)
   grm_args_push(args, "kind", "s", "surface");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x_rand);
@@ -751,13 +800,16 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
-static void test_surface2(void)
+static int test_surface2(void)
 {
   const int n = 40;
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x = lin_range(NULL, -2, 2, n, 0);
   cleanup_if(x == NULL);
@@ -774,7 +826,7 @@ static void test_surface2(void)
   grm_args_push(args, "kind", "s", "surface");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x);
@@ -784,6 +836,8 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 static double test_trisurf_x(double x)
@@ -796,12 +850,13 @@ static double test_trisurf_z(double x, double y)
   return sin(x) + cos(y);
 }
 
-static void test_trisurf(void)
+static int test_trisurf(void)
 {
   const int n = 100;
   double *x_rand = NULL, *y_rand = NULL;
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x_rand = rand(NULL, n);
   cleanup_if(x_rand == NULL);
@@ -823,7 +878,7 @@ static void test_trisurf(void)
   grm_args_push(args, "kind", "s", "trisurf");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x_rand);
@@ -835,6 +890,8 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 static double peak(double x, double y)
@@ -870,11 +927,12 @@ cleanup:
   return z;
 }
 
-static void test_surface_peaks(void)
+static int test_surface_peaks(void)
 {
   const int n = 49;
   double *z = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   z = peaks(n);
   cleanup_if(z == NULL);
@@ -886,7 +944,7 @@ static void test_surface_peaks(void)
   grm_args_push(args, "kind", "s", "surface");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(z);
@@ -894,6 +952,8 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 static double test_wireframe_z(double x, double y)
@@ -901,11 +961,12 @@ static double test_wireframe_z(double x, double y)
   return sin(x) + cos(y);
 }
 
-static void test_wireframe(void)
+static int test_wireframe(void)
 {
   const int n = 40;
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x = lin_range(NULL, -2, 2, n, 0);
   cleanup_if(x == NULL);
@@ -922,7 +983,7 @@ static void test_wireframe(void)
   grm_args_push(args, "kind", "s", "wireframe");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x);
@@ -932,6 +993,8 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 static double test_heatmap_z(double x, double y)
@@ -939,11 +1002,12 @@ static double test_heatmap_z(double x, double y)
   return sin(x) + cos(y);
 }
 
-static void test_heatmap_and_imshow(void)
+static int test_heatmap_and_imshow(void)
 {
   const int n = 40;
   double *x = NULL, *y = NULL, *z = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x = lin_range(NULL, -2, 2, n, 0);
   cleanup_if(x == NULL);
@@ -959,7 +1023,8 @@ static void test_heatmap_and_imshow(void)
   grm_args_push(args, "kind", "s", "heatmap");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
+  cleanup_if(!was_successful);
 
   grm_args_delete(args);
 
@@ -970,7 +1035,7 @@ static void test_heatmap_and_imshow(void)
   grm_args_push(args, "kind", "s", "imshow");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x);
@@ -980,13 +1045,16 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
-static void test_volume(void)
+static int test_volume(void)
 {
   const int n = 50;
   double *c = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   c = randn(NULL, n * n * n);
   cleanup_if(c == NULL);
@@ -997,7 +1065,7 @@ static void test_volume(void)
   grm_args_push(args, "kind", "s", "volume");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(c);
@@ -1005,13 +1073,16 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
-static void test_shade(void)
+static int test_shade(void)
 {
   const int n = 1000000;
   double *x = NULL, *y = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x = randn(NULL, n);
   cleanup_if(x == NULL);
@@ -1024,7 +1095,7 @@ static void test_shade(void)
   grm_args_push(args, "kind", "s", "shade");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x);
@@ -1033,15 +1104,18 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
-static void test_isosurface(void)
+static int test_isosurface(void)
 {
   int i, j, k;
   const int n = 40;
   double *s = NULL, *v = NULL;
   grm_args_t *args = NULL;
   int dims[3] = {n, n, n};
+  int was_successful = 0;
 
   s = lin_range(NULL, -1, 1, n, 0);
   cleanup_if(s == NULL);
@@ -1067,7 +1141,7 @@ static void test_isosurface(void)
   grm_args_push(args, "c_dims", "nI", 3, dims);
   grm_args_push(args, "isovalue", "d", 0.2);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(s);
@@ -1076,13 +1150,16 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
-static void test_barplot(void)
+static int test_barplot(void)
 {
   const int n = 20;
   double *x = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x = randn(NULL, n);
   cleanup_if(x == NULL);
@@ -1092,7 +1169,7 @@ static void test_barplot(void)
   grm_args_push(args, "kind", "s", "barplot");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x);
@@ -1100,13 +1177,16 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
-static void test_stairs(void)
+static int test_stairs(void)
 {
   const int n = 51;
   double *x = NULL, *y = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   x = lin_range(NULL, 0.0, 1.0, n, 0);
   cleanup_if(x == NULL);
@@ -1120,7 +1200,7 @@ static void test_stairs(void)
   grm_args_push(args, "kind", "s", "stairs");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(x);
@@ -1129,6 +1209,8 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 static double test_polarheatmap_z(double x, double y)
@@ -1136,12 +1218,13 @@ static double test_polarheatmap_z(double x, double y)
   return sin(2.0 * x) * cos(y);
 }
 
-static void test_polarheatmap(void)
+static int test_polarheatmap(void)
 {
   int i, j;
   const int n = 200, m = 360;
   double *phi = NULL, *theta = NULL, *z = NULL, *zv = NULL;
   grm_args_t *args = NULL;
+  int was_successful = 0;
 
   phi = lin_range(NULL, 0.0, 7, n, 0);
   cleanup_if(phi == NULL);
@@ -1167,7 +1250,7 @@ static void test_polarheatmap(void)
   grm_args_push(args, "kind", "s", "polar_heatmap");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
-  grm_plot(args);
+  was_successful = grm_plot(args);
 
 cleanup:
   free(phi);
@@ -1178,41 +1261,46 @@ cleanup:
     {
       grm_args_delete(args);
     }
+
+  return was_successful;
 }
 
 int main(void)
 {
-  /* 1 */ test_line();
-  /* 2, 3 */ test_scatter();
-  /* 4 */ test_stem();
-  /* 5 */ test_histogram();
-  /* 6, 7 */ test_line_only_y();
-  /* 8 */ test_plot3d();
-  /* 9 */ test_polar();
-  /* 10, 11 */ test_scatter3();
-  /* 12 */ test_hexbin();
-  /* 13, 14 */ test_contour1();
-  /* 15, 16 */ test_contour2();
-  /* 17 */ test_tricont();
-  /* 18 */ test_surface1();
-  /* 19 */ test_surface2();
-  /* 20 */ test_trisurf();
-  /* 21 */ test_surface_peaks();
-  /* 22 */ test_wireframe();
-  /* 23, 24 */ test_heatmap_and_imshow();
-  /* 25 */ test_polarheatmap();
-  /* 26 */ test_isosurface();
-  /* 27 */ test_volume();
-  /* 28 */ test_shade();
+  int was_successful = 0;
+
+  /* 1      */ cleanup_if(!(was_successful = test_line()));
+  /* 2, 3   */ cleanup_if(!(was_successful = test_scatter()));
+  /* 4      */ cleanup_if(!(was_successful = test_stem()));
+  /* 5      */ cleanup_if(!(was_successful = test_histogram()));
+  /* 6, 7   */ cleanup_if(!(was_successful = test_line_only_y()));
+  /* 8      */ cleanup_if(!(was_successful = test_plot3d()));
+  /* 9      */ cleanup_if(!(was_successful = test_polar()));
+  /* 10, 11 */ cleanup_if(!(was_successful = test_scatter3()));
+  /* 12     */ cleanup_if(!(was_successful = test_hexbin()));
+  /* 13, 14 */ cleanup_if(!(was_successful = test_contour1()));
+  /* 15, 16 */ cleanup_if(!(was_successful = test_contour2()));
+  /* 17     */ cleanup_if(!(was_successful = test_tricont()));
+  /* 18     */ cleanup_if(!(was_successful = test_surface1()));
+  /* 19     */ cleanup_if(!(was_successful = test_surface2()));
+  /* 20     */ cleanup_if(!(was_successful = test_trisurf()));
+  /* 21     */ cleanup_if(!(was_successful = test_surface_peaks()));
+  /* 22     */ cleanup_if(!(was_successful = test_wireframe()));
+  /* 23, 24 */ cleanup_if(!(was_successful = test_heatmap_and_imshow()));
+  /* 25     */ cleanup_if(!(was_successful = test_polarheatmap()));
+  /* 26     */ cleanup_if(!(was_successful = test_isosurface()));
+  /* 27     */ cleanup_if(!(was_successful = test_volume()));
+  /* 28     */ cleanup_if(!(was_successful = test_shade()));
   /*
    * Temporarily disabled
    * #if defined(__x86_64__) || defined(_M_X64)
-   *   29 * test_barplot();
+   *   29 * cleanup_if(!(was_successful = test_barplot()));
    * #endif
    */
-  /* 30 */ test_stairs();
+  /* 30     */ cleanup_if(!(was_successful = test_stairs()));
 
+cleanup:
   grm_finalize();
 
-  return 0;
+  return was_successful ? 0 : 1;
 }

@@ -92,10 +92,31 @@ find_package(Agg)
 find_package(Fontconfig)
 find_package(OpenGL OPTIONAL_COMPONENTS OpenGL)
 find_package(Gs)
+find_package(Expat)
+# CMake ships with a `FindLibXml2.cmake` module which does not configure needed libxml2 dependencies.
+# Thus, use the `libxml2-config.cmake` config file shipped with libxml which configures dependencies correctly by
+# skipping module search mode.
+find_package(LibXml2 NO_MODULE)
 if(${CMAKE_VERSION} VERSION_GREATER "3.16.0")
-  find_package(Qt6 OPTIONAL_COMPONENTS Widgets Core Network)
+  find_package(
+    Qt6
+    OPTIONAL_COMPONENTS
+      Widgets
+      Core
+      Network
+      Gui
+      PrintSupport
+  )
 endif()
-find_package(Qt5 OPTIONAL_COMPONENTS Widgets Core Network)
+find_package(
+  Qt5
+  OPTIONAL_COMPONENTS
+    Widgets
+    Core
+    Network
+    Gui
+    PrintSupport
+)
 find_package(Qt4)
 
 if(APPLE)
@@ -470,8 +491,11 @@ set(GRM_SOURCES
     lib/grm/src/grm/dynamic_args_array.c
     lib/grm/src/grm/error.c
     lib/grm/src/grm/event.c
-    lib/grm/src/grm/interaction.c
+    lib/grm/src/grm/interaction.cxx
     lib/grm/src/grm/json.c
+    lib/grm/src/grm/layout_c.cxx
+    lib/grm/src/grm/layout.cxx
+    lib/grm/src/grm/layout_error.cxx
     lib/grm/src/grm/logging.c
     lib/grm/src/grm/memwriter.c
     lib/grm/src/grm/net.c
@@ -484,6 +508,18 @@ set(GRM_SOURCES
     lib/grm/src/grm/datatype/string_list.c
     lib/grm/src/grm/datatype/string_map.c
     lib/grm/src/grm/datatype/uint_map.c
+    lib/grm/src/grm/dom_render/context.cxx
+    lib/grm/src/grm/dom_render/render.cxx
+    lib/grm/src/grm/dom_render/Drawable.cxx
+    lib/grm/src/grm/dom_render/graphics_tree/Comment.cxx
+    lib/grm/src/grm/dom_render/graphics_tree/Document.cxx
+    lib/grm/src/grm/dom_render/graphics_tree/Element.cxx
+    lib/grm/src/grm/dom_render/graphics_tree/Node.cxx
+    lib/grm/src/grm/dom_render/graphics_tree/Value.cxx
+    lib/grm/src/grm/dom_render/graphics_tree/util.cxx
+    lib/grm/src/grm/dom_render/ManageCustomColorIndex.cxx
+    lib/grm/src/grm/dom_render/ManageGRContextIds.cxx
+    lib/grm/src/grm/dom_render/ManageZIndex.cxx
 )
 
 add_library(grm_static STATIC ${GRM_SOURCES})
@@ -502,6 +538,17 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GKS)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GR)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GR3)
+  if(TARGET LibXml2::LibXml2)
+    target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} LibXml2::LibXml2)
+  elseif(EXPAT_FOUND)
+    target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} Expat::Expat)
+  endif()
+  if(NOT TARGET LibXml2::LibXml2)
+    target_compile_definitions(${LIBRARY} PRIVATE NO_LIBXML2)
+  endif()
+  if(NOT EXPAT_FOUND OR TARGET LibXml2::LibXml2)
+    target_compile_definitions(${LIBRARY} PRIVATE NO_EXPAT)
+  endif()
   if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"))
     target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} m)
   endif()
@@ -513,6 +560,8 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
     PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/include/>
            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/src/> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
+  target_compile_definitions(${LIBRARY} PRIVATE BUILDING_GR)
+  target_compile_definitions(${LIBRARY} PRIVATE GRDIR="${GR_DIRECTORY}")
   target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     target_compile_options(${LIBRARY} PRIVATE /permissive-)
@@ -1114,9 +1163,21 @@ else()
   string(APPEND GR_REPORT "- gksqt: No (Qt4 / Qt5 / Qt6 not found)\n")
 endif()
 
-if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
+if((Qt6Widgets_FOUND
+    AND Qt6Core_FOUND
+    AND Qt6Gui_FOUND
+   )
+   OR (Qt5Widgets_FOUND
+       AND Qt5Core_FOUND
+       AND Qt5Gui_FOUND
+      )
+)
   add_executable(
     grplot WIN32 MACOSX_BUNDLE
+    lib/grm/grplot/gredit/Bounding_logic.cpp
+    lib/grm/grplot/gredit/Bounding_object.cpp
+    lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
+    lib/grm/grplot/gredit/TreeWidget.cpp
     lib/grm/grplot/grplot.cxx
     lib/grm/grplot/grplot_mainwindow.cxx
     lib/grm/grplot/grplot_widget.cxx
@@ -1125,10 +1186,10 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
     lib/grm/grplot/util.cxx
   )
   if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
-    target_link_libraries(grplot PRIVATE Qt6::Widgets Qt6::Core grm_static)
+    target_link_libraries(grplot PRIVATE Qt6::Widgets Qt6::Core Qt6::Gui grm_static)
     set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
   else()
-    target_link_libraries(grplot PRIVATE Qt5::Widgets Qt5::Core grm_static)
+    target_link_libraries(grplot PRIVATE Qt5::Widgets Qt5::Core Qt5::Gui grm_static)
     set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
   endif()
   target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
@@ -1182,10 +1243,46 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
         ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h
     )
+
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
+    )
     target_sources(
       grplot
       PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
               ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
               ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
               ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
     )
@@ -1195,6 +1292,10 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
       grplot
       PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h
     )
@@ -1211,6 +1312,15 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
   string(APPEND GR_REPORT "- grplot: Yes\n")
 else()
   string(APPEND GR_REPORT "- grplot: No (Qt6 and Qt5 not found)\n")
+endif()
+
+string(APPEND GR_REPORT "\nGRM integrations:\n")
+if(TARGET LibXml2::LibXml2)
+  string(APPEND GR_REPORT "- libxml2: Yes\n- Expat: No\n")
+elseif(EXPAT_FOUND)
+  string(APPEND GR_REPORT "- libxml2: No\n- Expat: Yes\n")
+else()
+  string(APPEND GR_REPORT "- libxml2: No\n- Expat: No\n")
 endif()
 
 if(GR_BUILD_DEMOS)
@@ -1231,6 +1341,11 @@ endif()
 
 if(GR_INSTALL)
   install(FILES LICENSE.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/)
+  install(
+    FILES lib/grm/src/grm/dom_render/graphics_tree/schema.xsd
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/xml/GRM
+    RENAME grm_graphics_tree_schema.xsd
+  )
   include(CMakePackageConfigHelpers)
   configure_package_config_file(
     "cmake/Config.cmake.in" "GRConfig.cmake" INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"

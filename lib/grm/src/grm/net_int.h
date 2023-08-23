@@ -7,7 +7,7 @@ extern "C" {
 
 /* ######################### includes ############################################################################### */
 
-#include "error_int.h"
+#include "grm/error.h"
 #include "memwriter_int.h"
 #include <grm/net.h>
 
@@ -47,9 +47,19 @@ struct _net_handle_t
   {
     struct
     {
+      /*
+       * **Important**:
+       * - `memwriter`
+       * - `message_size`
+       * - `recv`
+       * - `send`
+       * must be definied in both union parts in the same order
+       * -> these attributes can be accessed with both receiver and sender structs
+       */
       memwriter_t *memwriter;
       size_t message_size;
       recv_callback_t recv;
+      send_callback_t send;
       union
       {
         struct
@@ -68,6 +78,8 @@ struct _net_handle_t
     struct
     {
       memwriter_t *memwriter;
+      size_t message_size;
+      recv_callback_t recv;
       send_callback_t send;
       union
       {

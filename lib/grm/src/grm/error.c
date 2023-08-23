@@ -2,7 +2,7 @@
 
 #include <stdarg.h>
 
-#include "error_int.h"
+#include "grm/error.h"
 
 
 /* ######################### internal interface ##################################################################### */

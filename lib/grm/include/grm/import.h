@@ -1,6 +1,8 @@
 #ifndef GRM_IMPORT_H_INCLUDED
 #define GRM_IMPORT_H_INCLUDED
 
+#include "plot.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -10,7 +12,6 @@ extern "C" {
 #include "args.h"
 #include "util.h"
 #include "net.h"
-#include "plot.h"
 
 
 /* ######################### public interface ####################################################################### */

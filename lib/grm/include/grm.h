@@ -8,6 +8,7 @@
 #include <grm/dump.h>
 #include <grm/event.h>
 #include <grm/interaction.h>
+#include <grm/layout.h>
 #include <grm/net.h>
 #include <grm/plot.h>
 #include <grm/util.h>

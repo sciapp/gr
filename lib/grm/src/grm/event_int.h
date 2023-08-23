@@ -8,7 +8,7 @@ extern "C" {
 /* ######################### includes ############################################################################### */
 
 #include "datatype/template/list_int.h"
-#include "error_int.h"
+#include "grm/error.h"
 #include <grm/event.h>
 
 
@@ -54,7 +54,7 @@ err_t event_queue_enqueue_new_plot_event(event_queue_t *queue, int plot_id);
 err_t event_queue_enqueue_update_plot_event(event_queue_t *queue, int plot_id);
 err_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int width, int height);
 err_t event_queue_enqueue_merge_end_event(event_queue_t *queue, const char *identificator);
-err_t event_queue_enqueue_cmd_event(event_queue_t *queue, const char *cmd);
+err_t event_queue_enqueue_request_event(event_queue_t *queue, const char *request_string);
 
 
 #undef DECLARE_LIST_METHODS

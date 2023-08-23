@@ -1,0 +1,2477 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning"
+           vc:minVersion="1.1">
+
+    <!-- definition of root -->
+    <xs:element name="root">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="figure" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attribute name="clearws" type="xs:string" use="required"/>
+            <xs:attribute name="updatews" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of figure -->
+    <xs:element name="figure">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="plot" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="drawgraphics" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attribute name="active" type="xs:string"/>
+            <xs:attribute name="figsize_x" type="xs:string"/>
+            <xs:attribute name="figsize_y" type="xs:string"/>
+            <xs:attribute name="figure_id" type="xs:ID" use="required"/>
+            <xs:attribute name="size_x" type="xs:string"/>
+            <xs:attribute name="size_x_type" type="xs:string"/>
+            <xs:attribute name="size_x_unit" type="xs:string"/>
+            <xs:attribute name="size_y" type="xs:string"/>
+            <xs:attribute name="size_y_type" type="xs:string"/>
+            <xs:attribute name="size_y_unit" type="xs:string"/>
+            <xs:attribute name="textencoding" type="xs:string"/>
+            <xs:attribute name="wsviewport_xmax" type="xs:string"/>
+            <xs:attribute name="wsviewport_xmin" type="xs:string"/>
+            <xs:attribute name="wsviewport_ymax" type="xs:string"/>
+            <xs:attribute name="wsviewport_ymin" type="xs:string"/>
+            <xs:attribute name="wswindow_xmax" type="xs:string"/>
+            <xs:attribute name="wswindow_xmin" type="xs:string"/>
+            <xs:attribute name="wswindow_ymax" type="xs:string"/>
+            <xs:attribute name="wswindow_ymin" type="xs:string"/>
+        </xs:complexType>
+        <xs:unique name="plotidisunique">
+            <xs:selector xpath="plot"/>
+            <xs:field xpath="@plot_id"/>
+        </xs:unique>
+    </xs:element>
+
+    <!-- definition of drawgraphics -->
+    <xs:element name="drawgraphics">
+        <xs:complexType>
+            <xs:attribute name="data" type="xs:string" use="required"/>
+            <xs:attribute name="name" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of plot -->
+    <xs:element name="plot">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="colorbar" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="coordinate_system" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="legend" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="series_barplot" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_contour" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_contourf" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_heatmap" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_hexbin" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_hist" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_imshow" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_isosurface" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_line" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_marginalheatmap" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_nonuniformheatmap" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_nonuniformpolar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_pie" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_plot3" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_polar" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_polar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_polar_histogram" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_quiver" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_scatter" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_scatter3" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_shade" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_stairs" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_stem" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_surface" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_tricontour" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_trisurface" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_volume" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_wireframe" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="1"/> <!-- title -->
+            </xs:choice>
+            <xs:attributeGroup ref="colorrep"/>
+            <xs:attribute name="adjust_xlim" type="xs:string" use="required"/>
+            <xs:attribute name="adjust_ylim" type="xs:string" use="required"/>
+            <xs:attribute name="adjust_zlim" type="xs:string"/>
+            <xs:attribute name="charheight" type="xs:string"/>
+            <xs:attribute name="color_rgb_values" type="xs:string"/>
+            <xs:attribute name="colormap" type="xs:string"/>
+            <xs:attribute name="fillcolorind" type="xs:string"/>
+            <xs:attribute name="fillintstyle" type="xs:string"/>
+            <xs:attribute name="font" type="xs:string"/>
+            <xs:attribute name="font_precision" type="xs:string"/>
+            <xs:attribute name="grplot" type="xs:string"/> <!-- all plots are made with grplot or none -->
+            <xs:attribute name="keep_aspect_ratio" type="xs:string" use="required"/>
+            <xs:attribute name="keep_window" type="xs:string"/>
+            <xs:attribute name="kind" type="xs:string" use="required"/>
+            <xs:attribute name="clim_max" type="xs:string"/>
+            <xs:attribute name="clim_min" type="xs:string"/>
+            <xs:attribute name="xlim_max" type="xs:string"/>
+            <xs:attribute name="xlim_min" type="xs:string"/>
+            <xs:attribute name="ylim_max" type="xs:string"/>
+            <xs:attribute name="ylim_min" type="xs:string"/>
+            <xs:attribute name="zlim_max" type="xs:string"/>
+            <xs:attribute name="zlim_min" type="xs:string"/>
+            <xs:attribute name="linespec" type="xs:string"/>
+            <xs:attribute name="location" type="xs:string"/>
+            <xs:attribute name="max_y_length" type="xs:string"/>
+            <xs:attribute name="phiflip" type="xs:string"/>
+            <xs:attribute name="philim_max" type="xs:string"/>
+            <xs:attribute name="philim_min" type="xs:string"/>
+            <xs:attribute name="plot_id" type="xs:string" use="required"/>
+            <xs:attribute name="plot_xmax" type="xs:string" use="required"/>
+            <xs:attribute name="plot_xmin" type="xs:string" use="required"/>
+            <xs:attribute name="plot_ymax" type="xs:string" use="required"/>
+            <xs:attribute name="plot_ymin" type="xs:string" use="required"/>
+            <xs:attribute name="plotGroup" type="xs:string"/>
+            <xs:attribute name="projectiontype" type="xs:string"/>
+            <xs:attribute name="r_max" type="xs:string"/>
+            <xs:attribute name="r_min" type="xs:string"/>
+            <xs:attribute name="resample_method" type="xs:string"/>
+            <xs:attribute name="rings" type="xs:string"/>
+            <xs:attribute name="rlim_max" type="xs:string"/>
+            <xs:attribute name="rlim_min" type="xs:string"/>
+            <xs:attribute name="scale" type="xs:string"/>
+            <xs:attribute name="space" type="xs:string"/>
+            <xs:attribute name="space_rotation" type="xs:string"/>
+            <xs:attribute name="space_tilt" type="xs:string"/>
+            <xs:attribute name="space_zmax" type="xs:string"/>
+            <xs:attribute name="space_zmin" type="xs:string"/>
+            <xs:attribute name="space3d_camera_distance" type="xs:string"/>
+            <xs:attribute name="space3d_fov" type="xs:string"/>
+            <xs:attribute name="space3d_phi" type="xs:string"/>
+            <xs:attribute name="space3d_theta" type="xs:string"/>
+            <xs:attribute name="tick" type="xs:string"/>
+            <xs:attribute name="title" type="xs:string"/>
+            <xs:attribute name="title_margin" type="xs:string"/>
+            <xs:attribute name="transparency" type="xs:string"/>
+            <xs:attribute name="viewport_xmax" type="xs:string"/>
+            <xs:attribute name="viewport_xmin" type="xs:string"/>
+            <xs:attribute name="viewport_ymax" type="xs:string"/>
+            <xs:attribute name="viewport_ymin" type="xs:string"/>
+            <xs:attribute name="vp_xmax" type="xs:string"/>
+            <xs:attribute name="vp_xmin" type="xs:string"/>
+            <xs:attribute name="vp_ymax" type="xs:string"/>
+            <xs:attribute name="vp_ymin" type="xs:string"/>
+            <xs:attribute name="window_xmax" type="xs:string"/>
+            <xs:attribute name="window_xmin" type="xs:string"/>
+            <xs:attribute name="window_ymax" type="xs:string"/>
+            <xs:attribute name="window_ymin" type="xs:string"/>
+            <xs:attribute name="window_zmax" type="xs:string"/>
+            <xs:attribute name="window_zmin" type="xs:string"/>
+            <xs:attribute name="xflip" type="xs:string"/>
+            <xs:attribute name="xlabel_margin" type="xs:string"/>
+            <xs:attribute name="xlog" type="xs:string"/>
+            <xs:attribute name="yflip" type="xs:string"/>
+            <xs:attribute name="ylabel_margin" type="xs:string"/>
+            <xs:attribute name="ylog" type="xs:string"/>
+            <xs:attribute name="zflip" type="xs:string"/>
+            <xs:attribute name="zlog" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of coordinate_system -->
+    <xs:element name="coordinate_system">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="axes" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="axes3d" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="grid" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="grid3d" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polar_axes" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="titles3d" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="xticklabel_group" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="yticklabel_group" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="linecolorind" type="xs:string"/>
+            <xs:attribute name="linewidth" type="xs:string"/>
+            <xs:attribute name="xticklabels" type="xs:string"/>
+            <xs:attribute name="yticklabels" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of grid -->
+    <xs:element name="grid">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="grid"/>
+            <xs:attribute name="x_major" type="xs:string"/>
+            <xs:attribute name="x_org_pos" type="xs:string"/>
+            <xs:attribute name="y_major" type="xs:string"/>
+            <xs:attribute name="y_org_pos" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of grid3d -->
+    <xs:element name="grid3d">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="grid"/>
+            <xs:attribute name="x_major" type="xs:string" use="required"/>
+            <xs:attribute name="x_org_pos" type="xs:string" use="required"/>
+            <xs:attribute name="y_major" type="xs:string" use="required"/>
+            <xs:attribute name="y_org_pos" type="xs:string" use="required"/>
+            <xs:attribute name="z_major" type="xs:string"/>
+            <xs:attribute name="z_org_pos" type="xs:string"/>
+            <xs:attribute name="z_tick" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of axes -->
+    <xs:element name="axes">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/> <!-- label -->
+            </xs:choice>
+            <xs:attributeGroup ref="axes"/>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="linecolorind" type="xs:string"/>
+            <xs:attribute name="name" type="xs:string"/>
+            <xs:attribute name="z_index" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of axes3d -->
+    <xs:element name="axes3d">
+        <xs:complexType>
+            <xs:attributeGroup ref="axes"/>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="z_index" type="xs:string"/>
+            <xs:attribute name="z_major" type="xs:string"/>
+            <xs:attribute name="z_org" type="xs:string"/>
+            <xs:attribute name="z_org_pos" type="xs:string"/>
+            <xs:attribute name="z_tick" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of xticklabel_group -->
+    <xs:element name="xticklabel_group">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="textalign_horizontal" type="xs:string"/>
+            <xs:attribute name="textalign_vertical" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of yticklabel_group -->
+    <xs:element name="yticklabel_group">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="textalign_hrizontal" type="xs:string"/>
+            <xs:attribute name="textalign_vertical" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of title, label -->
+    <xs:element name="text">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="charup_x" type="xs:string"/>
+            <xs:attribute name="charup_y" type="xs:string"/>
+            <xs:attribute name="color_index" type="xs:string"/>
+            <xs:attribute name="height" type="xs:string"/>
+            <xs:attribute name="linecolorind" type="xs:string"/>
+            <xs:attribute name="linewidth" type="xs:string"/>
+            <xs:attribute name="name" type="xs:string"/>
+            <xs:attribute name="set_text_color_for_background" type="xs:string"/>
+            <xs:attribute name="space" type="xs:string"/>
+            <xs:attribute name="text" type="xs:string" use="required"/>
+            <xs:attribute name="textalign_horizontal" type="xs:string"/>
+            <xs:attribute name="textalign_vertical" type="xs:string"/>
+            <xs:attribute name="textcolorind" type="xs:string"/>
+            <xs:attribute name="width" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string"/>
+            <xs:attribute name="y" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of titles3d -->
+    <xs:element name="titles3d">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="z" type="xs:string" use="required"/>
+            <xs:attribute name="z_index" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of legend -->
+    <xs:element name="legend">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="drawrect" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="fillrect" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="labels_group" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attribute name="color_indices" type="xs:string"/>
+            <xs:attribute name="color_rgb_values" type="xs:string"/>
+            <xs:attribute name="fillcolorind" type="xs:string"/>
+            <xs:attribute name="fillintstyle" type="xs:string"/>
+            <xs:attribute name="labels" type="xs:string"/>
+            <xs:attribute name="linecolorind" type="xs:string"/>
+            <xs:attribute name="linespec" type="xs:string"/>
+            <xs:attribute name="linetype" type="xs:string"/>
+            <xs:attribute name="linewidth" type="xs:string"/>
+            <xs:attribute name="location" type="xs:string"/>
+            <xs:attribute name="scale" type="xs:string"/>
+            <xs:attribute name="selntran" type="xs:string"/>
+            <xs:attribute name="specs" type="xs:string"/>
+            <xs:attribute name="z_index" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of labels_group -->
+    <xs:element name="labels_group">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="label" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attribute name="linespec" type="xs:string"/>
+            <xs:attribute name="textalign_horizontal" type="xs:string"/>
+            <xs:attribute name="textalign_vertical" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of label -->
+    <xs:element name="label">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="drawrect" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="fillrect" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="colorrep"/>
+            <xs:attribute name="fillcolorind" type="xs:string"/>
+            <xs:attribute name="linecolorind" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polar_axes -->
+    <xs:element name="polar_axes">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="drawarc" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="fillarc" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="axes_text_group" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="angle_ticks" type="xs:string" use="required"/>
+            <xs:attribute name="charheight" type="xs:string"/>
+            <xs:attribute name="linetype" type="xs:string"/>
+            <xs:attribute name="norm" type="xs:string"/>
+            <xs:attribute name="rings" type="xs:string"/>
+            <xs:attribute name="textalign_horizontal" type="xs:string"/>
+            <xs:attribute name="textalign_vertical" type="xs:string"/>
+            <xs:attribute name="tick" type="xs:string"/>
+            <xs:attribute name="title" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of axes_text_group -->
+    <xs:element name="axes_text_group">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attribute name="charheight" type="xs:string"/>
+            <xs:attribute name="name" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of errorbars -->
+    <xs:element name="errorbars">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="absolute_downwards" type="xs:string"/>
+            <xs:attribute name="absolute_downwards_flt" type="xs:string"/>
+            <xs:attribute name="absolute_upwards" type="xs:string"/>
+            <xs:attribute name="absolute_upwards_flt" type="xs:string"/>
+            <xs:attribute name="downwardscap_color" type="xs:string"/>
+            <xs:attribute name="errorbar_color" type="xs:string"/>
+            <xs:attribute name="relative_downwards" type="xs:string"/>
+            <xs:attribute name="relative_downwards_flt" type="xs:string"/>
+            <xs:attribute name="relative_upwards" type="xs:string"/>
+            <xs:attribute name="relative_upwards_flt" type="xs:string"/>
+            <xs:attribute name="upwardscap_color" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="z_index" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polyline3d -->
+    <xs:element name="polyline3d">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="polyline"/>
+            <xs:attribute name="z" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polyline -->
+    <xs:element name="polyline">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="polyline"/>
+            <xs:attribute name="linespec" type="xs:string"/>
+            <xs:attribute name="x1" type="xs:string"/>
+            <xs:attribute name="x2" type="xs:string"/>
+            <xs:attribute name="y1" type="xs:string"/>
+            <xs:attribute name="y2" type="xs:string"/>
+            <xs:attribute name="z_index" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polymarker -->
+    <xs:element name="polymarker">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="polymarker"/>
+            <xs:attribute name="name" type="xs:string"/>
+            <xs:attribute name="z_index" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polymarker3d -->
+    <xs:element name="polymarker3d">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="polymarker"/>
+            <xs:attribute name="z" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of fillrect -->
+    <xs:element name="fillrect">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="colorrep"/>
+            <xs:attributeGroup ref="rect"/>
+            <xs:attribute name="fillcolorind" type="xs:string"/>
+            <xs:attribute name="fillintstyle" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of drawrect -->
+    <xs:element name="drawrect">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="colorrep"/>
+            <xs:attributeGroup ref="rect"/>
+            <xs:attribute name="linecolorind" type="xs:string"/>
+            <xs:attribute name="linetype" type="xs:string"/>
+            <xs:attribute name="linewidth" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of colorbar -->
+    <xs:element name="colorbar">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="axes" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="cellarray" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="colorbar_position" type="xs:string"/>
+            <xs:attribute name="colors" type="xs:string"/>
+            <xs:attribute name="diag_factor" type="xs:string"/>
+            <xs:attribute name="lim_cmax" type="xs:string"/>
+            <xs:attribute name="lim_cmin" type="xs:string"/>
+            <xs:attribute name="max_charheight" type="xs:string"/>
+            <xs:attribute name="offset" type="xs:string"/>
+            <xs:attribute name="width" type="xs:string"/>
+            <xs:attribute name="xflip" type="xs:string"/>
+            <xs:attribute name="yflip" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of cellarray -->
+    <xs:element name="cellarray">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="cellarray"/>
+            <xs:attribute name="dimx" type="xs:string" use="required"/>
+            <xs:attribute name="dimy" type="xs:string" use="required"/>
+            <xs:attribute name="name" type="xs:string"/>
+            <xs:attribute name="xmax" type="xs:string" use="required"/>
+            <xs:attribute name="xmin" type="xs:string" use="required"/>
+            <xs:attribute name="ymax" type="xs:string" use="required"/>
+            <xs:attribute name="ymin" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of nonuniformcellarray -->
+    <xs:element name="nonuniformcellarray">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="cellarray"/>
+            <xs:attribute name="dimx" type="xs:string" use="required"/>
+            <xs:attribute name="dimy" type="xs:string" use="required"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polarcellarray -->
+    <xs:element name="polarcellarray">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="cellarray"/>
+            <xs:attribute name="dimphi" type="xs:string" use="required"/>
+            <xs:attribute name="dimr" type="xs:string" use="required"/>
+            <xs:attribute name="phimax" type="xs:string" use="required"/>
+            <xs:attribute name="phimin" type="xs:string" use="required"/>
+            <xs:attribute name="rmax" type="xs:string" use="required"/>
+            <xs:attribute name="rmin" type="xs:string" use="required"/>
+            <xs:attribute name="x_org" type="xs:string" use="required"/>
+            <xs:attribute name="y_org" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of nonuniform_polarcellarray -->
+    <xs:element name="nonuniform_polarcellarray">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="cellarray"/>
+            <xs:attribute name="dimphi" type="xs:string" use="required"/>
+            <xs:attribute name="dimr" type="xs:string" use="required"/>
+            <xs:attribute name="phi" type="xs:string" use="required"/>
+            <xs:attribute name="r" type="xs:string" use="required"/>
+            <xs:attribute name="x_org" type="xs:string" use="required"/>
+            <xs:attribute name="y_org" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of drawimage -->
+    <xs:element name="drawimage">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="data" type="xs:string" use="required"/>
+            <xs:attribute name="height" type="xs:string" use="required"/>
+            <xs:attribute name="model" type="xs:string" use="required"/>
+            <xs:attribute name="resample_method" type="xs:string"/>
+            <xs:attribute name="width" type="xs:string" use="required"/>
+            <xs:attribute name="xmax" type="xs:string" use="required"/>
+            <xs:attribute name="xmin" type="xs:string" use="required"/>
+            <xs:attribute name="ymax" type="xs:string" use="required"/>
+            <xs:attribute name="ymin" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of drawarc -->
+    <xs:element name="drawarc">
+        <xs:complexType>
+            <xs:attributeGroup ref="arc"/>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="colorrep"/>
+            <xs:attribute name="linecolorind" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of fillarc -->
+    <xs:element name="fillarc">
+        <xs:complexType>
+            <xs:attributeGroup ref="arc"/>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="colorrep"/>
+            <xs:attribute name="fillcolorind" type="xs:string" use="required"/>
+            <xs:attribute name="fillintstyle" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of fillarea -->
+    <xs:element name="fillarea">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="colorrep"/>
+            <xs:attribute name="fillcolorind" type="xs:string"/>
+            <xs:attribute name="fillintstyle" type="xs:string"/>
+            <xs:attribute name="fillstyle" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- ||||||||||||||||||||||||||||| Plottypes |||||||||||||||||||||||||||||||||||||||| -->
+
+    <!-- definition of barplot -->
+    <xs:element name="series_barplot">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="errorbars" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="drawrect" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="fillrect" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="colorrep"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="bar_color" type="xs:string"/>
+            <xs:attribute name="bar_color_rgb" type="xs:string"/>
+            <xs:attribute name="bar_width" type="xs:string"/>
+            <xs:attribute name="c" type="xs:string"/>
+            <xs:attribute name="c_rgb" type="xs:string"/>
+            <xs:attribute name="clipxform" type="xs:string"/>
+            <xs:attribute name="edge_color" type="xs:string"/>
+            <xs:attribute name="edge_color_rgb" type="xs:string"/>
+            <xs:attribute name="edge_width" type="xs:string"/>
+            <xs:attribute name="fillcolorind" type="xs:string"/>
+            <xs:attribute name="fillintstyle" type="xs:string"/>
+            <xs:attribute name="ind_bar_color" type="xs:string"/>
+            <xs:attribute name="ind_edge_color" type="xs:string"/>
+            <xs:attribute name="ind_edge_width" type="xs:string"/>
+            <xs:attribute name="indices" type="xs:string"/>
+            <xs:attribute name="inner_series" type="xs:string"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="linecolorind" type="xs:string"/>
+            <xs:attribute name="linewidth" type="xs:string"/>
+            <xs:attribute name="orientation" type="xs:string"/>
+            <xs:attribute name="rgb" type="xs:string"/>
+            <xs:attribute name="series_index" type="xs:string"/>
+            <xs:attribute name="style" type="xs:string"/>
+            <xs:attribute name="textalign_horizontal" type="xs:string"/>
+            <xs:attribute name="textalign_vertical" type="xs:string"/>
+            <xs:attribute name="width" type="xs:string"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="ylabels" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of contour -->
+    <xs:element name="series_contour">
+        <xs:complexType>
+            <xs:attributeGroup ref="contour"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of contourf -->
+    <xs:element name="series_contourf">
+        <xs:complexType>
+            <xs:attributeGroup ref="contour"/>
+            <xs:attribute name="linecolorind" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of heatmap -->
+    <xs:element name="series_heatmap">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="drawimage" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="nonuniformcellarray" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="heatmap"/>
+            <xs:attributeGroup ref="ranges"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of hexbin -->
+    <xs:element name="series_hexbin">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="nbins" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of hist -->
+    <xs:element name="series_hist">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="drawrect" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="errorbars" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="fillrect" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="colorrep"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="bar_color_index" type="xs:string"/>
+            <xs:attribute name="bar_color_rgb" type="xs:string"/>
+            <xs:attribute name="bins" type="xs:string"/>
+            <xs:attribute name="calc_window_and_viewport_from_parent" type="xs:string"/>
+            <xs:attribute name="edge_color_index" type="xs:string"/>
+            <xs:attribute name="edge_color_rgb" type="xs:string"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="nbins" type="xs:string"/>
+            <xs:attribute name="orientation" type="xs:string"/>
+            <xs:attribute name="weights" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of imshow -->
+    <xs:element name="series_imshow">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="cellarray" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="c" type="xs:string" use="required"/>
+            <xs:attribute name="cdims" type="xs:string" use="required"/>
+            <xs:attribute name="img_data_key" type="xs:string"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="scale" type="xs:string"/>
+            <xs:attribute name="selntran" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string"/>
+            <xs:attribute name="y" type="xs:string"/>
+            <xs:attribute name="z" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of isosurface -->
+    <xs:element name="series_isosurface">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="ambient" type="xs:string"/>
+            <xs:attribute name="c" type="xs:string" use="required"/>
+            <xs:attribute name="c_dims" type="xs:string" use="required"/>
+            <xs:attribute name="diffuse" type="xs:string"/>
+            <xs:attribute name="foreground_color" type="xs:string"/>
+            <xs:attribute name="isovalue" type="xs:string"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="specular" type="xs:string"/>
+            <xs:attribute name="specular_power" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of line -->
+    <xs:element name="series_line">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="errorbars" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="markertype" type="xs:string"/>
+            <xs:attribute name="orientation" type="xs:string"/>
+            <xs:attribute name="spec" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of marginalheatmap -->
+    <xs:element name="series_marginalheatmap">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="series_heatmap" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_hist" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_stairs" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="algorithm" type="xs:string"/>
+            <xs:attribute name="gr_option_flip_x" type="xs:string"/>
+            <xs:attribute name="gr_option_flip_y" type="xs:string"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="marginalheatmap_kind" type="xs:string" use="required"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="xind" type="xs:string"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="yind" type="xs:string"/>
+            <xs:attribute name="z" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of nonuniformheatmap -->
+    <xs:element name="series_nonuniformheatmap">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="series_heatmap" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of nonuniformpolar_heatmap -->
+    <xs:element name="series_nonuniformpolar_heatmap">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="series_polar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of pie -->
+    <xs:element name="series_pie">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="fillarc" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="color_indices" type="xs:string"/>
+            <xs:attribute name="color_rgb_values" type="xs:string"/>
+            <xs:attribute name="fillintstyle" type="xs:string"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="textalign_horizontal" type="xs:string"/>
+            <xs:attribute name="textalign_vertical" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of plot3 -->
+    <xs:element name="series_plot3">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="polyline3d" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="z" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polar -->
+    <xs:element name="series_polar">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="linespec" type="xs:string"/>
+            <xs:attribute name="r_max" type="xs:string"/>
+            <xs:attribute name="r_min" type="xs:string"/>
+            <xs:attribute name="spec" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polar_heatmap -->
+    <xs:element name="series_polar_heatmap">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="nonuniform_polarcellarray" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polarcellarray" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="heatmap"/>
+            <xs:attributeGroup ref="ranges"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polar_histogram -->
+    <xs:element name="series_polar_histogram">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="drawarc" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="drawimage" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="fillarea" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="fillarc" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="bin_counts" type="xs:string"/>
+            <xs:attribute name="bin_edges" type="xs:string"/>
+            <xs:attribute name="bin_width" type="xs:string"/>
+            <xs:attribute name="bin_widths" type="xs:string"/>
+            <xs:attribute name="classes" type="xs:string"/>
+            <xs:attribute name="draw_edges" type="xs:string"/>
+            <xs:attribute name="edge_color" type="xs:string"/>
+            <xs:attribute name="face_alpha" type="xs:string"/>
+            <xs:attribute name="face_color" type="xs:string"/>
+            <xs:attribute name="fillcolorind" type="xs:string"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="linecolorind" type="xs:string"/>
+            <xs:attribute name="linewidth" type="xs:string"/>
+            <xs:attribute name="nbins" type="xs:string"/>
+            <xs:attribute name="normalization" type="xs:string"/>
+            <xs:attribute name="r_max" type="xs:string"/>
+            <xs:attribute name="r_min" type="xs:string"/>
+            <xs:attribute name="stairs" type="xs:string"/>
+            <xs:attribute name="theta" type="xs:string"/>
+            <xs:attribute name="tick" type="xs:string"/>
+            <xs:attribute name="total" type="xs:string"/>
+            <xs:attribute name="transparency" type="xs:string"/>
+            <xs:attribute name="xcolormap" type="xs:string"/>
+            <xs:attribute name="ycolormap" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of quiver -->
+    <xs:element name="series_quiver">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="color" type="xs:string" use="required"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="u" type="xs:string" use="required"/>
+            <xs:attribute name="v" type="xs:string" use="required"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of scatter -->
+    <xs:element name="series_scatter">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="errorbars" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="scatter"/>
+            <xs:attribute name="markersizes" type="xs:string"/>
+            <xs:attribute name="orientation" type="xs:string"/>
+            <xs:attribute name="z" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of scatter3 -->
+    <xs:element name="series_scatter3">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="polymarker3d" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="scatter"/>
+            <xs:attribute name="z" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of shade -->
+    <xs:element name="series_shade">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="xbins" type="xs:string"/>
+            <xs:attribute name="xform" type="xs:string"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="ybins" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of stairs -->
+    <xs:element name="series_stairs">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="calc_window_and_viewport_from_parent" type="xs:string"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="orientation" type="xs:string"/>
+            <xs:attribute name="spec" type="xs:string"/>
+            <xs:attribute name="step_where" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="xi" type="xs:string"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="z" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of stem -->
+    <xs:element name="series_stem">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="linespec" type="xs:string"/>
+            <xs:attribute name="orientation" type="xs:string"/>
+            <xs:attribute name="spec" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of surface -->
+    <xs:element name="series_surface">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="accelerate" type="xs:string" use="required"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string"/>
+            <xs:attribute name="y" type="xs:string"/>
+            <xs:attribute name="z" type="xs:string" use="required"/>
+            <xs:attribute name="zdims_max" type="xs:string"/>
+            <xs:attribute name="zdims_min" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of tricontour -->
+    <xs:element name="series_tricontour">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="levels" type="xs:string" use="required"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="z" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of trisurface -->
+    <xs:element name="series_trisurface">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="z" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of volume -->
+    <xs:element name="series_volume">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="algorithm" type="xs:string" use="required"/>
+            <xs:attribute name="c" type="xs:string" use="required"/>
+            <xs:attribute name="c_dims" type="xs:string" use="required"/>
+            <xs:attribute name="dmax" type="xs:string" use="required"/>
+            <xs:attribute name="dmin" type="xs:string" use="required"/>
+            <xs:attribute name="kind" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of wireframe -->
+    <xs:element name="series_wireframe">
+        <xs:complexType>
+            <xs:attributeGroup ref="bbox"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="fillcolorind" type="xs:string"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="z" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- ||||||||||||||||||||||||||||| attribute groups |||||||||||||||||||||||||||||||||||||||| -->
+
+    <!-- definition of boundingbox attributes -->
+    <xs:attributeGroup name="bbox">
+        <xs:attribute name="bbox_id" type="xs:string"/>
+        <xs:attribute name="bbox_xmax" type="xs:string"/>
+        <xs:attribute name="bbox_xmin" type="xs:string"/>
+        <xs:attribute name="bbox_ymax" type="xs:string"/>
+        <xs:attribute name="bbox_ymin" type="xs:string"/>
+    </xs:attributeGroup>
+
+    <!-- definition of range attributes -->
+    <xs:attributeGroup name="ranges">
+        <xs:attribute name="xrange_max" type="xs:string"/>
+        <xs:attribute name="xrange_min" type="xs:string"/>
+        <xs:attribute name="yrange_max" type="xs:string"/>
+        <xs:attribute name="yrange_min" type="xs:string"/>
+        <xs:attribute name="zrange_max" type="xs:string"/>
+        <xs:attribute name="zrange_min" type="xs:string"/>
+        <xs:attribute name="crange_max" type="xs:string"/>
+        <xs:attribute name="crange_min" type="xs:string"/>
+    </xs:attributeGroup>
+
+    <!-- definition of contour attributes -->
+    <xs:attributeGroup name="contour">
+        <xs:attributeGroup ref="bbox"/>
+        <xs:attributeGroup ref="ranges"/>
+        <xs:attribute name="kind" type="xs:string"/>
+        <xs:attribute name="levels" type="xs:string"/>
+        <xs:attribute name="px" type="xs:string"/>
+        <xs:attribute name="py" type="xs:string"/>
+        <xs:attribute name="pz" type="xs:string"/>
+        <xs:attribute name="x" type="xs:string" use="required"/>
+        <xs:attribute name="y" type="xs:string" use="required"/>
+        <xs:attribute name="z" type="xs:string" use="required"/>
+    </xs:attributeGroup>
+
+    <!-- definition of axes attributes -->
+    <xs:attributeGroup name="axes">
+        <xs:attribute name="tick_orientation" type="xs:string" use="required"/>
+        <xs:attribute name="tick_size" type="xs:string"/>
+        <xs:attribute name="x_major" type="xs:string"/>
+        <xs:attribute name="x_org" type="xs:string"/>
+        <xs:attribute name="x_org_pos" type="xs:string"/>
+        <xs:attribute name="x_tick" type="xs:string"/>
+        <xs:attribute name="xlabel" type="xs:string"/>
+        <xs:attribute name="y_major" type="xs:string"/>
+        <xs:attribute name="y_org" type="xs:string"/>
+        <xs:attribute name="y_org_pos" type="xs:string"/>
+        <xs:attribute name="y_tick" type="xs:string"/>
+        <xs:attribute name="ylabel" type="xs:string"/>
+    </xs:attributeGroup>
+
+    <!-- definition of arc attributes -->
+    <xs:attributeGroup name="arc">
+        <xs:attribute name="a1" type="xs:string" use="required"/>
+        <xs:attribute name="a2" type="xs:string" use="required"/>
+        <xs:attribute name="name" type="xs:string"/>
+        <xs:attribute name="xmax" type="xs:string" use="required"/>
+        <xs:attribute name="xmin" type="xs:string" use="required"/>
+        <xs:attribute name="ymax" type="xs:string" use="required"/>
+        <xs:attribute name="ymin" type="xs:string" use="required"/>
+    </xs:attributeGroup>
+
+    <!-- definition of grid attributes -->
+    <xs:attributeGroup name="grid">
+        <xs:attribute name="x_org" type="xs:string"/>
+        <xs:attribute name="x_tick" type="xs:string"/>
+        <xs:attribute name="y_org" type="xs:string"/>
+        <xs:attribute name="y_tick" type="xs:string"/>
+    </xs:attributeGroup>
+
+    <!-- definition of heatmap attributes -->
+    <xs:attributeGroup name="heatmap">
+        <xs:attribute name="kind" type="xs:string"/>
+        <xs:attribute name="x" type="xs:string"/>
+        <xs:attribute name="y" type="xs:string"/>
+        <xs:attribute name="z" type="xs:string" use="required"/>
+        <xs:attribute name="zdims_max" type="xs:string"/>
+        <xs:attribute name="zdims_min" type="xs:string"/>
+    </xs:attributeGroup>
+
+    <!-- definition of polyline attributes -->
+    <xs:attributeGroup name="polyline">
+        <xs:attribute name="linecolorind" type="xs:string"/>
+        <xs:attribute name="name" type="xs:string"/>
+        <xs:attribute name="x" type="xs:string"/>
+        <xs:attribute name="y" type="xs:string"/>
+    </xs:attributeGroup>
+
+    <!-- definition of polymarker attributes -->
+    <xs:attributeGroup name="polymarker">
+        <xs:attribute name="markercolorind" type="xs:string"/>
+        <xs:attribute name="markersize" type="xs:string"/>
+        <xs:attribute name="markertype" type="xs:string"/>
+        <xs:attribute name="x" type="xs:string"/>
+        <xs:attribute name="y" type="xs:string"/>
+    </xs:attributeGroup>
+
+    <!-- definition of rect attributes -->
+    <xs:attributeGroup name="rect">
+        <xs:attribute name="x" type="xs:string"/>
+        <xs:attribute name="y" type="xs:string"/>
+        <xs:attribute name="xmax" type="xs:string" use="required"/>
+        <xs:attribute name="xmin" type="xs:string" use="required"/>
+        <xs:attribute name="ymax" type="xs:string" use="required"/>
+        <xs:attribute name="ymin" type="xs:string" use="required"/>
+    </xs:attributeGroup>
+
+    <!-- definition of cellarray attributes -->
+    <xs:attributeGroup name="cellarray">
+        <xs:attribute name="color" type="xs:string" use="required"/>
+        <xs:attribute name="ncol" type="xs:string" use="required"/>
+        <xs:attribute name="nrow" type="xs:string" use="required"/>
+        <xs:attribute name="scol" type="xs:string" use="required"/>
+        <xs:attribute name="srow" type="xs:string" use="required"/>
+    </xs:attributeGroup>
+
+    <!-- definition of scatter attributes -->
+    <xs:attributeGroup name="scatter">
+        <xs:attribute name="c" type="xs:string"/>
+        <xs:attribute name="c_index" type="xs:string"/>
+        <xs:attribute name="kind" type="xs:string"/>
+        <xs:attribute name="markercolorinds" type="xs:string"/>
+        <xs:attribute name="markertype" type="xs:string"/>
+        <xs:attribute name="x" type="xs:string" use="required"/>
+        <xs:attribute name="y" type="xs:string" use="required"/>
+    </xs:attributeGroup>
+
+    <!-- definition of colorrep attribute -->
+    <xs:attributeGroup name="colorrep">
+        <xs:attribute name="colorrep.0" type="xs:string"/>
+        <xs:attribute name="colorrep.1" type="xs:string"/>
+        <xs:attribute name="colorrep.2" type="xs:string"/>
+        <xs:attribute name="colorrep.3" type="xs:string"/>
+        <xs:attribute name="colorrep.4" type="xs:string"/>
+        <xs:attribute name="colorrep.5" type="xs:string"/>
+        <xs:attribute name="colorrep.6" type="xs:string"/>
+        <xs:attribute name="colorrep.7" type="xs:string"/>
+        <xs:attribute name="colorrep.8" type="xs:string"/>
+        <xs:attribute name="colorrep.9" type="xs:string"/>
+        <xs:attribute name="colorrep.10" type="xs:string"/>
+        <xs:attribute name="colorrep.11" type="xs:string"/>
+        <xs:attribute name="colorrep.12" type="xs:string"/>
+        <xs:attribute name="colorrep.13" type="xs:string"/>
+        <xs:attribute name="colorrep.14" type="xs:string"/>
+        <xs:attribute name="colorrep.15" type="xs:string"/>
+        <xs:attribute name="colorrep.16" type="xs:string"/>
+        <xs:attribute name="colorrep.17" type="xs:string"/>
+        <xs:attribute name="colorrep.18" type="xs:string"/>
+        <xs:attribute name="colorrep.19" type="xs:string"/>
+        <xs:attribute name="colorrep.20" type="xs:string"/>
+        <xs:attribute name="colorrep.21" type="xs:string"/>
+        <xs:attribute name="colorrep.22" type="xs:string"/>
+        <xs:attribute name="colorrep.23" type="xs:string"/>
+        <xs:attribute name="colorrep.24" type="xs:string"/>
+        <xs:attribute name="colorrep.25" type="xs:string"/>
+        <xs:attribute name="colorrep.26" type="xs:string"/>
+        <xs:attribute name="colorrep.27" type="xs:string"/>
+        <xs:attribute name="colorrep.28" type="xs:string"/>
+        <xs:attribute name="colorrep.29" type="xs:string"/>
+        <xs:attribute name="colorrep.30" type="xs:string"/>
+        <xs:attribute name="colorrep.31" type="xs:string"/>
+        <xs:attribute name="colorrep.32" type="xs:string"/>
+        <xs:attribute name="colorrep.33" type="xs:string"/>
+        <xs:attribute name="colorrep.34" type="xs:string"/>
+        <xs:attribute name="colorrep.35" type="xs:string"/>
+        <xs:attribute name="colorrep.36" type="xs:string"/>
+        <xs:attribute name="colorrep.37" type="xs:string"/>
+        <xs:attribute name="colorrep.38" type="xs:string"/>
+        <xs:attribute name="colorrep.39" type="xs:string"/>
+        <xs:attribute name="colorrep.40" type="xs:string"/>
+        <xs:attribute name="colorrep.41" type="xs:string"/>
+        <xs:attribute name="colorrep.42" type="xs:string"/>
+        <xs:attribute name="colorrep.43" type="xs:string"/>
+        <xs:attribute name="colorrep.44" type="xs:string"/>
+        <xs:attribute name="colorrep.45" type="xs:string"/>
+        <xs:attribute name="colorrep.46" type="xs:string"/>
+        <xs:attribute name="colorrep.47" type="xs:string"/>
+        <xs:attribute name="colorrep.48" type="xs:string"/>
+        <xs:attribute name="colorrep.49" type="xs:string"/>
+        <xs:attribute name="colorrep.50" type="xs:string"/>
+        <xs:attribute name="colorrep.51" type="xs:string"/>
+        <xs:attribute name="colorrep.52" type="xs:string"/>
+        <xs:attribute name="colorrep.53" type="xs:string"/>
+        <xs:attribute name="colorrep.54" type="xs:string"/>
+        <xs:attribute name="colorrep.55" type="xs:string"/>
+        <xs:attribute name="colorrep.56" type="xs:string"/>
+        <xs:attribute name="colorrep.57" type="xs:string"/>
+        <xs:attribute name="colorrep.58" type="xs:string"/>
+        <xs:attribute name="colorrep.59" type="xs:string"/>
+        <xs:attribute name="colorrep.60" type="xs:string"/>
+        <xs:attribute name="colorrep.61" type="xs:string"/>
+        <xs:attribute name="colorrep.62" type="xs:string"/>
+        <xs:attribute name="colorrep.63" type="xs:string"/>
+        <xs:attribute name="colorrep.64" type="xs:string"/>
+        <xs:attribute name="colorrep.65" type="xs:string"/>
+        <xs:attribute name="colorrep.66" type="xs:string"/>
+        <xs:attribute name="colorrep.67" type="xs:string"/>
+        <xs:attribute name="colorrep.68" type="xs:string"/>
+        <xs:attribute name="colorrep.69" type="xs:string"/>
+        <xs:attribute name="colorrep.70" type="xs:string"/>
+        <xs:attribute name="colorrep.71" type="xs:string"/>
+        <xs:attribute name="colorrep.72" type="xs:string"/>
+        <xs:attribute name="colorrep.73" type="xs:string"/>
+        <xs:attribute name="colorrep.74" type="xs:string"/>
+        <xs:attribute name="colorrep.75" type="xs:string"/>
+        <xs:attribute name="colorrep.76" type="xs:string"/>
+        <xs:attribute name="colorrep.77" type="xs:string"/>
+        <xs:attribute name="colorrep.78" type="xs:string"/>
+        <xs:attribute name="colorrep.79" type="xs:string"/>
+        <xs:attribute name="colorrep.80" type="xs:string"/>
+        <xs:attribute name="colorrep.81" type="xs:string"/>
+        <xs:attribute name="colorrep.82" type="xs:string"/>
+        <xs:attribute name="colorrep.83" type="xs:string"/>
+        <xs:attribute name="colorrep.84" type="xs:string"/>
+        <xs:attribute name="colorrep.85" type="xs:string"/>
+        <xs:attribute name="colorrep.86" type="xs:string"/>
+        <xs:attribute name="colorrep.87" type="xs:string"/>
+        <xs:attribute name="colorrep.88" type="xs:string"/>
+        <xs:attribute name="colorrep.89" type="xs:string"/>
+        <xs:attribute name="colorrep.90" type="xs:string"/>
+        <xs:attribute name="colorrep.91" type="xs:string"/>
+        <xs:attribute name="colorrep.92" type="xs:string"/>
+        <xs:attribute name="colorrep.93" type="xs:string"/>
+        <xs:attribute name="colorrep.94" type="xs:string"/>
+        <xs:attribute name="colorrep.95" type="xs:string"/>
+        <xs:attribute name="colorrep.96" type="xs:string"/>
+        <xs:attribute name="colorrep.97" type="xs:string"/>
+        <xs:attribute name="colorrep.98" type="xs:string"/>
+        <xs:attribute name="colorrep.99" type="xs:string"/>
+        <xs:attribute name="colorrep.100" type="xs:string"/>
+        <xs:attribute name="colorrep.101" type="xs:string"/>
+        <xs:attribute name="colorrep.102" type="xs:string"/>
+        <xs:attribute name="colorrep.103" type="xs:string"/>
+        <xs:attribute name="colorrep.104" type="xs:string"/>
+        <xs:attribute name="colorrep.105" type="xs:string"/>
+        <xs:attribute name="colorrep.106" type="xs:string"/>
+        <xs:attribute name="colorrep.107" type="xs:string"/>
+        <xs:attribute name="colorrep.108" type="xs:string"/>
+        <xs:attribute name="colorrep.109" type="xs:string"/>
+        <xs:attribute name="colorrep.110" type="xs:string"/>
+        <xs:attribute name="colorrep.111" type="xs:string"/>
+        <xs:attribute name="colorrep.112" type="xs:string"/>
+        <xs:attribute name="colorrep.113" type="xs:string"/>
+        <xs:attribute name="colorrep.114" type="xs:string"/>
+        <xs:attribute name="colorrep.115" type="xs:string"/>
+        <xs:attribute name="colorrep.116" type="xs:string"/>
+        <xs:attribute name="colorrep.117" type="xs:string"/>
+        <xs:attribute name="colorrep.118" type="xs:string"/>
+        <xs:attribute name="colorrep.119" type="xs:string"/>
+        <xs:attribute name="colorrep.120" type="xs:string"/>
+        <xs:attribute name="colorrep.121" type="xs:string"/>
+        <xs:attribute name="colorrep.122" type="xs:string"/>
+        <xs:attribute name="colorrep.123" type="xs:string"/>
+        <xs:attribute name="colorrep.124" type="xs:string"/>
+        <xs:attribute name="colorrep.125" type="xs:string"/>
+        <xs:attribute name="colorrep.126" type="xs:string"/>
+        <xs:attribute name="colorrep.127" type="xs:string"/>
+        <xs:attribute name="colorrep.128" type="xs:string"/>
+        <xs:attribute name="colorrep.129" type="xs:string"/>
+        <xs:attribute name="colorrep.130" type="xs:string"/>
+        <xs:attribute name="colorrep.131" type="xs:string"/>
+        <xs:attribute name="colorrep.132" type="xs:string"/>
+        <xs:attribute name="colorrep.133" type="xs:string"/>
+        <xs:attribute name="colorrep.134" type="xs:string"/>
+        <xs:attribute name="colorrep.135" type="xs:string"/>
+        <xs:attribute name="colorrep.136" type="xs:string"/>
+        <xs:attribute name="colorrep.137" type="xs:string"/>
+        <xs:attribute name="colorrep.138" type="xs:string"/>
+        <xs:attribute name="colorrep.139" type="xs:string"/>
+        <xs:attribute name="colorrep.140" type="xs:string"/>
+        <xs:attribute name="colorrep.141" type="xs:string"/>
+        <xs:attribute name="colorrep.142" type="xs:string"/>
+        <xs:attribute name="colorrep.143" type="xs:string"/>
+        <xs:attribute name="colorrep.144" type="xs:string"/>
+        <xs:attribute name="colorrep.145" type="xs:string"/>
+        <xs:attribute name="colorrep.146" type="xs:string"/>
+        <xs:attribute name="colorrep.147" type="xs:string"/>
+        <xs:attribute name="colorrep.148" type="xs:string"/>
+        <xs:attribute name="colorrep.149" type="xs:string"/>
+        <xs:attribute name="colorrep.150" type="xs:string"/>
+        <xs:attribute name="colorrep.151" type="xs:string"/>
+        <xs:attribute name="colorrep.152" type="xs:string"/>
+        <xs:attribute name="colorrep.153" type="xs:string"/>
+        <xs:attribute name="colorrep.154" type="xs:string"/>
+        <xs:attribute name="colorrep.155" type="xs:string"/>
+        <xs:attribute name="colorrep.156" type="xs:string"/>
+        <xs:attribute name="colorrep.157" type="xs:string"/>
+        <xs:attribute name="colorrep.158" type="xs:string"/>
+        <xs:attribute name="colorrep.159" type="xs:string"/>
+        <xs:attribute name="colorrep.160" type="xs:string"/>
+        <xs:attribute name="colorrep.161" type="xs:string"/>
+        <xs:attribute name="colorrep.162" type="xs:string"/>
+        <xs:attribute name="colorrep.163" type="xs:string"/>
+        <xs:attribute name="colorrep.164" type="xs:string"/>
+        <xs:attribute name="colorrep.165" type="xs:string"/>
+        <xs:attribute name="colorrep.166" type="xs:string"/>
+        <xs:attribute name="colorrep.167" type="xs:string"/>
+        <xs:attribute name="colorrep.168" type="xs:string"/>
+        <xs:attribute name="colorrep.169" type="xs:string"/>
+        <xs:attribute name="colorrep.170" type="xs:string"/>
+        <xs:attribute name="colorrep.171" type="xs:string"/>
+        <xs:attribute name="colorrep.172" type="xs:string"/>
+        <xs:attribute name="colorrep.173" type="xs:string"/>
+        <xs:attribute name="colorrep.174" type="xs:string"/>
+        <xs:attribute name="colorrep.175" type="xs:string"/>
+        <xs:attribute name="colorrep.176" type="xs:string"/>
+        <xs:attribute name="colorrep.177" type="xs:string"/>
+        <xs:attribute name="colorrep.178" type="xs:string"/>
+        <xs:attribute name="colorrep.179" type="xs:string"/>
+        <xs:attribute name="colorrep.180" type="xs:string"/>
+        <xs:attribute name="colorrep.181" type="xs:string"/>
+        <xs:attribute name="colorrep.182" type="xs:string"/>
+        <xs:attribute name="colorrep.183" type="xs:string"/>
+        <xs:attribute name="colorrep.184" type="xs:string"/>
+        <xs:attribute name="colorrep.185" type="xs:string"/>
+        <xs:attribute name="colorrep.186" type="xs:string"/>
+        <xs:attribute name="colorrep.187" type="xs:string"/>
+        <xs:attribute name="colorrep.188" type="xs:string"/>
+        <xs:attribute name="colorrep.189" type="xs:string"/>
+        <xs:attribute name="colorrep.190" type="xs:string"/>
+        <xs:attribute name="colorrep.191" type="xs:string"/>
+        <xs:attribute name="colorrep.192" type="xs:string"/>
+        <xs:attribute name="colorrep.193" type="xs:string"/>
+        <xs:attribute name="colorrep.194" type="xs:string"/>
+        <xs:attribute name="colorrep.195" type="xs:string"/>
+        <xs:attribute name="colorrep.196" type="xs:string"/>
+        <xs:attribute name="colorrep.197" type="xs:string"/>
+        <xs:attribute name="colorrep.198" type="xs:string"/>
+        <xs:attribute name="colorrep.199" type="xs:string"/>
+        <xs:attribute name="colorrep.200" type="xs:string"/>
+        <xs:attribute name="colorrep.201" type="xs:string"/>
+        <xs:attribute name="colorrep.202" type="xs:string"/>
+        <xs:attribute name="colorrep.203" type="xs:string"/>
+        <xs:attribute name="colorrep.204" type="xs:string"/>
+        <xs:attribute name="colorrep.205" type="xs:string"/>
+        <xs:attribute name="colorrep.206" type="xs:string"/>
+        <xs:attribute name="colorrep.207" type="xs:string"/>
+        <xs:attribute name="colorrep.208" type="xs:string"/>
+        <xs:attribute name="colorrep.209" type="xs:string"/>
+        <xs:attribute name="colorrep.210" type="xs:string"/>
+        <xs:attribute name="colorrep.211" type="xs:string"/>
+        <xs:attribute name="colorrep.212" type="xs:string"/>
+        <xs:attribute name="colorrep.213" type="xs:string"/>
+        <xs:attribute name="colorrep.214" type="xs:string"/>
+        <xs:attribute name="colorrep.215" type="xs:string"/>
+        <xs:attribute name="colorrep.216" type="xs:string"/>
+        <xs:attribute name="colorrep.217" type="xs:string"/>
+        <xs:attribute name="colorrep.218" type="xs:string"/>
+        <xs:attribute name="colorrep.219" type="xs:string"/>
+        <xs:attribute name="colorrep.220" type="xs:string"/>
+        <xs:attribute name="colorrep.221" type="xs:string"/>
+        <xs:attribute name="colorrep.222" type="xs:string"/>
+        <xs:attribute name="colorrep.223" type="xs:string"/>
+        <xs:attribute name="colorrep.224" type="xs:string"/>
+        <xs:attribute name="colorrep.225" type="xs:string"/>
+        <xs:attribute name="colorrep.226" type="xs:string"/>
+        <xs:attribute name="colorrep.227" type="xs:string"/>
+        <xs:attribute name="colorrep.228" type="xs:string"/>
+        <xs:attribute name="colorrep.229" type="xs:string"/>
+        <xs:attribute name="colorrep.230" type="xs:string"/>
+        <xs:attribute name="colorrep.231" type="xs:string"/>
+        <xs:attribute name="colorrep.232" type="xs:string"/>
+        <xs:attribute name="colorrep.233" type="xs:string"/>
+        <xs:attribute name="colorrep.234" type="xs:string"/>
+        <xs:attribute name="colorrep.235" type="xs:string"/>
+        <xs:attribute name="colorrep.236" type="xs:string"/>
+        <xs:attribute name="colorrep.237" type="xs:string"/>
+        <xs:attribute name="colorrep.238" type="xs:string"/>
+        <xs:attribute name="colorrep.239" type="xs:string"/>
+        <xs:attribute name="colorrep.240" type="xs:string"/>
+        <xs:attribute name="colorrep.241" type="xs:string"/>
+        <xs:attribute name="colorrep.242" type="xs:string"/>
+        <xs:attribute name="colorrep.243" type="xs:string"/>
+        <xs:attribute name="colorrep.244" type="xs:string"/>
+        <xs:attribute name="colorrep.245" type="xs:string"/>
+        <xs:attribute name="colorrep.246" type="xs:string"/>
+        <xs:attribute name="colorrep.247" type="xs:string"/>
+        <xs:attribute name="colorrep.248" type="xs:string"/>
+        <xs:attribute name="colorrep.249" type="xs:string"/>
+        <xs:attribute name="colorrep.250" type="xs:string"/>
+        <xs:attribute name="colorrep.251" type="xs:string"/>
+        <xs:attribute name="colorrep.252" type="xs:string"/>
+        <xs:attribute name="colorrep.253" type="xs:string"/>
+        <xs:attribute name="colorrep.254" type="xs:string"/>
+        <xs:attribute name="colorrep.255" type="xs:string"/>
+        <xs:attribute name="colorrep.256" type="xs:string"/>
+        <xs:attribute name="colorrep.257" type="xs:string"/>
+        <xs:attribute name="colorrep.258" type="xs:string"/>
+        <xs:attribute name="colorrep.259" type="xs:string"/>
+        <xs:attribute name="colorrep.260" type="xs:string"/>
+        <xs:attribute name="colorrep.261" type="xs:string"/>
+        <xs:attribute name="colorrep.262" type="xs:string"/>
+        <xs:attribute name="colorrep.263" type="xs:string"/>
+        <xs:attribute name="colorrep.264" type="xs:string"/>
+        <xs:attribute name="colorrep.265" type="xs:string"/>
+        <xs:attribute name="colorrep.266" type="xs:string"/>
+        <xs:attribute name="colorrep.267" type="xs:string"/>
+        <xs:attribute name="colorrep.268" type="xs:string"/>
+        <xs:attribute name="colorrep.269" type="xs:string"/>
+        <xs:attribute name="colorrep.270" type="xs:string"/>
+        <xs:attribute name="colorrep.271" type="xs:string"/>
+        <xs:attribute name="colorrep.272" type="xs:string"/>
+        <xs:attribute name="colorrep.273" type="xs:string"/>
+        <xs:attribute name="colorrep.274" type="xs:string"/>
+        <xs:attribute name="colorrep.275" type="xs:string"/>
+        <xs:attribute name="colorrep.276" type="xs:string"/>
+        <xs:attribute name="colorrep.277" type="xs:string"/>
+        <xs:attribute name="colorrep.278" type="xs:string"/>
+        <xs:attribute name="colorrep.279" type="xs:string"/>
+        <xs:attribute name="colorrep.280" type="xs:string"/>
+        <xs:attribute name="colorrep.281" type="xs:string"/>
+        <xs:attribute name="colorrep.282" type="xs:string"/>
+        <xs:attribute name="colorrep.283" type="xs:string"/>
+        <xs:attribute name="colorrep.284" type="xs:string"/>
+        <xs:attribute name="colorrep.285" type="xs:string"/>
+        <xs:attribute name="colorrep.286" type="xs:string"/>
+        <xs:attribute name="colorrep.287" type="xs:string"/>
+        <xs:attribute name="colorrep.288" type="xs:string"/>
+        <xs:attribute name="colorrep.289" type="xs:string"/>
+        <xs:attribute name="colorrep.290" type="xs:string"/>
+        <xs:attribute name="colorrep.291" type="xs:string"/>
+        <xs:attribute name="colorrep.292" type="xs:string"/>
+        <xs:attribute name="colorrep.293" type="xs:string"/>
+        <xs:attribute name="colorrep.294" type="xs:string"/>
+        <xs:attribute name="colorrep.295" type="xs:string"/>
+        <xs:attribute name="colorrep.296" type="xs:string"/>
+        <xs:attribute name="colorrep.297" type="xs:string"/>
+        <xs:attribute name="colorrep.298" type="xs:string"/>
+        <xs:attribute name="colorrep.299" type="xs:string"/>
+        <xs:attribute name="colorrep.300" type="xs:string"/>
+        <xs:attribute name="colorrep.301" type="xs:string"/>
+        <xs:attribute name="colorrep.302" type="xs:string"/>
+        <xs:attribute name="colorrep.303" type="xs:string"/>
+        <xs:attribute name="colorrep.304" type="xs:string"/>
+        <xs:attribute name="colorrep.305" type="xs:string"/>
+        <xs:attribute name="colorrep.306" type="xs:string"/>
+        <xs:attribute name="colorrep.307" type="xs:string"/>
+        <xs:attribute name="colorrep.308" type="xs:string"/>
+        <xs:attribute name="colorrep.309" type="xs:string"/>
+        <xs:attribute name="colorrep.310" type="xs:string"/>
+        <xs:attribute name="colorrep.311" type="xs:string"/>
+        <xs:attribute name="colorrep.312" type="xs:string"/>
+        <xs:attribute name="colorrep.313" type="xs:string"/>
+        <xs:attribute name="colorrep.314" type="xs:string"/>
+        <xs:attribute name="colorrep.315" type="xs:string"/>
+        <xs:attribute name="colorrep.316" type="xs:string"/>
+        <xs:attribute name="colorrep.317" type="xs:string"/>
+        <xs:attribute name="colorrep.318" type="xs:string"/>
+        <xs:attribute name="colorrep.319" type="xs:string"/>
+        <xs:attribute name="colorrep.320" type="xs:string"/>
+        <xs:attribute name="colorrep.321" type="xs:string"/>
+        <xs:attribute name="colorrep.322" type="xs:string"/>
+        <xs:attribute name="colorrep.323" type="xs:string"/>
+        <xs:attribute name="colorrep.324" type="xs:string"/>
+        <xs:attribute name="colorrep.325" type="xs:string"/>
+        <xs:attribute name="colorrep.326" type="xs:string"/>
+        <xs:attribute name="colorrep.327" type="xs:string"/>
+        <xs:attribute name="colorrep.328" type="xs:string"/>
+        <xs:attribute name="colorrep.329" type="xs:string"/>
+        <xs:attribute name="colorrep.330" type="xs:string"/>
+        <xs:attribute name="colorrep.331" type="xs:string"/>
+        <xs:attribute name="colorrep.332" type="xs:string"/>
+        <xs:attribute name="colorrep.333" type="xs:string"/>
+        <xs:attribute name="colorrep.334" type="xs:string"/>
+        <xs:attribute name="colorrep.335" type="xs:string"/>
+        <xs:attribute name="colorrep.336" type="xs:string"/>
+        <xs:attribute name="colorrep.337" type="xs:string"/>
+        <xs:attribute name="colorrep.338" type="xs:string"/>
+        <xs:attribute name="colorrep.339" type="xs:string"/>
+        <xs:attribute name="colorrep.340" type="xs:string"/>
+        <xs:attribute name="colorrep.341" type="xs:string"/>
+        <xs:attribute name="colorrep.342" type="xs:string"/>
+        <xs:attribute name="colorrep.343" type="xs:string"/>
+        <xs:attribute name="colorrep.344" type="xs:string"/>
+        <xs:attribute name="colorrep.345" type="xs:string"/>
+        <xs:attribute name="colorrep.346" type="xs:string"/>
+        <xs:attribute name="colorrep.347" type="xs:string"/>
+        <xs:attribute name="colorrep.348" type="xs:string"/>
+        <xs:attribute name="colorrep.349" type="xs:string"/>
+        <xs:attribute name="colorrep.350" type="xs:string"/>
+        <xs:attribute name="colorrep.351" type="xs:string"/>
+        <xs:attribute name="colorrep.352" type="xs:string"/>
+        <xs:attribute name="colorrep.353" type="xs:string"/>
+        <xs:attribute name="colorrep.354" type="xs:string"/>
+        <xs:attribute name="colorrep.355" type="xs:string"/>
+        <xs:attribute name="colorrep.356" type="xs:string"/>
+        <xs:attribute name="colorrep.357" type="xs:string"/>
+        <xs:attribute name="colorrep.358" type="xs:string"/>
+        <xs:attribute name="colorrep.359" type="xs:string"/>
+        <xs:attribute name="colorrep.360" type="xs:string"/>
+        <xs:attribute name="colorrep.361" type="xs:string"/>
+        <xs:attribute name="colorrep.362" type="xs:string"/>
+        <xs:attribute name="colorrep.363" type="xs:string"/>
+        <xs:attribute name="colorrep.364" type="xs:string"/>
+        <xs:attribute name="colorrep.365" type="xs:string"/>
+        <xs:attribute name="colorrep.366" type="xs:string"/>
+        <xs:attribute name="colorrep.367" type="xs:string"/>
+        <xs:attribute name="colorrep.368" type="xs:string"/>
+        <xs:attribute name="colorrep.369" type="xs:string"/>
+        <xs:attribute name="colorrep.370" type="xs:string"/>
+        <xs:attribute name="colorrep.371" type="xs:string"/>
+        <xs:attribute name="colorrep.372" type="xs:string"/>
+        <xs:attribute name="colorrep.373" type="xs:string"/>
+        <xs:attribute name="colorrep.374" type="xs:string"/>
+        <xs:attribute name="colorrep.375" type="xs:string"/>
+        <xs:attribute name="colorrep.376" type="xs:string"/>
+        <xs:attribute name="colorrep.377" type="xs:string"/>
+        <xs:attribute name="colorrep.378" type="xs:string"/>
+        <xs:attribute name="colorrep.379" type="xs:string"/>
+        <xs:attribute name="colorrep.380" type="xs:string"/>
+        <xs:attribute name="colorrep.381" type="xs:string"/>
+        <xs:attribute name="colorrep.382" type="xs:string"/>
+        <xs:attribute name="colorrep.383" type="xs:string"/>
+        <xs:attribute name="colorrep.384" type="xs:string"/>
+        <xs:attribute name="colorrep.385" type="xs:string"/>
+        <xs:attribute name="colorrep.386" type="xs:string"/>
+        <xs:attribute name="colorrep.387" type="xs:string"/>
+        <xs:attribute name="colorrep.388" type="xs:string"/>
+        <xs:attribute name="colorrep.389" type="xs:string"/>
+        <xs:attribute name="colorrep.390" type="xs:string"/>
+        <xs:attribute name="colorrep.391" type="xs:string"/>
+        <xs:attribute name="colorrep.392" type="xs:string"/>
+        <xs:attribute name="colorrep.393" type="xs:string"/>
+        <xs:attribute name="colorrep.394" type="xs:string"/>
+        <xs:attribute name="colorrep.395" type="xs:string"/>
+        <xs:attribute name="colorrep.396" type="xs:string"/>
+        <xs:attribute name="colorrep.397" type="xs:string"/>
+        <xs:attribute name="colorrep.398" type="xs:string"/>
+        <xs:attribute name="colorrep.399" type="xs:string"/>
+        <xs:attribute name="colorrep.400" type="xs:string"/>
+        <xs:attribute name="colorrep.401" type="xs:string"/>
+        <xs:attribute name="colorrep.402" type="xs:string"/>
+        <xs:attribute name="colorrep.403" type="xs:string"/>
+        <xs:attribute name="colorrep.404" type="xs:string"/>
+        <xs:attribute name="colorrep.405" type="xs:string"/>
+        <xs:attribute name="colorrep.406" type="xs:string"/>
+        <xs:attribute name="colorrep.407" type="xs:string"/>
+        <xs:attribute name="colorrep.408" type="xs:string"/>
+        <xs:attribute name="colorrep.409" type="xs:string"/>
+        <xs:attribute name="colorrep.410" type="xs:string"/>
+        <xs:attribute name="colorrep.411" type="xs:string"/>
+        <xs:attribute name="colorrep.412" type="xs:string"/>
+        <xs:attribute name="colorrep.413" type="xs:string"/>
+        <xs:attribute name="colorrep.414" type="xs:string"/>
+        <xs:attribute name="colorrep.415" type="xs:string"/>
+        <xs:attribute name="colorrep.416" type="xs:string"/>
+        <xs:attribute name="colorrep.417" type="xs:string"/>
+        <xs:attribute name="colorrep.418" type="xs:string"/>
+        <xs:attribute name="colorrep.419" type="xs:string"/>
+        <xs:attribute name="colorrep.420" type="xs:string"/>
+        <xs:attribute name="colorrep.421" type="xs:string"/>
+        <xs:attribute name="colorrep.422" type="xs:string"/>
+        <xs:attribute name="colorrep.423" type="xs:string"/>
+        <xs:attribute name="colorrep.424" type="xs:string"/>
+        <xs:attribute name="colorrep.425" type="xs:string"/>
+        <xs:attribute name="colorrep.426" type="xs:string"/>
+        <xs:attribute name="colorrep.427" type="xs:string"/>
+        <xs:attribute name="colorrep.428" type="xs:string"/>
+        <xs:attribute name="colorrep.429" type="xs:string"/>
+        <xs:attribute name="colorrep.430" type="xs:string"/>
+        <xs:attribute name="colorrep.431" type="xs:string"/>
+        <xs:attribute name="colorrep.432" type="xs:string"/>
+        <xs:attribute name="colorrep.433" type="xs:string"/>
+        <xs:attribute name="colorrep.434" type="xs:string"/>
+        <xs:attribute name="colorrep.435" type="xs:string"/>
+        <xs:attribute name="colorrep.436" type="xs:string"/>
+        <xs:attribute name="colorrep.437" type="xs:string"/>
+        <xs:attribute name="colorrep.438" type="xs:string"/>
+        <xs:attribute name="colorrep.439" type="xs:string"/>
+        <xs:attribute name="colorrep.440" type="xs:string"/>
+        <xs:attribute name="colorrep.441" type="xs:string"/>
+        <xs:attribute name="colorrep.442" type="xs:string"/>
+        <xs:attribute name="colorrep.443" type="xs:string"/>
+        <xs:attribute name="colorrep.444" type="xs:string"/>
+        <xs:attribute name="colorrep.445" type="xs:string"/>
+        <xs:attribute name="colorrep.446" type="xs:string"/>
+        <xs:attribute name="colorrep.447" type="xs:string"/>
+        <xs:attribute name="colorrep.448" type="xs:string"/>
+        <xs:attribute name="colorrep.449" type="xs:string"/>
+        <xs:attribute name="colorrep.450" type="xs:string"/>
+        <xs:attribute name="colorrep.451" type="xs:string"/>
+        <xs:attribute name="colorrep.452" type="xs:string"/>
+        <xs:attribute name="colorrep.453" type="xs:string"/>
+        <xs:attribute name="colorrep.454" type="xs:string"/>
+        <xs:attribute name="colorrep.455" type="xs:string"/>
+        <xs:attribute name="colorrep.456" type="xs:string"/>
+        <xs:attribute name="colorrep.457" type="xs:string"/>
+        <xs:attribute name="colorrep.458" type="xs:string"/>
+        <xs:attribute name="colorrep.459" type="xs:string"/>
+        <xs:attribute name="colorrep.460" type="xs:string"/>
+        <xs:attribute name="colorrep.461" type="xs:string"/>
+        <xs:attribute name="colorrep.462" type="xs:string"/>
+        <xs:attribute name="colorrep.463" type="xs:string"/>
+        <xs:attribute name="colorrep.464" type="xs:string"/>
+        <xs:attribute name="colorrep.465" type="xs:string"/>
+        <xs:attribute name="colorrep.466" type="xs:string"/>
+        <xs:attribute name="colorrep.467" type="xs:string"/>
+        <xs:attribute name="colorrep.468" type="xs:string"/>
+        <xs:attribute name="colorrep.469" type="xs:string"/>
+        <xs:attribute name="colorrep.470" type="xs:string"/>
+        <xs:attribute name="colorrep.471" type="xs:string"/>
+        <xs:attribute name="colorrep.472" type="xs:string"/>
+        <xs:attribute name="colorrep.473" type="xs:string"/>
+        <xs:attribute name="colorrep.474" type="xs:string"/>
+        <xs:attribute name="colorrep.475" type="xs:string"/>
+        <xs:attribute name="colorrep.476" type="xs:string"/>
+        <xs:attribute name="colorrep.477" type="xs:string"/>
+        <xs:attribute name="colorrep.478" type="xs:string"/>
+        <xs:attribute name="colorrep.479" type="xs:string"/>
+        <xs:attribute name="colorrep.480" type="xs:string"/>
+        <xs:attribute name="colorrep.481" type="xs:string"/>
+        <xs:attribute name="colorrep.482" type="xs:string"/>
+        <xs:attribute name="colorrep.483" type="xs:string"/>
+        <xs:attribute name="colorrep.484" type="xs:string"/>
+        <xs:attribute name="colorrep.485" type="xs:string"/>
+        <xs:attribute name="colorrep.486" type="xs:string"/>
+        <xs:attribute name="colorrep.487" type="xs:string"/>
+        <xs:attribute name="colorrep.488" type="xs:string"/>
+        <xs:attribute name="colorrep.489" type="xs:string"/>
+        <xs:attribute name="colorrep.490" type="xs:string"/>
+        <xs:attribute name="colorrep.491" type="xs:string"/>
+        <xs:attribute name="colorrep.492" type="xs:string"/>
+        <xs:attribute name="colorrep.493" type="xs:string"/>
+        <xs:attribute name="colorrep.494" type="xs:string"/>
+        <xs:attribute name="colorrep.495" type="xs:string"/>
+        <xs:attribute name="colorrep.496" type="xs:string"/>
+        <xs:attribute name="colorrep.497" type="xs:string"/>
+        <xs:attribute name="colorrep.498" type="xs:string"/>
+        <xs:attribute name="colorrep.499" type="xs:string"/>
+        <xs:attribute name="colorrep.500" type="xs:string"/>
+        <xs:attribute name="colorrep.501" type="xs:string"/>
+        <xs:attribute name="colorrep.502" type="xs:string"/>
+        <xs:attribute name="colorrep.503" type="xs:string"/>
+        <xs:attribute name="colorrep.504" type="xs:string"/>
+        <xs:attribute name="colorrep.505" type="xs:string"/>
+        <xs:attribute name="colorrep.506" type="xs:string"/>
+        <xs:attribute name="colorrep.507" type="xs:string"/>
+        <xs:attribute name="colorrep.508" type="xs:string"/>
+        <xs:attribute name="colorrep.509" type="xs:string"/>
+        <xs:attribute name="colorrep.510" type="xs:string"/>
+        <xs:attribute name="colorrep.511" type="xs:string"/>
+        <xs:attribute name="colorrep.512" type="xs:string"/>
+        <xs:attribute name="colorrep.513" type="xs:string"/>
+        <xs:attribute name="colorrep.514" type="xs:string"/>
+        <xs:attribute name="colorrep.515" type="xs:string"/>
+        <xs:attribute name="colorrep.516" type="xs:string"/>
+        <xs:attribute name="colorrep.517" type="xs:string"/>
+        <xs:attribute name="colorrep.518" type="xs:string"/>
+        <xs:attribute name="colorrep.519" type="xs:string"/>
+        <xs:attribute name="colorrep.520" type="xs:string"/>
+        <xs:attribute name="colorrep.521" type="xs:string"/>
+        <xs:attribute name="colorrep.522" type="xs:string"/>
+        <xs:attribute name="colorrep.523" type="xs:string"/>
+        <xs:attribute name="colorrep.524" type="xs:string"/>
+        <xs:attribute name="colorrep.525" type="xs:string"/>
+        <xs:attribute name="colorrep.526" type="xs:string"/>
+        <xs:attribute name="colorrep.527" type="xs:string"/>
+        <xs:attribute name="colorrep.528" type="xs:string"/>
+        <xs:attribute name="colorrep.529" type="xs:string"/>
+        <xs:attribute name="colorrep.530" type="xs:string"/>
+        <xs:attribute name="colorrep.531" type="xs:string"/>
+        <xs:attribute name="colorrep.532" type="xs:string"/>
+        <xs:attribute name="colorrep.533" type="xs:string"/>
+        <xs:attribute name="colorrep.534" type="xs:string"/>
+        <xs:attribute name="colorrep.535" type="xs:string"/>
+        <xs:attribute name="colorrep.536" type="xs:string"/>
+        <xs:attribute name="colorrep.537" type="xs:string"/>
+        <xs:attribute name="colorrep.538" type="xs:string"/>
+        <xs:attribute name="colorrep.539" type="xs:string"/>
+        <xs:attribute name="colorrep.540" type="xs:string"/>
+        <xs:attribute name="colorrep.541" type="xs:string"/>
+        <xs:attribute name="colorrep.542" type="xs:string"/>
+        <xs:attribute name="colorrep.543" type="xs:string"/>
+        <xs:attribute name="colorrep.544" type="xs:string"/>
+        <xs:attribute name="colorrep.545" type="xs:string"/>
+        <xs:attribute name="colorrep.546" type="xs:string"/>
+        <xs:attribute name="colorrep.547" type="xs:string"/>
+        <xs:attribute name="colorrep.548" type="xs:string"/>
+        <xs:attribute name="colorrep.549" type="xs:string"/>
+        <xs:attribute name="colorrep.550" type="xs:string"/>
+        <xs:attribute name="colorrep.551" type="xs:string"/>
+        <xs:attribute name="colorrep.552" type="xs:string"/>
+        <xs:attribute name="colorrep.553" type="xs:string"/>
+        <xs:attribute name="colorrep.554" type="xs:string"/>
+        <xs:attribute name="colorrep.555" type="xs:string"/>
+        <xs:attribute name="colorrep.556" type="xs:string"/>
+        <xs:attribute name="colorrep.557" type="xs:string"/>
+        <xs:attribute name="colorrep.558" type="xs:string"/>
+        <xs:attribute name="colorrep.559" type="xs:string"/>
+        <xs:attribute name="colorrep.560" type="xs:string"/>
+        <xs:attribute name="colorrep.561" type="xs:string"/>
+        <xs:attribute name="colorrep.562" type="xs:string"/>
+        <xs:attribute name="colorrep.563" type="xs:string"/>
+        <xs:attribute name="colorrep.564" type="xs:string"/>
+        <xs:attribute name="colorrep.565" type="xs:string"/>
+        <xs:attribute name="colorrep.566" type="xs:string"/>
+        <xs:attribute name="colorrep.567" type="xs:string"/>
+        <xs:attribute name="colorrep.568" type="xs:string"/>
+        <xs:attribute name="colorrep.569" type="xs:string"/>
+        <xs:attribute name="colorrep.570" type="xs:string"/>
+        <xs:attribute name="colorrep.571" type="xs:string"/>
+        <xs:attribute name="colorrep.572" type="xs:string"/>
+        <xs:attribute name="colorrep.573" type="xs:string"/>
+        <xs:attribute name="colorrep.574" type="xs:string"/>
+        <xs:attribute name="colorrep.575" type="xs:string"/>
+        <xs:attribute name="colorrep.576" type="xs:string"/>
+        <xs:attribute name="colorrep.577" type="xs:string"/>
+        <xs:attribute name="colorrep.578" type="xs:string"/>
+        <xs:attribute name="colorrep.579" type="xs:string"/>
+        <xs:attribute name="colorrep.580" type="xs:string"/>
+        <xs:attribute name="colorrep.581" type="xs:string"/>
+        <xs:attribute name="colorrep.582" type="xs:string"/>
+        <xs:attribute name="colorrep.583" type="xs:string"/>
+        <xs:attribute name="colorrep.584" type="xs:string"/>
+        <xs:attribute name="colorrep.585" type="xs:string"/>
+        <xs:attribute name="colorrep.586" type="xs:string"/>
+        <xs:attribute name="colorrep.587" type="xs:string"/>
+        <xs:attribute name="colorrep.588" type="xs:string"/>
+        <xs:attribute name="colorrep.589" type="xs:string"/>
+        <xs:attribute name="colorrep.590" type="xs:string"/>
+        <xs:attribute name="colorrep.591" type="xs:string"/>
+        <xs:attribute name="colorrep.592" type="xs:string"/>
+        <xs:attribute name="colorrep.593" type="xs:string"/>
+        <xs:attribute name="colorrep.594" type="xs:string"/>
+        <xs:attribute name="colorrep.595" type="xs:string"/>
+        <xs:attribute name="colorrep.596" type="xs:string"/>
+        <xs:attribute name="colorrep.597" type="xs:string"/>
+        <xs:attribute name="colorrep.598" type="xs:string"/>
+        <xs:attribute name="colorrep.599" type="xs:string"/>
+        <xs:attribute name="colorrep.600" type="xs:string"/>
+        <xs:attribute name="colorrep.601" type="xs:string"/>
+        <xs:attribute name="colorrep.602" type="xs:string"/>
+        <xs:attribute name="colorrep.603" type="xs:string"/>
+        <xs:attribute name="colorrep.604" type="xs:string"/>
+        <xs:attribute name="colorrep.605" type="xs:string"/>
+        <xs:attribute name="colorrep.606" type="xs:string"/>
+        <xs:attribute name="colorrep.607" type="xs:string"/>
+        <xs:attribute name="colorrep.608" type="xs:string"/>
+        <xs:attribute name="colorrep.609" type="xs:string"/>
+        <xs:attribute name="colorrep.610" type="xs:string"/>
+        <xs:attribute name="colorrep.611" type="xs:string"/>
+        <xs:attribute name="colorrep.612" type="xs:string"/>
+        <xs:attribute name="colorrep.613" type="xs:string"/>
+        <xs:attribute name="colorrep.614" type="xs:string"/>
+        <xs:attribute name="colorrep.615" type="xs:string"/>
+        <xs:attribute name="colorrep.616" type="xs:string"/>
+        <xs:attribute name="colorrep.617" type="xs:string"/>
+        <xs:attribute name="colorrep.618" type="xs:string"/>
+        <xs:attribute name="colorrep.619" type="xs:string"/>
+        <xs:attribute name="colorrep.620" type="xs:string"/>
+        <xs:attribute name="colorrep.621" type="xs:string"/>
+        <xs:attribute name="colorrep.622" type="xs:string"/>
+        <xs:attribute name="colorrep.623" type="xs:string"/>
+        <xs:attribute name="colorrep.624" type="xs:string"/>
+        <xs:attribute name="colorrep.625" type="xs:string"/>
+        <xs:attribute name="colorrep.626" type="xs:string"/>
+        <xs:attribute name="colorrep.627" type="xs:string"/>
+        <xs:attribute name="colorrep.628" type="xs:string"/>
+        <xs:attribute name="colorrep.629" type="xs:string"/>
+        <xs:attribute name="colorrep.630" type="xs:string"/>
+        <xs:attribute name="colorrep.631" type="xs:string"/>
+        <xs:attribute name="colorrep.632" type="xs:string"/>
+        <xs:attribute name="colorrep.633" type="xs:string"/>
+        <xs:attribute name="colorrep.634" type="xs:string"/>
+        <xs:attribute name="colorrep.635" type="xs:string"/>
+        <xs:attribute name="colorrep.636" type="xs:string"/>
+        <xs:attribute name="colorrep.637" type="xs:string"/>
+        <xs:attribute name="colorrep.638" type="xs:string"/>
+        <xs:attribute name="colorrep.639" type="xs:string"/>
+        <xs:attribute name="colorrep.640" type="xs:string"/>
+        <xs:attribute name="colorrep.641" type="xs:string"/>
+        <xs:attribute name="colorrep.642" type="xs:string"/>
+        <xs:attribute name="colorrep.643" type="xs:string"/>
+        <xs:attribute name="colorrep.644" type="xs:string"/>
+        <xs:attribute name="colorrep.645" type="xs:string"/>
+        <xs:attribute name="colorrep.646" type="xs:string"/>
+        <xs:attribute name="colorrep.647" type="xs:string"/>
+        <xs:attribute name="colorrep.648" type="xs:string"/>
+        <xs:attribute name="colorrep.649" type="xs:string"/>
+        <xs:attribute name="colorrep.650" type="xs:string"/>
+        <xs:attribute name="colorrep.651" type="xs:string"/>
+        <xs:attribute name="colorrep.652" type="xs:string"/>
+        <xs:attribute name="colorrep.653" type="xs:string"/>
+        <xs:attribute name="colorrep.654" type="xs:string"/>
+        <xs:attribute name="colorrep.655" type="xs:string"/>
+        <xs:attribute name="colorrep.656" type="xs:string"/>
+        <xs:attribute name="colorrep.657" type="xs:string"/>
+        <xs:attribute name="colorrep.658" type="xs:string"/>
+        <xs:attribute name="colorrep.659" type="xs:string"/>
+        <xs:attribute name="colorrep.660" type="xs:string"/>
+        <xs:attribute name="colorrep.661" type="xs:string"/>
+        <xs:attribute name="colorrep.662" type="xs:string"/>
+        <xs:attribute name="colorrep.663" type="xs:string"/>
+        <xs:attribute name="colorrep.664" type="xs:string"/>
+        <xs:attribute name="colorrep.665" type="xs:string"/>
+        <xs:attribute name="colorrep.666" type="xs:string"/>
+        <xs:attribute name="colorrep.667" type="xs:string"/>
+        <xs:attribute name="colorrep.668" type="xs:string"/>
+        <xs:attribute name="colorrep.669" type="xs:string"/>
+        <xs:attribute name="colorrep.670" type="xs:string"/>
+        <xs:attribute name="colorrep.671" type="xs:string"/>
+        <xs:attribute name="colorrep.672" type="xs:string"/>
+        <xs:attribute name="colorrep.673" type="xs:string"/>
+        <xs:attribute name="colorrep.674" type="xs:string"/>
+        <xs:attribute name="colorrep.675" type="xs:string"/>
+        <xs:attribute name="colorrep.676" type="xs:string"/>
+        <xs:attribute name="colorrep.677" type="xs:string"/>
+        <xs:attribute name="colorrep.678" type="xs:string"/>
+        <xs:attribute name="colorrep.679" type="xs:string"/>
+        <xs:attribute name="colorrep.680" type="xs:string"/>
+        <xs:attribute name="colorrep.681" type="xs:string"/>
+        <xs:attribute name="colorrep.682" type="xs:string"/>
+        <xs:attribute name="colorrep.683" type="xs:string"/>
+        <xs:attribute name="colorrep.684" type="xs:string"/>
+        <xs:attribute name="colorrep.685" type="xs:string"/>
+        <xs:attribute name="colorrep.686" type="xs:string"/>
+        <xs:attribute name="colorrep.687" type="xs:string"/>
+        <xs:attribute name="colorrep.688" type="xs:string"/>
+        <xs:attribute name="colorrep.689" type="xs:string"/>
+        <xs:attribute name="colorrep.690" type="xs:string"/>
+        <xs:attribute name="colorrep.691" type="xs:string"/>
+        <xs:attribute name="colorrep.692" type="xs:string"/>
+        <xs:attribute name="colorrep.693" type="xs:string"/>
+        <xs:attribute name="colorrep.694" type="xs:string"/>
+        <xs:attribute name="colorrep.695" type="xs:string"/>
+        <xs:attribute name="colorrep.696" type="xs:string"/>
+        <xs:attribute name="colorrep.697" type="xs:string"/>
+        <xs:attribute name="colorrep.698" type="xs:string"/>
+        <xs:attribute name="colorrep.699" type="xs:string"/>
+        <xs:attribute name="colorrep.700" type="xs:string"/>
+        <xs:attribute name="colorrep.701" type="xs:string"/>
+        <xs:attribute name="colorrep.702" type="xs:string"/>
+        <xs:attribute name="colorrep.703" type="xs:string"/>
+        <xs:attribute name="colorrep.704" type="xs:string"/>
+        <xs:attribute name="colorrep.705" type="xs:string"/>
+        <xs:attribute name="colorrep.706" type="xs:string"/>
+        <xs:attribute name="colorrep.707" type="xs:string"/>
+        <xs:attribute name="colorrep.708" type="xs:string"/>
+        <xs:attribute name="colorrep.709" type="xs:string"/>
+        <xs:attribute name="colorrep.710" type="xs:string"/>
+        <xs:attribute name="colorrep.711" type="xs:string"/>
+        <xs:attribute name="colorrep.712" type="xs:string"/>
+        <xs:attribute name="colorrep.713" type="xs:string"/>
+        <xs:attribute name="colorrep.714" type="xs:string"/>
+        <xs:attribute name="colorrep.715" type="xs:string"/>
+        <xs:attribute name="colorrep.716" type="xs:string"/>
+        <xs:attribute name="colorrep.717" type="xs:string"/>
+        <xs:attribute name="colorrep.718" type="xs:string"/>
+        <xs:attribute name="colorrep.719" type="xs:string"/>
+        <xs:attribute name="colorrep.720" type="xs:string"/>
+        <xs:attribute name="colorrep.721" type="xs:string"/>
+        <xs:attribute name="colorrep.722" type="xs:string"/>
+        <xs:attribute name="colorrep.723" type="xs:string"/>
+        <xs:attribute name="colorrep.724" type="xs:string"/>
+        <xs:attribute name="colorrep.725" type="xs:string"/>
+        <xs:attribute name="colorrep.726" type="xs:string"/>
+        <xs:attribute name="colorrep.727" type="xs:string"/>
+        <xs:attribute name="colorrep.728" type="xs:string"/>
+        <xs:attribute name="colorrep.729" type="xs:string"/>
+        <xs:attribute name="colorrep.730" type="xs:string"/>
+        <xs:attribute name="colorrep.731" type="xs:string"/>
+        <xs:attribute name="colorrep.732" type="xs:string"/>
+        <xs:attribute name="colorrep.733" type="xs:string"/>
+        <xs:attribute name="colorrep.734" type="xs:string"/>
+        <xs:attribute name="colorrep.735" type="xs:string"/>
+        <xs:attribute name="colorrep.736" type="xs:string"/>
+        <xs:attribute name="colorrep.737" type="xs:string"/>
+        <xs:attribute name="colorrep.738" type="xs:string"/>
+        <xs:attribute name="colorrep.739" type="xs:string"/>
+        <xs:attribute name="colorrep.740" type="xs:string"/>
+        <xs:attribute name="colorrep.741" type="xs:string"/>
+        <xs:attribute name="colorrep.742" type="xs:string"/>
+        <xs:attribute name="colorrep.743" type="xs:string"/>
+        <xs:attribute name="colorrep.744" type="xs:string"/>
+        <xs:attribute name="colorrep.745" type="xs:string"/>
+        <xs:attribute name="colorrep.746" type="xs:string"/>
+        <xs:attribute name="colorrep.747" type="xs:string"/>
+        <xs:attribute name="colorrep.748" type="xs:string"/>
+        <xs:attribute name="colorrep.749" type="xs:string"/>
+        <xs:attribute name="colorrep.750" type="xs:string"/>
+        <xs:attribute name="colorrep.751" type="xs:string"/>
+        <xs:attribute name="colorrep.752" type="xs:string"/>
+        <xs:attribute name="colorrep.753" type="xs:string"/>
+        <xs:attribute name="colorrep.754" type="xs:string"/>
+        <xs:attribute name="colorrep.755" type="xs:string"/>
+        <xs:attribute name="colorrep.756" type="xs:string"/>
+        <xs:attribute name="colorrep.757" type="xs:string"/>
+        <xs:attribute name="colorrep.758" type="xs:string"/>
+        <xs:attribute name="colorrep.759" type="xs:string"/>
+        <xs:attribute name="colorrep.760" type="xs:string"/>
+        <xs:attribute name="colorrep.761" type="xs:string"/>
+        <xs:attribute name="colorrep.762" type="xs:string"/>
+        <xs:attribute name="colorrep.763" type="xs:string"/>
+        <xs:attribute name="colorrep.764" type="xs:string"/>
+        <xs:attribute name="colorrep.765" type="xs:string"/>
+        <xs:attribute name="colorrep.766" type="xs:string"/>
+        <xs:attribute name="colorrep.767" type="xs:string"/>
+        <xs:attribute name="colorrep.768" type="xs:string"/>
+        <xs:attribute name="colorrep.769" type="xs:string"/>
+        <xs:attribute name="colorrep.770" type="xs:string"/>
+        <xs:attribute name="colorrep.771" type="xs:string"/>
+        <xs:attribute name="colorrep.772" type="xs:string"/>
+        <xs:attribute name="colorrep.773" type="xs:string"/>
+        <xs:attribute name="colorrep.774" type="xs:string"/>
+        <xs:attribute name="colorrep.775" type="xs:string"/>
+        <xs:attribute name="colorrep.776" type="xs:string"/>
+        <xs:attribute name="colorrep.777" type="xs:string"/>
+        <xs:attribute name="colorrep.778" type="xs:string"/>
+        <xs:attribute name="colorrep.779" type="xs:string"/>
+        <xs:attribute name="colorrep.780" type="xs:string"/>
+        <xs:attribute name="colorrep.781" type="xs:string"/>
+        <xs:attribute name="colorrep.782" type="xs:string"/>
+        <xs:attribute name="colorrep.783" type="xs:string"/>
+        <xs:attribute name="colorrep.784" type="xs:string"/>
+        <xs:attribute name="colorrep.785" type="xs:string"/>
+        <xs:attribute name="colorrep.786" type="xs:string"/>
+        <xs:attribute name="colorrep.787" type="xs:string"/>
+        <xs:attribute name="colorrep.788" type="xs:string"/>
+        <xs:attribute name="colorrep.789" type="xs:string"/>
+        <xs:attribute name="colorrep.790" type="xs:string"/>
+        <xs:attribute name="colorrep.791" type="xs:string"/>
+        <xs:attribute name="colorrep.792" type="xs:string"/>
+        <xs:attribute name="colorrep.793" type="xs:string"/>
+        <xs:attribute name="colorrep.794" type="xs:string"/>
+        <xs:attribute name="colorrep.795" type="xs:string"/>
+        <xs:attribute name="colorrep.796" type="xs:string"/>
+        <xs:attribute name="colorrep.797" type="xs:string"/>
+        <xs:attribute name="colorrep.798" type="xs:string"/>
+        <xs:attribute name="colorrep.799" type="xs:string"/>
+        <xs:attribute name="colorrep.800" type="xs:string"/>
+        <xs:attribute name="colorrep.801" type="xs:string"/>
+        <xs:attribute name="colorrep.802" type="xs:string"/>
+        <xs:attribute name="colorrep.803" type="xs:string"/>
+        <xs:attribute name="colorrep.804" type="xs:string"/>
+        <xs:attribute name="colorrep.805" type="xs:string"/>
+        <xs:attribute name="colorrep.806" type="xs:string"/>
+        <xs:attribute name="colorrep.807" type="xs:string"/>
+        <xs:attribute name="colorrep.808" type="xs:string"/>
+        <xs:attribute name="colorrep.809" type="xs:string"/>
+        <xs:attribute name="colorrep.810" type="xs:string"/>
+        <xs:attribute name="colorrep.811" type="xs:string"/>
+        <xs:attribute name="colorrep.812" type="xs:string"/>
+        <xs:attribute name="colorrep.813" type="xs:string"/>
+        <xs:attribute name="colorrep.814" type="xs:string"/>
+        <xs:attribute name="colorrep.815" type="xs:string"/>
+        <xs:attribute name="colorrep.816" type="xs:string"/>
+        <xs:attribute name="colorrep.817" type="xs:string"/>
+        <xs:attribute name="colorrep.818" type="xs:string"/>
+        <xs:attribute name="colorrep.819" type="xs:string"/>
+        <xs:attribute name="colorrep.820" type="xs:string"/>
+        <xs:attribute name="colorrep.821" type="xs:string"/>
+        <xs:attribute name="colorrep.822" type="xs:string"/>
+        <xs:attribute name="colorrep.823" type="xs:string"/>
+        <xs:attribute name="colorrep.824" type="xs:string"/>
+        <xs:attribute name="colorrep.825" type="xs:string"/>
+        <xs:attribute name="colorrep.826" type="xs:string"/>
+        <xs:attribute name="colorrep.827" type="xs:string"/>
+        <xs:attribute name="colorrep.828" type="xs:string"/>
+        <xs:attribute name="colorrep.829" type="xs:string"/>
+        <xs:attribute name="colorrep.830" type="xs:string"/>
+        <xs:attribute name="colorrep.831" type="xs:string"/>
+        <xs:attribute name="colorrep.832" type="xs:string"/>
+        <xs:attribute name="colorrep.833" type="xs:string"/>
+        <xs:attribute name="colorrep.834" type="xs:string"/>
+        <xs:attribute name="colorrep.835" type="xs:string"/>
+        <xs:attribute name="colorrep.836" type="xs:string"/>
+        <xs:attribute name="colorrep.837" type="xs:string"/>
+        <xs:attribute name="colorrep.838" type="xs:string"/>
+        <xs:attribute name="colorrep.839" type="xs:string"/>
+        <xs:attribute name="colorrep.840" type="xs:string"/>
+        <xs:attribute name="colorrep.841" type="xs:string"/>
+        <xs:attribute name="colorrep.842" type="xs:string"/>
+        <xs:attribute name="colorrep.843" type="xs:string"/>
+        <xs:attribute name="colorrep.844" type="xs:string"/>
+        <xs:attribute name="colorrep.845" type="xs:string"/>
+        <xs:attribute name="colorrep.846" type="xs:string"/>
+        <xs:attribute name="colorrep.847" type="xs:string"/>
+        <xs:attribute name="colorrep.848" type="xs:string"/>
+        <xs:attribute name="colorrep.849" type="xs:string"/>
+        <xs:attribute name="colorrep.850" type="xs:string"/>
+        <xs:attribute name="colorrep.851" type="xs:string"/>
+        <xs:attribute name="colorrep.852" type="xs:string"/>
+        <xs:attribute name="colorrep.853" type="xs:string"/>
+        <xs:attribute name="colorrep.854" type="xs:string"/>
+        <xs:attribute name="colorrep.855" type="xs:string"/>
+        <xs:attribute name="colorrep.856" type="xs:string"/>
+        <xs:attribute name="colorrep.857" type="xs:string"/>
+        <xs:attribute name="colorrep.858" type="xs:string"/>
+        <xs:attribute name="colorrep.859" type="xs:string"/>
+        <xs:attribute name="colorrep.860" type="xs:string"/>
+        <xs:attribute name="colorrep.861" type="xs:string"/>
+        <xs:attribute name="colorrep.862" type="xs:string"/>
+        <xs:attribute name="colorrep.863" type="xs:string"/>
+        <xs:attribute name="colorrep.864" type="xs:string"/>
+        <xs:attribute name="colorrep.865" type="xs:string"/>
+        <xs:attribute name="colorrep.866" type="xs:string"/>
+        <xs:attribute name="colorrep.867" type="xs:string"/>
+        <xs:attribute name="colorrep.868" type="xs:string"/>
+        <xs:attribute name="colorrep.869" type="xs:string"/>
+        <xs:attribute name="colorrep.870" type="xs:string"/>
+        <xs:attribute name="colorrep.871" type="xs:string"/>
+        <xs:attribute name="colorrep.872" type="xs:string"/>
+        <xs:attribute name="colorrep.873" type="xs:string"/>
+        <xs:attribute name="colorrep.874" type="xs:string"/>
+        <xs:attribute name="colorrep.875" type="xs:string"/>
+        <xs:attribute name="colorrep.876" type="xs:string"/>
+        <xs:attribute name="colorrep.877" type="xs:string"/>
+        <xs:attribute name="colorrep.878" type="xs:string"/>
+        <xs:attribute name="colorrep.879" type="xs:string"/>
+        <xs:attribute name="colorrep.880" type="xs:string"/>
+        <xs:attribute name="colorrep.881" type="xs:string"/>
+        <xs:attribute name="colorrep.882" type="xs:string"/>
+        <xs:attribute name="colorrep.883" type="xs:string"/>
+        <xs:attribute name="colorrep.884" type="xs:string"/>
+        <xs:attribute name="colorrep.885" type="xs:string"/>
+        <xs:attribute name="colorrep.886" type="xs:string"/>
+        <xs:attribute name="colorrep.887" type="xs:string"/>
+        <xs:attribute name="colorrep.888" type="xs:string"/>
+        <xs:attribute name="colorrep.889" type="xs:string"/>
+        <xs:attribute name="colorrep.890" type="xs:string"/>
+        <xs:attribute name="colorrep.891" type="xs:string"/>
+        <xs:attribute name="colorrep.892" type="xs:string"/>
+        <xs:attribute name="colorrep.893" type="xs:string"/>
+        <xs:attribute name="colorrep.894" type="xs:string"/>
+        <xs:attribute name="colorrep.895" type="xs:string"/>
+        <xs:attribute name="colorrep.896" type="xs:string"/>
+        <xs:attribute name="colorrep.897" type="xs:string"/>
+        <xs:attribute name="colorrep.898" type="xs:string"/>
+        <xs:attribute name="colorrep.899" type="xs:string"/>
+        <xs:attribute name="colorrep.900" type="xs:string"/>
+        <xs:attribute name="colorrep.901" type="xs:string"/>
+        <xs:attribute name="colorrep.902" type="xs:string"/>
+        <xs:attribute name="colorrep.903" type="xs:string"/>
+        <xs:attribute name="colorrep.904" type="xs:string"/>
+        <xs:attribute name="colorrep.905" type="xs:string"/>
+        <xs:attribute name="colorrep.906" type="xs:string"/>
+        <xs:attribute name="colorrep.907" type="xs:string"/>
+        <xs:attribute name="colorrep.908" type="xs:string"/>
+        <xs:attribute name="colorrep.909" type="xs:string"/>
+        <xs:attribute name="colorrep.910" type="xs:string"/>
+        <xs:attribute name="colorrep.911" type="xs:string"/>
+        <xs:attribute name="colorrep.912" type="xs:string"/>
+        <xs:attribute name="colorrep.913" type="xs:string"/>
+        <xs:attribute name="colorrep.914" type="xs:string"/>
+        <xs:attribute name="colorrep.915" type="xs:string"/>
+        <xs:attribute name="colorrep.916" type="xs:string"/>
+        <xs:attribute name="colorrep.917" type="xs:string"/>
+        <xs:attribute name="colorrep.918" type="xs:string"/>
+        <xs:attribute name="colorrep.919" type="xs:string"/>
+        <xs:attribute name="colorrep.920" type="xs:string"/>
+        <xs:attribute name="colorrep.921" type="xs:string"/>
+        <xs:attribute name="colorrep.922" type="xs:string"/>
+        <xs:attribute name="colorrep.923" type="xs:string"/>
+        <xs:attribute name="colorrep.924" type="xs:string"/>
+        <xs:attribute name="colorrep.925" type="xs:string"/>
+        <xs:attribute name="colorrep.926" type="xs:string"/>
+        <xs:attribute name="colorrep.927" type="xs:string"/>
+        <xs:attribute name="colorrep.928" type="xs:string"/>
+        <xs:attribute name="colorrep.929" type="xs:string"/>
+        <xs:attribute name="colorrep.930" type="xs:string"/>
+        <xs:attribute name="colorrep.931" type="xs:string"/>
+        <xs:attribute name="colorrep.932" type="xs:string"/>
+        <xs:attribute name="colorrep.933" type="xs:string"/>
+        <xs:attribute name="colorrep.934" type="xs:string"/>
+        <xs:attribute name="colorrep.935" type="xs:string"/>
+        <xs:attribute name="colorrep.936" type="xs:string"/>
+        <xs:attribute name="colorrep.937" type="xs:string"/>
+        <xs:attribute name="colorrep.938" type="xs:string"/>
+        <xs:attribute name="colorrep.939" type="xs:string"/>
+        <xs:attribute name="colorrep.940" type="xs:string"/>
+        <xs:attribute name="colorrep.941" type="xs:string"/>
+        <xs:attribute name="colorrep.942" type="xs:string"/>
+        <xs:attribute name="colorrep.943" type="xs:string"/>
+        <xs:attribute name="colorrep.944" type="xs:string"/>
+        <xs:attribute name="colorrep.945" type="xs:string"/>
+        <xs:attribute name="colorrep.946" type="xs:string"/>
+        <xs:attribute name="colorrep.947" type="xs:string"/>
+        <xs:attribute name="colorrep.948" type="xs:string"/>
+        <xs:attribute name="colorrep.949" type="xs:string"/>
+        <xs:attribute name="colorrep.950" type="xs:string"/>
+        <xs:attribute name="colorrep.951" type="xs:string"/>
+        <xs:attribute name="colorrep.952" type="xs:string"/>
+        <xs:attribute name="colorrep.953" type="xs:string"/>
+        <xs:attribute name="colorrep.954" type="xs:string"/>
+        <xs:attribute name="colorrep.955" type="xs:string"/>
+        <xs:attribute name="colorrep.956" type="xs:string"/>
+        <xs:attribute name="colorrep.957" type="xs:string"/>
+        <xs:attribute name="colorrep.958" type="xs:string"/>
+        <xs:attribute name="colorrep.959" type="xs:string"/>
+        <xs:attribute name="colorrep.960" type="xs:string"/>
+        <xs:attribute name="colorrep.961" type="xs:string"/>
+        <xs:attribute name="colorrep.962" type="xs:string"/>
+        <xs:attribute name="colorrep.963" type="xs:string"/>
+        <xs:attribute name="colorrep.964" type="xs:string"/>
+        <xs:attribute name="colorrep.965" type="xs:string"/>
+        <xs:attribute name="colorrep.966" type="xs:string"/>
+        <xs:attribute name="colorrep.967" type="xs:string"/>
+        <xs:attribute name="colorrep.968" type="xs:string"/>
+        <xs:attribute name="colorrep.969" type="xs:string"/>
+        <xs:attribute name="colorrep.970" type="xs:string"/>
+        <xs:attribute name="colorrep.971" type="xs:string"/>
+        <xs:attribute name="colorrep.972" type="xs:string"/>
+        <xs:attribute name="colorrep.973" type="xs:string"/>
+        <xs:attribute name="colorrep.974" type="xs:string"/>
+        <xs:attribute name="colorrep.975" type="xs:string"/>
+        <xs:attribute name="colorrep.976" type="xs:string"/>
+        <xs:attribute name="colorrep.977" type="xs:string"/>
+        <xs:attribute name="colorrep.978" type="xs:string"/>
+        <xs:attribute name="colorrep.979" type="xs:string"/>
+        <xs:attribute name="colorrep.980" type="xs:string"/>
+        <xs:attribute name="colorrep.981" type="xs:string"/>
+        <xs:attribute name="colorrep.982" type="xs:string"/>
+        <xs:attribute name="colorrep.983" type="xs:string"/>
+        <xs:attribute name="colorrep.984" type="xs:string"/>
+        <xs:attribute name="colorrep.985" type="xs:string"/>
+        <xs:attribute name="colorrep.986" type="xs:string"/>
+        <xs:attribute name="colorrep.987" type="xs:string"/>
+        <xs:attribute name="colorrep.988" type="xs:string"/>
+        <xs:attribute name="colorrep.989" type="xs:string"/>
+        <xs:attribute name="colorrep.990" type="xs:string"/>
+        <xs:attribute name="colorrep.991" type="xs:string"/>
+        <xs:attribute name="colorrep.992" type="xs:string"/>
+        <xs:attribute name="colorrep.993" type="xs:string"/>
+        <xs:attribute name="colorrep.994" type="xs:string"/>
+        <xs:attribute name="colorrep.995" type="xs:string"/>
+        <xs:attribute name="colorrep.996" type="xs:string"/>
+        <xs:attribute name="colorrep.997" type="xs:string"/>
+        <xs:attribute name="colorrep.998" type="xs:string"/>
+        <xs:attribute name="colorrep.999" type="xs:string"/>
+        <xs:attribute name="colorrep.1000" type="xs:string"/>
+        <xs:attribute name="colorrep.1001" type="xs:string"/>
+        <xs:attribute name="colorrep.1002" type="xs:string"/>
+        <xs:attribute name="colorrep.1003" type="xs:string"/>
+        <xs:attribute name="colorrep.1004" type="xs:string"/>
+        <xs:attribute name="colorrep.1005" type="xs:string"/>
+        <xs:attribute name="colorrep.1006" type="xs:string"/>
+        <xs:attribute name="colorrep.1007" type="xs:string"/>
+        <xs:attribute name="colorrep.1008" type="xs:string"/>
+        <xs:attribute name="colorrep.1009" type="xs:string"/>
+        <xs:attribute name="colorrep.1010" type="xs:string"/>
+        <xs:attribute name="colorrep.1011" type="xs:string"/>
+        <xs:attribute name="colorrep.1012" type="xs:string"/>
+        <xs:attribute name="colorrep.1013" type="xs:string"/>
+        <xs:attribute name="colorrep.1014" type="xs:string"/>
+        <xs:attribute name="colorrep.1015" type="xs:string"/>
+        <xs:attribute name="colorrep.1016" type="xs:string"/>
+        <xs:attribute name="colorrep.1017" type="xs:string"/>
+        <xs:attribute name="colorrep.1018" type="xs:string"/>
+        <xs:attribute name="colorrep.1019" type="xs:string"/>
+        <xs:attribute name="colorrep.1020" type="xs:string"/>
+        <xs:attribute name="colorrep.1021" type="xs:string"/>
+        <xs:attribute name="colorrep.1022" type="xs:string"/>
+        <xs:attribute name="colorrep.1023" type="xs:string"/>
+        <xs:attribute name="colorrep.1024" type="xs:string"/>
+        <xs:attribute name="colorrep.1025" type="xs:string"/>
+        <xs:attribute name="colorrep.1026" type="xs:string"/>
+        <xs:attribute name="colorrep.1027" type="xs:string"/>
+        <xs:attribute name="colorrep.1028" type="xs:string"/>
+        <xs:attribute name="colorrep.1029" type="xs:string"/>
+        <xs:attribute name="colorrep.1030" type="xs:string"/>
+        <xs:attribute name="colorrep.1031" type="xs:string"/>
+        <xs:attribute name="colorrep.1032" type="xs:string"/>
+        <xs:attribute name="colorrep.1033" type="xs:string"/>
+        <xs:attribute name="colorrep.1034" type="xs:string"/>
+        <xs:attribute name="colorrep.1035" type="xs:string"/>
+        <xs:attribute name="colorrep.1036" type="xs:string"/>
+        <xs:attribute name="colorrep.1037" type="xs:string"/>
+        <xs:attribute name="colorrep.1038" type="xs:string"/>
+        <xs:attribute name="colorrep.1039" type="xs:string"/>
+        <xs:attribute name="colorrep.1040" type="xs:string"/>
+        <xs:attribute name="colorrep.1041" type="xs:string"/>
+        <xs:attribute name="colorrep.1042" type="xs:string"/>
+        <xs:attribute name="colorrep.1043" type="xs:string"/>
+        <xs:attribute name="colorrep.1044" type="xs:string"/>
+        <xs:attribute name="colorrep.1045" type="xs:string"/>
+        <xs:attribute name="colorrep.1046" type="xs:string"/>
+        <xs:attribute name="colorrep.1047" type="xs:string"/>
+        <xs:attribute name="colorrep.1048" type="xs:string"/>
+        <xs:attribute name="colorrep.1049" type="xs:string"/>
+        <xs:attribute name="colorrep.1050" type="xs:string"/>
+        <xs:attribute name="colorrep.1051" type="xs:string"/>
+        <xs:attribute name="colorrep.1052" type="xs:string"/>
+        <xs:attribute name="colorrep.1053" type="xs:string"/>
+        <xs:attribute name="colorrep.1054" type="xs:string"/>
+        <xs:attribute name="colorrep.1055" type="xs:string"/>
+        <xs:attribute name="colorrep.1056" type="xs:string"/>
+        <xs:attribute name="colorrep.1057" type="xs:string"/>
+        <xs:attribute name="colorrep.1058" type="xs:string"/>
+        <xs:attribute name="colorrep.1059" type="xs:string"/>
+        <xs:attribute name="colorrep.1060" type="xs:string"/>
+        <xs:attribute name="colorrep.1061" type="xs:string"/>
+        <xs:attribute name="colorrep.1062" type="xs:string"/>
+        <xs:attribute name="colorrep.1063" type="xs:string"/>
+        <xs:attribute name="colorrep.1064" type="xs:string"/>
+        <xs:attribute name="colorrep.1065" type="xs:string"/>
+        <xs:attribute name="colorrep.1066" type="xs:string"/>
+        <xs:attribute name="colorrep.1067" type="xs:string"/>
+        <xs:attribute name="colorrep.1068" type="xs:string"/>
+        <xs:attribute name="colorrep.1069" type="xs:string"/>
+        <xs:attribute name="colorrep.1070" type="xs:string"/>
+        <xs:attribute name="colorrep.1071" type="xs:string"/>
+        <xs:attribute name="colorrep.1072" type="xs:string"/>
+        <xs:attribute name="colorrep.1073" type="xs:string"/>
+        <xs:attribute name="colorrep.1074" type="xs:string"/>
+        <xs:attribute name="colorrep.1075" type="xs:string"/>
+        <xs:attribute name="colorrep.1076" type="xs:string"/>
+        <xs:attribute name="colorrep.1077" type="xs:string"/>
+        <xs:attribute name="colorrep.1078" type="xs:string"/>
+        <xs:attribute name="colorrep.1079" type="xs:string"/>
+        <xs:attribute name="colorrep.1080" type="xs:string"/>
+        <xs:attribute name="colorrep.1081" type="xs:string"/>
+        <xs:attribute name="colorrep.1082" type="xs:string"/>
+        <xs:attribute name="colorrep.1083" type="xs:string"/>
+        <xs:attribute name="colorrep.1084" type="xs:string"/>
+        <xs:attribute name="colorrep.1085" type="xs:string"/>
+        <xs:attribute name="colorrep.1086" type="xs:string"/>
+        <xs:attribute name="colorrep.1087" type="xs:string"/>
+        <xs:attribute name="colorrep.1088" type="xs:string"/>
+        <xs:attribute name="colorrep.1089" type="xs:string"/>
+        <xs:attribute name="colorrep.1090" type="xs:string"/>
+        <xs:attribute name="colorrep.1091" type="xs:string"/>
+        <xs:attribute name="colorrep.1092" type="xs:string"/>
+        <xs:attribute name="colorrep.1093" type="xs:string"/>
+        <xs:attribute name="colorrep.1094" type="xs:string"/>
+        <xs:attribute name="colorrep.1095" type="xs:string"/>
+        <xs:attribute name="colorrep.1096" type="xs:string"/>
+        <xs:attribute name="colorrep.1097" type="xs:string"/>
+        <xs:attribute name="colorrep.1098" type="xs:string"/>
+        <xs:attribute name="colorrep.1099" type="xs:string"/>
+        <xs:attribute name="colorrep.1100" type="xs:string"/>
+        <xs:attribute name="colorrep.1101" type="xs:string"/>
+        <xs:attribute name="colorrep.1102" type="xs:string"/>
+        <xs:attribute name="colorrep.1103" type="xs:string"/>
+        <xs:attribute name="colorrep.1104" type="xs:string"/>
+        <xs:attribute name="colorrep.1105" type="xs:string"/>
+        <xs:attribute name="colorrep.1106" type="xs:string"/>
+        <xs:attribute name="colorrep.1107" type="xs:string"/>
+        <xs:attribute name="colorrep.1108" type="xs:string"/>
+        <xs:attribute name="colorrep.1109" type="xs:string"/>
+        <xs:attribute name="colorrep.1110" type="xs:string"/>
+        <xs:attribute name="colorrep.1111" type="xs:string"/>
+        <xs:attribute name="colorrep.1112" type="xs:string"/>
+        <xs:attribute name="colorrep.1113" type="xs:string"/>
+        <xs:attribute name="colorrep.1114" type="xs:string"/>
+        <xs:attribute name="colorrep.1115" type="xs:string"/>
+        <xs:attribute name="colorrep.1116" type="xs:string"/>
+        <xs:attribute name="colorrep.1117" type="xs:string"/>
+        <xs:attribute name="colorrep.1118" type="xs:string"/>
+        <xs:attribute name="colorrep.1119" type="xs:string"/>
+        <xs:attribute name="colorrep.1120" type="xs:string"/>
+        <xs:attribute name="colorrep.1121" type="xs:string"/>
+        <xs:attribute name="colorrep.1122" type="xs:string"/>
+        <xs:attribute name="colorrep.1123" type="xs:string"/>
+        <xs:attribute name="colorrep.1124" type="xs:string"/>
+        <xs:attribute name="colorrep.1125" type="xs:string"/>
+        <xs:attribute name="colorrep.1126" type="xs:string"/>
+        <xs:attribute name="colorrep.1127" type="xs:string"/>
+        <xs:attribute name="colorrep.1128" type="xs:string"/>
+        <xs:attribute name="colorrep.1129" type="xs:string"/>
+        <xs:attribute name="colorrep.1130" type="xs:string"/>
+        <xs:attribute name="colorrep.1131" type="xs:string"/>
+        <xs:attribute name="colorrep.1132" type="xs:string"/>
+        <xs:attribute name="colorrep.1133" type="xs:string"/>
+        <xs:attribute name="colorrep.1134" type="xs:string"/>
+        <xs:attribute name="colorrep.1135" type="xs:string"/>
+        <xs:attribute name="colorrep.1136" type="xs:string"/>
+        <xs:attribute name="colorrep.1137" type="xs:string"/>
+        <xs:attribute name="colorrep.1138" type="xs:string"/>
+        <xs:attribute name="colorrep.1139" type="xs:string"/>
+        <xs:attribute name="colorrep.1140" type="xs:string"/>
+        <xs:attribute name="colorrep.1141" type="xs:string"/>
+        <xs:attribute name="colorrep.1142" type="xs:string"/>
+        <xs:attribute name="colorrep.1143" type="xs:string"/>
+        <xs:attribute name="colorrep.1144" type="xs:string"/>
+        <xs:attribute name="colorrep.1145" type="xs:string"/>
+        <xs:attribute name="colorrep.1146" type="xs:string"/>
+        <xs:attribute name="colorrep.1147" type="xs:string"/>
+        <xs:attribute name="colorrep.1148" type="xs:string"/>
+        <xs:attribute name="colorrep.1149" type="xs:string"/>
+        <xs:attribute name="colorrep.1150" type="xs:string"/>
+        <xs:attribute name="colorrep.1151" type="xs:string"/>
+        <xs:attribute name="colorrep.1152" type="xs:string"/>
+        <xs:attribute name="colorrep.1153" type="xs:string"/>
+        <xs:attribute name="colorrep.1154" type="xs:string"/>
+        <xs:attribute name="colorrep.1155" type="xs:string"/>
+        <xs:attribute name="colorrep.1156" type="xs:string"/>
+        <xs:attribute name="colorrep.1157" type="xs:string"/>
+        <xs:attribute name="colorrep.1158" type="xs:string"/>
+        <xs:attribute name="colorrep.1159" type="xs:string"/>
+        <xs:attribute name="colorrep.1160" type="xs:string"/>
+        <xs:attribute name="colorrep.1161" type="xs:string"/>
+        <xs:attribute name="colorrep.1162" type="xs:string"/>
+        <xs:attribute name="colorrep.1163" type="xs:string"/>
+        <xs:attribute name="colorrep.1164" type="xs:string"/>
+        <xs:attribute name="colorrep.1165" type="xs:string"/>
+        <xs:attribute name="colorrep.1166" type="xs:string"/>
+        <xs:attribute name="colorrep.1167" type="xs:string"/>
+        <xs:attribute name="colorrep.1168" type="xs:string"/>
+        <xs:attribute name="colorrep.1169" type="xs:string"/>
+        <xs:attribute name="colorrep.1170" type="xs:string"/>
+        <xs:attribute name="colorrep.1171" type="xs:string"/>
+        <xs:attribute name="colorrep.1172" type="xs:string"/>
+        <xs:attribute name="colorrep.1173" type="xs:string"/>
+        <xs:attribute name="colorrep.1174" type="xs:string"/>
+        <xs:attribute name="colorrep.1175" type="xs:string"/>
+        <xs:attribute name="colorrep.1176" type="xs:string"/>
+        <xs:attribute name="colorrep.1177" type="xs:string"/>
+        <xs:attribute name="colorrep.1178" type="xs:string"/>
+        <xs:attribute name="colorrep.1179" type="xs:string"/>
+        <xs:attribute name="colorrep.1180" type="xs:string"/>
+        <xs:attribute name="colorrep.1181" type="xs:string"/>
+        <xs:attribute name="colorrep.1182" type="xs:string"/>
+        <xs:attribute name="colorrep.1183" type="xs:string"/>
+        <xs:attribute name="colorrep.1184" type="xs:string"/>
+        <xs:attribute name="colorrep.1185" type="xs:string"/>
+        <xs:attribute name="colorrep.1186" type="xs:string"/>
+        <xs:attribute name="colorrep.1187" type="xs:string"/>
+        <xs:attribute name="colorrep.1188" type="xs:string"/>
+        <xs:attribute name="colorrep.1189" type="xs:string"/>
+        <xs:attribute name="colorrep.1190" type="xs:string"/>
+        <xs:attribute name="colorrep.1191" type="xs:string"/>
+        <xs:attribute name="colorrep.1192" type="xs:string"/>
+        <xs:attribute name="colorrep.1193" type="xs:string"/>
+        <xs:attribute name="colorrep.1194" type="xs:string"/>
+        <xs:attribute name="colorrep.1195" type="xs:string"/>
+        <xs:attribute name="colorrep.1196" type="xs:string"/>
+        <xs:attribute name="colorrep.1197" type="xs:string"/>
+        <xs:attribute name="colorrep.1198" type="xs:string"/>
+        <xs:attribute name="colorrep.1199" type="xs:string"/>
+        <xs:attribute name="colorrep.1200" type="xs:string"/>
+        <xs:attribute name="colorrep.1201" type="xs:string"/>
+        <xs:attribute name="colorrep.1202" type="xs:string"/>
+        <xs:attribute name="colorrep.1203" type="xs:string"/>
+        <xs:attribute name="colorrep.1204" type="xs:string"/>
+        <xs:attribute name="colorrep.1205" type="xs:string"/>
+        <xs:attribute name="colorrep.1206" type="xs:string"/>
+        <xs:attribute name="colorrep.1207" type="xs:string"/>
+        <xs:attribute name="colorrep.1208" type="xs:string"/>
+        <xs:attribute name="colorrep.1209" type="xs:string"/>
+        <xs:attribute name="colorrep.1210" type="xs:string"/>
+        <xs:attribute name="colorrep.1211" type="xs:string"/>
+        <xs:attribute name="colorrep.1212" type="xs:string"/>
+        <xs:attribute name="colorrep.1213" type="xs:string"/>
+        <xs:attribute name="colorrep.1214" type="xs:string"/>
+        <xs:attribute name="colorrep.1215" type="xs:string"/>
+        <xs:attribute name="colorrep.1216" type="xs:string"/>
+        <xs:attribute name="colorrep.1217" type="xs:string"/>
+        <xs:attribute name="colorrep.1218" type="xs:string"/>
+        <xs:attribute name="colorrep.1219" type="xs:string"/>
+        <xs:attribute name="colorrep.1220" type="xs:string"/>
+        <xs:attribute name="colorrep.1221" type="xs:string"/>
+        <xs:attribute name="colorrep.1222" type="xs:string"/>
+        <xs:attribute name="colorrep.1223" type="xs:string"/>
+        <xs:attribute name="colorrep.1224" type="xs:string"/>
+        <xs:attribute name="colorrep.1225" type="xs:string"/>
+        <xs:attribute name="colorrep.1226" type="xs:string"/>
+        <xs:attribute name="colorrep.1227" type="xs:string"/>
+        <xs:attribute name="colorrep.1228" type="xs:string"/>
+        <xs:attribute name="colorrep.1229" type="xs:string"/>
+        <xs:attribute name="colorrep.1230" type="xs:string"/>
+        <xs:attribute name="colorrep.1231" type="xs:string"/>
+        <xs:attribute name="colorrep.1232" type="xs:string"/>
+        <xs:attribute name="colorrep.1233" type="xs:string"/>
+        <xs:attribute name="colorrep.1234" type="xs:string"/>
+        <xs:attribute name="colorrep.1235" type="xs:string"/>
+        <xs:attribute name="colorrep.1236" type="xs:string"/>
+        <xs:attribute name="colorrep.1237" type="xs:string"/>
+        <xs:attribute name="colorrep.1238" type="xs:string"/>
+        <xs:attribute name="colorrep.1239" type="xs:string"/>
+        <xs:attribute name="colorrep.1240" type="xs:string"/>
+        <xs:attribute name="colorrep.1241" type="xs:string"/>
+        <xs:attribute name="colorrep.1242" type="xs:string"/>
+        <xs:attribute name="colorrep.1243" type="xs:string"/>
+        <xs:attribute name="colorrep.1244" type="xs:string"/>
+        <xs:attribute name="colorrep.1245" type="xs:string"/>
+        <xs:attribute name="colorrep.1246" type="xs:string"/>
+        <xs:attribute name="colorrep.1247" type="xs:string"/>
+        <xs:attribute name="colorrep.1248" type="xs:string"/>
+        <xs:attribute name="colorrep.1249" type="xs:string"/>
+        <xs:attribute name="colorrep.1250" type="xs:string"/>
+        <xs:attribute name="colorrep.1251" type="xs:string"/>
+        <xs:attribute name="colorrep.1252" type="xs:string"/>
+        <xs:attribute name="colorrep.1253" type="xs:string"/>
+        <xs:attribute name="colorrep.1254" type="xs:string"/>
+        <xs:attribute name="colorrep.1255" type="xs:string"/>
+    </xs:attributeGroup>
+</xs:schema>
+

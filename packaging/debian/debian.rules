@@ -32,6 +32,7 @@ override_dh_auto_configure:
 	cp ../SOURCES/pixman-0.40.0.tar.gz ${THIRDPARTY_SRC}
 	cp ../SOURCES/tiff-4.0.10.tar.gz ${THIRDPARTY_SRC}
 	cp ../SOURCES/libopenh264-2.0.0.tar.gz ${THIRDPARTY_SRC}
+	cp ../SOURCES/libxml2-2.10.4.tar.xz ${THIRDPARTY_SRC}
 
 override_dh_auto_build:
 	make -C 3rdparty GRDIR=${GRDIR} DIR=`pwd`/${THIRDPARTY}

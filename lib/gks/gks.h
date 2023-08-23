@@ -649,6 +649,7 @@ DLLEXPORT void gks_inq_text_align(int *errind, int *txalh, int *txalv);
 DLLEXPORT void gks_inq_fill_int_style(int *errind, int *ints);
 DLLEXPORT void gks_inq_fill_style_index(int *errind, int *styli);
 DLLEXPORT void gks_inq_fill_color_index(int *errind, int *coli);
+DLLEXPORT void gks_inq_transparency(int *errind, double *alpha);
 DLLEXPORT void gks_inq_open_segn(int *errind, int *segn);
 DLLEXPORT void gks_inq_current_xformno(int *errind, int *tnr);
 DLLEXPORT void gks_inq_xform(int tnr, int *errind, double *wn, double *vp);
@@ -673,6 +674,9 @@ DLLEXPORT void gks_begin_selection(int index, int kind);
 DLLEXPORT void gks_end_selection(void);
 DLLEXPORT void gks_move_selection(double x, double y);
 DLLEXPORT void gks_resize_selection(int kind, double x, double y);
+
+DLLEXPORT void gks_begin_grm_selection(int index, void (*fun)(int, double, double, double, double));
+DLLEXPORT void gks_end_grm_selection(void);
 
 DLLEXPORT void gks_inq_bbox(int *errind, double *xmin, double *xmax, double *ymin, double *ymax);
 DLLEXPORT void gks_inq_text_slant(int *errind, double *slant);

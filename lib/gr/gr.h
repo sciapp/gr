@@ -29,6 +29,11 @@ extern "C" {
 #define GR_TEXT_USE_WC (1 << 0)
 #define GR_TEXT_ENABLE_INLINE_MATH (1 << 1)
 
+#define GR_2PASS_CLEANUP 1
+#define GR_2PASS_RENDER 2
+
+#define GR_MAX_CONTEXT 8192
+
 typedef struct
 {
   double x, y;
@@ -67,6 +72,7 @@ typedef struct
 {
   double dmin;
   double dmax;
+  int action;
   cpubasedvolume_2pass_priv_t *priv;
 } cpubasedvolume_2pass_t;
 
@@ -75,6 +81,7 @@ typedef struct
 {
   int nc;
   int cntmax;
+  int action;
   hexbin_2pass_priv_t *priv;
 } hexbin_2pass_t;
 
@@ -208,6 +215,7 @@ DLLEXPORT void gr_drawimage(double, double, double, double, int, int, int *, int
 DLLEXPORT int gr_importgraphics(char *);
 DLLEXPORT void gr_setshadow(double, double, double);
 DLLEXPORT void gr_settransparency(double);
+DLLEXPORT void gr_inqtransparency(double *);
 DLLEXPORT void gr_setcoordxform(double[3][2]);
 DLLEXPORT void gr_begingraphics(char *);
 DLLEXPORT void gr_endgraphics(void);
@@ -218,6 +226,8 @@ DLLEXPORT void gr_mathtex(double, double, char *);
 DLLEXPORT void gr_inqmathtex(double, double, char *, double *, double *);
 DLLEXPORT void gr_beginselection(int, int);
 DLLEXPORT void gr_endselection(void);
+DLLEXPORT void gr_begin_grm_selection(int, void (*)(int, double, double, double, double));
+DLLEXPORT void gr_end_grm_selection(void);
 DLLEXPORT void gr_moveselection(double, double);
 DLLEXPORT void gr_resizeselection(int, double, double);
 DLLEXPORT void gr_inqbbox(double *, double *, double *, double *);

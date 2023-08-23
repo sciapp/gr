@@ -2,6 +2,8 @@
 #define _POSIX_C_SOURCE 200112L
 #endif
 
+/* ######################### includes ############################################################################### */
+
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>
@@ -18,6 +20,10 @@
 #include "logging_int.h"
 #include "util_int.h"
 
+
+/* ######################### internal implementation ################################################################ */
+
+/* ========================= static variables ======================================================================= */
 
 static const char base64_decode_table[128] = {
     0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,
@@ -40,6 +46,8 @@ static const char base64_encode_table[64] = {
 
 static const char padding_char = '=';
 
+
+/* ========================= functions ============================================================================== */
 
 err_t block_decode(char dst[3], const char src[4], int block_len, int *decoded_block_len)
 {
@@ -292,4 +300,39 @@ finally:
     }
 
   return dst;
+}
+
+
+/* ######################### public implementation ################################################################## */
+
+/* ========================= functions ============================================================================== */
+
+char *grm_base64_decode(char *dst, const char *src, size_t *dst_len, int *was_successful)
+{
+  err_t error;
+  char *decoded_string;
+
+  decoded_string = base64_decode(dst, src, dst_len, &error);
+
+  if (was_successful != NULL)
+    {
+      *was_successful = error == ERROR_NONE;
+    }
+
+  return decoded_string;
+}
+
+char *grm_base64_encode(char *dst, const char *src, size_t src_len, int *was_successful)
+{
+  err_t error;
+  char *encoded_string;
+
+  encoded_string = base64_encode(dst, src, src_len, &error);
+
+  if (was_successful != NULL)
+    {
+      *was_successful = error == ERROR_NONE;
+    }
+
+  return encoded_string;
 }

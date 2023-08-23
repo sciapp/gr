@@ -229,6 +229,7 @@ static void polar_histogram_normalization(void)
 
       grm_plot(args);
       printf("Press any key to continue...\n");
+      printf("%s\n", *current_norm_ptr);
       getchar();
       grm_args_delete(args);
 

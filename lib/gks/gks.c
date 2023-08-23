@@ -2936,6 +2936,12 @@ void gks_inq_fill_color_index(int *errind, int *coli)
     *coli = s->facoli;
 }
 
+void gks_inq_transparency(int *errind, double *alpha)
+{
+  *errind = GKS_K_NO_ERROR;
+  *alpha = s->alpha;
+}
+
 void gks_inq_open_segn(int *errind, int *segn)
 {
   if (state == GKS_K_SGOP)
@@ -3347,6 +3353,34 @@ void gks_resize_selection(int kind, double x, double y)
     /* GKS not in proper state. GKS must be either in the state
        WSAC or in the state SGOP */
     gks_report_error(RESIZE_SELECTION, 5);
+}
+
+void gks_begin_grm_selection(int index, void (*fun)(int, double, double, double, double))
+{
+  if (state >= GKS_K_WSAC)
+    {
+      i_arr[0] = index;
+
+      /* call the device driver link routine */
+      gks_ddlk(GRM_BEGIN_SELECTION, 1, 1, 1, i_arr, 1, (double *)fun, 0, f_arr_2, 0, c_arr, NULL);
+    }
+  else
+    /* GKS not in proper state. GKS must be either in the state
+       WSAC or in the state SGOP */
+    gks_report_error(GRM_BEGIN_SELECTION, 5);
+}
+
+void gks_end_grm_selection(void)
+{
+  if (state >= GKS_K_WSAC)
+    {
+      /* call the device driver link routine */
+      gks_ddlk(GRM_END_SELECTION, 0, 0, 0, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+    }
+  else
+    /* GKS not in proper state. GKS must be either in the state
+       WSAC or in the state SGOP */
+    gks_report_error(GRM_END_SELECTION, 5);
 }
 
 void gks_draw_image(double x, double y, double scalex, double scaley, int width, int height, int *data)
