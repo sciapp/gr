@@ -107,14 +107,14 @@
             <xs:attribute name="keep_aspect_ratio" type="xs:string" use="required"/>
             <xs:attribute name="keep_window" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string" use="required"/>
-            <xs:attribute name="lim_cmax" type="xs:string"/>
-            <xs:attribute name="lim_cmin" type="xs:string"/>
-            <xs:attribute name="lim_xmax" type="xs:string"/>
-            <xs:attribute name="lim_xmin" type="xs:string"/>
-            <xs:attribute name="lim_ymax" type="xs:string"/>
-            <xs:attribute name="lim_ymin" type="xs:string"/>
-            <xs:attribute name="lim_zmax" type="xs:string"/>
-            <xs:attribute name="lim_zmin" type="xs:string"/>
+            <xs:attribute name="clim_max" type="xs:string"/>
+            <xs:attribute name="clim_min" type="xs:string"/>
+            <xs:attribute name="xlim_max" type="xs:string"/>
+            <xs:attribute name="xlim_min" type="xs:string"/>
+            <xs:attribute name="ylim_max" type="xs:string"/>
+            <xs:attribute name="ylim_min" type="xs:string"/>
+            <xs:attribute name="zlim_max" type="xs:string"/>
+            <xs:attribute name="zlim_min" type="xs:string"/>
             <xs:attribute name="linespec" type="xs:string"/>
             <xs:attribute name="location" type="xs:string"/>
             <xs:attribute name="max_y_length" type="xs:string"/>
