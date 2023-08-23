@@ -2959,8 +2959,8 @@ err_t plot_volume(grm_args_t *subplot_args)
 
   logger((stderr, "dmin, dmax: (%lf, %lf)\n", dlim[0], dlim[1]));
   grm_args_push(subplot_args, "clim", "dd", dlim[0], dlim[1]);
-  group->setAttribute("lim_cmin", dlim[0]);
-  group->setAttribute("lim_cmax", dlim[1]);
+  group->setAttribute("clim_min", dlim[0]);
+  group->setAttribute("clim_max", dlim[1]);
 
   error = plot_draw_axes(subplot_args, 2);
   return_if_error;

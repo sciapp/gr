@@ -9451,10 +9451,10 @@ static void processVolume(const std::shared_ptr<GRM::Element> &element, const st
   element->setAttribute("_volume_context_address", get_address.str());
 
   auto parent_element = element->parentElement();
-  if (parent_element->hasAttribute("lim_cmin") && parent_element->hasAttribute("lim_cmax"))
+  if (parent_element->hasAttribute("clim_min") && parent_element->hasAttribute("clim_max"))
     {
-      dlim[0] = static_cast<double>(parent_element->getAttribute("lim_cmin"));
-      dlim[1] = static_cast<double>(parent_element->getAttribute("lim_cmax"));
+      dlim[0] = static_cast<double>(parent_element->getAttribute("clim_min"));
+      dlim[1] = static_cast<double>(parent_element->getAttribute("clim_max"));
       dlim[0] = grm_min(dlim[0], dmin);
       dlim[1] = grm_max(dlim[1], dmax);
     }
