@@ -1,3 +1,4 @@
+
 #ifndef NO_QT
 
 #include <stdio.h>
@@ -5,6 +6,9 @@
 #include <assert.h>
 #include <string.h>
 #include <math.h>
+#include <float.h>
+#include <stack>
+#include <QDebug>
 
 #endif
 
@@ -82,9 +86,21 @@ DLLEXPORT void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
+#ifndef max
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+#endif
+
 static gks_state_list_t gkss_, *gkss = &gkss_;
 
 static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+
+struct bounding_struct
+{
+  double x_min, x_max;
+  double y_min, y_max;
+  void (*fun_call)(int, double, double, double, double);
+  int item_id;
+};
 
 typedef struct ws_state_list_t
 {
@@ -122,6 +138,7 @@ typedef struct ws_state_list_t
   void *memory_plugin_ws_state_list;
   int *memory_plugin_mem_ptr;
   char *memory_plugin_mem_path;
+  std::stack<bounding_struct> bounding_stack;
 } ws_state_list;
 
 static ws_state_list p_, *p = &p_;
@@ -387,6 +404,19 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
     {
       p->pixmap->drawPolyline(p->points->constData(), p->npoints);
     }
+  if (!p->bounding_stack.empty())
+    {
+      double point_x, point_y;
+      for (i = 0; i < p->npoints; i++)
+        {
+          point_x = p->points->constData()[i].x();
+          point_y = p->points->constData()[i].y();
+          if (p->bounding_stack.top().x_max < point_x) p->bounding_stack.top().x_max = point_x;
+          if (p->bounding_stack.top().x_min > point_x) p->bounding_stack.top().x_min = point_x;
+          if (p->bounding_stack.top().y_max < point_y) p->bounding_stack.top().y_max = point_y;
+          if (p->bounding_stack.top().y_min > point_y) p->bounding_stack.top().y_min = point_y;
+        }
+    }
 }
 
 static void polyline(int n, double *px, double *py)
@@ -481,25 +511,30 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               seg_xform_rel(&xr, &yr);
               (*p->points)[i] = QPointF(x - xr, y + yr);
             }
-          p->pixmap->setPen(QPen(marker_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
+          p->pixmap->setPen(
+              QPen(marker_color, max(gkss->bwidth, gkss->lwidth) * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawPolyline(p->points->constData(), 2);
           pc += 4;
           break;
 
         case 3: /* polygon */
-          points = new QPolygonF(marker[mtype][pc + 1]);
-          for (i = 0; i < marker[mtype][pc + 1]; i++)
+        case 9: /* border polygon */
+          if (op == 3 || gkss->bwidth > 0)
             {
-              xr = scale * marker[mtype][pc + 2 + 2 * i];
-              yr = -scale * marker[mtype][pc + 3 + 2 * i];
-              seg_xform_rel(&xr, &yr);
-              (*points)[i] = QPointF(x - xr, y + yr);
+              points = new QPolygonF(marker[mtype][pc + 1]);
+              for (i = 0; i < marker[mtype][pc + 1]; i++)
+                {
+                  xr = scale * marker[mtype][pc + 2 + 2 * i];
+                  yr = -scale * marker[mtype][pc + 3 + 2 * i];
+                  seg_xform_rel(&xr, &yr);
+                  (*points)[i] = QPointF(x - xr, y + yr);
+                }
+              p->pixmap->setPen(QPen(op == 3 ? marker_color : border_color, gkss->bwidth * p->nominal_size,
+                                     Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
+              p->pixmap->drawPolyline(points->constData(), marker[mtype][pc + 1]);
+              delete points;
             }
-          p->pixmap->setPen(
-              QPen(marker_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
-          p->pixmap->drawPolyline(points->constData(), marker[mtype][pc + 1]);
           pc += 1 + 2 * marker[mtype][pc + 1];
-          delete points;
           break;
 
         case 4: /* filled polygon */
@@ -508,7 +543,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (op == 4)
             {
               p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
-              if (gkss->bcoli != gkss->pmcoli)
+              if (gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
                 p->pixmap->setPen(
                     QPen(border_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
               else
@@ -529,7 +564,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 6: /* arc */
-          p->pixmap->setPen(QPen(marker_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
+          p->pixmap->setPen(
+              QPen(marker_color, max(gkss->bwidth, gkss->lwidth) * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawArc(QRectF(x - r, y - r, d, d), 0, 360 * 16);
           break;
 
@@ -538,7 +574,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (op == 7)
             {
               p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
-              if (gkss->bcoli != gkss->pmcoli)
+              if (gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
                 p->pixmap->setPen(QPen(border_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
               else
                 p->pixmap->setPen(Qt::NoPen);
@@ -547,6 +583,16 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
             set_color(0);
           p->pixmap->drawChord(QRectF(x - r, y - r, d, d), 0, 360 * 16);
           break;
+        }
+      if (!p->bounding_stack.empty())
+        {
+          double point_x, point_y;
+          point_x = x;
+          point_y = y;
+          if (p->bounding_stack.top().x_max <= point_x) p->bounding_stack.top().x_max = point_x;
+          if (p->bounding_stack.top().x_min >= point_x) p->bounding_stack.top().x_min = point_x;
+          if (p->bounding_stack.top().y_max <= point_y) p->bounding_stack.top().y_max = point_y;
+          if (p->bounding_stack.top().y_min >= point_y) p->bounding_stack.top().y_min = point_y;
         }
       pc++;
     }
@@ -640,6 +686,16 @@ static void text_routine(double x, double y, int nchars, char *chars)
     }
   else
     p->pixmap->drawText(xstart, ystart, s);
+
+  if (!p->bounding_stack.empty())
+    {
+      double point_x = p->points->constData()[i].x();
+      double point_y = p->points->constData()[i].y();
+      p->bounding_stack.top().x_max = xstart + xrel;
+      p->bounding_stack.top().x_min = xstart;
+      p->bounding_stack.top().y_max = ystart + yrel;
+      p->bounding_stack.top().y_min = ystart;
+    }
 }
 
 static void set_font(int font)
@@ -725,6 +781,7 @@ static void text(double px, double py, int nchars, char *chars)
       if ((tx_prec == GKS_K_TEXT_PRECISION_STROKE || tx_prec == GKS_K_TEXT_PRECISION_CHAR) && fontfile == 0)
         {
           fontfile = gks_open_font();
+          gkss->fontfile = fontfile;
         }
       gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
     }
@@ -758,6 +815,19 @@ static void fill_routine(int n, double *px, double *py, int tnr)
       p->pixmap->drawPolygon(points->constData(), points->size());
     }
 
+  if (!p->bounding_stack.empty())
+    {
+      double point_x, point_y;
+      for (i = 0; i < points->size(); i++)
+        {
+          point_x = points->constData()[i].x();
+          point_y = points->constData()[i].y();
+          if (p->bounding_stack.top().x_max < point_x) p->bounding_stack.top().x_max = point_x;
+          if (p->bounding_stack.top().x_min > point_x) p->bounding_stack.top().x_min = point_x;
+          if (p->bounding_stack.top().y_max < point_y) p->bounding_stack.top().y_max = point_y;
+          if (p->bounding_stack.top().y_min > point_y) p->bounding_stack.top().y_min = point_y;
+        }
+    }
   delete points;
 }
 
@@ -832,6 +902,14 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
 
   swapx = xi1 > xi2;
   swapy = yi1 < yi2;
+
+  if (!p->bounding_stack.empty())
+    {
+      p->bounding_stack.top().x_max = xi2;
+      p->bounding_stack.top().x_min = xi1;
+      p->bounding_stack.top().y_max = yi2;
+      p->bounding_stack.top().y_min = yi1;
+    }
 
   if (!true_color)
     {
@@ -1049,18 +1127,22 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           p->pixmap->strokePath(
               path, QPen(stroke_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
           break;
-        case 'F': /* fill and stroke */
+        case 'F': /* fill (even-odd) and stroke */
+        case 'G': /* fill (winding) and stroke */
           path.closeSubpath();
           cur_x = start_x;
           cur_y = start_y;
+          path.setFillRule(codes[i] == 'F' ? Qt::OddEvenFill : Qt::WindingFill);
           p->pixmap->fillPath(path, fill_color);
           p->pixmap->strokePath(
               path, QPen(stroke_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
           break;
-        case 'f': /* fill */
+        case 'f': /* fill (even-odd) */
+        case 'g': /* fill (winding) */
           path.closeSubpath();
           cur_x = start_x;
           cur_y = start_y;
+          path.setFillRule(codes[i] == 'f' ? Qt::OddEvenFill : Qt::WindingFill);
           p->pixmap->fillPath(path, fill_color);
           break;
         case 'Z': /* closepath */
@@ -1074,6 +1156,18 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           gks_perror("invalid path code ('%c')", codes[i]);
           exit(1);
         }
+    }
+
+  if (!p->bounding_stack.empty())
+    {
+      if (p->bounding_stack.top().x_max < path.boundingRect().x() + path.boundingRect().width())
+        p->bounding_stack.top().x_max = path.boundingRect().x() + path.boundingRect().width();
+      if (p->bounding_stack.top().x_min > path.boundingRect().x())
+        p->bounding_stack.top().x_min = path.boundingRect().x();
+      if (p->bounding_stack.top().y_max < path.boundingRect().y() + path.boundingRect().height())
+        p->bounding_stack.top().y_max = path.boundingRect().y() + path.boundingRect().height();
+      if (p->bounding_stack.top().y_min > path.boundingRect().y())
+        p->bounding_stack.top().y_min = path.boundingRect().y();
     }
   p->pixmap->restore();
 }
@@ -1172,6 +1266,16 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
       (*p->points)[i] = QPointF(xi, yi);
+      if (!p->bounding_stack.empty())
+        {
+          double point_x, point_y;
+          point_x = xi;
+          point_y = yi;
+          if (p->bounding_stack.top().x_max <= point_x) p->bounding_stack.top().x_max = point_x;
+          if (p->bounding_stack.top().x_min >= point_x) p->bounding_stack.top().x_min = point_x;
+          if (p->bounding_stack.top().y_max <= point_y) p->bounding_stack.top().y_max = point_y;
+          if (p->bounding_stack.top().y_min >= point_y) p->bounding_stack.top().y_min = point_y;
+        }
     }
 
   triangle = new QPolygonF(3);
@@ -1226,6 +1330,16 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
       (*p->points)[i] = QPointF(xi, yi);
+      if (!p->bounding_stack.empty())
+        {
+          double point_x, point_y;
+          point_x = xi;
+          point_y = yi;
+          if (p->bounding_stack.top().x_max <= point_x) p->bounding_stack.top().x_max = point_x;
+          if (p->bounding_stack.top().x_min >= point_x) p->bounding_stack.top().x_min = point_x;
+          if (p->bounding_stack.top().y_max <= point_y) p->bounding_stack.top().y_max = point_y;
+          if (p->bounding_stack.top().y_min >= point_y) p->bounding_stack.top().y_min = point_y;
+        }
     }
 
   j = 0;
@@ -1344,22 +1458,6 @@ static void memory_plugin_dl_render(int fctid, int dx, int dy, int dimx, int *ia
                            (void **)(&p->memory_plugin_ws_state_list));
         }
       return;
-    case 3:
-      if (fontfile > 0)
-        {
-          gks_close_font(fontfile);
-          fontfile = 0;
-        }
-      break;
-    case 14:
-      {
-        int tx_prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
-        if ((tx_prec == GKS_K_TEXT_PRECISION_STROKE || tx_prec == GKS_K_TEXT_PRECISION_CHAR) && fontfile == 0)
-          {
-            fontfile = gks_open_font();
-          }
-      }
-      break;
     case 54:
       if (!p->prevent_resize_by_dl || !p->interp_was_called)
         {
@@ -1414,6 +1512,9 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
   GKS_UNUSED(lc);
   static gks_state_list_t saved_gkss;
   int true_color;
+  int cur_id;
+  bounding_struct s;
+  bounding_struct *top;
 
   switch (fctid)
     {
@@ -1435,15 +1536,8 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       init_norm_xform();
       init_colors();
 
+      gkss->fontfile = fontfile;
       gks_init_core(gkss);
-      break;
-
-    case 3:
-      if (fontfile > 0)
-        {
-          gks_close_font(fontfile);
-          fontfile = 0;
-        }
       break;
 
     case 12:
@@ -1533,6 +1627,18 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
 
     case 203:
       p->transparency = (int)(r1[0] * 255);
+      break;
+
+    case GRM_BEGIN_SELECTION: /* 260 */
+      cur_id = ia[0];
+      s = {DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX, (void (*)(int, double, double, double, double))r1, cur_id};
+      p->bounding_stack.push(s);
+      break;
+
+    case GRM_END_SELECTION: /* 261 */
+      top = &p->bounding_stack.top();
+      s.fun_call(top->item_id, top->x_min, top->x_max, top->y_min, top->y_max);
+      p->bounding_stack.pop();
       break;
     }
 }
@@ -1783,19 +1889,11 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       if (fontfile > 0)
         {
           gks_close_font(fontfile);
-          fontfile = 0;
+          gkss->fontfile = fontfile = 0;
         }
       release_data();
 
       p = NULL;
-      break;
-
-    case 6:
-      /* set display list length to zero */
-      memset(p->dl.buffer, 0, sizeof(int));
-      p->dl.nbytes = 0;
-
-      p->empty = true;
       break;
 
     case 8:

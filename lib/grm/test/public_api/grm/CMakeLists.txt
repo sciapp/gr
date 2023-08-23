@@ -8,7 +8,7 @@ project(
 
 set(EXECUTABLE_SOURCES
     bar_errorbar.c
-    barplot.c
+    barplot.cxx
     custom_receiver.c
     custom_sender.c
     dom_render.cxx
@@ -34,6 +34,7 @@ set(EXECUTABLE_SOURCES
     sender.c
     size.c
     subplots.c
+    surface.c
     volume.c
     marginalheatmap.c
 )
@@ -62,3 +63,5 @@ foreach(executable_source ${EXECUTABLE_SOURCES})
                CXX_EXTENSIONS OFF
   )
 endforeach()
+
+add_subdirectory(snoop grm_test_snoop)

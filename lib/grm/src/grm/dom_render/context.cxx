@@ -6,67 +6,68 @@
 #include <grm/dom_render/context.hxx>
 
 
-GR::Context::Context() = default; /*! default constructor for GR::Context*/
+GRM::Context::Context() = default; /*! default constructor for GRM::Context*/
 
-GR::Context::Inner::Inner(Context &context, std::string key) : context(&context), key(std::move(key))
+GRM::Context::Inner::Inner(Context &context, std::string key) : context(&context), key(std::move(key))
 {
   /*!
-   * The non const constructor for GR::Context::Inner
+   * The non const constructor for GRM::Context::Inner
    *
-   * \param[in] context The GR::Context it belongs to
+   * \param[in] context The GRM::Context it belongs to
    * \param[in] key The assigned key for Inner
    */
 }
-GR::Context::Inner::Inner(const Context &context, std::string key)
+GRM::Context::Inner::Inner(const Context &context, std::string key)
     : context(&const_cast<Context &>(context)), key(std::move(key))
 {
   /*!
-   * The const construtor for GR::Context::Inner
+   * The const construtor for GRM::Context::Inner
    *
-   * \param[in] context A const GR::Context it belongs to
+   * \param[in] context A const GRM::Context it belongs to
    * \param[in] key The assigned key for Inner
    */
 }
 
-bool GR::Context::Inner::intUsed()
+bool GRM::Context::Inner::intUsed()
 {
   /*!
-   * This function is used for checking if the tableInt map of GR::Context contains a value for GR::Context::Inner's key
+   * This function is used for checking if the tableInt map of GRM::Context contains a value for GRM::Context::Inner's
+   * key
    *
-   * \returns a bool indicating the usage of GR::Context::Inner::key by GR::Context::tableInt
+   * \returns a bool indicating the usage of GRM::Context::Inner::key by GRM::Context::tableInt
    */
   return context->tableInt.find(key) != context->tableInt.end();
 }
 
-bool GR::Context::Inner::doubleUsed()
+bool GRM::Context::Inner::doubleUsed()
 {
   /*!
-   * This function is used for checking if the tableDouble map of GR::Context contains a value for GR::Context::Inner's
-   * key
+   * This function is used for checking if the tableDouble map of GRM::Context contains a value for
+   * GRM::Context::Inner's key
    *
-   * \returns a bool indicating the usage of GR::Context::Inner::key by GR::Context::tableDouble
+   * \returns a bool indicating the usage of GRM::Context::Inner::key by GRM::Context::tableDouble
    */
   return context->tableDouble.find(key) != context->tableDouble.end();
 }
 
-bool GR::Context::Inner::stringUsed()
+bool GRM::Context::Inner::stringUsed()
 {
   /*!
-   * This function is used for checking if the tableString map of GR::Context contains a value for GR::Context::Inner's
-   * key
+   * This function is used for checking if the tableString map of GRM::Context contains a value for
+   * GRM::Context::Inner's key
    *
-   * \returns a bool indicating the usage of GR::Context::Inner::key by GR::Context::tableString
+   * \returns a bool indicating the usage of GRM::Context::Inner::key by GRM::Context::tableString
    */
   return context->tableString.find(key) != context->tableString.end();
 }
 
 
-GR::Context::Inner &GR::Context::Inner::operator=(std::vector<double> vec)
+GRM::Context::Inner &GRM::Context::Inner::operator=(std::vector<double> vec)
 {
   /*!
-   * Overloaded operator= for GR::Context::Inner assigning std::vector<double>
-   * Stores the vector in GR::Context::tableDouble with GR::Context::Inner's key
-   * Throws a TypeError if the GR::Context::Inner key is already used by other GR::Context tableTYPES
+   * Overloaded operator= for GRM::Context::Inner assigning std::vector<double>
+   * Stores the vector in GRM::Context::tableDouble with GRM::Context::Inner's key
+   * Throws a TypeError if the GRM::Context::Inner key is already used by other GRM::Context tableTYPES
    */
   if (intUsed() || stringUsed())
     {
@@ -79,12 +80,12 @@ GR::Context::Inner &GR::Context::Inner::operator=(std::vector<double> vec)
     }
 }
 
-GR::Context::Inner &GR::Context::Inner::operator=(std::vector<int> vec)
+GRM::Context::Inner &GRM::Context::Inner::operator=(std::vector<int> vec)
 {
   /*!
-   * Overloaded operator= for GR::Context::Inner assigning std::vector<int>
-   * Stores the vector in GR::Context::tableInt with GR::Context::Inner's key
-   * Throws a TypeError if the GR::Context::Inner key is already used by other GR::Context tableTYPES
+   * Overloaded operator= for GRM::Context::Inner assigning std::vector<int>
+   * Stores the vector in GRM::Context::tableInt with GRM::Context::Inner's key
+   * Throws a TypeError if the GRM::Context::Inner key is already used by other GRM::Context tableTYPES
    */
   if (doubleUsed() || stringUsed())
     {
@@ -98,12 +99,12 @@ GR::Context::Inner &GR::Context::Inner::operator=(std::vector<int> vec)
 }
 
 
-GR::Context::Inner &GR::Context::Inner::operator=(std::vector<std::string> vec)
+GRM::Context::Inner &GRM::Context::Inner::operator=(std::vector<std::string> vec)
 {
   /*!
-   * Overloaded operator= for GR::Context::Inner assigning std::vector<std::string>
-   * Stores the vector in GR::Context::tableString with GR::Context::Inner's key
-   * Throws a TypeError if the GR::Context::Inner is already used by other GR::Context tableTYPES
+   * Overloaded operator= for GRM::Context::Inner assigning std::vector<std::string>
+   * Stores the vector in GRM::Context::tableString with GRM::Context::Inner's key
+   * Throws a TypeError if the GRM::Context::Inner is already used by other GRM::Context tableTYPES
    */
   if (intUsed() || doubleUsed())
     {
@@ -117,11 +118,11 @@ GR::Context::Inner &GR::Context::Inner::operator=(std::vector<std::string> vec)
 }
 
 
-GR::Context::Inner::operator std::vector<int> &()
+GRM::Context::Inner::operator std::vector<int> &()
 {
   /*!
-   * Overloaded operator std::vector<int>& used for converting GR::Context::Inner to std::vector
-   * This operator is used in GR::get
+   * Overloaded operator std::vector<int>& used for converting GRM::Context::Inner to std::vector
+   * This operator is used in GRM::get
    *
    * Throws a NotFoundError if there is no vector found in tableInt with Inner's key
    */
@@ -132,11 +133,11 @@ GR::Context::Inner::operator std::vector<int> &()
   throw NotFoundError("No integer value found for given key");
 }
 
-GR::Context::Inner::operator const std::vector<int> &() const
+GRM::Context::Inner::operator const std::vector<int> &() const
 {
   /*!
-   * The const overloaded operator std::vector<int>& used for converting GR::Context::Inner to const std::vector
-   * This operator is used in GR::get
+   * The const overloaded operator std::vector<int>& used for converting GRM::Context::Inner to const std::vector
+   * This operator is used in GRM::get
    *
    * Throws a NotFoundError if there is no vector found in tableInt with Inner's key
    */
@@ -147,11 +148,11 @@ GR::Context::Inner::operator const std::vector<int> &() const
   throw NotFoundError("No integer value found for given key");
 }
 
-GR::Context::Inner::operator std::vector<double> &()
+GRM::Context::Inner::operator std::vector<double> &()
 {
   /*!
-   * Overloaded operator std::vector<double>& used for converting GR::Context::Inner to std::vector
-   * This operator is used in GR::get
+   * Overloaded operator std::vector<double>& used for converting GRM::Context::Inner to std::vector
+   * This operator is used in GRM::get
    *
    * Throws a NotFoundError if there is no vector found in tableDouble with Inner's key
    */
@@ -162,11 +163,11 @@ GR::Context::Inner::operator std::vector<double> &()
   throw NotFoundError("No double value found for given key");
 }
 
-GR::Context::Inner::operator const std::vector<double> &() const
+GRM::Context::Inner::operator const std::vector<double> &() const
 {
   /*!
-   * The const overloaded operator std::vector<double>& used for converting GR::Context::Inner to std::vector
-   * This operator is used in GR::get
+   * The const overloaded operator std::vector<double>& used for converting GRM::Context::Inner to std::vector
+   * This operator is used in GRM::get
    *
    * Throws a NotFoundError if there is no vector found in tableDouble with Inner's key
    */
@@ -177,11 +178,11 @@ GR::Context::Inner::operator const std::vector<double> &() const
   throw NotFoundError("No double value found for given key");
 }
 
-GR::Context::Inner::operator std::vector<std::string> &()
+GRM::Context::Inner::operator std::vector<std::string> &()
 {
   /*!
-   * Overloaded operator std::vector<std::string>& used for converting GR::Context::Inner to std::vector
-   * This operator is used in GR::get
+   * Overloaded operator std::vector<std::string>& used for converting GRM::Context::Inner to std::vector
+   * This operator is used in GRM::get
    *
    * Throws a NotFoundError if there is no vector found in tableString with Inner's key
    */
@@ -192,11 +193,11 @@ GR::Context::Inner::operator std::vector<std::string> &()
   throw NotFoundError("No string value found for given key");
 }
 
-GR::Context::Inner::operator const std::vector<std::string> &() const
+GRM::Context::Inner::operator const std::vector<std::string> &() const
 {
   /*!
-   * The const overloaded operator std::vector<std::string>& used for converting GR::Context::Inner to std::vector
-   * This operator is used in GR::get
+   * The const overloaded operator std::vector<std::string>& used for converting GRM::Context::Inner to std::vector
+   * This operator is used in GRM::get
    *
    * Throws a NotFoundError if there is no vector found in tableString with Inner's key
    */
@@ -207,11 +208,11 @@ GR::Context::Inner::operator const std::vector<std::string> &() const
   throw NotFoundError("No string value found for given key");
 }
 
-GR::Context::Inner::operator std::vector<int> *()
+GRM::Context::Inner::operator std::vector<int> *()
 {
   /*!
-   * Overloaded operator std::vector<int>* used for converting GR::Context::Inner to a std::vector pointer
-   * This operator is used in GR::get_if
+   * Overloaded operator std::vector<int>* used for converting GRM::Context::Inner to a std::vector pointer
+   * This operator is used in GRM::get_if
    *
    * Throws a NotFoundError if there is no vector found in tableInt with Inner's key
    */
@@ -222,11 +223,11 @@ GR::Context::Inner::operator std::vector<int> *()
   throw NotFoundError("No int value found for given key");
 }
 
-GR::Context::Inner::operator const std::vector<int> *() const
+GRM::Context::Inner::operator const std::vector<int> *() const
 {
   /*!
-   * The const overloaded operator std::vector<int>* used for converting GR::Context::Inner to a std::vector pointer
-   * This operator is used in GR::get_if
+   * The const overloaded operator std::vector<int>* used for converting GRM::Context::Inner to a std::vector pointer
+   * This operator is used in GRM::get_if
    *
    * Throws a NotFoundError if there is no vector found in tableInt with Inner's key
    */
@@ -238,11 +239,11 @@ GR::Context::Inner::operator const std::vector<int> *() const
 }
 
 
-GR::Context::Inner::operator std::vector<double> *()
+GRM::Context::Inner::operator std::vector<double> *()
 {
   /*!
-   * Overloaded operator std::vector<double>* used for converting GR::Context::Inner to a std::vector pointer
-   * This operator is used in GR::get_if
+   * Overloaded operator std::vector<double>* used for converting GRM::Context::Inner to a std::vector pointer
+   * This operator is used in GRM::get_if
    *
    * Throws a NotFoundError if there is no vector found in tableDouble with Inner's key
    */
@@ -253,11 +254,11 @@ GR::Context::Inner::operator std::vector<double> *()
   throw NotFoundError("No double value found for given key");
 }
 
-GR::Context::Inner::operator const std::vector<double> *() const
+GRM::Context::Inner::operator const std::vector<double> *() const
 {
   /*!
-   * The const overloaded operator std::vector<double>* used for converting GR::Context::Inner to a std::vector pointer
-   * This operator is used in GR::get_if
+   * The const overloaded operator std::vector<double>* used for converting GRM::Context::Inner to a std::vector pointer
+   * This operator is used in GRM::get_if
    *
    * Throws a NotFoundError if there is no vector found in tableDouble with Inner's key
    */
@@ -268,11 +269,11 @@ GR::Context::Inner::operator const std::vector<double> *() const
   throw NotFoundError("No double value found for given key");
 }
 
-GR::Context::Inner::operator std::vector<std::string> *()
+GRM::Context::Inner::operator std::vector<std::string> *()
 {
   /*!
-   * Overloaded operator std::vector<std::string>* used for converting GR::Context::Inner to a std::vector pointer
-   * This operator is used in GR::get_if
+   * Overloaded operator std::vector<std::string>* used for converting GRM::Context::Inner to a std::vector pointer
+   * This operator is used in GRM::get_if
    *
    * Throws a NotFoundError if there is no vector found in tableString with Inner's key
    */
@@ -284,11 +285,11 @@ GR::Context::Inner::operator std::vector<std::string> *()
 }
 
 
-GR::Context::Inner::operator const std::vector<std::string> *() const
+GRM::Context::Inner::operator const std::vector<std::string> *() const
 {
   /*!
-   * Const overloaded operator std::vector<std::string>* used for converting GR::Context::Inner to a std::vector pointer
-   * This operator is used in GR::get_if
+   * Const overloaded operator std::vector<std::string>* used for converting GRM::Context::Inner to a std::vector
+   * pointer This operator is used in GRM::get_if
    *
    * Throws a NotFoundError if there is no vector found in tableString with Inner's key
    */
@@ -299,25 +300,25 @@ GR::Context::Inner::operator const std::vector<std::string> *() const
   throw NotFoundError("No std::string value found for given key");
 }
 
-GR::Context::Inner GR::Context::operator[](const std::string &str)
+GRM::Context::Inner GRM::Context::operator[](const std::string &str)
 {
   /*!
-   * Overloaded operator[] of GR::Context. This is used to mimic std::map's usage syntax
+   * Overloaded operator[] of GRM::Context. This is used to mimic std::map's usage syntax
    *
-   * \param[in] str A std::string used as the key for GR::Context::Inner
-   * \returns GR::Context::Inner containing access to this GR::Context object and str as key
+   * \param[in] str A std::string used as the key for GRM::Context::Inner
+   * \returns GRM::Context::Inner containing access to this GRM::Context object and str as key
    */
   return Inner(*this, str);
 }
 
 
-const GR::Context::Inner GR::Context::operator[](const std::string &str) const
+const GRM::Context::Inner GRM::Context::operator[](const std::string &str) const
 {
   /*!
-   * The const overloaded operator[] of GR::Context. This is used to mimic std::map's usage syntax
+   * The const overloaded operator[] of GRM::Context. This is used to mimic std::map's usage syntax
    *
-   * \param[in] str A std::string used as the key for GR::Context::Inner
-   * \returns const GR::Context::Inner containing access to this GR::Context object and str as key
+   * \param[in] str A std::string used as the key for GRM::Context::Inner
+   * \returns const GRM::Context::Inner containing access to this GRM::Context object and str as key
    */
   return Inner(*this, str);
 }

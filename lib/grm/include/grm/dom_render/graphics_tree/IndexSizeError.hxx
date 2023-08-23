@@ -1,15 +1,16 @@
-#ifndef GR_GRAPHICS_TREE_INTERFACE_INDEXSIZEERROR_HXX
-#define GR_GRAPHICS_TREE_INTERFACE_INDEXSIZEERROR_HXX
+#ifndef GRM_GRAPHICS_TREE_INTERFACE_INDEXSIZEERROR_HXX
+#define GRM_GRAPHICS_TREE_INTERFACE_INDEXSIZEERROR_HXX
 
 #include <stdexcept>
+#include <grm/util.h>
 
-namespace GR
+namespace GRM
 {
-class IndexSizeError : public std::logic_error
+class EXPORT IndexSizeError : public std::logic_error
 {
 public:
   explicit IndexSizeError(const std::string &what_arg) : std::logic_error(what_arg) {}
 };
-} // namespace GR
+} // namespace GRM
 
 #endif

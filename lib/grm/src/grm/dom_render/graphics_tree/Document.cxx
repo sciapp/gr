@@ -5,49 +5,51 @@
 #include <grm/dom_render/graphics_tree/HierarchyRequestError.hxx>
 #include <grm/dom_render/graphics_tree/NotSupportedError.hxx>
 
-GR::Document::Document() : GR::Node(GR::Node::Type::DOCUMENT_NODE, nullptr) {}
+static void (*render)() = nullptr;
+static void (*update)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &) = nullptr;
+GRM::Document::Document() : GRM::Node(GRM::Node::Type::DOCUMENT_NODE, nullptr) {}
 
-std::string GR::Document::nodeName() const
+std::string GRM::Document::nodeName() const
 {
   return "#document";
 }
 
-std::shared_ptr<GR::Document> GR::Document::createDocument()
+std::shared_ptr<GRM::Document> GRM::Document::createDocument()
 {
-  return std::shared_ptr<GR::Document>(new GR::Document());
+  return std::shared_ptr<GRM::Document>(new GRM::Document());
 }
 
-std::shared_ptr<GR::Element> GR::Document::documentElement()
+std::shared_ptr<GRM::Element> GRM::Document::documentElement()
 {
   return firstChildElement();
 }
 
-std::shared_ptr<const GR::Element> GR::Document::documentElement() const
+std::shared_ptr<const GRM::Element> GRM::Document::documentElement() const
 {
   return firstChildElement();
 }
 
-std::shared_ptr<GR::Element> GR::Document::createElement(const std::string &localName)
+std::shared_ptr<GRM::Element> GRM::Document::createElement(const std::string &localName)
 {
-  auto result = std::shared_ptr<GR::Element>(new GR::Element(localName, shared()));
+  auto result = std::shared_ptr<GRM::Element>(new GRM::Element(localName, shared()));
   return result;
 }
 
-std::shared_ptr<GR::Comment> GR::Document::createComment(const std::string &data)
+std::shared_ptr<GRM::Comment> GRM::Document::createComment(const std::string &data)
 {
-  auto result = std::shared_ptr<GR::Comment>(new GR::Comment(data, shared()));
+  auto result = std::shared_ptr<GRM::Comment>(new GRM::Comment(data, shared()));
   return result;
 }
 
-std::shared_ptr<GR::Document> GR::Document::shared()
+std::shared_ptr<GRM::Document> GRM::Document::shared()
 {
-  return std::static_pointer_cast<GR::Document>(shared_from_this());
+  return std::static_pointer_cast<GRM::Document>(shared_from_this());
 }
 
 template <typename T, typename U>
 static std::vector<std::shared_ptr<T>> getElementsByTagName_impl(U &document, const std::string &qualifiedName)
 {
-  std::string local_name = GR::tolower(qualifiedName);
+  std::string local_name = GRM::tolower(qualifiedName);
   auto document_element = document.documentElement();
   if (!document_element)
     {
@@ -61,28 +63,28 @@ static std::vector<std::shared_ptr<T>> getElementsByTagName_impl(U &document, co
   return found_elements;
 }
 
-std::vector<std::shared_ptr<GR::Element>> GR::Document::getElementsByTagName(const std::string &qualifiedName)
+std::vector<std::shared_ptr<GRM::Element>> GRM::Document::getElementsByTagName(const std::string &qualifiedName)
 {
-  return ::getElementsByTagName_impl<GR::Element>(*this, qualifiedName);
+  return ::getElementsByTagName_impl<GRM::Element>(*this, qualifiedName);
 }
-std::vector<std::shared_ptr<const GR::Element>>
-GR::Document::getElementsByTagName(const std::string &qualifiedName) const
+std::vector<std::shared_ptr<const GRM::Element>>
+GRM::Document::getElementsByTagName(const std::string &qualifiedName) const
 {
-  return ::getElementsByTagName_impl<const GR::Element>(*this, qualifiedName);
+  return ::getElementsByTagName_impl<const GRM::Element>(*this, qualifiedName);
 }
 
-std::vector<std::shared_ptr<GR::Element>> GR::Document::getElementsByClassName(const std::string &classNames)
+std::vector<std::shared_ptr<GRM::Element>> GRM::Document::getElementsByClassName(const std::string &classNames)
 {
   return getElementsByClassName_impl(classNames);
 }
 
-std::vector<std::shared_ptr<const GR::Element>>
-GR::Document::getElementsByClassName(const std::string &classNames) const
+std::vector<std::shared_ptr<const GRM::Element>>
+GRM::Document::getElementsByClassName(const std::string &classNames) const
 {
   return getElementsByClassName_impl(classNames);
 }
 
-std::shared_ptr<GR::Element> GR::Document::getElementById(const std::string &id)
+std::shared_ptr<GRM::Element> GRM::Document::getElementById(const std::string &id)
 {
   auto document_element = documentElement();
   if (!document_element)
@@ -92,7 +94,7 @@ std::shared_ptr<GR::Element> GR::Document::getElementById(const std::string &id)
   return document_element->getElementById(id);
 }
 
-std::shared_ptr<const GR::Element> GR::Document::getElementById(const std::string &id) const
+std::shared_ptr<const GRM::Element> GRM::Document::getElementById(const std::string &id) const
 {
   auto document_element = documentElement();
   if (!document_element)
@@ -102,24 +104,24 @@ std::shared_ptr<const GR::Element> GR::Document::getElementById(const std::strin
   return document_element->getElementById(id);
 }
 
-void GR::Document::prepend(const std::vector<std::shared_ptr<GR::Node>> &nodes)
+void GRM::Document::prepend(const std::vector<std::shared_ptr<GRM::Node>> &nodes)
 {
   prepend_impl(nodes);
 }
 
-void GR::Document::append(const std::vector<std::shared_ptr<GR::Node>> &nodes)
+void GRM::Document::append(const std::vector<std::shared_ptr<GRM::Node>> &nodes)
 {
   append_impl(nodes);
 }
 
-void GR::Document::replaceChildren(const std::vector<std::shared_ptr<GR::Node>> &nodes)
+void GRM::Document::replaceChildren(const std::vector<std::shared_ptr<GRM::Node>> &nodes)
 {
   replaceChildren_impl(nodes);
 }
 
-std::shared_ptr<GR::Node> GR::Document::cloneIndividualNode()
+std::shared_ptr<GRM::Node> GRM::Document::cloneIndividualNode()
 {
-  auto document = GR::Document::createDocument();
+  auto document = GRM::Document::createDocument();
   *document = *this;
   return document;
 }
@@ -134,37 +136,37 @@ template <typename T, typename U> static std::vector<std::shared_ptr<T>> childre
   return {};
 }
 
-std::vector<std::shared_ptr<GR::Element>> GR::Document::children()
+std::vector<std::shared_ptr<GRM::Element>> GRM::Document::children()
 {
-  return ::children_impl<GR::Element>(*this);
+  return ::children_impl<GRM::Element>(*this);
 }
 
-std::vector<std::shared_ptr<const GR::Element>> GR::Document::children() const
+std::vector<std::shared_ptr<const GRM::Element>> GRM::Document::children() const
 {
-  return ::children_impl<const GR::Element>(*this);
+  return ::children_impl<const GRM::Element>(*this);
 }
 
-std::shared_ptr<GR::Element> GR::Document::firstChildElement()
-{
-  return firstChildElement_impl();
-}
-
-std::shared_ptr<const GR::Element> GR::Document::firstChildElement() const
+std::shared_ptr<GRM::Element> GRM::Document::firstChildElement()
 {
   return firstChildElement_impl();
 }
 
-std::shared_ptr<GR::Element> GR::Document::lastChildElement()
+std::shared_ptr<const GRM::Element> GRM::Document::firstChildElement() const
+{
+  return firstChildElement_impl();
+}
+
+std::shared_ptr<GRM::Element> GRM::Document::lastChildElement()
 {
   return firstChildElement();
 }
 
-std::shared_ptr<const GR::Element> GR::Document::lastChildElement() const
+std::shared_ptr<const GRM::Element> GRM::Document::lastChildElement() const
 {
   return firstChildElement();
 }
 
-unsigned long GR::Document::childElementCount() const
+unsigned long GRM::Document::childElementCount() const
 {
   if (firstChildElement())
     {
@@ -173,11 +175,11 @@ unsigned long GR::Document::childElementCount() const
   return 0;
 }
 
-std::shared_ptr<GR::Node> GR::Document::adoptNode(std::shared_ptr<GR::Node> node)
+std::shared_ptr<GRM::Node> GRM::Document::adoptNode(std::shared_ptr<GRM::Node> node)
 {
   if (node->nodeType() == Type::DOCUMENT_NODE)
     {
-      throw NotSupportedError("node must not be GR::Document node");
+      throw NotSupportedError("node must not be GRM::Document node");
     }
   auto old_document = node->ownerDocument();
   auto node_parent = node->parentNode();
@@ -192,42 +194,56 @@ std::shared_ptr<GR::Node> GR::Document::adoptNode(std::shared_ptr<GR::Node> node
   return node;
 }
 
-std::shared_ptr<GR::Node> GR::Document::importNode(const std::shared_ptr<GR::Node> &node, bool deep)
+std::shared_ptr<GRM::Node> GRM::Document::importNode(const std::shared_ptr<GRM::Node> &node, bool deep)
 {
   auto clone = node->cloneNode(deep);
   adoptNode(clone);
   return clone;
 }
 
-std::shared_ptr<GR::Document> GR::createDocument()
+std::shared_ptr<GRM::Document> GRM::createDocument()
 {
   return Document::createDocument();
 }
 
-std::vector<std::shared_ptr<GR::Element>> GR::Document::querySelectorsAll(const std::string &selectors)
+std::vector<std::shared_ptr<GRM::Element>> GRM::Document::querySelectorsAll(const std::string &selectors)
 {
-  std::vector<std::shared_ptr<GR::Element>> found_elements;
-  std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> match_map;
+  std::vector<std::shared_ptr<GRM::Element>> found_elements;
+  std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> match_map;
   querySelectorsAll_impl(parseSelectors(selectors), found_elements, match_map);
   return found_elements;
 }
 
-std::vector<std::shared_ptr<const GR::Element>> GR::Document::querySelectorsAll(const std::string &selectors) const
+std::vector<std::shared_ptr<const GRM::Element>> GRM::Document::querySelectorsAll(const std::string &selectors) const
 {
-  std::vector<std::shared_ptr<const GR::Element>> found_elements;
-  std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> match_map;
+  std::vector<std::shared_ptr<const GRM::Element>> found_elements;
+  std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> match_map;
   querySelectorsAll_impl(parseSelectors(selectors), found_elements, match_map);
   return found_elements;
 }
 
-std::shared_ptr<GR::Element> GR::Document::querySelectors(const std::string &selectors)
+std::shared_ptr<GRM::Element> GRM::Document::querySelectors(const std::string &selectors)
 {
-  std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> match_map;
+  std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> match_map;
   return querySelectors_impl(parseSelectors(selectors), match_map);
 }
 
-std::shared_ptr<const GR::Element> GR::Document::querySelectors(const std::string &selectors) const
+std::shared_ptr<const GRM::Element> GRM::Document::querySelectors(const std::string &selectors) const
 {
-  std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> match_map;
+  std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> match_map;
   return querySelectors_impl(parseSelectors(selectors), match_map);
+}
+
+void GRM::Document::setUpdateFct(void (*ren)(), void (*upt)(const std::shared_ptr<GRM::Element> &, const std::string &,
+                                                            const std::string &))
+{
+  render = ren;
+  update = upt;
+}
+
+void GRM::Document::getUpdateFct(void (**ren)(), void (**upt)(const std::shared_ptr<GRM::Element> &,
+                                                              const std::string &, const std::string &))
+{
+  *ren = render;
+  *upt = update;
 }

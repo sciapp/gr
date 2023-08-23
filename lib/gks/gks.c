@@ -1583,6 +1583,14 @@ void gks_set_text_fontprec(int font, int prec)
     {
       if (font != 0)
         {
+#ifdef NO_FT
+          if (prec == GKS_K_TEXT_PRECISION_OUTLINE)
+            {
+              /* text prec is invalid since no FreeType support was built in */
+              gks_report_error(SET_TEXT_FONTPREC, 71);
+              return;
+            }
+#endif
           if (font != s->txfont || prec != s->txprec)
             {
               if ((prec == GKS_K_TEXT_PRECISION_STROKE || prec == GKS_K_TEXT_PRECISION_CHAR) && fontfile == 0)
@@ -2928,6 +2936,12 @@ void gks_inq_fill_color_index(int *errind, int *coli)
     *coli = s->facoli;
 }
 
+void gks_inq_transparency(int *errind, double *alpha)
+{
+  *errind = GKS_K_NO_ERROR;
+  *alpha = s->alpha;
+}
+
 void gks_inq_open_segn(int *errind, int *segn)
 {
   if (state == GKS_K_SGOP)
@@ -3146,6 +3160,46 @@ void gks_inq_vp_size(int wkid, int *errind, int *width, int *height, double *dev
     *errind = GKS_K_ERROR;
 }
 
+void gks_sample_locator(int wkid, int *errind, double *x, double *y, int *buttons)
+{
+  gks_list_t *element;
+  ws_list_t *ws;
+
+  if ((element = gks_list_find(open_ws, wkid)) != NULL)
+    {
+      ws = (ws_list_t *)element->ptr;
+
+      switch (ws->wtype)
+        {
+#ifndef EMSCRIPTEN
+        case 400:
+          gks_quartz_plugin(SAMPLE_LOCATOR, 1, 1, 1, i_arr, 1, f_arr_1, 1, f_arr_2, 0, c_arr, &ws->ptr);
+          *x = f_arr_1[0];
+          *y = f_arr_2[0];
+          *buttons = i_arr[0];
+          *errind = GKS_K_NO_ERROR;
+          break;
+        case 411:
+        case 412:
+        case 413:
+          gks_drv_socket(SAMPLE_LOCATOR, 1, 1, 1, i_arr, 1, f_arr_1, 1, f_arr_2, 0, c_arr, &ws->ptr);
+          *x = f_arr_1[0];
+          *y = f_arr_2[0];
+          *buttons = i_arr[0];
+          *errind = GKS_K_NO_ERROR;
+          break;
+#endif
+        default:
+          *x = *y = 0;
+          *buttons = 0;
+          *errind = GKS_K_ERROR;
+          break;
+        }
+    }
+  else
+    *errind = GKS_K_ERROR;
+}
+
 void gks_emergency_close(void)
 {
   static int closing = 0;
@@ -3299,6 +3353,34 @@ void gks_resize_selection(int kind, double x, double y)
     /* GKS not in proper state. GKS must be either in the state
        WSAC or in the state SGOP */
     gks_report_error(RESIZE_SELECTION, 5);
+}
+
+void gks_begin_grm_selection(int index, void (*fun)(int, double, double, double, double))
+{
+  if (state >= GKS_K_WSAC)
+    {
+      i_arr[0] = index;
+
+      /* call the device driver link routine */
+      gks_ddlk(GRM_BEGIN_SELECTION, 1, 1, 1, i_arr, 1, (double *)fun, 0, f_arr_2, 0, c_arr, NULL);
+    }
+  else
+    /* GKS not in proper state. GKS must be either in the state
+       WSAC or in the state SGOP */
+    gks_report_error(GRM_BEGIN_SELECTION, 5);
+}
+
+void gks_end_grm_selection(void)
+{
+  if (state >= GKS_K_WSAC)
+    {
+      /* call the device driver link routine */
+      gks_ddlk(GRM_END_SELECTION, 0, 0, 0, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+    }
+  else
+    /* GKS not in proper state. GKS must be either in the state
+       WSAC or in the state SGOP */
+    gks_report_error(GRM_END_SELECTION, 5);
 }
 
 void gks_draw_image(double x, double y, double scalex, double scaley, int width, int height, int *data)

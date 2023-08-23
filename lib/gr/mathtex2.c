@@ -986,7 +986,7 @@ extern enum State state;
 extern const char *symbol_start;
 extern int ignore_whitespace;
 
-int yyparse();
+int yyparse(void);
 
 int has_parser_error = 0;
 
@@ -1016,9 +1016,9 @@ size_t result_box_model_node_index;
 size_t current_box_model_state_index = 0;
 size_t result_parser_node_index;
 
-static void push_state();
+static void push_state(void);
 
-static BoxModelState *get_current_state()
+static BoxModelState *get_current_state(void)
 {
   if (current_box_model_state_index == 0)
     {
@@ -1028,7 +1028,7 @@ static BoxModelState *get_current_state()
   return get_box_model_state(current_box_model_state_index);
 }
 
-static void push_state()
+static void push_state(void)
 {
   BoxModelState new_state;
   if (current_box_model_state_index)
@@ -1049,7 +1049,7 @@ static void push_state()
   current_box_model_state_index = copy_box_model_state(new_state);
 }
 
-static void pop_state()
+static void pop_state(void)
 {
   if (current_box_model_state_index == 0)
     {
@@ -1260,7 +1260,7 @@ static size_t make_glue(GlueType type)
   return copy_box_model_node(bm_node);
 }
 
-static size_t make_vlist()
+static size_t make_vlist(void)
 {
   BoxModelNode bm_node;
   bm_node.index = 0;
@@ -1446,7 +1446,7 @@ static void pack_vlist(size_t vlist_index, double h, int m, double l)
     }
 }
 
-static size_t make_hlist()
+static size_t make_hlist(void)
 {
   BoxModelNode bm_node;
   bm_node.index = 0;
@@ -2911,7 +2911,7 @@ static size_t convert_accent_to_box_model(ParserNode *node)
       0,
   };
   const double accent_bearing_factor[] = {
-      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, /* 1, */
+      1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, /* 1, */
       1,                                                    /* 1, */
       1,                                                    /* 1, */
       1,

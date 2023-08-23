@@ -309,35 +309,50 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
                      "\\begin{scope}[yscale=-1, yshift=-%f]\n"
                      "\\draw[color=mycolor, line width=%fpt, opacity=%f] (%f,%f) -- (%f,%f);\n"
                      "\\end{scope}\n",
-                     2 * y, gkss->bwidth * p->nominal_size, p->transparency, x - x1, y - y1, x - x2, y - y2);
-
+                     2 * y, max(gkss->bwidth, gkss->lwidth) * p->nominal_size, p->transparency, x - x1, y - y1, x - x2,
+                     y - y2);
           pc += 4;
           break;
 
         case 3: /* polyline */
+        case 9: /* border polyline */
+          if (op == 3 || gkss->bwidth > 0)
+            {
+              int color = op == 3 ? gkss->pmcoli : gkss->bcoli;
+
+              pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[color]);
+              pgf_printf(p->stream, "\\draw[color=mycolor, line width=%fpt, opacity=%f]",
+                         gkss->bwidth * p->nominal_size, p->transparency);
+              for (i = 0; i < marker[mtype][pc + 1]; i++)
+                {
+                  xr = scale * marker[mtype][pc + 2 + 2 * i];
+                  yr = -scale * marker[mtype][pc + 3 + 2 * i];
+                  seg_xform_rel(&xr, &yr);
+
+                  pgf_printf(p->stream, i == 0 ? "(%f,%f)" : "  --  (%f,%f)", x - xr, y - yr);
+                }
+              pgf_printf(p->stream, "  --  cycle;\n");
+            }
+
+          pc += 1 + 2 * marker[mtype][pc + 1];
+          break;
+
         case 4: /* filled polygon */
         case 5: /* hollow polygon */
           xr = scale * marker[mtype][pc + 2];
           yr = -scale * marker[mtype][pc + 3];
           seg_xform_rel(&xr, &yr);
 
-          if (op == 4)
+          pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[op == 4 ? gkss->pmcoli : 0]);
+          if (op == 4 && gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
             {
-              if (gkss->bcoli != gkss->pmcoli)
-                {
-                  pgf_printf(p->stream, "\\definecolor{bcoli}{HTML}{%s}\n", p->rgb[gkss->bcoli]);
-                  pgf_printf(p->stream, "\\filldraw[color=bcoli, fill=mycolor, line width=%fpt, opacity=%f]",
-                             gkss->bwidth * p->nominal_size, p->transparency);
-                }
-              else
-                {
-                  pgf_printf(p->stream, "\\fill[color=mycolor, line width=%fpt, opacity=%f]",
-                             gkss->bwidth * p->nominal_size, p->transparency);
-                }
+              pgf_printf(p->stream, "\\definecolor{bcoli}{HTML}{%s}\n", p->rgb[gkss->bcoli]);
+              pgf_printf(p->stream, "\\filldraw[color=bcoli, fill=mycolor, line width=%fpt, opacity=%f]",
+                         gkss->bwidth * p->nominal_size, p->transparency);
             }
           else
             {
-              pgf_printf(p->stream, "\\draw[color=mycolor, line width=%fpt, opacity=%f]",
+              pgf_printf(p->stream, "\\fill[color=mycolor, line width=%fpt, opacity=%f]",
                          gkss->bwidth * p->nominal_size, p->transparency);
             }
 
@@ -358,29 +373,29 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
           break;
 
         case 6: /* arc */
+          pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[gkss->pmcoli]);
+          pgf_printf(p->stream, "\\draw[color=mycolor, line width=%fpt, opacity=%f]",
+                     max(gkss->bwidth, gkss->lwidth) * p->nominal_size, p->transparency);
+
+          pgf_printf(p->stream, " (%f, %f) arc (0:360:%f);\n", x + r, y, r);
+          break;
+
         case 7: /* filled arc */
         case 8: /* hollow arc */
-          if (op == 7)
+          pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[op == 7 ? gkss->pmcoli : 0]);
+          if (op == 7 && gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
             {
-              if (gkss->bcoli != gkss->pmcoli)
-                {
-                  pgf_printf(p->stream, "\\definecolor{bcoli}{HTML}{%s}\n", p->rgb[gkss->bcoli]);
-                  pgf_printf(p->stream, "\\filldraw[color=bcoli, fill=mycolor, line width=%fpt, opacity=%f]",
-                             gkss->bwidth * p->nominal_size, p->transparency);
-                }
-              else
-                {
-                  pgf_printf(p->stream, "\\fill[color=mycolor, line width=%fpt, opacity=%f]",
-                             gkss->bwidth * p->nominal_size, p->transparency);
-                }
+              pgf_printf(p->stream, "\\definecolor{bcoli}{HTML}{%s}\n", p->rgb[gkss->bcoli]);
+              pgf_printf(p->stream, "\\filldraw[color=bcoli, fill=mycolor, line width=%fpt, opacity=%f]",
+                         gkss->bwidth * p->nominal_size, p->transparency);
             }
           else
             {
-              pgf_printf(p->stream, "\\draw[color=mycolor, line width=%fpt, opacity=%f]",
+              pgf_printf(p->stream, "\\fill[color=mycolor, line width=%fpt, opacity=%f]",
                          gkss->bwidth * p->nominal_size, p->transparency);
             }
 
-          pgf_printf(p->stream, " (%f, %f) arc (0:360:%d);\n", x + r, y, r);
+          pgf_printf(p->stream, " (%f, %f) arc (0:360:%f);\n", x + r, y, r);
           break;
 
         default:
@@ -1212,19 +1227,21 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
           pgf_clear_stream(buf);
           break;
-        case 'F': /* fill and stroke */
+        case 'F': /* fill (even-odd) and stroke */
+        case 'G': /* fill (winding) and stroke */
           pgf_printf(buf, "-- cycle;\n");
-          pgf_printf(p->stream,
-                     "\\filldraw[color=pathstroke, fill=pathfill, even odd rule, line width=%fpt, opacity=%f] ",
-                     line_width, p->transparency);
+          pgf_printf(p->stream, "\\filldraw[color=pathstroke, fill=pathfill%s, line width=%fpt, opacity=%f] ",
+                     codes[i] == 'F' ? ", even odd rule" : "", line_width, p->transparency);
           pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
           pgf_clear_stream(buf);
           cur_x = start_x;
           cur_y = start_y;
           break;
-        case 'f': /* fill */
+        case 'f': /* fill (even-odd) */
+        case 'g': /* fill (winding) */
           pgf_printf(buf, "-- cycle;\n");
-          pgf_printf(p->stream, "\\fill[fill=pathfill, even odd rule, opacity=%f] ", p->transparency);
+          pgf_printf(p->stream, "\\fill[fill=pathfill%s, opacity=%f] ", codes[i] == 'f' ? ", even odd rule" : "",
+                     p->transparency);
           pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
           pgf_clear_stream(buf);
           cur_x = start_x;

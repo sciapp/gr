@@ -1,17 +1,18 @@
-#ifndef GR_GRAPHICS_TREE_INTERFACE_DOCUMENT_HXX
-#define GR_GRAPHICS_TREE_INTERFACE_DOCUMENT_HXX
+#ifndef GRM_GRAPHICS_TREE_INTERFACE_DOCUMENT_HXX
+#define GRM_GRAPHICS_TREE_INTERFACE_DOCUMENT_HXX
 
 #include <memory>
 #include <string>
 
 #include <grm/dom_render/graphics_tree/Node.hxx>
+#include <grm/util.h>
 
-namespace GR
+namespace GRM
 {
 class Element;
 class Comment;
 
-class Document : public Node
+class EXPORT Document : public Node
 {
 public:
   static std::shared_ptr<Document> createDocument();
@@ -85,6 +86,11 @@ public:
   // virtual functions
   std::string nodeName() const override;
 
+  void setUpdateFct(void (*ren)(),
+                    void (*upt)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &));
+  void getUpdateFct(void (**ren)(),
+                    void (**upt)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &));
+
 protected:
   Document();
 
@@ -94,7 +100,7 @@ private:
   std::shared_ptr<Document> shared();
 };
 
-std::shared_ptr<Document> createDocument();
-} // namespace GR
+EXPORT std::shared_ptr<Document> createDocument();
+} // namespace GRM
 
 #endif

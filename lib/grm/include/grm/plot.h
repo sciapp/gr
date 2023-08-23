@@ -39,7 +39,8 @@ EXPORT int grm_merge_extended(const grm_args_t *args, int hold, const char *iden
 EXPORT int grm_merge_hold(const grm_args_t *args);
 EXPORT int grm_merge_named(const grm_args_t *args, const char *identificator);
 EXPORT int grm_plot(const grm_args_t *args);
-EXPORT void grm_render(void);
+EXPORT int grm_render(void);
+EXPORT int grm_export(const char *file_path);
 EXPORT int grm_switch(unsigned int id);
 
 #if !defined(NO_EXPAT) || !defined(NO_LIBXML2)
@@ -49,17 +50,17 @@ EXPORT int grm_load_graphics_tree(FILE *file);
 #ifdef __cplusplus
 }
 
-EXPORT std::shared_ptr<GR::Element> grm_get_document_root(void);
-EXPORT std::shared_ptr<GR::Render> grm_get_render(void);
+EXPORT std::shared_ptr<GRM::Element> grm_get_document_root(void);
+EXPORT std::shared_ptr<GRM::Render> grm_get_render(void);
 EXPORT int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
-                           const std::shared_ptr<GR::Element> &parentDomElement);
-EXPORT std::shared_ptr<GR::Element> get_subplot_from_ndc_point_using_dom(double x, double y);
-EXPORT std::shared_ptr<GR::Element> get_subplot_from_ndc_points_using_dom(unsigned int n, const double *x,
-                                                                          const double *y);
+                           const std::shared_ptr<GRM::Element> &parentDomElement);
+EXPORT std::shared_ptr<GRM::Element> get_subplot_from_ndc_point_using_dom(double x, double y);
+EXPORT std::shared_ptr<GRM::Element> get_subplot_from_ndc_points_using_dom(unsigned int n, const double *x,
+                                                                           const double *y);
 EXPORT void grm_set_attribute_on_all_subplots(std::string attribute, int value);
 EXPORT int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, const int y2,
                                          const int keep_aspect_ratio, double *factor_x, double *factor_y,
                                          double *focus_x, double *focus_y,
-                                         std::shared_ptr<GR::Element> subplot_element);
+                                         std::shared_ptr<GRM::Element> subplot_element);
 #endif
 #endif /* ifndef GRM_PLOT_H_INCLUDED */

@@ -1,31 +1,31 @@
 #include <grm/dom_render/graphics_tree/Comment.hxx>
 #include <grm/dom_render/graphics_tree/IndexSizeError.hxx>
 
-GR::Comment::Comment(std::string data, const std::shared_ptr<GR::Document> &owner_document)
-    : GR::Node(GR::Node::Type::COMMENT_NODE, owner_document), m_data(std::move(data))
+GRM::Comment::Comment(std::string data, const std::shared_ptr<GRM::Document> &owner_document)
+    : GRM::Node(GRM::Node::Type::COMMENT_NODE, owner_document), m_data(std::move(data))
 {
 }
 
-std::string GR::Comment::nodeName() const
+std::string GRM::Comment::nodeName() const
 {
   return "#comment";
 }
 
-const std::string &GR::Comment::data() const
+const std::string &GRM::Comment::data() const
 {
   return m_data;
 }
 
-std::shared_ptr<GR::Node> GR::Comment::cloneIndividualNode()
+std::shared_ptr<GRM::Node> GRM::Comment::cloneIndividualNode()
 {
-  auto comment = std::shared_ptr<Comment>(new GR::Comment(m_data, ownerDocument()));
+  auto comment = std::shared_ptr<Comment>(new GRM::Comment(m_data, ownerDocument()));
   *comment = *this;
   return comment;
 }
 
-bool GR::Comment::isEqualNode(const std::shared_ptr<const GR::Node> &otherNode) const
+bool GRM::Comment::isEqualNode(const std::shared_ptr<const GRM::Node> &otherNode) const
 {
-  auto other_node_as_comment = std::dynamic_pointer_cast<const GR::Comment>(otherNode);
+  auto other_node_as_comment = std::dynamic_pointer_cast<const GRM::Comment>(otherNode);
   if (!other_node_as_comment)
     {
       return false;
@@ -33,22 +33,22 @@ bool GR::Comment::isEqualNode(const std::shared_ptr<const GR::Node> &otherNode) 
   return (other_node_as_comment->data() == data());
 }
 
-unsigned long GR::Comment::length() const
+unsigned long GRM::Comment::length() const
 {
   return static_cast<unsigned long>(m_data.size());
 }
 
-std::string GR::Comment::substringData(unsigned long offset, unsigned long count) const
+std::string GRM::Comment::substringData(unsigned long offset, unsigned long count) const
 {
   return m_data.substr(offset, count);
 }
 
-void GR::Comment::appendData(const std::string &data)
+void GRM::Comment::appendData(const std::string &data)
 {
   m_data += data;
 }
 
-void GR::Comment::insertData(unsigned long offset, const std::string &data)
+void GRM::Comment::insertData(unsigned long offset, const std::string &data)
 {
   if (offset > length())
     {
@@ -57,7 +57,7 @@ void GR::Comment::insertData(unsigned long offset, const std::string &data)
   m_data.insert(offset, data);
 }
 
-void GR::Comment::replaceData(unsigned long offset, unsigned long count, const std::string &data)
+void GRM::Comment::replaceData(unsigned long offset, unsigned long count, const std::string &data)
 {
   if (offset > length())
     {
@@ -66,26 +66,26 @@ void GR::Comment::replaceData(unsigned long offset, unsigned long count, const s
   m_data.replace(offset, count, data);
 }
 
-void GR::Comment::deleteData(unsigned long offset, unsigned long count)
+void GRM::Comment::deleteData(unsigned long offset, unsigned long count)
 {
   replaceData(offset, count, "");
 }
 
-std::shared_ptr<GR::Element> GR::Comment::previousElementSibling()
+std::shared_ptr<GRM::Element> GRM::Comment::previousElementSibling()
 {
   return previousElementSibling_impl();
 }
 
-std::shared_ptr<const GR::Element> GR::Comment::previousElementSibling() const
+std::shared_ptr<const GRM::Element> GRM::Comment::previousElementSibling() const
 {
   return previousElementSibling_impl();
 }
 
-std::shared_ptr<GR::Element> GR::Comment::nextElementSibling()
+std::shared_ptr<GRM::Element> GRM::Comment::nextElementSibling()
 {
   return nextElementSibling_impl();
 }
-std::shared_ptr<const GR::Element> GR::Comment::nextElementSibling() const
+std::shared_ptr<const GRM::Element> GRM::Comment::nextElementSibling() const
 {
   return nextElementSibling_impl();
 }

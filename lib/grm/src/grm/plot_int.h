@@ -55,53 +55,9 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_DEFAULT_WIDTH 600.0
 #define PLOT_DEFAULT_HEIGHT 450.0
 #define PLOT_DEFAULT_KIND "line"
-#define PLOT_DEFAULT_SPEC ""
-#define PLOT_DEFAULT_CLEAR 1
-#define PLOT_DEFAULT_UPDATE 1
-#define PLOT_DEFAULT_LOCATION 1
-#define PLOT_DEFAULT_SUBPLOT_MIN_X 0.0
-#define PLOT_DEFAULT_SUBPLOT_MAX_X 1.0
-#define PLOT_DEFAULT_SUBPLOT_MIN_Y 0.0
-#define PLOT_DEFAULT_SUBPLOT_MAX_Y 1.0
-#define PLOT_DEFAULT_XLOG 0
-#define PLOT_DEFAULT_YLOG 0
-#define PLOT_DEFAULT_ZLOG 0
-#define PLOT_DEFAULT_XFLIP 0
-#define PLOT_DEFAULT_YFLIP 0
-#define PLOT_DEFAULT_ZFLIP 0
 #define PLOT_DEFAULT_XGRID 1
 #define PLOT_DEFAULT_YGRID 1
 #define PLOT_DEFAULT_ZGRID 1
-#define PLOT_DEFAULT_RESAMPLE_METHOD GKS_K_RESAMPLE_DEFAULT
-#define PLOT_DEFAULT_ADJUST_XLIM 1
-#define PLOT_DEFAULT_ADJUST_YLIM 1
-#define PLOT_DEFAULT_ADJUST_ZLIM 1
-#define PLOT_DEFAULT_COLORMAP 44                                 /* VIRIDIS */
-#define PLOT_DEFAULT_FONT 232                                    /* CMUSerif-Math */
-#define PLOT_DEFAULT_FONT_PRECISION GKS_K_TEXT_PRECISION_OUTLINE /* hardware font rendering */
-#define PLOT_DEFAULT_ROTATION 40.0
-#define PLOT_DEFAULT_TILT 60.0
-#define PLOT_DEFAULT_KEEP_ASPECT_RATIO 0
-#define PLOT_DEFAULT_XLABEL ""
-#define PLOT_DEFAULT_YLABEL ""
-#define PLOT_DEFAULT_ZLABEL ""
-#define PLOT_DEFAULT_STEP_WHERE "mid"
-#define PLOT_DEFAULT_CONTOUR_LEVELS 20
-#define PLOT_DEFAULT_HEXBIN_NBINS 40
-#define PLOT_DEFAULT_TRICONT_LEVELS 20
-#define PLOT_DEFAULT_VOLUME_ALGORITHM GR_VOLUME_EMISSION
-#define PLOT_DEFAULT_ORIENTATION "horizontal"
-#define SERIES_DEFAULT_SPEC ""
-#define PLOT_POLAR_AXES_TEXT_BUFFER 40
-#define PLOT_CONTOUR_GRIDIT_N 200
-#define PLOT_WIREFRAME_GRIDIT_N 50
-#define PLOT_SURFACE_GRIDIT_N 200
-
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-#define PLOT_CUSTOM_COLOR_INDEX 979
-
 
 /* ========================= datatypes ============================================================================== */
 
@@ -113,36 +69,6 @@ typedef err_t (*plot_func_t)(grm_args_t *args);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ options ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-typedef enum
-{
-  GR_OPTION_X_LOG = 1 << 0,
-  GR_OPTION_Y_LOG = 1 << 1,
-  GR_OPTION_Z_LOG = 1 << 2,
-  GR_OPTION_FLIP_X = 1 << 3,
-  GR_OPTION_FLIP_Y = 1 << 4,
-  GR_OPTION_FLIP_Z = 1 << 5,
-  GR_OPTION_LINES = 0,
-  GR_OPTION_MESH = 1,
-  GR_OPTION_FILLED_MESH = 2,
-  GR_OPTION_Z_SHADED_MESH = 3,
-  GR_OPTION_COLORED_MESH = 4,
-  GR_OPTION_CELL_ARRAY = 5,
-  GR_OPTION_SHADED_MESH = 6
-} gr_option_t;
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-typedef enum
-{
-  GR_COLOR_RESET = 0,
-  GR_COLOR_LINE = 1 << 0,
-  GR_COLOR_MARKER = 1 << 1,
-  GR_COLOR_FILL = 1 << 2,
-  GR_COLOR_TEXT = 1 << 3,
-  GR_COLOR_BORDER = 1 << 4
-} gr_color_type_t;
-
 
 /* ========================= functions ============================================================================== */
 
@@ -172,11 +98,9 @@ void plot_process_colormap(grm_args_t *subplot_args);
 void plot_process_font(grm_args_t *subplot_args);
 err_t plot_process_grid_arguments(const grm_args_t *args);
 void plot_process_resample_method(grm_args_t *subplot_args);
-void plot_process_viewport(grm_args_t *subplot_args);
 void plot_process_window(grm_args_t *subplot_args);
 err_t plot_store_coordinate_ranges(grm_args_t *subplot_args);
 void plot_post_plot(grm_args_t *plot_args);
-void plot_restore_text_encoding(void);
 void plot_post_subplot(grm_args_t *subplot_args);
 err_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name_start_ptr, const char *key,
                                  uint_map_t *hierarchy_to_id, const grm_args_t **found_args,
@@ -186,7 +110,7 @@ err_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name_s
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plotting ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 err_t plot_line(grm_args_t *subplot_args);
-err_t plot_step(grm_args_t *subplot_args);
+err_t plot_stairs(grm_args_t *subplot_args);
 err_t plot_scatter(grm_args_t *subplot_args);
 err_t plot_quiver(grm_args_t *subplot_args);
 err_t plot_stem(grm_args_t *subplot_args);
@@ -221,46 +145,22 @@ err_t plot_draw_polar_axes(grm_args_t *args);
 err_t plot_draw_legend(grm_args_t *args);
 err_t plot_draw_pie_legend(grm_args_t *args);
 err_t plot_draw_colorbar(grm_args_t *args, double off, unsigned int colors);
-err_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_length, double *y, const char *kind);
+err_t plot_draw_errorbars(grm_args_t *series_args, unsigned int x_length);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-double find_max_step(unsigned int n, const double *x);
-double *normalize(unsigned int n, const double *x);
-unsigned int *normalize_int(unsigned int n, const double *x, unsigned int sum);
-const char *next_fmt_key(const char *fmt) UNUSED;
 const char *get_compatible_format(const char *key, const char *given_format);
 int get_id_from_args(const grm_args_t *args, int *plot_id, int *subplot_id, int *series_id);
-int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_height, double *metric_width,
-                    double *metric_height);
-int get_focus_and_factor(const int top, const int right, const int bottom, const int left, const int keep_aspect_ratio,
-                         double *factor_x, double *factor_y, double *focus_x, double *focus_y,
-                         grm_args_t **subplot_args);
 grm_args_t *get_subplot_from_ndc_point(double x, double y);
 grm_args_t *get_subplot_from_ndc_points(unsigned int n, const double *x, const double *y);
-double *moivre(double r, int x, int n);
-double *listcomprehension(double count, double (*pFunction)(double), double *pDouble, int num, int start,
-                          double *result);
-int *create_colormap(int x, int y, int size);
-err_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max);
-double get_lightness_from_rbg(double r, double g, double b);
-void set_text_color_for_background(double r, double g, double b);
-void draw_xticklabel(double x1, double x2, const char *label, double available_width);
-void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type);
+err_t classes_polar_histogram(grm_args_t *subplot_args);
 
+int get_free_id_from_figure_elements();
 
 #ifdef __cplusplus
 }
-int set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type,
-                   const std::shared_ptr<GR::Element> &element);
-// void set_nect_color(std::optional<std::vector<int>> color_indices, std::optional<std::vector<double>>
-// color_rgb_values,
-//                     const std::string &key, gr_color_type_t color_type, const std::shared_ptr<GR::Element> &element);
 
-void set_text_color_for_background(double r, double g, double b, const std::shared_ptr<GR::Element> &element);
-void draw_xticklabel(double x1, double x2, const char *label, double available_width,
-                     const std::shared_ptr<GR::Element> &element);
 #endif
 
 /* ------------------------- xml ------------------------------------------------------------------------------------ */
@@ -272,6 +172,7 @@ extern "C" {
 #ifndef NO_LIBXML2
 err_t validate_graphics_tree_xml(void);
 #endif
+int validate_graphics_tree_with_error_messages(void);
 
 #ifdef __cplusplus
 }

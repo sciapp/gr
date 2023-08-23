@@ -1,5 +1,5 @@
-#ifndef GR_GRAPHICS_TREE_INTERFACE_NODE_HXX
-#define GR_GRAPHICS_TREE_INTERFACE_NODE_HXX
+#ifndef GRM_GRAPHICS_TREE_INTERFACE_NODE_HXX
+#define GRM_GRAPHICS_TREE_INTERFACE_NODE_HXX
 
 #include <memory>
 #include <list>
@@ -7,14 +7,15 @@
 #include <string>
 #include <map>
 #include <tuple>
+#include <grm/util.h>
 
-namespace GR
+namespace GRM
 {
 class Element;
 class Document;
 class Selector;
 
-class Node : public std::enable_shared_from_this<Node>
+class EXPORT Node : public std::enable_shared_from_this<Node>
 {
 public:
   enum class Type
@@ -116,18 +117,18 @@ protected:
 
   void replaceChildren_impl(const std::vector<std::shared_ptr<Node>> &nodes);
 
-  void querySelectorsAll_impl(const std::shared_ptr<GR::Selector> &selector,
-                              std::vector<std::shared_ptr<GR::Element>> &found_elements,
-                              std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map);
-  void querySelectorsAll_impl(const std::shared_ptr<GR::Selector> &selector,
-                              std::vector<std::shared_ptr<const GR::Element>> &found_elements,
-                              std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const;
+  void querySelectorsAll_impl(const std::shared_ptr<GRM::Selector> &selector,
+                              std::vector<std::shared_ptr<GRM::Element>> &found_elements,
+                              std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map);
+  void querySelectorsAll_impl(const std::shared_ptr<GRM::Selector> &selector,
+                              std::vector<std::shared_ptr<const GRM::Element>> &found_elements,
+                              std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const;
   std::shared_ptr<Element>
-  querySelectors_impl(const std::shared_ptr<GR::Selector> &selector,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map);
+  querySelectors_impl(const std::shared_ptr<GRM::Selector> &selector,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map);
   std::shared_ptr<const Element>
-  querySelectors_impl(const std::shared_ptr<GR::Selector> &selector,
-                      std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const;
+  querySelectors_impl(const std::shared_ptr<GRM::Selector> &selector,
+                      std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const;
 
   // NonDocumentTypeChildNode interface implementations
 
@@ -153,14 +154,14 @@ private:
   std::shared_ptr<Document> nodeDocument();
 
   std::shared_ptr<const Document> nodeDocument() const;
-  bool matchSelector(const std::shared_ptr<GR::Selector> &selector,
-                     std::map<std::tuple<const GR::Element *, const GR::Selector *>, bool> &match_map) const;
+  bool matchSelector(const std::shared_ptr<GRM::Selector> &selector,
+                     std::map<std::tuple<const GRM::Element *, const GRM::Selector *>, bool> &match_map) const;
 
   Type m_type;
   std::weak_ptr<Document> m_owner_document;
   std::weak_ptr<Node> m_parent_node;
   std::list<std::shared_ptr<Node>> m_child_nodes;
 };
-} // namespace GR
+} // namespace GRM
 
 #endif

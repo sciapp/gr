@@ -106,6 +106,10 @@ extern "C" {
           use the z-value directly as   \
           color index */
 
+#define GR3_TRANSPARENCY_OPAQUE 0
+#define GR3_TRANSPARENCY_TRANSMIT 1
+#define GR3_TRANSPARENCY_FILTER 2
+
 #define GR_VOLUME_EMISSION 0
 #define GR_VOLUME_ABSORPTION 1
 #define GR_VOLUME_MIP 2
@@ -121,6 +125,14 @@ typedef struct
   gr3_coord_t normal[3];
 } gr3_triangle_t;
 
+typedef struct gr3_volume_2pass_priv gr3_volume_2pass_priv_t;
+typedef struct
+{
+  double dmin;
+  double dmax;
+  gr3_volume_2pass_priv_t *priv;
+} gr3_volume_2pass_t;
+
 GR3API int gr3_init(int *attrib_list);
 GR3API void gr3_free(void *pointer);
 GR3API void gr3_terminate(void);
@@ -129,7 +141,7 @@ GR3API const char *gr3_getrenderpathstring(void);
 GR3API const char *gr3_geterrorstring(int error);
 GR3API void gr3_setlogcallback(void (*gr3_log_func)(const char *log_message));
 GR3API int gr3_clear(void);
-GR3API void gr3_usecurrentframebuffer();
+GR3API void gr3_usecurrentframebuffer(void);
 GR3API void gr3_useframebuffer(unsigned int framebuffer);
 
 GR3API int gr3_setquality(int quality);
@@ -250,6 +262,8 @@ GR3API void gr3_drawzslicemesh(const GR3_MC_DTYPE *data, unsigned int iz, unsign
 GR3API void gr3_drawtrianglesurface(int n, const float *triangles);
 
 GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, double *dmin_ptr, double *dmax_ptr);
+GR3API const gr3_volume_2pass_t *gr_volume_2pass(int nx, int ny, int nz, double *data, int algorithm, double *dmin_ptr,
+                                                 double *dmax_ptr, const gr3_volume_2pass_t *context);
 
 GR3API void gr3_setorthographicprojection(float left, float right, float bottom, float top, float znear, float zfar);
 
@@ -261,7 +275,10 @@ GR3API int gr3_setlightsources(int num_lights, float *positions, float *colors);
 
 GR3API void gr3_setlightparameters(float ambient, float diffuse, float specular, float specular_power);
 GR3API void gr3_getlightparameters(float *ambient, float *diffuse, float *specular, float *specular_power);
-GR3API void gr3_setdefaultlightparameters();
+GR3API void gr3_setdefaultlightparameters(void);
+
+GR3API int gr3_getalphamode(int *mode);
+GR3API void gr3_setalphamode(int mode);
 
 GR3API void gr3_setclipping(float xmin, float xmax, float ymin, float ymax, float zmin, float zmax);
 GR3API void gr3_getclipping(float *xmin, float *xmax, float *ymin, float *ymax, float *zmin, float *zmax);

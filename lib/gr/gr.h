@@ -29,6 +29,11 @@ extern "C" {
 #define GR_TEXT_USE_WC (1 << 0)
 #define GR_TEXT_ENABLE_INLINE_MATH (1 << 1)
 
+#define GR_2PASS_CLEANUP 1
+#define GR_2PASS_RENDER 2
+
+#define GR_MAX_CONTEXT 8192
+
 typedef struct
 {
   double x, y;
@@ -62,6 +67,23 @@ typedef struct
   double grid_z_re; /*!< Reciproke of interpolation kernel extent in z-direction */
 } tri_linear_t;
 
+typedef struct cpubasedvolume_2pass_priv cpubasedvolume_2pass_priv_t;
+typedef struct
+{
+  double dmin;
+  double dmax;
+  int action;
+  cpubasedvolume_2pass_priv_t *priv;
+} cpubasedvolume_2pass_t;
+
+typedef struct hexbin_2pass_priv hexbin_2pass_priv_t;
+typedef struct
+{
+  int nc;
+  int cntmax;
+  int action;
+  hexbin_2pass_priv_t *priv;
+} hexbin_2pass_t;
 
 DLLEXPORT void gr_initgr(void);
 DLLEXPORT int gr_debug(void);
@@ -134,6 +156,7 @@ DLLEXPORT void gr_copysegws(int);
 DLLEXPORT void gr_redrawsegws(void);
 DLLEXPORT void gr_setsegtran(int, double, double, double, double, double, double, double);
 DLLEXPORT void gr_closeseg(void);
+DLLEXPORT void gr_samplelocator(double *, double *, int *);
 DLLEXPORT void gr_emergencyclosegks(void);
 DLLEXPORT void gr_updategks(void);
 DLLEXPORT int gr_setspace(double, double, int, int);
@@ -160,6 +183,7 @@ DLLEXPORT void gr_contour(int, int, int, double *, double *, double *, double *,
 DLLEXPORT void gr_contourf(int, int, int, double *, double *, double *, double *, int);
 DLLEXPORT void gr_tricontour(int, double *, double *, double *, int, double *);
 DLLEXPORT int gr_hexbin(int, double *, double *, int);
+DLLEXPORT const hexbin_2pass_t *gr_hexbin_2pass(int, double *, double *, int, const hexbin_2pass_t *);
 DLLEXPORT void gr_setcolormap(int);
 DLLEXPORT void gr_inqcolormap(int *);
 DLLEXPORT void gr_setcolormapfromrgb(int n, double *r, double *g, double *b, double *x);
@@ -191,15 +215,19 @@ DLLEXPORT void gr_drawimage(double, double, double, double, int, int, int *, int
 DLLEXPORT int gr_importgraphics(char *);
 DLLEXPORT void gr_setshadow(double, double, double);
 DLLEXPORT void gr_settransparency(double);
+DLLEXPORT void gr_inqtransparency(double *);
 DLLEXPORT void gr_setcoordxform(double[3][2]);
 DLLEXPORT void gr_begingraphics(char *);
 DLLEXPORT void gr_endgraphics(void);
 DLLEXPORT char *gr_getgraphics(void);
 DLLEXPORT int gr_drawgraphics(char *);
+DLLEXPORT int gr_startlistener(void);
 DLLEXPORT void gr_mathtex(double, double, char *);
 DLLEXPORT void gr_inqmathtex(double, double, char *, double *, double *);
 DLLEXPORT void gr_beginselection(int, int);
 DLLEXPORT void gr_endselection(void);
+DLLEXPORT void gr_begin_grm_selection(int, void (*)(int, double, double, double, double));
+DLLEXPORT void gr_end_grm_selection(void);
 DLLEXPORT void gr_moveselection(double, double);
 DLLEXPORT void gr_resizeselection(int, double, double);
 DLLEXPORT void gr_inqbbox(double *, double *, double *, double *);
@@ -209,8 +237,10 @@ DLLEXPORT void gr_setregenflags(int);
 DLLEXPORT int gr_inqregenflags(void);
 DLLEXPORT void gr_savestate(void);
 DLLEXPORT void gr_restorestate(void);
+DLLEXPORT void gr_savecontext(int);
 DLLEXPORT void gr_selectcontext(int);
 DLLEXPORT void gr_destroycontext(int);
+DLLEXPORT void gr_unselectcontext(void);
 DLLEXPORT int gr_uselinespec(char *);
 DLLEXPORT void gr_delaunay(int, const double *, const double *, int *, int **);
 DLLEXPORT void gr_reducepoints(int, const double *, const double *, int, double *, double *);
@@ -261,6 +291,8 @@ DLLEXPORT void gr_setvolumebordercalculation(int);
 DLLEXPORT void gr_setapproximativecalculation(int);
 DLLEXPORT void gr_inqvolumeflags(int *, int *, int *, int *, int *);
 DLLEXPORT void gr_cpubasedvolume(int, int, int, double *, int, double *, double *, double *, double *);
+DLLEXPORT const cpubasedvolume_2pass_t *gr_cpubasedvolume_2pass(int, int, int, double *, int, double *, double *,
+                                                                double *, double *, const cpubasedvolume_2pass_t *);
 DLLEXPORT void gr_inqvpsize(int *, int *, double *);
 DLLEXPORT void gr_polygonmesh3d(int, const double *, const double *, const double *, int, const int *, const int *);
 

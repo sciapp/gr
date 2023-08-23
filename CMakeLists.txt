@@ -13,7 +13,7 @@ project(
 include(GNUInstallDirs)
 include(CheckCXXCompilerFlag)
 
-# Honor `C_VISIBILITY_PRESET hidden` in static libraries
+# Honor `C_VISIBILITY_PRESET hidden` and `CXX_VISIBILITY_PRESET hidden` in static libraries
 cmake_policy(SET CMP0063 NEW)
 
 check_cxx_compiler_flag("-Werror=implicit" ERROR_IMPLICIT_SUPPORTED)
@@ -80,7 +80,7 @@ set(GR_SHARED_LIBRARY_SUFFIX
 find_package(Freetype)
 find_package(Jpeg REQUIRED)
 find_package(Libpng REQUIRED)
-find_package(Zlib REQUIRED)
+find_package(ZLIB REQUIRED)
 find_package(Qhull REQUIRED)
 find_package(Tiff)
 find_package(Ffmpeg 57.48.100)
@@ -98,9 +98,25 @@ find_package(Expat)
 # skipping module search mode.
 find_package(LibXml2 NO_MODULE)
 if(${CMAKE_VERSION} VERSION_GREATER "3.16.0")
-  find_package(Qt6 OPTIONAL_COMPONENTS Widgets Core Network)
+  find_package(
+    Qt6
+    OPTIONAL_COMPONENTS
+      Widgets
+      Core
+      Network
+      Gui
+      PrintSupport
+  )
 endif()
-find_package(Qt5 OPTIONAL_COMPONENTS Widgets Core Network)
+find_package(
+  Qt5
+  OPTIONAL_COMPONENTS
+    Widgets
+    Core
+    Network
+    Gui
+    PrintSupport
+)
 find_package(Qt4)
 
 if(APPLE)
@@ -247,7 +263,7 @@ foreach(LIBRARY gks_static gks_shared)
       NO_FT
     )
   endif()
-  target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} Zlib::Zlib)
+  target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} ZLIB::ZLIB)
   target_compile_definitions(
     ${LIBRARY}
     ${GKS_LINK_MODE}
@@ -494,12 +510,16 @@ set(GRM_SOURCES
     lib/grm/src/grm/datatype/uint_map.c
     lib/grm/src/grm/dom_render/context.cxx
     lib/grm/src/grm/dom_render/render.cxx
+    lib/grm/src/grm/dom_render/Drawable.cxx
     lib/grm/src/grm/dom_render/graphics_tree/Comment.cxx
     lib/grm/src/grm/dom_render/graphics_tree/Document.cxx
     lib/grm/src/grm/dom_render/graphics_tree/Element.cxx
     lib/grm/src/grm/dom_render/graphics_tree/Node.cxx
     lib/grm/src/grm/dom_render/graphics_tree/Value.cxx
     lib/grm/src/grm/dom_render/graphics_tree/util.cxx
+    lib/grm/src/grm/dom_render/ManageCustomColorIndex.cxx
+    lib/grm/src/grm/dom_render/ManageGRContextIds.cxx
+    lib/grm/src/grm/dom_render/ManageZIndex.cxx
 )
 
 add_library(grm_static STATIC ${GRM_SOURCES})
@@ -511,6 +531,9 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
     set(GRM_LINK_MODE PUBLIC)
   else()
     set(GRM_LINK_MODE PRIVATE)
+  endif()
+  if(NOT LIBRARY MATCHES "internal")
+    set_target_properties(${LIBRARY} PROPERTIES C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden)
   endif()
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GKS)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GR)
@@ -552,7 +575,6 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
                CXX_EXTENSIONS OFF
                CXX_STANDARD_REQUIRED ON
                POSITION_INDEPENDENT_CODE ON
-               C_VISIBILITY_PRESET hidden
                INSTALL_RPATH "${INSTALL_RPATH}"
                PREFIX "lib"
                IMPORT_PREFIX "lib"
@@ -995,36 +1017,48 @@ string(APPEND GR_REPORT "\nGKS applications:\n")
 
 if(APPLE)
   if(Zeromq_FOUND)
-    add_executable(GKSTerm MACOSX_BUNDLE lib/gks/quartz/GKSTerm.m lib/gks/quartz/GKSView.m lib/gks/quartz/main.m)
-    target_link_libraries(GKSTerm PUBLIC Zeromq::Zeromq)
-    target_link_libraries(
-      GKSTerm PUBLIC gks_static
-                     "-framework CoreGraphics -framework CoreFoundation -framework CoreVideo -framework Cocoa"
-    )
-
-    add_custom_command(
-      TARGET GKSTerm
-      POST_BUILD
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/English.lproj
-        ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/English.lproj DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/English.lproj
-      BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/English.lproj
-    )
-    target_sources(GKSTerm PRIVATE lib/gks/quartz/GKSTerm.icns)
-    set_source_files_properties(lib/gks/quartz/GKSTerm.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources/)
-    target_compile_options(GKSTerm PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-    set_target_properties(
-      GKSTerm
-      PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME "GKSTerm"
-                 MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.GKSTerm"
-                 MACOSX_BUNDLE_ICON_FILE "GKSTerm"
-                 MACOSX_BUNDLE_BUNDLE_VERSION "${GR_VERSION}"
-                 MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/MacOSXBundleInfo.plist.in"
-    )
-    set(GKSTerm_MACOSX_BUNDLE_SIGNATURE "GKST")
-    set(GKSTerm_MACOSX_MAIN_NIB_FILE "MainMenu")
-    string(APPEND GR_REPORT "- GKSTerm: Yes\n")
+    find_program(XCODE_BUILD xcodebuild)
+    if(XCODE_BUILD)
+      set(GKSTERM_SOURCES
+          lib/gks/quartz/GKSTerm.h
+          lib/gks/quartz/GKSTerm.icns
+          lib/gks/quartz/GKSTerm.m
+          lib/gks/quartz/GKSTerm_Prefix.pch
+          lib/gks/quartz/GKSView.h
+          lib/gks/quartz/GKSView.m
+          lib/gks/quartz/Info.plist
+          lib/gks/quartz/MacOSXBundleInfo.plist.in
+          lib/gks/quartz/main.m
+          lib/gks/quartz/English.lproj/InfoPlist.strings
+          lib/gks/quartz/English.lproj/ExtendSavePanel.nib/designable.nib
+          lib/gks/quartz/English.lproj/ExtendSavePanel.nib/keyedobjects.nib
+          lib/gks/quartz/English.lproj/MainMenu.nib/designable.nib
+          lib/gks/quartz/English.lproj/MainMenu.nib/keyedobjects.nib
+          lib/gks/quartz/GKSTerm.xcodeproj/project.pbxproj
+          lib/gks/quartz/GKSTerm.xcodeproj/project.xcworkspace
+          lib/gks/quartz/GKSTerm.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+      )
+      add_custom_target(
+        GKSTerm ALL
+        COMMAND ${XCODE_BUILD} -arch ${CMAKE_SYSTEM_PROCESSOR} -project GKSTerm.xcodeproj
+                CONFIGURATION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}/GKSTerm
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj Zeromq::Zeromq
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj
+        COMMAND ${CMAKE_COMMAND} -E copy_directory lib/gks ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build
+        COMMAND
+          sed -i .bak -e s%../../../3rdparty/build/lib/libzmq.a%${ZEROMQ_LIBRARY}% -e
+          s%../../../3rdparty/build/include/zmq.h%${ZEROMQ_INCLUDE_DIR}/zmq.h%
+          ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj/project.pbxproj
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        DEPENDS ${GKS_SOURCES} ${GKSTERM_SOURCES}
+      )
+      string(APPEND GR_REPORT "- GKSTerm: Yes\n")
+    else()
+      string(APPEND GR_REPORT "- GKSTerm: No (XCode not found)\n")
+    endif()
   else()
     string(APPEND GR_REPORT "- GKSTerm: No (ZeroMQ not found)\n")
   endif()
@@ -1129,16 +1163,33 @@ else()
   string(APPEND GR_REPORT "- gksqt: No (Qt4 / Qt5 / Qt6 not found)\n")
 endif()
 
-if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
+if((Qt6Widgets_FOUND
+    AND Qt6Core_FOUND
+    AND Qt6Gui_FOUND
+   )
+   OR (Qt5Widgets_FOUND
+       AND Qt5Core_FOUND
+       AND Qt5Gui_FOUND
+      )
+)
   add_executable(
-    grplot WIN32 MACOSX_BUNDLE lib/grm/grplot/grplot.cxx lib/grm/grplot/grplot_mainwindow.cxx
-                               lib/grm/grplot/grplot_widget.cxx lib/grm/grplot/util.cxx
+    grplot WIN32 MACOSX_BUNDLE
+    lib/grm/grplot/gredit/Bounding_logic.cpp
+    lib/grm/grplot/gredit/Bounding_object.cpp
+    lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
+    lib/grm/grplot/gredit/TreeWidget.cpp
+    lib/grm/grplot/grplot.cxx
+    lib/grm/grplot/grplot_mainwindow.cxx
+    lib/grm/grplot/grplot_widget.cxx
+    lib/grm/grplot/qtterm/grm_args_t_wrapper.cpp
+    lib/grm/grplot/qtterm/receiver_thread.cpp
+    lib/grm/grplot/util.cxx
   )
   if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
-    target_link_libraries(grplot PRIVATE Qt6::Widgets Qt6::Core grm_static)
+    target_link_libraries(grplot PRIVATE Qt6::Widgets Qt6::Core Qt6::Gui grm_static)
     set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
   else()
-    target_link_libraries(grplot PRIVATE Qt5::Widgets Qt5::Core grm_static)
+    target_link_libraries(grplot PRIVATE Qt5::Widgets Qt5::Core Qt5::Gui grm_static)
     set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
   endif()
   target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
@@ -1176,15 +1227,77 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
         ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
     )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h
+    )
+
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h
+    )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
+    )
     target_sources(
-      grplot PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
-                     ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+      grplot
+      PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
     )
   else()
     set_target_properties(grplot PROPERTIES AUTOMOC ON AUTORCC ON)
     target_sources(
-      grplot PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
-                     ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
+      grplot
+      PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h
     )
   endif()
   if(APPLE)
@@ -1199,6 +1312,15 @@ if((Qt6Widgets_FOUND AND Qt6Core_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND))
   string(APPEND GR_REPORT "- grplot: Yes\n")
 else()
   string(APPEND GR_REPORT "- grplot: No (Qt6 and Qt5 not found)\n")
+endif()
+
+string(APPEND GR_REPORT "\nGRM integrations:\n")
+if(TARGET LibXml2::LibXml2)
+  string(APPEND GR_REPORT "- libxml2: Yes\n- Expat: No\n")
+elseif(EXPAT_FOUND)
+  string(APPEND GR_REPORT "- libxml2: No\n- Expat: Yes\n")
+else()
+  string(APPEND GR_REPORT "- libxml2: No\n- Expat: No\n")
 endif()
 
 if(GR_BUILD_DEMOS)
@@ -1342,7 +1464,11 @@ if(GR_INSTALL)
     )
   endif()
   if(TARGET GKSTerm)
-    install(TARGETS GKSTerm BUNDLE DESTINATION Applications)
+    install(
+      DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm/GKSTerm.app
+      DESTINATION Applications
+      USE_SOURCE_PERMISSIONS
+    )
   endif()
   if(TARGET gksqt)
     install(
@@ -1357,13 +1483,11 @@ if(GR_INSTALL)
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
       BUNDLE DESTINATION Applications
     )
-    if(APPLE)
-      install(
-        PROGRAMS lib/grm/grplot/grplot.macos.sh
-        DESTINATION ${CMAKE_INSTALL_BINDIR}
-        RENAME grplot
-      )
-    endif()
+    install(
+      FILES lib/grm/grplot/README.md
+      DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/grplot
+      RENAME grplot.man.md
+    )
   endif()
   install(FILES lib/gr/gr.h lib/gks/gks.h lib/gr3/gr3.h lib/grm/include/grm.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
   install(DIRECTORY lib/grm/include/grm DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)

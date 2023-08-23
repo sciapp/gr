@@ -437,26 +437,31 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                            "x2=\"%g\" y2=\"%g\" "
                            "style=\"stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g\"/>\n",
                            x - xr, y + yr, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2],
-                           gkss->bwidth * p->nominal_size, p->transparency);
+                           max(gkss->bwidth, gkss->lwidth) * p->nominal_size, p->transparency);
             }
           pc += 4;
           break;
 
         case 3: /* polyline */
-          svg_printf(p->stream,
-                     "<polyline clip-path=\"url(#clip%02d%d)\" "
-                     "style=\"stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g; fill:none\" "
-                     "points=\"",
-                     path_id, p->rect_index, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2],
-                     gkss->bwidth * p->nominal_size, p->transparency);
-          for (i = 0; i < marker[mtype][pc + 1]; i++)
+        case 9: /* border polyline */
+          if (op == 3 || gkss->bwidth > 0)
             {
-              xr = scale * marker[mtype][pc + 2 + 2 * i];
-              yr = -scale * marker[mtype][pc + 3 + 2 * i];
-              seg_xform_rel(&xr, &yr);
-              svg_printf(p->stream, "%g,%g ", x - xr, y + yr);
+              color = op == 3 ? mcolor : gkss->bcoli;
+              svg_printf(p->stream,
+                         "<polyline clip-path=\"url(#clip%02d%d)\" "
+                         "style=\"stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g; fill:none\" "
+                         "points=\"",
+                         path_id, p->rect_index, p->rgb[color][0], p->rgb[color][1], p->rgb[color][2],
+                         gkss->bwidth * p->nominal_size, p->transparency);
+              for (i = 0; i < marker[mtype][pc + 1]; i++)
+                {
+                  xr = scale * marker[mtype][pc + 2 + 2 * i];
+                  yr = -scale * marker[mtype][pc + 3 + 2 * i];
+                  seg_xform_rel(&xr, &yr);
+                  svg_printf(p->stream, "%g,%g ", x - xr, y + yr);
+                }
+              svg_printf(p->stream, "\"/>\n");
             }
-          svg_printf(p->stream, "\"/>\n");
           pc += 1 + 2 * marker[mtype][pc + 1];
           break;
 
@@ -473,7 +478,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
             }
           svg_printf(p->stream, "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" ",
                      p->rgb[color][0], p->rgb[color][1], p->rgb[color][2], p->transparency);
-          if (op == 4 && gkss->bcoli != gkss->pmcoli)
+          if (op == 4 && gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
             svg_printf(p->stream, "stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\"",
                        p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
                        gkss->bwidth * p->nominal_size);
@@ -489,7 +494,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                      "style=\"fill:none; stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g\" "
                      "cx=\"%g\" cy=\"%g\" r=\"%g\"/>\n",
                      path_id, p->rect_index, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2],
-                     gkss->bwidth * p->nominal_size, p->transparency, x, y, r);
+                     max(gkss->bwidth, gkss->lwidth) * p->nominal_size, p->transparency, x, y, r);
           break;
 
         case 7: /* filled arc */
@@ -501,7 +506,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                      path_id, p->rect_index, x, y, r);
           svg_printf(p->stream, " fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" ", p->rgb[color][0],
                      p->rgb[color][1], p->rgb[color][2], p->transparency);
-          if (op == 7 && gkss->bcoli != gkss->pmcoli)
+          if (op == 7 && gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
             svg_printf(p->stream, "stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\"",
                        p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
                        gkss->bwidth * p->nominal_size);
@@ -1252,20 +1257,23 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           cur_y = start_y;
           in_path = 0;
           break;
-        case 'f': /* fill */
-          svg_printf(p->stream, "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" />",
-                     p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency);
+        case 'f': /* fill (even-odd) */
+        case 'g': /* fill (winding) */
+          svg_printf(p->stream, "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"%s\" fill-opacity=\"%g\" />",
+                     p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2],
+                     codes[i] == 'f' ? "evenodd" : "nonzero", p->transparency);
           cur_x = start_x;
           cur_y = start_y;
           in_path = 0;
           break;
-        case 'F': /* fill and stroke */
+        case 'F': /* fill (even-odd) and stroke */
+        case 'G': /* fill (winding) and stroke */
           svg_printf(p->stream,
-                     "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" stroke=\"#%02x%02x%02x\" "
+                     "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"%s\" fill-opacity=\"%g\" stroke=\"#%02x%02x%02x\" "
                      "stroke-opacity=\"%g\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"%g\" />",
-                     p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency,
-                     p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
-                     gkss->bwidth * p->nominal_size);
+                     p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2],
+                     codes[i] == 'F' ? "evenodd" : "nonzero", p->transparency, p->rgb[gkss->bcoli][0],
+                     p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency, gkss->bwidth * p->nominal_size);
           cur_x = start_x;
           cur_y = start_y;
           in_path = 0;

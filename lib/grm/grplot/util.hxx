@@ -3,6 +3,22 @@
 
 #include <optional>
 #include <string>
+#include <fstream>
+#include <iostream>
+#include <iomanip>
+#include <QPoint>
+#include <vector>
+
+#ifdef _WIN64
+#include <stdlib.h>
+#include <io.h>
+#include <process.h>
+#include <direct.h>
+#define F_OK 0
+#define access _access
+#else
+#include <unistd.h>
+#endif
 
 #if !(defined(__EXCEPTIONS) || defined(__cpp_exceptions) || defined(_CPPUNWIND))
 #define NO_EXCEPTIONS
@@ -10,6 +26,11 @@
 
 namespace util
 {
+template <typename T> int sgn(T x)
+{
+  return (x > 0) ? 1 : ((x < 0) ? -1 : 0);
+}
+
 template <class... T> void unused(T &&...) {}
 
 class GetExecutablePathError : public virtual std::exception
@@ -154,28 +175,64 @@ public:
 
 bool endsWith(const std::string &str, const std::string &suffix);
 bool startsWith(const std::string &str, const std::string &prefix);
+#ifdef _WIN32
+bool fileExists(const std::string &file_path);
+bool fileExists(const std::wstring &file_path);
+std::wstring getEnvVar(const std::wstring &name, const std::wstring &defaultValue = L"");
+#else
+bool fileExists(const std::string &file_path);
+std::string getEnvVar(const std::string &name, const std::string &defaultValue = "");
+#endif
 
 #ifdef NO_EXCEPTIONS
 #ifdef _WIN32
-std::optional<std::wstring> get_executable_path();
+std::optional<std::wstring> getExecutablePath();
 #else
-std::optional<std::string> get_executable_path();
+std::optional<std::string> getExecutablePath();
 #endif
 #else
 #ifdef _WIN32
 std::wstring getExecutablePath();
-bool fileExists(const std::wstring &file_path);
 #else
 std::string getExecutablePath();
-bool fileExists(const std::string &file_path);
 #endif
 #endif
+
 #ifdef NO_EXCEPTIONS
 bool
 #else
 void
 #endif
 setGrdir(bool force = false);
+
+template <typename... Args> std::string string_format(const std::string &format, Args... args)
+{
+  // Modified version of <https://stackoverflow.com/a/26221725/5958465>
+  const int needed_bytes = std::snprintf(nullptr, 0, format.c_str(), args...) + 1; // Extra space for '\0'
+  if (needed_bytes <= 0)
+    {
+#ifdef NO_EXCEPTIONS
+      return "";
+#else
+      throw std::runtime_error("Error during formatting.");
+#endif
+    }
+  std::vector<char> buf(needed_bytes);
+  std::snprintf(buf.data(), needed_bytes, format.c_str(), args...);
+  return std::string(buf.data());
+}
+
+// `overloaded` utility taken from <https://en.cppreference.com/w/cpp/utility/variant/visit>
+template <class... Ts> struct overloaded : Ts...
+{
+  using Ts::operator()...;
+};
+template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 } // namespace util
+
+inline std::ostream &operator<<(std::ostream &os, const QPoint &point)
+{
+  return os << "(" << std::setw(4) << point.x() << ", " << std::setw(4) << point.y() << ")";
+}
 
 #endif /* ifndef UTIL_HXX_INCLUDED */

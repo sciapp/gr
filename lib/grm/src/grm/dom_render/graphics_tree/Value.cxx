@@ -2,48 +2,48 @@
 #include <stdexcept>
 #include <limits>
 
-GR::Value::Value() : m_type(Type::UNDEFINED), m_int_value(0), m_double_value(0), m_string_value() {}
+GRM::Value::Value() : m_type(Type::UNDEFINED), m_int_value(0), m_double_value(0), m_string_value() {}
 
-GR::Value::Value(int value) : m_type(Type::INT), m_int_value(value), m_double_value(0), m_string_value() {}
+GRM::Value::Value(int value) : m_type(Type::INT), m_int_value(value), m_double_value(0), m_string_value() {}
 
-GR::Value::Value(double value) : m_type(Type::DOUBLE), m_int_value(0), m_double_value(value), m_string_value() {}
+GRM::Value::Value(double value) : m_type(Type::DOUBLE), m_int_value(0), m_double_value(value), m_string_value() {}
 
-GR::Value::Value(std::string value)
+GRM::Value::Value(std::string value)
     : m_type(Type::STRING), m_int_value(0), m_double_value(0), m_string_value(std::move(value))
 {
 }
 
-bool GR::Value::isType(Type type) const
+bool GRM::Value::isType(Type type) const
 {
   return m_type == type;
 }
 
-bool GR::Value::isUndefined() const
+bool GRM::Value::isUndefined() const
 {
   return isType(Type::UNDEFINED);
 }
 
-bool GR::Value::isInt() const
+bool GRM::Value::isInt() const
 {
   return isType(Type::INT);
 }
 
-bool GR::Value::isDouble() const
+bool GRM::Value::isDouble() const
 {
   return isType(Type::DOUBLE);
 }
 
-bool GR::Value::isString() const
+bool GRM::Value::isString() const
 {
   return isType(Type::STRING);
 }
 
-GR::Value::Type GR::Value::type() const
+GRM::Value::Type GRM::Value::type() const
 {
   return m_type;
 }
 
-bool GR::Value::operator==(const GR::Value &other) const
+bool GRM::Value::operator==(const GRM::Value &other) const
 {
   if (m_type != other.m_type)
     {
@@ -63,7 +63,7 @@ bool GR::Value::operator==(const GR::Value &other) const
   return false;
 }
 
-GR::Value::operator int() const
+GRM::Value::operator int() const
 {
   switch (m_type)
     {
@@ -90,7 +90,7 @@ GR::Value::operator int() const
     }
 }
 
-GR::Value::operator double() const
+GRM::Value::operator double() const
 {
   switch (m_type)
     {
@@ -117,7 +117,7 @@ GR::Value::operator double() const
     }
 }
 
-GR::Value::operator std::string() const
+GRM::Value::operator std::string() const
 {
   switch (m_type)
     {
@@ -132,7 +132,7 @@ GR::Value::operator std::string() const
     }
 }
 
-bool GR::Value::operator!=(const GR::Value &other) const
+bool GRM::Value::operator!=(const GRM::Value &other) const
 {
   return !(*this == other);
 }

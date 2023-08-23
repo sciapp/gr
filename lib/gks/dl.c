@@ -17,6 +17,8 @@
   arg = (type *)(s + sp);          \
   sp += nbytes
 
+#define static_assert(cond, message) ((void)sizeof(char[(cond) ? 1 : -1]))
+
 #ifndef GKS_UNUSED
 #define GKS_UNUSED(x) (void)(x)
 #endif
@@ -87,6 +89,39 @@ static int purge(gks_display_list_t *d, char *t)
         }
     }
   return tp;
+}
+
+/*
+ * Debug function to print the displaylist
+ */
+void printdl(char *d, int fctid)
+{
+  char *cur_pos = d;
+  int sublen = ((int *)cur_pos)[0];
+  while (sublen != 0)
+    {
+      int cur_fctid = ((int *)cur_pos)[1];
+      cur_pos += 2 * sizeof(int);
+      if (cur_fctid == fctid)
+        {
+          switch (cur_fctid)
+            {
+            case GRM_BEGIN_SELECTION:
+              printf("BEGIN SELECTION %d\n", ((int *)cur_pos)[0]);
+              break;
+            case GRM_END_SELECTION:
+              {
+                double *bbox = (double *)((int *)cur_pos + 1);
+                printf("END SELECTION %d with %f %f %f %f\n", ((int *)cur_pos)[0], bbox[0], bbox[1], bbox[2], bbox[3]);
+              }
+              break;
+            default:
+              break;
+            }
+        }
+      cur_pos += sublen - 2 * sizeof(int);
+      sublen = ((int *)cur_pos)[0];
+    }
 }
 
 void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1,
@@ -349,6 +384,28 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
       COPY(&fctid, sizeof(int));
       COPY(f_arr_1, 6 * sizeof(double));
       break;
+
+    case 260: /* begin grm selection */
+
+      len = 3 * sizeof(int) + sizeof(void(*));
+      if (d->nbytes + len >= d->size) reallocate(d, len);
+
+      COPY(&len, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(&i_arr[0], sizeof(int));
+      static_assert(sizeof(double *) == sizeof(void (*)(int, double, double, double, double)),
+                    "sizeof(double *) != sizeof(void(*)(int,double,double,double,double) on this architecture");
+      COPY(&f_arr_1, sizeof(void(*)));
+      break;
+
+    case 261: /* end grm selection */
+
+      len = 2 * sizeof(int);
+      if (d->nbytes + len >= d->size) reallocate(d, len);
+
+      COPY(&len, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      break;
     }
 
   if (d->buffer != NULL)
@@ -436,6 +493,12 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
     case 207: /* set border color index */
     case 208: /* select clipping transformation */
       RESOLVE(ia, int, sizeof(int));
+      break;
+
+    case 260:                        /* begin grm selection */
+      RESOLVE(ia, int, sizeof(int)); /* id */
+      r1 = *((double **)&s[sp]);     /* callback function */
+      sp += sizeof(double *);
       break;
 
     case 27: /* set text font and precision */

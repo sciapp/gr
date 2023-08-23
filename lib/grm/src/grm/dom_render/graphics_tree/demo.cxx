@@ -6,11 +6,11 @@
 
 int main()
 {
-  auto document = GR::createDocument();
+  auto document = GRM::createDocument();
   auto root = document->createElement("root");
   root->setAttribute("id", "demo");
   document->append(root);
   root->append(document->createComment("This is a demo"));
-  std::cerr << GR::toXML(document) << std::endl;
+  std::cerr << GRM::toXML(document) << std::endl;
   return 0;
 }

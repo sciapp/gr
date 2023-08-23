@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
 #include "gr3.h"
 #include "gr3_internals.h"
 #include "gr3_sr.h"
@@ -42,8 +43,8 @@ static char not_initialized_[] = "Not initialized";
  */
 #ifndef NO_GL
 static GLuint framebuffer = 0;
-#endif
 static GLuint user_framebuffer = 0;
+#endif
 
 static int current_object_id = 0;
 
@@ -71,14 +72,14 @@ const char *gr3_error_file_ = "";
   {                                                                                                                   \
     GR3_InitStruct_INITIALIZER, 0, 0, 0, NULL, 0, NULL, not_initialized_, NULL, NULL, 0, 0, {{0}}, 0, 0, 0, NAN, NAN, \
         NAN, NAN, 0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0, 0, 0, 4, 0, {0}, {0}, {0},   \
-        {0}, 0, 0, 0, 0, {0}, {0.2, 0.8, 128, 0.7}, 1, NAN, NAN, NAN, NAN, NAN, NAN                                   \
+        {0}, {0}, 0, 0, 0, 0, {0}, {0.2, 0.8, 128, 0.7}, 1, NAN, NAN, NAN, NAN, NAN, NAN, 0, 0                        \
   }
 #else
 #define GR3_ContextStruct_INITIALIZER                                                                                 \
   {                                                                                                                   \
     GR3_InitStruct_INITIALIZER, 0, 0, 0, NULL, 0, NULL, not_initialized_, NULL, NULL, 0, 0, {{0}}, 0, 0, 0, NAN, NAN, \
         NAN, NAN, 0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0, 0, 0, -1, 0, {0}, {0}, {0},  \
-        0, 0, 0, {0}, {0.2, 0.8, 128, 0.7}, 1, NAN, NAN, NAN, NAN, NAN, NAN                                           \
+        {0}, 0, 0, 0, {0}, {0.2, 0.8, 128, 0.7}, 1, NAN, NAN, NAN, NAN, NAN, NAN, 0, 0                                \
   }
 #endif
 GR3_ContextStruct_t_ context_struct_ = GR3_ContextStruct_INITIALIZER;
@@ -137,11 +138,15 @@ GR3API int gr3_init(int *attrib_list)
   int i, error;
   char *renderpath_string = "gr3";
   GR3_InitStruct_t_ init_struct = GR3_InitStruct_INITIALIZER;
-  char *software_renderer;
-  software_renderer = getenv("GR3_USE_SR");
+  /* Only try to use OpenGL if support for it is available and GR3_USE_OPENGL is set */
+  int use_opengl;
+  char *use_opengl_str;
 #ifdef NO_GL
-  software_renderer = "True";
+  use_opengl_str = NULL;
+#else
+  use_opengl_str = getenv("GR3_USE_OPENGL");
 #endif
+  use_opengl = (use_opengl_str != NULL) && (use_opengl_str[0] != 0);
   if (attrib_list)
     {
       for (i = 0; attrib_list[i] != GR3_IA_END_OF_LIST; i++)
@@ -172,7 +177,7 @@ GR3API int gr3_init(int *attrib_list)
   error = GR3_ERROR_INIT_FAILED;
   do
     {
-      if (software_renderer == NULL)
+      if (use_opengl)
         {
 #if defined(GR3_USE_CGL)
           error = gr3_initGL_CGL_();
@@ -387,7 +392,10 @@ GR3API int gr3_init(int *attrib_list)
 
   context_struct_.is_initialized = 1;
   gr3_init_convenience();
-  gr3_useframebuffer(0);
+  if (!context_struct_.use_software_renderer)
+    {
+      gr3_useframebuffer(0);
+    }
   gr3_setcameraprojectionparameters(45, 1, 200);
   gr3_cameralookat(0, 0, 10, 0, 0, 0, 0, 1, 0);
   gr3_log_("init completed successfully");
@@ -549,6 +557,10 @@ GR3API int gr3_clear(void)
           free(draw->directions);
           free(draw->ups);
           free(draw->colors);
+          if (draw->alphas)
+            {
+              free(draw->alphas);
+            }
           free(draw->scales);
           free(draw);
         }
@@ -576,6 +588,12 @@ GR3API int gr3_clear(void)
 GR3API void gr3_usecurrentframebuffer()
 {
   GLuint framebuffer = 0;
+  if (context_struct_.use_software_renderer)
+    {
+      fprintf(stderr, "Error: gr3_usecurrentframebuffer is only available when using OpenGL. Set the GR3_USE_OPENGL "
+                      "environment variable for GR3 to use OpenGL\n");
+      return;
+    }
 #ifndef NO_GL
   glGetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint *)&framebuffer);
 #endif
@@ -584,7 +602,15 @@ GR3API void gr3_usecurrentframebuffer()
 
 GR3API void gr3_useframebuffer(unsigned int framebuffer)
 {
+  if (context_struct_.use_software_renderer)
+    {
+      fprintf(stderr, "Error: gr3_useframebuffer is only available when using OpenGL. Set the GR3_USE_OPENGL "
+                      "environment variable for GR3 to use OpenGL\n");
+      return;
+    }
+#ifndef NO_GL
   user_framebuffer = framebuffer;
+#endif
 }
 
 /*!
@@ -1069,7 +1095,7 @@ GR3API void gr3_drawmesh(int mesh, int n, const float *positions, const float *d
                          const float *colors, const float *scales)
 {
   GR3_DrawList_t_ *p, *draw;
-
+  int alpha_storage_modifier;
   GR3_DO_INIT;
   if (gr3_geterror(0, NULL, NULL)) return;
   if (!context_struct_.is_initialized)
@@ -1078,6 +1104,7 @@ GR3API void gr3_drawmesh(int mesh, int n, const float *positions, const float *d
     }
 
   draw = malloc(sizeof(GR3_DrawList_t_));
+  assert(draw);
   draw->mesh = mesh;
   draw->positions = malloc(sizeof(float) * n * 3);
   memmove(draw->positions, positions, sizeof(float) * n * 3);
@@ -1085,8 +1112,61 @@ GR3API void gr3_drawmesh(int mesh, int n, const float *positions, const float *d
   memmove(draw->directions, directions, sizeof(float) * n * 3);
   draw->ups = malloc(sizeof(float) * n * 3);
   memmove(draw->ups, ups, sizeof(float) * n * 3);
+  draw->alpha_mode = context_struct_.alpha_mode;
+  if (draw->alpha_mode == 0)
+    {
+      alpha_storage_modifier = 0;
+    }
+  else if (draw->alpha_mode == 1)
+    {
+      alpha_storage_modifier = 1;
+    }
+  else
+    {
+      alpha_storage_modifier = 3;
+    }
+
+  if (alpha_storage_modifier == 0)
+    {
+      draw->alphas = NULL;
+    }
+  else
+    {
+      draw->alphas = malloc(sizeof(float) * n * alpha_storage_modifier);
+    }
+
   draw->colors = malloc(sizeof(float) * n * 3);
-  memmove(draw->colors, colors, sizeof(float) * n * 3);
+  assert(draw->colors);
+  if (draw->alpha_mode == 1)
+    {
+      int k;
+      for (k = 0; k < n; k++)
+        {
+          draw->colors[k * 3 + 0] = colors[4 * k + 0];
+          draw->colors[k * 3 + 1] = colors[4 * k + 1];
+          draw->colors[k * 3 + 2] = colors[4 * k + 2];
+          draw->alphas[k] = colors[4 * k + 3];
+        }
+    }
+  else if (draw->alpha_mode == 2)
+    {
+      int k;
+      for (k = 0; k < n; k++)
+        {
+          draw->colors[k * 3] = colors[6 * k + 0];
+          draw->colors[k * 3 + 1] = colors[6 * k + 1];
+          draw->colors[k * 3 + 2] = colors[6 * k + 2];
+          draw->alphas[k * 3 + 0] = colors[6 * k + 3];
+          draw->alphas[k * 3 + 1] = colors[6 * k + 4];
+          draw->alphas[k * 3 + 2] = colors[6 * k + 5];
+        }
+    }
+  else
+    {
+      memmove(draw->colors, colors, sizeof(float) * n * 3);
+    }
+
+
   draw->scales = malloc(sizeof(float) * n * 3);
   memmove(draw->scales, scales, sizeof(float) * n * 3);
   draw->n = n;
@@ -1397,6 +1477,34 @@ GR3API void gr3_setlightdirection(float x, float y, float z)
   context_struct_.light_sources[0].g = 1;
   context_struct_.light_sources[0].b = 1;
   context_struct_.num_lights = 1;
+}
+
+GR3API void gr3_setalphamode(int mode)
+{
+  GR3_DO_INIT;
+  if (gr3_geterror(0, NULL, NULL)) return;
+
+  if (!context_struct_.is_initialized)
+    {
+      return;
+    }
+  if (mode == 0 || mode == 1 || mode == 2)
+    {
+      context_struct_.alpha_mode = mode;
+    }
+}
+
+GR3API int gr3_getalphamode(int *mode)
+{
+  GR3_DO_INIT;
+  if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
+  if (!context_struct_.is_initialized)
+    {
+      RETURN_ERROR(GR3_ERROR_NOT_INITIALIZED);
+    }
+
+  *mode = context_struct_.alpha_mode;
+  RETURN_ERROR(GR3_ERROR_NONE);
 }
 
 /*!
@@ -1803,6 +1911,8 @@ GR3API int gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int wid
     case GR3_DRAWABLE_OPENGL:
       if (context_struct_.use_software_renderer == 1)
         {
+          fprintf(stderr, "Error: gr3_drawimage with GR3_DRAWABLE_OPENGL is only available when using OpenGL. Set the "
+                          "GR3_USE_OPENGL environment variable for GR3 to use OpenGL\n");
           RETURN_ERROR(GR3_ERROR_INVALID_VALUE);
         }
       return gr3_drawimage_opengl_(xmin, xmax, ymin, ymax, width, height);
@@ -2486,6 +2596,14 @@ GR3API int gr3_selectid(int px, int py, int width, int height, int *object_id)
   GLfloat zNear = context_struct_.zNear;
   GLfloat zFar = context_struct_.zFar;
   GLfloat left, right, bottom, top;
+  GR3_DO_INIT;
+
+  if (context_struct_.use_software_renderer)
+    {
+      fprintf(stderr, "Error: gr3_selectid is only available when using OpenGL. Set the GR3_USE_OPENGL environment "
+                      "variable for GR3 to use OpenGL\n");
+      return -1;
+    }
 
   if (context_struct_.projection_type == GR3_PROJECTION_ORTHOGRAPHIC)
     {
@@ -2504,7 +2622,6 @@ GR3API int gr3_selectid(int px, int py, int width, int height, int *object_id)
       top = zNear * tan_halffovy;
       bottom = -top;
     }
-  GR3_DO_INIT;
   if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
 
   *object_id = 0;

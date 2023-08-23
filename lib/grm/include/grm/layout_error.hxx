@@ -2,13 +2,14 @@
 #define LAYOUT_ERROR_HXX_INCLUDED
 
 #include <string>
-#include "grm/error.h"
 #include <stdexcept>
+#include "grm/error.h"
+#include <grm/util.h>
 
 namespace grm
 {
 
-class InvalidArgument : public std::invalid_argument
+class EXPORT InvalidArgument : public std::invalid_argument
 {
 protected:
   err_t errorCode = ERROR_NONE;
@@ -18,17 +19,17 @@ public:
   err_t getErrorNumber() const;
 };
 
-class InvalidIndex : public InvalidArgument
+class EXPORT InvalidIndex : public InvalidArgument
 {
 public:
   InvalidIndex(const std::string &msg);
 };
-class ContradictingAttributes : public InvalidArgument
+class EXPORT ContradictingAttributes : public InvalidArgument
 {
 public:
   ContradictingAttributes(const std::string &msg);
 };
-class InvalidArgumentRange : public InvalidArgument
+class EXPORT InvalidArgumentRange : public InvalidArgument
 {
 public:
   InvalidArgumentRange(const std::string &msg);

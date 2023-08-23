@@ -1,16 +1,16 @@
-
-#ifndef GR_GRAPHICS_TREE_INTERFACE_NOTSUPPORTEDERROR_HXX
-#define GR_GRAPHICS_TREE_INTERFACE_NOTSUPPORTEDERROR_HXX
+#ifndef GRM_GRAPHICS_TREE_INTERFACE_NOTSUPPORTEDERROR_HXX
+#define GRM_GRAPHICS_TREE_INTERFACE_NOTSUPPORTEDERROR_HXX
 
 #include <stdexcept>
+#include <grm/util.h>
 
-namespace GR
+namespace GRM
 {
-class NotSupportedError : public std::logic_error
+class EXPORT NotSupportedError : public std::logic_error
 {
 public:
   explicit NotSupportedError(const std::string &what_arg) : std::logic_error(what_arg) {}
 };
-} // namespace GR
+} // namespace GRM
 
 #endif

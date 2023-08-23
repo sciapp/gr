@@ -4,13 +4,15 @@
 #include <stringapiset.h>
 #endif
 #include <iostream>
+#include <sstream>
 #include <QApplication>
 #include "grplot_mainwindow.hxx"
 #include "util.hxx"
 
 int main(int argc, char **argv)
 {
-  // Ensure that the `GRDIR` envionment variable is set, so GR can find its components like fonts.
+  int pass = 0;
+  // Ensure that the `GRDIR` environment variable is set, so GR can find its components like fonts.
 #ifndef NO_EXCEPTIONS
   try
     {
@@ -35,10 +37,48 @@ int main(int argc, char **argv)
     }
 #endif
 
-  QApplication app(argc, argv);
-  GRPlotMainWindow window(argc, argv);
+  if (argc > 1)
+    {
+      /* help page should be shown */
+      if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)
+        {
+#ifdef _WIN32
+          std::wstringstream pathStream;
+          pathStream << util::getEnvVar(L"GRDIR", L"" GRDIR)
+#else
+          std::stringstream pathStream;
+          pathStream << util::getEnvVar("GRDIR", GRDIR)
+#endif
+                     << "/share/doc/grplot/grplot.man.md";
 
-  window.show();
+          if (!util::fileExists(pathStream.str()))
+            {
+              fprintf(stderr, "Helpfile not found\n");
+              return 1;
+            }
+          pass = 1;
+        }
+    }
+  else
+    {
+      fprintf(stderr, "Usage: grplot <FILE> [<KEY:VALUE>] ...\n  -h, --help\n");
+      return 0;
+    }
 
-  return app.exec();
+  if (!pass && getenv("GKS_WSTYPE") != nullptr)
+    {
+      return (grm_plot_from_file(argc, argv) != 1);
+    }
+  else
+    {
+      QApplication app(argc, argv);
+      GRPlotMainWindow window(argc, argv);
+
+      if (strcmp(argv[1], "--listen") != 0)
+        {
+          window.show();
+        }
+
+      return app.exec();
+    }
 }

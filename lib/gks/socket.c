@@ -21,6 +21,7 @@
 #include <sys/errno.h>
 #else
 #define __STRSAFE__NO_INLINE
+#define STRSAFE_NO_DEPRECATE
 #define _WIN32_WINNT 0x0602
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -39,6 +40,7 @@
 #define SOCKET_FUNCTION_CLOSE_WINDOW 4
 #define SOCKET_FUNCTION_IS_RUNNING 5
 #define SOCKET_FUNCTION_INQ_WS_STATE 6
+#define SOCKET_FUNCTION_SAMPLE_LOCATOR 7
 
 
 #ifndef MAXPATHLEN
@@ -289,6 +291,15 @@ static int open_socket(int wstype)
 #endif
           command = cmd;
         }
+#endif
+    }
+
+  if (!gks_getenv("QT_AUTO_SCREEN_SCALE_FACTOR"))
+    {
+#ifdef _WIN32
+      putenv("QT_AUTO_SCREEN_SCALE_FACTOR=1");
+#else
+      setenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1", 1);
 #endif
     }
 
@@ -560,6 +571,36 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
             }
         }
       break;
+
+    case 210: /* sample locator */
+      check_socket_connection(wss);
+      if (wss->wstype >= 411 && wss->wstype <= 413)
+        {
+          char reply[1 + sizeof(gks_locator_t)];
+          request_type = SOCKET_FUNCTION_SAMPLE_LOCATOR;
+          if (send_socket(wss->s, &request_type, 1, 0) <= 0)
+            {
+              break;
+            }
+          if (read_socket(wss->s, reply, sizeof(reply), 0) <= 0)
+            {
+              break;
+            }
+          if (reply[0] == SOCKET_FUNCTION_SAMPLE_LOCATOR)
+            {
+              const gks_locator_t *locator = (const gks_locator_t *)&reply[1];
+              r1[0] = locator->x;
+              r2[0] = locator->y;
+              ia[0] = locator->status;
+            }
+          else
+            {
+              r1[0] = 0;
+              r2[0] = 0;
+              ia[0] = 0;
+            }
+        }
+      return;
     }
 
   if (wss != NULL)

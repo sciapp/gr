@@ -1133,7 +1133,7 @@ JSTerm = function(ispluto=false) {
           canvas.id = 'jsterm-hidden-canvas';
           canvas.style.width = '640px';
           canvas.style.height = '480px';
-          canvas.style = 'display: none;';
+          canvas.style.display = 'none';
           document.body.appendChild(canvas);
           grm = new GRM('jsterm-hidden-canvas');
           grm.register(grm.EVENT_SIZE, sizeCallback);

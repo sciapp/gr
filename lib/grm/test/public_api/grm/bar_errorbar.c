@@ -16,7 +16,7 @@
 
 static void test_plot(void)
 {
-  double plot[2][LENGTH + 1];
+  double plot[2][LENGTH];
   int n = LENGTH;
   double errors[2][LENGTH];
 
@@ -33,7 +33,6 @@ static void test_plot(void)
       errors[0][i] = plot[0][i] * plot[1][i] / 5;
       errors[1][i] = plot[0][i] * plot[1][i] / 5;
     }
-  plot[0][50] = i / 49.0;
 
   error = grm_args_new();
   grm_args_push(error, "absolute", "nDD", LENGTH, errors[0], errors[1]);
@@ -42,7 +41,7 @@ static void test_plot(void)
   grm_args_push(error, "errorbar_color", "i", 4);
 
   args = grm_args_new();
-  grm_args_push(args, "x", "nD", n + 1, plot[0]);
+  grm_args_push(args, "x", "nD", n, plot[0]);
   grm_args_push(args, "y", "nD", n, plot[1]);
   grm_args_push(args, "error", "a", error);
   grm_args_push(args, "kind", "s", "barplot");

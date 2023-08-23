@@ -293,6 +293,12 @@ unsigned long next_or_equal_power2(unsigned long num)
 #endif
 }
 
+int is_env_variable_enabled(const char *env_variable_name)
+{
+  return getenv(env_variable_name) != NULL &&
+         str_equals_any(getenv(env_variable_name), 7, "1", "on", "ON", "true", "TRUE", "yes", "YES");
+}
+
 int file_exists(const char *file_path)
 {
 #ifdef _WIN32

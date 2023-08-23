@@ -1,3 +1,5 @@
+#define _USE_MATH_DEFINES
+
 #include "utilcpp_int.hxx"
 #include <cmath>
 #include <list>
@@ -44,4 +46,51 @@ bool starts_with(const std::string &str, const std::string &prefix)
 bool ends_with(const std::string &str, const std::string &suffix)
 {
   return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
+}
+
+void linspace(double start, double end, int n, std::vector<double> &x)
+{
+  int i;
+  if (x.size() < n)
+    {
+      x.resize(n);
+    }
+  for (i = 0; i < n; i++)
+    {
+      x[i] = (start + i * (end - start) / (n - 1));
+    }
+}
+
+/* like python list comprehension [factor * func(element) for element in list] saves values in result starting at start
+ * index */
+void listcomprehension(double factor, double (*pFunction)(double), std::vector<double> &list, int num, int start,
+                       std::vector<double> &result)
+{
+  int i;
+  if (result.size() < num)
+    {
+      result.resize(num);
+    }
+
+  for (i = 0; i < num; ++i)
+    {
+      // just in case if start + num + 1 exceeds the size of the vector
+      if (i + start >= result.size())
+        {
+          break;
+        }
+      result[i + start] = factor * (*pFunction)(list[i]);
+    }
+}
+
+std::complex<double> moivre(double r, int x, int n)
+{
+  if (n != 0)
+    {
+      return {pow(r, (1.0 / n)) * (cos(2.0 * x * M_PI / n)), pow(r, (1.0 / n)) * (sin(2.0 * x * M_PI / n))};
+    }
+  else
+    {
+      return {1.0, 0.0};
+    }
 }
