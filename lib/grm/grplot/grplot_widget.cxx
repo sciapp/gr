@@ -8,6 +8,7 @@
 #include <list>
 #include <sstream>
 #include <functional>
+#include <cassert>
 
 #include <gr.h>
 
@@ -349,12 +350,12 @@ void GRPlotWidget::draw()
     }
   if (arguments_changed)
     {
-      grm_plot(args_);
+      assert(grm_plot(args_));
       arguments_changed = false;
     }
   else
     {
-      grm_plot(nullptr);
+      assert(grm_plot(nullptr));
     }
 }
 
