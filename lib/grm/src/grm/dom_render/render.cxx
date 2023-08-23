@@ -593,11 +593,11 @@ static void markerHelper(const std::shared_ptr<GRM::Element> &element, const std
 
       if (str == "polymarker")
         {
-          gr_polymarker(1, (double *)&(x_vec[i]), (double *)&(y_vec[i]));
+          if (redrawws) gr_polymarker(1, (double *)&(x_vec[i]), (double *)&(y_vec[i]));
         }
       else if (str == "polymarker3d")
         {
-          gr_polymarker3d(1, (double *)&(x_vec[i]), (double *)&(y_vec[i]), (double *)&(z_vec[i]));
+          if (redrawws) gr_polymarker3d(1, (double *)&(x_vec[i]), (double *)&(y_vec[i]), (double *)&(z_vec[i]));
         }
     }
 }
@@ -717,11 +717,11 @@ static void lineHelper(const std::shared_ptr<GRM::Element> &element, const std::
         }
       if (str == "polyline")
         {
-          gr_polyline(2, (double *)&(x_vec[i]), (double *)&(y_vec[i]));
+          if (redrawws) gr_polyline(2, (double *)&(x_vec[i]), (double *)&(y_vec[i]));
         }
       else if (str == "polyline3d")
         {
-          gr_polyline3d(2, (double *)&(x_vec[i]), (double *)&(y_vec[i]), (double *)&(z_vec[i]));
+          if (redrawws) gr_polyline3d(2, (double *)&(x_vec[i]), (double *)&(y_vec[i]), (double *)&(z_vec[i]));
         }
     }
 }
@@ -2421,11 +2421,11 @@ static void processSubplot(const std::shared_ptr<GRM::Element> &element)
       gr_setfillcolorind(background_color_index);
       if (aspect_ratio_ws > 1)
         {
-          gr_fillrect(subplot[0], subplot[1], subplot[2] / aspect_ratio_ws, subplot[3] / aspect_ratio_ws);
+          if (redrawws) gr_fillrect(subplot[0], subplot[1], subplot[2] / aspect_ratio_ws, subplot[3] / aspect_ratio_ws);
         }
       else
         {
-          gr_fillrect(subplot[0] * aspect_ratio_ws, subplot[1] * aspect_ratio_ws, subplot[2], subplot[3]);
+          if (redrawws) gr_fillrect(subplot[0] * aspect_ratio_ws, subplot[1] * aspect_ratio_ws, subplot[2], subplot[3]);
         }
       gr_selntran(1);
       gr_restorestate();
@@ -3067,7 +3067,7 @@ static void axes(const std::shared_ptr<GRM::Element> &element, const std::shared
   getTickSize(element, tick_size);
   tick_size *= tick_orientation;
 
-  gr_axes(x_tick, y_tick, x_org, y_org, x_major, y_major, tick_size);
+  if (redrawws) gr_axes(x_tick, y_tick, x_org, y_org, x_major, y_major, tick_size);
 }
 
 static void processAxes(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -3140,7 +3140,7 @@ static void axes3d(const std::shared_ptr<GRM::Element> &element, const std::shar
   getTickSize(element, tick_size);
   tick_size *= tick_orientation;
 
-  gr_axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major, tick_size);
+  if (redrawws) gr_axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major, tick_size);
 }
 
 static void processAxes3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -3177,8 +3177,9 @@ static void cellArray(const std::shared_ptr<GRM::Element> &element, const std::s
   int ncol = static_cast<int>(element->getAttribute("ncol"));
   int nrow = static_cast<int>(element->getAttribute("nrow"));
   auto color = static_cast<std::string>(element->getAttribute("color"));
-  gr_cellarray(xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nrow,
-               (int *)&(GRM::get<std::vector<int>>((*context)[color])[0]));
+  if (redrawws)
+    gr_cellarray(xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nrow,
+                 (int *)&(GRM::get<std::vector<int>>((*context)[color])[0]));
 }
 
 static void colorbar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -4009,7 +4010,7 @@ static void contour(const std::shared_ptr<GRM::Element> &element, const std::sha
   double *h_p = &(h[0]);
   double *pz_p = &(pz_vec[0]);
 
-  gr_contour(nx, ny, num_levels, px_p, py_p, h_p, pz_p, major_h);
+  if (redrawws) gr_contour(nx, ny, num_levels, px_p, py_p, h_p, pz_p, major_h);
 }
 
 static void contourf(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -4140,7 +4141,7 @@ static void contourf(const std::shared_ptr<GRM::Element> &element, const std::sh
   double *h_p = &(h[0]);
   double *pz_p = &(pz_vec[0]);
 
-  gr_contourf(nx, ny, num_levels, px_p, py_p, h_p, pz_p, major_h);
+  if (redrawws) gr_contourf(nx, ny, num_levels, px_p, py_p, h_p, pz_p, major_h);
 }
 
 static void drawArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -4157,7 +4158,7 @@ static void drawArc(const std::shared_ptr<GRM::Element> &element, const std::sha
   double ymax = static_cast<double>(element->getAttribute("ymax"));
   double a1 = static_cast<double>(element->getAttribute("a1"));
   double a2 = static_cast<double>(element->getAttribute("a2"));
-  gr_drawarc(xmin, xmax, ymin, ymax, a1, a2);
+  if (redrawws) gr_drawarc(xmin, xmax, ymin, ymax, a1, a2);
 }
 
 static void drawGraphics(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -4173,7 +4174,7 @@ static void drawGraphics(const std::shared_ptr<GRM::Element> &element, const std
     }
   char *data_p = &(char_vec[0]);
 
-  gr_drawgraphics(data_p);
+  if (redrawws) gr_drawgraphics(data_p);
 }
 
 static void drawImage(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -4192,7 +4193,9 @@ static void drawImage(const std::shared_ptr<GRM::Element> &element, const std::s
   int height = static_cast<int>(element->getAttribute("height"));
   int model = static_cast<int>(element->getAttribute("model"));
   auto data = static_cast<std::string>(element->getAttribute("data"));
-  gr_drawimage(xmin, xmax, ymax, ymin, width, height, (int *)&(GRM::get<std::vector<int>>((*context)[data])[0]), model);
+  if (redrawws)
+    gr_drawimage(xmin, xmax, ymax, ymin, width, height, (int *)&(GRM::get<std::vector<int>>((*context)[data])[0]),
+                 model);
 }
 
 static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -4999,7 +5002,7 @@ static void drawRect(const std::shared_ptr<GRM::Element> &element, const std::sh
   double xmax = static_cast<double>(element->getAttribute("xmax"));
   double ymin = static_cast<double>(element->getAttribute("ymin"));
   double ymax = static_cast<double>(element->getAttribute("ymax"));
-  gr_drawrect(xmin, xmax, ymin, ymax);
+  if (redrawws) gr_drawrect(xmin, xmax, ymin, ymax);
 }
 
 static void fillArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -5016,7 +5019,7 @@ static void fillArc(const std::shared_ptr<GRM::Element> &element, const std::sha
   double ymax = static_cast<double>(element->getAttribute("ymax"));
   double a1 = static_cast<double>(element->getAttribute("a1"));
   double a2 = static_cast<double>(element->getAttribute("a2"));
-  gr_fillarc(xmin, xmax, ymin, ymax, a1, a2);
+  if (redrawws) gr_fillarc(xmin, xmax, ymin, ymax, a1, a2);
 }
 
 static void fillRect(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -5031,7 +5034,7 @@ static void fillRect(const std::shared_ptr<GRM::Element> &element, const std::sh
   double xmax = static_cast<double>(element->getAttribute("xmax"));
   double ymin = static_cast<double>(element->getAttribute("ymin"));
   double ymax = static_cast<double>(element->getAttribute("ymax"));
-  gr_fillrect(xmin, xmax, ymin, ymax);
+  if (redrawws) gr_fillrect(xmin, xmax, ymin, ymax);
 }
 
 static void fillArea(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -5050,7 +5053,7 @@ static void fillArea(const std::shared_ptr<GRM::Element> &element, const std::sh
 
   int n = std::min<int>(x_vec.size(), y_vec.size());
 
-  gr_fillarea(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
+  if (redrawws) gr_fillarea(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
 }
 
 static void gr3Clear(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -5150,7 +5153,7 @@ static void grid(const std::shared_ptr<GRM::Element> &element, const std::shared
 
   getAxesInformation(element, x_org_pos, y_org_pos, x_org, y_org, x_major, y_major, x_tick, y_tick);
 
-  gr_grid(x_tick, y_tick, x_org, y_org, abs(x_major), abs(y_major));
+  if (redrawws) gr_grid(x_tick, y_tick, x_org, y_org, abs(x_major), abs(y_major));
 }
 
 static void grid3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -5195,7 +5198,7 @@ static void grid3d(const std::shared_ptr<GRM::Element> &element, const std::shar
   getAxes3dInformation(element, x_org_pos, y_org_pos, z_org_pos, x_org, y_org, z_org, x_major, y_major, z_major, x_tick,
                        y_tick, z_tick);
 
-  gr_grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, abs(x_major), abs(y_major), abs(z_major));
+  if (redrawws) gr_grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, abs(x_major), abs(y_major), abs(z_major));
 }
 
 static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -5447,7 +5450,7 @@ static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
       long hex_address = stol(address, nullptr, 16);
       const hexbin_2pass_t *hexbinContext = (hexbin_2pass_t *)hex_address;
       bool cleanup = hexbinContext->action & GR_2PASS_CLEANUP;
-      gr_hexbin_2pass(x_length, x_p, y_p, nbins, hexbinContext);
+      if (redrawws) gr_hexbin_2pass(x_length, x_p, y_p, nbins, hexbinContext);
       if (cleanup)
         {
           element->removeAttribute("_hexbin_context_address");
@@ -5455,7 +5458,7 @@ static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
     }
   else
     {
-      gr_hexbin(x_length, x_p, y_p, nbins);
+      if (redrawws) gr_hexbin(x_length, x_p, y_p, nbins);
     }
 }
 
@@ -5485,22 +5488,25 @@ static void processHexbin(const std::shared_ptr<GRM::Element> &element, const st
   int y_length = y_vec.size();
   if (x_length != y_length) throw std::length_error("For Hexbin x- and y-data must have the same size\n.");
 
-  const hexbin_2pass_t *hexbinContext = gr_hexbin_2pass(x_length, x_p, y_p, nbins, nullptr);
+  if (redrawws)
+    {
+      const hexbin_2pass_t *hexbinContext = gr_hexbin_2pass(x_length, x_p, y_p, nbins, nullptr);
 
-  std::ostringstream get_address;
-  get_address << hexbinContext;
-  element->setAttribute("_hexbin_context_address", get_address.str());
+      std::ostringstream get_address;
+      get_address << hexbinContext;
+      element->setAttribute("_hexbin_context_address", get_address.str());
 
-  auto colorbar = element->querySelectors("colorbar");
-  double c_min = 0.0;
-  double c_max = hexbinContext->cntmax;
-  auto plot_parent = element->parentElement();
+      auto colorbar = element->querySelectors("colorbar");
+      double c_min = 0.0;
+      double c_max = hexbinContext->cntmax;
+      auto plot_parent = element->parentElement();
 
-  getPlotParent(plot_parent);
-  plot_parent->setAttribute("_clim_min", c_min);
-  plot_parent->setAttribute("_clim_max", c_max);
-  PushDrawableToZQueue pushHexbinToZQueue(hexbin);
-  pushHexbinToZQueue(element, context);
+      getPlotParent(plot_parent);
+      plot_parent->setAttribute("_clim_min", c_min);
+      plot_parent->setAttribute("_clim_max", c_max);
+      PushDrawableToZQueue pushHexbinToZQueue(hexbin);
+      pushHexbinToZQueue(element, context);
+    }
 }
 
 static void histBins(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -5782,7 +5788,7 @@ static void nonUniformPolarCellArray(const std::shared_ptr<GRM::Element> &elemen
   double *r = &(r_vec[0]);
   int *color = &(color_vec[0]);
 
-  gr_nonuniformpolarcellarray(x_org, y_org, phi, r, dimphi, dimr, scol, srow, ncol, nrow, color);
+  if (redrawws) gr_nonuniformpolarcellarray(x_org, y_org, phi, r, dimphi, dimr, scol, srow, ncol, nrow, color);
 }
 
 static void nonuniformcellarray(const std::shared_ptr<GRM::Element> &element,
@@ -5809,7 +5815,7 @@ static void nonuniformcellarray(const std::shared_ptr<GRM::Element> &element,
   auto y_p = (double *)&(GRM::get<std::vector<double>>((*context)[y])[0]);
 
   auto color_p = (int *)&(GRM::get<std::vector<int>>((*context)[color])[0]);
-  gr_nonuniformcellarray(x_p, y_p, dimx, dimy, scol, srow, ncol, nrow, color_p);
+  if (redrawws) gr_nonuniformcellarray(x_p, y_p, dimx, dimy, scol, srow, ncol, nrow, color_p);
 }
 
 static void panzoom(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -5836,7 +5842,8 @@ static void polarCellArray(const std::shared_ptr<GRM::Element> &element, const s
   auto color_vec = GRM::get<std::vector<int>>((*context)[color_key]);
   int *color = &(color_vec[0]);
 
-  gr_polarcellarray(x_org, y_org, phimin, phimax, rmin, rmax, dimphi, dimr, scol, srow, ncol, nrow, color);
+  if (redrawws)
+    gr_polarcellarray(x_org, y_org, phimin, phimax, rmin, rmax, dimphi, dimr, scol, srow, ncol, nrow, color);
 }
 
 static void polyline(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -5865,7 +5872,7 @@ static void polyline(const std::shared_ptr<GRM::Element> &element, const std::sh
         {
           lineHelper(element, context, "polyline");
         }
-      else
+      else if (redrawws)
         gr_polyline(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
     }
   else if (element->getAttribute("x1").isDouble() && element->getAttribute("x2").isDouble() &&
@@ -5878,7 +5885,7 @@ static void polyline(const std::shared_ptr<GRM::Element> &element, const std::sh
       double x[2] = {x1, x2};
       double y[2] = {y1, y2};
 
-      gr_polyline(2, x, y);
+      if (redrawws) gr_polyline(2, x, y);
     }
 }
 
@@ -5912,7 +5919,7 @@ static void polyline3d(const std::shared_ptr<GRM::Element> &element, const std::
     }
   else
     {
-      gr_polyline3d(x_vec.size(), x_p, y_p, z_p);
+      if (redrawws) gr_polyline3d(x_vec.size(), x_p, y_p, z_p);
     }
 }
 
@@ -5944,14 +5951,14 @@ static void polymarker(const std::shared_ptr<GRM::Element> &element, const std::
         }
       else
         {
-          gr_polymarker(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
+          if (redrawws) gr_polymarker(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
         }
     }
   else if (element->getAttribute("x").isDouble() && element->getAttribute("y").isDouble())
     {
       double x = static_cast<double>(element->getAttribute("x"));
       double y = static_cast<double>(element->getAttribute("y"));
-      gr_polymarker(1, &x, &y);
+      if (redrawws) gr_polymarker(1, &x, &y);
     }
 }
 
@@ -5986,7 +5993,7 @@ static void polymarker3d(const std::shared_ptr<GRM::Element> &element, const std
     }
   else
     {
-      gr_polymarker3d(x_vec.size(), x_p, y_p, z_p);
+      if (redrawws) gr_polymarker3d(x_vec.size(), x_p, y_p, z_p);
     }
 }
 
@@ -6027,7 +6034,7 @@ static void quiver(const std::shared_ptr<GRM::Element> &element, const std::shar
   double *u_p = &(GRM::get<std::vector<double>>((*context)[u])[0]);
   double *v_p = &(GRM::get<std::vector<double>>((*context)[v])[0]);
 
-  gr_quiver(x_length, y_length, x_p, y_p, u_p, v_p, color);
+  if (redrawws) gr_quiver(x_length, y_length, x_p, y_p, u_p, v_p, color);
 }
 
 static void processPolar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -8311,7 +8318,7 @@ static void shade(const std::shared_ptr<GRM::Element> &element, const std::share
   y_p = &(y_vec[0]);
   n = std::min<int>(x_vec.size(), y_vec.size());
 
-  gr_shadepoints(n, x_p, y_p, xform, xbins, ybins);
+  if (redrawws) gr_shadepoints(n, x_p, y_p, xform, xbins, ybins);
 }
 
 static void surface(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -8448,7 +8455,7 @@ static void surface(const std::shared_ptr<GRM::Element> &element, const std::sha
       double *py_p = &(y_vec[0]);
       double *pz_p = &(z_vec[0]);
 
-      gr_surface(x_length, y_length, px_p, py_p, pz_p, GR_OPTION_COLORED_MESH);
+      if (redrawws) gr_surface(x_length, y_length, px_p, py_p, pz_p, GR_OPTION_COLORED_MESH);
     }
   else
     {
@@ -8460,7 +8467,7 @@ static void surface(const std::shared_ptr<GRM::Element> &element, const std::sha
       float *py_p = &(py_vec_f[0]);
       float *pz_p = &(pz_vec_f[0]);
 
-      gr3_surface(x_length, y_length, px_p, py_p, pz_p, GR_OPTION_COLORED_MESH);
+      if (redrawws) gr3_surface(x_length, y_length, px_p, py_p, pz_p, GR_OPTION_COLORED_MESH);
     }
 }
 
@@ -9258,7 +9265,7 @@ static void text(const std::shared_ptr<GRM::Element> &element, const std::shared
             }
         }
     }
-  if (text_fits) gr_text(x, y, &str[0]);
+  if (text_fits && redrawws) gr_text(x, y, &str[0]);
   gr_restorestate();
 }
 
@@ -9274,7 +9281,7 @@ static void titles3d(const std::shared_ptr<GRM::Element> &element, const std::sh
   x = static_cast<std::string>(element->getAttribute("x"));
   y = static_cast<std::string>(element->getAttribute("y"));
   z = static_cast<std::string>(element->getAttribute("z"));
-  gr_titles3d(x.data(), y.data(), z.data());
+  if (redrawws) gr_titles3d(x.data(), y.data(), z.data());
 }
 
 static void triContour(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -9333,7 +9340,7 @@ static void triContour(const std::shared_ptr<GRM::Element> &element, const std::
   double *pz_p = &(z_vec[0]);
   double *l_p = &(levels[0]);
 
-  gr_tricontour(x_length, px_p, py_p, pz_p, num_levels, l_p);
+  if (redrawws) gr_tricontour(x_length, px_p, py_p, pz_p, num_levels, l_p);
 }
 
 static void triSurface(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -9365,7 +9372,7 @@ static void triSurface(const std::shared_ptr<GRM::Element> &element, const std::
   double *py_p = &(py_vec[0]);
   double *pz_p = &(pz_vec[0]);
 
-  gr_trisurface(nx, px_p, py_p, pz_p);
+  if (redrawws) gr_trisurface(nx, px_p, py_p, pz_p);
 }
 
 static void volume(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -9389,12 +9396,13 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
       auto address = static_cast<std::string>(element->getAttribute("_volume_context_address"));
       long volume_address = stol(address, 0, 16);
       const gr3_volume_2pass_t *volume_context = (gr3_volume_2pass_t *)volume_address;
-      gr_volume_2pass(shape_vec[0], shape_vec[1], shape_vec[2], &(c_vec[0]), algorithm, &dmin, &dmax, volume_context);
-      element->removeAttribute("_hexbin_context_address");
+      if (redrawws)
+        gr_volume_2pass(shape_vec[0], shape_vec[1], shape_vec[2], &(c_vec[0]), algorithm, &dmin, &dmax, volume_context);
+      element->removeAttribute("_volume_context_address");
     }
   else
     {
-      gr_volume(shape_vec[0], shape_vec[1], shape_vec[2], &(c_vec[0]), algorithm, &dmin, &dmax);
+      if (redrawws) gr_volume(shape_vec[0], shape_vec[1], shape_vec[2], &(c_vec[0]), algorithm, &dmin, &dmax);
     }
 }
 
@@ -9443,32 +9451,35 @@ static void processVolume(const std::shared_ptr<GRM::Element> &element, const st
 
   gr_inqvpsize(&width, &height, &device_pixel_ratio);
   gr_setpicturesizeforvolume((int)(width * device_pixel_ratio), (int)(height * device_pixel_ratio));
-  const gr3_volume_2pass_t *volumeContext =
-      gr_volume_2pass(shape_vec[0], shape_vec[1], shape_vec[2], &(c_vec[0]), algorithm, &dmin, &dmax, nullptr);
-
-  std::ostringstream get_address;
-  get_address << volumeContext;
-  element->setAttribute("_volume_context_address", get_address.str());
-
-  auto parent_element = element->parentElement();
-  if (parent_element->hasAttribute("clim_min") && parent_element->hasAttribute("clim_max"))
+  if (redrawws)
     {
-      dlim[0] = static_cast<double>(parent_element->getAttribute("clim_min"));
-      dlim[1] = static_cast<double>(parent_element->getAttribute("clim_max"));
-      dlim[0] = grm_min(dlim[0], dmin);
-      dlim[1] = grm_max(dlim[1], dmax);
-    }
-  else
-    {
-      dlim[0] = dmin;
-      dlim[1] = dmax;
-    }
+      const gr3_volume_2pass_t *volumeContext =
+          gr_volume_2pass(shape_vec[0], shape_vec[1], shape_vec[2], &(c_vec[0]), algorithm, &dmin, &dmax, nullptr);
 
-  auto colorbar = parent_element->querySelectors("colorbar");
-  parent_element->setAttribute("_clim_min", dlim[0]);
-  parent_element->setAttribute("_clim_max", dlim[1]);
-  PushDrawableToZQueue pushVolumeToZQueue(volume);
-  pushVolumeToZQueue(element, context);
+      std::ostringstream get_address;
+      get_address << volumeContext;
+      element->setAttribute("_volume_context_address", get_address.str());
+
+      auto parent_element = element->parentElement();
+      if (parent_element->hasAttribute("clim_min") && parent_element->hasAttribute("clim_max"))
+        {
+          dlim[0] = static_cast<double>(parent_element->getAttribute("clim_min"));
+          dlim[1] = static_cast<double>(parent_element->getAttribute("clim_max"));
+          dlim[0] = grm_min(dlim[0], dmin);
+          dlim[1] = grm_max(dlim[1], dmax);
+        }
+      else
+        {
+          dlim[0] = dmin;
+          dlim[1] = dmax;
+        }
+
+      auto colorbar = parent_element->querySelectors("colorbar");
+      parent_element->setAttribute("_clim_min", dlim[0]);
+      parent_element->setAttribute("_clim_max", dlim[1]);
+      PushDrawableToZQueue pushVolumeToZQueue(volume);
+      pushVolumeToZQueue(element, context);
+    }
 }
 
 static void wireframe(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -9528,7 +9539,7 @@ static void wireframe(const std::shared_ptr<GRM::Element> &element, const std::s
   double *px_p = &(x_vec[0]);
   double *py_p = &(y_vec[0]);
   double *pz_p = &(z_vec[0]);
-  gr_surface(x_length, y_length, px_p, py_p, pz_p, GR_OPTION_FILLED_MESH);
+  if (redrawws) gr_surface(x_length, y_length, px_p, py_p, pz_p, GR_OPTION_FILLED_MESH);
 }
 
 void plotProcessWswindowWsviewport(const std::shared_ptr<GRM::Element> &element,
@@ -10415,22 +10426,14 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
     {
       // TODO: something like contour shouldnt be in this list
       if (!automatic_update ||
-          redrawws &&
-              ((static_cast<int>(global_root->getAttribute("_modified")) &&
-                (str_equals_any(element->localName().c_str(), 26, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
-                                "drawimage", "drawrect", "fillarc", "fillarea", "fillrect", "grid", "grid3d", "legend",
-                                "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
-                                "polyline3d", "polymarker", "polymarker3d", "series_contour", "series_contourf", "text",
-                                "titles3d", "series_stem", "coordinate_system") ||
-                 !element->hasChildNodes())) ||
-               (automatic_update && element->hasAttribute("_update_required") &&
-                static_cast<int>(element->getAttribute("_update_required")))) ||
-          ((!str_equals_any(element->localName().c_str(), 26, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
+
+          ((static_cast<int>(global_root->getAttribute("_modified")) &&
+            (str_equals_any(element->localName().c_str(), 26, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
                             "drawimage", "drawrect", "fillarc", "fillarea", "fillrect", "grid", "grid3d", "legend",
                             "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
                             "polyline3d", "polymarker", "polymarker3d", "series_contour", "series_contourf", "text",
                             "titles3d", "series_stem", "coordinate_system") ||
-            !element->hasChildNodes()) &&
+             !element->hasChildNodes())) ||
            (automatic_update && element->hasAttribute("_update_required") &&
             static_cast<int>(element->getAttribute("_update_required")))))
         {
