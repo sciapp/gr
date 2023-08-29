@@ -766,9 +766,9 @@ grm_tooltip_info_t *grm_get_tooltip(int mouse_x, int mouse_y)
 {
   nearest_tooltip = nullptr;
   get_tooltips(mouse_x, mouse_y, find_nearest_tooltip);
-  if ((mouse_x - nearest_tooltip->x_px) * (mouse_x - nearest_tooltip->x_px) +
-          (mouse_y - nearest_tooltip->y_px) * (mouse_y - nearest_tooltip->y_px) >
-      MAX_MOUSE_DIST)
+  if (nearest_tooltip != nullptr && (mouse_x - nearest_tooltip->x_px) * (mouse_x - nearest_tooltip->x_px) +
+                                            (mouse_y - nearest_tooltip->y_px) * (mouse_y - nearest_tooltip->y_px) >
+                                        MAX_MOUSE_DIST)
     {
       nearest_tooltip->x_px = -1;
       nearest_tooltip->y_px = -1;

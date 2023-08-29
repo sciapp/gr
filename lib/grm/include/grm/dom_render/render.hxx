@@ -117,6 +117,10 @@ private:
 EXPORT void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::string &attr,
                          const std::string &value);
 EXPORT void renderCaller();
+EXPORT void updateContextAttribute(const std::shared_ptr<GRM::Element> &element, const std::string &attr,
+                                   const GRM::Value &old_value);
+EXPORT void deleteContextAttribute(const std::shared_ptr<GRM::Element> &element);
+
 namespace GRM
 {
 

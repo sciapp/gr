@@ -47,6 +47,7 @@ public:
     bool intUsed();
     bool doubleUsed();
     bool stringUsed();
+    void increment_key(const std::string &);
 
   public:
     Inner(Context &context, std::string key);
@@ -65,7 +66,6 @@ public:
     explicit operator std::vector<std::string> &();
     explicit operator const std::vector<std::string> &() const;
 
-
     explicit operator std::vector<int> *();
     explicit operator const std::vector<int> *() const;
 
@@ -74,6 +74,10 @@ public:
 
     explicit operator std::vector<std::string> *();
     explicit operator const std::vector<std::string> *() const;
+
+    void delete_key(const std::string &);
+    void use_context_key(const std::string &key, const std::string &old_key = "");
+    void decrement_key(const std::string &);
   };
 
   Context();
@@ -86,6 +90,7 @@ private:
   std::map<std::string, std::vector<double>> tableDouble;
   std::map<std::string, std::vector<int>> tableInt;
   std::map<std::string, std::vector<std::string>> tableString;
+  std::map<std::string, int> referenceNumberOfKeys;
 };
 
 template <class T> static T &get(Context::Inner &&data)
@@ -135,7 +140,6 @@ template <class T> static const T &get(const Context::Inner &data)
    */
   return static_cast<const T &>(data);
 }
-
 
 template <class T> static T *get_if(Context::Inner &&data)
 {

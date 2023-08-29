@@ -147,6 +147,57 @@ static std::set<std::string> drawableKinds = {
     "contour", "contourf", "hexbin", "isosurface", "quiver", "shade", "surface", "tricontour", "trisurface", "volume",
 };
 
+static std::set<std::string> valid_context_keys = {"absolute_downwards",
+                                                   "absolute_upwards",
+                                                   "bar_color_rgb",
+                                                   "bin_counts",
+                                                   "bin_edges",
+                                                   "bin_widths",
+                                                   "bins",
+                                                   "c",
+                                                   "c_dims",
+                                                   "c_rgb",
+                                                   "classes",
+                                                   "color",
+                                                   "colors",
+                                                   "color_indices",
+                                                   "color_rgb_values",
+                                                   "data",
+                                                   "directions",
+                                                   "edge_color_rgb",
+                                                   "foreground_color",
+                                                   "img_data_key",
+                                                   "indices",
+                                                   "labels",
+                                                   "linecolorinds",
+                                                   "linetypes",
+                                                   "linewidths",
+                                                   "markercolorinds",
+                                                   "markersizes",
+                                                   "markertypes",
+                                                   "phi",
+                                                   "positions",
+                                                   "px",
+                                                   "py",
+                                                   "pz",
+                                                   "r",
+                                                   "relative_downwards",
+                                                   "relative_upwards",
+                                                   "scales",
+                                                   "specs",
+                                                   "theta",
+                                                   "u",
+                                                   "ups",
+                                                   "v",
+                                                   "weights",
+                                                   "x",
+                                                   "xi",
+                                                   "xticklabels",
+                                                   "y",
+                                                   "ylabels",
+                                                   "yticklabels",
+                                                   "z"};
+
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
     {"\"", 0.0254}, {"ft", 0.3048}, {"'", 0.0254}, {"pc", 0.0254 / 6.0}, {"pt", 0.0254 / 72.0},
@@ -3002,7 +3053,7 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &element, const std::s
 
       if (series->hasAttribute("yrange_min")) ymin = static_cast<double>(series->getAttribute("yrange_min"));
     }
-  if (series->localName() == "series_barplot" && ymin < 0) ymin = 0;
+  if (series != nullptr && series->localName() == "series_barplot" && ymin < 0) ymin = 0;
 
   int is_vertical = orientation == "vertical";
 
@@ -3200,13 +3251,6 @@ static void colorbar(const std::shared_ptr<GRM::Element> &element, const std::sh
 
   gr_setwindow(0.0, 1.0, c_min, c_max);
 
-  /* remove old cell arrays and axes if they exist */
-  auto colorbar_elements = element->querySelectorsAll("[name=\"colorbar\"]");
-  for (auto &colorbar_element : colorbar_elements)
-    {
-      colorbar_element->remove();
-    }
-
   /* create cell array */
   std::vector<int> data_vec;
   for (i = 0; i < colors; ++i)
@@ -3218,23 +3262,56 @@ static void colorbar(const std::shared_ptr<GRM::Element> &element, const std::sh
   std::string str = std::to_string(id);
   global_root->setAttribute("_id", id + 1);
 
-  auto cellArray =
-      global_render->createCellArray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, "data" + str, data_vec);
+  std::shared_ptr<GRM::Element> cellArray = nullptr, axes = nullptr;
+  for (const auto &child : element->children())
+    {
+      if (child->localName() == "cellarray") cellArray = child;
+      if (child->localName() == "axes") axes = child;
+    }
+
+  if (cellArray == nullptr)
+    {
+      cellArray =
+          global_render->createCellArray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, "data" + str, data_vec);
+      element->append(cellArray);
+    }
+  else
+    {
+      cellArray->setAttribute("ymin", c_max);
+      cellArray->setAttribute("ymax", c_min);
+      cellArray->setAttribute("dimy", (int)colors);
+      cellArray->setAttribute("nrow", (int)colors);
+      cellArray->setAttribute("color", "data" + str);
+      (*context)["data" + str] = data_vec;
+    }
   cellArray->setAttribute("name", "colorbar");
-  element->append(cellArray);
 
   /* create axes */
   gr_inqscale(&options);
-  std::shared_ptr<GRM::Element> axes;
   if (options & GR_OPTION_Z_LOG)
     {
-      axes = global_render->createAxes(0, 2, 1, c_min, 0, 1, 1);
+      if (axes == nullptr)
+        {
+          axes = global_render->createAxes(0, 2, 1, c_min, 0, 1, 1);
+        }
+      else
+        {
+          axes->setAttribute("y_org", c_min);
+        }
       global_render->setScale(axes, GR_OPTION_Y_LOG);
     }
   else
     {
       double c_tick = auto_tick(c_min, c_max);
-      axes = global_render->createAxes(0, c_tick, 1, c_min, 0, 1, 1);
+      if (axes == nullptr)
+        {
+          axes = global_render->createAxes(0, c_tick, 1, c_min, 0, 1, 1);
+        }
+      else
+        {
+          axes->setAttribute("y_tick", c_tick);
+          axes->setAttribute("y_org", c_min);
+        }
     }
   axes->setAttribute("tick_size", 0.005);
   axes->setAttribute("name", "colorbar");
@@ -7900,11 +7977,11 @@ static void processScatter(const std::shared_ptr<GRM::Element> &element, const s
       std::shared_ptr<GRM::Element> marker;
       if (is_horizontal)
         {
-          marker = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
+          marker = global_render->createPolymarker("x" + str, x_vec, "y" + str, y_vec);
         }
       else
         {
-          marker = global_render->createPolymarker(str + "x", y_vec, str + "y", x_vec);
+          marker = global_render->createPolymarker("x" + str, y_vec, "y" + str, x_vec);
         }
       element->append(marker);
       if (!markerSizesVec.empty())
@@ -7923,11 +8000,11 @@ static void processScatter(const std::shared_ptr<GRM::Element> &element, const s
       std::shared_ptr<GRM::Element> marker;
       if (is_horizontal)
         {
-          marker = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
+          marker = global_render->createPolymarker("x" + str, x_vec, "y" + str, y_vec);
         }
       else
         {
-          marker = global_render->createPolymarker(str + "x", y_vec, str + "y", x_vec);
+          marker = global_render->createPolymarker("x" + str, y_vec, "y" + str, x_vec);
         }
       element->append(marker);
       global_root->setAttribute("_id", ++id);
@@ -8133,12 +8210,12 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
               if (is_vertical)
                 {
                   element->append(
-                      global_render->createPolyline(str + "x", y_step_values, str + "y", x_step_boundaries));
+                      global_render->createPolyline("x" + str, y_step_values, "y" + str, x_step_boundaries));
                 }
               else
                 {
                   element->append(
-                      global_render->createPolyline(str + "x", x_step_boundaries, str + "y", y_step_values));
+                      global_render->createPolyline("x" + str, x_step_boundaries, "y" + str, y_step_values));
                 }
             }
           else if (where == "post")
@@ -8160,12 +8237,12 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
               if (is_vertical)
                 {
                   element->append(
-                      global_render->createPolyline(str + "x", y_step_values, str + "y", x_step_boundaries));
+                      global_render->createPolyline("x" + str, y_step_values, "y" + str, x_step_boundaries));
                 }
               else
                 {
                   element->append(
-                      global_render->createPolyline(str + "x", x_step_boundaries, str + "y", y_step_values));
+                      global_render->createPolyline("x" + str, x_step_boundaries, "y" + str, y_step_values));
                 }
             }
           else if (where == "mid")
@@ -8186,12 +8263,12 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
               if (is_vertical)
                 {
                   element->append(
-                      global_render->createPolyline(str + "x", y_step_values, str + "y", x_step_boundaries));
+                      global_render->createPolyline("x" + str, y_step_values, "y" + str, x_step_boundaries));
                 }
               else
                 {
                   element->append(
-                      global_render->createPolyline(str + "x", x_step_boundaries, str + "y", y_step_values));
+                      global_render->createPolyline("x" + str, x_step_boundaries, "y" + str, y_step_values));
                 }
             }
         }
@@ -8199,11 +8276,11 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
         {
           if (is_vertical)
             {
-              element->append(global_render->createPolyline(str + "x", y_vec, str + "y", x_vec));
+              element->append(global_render->createPolyline("x" + str, y_vec, "y" + str, x_vec));
             }
           else
             {
-              element->append(global_render->createPolyline(str + "x", x_vec, str + "y", y_vec));
+              element->append(global_render->createPolyline("x" + str, x_vec, "y" + str, y_vec));
             }
         }
     }
@@ -8541,11 +8618,11 @@ static void processLine(const std::shared_ptr<GRM::Element> &element, const std:
       std::shared_ptr<GRM::Element> line;
       if (orientation == "horizontal")
         {
-          line = global_render->createPolyline(str + "x", x_vec, str + "y", y_vec);
+          line = global_render->createPolyline("x" + str, x_vec, "y" + str, y_vec);
         }
       else
         {
-          line = global_render->createPolyline(str + "x", y_vec, str + "y", x_vec);
+          line = global_render->createPolyline("x" + str, y_vec, "y" + str, x_vec);
         }
       global_root->setAttribute("_id", ++id);
       line->setAttribute("linecolorind", current_line_colorind);
@@ -8560,11 +8637,11 @@ static void processLine(const std::shared_ptr<GRM::Element> &element, const std:
       std::shared_ptr<GRM::Element> marker;
       if (orientation == "horizontal")
         {
-          marker = global_render->createPolymarker(str + "x", x_vec, str + "y", y_vec);
+          marker = global_render->createPolymarker("x" + str, x_vec, "y" + str, y_vec);
         }
       else
         {
-          marker = global_render->createPolymarker(str + "x", y_vec, str + "y", x_vec);
+          marker = global_render->createPolymarker("x" + str, y_vec, "y" + str, x_vec);
         }
       marker->setAttribute("markercolorind", current_marker_colorind);
       element->append(marker);
@@ -9083,8 +9160,9 @@ static void processImshow(const std::shared_ptr<GRM::Element> &element, const st
 
   if (!element->hasAttribute("c")) throw NotFoundError("Imshow series is missing required attribute c-data.\n");
   auto x = static_cast<std::string>(element->getAttribute("c"));
-  if (!element->hasAttribute("cdims")) throw NotFoundError("Imshow series is missing required attribute cdims-data.\n");
-  auto y = static_cast<std::string>(element->getAttribute("cdims"));
+  if (!element->hasAttribute("c_dims"))
+    throw NotFoundError("Imshow series is missing required attribute c_dims-data.\n");
+  auto y = static_cast<std::string>(element->getAttribute("c_dims"));
 
   c_data_vec = GRM::get<std::vector<double>>((*context)[x]);
   shape_vec = GRM::get<std::vector<double>>((*context)[y]);
@@ -10255,17 +10333,24 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
 static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element,
                                     const std::shared_ptr<GRM::Context> &context)
 {
-  auto kind = static_cast<std::string>(element->parentElement()->getAttribute("kind"));
-  if (kind == "barplot" || kind == "stem")
+  for (const auto &parentchild : element->parentElement()->children())
     {
-      // remove all old polylines
-      for (const auto &child : element->children())
+      if (parentchild->localName() == "series_barplot" || parentchild->localName() == "series_stem")
         {
-          if (child->localName() == "polyline") child->remove();
-        }
+          auto kind = static_cast<std::string>(parentchild->getAttribute("kind"));
+          if (kind == "barplot" || kind == "stem")
+            {
+              // remove all old polylines
+              for (const auto &child : element->children())
+                {
+                  if (child->localName() == "polyline") child->remove();
+                }
 
-      /* 0-line */
-      drawYLine(element, context);
+              /* 0-line */
+              drawYLine(element, context);
+            }
+          break;
+        }
     }
 }
 
@@ -10295,10 +10380,17 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
           {std::string("polar_histogram"), prePolarHistogram},
       };
 
-  auto kind = static_cast<std::string>(element->getAttribute("kind"));
-  if (kindNameToFunc.find(kind) != kindNameToFunc.end())
+  for (const auto &child : element->children())
     {
-      kindNameToFunc[kind](element, context);
+      if (child->localName() == "series_barplot" || child->localName() == "series_polar_histogram")
+        {
+          auto kind = static_cast<std::string>(child->getAttribute("kind"));
+          if (kindNameToFunc.find(kind) != kindNameToFunc.end())
+            {
+              kindNameToFunc[kind](element, context);
+            }
+          break;
+        }
     }
 }
 
@@ -10424,21 +10516,22 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
     }
   else
     {
-      // TODO: something like contour shouldnt be in this list
+      // TODO: something like series_contour shouldn't be in this list
       if (!automatic_update ||
-
           ((static_cast<int>(global_root->getAttribute("_modified")) &&
-            (str_equals_any(element->localName().c_str(), 26, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
+            (str_equals_any(element->localName().c_str(), 33, "axes", "axes3d", "cellarray", "colorbar", "drawarc",
                             "drawimage", "drawrect", "fillarc", "fillarea", "fillrect", "grid", "grid3d", "legend",
                             "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
                             "polyline3d", "polymarker", "polymarker3d", "series_contour", "series_contourf", "text",
-                            "titles3d", "series_stem", "coordinate_system") ||
+                            "titles3d", "coordinate_system", "series_hexbin", "series_isosurface", "series_quiver",
+                            "series_shade", "series_surface", "series_tricontour", "series_trisurface",
+                            "series_volume") ||
              !element->hasChildNodes())) ||
            (automatic_update && element->hasAttribute("_update_required") &&
             static_cast<int>(element->getAttribute("_update_required")))))
         {
           // elements without children are the draw-functions which need to be processed everytime, else there could
-          // be problems with overlapping elements stem is in that list for the yline which is used inside of stem
+          // be problems with overlapping elements
           std::string local_name = getLocalName(element);
 
           bool old_state = automatic_update;
@@ -10499,7 +10592,7 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
 
   bool bounding_boxes = getenv("GRPLOT_ENABLE_EDITOR");
 
-  if (bounding_boxes && element->hasAttributes() && !isDrawable(element))
+  if (bounding_boxes && !isDrawable(element))
     {
       gr_begin_grm_selection(bounding_id, &receiverfunction);
       bounding_map[bounding_id] = element;
@@ -10515,7 +10608,7 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
           renderHelper(child, context);
         }
     }
-  if (bounding_boxes && element->hasAttributes() && !isDrawable(element))
+  if (bounding_boxes && !isDrawable(element))
     {
       gr_end_grm_selection();
     }
@@ -10523,6 +10616,57 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
   customColorIndexManager.restorestate();
   zIndexManager.restorestate();
   gr_restorestate();
+}
+
+static void missing_bbox_calculator(const std::shared_ptr<GRM::Element> &element,
+                                    const std::shared_ptr<GRM::Context> &context, double *bbox_xmin = nullptr,
+                                    double *bbox_xmax = nullptr, double *bbox_ymin = nullptr,
+                                    double *bbox_ymax = nullptr)
+{
+  double elem_bbox_xmin = DBL_MAX, elem_bbox_xmax = -DBL_MAX, elem_bbox_ymin = DBL_MAX, elem_bbox_ymax = -DBL_MAX;
+
+  if (element->hasAttribute("_bbox_id"))
+    {
+      *bbox_xmin = static_cast<double>(element->getAttribute("_bbox_xmin"));
+      *bbox_xmax = static_cast<double>(element->getAttribute("_bbox_xmax"));
+      *bbox_ymin = static_cast<double>(element->getAttribute("_bbox_ymin"));
+      *bbox_ymax = static_cast<double>(element->getAttribute("_bbox_ymax"));
+    }
+  else
+    {
+      if (element->hasChildNodes() && parentTypes.count(element->localName()))
+        {
+          for (const auto &child : element->children())
+            {
+              double tmp_bbox_xmin = DBL_MAX, tmp_bbox_xmax = -DBL_MAX, tmp_bbox_ymin = DBL_MAX,
+                     tmp_bbox_ymax = -DBL_MAX;
+              missing_bbox_calculator(child, context, &tmp_bbox_xmin, &tmp_bbox_xmax, &tmp_bbox_ymin, &tmp_bbox_ymax);
+              elem_bbox_xmin = grm_min(elem_bbox_xmin, tmp_bbox_xmin);
+              elem_bbox_xmax = grm_max(elem_bbox_xmax, tmp_bbox_xmax);
+              elem_bbox_ymin = grm_min(elem_bbox_ymin, tmp_bbox_ymin);
+              elem_bbox_ymax = grm_max(elem_bbox_ymax, tmp_bbox_ymax);
+            }
+        }
+    }
+
+  if (element->localName() != "root" && !element->hasAttribute("_bbox_id"))
+    {
+      if (!(elem_bbox_xmin == DBL_MAX || elem_bbox_xmax == -DBL_MAX || elem_bbox_ymin == DBL_MAX ||
+            elem_bbox_ymax == -DBL_MAX))
+        {
+          element->setAttribute("_bbox_id", bounding_id);
+          element->setAttribute("_bbox_xmin", elem_bbox_xmin);
+          element->setAttribute("_bbox_xmax", elem_bbox_xmax);
+          element->setAttribute("_bbox_ymin", elem_bbox_ymin);
+          element->setAttribute("_bbox_ymax", elem_bbox_ymax);
+          bounding_id++;
+        }
+
+      *bbox_xmin = elem_bbox_xmin;
+      *bbox_xmax = elem_bbox_xmax;
+      *bbox_ymin = elem_bbox_ymin;
+      *bbox_ymax = elem_bbox_ymax;
+    }
 }
 
 static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
@@ -10536,7 +10680,7 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
       auto drawable = z_queue.top();
       auto element = drawable->getElement();
 
-      if (bounding_boxes && element->hasAttributes())
+      if (bounding_boxes)
         {
           gr_begin_grm_selection(bounding_id, &receiverfunction);
           bounding_map[bounding_id] = element;
@@ -10546,7 +10690,7 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
       customColorIndexManager.selectcontext(drawable->getGrContextId());
       drawable->draw();
 
-      if (bounding_boxes && element->hasAttributes())
+      if (bounding_boxes)
         {
           gr_end_grm_selection();
         }
@@ -10793,30 +10937,32 @@ void GRM::Render::render()
    */
   auto root = this->firstChildElement();
   global_root = root;
-  active_figure = this->firstChildElement()->querySelectorsAll("[active=1]")[0];
-  const unsigned int indent = 2;
+  if (root->hasChildNodes())
+    {
+      active_figure = this->firstChildElement()->querySelectorsAll("[active=1]")[0];
+      const unsigned int indent = 2;
 
-  redrawws = true;
-  bounding_id = 0;
-  global_render = (std::dynamic_pointer_cast<GRM::Render>(root->ownerDocument()))
-                      ? std::dynamic_pointer_cast<GRM::Render>(root->ownerDocument())
-                      : GRM::Render::createRender();
-  applyRootDefaults(root);
-  if (logger_enabled())
-    {
-      std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '), true}) << "\n";
+      redrawws = true;
+      bounding_id = 0;
+      if (!global_render) GRM::Render::createRender();
+      applyRootDefaults(root);
+      if (logger_enabled())
+        {
+          std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '), true}) << "\n";
+        }
+      if (static_cast<int>(root->getAttribute("clearws"))) gr_clearws();
+      global_root->setAttribute("_modified", true);
+      renderHelper(root, this->context);
+      renderZQueue(this->context);
+      global_root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
+      if (getenv("GRPLOT_ENABLE_EDITOR")) missing_bbox_calculator(root, this->context);
+      if (static_cast<int>(root->getAttribute("updatews"))) gr_updatews();
+      if (logger_enabled())
+        {
+          std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '), true}) << "\n";
+        }
+      redrawws = false;
     }
-  if (static_cast<int>(root->getAttribute("clearws"))) gr_clearws();
-  global_root->setAttribute("_modified", true);
-  renderHelper(root, this->context);
-  renderZQueue(this->context);
-  global_root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
-  if (static_cast<int>(root->getAttribute("updatews"))) gr_updatews();
-  if (logger_enabled())
-    {
-      std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '), true}) << "\n";
-    }
-  redrawws = false;
 }
 
 void GRM::Render::finalize()
@@ -10829,9 +10975,10 @@ std::shared_ptr<GRM::Render> GRM::Render::createRender()
   /*!
    * This function can be used to create a Render object
    */
-  auto render = std::shared_ptr<Render>(new Render());
-  render->ownerDocument()->setUpdateFct(&renderCaller, &updateFilter);
-  return render;
+  global_render = std::shared_ptr<Render>(new Render());
+  global_render->ownerDocument()->setUpdateFct(&renderCaller, &updateFilter);
+  global_render->ownerDocument()->setContextFct(&deleteContextAttribute, &updateContextAttribute);
+  return global_render;
 }
 
 GRM::Render::Render()
@@ -12762,8 +12909,7 @@ void GRM::Render::getAutoUpdate(bool *update)
   *update = automatic_update;
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ filter functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ filter functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::string &attr, const std::string &value = "")
 {
@@ -12788,7 +12934,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       "bar_color_index", "bar_color_rgb", "bins", "edge_color_index", "edge_color_rgb", "orientation",
   };
   std::vector<std::string> series_imshow{
-      "c", "cdims", "img_data_key", "x", "y", "z",
+      "c", "c_dims", "img_data_key", "x", "y", "z",
   };
   std::vector<std::string> series_isosurface{
       "ambient", "c", "c_dims", "diffuse", "foreground_color", "isovalue", "specular", "specular_power",
@@ -12956,9 +13102,9 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                   auto y = static_cast<std::string>(element->getAttribute("y"));
                   auto y_vec = GRM::get<std::vector<double>>((*context)[y]);
                   int y_length = y_vec.size();
-                  std::vector<int> cdims_vec = {y_length, x_length};
-                  (*context)["cdims" + str] = cdims_vec;
-                  new_series->setAttribute("cdims", "cdims" + str);
+                  std::vector<int> c_dims_vec = {y_length, x_length};
+                  (*context)["c_dims" + str] = c_dims_vec;
+                  new_series->setAttribute("c_dims", "c_dims" + str);
                   global_root->setAttribute("_id", id++);
                 }
               else if (value == "imshow")
@@ -13154,4 +13300,44 @@ void GRM::Render::setActiveFigure(const std::shared_ptr<GRM::Element> &element)
       child->setAttribute("active", 0);
     }
   element->setAttribute("active", 1);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ modify context ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+void updateContextAttribute(const std::shared_ptr<GRM::Element> &element, const std::string &attr,
+                            const GRM::Value &old_value)
+{
+  // when the attribute is a context the counter for the attribute value inside the context must be modified
+  if (valid_context_keys.find(attr) != valid_context_keys.end())
+    {
+      auto new_value = element->getAttribute(attr);
+      if (new_value.isString())
+        {
+          auto context = global_render->getContext();
+          (*context)[attr].use_context_key(static_cast<std::string>(new_value), static_cast<std::string>(old_value));
+        }
+    }
+}
+
+void deleteContextAttribute(const std::shared_ptr<GRM::Element> &element)
+{
+  auto elem_attribs = element->getAttributeNames();
+  std::vector<std::string> attr_inter;
+  std::vector<std::string> elem_attribs_vec(elem_attribs.begin(), elem_attribs.end());
+  std::vector<std::string> valid_keys_copy(valid_context_keys.begin(), valid_context_keys.end());
+
+  std::sort(elem_attribs_vec.begin(), elem_attribs_vec.end());
+  std::sort(valid_keys_copy.begin(), valid_keys_copy.end());
+  std::set_intersection(elem_attribs_vec.begin(), elem_attribs_vec.end(), valid_keys_copy.begin(),
+                        valid_keys_copy.end(), std::back_inserter(attr_inter));
+
+  auto context = global_render->getContext();
+  for (const auto &attr : attr_inter)
+    {
+      auto value = element->getAttribute(attr);
+      if (value.isString())
+        {
+          (*context)[attr].decrement_key(static_cast<std::string>(value));
+        }
+    }
 }

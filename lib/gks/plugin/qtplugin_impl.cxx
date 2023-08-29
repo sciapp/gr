@@ -416,6 +416,19 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
           if (p->bounding_stack.top().y_max < point_y) p->bounding_stack.top().y_max = point_y;
           if (p->bounding_stack.top().y_min > point_y) p->bounding_stack.top().y_min = point_y;
         }
+
+      /* A vertical or horizontal polyline needs a bigger bounding box inside gredit so that the user can click on it */
+      double min_bbox_size = 8;
+      if (p->bounding_stack.top().x_max - p->bounding_stack.top().x_min < min_bbox_size)
+        {
+          p->bounding_stack.top().x_min -= min_bbox_size / 2;
+          p->bounding_stack.top().x_max += min_bbox_size / 2;
+        }
+      if (p->bounding_stack.top().y_max - p->bounding_stack.top().y_min < min_bbox_size)
+        {
+          p->bounding_stack.top().y_min -= min_bbox_size / 2;
+          p->bounding_stack.top().y_max += min_bbox_size / 2;
+        }
     }
 }
 
@@ -907,8 +920,16 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
     {
       p->bounding_stack.top().x_max = xi2;
       p->bounding_stack.top().x_min = xi1;
-      p->bounding_stack.top().y_max = yi2;
-      p->bounding_stack.top().y_min = yi1;
+      if (swapy)
+        {
+          p->bounding_stack.top().y_max = yi2;
+          p->bounding_stack.top().y_min = yi1;
+        }
+      else
+        {
+          p->bounding_stack.top().y_max = yi1;
+          p->bounding_stack.top().y_min = yi2;
+        }
     }
 
   if (!true_color)
@@ -1168,6 +1189,12 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
         p->bounding_stack.top().y_max = path.boundingRect().y() + path.boundingRect().height();
       if (p->bounding_stack.top().y_min > path.boundingRect().y())
         p->bounding_stack.top().y_min = path.boundingRect().y();
+      if (p->bounding_stack.top().y_max < p->bounding_stack.top().y_min)
+        {
+          double tmp = p->bounding_stack.top().y_max;
+          p->bounding_stack.top().y_max = p->bounding_stack.top().y_min;
+          p->bounding_stack.top().y_min = tmp;
+        }
     }
   p->pixmap->restore();
 }
@@ -1636,6 +1663,7 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       break;
 
     case GRM_END_SELECTION: /* 261 */
+      assert(!p->bounding_stack.empty());
       top = &p->bounding_stack.top();
       s.fun_call(top->item_id, top->x_min, top->x_max, top->y_min, top->y_max);
       p->bounding_stack.pop();

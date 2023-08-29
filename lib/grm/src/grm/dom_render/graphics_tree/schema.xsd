@@ -731,7 +731,7 @@
             <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="c" type="xs:string" use="required"/>
-            <xs:attribute name="cdims" type="xs:string" use="required"/>
+            <xs:attribute name="c_dims" type="xs:string" use="required"/>
             <xs:attribute name="img_data_key" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="scale" type="xs:string"/>

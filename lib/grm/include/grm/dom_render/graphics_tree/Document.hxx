@@ -5,6 +5,7 @@
 #include <string>
 
 #include <grm/dom_render/graphics_tree/Node.hxx>
+#include <grm/dom_render/graphics_tree/Value.hxx>
 #include <grm/util.h>
 
 namespace GRM
@@ -90,6 +91,11 @@ public:
                     void (*upt)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &));
   void getUpdateFct(void (**ren)(),
                     void (**upt)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &));
+
+  void setContextFct(void (*del)(const std::shared_ptr<GRM::Element> &),
+                     void (*upt)(const std::shared_ptr<GRM::Element> &, const std::string &, const GRM::Value &));
+  void getContextFct(void (**del)(const std::shared_ptr<GRM::Element> &),
+                     void (**upt)(const std::shared_ptr<GRM::Element> &, const std::string &, const GRM::Value &));
 
 protected:
   Document();

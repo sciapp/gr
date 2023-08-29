@@ -2817,8 +2817,8 @@ err_t plot_imshow(grm_args_t *subplot_args)
 
       (*context)["c" + str] = c_data_vec;
       subGroup->setAttribute("c", "c" + str);
-      (*context)["cdims" + str] = shape_vec;
-      subGroup->setAttribute("cdims", "cdims" + str);
+      (*context)["c_dims" + str] = shape_vec;
+      subGroup->setAttribute("c_dims", "c_dims" + str);
 
       global_root->setAttribute("_id", id++);
       ++current_series;
