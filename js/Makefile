@@ -97,17 +97,24 @@ INCLUDES = -I$(THIRDPARTYDIR)/include/ \
            $(GRMDIR)/src/grm/json.o \
            $(GRMDIR)/src/grm/layout.o \
            $(GRMDIR)/src/grm/layout_c.o \
+           $(GRMDIR)/src/grm/layout_error.o \
            $(GRMDIR)/src/grm/logging.o \
            $(GRMDIR)/src/grm/memwriter.o \
            $(GRMDIR)/src/grm/net.o \
            $(GRMDIR)/src/grm/plot.o \
            $(GRMDIR)/src/grm/util.o \
+           $(GRMDIR)/src/grm/utilcpp.o \
+           $(GRMDIR)/src/grm/import.o \
            $(GRMDIR)/src/grm/datatype/double_map.o \
            $(GRMDIR)/src/grm/datatype/string_array_map.o \
            $(GRMDIR)/src/grm/datatype/string_list.o \
            $(GRMDIR)/src/grm/datatype/string_map.o \
            $(GRMDIR)/src/grm/datatype/uint_map.o \
            $(GRMDIR)/src/grm/dom_render/context.o \
+           $(GRMDIR)/src/grm/dom_render/Drawable.o \
+           $(GRMDIR)/src/grm/dom_render/ManageCustomColorIndex.o \
+           $(GRMDIR)/src/grm/dom_render/ManageGRContextIds.o \
+           $(GRMDIR)/src/grm/dom_render/ManageZIndex.o \
            $(GRMDIR)/src/grm/dom_render/render.o \
            $(GRMDIR)/src/grm/dom_render/graphics_tree/Comment.o \
            $(GRMDIR)/src/grm/dom_render/graphics_tree/Document.o \

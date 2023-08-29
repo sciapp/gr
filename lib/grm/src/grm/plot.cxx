@@ -4876,7 +4876,7 @@ int grm_plot(const grm_args_t *args)
 
       plot_pre_plot(active_plot_args);
       grm_args_values(active_plot_args, "subplots", "A", &current_subplot_args);
-      if (!active_figure->hasChildNodes() || !hold_figures || (append_figures && !figure_id_given))
+      if (!active_figure->hasChildNodes() || (append_figures && !figure_id_given))
         {
           if (!(nrows == 1 && ncols == 1 &&
                 currentGrid->getElement(0, 0) == nullptr)) // Check if Grid arguments in container
@@ -4966,7 +4966,7 @@ int grm_switch(unsigned int id)
   unsigned int args_array_length = 0;
 
   auto figure_element = global_root->querySelectors("[figure_id=figure" + std::to_string(id) + "]");
-  if (figure_element == nullptr || !hold_figures)
+  if (figure_element == nullptr)
     {
       /* it is a new figure_id, but only with grm_switch will it be really active
        * active_figure is only set on this for creating the needed child_elements

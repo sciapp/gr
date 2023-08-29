@@ -10812,7 +10812,6 @@ void GRM::Render::render()
   renderZQueue(this->context);
   global_root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
   if (static_cast<int>(root->getAttribute("updatews"))) gr_updatews();
-  if (static_cast<int>(root->getAttribute("clearws"))) gr_clearws();
   if (logger_enabled())
     {
       std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '), true}) << "\n";
