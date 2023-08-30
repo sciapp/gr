@@ -269,7 +269,7 @@ JSTerm = function(ispluto=false) {
           if (typeof references[data.id] !== 'undefined') {
             references[data.id].msgHandleEvent(data);
           }
-        } else if (data.type === 'cmd') {
+        } else if (data.type === 'request') {
           if (typeof data.id !== 'undefined') {
             if (typeof references[data.id] !== 'undefined') {
               references[data.id].msgHandleCommand(data);
