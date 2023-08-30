@@ -1131,8 +1131,8 @@ JSTerm = function(ispluto=false) {
         if (typeof grm === 'undefined') {
           let canvas = document.createElement('canvas');
           canvas.id = 'jsterm-hidden-canvas';
-          canvas.style.width = '640px';
-          canvas.style.height = '480px';
+          canvas.style.width = `${DEFAULT_WIDTH}px`;
+          canvas.style.height = `${DEFAULT_HEIGHT}px`;
           canvas.style.display = 'none';
           document.body.appendChild(canvas);
           grm = new GRM('jsterm-hidden-canvas');
