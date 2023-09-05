@@ -133,15 +133,6 @@ DECLARE_MAP_METHODS(args_set)
 
 static int plot_static_variables_initialized = 0;
 const char *plot_hierarchy_names[] = {"figure", "plots", "subplots", "series", nullptr};
-static int plot_scatter_markertypes[] = {
-    GKS_K_MARKERTYPE_SOLID_CIRCLE,   GKS_K_MARKERTYPE_SOLID_TRI_UP, GKS_K_MARKERTYPE_SOLID_TRI_DOWN,
-    GKS_K_MARKERTYPE_SOLID_SQUARE,   GKS_K_MARKERTYPE_SOLID_BOWTIE, GKS_K_MARKERTYPE_SOLID_HGLASS,
-    GKS_K_MARKERTYPE_SOLID_DIAMOND,  GKS_K_MARKERTYPE_SOLID_STAR,   GKS_K_MARKERTYPE_SOLID_TRI_RIGHT,
-    GKS_K_MARKERTYPE_SOLID_TRI_LEFT, GKS_K_MARKERTYPE_SOLID_PLUS,   GKS_K_MARKERTYPE_PENTAGON,
-    GKS_K_MARKERTYPE_HEXAGON,        GKS_K_MARKERTYPE_HEPTAGON,     GKS_K_MARKERTYPE_OCTAGON,
-    GKS_K_MARKERTYPE_STAR_4,         GKS_K_MARKERTYPE_STAR_5,       GKS_K_MARKERTYPE_STAR_6,
-    GKS_K_MARKERTYPE_STAR_7,         GKS_K_MARKERTYPE_STAR_8,       GKS_K_MARKERTYPE_VLINE,
-    GKS_K_MARKERTYPE_HLINE,          GKS_K_MARKERTYPE_OMARK,        INT_MAX};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ args ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1418,7 +1409,6 @@ err_t plot_line(grm_args_t *subplot_args)
   err_t error = ERROR_NONE;
   const char *orientation;
   int markertype;
-  int *previous_marker_type = plot_scatter_markertypes;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : active_figure->lastChildElement();
@@ -1467,18 +1457,7 @@ err_t plot_line(grm_args_t *subplot_args)
 
       if (grm_args_values(*current_series, "spec", "s", &spec)) subGroup->setAttribute("spec", spec);
       if (grm_args_values(*current_series, "markertype", "i", &markertype))
-        {
-          subGroup->setAttribute("markertype", markertype);
-        }
-      else
-        {
-          subGroup->setAttribute("markertype", *previous_marker_type++);
-          if (*previous_marker_type == INT_MAX)
-            {
-              previous_marker_type = plot_scatter_markertypes;
-            }
-        }
-
+        subGroup->setAttribute("markertype", markertype);
 
       global_root->setAttribute("_id", ++id);
       error = plot_draw_errorbars(*current_series, x_length);
@@ -1569,7 +1548,6 @@ err_t plot_scatter(grm_args_t *subplot_args)
   grm_args_t **current_series;
   err_t error;
   char *orientation;
-  int *previous_marker_type = plot_scatter_markertypes;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : active_figure->lastChildElement();
@@ -1608,17 +1586,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
           subGroup->setAttribute("z", "z" + str);
         }
       if (grm_args_values(*current_series, "markertype", "i", &markertype))
-        {
-          subGroup->setAttribute("markertype", markertype);
-        }
-      else
-        {
-          subGroup->setAttribute("markertype", *previous_marker_type++);
-          if (*previous_marker_type == INT_MAX)
-            {
-              previous_marker_type = plot_scatter_markertypes;
-            }
-        }
+        subGroup->setAttribute("markertype", markertype);
 
       if (grm_args_first_value(*current_series, "c", "D", &c, &c_length))
         {
@@ -4411,6 +4379,7 @@ int grm_load_graphics_tree(FILE *file)
 
   ret = xmlTextReaderRead(reader);
   cleanup_and_set_error_if(has_schema_errors, ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION);
+  global_render->setAutoUpdate(false);
   while (ret == 1)
     {
       xmlNodePtr node = xmlTextReaderCurrentNode(reader);
@@ -4436,13 +4405,19 @@ int grm_load_graphics_tree(FILE *file)
 
               current_gr_element->setAttribute(reinterpret_cast<const char *>(attr_name),
                                                reinterpret_cast<const char *>(attr_value));
+              if (reinterpret_cast<const char *>(attr_name) == "active" &&
+                  reinterpret_cast<const char *>(attr_value) == "1")
+                global_render->setActiveFigure(current_gr_element);
               xmlFree(reinterpret_cast<void *>(attr_value));
             }
           if (insertion_parent != nullptr)
             {
               insertion_parent->appendChild(current_gr_element);
             }
-          insertion_parent = current_gr_element;
+          if (!xmlTextReaderIsEmptyElement(reader))
+            {
+              insertion_parent = current_gr_element;
+            }
         }
       else if (node_type == XML_READER_TYPE_END_ELEMENT)
         {
@@ -4451,6 +4426,8 @@ int grm_load_graphics_tree(FILE *file)
       ret = xmlTextReaderRead(reader);
       cleanup_and_set_error_if(has_schema_errors, ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION);
     }
+  active_figure = global_render->getActiveFigure();
+  global_render->setAutoUpdate(true);
 
   if (ret != 0)
     {
@@ -5121,6 +5098,7 @@ std::shared_ptr<GRM::Element> get_subplot_from_ndc_point_using_dom_helper(std::s
 
 std::shared_ptr<GRM::Element> get_subplot_from_ndc_point_using_dom(double x, double y)
 {
+  active_figure = global_render->getActiveFigure();
   if (active_figure->hasChildNodes())
     {
       for (const auto &child : active_figure->children())

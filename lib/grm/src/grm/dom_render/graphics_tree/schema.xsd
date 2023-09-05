@@ -184,13 +184,14 @@
                 <xs:element ref="polar_axes" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="titles3d" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="xticklabel_group" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="yticklabel_group" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="xticklabel_group" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="yticklabel_group" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="linecolorind" type="xs:string"/>
             <xs:attribute name="linewidth" type="xs:string"/>
             <xs:attribute name="xticklabels" type="xs:string"/>
+            <xs:attribute name="yline" type="xs:string"/>
             <xs:attribute name="yticklabels" type="xs:string"/>
         </xs:complexType>
     </xs:element>
@@ -256,6 +257,7 @@
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="name" type="xs:string"/>
             <xs:attribute name="textalign_horizontal" type="xs:string"/>
             <xs:attribute name="textalign_vertical" type="xs:string"/>
         </xs:complexType>
@@ -268,6 +270,7 @@
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
+            <xs:attribute name="name" type="xs:string"/>
             <xs:attribute name="textalign_hrizontal" type="xs:string"/>
             <xs:attribute name="textalign_vertical" type="xs:string"/>
         </xs:complexType>
@@ -488,8 +491,8 @@
     <xs:element name="colorbar">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="axes" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="cellarray" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="axes" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="cellarray" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="colorbar_position" type="xs:string"/>

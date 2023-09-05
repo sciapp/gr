@@ -615,8 +615,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
 
           for (const auto &cur_attr_name : current_selection->get_ref()->getAttributeNames())
             {
-              if (cur_attr_name == "_bbox_id" || cur_attr_name == "_bbox_xmin" || cur_attr_name == "_bbox_xmax" ||
-                  cur_attr_name == "_bbox_ymin" || cur_attr_name == "_bbox_ymax")
+              if (util::startsWith(cur_attr_name, "_"))
                 {
                   continue;
                 }
@@ -750,17 +749,26 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
               return;
             }
           amount_scrolled = 0;
-          // to remove title, xlabel and ylabel from axis Node
-          if (current_selection->get_ref()->parentElement()->hasAttribute(
-                  (std::string)current_selection->get_ref()->getAttribute("name")))
+          // to remove yline, title, xlabel and ylabel from axis Node
+          auto elem_name = (std::string)current_selection->get_ref()->getAttribute("name");
+          if (current_selection->get_ref()->parentElement()->hasAttribute(elem_name))
             {
-              current_selection->get_ref()->parentElement()->removeAttribute(
-                  (std::string)current_selection->get_ref()->getAttribute("name"));
+              if (elem_name == "yline")
+                {
+                  current_selection->get_ref()->parentElement()->setAttribute(elem_name, false);
+                }
+              else
+                {
+                  current_selection->get_ref()->parentElement()->removeAttribute(elem_name);
+                }
             }
           auto parent = current_selection->get_ref()->parentElement();
           while (parent != nullptr && parent->localName() != "root" && parent->childElementCount() <= 1)
             {
               auto tmp_parent = parent->parentElement();
+              // to remove xticklabels, yticklabels from coordinate_system
+              elem_name = (std::string)parent->getAttribute("name");
+              if (tmp_parent->hasAttribute(elem_name)) tmp_parent->removeAttribute(elem_name);
               parent->remove();
               parent = tmp_parent;
             }
@@ -785,11 +793,6 @@ void GRPlotWidget::keyReleaseEvent(QKeyEvent *event)
 
 void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
 {
-  const char *kind;
-  if (!args_)
-    {
-      return;
-    }
   amount_scrolled = 0;
 
   if (enable_editor)
@@ -836,8 +839,9 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
         }
       else
         {
+          const char *kind;
           collectTooltips();
-          if (grm_args_values(args_, "kind", "s", &kind))
+          if (args_ && grm_args_values(args_, "kind", "s", &kind))
             {
               if (strcmp(kind, "marginalheatmap") == 0)
                 {
@@ -926,12 +930,23 @@ void GRPlotWidget::resizeEvent(QResizeEvent *event)
   grm_args_push(args_, "size", "dd", (double)event->size().width(), (double)event->size().height());
   grm_merge_hold(args_);
 
+  auto root = grm_get_document_root();
+  auto figure = root->querySelectors("[active=1]");
+  if (figure != nullptr)
+    {
+      figure->setAttribute("size_x", (double)event->size().width());
+      figure->setAttribute("size_y", (double)event->size().height());
+    }
+  else
+    {
+      arguments_changed = true;
+    }
+
   current_selection = nullptr;
   mouse_move_selection = nullptr;
   amount_scrolled = 0;
   clicked.clear();
   reset_pixmap();
-  arguments_changed = true;
 
   redraw();
 }
@@ -1066,7 +1081,17 @@ void GRPlotWidget::line()
 {
   grm_args_push(args_, "kind", "s", "line");
   grm_merge(args_);
-  arguments_changed = true;
+  auto root = grm_get_document_root();
+  for (const auto &child : root->querySelectorsAll("series_scatter"))
+    {
+      child->setAttribute("kind", "line");
+    }
+
+  // to get the same lines then before all lines have to exist during render call so that the linespec work properly
+  for (const auto &child : root->querySelectorsAll("series_line"))
+    {
+      child->setAttribute("_update_required", true);
+    }
   redraw();
 }
 
@@ -1176,7 +1201,11 @@ void GRPlotWidget::scatter()
 {
   grm_args_push(args_, "kind", "s", "scatter");
   grm_merge(args_);
-  arguments_changed = true;
+  auto root = grm_get_document_root();
+  for (const auto &child : root->querySelectorsAll("series_line"))
+    {
+      child->setAttribute("kind", "scatter");
+    }
   redraw();
 }
 
@@ -1347,8 +1376,27 @@ void GRPlotWidget::show_bounding_boxes_slot()
 
 void GRPlotWidget::open_file_slot()
 {
-  if (enable_editor) fprintf(stderr, "This functionality isnt`t implemented yet\n");
-  // probably want to be able to load a new dataset as a subplot
+  if (enable_editor)
+    {
+      std::string path =
+          QFileDialog::getOpenFileName(this, "Open XML", QDir::homePath(), "XML files (*.xml)").toStdString();
+      if (path.empty())
+        {
+          return;
+        }
+
+      auto file = fopen(path.c_str(), "r");
+      if (!file)
+        {
+          std::stringstream text_stream;
+          text_stream << "Could not open the XML file \"" << path << "\".";
+          QMessageBox::critical(this, "File open not possible", QString::fromStdString(text_stream.str()));
+          return;
+        }
+      grm_load_graphics_tree(file);
+      redraw();
+      grm_render();
+    }
 }
 
 void GRPlotWidget::save_file_slot()
