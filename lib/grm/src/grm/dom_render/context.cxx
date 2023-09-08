@@ -284,7 +284,6 @@ GRM::Context::Inner::operator std::vector<std::string> *()
   throw NotFoundError("No std::string value found for given key");
 }
 
-
 GRM::Context::Inner::operator const std::vector<std::string> *() const
 {
   /*!
@@ -300,6 +299,47 @@ GRM::Context::Inner::operator const std::vector<std::string> *() const
   throw NotFoundError("No std::string value found for given key");
 }
 
+void GRM::Context::Inner::delete_key(const std::string &context_key)
+{
+  bool erased = false;
+  if (context->tableString.find(context_key) != context->tableString.end())
+    {
+      context->tableString.erase(context_key);
+      erased = true;
+    }
+  if (context->tableDouble.find(context_key) != context->tableDouble.end())
+    {
+      context->tableDouble.erase(context_key);
+      erased = true;
+    }
+  if (context->tableInt.find(context_key) != context->tableInt.end())
+    {
+      context->tableInt.erase(context_key);
+      erased = true;
+    }
+  if (erased) context->referenceNumberOfKeys.erase(context_key);
+}
+
+void GRM::Context::Inner::decrement_key(const std::string &context_key)
+{
+  context->referenceNumberOfKeys[context_key] -= 1;
+  if (context->referenceNumberOfKeys[context_key] <= 0) delete_key(context_key);
+}
+
+void GRM::Context::Inner::increment_key(const std::string &context_key)
+{
+  context->referenceNumberOfKeys[context_key] += 1;
+}
+
+void GRM::Context::Inner::use_context_key(const std::string &context_key, const std::string &old_key)
+{
+  if (context_key != old_key)
+    {
+      if (!old_key.empty()) decrement_key(old_key);
+      increment_key(context_key);
+    }
+}
+
 GRM::Context::Inner GRM::Context::operator[](const std::string &str)
 {
   /*!
@@ -310,7 +350,6 @@ GRM::Context::Inner GRM::Context::operator[](const std::string &str)
    */
   return Inner(*this, str);
 }
-
 
 const GRM::Context::Inner GRM::Context::operator[](const std::string &str) const
 {

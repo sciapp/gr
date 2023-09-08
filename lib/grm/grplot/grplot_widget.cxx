@@ -44,6 +44,7 @@ static QString test_commands_file_path = "";
 static QFile *test_commands_file = nullptr;
 static QTextStream *test_commands_stream = nullptr;
 static Qt::KeyboardModifiers modifiers = Qt::NoModifier;
+static std::vector<Bounding_object> cur_moved;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -375,7 +376,7 @@ void GRPlotWidget::collectTooltips()
     {
       auto accumulated_tooltip = grm_get_accumulated_tooltip_x(mouse_pos.x(), mouse_pos.y());
       tooltips.clear();
-      tooltips.push_back(accumulated_tooltip);
+      if (accumulated_tooltip != nullptr) tooltips.push_back(accumulated_tooltip);
     }
   else
     {
@@ -385,18 +386,21 @@ void GRPlotWidget::collectTooltips()
         }
       auto current_tooltip = grm_get_tooltip(mouse_pos.x(), mouse_pos.y());
       bool found_current_tooltip = false;
-      for (const auto &tooltip : tooltips)
+      if (current_tooltip != nullptr)
         {
-          if (tooltip.get<grm_tooltip_info_t>()->x == current_tooltip->x &&
-              tooltip.get<grm_tooltip_info_t>()->y == current_tooltip->y)
+          for (const auto &tooltip : tooltips)
             {
-              found_current_tooltip = true;
-              break;
+              if (tooltip.get<grm_tooltip_info_t>()->x == current_tooltip->x &&
+                  tooltip.get<grm_tooltip_info_t>()->y == current_tooltip->y)
+                {
+                  found_current_tooltip = true;
+                  break;
+                }
             }
-        }
-      if (!found_current_tooltip)
-        {
-          tooltips.push_back(current_tooltip);
+          if (!found_current_tooltip)
+            {
+              tooltips.push_back(current_tooltip);
+            }
         }
     }
 }
@@ -739,7 +743,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
               reset_pixmap();
             }
         }
-      else if (event->key() == Qt::Key_Delete)
+      else if (event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace)
         {
           if (current_selection == nullptr)
             {
@@ -747,10 +751,20 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
             }
           amount_scrolled = 0;
           // to remove title, xlabel and ylabel from axis Node
-          current_selection->get_ref()->parentElement()->removeAttribute(
-              (std::string)current_selection->get_ref()->getAttribute("name"));
+          if (current_selection->get_ref()->parentElement()->hasAttribute(
+                  (std::string)current_selection->get_ref()->getAttribute("name")))
+            {
+              current_selection->get_ref()->parentElement()->removeAttribute(
+                  (std::string)current_selection->get_ref()->getAttribute("name"));
+            }
+          auto parent = current_selection->get_ref()->parentElement();
+          while (parent != nullptr && parent->localName() != "root" && parent->childElementCount() <= 1)
+            {
+              auto tmp_parent = parent->parentElement();
+              parent->remove();
+              parent = tmp_parent;
+            }
           current_selection->get_ref()->remove();
-          std::cerr << GRM::toXML(grm_get_document_root()) << std::endl;
           mouse_move_selection = nullptr;
           reset_pixmap();
         }
@@ -765,7 +779,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
 void GRPlotWidget::keyReleaseEvent(QKeyEvent *event)
 {
   GR_UNUSED(event);
-  collectTooltips();
+  if (!enable_editor) collectTooltips();
   update();
 }
 
@@ -782,11 +796,18 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
     {
       int x, y;
       getMousePos(event, &x, &y);
-      auto cur_clicked = bounding_logic->get_bounding_objects_at_point(x, y);
+      cur_moved = bounding_logic->get_bounding_objects_at_point(x, y);
 
       if (current_selection == nullptr)
         {
-          mouse_move_selection = &cur_clicked[0];
+          if (cur_moved.empty())
+            {
+              mouse_move_selection = nullptr;
+            }
+          else
+            {
+              mouse_move_selection = &cur_moved[0];
+            }
           update();
         }
     }
@@ -866,6 +887,7 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
               clicked = cur_clicked;
             }
           current_selection = &clicked[0];
+          mouse_move_selection = nullptr;
         }
     }
 }
@@ -896,7 +918,7 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
   grm_input(args);
   grm_args_delete(args);
 
-  redraw();
+  update();
 }
 
 void GRPlotWidget::resizeEvent(QResizeEvent *event)
@@ -1283,10 +1305,16 @@ void GRPlotWidget::highlight_current_selection(QPainter &painter)
       if (current_selection != nullptr)
         {
           painter.fillRect(current_selection->boundingRect(), QBrush(QColor("blue"), Qt::Dense5Pattern));
+          if (current_selection->get_ref() != nullptr)
+            painter.drawText(current_selection->boundingRect().bottomRight() + QPointF(5, 0),
+                             current_selection->get_ref()->localName().c_str());
         }
       else if (mouse_move_selection != nullptr)
         {
           painter.fillRect(mouse_move_selection->boundingRect(), QBrush(QColor("blue"), Qt::Dense7Pattern));
+          if (mouse_move_selection->get_ref() != nullptr)
+            painter.drawText(mouse_move_selection->boundingRect().bottomRight() + QPointF(5, 0),
+                             mouse_move_selection->get_ref()->localName().c_str());
         }
     }
 }

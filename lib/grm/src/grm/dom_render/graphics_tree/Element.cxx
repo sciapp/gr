@@ -55,16 +55,21 @@ GRM::Value GRM::Element::getAttribute(const std::string &qualifiedName) const
 
 void GRM::Element::setAttribute(const std::string &qualifiedName, const GRM::Value &value)
 {
+  GRM::Value old_value;
   void (*render)() = nullptr;
   void (*update)(const std::shared_ptr<GRM::Element> &, const std::string &, const std::string &) = nullptr;
+  void (*contextUpdate)(const std::shared_ptr<GRM::Element> &, const std::string &, const GRM::Value &) = nullptr;
+  void (*contextDelete)(const std::shared_ptr<GRM::Element> &) = nullptr;
   ownerDocument()->getUpdateFct(&render, &update);
-  GRM::Value old_value;
+  ownerDocument()->getContextFct(&contextDelete, &contextUpdate);
+
   if (hasAttribute(qualifiedName)) old_value = this->m_attributes[qualifiedName];
 
   this->m_attributes[qualifiedName] = value;
   if (value != old_value)
     {
       auto elem_p = std::static_pointer_cast<Element>(shared_from_this());
+      contextUpdate(elem_p, qualifiedName, old_value);
       if (qualifiedName == "kind")
         {
           ;
@@ -171,7 +176,6 @@ GRM::Element::getElementsByClassName(const std::string &classNames) const
   return getElementsByClassName_impl(classNames);
 }
 
-
 void GRM::Element::before(std::shared_ptr<GRM::Element> node)
 {
   if (!parentNode())
@@ -209,10 +213,18 @@ void GRM::Element::replaceWith(const std::shared_ptr<GRM::Element> &node)
 
 void GRM::Element::remove()
 {
+  void (*contextUpdate)(const std::shared_ptr<GRM::Element> &, const std::string &, const GRM::Value &) = nullptr;
+  void (*contextDelete)(const std::shared_ptr<GRM::Element> &) = nullptr;
+  ownerDocument()->getContextFct(&contextDelete, &contextUpdate);
+
   if (!parentNode())
     {
       throw HierarchyRequestError("element is root node");
     }
+
+  auto elem_p = std::static_pointer_cast<Element>(shared_from_this());
+  contextDelete(elem_p);
+
   parentNode()->removeChild(shared_from_this());
 }
 
