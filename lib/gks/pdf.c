@@ -990,8 +990,15 @@ static void set_linetype(int ltype, double lwidth)
 {
   char dash[80];
 
-  gks_get_dash(ltype, lwidth * p->nominal_size, dash);
-  pdf_setdash(p, dash);
+  if (ltype != GKS_K_LINETYPE_SOLID)
+    {
+      gks_get_dash(ltype, lwidth * p->nominal_size, dash);
+      pdf_setdash(p, dash);
+    }
+  else
+    {
+      pdf_setdash(p, "[]");
+    }
 }
 
 static void set_linewidth(double lwidth)
@@ -1993,6 +2000,7 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
       pdf_save(p);
       set_clip(gkss->viewport[gkss->clip_tnr]);
     }
+  set_linetype(GKS_K_LINETYPE_SOLID, 1.0);
   switch (primid)
     {
     case GKS_K_GDP_DRAW_PATH:

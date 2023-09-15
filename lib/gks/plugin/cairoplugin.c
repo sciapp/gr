@@ -1800,6 +1800,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   cairo_new_path(p->cr);
   cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_ROUND);
   cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
+  cairo_set_dash(p->cr, p->dashes, 0, 0);
   cairo_set_fill_rule(p->cr, CAIRO_FILL_RULE_EVEN_ODD);
   set_line_width(gkss->bwidth * p->nominal_size);
 
@@ -1997,6 +1998,7 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
       NDC_to_DC(x, y, xi, yi);
 
       cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_ROUND);
+      cairo_set_dash(p->cr, p->dashes, 0, 0);
       line_width = 0.001 * attributes[j++];
       set_line_width(line_width * p->nominal_size);
       rgba = attributes[j++];
@@ -2068,6 +2070,7 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
 
       cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
       cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
+      cairo_set_dash(p->cr, p->dashes, 0, 0);
       set_line_width(gkss->lwidth * p->nominal_size);
       rgba = tri[j++];
       p->rgb[line_color][0] = (rgba & 0xff) / 255.0;
@@ -2131,6 +2134,7 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
       set_color(gkss->bcoli);
       cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
       cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
+      cairo_set_dash(p->cr, p->dashes, 0, 0);
       set_line_width(gkss->bwidth * p->nominal_size);
       cairo_stroke(p->cr);
     }
