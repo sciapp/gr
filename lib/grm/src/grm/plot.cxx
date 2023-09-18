@@ -4991,6 +4991,98 @@ int grm_switch(unsigned int id)
 
 } /* end of extern "C" block */
 
+/* ========================= c++ ==================================================================================== */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ c++ libxml util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+#ifndef NO_LIBXML2
+std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(void)
+{
+  char *gr_dir = get_gr_dir();
+  std::string schema_filepath{std::string(gr_dir) + "/" + SCHEMA_REL_FILEPATH};
+  free(reinterpret_cast<void *>(gr_dir));
+  int ret = -1;
+  xmlSchemaValidCtxtPtr valid_ctxt = nullptr;
+  xmlTextReaderPtr reader = nullptr;
+  std::shared_ptr<GRM::Document> document;
+  std::shared_ptr<GRM::Element> insertion_parent, current_element;
+  err_t error = ERROR_NONE;
+  FILE *schema_file;
+
+  error = plot_init_static_variables();
+  cleanup_if_error;
+
+  schema_file = fopen(schema_filepath.c_str(), "r");
+  cleanup_and_set_error_if(schema_file == nullptr, ERROR_PARSE_XML_NO_SCHEMA_FILE);
+  xmlInitParser();
+  reader = xmlReaderForFd(fileno(schema_file), nullptr, nullptr, XML_PARSE_NOBLANKS);
+  cleanup_and_set_error_if(reader == nullptr, ERROR_PARSE_XML_PARSING);
+  ret = xmlTextReaderRead(reader);
+  document = GRM::createDocument();
+  while (ret == 1)
+    {
+      xmlNodePtr node = xmlTextReaderCurrentNode(reader);
+      int node_type = xmlTextReaderNodeType(reader);
+      const xmlChar *node_name = xmlTextReaderConstName(reader);
+      if (node_type == XML_READER_TYPE_ELEMENT)
+        {
+          current_element = document->createElement(reinterpret_cast<const char *>(node_name));
+          for (xmlAttrPtr attr = node->properties; attr != nullptr; attr = attr->next)
+            {
+              const xmlChar *attr_name = attr->name;
+              xmlChar *attr_value = xmlNodeListGetString(node->doc, attr->children, 1);
+
+              current_element->setAttribute(reinterpret_cast<const char *>(attr_name),
+                                            reinterpret_cast<const char *>(attr_value));
+              xmlFree(reinterpret_cast<void *>(attr_value));
+            }
+          if (insertion_parent != nullptr)
+            {
+              insertion_parent->append(current_element);
+            }
+          else
+            {
+              document->append(current_element);
+            }
+          if (!xmlTextReaderIsEmptyElement(reader))
+            {
+              insertion_parent = current_element;
+            }
+        }
+      else if (node_type == XML_READER_TYPE_END_ELEMENT)
+        {
+          insertion_parent = insertion_parent->parentElement();
+        }
+      ret = xmlTextReaderRead(reader);
+    }
+
+  if (ret != 0)
+    {
+      xmlErrorPtr xml_error = xmlGetLastError();
+      logger((stderr, "%s: failed to parse in line %d, col %d. Error %d: %s\n", xml_error->file, xml_error->line,
+              xml_error->int2, xml_error->code, xml_error->message));
+      cleanup_and_set_error(ERROR_PARSE_XML_PARSING);
+    }
+
+cleanup:
+  if (reader != nullptr)
+    {
+      xmlFreeTextReader(reader);
+    }
+  if (valid_ctxt != nullptr)
+    {
+      xmlSchemaFreeValidCtxt(valid_ctxt);
+    }
+  xmlCleanupParser();
+  if (schema_file != nullptr)
+    {
+      fclose(schema_file);
+    }
+
+  return (error == ERROR_NONE) ? document : nullptr;
+}
+#endif
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ c++ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,

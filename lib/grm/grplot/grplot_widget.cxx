@@ -45,6 +45,7 @@ static QFile *test_commands_file = nullptr;
 static QTextStream *test_commands_stream = nullptr;
 static Qt::KeyboardModifiers modifiers = Qt::NoModifier;
 static std::vector<Bounding_object> cur_moved;
+static std::shared_ptr<GRM::Document> schema_tree;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -298,6 +299,12 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 
   if (getenv("GRPLOT_ENABLE_EDITOR"))
     {
+#if !defined(NO_LIBXML2)
+      schema_tree = grm_load_graphics_tree_schema();
+#else
+      schema_tree = nullptr;
+#endif
+
       editor_menu = new QMenu(tr("&Editor"));
       editor_action = new QAction(tr("&Activate Editor"));
       editor_action->setCheckable(true);
@@ -693,11 +700,100 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                       GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
                   ((QLineEdit *)lineEdit)->setToolTip(tooltipString);
                 }
-              QString label = QString(cur_attr_name.c_str());
-              form.addRow(label, lineEdit);
+              QString text_label = QString(cur_attr_name.c_str());
+              form.addRow(text_label, lineEdit);
 
-              labels << label;
+              labels << text_label;
               fields << lineEdit;
+            }
+
+          if (schema_tree != nullptr)
+            {
+              std::shared_ptr<GRM::Element> element;
+              auto selections = schema_tree->querySelectorsAll("[name=" + currently_clicked_name + "]");
+              for (const auto &selection : selections)
+                {
+                  if (selection->localName() == "xs:element") element = selection->children()[0];
+                }
+
+              /* iterate through complextype elements */
+              for (const auto &child : element->children())
+                {
+                  if (child->localName() == "xs:attribute")
+                    {
+                      auto attr_name = static_cast<std::string>(child->getAttribute("name"));
+                      if (!current_selection->get_ref()->hasAttribute(attr_name))
+                        {
+                          /* attributes of an element which aren't already in the tree getting added with red text color
+                           */
+                          lineEdit = new QLineEdit(&dialog);
+                          ((QLineEdit *)lineEdit)->setText("");
+                          QString text_label = QString("<span style='color:#ff0000;'>%1</span>").arg(attr_name.c_str());
+                          form.addRow(text_label, lineEdit);
+
+                          labels << text_label;
+                          fields << lineEdit;
+                        }
+                    }
+                  else if (child->localName() == "xs:attributegroup")
+                    {
+                      /* when an element contains one or more attributegroups all attributes from these groups must be
+                       * added */
+                      std::shared_ptr<GRM::Element> group;
+                      auto group_name = static_cast<std::string>(child->getAttribute("ref"));
+
+                      if (group_name != "colorrep")
+                        {
+                          auto attr_group_selections = schema_tree->querySelectorsAll("[name=" + group_name + "]");
+                          for (const auto &selection : attr_group_selections)
+                            {
+                              if (selection->localName() == "xs:attributegroup") group = selection;
+                            }
+
+                          /* iterate through attribute elements */
+                          for (const auto &childchild : group->children())
+                            {
+                              if (childchild->localName() == "xs:attribute")
+                                {
+                                  auto attr_name = static_cast<std::string>(childchild->getAttribute("name"));
+                                  if (!current_selection->get_ref()->hasAttribute(attr_name))
+                                    {
+                                      /* attributes of an element which aren't already in the tree getting added with
+                                       * red text color */
+                                      lineEdit = new QLineEdit(&dialog);
+                                      ((QLineEdit *)lineEdit)->setText("");
+                                      QString text_label =
+                                          QString("<span style='color:#ff0000;'>%1</span>").arg(attr_name.c_str());
+                                      form.addRow(text_label, lineEdit);
+
+                                      labels << text_label;
+                                      fields << lineEdit;
+                                    }
+                                }
+                            }
+                        }
+                      else
+                        {
+                          /* special case for colorrep cause there are way to many attributes inside the attributegroup
+                           */
+                          lineEdit = new QLineEdit(&dialog);
+                          ((QLineEdit *)lineEdit)->setText("");
+                          QString text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("Colorrep-index");
+                          form.addRow(text_label, lineEdit);
+
+                          labels << text_label;
+                          fields << lineEdit;
+
+                          lineEdit = new QLineEdit(&dialog);
+                          ((QLineEdit *)lineEdit)->setText("");
+                          text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("Colorrep-value");
+                          form.addRow(text_label, lineEdit);
+
+                          labels << text_label;
+                          fields << lineEdit;
+                        }
+                    }
+                }
             }
 
           QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
@@ -711,17 +807,41 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                 {
                   qDebug() << typeid(fields[i]).name();
                   auto &field = *fields[i]; // because typeid(*fields[i]) is bad :(
-                  if (typeid(field) == typeid(QLineEdit))
+                  if (typeid(field) == typeid(QLineEdit) && ((QLineEdit *)fields[i])->isModified())
                     {
                       std::string name = std::string(current_selection->get_ref()->getAttribute("name"));
-                      if (labels[i].toStdString() == "text" &&
-                          (name == "title" || name == "xlabel" || name == "ylabel"))
+                      if (((QLineEdit *)fields[i])->text().toStdString().empty())
                         {
-                          current_selection->get_ref()->parentElement()->setAttribute(
-                              name, ((QLineEdit *)fields[i])->text().toStdString());
+                          /* remove attributes from tree when the value got removed */
+                          current_selection->get_ref()->removeAttribute(labels[i].toStdString());
                         }
-                      current_selection->get_ref()->setAttribute(labels[i].toStdString(),
-                                                                 ((QLineEdit *)fields[i])->text().toStdString());
+                      else
+                        {
+                          if (util::startsWith(labels[i].toStdString(), "<span style='color:#ff0000;'>") &&
+                              util::endsWith(labels[i].toStdString(), "</span>"))
+                            {
+                              labels[i].remove(0, 29);
+                              labels[i].remove(labels[i].size() - 7, 7);
+                            }
+                          if (labels[i].toStdString() == "text" &&
+                              (name == "title" || name == "xlabel" || name == "ylabel"))
+                            {
+                              current_selection->get_ref()->parentElement()->setAttribute(
+                                  name, ((QLineEdit *)fields[i])->text().toStdString());
+                            }
+                          if (labels[i].toStdString() == "Colorrep-index")
+                            {
+                              /* special case for colorrep attribute */
+                              current_selection->get_ref()->setAttribute(
+                                  "colorrep." + ((QLineEdit *)fields[i])->text().toStdString(),
+                                  ((QLineEdit *)fields[i + 1])->text().toStdString());
+                            }
+                          else if (labels[i].toStdString() != "Colorrep-value")
+                            {
+                              current_selection->get_ref()->setAttribute(
+                                  labels[i].toStdString(), ((QLineEdit *)fields[i])->text().toStdString());
+                            }
+                        }
                     }
                   else if (typeid(field) == typeid(QComboBox))
                     {

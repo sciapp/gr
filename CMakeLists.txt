@@ -1195,6 +1195,9 @@ if(((Qt6Widgets_FOUND
     set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
   endif()
   target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
+  if(NOT TARGET LibXml2::LibXml2)
+    target_compile_definitions(grplot PRIVATE NO_LIBXML2)
+  endif()
   set_target_properties(
     grplot PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
                                                                                   "${grplot_INSTALL_RPATH}"
