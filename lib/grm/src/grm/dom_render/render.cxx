@@ -1924,14 +1924,7 @@ static double autoTickRingsPolar(double rmax, int &rings, const std::string &nor
           return 1.0 / rings;
         }
 
-      if (rmax > 20)
-        {
-          whichVector = &largeRings;
-        }
-      else
-        {
-          whichVector = &normalRings;
-        }
+      whichVector = (rmax > 20) ? &largeRings : &normalRings;
       scale = ceil(abs(log10(rmax)));
       if (rmax < 1.0)
         {
@@ -1939,11 +1932,24 @@ static double autoTickRingsPolar(double rmax, int &rings, const std::string &nor
           rmax = static_cast<int>(ceil(rmax * pow(10.0, scale)));
         }
 
+      else if (rmax < (*whichVector)[0])
+        {
+          // if rmax is bigger than 1.0 but smaller than the smallest amount of rings
+          for (int i : *whichVector)
+            {
+              if (static_cast<int>((rmax * 100)) % i == 0)
+                {
+                  rings = i;
+                  return floor(rmax * 100) / 100 / i;
+                }
+            }
+        }
+
       while (true)
         {
           for (int i : *whichVector)
             {
-              if (static_cast<int>(rmax) % i == 0)
+              if (static_cast<int>(ceil(rmax)) % i == 0)
                 {
                   if (is_decimal) rmax = rmax / pow(10.0, scale);
                   rings = i;
@@ -1960,7 +1966,7 @@ static double autoTickRingsPolar(double rmax, int &rings, const std::string &nor
 
   if (rmax > rings)
     {
-      return (static_cast<int>(rmax) + (rings - (static_cast<int>(rmax) % rings))) / rings;
+      return (static_cast<int>(ceil(rmax)) + (rings - (static_cast<int>(rmax) % rings))) / rings;
     }
   else if (rmax > (rings * 0.6))
     {
@@ -5004,16 +5010,9 @@ void GRM::Render::processWindow(const std::shared_ptr<GRM::Element> &element)
       getPlotParent(plot_element);
       auto kind = static_cast<std::string>(plot_element->getAttribute("kind"));
 
-      if (str_equals_any(kind, "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
+      if (kind != "pie")
         {
-          gr_setwindow(-1, 1, -1, 1);
-        }
-      else
-        {
-          if (kind != "pie")
-            {
-              if (xmax - xmin > 0.0 && ymax - ymin > 0.0) gr_setwindow(xmin, xmax, ymin, ymax);
-            }
+          if (xmax - xmin > 0.0 && ymax - ymin > 0.0) gr_setwindow(xmin, xmax, ymin, ymax);
         }
       if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume", "isosurface"))
         {
@@ -7358,22 +7357,40 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
   viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
   viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
 
-  r_min = static_cast<double>(subplotElement->getAttribute("_y_lim_min"));
-  r_max = static_cast<double>(subplotElement->getAttribute("_y_lim_max"));
+  kind = static_cast<std::string>(subplotElement->getAttribute("kind"));
+
+  if (kind == "polar_heatmap" || kind == "nonuniformpolar_heatmap")
+    {
+      r_min = static_cast<double>(subplotElement->getAttribute("r_min"));
+      r_max = static_cast<double>(subplotElement->getAttribute("r_max"));
+    }
+  else
+    {
+      r_min = 0.0;
+      r_max = static_cast<double>(subplotElement->getAttribute("_y_lim_max"));
+    }
 
   angle_ticks = static_cast<int>(element->getAttribute("angle_ticks"));
 
-  kind = static_cast<std::string>(subplotElement->getAttribute("kind"));
-
   render->setLineType(element, GKS_K_LINETYPE_SOLID);
 
-  if (kind == "polar_histogram")
+  if (kind == "polar_histogram" || kind == "polar")
     {
       auto max = static_cast<double>(central_region->getAttribute("r_max"));
 
-      // check if rings are given
-      rings = -1;
-      norm = static_cast<std::string>(element->getAttribute("norm"));
+
+      if (kind == "polar_histogram")
+        {
+          max = static_cast<double>(central_region->getAttribute("r_max"));
+          norm = static_cast<std::string>(element->getAttribute("norm"));
+        }
+      else
+        {
+          auto seriesElement = central_region->querySelectors("series_polar");
+          max = static_cast<double>(seriesElement->getAttribute("yrange_max"));
+          norm = "";
+        }
+      rings = (element->hasAttribute("rings")) ? static_cast<int>(element->getAttribute("rings")) : -1;
 
       tick = autoTickRingsPolar(max, rings, norm);
       central_region->setAttribute("tick", tick);
@@ -7381,8 +7398,6 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
 
       central_region->setAttribute("r_max", max);
       central_region->setAttribute("rings", rings);
-
-      r_min = 0.0;
     }
   else
     {
@@ -8746,9 +8761,7 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   int child_id = 0;
 
   getPlotParent(plot_parent);
-  r_min = static_cast<double>(plot_parent->getAttribute("_y_lim_min"));
-  r_max = static_cast<double>(plot_parent->getAttribute("_y_lim_max"));
-
+  r_max = static_cast<double>(plot_parent->getAttribute("r_max"));
   if (element->hasAttribute("line_spec"))
     {
       line_spec = static_cast<std::string>(element->getAttribute("line_spec"));
@@ -8757,11 +8770,8 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
     {
       element->setAttribute("line_spec", line_spec);
     }
-  element->setAttribute("r_min", r_min);
+  element->setAttribute("r_min", 0.0);
   element->setAttribute("r_max", r_max);
-  tick = 0.5 * autoTick(r_min, r_max);
-  n = (int)ceil((r_max - r_min) / tick);
-  r_max = r_min + n * tick;
 
   if (!element->hasAttribute("x")) throw NotFoundError("Polar series is missing required attribute x-data (theta).\n");
   auto x_key = static_cast<std::string>(element->getAttribute("x"));
@@ -13673,8 +13683,20 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               ++current_component_name;
             }
         }
-      else if (kind == "polar_histogram")
+      if (str_equals_any(kind.c_str(), 5, "polar_histogram", "polar", "polar_heatmap", "nonuniform_heatmap",
+                         "nonuniformpolar_heatmap"))
         {
+          // get maximum from prior steps and store as r_max and overwrite the limits (polar interactions need them)
+          auto xmax = static_cast<double>(element->getAttribute("_xlim_max"));
+          auto ymax = static_cast<double>(element->getAttribute("_ylim_max"));
+          auto xmin = static_cast<double>(element->getAttribute("_xlim_min"));
+          auto ymin = static_cast<double>(element->getAttribute("_ylim_min"));
+
+          if (kind == "polar_heatmap" || kind == "nonuniformpolar_heatmap")
+            {
+              element->setAttribute("r_min", ymin);
+              element->setAttribute("r_max", ymax);
+            }
           element->setAttribute("_x_lim_min", -1.0);
           element->setAttribute("_x_lim_max", 1.0);
           element->setAttribute("_y_lim_min", -1.0);
