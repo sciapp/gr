@@ -41,7 +41,7 @@ opts="${opts} USE_STATIC_CAIRO_LIBS=1 USE_STATIC_AGG_LIBS=1"
 
 extras=`pwd`/3rdparty/build
 extras_lib=${extras}/lib
-export PATH=${PATH}:${extras}/bin
+export PATH="${extras}/bin:${PATH}"
 
 ${MAKE} -C 3rdparty
 ${MAKE} -C 3rdparty extras
