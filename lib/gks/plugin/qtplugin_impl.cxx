@@ -716,6 +716,8 @@ static void set_font(int font)
   double scale, ux, uy;
   int fontNum, size, bold, italic;
   double width, height, capheight;
+  int metricUnit = 2;
+  double meterToInch = 39.3701;
 
   font = abs(font);
   if (font >= 101 && font <= 129)
@@ -746,7 +748,20 @@ static void set_font(int font)
   p->capheight = nint(capheight);
 
   fontNum = font - 1;
-  size = nint(p->capheight / capheights[fontNum]);
+
+  if (metricUnit == 0) /* m */
+    {
+      size = p->capheight / capheights[fontNum] * meterToInch * p->device_dpi_y;
+    }
+  else if (metricUnit == 1) /* cm */
+    {
+      size = (p->capheight / capheights[fontNum] * meterToInch / 100 * p->device_dpi_y);
+    }
+  else if (metricUnit == 2) /* old */
+    {
+      size = nint(p->capheight / capheights[fontNum]);
+    }
+
   if (size < 1) size = 1;
   if (font > 13) font += 3;
   p->family = (font - 1) / 4;
@@ -756,8 +771,8 @@ static void set_font(int font)
   p->font->setFamily(fonts[p->family]);
   p->font->setBold(bold);
   p->font->setItalic(italic);
-  p->font->setPixelSize(size);
 
+  p->font->setPixelSize(size);
   p->pixmap->setFont(*p->font);
 }
 

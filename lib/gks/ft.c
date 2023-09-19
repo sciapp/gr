@@ -1142,6 +1142,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
   unsigned int i, j, k;
   const int direction = (gkss->txp <= 3 && gkss->txp >= 0 ? gkss->txp : 0);
   const FT_Bool vertical = (direction == GKS_K_TEXT_PATH_DOWN || direction == GKS_K_TEXT_PATH_UP);
+  int metric_unit = 2;
 
   if (!init) gks_ft_init();
 
@@ -1185,7 +1186,19 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
     }
   textfont = gks_ft_convert_textfont(gkss->txfont);
 
-  textheight = nint(gkss->chh * *width * 64 / caps[textfont]);
+  if (metric_unit == 0) /* m */
+    {
+      textheight = nint(gkss->chh * 6570 / 0.28575 * 64); /*  cairo-textsize */
+    }
+  else if (metric_unit == 1) /* cm */
+    {
+      textheight = nint(gkss->chh * 6570 / 28.575 * 64); /*  cairo-textsize */
+    }
+  else if (metric_unit == 2) /* old */
+    {
+      textheight = nint(gkss->chh * *width * 64 / caps[textfont]); /*  cairo-textsize */
+    }
+
   error = FT_Set_Char_Size(face, nint(textheight * gkss->chxp), textheight, 72, 72);
   if (error) gks_perror("cannot set text height");
   for (i = 0; i < NUM_FALLBACK_FACES; i++)
