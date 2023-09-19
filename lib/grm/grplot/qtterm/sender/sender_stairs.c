@@ -49,7 +49,7 @@ int test_sendmeta_ref(void)
   grm_send_ref(handle, "step_where", 's', "mid", 0);
   grm_send_ref(handle, "spec", 's', "b-", 0);
   grm_send_ref(handle, NULL, 'O', "]", 0);
-  grm_send_ref(handle, "kind", 's', "step", 0);
+  grm_send_ref(handle, "kind", 's', "stairs", 0);
   grm_send_ref(handle, "labels", 'S', labels, 3);
   grm_send_ref(handle, NULL, '\0', NULL, 0);
 

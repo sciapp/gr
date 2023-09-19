@@ -269,7 +269,7 @@ JSTerm = function(ispluto=false) {
           if (typeof references[data.id] !== 'undefined') {
             references[data.id].msgHandleEvent(data);
           }
-        } else if (data.type === 'cmd') {
+        } else if (data.type === 'request') {
           if (typeof data.id !== 'undefined') {
             if (typeof references[data.id] !== 'undefined') {
               references[data.id].msgHandleCommand(data);
@@ -1131,8 +1131,8 @@ JSTerm = function(ispluto=false) {
         if (typeof grm === 'undefined') {
           let canvas = document.createElement('canvas');
           canvas.id = 'jsterm-hidden-canvas';
-          canvas.style.width = '640px';
-          canvas.style.height = '480px';
+          canvas.style.width = `${DEFAULT_WIDTH}px`;
+          canvas.style.height = `${DEFAULT_HEIGHT}px`;
           canvas.style.display = 'none';
           document.body.appendChild(canvas);
           grm = new GRM('jsterm-hidden-canvas');

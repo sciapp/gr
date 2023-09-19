@@ -11,9 +11,13 @@
 #include <QWidget>
 #include <QMainWindow>
 
+#include "gredit/Bounding_object.h"
+#include "gredit/Bounding_logic.h"
+#include "gredit/TreeWidget.h"
 #include "qtterm/receiver_thread.h"
 #include "qtterm/grm_args_t_wrapper.h"
 #include "util.hxx"
+
 #include <grm.h>
 
 class GRPlotWidget : public QWidget
@@ -37,6 +41,10 @@ protected:
   void resizeEvent(QResizeEvent *event) override;
   void wheelEvent(QWheelEvent *event) override;
   void mouseDoubleClickEvent(QMouseEvent *event) override;
+  void leaveEvent(QEvent *event) override;
+  void paint(QPaintDevice *paint_device);
+  void processTestCommandsFile();
+  static Qt::KeyboardModifiers queryKeyboardModifiers();
 
 private slots:
   void heatmap();
@@ -67,6 +75,11 @@ private slots:
   void png();
   void jpeg();
   void svg();
+  void show_container_slot();
+  void show_bounding_boxes_slot();
+  void save_file_slot();
+  void open_file_slot();
+  void enable_editor_functions();
   void received(grm_args_t_wrapper args);
   void screenChanged();
 
@@ -155,12 +168,17 @@ private:
   QRubberBand *rubberBand;
   std::vector<TooltipWrapper> tooltips;
   QTextDocument label;
+  Bounding_logic *bounding_logic;
+  std::vector<Bounding_object> clicked;
+  Bounding_object *current_selection, *mouse_move_selection;
+  bool highlightBoundingObjects;
+  TreeWidget *treewidget;
+  int amount_scrolled;
+  bool enable_editor;
   Receiver_Thread *receiver_thread;
 
   QMenuBar *menu;
-  QMenu *type;
-  QMenu *algo;
-  QMenu *export_menu;
+  QMenu *type, *algo, *export_menu, *editor_menu;
   QAction *heatmapAct;
   QAction *marginalheatmapAllAct;
   QAction *marginalheatmapLineAct;
@@ -189,11 +207,16 @@ private:
   QAction *PngAct;
   QAction *JpegAct;
   QAction *SvgAct;
+  QAction *show_container_action, *show_bounding_boxes_action, *save_file_action, *open_file_action, *editor_action;
 
+  void reset_pixmap();
+  void moveEvent(QMoveEvent *event) override;
+  void highlight_current_selection(QPainter &painter);
+  void extract_bounding_boxes_from_grm(QPainter &painter);
   void showEvent(QShowEvent *) override;
   void closeEvent(QCloseEvent *event) override;
   void size_callback(const grm_event_t *);
-  void cmd_callback(const grm_cmd_event_t *);
+  void cmd_callback(const grm_request_event_t *);
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

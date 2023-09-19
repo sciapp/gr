@@ -177,6 +177,7 @@ typedef struct
   int bcoli;
   int clip_tnr;
   int resize_behaviour;
+  double alpha;
 } state_list;
 
 typedef struct
@@ -9567,6 +9568,7 @@ const hexbin_2pass_t *gr_hexbin_2pass(int n, double *x, double *y, int nbins, co
       context_ = (hexbin_2pass_t *)xmalloc(sizeof(hexbin_2pass_t));
       context_->nc = nc;
       context_->cntmax = cntmax;
+      context_->action = GR_2PASS_CLEANUP | GR_2PASS_RENDER; /* render and clean up by default */
       context_->priv = (hexbin_2pass_priv_t *)xmalloc(sizeof(hexbin_2pass_priv_t));
       context_->priv->cell = cell;
       context_->priv->cnt = cnt;
@@ -9575,70 +9577,74 @@ const hexbin_2pass_t *gr_hexbin_2pass(int n, double *x, double *y, int nbins, co
     }
   else
     {
-      int errind, int_style, coli;
-      int nc, cntmax;
-      int *cell, *cnt;
-      double *xcm, *ycm;
-      double xlist[7], ylist[7], xdelta[6], ydelta[6];
-      int i, j;
-
-      nc = context->nc;
-      cntmax = context->cntmax;
-      cell = context->priv->cell;
-      cnt = context->priv->cnt;
-      xcm = context->priv->xcm;
-      ycm = context->priv->ycm;
-
-      for (j = 0; j < 6; j++)
+      if (context->action & GR_2PASS_RENDER)
         {
-          xdelta[j] = sin(M_PI / 3 * j) * R;
-          ydelta[j] = cos(M_PI / 3 * j) * R;
-        }
+          int errind, int_style, coli;
+          int nc, cntmax;
+          int *cell, *cnt;
+          double *xcm, *ycm;
+          double xlist[7], ylist[7], xdelta[6], ydelta[6];
+          int i, j;
 
-      setscale(lx.scale_options);
+          nc = context->nc;
+          cntmax = context->cntmax;
+          cell = context->priv->cell;
+          cnt = context->priv->cnt;
+          xcm = context->priv->xcm;
+          ycm = context->priv->ycm;
 
-      /* save fill area interior style and color index */
-      gks_inq_fill_int_style(&errind, &int_style);
-      gks_inq_fill_color_index(&errind, &coli);
-
-      gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
-
-      for (i = 1; i <= nc; i++)
-        {
           for (j = 0; j < 6; j++)
             {
-              xlist[j] = xcm[i] + xdelta[j];
-              ylist[j] = ycm[i] + ydelta[j];
-              gr_ndctowc(xlist + j, ylist + j);
+              xdelta[j] = sin(M_PI / 3 * j) * R;
+              ydelta[j] = cos(M_PI / 3 * j) * R;
             }
-          xlist[6] = xlist[0];
-          ylist[6] = ylist[0];
 
-          gks_set_fill_color_index(first_color + (last_color - first_color) * ((double)cnt[i] / cntmax));
-          gks_fillarea(6, xlist, ylist);
-          gks_polyline(7, xlist, ylist);
+          setscale(lx.scale_options);
+
+          /* save fill area interior style and color index */
+          gks_inq_fill_int_style(&errind, &int_style);
+          gks_inq_fill_color_index(&errind, &coli);
+
+          gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
+
+          for (i = 1; i <= nc; i++)
+            {
+              for (j = 0; j < 6; j++)
+                {
+                  xlist[j] = xcm[i] + xdelta[j];
+                  ylist[j] = ycm[i] + ydelta[j];
+                  gr_ndctowc(xlist + j, ylist + j);
+                }
+              xlist[6] = xlist[0];
+              ylist[6] = ylist[0];
+
+              gks_set_fill_color_index(first_color + (last_color - first_color) * ((double)cnt[i] / cntmax));
+              gks_fillarea(6, xlist, ylist);
+              gks_polyline(7, xlist, ylist);
+            }
+          free(ycm);
+          free(xcm);
+          free(cnt);
+          free(cell);
+          /* restore fill area interior style and color index */
+
+          gks_set_fill_int_style(int_style);
+          gks_set_fill_color_index(coli);
+          if (flag_stream)
+            {
+              gr_writestream("<hexbin len=\"%d\"", n);
+              print_float_array("x", n, x);
+              print_float_array("y", n, y);
+              gr_writestream(" nbins=\"%d\"/>\n", nbins);
+            }
         }
 
-      free(ycm);
-      free(xcm);
-      free(cnt);
-      free(cell);
-      free(context->priv);
-      free((hexbin_2pass_t *)context);
-      context_ = NULL;
-
-      /* restore fill area interior style and color index */
-
-      gks_set_fill_int_style(int_style);
-      gks_set_fill_color_index(coli);
-
-      if (flag_stream)
+      if (context->action & GR_2PASS_CLEANUP)
         {
-          gr_writestream("<hexbin len=\"%d\"", n);
-          print_float_array("x", n, x);
-          print_float_array("y", n, y);
-          gr_writestream(" nbins=\"%d\"/>\n", nbins);
+          free(context->priv);
+          free((hexbin_2pass_t *)context);
         }
+      context_ = NULL;
     }
 
   return context_;
@@ -11136,6 +11142,20 @@ void gr_settransparency(double alpha)
 }
 
 /*!
+ * Inquire the value of the alpha component associated with GR colors.
+ *
+ * \param[out] alpha A pointer to a double value which will hold the transparency value after the function call
+ */
+void gr_inqtransparency(double *alpha)
+{
+  int errind;
+
+  check_autoinit;
+
+  gks_inq_transparency(&errind, alpha);
+}
+
+/*!
  * Change the coordinate transformation according to the given matrix.
  *
  * \param[in] mat 2D transformation matrix
@@ -12028,6 +12048,20 @@ void gr_endselection(void)
   gks_end_selection();
 }
 
+void gr_begin_grm_selection(int index, void (*fun)(int, double, double, double, double))
+{
+  check_autoinit;
+
+  gks_begin_grm_selection(index, fun);
+}
+
+void gr_end_grm_selection(void)
+{
+  check_autoinit;
+
+  gks_end_grm_selection();
+}
+
 void gr_moveselection(double x, double y)
 {
   check_autoinit;
@@ -12109,6 +12143,7 @@ void gr_savestate(void)
       gks_inq_fill_int_style(&errind, &s->ints);
       gks_inq_fill_style_index(&errind, &s->styli);
       gks_inq_fill_color_index(&errind, &s->facoli);
+      gks_inq_transparency(&errind, &s->alpha);
 
       gks_inq_current_xformno(&errind, &s->tnr);
       gks_inq_xform(WC, &errind, s->wn, s->vp);
@@ -12154,6 +12189,7 @@ void gr_restorestate(void)
       gks_set_fill_int_style(s->ints);
       gks_set_fill_style_index(s->styli);
       gks_set_fill_color_index(s->facoli);
+      gks_set_transparency(s->alpha);
 
       gks_select_xform(s->tnr);
       gks_set_window(WC, s->wn[0], s->wn[1], s->wn[2], s->wn[3]);
@@ -12223,7 +12259,7 @@ void gr_selectcontext(int context)
 
   check_autoinit;
 
-  if (context >= 1 && context <= MAX_CONTEXT)
+  if (context >= 1 && context <= GR_MAX_CONTEXT)
     {
       if (app_context == NULL)
         {
@@ -12274,6 +12310,7 @@ void gr_selectcontext(int context)
           ctx->ints = GKS_K_INTSTYLE_HOLLOW;
           ctx->styli = 1;
           ctx->facoli = 1;
+          ctx->alpha = 1.0;
 
           ctx->tnr = WC;
           ctx->wn[0] = ctx->wn[2] = 0;
@@ -12310,6 +12347,7 @@ void gr_selectcontext(int context)
       gks_set_fill_int_style(ctx->ints);
       gks_set_fill_style_index(ctx->styli);
       gks_set_fill_color_index(ctx->facoli);
+      gks_set_transparency(ctx->alpha);
 
       gks_select_xform(ctx->tnr);
       gks_set_window(WC, ctx->wn[0], ctx->wn[1], ctx->wn[2], ctx->wn[3]);
@@ -12340,7 +12378,7 @@ void gr_savecontext(int context)
 
   check_autoinit;
 
-  if (context >= 1 && context <= MAX_CONTEXT)
+  if (context >= 1 && context <= GR_MAX_CONTEXT)
     {
       if (app_context == NULL)
         {
@@ -12388,6 +12426,7 @@ void gr_savecontext(int context)
       gks_inq_fill_int_style(&errind, &app_context->buf[id]->ints);
       gks_inq_fill_style_index(&errind, &app_context->buf[id]->styli);
       gks_inq_fill_color_index(&errind, &app_context->buf[id]->facoli);
+      gks_inq_transparency(&errind, &app_context->buf[id]->alpha);
 
       gks_inq_current_xformno(&errind, &app_context->buf[id]->tnr);
       gks_inq_xform(WC, &errind, app_context->buf[id]->wn, app_context->buf[id]->vp);
@@ -12407,46 +12446,74 @@ void gr_savecontext(int context)
 
 void gr_destroycontext(int context)
 {
+  int errind;
   int id;
 
   check_autoinit;
 
   if (context >= 1 && context <= app_context->capacity)
     {
-      id = context - 1;
-      if (app_context->buf[id] != NULL)
+      if (app_context == NULL)
         {
-          free(app_context->buf[id]);
-          if (ctx == app_context->buf[id])
+          int i;
+          app_context = (state_list_vector *)xmalloc(sizeof(state_list_vector));
+          app_context->max_non_null_id = -1;
+          app_context->capacity = max(CONTEXT_VECTOR_INCREMENT, context);
+          app_context->buf = (state_list **)xmalloc(app_context->capacity * sizeof(state_list));
+          for (i = 0; i < app_context->capacity; ++i)
             {
-              ctx = NULL;
-            }
-          app_context->buf[id] = NULL;
-          if (id == app_context->max_non_null_id)
-            {
-              while (app_context->max_non_null_id >= 0 && app_context->buf[app_context->max_non_null_id] == NULL)
-                {
-                  --(app_context->max_non_null_id);
-                }
-              if (app_context->max_non_null_id < 0)
-                {
-                  free(app_context->buf);
-                  free(app_context);
-                  app_context = NULL;
-                  ctx = NULL;
-                }
-              else if (app_context->capacity - app_context->max_non_null_id - 1 >= CONTEXT_VECTOR_INCREMENT)
-                {
-                  app_context->capacity = ((size_t)ceil((double)app_context->capacity / CONTEXT_VECTOR_INCREMENT)) *
-                                          CONTEXT_VECTOR_INCREMENT;
-                }
+              app_context->buf[i] = NULL;
             }
         }
+      else if (app_context->capacity < context)
+        {
+          int i = app_context->capacity;
+          app_context->capacity = max(app_context->capacity + CONTEXT_VECTOR_INCREMENT, context);
+          app_context->buf = (state_list **)xrealloc(app_context->buf, app_context->capacity * sizeof(state_list));
+          for (; i < app_context->capacity; ++i)
+            {
+              app_context->buf[i] = NULL;
+            }
+        }
+      id = context - 1;
+      if (app_context->buf[id] == NULL)
+        {
+          app_context->buf[id] = (state_list *)xmalloc(sizeof(state_list));
+          app_context->max_non_null_id = max(app_context->max_non_null_id, id);
+        }
+
+      gks_inq_pline_linetype(&errind, &app_context->buf[id]->ltype);
+      gks_inq_pline_linewidth(&errind, &app_context->buf[id]->lwidth);
+      gks_inq_pline_color_index(&errind, &app_context->buf[id]->plcoli);
+      gks_inq_pmark_type(&errind, &app_context->buf[id]->mtype);
+      gks_inq_pmark_size(&errind, &app_context->buf[id]->mszsc);
+      gks_inq_pmark_color_index(&errind, &app_context->buf[id]->pmcoli);
+      gks_inq_text_fontprec(&errind, &app_context->buf[id]->txfont, &app_context->buf[id]->txprec);
+      gks_inq_text_expfac(&errind, &app_context->buf[id]->chxp);
+      gks_inq_text_spacing(&errind, &app_context->buf[id]->chsp);
+      gks_inq_text_color_index(&errind, &app_context->buf[id]->txcoli);
+      gks_inq_text_height(&errind, &app_context->buf[id]->chh);
+      gks_inq_text_upvec(&errind, &app_context->buf[id]->chup[0], &app_context->buf[id]->chup[1]);
+      gks_inq_text_path(&errind, &app_context->buf[id]->txp);
+      gks_inq_text_align(&errind, &app_context->buf[id]->txal[0], &app_context->buf[id]->txal[1]);
+      gks_inq_fill_int_style(&errind, &app_context->buf[id]->ints);
+      gks_inq_fill_style_index(&errind, &app_context->buf[id]->styli);
+      gks_inq_fill_color_index(&errind, &app_context->buf[id]->facoli);
+      gks_inq_transparency(&errind, &app_context->buf[id]->alpha);
+
+      gks_inq_current_xformno(&errind, &app_context->buf[id]->tnr);
+      gks_inq_xform(WC, &errind, app_context->buf[id]->wn, app_context->buf[id]->vp);
+
+      app_context->buf[id]->scale_options = lx.scale_options;
+
+      gks_inq_border_width(&errind, &app_context->buf[id]->bwidth);
+      gks_inq_border_color_index(&errind, &app_context->buf[id]->bcoli);
+      gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
+      gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
     }
   else
     {
       fprintf(stderr, "invalid context id\n");
-      ctx = NULL;
     }
 }
 
@@ -14762,6 +14829,7 @@ const cpubasedvolume_2pass_t *gr_cpubasedvolume_2pass(int nx, int ny, int nz, do
       context_ = (cpubasedvolume_2pass_t *)xmalloc(sizeof(cpubasedvolume_2pass_t));
       context_->dmin = *dmin_ptr;
       context_->dmax = *dmax_ptr;
+      context_->action = GR_2PASS_CLEANUP | GR_2PASS_RENDER; /* render and clean up by default */
       context_->priv = (cpubasedvolume_2pass_priv_t *)xmalloc(sizeof(cpubasedvolume_2pass_priv_t));
       context_->priv->pixels = pixels;
     }
@@ -14769,24 +14837,29 @@ const cpubasedvolume_2pass_t *gr_cpubasedvolume_2pass(int nx, int ny, int nz, do
     {
       double *pixels = context->priv->pixels;
 
-      draw_volume(pixels);
-
-      free(pixels);
-      free(context->priv);
-      free((cpubasedvolume_2pass_t *)context);
-      context_ = NULL;
-
-      if (flag_stream)
+      if (context->action & GR_2PASS_RENDER)
         {
-          gr_writestream("<cpubasedvolume nx=\"%i\" ny=\"%i\" nz=\"%i\" />\n", nx, ny, nz);
-          print_float_array("data", nx * ny * nz, data);
-          gr_writestream(" algorithm=\"%i\" ", algorithm);
-          print_float_array("dmin_ptr", 1, dmin_ptr);
-          print_float_array("dmax_ptr", 1, dmax_ptr);
-          print_float_array("dmin_val", 1, dmin_val);
-          print_float_array("dmax_val", 1, dmax_val);
-          gr_writestream("/>\n");
+          draw_volume(pixels);
+          if (flag_stream)
+            {
+              gr_writestream("<cpubasedvolume nx=\"%i\" ny=\"%i\" nz=\"%i\" />\n", nx, ny, nz);
+              print_float_array("data", nx * ny * nz, data);
+              gr_writestream(" algorithm=\"%i\" ", algorithm);
+              print_float_array("dmin_ptr", 1, dmin_ptr);
+              print_float_array("dmax_ptr", 1, dmax_ptr);
+              print_float_array("dmin_val", 1, dmin_val);
+              print_float_array("dmax_val", 1, dmax_val);
+              gr_writestream("/>\n");
+            }
         }
+
+      if (context->action & GR_2PASS_CLEANUP)
+        {
+          free(pixels);
+          free(context->priv);
+          free((cpubasedvolume_2pass_t *)context);
+        }
+      context_ = NULL;
     }
 
   return context_;

@@ -7,7 +7,6 @@
 #include <string>
 #include <cstring>
 #include <vector>
-#include "error_int.h"
 
 
 /* ######################### internal interface ##################################################################### */

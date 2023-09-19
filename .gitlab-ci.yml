@@ -95,10 +95,32 @@ ubuntu-cmake-self-contained:
     expire_in: 1 week
     paths:
       - artifacts-ubuntu2004-cmake/
+
+ubuntu-cmake-self-contained-debug:
+  stage: build
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
+  script:
+    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
+    - make -C 3rdparty default extras
+    - mkdir build
+    - cd build
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_DEMOS=ON
+    - make
+    - make install
+    - cd ..
+    - mv install artifacts-ubuntu2004-cmake
+    - mv build/grm_test_public_api/grm_test_snoop/snoop ./grm_snoop
+    - mv build/grm_test_public_api/grm_test_snoop/libc_rand.so ./
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - artifacts-ubuntu2004-cmake/
       - grm_snoop
       - libc_rand.so
 
-ubuntu-cmake-self-contained-test:
+ubuntu-cmake-self-contained-test-c:
   stage: test
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing
   rules:
@@ -110,16 +132,63 @@ ubuntu-cmake-self-contained-test:
     when: never
   - when: on_success
   needs:
-  - ubuntu-cmake-self-contained
+  - ubuntu-cmake-self-contained-debug
   script:
   - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export GRM_VALIDATE=yes
   - gr_test c `pwd`/test_result/
   artifacts:
     paths:
     - test_result/
     when: on_failure
 
-ubuntu-cmake-self-contained-rebuild-images:
+ubuntu-cmake-self-contained-test-cpp:
+  stage: test
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/cpp-testing
+  rules:
+    - if: '$CI_MERGE_REQUEST_ID'
+      when: never
+    - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+      when: never
+    - if: '$GR_REBUILD_REFERENCE'
+      when: never
+    - when: on_success
+  needs:
+    - ubuntu-cmake-self-contained-debug
+  script:
+    - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+    - export GRM_VALIDATE=yes
+    - gr_test cpp `pwd`/test_result/
+  artifacts:
+    paths:
+      - test_result/
+    when: on_failure
+
+ubuntu-cmake-self-contained-test-grplot:
+  stage: test
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/grplot-testing
+  rules:
+  - if: '$CI_MERGE_REQUEST_ID'
+    when: never
+  - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+    when: never
+  - if: '$GR_REBUILD_REFERENCE'
+    when: never
+  - when: on_success
+  needs:
+  - ubuntu-cmake-self-contained-debug
+  script:
+  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export GRM_VALIDATE=yes
+  - export LD_LIBRARY_PATH=$GRDIR/lib
+  - export PATH=$GRDIR/bin/:$PATH
+  - xvfb-run --server-args="-screen 0, 1920x1080x24" gr_test grplot `pwd`/test_result/
+  artifacts:
+    paths:
+    - test_result/
+    when: on_failure
+
+ubuntu-cmake-self-contained-rebuild-images-c:
   stage: test
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing:latest
   rules:
@@ -130,7 +199,7 @@ ubuntu-cmake-self-contained-rebuild-images:
   - if: '$GR_REBUILD_REFERENCE'
     when: on_success
   needs:
-  - ubuntu-cmake-self-contained
+  - ubuntu-cmake-self-contained-debug
   script:
   - apt-get update && apt-get install -y python3-venv
   - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
@@ -161,6 +230,92 @@ ubuntu-cmake-self-contained-rebuild-images:
   - git commit -m "Rebuilt c images in build job $CI_JOB_ID"
   - 'git push -o merge_request.description="Job initiator: @$GITLAB_USER_LOGIN" -o merge_request.label="auto-create" -o merge_request.label="reference-files-update" -o merge_request.remove_source_branch -o merge_request.create origin update-files/job-$CI_JOB_ID'
 
+ubuntu-cmake-self-contained-rebuild-images-cpp:
+  stage: test
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/cpp-testing:latest
+  rules:
+    - if: '$CI_MERGE_REQUEST_ID'
+      when: never
+    - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+      when: on_success
+    - if: '$GR_REBUILD_REFERENCE'
+      when: on_success
+  needs:
+    - ubuntu-cmake-self-contained-debug
+  script:
+    - apt-get update && apt-get install -y python3-venv
+    - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+
+    - mkdir -p ~/.ssh
+    - cat $SSH_KEY | base64 -d > ~/.ssh/id_rsa
+    - mv $SSH_KNOWN_HOSTS ~/.ssh/known_hosts
+    - chmod 600 ~/.ssh/id_rsa
+    - python3 -m venv env && source env/bin/activate
+    - git clone gitlab@iffgit.fz-juelich.de:scientific-it-systems/gr-test.git
+    - pip install -e gr-test/
+    - cd gr-test
+    - git checkout -b update-files/job-$CI_JOB_ID
+
+    - if [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+      export GR_REBUILD_REFERENCE=`echo $CI_COMMIT_MESSAGE | sed 's/.*RebuildReferenceImages(\([][ ?*_a-zA-Z0-9-]*\)).*/\1/'` ;
+      fi
+
+    - if [[ $GR_REBUILD_REFERENCE == "all" ]] || [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+      gr_test --create=REFERENCE cpp ;
+      else
+      gr_test --create=REFERENCE --filter ${GR_REBUILD_REFERENCE} -- cpp ;
+      fi
+    - git config user.name "GR-Test Reference Bot"
+    - git config user.email "$GITLAB_USER_EMAIL"
+    - git status
+    - git add -A gr_test/cpp_data/
+    - git commit -m "Rebuilt cpp images in build job $CI_JOB_ID"
+    - 'git push -o merge_request.description="Job initiator: @$GITLAB_USER_LOGIN" -o merge_request.label="auto-create" -o merge_request.label="reference-files-update" -o merge_request.remove_source_branch -o merge_request.create origin update-files/job-$CI_JOB_ID'
+
+ubuntu-cmake-self-contained-rebuild-images-grplot:
+  stage: test
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/grplot-testing:latest
+  rules:
+    - if: '$CI_MERGE_REQUEST_ID'
+      when: never
+    - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+      when: on_success
+    - if: '$GR_REBUILD_REFERENCE'
+      when: on_success
+  needs:
+    - ubuntu-cmake-self-contained-debug
+  script:
+    - apt-get update && apt-get install -y python3-venv
+    - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+    - export LD_LIBRARY_PATH=$GRDIR/lib
+    - export PATH=$GRDIR/bin/:$PATH
+
+    - mkdir -p ~/.ssh
+    - cat $SSH_KEY | base64 -d > ~/.ssh/id_rsa
+    - mv $SSH_KNOWN_HOSTS ~/.ssh/known_hosts
+    - chmod 600 ~/.ssh/id_rsa
+    - python3 -m venv env && source env/bin/activate
+    - git clone gitlab@iffgit.fz-juelich.de:scientific-it-systems/gr-test.git
+    - pip install -e gr-test/
+    - cd gr-test
+    - git checkout -b update-files/job-$CI_JOB_ID
+
+    - if [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+      export GR_REBUILD_REFERENCE=`echo $CI_COMMIT_MESSAGE | sed 's/.*RebuildReferenceImages(\([][ ?*_a-zA-Z0-9-]*\)).*/\1/'` ;
+      fi
+
+    - if [[ $GR_REBUILD_REFERENCE == "all" ]] || [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+      xvfb-run --server-args="-screen 0, 1920x1080x24" gr_test --create=REFERENCE grplot ;
+      else
+      xvfb-run --server-args="-screen 0, 1920x1080x24" gr_test --create=REFERENCE --filter ${GR_REBUILD_REFERENCE} -- grplot ;
+      fi
+    - git config user.name "GR-Test Reference Bot"
+    - git config user.email "$GITLAB_USER_EMAIL"
+    - git status
+    - git add -A gr_test/grplot_data/
+    - git commit -m "Rebuilt grplot images in build job $CI_JOB_ID"
+    - 'git push -o merge_request.description="Job initiator: @$GITLAB_USER_LOGIN" -o merge_request.label="auto-create" -o merge_request.label="reference-files-update" -o merge_request.remove_source_branch -o merge_request.create origin update-files/job-$CI_JOB_ID'
+
 ubuntu-cmake-self-contained-test-snoop:
   stage: test
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
@@ -173,7 +328,7 @@ ubuntu-cmake-self-contained-test-snoop:
     when: never
   - when: on_success
   needs:
-  - ubuntu-cmake-self-contained
+  - ubuntu-cmake-self-contained-debug
   variables:
     JULIA_VERSION: 1.8.5
   before_script:
@@ -187,6 +342,7 @@ ubuntu-cmake-self-contained-test-snoop:
   - export LD_LIBRARY_PATH=`pwd`/artifacts-ubuntu2004-cmake/lib
   - export LIBC_RAND_DIRPATH=`pwd`
   - export GRM_SNOOP_EXECUTABLE_PATH=`pwd`/grm_snoop
+  - export GRM_VALIDATE=yes
   - lib/grm/test/public_api/grm/snoop/compare_grm_julia.sh || {
       mv lib/grm/test/public_api/grm/snoop/diff_images ./;
       exit 1;
@@ -284,7 +440,8 @@ debian-self-contained-armhf:
       CAIRO_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihfnu \
       TIFF_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
       OPENH264_EXTRA_MAKE_FLAGS="OS=linux ARCH=armhf" \
-      ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf
+      ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
+      LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf
     - make self \
       CC=arm-linux-gnueabihf-gcc \
       LD=arm-linux-gnueabihf-ld \
@@ -334,7 +491,8 @@ debian-self-contained-aarch64:
       CAIRO_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
       TIFF_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
       OPENH264_EXTRA_MAKE_FLAGS="OS=linux ARCH=aarch64" \
-      ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
+      ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
+      LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
     - make self \
       CC=aarch64-linux-gnu-gcc \
       LD=aarch64-linux-gnu-ld \
@@ -383,10 +541,14 @@ debian-cmake-self-contained-aarch64:
       CAIRO_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
       TIFF_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
       OPENH264_EXTRA_MAKE_FLAGS="OS=linux ARCH=aarch64" \
-      ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
+      ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
+      LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
+    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
     - mkdir build
     - cd build
-    - cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/aarch64-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DGR_USE_BUNDLED_LIBRARIES=ON
+    - $CMAKE_CMD .. -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/aarch64-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
     - make install
     - mv /usr/local/gr ${CI_PROJECT_DIR}/artifacts-debian10-cmake-aarch64
@@ -416,10 +578,14 @@ debian-cmake-self-contained-armhf:
       CAIRO_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
       TIFF_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
       OPENH264_EXTRA_MAKE_FLAGS="OS=linux ARCH=armhf" \
-      ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf
+      ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
+      LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf
+    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
     - mkdir build
     - cd build
-    - cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/armhf-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DGR_USE_BUNDLED_LIBRARIES=ON
+    - $CMAKE_CMD .. -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/armhf-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
     - make install
     - mv /usr/local/gr ${CI_PROJECT_DIR}/artifacts-debian10-cmake-armhf
@@ -557,7 +723,6 @@ centos7-32bit-self-contained:
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - mkdir artifacts/include/grm/
   - cp -r lib/grm/include/grm artifacts/include/
   - mv artifacts artifacts-centos7-32bit
   artifacts:
@@ -707,7 +872,7 @@ windows-32bit-cross:
   - tar xf cmake-3.23.0-linux-x86_64.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
-    EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo agg"
+    EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo agg libxml2"
     HOST=i686-w64-mingw32
     ARCHITECTURE=i686
     OS=w64_x86-cross-mingw32
@@ -721,6 +886,7 @@ windows-32bit-cross:
     PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     CAIRO_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     TIFF_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
+    LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     OPENH264_EXTRA_MAKE_FLAGS="OS=mingw_nt ARCH=i386 CFLAGS=-fno-exceptions CXXFLAGS=-fno-exceptions LDFLAGS=-fno-exceptions"
   - MAKE="make -f makefile.mingw" make -f makefile.mingw
     GRDIR=./
@@ -773,7 +939,7 @@ windows-32bit-cmake-cross:
     - tar xf cmake-3.23.0-linux-x86_64.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
     - make -C 3rdparty default extras
-      EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo agg"
+      EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo agg libxml2"
       HOST=i686-w64-mingw32
       ARCHITECTURE=i686
       OS=w64_x86-cross-mingw32
@@ -788,7 +954,24 @@ windows-32bit-cmake-cross:
       PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
       CAIRO_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
       TIFF_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
+      LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
       OPENH264_EXTRA_MAKE_FLAGS="OS=mingw_nt ARCH=i386 CFLAGS=-fno-exceptions CXXFLAGS=-fno-exceptions LDFLAGS=-fno-exceptions"
+    - cd 3rdparty/build/lib/cmake/libxml2
+    - |-
+      patch -N <<'EOF'
+      --- libxml2-config.cmake        2023-05-24 10:50:21.099243441 +0000
+      +++ libxml2-config.cmake.patched        2023-05-24 10:50:42.289604090 +0000
+      @@ -29,7 +29,7 @@
+       set(LIBXML2_VERSION_MINOR  10)
+       set(LIBXML2_VERSION_MICRO  4)
+       set(LIBXML2_VERSION_STRING "2.10.4")
+      -set(LIBXML2_DEFINITIONS    " -DLIBXML_STATIC")
+      +set(LIBXML2_DEFINITIONS    -DLIBXML_STATIC)
+       set(LIBXML2_INSTALL_PREFIX ${_libxml2_rootdir})
+       set(LIBXML2_INCLUDE_DIR    ${_libxml2_rootdir}/include/libxml2)
+       set(LIBXML2_LIBRARY_DIR    ${_libxml2_rootdir}/lib)
+      EOF
+    - cd -
     - mkdir build
     - cd build
     - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/i686-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-i686/cmake -DGR_MANUAL_MOC_AND_RCC=ON -DGR_USE_BUNDLED_LIBRARIES=ON
@@ -812,7 +995,7 @@ windows-64bit-cross:
   - tar xf cmake-3.23.0-linux-x86_64.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
-    EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo agg"
+    EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo agg libxml2"
     HOST=x86_64-w64-mingw32
     ARCHITECTURE=x86_64
     OS=w64_amd64-cross-mingw32
@@ -826,6 +1009,7 @@ windows-64bit-cross:
     PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     CAIRO_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     TIFF_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
+    LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     OPENH264_EXTRA_MAKE_FLAGS=OS=mingw_nt
   - MAKE="make -f makefile.mingw" make -f makefile.mingw
     GRDIR=./
@@ -878,7 +1062,7 @@ windows-64bit-cmake-cross:
     - tar xf cmake-3.23.0-linux-x86_64.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
     - make -C 3rdparty default extras
-      EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo agg"
+      EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo agg libxml2"
       HOST=x86_64-w64-mingw32
       ARCHITECTURE=x86_64
       OS=w64_amd64-cross-mingw32
@@ -893,7 +1077,24 @@ windows-64bit-cmake-cross:
       PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
       CAIRO_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
       TIFF_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
+      LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
       OPENH264_EXTRA_MAKE_FLAGS=OS=mingw_nt
+    - cd 3rdparty/build/lib/cmake/libxml2
+    - |-
+      patch -N <<'EOF'
+      --- libxml2-config.cmake        2023-05-24 10:50:21.099243441 +0000
+      +++ libxml2-config.cmake.patched        2023-05-24 10:50:42.289604090 +0000
+      @@ -29,7 +29,7 @@
+       set(LIBXML2_VERSION_MINOR  10)
+       set(LIBXML2_VERSION_MICRO  4)
+       set(LIBXML2_VERSION_STRING "2.10.4")
+      -set(LIBXML2_DEFINITIONS    " -DLIBXML_STATIC")
+      +set(LIBXML2_DEFINITIONS    -DLIBXML_STATIC)
+       set(LIBXML2_INSTALL_PREFIX ${_libxml2_rootdir})
+       set(LIBXML2_INCLUDE_DIR    ${_libxml2_rootdir}/include/libxml2)
+       set(LIBXML2_LIBRARY_DIR    ${_libxml2_rootdir}/lib)
+      EOF
+    - cd -
     - mkdir build
     - cd build
     - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/x86_64-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-x86_64/cmake -DGR_MANUAL_MOC_AND_RCC=ON  -DGR_USE_BUNDLED_LIBRARIES=ON
@@ -926,7 +1127,7 @@ windows-64bit-cmake-msvc:
     - cp -v /c/Qt/5.15.2/msvc2019_64/plugins/platforms/qwindows.dll platforms/
     - cd -
     - cd /c/local/bin
-    - cp -v cairo.dll freetype.dll jpeg62.dll libpng16.dll pixman-1-0.dll qhull_r.dll tiff.dll tiffxx.dll turbojpeg.dll zlib.dll /c/gr/bin/
+    - cp -v cairo.dll freetype.dll jpeg62.dll libpng16.dll libxml2.dll pixman-1-0.dll qhull_r.dll tiff.dll tiffxx.dll turbojpeg.dll zlib.dll /c/gr/bin/
     - cd -
     - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.31.31103/x64/Microsoft.VC143.CRT/vcruntime140.dll" /c/gr/bin/
     - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.31.31103/x64/Microsoft.VC143.CRT/vcruntime140_1.dll" /c/gr/bin/

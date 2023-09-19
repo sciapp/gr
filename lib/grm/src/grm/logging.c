@@ -45,9 +45,7 @@ void logger_init(void)
 {
   if (logging_enabled < 0)
     {
-      logging_enabled =
-          (getenv(ENABLE_LOGGING_ENV_KEY) != NULL &&
-           str_equals_any(getenv(ENABLE_LOGGING_ENV_KEY), 7, "1", "on", "ON", "true", "TRUE", "yes", "YES"));
+      logging_enabled = is_env_variable_enabled(ENABLE_LOGGING_ENV_KEY);
     }
 }
 

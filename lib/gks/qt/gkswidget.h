@@ -31,6 +31,7 @@ signals:
 protected:
   void paintEvent(QPaintEvent *event);
   void resizeEvent(QResizeEvent *event);
+  void keyPressEvent(QKeyEvent *event);
   void set_window_size_from_dl();
 
 private:
@@ -40,6 +41,8 @@ private:
   static QSize frame_decoration_size_;
   QString renderer_string;
   ws_state_list_t *widget_state_list;
+  int x, y;
+  int window_number;
 };
 
 #endif

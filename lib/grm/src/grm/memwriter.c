@@ -7,7 +7,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "error_int.h"
+#include "grm/error.h"
 #include "memwriter_int.h"
 
 

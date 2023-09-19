@@ -22,7 +22,7 @@ typedef enum
   GRM_EVENT_UPDATE_PLOT,
   GRM_EVENT_SIZE,
   GRM_EVENT_MERGE_END,
-  GRM_EVENT_CMD,
+  GRM_EVENT_REQUEST,
   _GRM_EVENT_TYPE_COUNT /* helper entry to store how many different event types exist */
 } grm_event_type_t;
 
@@ -55,8 +55,8 @@ typedef struct
 typedef struct
 {
   grm_event_type_t type;
-  const char *cmd;
-} grm_cmd_event_t;
+  const char *request_string;
+} grm_request_event_t;
 
 typedef union
 {
@@ -64,7 +64,7 @@ typedef union
   grm_size_event_t size_event;
   grm_update_plot_event_t update_plot_event;
   grm_merge_end_event_t merge_end_event;
-  grm_cmd_event_t cmd_event;
+  grm_request_event_t request_event;
 } grm_event_t;
 
 typedef void (*grm_event_callback_t)(const grm_event_t *);

@@ -12,7 +12,7 @@ extern "C" {
 #include <sys/types.h>
 
 #include <grm/args.h>
-#include "error_int.h"
+#include "grm/error.h"
 #include "util_int.h"
 
 #if defined(_MSC_VER)

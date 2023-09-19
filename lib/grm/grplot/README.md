@@ -29,7 +29,7 @@ For plots where multiple columns are read there is also a parameter that allows 
 
 There are more key-value parameters. These parameters only effect specific plot types. For example `bar_width` only makes sense, when bars are drawn. All possible parameters are:
 
-`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `c`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `grplot`, `isovalue`, `kind`, `levels`, `marginalheatmap_kind`, `markertype`, `nbins`, `normalization`, `orientation`, `phiflip`, `rotation`, `scatterz`, `spec`, `stairs`, `step_where`, `style`, `tilt`, `xbins`, `xcolormap`, `xflip`, `xform`, `xticklabels`, `ybins`, `ycolormap`, `yflip`, `ylabels`
+`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `c`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `grplot`, `isovalue`, `kind`, `levels`, `marginalheatmap_kind`, `markertype`, `nbins`, `normalization`, `orientation`, `phiflip`, `rotation`, `scatterz`, `spec`, `stairs`, `step_where`, `style`, `tilt`, `xbins`, `xcolormap`, `xflip`, `xform`, `ybins`, `ycolormap`, `yflip`, `ylabels`
 
 All parameters are separated by a blank. Some parameters are more complex than others. These parameters represent a container inside GRM.
 
@@ -78,7 +78,7 @@ grplot --test <command-file> <data-file> <parameter>
 
 ## Data file
 
-These files contain the data that should be plotted. Besides the data these files can include parameters which modify the plot. The first lines define parameters just like the `title` and have the following pattern:
+These files contain the data that should be plotted. Besides the data these files can include parameters which modify the plot. Important to know is that the parameters which can stand in these files doesn't belong to a specific plot. They are atleast valid for all 2D or 3D plots for example. The first lines of teh datafile define parameters just like the `title` and have the following pattern:
 
 ```text
 # key : value
@@ -95,6 +95,7 @@ Valid keys are:
 7. `philim`, `rlim`: defines which part of the specific polar axis should be displayed
 8. `xlim`, `ylim`, `zlim`: defines which part of the respective axis should be displayed
 9. `xrange`, `yrange`, `zrange`: defines the range of the values on the respective axis
+10. `xticklabels`, `yticklabels`: sets the custom labels for the x-, y-axis ticks
 
 Values are seperated through commas (`,`), e.g. `3, 5`.
 
@@ -113,6 +114,10 @@ The next line after the header may contain the column labels. If the data does n
 11. `hexbin`, `shade`: The expected data are two columns, representing the x- and y-data.
 
 A plot type that expect the same data shape as other plot types can be converted using an interactive menu. The interaction also yields extra information about the plot, when the mouse is being hovered over them.
+
+## Editor
+
+The editor can be enabled by setting the environment variable `GRPLOT_ENABLE_EDITOR` to the value of 1. After that the editor can be activated and deactivated via the interactive menubar. The editor allows to modify the displayed plot in parts.
 
 ## Advanced information for each plot type
 
@@ -163,6 +168,7 @@ Possible parameters for the bar plot are:
     - `default`: All values are displayed with a separate bar.
     - `stacked`: The values are displayed with bars which are stacked over each other.
     - `lined`: The values are displayed with smaller bars next to each other.
+11. `ylabels`: This parameter allows the user to set labels to specific bars, which can for example display the value of the bar. The syntax of this parameter is `ylabels:{`label1`,`label2`,`...`}`.
 
 ### CONTOUR
 
@@ -271,7 +277,7 @@ Possible parameters for the line plot are:
     - `downwardscap_color`: Defines the downward scap color of the error bars. The value of this parameter has to be an integer.
     - `upwardscap_color`: Defines the upward scap color of the error bars. The value of this parameter has to be an integer.
 
-      Note: If the error of the points is to be displayed, the last two columns of the data are used for the error. The syntax of this parameter is:
+      Note: If the error of the points is to be displayed, the last two columns of each pair of three columns from the data are used for the error. This means for a dataset with eight columns that columns 2, 3, 5, 6 are used for the errorbars. The syntax of this parameter is:
 
    `error:{{errorbar_color:`color_index`},{downwardscap_color:`color_index`},{upwardscap_color:`color_index`}}`
 

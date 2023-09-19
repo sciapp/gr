@@ -704,5 +704,64 @@ fi
 printf "%12s: %s\n" "agg" "$info" >&2
 rm -f $tmpsrc $tmpout $tmpver
 
+if [ "$libxml2" != "no" ]
+then
+  libxml2config=xml2-config
+  if [ "$LIBXML2_CONFIG" != "" ]
+  then
+    libxml2config=$LIBXML2_CONFIG
+  fi
+  if [ "`which $libxml2config 2>/dev/null`" = "" ]
+  then
+    libxml2defs="LIBXML2_CONFIG=false LIBXML2DEFS=-DNO_LIBXML2 LIBXML2INC= LIBXML2LIBS="
+    info="${red} no${normal} [xml2-config not found]"
+    ret=1
+  else
+    libxml2defs="LIBXML2_CONFIG=$libxml2config"
+    info="${green}yes${normal} [version `xml2-config --version`]"
+  fi
+else
+  libxml2defs="LIBXML2_CONFIG=false LIBXML2DEFS=-DNO_LIBXML2 LIBXML2INC= LIBXML2LIBS="
+  info="${yellow} no${normal} [disabled]"
+  ret=1
+fi
+printf "%12s: %s\n" "libxml2" "$info" >&2
+
+
+if [ "$expat" != "no" ] && [[ "$libxml2defs" =~ -DNO_LIBXML2 ]]
+then
+  tmpout=`mktemp /tmp/a.out.XXXXX`
+  tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+  tmpver=`mktemp /tmp/a$$XXXXX.txt`
+  cat >$tmpsrc << eof
+#include <stdio.h>
+#include <expat.h>
+
+int main(void) {
+    XML_Expat_Version version_info;
+    version_info = XML_ExpatVersionInfo();
+    printf("%d.%d.%d\n", version_info.major, version_info.minor, version_info.micro);
+    return 0;
+}
+eof
+  libs=""
+  cmd="${CXX} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lexpat"
+  $cmd $libs >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    expatdefs="EXPATDEFS=-DNO_EXPAT EXPATLIBS="
+    info="${red} no${normal} [expat not found]"
+    ret=1
+  else
+    $tmpout >$tmpver 2>&1
+    info="${green}yes${normal} [version `cat $tmpver`]"
+  fi
+else
+  info="${yellow} no${normal} [disabled]"
+  expatdefs="EXPATDEFS=-DNO_EXPAT EXPATLIBS="
+  ret=1
+fi
+printf "%12s: %s\n" "expat" "$info" >&2
+rm -f $tmpsrc $tmpout $tmpver
+
 echo "" >&2
-echo $target $wxdefs $qt4defs $qt5defs $qt6defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $gldefs $zmqdefs $avdefs $cairodefs $tiffdefs $aggdefs $extradefs
+echo $target $wxdefs $qt4defs $qt5defs $qt6defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $gldefs $zmqdefs $avdefs $cairodefs $tiffdefs $aggdefs $libxml2defs $expatdefs $extradefs

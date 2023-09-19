@@ -1,3 +1,4 @@
+#include <QFile>
 #include <QPainter>
 #include <QPainterPath>
 #include <QResizeEvent>
@@ -6,16 +7,29 @@
 #include <iostream>
 #include <list>
 #include <sstream>
+#include <functional>
+#include <cassert>
+
+#include <gr.h>
+
+#include <QInputDialog>
+#include <QFormLayout>
+#include <QLabel>
+#include <QDialogButtonBox>
+#include <QComboBox>
+#include <QtWidgets>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <cfloat>
 #include <QtGlobal>
 #include <QApplication>
-#include <QWindow>
 #include <QToolTip>
 #include <QTimer>
 #include <QEvent>
 #include <QRubberBand>
-#include <functional>
-
-#include <gr.h>
+#include <QGraphicsSceneMouseEvent>
+#include <QGraphicsScene>
+#include <QWindow>
 
 #include "grplot_widget.hxx"
 #include "util.hxx"
@@ -25,6 +39,12 @@
 #endif
 
 static std::string file_export;
+static bool arguments_changed = false;
+static QString test_commands_file_path = "";
+static QFile *test_commands_file = nullptr;
+static QTextStream *test_commands_stream = nullptr;
+static Qt::KeyboardModifiers modifiers = Qt::NoModifier;
+static std::vector<Bounding_object> cur_moved;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -54,10 +74,10 @@ extern "C" void size_callback_wrapper(const grm_event_t *cb)
   size_callback(cb);
 }
 
-std::function<void(const grm_cmd_event_t *)> cmd_callback;
+std::function<void(const grm_request_event_t *)> cmd_callback;
 extern "C" void cmd_callback_wrapper(const grm_event_t *event)
 {
-  cmd_callback(reinterpret_cast<const grm_cmd_event_t *>(event));
+  cmd_callback(reinterpret_cast<const grm_request_event_t *>(event));
 }
 
 
@@ -69,6 +89,14 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   double *z = nullptr;
   int error = 0;
   args_ = grm_args_new();
+
+  enable_editor = false;
+  highlightBoundingObjects = false;
+  bounding_logic = new Bounding_logic();
+  current_selection = nullptr;
+  amount_scrolled = 0;
+  treewidget = new TreeWidget();
+  treewidget->hide();
 
 #ifdef _WIN32
   putenv("GKS_WSTYPE=381");
@@ -117,7 +145,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 #endif
 
       grm_register(GRM_EVENT_SIZE, size_callback_wrapper);
-      grm_register(GRM_EVENT_CMD, cmd_callback_wrapper);
+      grm_register(GRM_EVENT_REQUEST, cmd_callback_wrapper);
       grm_args_t_wrapper configuration;
       configuration.set_wrapper(grm_args_new());
       grm_args_push(configuration.get_wrapper(), "hold_plots", "i", 0);
@@ -126,6 +154,23 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
     }
   else
     {
+      if (strcmp(argv[1], "--test") == 0)
+        {
+          test_commands_file_path = argv[2];
+          argv += 2;
+          argc -= 2;
+          test_commands_file = new QFile(test_commands_file_path);
+          if (test_commands_file->open(QIODevice::ReadOnly))
+            {
+              test_commands_stream = new QTextStream(test_commands_file);
+              QTimer::singleShot(1000, this, &GRPlotWidget::processTestCommandsFile);
+            }
+          else
+            {
+              std::cerr << "Unable to open test commands file" << std::endl;
+              QApplication::quit();
+            }
+        }
       grm_args_push(args_, "keep_aspect_ratio", "i", 1);
       if (!grm_interactive_plot_from_file(args_, argc, argv))
         {
@@ -243,15 +288,54 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
           type->addAction(shadeAct);
           type->addAction(hexbinAct);
         }
-      menu->addMenu(type);
-      menu->addMenu(algo);
+      if (strcmp(argv[1], "--test") != 0 && !test_commands_stream)
+        {
+          menu->addMenu(type);
+          menu->addMenu(algo);
+        }
     }
-  menu->addMenu(export_menu);
+  if (strcmp(argv[1], "--test") != 0 && !test_commands_stream) menu->addMenu(export_menu);
+
+  if (getenv("GRPLOT_ENABLE_EDITOR"))
+    {
+      editor_menu = new QMenu(tr("&Editor"));
+      editor_action = new QAction(tr("&Activate Editor"));
+      editor_action->setCheckable(true);
+      editor_menu->addAction(editor_action);
+      QObject::connect(editor_action, SIGNAL(triggered()), this, SLOT(enable_editor_functions()));
+
+      auto file_menu = editor_menu->addMenu(tr("&File"));
+      save_file_action = new QAction("&Save Plot");
+      save_file_action->setShortcut(Qt::CTRL | Qt::Key_S);
+      file_menu->addAction(save_file_action);
+      QObject::connect(save_file_action, SIGNAL(triggered()), this, SLOT(save_file_slot()));
+
+      open_file_action = new QAction("&Open Plot");
+      open_file_action->setShortcut(Qt::CTRL | Qt::Key_O);
+      file_menu->addAction(open_file_action);
+      QObject::connect(open_file_action, SIGNAL(triggered()), this, SLOT(open_file_slot()));
+
+      auto configuration_menu = editor_menu->addMenu(tr("&Show"));
+      show_container_action = new QAction(tr("&GRM Container"));
+      show_container_action->setCheckable(true);
+      show_container_action->setShortcut(Qt::CTRL | Qt::Key_C);
+      configuration_menu->addAction(show_container_action);
+      QObject::connect(show_container_action, SIGNAL(triggered()), this, SLOT(show_container_slot()));
+
+      show_bounding_boxes_action = new QAction(tr("&Bounding Boxes"));
+      show_bounding_boxes_action->setCheckable(true);
+      show_bounding_boxes_action->setShortcut(Qt::CTRL | Qt::Key_B);
+      configuration_menu->addAction(show_bounding_boxes_action);
+      QObject::connect(show_bounding_boxes_action, SIGNAL(triggered()), this, SLOT(show_bounding_boxes_slot()));
+
+      menu->addMenu(editor_menu);
+    }
 }
 
 GRPlotWidget::~GRPlotWidget()
 {
   grm_args_delete(args_);
+  grm_finalize();
 }
 
 void GRPlotWidget::draw()
@@ -265,7 +349,15 @@ void GRPlotWidget::draw()
       snprintf(file, 50, "grplot_%s.%s", kind, file_export.c_str());
       grm_export(file);
     }
-  grm_plot(nullptr);
+  if (arguments_changed)
+    {
+      assert(grm_plot(args_));
+      arguments_changed = false;
+    }
+  else
+    {
+      assert(grm_plot(nullptr));
+    }
 }
 
 void GRPlotWidget::redraw()
@@ -278,13 +370,13 @@ void GRPlotWidget::redraw()
 void GRPlotWidget::collectTooltips()
 {
   QPoint mouse_pos = this->mapFromGlobal(QCursor::pos());
-  Qt::KeyboardModifiers keyboard_modifiers = QApplication::queryKeyboardModifiers();
+  Qt::KeyboardModifiers keyboard_modifiers = GRPlotWidget::queryKeyboardModifiers();
 
   if (keyboard_modifiers == Qt::ShiftModifier)
     {
       auto accumulated_tooltip = grm_get_accumulated_tooltip_x(mouse_pos.x(), mouse_pos.y());
       tooltips.clear();
-      tooltips.push_back(accumulated_tooltip);
+      if (accumulated_tooltip != nullptr) tooltips.push_back(accumulated_tooltip);
     }
   else
     {
@@ -294,18 +386,21 @@ void GRPlotWidget::collectTooltips()
         }
       auto current_tooltip = grm_get_tooltip(mouse_pos.x(), mouse_pos.y());
       bool found_current_tooltip = false;
-      for (const auto &tooltip : tooltips)
+      if (current_tooltip != nullptr)
         {
-          if (tooltip.get<grm_tooltip_info_t>()->x == current_tooltip->x &&
-              tooltip.get<grm_tooltip_info_t>()->y == current_tooltip->y)
+          for (const auto &tooltip : tooltips)
             {
-              found_current_tooltip = true;
-              break;
+              if (tooltip.get<grm_tooltip_info_t>()->x == current_tooltip->x &&
+                  tooltip.get<grm_tooltip_info_t>()->y == current_tooltip->y)
+                {
+                  found_current_tooltip = true;
+                  break;
+                }
             }
-        }
-      if (!found_current_tooltip)
-        {
-          tooltips.push_back(current_tooltip);
+          if (!found_current_tooltip)
+            {
+              tooltips.push_back(current_tooltip);
+            }
         }
     }
 }
@@ -336,6 +431,11 @@ static const std::string accumulatedTooltipTemplate{"\
 void GRPlotWidget::paintEvent(QPaintEvent *event)
 {
   util::unused(event);
+  paint(this);
+}
+
+void GRPlotWidget::paint(QPaintDevice *paint_device)
+{
   QPainter painter;
   std::stringstream addresses;
   const char *kind;
@@ -365,15 +465,21 @@ void GRPlotWidget::paintEvent(QPaintEvent *event)
       painter.begin(&pixmap);
 
       painter.fillRect(0, 0, width(), height(), QColor("white"));
+      painter.save();
       draw();
-
+      painter.restore();
       painter.end();
       redraw_pixmap = false;
+
+      treewidget->updateData(grm_get_document_root());
     }
 
-  painter.begin(this);
+  painter.begin(paint_device);
   painter.drawPixmap(0, 0, pixmap);
-  if (!tooltips.empty())
+  bounding_logic->clear();
+  extract_bounding_boxes_from_grm((QPainter &)painter);
+  highlight_current_selection((QPainter &)painter);
+  if (!tooltips.empty() && !enable_editor)
     {
       for (const auto &tooltip : tooltips)
         {
@@ -458,14 +564,210 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
 {
   if (event->key() == Qt::Key_R)
     {
-      grm_args_t *args = grm_args_new();
-      QPoint widget_cursor_pos = mapFromGlobal(QCursor::pos());
-      grm_args_push(args, "key", "s", "r");
-      grm_args_push(args, "x", "i", widget_cursor_pos.x());
-      grm_args_push(args, "y", "i", widget_cursor_pos.y());
-      grm_input(args);
-      grm_args_delete(args);
-      redraw();
+      if (enable_editor)
+        {
+          reset_pixmap();
+        }
+      else
+        {
+          grm_args_t *args = grm_args_new();
+          QPoint widget_cursor_pos = mapFromGlobal(QCursor::pos());
+          grm_args_push(args, "key", "s", "r");
+          grm_args_push(args, "x", "i", widget_cursor_pos.x());
+          grm_args_push(args, "y", "i", widget_cursor_pos.y());
+          grm_input(args);
+          grm_args_delete(args);
+          redraw();
+        }
+    }
+  if (enable_editor)
+    {
+      if (event->key() == Qt::Key_Escape)
+        {
+          current_selection = nullptr;
+          mouse_move_selection = nullptr;
+          update();
+        }
+      else if (event->key() == Qt::Key_Space)
+        {
+          show_bounding_boxes_action->trigger();
+        }
+      else if (event->key() == Qt::Key_Return)
+        {
+          if (current_selection == nullptr)
+            {
+              return;
+            }
+          std::string currently_clicked_name = current_selection->get_ref()->localName();
+
+          QDialog dialog(this);
+          QFormLayout form(&dialog);
+          QString title("Selected: ");
+          title.append(currently_clicked_name.c_str());
+          dialog.setWindowTitle(title);
+          auto changeParametersLabel = new QLabel("Change Parameters:");
+          changeParametersLabel->setStyleSheet("font-weight: bold");
+          form.addRow(changeParametersLabel);
+
+          QList<QString> labels;
+          QList<QWidget *> fields;
+          QWidget *lineEdit;
+
+          for (const auto &cur_attr_name : current_selection->get_ref()->getAttributeNames())
+            {
+              if (cur_attr_name == "_bbox_id" || cur_attr_name == "_bbox_xmin" || cur_attr_name == "_bbox_xmax" ||
+                  cur_attr_name == "_bbox_ymin" || cur_attr_name == "_bbox_ymax")
+                {
+                  continue;
+                }
+              if (cur_attr_name == "render_method")
+                {
+                  lineEdit = new QComboBox(&dialog);
+                  QString tooltipString =
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
+                  tooltipString.append(" Default: ");
+                  tooltipString.append(
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
+                  ((QComboBox *)lineEdit)->setToolTip(tooltipString);
+                  ((QComboBox *)lineEdit)->addItem("gr_text");     // 0
+                  ((QComboBox *)lineEdit)->addItem("gr_mathtext"); // 1
+                  ((QComboBox *)lineEdit)->addItem("gr_textext");  // 2
+                  ((QComboBox *)lineEdit)
+                      ->setCurrentIndex(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+                }
+              else if (cur_attr_name == "textalign_vertical")
+                {
+                  lineEdit = new QComboBox(&dialog);
+                  QString tooltipString =
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
+                  tooltipString.append(" Default: ");
+                  tooltipString.append(
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
+                  ((QComboBox *)lineEdit)->setToolTip(tooltipString);
+                  ((QComboBox *)lineEdit)->addItem("normal"); // 0
+                  ((QComboBox *)lineEdit)->addItem("top");    // 1
+                  ((QComboBox *)lineEdit)->addItem("cap");    // 2
+                  ((QComboBox *)lineEdit)->addItem("half");   // 3
+                  ((QComboBox *)lineEdit)->addItem("base");   // 4
+                  ((QComboBox *)lineEdit)->addItem("bottom"); // 5
+                  ((QComboBox *)lineEdit)
+                      ->setCurrentIndex(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+                }
+              else if (cur_attr_name == "textalign_horizontal")
+                {
+                  lineEdit = new QComboBox(&dialog);
+                  QString tooltipString =
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
+                  tooltipString.append(" Default: ");
+                  tooltipString.append(
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
+                  ((QComboBox *)lineEdit)->setToolTip(tooltipString);
+                  ((QComboBox *)lineEdit)->addItem("normal"); // 0
+                  ((QComboBox *)lineEdit)->addItem("left");   // 1
+                  ((QComboBox *)lineEdit)->addItem("center"); // 2
+                  ((QComboBox *)lineEdit)->addItem("right");  // 3
+                  ((QComboBox *)lineEdit)
+                      ->setCurrentIndex(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+                }
+              else if (cur_attr_name == "textalign")
+                {
+                  lineEdit = new QCheckBox(&dialog);
+                  QString tooltipString =
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
+                  tooltipString.append(" Default: ");
+                  tooltipString.append(
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
+                  ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
+                  ((QCheckBox *)lineEdit)
+                      ->setChecked(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)) == 1);
+                }
+              else
+                {
+                  lineEdit = new QLineEdit(&dialog);
+                  ((QLineEdit *)lineEdit)
+                      ->setText(
+                          static_cast<std::string>(current_selection->get_ref()->getAttribute(cur_attr_name)).c_str());
+                  QString tooltipString =
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
+                  tooltipString.append(" Default: ");
+                  tooltipString.append(
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
+                  ((QLineEdit *)lineEdit)->setToolTip(tooltipString);
+                }
+              QString label = QString(cur_attr_name.c_str());
+              form.addRow(label, lineEdit);
+
+              labels << label;
+              fields << lineEdit;
+            }
+
+          QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
+          form.addRow(&buttonBox);
+          QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+          QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+          if (dialog.exec() == QDialog::Accepted)
+            {
+              for (int i = 0; i < labels.count(); i++)
+                {
+                  qDebug() << typeid(fields[i]).name();
+                  auto &field = *fields[i]; // because typeid(*fields[i]) is bad :(
+                  if (typeid(field) == typeid(QLineEdit))
+                    {
+                      std::string name = std::string(current_selection->get_ref()->getAttribute("name"));
+                      if (labels[i].toStdString() == "text" &&
+                          (name == "title" || name == "xlabel" || name == "ylabel"))
+                        {
+                          current_selection->get_ref()->parentElement()->setAttribute(
+                              name, ((QLineEdit *)fields[i])->text().toStdString());
+                        }
+                      current_selection->get_ref()->setAttribute(labels[i].toStdString(),
+                                                                 ((QLineEdit *)fields[i])->text().toStdString());
+                    }
+                  else if (typeid(field) == typeid(QComboBox))
+                    {
+                      current_selection->get_ref()->setAttribute(labels[i].toStdString(),
+                                                                 ((QComboBox *)fields[i])->currentIndex());
+                    }
+                  else if (typeid(field) == typeid(QCheckBox))
+                    {
+                      current_selection->get_ref()->setAttribute(labels[i].toStdString(),
+                                                                 ((QCheckBox *)fields[i])->isChecked());
+                    }
+                }
+              current_selection = nullptr;
+              mouse_move_selection = nullptr;
+              amount_scrolled = 0;
+              clicked.clear();
+              std::cerr << GRM::toXML(grm_get_document_root()) << std::endl;
+              reset_pixmap();
+            }
+        }
+      else if (event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace)
+        {
+          if (current_selection == nullptr)
+            {
+              return;
+            }
+          amount_scrolled = 0;
+          // to remove title, xlabel and ylabel from axis Node
+          if (current_selection->get_ref()->parentElement()->hasAttribute(
+                  (std::string)current_selection->get_ref()->getAttribute("name")))
+            {
+              current_selection->get_ref()->parentElement()->removeAttribute(
+                  (std::string)current_selection->get_ref()->getAttribute("name"));
+            }
+          auto parent = current_selection->get_ref()->parentElement();
+          while (parent != nullptr && parent->localName() != "root" && parent->childElementCount() <= 1)
+            {
+              auto tmp_parent = parent->parentElement();
+              parent->remove();
+              parent = tmp_parent;
+            }
+          current_selection->get_ref()->remove();
+          mouse_move_selection = nullptr;
+          reset_pixmap();
+        }
     }
   else
     {
@@ -477,7 +779,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
 void GRPlotWidget::keyReleaseEvent(QKeyEvent *event)
 {
   GR_UNUSED(event);
-  collectTooltips();
+  if (!enable_editor) collectTooltips();
   update();
 }
 
@@ -488,44 +790,68 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
     {
       return;
     }
-  if (mouseState.mode == MouseState::Mode::boxzoom)
-    {
-      rubberBand->setGeometry(QRect(mouseState.pressed, event->pos()).normalized());
-    }
-  else if (mouseState.mode == MouseState::Mode::pan)
+  amount_scrolled = 0;
+
+  if (enable_editor)
     {
       int x, y;
       getMousePos(event, &x, &y);
-      grm_args_t *args = grm_args_new();
+      cur_moved = bounding_logic->get_bounding_objects_at_point(x, y);
 
-      grm_args_push(args, "x", "i", mouseState.anchor.x());
-      grm_args_push(args, "y", "i", mouseState.anchor.y());
-      grm_args_push(args, "xshift", "i", x - mouseState.anchor.x());
-      grm_args_push(args, "yshift", "i", y - mouseState.anchor.y());
-
-      grm_input(args);
-      grm_args_delete(args);
-
-      mouseState.anchor = event->pos();
-      redraw();
+      if (current_selection == nullptr)
+        {
+          if (cur_moved.empty())
+            {
+              mouse_move_selection = nullptr;
+            }
+          else
+            {
+              mouse_move_selection = &cur_moved[0];
+            }
+          update();
+        }
     }
   else
     {
-      collectTooltips();
-      if (grm_args_values(args_, "kind", "s", &kind))
+      if (mouseState.mode == MouseState::Mode::boxzoom)
         {
-          if (strcmp(kind, "marginalheatmap") == 0)
-            {
-              grm_args_t *input_args;
-              input_args = grm_args_new();
+          rubberBand->setGeometry(QRect(mouseState.pressed, event->pos()).normalized());
+        }
+      else if (mouseState.mode == MouseState::Mode::pan)
+        {
+          int x, y;
+          getMousePos(event, &x, &y);
+          grm_args_t *args = grm_args_new();
 
-              grm_args_push(input_args, "x", "i", event->pos().x());
-              grm_args_push(input_args, "y", "i", event->pos().y());
-              grm_input(input_args);
-            }
+          grm_args_push(args, "x", "i", mouseState.anchor.x());
+          grm_args_push(args, "y", "i", mouseState.anchor.y());
+          grm_args_push(args, "xshift", "i", x - mouseState.anchor.x());
+          grm_args_push(args, "yshift", "i", y - mouseState.anchor.y());
+
+          grm_input(args);
+          grm_args_delete(args);
+
+          mouseState.anchor = event->pos();
           redraw();
         }
-      update();
+      else
+        {
+          collectTooltips();
+          if (grm_args_values(args_, "kind", "s", &kind))
+            {
+              if (strcmp(kind, "marginalheatmap") == 0)
+                {
+                  grm_args_t *input_args;
+                  input_args = grm_args_new();
+
+                  grm_args_push(input_args, "x", "i", event->pos().x());
+                  grm_args_push(input_args, "y", "i", event->pos().y());
+                  grm_input(input_args);
+                }
+              redraw();
+            }
+          update();
+        }
     }
 }
 
@@ -542,6 +868,27 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
     {
       mouseState.mode = MouseState::Mode::pan;
       mouseState.anchor = event->pos();
+
+      if (enable_editor)
+        {
+          amount_scrolled = 0;
+          int x, y;
+          getMousePos(event, &x, &y);
+          auto cur_clicked = bounding_logic->get_bounding_objects_at_point(x, y);
+          if (cur_clicked.empty())
+            {
+              clicked.clear();
+              current_selection = nullptr;
+              update();
+              return;
+            }
+          else
+            {
+              clicked = cur_clicked;
+            }
+          current_selection = &clicked[0];
+          mouse_move_selection = nullptr;
+        }
     }
 }
 
@@ -571,13 +918,20 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
   grm_input(args);
   grm_args_delete(args);
 
-  redraw();
+  update();
 }
 
 void GRPlotWidget::resizeEvent(QResizeEvent *event)
 {
   grm_args_push(args_, "size", "dd", (double)event->size().width(), (double)event->size().height());
   grm_merge_hold(args_);
+
+  current_selection = nullptr;
+  mouse_move_selection = nullptr;
+  amount_scrolled = 0;
+  clicked.clear();
+  reset_pixmap();
+  arguments_changed = true;
 
   redraw();
 }
@@ -588,12 +942,81 @@ void GRPlotWidget::wheelEvent(QWheelEvent *event)
     {
       int x, y;
       getWheelPos(event, &x, &y);
-      grm_args_t *args = grm_args_new();
-      grm_args_push(args, "x", "i", x);
-      grm_args_push(args, "y", "i", y);
-      grm_args_push(args, "angle_delta", "d", (double)event->angleDelta().y());
-      grm_input(args);
-      grm_args_delete(args);
+      QPoint numPixels = event->pixelDelta();
+      QPoint numDegrees = event->angleDelta();
+
+      if (enable_editor)
+        {
+          if (!numPixels.isNull())
+            {
+              // Scrolling with pixels (For high-res scrolling like on macOS)
+
+              // Prevent flickering when scrolling fast
+              if (numPixels.y() > 0)
+                {
+                  amount_scrolled += numPixels.y() < 10 ? numPixels.y() : 10;
+                }
+              else if (numPixels.y() < 0)
+                {
+                  amount_scrolled += numPixels.y() > -10 ? numPixels.y() : -10;
+                }
+            }
+          else if (!numDegrees.isNull())
+            {
+              QPoint numSteps = numDegrees / 16;
+              // Scrolling with degrees
+              if (numSteps.y() != 0)
+                {
+                  amount_scrolled += numSteps.y();
+                }
+            }
+
+          if (amount_scrolled > 50)
+            {
+              if (!clicked.empty() && current_selection != nullptr)
+                {
+                  for (int i = 0; i < clicked.size(); i++)
+                    {
+                      if (clicked[i].get_id() == current_selection->get_id())
+                        {
+                          if (i + 1 < clicked.size())
+                            {
+                              current_selection = &clicked[i + 1];
+                              break;
+                            }
+                        }
+                    }
+                }
+              amount_scrolled = 0;
+            }
+          else if (amount_scrolled < -50)
+            {
+              if (!clicked.empty() && current_selection != nullptr)
+                {
+                  for (int i = clicked.size() - 1; i >= 0; i--)
+                    {
+                      if (clicked[i].get_id() == current_selection->get_id())
+                        {
+                          if (i - 1 > 0)
+                            {
+                              current_selection = &clicked[i - 1];
+                              break;
+                            }
+                        }
+                    }
+                }
+              amount_scrolled = 0;
+            }
+        }
+      else
+        {
+          grm_args_t *args = grm_args_new();
+          grm_args_push(args, "x", "i", x);
+          grm_args_push(args, "y", "i", y);
+          grm_args_push(args, "angle_delta", "d", (double)event->angleDelta().y());
+          grm_input(args);
+          grm_args_delete(args);
+        }
 
       redraw();
     }
@@ -617,6 +1040,7 @@ void GRPlotWidget::heatmap()
 {
   grm_args_push(args_, "kind", "s", "heatmap");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -625,6 +1049,7 @@ void GRPlotWidget::marginalheatmapall()
   grm_args_push(args_, "kind", "s", "marginalheatmap");
   grm_args_push(args_, "marginalheatmap_kind", "s", "all");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -633,6 +1058,7 @@ void GRPlotWidget::marginalheatmapline()
   grm_args_push(args_, "kind", "s", "marginalheatmap");
   grm_args_push(args_, "marginalheatmap_kind", "s", "line");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -640,6 +1066,7 @@ void GRPlotWidget::line()
 {
   grm_args_push(args_, "kind", "s", "line");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -647,6 +1074,7 @@ void GRPlotWidget::sumalgorithm()
 {
   grm_args_push(args_, "algorithm", "s", "sum");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -654,6 +1082,7 @@ void GRPlotWidget::maxalgorithm()
 {
   grm_args_push(args_, "algorithm", "s", "max");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -661,12 +1090,14 @@ void GRPlotWidget::volume()
 {
   grm_args_push(args_, "kind", "s", "volume");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 void GRPlotWidget::isosurface()
 {
   grm_args_push(args_, "kind", "s", "isosurface");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -674,12 +1105,14 @@ void GRPlotWidget::surface()
 {
   grm_args_push(args_, "kind", "s", "surface");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 void GRPlotWidget::wireframe()
 {
   grm_args_push(args_, "kind", "s", "wireframe");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -687,6 +1120,7 @@ void GRPlotWidget::contour()
 {
   grm_args_push(args_, "kind", "s", "contour");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -694,6 +1128,7 @@ void GRPlotWidget::imshow()
 {
   grm_args_push(args_, "kind", "s", "imshow");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -701,6 +1136,7 @@ void GRPlotWidget::plot3()
 {
   grm_args_push(args_, "kind", "s", "plot3");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -708,6 +1144,7 @@ void GRPlotWidget::contourf()
 {
   grm_args_push(args_, "kind", "s", "contourf");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -715,6 +1152,7 @@ void GRPlotWidget::trisurf()
 {
   grm_args_push(args_, "kind", "s", "trisurf");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -722,6 +1160,7 @@ void GRPlotWidget::tricont()
 {
   grm_args_push(args_, "kind", "s", "tricont");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -729,6 +1168,7 @@ void GRPlotWidget::scatter3()
 {
   grm_args_push(args_, "kind", "s", "scatter3");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -736,6 +1176,7 @@ void GRPlotWidget::scatter()
 {
   grm_args_push(args_, "kind", "s", "scatter");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -743,6 +1184,7 @@ void GRPlotWidget::hist()
 {
   grm_args_push(args_, "kind", "s", "hist");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -750,6 +1192,7 @@ void GRPlotWidget::barplot()
 {
   grm_args_push(args_, "kind", "s", "barplot");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -757,6 +1200,7 @@ void GRPlotWidget::stairs()
 {
   grm_args_push(args_, "kind", "s", "stairs");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -764,6 +1208,7 @@ void GRPlotWidget::stem()
 {
   grm_args_push(args_, "kind", "s", "stem");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -771,6 +1216,7 @@ void GRPlotWidget::shade()
 {
   grm_args_push(args_, "kind", "s", "shade");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -778,6 +1224,7 @@ void GRPlotWidget::hexbin()
 {
   grm_args_push(args_, "kind", "s", "hexbin");
   grm_merge(args_);
+  arguments_changed = true;
   redraw();
 }
 
@@ -803,6 +1250,174 @@ void GRPlotWidget::svg()
 {
   file_export = "svg";
   redraw();
+}
+
+void GRPlotWidget::moveEvent(QMoveEvent *event)
+{
+  if (enable_editor)
+    {
+      treewidget->move(this->width() + event->pos().x(),
+                       event->pos().y() - (treewidget->geometry().y() - treewidget->pos().y()));
+    }
+}
+
+void GRPlotWidget::extract_bounding_boxes_from_grm(QPainter &painter)
+{
+  auto global_root = grm_get_document_root();
+  double xmin, xmax, ymin, ymax;
+  int id;
+
+  if (enable_editor)
+    {
+      painter.setPen(QPen(QColor(255, 0, 0, 100)));
+
+      for (const auto &cur_child : global_root->querySelectorsAll("[_bbox_id]"))
+        {
+          id = static_cast<int>(cur_child->getAttribute("_bbox_id"));
+          xmin = static_cast<double>(cur_child->getAttribute("_bbox_xmin"));
+          xmax = static_cast<double>(cur_child->getAttribute("_bbox_xmax"));
+          ymin = static_cast<double>(cur_child->getAttribute("_bbox_ymin"));
+          ymax = static_cast<double>(cur_child->getAttribute("_bbox_ymax"));
+
+          if (xmin == DBL_MAX || xmax == -DBL_MAX || ymin == DBL_MAX || ymax == -DBL_MAX)
+            {
+              qDebug() << "skipping" << cur_child->localName().c_str();
+            }
+          else
+            {
+              auto b = Bounding_object(id, xmin, xmax, ymin, ymax, cur_child);
+              bounding_logic->add_bounding_object(b);
+              auto bounding_rect = b.boundingRect();
+              if (highlightBoundingObjects)
+                {
+                  painter.drawRect(bounding_rect);
+                  painter.drawText(bounding_rect.bottomRight() + QPointF(5, 0), cur_child->localName().c_str());
+                }
+            }
+        }
+    }
+}
+
+void GRPlotWidget::highlight_current_selection(QPainter &painter)
+{
+  if (enable_editor)
+    {
+      if (current_selection != nullptr)
+        {
+          painter.fillRect(current_selection->boundingRect(), QBrush(QColor("blue"), Qt::Dense5Pattern));
+          if (current_selection->get_ref() != nullptr)
+            painter.drawText(current_selection->boundingRect().bottomRight() + QPointF(5, 0),
+                             current_selection->get_ref()->localName().c_str());
+        }
+      else if (mouse_move_selection != nullptr)
+        {
+          painter.fillRect(mouse_move_selection->boundingRect(), QBrush(QColor("blue"), Qt::Dense7Pattern));
+          if (mouse_move_selection->get_ref() != nullptr)
+            painter.drawText(mouse_move_selection->boundingRect().bottomRight() + QPointF(5, 0),
+                             mouse_move_selection->get_ref()->localName().c_str());
+        }
+    }
+}
+
+void GRPlotWidget::leaveEvent(QEvent *event)
+{
+  // Prevent highlighting if mouse leaves the widget without a mouseMoveEvent
+  if (enable_editor)
+    {
+      mouse_move_selection = nullptr;
+      update();
+    }
+}
+
+void GRPlotWidget::reset_pixmap()
+{
+  redraw_pixmap = true;
+  current_selection = nullptr;
+  update();
+}
+
+void GRPlotWidget::show_bounding_boxes_slot()
+{
+  if (enable_editor)
+    {
+      highlightBoundingObjects = show_bounding_boxes_action->isChecked();
+      update();
+    }
+}
+
+void GRPlotWidget::open_file_slot()
+{
+  if (enable_editor) fprintf(stderr, "This functionality isnt`t implemented yet\n");
+  // probably want to be able to load a new dataset as a subplot
+}
+
+void GRPlotWidget::save_file_slot()
+{
+  if (enable_editor)
+    {
+      if (grm_get_render() == nullptr)
+        {
+          QApplication::beep();
+          return;
+        }
+      std::string save_file_name =
+          QFileDialog::getSaveFileName(this, "Save XML", QDir::homePath(), "XML files (*.xml)").toStdString();
+      if (save_file_name.empty())
+        {
+          return;
+        }
+      std::ofstream save_file_stream(save_file_name);
+      if (!save_file_stream)
+        {
+          std::stringstream text_stream;
+          text_stream << "Could not save the graphics tree to the XML file \"" << save_file_name << "\".";
+          QMessageBox::critical(this, "File save not possible", QString::fromStdString(text_stream.str()));
+          return;
+        }
+      save_file_stream << GRM::toXML(grm_get_render()) << std::endl;
+      save_file_stream.close();
+    }
+}
+
+void GRPlotWidget::show_container_slot()
+{
+  if (enable_editor)
+    {
+      if (show_container_action->isChecked())
+        {
+          treewidget->show();
+        }
+      else
+        {
+          treewidget->hide();
+        }
+      treewidget->resize(400, height());
+      treewidget->move(this->pos().x() + this->width(),
+                       this->pos().y() - 28 + (treewidget->geometry().y() - treewidget->pos().y()));
+    }
+}
+
+void GRPlotWidget::enable_editor_functions()
+{
+  if (editor_action->isChecked())
+    {
+      enable_editor = true;
+
+      // dirty reset of screen position
+      grm_args_t *args = grm_args_new();
+      QPoint pos = mapFromGlobal(QCursor::pos());
+      grm_args_push(args, "key", "s", "r");
+      grm_args_push(args, "x", "i", pos.x());
+      grm_args_push(args, "y", "i", pos.y());
+      grm_input(args);
+      grm_args_delete(args);
+
+      redraw();
+    }
+  else
+    {
+      enable_editor = false;
+    }
 }
 
 void GRPlotWidget::received(grm_args_t_wrapper args)
@@ -853,10 +1468,224 @@ void GRPlotWidget::size_callback(const grm_event_t *new_size_object)
     }
 }
 
-void GRPlotWidget::cmd_callback(const grm_cmd_event_t *event)
+void GRPlotWidget::cmd_callback(const grm_request_event_t *event)
 {
-  if (strcmp(event->cmd, "close") == 0)
+  if (strcmp(event->request_string, "close") == 0)
     {
       QApplication::quit();
     }
+}
+
+Qt::KeyboardModifiers GRPlotWidget::queryKeyboardModifiers()
+{
+  return modifiers | QApplication::queryKeyboardModifiers();
+}
+
+void GRPlotWidget::processTestCommandsFile()
+{
+  while (test_commands_stream && !test_commands_stream->atEnd())
+    {
+      QString line = test_commands_stream->readLine();
+      QStringList words = line.split(",");
+      if (words.size())
+        {
+          if (words[0] == "keyPressEvent" && words.size() == 2 && words[1].size() == 1 && words[1][0] >= 'A' &&
+              words[1][0] <= 'Z')
+            {
+              QKeyEvent event(QEvent::KeyPress, words[1][0].unicode(), modifiers);
+              keyPressEvent(&event);
+
+              QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
+              return;
+            }
+          else if (words[0] == "setArg" && words.size() == 3)
+            {
+              grm_args_push(args_, words[1].toUtf8().constData(), "s", words[2].toUtf8().constData());
+              grm_merge(args_);
+              arguments_changed = true;
+              redraw();
+            }
+          else if (words[0] == "mouseMoveEvent" && words.size() == 3)
+            {
+              bool x_flag;
+              bool y_flag;
+              int x = words[1].toInt(&x_flag);
+              int y = words[2].toInt(&y_flag);
+              if (x_flag && y_flag)
+                {
+                  QPoint local_position(x, y);
+                  QPoint global_position = mapToGlobal(local_position);
+                  QMouseEvent event(QEvent::MouseMove, local_position, global_position, Qt::NoButton, Qt::NoButton,
+                                    modifiers);
+                  QCursor::setPos(global_position.x(), global_position.y());
+                  mouseMoveEvent(&event);
+
+                  QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
+                  return;
+                }
+              else
+                {
+                  std::cerr << "Failed to parse mouseMoveEvent: " << line.toStdString() << std::endl;
+                  break;
+                }
+            }
+          else if (words[0] == "mousePressEvent" && words.size() == 2)
+            {
+              Qt::MouseButton button;
+              if (words[1] == "left")
+                {
+                  button = Qt::MouseButton::LeftButton;
+                }
+              else if (words[1] == "right")
+                {
+                  button = Qt::MouseButton::RightButton;
+                }
+              else
+                {
+                  std::cerr << "Failed to parse mousePressEvent: " << line.toStdString() << std::endl;
+                  break;
+                }
+              QPoint global_position = QCursor::pos();
+              QPoint local_position = mapFromGlobal(global_position);
+              QMouseEvent event(QEvent::MouseButtonPress, local_position, global_position, button, Qt::NoButton,
+                                modifiers);
+              mousePressEvent(&event);
+            }
+          else if (words[0] == "mouseReleaseEvent" && words.size() == 2)
+            {
+              Qt::MouseButton button;
+              if (words[1] == "left")
+                {
+                  button = Qt::MouseButton::LeftButton;
+                }
+              else if (words[1] == "right")
+                {
+                  button = Qt::MouseButton::RightButton;
+                }
+              else
+                {
+                  std::cerr << "Failed to parse mousePressEvent: " << line.toStdString() << std::endl;
+                  break;
+                }
+              QPoint global_position = QCursor::pos();
+              QPoint local_position = mapFromGlobal(global_position);
+              QMouseEvent event(QEvent::MouseButtonRelease, local_position, global_position, button, Qt::NoButton,
+                                modifiers);
+              mouseReleaseEvent(&event);
+            }
+          else if (words[0] == "wheelEvent" && words.size() == 2)
+            {
+              bool delta_flag;
+              int delta = words[1].toInt(&delta_flag);
+              if (delta_flag)
+                {
+                  QPoint global_position = QCursor::pos();
+                  QPoint local_position = mapFromGlobal(global_position);
+#if QT_VERSION >= 0x060000
+                  QWheelEvent event(local_position, global_position, QPoint{}, QPoint{0, delta}, Qt::NoButton,
+                                    modifiers, Qt::NoScrollPhase, false, Qt::MouseEventSynthesizedByApplication);
+#else
+                  QWheelEvent event(local_position, global_position, QPoint{}, QPoint{0, delta}, delta, Qt::Vertical,
+                                    Qt::NoButton, modifiers, Qt::NoScrollPhase, Qt::MouseEventSynthesizedByApplication,
+                                    false);
+#endif
+                  wheelEvent(&event);
+
+                  QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
+                  return;
+                }
+              else
+                {
+                  std::cerr << "Failed to parse wheelEvent: " << line.toStdString() << std::endl;
+                  break;
+                }
+            }
+          else if (words[0] == "modifiers")
+            {
+              bool parsing_failed = false;
+              modifiers = Qt::NoModifier;
+              for (int i = 1; i < words.size(); i++)
+                {
+                  if (words[i] == "shift")
+                    {
+                      modifiers |= Qt::ShiftModifier;
+                    }
+                  else if (words[i] == "alt")
+                    {
+                      modifiers |= Qt::AltModifier;
+                    }
+                  else if (words[i] == "control")
+                    {
+                      modifiers |= Qt::ControlModifier;
+                    }
+                  else
+                    {
+                      parsing_failed = true;
+                    }
+                }
+              if (parsing_failed)
+                {
+                  std::cerr << "Failed to parse modifiers: " << line.toStdString() << std::endl;
+                  break;
+                }
+            }
+          else if (words[0] == "sleep" && words.size() == 2)
+            {
+              bool ms_flag;
+              int ms = words[1].toInt(&ms_flag);
+              if (ms_flag)
+                {
+                  QTimer::singleShot(ms, this, &GRPlotWidget::processTestCommandsFile);
+                  return;
+                }
+              else
+                {
+                  std::cerr << "Failed to parse sleep: " << line.toStdString() << std::endl;
+                  break;
+                }
+            }
+          else if (words[0] == "resize" && words.size() == 3)
+            {
+              bool width_flag;
+              bool height_flag;
+              int width = words[1].toInt(&width_flag);
+              int height = words[2].toInt(&height_flag);
+              if (width_flag && height_flag)
+                {
+                  window()->resize(width, height);
+
+                  QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
+                  return;
+                }
+              else
+                {
+                  std::cerr << "Failed to parse resize: " << line.toStdString() << std::endl;
+                  break;
+                }
+            }
+          else if (words[0] == "widgetToPNG" && words.size() == 2)
+            {
+              QPixmap pixmap(size());
+              pixmap.fill(Qt::transparent);
+              paint(&pixmap);
+              QFile file(words[1]);
+              if (file.open(QIODevice::WriteOnly))
+                {
+                  pixmap.save(&file, "PNG");
+                }
+              else
+                {
+                  std::cerr << "Failed to open: " << words[1].toStdString() << std::endl;
+                  break;
+                }
+            }
+          else
+            {
+              std::cerr << "Unknown test event: " << line.toStdString() << std::endl;
+              break;
+            }
+        }
+    }
+  test_commands_file->close();
+  QApplication::quit();
 }
