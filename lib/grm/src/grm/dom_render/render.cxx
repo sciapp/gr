@@ -78,6 +78,7 @@ static std::set<std::string> parentTypes = {
     "layout_grid",
     "layout_gridelement",
     "legend",
+    "pie_segment",
     "plot",
     "polar_axes",
     "root",
@@ -239,6 +240,15 @@ static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},           {"hexbin",
 static string_map_t *fmt_map = string_map_new_with_data(array_size(kind_to_fmt), kind_to_fmt);
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static void resetOldBoundingBoxes(const std::shared_ptr<GRM::Element> &element)
+{
+  element->setAttribute("_bbox_id", -1);
+  element->removeAttribute("_bbox_xmin");
+  element->removeAttribute("_bbox_xmax");
+  element->removeAttribute("_bbox_ymin");
+  element->removeAttribute("_bbox_ymax");
+}
 
 static void clearOldChildren(int *del, const std::shared_ptr<GRM::Element> &element)
 {
@@ -2225,6 +2235,14 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
 
       element->removeAttribute("panzoom");
       element->removeChild(panzoom_element);
+
+      for (const auto &child : element->children())
+        {
+          if (starts_with(child->localName(), "series_"))
+            {
+              resetOldBoundingBoxes(child);
+            }
+        }
     }
 
   element->setAttribute("_xlim_min", xmin);
@@ -5208,33 +5226,12 @@ static void legend(const std::shared_ptr<GRM::Element> &element, const std::shar
   else
     {
       unsigned int num_labels = labels.size();
-      std::string color_indices_key;
-      std::string color_rgb_values_key;
-      std::vector<int> color_indices_vec;
-      std::vector<double> color_rgb_values_vec;
       std::shared_ptr<GRM::Element> fr, dr;
+      int label_child_id = 0;
 
       /* clear child nodes */
       del = static_cast<int>(element->getAttribute("_delete_childs"));
       clearOldChildren(&del, element);
-
-      for (const auto &child : element->parentElement()->children())
-        {
-          if (child->localName() == "series_pie")
-            {
-              if (child->hasAttribute("color_indices"))
-                {
-                  color_indices_key = static_cast<std::string>(child->getAttribute("color_indices"));
-                  color_indices_vec = GRM::get<std::vector<int>>((*context)[color_indices_key]);
-                }
-              else if (child->hasAttribute("color_rgb_values"))
-                {
-                  color_rgb_values_key = static_cast<std::string>(child->getAttribute("color_rgb_values"));
-                  color_rgb_values_vec = GRM::get<std::vector<double>>((*context)[color_rgb_values_key]);
-                }
-              break;
-            }
-        }
 
       gr_selntran(1);
 
@@ -5293,8 +5290,6 @@ static void legend(const std::shared_ptr<GRM::Element> &element, const std::shar
           element->append(subsubGroup);
         }
       render->setTextAlign(subsubGroup, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-      // reset setNextColor
-      setNextColor(GR_COLOR_RESET, color_indices_vec, color_rgb_values_vec, element);
 
       for (auto &current_label : labels)
         {
@@ -5302,49 +5297,109 @@ static void legend(const std::shared_ptr<GRM::Element> &element, const std::shar
           if (del != 0 && del != 1)
             {
               labelGroup = render->createElement("label");
-              labelGroup->setAttribute("_child_id", child_id++);
+              labelGroup->setAttribute("_child_id", label_child_id++);
               subsubGroup->append(labelGroup);
             }
           else
             {
-              labelGroup = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+              auto selections = subsubGroup->querySelectorsAll("[_child_id=" + std::to_string(label_child_id++) + "]");
+              for (const auto &sel : selections)
+                {
+                  if (sel->localName() == "label")
+                    {
+                      labelGroup = sel;
+                      break;
+                    }
+                }
             }
           if (labelGroup != nullptr)
             {
-              setNextColor(GR_COLOR_FILL, color_indices_vec, color_rgb_values_vec, labelGroup);
-
               std::shared_ptr<GRM::Element> fr, dr, text;
               if (del != 0 && del != 1)
                 {
                   fr = render->createFillRect(px, px + 0.02, py - 0.01, py + 0.01);
-                  fr->setAttribute("_child_id", child_id++);
+                  fr->setAttribute("_child_id", 0);
                   labelGroup->append(fr);
                 }
               else
                 {
-                  fr = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                  auto selections = labelGroup->querySelectorsAll("[_child_id=0]");
+                  for (const auto &sel : selections)
+                    {
+                      if (sel->localName() == "fillrect")
+                        {
+                          fr = sel;
+                          break;
+                        }
+                    }
                   if (fr != nullptr) render->createFillRect(px, px + 0.02, py - 0.01, py + 0.01, 0, 0, -1, fr);
                 }
+              if (fr != nullptr)
+                {
+                  for (const auto &child : element->parentElement()->children())
+                    {
+                      if (child->localName() == "series_pie")
+                        {
+                          std::shared_ptr<GRM::Element> pie_segment;
+                          auto pie_childs =
+                              child->querySelectorsAll("[_child_id=" + std::to_string(label_child_id - 1) + "]");
+                          for (const auto &segments : pie_childs)
+                            {
+                              if (segments->localName() == "pie_segment")
+                                {
+                                  pie_segment = segments;
+                                  break;
+                                }
+                            }
+                          if (pie_segment != nullptr)
+                            {
+                              int color_ind = static_cast<int>(pie_segment->getAttribute("fillcolorind"));
+                              auto colorrep = static_cast<std::string>(
+                                  pie_segment->getAttribute("colorrep." + std::to_string(color_ind)));
+                              fr->setAttribute("fillcolorind", color_ind);
+                              fr->setAttribute("colorrep." + std::to_string(color_ind), colorrep);
+                            }
+                          break;
+                        }
+                    }
+                }
+
               if (del != 0 && del != 1)
                 {
                   dr = render->createDrawRect(px, px + 0.02, py - 0.01, py + 0.01);
-                  dr->setAttribute("_child_id", child_id++);
+                  dr->setAttribute("_child_id", 1);
                   labelGroup->append(dr);
                 }
               else
                 {
-                  dr = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                  auto selections = labelGroup->querySelectorsAll("[_child_id=1]");
+                  for (const auto &sel : selections)
+                    {
+                      if (sel->localName() == "drawrect")
+                        {
+                          dr = sel;
+                          break;
+                        }
+                    }
                   if (dr != nullptr) render->createDrawRect(px, px + 0.02, py - 0.01, py + 0.01, dr);
                 }
               if (del != 0 && del != 1)
                 {
                   text = render->createText(px + 0.03, py, current_label);
-                  text->setAttribute("_child_id", child_id++);
+                  text->setAttribute("_child_id", 2);
                   labelGroup->append(text);
                 }
               else
                 {
-                  text = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                  auto selections = labelGroup->querySelectorsAll("[_child_id=2]");
+                  for (const auto &sel : selections)
+                    {
+                      if (sel->localName() == "text")
+                        {
+                          text = sel;
+                          break;
+                        }
+                    }
                   if (text != nullptr) render->createText(px + 0.03, py, current_label, CoordinateSpace::NDC, text);
                 }
 
@@ -5352,8 +5407,6 @@ static void legend(const std::shared_ptr<GRM::Element> &element, const std::shar
               px += tbx[2] - tbx[0] + 0.05;
             }
         }
-      // reset setNextColor
-      setNextColor(GR_COLOR_RESET, color_indices_vec, color_rgb_values_vec, element);
 
       processLineColorInd(element);
       processLineWidth(element);
@@ -10164,6 +10217,59 @@ static int set_next_color(std::string key, gr_color_type_t color_type, const std
   return color_index;
 }
 
+static void pieSegment(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  double start_angle, end_angle, middle_angle;
+  int del = 0, child_id = 0;
+  std::shared_ptr<GRM::Element> arc, text_elem;
+  int color_index;
+  double text_pos[2];
+  std::string text;
+
+  del = static_cast<int>(element->getAttribute("_delete_childs"));
+  clearOldChildren(&del, element);
+
+  start_angle = static_cast<double>(element->getAttribute("start_angle"));
+  end_angle = static_cast<double>(element->getAttribute("end_angle"));
+  color_index = static_cast<int>(element->getAttribute("color_ind"));
+  text = static_cast<std::string>(element->getAttribute("text"));
+
+  if (del != 0 && del != 1)
+    {
+      arc = global_render->createFillArc(0.035, 0.965, 0.07, 1.0, start_angle, end_angle);
+      arc->setAttribute("_child_id", child_id++);
+      element->append(arc);
+    }
+  else
+    {
+      arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+      if (arc != nullptr) global_render->createFillArc(0.035, 0.965, 0.07, 1.0, start_angle, end_angle, 0, 0, -1, arc);
+    }
+
+  middle_angle = (start_angle + end_angle) / 2.0;
+
+  text_pos[0] = 0.5 + 0.25 * cos(middle_angle * M_PI / 180.0);
+  text_pos[1] = 0.5 + 0.25 * sin(middle_angle * M_PI / 180.0);
+
+  if (del != 0 && del != 1)
+    {
+      text_elem = global_render->createText(text_pos[0], text_pos[1], text, CoordinateSpace::WC);
+      text_elem->setAttribute("_child_id", child_id++);
+      element->append(text_elem);
+    }
+  else
+    {
+      text_elem = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+      if (text_elem != nullptr)
+        global_render->createText(text_pos[0], text_pos[1], text, CoordinateSpace::WC, text_elem);
+    }
+  if (text_elem != nullptr)
+    {
+      text_elem->setAttribute("set_text_color_for_background", true);
+      processTextColorForBackground(text_elem);
+    }
+}
+
 static void pie(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
@@ -10181,7 +10287,7 @@ static void pie(const std::shared_ptr<GRM::Element> &element, const std::shared_
   std::string title;
   unsigned int i;
   int del = 0, child_id = 0;
-  std::shared_ptr<GRM::Element> arc, text_elem;
+  std::shared_ptr<GRM::Element> pie_segment;
 
   global_render->setFillIntStyle(element, GKS_K_INTSTYLE_SOLID);
   global_render->setTextAlign(element, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
@@ -10199,58 +10305,31 @@ static void pie(const std::shared_ptr<GRM::Element> &element, const std::shared_
   start_angle = 90;
   color_index = set_next_color("c", GR_COLOR_FILL, element, context);
 
-  // clear old pie
+  // clear old pie_segments
   del = static_cast<int>(element->getAttribute("_delete_childs"));
   clearOldChildren(&del, element);
 
   for (i = 0; i < x_length; ++i)
     {
       end_angle = start_angle - normalized_x[i] * 360.0;
-      if (del != 0 && del != 1)
-        {
-          arc = global_render->createFillArc(0.035, 0.965, 0.07, 1.0, start_angle, end_angle);
-          arc->setAttribute("_child_id", child_id++);
-          element->append(arc);
-        }
-      else
-        {
-          arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-          if (arc != nullptr)
-            global_render->createFillArc(0.035, 0.965, 0.07, 1.0, start_angle, end_angle, 0, 0, -1, arc);
-        }
-
-      if (arc != nullptr)
-        {
-          color_index = set_next_color("", GR_COLOR_FILL, arc, context);
-          processFillColorInd(arc);
-        }
-
-      middle_angle = (start_angle + end_angle) / 2.0;
-
-      text_pos[0] = 0.5 + 0.25 * cos(middle_angle * M_PI / 180.0);
-      text_pos[1] = 0.5 + 0.25 * sin(middle_angle * M_PI / 180.0);
 
       snprintf(text, 80, "%.2lf\n%.1lf %%", x_vec[i], normalized_x_int[i] / 10.0);
-
       if (del != 0 && del != 1)
         {
-          text_elem = global_render->createText(text_pos[0], text_pos[1], text, CoordinateSpace::WC);
-          text_elem->setAttribute("_child_id", child_id++);
-          element->append(text_elem);
+          pie_segment = global_render->createPieSegment(start_angle, end_angle, text, color_index);
+          pie_segment->setAttribute("_child_id", child_id++);
+          element->append(pie_segment);
         }
       else
         {
-          text_elem = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-          if (text_elem != nullptr)
-            global_render->createText(text_pos[0], text_pos[1], text, CoordinateSpace::WC, text_elem);
+          pie_segment = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+          if (pie_segment != nullptr)
+            global_render->createPieSegment(start_angle, end_angle, text, color_index, pie_segment);
         }
-      if (text_elem != nullptr)
+      if (pie_segment != nullptr)
         {
-          text_elem->setAttribute("color_index", color_index);
-
-          text_elem->setAttribute("set_text_color_for_background", true);
-          processFillColorInd(text_elem);
-          processTextColorForBackground(text_elem);
+          color_index = set_next_color("", GR_COLOR_FILL, pie_segment, context);
+          processFillColorInd(pie_segment);
         }
 
       start_angle = end_angle;
@@ -11696,6 +11775,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("nonuniform_polarcellarray"), PushDrawableToZQueue(nonUniformPolarCellArray)},
           {std::string("nonuniformcellarray"), PushDrawableToZQueue(nonuniformcellarray)},
           {std::string("panzoom"), PushDrawableToZQueue(panzoom)},
+          {std::string("pie_segment"), pieSegment},
           {std::string("polarcellarray"), PushDrawableToZQueue(polarCellArray)},
           {std::string("polyline"), PushDrawableToZQueue(polyline)},
           {std::string("polyline3d"), PushDrawableToZQueue(polyline3d)},
@@ -12642,6 +12722,19 @@ std::shared_ptr<GRM::Element> GRM::Render::createPieLegend(const std::string &la
     {
       (*useContext)[labels_key] = *labels;
     }
+  return element;
+}
+
+std::shared_ptr<GRM::Element> GRM::Render::createPieSegment(const double start_angle, const double end_angle,
+                                                            const std::string text, const int color_index,
+                                                            const std::shared_ptr<GRM::Element> &extElement)
+{
+  std::shared_ptr<GRM::Element> element = (extElement == nullptr) ? createElement("pie_segment") : extElement;
+  element->setAttribute("start_angle", start_angle);
+  element->setAttribute("end_angle", end_angle);
+  element->setAttribute("text", text);
+  element->setAttribute("color_ind", color_index);
+
   return element;
 }
 
@@ -14490,6 +14583,12 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                 {
                   element->setAttribute("_update_required", true);
                   if (attr != "orientation") element->setAttribute("_delete_childs", 2);
+                  if (attr == "orientation")
+                    {
+                      resetOldBoundingBoxes(element->parentElement());
+                      resetOldBoundingBoxes(element);
+                      element->removeAttribute("_bbox_id");
+                    }
                 }
             }
           else if (starts_with(element->localName(), "series"))

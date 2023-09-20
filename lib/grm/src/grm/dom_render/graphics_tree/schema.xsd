@@ -572,7 +572,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="arc"/>
             <xs:attributeGroup ref="colorrep"/>
-            <xs:attribute name="fillcolorind" type="xs:string" use="required"/>
+            <xs:attribute name="fillcolorind" type="xs:string"/>
             <xs:attribute name="fillintstyle" type="xs:string"/>
         </xs:complexType>
     </xs:element>
@@ -792,8 +792,7 @@
     <xs:element name="series_pie">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="fillarc" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="pie_segment" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="color_indices" type="xs:string"/>
@@ -803,6 +802,22 @@
             <xs:attribute name="textalign_horizontal" type="xs:string"/>
             <xs:attribute name="textalign_vertical" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of pie_segment -->
+    <xs:element name="pie_segment">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="fillarc" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="1"/>
+            </xs:choice>
+            <xs:attributeGroup ref="colorrep"/>
+            <xs:attribute name="color_ind" type="xs:string" use="required"/>
+            <xs:attribute name="end_angle" type="xs:string" use="required"/>
+            <xs:attribute name="fillcolorind" type="xs:string"/>
+            <xs:attribute name="start_angle" type="xs:string" use="required"/>
+            <xs:attribute name="text" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
 
