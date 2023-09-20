@@ -1148,7 +1148,7 @@ darwin-self-contained-iff1600:
   - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-macos-universal.tar.gz
   - tar xf cmake-3.23.0-macos-universal.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.23.0-macos-universal/CMake.app/Contents/bin/cmake
-  - export MACOSX_DEPLOYMENT_TARGET=10.14
+  - export MACOSX_DEPLOYMENT_TARGET=10.15
   - rm -rf /usr/local/gr/*
   - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake
   - mkdir artifacts
@@ -1199,7 +1199,7 @@ darwin-self-contained:
   tags:
   - libvirt
   script:
-  - export MACOSX_DEPLOYMENT_TARGET=10.14
+  - export MACOSX_DEPLOYMENT_TARGET=10.15
   - sudo mkdir /usr/local/gr
   - sudo chown administrator:wheel /usr/local/gr
   - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake QT6_QMAKE=/usr/local/qt6/bin/qmake
