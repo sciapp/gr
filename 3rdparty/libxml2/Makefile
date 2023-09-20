@@ -5,7 +5,7 @@ endif
 VERSION = 2.10.4
 LIBXML2_EXTRA_CONFIGURE_FLAGS ?=
 ifeq ($(shell uname),Darwin)
-LIBXML2_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.14
+LIBXML2_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
 endif
 
 ifeq ($(DOWNLOAD_CMD),)

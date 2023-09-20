@@ -70,10 +70,10 @@ LIBXML2_CONFIG = false
      RANLIB ?= ar ts
 ifeq ($(UNAME), Darwin)
 GR_SHARED_LIBRARY_SUFFIX ?= .dylib
-     CFLAGS += -mmacosx-version-min=10.14
-   CXXFLAGS += -mmacosx-version-min=10.14
+     CFLAGS += -mmacosx-version-min=10.15
+   CXXFLAGS += -mmacosx-version-min=10.15
 INSTALL_NAME = -Wl,-install_name,@rpath/libGRM${GR_SHARED_LIBRARY_SUFFIX}
-     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.14
+     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.15
      SOFLAGS = -dynamiclib
 else
 GR_SHARED_LIBRARY_SUFFIX ?= .so
