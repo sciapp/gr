@@ -5,7 +5,7 @@ endif
 VERSION = 2.4.8
 EXPAT_EXTRA_CONFIGURE_FLAGS ?=
 ifeq ($(shell uname),Darwin)
-EXPAT_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.14
+EXPAT_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
 endif
 
 ifeq ($(DOWNLOAD_CMD),)

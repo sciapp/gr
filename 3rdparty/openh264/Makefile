@@ -5,7 +5,7 @@ endif
 VERSION = 2.0.0
 OPENH264_EXTRA_MAKE_FLAGS ?=
 ifeq ($(shell uname),Darwin)
-OPENH264_EXTRA_MAKE_FLAGS += CFLAGS=-mmacosx-version-min=10.14
+OPENH264_EXTRA_MAKE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
 endif
 
 ifeq ($(DOWNLOAD_CMD),)
