@@ -1540,7 +1540,6 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
   static gks_state_list_t saved_gkss;
   int true_color;
   int cur_id;
-  bounding_struct s = {};
   bounding_struct *top;
 
   switch (fctid)
@@ -1659,18 +1658,18 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
     case GRM_BEGIN_SELECTION: /* 260 */
       cur_id = ia[0];
 #ifdef _WIN32
-      s = {DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX, (void (*)(int, double, double, double, double))r1, cur_id};
+      p->bounding_stack.push(
+          {DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX, (void (*)(int, double, double, double, double))r1, cur_id});
 #else
-      s = (bounding_struct){DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX, (void (*)(int, double, double, double, double))r1,
-                            cur_id};
+      p->bounding_stack.push((bounding_struct){DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX,
+                                               (void (*)(int, double, double, double, double))r1, cur_id});
 #endif
-      p->bounding_stack.push(s);
       break;
 
     case GRM_END_SELECTION: /* 261 */
       assert(!p->bounding_stack.empty());
       top = &p->bounding_stack.top();
-      s.fun_call(top->item_id, top->x_min, top->x_max, top->y_min, top->y_max);
+      top->fun_call(top->item_id, top->x_min, top->x_max, top->y_min, top->y_max);
       p->bounding_stack.pop();
       break;
     }
