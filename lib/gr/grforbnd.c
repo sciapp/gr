@@ -154,6 +154,16 @@ void FORTRAN(gr_setmarkercolorind)(int *color)
   gr_setmarkercolorind(*color);
 }
 
+void FORTRAN(gr_setbordercolorind)(int *color)
+{
+  gr_setbordercolorind(*color);
+}
+
+void FORTRAN(gr_setborderwidth)(double *width)
+{
+  gr_setborderwidth(*width);
+}
+
 void FORTRAN(gr_settextfontprec)(int *font, int *precision)
 {
   gr_settextfontprec(*font, *precision);

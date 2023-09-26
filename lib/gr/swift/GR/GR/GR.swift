@@ -160,6 +160,14 @@ public func inqmarkercolorind() -> Int {
     return Int(coli)
 }
 
+public func setbordercolorind(color: Int) {
+    gr_setbordercolorind(CInt(color))
+}
+
+public func setborderwidth(width: Double) {
+    gr_setborderwidth(CDouble(width))
+}
+
 public func setfontprec(font: Int, precision: Int) {
     gr_settextfontprec(CInt(font), CInt(precision))
 }
