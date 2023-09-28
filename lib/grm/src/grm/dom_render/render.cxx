@@ -2338,8 +2338,7 @@ static void processMarkerType(const std::shared_ptr<GRM::Element> &element)
 
 static void processProjectionType(const std::shared_ptr<GRM::Element> &element)
 {
-  int type = (int)element->getAttribute("projectiontype");
-  gr_setprojectiontype(type);
+  gr_setprojectiontype(static_cast<int>(element->getAttribute("projectiontype")));
 }
 
 static void processRelativeCharHeight(const std::shared_ptr<GRM::Element> &element)
@@ -2905,6 +2904,51 @@ static void processXlabel(const std::shared_ptr<GRM::Element> &element)
     }
 }
 
+static void processYlabel(const std::shared_ptr<GRM::Element> &element)
+{
+  double viewport[4], vp[4], charheight;
+  int keep_aspect_ratio;
+  int del = 0;
+
+  auto subplot_element = getSubplotElement(element);
+
+  gr_inqcharheight(&charheight);
+  viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
+  viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
+  viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
+  viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
+  vp[0] = (double)subplot_element->getAttribute("vp_xmin");
+  vp[1] = (double)subplot_element->getAttribute("vp_xmax");
+  vp[2] = (double)subplot_element->getAttribute("vp_ymin");
+  vp[3] = (double)subplot_element->getAttribute("vp_ymax");
+  keep_aspect_ratio = (int)subplot_element->getAttribute("keep_aspect_ratio");
+
+  double x = ((keep_aspect_ratio) ? 0.925 : 1) * vp[0] + 0.5 * charheight;
+  double y = 0.5 * (viewport[2] + viewport[3]);
+  std::string y_label = (std::string)element->getAttribute("ylabel");
+  if (y_label.empty()) return; // Empty ylabel is pointless, no need to waste the space for nothing
+
+  if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()))
+    {
+      del = static_cast<int>(element->getAttribute("_delete_childs"));
+      auto ylabel_elem = element->querySelectors("[name=\"ylabel\"]");
+
+      if ((del != 0 && del != 1) || ylabel_elem == nullptr)
+        {
+          if (ylabel_elem != nullptr) ylabel_elem->remove();
+          ylabel_elem = render->createText(x, y, y_label);
+          render->setTextAlign(ylabel_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          render->setCharUp(ylabel_elem, -1, 0);
+          element->appendChild(ylabel_elem);
+        }
+      else if (ylabel_elem != nullptr)
+        {
+          render->createText(x, y, y_label, CoordinateSpace::NDC, ylabel_elem);
+        }
+      if (ylabel_elem != nullptr) ylabel_elem->setAttribute("name", "ylabel");
+    }
+}
+
 static void processXTickLabels(const std::shared_ptr<GRM::Element> &element)
 {
   double viewport[4], charheight;
@@ -3039,51 +3083,6 @@ static void processYTickLabels(const std::shared_ptr<GRM::Element> &element)
           x = viewport[0] - 1.5 * charheight; // correct would be charwidth here
           draw_yticklabel(x, y, yticklabels[i - 1].c_str(), available_height, ytick_element, init, child_id++);
         }
-    }
-}
-
-static void processYlabel(const std::shared_ptr<GRM::Element> &element)
-{
-  double viewport[4], vp[4], charheight;
-  int keep_aspect_ratio;
-  int del = 0;
-
-  auto subplot_element = getSubplotElement(element);
-
-  gr_inqcharheight(&charheight);
-  viewport[0] = (double)subplot_element->getAttribute("viewport_xmin");
-  viewport[1] = (double)subplot_element->getAttribute("viewport_xmax");
-  viewport[2] = (double)subplot_element->getAttribute("viewport_ymin");
-  viewport[3] = (double)subplot_element->getAttribute("viewport_ymax");
-  vp[0] = (double)subplot_element->getAttribute("vp_xmin");
-  vp[1] = (double)subplot_element->getAttribute("vp_xmax");
-  vp[2] = (double)subplot_element->getAttribute("vp_ymin");
-  vp[3] = (double)subplot_element->getAttribute("vp_ymax");
-  keep_aspect_ratio = (int)subplot_element->getAttribute("keep_aspect_ratio");
-
-  double x = ((keep_aspect_ratio) ? 0.925 : 1) * vp[0] + 0.5 * charheight;
-  double y = 0.5 * (viewport[2] + viewport[3]);
-  std::string y_label = (std::string)element->getAttribute("ylabel");
-  if (y_label.empty()) return; // Empty ylabel is pointless, no need to waste the space for nothing
-
-  if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()))
-    {
-      del = static_cast<int>(element->getAttribute("_delete_childs"));
-      auto ylabel_elem = element->querySelectors("[name=\"ylabel\"]");
-
-      if ((del != 0 && del != 1) || ylabel_elem == nullptr)
-        {
-          if (ylabel_elem != nullptr) ylabel_elem->remove();
-          ylabel_elem = render->createText(x, y, y_label);
-          render->setTextAlign(ylabel_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-          render->setCharUp(ylabel_elem, -1, 0);
-          element->appendChild(ylabel_elem);
-        }
-      else if (ylabel_elem != nullptr)
-        {
-          render->createText(x, y, y_label, CoordinateSpace::NDC, ylabel_elem);
-        }
-      if (ylabel_elem != nullptr) ylabel_elem->setAttribute("name", "ylabel");
     }
 }
 
@@ -4683,7 +4682,7 @@ static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::s
   if (element->hasAttribute("errorbar_color"))
     color_errorbar = static_cast<int>(element->getAttribute("errorbar_color"));
 
-  //   clear old lines
+  /* clear old lines */
   del = static_cast<int>(element->getAttribute("_delete_childs"));
   clearOldChildren(&del, element);
 
@@ -5357,7 +5356,8 @@ static void legend(const std::shared_ptr<GRM::Element> &element, const std::shar
                               auto colorrep = static_cast<std::string>(
                                   pie_segment->getAttribute("colorrep." + std::to_string(color_ind)));
                               fr->setAttribute("fillcolorind", color_ind);
-                              fr->setAttribute("colorrep." + std::to_string(color_ind), colorrep);
+                              if (!colorrep.empty())
+                                fr->setAttribute("colorrep." + std::to_string(color_ind), colorrep);
                             }
                           break;
                         }
@@ -6007,7 +6007,7 @@ static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::sha
     }
   rgba = std::vector<int>(rows * cols);
 
-  //   clear old heatmaps
+  /* clear old heatmaps */
   del = static_cast<int>(element->getAttribute("_delete_childs"));
   clearOldChildren(&del, element);
 
@@ -6324,7 +6324,7 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
   // std::shared_ptr<GRM::Element> innerFillGroup = global_render->createGroup("innerFillGroup");
   // std::shared_ptr<GRM::Element> outerFillGroup = global_render->createGroup("outerFillGroup");
 
-  // clear old rects
+  /* clear old rects */
   del = static_cast<int>(element->getAttribute("_delete_childs"));
   clearOldChildren(&del, element);
 
@@ -6799,7 +6799,7 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   int id = (int)global_root->getAttribute("_id");
   global_root->setAttribute("_id", id + 1);
 
-  // clear old polylines
+  /* clear old polylines */
   del = static_cast<int>(element->getAttribute("_delete_childs"));
   clearOldChildren(&del, element);
 
@@ -6972,7 +6972,7 @@ static void polarHeatmap(const std::shared_ptr<GRM::Element> &element, const std
   global_root->setAttribute("_id", id + 1);
   std::string str = std::to_string(id);
 
-  //   clear old polar_heatmaps
+  /* clear old polar_heatmaps */
   del = static_cast<int>(element->getAttribute("_delete_childs"));
   clearOldChildren(&del, element);
 
@@ -7434,7 +7434,6 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
       group->setAttribute("classes", classes_key);
       (*context)[classes_key] = classes;
       group->setAttribute("total", total);
-
 
       if (strcmp(norm, "probability") == 0)
         max = temp_max_bc * 1.0 / total;
@@ -7994,7 +7993,7 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
                 }
             }
 
-          /* no stairs*/
+          /* no stairs */
           if (stairs == 0)
             {
               /* perform calculations for later usages */
@@ -8950,7 +8949,7 @@ static void processScatter(const std::shared_ptr<GRM::Element> &element, const s
         }
     }
 
-  // clear old marker
+  /* clear old marker */
   del = static_cast<int>(element->getAttribute("_delete_childs"));
   clearOldChildren(&del, element);
 
@@ -9159,7 +9158,7 @@ static void processScatter3(const std::shared_ptr<GRM::Element> &element, const 
       global_render->setMarkerColorInd(element, c_index);
     }
 
-  // clear old marker
+  /* clear old marker */
   del = static_cast<int>(element->getAttribute("_delete_childs"));
   clearOldChildren(&del, element);
 
@@ -9228,7 +9227,7 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
   std::string str = std::to_string(id);
   global_root->setAttribute("_id", id + 1);
 
-  // clear old marker and lines
+  /* clear old marker and lines */
   del = static_cast<int>(element->getAttribute("_delete_childs"));
   clearOldChildren(&del, element);
 
@@ -9444,7 +9443,7 @@ static void processStem(const std::shared_ptr<GRM::Element> &element, const std:
 
   if (element->hasAttribute("yrange_min")) stem_y[0] = static_cast<double>(element->getAttribute("yrange_min"));
 
-  // remove all old polylines and -marker
+  /* clear all old polylines and -marker */
   del = static_cast<int>(element->getAttribute("_delete_childs"));
   clearOldChildren(&del, element);
 
@@ -9738,7 +9737,7 @@ static void processLine(const std::shared_ptr<GRM::Element> &element, const std:
   const char *spec_char = spec.c_str();
   mask = gr_uselinespec((char *)spec_char);
 
-  // clear old line
+  /* clear old line */
   del = static_cast<int>(element->getAttribute("_delete_childs"));
   clearOldChildren(&del, element);
 
@@ -9890,7 +9889,7 @@ static void marginalheatmap(const std::shared_ptr<GRM::Element> &element, const 
   auto plot_vec = GRM::get<std::vector<double>>((*context)[plot]);
   n = plot_vec.size();
 
-  // remove all old entry's
+  /* clear old child nodes */
   del = static_cast<int>(element->getAttribute("_delete_childs"));
   clearOldChildren(&del, element);
 
@@ -10226,6 +10225,7 @@ static void pieSegment(const std::shared_ptr<GRM::Element> &element, const std::
   double text_pos[2];
   std::string text;
 
+  /* clear old child nodes */
   del = static_cast<int>(element->getAttribute("_delete_childs"));
   clearOldChildren(&del, element);
 
@@ -10305,7 +10305,7 @@ static void pie(const std::shared_ptr<GRM::Element> &element, const std::shared_
   start_angle = 90;
   color_index = set_next_color("c", GR_COLOR_FILL, element, context);
 
-  // clear old pie_segments
+  /* clear old pie_segments */
   del = static_cast<int>(element->getAttribute("_delete_childs"));
   clearOldChildren(&del, element);
 
@@ -10373,7 +10373,7 @@ static void plot3(const std::shared_ptr<GRM::Element> &element, const std::share
   if (x_length != y_length || x_length != z_length)
     throw std::length_error("For plot3 series x-, y- and z-data must have the same size.\n");
 
-  // clear old line
+  /* clear old line */
   del = static_cast<int>(element->getAttribute("_delete_childs"));
   clearOldChildren(&del, element);
 
@@ -11913,7 +11913,7 @@ static void missing_bbox_calculator(const std::shared_ptr<GRM::Element> &element
 {
   double elem_bbox_xmin = DBL_MAX, elem_bbox_xmax = -DBL_MAX, elem_bbox_ymin = DBL_MAX, elem_bbox_ymax = -DBL_MAX;
 
-  if (element->hasAttribute("_bbox_id"))
+  if (element->hasAttribute("_bbox_id") && static_cast<int>(element->getAttribute("_bbox_id")) != -1)
     {
       *bbox_xmin = static_cast<double>(element->getAttribute("_bbox_xmin"));
       *bbox_xmax = static_cast<double>(element->getAttribute("_bbox_xmax"));
@@ -11937,17 +11937,20 @@ static void missing_bbox_calculator(const std::shared_ptr<GRM::Element> &element
         }
     }
 
-  if (element->localName() != "root" && !element->hasAttribute("_bbox_id"))
+  if (element->localName() != "root" &&
+      (!element->hasAttribute("_bbox_id") || static_cast<int>(element->getAttribute("_bbox_id")) == -1))
     {
       if (!(elem_bbox_xmin == DBL_MAX || elem_bbox_xmax == -DBL_MAX || elem_bbox_ymin == DBL_MAX ||
             elem_bbox_ymax == -DBL_MAX))
         {
-          element->setAttribute("_bbox_id", bounding_id);
+          if (static_cast<int>(element->getAttribute("_bbox_id")) != -1)
+            {
+              element->setAttribute("_bbox_id", bounding_id++);
+            }
           element->setAttribute("_bbox_xmin", elem_bbox_xmin);
           element->setAttribute("_bbox_xmax", elem_bbox_xmax);
           element->setAttribute("_bbox_ymin", elem_bbox_ymin);
           element->setAttribute("_bbox_ymax", elem_bbox_ymax);
-          bounding_id++;
         }
 
       if (bbox_xmin != nullptr) *bbox_xmin = elem_bbox_xmin;
@@ -11967,6 +11970,7 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
     {
       auto drawable = z_queue.top();
       auto element = drawable->getElement();
+      if (!element->parentElement()) continue;
 
       if (bounding_boxes)
         {
@@ -12239,12 +12243,12 @@ void GRM::Render::render()
           std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '), true}) << "\n";
         }
       if (static_cast<int>(root->getAttribute("clearws"))) gr_clearws();
-      global_root->setAttribute("_modified", true);
+      root->setAttribute("_modified", true);
       renderHelper(root, this->context);
       renderZQueue(this->context);
-      global_root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
+      root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
       if (getenv("GRPLOT_ENABLE_EDITOR")) missing_bbox_calculator(root, this->context);
-      if (static_cast<int>(root->getAttribute("updatews"))) gr_updatews();
+      if (root->hasAttribute("updatews") && static_cast<int>(root->getAttribute("updatews"))) gr_updatews();
       // needed when series_line is changed to series_scatter for example
       if (getenv("GRPLOT_ENABLE_EDITOR"))
         {
@@ -12263,6 +12267,14 @@ void GRM::Render::render()
       previous_scatter_marker_type = plot_scatter_markertypes;
       previous_line_marker_type = plot_scatter_markertypes;
     }
+}
+
+void GRM::Render::process_tree()
+{
+  global_root->setAttribute("_modified", true);
+  renderHelper(global_root, this->context);
+  renderZQueue(this->context);
+  global_root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
 }
 
 void GRM::Render::finalize()
@@ -14651,6 +14663,33 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                 {
                   imshow_elem->setAttribute("_update_required", true);
                 }
+
+              // reset the bounding boxes for figure, plot, coordinate_system and series, so they get calculated again
+              for (const auto &child : element->children()) // plot level
+                {
+                  for (const auto &childchild : child->children())
+                    {
+                      if (starts_with(childchild->localName(), "series_") ||
+                          childchild->localName() == "coordinate_system")
+                        resetOldBoundingBoxes(childchild);
+                    }
+                  if (child->localName() == "plot") // reset bounding box on plot
+                    {
+                      resetOldBoundingBoxes(child);
+                      child->removeAttribute("_bbox_id");
+                    }
+                }
+              resetOldBoundingBoxes(element);
+              element->removeAttribute("_bbox_id");
+            }
+          else if (attr == "reset_ranges" && element->localName() == "plot")
+            {
+              // when the ranges gets reseted the bounding boxes of the series can be wrong, to solve this problem they
+              // get calculated again out of their children
+              for (const auto &child : element->children())
+                {
+                  if (starts_with(child->localName(), "series_")) resetOldBoundingBoxes(child);
+                }
             }
         }
       global_root->setAttribute("_modified", true);
@@ -14663,9 +14702,7 @@ void renderCaller()
 {
   if (global_root && static_cast<int>(global_root->getAttribute("_modified")) && automatic_update)
     {
-      renderHelper(global_root, global_render->getContext());
-      renderZQueue(global_render->getContext());
-      global_root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
+      global_render->process_tree();
     }
 }
 

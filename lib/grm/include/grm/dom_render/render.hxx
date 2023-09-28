@@ -460,6 +460,7 @@ public:
   void render(const std::shared_ptr<Document> &document);  // external doc and render context
   static void render(const std::shared_ptr<Document> &document,
                      const std::shared_ptr<Context> &extContext); // external doc and external context; could be static
+  void process_tree();
   static void finalize();
   std::shared_ptr<Context> getContext();
 

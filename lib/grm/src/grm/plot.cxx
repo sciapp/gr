@@ -4929,6 +4929,18 @@ int grm_render(void)
   return 1;
 }
 
+int grm_process_tree(void)
+{
+  global_render->process_tree();
+#ifndef NDEBUG
+  if (is_env_variable_enabled(ENABLE_XML_VALIDATION_ENV_KEY.c_str()) || logger_enabled())
+    {
+      return validate_graphics_tree_with_error_messages();
+    }
+#endif
+  return 1;
+}
+
 int grm_export(const char *file_path)
 {
   gr_beginprint(const_cast<char *>(file_path));
@@ -5326,4 +5338,13 @@ int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, cons
   *focus_x = (ndc_left - *factor_x * viewport[0]) / (1 - *factor_x) - (viewport[0] + viewport[1]) / 2.0;
   *focus_y = (ndc_top - *factor_y * viewport[3]) / (1 - *factor_y) - (viewport[2] + viewport[3]) / 2.0;
   return 1;
+}
+
+bool grm_validate(void)
+{
+#ifndef NO_LIBXML2
+  err_t validation_error = validate_graphics_tree();
+  return (validation_error == ERROR_NONE);
+#endif
+  return false;
 }

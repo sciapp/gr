@@ -98,6 +98,10 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   amount_scrolled = 0;
   treewidget = new TreeWidget();
   treewidget->hide();
+  add_element_widget = new AddElementWidget(this);
+  add_element_widget->hide();
+  add_element_widget->setBoundingBoxRef(&selected_parent);
+  selected_parent = nullptr;
 
 #ifdef _WIN32
   putenv("GKS_WSTYPE=381");
@@ -311,7 +315,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       editor_menu->addAction(editor_action);
       QObject::connect(editor_action, SIGNAL(triggered()), this, SLOT(enable_editor_functions()));
 
-      auto file_menu = editor_menu->addMenu(tr("&File"));
+      file_menu = editor_menu->addMenu(tr("&File"));
       save_file_action = new QAction("&Save Plot");
       save_file_action->setShortcut(Qt::CTRL | Qt::Key_S);
       file_menu->addAction(save_file_action);
@@ -322,7 +326,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       file_menu->addAction(open_file_action);
       QObject::connect(open_file_action, SIGNAL(triggered()), this, SLOT(open_file_slot()));
 
-      auto configuration_menu = editor_menu->addMenu(tr("&Show"));
+      configuration_menu = editor_menu->addMenu(tr("&Show"));
       show_container_action = new QAction(tr("&GRM Container"));
       show_container_action->setCheckable(true);
       show_container_action->setShortcut(Qt::CTRL | Qt::Key_C);
@@ -334,6 +338,12 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       show_bounding_boxes_action->setShortcut(Qt::CTRL | Qt::Key_B);
       configuration_menu->addAction(show_bounding_boxes_action);
       QObject::connect(show_bounding_boxes_action, SIGNAL(triggered()), this, SLOT(show_bounding_boxes_slot()));
+
+      add_element_action = new QAction("&Add Element");
+      add_element_action->setShortcut(Qt::CTRL | Qt::Key_Plus);
+      editor_menu->addAction(add_element_action);
+      QObject::connect(add_element_action, SIGNAL(triggered()), this, SLOT(add_element_slot()));
+      add_element_action->setVisible(false);
 
       menu->addMenu(editor_menu);
     }
@@ -619,6 +629,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
           QList<QString> labels;
           QList<QWidget *> fields;
           QWidget *lineEdit;
+          std::vector<std::string> attr_type;
 
           for (const auto &cur_attr_name : current_selection->get_ref()->getAttributeNames())
             {
@@ -689,6 +700,18 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                 }
               else
                 {
+                  if (current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+                    {
+                      attr_type.push_back("xs:integer");
+                    }
+                  else if (current_selection->get_ref()->getAttribute(cur_attr_name).isDouble())
+                    {
+                      attr_type.push_back("xs:double");
+                    }
+                  else
+                    {
+                      attr_type.push_back("xs:string");
+                    }
                   lineEdit = new QLineEdit(&dialog);
                   ((QLineEdit *)lineEdit)
                       ->setText(
@@ -726,6 +749,9 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                         {
                           /* attributes of an element which aren't already in the tree getting added with red text color
                            */
+                          auto type_name = static_cast<std::string>(child->getAttribute("type"));
+                          attr_type.push_back(type_name);
+
                           lineEdit = new QLineEdit(&dialog);
                           ((QLineEdit *)lineEdit)->setText("");
                           QString text_label = QString("<span style='color:#ff0000;'>%1</span>").arg(attr_name.c_str());
@@ -760,6 +786,9 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                                     {
                                       /* attributes of an element which aren't already in the tree getting added with
                                        * red text color */
+                                      auto type_name = static_cast<std::string>(child->getAttribute("type"));
+                                      attr_type.push_back(type_name);
+
                                       lineEdit = new QLineEdit(&dialog);
                                       ((QLineEdit *)lineEdit)->setText("");
                                       QString text_label =
@@ -781,6 +810,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                           QString text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("Colorrep-index");
                           form.addRow(text_label, lineEdit);
 
+                          attr_type.push_back("xs:string");
                           labels << text_label;
                           fields << lineEdit;
 
@@ -789,6 +819,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                           text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("Colorrep-value");
                           form.addRow(text_label, lineEdit);
 
+                          attr_type.push_back("xs:string");
                           labels << text_label;
                           fields << lineEdit;
                         }
@@ -826,8 +857,23 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                           if (labels[i].toStdString() == "text" &&
                               (name == "title" || name == "xlabel" || name == "ylabel"))
                             {
-                              current_selection->get_ref()->parentElement()->setAttribute(
-                                  name, ((QLineEdit *)fields[i])->text().toStdString());
+                              std::string value = ((QLineEdit *)fields[i])->text().toStdString();
+                              if (attr_type[i] == "xs:string" || (attr_type[i] == "strint" && !util::is_digits(value)))
+                                {
+                                  current_selection->get_ref()->parentElement()->setAttribute(labels[i].toStdString(),
+                                                                                              value);
+                                }
+                              else if (attr_type[i] == "xs:double")
+                                {
+                                  current_selection->get_ref()->parentElement()->setAttribute(labels[i].toStdString(),
+                                                                                              std::stod(value));
+                                }
+                              else if (attr_type[i] == "xs:integer" ||
+                                       (attr_type[i] == "strint" && util::is_digits(value)))
+                                {
+                                  current_selection->get_ref()->parentElement()->setAttribute(labels[i].toStdString(),
+                                                                                              std::stoi(value));
+                                }
                             }
                           if (labels[i].toStdString() == "Colorrep-index")
                             {
@@ -838,8 +884,20 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                             }
                           else if (labels[i].toStdString() != "Colorrep-value")
                             {
-                              current_selection->get_ref()->setAttribute(
-                                  labels[i].toStdString(), ((QLineEdit *)fields[i])->text().toStdString());
+                              std::string value = ((QLineEdit *)fields[i])->text().toStdString();
+                              if (attr_type[i] == "xs:string" || (attr_type[i] == "strint" && !util::is_digits(value)))
+                                {
+                                  current_selection->get_ref()->setAttribute(labels[i].toStdString(), value);
+                                }
+                              else if (attr_type[i] == "xs:double")
+                                {
+                                  current_selection->get_ref()->setAttribute(labels[i].toStdString(), std::stod(value));
+                                }
+                              else if (attr_type[i] == "xs:integer" ||
+                                       (attr_type[i] == "strint" && util::is_digits(value)))
+                                {
+                                  current_selection->get_ref()->setAttribute(labels[i].toStdString(), std::stoi(value));
+                                }
                             }
                         }
                     }
@@ -1465,6 +1523,20 @@ void GRPlotWidget::highlight_current_selection(QPainter &painter)
             painter.drawText(mouse_move_selection->boundingRect().bottomRight() + QPointF(5, 0),
                              mouse_move_selection->get_ref()->localName().c_str());
         }
+      if (selected_parent != nullptr)
+        {
+          auto rect = selected_parent->boundingRect();
+          if (selected_parent->get_ref() != nullptr)
+            {
+              auto bbox_xmin = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_xmin"));
+              auto bbox_xmax = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_xmax"));
+              auto bbox_ymin = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_ymin"));
+              auto bbox_ymax = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_ymax"));
+              rect = QRectF(bbox_xmin, bbox_ymin, bbox_xmax - bbox_xmin, bbox_ymax - bbox_ymin);
+              painter.drawText(rect.bottomRight() + QPointF(5, 0), selected_parent->get_ref()->localName().c_str());
+            }
+          painter.fillRect(rect, QBrush(QColor("red"), Qt::Dense6Pattern));
+        }
     }
 }
 
@@ -1560,8 +1632,7 @@ void GRPlotWidget::show_container_slot()
           treewidget->hide();
         }
       treewidget->resize(400, height());
-      treewidget->move(this->pos().x() + this->width(),
-                       this->pos().y() - 28 + (treewidget->geometry().y() - treewidget->pos().y()));
+      treewidget->move(this->pos().x() + 0.5 * this->width() - 61, this->pos().y() - 28 + treewidget->geometry().y());
     }
 }
 
@@ -1570,6 +1641,7 @@ void GRPlotWidget::enable_editor_functions()
   if (editor_action->isChecked())
     {
       enable_editor = true;
+      add_element_action->setVisible(true);
 
       // dirty reset of screen position
       grm_args_t *args = grm_args_new();
@@ -1585,6 +1657,18 @@ void GRPlotWidget::enable_editor_functions()
   else
     {
       enable_editor = false;
+      add_element_action->setVisible(false);
+    }
+}
+
+void GRPlotWidget::add_element_slot()
+{
+  if (enable_editor)
+    {
+      add_element_widget->show();
+      add_element_widget->resize(400, height());
+      add_element_widget->move(this->pos().x() + this->width() + add_element_widget->width(),
+                               this->pos().y() + add_element_widget->geometry().y() - 28);
     }
 }
 
