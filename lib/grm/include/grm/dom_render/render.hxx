@@ -212,6 +212,10 @@ public:
                                                  const std::string text, const int color_index,
                                                  const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
+  std::shared_ptr<GRM::Element> createBar(const double x1, const double x2, const double y1, const double y2,
+                                          const int edge_color_index, const int bar_color_index,
+                                          const std::shared_ptr<GRM::Element> &extElement = nullptr);
+
   std::shared_ptr<Element> createGrid(double x_tick, double y_tick, double x_org, double y_org, int major_x,
                                       int major_y, const std::shared_ptr<GRM::Element> &extElement = nullptr);
 

@@ -7,15 +7,11 @@
 #include "../util.hxx"
 #include "grm/dom_render/graphics_tree/NotFoundError.hxx"
 
-
-static std::shared_ptr<GRM::Document> schema_tree;
-static Bounding_object **grplot_ref;
-
 AddElementWidget::AddElementWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(parent)
 {
   grplot_widget = widget;
 #if !defined(NO_LIBXML2)
-  schema_tree = grm_load_graphics_tree_schema();
+  schema_tree = grplot_widget->get_schema_tree();
 #else
   schema_tree = nullptr;
 #endif
@@ -139,7 +135,7 @@ void AddElementWidget::parentSelected(int i)
   if (schema_tree != nullptr)
     {
       Bounding_object *tmp = &parent_vec[i];
-      *grplot_ref = tmp;
+      grplot_widget->set_selected_parent(tmp);
       attribute_name_vec.clear();
       attribute_type_vec.clear();
 
@@ -264,20 +260,16 @@ void AddElementWidget::parentSelected(int i)
     }
 }
 
-void AddElementWidget::setBoundingBoxRef(Bounding_object **ref)
-{
-  grplot_ref = ref;
-}
-
 void AddElementWidget::reject()
 {
-  *grplot_ref = nullptr;
+  grplot_widget->set_selected_parent(nullptr);
   this->close();
 }
 
 void AddElementWidget::accept()
 {
   QLabel *msg;
+  Bounding_object *grplot_ref = grplot_widget->get_selected_parent();
   std::shared_ptr<GRM::Render> render = grm_get_render();
   bool error = false, auto_update;
   auto new_element =
@@ -329,14 +321,19 @@ void AddElementWidget::accept()
         }
     }
 
-  if (*grplot_ref == nullptr)
+  if (grplot_ref == nullptr)
     {
       msg = new QLabel("Element could not be created. Missing parent element.");
       error = true;
     }
+  else if (!new_element->hasAttributes())
+    {
+      msg = new QLabel("Element could not be created. Attributes are missing.");
+      error = true;
+    }
   else
     {
-      (*grplot_ref)->get_ref()->append(new_element);
+      grplot_ref->get_ref()->append(new_element);
       if (!grm_validate())
         {
           msg = new QLabel("Element could not be created. Missing required attributes.");
@@ -367,7 +364,7 @@ void AddElementWidget::accept()
       attribute_type_vec.clear();
       fields.clear();
 
-      *grplot_ref = nullptr;
+      grplot_widget->set_selected_parent(nullptr);
       this->close();
       new_element->parentElement()->setAttribute("_bbox_id", -1);
       render->setAutoUpdate(auto_update);

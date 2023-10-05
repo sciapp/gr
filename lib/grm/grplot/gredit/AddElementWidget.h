@@ -22,7 +22,6 @@ class AddElementWidget : public QWidget
   Q_OBJECT
 public:
   explicit AddElementWidget(GRPlotWidget *widget, QWidget *parent = nullptr);
-  EXPORT void setBoundingBoxRef(Bounding_object **ref);
 
 protected:
 private slots:
@@ -41,6 +40,7 @@ private:
   std::vector<std::string> attribute_name_vec;
   std::vector<std::string> attribute_type_vec;
   QList<QWidget *> fields;
+  std::shared_ptr<GRM::Document> schema_tree;
 };
 
 

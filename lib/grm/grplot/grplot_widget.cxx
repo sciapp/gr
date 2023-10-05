@@ -45,7 +45,6 @@ static QFile *test_commands_file = nullptr;
 static QTextStream *test_commands_stream = nullptr;
 static Qt::KeyboardModifiers modifiers = Qt::NoModifier;
 static std::vector<Bounding_object> cur_moved;
-static std::shared_ptr<GRM::Document> schema_tree;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -98,9 +97,6 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   amount_scrolled = 0;
   treewidget = new TreeWidget();
   treewidget->hide();
-  add_element_widget = new AddElementWidget(this);
-  add_element_widget->hide();
-  add_element_widget->setBoundingBoxRef(&selected_parent);
   selected_parent = nullptr;
 
 #ifdef _WIN32
@@ -308,6 +304,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 #else
       schema_tree = nullptr;
 #endif
+      add_element_widget = new AddElementWidget(this);
+      add_element_widget->hide();
 
       editor_menu = new QMenu(tr("&Editor"));
       editor_action = new QAction(tr("&Activate Editor"));
@@ -786,7 +784,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                                     {
                                       /* attributes of an element which aren't already in the tree getting added with
                                        * red text color */
-                                      auto type_name = static_cast<std::string>(child->getAttribute("type"));
+                                      auto type_name = static_cast<std::string>(childchild->getAttribute("type"));
                                       attr_type.push_back(type_name);
 
                                       lineEdit = new QLineEdit(&dialog);
@@ -857,11 +855,10 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                           if (labels[i].toStdString() == "text" &&
                               (name == "title" || name == "xlabel" || name == "ylabel"))
                             {
-                              std::string value = ((QLineEdit *)fields[i])->text().toStdString();
+                              const std::string value = ((QLineEdit *)fields[i])->text().toStdString();
                               if (attr_type[i] == "xs:string" || (attr_type[i] == "strint" && !util::is_digits(value)))
                                 {
-                                  current_selection->get_ref()->parentElement()->setAttribute(labels[i].toStdString(),
-                                                                                              value);
+                                  current_selection->get_ref()->parentElement()->setAttribute(name, value);
                                 }
                               else if (attr_type[i] == "xs:double")
                                 {
@@ -884,7 +881,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
                             }
                           else if (labels[i].toStdString() != "Colorrep-value")
                             {
-                              std::string value = ((QLineEdit *)fields[i])->text().toStdString();
+                              const std::string value = ((QLineEdit *)fields[i])->text().toStdString();
                               if (attr_type[i] == "xs:string" || (attr_type[i] == "strint" && !util::is_digits(value)))
                                 {
                                   current_selection->get_ref()->setAttribute(labels[i].toStdString(), value);
@@ -1940,4 +1937,19 @@ void GRPlotWidget::processTestCommandsFile()
     }
   test_commands_file->close();
   QApplication::quit();
+}
+
+std::shared_ptr<GRM::Document> GRPlotWidget::get_schema_tree()
+{
+  return this->schema_tree;
+}
+
+void GRPlotWidget::set_selected_parent(Bounding_object *parent)
+{
+  this->selected_parent = parent;
+}
+
+Bounding_object *GRPlotWidget::get_selected_parent()
+{
+  return this->selected_parent;
 }

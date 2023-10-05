@@ -30,6 +30,9 @@ public:
   explicit GRPlotWidget(QMainWindow *parent, int argc, char **argv);
   ~GRPlotWidget() override;
   void redraw();
+  std::shared_ptr<GRM::Document> get_schema_tree();
+  void set_selected_parent(Bounding_object *parent);
+  Bounding_object *get_selected_parent();
 
 protected:
   virtual void draw();
@@ -180,6 +183,7 @@ private:
   int amount_scrolled;
   bool enable_editor;
   Receiver_Thread *receiver_thread;
+  std::shared_ptr<GRM::Document> schema_tree;
 
   QMenuBar *menu;
   QMenu *type, *algo, *export_menu, *editor_menu;
