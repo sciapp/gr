@@ -3172,8 +3172,8 @@ err_t plot_polar(grm_args_t *subplot_args)
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) subGroup->setAttribute("spec", spec);
       if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
         {
-          group->setAttribute("yrange_min", y_min);
-          group->setAttribute("yrange_max", y_max);
+          subGroup->setAttribute("yrange_min", y_min);
+          subGroup->setAttribute("yrange_max", y_max);
         }
 
       global_root->setAttribute("_id", id++);
