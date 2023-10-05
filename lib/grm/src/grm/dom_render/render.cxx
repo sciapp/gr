@@ -8016,23 +8016,17 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
       ylim_max = static_cast<double>(plot_parent->getAttribute("ylim_max"));
       ylim = true;
     }
-  if (plot_parent->hasAttribute("yrange_min") && plot_parent->hasAttribute("yrange_max"))
-    {
-      transform = true;
-      yrange_min = static_cast<double>(plot_parent->getAttribute("yrange_min"));
-      yrange_max = static_cast<double>(plot_parent->getAttribute("yrange_max"));
-    }
   if (element->hasAttribute("yrange_min") && element->hasAttribute("yrange_max"))
     {
-      r_min = static_cast<double>(element->getAttribute("yrange_min"));
-      r_max = static_cast<double>(element->getAttribute("yrange_max"));
+      transform = true;
+      yrange_min = static_cast<double>(element->getAttribute("yrange_min"));
+      yrange_max = static_cast<double>(element->getAttribute("yrange_max"));
     }
   else
     {
       r_max = static_cast<double>(plot_parent->getAttribute("r_max"));
       r_min = 0.0;
     }
-  if (!ylim) ylim_max = r_max;
 
   if (element->hasAttribute("line_spec"))
     {
@@ -8053,6 +8047,12 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   rho_length = rho_vec.size();
   if (rho_length != theta_length)
     throw std::length_error("For polar series y(rho)- and x(theta)-data must have the same size.\n");
+
+  r_min = *std::min_element(rho_vec.begin(), rho_vec.end());
+  r_max = *std::max_element(rho_vec.begin(), rho_vec.end());
+
+  if (r_min == yrange_min && r_max == yrange_max) transform = false;
+  if (!ylim) ylim_max = r_max;
 
   std::vector<double> x(rho_length);
   std::vector<double> y(rho_length);
@@ -12048,7 +12048,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
               if (!element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_min") ||
                   !element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_max") ||
-                  str_equals_any(kind.c_str(), 4, "heatmap", "marginal_heatmap", "polar_heatmap", "polar"))
+                  str_equals_any(kind.c_str(), 3, "heatmap", "marginal_heatmap", "polar_heatmap"))
                 {
                   for (const auto &series : central_region->children())
                     {
