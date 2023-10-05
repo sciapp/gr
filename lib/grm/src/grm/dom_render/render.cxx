@@ -560,6 +560,12 @@ static double getLightness(int color)
   return 116 * pow(y / 100, 1.0 / 3) - 16;
 }
 
+static double transformCoordinates(double value, double vmin, double vmax, double rangeMin, double rangeMax)
+{
+  return (rangeMax - rangeMin) * (value - vmin) / (vmax - vmin) + rangeMin;
+}
+
+
 static void resetOldBoundingBoxes(const std::shared_ptr<GRM::Element> &element)
 {
   if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
@@ -7366,7 +7372,7 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
     }
   else
     {
-      r_min = 0.0;
+      r_min = static_cast<double>(subplotElement->getAttribute("_y_lim_min"));
       r_max = static_cast<double>(subplotElement->getAttribute("_y_lim_max"));
     }
 
@@ -7374,7 +7380,7 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
 
   render->setLineType(element, GKS_K_LINETYPE_SOLID);
 
-  if (kind == "polar_histogram" || kind == "polar")
+  if (kind == "polar_histogram" || (kind == "polar" && !subplot->hasAttribute("ylim_max")))
     {
       auto max = static_cast<double>(central_region->getAttribute("r_max"));
 
@@ -7384,7 +7390,7 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
           max = static_cast<double>(central_region->getAttribute("r_max"));
           norm = static_cast<std::string>(element->getAttribute("norm"));
         }
-      else
+      else if (kind == "polar")
         {
           auto seriesElement = central_region->querySelectors("series_polar");
           max = static_cast<double>(seriesElement->getAttribute("yrange_max"));
@@ -7404,7 +7410,11 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
       rings = grm_max(4, (int)(r_max - r_min));
       element->setAttribute("rings", rings);
 
-      if (element->hasAttribute("tick"))
+      if (subplot->hasAttribute("ylim_max") && subplot->hasAttribute("ylim_min"))
+        {
+          tick = r_max / rings;
+        }
+      else if (element->hasAttribute("tick"))
         {
           tick = static_cast<double>(element->getAttribute("tick"));
         }
@@ -8753,6 +8763,8 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
    */
   double r_min, r_max, tick;
   int n, i;
+  double ylim_min, ylim_max, yrange_min, yrange_max;
+  bool transform = false, ylim = false;
   unsigned int rho_length, theta_length;
   std::string line_spec = SERIES_DEFAULT_SPEC;
   std::vector<double> theta_vec, rho_vec;
@@ -8761,7 +8773,30 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   int child_id = 0;
 
   getPlotParent(plot_parent);
-  r_max = static_cast<double>(plot_parent->getAttribute("r_max"));
+  if (plot_parent->hasAttribute("ylim_max") && plot_parent->hasAttribute("ylim_min"))
+    {
+      ylim_min = static_cast<double>(plot_parent->getAttribute("ylim_min"));
+      ylim_max = static_cast<double>(plot_parent->getAttribute("ylim_max"));
+      ylim = true;
+    }
+  if (plot_parent->hasAttribute("yrange_min") && plot_parent->hasAttribute("yrange_max"))
+    {
+      transform = true;
+      yrange_min = static_cast<double>(plot_parent->getAttribute("yrange_min"));
+      yrange_max = static_cast<double>(plot_parent->getAttribute("yrange_max"));
+    }
+  if (element->hasAttribute("yrange_min") && element->hasAttribute("yrange_max"))
+    {
+      r_min = static_cast<double>(element->getAttribute("yrange_min"));
+      r_max = static_cast<double>(element->getAttribute("yrange_max"));
+    }
+  else
+    {
+      r_max = static_cast<double>(plot_parent->getAttribute("r_max"));
+      r_min = 0.0;
+    }
+  if (!ylim) ylim_max = r_max;
+
   if (element->hasAttribute("line_spec"))
     {
       line_spec = static_cast<std::string>(element->getAttribute("line_spec"));
@@ -8770,8 +8805,6 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
     {
       element->setAttribute("line_spec", line_spec);
     }
-  element->setAttribute("r_min", 0.0);
-  element->setAttribute("r_max", r_max);
 
   if (!element->hasAttribute("x")) throw NotFoundError("Polar series is missing required attribute x-data (theta).\n");
   auto x_key = static_cast<std::string>(element->getAttribute("x"));
@@ -8785,11 +8818,25 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
     throw std::length_error("For polar series y(rho)- and x(theta)-data must have the same size.\n");
 
   std::vector<double> x(rho_length), y(rho_length);
-  for (i = 0; i < rho_length; ++i)
+
+  // transform coordinates into yrange if given
+  if (transform)
     {
-      double current_rho = rho_vec[i] / r_max;
-      x[i] = current_rho * cos(theta_vec[i]);
-      y[i] = current_rho * sin(theta_vec[i]);
+      for (i = 0; i < rho_length; ++i)
+        {
+          double current_rho = transformCoordinates(rho_vec[i], r_min, r_max, yrange_min, yrange_max) / ylim_max;
+          x[i] = current_rho * cos(theta_vec[i]);
+          y[i] = current_rho * sin(theta_vec[i]);
+        }
+    }
+  else
+    {
+      for (i = 0; i < rho_length; ++i)
+        {
+          double current_rho = rho_vec[i] / ylim_max;
+          x[i] = current_rho * cos(theta_vec[i]);
+          y[i] = current_rho * sin(theta_vec[i]);
+        }
     }
 
   auto id = static_cast<int>(global_root->getAttribute("_id"));
@@ -13394,7 +13441,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
               if (!element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_min") ||
                   !element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_max") ||
-                  str_equals_any(kind, "heatmap", "marginal_heatmap", "polar_heatmap"))
+                  str_equals_any(kind, "heatmap", "marginal_heatmap", "polar_heatmap", "polar"))
                 {
                   std::shared_ptr<GRM::Element> series_parent = central_region;
                   if (kind == "marginal_heatmap") series_parent = element;
@@ -13686,14 +13733,11 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
       if (str_equals_any(kind.c_str(), 5, "polar_histogram", "polar", "polar_heatmap", "nonuniform_heatmap",
                          "nonuniformpolar_heatmap"))
         {
-          // get maximum from prior steps and store as r_max and overwrite the limits (polar interactions need them)
-          auto xmax = static_cast<double>(element->getAttribute("_xlim_max"));
-          auto ymax = static_cast<double>(element->getAttribute("_ylim_max"));
-          auto xmin = static_cast<double>(element->getAttribute("_xlim_min"));
-          auto ymin = static_cast<double>(element->getAttribute("_ylim_min"));
-
           if (kind == "polar_heatmap" || kind == "nonuniformpolar_heatmap")
             {
+              auto ymax = static_cast<double>(element->getAttribute("_ylim_max"));
+              auto ymin = static_cast<double>(element->getAttribute("_ylim_min"));
+
               element->setAttribute("r_min", ymin);
               element->setAttribute("r_max", ymax);
             }

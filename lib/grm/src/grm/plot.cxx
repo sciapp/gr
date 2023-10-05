@@ -3148,6 +3148,7 @@ err_t plot_polar(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       double *rho, *theta;
+      double y_min, y_max;
       unsigned int rho_length, theta_length;
       char *spec;
       auto subGroup = global_render->createSeries("polar");
@@ -3168,7 +3169,12 @@ err_t plot_polar(grm_args_t *subplot_args)
       (*context)["y" + str] = rho_vec;
       subGroup->setAttribute("y", "y" + str);
 
-      if (grm_args_values(*current_series, "line_spec", "s", &spec)) subGroup->setAttribute("line_spec", spec);
+      if (grm_args_values(*current_series, "line_spec", "s", &spec)) subGroup->setAttribute("spec", spec);
+      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+        {
+          group->setAttribute("yrange_min", y_min);
+          group->setAttribute("yrange_max", y_max);
+        }
 
       global_root->setAttribute("_id", id++);
       ++current_series;
