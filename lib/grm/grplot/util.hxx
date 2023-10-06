@@ -20,10 +20,6 @@
 #include <unistd.h>
 #endif
 
-#if !(defined(__EXCEPTIONS) || defined(__cpp_exceptions) || defined(_CPPUNWIND))
-#define NO_EXCEPTIONS
-#endif
-
 namespace util
 {
 template <typename T> int sgn(T x)
@@ -184,26 +180,13 @@ bool fileExists(const std::string &file_path);
 std::string getEnvVar(const std::string &name, const std::string &defaultValue = "");
 #endif
 
-#ifdef NO_EXCEPTIONS
-#ifdef _WIN32
-std::optional<std::wstring> getExecutablePath();
-#else
-std::optional<std::string> getExecutablePath();
-#endif
-#else
 #ifdef _WIN32
 std::wstring getExecutablePath();
 #else
 std::string getExecutablePath();
 #endif
-#endif
 
-#ifdef NO_EXCEPTIONS
-bool
-#else
-void
-#endif
-setGrdir(bool force = false);
+void setGrdir(bool force = false);
 
 template <typename... Args> std::string string_format(const std::string &format, Args... args)
 {
@@ -211,11 +194,7 @@ template <typename... Args> std::string string_format(const std::string &format,
   const int needed_bytes = std::snprintf(nullptr, 0, format.c_str(), args...) + 1; // Extra space for '\0'
   if (needed_bytes <= 0)
     {
-#ifdef NO_EXCEPTIONS
-      return "";
-#else
       throw std::runtime_error("Error during formatting.");
-#endif
     }
   std::vector<char> buf(needed_bytes);
   std::snprintf(buf.data(), needed_bytes, format.c_str(), args...);
