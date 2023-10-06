@@ -35,7 +35,9 @@ endif()
 if(ZLIB_INCLUDE_DIR)
   if(NOT ZLIB_VERSION_STRING)
     file(READ ${ZLIB_INCLUDE_DIR}/zlib.h ZLIB_H_TEXT)
-    string(REGEX REPLACE ".*#define ZLIB_VERSION \"([0-9]+.[0-9]+.[0-9]+)\".*" "\\1" ZLIB_VERSION_STRING ${ZLIB_H_TEXT})
+    string(REGEX REPLACE ".*#define ZLIB_VERSION \"([0-9]+.[0-9]+(.[0-9]+)?)\".*" "\\1" ZLIB_VERSION_STRING
+                         ${ZLIB_H_TEXT}
+    )
   endif()
 endif()
 
