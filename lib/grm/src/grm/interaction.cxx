@@ -515,28 +515,33 @@ int grm_input(const grm_args_t *input_args)
                       // reset bar colors
                       bool is_horizontal = static_cast<std::string>(child->getAttribute("orientation")) == "horizontal";
 
-                      for (auto &childSeries : child->children())
+                      // bar level
+                      for (auto &bars : child->children())
                         {
-                          auto groups = childSeries->children(); // innerFillGroup and outerFillGroup
-                          std::shared_ptr<GRM::Element> innerFillGroup;
-                          if (groups.size() == 2)
+                          // fill- and drawrect level
+                          for (auto &childSeries : bars->children())
                             {
-                              innerFillGroup = groups[0];
-                            }
-                          else
-                            {
-                              // no fillGroups?
-                              break;
-                            }
+                              auto groups = childSeries->children(); // innerFillGroup and outerFillGroup
+                              std::shared_ptr<GRM::Element> innerFillGroup;
+                              if (groups.size() == 2)
+                                {
+                                  innerFillGroup = groups[0];
+                                }
+                              else
+                                {
+                                  // no fillGroups?
+                                  break;
+                                }
 
-                          int fillColorInd = static_cast<int>(innerFillGroup->getAttribute("fillcolorind"));
-                          if (xind != -1)
-                            {
-                              innerFillGroup->children()[xind]->removeAttribute("fillcolorind");
-                            }
-                          if (yind != -1)
-                            {
-                              innerFillGroup->children()[yind]->removeAttribute("fillcolorind");
+                              int fillColorInd = static_cast<int>(innerFillGroup->getAttribute("fillcolorind"));
+                              if (xind != -1)
+                                {
+                                  innerFillGroup->children()[xind]->removeAttribute("fillcolorind");
+                                }
+                              if (yind != -1)
+                                {
+                                  innerFillGroup->children()[yind]->removeAttribute("fillcolorind");
+                                }
                             }
                         }
                     }

@@ -1176,6 +1176,7 @@ if(((Qt6Widgets_FOUND
 )
   add_executable(
     grplot WIN32 MACOSX_BUNDLE
+    lib/grm/grplot/gredit/AddElementWidget.cpp
     lib/grm/grplot/gredit/Bounding_logic.cpp
     lib/grm/grplot/gredit/Bounding_object.cpp
     lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
@@ -1195,6 +1196,9 @@ if(((Qt6Widgets_FOUND
     set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
   endif()
   target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
+  if(NOT TARGET LibXml2::LibXml2)
+    target_compile_definitions(grplot PRIVATE NO_LIBXML2)
+  endif()
   set_target_properties(
     grplot PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
                                                                                   "${grplot_INSTALL_RPATH}"
@@ -1277,6 +1281,14 @@ if(((Qt6Widgets_FOUND
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
     )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.h
+    )
     target_sources(
       grplot
       PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
@@ -1285,6 +1297,7 @@ if(((Qt6Widgets_FOUND
               ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
               ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
               ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
               ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
               ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
     )
@@ -1298,6 +1311,7 @@ if(((Qt6Widgets_FOUND
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.h
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h
     )

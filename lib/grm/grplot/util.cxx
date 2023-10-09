@@ -244,6 +244,11 @@ bool startsWith(const std::string &str, const std::string &prefix)
   return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
 }
 
+bool is_digits(const std::string &str)
+{
+  return str.find_first_not_of("0123456789") == std::string::npos;
+}
+
 #ifdef _WIN32
 std::wstring getEnvVar(const std::wstring &name, const std::wstring &defaultValue)
 #else

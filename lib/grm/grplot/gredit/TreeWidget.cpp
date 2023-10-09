@@ -26,7 +26,6 @@ TreeWidget::TreeWidget(QWidget *parent) : QTreeWidget(parent)
   this->setStyleSheet(style);
 }
 
-
 void TreeWidget::updateData(std::shared_ptr<GRM::Element> ref)
 {
   this->clear();
@@ -45,7 +44,6 @@ void TreeWidget::updateData(std::shared_ptr<GRM::Element> ref)
     {
       updateDataRecursion(cur_elem, plotTree);
     }
-
 
   connect(this->model(), &QAbstractItemModel::dataChanged,
           [](const QModelIndex &index, const QModelIndex &, const QVector<int> &roles) {
