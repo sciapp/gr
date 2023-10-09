@@ -1,4 +1,5 @@
 set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR x86_64)
 add_definitions(-D_WIN32_WINNT=0x0600)
 set(CMAKE_C_COMPILER x86_64-w64-mingw32-gcc-posix)
 set(CMAKE_C_COMPILER_TARGET x86_64-w64-mingw32)

@@ -31,46 +31,6 @@
 
 #include "util.hxx"
 
-#ifdef NO_EXCEPTIONS
-#ifdef _WIN32
-#define throwWithoutReturn_(e)                                                         \
-  do                                                                                   \
-    {                                                                                  \
-      int neededWideChars = MultiByteToWideChar(CP_UTF8, 0, e.what(), -1, nullptr, 0); \
-      std::vector<wchar_t> whatWide(neededWideChars);                                  \
-      MultiByteToWideChar(CP_UTF8, 0, e.what(), -1, whatWide.data(), neededWideChars); \
-      std::wcerr << whatWide.data() << std::endl;                                      \
-    }                                                                                  \
-  while (0)
-#else
-#define throwWithoutReturn_(e)            \
-  do                                      \
-    {                                     \
-      std::cerr << e.what() << std::endl; \
-      return {};                          \
-    }                                     \
-  while (0)
-#endif
-#define throw_(e)             \
-  do                          \
-    {                         \
-      throwWithoutReturn_(e); \
-      return {};              \
-    }                         \
-  while (0)
-#define throwOrTerminate_(e)  \
-  do                          \
-    {                         \
-      throwWithoutReturn_(e); \
-      std::terminate();       \
-    }                         \
-  while (0)
-#else
-#define throwWithoutReturn_(e) throw(e)
-#define throw_(e) throw(e)
-#define throwOrTerminate_(e) throw(e)
-#endif
-
 namespace util
 {
 const unsigned int MAXPATHLEN = 1024;
@@ -104,7 +64,7 @@ GetLastErrorError::GetLastErrorError()
   if (!FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                      nullptr, errorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&errorMessage, 0, nullptr))
     {
-      throwOrTerminate_(FormatMessageError());
+      throw(FormatMessageError());
     }
   whatStream << "Error " << errorCode << ": " << errorMessage;
   LocalFree(errorMessage);
@@ -195,14 +155,14 @@ DirnameError::DirnameError(const std::wstring &filepath)
       WideCharToMultiByte(CP_UTF8, 0, whatStream.str().c_str(), -1, nullptr, 0, nullptr, nullptr);
   if (neededBytesUtf8String == 0)
     {
-      throwOrTerminate_(WideCharToMultiByteError());
+      throw(WideCharToMultiByteError());
     }
   std::vector<char> utf8Bytes(neededBytesUtf8String);
   int writtenBytesUtf8String = WideCharToMultiByte(CP_UTF8, 0, whatStream.str().c_str(), -1, utf8Bytes.data(),
                                                    neededBytesUtf8String, nullptr, nullptr);
   if (writtenBytesUtf8String == 0)
     {
-      throwOrTerminate_(WideCharToMultiByteError());
+      throw(WideCharToMultiByteError());
     }
   whatStr_ = utf8Bytes.data();
 }
@@ -222,14 +182,14 @@ AbsolutePathError::AbsolutePathError(const std::wstring &path)
       WideCharToMultiByte(CP_UTF8, 0, whatStream.str().c_str(), -1, nullptr, 0, nullptr, nullptr);
   if (neededBytesUtf8String == 0)
     {
-      throwOrTerminate_(WideCharToMultiByteError());
+      throw(WideCharToMultiByteError());
     }
   std::vector<char> utf8Bytes(neededBytesUtf8String);
   int writtenBytesUtf8String = WideCharToMultiByte(CP_UTF8, 0, whatStream.str().c_str(), -1, utf8Bytes.data(),
                                                    neededBytesUtf8String, nullptr, nullptr);
   if (writtenBytesUtf8String == 0)
     {
-      throwOrTerminate_(WideCharToMultiByteError());
+      throw(WideCharToMultiByteError());
     }
   whatStr_ = utf8Bytes.data();
 }
@@ -249,14 +209,14 @@ CorruptedGrDirError::CorruptedGrDirError(const std::wstring &path)
       WideCharToMultiByte(CP_UTF8, 0, whatStream.str().c_str(), -1, nullptr, 0, nullptr, nullptr);
   if (neededBytesUtf8String == 0)
     {
-      throwOrTerminate_(WideCharToMultiByteError());
+      throw(WideCharToMultiByteError());
     }
   std::vector<char> utf8Bytes(neededBytesUtf8String);
   int writtenBytesUtf8String = WideCharToMultiByte(CP_UTF8, 0, whatStream.str().c_str(), -1, utf8Bytes.data(),
                                                    neededBytesUtf8String, nullptr, nullptr);
   if (writtenBytesUtf8String == 0)
     {
-      throwOrTerminate_(WideCharToMultiByteError());
+      throw(WideCharToMultiByteError());
     }
   whatStr_ = utf8Bytes.data();
 }
@@ -315,18 +275,10 @@ std::string getEnvVar(const std::string &name, const std::string &defaultValue)
 #endif
 }
 
-#ifdef NO_EXCEPTIONS
-#ifdef _WIN32
-std::optional<std::wstring> getExecutablePath()
-#else
-std::optional<std::string> getExecutablePath()
-#endif
-#else
 #ifdef _WIN32
 std::wstring getExecutablePath()
 #else
 std::string getExecutablePath()
-#endif
 #endif
 {
 #ifdef _WIN32
@@ -340,7 +292,7 @@ std::string getExecutablePath()
 
   if (_NSGetExecutablePath(exePath.data(), &pathLen))
     {
-      throw_(PathTooLongError(pathLen));
+      throw(PathTooLongError(pathLen));
     }
 #elif defined __FreeBSD__ || defined __NetBSD__ || defined __OpenBSD__
   ssize_t pathLen = -1;
@@ -348,11 +300,11 @@ std::string getExecutablePath()
   pathLen = readlink("/proc/curproc/file", exePath.data(), MAXPATHLEN);
   if (pathLen < 0)
     {
-      throw_(ProcessFileLinkNotReadableError());
+      throw(ProcessFileLinkNotReadableError());
     }
   else if (pathLen == MAXPATHLEN)
     {
-      throw_(PathTooLongError());
+      throw(PathTooLongError());
     }
 #elif defined __linux__
   ssize_t pathLen = -1;
@@ -360,11 +312,11 @@ std::string getExecutablePath()
   pathLen = readlink("/proc/self/exe", exePath.data(), MAXPATHLEN);
   if (pathLen < 0)
     {
-      throw_(ProcessFileLinkNotReadableError());
+      throw(ProcessFileLinkNotReadableError());
     }
   if (pathLen == MAXPATHLEN)
     {
-      throw_(PathTooLongError());
+      throw(PathTooLongError());
     }
 #elif defined _WIN32
   unsigned int pathLen = 0;
@@ -372,7 +324,7 @@ std::string getExecutablePath()
   pathLen = GetModuleFileNameW(nullptr, exePath.data(), MAXPATHLEN);
   if (GetLastError() != ERROR_SUCCESS)
     {
-      throw_(ModulePathError());
+      throw(ModulePathError());
     }
 #else
 #error "Unsupported system"
@@ -404,12 +356,7 @@ bool fileExists(const std::string &filePath)
 }
 #endif
 
-#ifdef NO_EXCEPTIONS
-bool
-#else
-void
-#endif
-setGrdir(bool force)
+void setGrdir(bool force)
 {
   if (!force)
     {
@@ -417,37 +364,17 @@ setGrdir(bool force)
       GetEnvironmentVariableW(L"GRDIR", nullptr, 0);
       if (GetLastError() != ERROR_ENVVAR_NOT_FOUND)
         {
-          return
-#ifdef NO_EXCEPTIONS
-              false
-#endif
-              ;
+          return;
         }
 #else
       if (getenv("GRDIR") != nullptr)
         {
-          return
-#ifdef NO_EXCEPTIONS
-              false
-#endif
-              ;
+          return;
         }
 #endif
     }
 
-#ifdef NO_EXCEPTIONS
-  decltype(getExecutablePath())::value_type exePath;
-  if (auto exePath_ = getExecutablePath())
-    {
-      exePath = *exePath_;
-    }
-  else
-    {
-      return false;
-    }
-#else
   auto exePath = getExecutablePath();
-#endif
 #ifdef _WIN32
   std::array<wchar_t, MAXPATHLEN> exeDirname;
   std::wstringstream grDirRelativeStream;
@@ -456,21 +383,21 @@ setGrdir(bool force)
 
   if (_wsplitpath_s(exePath.c_str(), nullptr, 0, exeDirname.data(), MAXPATHLEN, nullptr, 0, nullptr, 0))
     {
-      throw_(DirnameError(exePath));
+      throw(DirnameError(exePath));
     }
   grDirRelativeStream << exeDirname.data() << L"/..";
   if (_wfullpath(grDirAbsolute.data(), grDirRelativeStream.str().c_str(), MAXPATHLEN) == nullptr)
     {
-      throw_(AbsolutePathError(grDirRelativeStream.str()));
+      throw(AbsolutePathError(grDirRelativeStream.str()));
     }
   grHeaderPathStream << grDirAbsolute.data() << L"/include/gr.h";
   if (!fileExists(grHeaderPathStream.str()))
     {
-      throw_(CorruptedGrDirError(grDirAbsolute.data()));
+      throw(CorruptedGrDirError(grDirAbsolute.data()));
     }
   if (!SetEnvironmentVariableW(L"GRDIR", grDirAbsolute.data()))
     {
-      throw_(SetEnvError());
+      throw(SetEnvError());
     }
 #else
   std::stringstream grDirRelativeStream;
@@ -489,20 +416,17 @@ setGrdir(bool force)
                                                                  std::free};
   if (!grDirAbsoluteCptr)
     {
-      throw_(AbsolutePathError());
+      throw(AbsolutePathError());
     }
   grHeaderPathStream << grDirAbsoluteCptr.get() << "/include/gr.h";
   if (!fileExists(grHeaderPathStream.str()))
     {
-      throw_(CorruptedGrDirError(grDirAbsoluteCptr.get()));
+      throw(CorruptedGrDirError(grDirAbsoluteCptr.get()));
     }
   if (setenv("GRDIR", grDirAbsoluteCptr.get(), 1) != 0)
     {
-      throw_(SetEnvError());
+      throw(SetEnvError());
     }
-#endif
-#ifdef NO_EXCEPTIONS
-  return true;
 #endif
 }
 } // namespace util
