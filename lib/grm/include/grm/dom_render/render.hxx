@@ -213,7 +213,9 @@ public:
                                                  const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
   std::shared_ptr<GRM::Element> createBar(const double x1, const double x2, const double y1, const double y2,
-                                          const int edge_color_index, const int bar_color_index,
+                                          const int bar_color_index, const int edge_color_index,
+                                          const std::string bar_color_rgb = "", const std::string edge_color_rgb = "",
+                                          const double linewidth = -1, const std::string text = "",
                                           const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
   std::shared_ptr<Element> createGrid(double x_tick, double y_tick, double x_org, double y_org, int major_x,
@@ -320,6 +322,12 @@ public:
 
   std::shared_ptr<GRM::Element> createPanzoom(double x, double y, double xzoom, double yzoom);
 
+  std::shared_ptr<Element> createPolarBar(double count, int class_nr,
+                                          const std::shared_ptr<GRM::Element> &extElement = nullptr);
+
+  std::shared_ptr<Element> createErrorbar(double errorbar_x, double errorbar_ymin, double errorbar_ymax,
+                                          int color_errorbar,
+                                          const std::shared_ptr<GRM::Element> &extElement = nullptr);
   //! Modifierfunctions
 
   /* ------------------------------- setter functions ----------------------------------------------------------------*/
