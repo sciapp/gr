@@ -11000,11 +11000,11 @@ static void drawimage_calculation(double xmin, double xmax, double ymin, double 
         }
     }
 
-  if (lx.scale_options != 0)
+  if ((lx.scale_options & ~(OPTION_FLIP_X | OPTION_FLIP_Y | OPTION_FLIP_Z)) != 0)
     {
       linear_xform lx_original;
-      w = max(width, 500);
-      h = max(height, 500);
+      w = max(width, 2000);
+      h = max(height, 2000);
       lx_original = lx;
       lx.xmin = xmin;
       lx.xmax = xmax;
@@ -11059,7 +11059,21 @@ static void drawimage_calculation(double xmin, double xmax, double ymin, double 
       free(imgT);
     }
   else
-    gks_draw_image(xmin, ymax, xmax, ymin, width, height, img);
+    {
+      if (lx.scale_options & OPTION_FLIP_X)
+        {
+          double tmp = xmin;
+          xmin = xmax;
+          xmax = tmp;
+        }
+      if (lx.scale_options & OPTION_FLIP_Y)
+        {
+          double tmp = ymin;
+          ymin = ymax;
+          ymax = tmp;
+        }
+      gks_draw_image(xmin, ymax, xmax, ymin, width, height, img);
+    }
 }
 
 /*!
