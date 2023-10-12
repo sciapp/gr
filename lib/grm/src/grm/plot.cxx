@@ -4674,7 +4674,7 @@ int grm_plot(const grm_args_t *args)
 
   if (!figure_switched)
     {
-      if (args == nullptr && global_render->documentElement())
+      if (args == nullptr && global_render->documentElement() && global_render->documentElement()->hasChildNodes())
         {
           global_render->render();
           return 1;
@@ -4683,17 +4683,17 @@ int grm_plot(const grm_args_t *args)
         {
           int temp;
           global_render->setAutoUpdate(false);
-          if (grm_args_values(args, "hold_plots", "i", &temp))
+          if (args != nullptr && grm_args_values(args, "hold_plots", "i", &temp))
             {
               hold_figures = temp;
             }
-          if (grm_args_values(args, "append_plots", "i", &temp))
+          if (args != nullptr && grm_args_values(args, "append_plots", "i", &temp))
             {
               append_figures = temp;
             }
 
           int figure_id = 0;
-          if (grm_args_values(args, "plot_id", "i", &figure_id))
+          if (args != nullptr && grm_args_values(args, "plot_id", "i", &figure_id))
             {
               figure_id_given = true;
             }
