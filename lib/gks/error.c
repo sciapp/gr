@@ -11,7 +11,7 @@
 #include "gkscore.h"
 
 char *gks_a_error_info = NULL; /* for compatibility with GLI/GKS */
-int gks_errno = 0;
+DLLEXPORT int gks_errno = 0;
 FILE *gks_a_error_file = NULL;
 
 void gks_perror(const char *format, ...)
