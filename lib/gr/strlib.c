@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include <float.h>
 #include <string.h>
 #include <ctype.h>
 #ifdef _MSC_VER
@@ -14,6 +15,10 @@ typedef __int64 int64_t;
 #endif
 
 #include "strlib.h"
+
+#ifndef DBL_EPSILON
+#define DBL_EPSILON 2.2204460492503131e-16
+#endif
 
 /*
  * Maximum number of decimal digits: 15
@@ -77,7 +82,7 @@ format_reference_t *str_get_format_reference(format_reference_t *result, double 
       double current = min + i * tick_width;
       if (current != origin || origin == min || origin == max)
         {
-          if (current != 0)
+          if (fabs(current) > DBL_EPSILON)
             {
               exponent = (int64_t)floor(log10(fabs(current)));
               if (exponent <= SCIENTIFIC_EXP_LOW || exponent >= SCIENTIFIC_EXP_HIGH)
