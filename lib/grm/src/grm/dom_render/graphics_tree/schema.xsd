@@ -393,7 +393,7 @@
     <xs:element name="errorbars">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="errorbar" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attribute name="absolute_downwards" type="xs:string"/>
             <xs:attribute name="absolute_downwards_flt" type="xs:double"/>
@@ -575,6 +575,7 @@
             <xs:attributeGroup ref="colorrep"/>
             <xs:attribute name="fillcolorind" type="xs:integer"/>
             <xs:attribute name="fillintstyle" type="xs:integer"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -587,6 +588,7 @@
             <xs:attribute name="fillstyle" type="xs:integer"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -596,10 +598,8 @@
     <xs:element name="series_barplot">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="bar" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="errorbars" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="drawrect" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="fillrect" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="ranges"/>
@@ -686,23 +686,6 @@
             <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="weights" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
-        </xs:complexType>
-    </xs:element>
-
-    <!-- definition of bar -->
-    <xs:element name="bar">
-        <xs:complexType>
-            <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="fillrect" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="drawrect" minOccurs="0" maxOccurs="1"/>
-            </xs:choice>
-            <xs:attribute name="bar_color_index" type="xs:integer" use="required"/>
-            <xs:attribute name="edge_color_index" type="xs:integer" use="required"/>
-            <xs:attribute name="fillcolorind" type="xs:integer"/>
-            <xs:attribute name="x1" type="xs:double" use="required"/>
-            <xs:attribute name="x2" type="xs:double" use="required"/>
-            <xs:attribute name="y1" type="xs:double" use="required"/>
-            <xs:attribute name="y2" type="xs:double" use="required"/>
         </xs:complexType>
     </xs:element>
 
@@ -816,22 +799,6 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of pie_segment -->
-    <xs:element name="pie_segment">
-        <xs:complexType>
-            <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="fillarc" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="text" minOccurs="0" maxOccurs="1"/>
-            </xs:choice>
-            <xs:attributeGroup ref="colorrep"/>
-            <xs:attribute name="color_ind" type="xs:integer" use="required"/>
-            <xs:attribute name="end_angle" type="xs:double" use="required"/>
-            <xs:attribute name="fillcolorind" type="xs:integer"/>
-            <xs:attribute name="start_angle" type="xs:double" use="required"/>
-            <xs:attribute name="text" type="xs:string" use="required"/>
-        </xs:complexType>
-    </xs:element>
-
     <!-- definition of plot3 -->
     <xs:element name="series_plot3">
         <xs:complexType>
@@ -880,9 +847,7 @@
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="drawarc" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="drawimage" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="fillarea" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="fillarc" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polar_bar" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attribute name="bin_counts" type="xs:string"/>
@@ -1061,6 +1026,89 @@
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- ||||||||||||||||||||||||||||| series subgroups |||||||||||||||||||||||||||||||||||||||| -->
+
+    <!-- definition of errorbar -->
+    <xs:element name="errorbar">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="3">
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="3"/>
+            </xs:choice>
+            <xs:attribute name="color_errorbar" type="xs:integer" use="required"/>
+            <xs:attribute name="color_downwardscap" type="xs:integer"/>
+            <xs:attribute name="color_upwardscap" type="xs:integer"/>
+            <xs:attribute name="e_downwards" type="xs:double"/>
+            <xs:attribute name="e_upwards" type="xs:double"/>
+            <xs:attribute name="errorbar_x" type="xs:double" use="required"/>
+            <xs:attribute name="errorbar_ymax" type="xs:double" use="required"/>
+            <xs:attribute name="errorbar_ymin" type="xs:double" use="required"/>
+            <xs:attribute name="scap_xmax" type="xs:double"/>
+            <xs:attribute name="scap_xmin" type="xs:double"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of bar -->
+    <xs:element name="bar">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="drawrect" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="fillrect" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="1"/>
+            </xs:choice>
+            <xs:attributeGroup ref="colorrep"/>
+            <xs:attribute name="bar_color_index" type="xs:integer"/>
+            <xs:attribute name="bar_color_rgb" type="xs:string"/>
+            <xs:attribute name="edge_color_index" type="xs:integer"/>
+            <xs:attribute name="edge_color_rgb" type="xs:string"/>
+            <xs:attribute name="fillcolorind" type="xs:integer"/>
+            <xs:attribute name="linewidth" type="xs:double"/>
+            <xs:attribute name="text" type="xs:string"/>
+            <xs:attribute name="x1" type="xs:double" use="required"/>
+            <xs:attribute name="x2" type="xs:double" use="required"/>
+            <xs:attribute name="y1" type="xs:double" use="required"/>
+            <xs:attribute name="y2" type="xs:double" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polarBar -->
+    <xs:element name="polar_bar">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="2">
+                <xs:element ref="drawimage" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="fillarea" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="fillarc" minOccurs="0" maxOccurs="1"/>
+            </xs:choice>
+            <xs:attribute name="bin_width" type="xs:double"/>
+            <xs:attribute name="bin_widths" type="xs:double"/>
+            <xs:attribute name="bin_edges" type="xs:string"/>
+            <xs:attribute name="class_nr" type="xs:integer" use="required"/>
+            <xs:attribute name="count" type="xs:double" use="required"/>
+            <xs:attribute name="draw_edges" type="xs:integer"/>
+            <xs:attribute name="edge_color" type="xs:integer"/>
+            <xs:attribute name="face_color" type="xs:integer"/>
+            <xs:attribute name="norm" type="xs:string"/>
+            <xs:attribute name="phiflip" type="xs:integer"/>
+            <xs:attribute name="xcolormap" type="xs:integer"/>
+            <xs:attribute name="ycolormap" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of pie_segment -->
+    <xs:element name="pie_segment">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="fillarc" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="1"/>
+            </xs:choice>
+            <xs:attributeGroup ref="colorrep"/>
+            <xs:attribute name="color_ind" type="xs:integer" use="required"/>
+            <xs:attribute name="end_angle" type="xs:double" use="required"/>
+            <xs:attribute name="fillcolorind" type="xs:integer"/>
+            <xs:attribute name="start_angle" type="xs:double" use="required"/>
+            <xs:attribute name="text" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
 

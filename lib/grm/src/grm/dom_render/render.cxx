@@ -72,6 +72,7 @@ static std::set<std::string> parentTypes = {
     "bar",
     "colorbar",
     "coordinate_system",
+    "errorbar",
     "errorbars",
     "figure",
     "label",
@@ -82,6 +83,7 @@ static std::set<std::string> parentTypes = {
     "pie_segment",
     "plot",
     "polar_axes",
+    "polar_bar",
     "root",
     "series_barplot",
     "series_contour",
@@ -249,6 +251,15 @@ enum class del_values
 };
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static double getLightness(int color)
+{
+  unsigned char rgb[sizeof(int)];
+
+  gr_inqcolor(color, (int *)rgb);
+  double Y = (0.2126729 * rgb[0] / 255 + 0.7151522 * rgb[1] / 255 + 0.0721750 * rgb[2] / 255);
+  return 116 * pow(Y / 100, 1.0 / 3) - 16;
+}
 
 static void resetOldBoundingBoxes(const std::shared_ptr<GRM::Element> &element)
 {
@@ -3429,7 +3440,7 @@ static void processAxes3d(const std::shared_ptr<GRM::Element> &element, const st
   pushAxes3dToZqueue(element, context);
 }
 
-static void cellArray(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processCellArray(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for cellArray
@@ -3453,7 +3464,7 @@ static void cellArray(const std::shared_ptr<GRM::Element> &element, const std::s
                  (int *)&(GRM::get<std::vector<int>>((*context)[color])[0]));
 }
 
-static void colorbar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processColorbar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   double c_min, c_max;
   int data, i;
@@ -3556,7 +3567,7 @@ static void colorbar(const std::shared_ptr<GRM::Element> &element, const std::sh
     }
 }
 
-static void barplot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for barplot
@@ -3585,16 +3596,12 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
   std::vector<double> c_rgb;
   unsigned int c_rgb_length;
   std::vector<std::string> ylabels;
-  unsigned int ylabels_left = 0, ylabels_length = 0, y_lightness_to_get = 0;
-  unsigned char rgb[sizeof(int)];
+  unsigned int ylabels_left = 0, ylabels_length = 0;
   int use_y_notations_from_inner_series = 1;
-  double Y;
-  int color;
   /* Style Varianz */
   double pos_vertical_change = 0, neg_vertical_change = 0;
   double x1, x2, y1, y2;
   double x_min = 0, x_max, y_min = 0, y_max;
-  std::vector<double> y_lightness = {};
   int is_vertical;
   bool inner_series;
   bool inner_c = false;
@@ -3602,7 +3609,7 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
   del_values del = del_values::update_without_default;
   int child_id = 0;
 
-  /* clear old child nodes */
+  /* clear old bars */
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
   clearOldChildren(&del, element);
 
@@ -3699,7 +3706,6 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
       ylabels_length = size(ylabels);
 
       ylabels_left = ylabels_length;
-      y_lightness_to_get = ylabels_length;
     }
 
   if (element->hasAttribute("xrange_min") && element->hasAttribute("xrange_max") &&
@@ -3775,7 +3781,6 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
       global_render->setFillColorInd(element, bar_color);
       processFillColorInd(element);
     }
-  double available_width, available_height, x_text, y_text;
   if (!inner_series)
     {
       /* Draw Bar */
@@ -3822,127 +3827,65 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
               y1 = tmp1, y2 = tmp2;
             }
 
-          // fillrect code
-          std::shared_ptr<GRM::Element> rect;
+          int fillcolorind = -1;
+          std::vector<double> bar_fillcolor_rgb, edge_fillcolor_rgb;
+          std::string bar_color_rgb_key, edge_color_rgb_key;
+          std::shared_ptr<GRM::Element> bar;
+          int id = static_cast<int>(global_root->getAttribute("_id"));
+          std::string str = std::to_string(id);
 
+          /* attributes for fillrect */
+          if (style != "default")
+            {
+              fillcolorind = std_colors[i % len_std_colors];
+            }
+          if (!c.empty() && c[i] != -1)
+            {
+              fillcolorind = c[i];
+            }
+          else if (!c_rgb.empty() && c_rgb[i * 3] != -1)
+            {
+              bar_fillcolor_rgb = std::vector<double>{c_rgb[i * 3], c_rgb[i * 3 + 1], c_rgb[i * 3 + 2]};
+              bar_color_rgb_key = "bar_color_rgb" + str;
+              (*context)[bar_color_rgb_key] = bar_fillcolor_rgb;
+            }
+
+          if (fillcolorind == -1)
+            fillcolorind =
+                element->hasAttribute("fillcolorind") ? static_cast<int>(element->getAttribute("fillcolorind")) : 989;
+
+          /* Colorrep for drawrect */
+          if (edge_color_rgb[0] != -1)
+            {
+              edge_fillcolor_rgb = std::vector<double>{edge_color_rgb[0], edge_color_rgb[1], edge_color_rgb[2]};
+              edge_color_rgb_key = "edge_color_rgb" + str;
+              (*context)[edge_color_rgb_key] = edge_fillcolor_rgb;
+            }
+
+          /* Create bars */
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
-              rect = global_render->createFillRect(x1, x2, y1, y2);
-              rect->setAttribute("_child_id", child_id++);
-              element->append(rect);
+              bar = global_render->createBar(x1, x2, y1, y2, fillcolorind, edge_color, bar_color_rgb_key,
+                                             edge_color_rgb_key, edge_width, "");
+              bar->setAttribute("_child_id", child_id++);
+              element->append(bar);
             }
           else
             {
-              rect = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-              if (rect != nullptr) global_render->createFillRect(x1, x2, y1, y2, 0, 0, -1, rect);
+              bar = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+              if (bar != nullptr)
+                global_render->createBar(x1, x2, y1, y2, fillcolorind, edge_color, bar_color_rgb_key,
+                                         edge_color_rgb_key, edge_width, "", bar);
             }
 
-          if (rect != nullptr)
-            {
-              if (style != "default")
-                {
-                  int color_index = i % len_std_colors;
-                  global_render->setFillColorInd(rect, std_colors[color_index]);
-                }
-              if (!c.empty() && c[i] != -1)
-                {
-                  global_render->setFillColorInd(rect, c[i]);
-                }
-              else if (!c_rgb.empty() && c_rgb[i * 3] != -1)
-                {
-                  global_render->setColorRep(rect, color_save_spot, c_rgb[i * 3], c_rgb[i * 3 + 1], c_rgb[i * 3 + 2]);
-                  global_render->setFillColorInd(rect, color_save_spot);
-                }
-              if (y_lightness_to_get > 0)
-                {
-                  if (rect->hasAttribute("fillcolorind"))
-                    {
-                      color = (int)rect->getAttribute("fillcolorind");
-                    }
-                  else if (element->hasAttribute("fillcolorind"))
-                    {
-                      color = (int)element->getAttribute("fillcolorind");
-                    }
-
-                  gr_inqcolor(color, (int *)rgb);
-                  Y = (0.2126729 * rgb[0] / 255 + 0.7151522 * rgb[1] / 255 + 0.0721750 * rgb[2] / 255);
-                  y_lightness.push_back(116 * pow(Y / 100, 1.0 / 3) - 16);
-                  --y_lightness_to_get;
-                }
-            }
-
-          // drawrect code
-          std::shared_ptr<GRM::Element> draw_rect;
-
-          if (del != del_values::update_without_default && del != del_values::update_with_default)
-            {
-              draw_rect = global_render->createDrawRect(x1, x2, y1, y2);
-              draw_rect->setAttribute("_child_id", child_id++);
-              element->append(draw_rect);
-            }
-          else
-            {
-              draw_rect = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-              if (draw_rect != nullptr) global_render->createDrawRect(x1, x2, y1, y2, draw_rect);
-            }
-
-          if (draw_rect != nullptr)
-            {
-              draw_rect->setAttribute("z_index", 2);
-              global_render->setLineWidth(draw_rect, edge_width);
-              if (edge_color_rgb[0] != -1)
-                {
-                  global_render->setColorRep(draw_rect, color_save_spot, edge_color_rgb[0], edge_color_rgb[1],
-                                             edge_color_rgb[2]);
-                  edge_color = color_save_spot;
-                }
-              global_render->setLineColorInd(draw_rect, edge_color);
-              element->setAttribute("edge_color", edge_color);
-              processLineColorInd(draw_rect);
-              processLineWidth(draw_rect);
-            }
-
-          /* Draw ylabels */
+          /* Draw ynotations */
           if (!ylabels.empty() && ylabels_left > 0)
             {
-              available_width = x2 - x1;
-              available_height = y2 - y1;
-              x_text = (x1 + x2) / 2;
-              y_text = (y1 + y2) / 2;
-
-              std::shared_ptr<GRM::Element> text;
-
-              if (del != del_values::update_without_default && del != del_values::update_with_default)
-                {
-                  text = global_render->createText(x_text, y_text, ylabels[i], CoordinateSpace::WC);
-                  text->setAttribute("_child_id", child_id++);
-                  element->append(text);
-                }
-              else
-                {
-                  text = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                  if (text != nullptr) global_render->createText(x_text, y_text, ylabels[i], CoordinateSpace::WC, text);
-                }
-
-              if (text != nullptr)
-                {
-                  text->setAttribute("z_index", 2);
-                  global_render->setTextAlign(text, 2, 3);
-                  global_render->setTextWidthAndHeight(text, available_width, available_height);
-                  if (y_lightness[i] < 0.4)
-                    {
-                      global_render->setTextColorInd(text, 0);
-                    }
-                  else
-                    {
-                      global_render->setTextColorInd(text, 1);
-                    }
-                  --ylabels_left;
-                }
+              if (bar != nullptr) bar->setAttribute("text", ylabels[i]);
+              --ylabels_left;
             }
+          global_root->setAttribute("_id", ++id);
         }
-      pos_vertical_change = 0;
-      neg_vertical_change = 0;
     }
   else
     {
@@ -3964,7 +3907,6 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
       for (int inner_series_index = 0; inner_series_index < size(indices_vec); inner_series_index++)
         {
           /* Draw bars from inner_series */
-          color = std_colors[inner_series_index % len_std_colors];
           int inner_y_length = indices_vec[inner_series_index];
           std::vector<double> inner_y_vec(y_vec.begin() + inner_y_start_index,
                                           y_vec.begin() + inner_y_start_index + inner_y_length);
@@ -3996,117 +3938,63 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
                   y1 = tmp1, y2 = tmp2;
                 }
 
-              std::shared_ptr<GRM::Element> rect;
+              int fillcolorind = -1;
+              std::vector<double> bar_fillcolor_rgb, edge_fillcolor_rgb;
+              std::string bar_color_rgb_key, edge_color_rgb_key;
+              std::shared_ptr<GRM::Element> bar;
+              int id = static_cast<int>(global_root->getAttribute("_id"));
+              std::string str = std::to_string(id);
 
+              /* attributes for fillrect */
+              if (!c.empty() && !inner_c && c[inner_series_index] != -1)
+                {
+                  fillcolorind = c[inner_series_index];
+                }
+              if (!c_rgb.empty() && !inner_c_rgb && c_rgb[inner_series_index * 3] != -1)
+                {
+                  bar_fillcolor_rgb =
+                      std::vector<double>{c_rgb[inner_series_index * 3], c_rgb[inner_series_index * 3 + 1],
+                                          c_rgb[inner_series_index * 3 + 2]};
+                  bar_color_rgb_key = "bar_color_rgb" + str;
+                  (*context)[bar_color_rgb_key] = bar_fillcolor_rgb;
+                }
+              if (inner_c && c[inner_y_start_index + i] != -1)
+                {
+                  fillcolorind = c[inner_y_start_index + i];
+                }
+              if (inner_c_rgb && c_rgb[(inner_y_start_index + i) * 3] != -1)
+                {
+                  bar_fillcolor_rgb = std::vector<double>{c_rgb[(inner_y_start_index + i) * 3],
+                                                          c_rgb[(inner_y_start_index + i) * 3 + 1],
+                                                          c_rgb[(inner_y_start_index + i) * 3 + 2]};
+                  bar_color_rgb_key = "bar_color_rgb" + str;
+                  (*context)[bar_color_rgb_key] = bar_fillcolor_rgb;
+                }
+              if (fillcolorind == -1) fillcolorind = std_colors[inner_series_index % len_std_colors];
+
+              /* Create bars */
               if (del != del_values::update_without_default && del != del_values::update_with_default)
                 {
-                  rect = global_render->createFillRect(x1, x2, y1, y2);
-                  rect->setAttribute("_child_id", child_id++);
-                  element->append(rect);
+                  bar = global_render->createBar(x1, x2, y1, y2, fillcolorind, edge_color, bar_color_rgb_key,
+                                                 edge_color_rgb_key, edge_width, "");
+                  bar->setAttribute("_child_id", child_id++);
+                  element->append(bar);
                 }
               else
                 {
-                  rect = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                  if (rect != nullptr) global_render->createFillRect(x1, x2, y1, y2, 0, 0, -1, rect);
+                  bar = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                  if (bar != nullptr)
+                    global_render->createBar(x1, x2, y1, y2, fillcolorind, edge_color, bar_color_rgb_key,
+                                             edge_color_rgb_key, edge_width, "", bar);
                 }
-
-              if (rect != nullptr)
-                {
-                  global_render->setFillColorInd(rect, color);
-
-                  if (!c.empty() && !inner_c && c[inner_series_index] != -1)
-                    {
-                      global_render->setFillColorInd(rect, c[inner_series_index]);
-                    }
-                  if (!c_rgb.empty() && !inner_c_rgb && c_rgb[inner_series_index * 3] != -1)
-                    {
-                      global_render->setColorRep(rect, color_save_spot, c_rgb[inner_series_index * 3],
-                                                 c_rgb[inner_series_index * 3 + 1], c_rgb[inner_series_index * 3 + 2]);
-                      global_render->setFillColorInd(rect, color_save_spot);
-                    }
-                  if (inner_c && c[inner_y_start_index + i] != -1)
-                    {
-                      global_render->setFillColorInd(rect, c[inner_y_start_index + i]);
-                    }
-                  if (inner_c_rgb && c_rgb[(inner_y_start_index + i) * 3] != -1)
-                    {
-                      global_render->setColorRep(rect, color_save_spot, c_rgb[(inner_y_start_index + i) * 3],
-                                                 c_rgb[(inner_y_start_index + i) * 3 + 1],
-                                                 c_rgb[(inner_y_start_index + i) * 3 + 2]);
-                      global_render->setFillColorInd(rect, color_save_spot);
-                    }
-
-                  if (y_lightness_to_get > 0)
-                    {
-                      if (rect->hasAttribute("fillcolorind"))
-                        {
-                          color = (int)rect->getAttribute("fillcolorind");
-                        }
-                      gr_inqcolor(color, (int *)rgb);
-                      Y = (0.2126729 * rgb[0] / 255 + 0.7151522 * rgb[1] / 255 + 0.0721750 * rgb[2] / 255);
-                      y_lightness.push_back(116 * pow(Y / 100, 1.0 / 3) - 16);
-                      --y_lightness_to_get;
-                    }
-                }
-
-              /* Draw edges from inner_series */
-              std::shared_ptr<GRM::Element> draw_rect;
-
-              if (del != del_values::update_without_default && del != del_values::update_with_default)
-                {
-                  draw_rect = global_render->createDrawRect(x1, x2, y1, y2);
-                  draw_rect->setAttribute("_child_id", child_id++);
-                  element->append(draw_rect);
-                }
-              else
-                {
-                  draw_rect = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                  if (draw_rect != nullptr) global_render->createDrawRect(x1, x2, y1, y2, draw_rect);
-                }
-              if (draw_rect != nullptr) draw_rect->setAttribute("z_index", 2);
 
               /* Draw ynotations from inner_series */
               if (!ylabels.empty() && ylabels_left > 0)
                 {
-                  available_width = x2 - x1;
-                  available_height = y2 - y1;
-                  x_text = (x1 + x2) / 2;
-                  y_text = (y1 + y2) / 2;
-
-                  std::shared_ptr<GRM::Element> text;
-
-                  if (del != del_values::update_without_default && del != del_values::update_with_default)
-                    {
-                      text = global_render->createText(x_text, y_text, ylabels[ylabels_length - ylabels_left],
-                                                       CoordinateSpace::WC);
-                      text->setAttribute("_child_id", child_id++);
-                      element->append(text);
-                    }
-                  else
-                    {
-                      text = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                      if (text != nullptr)
-                        global_render->createText(x_text, y_text, ylabels[ylabels_length - ylabels_left],
-                                                  CoordinateSpace::WC, text);
-                    }
-
-                  if (text != nullptr)
-                    {
-                      text->setAttribute("z_index", 2);
-                      global_render->setTextAlign(text, 2, 3);
-                      global_render->setTextWidthAndHeight(text, available_width, available_height);
-
-                      if (y_lightness[ylabels_length - ylabels_left] < 0.4)
-                        {
-                          global_render->setTextColorInd(text, 0);
-                        }
-                      else
-                        {
-                          global_render->setTextColorInd(text, 1);
-                        }
-                      --ylabels_left;
-                    }
+                  if (bar != nullptr) bar->setAttribute("text", ylabels[ylabels_length - ylabels_left]);
+                  --ylabels_left;
                 }
+              global_root->setAttribute("_id", ++id);
             }
           pos_vertical_change = 0;
           neg_vertical_change = 0;
@@ -4114,6 +4002,8 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
           inner_y_start_index += inner_y_length;
         }
     }
+  element->setAttribute("linecolorind", edge_color);
+  processLineColorInd(element);
 
   // errorbar handling
   for (const auto &child : element->children())
@@ -4146,7 +4036,7 @@ static void barplot(const std::shared_ptr<GRM::Element> &element, const std::sha
     }
 }
 
-static void contour(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processContour(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for contour
@@ -4272,7 +4162,7 @@ static void contour(const std::shared_ptr<GRM::Element> &element, const std::sha
   if (redrawws) gr_contour(nx, ny, num_levels, px_p, py_p, h_p, pz_p, major_h);
 }
 
-static void contourf(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processContourf(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for contourf
@@ -4403,7 +4293,7 @@ static void contourf(const std::shared_ptr<GRM::Element> &element, const std::sh
   if (redrawws) gr_contourf(nx, ny, num_levels, px_p, py_p, h_p, pz_p, major_h);
 }
 
-static void drawArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processDrawArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for drawArc
@@ -4420,7 +4310,8 @@ static void drawArc(const std::shared_ptr<GRM::Element> &element, const std::sha
   if (redrawws) gr_drawarc(xmin, xmax, ymin, ymax, a1, a2);
 }
 
-static void drawGraphics(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processDrawGraphics(const std::shared_ptr<GRM::Element> &element,
+                                const std::shared_ptr<GRM::Context> &context)
 {
   auto key = (std::string)element->getAttribute("data");
   auto data_vec = GRM::get<std::vector<int>>((*context)[key]);
@@ -4436,7 +4327,7 @@ static void drawGraphics(const std::shared_ptr<GRM::Element> &element, const std
   if (redrawws) gr_drawgraphics(data_p);
 }
 
-static void drawImage(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processDrawImage(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for drawImage
@@ -4457,7 +4348,7 @@ static void drawImage(const std::shared_ptr<GRM::Element> &element, const std::s
                  model);
 }
 
-static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processErrorbars(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   std::string orientation = PLOT_DEFAULT_ORIENTATION, kind;
   int is_horizontal;
@@ -4577,7 +4468,7 @@ static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::s
   e_upwards = e_downwards = FLT_MAX;
   for (i = 0; i < x_length; i++)
     {
-      std::shared_ptr<GRM::Element> line;
+      std::shared_ptr<GRM::Element> errorbar;
       if (!absolute_upwards.empty() || !relative_upwards.empty() || absolute_upwards_flt != FLT_MAX ||
           relative_upwards_flt != FLT_MAX)
         {
@@ -4612,70 +4503,128 @@ static void errorbars(const std::shared_ptr<GRM::Element> &element, const std::s
           line_y[0] = tmp1, line_y[1] = tmp2;
         }
 
-      if (e_upwards != FLT_MAX && color_upwardscap >= 0)
-        {
-          line_y[0] = e_upwards;
-          line_y[1] = e_upwards;
-          if (del != del_values::update_without_default && del != del_values::update_with_default)
-            {
-              line =
-                  global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, color_upwardscap);
-              line->setAttribute("_child_id", child_id++);
-              element->append(line);
-            }
-          else
-            {
-              line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-              if (line != nullptr)
-                global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, color_upwardscap,
-                                              line);
-            }
-        }
-
-      if (e_downwards != FLT_MAX && color_downwardscap >= 0)
-        {
-          line_y[0] = e_downwards;
-          line_y[1] = e_downwards;
-          if (del != del_values::update_without_default && del != del_values::update_with_default)
-            {
-              line =
-                  global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, color_downwardscap);
-              line->setAttribute("_child_id", child_id++);
-              element->append(line);
-            }
-          else
-            {
-              line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-              if (line != nullptr)
-                global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, color_downwardscap,
-                                              line);
-            }
-        }
-
       if (color_errorbar >= 0)
         {
-          line_x[0] = x_value;
-          line_x[1] = x_value;
           line_y[0] = e_upwards != FLT_MAX ? e_upwards : y_vec[i];
           line_y[1] = e_downwards != FLT_MAX ? e_downwards : y_vec[i];
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
-              line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, color_errorbar);
-              line->setAttribute("_child_id", child_id++);
-              element->append(line);
+              errorbar = global_render->createErrorbar(x_value, line_y[0], line_y[1], color_errorbar);
+              errorbar->setAttribute("_child_id", child_id++);
+              element->append(errorbar);
             }
           else
             {
-              line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-              if (line != nullptr)
-                global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, color_errorbar, line);
+              errorbar = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+              if (errorbar != nullptr)
+                global_render->createErrorbar(x_value, line_y[0], line_y[1], color_errorbar, errorbar);
+            }
+
+          if (errorbar != nullptr)
+            {
+              if (e_upwards != FLT_MAX)
+                {
+                  errorbar->setAttribute("e_upwards", e_upwards);
+                  errorbar->setAttribute("color_upwardscap", color_upwardscap);
+                }
+              if (e_downwards != FLT_MAX)
+                {
+                  errorbar->setAttribute("e_downwards", e_downwards);
+                  errorbar->setAttribute("color_downwardscap", color_downwardscap);
+                }
+              if (e_downwards != FLT_MAX || e_upwards != FLT_MAX)
+                {
+                  errorbar->setAttribute("scap_xmin", line_x[0]);
+                  errorbar->setAttribute("scap_xmax", line_x[1]);
+                }
             }
         }
     }
   gr_restorestate();
 }
 
-static void isosurface(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processErrorbar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  double scap_xmin, scap_xmax, e_upwards = FLT_MAX, e_downwards = FLT_MAX;
+  double errorbar_x, errorbar_ymin, errorbar_ymax;
+  int color_upwardscap, color_downwardscap, color_errorbar;
+  std::shared_ptr<GRM::Element> line;
+  del_values del = del_values::update_without_default;
+  int child_id = 0;
+
+  /* clear old lines */
+  del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
+  clearOldChildren(&del, element);
+
+  errorbar_x = static_cast<double>(element->getAttribute("errorbar_x"));
+  errorbar_ymin = static_cast<double>(element->getAttribute("errorbar_ymin"));
+  errorbar_ymax = static_cast<double>(element->getAttribute("errorbar_ymax"));
+  color_errorbar = static_cast<int>(element->getAttribute("color_errorbar"));
+
+  if (element->hasAttribute("scap_xmin")) scap_xmin = static_cast<double>(element->getAttribute("scap_xmin"));
+  if (element->hasAttribute("scap_xmax")) scap_xmax = static_cast<double>(element->getAttribute("scap_xmax"));
+  if (element->hasAttribute("e_upwards")) e_upwards = static_cast<double>(element->getAttribute("e_upwards"));
+  if (element->hasAttribute("e_downwards")) e_downwards = static_cast<double>(element->getAttribute("e_downwards"));
+  if (element->hasAttribute("color_upwardscap"))
+    color_upwardscap = static_cast<int>(element->getAttribute("color_upwardscap"));
+  if (element->hasAttribute("color_downwardscap"))
+    color_downwardscap = static_cast<int>(element->getAttribute("color_downwardscap"));
+
+  if (e_upwards != FLT_MAX && color_upwardscap >= 0)
+    {
+      if (del != del_values::update_without_default && del != del_values::update_with_default)
+        {
+          line = global_render->createPolyline(scap_xmin, scap_xmax, e_upwards, e_upwards, 0, 0.0, color_upwardscap);
+          line->setAttribute("_child_id", child_id++);
+          element->append(line);
+        }
+      else
+        {
+          line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+          if (line != nullptr)
+            global_render->createPolyline(scap_xmin, scap_xmax, e_upwards, e_upwards, 0, 0.0, color_upwardscap, line);
+        }
+    }
+
+  if (e_downwards != FLT_MAX && color_downwardscap >= 0)
+    {
+      if (del != del_values::update_without_default && del != del_values::update_with_default)
+        {
+          line =
+              global_render->createPolyline(scap_xmin, scap_xmax, e_downwards, e_downwards, 0, 0.0, color_downwardscap);
+          line->setAttribute("_child_id", child_id++);
+          element->append(line);
+        }
+      else
+        {
+          line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+          if (line != nullptr)
+            global_render->createPolyline(scap_xmin, scap_xmax, e_downwards, e_downwards, 0, 0.0, color_downwardscap,
+                                          line);
+        }
+    }
+
+  if (color_errorbar >= 0)
+    {
+      if (del != del_values::update_without_default && del != del_values::update_with_default)
+        {
+          line = global_render->createPolyline(errorbar_x, errorbar_x, errorbar_ymin, errorbar_ymax, 0, 0.0,
+                                               color_errorbar);
+          line->setAttribute("_child_id", child_id++);
+          element->append(line);
+        }
+      else
+        {
+          line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+          if (line != nullptr)
+            global_render->createPolyline(errorbar_x, errorbar_x, errorbar_ymin, errorbar_ymax, 0, 0.0, color_errorbar,
+                                          line);
+        }
+    }
+}
+
+static void processIsosurface(const std::shared_ptr<GRM::Element> &element,
+                              const std::shared_ptr<GRM::Context> &context)
 {
   std::vector<double> c_vec, temp_colors;
   unsigned int i, c_length, dims;
@@ -4769,7 +4718,7 @@ static void isosurface(const std::shared_ptr<GRM::Element> &element, const std::
   gr3_setlightparameters(light_parameters[0], light_parameters[1], light_parameters[2], light_parameters[3]);
 }
 
-static void legend(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   double viewport[4];
   double px, py, w, h;
@@ -5307,7 +5256,7 @@ static void legend(const std::shared_ptr<GRM::Element> &element, const std::shar
   processFillColorInd(element);
 }
 
-static void drawPolarAxes(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   double viewport[4], vp[4];
   double diag;
@@ -5516,7 +5465,7 @@ static void drawPolarAxes(const std::shared_ptr<GRM::Element> &element, const st
   processTextAlign(element);
 }
 
-static void drawRect(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processDrawRect(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for drawArc
@@ -5531,7 +5480,7 @@ static void drawRect(const std::shared_ptr<GRM::Element> &element, const std::sh
   if (redrawws) gr_drawrect(xmin, xmax, ymin, ymax);
 }
 
-static void fillArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processFillArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for drawArc
@@ -5548,7 +5497,7 @@ static void fillArc(const std::shared_ptr<GRM::Element> &element, const std::sha
   if (redrawws) gr_fillarc(xmin, xmax, ymin, ymax, a1, a2);
 }
 
-static void fillRect(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processFillRect(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for drawArc
@@ -5563,7 +5512,7 @@ static void fillRect(const std::shared_ptr<GRM::Element> &element, const std::sh
   if (redrawws) gr_fillrect(xmin, xmax, ymin, ymax);
 }
 
-static void fillArea(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processFillArea(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for fillArea
@@ -5582,18 +5531,20 @@ static void fillArea(const std::shared_ptr<GRM::Element> &element, const std::sh
   if (redrawws) gr_fillarea(n, (double *)&(x_vec[0]), (double *)&(y_vec[0]));
 }
 
-static void gr3Clear(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processGr3Clear(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   gr3_clear();
 }
 
-static void gr3DeleteMesh(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processGr3DeleteMesh(const std::shared_ptr<GRM::Element> &element,
+                                 const std::shared_ptr<GRM::Context> &context)
 {
   int mesh = static_cast<int>(element->getAttribute("mesh"));
   gr3_deletemesh(mesh);
 }
 
-static void gr3DrawImage(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processGr3DrawImage(const std::shared_ptr<GRM::Element> &element,
+                                const std::shared_ptr<GRM::Context> &context)
 {
   double xmin, xmax, ymin, ymax;
   int width, height, drawable_type;
@@ -5609,7 +5560,8 @@ static void gr3DrawImage(const std::shared_ptr<GRM::Element> &element, const std
   logger((stderr, "gr3_drawimage returned %i\n", gr3_drawimage(xmin, xmax, ymin, ymax, width, height, drawable_type)));
 }
 
-static void gr3DrawMesh(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processGr3DrawMesh(const std::shared_ptr<GRM::Element> &element,
+                               const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for gr3_drawmesh
@@ -5648,7 +5600,7 @@ static void gr3DrawMesh(const std::shared_ptr<GRM::Element> &element, const std:
   gr3_drawmesh(mesh, n, positions_p, directions_p, ups_p, colors_p, scales_p);
 }
 
-static void grid(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processGrid(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for grid
@@ -5682,7 +5634,7 @@ static void grid(const std::shared_ptr<GRM::Element> &element, const std::shared
   if (redrawws) gr_grid(x_tick, y_tick, x_org, y_org, abs(x_major), abs(y_major));
 }
 
-static void grid3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processGrid3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for grid3d
@@ -5727,7 +5679,7 @@ static void grid3d(const std::shared_ptr<GRM::Element> &element, const std::shar
   if (redrawws) gr_grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, abs(x_major), abs(y_major), abs(z_major));
 }
 
-static void heatmap(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processHeatmap(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for heatmap
@@ -6228,7 +6180,7 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
               bar =
-                  global_render->createBar(x, x + bar_width, y_min, bins_vec[i - 1], edge_color_index, bar_color_index);
+                  global_render->createBar(x, x + bar_width, y_min, bins_vec[i - 1], bar_color_index, edge_color_index);
               bar->setAttribute("_child_id", child_id++);
               element->append(bar);
             }
@@ -6236,8 +6188,8 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
             {
               bar = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
               if (bar != nullptr)
-                global_render->createBar(x, x + bar_width, y_min, bins_vec[i - 1], edge_color_index, bar_color_index,
-                                         bar);
+                global_render->createBar(x, x + bar_width, y_min, bins_vec[i - 1], bar_color_index, edge_color_index,
+                                         "", "", -1, "", bar);
             }
         }
       else
@@ -6245,7 +6197,7 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
               bar =
-                  global_render->createBar(y_min, bins_vec[i - 1], x, x + bar_width, edge_color_index, bar_color_index);
+                  global_render->createBar(y_min, bins_vec[i - 1], x, x + bar_width, bar_color_index, edge_color_index);
               bar->setAttribute("_child_id", child_id++);
               element->append(bar);
             }
@@ -6253,8 +6205,8 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
             {
               bar = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
               if (bar != nullptr)
-                global_render->createBar(y_min, bins_vec[i - 1], x, x + bar_width, edge_color_index, bar_color_index,
-                                         bar);
+                global_render->createBar(y_min, bins_vec[i - 1], x, x + bar_width, bar_color_index, edge_color_index,
+                                         "", "", -1, "", bar);
             }
         }
     }
@@ -6275,10 +6227,12 @@ static void processBar(const std::shared_ptr<GRM::Element> &element, const std::
 {
   bool is_horizontal;
   double x1, x2, y1, y2;
-  int bar_color_index, edge_color_index;
-  std::shared_ptr<GRM::Element> fillRect, drawRect;
-  std::string orientation = PLOT_DEFAULT_ORIENTATION;
+  int bar_color_index, edge_color_index, text_color_index = -1, color_save_spot = PLOT_CUSTOM_COLOR_INDEX;
+  std::shared_ptr<GRM::Element> fillRect, drawRect, text_elem;
+  std::string orientation = PLOT_DEFAULT_ORIENTATION, text;
   del_values del = del_values::update_without_default;
+  double linewidth = NAN, y_lightness = NAN;
+  std::vector<double> bar_color_rgb, edge_color_rgb;
   int child_id = 0;
 
   x1 = static_cast<double>(element->getAttribute("x1"));
@@ -6287,6 +6241,19 @@ static void processBar(const std::shared_ptr<GRM::Element> &element, const std::
   y2 = static_cast<double>(element->getAttribute("y2"));
   bar_color_index = static_cast<int>(element->getAttribute("bar_color_index"));
   edge_color_index = static_cast<int>(element->getAttribute("edge_color_index"));
+  if (element->hasAttribute("text")) text = static_cast<std::string>(element->getAttribute("text"));
+  if (element->hasAttribute("linewidth")) linewidth = static_cast<double>(element->getAttribute("linewidth"));
+
+  if (element->hasAttribute("bar_color_rgb"))
+    {
+      auto bar_color_rgb_key = static_cast<std::string>(element->getAttribute("bar_color_rgb"));
+      bar_color_rgb = GRM::get<std::vector<double>>((*context)[bar_color_rgb_key]);
+    }
+  if (element->hasAttribute("edge_color_rgb"))
+    {
+      auto edge_color_rgb_key = static_cast<std::string>(element->getAttribute("edge_color_rgb"));
+      edge_color_rgb = GRM::get<std::vector<double>>((*context)[edge_color_rgb_key]);
+    }
 
   /* clear old rects */
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
@@ -6305,8 +6272,29 @@ static void processBar(const std::shared_ptr<GRM::Element> &element, const std::
     }
   if (fillRect != nullptr)
     {
-      global_render->setFillColorInd(fillRect, bar_color_index);
       global_render->setFillIntStyle(fillRect, GKS_K_INTSTYLE_SOLID);
+
+      if (!bar_color_rgb.empty() && bar_color_rgb[0] != -1)
+        {
+          global_render->setColorRep(fillRect, color_save_spot, bar_color_rgb[0], bar_color_rgb[1], bar_color_rgb[2]);
+          bar_color_index = color_save_spot;
+          processColorReps(fillRect);
+        }
+      global_render->setFillColorInd(fillRect, bar_color_index);
+
+      if (!text.empty())
+        {
+          int color;
+          if (bar_color_index != -1)
+            {
+              color = bar_color_index;
+            }
+          else if (element->hasAttribute("fillcolorind"))
+            {
+              color = (int)element->getAttribute("fillcolorind");
+            }
+          y_lightness = getLightness(color);
+        }
     }
 
   if (del != del_values::update_without_default)
@@ -6320,10 +6308,49 @@ static void processBar(const std::shared_ptr<GRM::Element> &element, const std::
       drawRect = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
       if (drawRect != nullptr) global_render->createDrawRect(x1, x2, y1, y2, drawRect);
     }
-  if (drawRect != nullptr) global_render->setLineColorInd(drawRect, edge_color_index);
+  if (drawRect != nullptr)
+    {
+      drawRect->setAttribute("z_index", 2);
+
+      if (!edge_color_rgb.empty() && edge_color_rgb[0] != -1)
+        {
+          global_render->setColorRep(drawRect, color_save_spot - 1, edge_color_rgb[0], edge_color_rgb[1],
+                                     edge_color_rgb[2]);
+          edge_color_index = color_save_spot - 1;
+        }
+      if (element->parentElement()->localName() == "series_barplot")
+        element->parentElement()->setAttribute("edge_color", edge_color_index);
+      global_render->setLineColorInd(drawRect, edge_color_index);
+      processLineColorInd(drawRect);
+      if (!std::isnan(linewidth)) global_render->setLineWidth(drawRect, linewidth);
+    }
+
+  if (!text.empty())
+    {
+      if (del != del_values::update_without_default && del != del_values::update_with_default)
+        {
+          text_elem = global_render->createText((x1 + x2) / 2, (y1 + y2) / 2, text, CoordinateSpace::WC);
+          text_elem->setAttribute("_child_id", child_id++);
+          element->append(text_elem);
+        }
+      else
+        {
+          text_elem = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+          if (text_elem != nullptr)
+            global_render->createText((x1 + x2) / 2, (y1 + y2) / 2, text, CoordinateSpace::WC, text_elem);
+        }
+      if (text_elem != nullptr)
+        {
+          text_elem->setAttribute("z_index", 2);
+          global_render->setTextAlign(text_elem, 2, 3);
+          global_render->setTextWidthAndHeight(text_elem, x2 - x1, y2 - y1);
+          if (!std::isnan(y_lightness)) global_render->setTextColorInd(text_elem, (y_lightness < 0.4) ? 0 : 1);
+        }
+    }
 }
 
-static void isosurfaceRender(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processIsosurfaceRender(const std::shared_ptr<GRM::Element> &element,
+                                    const std::shared_ptr<GRM::Context> &context)
 {
   double viewport[4];
   double x_min, x_max, y_min, y_max;
@@ -6353,7 +6380,8 @@ static void isosurfaceRender(const std::shared_ptr<GRM::Element> &element, const
                 GR3_DRAWABLE_GKS);
 }
 
-static void layoutGrid(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processLayoutGrid(const std::shared_ptr<GRM::Element> &element,
+                              const std::shared_ptr<GRM::Context> &context)
 {
   double xmin, xmax, ymin, ymax;
   xmin = (double)element->getAttribute("plot_xmin");
@@ -6364,31 +6392,30 @@ static void layoutGrid(const std::shared_ptr<GRM::Element> &element, const std::
   gr_setviewport(xmin, xmax, ymin, ymax);
 }
 
-static void layoutGridElement(const std::shared_ptr<GRM::Element> &element,
-                              const std::shared_ptr<GRM::Context> &context)
-{
-  // todo is layoutgridelement actually needed? Can it be replaced by an ordinary group
-  double xmin, xmax, ymin, ymax;
-  xmin = (double)element->getAttribute("plot_xmin");
-  xmax = (double)element->getAttribute("plot_xmax");
-  ymin = (double)element->getAttribute("plot_ymin");
-  ymax = (double)element->getAttribute("plot_ymax");
-}
-
-static void nonUniformPolarCellArray(const std::shared_ptr<GRM::Element> &element,
+static void processLayoutGridElement(const std::shared_ptr<GRM::Element> &element,
                                      const std::shared_ptr<GRM::Context> &context)
 {
-  double x_org = static_cast<double>(element->getAttribute("x_org"));
-  double y_org = static_cast<double>(element->getAttribute("y_org"));
-  std::string phi_key = static_cast<std::string>(element->getAttribute("phi"));
-  std::string r_key = static_cast<std::string>(element->getAttribute("r"));
-  int dimr = static_cast<int>(element->getAttribute("dimr"));
-  int dimphi = static_cast<int>(element->getAttribute("dimphi"));
-  int scol = static_cast<int>(element->getAttribute("scol"));
-  int srow = static_cast<int>(element->getAttribute("srow"));
-  int ncol = static_cast<int>(element->getAttribute("ncol"));
-  int nrow = static_cast<int>(element->getAttribute("nrow"));
-  std::string color_key = static_cast<std::string>(element->getAttribute("color"));
+  // todo is layoutgridelement actually needed? Can it be replaced by an ordinary group
+  auto xmin = static_cast<double>(element->getAttribute("plot_xmin"));
+  auto xmax = static_cast<double>(element->getAttribute("plot_xmax"));
+  auto ymin = static_cast<double>(element->getAttribute("plot_ymin"));
+  auto ymax = static_cast<double>(element->getAttribute("plot_ymax"));
+}
+
+static void processNonUniformPolarCellArray(const std::shared_ptr<GRM::Element> &element,
+                                            const std::shared_ptr<GRM::Context> &context)
+{
+  auto x_org = static_cast<double>(element->getAttribute("x_org"));
+  auto y_org = static_cast<double>(element->getAttribute("y_org"));
+  auto phi_key = static_cast<std::string>(element->getAttribute("phi"));
+  auto r_key = static_cast<std::string>(element->getAttribute("r"));
+  auto dimr = static_cast<int>(element->getAttribute("dimr"));
+  auto dimphi = static_cast<int>(element->getAttribute("dimphi"));
+  auto scol = static_cast<int>(element->getAttribute("scol"));
+  auto srow = static_cast<int>(element->getAttribute("srow"));
+  auto ncol = static_cast<int>(element->getAttribute("ncol"));
+  auto nrow = static_cast<int>(element->getAttribute("nrow"));
+  auto color_key = static_cast<std::string>(element->getAttribute("color"));
 
   auto r_vec = GRM::get<std::vector<double>>((*context)[r_key]);
   auto phi_vec = GRM::get<std::vector<double>>((*context)[phi_key]);
@@ -6401,8 +6428,8 @@ static void nonUniformPolarCellArray(const std::shared_ptr<GRM::Element> &elemen
   if (redrawws) gr_nonuniformpolarcellarray(x_org, y_org, phi, r, dimphi, dimr, scol, srow, ncol, nrow, color);
 }
 
-static void nonuniformcellarray(const std::shared_ptr<GRM::Element> &element,
-                                const std::shared_ptr<GRM::Context> &context)
+static void processNonuniformcellarray(const std::shared_ptr<GRM::Element> &element,
+                                       const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for nonuniformcellarray
@@ -6413,12 +6440,12 @@ static void nonuniformcellarray(const std::shared_ptr<GRM::Element> &element,
   auto x = static_cast<std::string>(element->getAttribute("x"));
   auto y = static_cast<std::string>(element->getAttribute("y"));
 
-  int dimx = static_cast<int>(element->getAttribute("dimx"));
-  int dimy = static_cast<int>(element->getAttribute("dimy"));
-  int scol = static_cast<int>(element->getAttribute("scol"));
-  int srow = static_cast<int>(element->getAttribute("srow"));
-  int ncol = static_cast<int>(element->getAttribute("ncol"));
-  int nrow = static_cast<int>(element->getAttribute("nrow"));
+  auto dimx = static_cast<int>(element->getAttribute("dimx"));
+  auto dimy = static_cast<int>(element->getAttribute("dimy"));
+  auto scol = static_cast<int>(element->getAttribute("scol"));
+  auto srow = static_cast<int>(element->getAttribute("srow"));
+  auto ncol = static_cast<int>(element->getAttribute("ncol"));
+  auto nrow = static_cast<int>(element->getAttribute("nrow"));
   auto color = static_cast<std::string>(element->getAttribute("color"));
 
   auto x_p = (double *)&(GRM::get<std::vector<double>>((*context)[x])[0]);
@@ -6428,26 +6455,27 @@ static void nonuniformcellarray(const std::shared_ptr<GRM::Element> &element,
   if (redrawws) gr_nonuniformcellarray(x_p, y_p, dimx, dimy, scol, srow, ncol, nrow, color_p);
 }
 
-static void panzoom(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processPanzoom(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   ; /* panzoom is being processed in the processLimits routine */
 }
 
-static void polarCellArray(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processPolarCellArray(const std::shared_ptr<GRM::Element> &element,
+                                  const std::shared_ptr<GRM::Context> &context)
 {
-  double x_org = static_cast<double>(element->getAttribute("x_org"));
-  double y_org = static_cast<double>(element->getAttribute("y_org"));
-  double phimin = static_cast<double>(element->getAttribute("phimin"));
-  double phimax = static_cast<double>(element->getAttribute("phimax"));
-  double rmin = static_cast<double>(element->getAttribute("rmin"));
-  double rmax = static_cast<double>(element->getAttribute("rmax"));
-  int dimr = static_cast<int>(element->getAttribute("dimr"));
-  int dimphi = static_cast<int>(element->getAttribute("dimphi"));
-  int scol = static_cast<int>(element->getAttribute("scol"));
-  int srow = static_cast<int>(element->getAttribute("srow"));
-  int ncol = static_cast<int>(element->getAttribute("ncol"));
-  int nrow = static_cast<int>(element->getAttribute("nrow"));
-  std::string color_key = static_cast<std::string>(element->getAttribute("color"));
+  auto x_org = static_cast<double>(element->getAttribute("x_org"));
+  auto y_org = static_cast<double>(element->getAttribute("y_org"));
+  auto phimin = static_cast<double>(element->getAttribute("phimin"));
+  auto phimax = static_cast<double>(element->getAttribute("phimax"));
+  auto rmin = static_cast<double>(element->getAttribute("rmin"));
+  auto rmax = static_cast<double>(element->getAttribute("rmax"));
+  auto dimr = static_cast<int>(element->getAttribute("dimr"));
+  auto dimphi = static_cast<int>(element->getAttribute("dimphi"));
+  auto scol = static_cast<int>(element->getAttribute("scol"));
+  auto srow = static_cast<int>(element->getAttribute("srow"));
+  auto ncol = static_cast<int>(element->getAttribute("ncol"));
+  auto nrow = static_cast<int>(element->getAttribute("nrow"));
+  auto color_key = static_cast<std::string>(element->getAttribute("color"));
 
   auto color_vec = GRM::get<std::vector<int>>((*context)[color_key]);
   int *color = &(color_vec[0]);
@@ -6456,7 +6484,7 @@ static void polarCellArray(const std::shared_ptr<GRM::Element> &element, const s
     gr_polarcellarray(x_org, y_org, phimin, phimax, rmin, rmax, dimphi, dimr, scol, srow, ncol, nrow, color);
 }
 
-static void polyline(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processPolyline(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing Function for polyline
@@ -6499,7 +6527,8 @@ static void polyline(const std::shared_ptr<GRM::Element> &element, const std::sh
     }
 }
 
-static void polyline3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processPolyline3d(const std::shared_ptr<GRM::Element> &element,
+                              const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for polyline3d
@@ -6533,7 +6562,8 @@ static void polyline3d(const std::shared_ptr<GRM::Element> &element, const std::
     }
 }
 
-static void polymarker(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processPolymarker(const std::shared_ptr<GRM::Element> &element,
+                              const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for polymarker
@@ -6572,7 +6602,8 @@ static void polymarker(const std::shared_ptr<GRM::Element> &element, const std::
     }
 }
 
-static void polymarker3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processPolymarker3d(const std::shared_ptr<GRM::Element> &element,
+                                const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for polymarker3d
@@ -6607,7 +6638,7 @@ static void polymarker3d(const std::shared_ptr<GRM::Element> &element, const std
     }
 }
 
-static void quiver(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processQuiver(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for quiver
@@ -6729,7 +6760,8 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
     }
 }
 
-static void polarHeatmap(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
+                                const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for polar_heatmap
@@ -6957,40 +6989,18 @@ static void preBarplot(const std::shared_ptr<GRM::Element> &element, const std::
 static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
                               const std::shared_ptr<GRM::Context> &context)
 {
-  unsigned int num_bins;
+  unsigned int num_bins, length, num_bin_edges, dummy;
   std::vector<double> theta;
-  unsigned int length;
-  const char *norm;
-  std::vector<int> classes;
-
-  double interval;
-  double start;
-  double *p;
-  double max;
-  double temp_max;
-
-  int observations = 0;
-  int maxObservations = 0;
-  int totalObservations = 0;
-
-  std::vector<double> bin_edges;
-  unsigned int num_bin_edges;
-
-  double bin_width;
-
-  std::vector<double> bin_widths;
-
-  int is_bin_counts = 0;
-  std::vector<int> bin_counts;
-
-  double *philim = nullptr;
+  std::string norm = "count";
+  std::vector<int> classes, bin_counts;
+  double interval, start, max, temp_max, bin_width;
+  double *p, *philim = nullptr;
+  int maxObservations = 0, totalObservations = 0;
+  std::vector<double> bin_edges, bin_widths;
+  bool is_bin_counts = false;
   double philim_arr[2];
-  unsigned int dummy;
+  std::vector<double> new_theta, new_edges;
 
-  std::vector<double> new_theta;
-  std::vector<double> new_edges;
-
-  err_t error = ERROR_NONE;
   // element is the plot element -> get the first series with polarhistogram
   auto seriesList = element->querySelectorsAll("series_polar_histogram");
   std::shared_ptr<GRM::Element> group = seriesList[0];
@@ -6999,15 +7009,12 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
 
   //! define keys for later usages;
   auto str = static_cast<std::string>(group->getAttribute("_id"));
-  std::string bin_widths_key = "bin_widths" + str;
-  std::string bin_edges_key = "bin_edges" + str;
-  std::string bin_counts_key;
-  std::string classes_key = "classes" + str;
+  std::string bin_widths_key = "bin_widths" + str, bin_edges_key = "bin_edges" + str, classes_key = "classes" + str;
 
   if (group->hasAttribute("bin_counts"))
     {
-      is_bin_counts = 1;
-      bin_counts_key = static_cast<std::string>(group->getAttribute("bin_counts"));
+      is_bin_counts = true;
+      auto bin_counts_key = static_cast<std::string>(group->getAttribute("bin_counts"));
       bin_counts = GRM::get<std::vector<int>>((*context)[bin_counts_key]);
 
       length = bin_counts.size();
@@ -7021,11 +7028,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
       length = theta.size();
     }
 
-  if (!plot_group->hasAttribute("philim_min") && !plot_group->hasAttribute("philim_max"))
-    {
-      philim = nullptr;
-    }
-  else
+  if (plot_group->hasAttribute("philim_min") || plot_group->hasAttribute("philim_max"))
     {
       philim = philim_arr;
       philim[0] = static_cast<double>(plot_group->getAttribute("philim_min"));
@@ -7033,23 +7036,18 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
 
       if (philim[1] < philim[0])
         {
-          int phiflip = 0;
           std::swap(philim[0], philim[1]);
-
           plot_group->setAttribute("phiflip", 1);
         }
-      if (philim[0] < 0.0 || philim[1] > 2 * M_PI)
-        {
-          logger((stderr, "philim must be between 0 and 2 * pi\n"));
-        }
+      if (philim[0] < 0.0 || philim[1] > 2 * M_PI) logger((stderr, "\"philim\" must be between 0 and 2 * pi\n"));
       plot_group->setAttribute("philim_min", philim[0]);
       plot_group->setAttribute("philim_max", philim[1]);
     }
 
   /* bin_edges and nbins */
-  if (group->hasAttribute("bin_edges") == 0)
+  if (!group->hasAttribute("bin_edges"))
     {
-      if (group->hasAttribute("nbins") == 0)
+      if (!group->hasAttribute("nbins"))
         {
           num_bins = grm_min(12, (int)(length * 1.0 / 2) - 1);
           group->setAttribute("nbins", static_cast<int>(num_bins));
@@ -7070,27 +7068,25 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
         {
           //! if philim is given, it will create equidistant bin_edges from phi_min to phi_max
           bin_edges.resize(num_bins + 1);
-          linspace(philim[0], philim[1], num_bins + 1, bin_edges);
+          linspace(philim[0], philim[1], (int)num_bins + 1, bin_edges);
           num_bin_edges = num_bins + 1;
           (*context)[bin_edges_key] = bin_edges;
           group->setAttribute("bin_edges", bin_edges_key);
         }
     }
-  /* with bin_edges */
-  else
+  else /* with bin_edges */
     {
+      int temp = 0, i;
+
       bin_edges_key = static_cast<std::string>(group->getAttribute("bin_edges"));
       bin_edges = GRM::get<std::vector<double>>((*context)[bin_edges_key]);
       num_bin_edges = bin_edges.size();
-      /* no philim */
-      if (philim == nullptr)
-        {
-          /* filter bin_edges */
-          int temp = 0;
-          int i;
-          new_edges.resize(num_bin_edges);
 
-          for (i = 0; i < num_bin_edges; ++i)
+      /* filter bin_edges */
+      new_edges.resize(num_bin_edges);
+      for (i = 0; i < num_bin_edges; ++i)
+        {
+          if (philim == nullptr) /* no philim */
             {
               if (0.0 <= bin_edges[i] && bin_edges[i] <= 2 * M_PI)
                 {
@@ -7102,27 +7098,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
                   logger((stderr, "Only values between 0 and 2 * pi allowed\n"));
                 }
             }
-          if (num_bin_edges > temp)
-            {
-              num_bin_edges = temp;
-              bin_edges.resize(temp);
-            }
           else
-            {
-              bin_edges = new_edges;
-            }
-          num_bins = num_bin_edges - 1;
-          group->setAttribute("nbins", static_cast<int>(num_bins));
-        }
-      /* with philim and binedges */
-      else
-        {
-          /* filter bin_edges */
-          int temp = 0;
-          new_edges.resize(num_bin_edges);
-
-          int i;
-          for (i = 0; i < num_bin_edges; ++i)
             {
               if (philim[0] <= bin_edges[i] && bin_edges[i] <= philim[1])
                 {
@@ -7130,22 +7106,27 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
                   temp++;
                 }
             }
-          if (temp > 1)
-            {
-              if (num_bin_edges > temp)
-                {
-                  num_bin_edges = temp;
-                  bin_edges.resize(temp);
-                }
-              else
-                {
-                  bin_edges = new_edges;
-                }
-            }
+        }
+      if (num_bin_edges > temp)
+        {
+          num_bin_edges = temp;
+          bin_edges.resize(temp);
+        }
+      else
+        {
+          bin_edges = new_edges;
+        }
+      if (philim == nullptr) /* no philim */
+        {
+          num_bins = num_bin_edges - 1;
+          group->setAttribute("nbins", static_cast<int>(num_bins));
+        }
+      else /* with philim and binedges */
+        {
           if (num_bin_edges == 1)
             {
-              logger(
-                  (stderr, "given philim and given bin_edges are not compatible --> filtered len(bin_edges) == 1\n"));
+              logger((stderr, "Given \"philim\" and given \"bin_edges\" are not compatible --> filtered "
+                              "\"len(bin_edges) == 1\"\n"));
             }
           else
             {
@@ -7157,26 +7138,21 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
         }
     }
 
-  if (group->hasAttribute("normalization") == 0)
+  if (group->hasAttribute("normalization"))
     {
-      norm = "count";
-    }
-  else
-    {
-      norm = static_cast<std::string>(group->getAttribute("normalization")).c_str();
-      if (!str_equals_any(norm, 6, "count", "countdensity", "pdf", "probability", "cumcount", "cdf"))
+      norm = static_cast<std::string>(group->getAttribute("normalization"));
+      if (!str_equals_any(norm.c_str(), 6, "count", "countdensity", "pdf", "probability", "cumcount", "cdf"))
         {
-          logger((stderr, "Got keyword \"norm\"  with invalid value \"%s\"\n", norm));
+          logger((stderr, "Got keyword \"norm\"  with invalid value \"%s\"\n", norm.c_str()));
         }
     }
 
-  if (group->hasAttribute("bin_width") == 0)
+  if (!group->hasAttribute("bin_width"))
     {
       if (num_bin_edges > 0)
         {
-          int i;
           bin_widths.resize(num_bins + 1);
-          for (i = 1; i <= num_bin_edges - 1; ++i)
+          for (int i = 1; i <= num_bin_edges - 1; ++i)
             {
               bin_widths[i - 1] = bin_edges[i] - bin_edges[i - 1];
             }
@@ -7189,18 +7165,16 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
           group->setAttribute("bin_width", bin_width);
         }
     }
-  /* bin_width is given*/
-  else
+  else /* bin_width is given*/
     {
-      bin_width = static_cast<double>(group->getAttribute("bin_width"));
+      int n = 0, temp;
 
-      int n = 0;
-      int temp;
+      bin_width = static_cast<double>(group->getAttribute("bin_width"));
 
       if (num_bin_edges > 0 && philim == nullptr)
         {
           int i;
-          logger((stderr, "bin_width is not compatible with bin_edges\n"));
+          logger((stderr, "\"bin_width\" is not compatible with \"bin_edges\"\n"));
 
           bin_widths.resize(num_bins);
 
@@ -7212,54 +7186,44 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
           (*context)[bin_widths_key] = bin_widths;
         }
 
+      if (bin_width <= 0 || bin_width > 2 * M_PI)
+        logger((stderr, "\"bin_width\" must be between 0 (exclusive) and 2 * pi\n"));
+
       /* with philim (with bin_width) */
       if (philim != nullptr)
         {
-          if (bin_width < 0 || bin_width > 2 * M_PI)
-            {
-              logger((stderr, "bin_width must be between 0 and 2 * Pi\n"));
-            }
           if (philim[1] - philim[0] < bin_width)
             {
-              logger((stderr, "the given philim range does not work with the given bin_width\n"));
+              logger((stderr, "The given \"philim\" range does not work with the given \"bin_width\"\n"));
             }
           else
             {
               n = (int)((philim[1] - philim[0]) / bin_width);
-              if (is_bin_counts == 1)
+              if (is_bin_counts)
                 {
                   if (num_bins > n)
-                    {
-                      logger((stderr,
-                              "bin_width does not work with this specific bin_count. Nbins do not fit bin_width\n"));
-                    }
-                  n = num_bins;
+                    logger((stderr, "\"bin_width\" does not work with this specific \"bin_count\". \"nbins\" do not "
+                                    "fit \"bin_width\"\n"));
+                  n = (int)num_bins;
                 }
               bin_edges.resize(n + 1);
               linspace(philim[0], n * bin_width, n + 1, bin_edges);
             }
         }
-      /* without philim */
-      else
+      else /* without philim */
         {
-          if (bin_width <= 0 || bin_width > 2 * M_PI)
-            {
-              logger((stderr, "bin_width must be between 0 (exclusive) and 2 * Pi\n"));
-            }
-          else if ((int)(2 * M_PI / bin_width) > 200)
+          if ((int)(2 * M_PI / bin_width) > 200)
             {
               n = 200;
               bin_width = 2 * M_PI / n;
             }
           n = (int)(2 * M_PI / bin_width);
-          if (is_bin_counts == 1)
+          if (is_bin_counts)
             {
               if (num_bins > n)
-                {
-                  logger(
-                      (stderr, "bin_width does not work with this specific bin_count. Nbins do not fit bin_width\n"));
-                }
-              n = num_bins;
+                logger((stderr, "\"bin_width\" does not work with this specific \"bin_count\". \"nbins\" do not fit "
+                                "\"bin_width\"\n"));
+              n = (int)num_bins;
             }
           bin_edges.resize(n + 1);
           linspace(0.0, n * bin_width, n + 1, bin_edges);
@@ -7281,13 +7245,10 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
     }
 
   /* is_bin_counts */
-  if (is_bin_counts == 1)
+  if (is_bin_counts)
     {
       double temp_max_bc = 0.0;
-      int i;
-      int total = 0;
-      int j;
-      int prev = 0;
+      int i, j, total = 0, prev = 0;
 
       if (num_bin_edges > 0 && num_bins != num_bin_edges - 1)
         {
@@ -7300,41 +7261,23 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
           // temp_max_bc is a potential maximum for all bins respecting the given norm
           if (num_bin_edges > 0) bin_width = bin_widths[i];
 
-          if (strcmp(norm, "pdf") == 0)
-            {
-              if (bin_counts[i] * 1.0 / (total * bin_width) > temp_max_bc)
-                {
-                  temp_max_bc = bin_counts[i] * 1.0 / (total * bin_width);
-                }
-            }
-          else if (strcmp(norm, "countdensity") == 0)
-            {
-              if (bin_counts[i] * 1.0 / (bin_width) > temp_max_bc)
-                {
-                  temp_max_bc = bin_counts[i] * 1.0 / (bin_width);
-                }
-            }
-          else
-            {
-              if (bin_counts[i] > temp_max_bc) temp_max_bc = bin_counts[i];
-            }
+          if (norm == "pdf" && bin_counts[i] * 1.0 / (total * bin_width) > temp_max_bc)
+            temp_max_bc = bin_counts[i] * 1.0 / (total * bin_width);
+          else if (norm == "countdensity" && bin_counts[i] * 1.0 / (bin_width) > temp_max_bc)
+            temp_max_bc = bin_counts[i] * 1.0 / (bin_width);
+          else if (bin_counts[i] > temp_max_bc)
+            temp_max_bc = bin_counts[i];
         }
 
       classes.resize(num_bins);
 
       // bin_counts is affected by cumulative norms --> bin_counts are summed in later bins
-      if (str_equals_any(norm, 2, "cdf", "cumcount"))
+      if (str_equals_any(norm.c_str(), 2, "cdf", "cumcount"))
         {
           for (i = 0; i < num_bins; ++i)
             {
-              if (i == 0)
-                {
-                  classes[0] = bin_counts[0];
-                }
-              else
-                {
-                  classes[i] = bin_counts[i] + classes[i - 1];
-                }
+              classes[i] = bin_counts[i];
+              if (i != 0) classes[i] += classes[i - 1];
             }
         }
       else
@@ -7346,36 +7289,34 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
       (*context)[classes_key] = classes;
       group->setAttribute("total", total);
 
-      if (strcmp(norm, "probability") == 0)
+      if (norm == "probability")
         max = temp_max_bc * 1.0 / total;
-      else if (strcmp(norm, "cdf") == 0)
+      else if (norm == "cdf")
         max = 1.0;
-      else if (strcmp(norm, "cumcount") == 0)
+      else if (norm == "cumcount")
         max = total * 1.0;
       else
         max = temp_max_bc;
     }
-  /* no is_bin_counts */
-  else
+  else /* no is_bin_counts */
     {
       int x;
 
       max = 0.0;
       classes.resize(num_bins);
-      int i;
 
       // prepare bin_edges
       if (num_bin_edges == 0) // no bin_edges --> create bin_edges for uniform code later
         {
           // linspace the bin_edges
           bin_edges.resize(num_bins + 1);
-          linspace(0.0, 2 * M_PI, num_bins + 1, bin_edges);
+          linspace(0.0, 2 * M_PI, (int)num_bins + 1, bin_edges);
         }
       else // bin_edges given
         {
           // filter theta
-          double edge_min = bin_edges[0];
-          double edge_max = bin_edges[num_bin_edges - 1];
+          double edge_min = bin_edges[0], edge_max = bin_edges[num_bin_edges - 1];
+
           auto it = std::remove_if(theta.begin(), theta.end(), [edge_min, edge_max](double angle) {
             return (angle < edge_min || angle > edge_max);
           });
@@ -7386,34 +7327,17 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
       // calc classes
       for (x = 0; x < num_bins; ++x)
         {
-          int y;
-          observations = 0;
+          int observations = 0;
 
           // iterate theta --> filter angles for current bin
-          for (y = 0; y < length; ++y)
+          for (int y = 0; y < length; ++y)
             {
-              if (bin_edges[x] <= theta[y] && theta[y] < bin_edges[x + 1])
-                {
-                  ++observations;
-                }
+              if (bin_edges[x] <= theta[y] && theta[y] < bin_edges[x + 1]) ++observations;
             }
 
           // differentiate between cumulative and non-cumulative norms
-          if (str_equals_any(norm, 2, "cdf", "cumcount"))
-            {
-              if (x == 0)
-                {
-                  classes[0] = observations;
-                }
-              else
-                {
-                  classes[x] = observations + classes[x - 1];
-                }
-            }
-          else
-            {
-              classes[x] = observations;
-            }
+          classes[x] = observations;
+          if (x != 0 && str_equals_any(norm.c_str(), 2, "cdf", "cumcount")) classes[x] += classes[x - 1];
           // update the total number of observations; used for some norms;
           totalObservations += observations;
         }
@@ -7426,237 +7350,115 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
       group->setAttribute("total", totalObservations);
 
       // calculate the maximum from maxObservations respecting the norms;
-      if (num_bin_edges == 0) // no given bin_edges
+      if (num_bin_edges == 0 && norm == "pdf") // no given bin_edges
         {
-          if (str_equals_any(norm, 2, "probability", "cdf"))
+          max = maxObservations * 1.0 / (totalObservations * bin_width);
+        }
+      else if (num_bin_edges != 0 &&
+               str_equals_any(norm.c_str(), 2, "pdf", "countdensity")) // calc maximum with given bin_edges
+        {
+          for (int i = 0; i < num_bins; ++i)
             {
-              max = maxObservations * 1.0 / totalObservations;
-            }
-          else if (strcmp(norm, "pdf") == 0)
-            {
-              max = maxObservations * 1.0 / (totalObservations * bin_width);
-            }
-          else
-            {
-              max = maxObservations * 1.0;
+              // temporary maximum respecting norm
+              temp_max = classes[i];
+              if (norm == "pdf")
+                temp_max /= totalObservations * bin_widths[x];
+              else if (norm == "countdensity")
+                temp_max /= bin_widths[x];
+
+              if (temp_max > max) max = temp_max;
             }
         }
-      else // calc maximum with given bin_edges
+      else if (str_equals_any(norm.c_str(), 2, "probability", "cdf"))
         {
-          if (str_equals_any(norm, 2, "pdf", "countdensity"))
-            {
-              for (i = 0; i < num_bins; ++i)
-                {
-                  // temporary maximum respecting norm
-                  temp_max = classes[i];
-                  if (strcmp(norm, "pdf") == 0)
-                    {
-                      temp_max /= totalObservations * bin_widths[x];
-                    }
-                  else if (strcmp(norm, "countdensity") == 0)
-                    {
-                      temp_max /= bin_widths[x];
-                    }
-                  if (temp_max > max)
-                    {
-                      max = temp_max;
-                    }
-                }
-            }
-          else if (str_equals_any(norm, 2, "probability", "cdf"))
-            {
-              max = maxObservations * 1.0 / totalObservations;
-            }
-          else
-            {
-              max = maxObservations * 1.0;
-            }
+          max = maxObservations * 1.0 / totalObservations;
+        }
+      else
+        {
+          max = maxObservations * 1.0;
         }
     } /* end classes and maximum */
   // set r_max (radius_max) in parent for later usages in polar_axes and polar_histogram
   group->parentElement()->setAttribute("r_max", max);
 }
 
-static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
+                                  const std::shared_ptr<GRM::Context> &context)
 {
-  unsigned int num_bins;
-  std::vector<int> classes;
-  unsigned int maxObservations;
-  unsigned int totalObservations = 0;
-  double max;
-  double *inner = nullptr, *outer = nullptr;
-  double r;
-  double rect;
-  std::vector<double> mlist;
-  std::vector<double> rectlist;
-  const char *norm = nullptr;
-  double bin_width = -1.0;
-  std::vector<double> bin_edges;
-
-  unsigned int num_bin_edges;
-  std::vector<double> bin_widths;
-  double *philim = nullptr;
-  double *rlim = nullptr;
-  unsigned int dummy;
-  std::complex<double> r_min_complex1, r_min_complex2;
-  std::complex<double> complex1, complex2;
-  int stairs;
-  double r_min = 0.0;
-  double r_max = 1.0;
-  std::vector<double> phi_vec;
-  std::vector<double> arc_2_x, arc_2_y;
-
-  unsigned int resample;
-  std::vector<int> colormap;
-  int xcolormap, ycolormap;
-  std::vector<double> angles;
-  int draw_edges = 0;
-  int phiflip = 0;
-  int x;
-  const double convert = 180.0 / M_PI;
+  unsigned int num_bins, num_bin_edges = 0;
   int edge_color = 1, face_color = 989;
-  double face_alpha = 0.75;
-  double edge_width = 1.0; /* only for stairs */
-  std::vector<int> lineardata;
-  std::vector<int> bin_counts;
-
-  std::vector<double> f1, f2;
-  err_t error = ERROR_NONE;
-
-  std::vector<double> r_lim_vec;
-
-  const std::shared_ptr<GRM::Element> &group = element;
-  std::shared_ptr<GRM::Element> plot_group = group->parentElement();
-  std::string str;
-  del_values del = del_values::update_without_default;
+  int totalObservations = 0;
+  int xcolormap = -2, ycolormap = -2;
   int child_id = 0;
+  double face_alpha = 0.75, bin_width = -1.0, max;
+  double r_min = 0.0, r_max = 1.0;
+  double *rlim = nullptr, *philim = nullptr;
+  double philim_arr[2];
+  bool draw_edges = false, stairs = false, phiflip = false;
+  std::string norm = "count";
+  std::vector<double> r_lim_vec;
+  std::vector<double> bin_edges, bin_widths;
+  std::vector<double> mlist, rectlist;
+  std::vector<int> classes;
+  std::shared_ptr<GRM::Element> plot_group = element->parentElement();
+  del_values del = del_values::update_without_default;
 
-  auto classes_key = static_cast<std::string>(group->getAttribute("classes"));
+  auto classes_key = static_cast<std::string>(element->getAttribute("classes"));
   classes = GRM::get<std::vector<int>>((*context)[classes_key]);
-  totalObservations = static_cast<int>(group->getAttribute("total"));
 
   /* clear old polar-histogram children */
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
   clearOldChildren(&del, element);
 
-  /* edge_color */
-  if (group->hasAttribute("edge_color") == 0)
+  if (element->hasAttribute("edge_color")) edge_color = static_cast<int>(element->getAttribute("edge_color"));
+  if (element->hasAttribute("face_color")) face_color = static_cast<int>(element->getAttribute("face_color"));
+  if (element->hasAttribute("face_alpha")) face_alpha = static_cast<double>(element->getAttribute("face_alpha"));
+  if (element->hasAttribute("normalization")) norm = static_cast<std::string>(element->getAttribute("normalization"));
+  if (plot_group->hasAttribute("phiflip")) phiflip = static_cast<int>(plot_group->getAttribute("phiflip"));
+  if (element->hasAttribute("draw_edges")) draw_edges = static_cast<int>(element->getAttribute("draw_edges"));
+  num_bins = static_cast<int>(element->getAttribute("nbins"));
+  max = static_cast<double>(element->parentElement()->getAttribute("r_max"));
+  totalObservations = static_cast<int>(element->getAttribute("total"));
+  global_render->setTransparency(element, face_alpha);
+  processTransparency(element);
+
+  if (plot_group->hasAttribute("philim_min") || plot_group->hasAttribute("philim_max"))
     {
-      edge_color = 1;
+      philim = philim_arr;
+      philim[0] = static_cast<double>(plot_group->getAttribute("philim_min"));
+      philim[1] = static_cast<double>(plot_group->getAttribute("philim_max"));
+    }
+
+  if (!element->hasAttribute("bin_edges"))
+    {
+      if (element->hasAttribute("bin_width")) bin_width = static_cast<double>(element->getAttribute("bin_width"));
     }
   else
     {
-      edge_color = static_cast<int>(group->getAttribute("edge_color"));
-    }
-
-  /* face_color */
-  if (group->hasAttribute("face_color") == 0)
-    {
-      face_color = 989;
-    }
-  else
-    {
-      face_color = static_cast<int>(group->getAttribute("face_color"));
-    }
-
-  /* face_alpha */
-  if (group->hasAttribute("face_alpha") == 0)
-    {
-      face_alpha = 0.75;
-    }
-  else
-    {
-      face_alpha = static_cast<double>(group->getAttribute("face_alpha"));
-    }
-
-  global_render->setTransparency(group, face_alpha);
-  processTransparency(group);
-
-  num_bins = static_cast<int>(group->getAttribute("nbins"));
-
-  if (group->hasAttribute("normalization") == 0)
-    {
-      norm = "count";
-    }
-  else
-    {
-      norm = static_cast<std::string>(group->getAttribute("normalization")).c_str();
-    }
-
-  max = static_cast<double>(group->parentElement()->getAttribute("r_max"));
-
-  if (plot_group->hasAttribute("phiflip") == 0)
-    {
-      phiflip = 0;
-    }
-  else
-    {
-      phiflip = static_cast<int>(plot_group->getAttribute("phiflip"));
-    }
-
-  if (group->hasAttribute("draw_edges") == 0)
-    {
-      draw_edges = 0;
-    }
-  else
-    {
-      draw_edges = static_cast<int>(group->getAttribute("draw_edges"));
-    }
-
-  if (group->hasAttribute("bin_edges") == 0)
-    {
-      num_bin_edges = 0;
-      if (group->hasAttribute("bin_width"))
-        {
-          bin_width = static_cast<double>(group->getAttribute("bin_width"));
-        }
-    }
-  else
-    {
-      auto bin_edges_key = static_cast<std::string>(group->getAttribute("bin_edges"));
+      auto bin_edges_key = static_cast<std::string>(element->getAttribute("bin_edges"));
       bin_edges = GRM::get<std::vector<double>>((*context)[bin_edges_key]);
       num_bin_edges = bin_edges.size();
 
-      auto bin_widths_key = static_cast<std::string>(group->getAttribute("bin_widths"));
+      auto bin_widths_key = static_cast<std::string>(element->getAttribute("bin_widths"));
       bin_widths = GRM::get<std::vector<double>>((*context)[bin_widths_key]);
       num_bins = bin_widths.size();
     }
 
-  if (group->hasAttribute("stairs") == 0)
-    {
-      stairs = 0;
-    }
-  else
+  if (element->hasAttribute("stairs"))
     {
       /* Set default stairs line color width and alpha values */
-      if (!group->hasAttribute("edge_color"))
-        {
-          edge_color = 1;
-        }
-      if (!group->hasAttribute("face_alpha"))
-        {
-          face_alpha = 1.0;
-        }
-      if (!group->hasAttribute("edge_width"))
-        {
-          edge_width = 2.3;
-        }
+      if (!element->hasAttribute("face_alpha")) face_alpha = 1.0;
 
-      stairs = static_cast<int>(group->getAttribute("stairs"));
+      stairs = static_cast<int>(element->getAttribute("stairs"));
       if (stairs)
         {
-          if (draw_edges != 0)
+          if (draw_edges)
             {
-              logger((stderr, "stairs is not compatible with draw_edges / colormap\n"));
+              logger((stderr, "\"stairs\" is not compatible with \"draw_edges\" / colormap\n"));
             }
-          /* no bin_edges */
-          else if (num_bin_edges == 0)
+          else if (num_bin_edges == 0) /* no bin_edges */
             {
               mlist.resize(num_bins * 4);
-              if (stairs != 0)
-                {
-                  stairs = 1;
-                }
             }
           else
             {
@@ -7665,55 +7467,42 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
         }
     }
 
-  if (!(plot_group->hasAttribute("rlim_min") && plot_group->hasAttribute("rlim_max")))
-    {
-      rlim = nullptr;
-    }
-  else
+  if (plot_group->hasAttribute("rlim_min") && plot_group->hasAttribute("rlim_max"))
     {
       r_lim_vec.push_back(static_cast<double>(plot_group->getAttribute("rlim_min")));
       r_lim_vec.push_back(static_cast<double>(plot_group->getAttribute("rlim_max")));
       rlim = &(r_lim_vec[0]);
 
       mlist.resize((num_bins + 1) * 4);
+      r_min = grm_min(rlim[0], rlim[1]);
+      r_max = grm_max(rlim[0], rlim[1]);
       if (rlim[0] > rlim[1])
         {
-          r_min = rlim[1];
-          r_max = rlim[0];
           rlim[0] = r_min;
           rlim[1] = r_max;
-        }
-      else
-        {
-          r_min = rlim[0];
-          r_max = rlim[1];
         }
 
       if (r_max > 1.0)
         {
           r_max = 1.0;
-          logger((stderr, "The value of rlim_max can not exceed 1.0\n"));
+          logger((stderr, "The value of \"rlim_max\" can not exceed 1.0\n"));
         }
       if (r_min < 0.0) r_min = 0.0;
     }
 
-  if (phiflip != 0)
-    {
-      std::reverse(classes.begin(), classes.end());
-    }
+  if (phiflip) std::reverse(classes.begin(), classes.end());
 
   /* if phiflip and bin_edges are given --> invert the angles*/
-  if (phiflip != 0 && num_bin_edges > 0)
+  if (phiflip && num_bin_edges > 0)
     {
-      std::vector<double> temp(num_bin_edges);
-      std::vector<double> temp2(num_bins);
-
       int u;
+      std::vector<double> temp(num_bin_edges), temp2(num_bins);
+
       for (u = 0; u < num_bin_edges; u++)
         {
           temp[u] = 2 * M_PI - bin_edges[num_bin_edges - 1 - u];
         }
-      for (u = num_bins - 1; u >= 0; --u)
+      for (u = (int)num_bins - 1; u >= 0; --u)
         {
           temp2[u] = bin_widths[num_bins - 1 - u];
         }
@@ -7721,35 +7510,554 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
       bin_edges = temp;
     }
 
-  if (!(group->hasAttribute("xcolormap") && group->hasAttribute("ycolormap")))
+  for (int class_nr = 0; class_nr < classes.size(); ++class_nr)
     {
-      colormap.clear();
-      if (draw_edges != 0)
+      double count = classes[class_nr];
+      if (classes[class_nr] == 0)
         {
-          logger((stderr, "draw_edges can only be used with colormap\n"));
+          /* stairs bin_edges / philim  */
+          if (!rectlist.empty() && philim != nullptr)
+            rectlist[class_nr] = r_min;
+          else if (!rectlist.empty())
+            rectlist[class_nr] = 0.0;
         }
-    }
-  else
-    {
-      xcolormap = static_cast<int>(group->getAttribute("xcolormap"));
-      ycolormap = static_cast<int>(group->getAttribute("ycolormap"));
 
-      if (-1 > xcolormap || xcolormap > 47 || ycolormap < -1 || ycolormap > 47)
+      if (str_equals_any(norm.c_str(), 2, "probability", "cdf"))
         {
-          logger((stderr, "the value for keyword \"colormap\" must contain two integer between -1 and 47\n"));
+          count /= totalObservations;
+        }
+      else if (norm == "pdf")
+        {
+          if (num_bin_edges == 0)
+            {
+              count /= totalObservations * bin_width;
+            }
+          else
+            {
+              count /= (totalObservations * bin_widths[class_nr]);
+            }
+        }
+      else if (norm == "countdensity")
+        {
+          if (num_bin_edges == 0)
+            {
+              count /= bin_width;
+            }
+          else
+            {
+              count /= bin_widths[class_nr];
+            }
+        }
+
+      if (!(element->hasAttribute("xcolormap") && element->hasAttribute("ycolormap")))
+        {
+          if (draw_edges) logger((stderr, "\"draw_edges\" can only be used with colormap\n"));
         }
       else
         {
-          int colormap_size = 500;
-          int image_size = 2000;
-          int y, center, center_x, center_y;
-          double radius, angle;
-          int temp1, temp2;
-          int temp = 0;
+          xcolormap = static_cast<int>(element->getAttribute("xcolormap"));
+          ycolormap = static_cast<int>(element->getAttribute("ycolormap"));
+        }
+
+      if (!stairs)
+        {
+          std::shared_ptr<GRM::Element> polar_bar;
+
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              polar_bar = global_render->createPolarBar(count, class_nr);
+              polar_bar->setAttribute("_child_id", child_id++);
+              element->append(polar_bar);
+            }
+          else
+            {
+              polar_bar = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+              if (polar_bar != nullptr) global_render->createPolarBar(count, class_nr, polar_bar);
+            }
+
+          if (polar_bar != nullptr)
+            {
+              if (bin_width != -1) polar_bar->setAttribute("bin_width", bin_width);
+              if (norm != "count") polar_bar->setAttribute("norm", norm);
+              if (phiflip) polar_bar->setAttribute("phiflip", phiflip);
+              if (draw_edges) polar_bar->setAttribute("draw_edges", draw_edges);
+              if (edge_color != 1) polar_bar->setAttribute("edge_color", edge_color);
+              if (face_color != 989) polar_bar->setAttribute("face_color", face_color);
+              if (xcolormap != -2) polar_bar->setAttribute("xcolormap", xcolormap);
+              if (ycolormap != -2) polar_bar->setAttribute("ycolormap", ycolormap);
+              if (!bin_widths.empty()) polar_bar->setAttribute("bin_widths", bin_widths[class_nr]);
+              if (!bin_edges.empty())
+                {
+                  int id = static_cast<int>(global_root->getAttribute("_id"));
+                  std::string str = std::to_string(id);
+                  global_root->setAttribute("_id", id + 1);
+
+                  auto bin_edges_vec = std::vector<double>{bin_edges[class_nr], bin_edges[class_nr + 1]};
+                  auto bin_edges_key = "bin_edges" + str;
+                  (*context)[bin_edges_key] = bin_edges_vec;
+                  polar_bar->setAttribute("bin_edges", bin_edges_key);
+                }
+            }
+        }
+      else if (!draw_edges && (xcolormap == -2 && ycolormap == -2)) /* stairs without draw_edges (not compatible) */
+        {
+          double r, rect;
+          std::complex<double> complex1, complex2;
+          const double convert = 180.0 / M_PI;
+          double edge_width = 2.3; /* only for stairs */
+
+          global_render->setFillColorInd(element, 1);
+          global_render->setLineColorInd(element, edge_color);
+          global_render->setLineWidth(element, edge_width);
+          processLineColorInd(element);
+          processFillColorInd(element);
+          processLineWidth(element);
+
+          r = pow((count / max), (num_bins * 2));
+          complex1 = moivre(r, (2 * class_nr), (int)num_bins * 2);
+          complex2 = moivre(r, (2 * class_nr + 2), ((int)num_bins * 2));
+          rect = sqrt(pow(real(complex1), 2) + pow(imag(complex1), 2));
+
+          /*  no bin_edges */
+          if (num_bin_edges == 0)
+            {
+              double arc_pos;
+              std::shared_ptr<GRM::Element> arc;
+
+              mlist[class_nr * 4] = real(complex1);
+              mlist[class_nr * 4 + 1] = imag(complex1);
+              mlist[class_nr * 4 + 2] = real(complex2);
+              mlist[class_nr * 4 + 3] = imag(complex2);
+
+              if (rlim != nullptr)
+                {
+                  for (int i = 0; i < 2; ++i)
+                    {
+                      double temporary =
+                          fabs(sqrt(pow(mlist[class_nr * 4 + 2 - i * 2], 2) + pow(mlist[class_nr * 4 + 3 - i * 2], 2)));
+                      if (temporary > r_max)
+                        {
+                          double factor = fabs(r_max / temporary);
+                          mlist[class_nr * 4 + 2 - i * 2] *= factor;
+                          mlist[class_nr * 4 + 3 - i * 2] *= factor;
+                        }
+                    }
+
+                  if (rect > r_min)
+                    {
+                      if (del != del_values::update_without_default && del != del_values::update_with_default)
+                        {
+                          arc = global_render->createDrawArc(
+                              -grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max), grm_min(rect, r_max),
+                              class_nr * (360.0 / num_bins), (class_nr + 1) * 360.0 / num_bins);
+                          arc->setAttribute("_child_id", child_id++);
+                          element->append(arc);
+                        }
+                      else
+                        {
+                          arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                          if (arc != nullptr)
+                            global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max),
+                                                         -grm_min(rect, r_max), grm_min(rect, r_max),
+                                                         class_nr * (360.0 / num_bins),
+                                                         (class_nr + 1) * 360.0 / num_bins, arc);
+                        }
+
+                      arc_pos = r_min;
+                    }
+                }
+              else /* no rlim */
+                {
+                  arc_pos = rect;
+                }
+              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                {
+                  arc =
+                      global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, class_nr * (360.0 / num_bins),
+                                                   (class_nr + 1) * (360.0 / num_bins));
+                  arc->setAttribute("_child_id", child_id++);
+                  element->append(arc);
+                }
+              else
+                {
+                  arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                  if (arc != nullptr)
+                    global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, class_nr * (360.0 / num_bins),
+                                                 (class_nr + 1) * (360.0 / num_bins), arc);
+                }
+            }
+          else /* with bin_edges */
+            {
+              /* rlim and bin_edges*/
+              std::shared_ptr<GRM::Element> arc;
+              double arc_pos;
+
+              if (rlim != nullptr)
+                {
+                  if (rect < r_min)
+                    rectlist[class_nr] = r_min;
+                  else if (rect > r_max)
+                    rectlist[class_nr] = r_max;
+                  else
+                    rectlist[class_nr] = rect;
+
+                  if (rect > r_min)
+                    {
+                      if (del != del_values::update_without_default && del != del_values::update_with_default)
+                        {
+                          arc = global_render->createDrawArc(
+                              -grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max), grm_min(rect, r_max),
+                              bin_edges[class_nr] * convert, bin_edges[class_nr + 1] * convert);
+                          arc->setAttribute("_child_id", child_id++);
+                          element->append(arc);
+                        }
+                      else
+                        {
+                          arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                          if (arc != nullptr)
+                            global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max),
+                                                         -grm_min(rect, r_max), grm_min(rect, r_max),
+                                                         bin_edges[class_nr] * convert,
+                                                         bin_edges[class_nr + 1] * convert, arc);
+                        }
+
+                      arc_pos = r_min;
+                    }
+                }
+              else /* no rlim */
+                {
+                  rectlist[class_nr] = rect;
+                  if (class_nr == num_bin_edges - 1) break;
+                  arc_pos = rect;
+                }
+              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                {
+                  arc = global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos,
+                                                     bin_edges[class_nr] * convert, bin_edges[class_nr + 1] * convert);
+                  arc->setAttribute("_child_id", child_id++);
+                  element->append(arc);
+                }
+              else
+                {
+                  arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                  if (arc != nullptr)
+                    global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, bin_edges[class_nr] * convert,
+                                                 bin_edges[class_nr + 1] * convert, arc);
+                }
+            }
+        }
+    } /* end of classes for loop */
+
+  if (stairs && !draw_edges && (xcolormap == -2 && ycolormap == -2))
+    {
+      std::shared_ptr<GRM::Element> line;
+      double line_x[2], line_y[2];
+
+      /* stairs without binedges, rlim */
+      if (!mlist.empty() && rlim == nullptr && rectlist.empty())
+        {
+          for (int s = 0; s < num_bins * 4; s += 2)
+            {
+              if (s > 2 && s % 4 == 0)
+                {
+                  line_x[0] = mlist[s];
+                  line_x[1] = mlist[s - 2];
+                  line_y[0] = mlist[s + 1];
+                  line_y[1] = mlist[s - 1];
+
+                  if (del != del_values::update_without_default && del != del_values::update_with_default)
+                    {
+                      line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
+                      line->setAttribute("_child_id", child_id++);
+                      element->append(line);
+                    }
+                  else
+                    {
+                      line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                      if (line != nullptr)
+                        global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
+                    }
+                }
+            }
+          line_x[0] = mlist[0];
+          line_x[1] = mlist[(num_bins - 1) * 4 + 2];
+          line_y[0] = mlist[1];
+          line_y[1] = mlist[(num_bins - 1) * 4 + 3];
+        }
+      else if (!mlist.empty() && rlim != nullptr && rectlist.empty()) /* stairs without bin_edges with rlim*/
+        {
+          double rect1, rect2;
+
+          for (int x = 0; x < num_bins; ++x)
+            {
+              rect1 = sqrt(pow(mlist[x * 4], 2) + pow(mlist[x * 4 + 1], 2));
+              rect2 = sqrt(pow(mlist[(x - 1) * 4 + 2], 2) + pow(mlist[(x - 1) * 4 + 3], 2));
+
+              if (rect1 < r_min && rect2 < r_min) continue;
+              if (rect1 < r_min)
+                {
+                  mlist[4 * x] = r_min * cos(2 * M_PI / num_bins * x);
+                  mlist[4 * x + 1] = r_min * sin(2 * M_PI / num_bins * x);
+                }
+              else if (rect2 < r_min)
+                {
+                  mlist[(x - 1) * 4 + 2] = r_min * cos(2 * M_PI / num_bins * x);
+                  mlist[(x - 1) * 4 + 3] = r_min * sin(2 * M_PI / num_bins * x);
+                }
+              line_x[0] = mlist[x * 4];
+              line_x[1] = mlist[(x - 1) * 4 + 2];
+              line_y[0] = mlist[x * 4 + 1];
+              line_y[1] = mlist[(x - 1) * 4 + 3];
+
+              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                {
+                  line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
+                  line->setAttribute("_child_id", child_id++);
+                  element->append(line);
+                }
+              else
+                {
+                  line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                  if (line != nullptr)
+                    global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
+                }
+            }
+          line_x[0] = mlist[(num_bins - 1) * 4 + 2] = grm_max(mlist[(num_bins - 1) * 4 + 2], r_min * cos(0));
+          line_y[0] = mlist[(num_bins - 1) * 4 + 3] = grm_max(mlist[(num_bins - 1) * 4 + 3], r_min * sin(0));
+          line_x[1] = mlist[0] = grm_max(mlist[0], r_min * cos(0));
+          line_y[1] = mlist[1] = grm_max(mlist[1], r_min * sin(0));
+        }
+      else if (!rectlist.empty() && rlim == nullptr) /* stairs with binedges without rlim */
+        {
+          double startx = 0.0, starty = 0.0;
+
+          for (int x = 0; x < num_bin_edges - 1; ++x)
+            {
+              line_x[0] = startx;
+              line_x[1] = rectlist[x] * cos(bin_edges[x]);
+              line_y[0] = starty;
+              line_y[1] = rectlist[x] * sin(bin_edges[x]);
+
+              startx = rectlist[x] * cos(bin_edges[x + 1]);
+              starty = rectlist[x] * sin(bin_edges[x + 1]);
+
+              if (!(bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI) || x > 0)
+                {
+                  if (del != del_values::update_without_default && del != del_values::update_with_default)
+                    {
+                      line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
+                      line->setAttribute("_child_id", child_id++);
+                      element->append(line);
+                    }
+                  else
+                    {
+                      line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                      if (line != nullptr)
+                        global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
+                    }
+                }
+            }
+
+          if (bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI)
+            {
+              line_x[0] = rectlist[0] * cos(bin_edges[0]);
+              line_x[1] = startx;
+              line_y[0] = rectlist[0] * sin(bin_edges[0]);
+              line_y[1] = starty;
+            }
+          else
+            {
+              line_x[0] = rectlist[num_bin_edges - 2] * cos(bin_edges[num_bin_edges - 1]);
+              line_x[1] = 0.0;
+              line_y[0] = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
+              line_y[1] = 0.0;
+            }
+        }
+      else if (!rectlist.empty() && rlim != nullptr) /* stairs with bin_edges and rlim */
+        {
+          double startx = grm_max(rectlist[0] * cos(bin_edges[0]), r_min * cos(bin_edges[0]));
+          double starty = grm_max(rectlist[0] * sin(bin_edges[0]), r_min * sin(bin_edges[0]));
+
+          for (int x = 0; x < num_bin_edges - 1; ++x)
+            {
+              line_x[0] = startx;
+              line_x[1] = rectlist[x] * cos(bin_edges[x]);
+              line_y[0] = starty;
+              line_y[1] = rectlist[x] * sin(bin_edges[x]);
+
+              startx = rectlist[x] * cos(bin_edges[x + 1]);
+              starty = rectlist[x] * sin(bin_edges[x + 1]);
+
+              if ((!phiflip &&
+                   (!((bin_edges[0] > 0.0 && bin_edges[0] < 0.001) && bin_edges[num_bin_edges - 1] > 1.96 * M_PI) ||
+                    x > 0)) ||
+                  ((bin_edges[0] > 1.96 * M_PI &&
+                    !(bin_edges[num_bin_edges - 1] > 0.0 && bin_edges[num_bin_edges - 1] < 0.001)) ||
+                   x > 0))
+                {
+                  if (del != del_values::update_without_default && del != del_values::update_with_default)
+                    {
+                      line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
+                      line->setAttribute("_child_id", child_id++);
+                      element->append(line);
+                    }
+                  else
+                    {
+                      line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                      if (line != nullptr)
+                        global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
+                    }
+                }
+            }
+
+          if (!(bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI))
+            {
+              line_x[0] = r_min * cos(bin_edges[0]);
+              line_x[1] = rectlist[0] * cos(bin_edges[0]);
+              line_y[0] = r_min * sin(bin_edges[0]);
+              line_y[1] = rectlist[0] * sin(bin_edges[0]);
+
+              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                {
+                  line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
+                  line->setAttribute("_child_id", child_id++);
+                  element->append(line);
+                }
+              else
+                {
+                  line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                  if (line != nullptr)
+                    global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
+                }
+            }
+
+          if (bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI)
+            {
+              line_x[0] = rectlist[0] * cos(bin_edges[0]);
+              line_x[1] = rectlist[num_bin_edges - 2] * cos(bin_edges[num_bin_edges - 1]);
+              line_y[0] = rectlist[0] * sin(bin_edges[0]);
+              line_y[1] = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
+            }
+          else
+            {
+              line_x[0] = rectlist[num_bin_edges - 2] * cos(bin_edges[num_bin_edges - 1]);
+              line_x[1] = r_min * cos(bin_edges[num_bin_edges - 1]);
+              line_y[0] = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
+              line_y[1] = r_min * sin(bin_edges[num_bin_edges - 1]);
+            }
+        }
+
+      if (del != del_values::update_without_default && del != del_values::update_with_default)
+        {
+          line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
+          line->setAttribute("_child_id", child_id++);
+          element->append(line);
+        }
+      else
+        {
+          line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+          if (line != nullptr)
+            global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
+        }
+    }
+}
+
+static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  unsigned int resample;
+  double *rlim = nullptr;
+  double r, rect;
+  std::complex<double> complex1, complex2;
+  std::vector<double> angles, bin_edges;
+  std::vector<int> colormap;
+  const double convert = 180.0 / M_PI;
+  std::vector<int> lineardata, bin_counts;
+  std::vector<double> f1, f2, arc_2_x, arc_2_y;
+  std::vector<double> phi_vec, r_lim_vec;
+  std::complex<double> r_min_complex1, r_min_complex2;
+  int child_id = 0;
+  int xcolormap = -2, ycolormap = -2;
+  double count, bin_width = -1.0, bin_widths;
+  double r_min = 0.0, r_max = 1.0, max;
+  int num_bins, num_bin_edges = 0, class_nr;
+  std::string norm = "count", str;
+  bool phiflip = false, draw_edges = false;
+  int edge_color = 1, face_color = 989;
+  std::vector<double> mlist = {0.0, 0.0, 0.0, 0.0};
+  std::shared_ptr<GRM::Element> plot_elem = element->parentElement()->parentElement();
+  del_values del = del_values::update_without_default;
+
+  /* clear old polar-histogram children */
+  del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
+  clearOldChildren(&del, element);
+
+  class_nr = static_cast<int>(element->getAttribute("class_nr"));
+  count = static_cast<double>(element->getAttribute("count"));
+
+  if (element->hasAttribute("bin_width")) bin_width = static_cast<double>(element->getAttribute("bin_width"));
+  if (element->hasAttribute("norm")) norm = static_cast<std::string>(element->getAttribute("norm"));
+  if (element->hasAttribute("phiflip")) phiflip = static_cast<int>(element->getAttribute("phiflip"));
+  if (element->hasAttribute("draw_edges")) draw_edges = static_cast<int>(element->getAttribute("draw_edges"));
+  if (element->hasAttribute("edge_color")) edge_color = static_cast<int>(element->getAttribute("edge_color"));
+  if (element->hasAttribute("face_color")) face_color = static_cast<int>(element->getAttribute("face_color"));
+  if (element->hasAttribute("xcolormap")) xcolormap = static_cast<int>(element->getAttribute("xcolormap"));
+  if (element->hasAttribute("ycolormap")) ycolormap = static_cast<int>(element->getAttribute("ycolormap"));
+  if (element->hasAttribute("bin_edges"))
+    {
+      auto bin_edges_key = static_cast<std::string>(element->getAttribute("bin_edges"));
+      bin_edges = GRM::get<std::vector<double>>((*context)[bin_edges_key]);
+      num_bin_edges = bin_edges.size();
+    }
+  if (element->hasAttribute("bin_widths")) bin_widths = static_cast<double>(element->getAttribute("bin_widths"));
+
+  num_bins = static_cast<int>(element->parentElement()->getAttribute("nbins"));
+  if (element->parentElement()->hasAttribute("bin_widths"))
+    {
+      auto bin_widths_key = static_cast<std::string>(element->parentElement()->getAttribute("bin_widths"));
+      auto bin_widths_vec = GRM::get<std::vector<double>>((*context)[bin_widths_key]);
+      num_bins = bin_widths_vec.size();
+    }
+
+  if (plot_elem->hasAttribute("rlim_min") && plot_elem->hasAttribute("rlim_max"))
+    {
+      r_lim_vec.push_back(static_cast<double>(plot_elem->getAttribute("rlim_min")));
+      r_lim_vec.push_back(static_cast<double>(plot_elem->getAttribute("rlim_max")));
+      rlim = &(r_lim_vec[0]);
+
+      r_min = grm_min(rlim[0], rlim[1]);
+      r_max = grm_max(rlim[0], rlim[1]);
+      if (rlim[0] > rlim[1])
+        {
+          rlim[0] = r_min;
+          rlim[1] = r_max;
+        }
+
+      if (r_max > 1.0)
+        {
+          r_max = 1.0;
+          logger((stderr, "The value of \"rlim_max\" can not exceed 1.0\n"));
+        }
+      if (r_min < 0.0) r_min = 0.0;
+    }
+  max = static_cast<double>(plot_elem->getAttribute("r_max"));
+
+  if (element->hasAttribute("xcolormap") && element->hasAttribute("ycolormap"))
+    {
+      if (-1 > xcolormap || xcolormap > 47 || ycolormap < -1 || ycolormap > 47)
+        {
+          logger((stderr, "The value for keyword \"colormap\" must contain two integer between -1 and 47\n"));
+        }
+      else
+        {
+          std::shared_ptr<GRM::Element> drawImage;
+          const int colormap_size = 500, image_size = 2000;
+          double radius, angle, max_radius;
           int total = 0;
           double norm_factor = 1;
-          int count = 0;
-          double max_radius;
+          int id = (int)global_root->getAttribute("_id");
+
+          global_root->setAttribute("_id", id + 1);
+          str = std::to_string(id);
 
           lineardata.resize(image_size * image_size);
           bin_counts.resize(num_bins);
@@ -7759,26 +8067,21 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
           if (num_bin_edges == 0)
             {
               angles.resize(num_bins + 1);
-              linspace(0.0, M_PI * 2, num_bins + 1, angles);
+              linspace(0.0, M_PI * 2, (int)num_bins + 1, angles);
             }
           else
             {
               angles = bin_edges;
             }
+          max_radius = image_size / 2;
 
-          center_x = image_size / 2;
-          center_y = image_size / 2;
-          center = image_size / 2;
+          total = static_cast<int>(element->getAttribute("total"));
 
-          max_radius = center;
-
-          total = static_cast<int>(group->getAttribute("total"));
-
-          if (str_equals_any(norm, 2, "probability", "cdf"))
+          if (str_equals_any(norm.c_str(), 2, "probability", "cdf"))
             norm_factor = total;
-          else if (num_bin_edges == 0 && strcmp(norm, "pdf") == 0)
+          else if (num_bin_edges == 0 && norm == "pdf")
             norm_factor = total * bin_width;
-          else if (num_bin_edges == 0 && strcmp(norm, "countdensity") == 0)
+          else if (num_bin_edges == 0 && norm == "countdensity")
             norm_factor = bin_width;
 
           if (rlim != nullptr)
@@ -7792,62 +8095,48 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
               r_max = max_radius;
             }
 
-          for (y = 0; y < image_size; y++)
+          for (int y = 0; y < image_size; y++)
             {
-              for (x = 0; x < image_size; x++)
+              for (int x = 0; x < image_size; x++)
                 {
-                  int q;
-                  radius = sqrt(pow(x - center_x, 2) + pow(y - center_y, 2));
-                  angle = atan2(y - center_y, x - center_x);
+                  radius = sqrt(pow(x - max_radius, 2) + pow(y - max_radius, 2));
+                  angle = atan2(y - max_radius, x - max_radius);
 
                   if (angle < 0) angle += M_PI * 2;
-                  if (phiflip == 0) angle = 2 * M_PI - angle;
+                  if (!phiflip) angle = 2 * M_PI - angle;
 
-                  for (q = 0; q < num_bins; ++q)
+                  if (angle > angles[class_nr] && angle <= angles[class_nr + 1])
                     {
-                      if (angle > angles[q] && angle <= angles[q + 1])
+                      if (norm == "pdf" && num_bin_edges > 0)
+                        norm_factor = total * bin_widths;
+                      else if (norm == "countdensity" && num_bin_edges > 0)
+                        norm_factor = bin_widths;
+
+                      if ((grm_round(radius * 100) / 100) <=
+                              (grm_round((count * 1.0 / norm_factor / max * max_radius) * 100) / 100) &&
+                          radius <= r_max && radius > r_min)
                         {
-                          count = classes[q];
-                          if (strcmp(norm, "pdf") == 0 && num_bin_edges > 0)
-                            {
-                              norm_factor = total * bin_widths[q];
-                            }
-                          else if (strcmp(norm, "countdensity") == 0 && num_bin_edges > 0)
-                            {
-                              norm_factor = bin_widths[q];
-                            }
+                          lineardata[y * image_size + x] = colormap
+                              [(int)(radius / (max_radius * pow(2, 0.5)) * (colormap_size - 1)) * colormap_size +
+                               grm_max(grm_min((int)(angle / (2 * M_PI) * colormap_size), colormap_size - 1), 0)];
+                        }
 
-                          if ((grm_round(radius * 100) / 100) <=
-                                  (grm_round((count * 1.0 / norm_factor / max * center) * 100) / 100) &&
-                              radius <= r_max && radius > r_min)
-                            {
-                              lineardata[y * image_size + x] = colormap
-                                  [(int)(radius / (center * pow(2, 0.5)) * (colormap_size - 1)) * colormap_size +
-                                   grm_max(grm_min((int)(angle / (2 * M_PI) * colormap_size), colormap_size - 1), 0)];
-                            }
-
-                        } /* end angle check */
-                    }     /* end for q loop: bin check*/
-                }         /* end x loop*/
-            }             /* end y loop */
+                    } /* end angle check */
+                }     /* end x loop*/
+            }         /* end y loop */
           if (rlim != nullptr)
             {
               r_min = rlim[0];
               r_max = rlim[1];
             }
 
-          int id = (int)global_root->getAttribute("_id");
-          global_root->setAttribute("_id", id + 1);
-          str = std::to_string(id);
-
           /* save resample method and reset because it isn't restored with gr_restorestate */
-          std::shared_ptr<GRM::Element> drawImage;
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
               drawImage = global_render->createDrawImage(-1.0, 1.0, 1.0, -1.0, image_size, image_size, "data" + str,
                                                          lineardata, 0);
               drawImage->setAttribute("_child_id", child_id++);
-              group->append(drawImage);
+              element->append(drawImage);
             }
           else
             {
@@ -7858,928 +8147,355 @@ static void polarHistogram(const std::shared_ptr<GRM::Element> &element, const s
             }
           gr_inqresamplemethod(&resample);
           if (drawImage != nullptr) global_render->setResampleMethod(drawImage, static_cast<int>(0x2020202));
-        } /* end colormap calculation*/
-    }     /* end colormap condition */
+          lineardata.clear();
+          colormap.clear();
+        }
+    }
 
-  /* no colormap or colormap combined with draw_edges */
-  if (colormap.empty() || draw_edges == 1)
+  /* perform calculations for later usages */
+  r = pow((count / max), num_bins * 2);
+  complex1 = moivre(r, 2 * class_nr, (int)num_bins * 2);
+
+  rect = sqrt(pow(real(complex1), 2) + pow(imag(complex1), 2));
+
+  if (rlim != nullptr)
     {
-      for (x = 0; x < classes.size(); ++x)
+      complex2 = moivre(r, 2 * class_nr + 2, (int)num_bins * 2);
+
+      mlist[0] = real(complex1);
+      mlist[1] = imag(complex1);
+      mlist[2] = real(complex2);
+      mlist[3] = imag(complex2);
+
+      r_min_complex1 = moivre(pow((r_min), (num_bins * 2)), (class_nr * 2), (int)num_bins * 2);
+      r_min_complex2 = moivre(pow((r_min), (num_bins * 2)), (class_nr * 2 + 2), (int)num_bins * 2);
+
+      /* check if the segment is higher than rmax? */
+      for (int i = 0; i < 2; ++i)
         {
-          double count;
-          count = classes[x];
-
-          if (classes[x] == 0)
+          double temporary = fabs(sqrt(pow(mlist[2 - i * 2], 2) + pow(mlist[3 - i * 2], 2)));
+          if (temporary > r_max)
             {
-              /* stairs bin_edges / philim  */
-              if (!rectlist.empty() && philim != nullptr)
-                rectlist[x] = r_min;
-              else if (!rectlist.empty())
-                rectlist[x] = 0.0;
+              double factor = fabs(r_max / temporary);
+              mlist[2 - i * 2] *= factor;
+              mlist[3 - i * 2] *= factor;
             }
+        }
+      r = count / max;
+      if (r > r_max) r = r_max;
+    }
 
-          if (str_equals_any(norm, 2, "probability", "cdf"))
-            {
-              count /= totalObservations;
-            }
-          else if (strcmp(norm, "pdf") == 0)
-            {
-              if (num_bin_edges == 0)
-                {
-                  count /= totalObservations * bin_width;
-                }
-              else
-                {
-                  count /= (totalObservations * bin_widths[x]);
-                }
-            }
-          else if (strcmp(norm, "countdensity") == 0)
-            {
-              if (num_bin_edges == 0)
-                {
-                  count /= bin_width;
-                }
-              else
-                {
-                  count /= bin_widths[x];
-                }
-            }
-
-          /* no stairs */
-          if (stairs == 0)
-            {
-              /* perform calculations for later usages */
-              r = pow((count / max), num_bins * 2);
-              complex1 = moivre(r, 2 * x, num_bins * 2);
-
-              rect = sqrt(pow(real(complex1), 2) + pow(imag(complex1), 2));
-
-              if (rlim != nullptr)
-                {
-                  double temporary;
-                  int i;
-                  complex2 = moivre(r, 2 * x + 2, num_bins * 2);
-
-                  mlist[x * 4] = real(complex1);
-                  mlist[x * 4 + 1] = imag(complex1);
-                  mlist[x * 4 + 2] = real(complex2);
-                  mlist[x * 4 + 3] = imag(complex2);
-
-                  r_min_complex1 = moivre(pow((r_min), (num_bins * 2)), (x * 2), num_bins * 2);
-                  r_min_complex2 = moivre(pow((r_min), (num_bins * 2)), (x * 2 + 2), num_bins * 2);
-
-                  /* check if the segment is higher than rmax? */
-                  for (i = 0; i < 2; ++i)
-                    {
-                      temporary = fabs(sqrt(pow(mlist[x * 4 + 2 - i * 2], 2) + pow(mlist[x * 4 + 3 - i * 2], 2)));
-                      if (temporary > r_max)
-                        {
-                          double factor = fabs(r_max / temporary);
-                          mlist[x * 4 + 2 - i * 2] *= factor;
-                          mlist[x * 4 + 3 - i * 2] *= factor;
-                        }
-                    }
-                  r = count / max;
-                  if (r > r_max)
-                    {
-                      r = r_max;
-                    }
-                }
-
-              /*  no binedges */
-              if (num_bin_edges == 0)
-                {
-                  if (rlim != nullptr)
-                    {
-                      double start_angle;
-                      double end_angle;
-
-                      double diff_angle;
-                      int num_angle;
-
-                      int i;
-
-                      if (r <= r_min)
-                        {
-                          continue;
-                        }
-
-                      start_angle = x * (360.0 / num_bins) / convert;
-                      end_angle = (x + 1) * (360.0 / num_bins) / convert;
-
-                      diff_angle = end_angle - start_angle;
-
-                      // determine number of angles for arc approximations
-                      num_angle = (int)(diff_angle / (0.2 / convert));
-
-                      phi_vec.resize(num_angle);
-                      linspace(start_angle, end_angle, num_angle, phi_vec);
-
-                      // 4 because of the 4 corner coordinates and 2 * num_angle for the arc approximations, top and
-                      // bottom
-                      f1.resize(4 + 2 * num_angle);
-                      /* line_1_x[0] and [1]*/
-                      f1[0] = real(r_min_complex1);
-                      f1[1] = mlist[4 * x];
-                      /* arc_1_x */
-                      listcomprehension(r, cos, phi_vec, num_angle, 2, f1);
-                      /* reversed line_2_x [0] and [1] */
-                      f1[2 + num_angle + 1] = real(r_min_complex2);
-                      f1[2 + num_angle] = mlist[4 * x + 2];
-                      /* reversed arc_2_x */
-                      listcomprehension(r_min, cos, phi_vec, num_angle, 0, arc_2_x);
-                      for (i = 0; i < num_angle; ++i)
-                        {
-                          f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
-                        }
-                      arc_2_x.clear();
-
-                      f2.resize(4 + 2 * num_angle);
-                      /* line_1_y[0] and [1] */
-                      f2[0] = imag(r_min_complex1);
-                      f2[1] = mlist[4 * x + 1];
-                      /*arc_1_y */
-                      listcomprehension(r, sin, phi_vec, num_angle, 2, f2);
-                      /* reversed line_2_y [0] and [1] */
-                      f2[2 + num_angle + 1] = imag(r_min_complex2);
-                      f2[2 + num_angle] = mlist[4 * x + 3];
-                      /* reversed arc_2_y */
-                      listcomprehension(r_min, sin, phi_vec, num_angle, 0, arc_2_y);
-                      for (i = 0; i < num_angle; ++i)
-                        {
-                          f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
-                        }
-
-                      arc_2_y.clear();
-                      if (draw_edges == 0)
-                        {
-                          // with rlim gr_fillarc cant be used because it will always draw from the origin
-                          // instead use gr_fillarea and approximate line segment with calculations from above.
-                          int id = (int)global_root->getAttribute("_id");
-                          global_root->setAttribute("_id", id + 1);
-                          str = std::to_string(id);
-                          std::shared_ptr<GRM::Element> area;
-
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
-                            {
-                              area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
-                              area->setAttribute("_child_id", child_id++);
-                              group->append(area);
-                            }
-                          else
-                            {
-                              area = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                              if (area != nullptr)
-                                global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
-                            }
-
-                          if (area != nullptr)
-                            {
-                              global_render->setFillColorInd(area, face_color);
-                              global_render->setFillIntStyle(area, 1);
-                            }
-
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
-                            {
-                              area = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
-                              area->setAttribute("_child_id", child_id++);
-                              group->append(area);
-                            }
-                          else
-                            {
-                              area = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                              if (area != nullptr)
-                                global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt, nullptr,
-                                                              0, 0, -1, area);
-                            }
-                          if (area != nullptr)
-                            {
-                              global_render->setFillColorInd(area, edge_color);
-                              global_render->setFillIntStyle(area, 0);
-                            }
-                        }
-                      else
-                        {
-                          int id = (int)global_root->getAttribute("_id");
-                          global_root->setAttribute("_id", id + 1);
-                          str = std::to_string(id);
-                          std::shared_ptr<GRM::Element> area;
-
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
-                            {
-                              area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
-                              area->setAttribute("_child_id", child_id++);
-                              group->append(area);
-                            }
-                          else
-                            {
-                              area = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                              if (area != nullptr)
-                                global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
-                            }
-                          if (area != nullptr)
-                            {
-                              global_render->setFillColorInd(area, edge_color);
-                              global_render->setFillIntStyle(area, 0);
-                            }
-                        }
-                      /* clean up vectors for next iteration */
-                      phi_vec.clear();
-                      f1.clear();
-                      f2.clear();
-                    } /* end rlim condition */
-                  /* no rlim */
-                  else
-                    {
-                      std::shared_ptr<GRM::Element> arc;
-                      if (draw_edges == 0)
-                        {
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
-                            {
-                              arc = global_render->createFillArc(-rect, rect, -rect, rect, x * (360.0 / num_bins),
-                                                                 (x + 1) * (360.0 / num_bins));
-                              arc->setAttribute("_child_id", child_id++);
-                              group->append(arc);
-                            }
-                          else
-                            {
-                              arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                              if (arc != nullptr)
-                                global_render->createFillArc(-rect, rect, -rect, rect, x * (360.0 / num_bins),
-                                                             (x + 1) * (360.0 / num_bins), 0, 0, -1, arc);
-                            }
-
-                          if (arc != nullptr)
-                            {
-                              global_render->setFillIntStyle(arc, 1);
-                              global_render->setFillColorInd(arc, face_color);
-                            }
-                        }
-
-                      if (del != del_values::update_without_default && del != del_values::update_with_default)
-                        {
-                          arc = global_render->createFillArc(-rect, rect, -rect, rect, x * (360.0 / num_bins),
-                                                             (x + 1) * (360.0 / num_bins));
-                          arc->setAttribute("_child_id", child_id++);
-                          group->append(arc);
-                        }
-                      else
-                        {
-                          arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                          if (arc != nullptr)
-                            global_render->createFillArc(-rect, rect, -rect, rect, x * (360.0 / num_bins),
-                                                         (x + 1) * (360.0 / num_bins), 0, 0, -1, arc);
-                        }
-
-                      if (arc != nullptr)
-                        {
-                          global_render->setFillIntStyle(arc, 0);
-                          global_render->setFillColorInd(arc, edge_color);
-                        }
-                    }
-                }
-              /* bin_egdes */
-              else
-                {
-                  if (rlim != nullptr)
-                    {
-                      double start_angle;
-                      double end_angle;
-
-                      double diff_angle;
-                      int num_angle;
-
-                      int i;
-
-                      if (r <= r_min)
-                        {
-                          continue;
-                        }
-
-                      start_angle = bin_edges[x];
-                      end_angle = bin_edges[x + 1];
-
-                      diff_angle = end_angle - start_angle;
-                      num_angle = (int)(diff_angle / (0.2 / convert));
-                      phi_vec.resize(num_angle);
-                      linspace(start_angle, end_angle, num_angle, phi_vec);
-
-                      f1.resize(4 + 2 * num_angle);
-                      /* line_1_x[0] and [1]*/
-                      f1[0] = cos(bin_edges[x]) * r_min;
-                      f1[1] = grm_min(rect, r_max) * cos(bin_edges[x]);
-                      /*arc_1_x */
-                      listcomprehension(r, cos, phi_vec, num_angle, 2, f1);
-                      /* reversed line_2_x [0] and [1] */
-                      f1[2 + num_angle + 1] = cos(bin_edges[x + 1]) * r_min;
-                      f1[2 + num_angle] = grm_min(rect, r_max) * cos(bin_edges[x + 1]);
-                      /* reversed arc_2_x */
-                      listcomprehension(r_min, cos, phi_vec, num_angle, 0, arc_2_x);
-                      for (i = 0; i < num_angle; ++i)
-                        {
-                          f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
-                        }
-
-                      f2.resize(4 + 2 * num_angle);
-                      /* line_1_y[0] and [1] */
-                      f2[0] = r_min * sin(bin_edges[x]);
-                      f2[1] = grm_min(rect, r_max) * sin(bin_edges[x]);
-                      /*arc_1_y */
-                      listcomprehension(r, sin, phi_vec, num_angle, 2, f2);
-                      /* reversed line_2_y [0] and [1] */
-                      f2[2 + num_angle + 1] = r_min * sin(bin_edges[x + 1]);
-                      f2[2 + num_angle] = grm_min(rect, r_max) * sin(bin_edges[x + 1]);
-                      /* reversed arc_2_y */
-                      listcomprehension(r_min, sin, phi_vec, num_angle, 0, arc_2_y);
-                      for (i = 0; i < num_angle; ++i)
-                        {
-                          f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
-                        }
-
-                      if (draw_edges == 0)
-                        {
-                          int id = (int)global_root->getAttribute("_id");
-                          global_root->setAttribute("_id", id + 1);
-                          str = std::to_string(id);
-                          std::shared_ptr<GRM::Element> area;
-
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
-                            {
-                              area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
-                              area->setAttribute("_child_id", child_id++);
-                              group->append(area);
-                            }
-                          else
-                            {
-                              area = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                              if (area != nullptr)
-                                global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
-                            }
-
-                          if (area != nullptr)
-                            {
-                              global_render->setFillColorInd(area, face_color);
-                              global_render->setFillIntStyle(area, 1);
-                            }
-
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
-                            {
-                              area = global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt);
-                              area->setAttribute("_child_id", child_id++);
-                              group->append(area);
-                            }
-                          else
-                            {
-                              area = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                              if (area != nullptr)
-                                global_render->createFillArea("x" + str, std::nullopt, "y" + str, std::nullopt, nullptr,
-                                                              0, 0, -1, area);
-                            }
-
-                          if (area != nullptr)
-                            {
-                              global_render->setFillColorInd(area, edge_color);
-                              global_render->setFillIntStyle(area, 0);
-                            }
-                        }
-                      else
-                        {
-                          int id = (int)global_root->getAttribute("_id");
-                          global_root->setAttribute("_id", id + 1);
-                          str = std::to_string(id);
-                          std::shared_ptr<GRM::Element> area;
-
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
-                            {
-                              area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
-                              area->setAttribute("_child_id", child_id++);
-                              group->append(area);
-                            }
-                          else
-                            {
-                              area = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                              if (area != nullptr)
-                                global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
-                            }
-                          if (area != nullptr)
-                            {
-                              global_render->setFillColorInd(area, edge_color);
-                              global_render->setFillIntStyle(area, 0);
-                            }
-                        }
-                    }
-                  /* no rlim */
-                  else
-                    {
-                      std::shared_ptr<GRM::Element> arc;
-                      if (draw_edges == 0)
-                        {
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
-                            {
-                              arc = global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[x] * convert,
-                                                                 bin_edges[x + 1] * convert);
-                              arc->setAttribute("_child_id", child_id++);
-                              group->append(arc);
-                            }
-                          else
-                            {
-                              arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                              if (arc != nullptr)
-                                global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[x] * convert,
-                                                             bin_edges[x + 1] * convert, 0, 0, -1, arc);
-                            }
-
-                          if (arc != nullptr)
-                            {
-                              global_render->setFillIntStyle(arc, 1);
-                              global_render->setFillColorInd(arc, face_color);
-                            }
-                        }
-                      if (del != del_values::update_without_default && del != del_values::update_with_default)
-                        {
-                          arc = global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[x] * convert,
-                                                             bin_edges[x + 1] * convert);
-                          arc->setAttribute("_child_id", child_id++);
-                          group->append(arc);
-                        }
-                      else
-                        {
-                          arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                          if (arc != nullptr)
-                            global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[x] * convert,
-                                                         bin_edges[x + 1] * convert, 0, 0, -1, arc);
-                        }
-
-                      if (arc != nullptr)
-                        {
-                          global_render->setFillIntStyle(arc, 0);
-                          global_render->setFillColorInd(arc, edge_color);
-                        }
-                    }
-                }
-            } /* end no stairs condition */
-          /* stairs without draw_edges (not compatible) */
-          else if (draw_edges == 0 && colormap.empty())
-            {
-              global_render->setFillColorInd(group, 1);
-              global_render->setLineColorInd(group, edge_color);
-              global_render->setLineWidth(group, edge_width);
-              processLineColorInd(group);
-              processFillColorInd(group);
-              processLineWidth(group);
-
-              r = pow((count / max), (num_bins * 2));
-              complex1 = moivre(r, (2 * x), num_bins * 2);
-              complex2 = moivre(r, (2 * x + 2), (num_bins * 2));
-              rect = sqrt(pow(real(complex1), 2) + pow(imag(complex1), 2));
-
-              /*  no bin_edges */
-              if (num_bin_edges == 0)
-                {
-                  mlist[x * 4] = real(complex1);
-                  mlist[x * 4 + 1] = imag(complex1);
-                  mlist[x * 4 + 2] = real(complex2);
-                  mlist[x * 4 + 3] = imag(complex2);
-
-                  std::shared_ptr<GRM::Element> arc;
-                  if (rlim != nullptr)
-                    {
-                      double temporary;
-                      int i;
-                      for (i = 0; i < 2; ++i)
-                        {
-                          temporary = fabs(sqrt(pow(mlist[x * 4 + 2 - i * 2], 2) + pow(mlist[x * 4 + 3 - i * 2], 2)));
-                          if (temporary > r_max)
-                            {
-                              double factor = fabs(r_max / temporary);
-                              mlist[x * 4 + 2 - i * 2] *= factor;
-                              mlist[x * 4 + 3 - i * 2] *= factor;
-                            }
-                        }
-
-                      if (rect > r_min)
-                        {
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
-                            {
-                              arc = global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max),
-                                                                 -grm_min(rect, r_max), grm_min(rect, r_max),
-                                                                 x * (360.0 / num_bins), (x + 1) * 360.0 / num_bins);
-                              arc->setAttribute("_child_id", child_id++);
-                              group->append(arc);
-                            }
-                          else
-                            {
-                              arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                              if (arc != nullptr)
-                                global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max),
-                                                             -grm_min(rect, r_max), grm_min(rect, r_max),
-                                                             x * (360.0 / num_bins), (x + 1) * 360.0 / num_bins, arc);
-                            }
-
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
-                            {
-                              arc = global_render->createDrawArc(-r_min, r_min, -r_min, r_min, x * (360.0 / num_bins),
-                                                                 (x + 1) * (360.0 / num_bins));
-                              arc->setAttribute("_child_id", child_id++);
-                              group->append(arc);
-                            }
-                          else
-                            {
-                              arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                              if (arc != nullptr)
-                                global_render->createDrawArc(-r_min, r_min, -r_min, r_min, x * (360.0 / num_bins),
-                                                             (x + 1) * (360.0 / num_bins), arc);
-                            }
-                        }
-                    }
-                  /* no rlim */
-                  else
-                    {
-                      if (del != del_values::update_without_default && del != del_values::update_with_default)
-                        {
-                          arc = global_render->createDrawArc(-rect, rect, -rect, rect, x * (360.0 / num_bins),
-                                                             (x + 1) * (360.0 / num_bins));
-                          arc->setAttribute("_child_id", child_id++);
-                          group->append(arc);
-                        }
-                      else
-                        {
-                          arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                          if (arc != nullptr)
-                            global_render->createDrawArc(-rect, rect, -rect, rect, x * (360.0 / num_bins),
-                                                         (x + 1) * (360.0 / num_bins), arc);
-                        }
-                    }
-                }
-              /* with bin_edges */
-              else
-                {
-                  /* rlim and bin_edges*/
-                  std::shared_ptr<GRM::Element> arc;
-                  if (rlim != nullptr)
-                    {
-                      if (rect < r_min)
-                        {
-                          rectlist[x] = r_min;
-                        }
-                      else if (rect > r_max)
-                        {
-                          rectlist[x] = r_max;
-                        }
-                      else
-                        {
-                          rectlist[x] = rect;
-                        }
-
-                      if (rect > r_min)
-                        {
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
-                            {
-                              arc = global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max),
-                                                                 -grm_min(rect, r_max), grm_min(rect, r_max),
-                                                                 bin_edges[x] * convert, bin_edges[x + 1] * convert);
-                              arc->setAttribute("_child_id", child_id++);
-                              group->append(arc);
-                            }
-                          else
-                            {
-                              arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                              if (arc != nullptr)
-                                global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max),
-                                                             -grm_min(rect, r_max), grm_min(rect, r_max),
-                                                             bin_edges[x] * convert, bin_edges[x + 1] * convert, arc);
-                            }
-
-                          if (del != del_values::update_without_default && del != del_values::update_with_default)
-                            {
-                              arc = global_render->createDrawArc(-r_min, r_min, -r_min, r_min, bin_edges[x] * convert,
-                                                                 bin_edges[x + 1] * convert);
-                              arc->setAttribute("_child_id", child_id++);
-                              group->append(arc);
-                            }
-                          else
-                            {
-                              arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                              if (arc != nullptr)
-                                global_render->createDrawArc(-r_min, r_min, -r_min, r_min, bin_edges[x] * convert,
-                                                             bin_edges[x + 1] * convert, arc);
-                            }
-                        }
-                    }
-                  /* no rlim */
-                  else
-                    {
-                      rectlist[x] = rect;
-                      if (x == num_bin_edges - 1)
-                        {
-                          break;
-                        }
-                      if (del != del_values::update_without_default && del != del_values::update_with_default)
-                        {
-                          arc = global_render->createDrawArc(-rect, rect, -rect, rect, bin_edges[x] * convert,
-                                                             bin_edges[x + 1] * convert);
-                          arc->setAttribute("_child_id", child_id++);
-                          group->append(arc);
-                        }
-                      else
-                        {
-                          arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                          if (arc != nullptr)
-                            global_render->createDrawArc(-rect, rect, -rect, rect, bin_edges[x] * convert,
-                                                         bin_edges[x + 1] * convert, arc);
-                        }
-                    }
-                }
-            }
-        } /* end of classes for loop */
-
-      if (stairs != 0 && draw_edges == 0)
+  /*  no binedges */
+  if (num_bin_edges == 0)
+    {
+      if (rlim != nullptr)
         {
-          std::shared_ptr<GRM::Element> line;
-          /* stairs without binedges, rlim */
-          if (!mlist.empty() && rlim == nullptr && rectlist.empty())
-            {
-              int s;
-              double line_x[2];
-              double line_y[2];
-              for (s = 0; s < num_bins * 4; s += 2)
-                {
-                  if (s > 2 && s % 4 == 0)
-                    {
-                      line_x[0] = mlist[s];
-                      line_x[1] = mlist[s - 2];
-                      line_y[0] = mlist[s + 1];
-                      line_y[1] = mlist[s - 1];
+          int i, num_angle;
+          double start_angle, end_angle;
+          std::shared_ptr<GRM::Element> area;
+          int id = (int)global_root->getAttribute("_id");
 
-                      if (del != del_values::update_without_default && del != del_values::update_with_default)
-                        {
-                          line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
-                          line->setAttribute("_child_id", child_id++);
-                          group->append(line);
-                        }
-                      else
-                        {
-                          line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                          if (line != nullptr)
-                            global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
-                        }
+          if (r > r_min)
+            {
+              global_root->setAttribute("_id", id + 1);
+              str = std::to_string(id);
+
+              start_angle = class_nr * (360.0 / num_bins) / convert;
+              end_angle = (class_nr + 1) * (360.0 / num_bins) / convert;
+
+              // determine number of angles for arc approximations
+              num_angle = (int)((end_angle - start_angle) / (0.2 / convert));
+
+              phi_vec.resize(num_angle);
+              linspace(start_angle, end_angle, num_angle, phi_vec);
+
+              // 4 because of the 4 corner coordinates and 2 * num_angle for the arc approximations, top and
+              // bottom
+              f1.resize(4 + 2 * num_angle);
+              /* line_1_x[0] and [1]*/
+              f1[0] = real(r_min_complex1);
+              f1[1] = mlist[0];
+              /* arc_1_x */
+              listcomprehension(r, cos, phi_vec, num_angle, 2, f1);
+              /* reversed line_2_x [0] and [1] */
+              f1[2 + num_angle + 1] = real(r_min_complex2);
+              f1[2 + num_angle] = mlist[2];
+              /* reversed arc_2_x */
+              listcomprehension(r_min, cos, phi_vec, num_angle, 0, arc_2_x);
+              for (i = 0; i < num_angle; ++i)
+                {
+                  f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
+                }
+              arc_2_x.clear();
+
+              f2.resize(4 + 2 * num_angle);
+              /* line_1_y[0] and [1] */
+              f2[0] = imag(r_min_complex1);
+              f2[1] = mlist[1];
+              /*arc_1_y */
+              listcomprehension(r, sin, phi_vec, num_angle, 2, f2);
+              /* reversed line_2_y [0] and [1] */
+              f2[2 + num_angle + 1] = imag(r_min_complex2);
+              f2[2 + num_angle] = mlist[3];
+              /* reversed arc_2_y */
+              listcomprehension(r_min, sin, phi_vec, num_angle, 0, arc_2_y);
+              for (i = 0; i < num_angle; ++i)
+                {
+                  f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
+                }
+              arc_2_y.clear();
+
+              if (!draw_edges)
+                {
+                  // with rlim gr_fillarc cant be used because it will always draw from the origin
+                  // instead use gr_fillarea and approximate line segment with calculations from above.
+                  if (del != del_values::update_without_default && del != del_values::update_with_default)
+                    {
+                      area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
+                      area->setAttribute("_child_id", child_id++);
+                      element->append(area);
+                    }
+                  else
+                    {
+                      area = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                      if (area != nullptr)
+                        global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
+                    }
+
+                  if (area != nullptr)
+                    {
+                      global_render->setFillColorInd(area, face_color);
+                      global_render->setFillIntStyle(area, 1);
                     }
                 }
-              line_x[0] = mlist[0];
-              line_x[1] = mlist[(num_bins - 1) * 4 + 2];
-              line_y[0] = mlist[1];
-              line_y[1] = mlist[(num_bins - 1) * 4 + 3];
 
+              // drawarea more likely
               if (del != del_values::update_without_default && del != del_values::update_with_default)
                 {
-                  line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
-                  line->setAttribute("_child_id", child_id++);
-                  group->append(line);
+                  area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
+                  area->setAttribute("_child_id", child_id++);
+                  element->append(area);
                 }
               else
                 {
-                  line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                  if (line != nullptr)
-                    global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
+                  area = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                  if (area != nullptr)
+                    global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
                 }
-            }
-
-          /* stairs without bin_edges with rlim*/
-          else if (!mlist.empty() && rlim != nullptr && rectlist.empty())
-            {
-              double line_x[2], line_y[2];
-              double rect1, rect2;
-              for (x = 0; x < num_bins; ++x)
+              if (area != nullptr)
                 {
-                  if (x > 0)
-                    {
-                      rect1 = sqrt(pow(mlist[x * 4], 2) + pow(mlist[x * 4 + 1], 2));
-                      rect2 = sqrt(pow(mlist[(x - 1) * 4 + 2], 2) + pow(mlist[(x - 1) * 4 + 3], 2));
-
-                      if (rect1 < r_min && rect2 < r_min) continue;
-                      if (rect1 < r_min)
-                        {
-                          mlist[4 * x] = r_min * cos(2 * M_PI / num_bins * x);
-                          mlist[4 * x + 1] = r_min * sin(2 * M_PI / num_bins * x);
-                        }
-                      else if (rect2 < r_min)
-                        {
-                          mlist[(x - 1) * 4 + 2] = r_min * cos(2 * M_PI / num_bins * x);
-                          mlist[(x - 1) * 4 + 3] = r_min * sin(2 * M_PI / num_bins * x);
-                        }
-                      line_x[0] = mlist[x * 4];
-                      line_x[1] = mlist[(x - 1) * 4 + 2];
-                      line_y[0] = mlist[x * 4 + 1];
-                      line_y[1] = mlist[(x - 1) * 4 + 3];
-
-                      if (del != del_values::update_without_default && del != del_values::update_with_default)
-                        {
-                          line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
-                          line->setAttribute("_child_id", child_id++);
-                          group->append(line);
-                        }
-                      else
-                        {
-                          line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                          if (line != nullptr)
-                            global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
-                        }
-                    }
+                  global_render->setFillColorInd(area, edge_color);
+                  global_render->setFillIntStyle(area, 0);
+                  area->setAttribute("z_index", 2);
                 }
-              line_x[0] = mlist[(num_bins - 1) * 4 + 2] = grm_max(mlist[(num_bins - 1) * 4 + 2], r_min * cos(0));
-              line_y[0] = mlist[(num_bins - 1) * 4 + 3] = grm_max(mlist[(num_bins - 1) * 4 + 3], r_min * sin(0));
-              line_x[1] = mlist[0] = grm_max(mlist[0], r_min * cos(0));
-              line_y[1] = mlist[1] = grm_max(mlist[1], r_min * sin(0));
 
+              /* clean up vectors for next iteration */
+              phi_vec.clear();
+              f1.clear();
+              f2.clear();
+            }
+        }  /* end rlim condition */
+      else /* no rlim */
+        {
+          std::shared_ptr<GRM::Element> arc, drawArc;
+
+          if (!draw_edges)
+            {
               if (del != del_values::update_without_default && del != del_values::update_with_default)
                 {
-                  line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
-                  line->setAttribute("_child_id", child_id++);
-                  group->append(line);
+                  arc = global_render->createFillArc(-rect, rect, -rect, rect, class_nr * (360.0 / num_bins),
+                                                     (class_nr + 1) * (360.0 / num_bins));
+                  arc->setAttribute("_child_id", child_id++);
+                  element->append(arc);
                 }
               else
                 {
-                  line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                  if (line != nullptr)
-                    global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
+                  arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                  if (arc != nullptr)
+                    global_render->createFillArc(-rect, rect, -rect, rect, class_nr * (360.0 / num_bins),
+                                                 (class_nr + 1) * (360.0 / num_bins), 0, 0, -1, arc);
+                }
+
+              if (arc != nullptr)
+                {
+                  global_render->setFillIntStyle(arc, 1);
+                  global_render->setFillColorInd(arc, face_color);
                 }
             }
 
-          /* stairs with binedges without rlim */
-          else if (!rectlist.empty() && rlim == nullptr)
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
-              double startx = 0.0, starty = 0.0;
-              double line_x[2], line_y[2];
+              drawArc = global_render->createFillArc(-rect, rect, -rect, rect, class_nr * (360.0 / num_bins),
+                                                     (class_nr + 1) * (360.0 / num_bins));
+              drawArc->setAttribute("_child_id", child_id++);
+              element->append(drawArc);
+            }
+          else
+            {
+              drawArc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+              if (drawArc != nullptr)
+                global_render->createFillArc(-rect, rect, -rect, rect, class_nr * (360.0 / num_bins),
+                                             (class_nr + 1) * (360.0 / num_bins), 0, 0, -1, drawArc);
+            }
+          if (drawArc != nullptr)
+            {
+              global_render->setFillIntStyle(drawArc, 0);
+              global_render->setFillColorInd(drawArc, edge_color);
+              drawArc->setAttribute("z_index", 2);
+            }
+        }
+    }
+  else /* bin_egdes */
+    {
+      if (rlim != nullptr)
+        {
+          double start_angle, end_angle;
+          int num_angle, i;
+          std::shared_ptr<GRM::Element> area;
+          int id = (int)global_root->getAttribute("_id");
 
-              for (x = 0; x < num_bin_edges - 1; ++x)
+          if (r > r_min)
+            {
+              global_root->setAttribute("_id", id + 1);
+              str = std::to_string(id);
+
+              start_angle = bin_edges[0];
+              end_angle = bin_edges[1];
+
+              num_angle = (int)((end_angle - start_angle) / (0.2 / convert));
+              phi_vec.resize(num_angle);
+              linspace(start_angle, end_angle, num_angle, phi_vec);
+
+              f1.resize(4 + 2 * num_angle);
+              /* line_1_x[0] and [1]*/
+              f1[0] = cos(bin_edges[0]) * r_min;
+              f1[1] = grm_min(rect, r_max) * cos(bin_edges[0]);
+              /*arc_1_x */
+              listcomprehension(r, cos, phi_vec, num_angle, 2, f1);
+              /* reversed line_2_x [0] and [1] */
+              f1[2 + num_angle + 1] = cos(bin_edges[1]) * r_min;
+              f1[2 + num_angle] = grm_min(rect, r_max) * cos(bin_edges[1]);
+              /* reversed arc_2_x */
+              listcomprehension(r_min, cos, phi_vec, num_angle, 0, arc_2_x);
+              for (i = 0; i < num_angle; ++i)
                 {
-                  line_x[0] = startx;
-                  line_x[1] = rectlist[x] * cos(bin_edges[x]);
-                  line_y[0] = starty;
-                  line_y[1] = rectlist[x] * sin(bin_edges[x]);
-
-                  startx = rectlist[x] * cos(bin_edges[x + 1]);
-                  starty = rectlist[x] * sin(bin_edges[x + 1]);
-
-                  if (!(bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI) || x > 0)
-                    {
-                      if (del != del_values::update_without_default && del != del_values::update_with_default)
-                        {
-                          line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
-                          line->setAttribute("_child_id", child_id++);
-                          group->append(line);
-                        }
-                      else
-                        {
-                          line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                          if (line != nullptr)
-                            global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
-                        }
-                    }
+                  f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
                 }
+              arc_2_x.clear();
 
-              if (bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI)
+              f2.resize(4 + 2 * num_angle);
+              /* line_1_y[0] and [1] */
+              f2[0] = r_min * sin(bin_edges[0]);
+              f2[1] = grm_min(rect, r_max) * sin(bin_edges[0]);
+              /*arc_1_y */
+              listcomprehension(r, sin, phi_vec, num_angle, 2, f2);
+              /* reversed line_2_y [0] and [1] */
+              f2[2 + num_angle + 1] = r_min * sin(bin_edges[1]);
+              f2[2 + num_angle] = grm_min(rect, r_max) * sin(bin_edges[1]);
+              /* reversed arc_2_y */
+              listcomprehension(r_min, sin, phi_vec, num_angle, 0, arc_2_y);
+              for (i = 0; i < num_angle; ++i)
                 {
-                  line_x[0] = rectlist[0] * cos(bin_edges[0]);
-                  line_x[1] = startx;
-                  line_y[0] = rectlist[0] * sin(bin_edges[0]);
-                  line_y[1] = starty;
+                  f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
+                }
+              arc_2_y.clear();
 
+              if (!draw_edges)
+                {
                   if (del != del_values::update_without_default && del != del_values::update_with_default)
                     {
-                      line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
-                      line->setAttribute("_child_id", child_id++);
-                      group->append(line);
+                      area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
+                      area->setAttribute("_child_id", child_id++);
+                      element->append(area);
                     }
                   else
                     {
-                      line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                      if (line != nullptr)
-                        global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
+                      area = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                      if (area != nullptr)
+                        global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
                     }
+
+                  if (area != nullptr)
+                    {
+                      global_render->setFillColorInd(area, face_color);
+                      global_render->setFillIntStyle(area, 1);
+                    }
+                }
+
+              // drawarea more likely
+              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                {
+                  area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
+                  area->setAttribute("_child_id", child_id++);
+                  element->append(area);
                 }
               else
                 {
-                  line_x[0] = rectlist[num_bin_edges - 2] * cos(bin_edges[num_bin_edges - 1]);
-                  line_x[1] = 0.0;
-                  line_y[0] = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
-                  line_y[1] = 0.0;
+                  area = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                  if (area != nullptr)
+                    global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
+                }
+              if (area != nullptr)
+                {
+                  global_render->setFillColorInd(area, edge_color);
+                  global_render->setFillIntStyle(area, 0);
+                  area->setAttribute("z_index", 2);
+                }
 
-                  if (del != del_values::update_without_default && del != del_values::update_with_default)
-                    {
-                      line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
-                      line->setAttribute("_child_id", child_id++);
-                      group->append(line);
-                    }
-                  else
-                    {
-                      line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                      if (line != nullptr)
-                        global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
-                    }
+              /* clean up vectors for next iteration */
+              phi_vec.clear();
+              f1.clear();
+              f2.clear();
+            }
+        }
+      else /* no rlim */
+        {
+          std::shared_ptr<GRM::Element> arc, drawArc;
+
+          if (!draw_edges)
+            {
+              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                {
+                  arc = global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[0] * convert,
+                                                     bin_edges[1] * convert);
+                  arc->setAttribute("_child_id", child_id++);
+                  element->append(arc);
+                }
+              else
+                {
+                  arc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+                  if (arc != nullptr)
+                    global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[0] * convert,
+                                                 bin_edges[1] * convert, 0, 0, -1, arc);
+                }
+
+              if (arc != nullptr)
+                {
+                  global_render->setFillIntStyle(arc, 1);
+                  global_render->setFillColorInd(arc, face_color);
                 }
             }
 
-          /* stairs with bin_edges and rlim */
-          else if (!rectlist.empty() && rlim != nullptr)
+          // drawarc
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
-              std::shared_ptr<GRM::Element> line;
-              double startx = grm_max(rectlist[0] * cos(bin_edges[0]), r_min * cos(bin_edges[0]));
-              double starty = grm_max(rectlist[0] * sin(bin_edges[0]), r_min * sin(bin_edges[0]));
-
-              double line_x[2];
-              double line_y[2];
-
-              for (x = 0; x < num_bin_edges - 1; ++x)
-                {
-                  *line_x = startx;
-                  *(line_x + 1) = rectlist[x] * cos(bin_edges[x]);
-                  *line_y = starty;
-                  *(line_y + 1) = rectlist[x] * sin(bin_edges[x]);
-
-                  startx = rectlist[x] * cos(bin_edges[x + 1]);
-                  starty = rectlist[x] * sin(bin_edges[x + 1]);
-
-                  if (((phiflip == 0) &&
-                       (!((bin_edges[0] > 0.0 && bin_edges[0] < 0.001) && bin_edges[num_bin_edges - 1] > 1.96 * M_PI) ||
-                        x > 0)) ||
-                      ((bin_edges[0] > 1.96 * M_PI &&
-                        !(bin_edges[num_bin_edges - 1] > 0.0 && bin_edges[num_bin_edges - 1] < 0.001)) ||
-                       x > 0))
-                    {
-                      if (del != del_values::update_without_default && del != del_values::update_with_default)
-                        {
-                          line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
-                          line->setAttribute("_child_id", child_id++);
-                          group->append(line);
-                        }
-                      else
-                        {
-                          line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                          if (line != nullptr)
-                            global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
-                        }
-                    }
-                }
-
-              if (bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI)
-                {
-                  *line_x = rectlist[0] * cos(bin_edges[0]);
-                  *(line_x + 1) = rectlist[num_bin_edges - 2] * cos(bin_edges[num_bin_edges - 1]);
-                  *line_y = rectlist[0] * sin(bin_edges[0]);
-                  *(line_y + 1) = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
-
-                  if (del != del_values::update_without_default && del != del_values::update_with_default)
-                    {
-                      line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
-                      line->setAttribute("_child_id", child_id++);
-                      group->append(line);
-                    }
-                  else
-                    {
-                      line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                      if (line != nullptr)
-                        global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
-                    }
-                }
-              else
-                {
-                  *line_x = rectlist[num_bin_edges - 2] * cos(bin_edges[num_bin_edges - 1]);
-                  *(line_x + 1) = r_min * cos(bin_edges[num_bin_edges - 1]);
-                  *line_y = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
-                  *(line_y + 1) = r_min * sin(bin_edges[num_bin_edges - 1]);
-
-                  if (del != del_values::update_without_default && del != del_values::update_with_default)
-                    {
-                      line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
-                      line->setAttribute("_child_id", child_id++);
-                      group->append(line);
-                    }
-                  else
-                    {
-                      line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                      if (line != nullptr)
-                        global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
-                    }
-
-                  line_x[0] = r_min * cos(bin_edges[0]);
-                  line_x[1] = rectlist[0] * cos(bin_edges[0]);
-                  line_y[0] = r_min * sin(bin_edges[0]);
-                  line_y[1] = rectlist[0] * sin(bin_edges[0]);
-
-                  if (del != del_values::update_without_default && del != del_values::update_with_default)
-                    {
-                      line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
-                      line->setAttribute("_child_id", child_id++);
-                      group->append(line);
-                    }
-                  else
-                    {
-                      line = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
-                      if (line != nullptr)
-                        global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
-                    }
-                }
+              drawArc = global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[0] * convert,
+                                                     bin_edges[1] * convert);
+              drawArc->setAttribute("_child_id", child_id++);
+              element->append(drawArc);
+            }
+          else
+            {
+              drawArc = element->querySelectors("[_child_id=" + std::to_string(child_id++) + "]");
+              if (drawArc != nullptr)
+                global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[0] * convert, bin_edges[1] * convert,
+                                             0, 0, -1, drawArc);
+            }
+          if (drawArc != nullptr)
+            {
+              global_render->setFillIntStyle(drawArc, 0);
+              global_render->setFillColorInd(drawArc, edge_color);
+              drawArc->setAttribute("z_index", 2);
             }
         }
     }
@@ -9418,7 +9134,7 @@ static void processStem(const std::shared_ptr<GRM::Element> &element, const std:
     }
 }
 
-static void shade(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processShade(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /* char *spec = ""; TODO: read spec from data! */
   int xform = 5, xbins = 1200, ybins = 1200, n;
@@ -9446,7 +9162,7 @@ static void shade(const std::shared_ptr<GRM::Element> &element, const std::share
   if (redrawws) gr_shadepoints(n, x_p, y_p, xform, xbins, ybins);
 }
 
-static void surface(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processSurface(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for surface
@@ -9739,7 +9455,8 @@ static void processLine(const std::shared_ptr<GRM::Element> &element, const std:
     }
 }
 
-static void marginalheatmap(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processMarginalheatmap(const std::shared_ptr<GRM::Element> &element,
+                                   const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for marginalheatmap
@@ -10023,10 +9740,10 @@ static void marginalheatmap(const std::shared_ptr<GRM::Element> &element, const 
  *
  * \param key The key of the colors in the argument container. The key may reference integer or double arrays. Integer
  * arrays describe colors of the GKS color table (0 - 1255). Double arrays contain RGB tuples in the range [0.0, 1.0].
- * If key does not exist, the routine falls back to default colors (taken from `gr_uselinespec`). \param color_type The
- * color type to set. Can be one of `GR_COLOR_LINE`, `GR_COLOR_MARKER`, `GR_COLOR_FILL`, `GR_COLOR_TEXT`,
- * `GR_COLOR_BORDER` or any combination of them (combined with OR). The special value `GR_COLOR_RESET` resets all color
- * modifications.
+ * If key does not exist, the routine falls back to default colors (taken from `gr_uselinespec`). \param color_type
+ * The color type to set. Can be one of `GR_COLOR_LINE`, `GR_COLOR_MARKER`, `GR_COLOR_FILL`, `GR_COLOR_TEXT`,
+ * `GR_COLOR_BORDER` or any combination of them (combined with OR). The special value `GR_COLOR_RESET` resets all
+ * color modifications.
  */
 static int set_next_color(std::string key, gr_color_type_t color_type, const std::shared_ptr<GRM::Element> &element,
                           const std::shared_ptr<GRM::Context> &context)
@@ -10133,7 +9850,8 @@ static int set_next_color(std::string key, gr_color_type_t color_type, const std
   return color_index;
 }
 
-static void pieSegment(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processPieSegment(const std::shared_ptr<GRM::Element> &element,
+                              const std::shared_ptr<GRM::Context> &context)
 {
   double start_angle, end_angle, middle_angle;
   del_values del = del_values::update_without_default;
@@ -10183,12 +9901,13 @@ static void pieSegment(const std::shared_ptr<GRM::Element> &element, const std::
     }
   if (text_elem != nullptr)
     {
+      text_elem->setAttribute("z_index", 2);
       text_elem->setAttribute("set_text_color_for_background", true);
       processTextColorForBackground(text_elem);
     }
 }
 
-static void pie(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processPie(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for pie
@@ -10263,7 +9982,7 @@ static void pie(const std::shared_ptr<GRM::Element> &element, const std::shared_
   processTextAlign(element);
 }
 
-static void plot3(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processPlot3(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for plot3
@@ -10502,7 +10221,7 @@ static void processImshow(const std::shared_ptr<GRM::Element> &element, const st
   if (cellarray != nullptr) cellarray->setAttribute("name", "imshow");
 }
 
-static void text(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processText(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for text
@@ -10559,7 +10278,7 @@ static void text(const std::shared_ptr<GRM::Element> &element, const std::shared
   gr_restorestate();
 }
 
-static void titles3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processTitles3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for titles3d
@@ -10574,7 +10293,8 @@ static void titles3d(const std::shared_ptr<GRM::Element> &element, const std::sh
   if (redrawws) gr_titles3d(x.data(), y.data(), z.data());
 }
 
-static void triContour(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processTriContour(const std::shared_ptr<GRM::Element> &element,
+                              const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for tricontour
@@ -10633,7 +10353,8 @@ static void triContour(const std::shared_ptr<GRM::Element> &element, const std::
   if (redrawws) gr_tricontour(x_length, px_p, py_p, pz_p, num_levels, l_p);
 }
 
-static void triSurface(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processTriSurface(const std::shared_ptr<GRM::Element> &element,
+                              const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for trisurface
@@ -10772,7 +10493,7 @@ static void processVolume(const std::shared_ptr<GRM::Element> &element, const st
     }
 }
 
-static void wireframe(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processWireframe(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for wireframe
@@ -11601,37 +11322,37 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
     }
 }
 
-static void ProcessSeries(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processSeries(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   static std::map<std::string,
                   std::function<void(const std::shared_ptr<GRM::Element>, const std::shared_ptr<GRM::Context>)>>
       seriesNameToFunc{
-          {std::string("barplot"), barplot},
-          {std::string("contour"), PushDrawableToZQueue(contour)},
-          {std::string("contourf"), PushDrawableToZQueue(contourf)},
-          {std::string("heatmap"), heatmap},
+          {std::string("barplot"), processBarplot},
+          {std::string("contour"), PushDrawableToZQueue(processContour)},
+          {std::string("contourf"), PushDrawableToZQueue(processContourf)},
+          {std::string("heatmap"), processHeatmap},
           {std::string("hexbin"), processHexbin},
           {std::string("hist"), processHist},
           {std::string("imshow"), processImshow},
-          {std::string("isosurface"), PushDrawableToZQueue(isosurface)},
+          {std::string("isosurface"), PushDrawableToZQueue(processIsosurface)},
           {std::string("line"), processLine},
-          {std::string("marginalheatmap"), marginalheatmap},
-          {std::string("pie"), pie},
-          {std::string("plot3"), plot3},
+          {std::string("marginalheatmap"), processMarginalheatmap},
+          {std::string("pie"), processPie},
+          {std::string("plot3"), processPlot3},
           {std::string("polar"), processPolar},
-          {std::string("polar_heatmap"), polarHeatmap},
-          {std::string("polar_histogram"), polarHistogram},
-          {std::string("quiver"), PushDrawableToZQueue(quiver)},
+          {std::string("polar_heatmap"), processPolarHeatmap},
+          {std::string("polar_histogram"), processPolarHistogram},
+          {std::string("quiver"), PushDrawableToZQueue(processQuiver)},
           {std::string("scatter"), processScatter},
           {std::string("scatter3"), processScatter3},
-          {std::string("shade"), PushDrawableToZQueue(shade)},
+          {std::string("shade"), PushDrawableToZQueue(processShade)},
           {std::string("stairs"), processStairs},
           {std::string("stem"), processStem},
-          {std::string("surface"), PushDrawableToZQueue(surface)},
-          {std::string("tricontour"), PushDrawableToZQueue(triContour)},
-          {std::string("trisurface"), PushDrawableToZQueue(triSurface)},
+          {std::string("surface"), PushDrawableToZQueue(processSurface)},
+          {std::string("tricontour"), PushDrawableToZQueue(processTriContour)},
+          {std::string("trisurface"), PushDrawableToZQueue(processTriSurface)},
           {std::string("volume"), processVolume},
-          {std::string("wireframe"), PushDrawableToZQueue(wireframe)},
+          {std::string("wireframe"), PushDrawableToZQueue(processWireframe)},
       };
 
   auto kind = static_cast<std::string>(element->getAttribute("kind"));
@@ -11672,40 +11393,42 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("axes"), processAxes},
           {std::string("axes3d"), processAxes3d},
           {std::string("bar"), processBar},
-          {std::string("cellarray"), PushDrawableToZQueue(cellArray)},
-          {std::string("colorbar"), colorbar},
+          {std::string("cellarray"), PushDrawableToZQueue(processCellArray)},
+          {std::string("colorbar"), processColorbar},
           {std::string("coordinate_system"), processCoordinateSystem},
-          {std::string("errorbars"), errorbars},
-          {std::string("legend"), legend},
-          {std::string("polar_axes"), drawPolarAxes},
-          {std::string("drawarc"), PushDrawableToZQueue(drawArc)},
-          {std::string("drawgraphics"), PushDrawableToZQueue(drawGraphics)},
-          {std::string("drawimage"), PushDrawableToZQueue(drawImage)},
-          {std::string("drawrect"), PushDrawableToZQueue(drawRect)},
-          {std::string("fillarc"), PushDrawableToZQueue(fillArc)},
-          {std::string("fillarea"), PushDrawableToZQueue(fillArea)},
-          {std::string("fillrect"), PushDrawableToZQueue(fillRect)},
-          {std::string("gr3clear"), PushDrawableToZQueue(gr3Clear)},
-          {std::string("gr3deletemesh"), PushDrawableToZQueue(gr3DeleteMesh)},
-          {std::string("gr3drawimage"), PushDrawableToZQueue(gr3DrawImage)},
-          {std::string("gr3drawmesh"), PushDrawableToZQueue(gr3DrawMesh)},
-          {std::string("grid"), PushDrawableToZQueue(grid)},
-          {std::string("grid3d"), PushDrawableToZQueue(grid3d)},
-          {std::string("isosurface_render"), PushDrawableToZQueue(isosurfaceRender)},
-          {std::string("layout_grid"), PushDrawableToZQueue(layoutGrid)},
-          {std::string("layout_gridelement"), PushDrawableToZQueue(layoutGridElement)},
-          {std::string("nonuniform_polarcellarray"), PushDrawableToZQueue(nonUniformPolarCellArray)},
-          {std::string("nonuniformcellarray"), PushDrawableToZQueue(nonuniformcellarray)},
-          {std::string("panzoom"), PushDrawableToZQueue(panzoom)},
-          {std::string("pie_segment"), pieSegment},
-          {std::string("polarcellarray"), PushDrawableToZQueue(polarCellArray)},
-          {std::string("polyline"), PushDrawableToZQueue(polyline)},
-          {std::string("polyline3d"), PushDrawableToZQueue(polyline3d)},
-          {std::string("polymarker"), PushDrawableToZQueue(polymarker)},
-          {std::string("polymarker3d"), PushDrawableToZQueue(polymarker3d)},
-          {std::string("series"), ProcessSeries},
-          {std::string("text"), PushDrawableToZQueue(text)},
-          {std::string("titles3d"), PushDrawableToZQueue(titles3d)},
+          {std::string("errorbar"), processErrorbar},
+          {std::string("errorbars"), processErrorbars},
+          {std::string("legend"), processLegend},
+          {std::string("polar_axes"), processPolarAxes},
+          {std::string("drawarc"), PushDrawableToZQueue(processDrawArc)},
+          {std::string("drawgraphics"), PushDrawableToZQueue(processDrawGraphics)},
+          {std::string("drawimage"), PushDrawableToZQueue(processDrawImage)},
+          {std::string("drawrect"), PushDrawableToZQueue(processDrawRect)},
+          {std::string("fillarc"), PushDrawableToZQueue(processFillArc)},
+          {std::string("fillarea"), PushDrawableToZQueue(processFillArea)},
+          {std::string("fillrect"), PushDrawableToZQueue(processFillRect)},
+          {std::string("gr3clear"), PushDrawableToZQueue(processGr3Clear)},
+          {std::string("gr3deletemesh"), PushDrawableToZQueue(processGr3DeleteMesh)},
+          {std::string("gr3drawimage"), PushDrawableToZQueue(processGr3DrawImage)},
+          {std::string("gr3drawmesh"), PushDrawableToZQueue(processGr3DrawMesh)},
+          {std::string("grid"), PushDrawableToZQueue(processGrid)},
+          {std::string("grid3d"), PushDrawableToZQueue(processGrid3d)},
+          {std::string("isosurface_render"), PushDrawableToZQueue(processIsosurfaceRender)},
+          {std::string("layout_grid"), PushDrawableToZQueue(processLayoutGrid)},
+          {std::string("layout_gridelement"), PushDrawableToZQueue(processLayoutGridElement)},
+          {std::string("nonuniform_polarcellarray"), PushDrawableToZQueue(processNonUniformPolarCellArray)},
+          {std::string("nonuniformcellarray"), PushDrawableToZQueue(processNonuniformcellarray)},
+          {std::string("panzoom"), PushDrawableToZQueue(processPanzoom)},
+          {std::string("pie_segment"), processPieSegment},
+          {std::string("polar_bar"), processPolarBar},
+          {std::string("polarcellarray"), PushDrawableToZQueue(processPolarCellArray)},
+          {std::string("polyline"), PushDrawableToZQueue(processPolyline)},
+          {std::string("polyline3d"), PushDrawableToZQueue(processPolyline3d)},
+          {std::string("polymarker"), PushDrawableToZQueue(processPolymarker)},
+          {std::string("polymarker3d"), PushDrawableToZQueue(processPolymarker3d)},
+          {std::string("series"), processSeries},
+          {std::string("text"), PushDrawableToZQueue(processText)},
+          {std::string("titles3d"), PushDrawableToZQueue(processTitles3d)},
       };
 
   /*! Modifier */
@@ -12673,7 +12396,9 @@ std::shared_ptr<GRM::Element> GRM::Render::createPieSegment(const double start_a
 }
 
 std::shared_ptr<GRM::Element> GRM::Render::createBar(const double x1, const double x2, const double y1, const double y2,
-                                                     const int edge_color_index, const int bar_color_index,
+                                                     const int bar_color_index, const int edge_color_index,
+                                                     const std::string bar_color_rgb, const std::string edge_color_rgb,
+                                                     const double linewidth, const std::string text,
                                                      const std::shared_ptr<GRM::Element> &extElement)
 {
   std::shared_ptr<GRM::Element> element = (extElement == nullptr) ? createElement("bar") : extElement;
@@ -12683,6 +12408,10 @@ std::shared_ptr<GRM::Element> GRM::Render::createBar(const double x1, const doub
   element->setAttribute("y2", y2);
   element->setAttribute("edge_color_index", edge_color_index);
   element->setAttribute("bar_color_index", bar_color_index);
+  if (!bar_color_rgb.empty()) element->setAttribute("bar_color_rgb", bar_color_rgb);
+  if (!edge_color_rgb.empty()) element->setAttribute("edge_color_rgb", edge_color_rgb);
+  if (linewidth != -1) element->setAttribute("linewidth", linewidth);
+  if (!text.empty()) element->setAttribute("text", text);
 
   return element;
 }
@@ -13436,6 +13165,29 @@ std::shared_ptr<GRM::Element> GRM::Render::createPanzoom(double x, double y, dou
   return element;
 }
 
+std::shared_ptr<GRM::Element> GRM::Render::createPolarBar(double count, int class_nr,
+                                                          const std::shared_ptr<GRM::Element> &extElement)
+{
+  std::shared_ptr<GRM::Element> element = (extElement == nullptr) ? createElement("polar_bar") : extElement;
+  element->setAttribute("count", count);
+  element->setAttribute("class_nr", class_nr);
+
+  return element;
+}
+
+std::shared_ptr<GRM::Element> GRM::Render::createErrorbar(double errorbar_x, double errorbar_ymin, double errorbar_ymax,
+                                                          int color_errorbar,
+                                                          const std::shared_ptr<GRM::Element> &extElement)
+{
+  std::shared_ptr<GRM::Element> element = (extElement == nullptr) ? createElement("errorbar") : extElement;
+  element->setAttribute("errorbar_x", errorbar_x);
+  element->setAttribute("errorbar_ymin", errorbar_ymin);
+  element->setAttribute("errorbar_ymax", errorbar_ymax);
+  element->setAttribute("color_errorbar", color_errorbar);
+
+  return element;
+}
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ modifier functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 
@@ -14177,6 +13929,16 @@ void GRM::Render::getAutoUpdate(bool *update)
 
 void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::string &attr, const std::string &value = "")
 {
+  std::vector<std::string> bar{
+      "bar_color_index", "bar_color_rgb", "edge_color_index", "edge_color_rgb", "text", "x1", "x2", "y1", "y2",
+  };
+  std::vector<std::string> errorbar{
+      "e_downwards", "e_upwards", "errorbar_x", "errorbar_ymax", "errorbar_ymin", "scap_xmax", "scap_xmin",
+  };
+  std::vector<std::string> polar_bar{
+      "bin_width",  "bin_widths", "bin_edges", "class_nr",  "count",
+      "draw_edges", "norm",       "phiflip",   "xcolormap", "ycolormap",
+  };
   std::vector<std::string> series_barplot{
       "bar_color",      "bar_width",      "c",       "clipxform",    "edge_color",  "ind_bar_color",
       "ind_edge_color", "ind_edge_width", "indices", "inner_series", "orientation", "rgb",
@@ -14284,6 +14046,9 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       "z",
   };
   static std::map<std::string, std::vector<std::string>> element_names{
+      {std::string("bar"), bar},
+      {std::string("errorbar"), errorbar},
+      {std::string("polar_bar"), polar_bar},
       {std::string("series_barplot"), series_barplot},
       {std::string("series_contour"), series_contour},
       {std::string("series_contourf"), series_contourf},
@@ -14539,6 +14304,14 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                       resetOldBoundingBoxes(element);
                       element->removeAttribute("_bbox_id");
                     }
+                  if (element->localName() == "polar_bar") element->setAttribute("_delete_children", 1);
+                  if (element->localName() == "series_polar_histogram" && (attr == "nbins" || attr == "bin_widths"))
+                    {
+                      for (const auto &child : element->children())
+                        {
+                          if (child->localName() == "polar_bar") child->setAttribute("_update_required", true);
+                        }
+                    }
                 }
             }
           else if (starts_with(element->localName(), "series"))
@@ -14602,33 +14375,28 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                   imshow_elem->setAttribute("_update_required", true);
                 }
 
-              // reset the bounding boxes for figure, plot, coordinate_system and series, so they get calculated again
+              // reset the bounding boxes for all series
               for (const auto &child : element->children()) // plot level
                 {
                   for (const auto &childchild : child->children())
                     {
-                      if (starts_with(childchild->localName(), "series_") ||
-                          childchild->localName() == "coordinate_system")
-                        resetOldBoundingBoxes(childchild);
+                      if (starts_with(childchild->localName(), "series_")) resetOldBoundingBoxes(childchild);
                     }
-                  if (child->localName() == "plot") // reset bounding box on plot
+                }
+
+              // reset the bounding boxes for elements in list
+              for (const std::string name : {"bar", "pie_segment", "colorbar", "polar_bar", "coordinate_system",
+                                             "axes_text_group", "plot", "errorbar"})
+                {
+                  for (const auto &elem : element->querySelectorsAll(name))
                     {
-                      resetOldBoundingBoxes(child);
-                      child->removeAttribute("_bbox_id");
+                      resetOldBoundingBoxes(elem);
+                      // plot gets calculated to quit so this special case is needed to get the right bboxes
+                      if (name == "plot") elem->removeAttribute("_bbox_id");
                     }
                 }
-              for (const auto &bar : element->querySelectorsAll("bar"))
-                {
-                  resetOldBoundingBoxes(bar);
-                }
-              for (const auto &pie_segment : element->querySelectorsAll("pie_segment"))
-                {
-                  resetOldBoundingBoxes(pie_segment);
-                }
-              for (const auto &colorbar : element->querySelectorsAll("colorbar"))
-                {
-                  resetOldBoundingBoxes(colorbar);
-                }
+
+              // reset the bounding boxes for figure
               resetOldBoundingBoxes(element);
               element->removeAttribute("_bbox_id");
             }
@@ -14640,17 +14408,15 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                 {
                   if (starts_with(child->localName(), "series_")) resetOldBoundingBoxes(child);
                 }
-              for (const auto &bar : element->querySelectorsAll("bar"))
+
+              // reset the bounding boxes for elements in list
+              for (const std::string name :
+                   {"bar", "pie_segment", "colorbar", "polar_bar", "axes_text_group", "errorbar"})
                 {
-                  resetOldBoundingBoxes(bar);
-                }
-              for (const auto &pie_segment : element->querySelectorsAll("pie_segment"))
-                {
-                  resetOldBoundingBoxes(pie_segment);
-                }
-              for (const auto &colorbar : element->querySelectorsAll("colorbar"))
-                {
-                  resetOldBoundingBoxes(colorbar);
+                  for (const auto &elem : element->querySelectorsAll(name))
+                    {
+                      resetOldBoundingBoxes(elem);
+                    }
                 }
             }
         }
