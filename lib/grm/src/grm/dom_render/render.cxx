@@ -7368,6 +7368,7 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
   if (kind == "polar_heatmap" || kind == "nonuniformpolar_heatmap")
     {
       r_min = static_cast<double>(subplotElement->getAttribute("r_min"));
+      r_min = 0;
       r_max = static_cast<double>(subplotElement->getAttribute("r_max"));
     }
   else
@@ -7420,7 +7421,9 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
         }
       else
         {
-          tick = autoTick(r_min, r_max);
+          tick = autoTickRingsPolar(r_max, rings, norm);
+          subplotElement->setAttribute("r_max", tick * rings);
+          subplotElement->setAttribute("rings", rings);
         }
     }
 
@@ -9052,7 +9055,9 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
             }
           if (i < rows)
             {
-              rho.push_back(y_min + y_vec[i] / (y_max - y_min));
+              //              rho.push_back(y_min + y_vec[i] / (y_max - y_min)); // not needed since the data is already
+              //              transformed
+              rho.push_back(y_vec[i] / y_max);
             }
         }
 
