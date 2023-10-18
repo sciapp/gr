@@ -734,8 +734,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniform_polarcellarray -->
-    <xs:element name="nonuniform_polarcellarray">
+    <!-- definition of nonuniformpolarcellarray -->
+    <xs:element name="nonuniformpolarcellarray">
         <xs:complexType>
             <xs:attributeGroup ref="cellarray"/>
             <xs:attributeGroup ref="move_xform_wc"/>
@@ -1036,7 +1036,7 @@
     <xs:element name="series_polar_heatmap">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="nonuniform_polarcellarray" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="nonuniformpolarcellarray" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polarcellarray" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="heatmap"/>

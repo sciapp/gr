@@ -13731,7 +13731,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               ++current_component_name;
             }
         }
-      if (str_equals_any(kind.c_str(), 5, "polar_histogram", "polar", "polar_heatmap", "nonuniform_heatmap",
+      if (str_equals_any(kind.c_str(), 5, "polar_histogram", "polar", "polar_heatmap", "nonuniformheatmap",
                          "nonuniformpolar_heatmap"))
         {
           if (kind == "polar_heatmap" || kind == "nonuniformpolar_heatmap")
