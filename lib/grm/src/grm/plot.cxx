@@ -1214,9 +1214,9 @@ void plot_process_window(grm_args_t *subplot_args)
   if (grm_args_values(subplot_args, "xlog", "i", &xlog)) group->setAttribute("xlog", xlog);
   if (grm_args_values(subplot_args, "ylog", "i", &ylog)) group->setAttribute("ylog", ylog);
   if (grm_args_values(subplot_args, "zlog", "i", &zlog)) group->setAttribute("zlog", zlog);
-  if (grm_args_values(subplot_args, "xflip", "i", &xflip)) group->setAttribute("xflip", xflip);
-  if (grm_args_values(subplot_args, "yflip", "i", &yflip)) group->setAttribute("yflip", yflip);
-  if (grm_args_values(subplot_args, "zflip", "i", &zflip)) group->setAttribute("zflip", zflip);
+  if (grm_args_values(subplot_args, "xflip", "i", &xflip)) group->setAttribute("x_flip", xflip);
+  if (grm_args_values(subplot_args, "yflip", "i", &yflip)) group->setAttribute("y_flip", yflip);
+  if (grm_args_values(subplot_args, "zflip", "i", &zflip)) group->setAttribute("z_flip", zflip);
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
@@ -1457,7 +1457,7 @@ err_t plot_line(grm_args_t *subplot_args)
 
       if (grm_args_values(*current_series, "spec", "s", &spec)) subGroup->setAttribute("spec", spec);
       if (grm_args_values(*current_series, "markertype", "i", &markertype))
-        subGroup->setAttribute("markertype", markertype);
+        subGroup->setAttribute("marker_type", markertype);
 
       global_root->setAttribute("_id", ++id);
       error = plot_draw_errorbars(*current_series, x_length);
@@ -1586,7 +1586,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
           subGroup->setAttribute("z", "z" + str);
         }
       if (grm_args_values(*current_series, "markertype", "i", &markertype))
-        subGroup->setAttribute("markertype", markertype);
+        subGroup->setAttribute("marker_type", markertype);
 
       if (grm_args_first_value(*current_series, "c", "D", &c, &c_length))
         {
@@ -1597,7 +1597,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
         }
       if (grm_args_values(*current_series, "c", "i", &c_index))
         {
-          subGroup->setAttribute("c_index", c_index);
+          subGroup->setAttribute("color_ind", c_index);
         }
 
       if (z != nullptr || c != nullptr)
@@ -1759,16 +1759,16 @@ err_t plot_hist(grm_args_t *subplot_args)
       auto context = global_render->getContext();
 
       std::vector<double> bar_color_rgb_vec(bar_color_rgb, bar_color_rgb + 3);
-      (*context)["bar_color_rgb" + str] = bar_color_rgb_vec;
-      subGroup->setAttribute("bar_color_rgb", "bar_color_rgb" + str);
-      subGroup->setAttribute("bar_color_index", bar_color_index);
+      (*context)["fill_color_rgb" + str] = bar_color_rgb_vec;
+      subGroup->setAttribute("fill_color_rgb", "fill_color_rgb" + str);
+      subGroup->setAttribute("fill_color_ind", bar_color_index);
 
       grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
       grm_args_values(*current_series, "edge_color", "i", &edge_color_index);
       std::vector<double> edge_color_rgb_vec(edge_color_rgb, edge_color_rgb + 3);
-      (*context)["edge_color_rgb" + str] = edge_color_rgb_vec;
-      subGroup->setAttribute("edge_color_rgb", "edge_color_rgb" + str);
-      subGroup->setAttribute("edge_color_index", edge_color_index);
+      (*context)["line_color_rgb" + str] = edge_color_rgb_vec;
+      subGroup->setAttribute("line_color_rgb", "line_color_rgb" + str);
+      subGroup->setAttribute("line_color_ind", edge_color_index);
 
       if (grm_args_first_value(*current_series, "bins", "D", &bins, &num_bins))
         {
@@ -1778,7 +1778,8 @@ err_t plot_hist(grm_args_t *subplot_args)
         }
       if (num_bins == 0)
         {
-          if (grm_args_values(*current_series, "nbins", "i", &num_bins)) subGroup->setAttribute("nbins", (int)num_bins);
+          if (grm_args_values(*current_series, "nbins", "i", &num_bins))
+            subGroup->setAttribute("num_bins", (int)num_bins);
         }
 
       if (grm_args_values(subplot_args, "orientation", "s", &orientation))
@@ -1869,12 +1870,12 @@ err_t plot_barplot(grm_args_t *subplot_args)
       if (grm_args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]))
         {
           std::vector<double> bar_color_rgb_vec(bar_color_rgb, bar_color_rgb + 3);
-          (*context)["bar_color_rgb" + id_str] = bar_color_rgb_vec;
-          subGroup->setAttribute("bar_color_rgb", "bar_color_rgb" + id_str);
+          (*context)["fill_color_rgb" + id_str] = bar_color_rgb_vec;
+          subGroup->setAttribute("fill_color_rgb", "fill_color_rgb" + id_str);
         }
       if (grm_args_values(subplot_args, "bar_color", "i", &bar_color))
         {
-          subGroup->setAttribute("bar_color", bar_color);
+          subGroup->setAttribute("fill_color_ind", bar_color);
         }
       if (grm_args_values(subplot_args, "bar_width", "d", &bar_width))
         {
@@ -1894,12 +1895,12 @@ err_t plot_barplot(grm_args_t *subplot_args)
                           &edge_color_rgb[2]))
         {
           std::vector<double> edge_color_rgb_vec(edge_color_rgb, edge_color_rgb + 3);
-          (*context)["edge_color_rgb" + id_str] = edge_color_rgb_vec;
-          subGroup->setAttribute("edge_color_rgb", "edge_color_rgb" + id_str);
+          (*context)["line_color_rgb" + id_str] = edge_color_rgb_vec;
+          subGroup->setAttribute("line_color_rgb", "line_color_rgb" + id_str);
         }
       if (grm_args_values(*current_series, "edge_color", "i", &edge_color))
         {
-          subGroup->setAttribute("edge_color", edge_color);
+          subGroup->setAttribute("line_color_ind", edge_color);
         }
       if (grm_args_values(*current_series, "edge_width", "d", &edge_width))
         {
@@ -1918,20 +1919,20 @@ err_t plot_barplot(grm_args_t *subplot_args)
       if (grm_args_first_value(*current_series, "ylabels", "S", &ylabels, &ylabels_length))
         {
           std::vector<std::string> ylabels_vec(ylabels, ylabels + ylabels_length);
-          (*context)["ylabels" + id_str] = ylabels_vec;
-          subGroup->setAttribute("ylabels", "ylabels" + id_str);
+          (*context)["y_labels" + id_str] = ylabels_vec;
+          subGroup->setAttribute("y_labels", "y_labels" + id_str);
         }
       if (grm_args_first_value(*current_series, "c", "I", &c, &c_length))
         {
           c_vec = std::vector<int>(c, c + c_length);
-          (*context)["c" + id_str] = c_vec;
-          subGroup->setAttribute("c", "c" + id_str);
+          (*context)["c_ind" + id_str] = c_vec;
+          subGroup->setAttribute("color_ind_values", "c_ind" + id_str);
         }
       if (grm_args_first_value(*current_series, "c", "D", &c_rgb, &c_rgb_length))
         {
           c_rgb_vec = std::vector<double>(c_rgb, c_rgb + c_rgb_length);
           (*context)["c_rgb" + id_str] = c_rgb_vec;
-          subGroup->setAttribute("c_rgb", "c_rgb" + id_str);
+          subGroup->setAttribute("color_rgb_values", "c_rgb" + id_str);
         }
 
       std::vector<double> y_vec;
@@ -2046,16 +2047,16 @@ err_t plot_barplot(grm_args_t *subplot_args)
             }
           if (inner_y_labels_exists)
             {
-              (*context)["ylabels" + id_str] = ylabels_vec;
-              subGroup->setAttribute("ylabels", "ylabels" + id_str);
+              (*context)["y_labels" + id_str] = ylabels_vec;
+              subGroup->setAttribute("y_labels", "y_labels" + id_str);
             }
           /* Replace the previously pushed c or c_rgb vector by one containing the data of the  inner_series if such
            * data exists */
           if (inner_c_exists)
             {
-              (*context)["c" + id_str] = c_vec;
-              subGroup->setAttribute("c", "c" + id_str);
-              subGroup->removeAttribute("c_rgb");
+              (*context)["c_ind" + id_str] = c_vec;
+              subGroup->setAttribute("color_ind_values", "c_ind" + id_str);
+              subGroup->removeAttribute("color_rgb_values");
             }
         }
       else
@@ -2231,7 +2232,7 @@ err_t plot_hexbin(grm_args_t *subplot_args)
       auto x_vec = std::vector<double>(x, x + x_length);
       auto y_vec = std::vector<double>(y, y + y_length);
       auto subGroup = global_render->createHexbin("x" + str, x_vec, "y" + str, y_vec);
-      if (grm_args_values(*current_series, "nbins", "i", &nbins)) subGroup->setAttribute("nbins", nbins);
+      if (grm_args_values(*current_series, "nbins", "i", &nbins)) subGroup->setAttribute("num_bins", nbins);
       group->append(subGroup);
 
       if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
@@ -2303,8 +2304,11 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
         {
           /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
           grm_args_values(*current_series, "z_dims", "ii", &rows, &cols);
-          subGroup->setAttribute("zdims_min", (int)rows);
-          subGroup->setAttribute("zdims_max", (int)cols);
+
+          auto zdims_vec = std::vector<int>{(int)rows, (int)cols};
+          auto zdims_key = "z_dims" + str;
+          (*context)[zdims_key] = zdims_vec;
+          subGroup->setAttribute("z_dims", zdims_key);
         }
       if (x == nullptr)
         {
@@ -2402,8 +2406,11 @@ err_t plot_heatmap(grm_args_t *subplot_args)
         {
           /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
           grm_args_values(*current_series, "z_dims", "ii", &rows, &cols);
-          subGroup->setAttribute("zdims_min", (int)rows);
-          subGroup->setAttribute("zdims_max", (int)cols);
+
+          auto zdims_vec = std::vector<int>{(int)rows, (int)cols};
+          auto zdims_key = "z_dims" + str;
+          (*context)[zdims_key] = zdims_vec;
+          subGroup->setAttribute("z_dims", zdims_key);
         }
       if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
         {
@@ -2457,8 +2464,8 @@ err_t plot_marginalheatmap(grm_args_t *subplot_args)
 
   if (grm_args_values(subplot_args, "marginalheatmap_kind", "s", &marginalheatmap_kind))
     subGroup->setAttribute("marginalheatmap_kind", marginalheatmap_kind);
-  if (grm_args_values(subplot_args, "xind", "i", &xind)) subGroup->setAttribute("xind", xind);
-  if (grm_args_values(subplot_args, "yind", "i", &yind)) subGroup->setAttribute("yind", yind);
+  if (grm_args_values(subplot_args, "xind", "i", &xind)) subGroup->setAttribute("x_ind", xind);
+  if (grm_args_values(subplot_args, "yind", "i", &yind)) subGroup->setAttribute("y_ind", yind);
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_first_value(*current_series, "x", "D", &x, &num_bins_x);
@@ -2577,8 +2584,15 @@ err_t plot_surface(grm_args_t *subplot_args)
 
       if (grm_args_values(*current_series, "z_dims", "ii", &y_length, &x_length))
         {
-          subGroup->setAttribute("zdims_min", (int)x_length);
-          subGroup->setAttribute("zdims_max", (int)y_length);
+          int id = static_cast<int>(global_root->getAttribute("_id"));
+          std::string str = std::to_string(id);
+          auto context = global_render->getContext();
+          global_root->setAttribute("_id", ++id);
+
+          auto zdims_vec = std::vector<int>{(int)x_length, (int)y_length};
+          auto zdims_key = "z_dims" + str;
+          (*context)[zdims_key] = zdims_vec;
+          subGroup->setAttribute("z_dims", zdims_key);
         }
       if (grm_args_values(*current_series, "xrange", "dd", &xmin, &xmax))
         {
@@ -2764,8 +2778,8 @@ err_t plot_imshow(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "grplot", "i", &grplot);
   if (grm_args_values(subplot_args, "clim", "dd", &c_min, &c_max))
     {
-      group->setAttribute("clim_min", c_min);
-      group->setAttribute("clim_max", c_max);
+      group->setAttribute("zlim_min", c_min);
+      group->setAttribute("zlim_max", c_max);
     }
   while (*current_series != nullptr)
     {
@@ -2783,10 +2797,10 @@ err_t plot_imshow(grm_args_t *subplot_args)
       std::vector<double> c_data_vec(c_data, c_data + c_data_length);
       std::vector<double> shape_vec(shape, shape + i);
 
-      (*context)["c" + str] = c_data_vec;
-      subGroup->setAttribute("c", "c" + str);
-      (*context)["c_dims" + str] = shape_vec;
-      subGroup->setAttribute("c_dims", "c_dims" + str);
+      (*context)["z" + str] = c_data_vec;
+      subGroup->setAttribute("z", "z" + str);
+      (*context)["z_dims" + str] = shape_vec;
+      subGroup->setAttribute("z_dims", "z_dims" + str);
 
       global_root->setAttribute("_id", id++);
       ++current_series;
@@ -2829,10 +2843,10 @@ err_t plot_isosurface(grm_args_t *subplot_args)
       std::vector<double> c_data_vec(orig_data, orig_data + data_length);
       std::vector<int> shape_vec(shape, shape + dims);
 
-      (*context)["c" + str] = c_data_vec;
-      subGroup->setAttribute("c", "c" + str);
-      (*context)["c_dims" + str] = shape_vec;
-      subGroup->setAttribute("c_dims", "c_dims" + str);
+      (*context)["z" + str] = c_data_vec;
+      subGroup->setAttribute("z", "z" + str);
+      (*context)["z_dims" + str] = shape_vec;
+      subGroup->setAttribute("z_dims", "z_dims" + str);
 
       if (grm_args_values(*current_series, "isovalue", "d", &isovalue)) subGroup->setAttribute("isovalue", isovalue);
       /*
@@ -2842,8 +2856,8 @@ err_t plot_isosurface(grm_args_t *subplot_args)
       if (grm_args_first_value(*current_series, "foreground_color", "D", &temp_colors, &i))
         {
           std::vector<double> foreground_vec(temp_colors, temp_colors + i);
-          (*context)["foreground_color" + str] = foreground_vec;
-          subGroup->setAttribute("foreground_color", "foreground_color" + str);
+          (*context)["c_rgb" + str] = foreground_vec;
+          subGroup->setAttribute("color_rgb_values", "c_rgb" + str);
         }
 
       global_root->setAttribute("_id", ++id);
@@ -2856,7 +2870,6 @@ err_t plot_isosurface(grm_args_t *subplot_args)
 err_t plot_volume(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
-  double dlim[2] = {INFINITY, -INFINITY};
   err_t error;
 
   std::shared_ptr<GRM::Element> group = (currentDomElement) ? currentDomElement : active_figure->lastChildElement();
@@ -2884,10 +2897,10 @@ err_t plot_volume(grm_args_t *subplot_args)
       std::vector<double> c_data_vec(c, c + data_length);
       std::vector<int> shape_vec(shape, shape + dims);
 
-      (*context)["c" + str] = c_data_vec;
-      subGroup->setAttribute("c", "c" + str);
-      (*context)["c_dims" + str] = shape_vec;
-      subGroup->setAttribute("c_dims", "c_dims" + str);
+      (*context)["z" + str] = c_data_vec;
+      subGroup->setAttribute("z", "z" + str);
+      (*context)["z_dims" + str] = shape_vec;
+      subGroup->setAttribute("z_dims", "z_dims" + str);
 
       if (!grm_args_values(*current_series, "algorithm", "i", &algorithm))
         {
@@ -2924,11 +2937,6 @@ err_t plot_volume(grm_args_t *subplot_args)
       global_root->setAttribute("_id", ++id);
       ++current_series;
     }
-
-  logger((stderr, "dmin, dmax: (%lf, %lf)\n", dlim[0], dlim[1]));
-  grm_args_push(subplot_args, "clim", "dd", dlim[0], dlim[1]);
-  group->setAttribute("clim_min", dlim[0]);
-  group->setAttribute("clim_max", dlim[1]);
 
   error = plot_draw_axes(subplot_args, 2);
   return_if_error;
@@ -3068,13 +3076,13 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   /* edge_color */
   if (grm_args_values(*series, "edge_color", "i", &edge_color))
     {
-      series_group->setAttribute("edge_color", edge_color);
+      series_group->setAttribute("line_color_ind", edge_color);
     }
 
   /* face_color */
   if (grm_args_values(*series, "face_color", "i", &face_color))
     {
-      series_group->setAttribute("face_color", face_color);
+      series_group->setAttribute("color_ind", face_color);
     }
 
   /* face_alpha */
@@ -3085,7 +3093,7 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
   if (grm_args_values(subplot_args, "phiflip", "i", &phiflip))
     {
-      plot_group->setAttribute("phiflip", phiflip);
+      plot_group->setAttribute("phi_flip", phiflip);
     }
 
   if (grm_args_values(*series, "draw_edges", "i", &draw_edges))
@@ -3106,11 +3114,11 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
 
   if (grm_args_values(*series, "xcolormap", "i", &xcolormap))
     {
-      series_group->setAttribute("xcolormap", xcolormap);
+      series_group->setAttribute("x_colormap", xcolormap);
     }
   if (grm_args_values(*series, "ycolormap", "i", &ycolormap))
     {
-      series_group->setAttribute("ycolormap", ycolormap);
+      series_group->setAttribute("y_colormap", ycolormap);
     }
   global_root->setAttribute("_id", id++);
 
@@ -3150,14 +3158,14 @@ err_t plot_pie(grm_args_t *subplot_args)
   if (grm_args_first_value(series, "c", "I", &color_indices, &color_array_length))
     {
       std::vector<double> color_indec_vec(color_indices, color_indices + color_array_length);
-      (*context)["color_indices" + str] = color_indec_vec;
-      subGroup->setAttribute("color_indices", "color_indices" + str);
+      (*context)["c_ind" + str] = color_indec_vec;
+      subGroup->setAttribute("color_ind_values", "c_ind" + str);
     }
   else if (grm_args_first_value(series, "c", "D", &color_rgb_values, &color_array_length))
     {
       std::vector<double> color_rgb_vec(color_rgb_values, color_rgb_values + color_array_length);
-      (*context)["color_rgb_values" + str] = color_rgb_vec;
-      subGroup->setAttribute("color_rgb_values", "color_rgb_values" + str);
+      (*context)["c_rgb" + str] = color_rgb_vec;
+      subGroup->setAttribute("color_rgb_values", "c_rgb" + str);
     }
   if (grm_args_values(subplot_args, "title", "s", &title))
     {
@@ -3314,15 +3322,15 @@ err_t plot_shade(grm_args_t *subplot_args)
 
   if (grm_args_values(subplot_args, "xform", "i", &xform))
     {
-      subGroup->setAttribute("xform", xform);
+      subGroup->setAttribute("transformation", xform);
     }
   if (grm_args_values(subplot_args, "xbins", "i", &xbins))
     {
-      subGroup->setAttribute("xbins", xbins);
+      subGroup->setAttribute("x_bins", xbins);
     }
   if (grm_args_values(subplot_args, "ybins", "i", &ybins))
     {
-      subGroup->setAttribute("ybins", ybins);
+      subGroup->setAttribute("y_bins", ybins);
     }
 
   if (grm_args_values(*current_shader, "xrange", "dd", &x_min, &x_max))
@@ -3528,7 +3536,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           for (const auto &axes : group->getElementsByTagName("axes"))
             {
               if (static_cast<std::string>(axes->getAttribute("x_org_pos")) == "low")
-                axes->setAttribute("xlabel", x_label);
+                axes->setAttribute("x_label", x_label);
             }
         }
       if (grm_args_values(args, "ylabel", "s", &y_label))
@@ -3536,7 +3544,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           for (const auto &axes : group->getElementsByTagName("axes"))
             {
               if (static_cast<std::string>(axes->getAttribute("x_org_pos")) == "low")
-                axes->setAttribute("ylabel", y_label);
+                axes->setAttribute("y_label", y_label);
             }
         }
     }
@@ -3675,15 +3683,15 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
   auto colorbar = global_render->createColorbar(colors);
   group->append(colorbar);
 
-  colorbar->setAttribute("xflip", 0);
-  colorbar->setAttribute("yflip", 0);
+  colorbar->setAttribute("x_flip", 0);
+  colorbar->setAttribute("y_flip", 0);
   if (grm_args_values(subplot_args, "xflip", "i", &flip) && flip)
     {
-      colorbar->setAttribute("xflip", flip);
+      colorbar->setAttribute("x_flip", flip);
     }
   else if (grm_args_values(subplot_args, "yflip", "i", &flip) && flip)
     {
-      colorbar->setAttribute("yflip", flip);
+      colorbar->setAttribute("y_flip", flip);
     }
 
   colorbar->setAttribute("offset", off + 0.02);
@@ -4067,7 +4075,7 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
       is_bin_counts = 1;
       num_bins = length;
       grm_args_push(*series, "nbins", "i", num_bins);
-      series_group->setAttribute("nbins", static_cast<int>(num_bins));
+      series_group->setAttribute("num_bins", static_cast<int>(num_bins));
     }
 
   if (grm_args_first_value(*series, "philim", "D", &philim, &dummy))
@@ -4082,7 +4090,7 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
 
       if (grm_args_values(*series, "nbins", "i", &num_bins))
         {
-          series_group->setAttribute("nbins", static_cast<int>(num_bins));
+          series_group->setAttribute("num_bins", static_cast<int>(num_bins));
         }
     }
   /* with bin_edges */
@@ -4097,7 +4105,7 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
     {
       norm = "count";
     }
-  series_group->setAttribute("normalization", norm);
+  series_group->setAttribute("norm", norm);
 
   if (grm_args_values(*series, "bin_width", "d", &bin_width))
     {
@@ -4590,11 +4598,11 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
 
   if (grm_args_values(subplot_args, "ylabel", "s", &ylabel))
     {
-      group->setAttribute("ylabel_margin", 1);
+      group->setAttribute("y_label_margin", 1);
     }
   if (grm_args_values(subplot_args, "xlabel", "s", &xlabel))
     {
-      group->setAttribute("xlabel_margin", 1);
+      group->setAttribute("x_label_margin", 1);
     }
   if (grm_args_values(subplot_args, "title", "s", &title))
     {
@@ -4877,7 +4885,7 @@ int grm_plot(const grm_args_t *args)
                     {
                       auto group = global_render->createElement("plot");
                       group->setAttribute("plot_id", "plot" + std::to_string(plot_id));
-                      group->setAttribute("plotGroup", true);
+                      group->setAttribute("plot_group", true);
                       active_figure->append(group);
                       currentDomElement = group;
                     }
@@ -5171,7 +5179,7 @@ std::shared_ptr<GRM::Element> get_subplot_from_ndc_point_using_dom_helper(std::s
                                                                           double x, double y)
 {
   bool elementIsSubplotGroup =
-      (element->hasAttribute("plotGroup") && static_cast<int>(element->getAttribute("plotGroup")));
+      (element->hasAttribute("plot_group") && static_cast<int>(element->getAttribute("plot_group")));
 
   if (element->localName() == "layout_gridelement" || elementIsSubplotGroup)
     {
@@ -5234,7 +5242,7 @@ std::shared_ptr<GRM::Element> get_subplot_from_ndc_points_using_dom(unsigned int
 void grm_set_attribute_on_all_subplots_helper(std::shared_ptr<GRM::Element> element, std::string attribute, int value)
 {
   bool elementIsSubplotGroup =
-      (element->hasAttribute("plotGroup") && static_cast<int>(element->getAttribute("plotGroup")));
+      (element->hasAttribute("plot_group") && static_cast<int>(element->getAttribute("plot_group")));
 
   if (element->localName() == "layout_gridelement" || elementIsSubplotGroup)
     {

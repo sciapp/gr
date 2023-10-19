@@ -386,8 +386,8 @@ int grm_input(const grm_args_t *input_args)
   auto marginalheatmap = grm_get_document_root()->querySelectorsAll("series_marginalheatmap");
   if (!marginalheatmap.empty())
     {
-      if (marginalheatmap[0]->hasAttribute("xind")) marginalheatmap[0]->setAttribute("xind", -1);
-      if (marginalheatmap[0]->hasAttribute("yind")) marginalheatmap[0]->setAttribute("yind", -1);
+      if (marginalheatmap[0]->hasAttribute("x_ind")) marginalheatmap[0]->setAttribute("x_ind", -1);
+      if (marginalheatmap[0]->hasAttribute("y_ind")) marginalheatmap[0]->setAttribute("y_ind", -1);
     }
 
   if (grm_args_values(input_args, "x", "i", &x) && grm_args_values(input_args, "y", "i", &y))
@@ -498,10 +498,10 @@ int grm_input(const grm_args_t *input_args)
                   yind = (int)yind_d;
                 }
 
-              auto old_xind = static_cast<int>(current_series->parentElement()->getAttribute("xind"));
-              auto old_yind = static_cast<int>(current_series->parentElement()->getAttribute("yind"));
-              current_series->parentElement()->setAttribute("xind", xind);
-              current_series->parentElement()->setAttribute("yind", yind);
+              auto old_xind = static_cast<int>(current_series->parentElement()->getAttribute("x_ind"));
+              auto old_yind = static_cast<int>(current_series->parentElement()->getAttribute("y_ind"));
+              current_series->parentElement()->setAttribute("x_ind", xind);
+              current_series->parentElement()->setAttribute("y_ind", yind);
               if (static_cast<std::string>(current_series->parentElement()->getAttribute("marginalheatmap_kind")) ==
                       "line" &&
                   ((old_xind == -1 || old_yind == -1) && xind != -1 && yind != -1))
@@ -533,14 +533,14 @@ int grm_input(const grm_args_t *input_args)
                                   break;
                                 }
 
-                              int fillColorInd = static_cast<int>(innerFillGroup->getAttribute("fillcolorind"));
+                              int fillColorInd = static_cast<int>(innerFillGroup->getAttribute("fill_color_ind"));
                               if (xind != -1)
                                 {
-                                  innerFillGroup->children()[xind]->removeAttribute("fillcolorind");
+                                  innerFillGroup->children()[xind]->removeAttribute("fill_color_ind");
                                 }
                               if (yind != -1)
                                 {
-                                  innerFillGroup->children()[yind]->removeAttribute("fillcolorind");
+                                  innerFillGroup->children()[yind]->removeAttribute("fill_color_ind");
                                 }
                             }
                         }
@@ -999,7 +999,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
   std::vector<std::shared_ptr<GRM::Element>> label_vec;
   for (const auto &child : axes_vec)
     {
-      if (child->hasAttribute("xlabel") && child->hasAttribute("ylabel"))
+      if (child->hasAttribute("x_label") && child->hasAttribute("y_label"))
         {
           label_vec.push_back(child);
           break;
@@ -1013,22 +1013,22 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
     }
   else
     {
-      if (!label_vec[0]->hasAttribute("xlabel"))
+      if (!label_vec[0]->hasAttribute("x_label"))
         {
           info->xlabel = (char *)"x";
         }
       else
         {
-          static std::string xlabel = static_cast<std::string>(label_vec[0]->getAttribute("xlabel"));
+          static std::string xlabel = static_cast<std::string>(label_vec[0]->getAttribute("x_label"));
           info->xlabel = (char *)xlabel.c_str();
         }
-      if (!label_vec[0]->hasAttribute("ylabel"))
+      if (!label_vec[0]->hasAttribute("y_label"))
         {
           info->ylabel = (char *)"y";
         }
       else
         {
-          static std::string ylabel = static_cast<std::string>(label_vec[0]->getAttribute("ylabel"));
+          static std::string ylabel = static_cast<std::string>(label_vec[0]->getAttribute("y_label"));
           info->ylabel = (char *)ylabel.c_str();
         }
     }
@@ -1308,22 +1308,22 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                 }
               else
                 {
-                  if (!label_vec[0]->hasAttribute("xlabel"))
+                  if (!label_vec[0]->hasAttribute("x_label"))
                     {
                       info->xlabel = (char *)"x";
                     }
                   else
                     {
-                      static std::string xlabel = static_cast<std::string>(label_vec[0]->getAttribute("xlabel"));
+                      static std::string xlabel = static_cast<std::string>(label_vec[0]->getAttribute("x_label"));
                       info->xlabel = (char *)xlabel.c_str();
                     }
-                  if (!label_vec[0]->hasAttribute("ylabel"))
+                  if (!label_vec[0]->hasAttribute("y_label"))
                     {
                       info->ylabel = (char *)"y";
                     }
                   else
                     {
-                      static std::string ylabel = static_cast<std::string>(label_vec[0]->getAttribute("ylabel"));
+                      static std::string ylabel = static_cast<std::string>(label_vec[0]->getAttribute("y_label"));
                       info->ylabel = (char *)ylabel.c_str();
                     }
                 }

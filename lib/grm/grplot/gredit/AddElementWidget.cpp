@@ -2,6 +2,7 @@
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QCheckBox>
+#include <QScrollArea>
 #include "AddElementWidget.h"
 #include "grm/dom_render/graphics_tree/util.hxx"
 #include "../util.hxx"
@@ -47,6 +48,8 @@ AddElementWidget::AddElementWidget(GRPlotWidget *widget, QWidget *parent) : QWid
   addElementLayout->addWidget(selectParentComboBox, 1, 1);
   addElementGroup->setLayout(addElementLayout);
 
+  selectParentComboBox->setVisible(false);
+
   addAttributesGroup = new QGroupBox(tr("Add Attributes"));
 
   QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal);
@@ -90,6 +93,7 @@ void AddElementWidget::elementSelected(int i)
       selectParentComboBox->clear();
       clearLayout(addAttributesGroup->layout());
       delete addAttributesGroup->layout();
+      selectParentComboBox->setVisible(false);
 
       auto global_root = grm_get_document_root();
       auto selections = schema_tree->querySelectorsAll("[ref=" + selected_element_name + "]");
@@ -121,6 +125,7 @@ void AddElementWidget::elementSelected(int i)
                   if (max_occurs == "unbounded" || occurs < std::stoi(max_occurs))
                     {
                       selectParentComboBox->addItem(tr(parent_name.c_str()));
+                      selectParentComboBox->setVisible(true);
                       parent_vec.push_back(bbox);
                     }
                 }
@@ -255,7 +260,21 @@ void AddElementWidget::parentSelected(int i)
             }
         }
 
-      if (!addAttributesGroup->layout()) addAttributesGroup->setLayout(addAttributesLayout);
+      if (!addAttributesGroup->layout())
+        {
+          auto scrollAreaContent = new QWidget;
+          scrollAreaContent->setLayout(addAttributesLayout);
+          auto scrollArea = new QScrollArea;
+          scrollArea = new QScrollArea;
+          scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+          scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+          scrollArea->setWidgetResizable(true);
+          scrollArea->setWidget(scrollAreaContent);
+
+          auto groupBoxLayout = new QVBoxLayout;
+          groupBoxLayout->addWidget(scrollArea);
+          addAttributesGroup->setLayout(groupBoxLayout);
+        }
       grplot_widget->redraw();
     }
 }

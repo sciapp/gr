@@ -208,6 +208,7 @@ private:
   void closeEvent(QCloseEvent *event) override;
   void size_callback(const grm_event_t *);
   void cmd_callback(const grm_request_event_t *);
+  void AttributeEditEvent();
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

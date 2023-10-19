@@ -230,8 +230,8 @@ public:
                                            const std::shared_ptr<Context> &extContext = nullptr,
                                            const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
-  std::shared_ptr<Element> createDrawArc(double xmin, double xmax, double ymin, double ymax, double a1, double a2,
-                                         const std::shared_ptr<GRM::Element> &extElement = nullptr);
+  std::shared_ptr<Element> createDrawArc(double xmin, double xmax, double ymin, double ymax, double start_angle,
+                                         double end_angle, const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
   std::shared_ptr<Element> createFillArc(double xmin, double xmax, double ymin, double ymax, double a1, double a2,
                                          int fillintstyle = 0, int fillstyle = 0, int fillcolorind = -1,
@@ -290,14 +290,6 @@ public:
                                               const std::shared_ptr<Context> &extContext = nullptr,
                                               const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
-  std::shared_ptr<Element>
-  createGR3DrawMesh(int mesh, int n, const std::string &positions_key, std::optional<std::vector<double>> positions,
-                    const std::string &directions_key, std::optional<std::vector<double>> directions,
-                    const std::string &ups_key, std::optional<std::vector<double>> ups, const std::string &colors_key,
-                    std::optional<std::vector<double>> colors, const std::string &scales_key,
-                    std::optional<std::vector<double>> scales, const std::shared_ptr<Context> &extContext = nullptr,
-                    const std::shared_ptr<GRM::Element> &extElement = nullptr);
-
   std::shared_ptr<Element> createDrawGraphics(const std::string &data_key, std::optional<std::vector<int>> data,
                                               const std::shared_ptr<Context> &extContext = nullptr,
                                               const std::shared_ptr<GRM::Element> &extElement = nullptr);
@@ -307,12 +299,9 @@ public:
                                             const std::string &pz_key, std::optional<std::vector<double>> pz,
                                             const std::shared_ptr<Context> &extContext = nullptr);
 
-  std::shared_ptr<Element> createTitles3d(const std::string &x, const std::string &y, const std::string &z,
+  std::shared_ptr<Element> createTitles3d(const std::string &xlabel, const std::string &ylabel,
+                                          const std::string &zlabel,
                                           const std::shared_ptr<GRM::Element> &extElement = nullptr);
-
-  std::shared_ptr<Element> createGR3DrawImage(double xmin, double xmax, double ymin, double ymax, int width, int height,
-                                              int drawable_type,
-                                              const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
   std::shared_ptr<Element> createLayoutGrid(const grm::Grid &grid);
 
@@ -385,8 +374,6 @@ public:
 
   void setLineColorInd(const std::shared_ptr<Element> &element, int color);
 
-  void setTextFontPrec(const std::shared_ptr<Element> &element, int font, int prec);
-
   void setCharUp(const std::shared_ptr<Element> &element, double ux, double uy);
 
   void setTextAlign(const std::shared_ptr<Element> &element, int horizontal, int vertical);
@@ -414,12 +401,6 @@ public:
   void setSpace(const std::shared_ptr<Element> &element, double zmin, double zmax, int rotation, int tilt);
 
   void setSelntran(const std::shared_ptr<Element> &element, int transform);
-
-  void setGR3BackgroundColor(const std::shared_ptr<Element> &element, double red, double green, double blue,
-                             double alpha);
-
-  void setGR3CameraLookAt(const std::shared_ptr<Element> &element, double camera_x, double camera_y, double camera_z,
-                          double center_x, double center_y, double center_z, double up_x, double up_y, double up_z);
 
   void setTextColorInd(const std::shared_ptr<Element> &element, int index);
 

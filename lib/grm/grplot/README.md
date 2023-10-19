@@ -117,7 +117,7 @@ A plot type that expect the same data shape as other plot types can be converted
 
 ## Editor
 
-The editor can be enabled by setting the environment variable `GRPLOT_ENABLE_EDITOR` to the value of 1. After that the editor can be activated and deactivated via the interactive menubar. The editor allows to modify the displayed plot in parts.
+The editor can be enabled by setting the environment variable `GRDISPLAY` to the value of `edit`. After that the editor can be activated and deactivated via the interactive menubar. The editor allows to modify the displayed plot in parts.
 
 ## Advanced information for each plot type
 
