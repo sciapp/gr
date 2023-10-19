@@ -8938,7 +8938,6 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
 
   is_uniform_heatmap = is_equidistant_array(cols, x_vec.data()) && is_equidistant_array(rows, y_vec.data());
   if (kind == "nonuniformpolar_heatmap") is_uniform_heatmap = false;
-  if (y_vec[0] > 0.0) is_uniform_heatmap = 0; /* when y range min > 0 for example */
 
   if (!is_uniform_heatmap && (x_vec.empty() || y_vec.empty()))
     throw NotFoundError("Polar-heatmap series is missing x- or y-data or the data has to be uniform.\n");
@@ -8963,6 +8962,7 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
       y_min = y_vec[0];
       y_max = y_vec[rows - 1];
     }
+  if (y_min > 0.0) is_uniform_heatmap = 0; /* when y range min > 0 for example */
 
   z_min = static_cast<double>(element->getAttribute("z_range_min"));
   z_max = static_cast<double>(element->getAttribute("z_range_max"));
