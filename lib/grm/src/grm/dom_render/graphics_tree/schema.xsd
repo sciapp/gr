@@ -212,8 +212,8 @@
                 <xs:element ref="series_imshow" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_isosurface" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_line" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="series_nonuniformheatmap" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="series_nonuniformpolar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_nonuniform_heatmap" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_nonuniform_polar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_pie" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_plot3" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_polar" minOccurs="0" maxOccurs="unbounded"/>
@@ -706,8 +706,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniformcellarray -->
-    <xs:element name="nonuniformcellarray">
+    <!-- definition of nonuniform_cellarray -->
+    <xs:element name="nonuniform_cellarray">
         <xs:complexType>
             <xs:attributeGroup ref="cellarray"/>
             <xs:attributeGroup ref="move_xform_wc"/>
@@ -718,8 +718,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of polarcellarray -->
-    <xs:element name="polarcellarray">
+    <!-- definition of polar_cellarray -->
+    <xs:element name="polar_cellarray">
         <xs:complexType>
             <xs:attributeGroup ref="cellarray"/>
             <xs:attributeGroup ref="move_xform_wc"/>
@@ -734,8 +734,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniformpolarcellarray -->
-    <xs:element name="nonuniformpolarcellarray">
+    <!-- definition of nonuniform_polar_cellarray -->
+    <xs:element name="nonuniform_polar_cellarray">
         <xs:complexType>
             <xs:attributeGroup ref="cellarray"/>
             <xs:attributeGroup ref="move_xform_wc"/>
@@ -859,7 +859,7 @@
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="draw_image" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="nonuniformcellarray" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="nonuniform_cellarray" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="heatmap"/>
             <xs:attributeGroup ref="move_xform_wc"/>
@@ -962,8 +962,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniformheatmap -->
-    <xs:element name="series_nonuniformheatmap">
+    <!-- definition of nonuniform_heatmap -->
+    <xs:element name="series_nonuniform_heatmap">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="series_heatmap" minOccurs="0" maxOccurs="unbounded"/>
@@ -972,8 +972,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniformpolar_heatmap -->
-    <xs:element name="series_nonuniformpolar_heatmap">
+    <!-- definition of nonuniform_polar_heatmap -->
+    <xs:element name="series_nonuniform_polar_heatmap">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="series_polar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
@@ -1036,8 +1036,8 @@
     <xs:element name="series_polar_heatmap">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="nonuniformpolarcellarray" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="polarcellarray" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="nonuniform_polar_cellarray" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polar_cellarray" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="heatmap"/>
             <xs:attributeGroup ref="move_xform_wc"/>

@@ -2426,6 +2426,7 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
   unsigned int i, cols, rows, z_length;
   double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max;
   err_t error = ERROR_NONE;
+  char *kind;
 
   std::shared_ptr<GRM::Element> group =
       (current_central_region_element) ? current_central_region_element : getCentralRegion();
@@ -2535,6 +2536,11 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "z_log", "i", &z_log);
+
+  if (strcmp(kind, "nonuniformheatmap") == 0)
+    group->setAttribute(
+        "kind",
+        "nonuniform_heatmap"); // temporary workaround for name changes affecting gr-test (gr-test update needed)
   while (*current_series != nullptr)
     {
       x = y = nullptr;

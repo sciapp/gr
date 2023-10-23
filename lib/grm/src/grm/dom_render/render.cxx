@@ -98,8 +98,8 @@ static std::set<std::string> parent_types = {
     "series_imshow",
     "series_isosurface",
     "series_line",
-    "series_nonuniformheatmap",
-    "series_nonuniformpolar_heatmap",
+    "series_nonuniform_heatmap",
+    "series_nonuniform_polar_heatmap",
     "series_pie",
     "series_plot3",
     "series_polar",
@@ -130,7 +130,7 @@ static std::set<std::string> drawable_types = {
     "fill_rect",     "grid",
     "grid_3d",       "isosurface_render",
     "layout_grid",   "layout_grid_element",
-    "legend",        "nonuniformcellarray",
+    "legend",        "nonuniform_cellarray",
     "panzoom",       "polyline",
     "polyline_3d",   "polymarker",
     "polymarker_3d", "text",
@@ -238,10 +238,10 @@ static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},           {"hexbin",
                                            {"scatter3", "xyzc"},      {"quiver", "xyuv"},
                                            {"heatmap", "xyzc"},       {"hist", "x"},
                                            {"barplot", "y"},          {"isosurface", "z"},
-                                           {"imshow", "z"},           {"nonuniformheatmap", "xyzc"},
+                                           {"imshow", "z"},           {"nonuniform_heatmap", "xyzc"},
                                            {"polar_histogram", "x"},  {"pie", "x"},
                                            {"volume", "z"},           {"marginal_heatmap", "xyzc"},
-                                           {"polar_heatmap", "xyzc"}, {"nonuniformpolar_heatmap", "xyzc"}};
+                                           {"polar_heatmap", "xyzc"}, {"nonuniform_polar_heatmap", "xyzc"}};
 
 static string_map_t *fmt_map = string_map_new_with_data(array_size(kind_to_fmt), kind_to_fmt);
 
@@ -2496,8 +2496,8 @@ static void getMajorCount(const std::shared_ptr<GRM::Element> &element, const st
     }
   else
     {
-      if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurface", "polar_heatmap",
-                         "nonuniformpolar_heatmap", "volume"))
+      if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurface",
+                         "polar_heatmap", "nonuniform_polar_heatmap", "volume"))
         {
           major_count = 2;
         }
@@ -4008,7 +4008,7 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
   gr_inqscale(&scale);
 
   if (kind != "pie" && kind != "polar" && kind != "polar_histogram" && kind != "polar_heatmap" &&
-      kind != "nonuniformpolar_heatmap")
+      kind != "nonuniform_polar_heatmap")
     {
       scale |= static_cast<int>(element->getAttribute("x_log")) ? GR_OPTION_X_LOG : 0;
       scale |= static_cast<int>(element->getAttribute("y_log")) ? GR_OPTION_Y_LOG : 0;
@@ -7365,7 +7365,7 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
 
   kind = static_cast<std::string>(subplotElement->getAttribute("kind"));
 
-  if (kind == "polar_heatmap" || kind == "nonuniformpolar_heatmap")
+  if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap")
     {
       r_min = static_cast<double>(subplotElement->getAttribute("r_min"));
       r_min = 0;
@@ -8937,7 +8937,7 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
     }
 
   is_uniform_heatmap = is_equidistant_array(cols, x_vec.data()) && is_equidistant_array(rows, y_vec.data());
-  if (kind == "nonuniformpolar_heatmap") is_uniform_heatmap = false;
+  if (kind == "nonuniform_polar_heatmap") is_uniform_heatmap = false;
 
   if (!is_uniform_heatmap && (x_vec.empty() || y_vec.empty()))
     throw NotFoundError("Polar-heatmap series is missing x- or y-data or the data has to be uniform.\n");
@@ -13736,10 +13736,10 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               ++current_component_name;
             }
         }
-      if (str_equals_any(kind.c_str(), 5, "polar_histogram", "polar", "polar_heatmap", "nonuniformheatmap",
-                         "nonuniformpolar_heatmap"))
+      if (str_equals_any(kind.c_str(), 5, "polar_histogram", "polar", "polar_heatmap", "nonuniform_heatmap",
+                         "nonuniform_polar_heatmap"))
         {
-          if (kind == "polar_heatmap" || kind == "nonuniformpolar_heatmap")
+          if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap")
             {
               auto ymax = static_cast<double>(element->getAttribute("_ylim_max"));
               auto ymin = static_cast<double>(element->getAttribute("_ylim_min"));
@@ -14767,12 +14767,12 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("isosurface_render"), PushDrawableToZQueue(processIsosurfaceRender)},
           {std::string("layout_grid"), PushDrawableToZQueue(processLayoutGrid)},
           {std::string("marginal_heatmap_plot"), processMarginalHeatmapPlot},
-          {std::string("nonuniform_polarcellarray"), PushDrawableToZQueue(processNonUniformPolarCellArray)},
-          {std::string("nonuniformcellarray"), PushDrawableToZQueue(processNonuniformcellarray)},
+          {std::string("nonuniform_polar_cellarray"), PushDrawableToZQueue(processNonUniformPolarCellArray)},
+          {std::string("nonuniform_cellarray"), PushDrawableToZQueue(processNonuniformcellarray)},
           {std::string("panzoom"), PushDrawableToZQueue(processPanzoom)},
           {std::string("pie_segment"), processPieSegment},
           {std::string("polar_bar"), processPolarBar},
-          {std::string("polarcellarray"), PushDrawableToZQueue(processPolarCellArray)},
+          {std::string("polar_cellarray"), PushDrawableToZQueue(processPolarCellArray)},
           {std::string("polyline"), PushDrawableToZQueue(processPolyline)},
           {std::string("polyline_3d"), PushDrawableToZQueue(processPolyline3d)},
           {std::string("polymarker"), PushDrawableToZQueue(processPolymarker)},
@@ -14850,7 +14850,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           ((static_cast<int>(global_root->getAttribute("_modified")) &&
             (str_equals_any(element->localName(), "axes_3d", "cellarray", "colorbar", "draw_arc", "draw_image",
                             "draw_rect", "fill_arc", "fill_area", "fill_rect", "grid", "grid_3d", "legend",
-                            "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
+                            "nonuniform_polar_cellarray", "nonuniform_cellarray", "polar_cellarray", "polyline",
                             "polyline_3d", "polymarker", "polymarker_3d", "series_contour", "series_contourf", "text",
                             "titles_3d", "coordinate_system", "series_hexbin", "series_isosurface", "series_quiver",
                             "series_shade", "series_surface", "series_tricontour", "series_trisurface",
@@ -16589,7 +16589,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createPolarCellArray(
    */
 
   std::shared_ptr<GRM::Context> use_context = (ext_context == nullptr) ? context : ext_context;
-  std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("polarcellarray") : ext_element;
+  std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("polar_cellarray") : ext_element;
   element->setAttribute("x_org", x_org);
   element->setAttribute("y_org", y_org);
   element->setAttribute("phi_min", phimin);
@@ -16681,7 +16681,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createNonUniformPolarCellArray(
 
   std::shared_ptr<GRM::Context> use_context = (ext_context == nullptr) ? context : ext_context;
   std::shared_ptr<GRM::Element> element =
-      (ext_element == nullptr) ? createElement("nonuniform_polarcellarray") : ext_element;
+      (ext_element == nullptr) ? createElement("nonuniform_polar_cellarray") : ext_element;
   element->setAttribute("x_org", x_org);
   element->setAttribute("y_org", y_org);
   element->setAttribute("r", r_key);
@@ -16718,7 +16718,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createNonUniformCellArray(
    * This function can be used to create a non uniform cell array GRM::Element
    */
   std::shared_ptr<GRM::Context> use_context = (ext_context == nullptr) ? context : ext_context;
-  std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("nonuniformcellarray") : ext_element;
+  std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("nonuniform_cellarray") : ext_element;
   element->setAttribute("x", x_key);
   element->setAttribute("y", y_key);
   element->setAttribute("color_ind_values", color_key);
@@ -17847,8 +17847,8 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       {std::string("series_imshow"), series_imshow},
       {std::string("series_isosurface"), series_isosurface},
       {std::string("series_line"), series_line},
-      {std::string("series_nonuniformheatmap"), series_nonuniformheatmap},
-      {std::string("series_nonuniformpolar_heatmap"), series_nonuniformpolar_heatmap},
+      {std::string("series_nonuniform_heatmap"), series_nonuniformheatmap},
+      {std::string("series_nonuniform_polar_heatmap"), series_nonuniformpolar_heatmap},
       {std::string("series_pie"), series_pie},
       {std::string("series_plot3"), series_plot3},
       {std::string("series_polar"), series_polar},
