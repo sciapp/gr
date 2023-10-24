@@ -8,7 +8,6 @@
 #include <string>
 
 extern "C" {
-
 #include <grm/layout.h>
 #include <ctype.h>
 #include <float.h>
@@ -23,6 +22,7 @@ extern "C" {
 #include "gr.h"
 #include "gr3.h"
 #include "logging_int.h"
+}
 
 #ifndef NO_LIBXML2
 #include <libxml/globals.h>
@@ -30,7 +30,6 @@ extern "C" {
 #elif !defined(NO_EXPAT)
 #include <expat.h>
 #endif
-}
 
 #include "plot_int.h"
 #include "grm/layout.hxx"
