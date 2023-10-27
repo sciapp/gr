@@ -9046,18 +9046,18 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
       y_min = static_cast<double>(central_region->getAttribute("window_y_min"));
       y_max = static_cast<double>(central_region->getAttribute("window_y_max"));
 
-      std::vector<double> rho, phi;
+      std::vector<double> rho(rows), phi(cols);
       for (i = 0; i < ((cols > rows) ? cols : rows); ++i)
         {
           if (i < cols)
             {
-              phi.push_back(x_vec[i] * 180 / M_PI);
+              phi[i] = (x_vec[i]);
             }
           if (i < rows)
             {
               //              rho.push_back(y_min + y_vec[i] / (y_max - y_min)); // not needed since the data is already
               //              transformed
-              rho.push_back(y_vec[i] / y_max);
+              rho[i] = (y_vec[i] / y_max);
             }
         }
 
