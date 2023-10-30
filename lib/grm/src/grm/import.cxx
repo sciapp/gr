@@ -336,6 +336,10 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                     }
                 }
             }
+          else if (key == "clip_negative")
+            {
+              grm_args_push(args, key.c_str(), "i", std::stoi(value));
+            }
           else
             {
               fprintf(stderr, "Unknown key:value pair (%s:%s) in line %i\n", key.c_str(), value.c_str(), linecount);

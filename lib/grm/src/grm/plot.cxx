@@ -366,6 +366,7 @@ const char *valid_series_keys[] = {"a",
                                    "c",
                                    "c_dims",
                                    "c_range",
+                                   "clip_negative",
                                    "draw_edges",
                                    "d_min",
                                    "d_max",
@@ -3158,6 +3159,7 @@ err_t plot_polar(grm_args_t *subplot_args)
       unsigned int rho_length, theta_length;
       char *spec;
       auto subGroup = global_render->createSeries("polar");
+      int clip_negative = 0;
       group->append(subGroup);
 
       grm_args_first_value(*current_series, "x", "D", &theta, &theta_length);
@@ -3180,6 +3182,10 @@ err_t plot_polar(grm_args_t *subplot_args)
         {
           subGroup->setAttribute("yrange_min", y_min);
           subGroup->setAttribute("yrange_max", y_max);
+        }
+      if (grm_args_values(*current_series, "clip_negative", "i", &clip_negative))
+        {
+          subGroup->setAttribute("clip_negative", clip_negative);
         }
 
       global_root->setAttribute("_id", id++);

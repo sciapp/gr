@@ -565,6 +565,15 @@ static double transformCoordinates(double value, double vmin, double vmax, doubl
   return (rangeMax - rangeMin) * (value - vmin) / (vmax - vmin) + rangeMin;
 }
 
+static void transformCoordinateVector(std::vector<double> &coords, double vmin, double vmax, double rangeMin,
+                                      double rangeMax)
+{
+  for (auto &coord : coords)
+    {
+      coord = transformCoordinates(coord, vmin, vmax, rangeMin, rangeMax);
+    }
+}
+
 
 static void resetOldBoundingBoxes(const std::shared_ptr<GRM::Element> &element)
 {
@@ -7365,10 +7374,9 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
 
   kind = static_cast<std::string>(subplotElement->getAttribute("kind"));
 
-  if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap")
+  if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap" || kind == "polar")
     {
       r_min = static_cast<double>(subplotElement->getAttribute("r_min"));
-      r_min = 0;
       r_max = static_cast<double>(subplotElement->getAttribute("r_max"));
     }
   else
@@ -7381,25 +7389,26 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
 
   render->setLineType(element, GKS_K_LINETYPE_SOLID);
 
-  if (kind == "polar_histogram" || (kind == "polar" && !subplot->hasAttribute("ylim_max")))
+  if (kind == "polar_histogram" || (kind == "polar" && !subplotElement->hasAttribute("ylim_max")))
     {
       auto max = static_cast<double>(central_region->getAttribute("r_max"));
+      rings = (element->hasAttribute("rings")) ? static_cast<int>(element->getAttribute("rings")) : -1;
 
 
       if (kind == "polar_histogram")
         {
           max = static_cast<double>(central_region->getAttribute("r_max"));
           norm = static_cast<std::string>(element->getAttribute("norm"));
+          r_min = 0.0;
+          tick = auto_tick_rings_polar(max, rings, norm);
         }
       else if (kind == "polar")
         {
+          r_min = 0.0;
           auto seriesElement = central_region->querySelectors("series_polar");
           max = static_cast<double>(seriesElement->getAttribute("yrange_max"));
-          norm = "";
+          tick = auto_tick_rings_polar(max, rings, "");
         }
-      rings = (element->hasAttribute("rings")) ? static_cast<int>(element->getAttribute("rings")) : -1;
-
-      tick = autoTickRingsPolar(max, rings, norm);
       central_region->setAttribute("tick", tick);
       max = tick * rings;
 
@@ -7411,7 +7420,7 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
       rings = grm_max(4, (int)(r_max - r_min));
       element->setAttribute("rings", rings);
 
-      if (subplot->hasAttribute("ylim_max") && subplot->hasAttribute("ylim_min"))
+      if (subplotElement->hasAttribute("ylim_max") && subplotElement->hasAttribute("ylim_min"))
         {
           tick = r_max / rings;
         }
@@ -8765,15 +8774,16 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
    * \param[in] context The GRM::Context that contains the actual data
    */
   double r_min, r_max, tick;
-  int n, i;
   double ylim_min, ylim_max, yrange_min, yrange_max;
-  bool transform = false, ylim = false;
+  int n, i;
+  bool transform = false, ylim = false, clip_negative = false;
   unsigned int rho_length, theta_length;
   std::string line_spec = SERIES_DEFAULT_SPEC;
   std::vector<double> theta_vec, rho_vec;
   auto plot_parent = element->parentElement();
   del_values del = del_values::update_without_default;
   int child_id = 0;
+
 
   getPlotParent(plot_parent);
   if (plot_parent->hasAttribute("ylim_max") && plot_parent->hasAttribute("ylim_min"))
@@ -8803,6 +8813,11 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
       element->setAttribute("line_spec", line_spec);
     }
 
+  if (element->hasAttribute("clip_negative"))
+    {
+      clip_negative = static_cast<int>(element->getAttribute("clip_negative"));
+    }
+
   if (!element->hasAttribute("x")) throw NotFoundError("Polar series is missing required attribute x-data (theta).\n");
   auto x_key = static_cast<std::string>(element->getAttribute("x"));
   if (!element->hasAttribute("y")) throw NotFoundError("Polar series is missing required attribute y-data (rho).\n");
@@ -8811,8 +8826,6 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   rho_vec = GRM::get<std::vector<double>>((*context)[y_key]);
   theta_length = theta_vec.size();
   rho_length = rho_vec.size();
-  if (rho_length != theta_length)
-    throw std::length_error("For polar series y(rho)- and x(theta)-data must have the same size.\n");
 
   r_min = *std::min_element(rho_vec.begin(), rho_vec.end());
   r_max = *std::max_element(rho_vec.begin(), rho_vec.end());
@@ -8820,7 +8833,25 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   if (r_min == yrange_min && r_max == yrange_max) transform = false;
   if (!ylim) ylim_max = r_max;
 
+  if (rho_length != theta_length)
+    throw std::length_error("For polar series y(rho)- and x(theta)-data must have the same size.\n");
+
   std::vector<double> x(rho_length), std::vector<double> y(rho_length);
+
+  if (clip_negative)
+    {
+      std::vector<int> indices;
+      for (int ind = 0; ind < theta_vec.size(); ++ind)
+        {
+          if (rho_vec[ind] < 0) indices.insert(indices.begin(), ind);
+        }
+
+      for (auto ind : indices)
+        {
+          rho_vec.erase(rho_vec.begin() + ind);
+          theta_vec.erase(theta_vec.begin() + ind);
+        }
+    }
 
   // transform coordinates into yrange if given
   if (transform)
@@ -8834,6 +8865,21 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
     }
   else
     {
+      // iterate over rho_vec and for each negative value add 180 degrees in radian to the corresponding value in
+      // theta_vec and make the rho_vec value positive
+      for (i = 0; i < rho_length; ++i)
+        {
+          if (rho_vec[i] < 0)
+            {
+              theta_vec[i] += M_PI;
+              // if theta_vec[i] is bigger than 2 * PI, subtract 2 * PI
+              if (theta_vec[i] > 2 * M_PI)
+                {
+                  theta_vec[i] -= 2 * M_PI;
+                }
+              rho_vec[i] = -rho_vec[i];
+            }
+        }
       for (i = 0; i < rho_length; ++i)
         {
           double current_rho = rho_vec[i] / ylim_max;
@@ -8879,11 +8925,14 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
   int icmap[256];
   unsigned int i, cols, rows, z_length;
   double x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv;
+  double xrange_min, xrange_max, yrange_min, yrange_max, zrange_min, zrange_max;
   bool is_uniform_heatmap;
   std::vector<int> data;
   std::vector<double> x_vec, y_vec, z_vec;
   del_values del = del_values::update_without_default;
   int child_id = 0;
+  bool zrange = false, transform = false;
+  double convert = 1.0;
   std::shared_ptr<GRM::Element> central_region;
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
@@ -8912,6 +8961,26 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
       rows = y_vec.size();
     }
 
+  if (element->hasAttribute("xrange_min") && element->hasAttribute("xrange_max"))
+    {
+      transform = true;
+      xrange_min = static_cast<double>(element->getAttribute("xrange_min"));
+      xrange_max = static_cast<double>(element->getAttribute("xrange_max"));
+      if (xrange_max <= 2 * M_PI) convert = 180.0 / M_PI;
+    }
+  if (element->hasAttribute("yrange_min") && element->hasAttribute("yrange_max"))
+    {
+      transform = true;
+      yrange_min = static_cast<double>(element->getAttribute("yrange_min"));
+      yrange_max = static_cast<double>(element->getAttribute("yrange_max"));
+    }
+  if (element->hasAttribute("zrange_min") && element->hasAttribute("zrange_max"))
+    {
+      zrange_min = static_cast<double>(element->getAttribute("zrange_min"));
+      zrange = true;
+      zrange_max = static_cast<double>(element->getAttribute("zrange_max"));
+    }
+
   if (!element->hasAttribute("z")) throw NotFoundError("Polar-heatmap series is missing required attribute z-data.\n");
   auto z = static_cast<std::string>(element->getAttribute("z"));
   z_vec = GRM::get<std::vector<double>>((*context)[z]);
@@ -8924,7 +8993,7 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
         throw NotFoundError("Polar-heatmap series is missing required attribute z_dims.\n");
       auto z_dims_key = static_cast<std::string>(element->getAttribute("z_dims"));
       auto z_dims_vec = GRM::get<std::vector<int>>((*context)[z_dims_key]);
-      cols = z_dims_vec[0];
+      cols = z_dims_vec[0]; // todo: is this switched?
       rows = z_dims_vec[1];
     }
   else if (x_vec.empty())
@@ -8963,6 +9032,52 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
       y_max = y_vec[rows - 1];
     }
   if (y_min > 0.0) is_uniform_heatmap = 0; /* when y range min > 0 for example */
+
+  // Check if coordinate transformations are needed and then transform if needed
+  if (transform && ((!x_vec.empty() && (x_vec[0] < xrange_min || x_vec[-1] > xrange_max)) ||
+                    (!y_vec.empty() && (y_vec[0] < yrange_min || y_vec[-1] > yrange_max))))
+    {
+      is_uniform_heatmap = 0;
+      int col, row;
+
+      if (x_vec.empty())
+        {
+          x_vec.resize(cols);
+          for (col = 0; col < cols; ++col)
+            {
+              x_vec[col] = transformCoordinates(col / (cols - 1.0) * 360.0, 0.0, 360.0, xrange_min * convert,
+                                                xrange_max * convert);
+            }
+        }
+      else
+        {
+          transformCoordinateVector(x_vec, x_min, x_max, xrange_min * convert, xrange_max * convert);
+        }
+      if (y_vec.empty())
+        {
+          y_vec.resize(rows);
+          for (row = 0; row < rows; ++row)
+            {
+              y_vec[row] = transformCoordinates(row / (rows - 1.0), 0.0, 1.0, yrange_min, yrange_max);
+            }
+        }
+      else
+        {
+          transformCoordinateVector(y_vec, y_min, y_max, yrange_min, yrange_max);
+        }
+    }
+
+  if (zrange)
+    {
+      int elem;
+      double min_val = *std::min_element(z_vec.begin(), z_vec.end());
+      double max_val = *std::max_element(z_vec.begin(), z_vec.end());
+
+      for (elem = 0; elem < rows * cols; ++elem)
+        {
+          z_vec[elem] = zrange_min + (zrange_max - zrange_min) * (z_vec[elem] - min_val) / (max_val - min_val);
+        }
+    }
 
   z_min = static_cast<double>(element->getAttribute("z_range_min"));
   z_max = static_cast<double>(element->getAttribute("z_range_max"));
@@ -9047,16 +9162,18 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
       y_max = static_cast<double>(central_region->getAttribute("window_y_max"));
 
       std::vector<double> rho(rows), phi(cols);
+      if (x_vec[cols - 1] <= 2 * M_PI)
+        {
+          convert = 180.0 / M_PI;
+        }
       for (i = 0; i < ((cols > rows) ? cols : rows); ++i)
         {
           if (i < cols)
             {
-              phi[i] = (x_vec[i]);
+              phi[i] = (x_vec[i]) * convert;
             }
           if (i < rows)
             {
-              //              rho.push_back(y_min + y_vec[i] / (y_max - y_min)); // not needed since the data is already
-              //              transformed
               rho[i] = (y_vec[i] / y_max);
             }
         }
@@ -13739,7 +13856,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
       if (str_equals_any(kind.c_str(), 5, "polar_histogram", "polar", "polar_heatmap", "nonuniform_heatmap",
                          "nonuniform_polar_heatmap"))
         {
-          if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap")
+          if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap" || kind == "polar")
             {
               auto ymax = static_cast<double>(element->getAttribute("_ylim_max"));
               auto ymin = static_cast<double>(element->getAttribute("_ylim_min"));

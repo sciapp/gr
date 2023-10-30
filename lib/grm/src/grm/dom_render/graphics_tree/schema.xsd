@@ -1023,6 +1023,7 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="clip_negative" type="xs:int"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="line_spec" type="xs:string"/>
             <xs:attribute name="r_max" type="xs:double"/>
