@@ -205,6 +205,8 @@ err_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int widt
   grm_size_event_t *size_event = NULL;
   err_t error = ERROR_NONE;
 
+  event_queue_discard_all_of_type(queue, GRM_EVENT_SIZE);
+
   size_event = malloc(sizeof(grm_size_event_t));
   error_cleanup_and_set_error_if(size_event == NULL, ERROR_MALLOC);
   size_event->type = GRM_EVENT_SIZE;
@@ -270,6 +272,38 @@ error_cleanup:
     }
 
   return error;
+}
+
+void event_queue_discard_all_of_type(event_queue_t *queue, grm_event_type_t type)
+{
+
+  event_reflist_node_t *previous_node = NULL, *current_node, *next_node = NULL;
+
+  current_node = queue->queue->head;
+  while (current_node != NULL)
+    {
+      next_node = current_node->next;
+      if (current_node->entry->size_event.type == type)
+        {
+          logger((stderr, "Discarding event of type \"%d\"\n", type));
+          event_reflist_entry_delete(current_node->entry);
+          free(current_node);
+          queue->queue->size--;
+          if (current_node == queue->queue->head)
+            {
+              queue->queue->head = next_node;
+            }
+          if (current_node == queue->queue->tail)
+            {
+              queue->queue->tail = previous_node;
+            }
+        }
+      else
+        {
+          previous_node = current_node;
+        }
+      current_node = next_node;
+    }
 }
 
 #undef DEFINE_LIST_METHODS

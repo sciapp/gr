@@ -184,6 +184,7 @@ private:
   bool enable_editor;
   Receiver_Thread *receiver_thread;
   std::shared_ptr<GRM::Document> schema_tree;
+  QSize size_hint;
 
   QMenuBar *menu;
   QMenu *type, *algo, *export_menu, *editor_menu;
@@ -206,6 +207,7 @@ private:
   void extract_bounding_boxes_from_grm(QPainter &painter);
   void showEvent(QShowEvent *) override;
   void closeEvent(QCloseEvent *event) override;
+  QSize sizeHint() const override;
   void size_callback(const grm_event_t *);
   void cmd_callback(const grm_request_event_t *);
   void AttributeEditEvent();

@@ -1180,8 +1180,6 @@ void GRPlotWidget::resizeEvent(QResizeEvent *event)
   amount_scrolled = 0;
   clicked.clear();
   reset_pixmap();
-
-  redraw();
 }
 
 void GRPlotWidget::wheelEvent(QWheelEvent *event)
@@ -1799,6 +1797,18 @@ void GRPlotWidget::showEvent(QShowEvent *)
   QObject::connect(window()->windowHandle(), SIGNAL(screenChanged(QScreen *)), this, SLOT(screenChanged()));
 }
 
+QSize GRPlotWidget::sizeHint() const
+{
+  if (size_hint.isValid())
+    {
+      return size_hint;
+    }
+  else
+    {
+      return QWidget::sizeHint();
+    }
+}
+
 void GRPlotWidget::screenChanged()
 {
   gr_configurews();
@@ -1808,9 +1818,12 @@ void GRPlotWidget::screenChanged()
 void GRPlotWidget::size_callback(const grm_event_t *new_size_object)
 {
   // TODO: Get Plot ID
-  if (this->size() != QSize(new_size_object->size_event.width, new_size_object->size_event.height))
+  auto event_size = QSize(new_size_object->size_event.width, new_size_object->size_event.height);
+  if (this->size() != event_size)
     {
-      this->window()->resize(new_size_object->size_event.width, new_size_object->size_event.height);
+      size_hint = event_size;
+      setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+      window()->adjustSize();
     }
 }
 
