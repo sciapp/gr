@@ -160,6 +160,7 @@ typedef struct ws_state_list_t
   int pattern_id[PATTERNS][2];
   PDF_image **image;
   int images, max_images;
+  int preview_fix;
 } ws_state_list;
 
 static ws_state_list *p;
@@ -360,6 +361,8 @@ static void pdf_open(int fd)
   p->images = 0;
   p->max_images = MAX_IMAGES;
   p->image = (PDF_image **)pdf_calloc(p->max_images, sizeof(PDF_image *));
+
+  p->preview_fix = (char *)gks_getenv("GKS_PDF_PREVIEW_FIX") != NULL ? 1 : 0;
 }
 
 static PDF_image *pdf_image(PDF *p, int width, int height)
@@ -1519,6 +1522,18 @@ static void fillarea(int n, double *px, double *py)
     }
 }
 
+static void fill_rect(double x1, double y1, double x2, double y2, int rgb)
+{
+  double red, green, blue;
+
+  red = (rgb & 0xff) / 255.0;
+  green = ((rgb >> 8) & 0xff) / 255.0;
+  blue = ((rgb >> 16) & 0xff) / 255.0;
+
+  pdf_setfillcolor(p, red, green, blue);
+  pdf_printf(p->content, "%.2f %.2f m %.2f %.2f l %.2f %.2f l %.2f %.2f l h f*\n", x1, y1, x2, y1, x2, y2, x1, y2);
+}
+
 static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx, int dy, int dimx, int *colia,
                       int true_color)
 {
@@ -1539,11 +1554,11 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   seg_xform(&x2, &y2);
   NDC_to_DC(x2, y2, rx2, ry2);
 
-  width = (int)(fabs(rx2 - rx1));
-  height = (int)(fabs(ry2 - ry1));
+  width = (int)(fabs(rx2 - rx1) + 0.5);
+  height = (int)(fabs(ry2 - ry1) + 0.5);
   if (width == 0 || height == 0) return;
-  x = (int)min(rx1, rx2);
-  y = (int)min(ry1, ry2);
+  x = (int)(min(rx1, rx2) + 0.5);
+  y = (int)(min(ry1, ry2) + 0.5);
 
   swapx = rx1 > rx2;
   swapy = ry1 > ry2;
@@ -1559,7 +1574,6 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
     {
       set_clip(gkss->viewport[gkss->clip == GKS_K_CLIP ? gkss->cntnr : 0]);
     }
-  pdf_printf(p->content, "%d 0 0 %d %d %d cm\n", width, height, x, y);
 
   have_alpha = 0;
   if (true_color)
@@ -1573,8 +1587,46 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
             }
     }
 
-  if (true_color && have_alpha)
+  if (p->preview_fix)
     {
+      double x0, y0, xim1, xi, yjm1, yj, cx, cy;
+      int rgb;
+
+      x0 = min(rx1, rx2);
+      y0 = min(ry1, ry2);
+      cx = fabs(rx2 - rx1) / dx;
+      cy = fabs(ry2 - ry1) / dy;
+      yj = y0;
+      for (j = 1; j <= dy; j++)
+        {
+          iy = swapy ? j - 1 : dy - j;
+          yjm1 = yj;
+          yj = y0 + j * cy;
+          xi = x0;
+          for (i = 1; i <= dx; i++)
+            {
+              ix = swapx ? dx - i : i - 1;
+              xim1 = xi;
+              xi = x0 + i * cx;
+              if (!true_color)
+                {
+                  int color;
+                  color = FIX_COLORIND(colia[iy * dimx + ix]);
+                  rgb = (Byte)(p->red[color] * 255) + ((Byte)(p->green[color] * 255) << 8) +
+                        ((Byte)(p->blue[color] * 255) << 16);
+                }
+              else
+                {
+                  rgb = colia[iy * dimx + ix];
+                }
+              fill_rect(xim1, yjm1, xi, yj, rgb);
+            }
+        }
+    }
+  else if (true_color && have_alpha)
+    {
+      pdf_printf(p->content, "%d 0 0 %d %d %d cm\n", width, height, x, y);
+
       image = pdf_image(p, dx, dy);
       p->image[p->images++] = image;
 
@@ -1593,6 +1645,8 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
     }
   else
     {
+      pdf_printf(p->content, "%d 0 0 %d %d %d cm\n", width, height, x, y);
+
       pdf_printf(p->content, "BI\n");
       pdf_printf(p->content, "/W %d\n", dx);
       pdf_printf(p->content, "/H %d\n", dy);
