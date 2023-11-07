@@ -11,57 +11,82 @@
 #include <algorithm>
 #include <map>
 #include <iostream>
+#include <clocale>
 
 /* ========================= static variables ======================================================================= */
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ key to types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static std::map<std::string, const char *> key_to_types{{"accelerate", "i"},
-                                                        {"algorithm", "s"},
-                                                        {"bar_color", "ddd"},
-                                                        {"bar_color", "i"},
-                                                        {"bar_width", "d"},
-                                                        {"bin_counts", "i"},
-                                                        {"bin_edges", "nD"},
-                                                        {"bin_width", "d"},
-                                                        {"c", "nD"},
-                                                        {"colormap", "i"},
-                                                        {"draw_edges", "i"},
-                                                        {"edge_color", "ddd"},
-                                                        {"edge_color", "i"},
-                                                        {"edge_width", "d"},
-                                                        {"error", "a"},
-                                                        {"grplot", "i"},
-                                                        {"ind_bar_color", "nA"},
-                                                        {"ind_edge_color", "nA"},
-                                                        {"ind_edge_width", "nA"},
-                                                        {"isovalue", "d"},
-                                                        {"keep_aspect_ratio", "i"},
-                                                        {"kind", "s"},
-                                                        {"levels", "i"},
-                                                        {"marginalheatmap_kind", "s"},
-                                                        {"markertype", "i"},
-                                                        {"nbins", "i"},
-                                                        {"normalization", "s"},
-                                                        {"orientation", "s"},
-                                                        {"phiflip", "i"},
-                                                        {"rotation", "d"},
-                                                        {"scale", "i"},
-                                                        {"scatterz", "i"},
-                                                        {"spec", "s"},
-                                                        {"stairs", "i"},
-                                                        {"step_where", "s"},
-                                                        {"style", "s"},
-                                                        {"tilt", "d"},
-                                                        {"use_bins", "i"},
-                                                        {"xbins", "i"},
-                                                        {"xcolormap", "i"},
-                                                        {"xflip", "i"},
-                                                        {"xform", "i"},
-                                                        {"ybins", "i"},
-                                                        {"ycolormap", "i"},
-                                                        {"yflip", "i"},
-                                                        {"ylabels", "nS"}};
+static std::map<std::string, const char *> key_to_types{
+    {"accelerate", "i"},
+    {"algorithm", "s"},
+    {"bar_color", "ddd"},
+    {"bar_color", "i"},
+    {"bar_width", "d"},
+    {"bin_counts", "i"},
+    {"bin_edges", "nD"},
+    {"bin_width", "d"},
+    {"c", "nD"},
+    {"colormap", "i"},
+    {"draw_edges", "i"},
+    {"edge_color", "ddd"},
+    {"edge_color", "i"},
+    {"edge_width", "d"},
+    {"error", "a"},
+    {"grplot", "i"},
+    {"ind_bar_color", "nA"},
+    {"ind_edge_color", "nA"},
+    {"ind_edge_width", "nA"},
+    {"isovalue", "d"},
+    {"keep_aspect_ratio", "i"},
+    {"kind", "s"},
+    {"levels", "i"},
+    {"location", "i"},
+    {"marginalheatmap_kind", "s"},
+    {"markertype", "i"},
+    {"nbins", "i"},
+    {"normalization", "s"},
+    {"orientation", "s"},
+    {"phiflip", "i"},
+    {"philim", "dd"},
+    {"resample_method", "s"},
+    {"rlim", "dd"},
+    {"rotation", "d"},
+    {"scale", "i"},
+    {"scatterz", "i"},
+    {"spec", "s"},
+    {"stairs", "i"},
+    {"step_where", "s"},
+    {"style", "s"},
+    {"tilt", "d"},
+    {"title", "s"},
+    {"use_bins", "i"},
+    {"xbins", "i"},
+    {"xcolormap", "i"},
+    {"xflip", "i"},
+    {"xform", "i"},
+    {"xgrid", "i"},
+    {"xlabel", "s"},
+    {"xlim", "dd"},
+    {"xlog", "i"},
+    {"xrange", "dd"},
+    {"xticklabels", "nS"},
+    {"ybins", "i"},
+    {"ycolormap", "i"},
+    {"yflip", "i"},
+    {"ygrid", "i"},
+    {"ylabel", "s"},
+    {"ylabels", "nS"},
+    {"ylim", "dd"},
+    {"ylog", "i"},
+    {"yrange", "dd"},
+    {"yticklabels", "nS"},
+    {"zgrid", "i"},
+    {"zlabel", "s"},
+    {"zlim", "dd"},
+    {"zlog", "i"},
+    {"zrange", "dd"},
+};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -126,6 +151,10 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
   bool depth_change = true;
   int depth = 0, max_col = -1;
   int linecount = 0;
+
+  // Save locale setting
+  const std::string oldLocale = std::setlocale(LC_NUMERIC, nullptr);
+  std::setlocale(LC_NUMERIC, "C");
 
   /* read the columns from the colms string also converts slicing into numbers */
   std::stringstream scol(colms);
@@ -220,12 +249,15 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
             }
           if (str_equals_any(key.c_str(), 5, "title", "xlabel", "ylabel", "zlabel", "resample_method"))
             {
-              grm_args_push(args, key.c_str(), "s", value.c_str());
+              const char *tmp;
+              if (!grm_args_values(args, key.c_str(), "s", &tmp)) grm_args_push(args, key.c_str(), "s", value.c_str());
             }
           else if (str_equals_any(key.c_str(), 2, "xticklabels", "yticklabels"))
             {
               std::vector<std::string> ticklabels;
               std::stringstream sv(value);
+              int tmp_size;
+              const char *tmp;
               for (size_t col = 0; std::getline(sv, token, ',') && token.length(); col++)
                 {
                   ticklabels.push_back(token);
@@ -237,13 +269,16 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                 {
                   c_ticklabel[i] = (const char *)ticklabels[i].c_str();
                 }
-              grm_args_push(args, key.c_str(), "nS", ticklabels.size(), (const char *)c_ticklabel.data());
+              if (!grm_args_values(args, key.c_str(), "nS", &tmp_size, &tmp))
+                grm_args_push(args, key.c_str(), "nS", ticklabels.size(), (const char *)c_ticklabel.data());
             }
           else if (str_equals_any(key.c_str(), 7, "location", "xlog", "ylog", "zlog", "xgrid", "ygrid", "zgrid"))
             {
               try
                 {
-                  grm_args_push(args, key.c_str(), "i", std::stoi(value));
+                  int tmp;
+                  if (!grm_args_values(args, key.c_str(), "i", &tmp))
+                    grm_args_push(args, key.c_str(), "i", std::stoi(value));
                 }
               catch (std::invalid_argument &e)
                 {
@@ -258,6 +293,9 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
               std::stringstream sv(value);
               std::string value1;
               std::string value2;
+              double tmp1, tmp2;
+              int ret_val;
+
               for (size_t col = 0; std::getline(sv, token, ',') && token.length(); col++)
                 {
                   if (col == 0)
@@ -271,7 +309,8 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                 }
               try
                 {
-                  grm_args_push(args, key.c_str(), "dd", std::stod(value1), std::stod(value2));
+                  ret_val = grm_args_values(args, key.c_str(), "dd", &tmp1, &tmp2);
+                  if (!ret_val) grm_args_push(args, key.c_str(), "dd", std::stod(value1), std::stod(value2));
                 }
               catch (std::invalid_argument &e)
                 {
@@ -279,20 +318,23 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                           value1.c_str(), value2.c_str(), linecount);
                   return ERROR_PARSE_DOUBLE;
                 }
-              if (strcmp(key.c_str(), "xrange") == 0)
+              if (!ret_val)
                 {
-                  ranges->xmin = std::stod(value1);
-                  ranges->xmax = std::stod(value2);
-                }
-              else if (strcmp(key.c_str(), "yrange") == 0)
-                {
-                  ranges->ymin = std::stod(value1);
-                  ranges->ymax = std::stod(value2);
-                }
-              else if (strcmp(key.c_str(), "zrange") == 0)
-                {
-                  ranges->zmin = std::stod(value1);
-                  ranges->zmax = std::stod(value2);
+                  if (strcmp(key.c_str(), "xrange") == 0)
+                    {
+                      ranges->xmin = std::stod(value1);
+                      ranges->xmax = std::stod(value2);
+                    }
+                  else if (strcmp(key.c_str(), "yrange") == 0)
+                    {
+                      ranges->ymin = std::stod(value1);
+                      ranges->ymax = std::stod(value2);
+                    }
+                  else if (strcmp(key.c_str(), "zrange") == 0)
+                    {
+                      ranges->zmin = std::stod(value1);
+                      ranges->zmax = std::stod(value2);
+                    }
                 }
             }
           else
@@ -424,6 +466,8 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
           return ERROR_PLOT_MISSING_DATA;
         }
     }
+  // Restore locale setting
+  std::setlocale(LC_NUMERIC, oldLocale.c_str());
   return ERROR_NONE;
 }
 
@@ -498,7 +542,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   file_args = grm_file_args_new();
   PlotRange ranges = {INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY};
 
-  if (!convert_inputstream_into_args(args, file_args, argc, argv))
+  if (!convert_inputstream_into_args(args, file_args, argc, argv, &ranges))
     {
       return 0;
     }
@@ -1008,7 +1052,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ input stream parser ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, int argc, char **argv)
+int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, int argc, char **argv,
+                                  PlotRange *ranges)
 {
   int i;
   std::string token, found_key;
@@ -1128,6 +1173,28 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                                           grm_args_push(new_args[ind], con->first.c_str(), con->second,
                                                         std::stoi(container_value));
                                         }
+                                      else if (strcmp(search->second, "dd") == 0)
+                                        {
+                                          std::string x, y;
+                                          parse_parameter_dd(&value, &search->first, &x, &y);
+                                          grm_args_push(args, search->first.c_str(), search->second, std::stod(x),
+                                                        std::stod(y));
+                                          if (search->first == "xrange")
+                                            {
+                                              ranges->xmin = std::stod(x);
+                                              ranges->xmax = std::stod(y);
+                                            }
+                                          else if (search->first == "yrange")
+                                            {
+                                              ranges->ymin = std::stod(x);
+                                              ranges->ymax = std::stod(y);
+                                            }
+                                          else if (search->first == "zrange")
+                                            {
+                                              ranges->zmin = std::stod(x);
+                                              ranges->zmax = std::stod(y);
+                                            }
+                                        }
                                       else if (strcmp(con->second, "ddd") == 0)
                                         {
                                           std::string r, g, b;
@@ -1212,6 +1279,27 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                             {
                               grm_args_push(args, search->first.c_str(), search->second, std::stod(value));
                             }
+                          else if (strcmp(search->second, "dd") == 0)
+                            {
+                              std::string x, y;
+                              parse_parameter_dd(&value, &search->first, &x, &y);
+                              grm_args_push(args, search->first.c_str(), search->second, std::stod(x), std::stod(y));
+                              if (search->first == "xrange")
+                                {
+                                  ranges->xmin = std::stod(x);
+                                  ranges->xmax = std::stod(y);
+                                }
+                              else if (search->first == "yrange")
+                                {
+                                  ranges->ymin = std::stod(x);
+                                  ranges->ymax = std::stod(y);
+                                }
+                              else if (search->first == "zrange")
+                                {
+                                  ranges->zmin = std::stod(x);
+                                  ranges->zmax = std::stod(y);
+                                }
+                            }
                           else if (strcmp(search->second, "ddd") == 0)
                             {
                               std::string r, g, b;
@@ -1290,6 +1378,27 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
     }
   grm_args_push(args, "kind", "s", kind.c_str());
   return 1;
+}
+
+void parse_parameter_dd(std::string *input, const std::string *key, std::string *x, std::string *y)
+{
+  size_t con_pos = 0;
+  int k = 0;
+  while ((con_pos = (*input).find(',')) != std::string::npos)
+    {
+      if (k == 0) *x = (*input).substr(0, con_pos);
+      (*input).erase(0, con_pos + 1);
+      k++;
+    }
+  if (k != 1 || (*input).length() == 0)
+    {
+      fprintf(stderr,
+              "Given number doesn't fit the data for %s parameter. The "
+              "parameter will be "
+              "ignored\n",
+              (*key).c_str());
+    }
+  *y = *input;
 }
 
 void parse_parameter_ddd(std::string *input, const std::string *key, std::string *r, std::string *g, std::string *b)

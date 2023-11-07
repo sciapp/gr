@@ -3,6 +3,7 @@
 #include <QDialogButtonBox>
 #include <QCheckBox>
 #include <QScrollArea>
+#include <QCompleter>
 #include "AddElementWidget.h"
 #include "grm/dom_render/graphics_tree/util.hxx"
 #include "../util.hxx"
@@ -139,13 +140,16 @@ void AddElementWidget::parentSelected(int i)
 {
   if (schema_tree != nullptr)
     {
+      QStringList combo_box_attr = grplot_widget->getComboBoxAttributes();
+      QStringList check_box_attr = grplot_widget->getCheckBoxAttributes();
+
       Bounding_object *tmp = &parent_vec[i];
       grplot_widget->set_selected_parent(tmp);
       attribute_name_vec.clear();
       attribute_type_vec.clear();
 
       int line = 0;
-      QLineEdit *attrLineEdit;
+      QWidget *attrLineEdit;
       QLabel *attrLabel;
       auto *addAttributesLayout = new QGridLayout;
       std::string selectedElementName = addElementComboBox->itemText(addElementComboBox->currentIndex()).toStdString();
@@ -163,20 +167,37 @@ void AddElementWidget::parentSelected(int i)
             {
               auto attr_name = static_cast<std::string>(child->getAttribute("name"));
               attribute_name_vec.push_back(attr_name);
-              if (child->hasAttribute("use")) attr_name = "*" + attr_name + ":";
 
               auto type_name = static_cast<std::string>(child->getAttribute("type"));
               attribute_type_vec.push_back(type_name);
 
-              attrLabel = new QLabel(tr(attr_name.c_str()));
-              attrLineEdit = new QLineEdit;
-              attrLineEdit->setPlaceholderText("Placeholder Text");
-              attrLineEdit->setFocus();
-              if (attr_name == "kind" && util::startsWith(selectedElementName, "series_"))
+              if (combo_box_attr.contains(attr_name.c_str()))
                 {
-                  attrLineEdit->setText(selectedElementName.erase(0, 7).c_str());
-                  attrLineEdit->setModified(true);
+                  attrLineEdit = new QComboBox;
+                  ((QComboBox *)attrLineEdit)->addItem(""); // default all attributes are empty
+                  grplot_widget->attributeComboBoxHandler(attr_name, selectedElementName, &attrLineEdit);
+                  int index = ((QComboBox *)attrLineEdit)->count();
+                  ((QComboBox *)attrLineEdit)->setCurrentIndex(index);
+
+                  if (attr_name == "kind" && util::startsWith(selectedElementName, "series_"))
+                    {
+                      int index = ((QComboBox *)attrLineEdit)->findText(selectedElementName.erase(0, 7).c_str());
+                      if (index == -1) index += ((QComboBox *)attrLineEdit)->count();
+                      ((QComboBox *)attrLineEdit)->setCurrentIndex(index);
+                    }
                 }
+              else if (check_box_attr.contains(attr_name.c_str()))
+                {
+                  attrLineEdit = new QCheckBox;
+                }
+              else
+                {
+                  attrLineEdit = new QLineEdit;
+                  ((QLineEdit *)attrLineEdit)->setPlaceholderText("Placeholder Text");
+                  ((QLineEdit *)attrLineEdit)->setFocus();
+                }
+              if (child->hasAttribute("use")) attr_name = "*" + attr_name + ":";
+              attrLabel = new QLabel(tr(attr_name.c_str()));
 
               addAttributesLayout->addWidget(attrLabel, line, 0);
               addAttributesLayout->addWidget(attrLineEdit, line++, 1);
@@ -205,20 +226,37 @@ void AddElementWidget::parentSelected(int i)
                         {
                           auto attr_name = static_cast<std::string>(childchild->getAttribute("name"));
                           attribute_name_vec.push_back(attr_name);
-                          if (childchild->hasAttribute("use")) attr_name = "*" + attr_name + ":";
-
                           auto type_name = static_cast<std::string>(childchild->getAttribute("type"));
                           attribute_type_vec.push_back(type_name);
 
-                          attrLabel = new QLabel(tr(attr_name.c_str()));
-                          attrLineEdit = new QLineEdit;
-                          attrLineEdit->setPlaceholderText("Placeholder Text");
-                          attrLineEdit->setFocus();
-                          if (attr_name == "kind" && util::startsWith(selectedElementName, "series_"))
+                          if (combo_box_attr.contains(attr_name.c_str()))
                             {
-                              attrLineEdit->setText(selectedElementName.erase(0, 7).c_str());
-                              attrLineEdit->setModified(true);
+                              attrLineEdit = new QComboBox;
+                              ((QComboBox *)attrLineEdit)->addItem(""); // default all attributes are empty
+                              grplot_widget->attributeComboBoxHandler(attr_name, selectedElementName, &attrLineEdit);
+                              int index = ((QComboBox *)attrLineEdit)->count();
+                              ((QComboBox *)attrLineEdit)->setCurrentIndex(index);
+
+                              if (attr_name == "kind" && util::startsWith(selectedElementName, "series_"))
+                                {
+                                  int index =
+                                      ((QComboBox *)attrLineEdit)->findText(selectedElementName.erase(0, 7).c_str());
+                                  if (index == -1) index += ((QComboBox *)attrLineEdit)->count();
+                                  ((QComboBox *)attrLineEdit)->setCurrentIndex(index);
+                                }
                             }
+                          else if (check_box_attr.contains(attr_name.c_str()))
+                            {
+                              attrLineEdit = new QCheckBox;
+                            }
+                          else
+                            {
+                              attrLineEdit = new QLineEdit;
+                              ((QLineEdit *)attrLineEdit)->setPlaceholderText("Placeholder Text");
+                              ((QLineEdit *)attrLineEdit)->setFocus();
+                            }
+                          if (childchild->hasAttribute("use")) attr_name = "*" + attr_name + ":";
+                          attrLabel = new QLabel(tr(attr_name.c_str()));
 
                           addAttributesLayout->addWidget(attrLabel, line, 0);
                           addAttributesLayout->addWidget(attrLineEdit, line++, 1);
@@ -236,8 +274,8 @@ void AddElementWidget::parentSelected(int i)
 
                   attrLabel = new QLabel(tr("Colorrep-index:"));
                   attrLineEdit = new QLineEdit;
-                  attrLineEdit->setPlaceholderText("Placeholder Text");
-                  attrLineEdit->setFocus();
+                  ((QLineEdit *)attrLineEdit)->setPlaceholderText("Placeholder Text");
+                  ((QLineEdit *)attrLineEdit)->setFocus();
 
                   addAttributesLayout->addWidget(attrLabel, line, 0);
                   addAttributesLayout->addWidget(attrLineEdit, line++, 1);
@@ -249,8 +287,8 @@ void AddElementWidget::parentSelected(int i)
 
                   attrLabel = new QLabel(tr("Colorrep-value:"));
                   attrLineEdit = new QLineEdit;
-                  attrLineEdit->setPlaceholderText("Placeholder Text");
-                  attrLineEdit->setFocus();
+                  ((QLineEdit *)attrLineEdit)->setPlaceholderText("Placeholder Text");
+                  ((QLineEdit *)attrLineEdit)->setFocus();
 
                   addAttributesLayout->addWidget(attrLabel, line, 0);
                   addAttributesLayout->addWidget(attrLineEdit, line++, 1);
@@ -329,14 +367,17 @@ void AddElementWidget::accept()
         }
       else if (typeid(field) == typeid(QComboBox))
         {
-          new_element->setAttribute(attribute_name_vec[i], ((QComboBox *)fields[i])->currentIndex());
-        }
-      else
-        {
-          if (typeid(field) == typeid(QCheckBox))
+          int index = ((QComboBox *)fields[i])->currentIndex();
+
+          const std::string value = ((QComboBox *)fields[i])->itemText(index).toStdString();
+          if (!value.empty())
             {
-              new_element->setAttribute(attribute_name_vec[i], ((QCheckBox *)fields[i])->isChecked());
+              grplot_widget->attributeSetForComboBox(attribute_type_vec[i], new_element, value, attribute_name_vec[i]);
             }
+        }
+      else if (typeid(field) == typeid(QCheckBox))
+        {
+          new_element->setAttribute(attribute_name_vec[i], ((QCheckBox *)fields[i])->isChecked());
         }
     }
 

@@ -90,7 +90,7 @@ Valid keys are:
 2. `xlabel`, `ylabel`, `zlabel`: set the label for the respective axis
 3. `resample_method`: defines how the data is resampled when needed
 4. `location`: defines where the legend should be drawn
-5. `xlog`, `ylog`, `zlog`: defines whether the respective axis is plotted logarithmic
+5. `xlog`, `ylog`, `zlog`: defines whether the respective axis is plotted logarithmic. These options only work if the data respects the definition of the logarithmic function.
 6. `xgrid`, `ygrid`, `zgrid`: defines the grid for the respective axis
 7. `philim`, `rlim`: defines which part of the specific polar axis should be displayed
 8. `xlim`, `ylim`, `zlim`: defines which part of the respective axis should be displayed

@@ -13,8 +13,8 @@
 
 #include "gredit/Bounding_object.h"
 #include "gredit/Bounding_logic.h"
-#include "gredit/TreeWidget.h"
 class GRPlotWidget;
+#include "gredit/TreeWidget.h"
 #include "gredit/AddElementWidget.h"
 #include "qtterm/receiver_thread.h"
 #include "qtterm/grm_args_t_wrapper.h"
@@ -29,10 +29,18 @@ class GRPlotWidget : public QWidget
 public:
   explicit GRPlotWidget(QMainWindow *parent, int argc, char **argv);
   ~GRPlotWidget() override;
-  void redraw();
+  void redraw(bool tree_update = true);
   std::shared_ptr<GRM::Document> get_schema_tree();
   void set_selected_parent(Bounding_object *parent);
   Bounding_object *get_selected_parent();
+  void set_current_selection(Bounding_object *current_selection);
+  Bounding_object *get_current_selection();
+  void AttributeEditEvent();
+  void attributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name, QWidget **lineEdit);
+  QStringList getCheckBoxAttributes();
+  QStringList getComboBoxAttributes();
+  void attributeSetForComboBox(const std::string &attr_type, std::shared_ptr<GRM::Element> element,
+                               const std::string &value, const std::string &label);
 
 protected:
   virtual void draw();
@@ -184,7 +192,9 @@ private:
   bool enable_editor;
   Receiver_Thread *receiver_thread;
   std::shared_ptr<GRM::Document> schema_tree;
+  bool tree_update = true;
   QSize size_hint;
+  QStringList check_box_attr, combo_box_attr;
 
   QMenuBar *menu;
   QMenu *type, *algo, *export_menu, *editor_menu;
@@ -210,7 +220,8 @@ private:
   QSize sizeHint() const override;
   void size_callback(const grm_event_t *);
   void cmd_callback(const grm_request_event_t *);
-  void AttributeEditEvent();
+  void advancedAttributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name,
+                                        QWidget **lineEdit);
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */
