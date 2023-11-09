@@ -137,6 +137,9 @@ public:
   /* ------------------------------- create functions ----------------------------------------------------------------*/
 
   static std::shared_ptr<Render> createRender();
+
+  std::shared_ptr<GRM::Element> createPlot(int plotId, const std::shared_ptr<GRM::Element> &extElement = nullptr);
+
   std::shared_ptr<Element> createPolymarker(const std::string &x_key, std::optional<std::vector<double>> x,
                                             const std::string &y_key, std::optional<std::vector<double>> y,
                                             const std::shared_ptr<Context> &extContext = nullptr, int marker_type = 0,

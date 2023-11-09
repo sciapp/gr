@@ -63,6 +63,12 @@ GridElement::GridElement(double absHeight, double absWidth, int absHeightPxl, in
       fitParentsHeight(fitParentsHeight), fitParentsWidth(fitParentsWidth), relativeHeight(relativeHeight),
       relativeWidth(relativeWidth), aspectRatio(aspectRatio)
 {
+  setAbsHeight(absHeight);
+  setAbsWidth(absWidth);
+  setAbsHeightPxl(absHeightPxl);
+  setAbsWidthPxl(absWidthPxl);
+  setRelativeHeight(relativeHeight);
+  setRelativeWidth(relativeWidth);
   subplot = new double[4];
 }
 
@@ -93,124 +99,124 @@ void GridElement::setSubplot(double x1, double x2, double y1, double y2)
 
 void GridElement::setAbsHeight(double height)
 {
-  if (heightSet)
+  if (heightSet && height != -1)
     {
       throw ContradictingAttributes("Can only set one height attribute");
     }
-  if (height <= 0 || height > 1)
+  if ((height <= 0 || height > 1) && height != -1)
     {
-      throw std::invalid_argument("Height has to be between 0 and 1");
+      throw std::invalid_argument("Height has to be between 0 and 1 or be -1");
     }
-  if (arSet and widthSet)
+  if (arSet && widthSet && height != -1)
     {
       throw ContradictingAttributes("You cant restrict the height on a plot with fixed width and aspect ratio");
     }
   absHeight = height;
-  heightSet = 1;
+  heightSet = (height != -1) ? 1 : 0;
 }
 
 void GridElement::setAbsHeightPxl(int height)
 {
-  if (heightSet)
+  if (heightSet && height != -1)
     {
       throw ContradictingAttributes("Can only set one height attribute");
     }
-  if (height <= 0)
+  if (height <= 0 && height != -1)
     {
-      throw InvalidArgumentRange("Pixel height has to be an positive integer");
+      throw InvalidArgumentRange("Pixel height has to be an positive integer or be -1");
     }
-  if (arSet and widthSet)
+  if (arSet && widthSet && height != -1)
     {
       throw ContradictingAttributes("You cant restrict the height on a plot with fixed width and aspect ratio");
     }
   absHeightPxl = height;
-  heightSet = 1;
+  heightSet = (height != -1) ? 1 : 0;
 }
 
 void GridElement::setRelativeHeight(double height)
 {
-  if (heightSet)
+  if (heightSet && height != -1)
     {
       throw ContradictingAttributes("Can only set one height attribute");
     }
-  if (height <= 0 || height > 1)
+  if ((height <= 0 || height > 1) && height != -1)
     {
-      throw InvalidArgumentRange("Height has to be between 0 and 1");
+      throw InvalidArgumentRange("Height has to be between 0 and 1 or be -1");
     }
-  if (arSet and widthSet)
+  if (arSet && widthSet && height != -1)
     {
       throw ContradictingAttributes("You cant restrict the height on a plot with fixed width and aspect ratio");
     }
   relativeHeight = height;
-  heightSet = 1;
+  heightSet = (height != -1) ? 1 : 0;
 }
 
 void GridElement::setAbsWidth(double width)
 {
-  if (widthSet)
+  if (widthSet && width != -1)
     {
       throw ContradictingAttributes("Can only set one width attribute");
     }
-  if (width <= 0 || width > 1)
+  if ((width <= 0 || width > 1) && width != -1)
     {
-      throw InvalidArgumentRange("Width has to be between 0 and 1");
+      throw InvalidArgumentRange("Width has to be between 0 and 1 or be -1");
     }
   if (arSet and heightSet)
     {
       throw ContradictingAttributes("You cant restrict the width on a plot with fixed height and aspect ratio");
     }
   absWidth = width;
-  widthSet = 1;
+  widthSet = (width != -1) ? 1 : 0;
 }
 
 void GridElement::setAbsWidthPxl(int width)
 {
-  if (widthSet)
+  if (widthSet && width != -1)
     {
       throw ContradictingAttributes("Can only set one width attribute");
     }
-  if (width <= 0)
+  if (width <= 0 && width != -1)
     {
-      throw InvalidArgumentRange("Pixel Width has to be an positive integer");
+      throw InvalidArgumentRange("Pixel Width has to be an positive integer or be -1");
     }
-  if (arSet and heightSet)
+  if (arSet && heightSet && width != -1)
     {
       throw ContradictingAttributes("You cant restrict the width on a plot with fixed height and aspect ratio");
     }
   absWidthPxl = width;
-  widthSet = 1;
+  widthSet = (width != -1) ? 1 : 0;
 }
 
 void GridElement::setRelativeWidth(double width)
 {
-  if (widthSet)
+  if (widthSet && width != -1)
     {
       throw ContradictingAttributes("Can only set one width attribute");
     }
-  if (width <= 0 || width > 1)
+  if ((width <= 0 || width > 1) && width != -1)
     {
-      throw InvalidArgumentRange("Width has to be between 0 and 1");
+      throw InvalidArgumentRange("Width has to be between 0 and 1 or be -1");
     }
-  if (arSet and heightSet)
+  if (arSet && heightSet && width != -1)
     {
       throw ContradictingAttributes("You cant restrict the width on a plot with fixed height and aspect ratio");
     }
   relativeWidth = width;
-  widthSet = 1;
+  widthSet = (width != -1) ? 1 : 0;
 }
 
 void GridElement::setAspectRatio(double ar)
 {
-  if (ar <= 0)
+  if (ar <= 0 && ar != -1)
     {
-      throw InvalidArgumentRange("Aspect ration has to be bigger than 0");
+      throw InvalidArgumentRange("Aspect ration has to be bigger than 0 or be -1");
     }
-  if (widthSet && heightSet)
+  if (widthSet && heightSet && ar != -1)
     {
       throw ContradictingAttributes("You cant restrict the aspect ratio on a plot with fixed sides");
     }
   aspectRatio = ar;
-  arSet = 1;
+  arSet = (ar != -1) ? 1 : 0;
 }
 
 void GridElement::finalizeSubplot()
@@ -293,11 +299,10 @@ void GridElement::finalizeSubplot()
 
   if (elementInDOM != nullptr)
     {
-      elementInDOM->setAttribute("subplot", true);
-      elementInDOM->setAttribute("subplot_xmin", subplot[0]);
-      elementInDOM->setAttribute("subplot_xmax", subplot[1]);
-      elementInDOM->setAttribute("subplot_ymin", subplot[2]);
-      elementInDOM->setAttribute("subplot_ymax", subplot[3]);
+      elementInDOM->setAttribute("plot_xmin", subplot[0]);
+      elementInDOM->setAttribute("plot_xmax", subplot[1]);
+      elementInDOM->setAttribute("plot_ymin", subplot[2]);
+      elementInDOM->setAttribute("plot_ymax", subplot[3]);
     }
 
   finalized = 1;

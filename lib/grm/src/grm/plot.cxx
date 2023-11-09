@@ -981,7 +981,7 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
   const char *kind;
   double alpha;
   err_t error = ERROR_NONE;
-  auto group = active_figure->lastChildElement();
+  auto group = (currentDomElement) ? currentDomElement : active_figure->lastChildElement();
 
   logger((stderr, "Pre subplot processing\n"));
 
@@ -1242,7 +1242,7 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
   err_t error = ERROR_NONE;
   double x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max;
 
-  auto group = active_figure->lastChildElement();
+  auto group = (currentDomElement) ? currentDomElement : active_figure->lastChildElement();
 
   if (grm_args_contains(subplot_args, "_original_xlim"))
     {
@@ -4862,6 +4862,7 @@ int grm_plot(const grm_args_t *args)
       grm_args_values(active_plot_args, "subplots", "A", &current_subplot_args);
       if (!active_figure->hasChildNodes() || (append_figures && !figure_id_given))
         {
+          int plot_id = 0;
           if (!(nrows == 1 && ncols == 1 &&
                 currentGrid->getElement(0, 0) == nullptr)) // Check if Grid arguments in container
             {
@@ -4870,23 +4871,20 @@ int grm_plot(const grm_args_t *args)
 
               for (auto const &elementToSlice : currentGrid->getElementToPosition())
                 {
-                  grm_plot_helper(elementToSlice.first, elementToSlice.second, gridDomElement);
+                  grm_plot_helper(elementToSlice.first, elementToSlice.second, gridDomElement, plot_id);
                 }
             }
           else
             {
               logger((stderr, "No grid elements\n"));
-              int plot_id = 0;
               while (*current_subplot_args != nullptr)
                 {
                   grm_args_t **series;
                   if (grm_args_values(*current_subplot_args, "series", "A", &series))
                     {
-                      auto group = global_render->createElement("plot");
-                      group->setAttribute("plot_id", "plot" + std::to_string(plot_id));
-                      group->setAttribute("plot_group", true);
-                      active_figure->append(group);
-                      currentDomElement = group;
+                      auto plot = global_render->createPlot(plot_id);
+                      active_figure->append(plot);
+                      currentDomElement = plot;
                     }
                   else
                     {
@@ -5105,7 +5103,7 @@ cleanup:
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ c++ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
-                    const std::shared_ptr<GRM::Element> &parentDomElement)
+                    const std::shared_ptr<GRM::Element> &parentDomElement, int plotId)
 {
   plot_func_t plot_func;
   const char *kind = nullptr;
@@ -5119,9 +5117,11 @@ int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
   if (!gridElement->isGrid())
     {
       grm_args_t **current_subplot_args = &gridElement->subplot_args;
-      auto subplotGroup = global_render->createLayoutGridElement(*gridElement, *slice);
-      currentDomElement = subplotGroup;
-      parentDomElement->append(subplotGroup);
+      auto layoutGridElement = global_render->createLayoutGridElement(*gridElement, *slice);
+      parentDomElement->append(layoutGridElement);
+      auto plot = global_render->createPlot(plotId++);
+      layoutGridElement->append(plot);
+      currentDomElement = plot;
 
       if (!plot_process_subplot_args(*current_subplot_args))
         {
@@ -5133,15 +5133,15 @@ int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
       auto *currentGrid = reinterpret_cast<grm::Grid *>(gridElement);
 
       auto gridDomElement = global_render->createLayoutGrid(*currentGrid);
-      gridDomElement->setAttribute("rowStart", slice->rowStart);
-      gridDomElement->setAttribute("rowStop", slice->rowStop);
-      gridDomElement->setAttribute("colStart", slice->colStart);
-      gridDomElement->setAttribute("colStop", slice->colStop);
+      gridDomElement->setAttribute("start_row", slice->rowStart);
+      gridDomElement->setAttribute("stop_row", slice->rowStop);
+      gridDomElement->setAttribute("start_col", slice->colStart);
+      gridDomElement->setAttribute("stop_col", slice->colStop);
       parentDomElement->append(gridDomElement);
 
       for (auto const &elementToSlice : currentGrid->getElementToPosition())
         {
-          grm_plot_helper(elementToSlice.first, elementToSlice.second, gridDomElement);
+          grm_plot_helper(elementToSlice.first, elementToSlice.second, gridDomElement, plotId);
         }
     }
   return 0;

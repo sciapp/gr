@@ -18,8 +18,9 @@
     <xs:element name="figure">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="plot" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="drawgraphics" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="layout_grid" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="plot" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attribute name="active" type="xs:integer"/>
             <xs:attribute name="figsize_x" type="xs:double"/>
@@ -45,6 +46,61 @@
             <xs:selector xpath="plot"/>
             <xs:field xpath="@plot_id"/>
         </xs:unique>
+    </xs:element>
+
+    <!-- definition of layout_grid -->
+    <xs:element name="layout_grid">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="layout_grid" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="layout_gridelement" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attribute name="absolute_height" type="xs:double"/>
+            <xs:attribute name="absolute_height_pxl" type="xs:int"/>
+            <xs:attribute name="absolute_width" type="xs:double"/>
+            <xs:attribute name="absolute_width_pxl" type="xs:int"/>
+            <xs:attribute name="aspect_ratio" type="xs:double"/>
+            <xs:attribute name="fit_parents_height" type="xs:int" use="required"/>
+            <xs:attribute name="fit_parents_width" type="xs:int" use="required"/>
+            <xs:attribute name="num_col" type="xs:int" use="required"/>
+            <xs:attribute name="num_row" type="xs:int" use="required"/>
+            <xs:attribute name="plot_xmax" type="xs:double"/>
+            <xs:attribute name="plot_xmin" type="xs:double"/>
+            <xs:attribute name="plot_ymax" type="xs:double"/>
+            <xs:attribute name="plot_ymin" type="xs:double"/>
+            <xs:attribute name="relative_height" type="xs:double"/>
+            <xs:attribute name="relative_width" type="xs:double"/>
+            <xs:attribute name="start_col" type="xs:int"/>
+            <xs:attribute name="start_row" type="xs:int"/>
+            <xs:attribute name="stop_col" type="xs:int"/>
+            <xs:attribute name="stop_row" type="xs:int"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of layout_gridelement -->
+    <xs:element name="layout_gridelement">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="plot" minOccurs="0" maxOccurs="1"/>
+            </xs:choice>
+            <xs:attribute name="absolute_height" type="xs:double"/>
+            <xs:attribute name="absolute_height_pxl" type="xs:int"/>
+            <xs:attribute name="absolute_width" type="xs:double"/>
+            <xs:attribute name="absolute_width_pxl" type="xs:int"/>
+            <xs:attribute name="aspect_ratio" type="xs:double"/>
+            <xs:attribute name="fit_parents_height" type="xs:int" use="required"/>
+            <xs:attribute name="fit_parents_width" type="xs:int" use="required"/>
+            <xs:attribute name="plot_xmax" type="xs:double"/>
+            <xs:attribute name="plot_xmin" type="xs:double"/>
+            <xs:attribute name="plot_ymax" type="xs:double"/>
+            <xs:attribute name="plot_ymin" type="xs:double"/>
+            <xs:attribute name="relative_height" type="xs:double"/>
+            <xs:attribute name="relative_width" type="xs:double"/>
+            <xs:attribute name="start_col" type="xs:int"/>
+            <xs:attribute name="start_row" type="xs:int"/>
+            <xs:attribute name="stop_col" type="xs:int"/>
+            <xs:attribute name="stop_row" type="xs:int"/>
+        </xs:complexType>
     </xs:element>
 
     <!-- definition of drawgraphics -->
