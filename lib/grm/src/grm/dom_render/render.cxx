@@ -2447,10 +2447,21 @@ static void processSubplot(const std::shared_ptr<GRM::Element> &element)
   double viewport[4] = {0.0, 0.0, 0.0, 0.0};
   int background_color_index;
 
-  subplot[0] = (double)element->getAttribute("plot_xmin");
-  subplot[1] = (double)element->getAttribute("plot_xmax");
-  subplot[2] = (double)element->getAttribute("plot_ymin");
-  subplot[3] = (double)element->getAttribute("plot_ymax");
+  /* when grids are being used for layouting the subplot information is stored in the parent of the plot */
+  if (element->parentElement()->localName() == "layout_gridelement")
+    {
+      subplot[0] = (double)element->parentElement()->getAttribute("plot_xmin");
+      subplot[1] = (double)element->parentElement()->getAttribute("plot_xmax");
+      subplot[2] = (double)element->parentElement()->getAttribute("plot_ymin");
+      subplot[3] = (double)element->parentElement()->getAttribute("plot_ymax");
+    }
+  else
+    {
+      subplot[0] = (double)element->getAttribute("plot_xmin");
+      subplot[1] = (double)element->getAttribute("plot_xmax");
+      subplot[2] = (double)element->getAttribute("plot_ymin");
+      subplot[3] = (double)element->getAttribute("plot_ymax");
+    }
   kind = (std::string)element->getAttribute("kind");
   y_label_margin = (int)element->getAttribute("y_label_margin");
   x_label_margin = (int)element->getAttribute("x_label_margin");
@@ -11492,19 +11503,30 @@ static void initializeGridElements(const std::shared_ptr<GRM::Element> &element,
               return;
             }
 
-          double absHeight = static_cast<double>(child->getAttribute("absHeight"));
-          double absWidth = static_cast<double>(child->getAttribute("absWidth"));
-          int absHeightPxl = static_cast<int>(child->getAttribute("absHeightPxl"));
-          int absWidthPxl = static_cast<int>(child->getAttribute("absWidthPxl"));
-          int fitParentsHeight = static_cast<int>(child->getAttribute("fitParentsHeight"));
-          int fitParentsWidth = static_cast<int>(child->getAttribute("fitParentsWidth"));
-          double relativeHeight = static_cast<double>(child->getAttribute("relativeHeight"));
-          double relativeWidth = static_cast<double>(child->getAttribute("relativeWidth"));
-          double aspectRatio = static_cast<double>(child->getAttribute("aspectRatio"));
-          int rowStart = static_cast<int>(child->getAttribute("rowStart"));
-          int rowStop = static_cast<int>(child->getAttribute("rowStop"));
-          int colStart = static_cast<int>(child->getAttribute("colStart"));
-          int colStop = static_cast<int>(child->getAttribute("colStop"));
+          double absHeight = (child->hasAttribute("absolute_height"))
+                                 ? static_cast<double>(child->getAttribute("absolute_height"))
+                                 : -1;
+          double absWidth =
+              (child->hasAttribute("absolute_width")) ? static_cast<double>(child->getAttribute("absolute_width")) : -1;
+          int absHeightPxl = (child->hasAttribute("absolute_height_pxl"))
+                                 ? static_cast<int>(child->getAttribute("absolute_height_pxl"))
+                                 : -1;
+          int absWidthPxl = (child->hasAttribute("absolute_width_pxl"))
+                                ? static_cast<int>(child->getAttribute("absolute_width_pxl"))
+                                : -1;
+          double relativeHeight = (child->hasAttribute("relative_height"))
+                                      ? static_cast<double>(child->getAttribute("relative_height"))
+                                      : -1;
+          double relativeWidth =
+              (child->hasAttribute("relative_width")) ? static_cast<double>(child->getAttribute("relative_width")) : -1;
+          double aspectRatio =
+              (child->hasAttribute("aspect_ratio")) ? static_cast<double>(child->getAttribute("aspect_ratio")) : -1;
+          int fitParentsHeight = static_cast<int>(child->getAttribute("fit_parents_height"));
+          int fitParentsWidth = static_cast<int>(child->getAttribute("fit_parents_width"));
+          int rowStart = static_cast<int>(child->getAttribute("start_row"));
+          int rowStop = static_cast<int>(child->getAttribute("stop_row"));
+          int colStart = static_cast<int>(child->getAttribute("start_col"));
+          int colStop = static_cast<int>(child->getAttribute("stop_col"));
           auto *slice = new grm::Slice(rowStart, rowStop, colStart, colStop);
 
           if (child->localName() == "layout_gridelement")
@@ -11518,8 +11540,8 @@ static void initializeGridElements(const std::shared_ptr<GRM::Element> &element,
 
           if (child->localName() == "layout_grid")
             {
-              int nrows = static_cast<int>(child->getAttribute("nrows"));
-              int ncols = static_cast<int>(child->getAttribute("ncols"));
+              int nrows = static_cast<int>(child->getAttribute("num_row"));
+              int ncols = static_cast<int>(child->getAttribute("num_col"));
 
               auto *curGrid =
                   new grm::Grid(nrows, ncols, absHeight, absWidth, absHeightPxl, absWidthPxl, fitParentsHeight,
@@ -11532,17 +11554,17 @@ static void initializeGridElements(const std::shared_ptr<GRM::Element> &element,
     }
 }
 
-static void finalizeGrid(const std::shared_ptr<GRM::Element> &root)
+static void finalizeGrid(const std::shared_ptr<GRM::Element> &figure)
 {
   grm::Grid *rootGrid = nullptr;
-  if (root->hasChildNodes())
+  if (figure->hasChildNodes())
     {
-      for (const auto &child : root->children())
+      for (const auto &child : figure->children())
         {
           if (child->localName() == "layout_grid")
             {
-              int nrows = static_cast<int>(child->getAttribute("nrows"));
-              int ncols = static_cast<int>(child->getAttribute("ncols"));
+              int nrows = static_cast<int>(child->getAttribute("num_row"));
+              int ncols = static_cast<int>(child->getAttribute("num_col"));
               rootGrid = new grm::Grid(nrows, ncols);
               child->setAttribute("plot_xmin", 0);
               child->setAttribute("plot_xmax", 1);
@@ -11553,6 +11575,79 @@ static void finalizeGrid(const std::shared_ptr<GRM::Element> &root)
               rootGrid->finalizeSubplot();
               break;
             }
+        }
+    }
+}
+
+static void applyPlotDefaults(std::shared_ptr<GRM::Element> plot)
+{
+  if (!plot->hasAttribute("kind")) plot->setAttribute("kind", PLOT_DEFAULT_KIND);
+  if (!plot->hasAttribute("keep_aspect_ratio")) plot->setAttribute("keep_aspect_ratio", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
+  if (!plot->hasAttribute("keep_window")) plot->setAttribute("keep_window", PLOT_DEFAULT_KEEP_WINDOW);
+  if (!plot->hasAttribute("plot_xmin")) plot->setAttribute("plot_xmin", PLOT_DEFAULT_SUBPLOT_MIN_X);
+  if (!plot->hasAttribute("plot_xmax")) plot->setAttribute("plot_xmax", PLOT_DEFAULT_SUBPLOT_MAX_X);
+  if (!plot->hasAttribute("plot_ymin")) plot->setAttribute("plot_ymin", PLOT_DEFAULT_SUBPLOT_MIN_Y);
+  if (!plot->hasAttribute("plot_ymax")) plot->setAttribute("plot_ymax", PLOT_DEFAULT_SUBPLOT_MAX_Y);
+  auto kind = static_cast<std::string>(plot->getAttribute("kind"));
+  if (!plot->hasAttribute("adjust_xlim"))
+    {
+      if (kind == "heatmap" || kind == "marginalheatmap")
+        {
+          plot->setAttribute("adjust_xlim", 0);
+        }
+      else
+        {
+          plot->setAttribute("adjust_xlim", (plot->hasAttribute("xlim_min") ? 0 : PLOT_DEFAULT_ADJUST_XLIM));
+        }
+    }
+  if (!plot->hasAttribute("adjust_ylim"))
+    {
+      if (kind == "heatmap" || kind == "marginalheatmap")
+        {
+          plot->setAttribute("adjust_ylim", 0);
+        }
+      else
+        {
+          plot->setAttribute("adjust_ylim", (plot->hasAttribute("ylim_min") ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
+        }
+    }
+  if (!plot->hasAttribute("adjust_zlim"))
+    {
+      if (kind != "heatmap" && kind != "marginalheatmap")
+        {
+          plot->setAttribute("adjust_zlim", (plot->hasAttribute("zlim_min") ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
+        }
+    }
+  if (!plot->hasAttribute("line_spec")) plot->setAttribute("line_spec", " ");
+  if (!plot->hasAttribute("xlog")) plot->setAttribute("xlog", PLOT_DEFAULT_XLOG);
+  if (!plot->hasAttribute("ylog")) plot->setAttribute("ylog", PLOT_DEFAULT_YLOG);
+  if (!plot->hasAttribute("zlog")) plot->setAttribute("zlog", PLOT_DEFAULT_ZLOG);
+  if (!plot->hasAttribute("x_flip")) plot->setAttribute("x_flip", PLOT_DEFAULT_XFLIP);
+  if (!plot->hasAttribute("y_flip")) plot->setAttribute("y_flip", PLOT_DEFAULT_YFLIP);
+  if (!plot->hasAttribute("z_flip")) plot->setAttribute("z_flip", PLOT_DEFAULT_ZFLIP);
+  if (!plot->hasAttribute("resample_method")) plot->setAttribute("resample_method", (int)PLOT_DEFAULT_RESAMPLE_METHOD);
+  if (!plot->hasAttribute("font")) plot->setAttribute("font", PLOT_DEFAULT_FONT);
+  if (!plot->hasAttribute("font_precision")) plot->setAttribute("font_precision", PLOT_DEFAULT_FONT_PRECISION);
+  if (!plot->hasAttribute("colormap")) plot->setAttribute("colormap", PLOT_DEFAULT_COLORMAP);
+}
+
+static void applyPlotDefaultsHelper(std::shared_ptr<GRM::Element> element)
+{
+  if (element->localName() == "layout_gridelement")
+    {
+      for (const auto &child : element->children())
+        {
+          if (child->localName() == "plot")
+            {
+              applyPlotDefaults(child);
+            }
+        }
+    }
+  if (element->localName() == "layout_grid")
+    {
+      for (const auto &child : element->children())
+        {
+          applyPlotDefaultsHelper(child);
         }
     }
 }
@@ -11584,60 +11679,11 @@ static void applyRootDefaults(std::shared_ptr<GRM::Element> root)
             {
               if (child->localName() == "plot")
                 {
-                  if (!child->hasAttribute("kind")) child->setAttribute("kind", PLOT_DEFAULT_KIND);
-                  if (!child->hasAttribute("keep_aspect_ratio"))
-                    child->setAttribute("keep_aspect_ratio", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
-                  if (!child->hasAttribute("keep_window")) child->setAttribute("keep_window", PLOT_DEFAULT_KEEP_WINDOW);
-                  if (!child->hasAttribute("plot_xmin")) child->setAttribute("plot_xmin", PLOT_DEFAULT_SUBPLOT_MIN_X);
-                  if (!child->hasAttribute("plot_xmax")) child->setAttribute("plot_xmax", PLOT_DEFAULT_SUBPLOT_MAX_X);
-                  if (!child->hasAttribute("plot_ymin")) child->setAttribute("plot_ymin", PLOT_DEFAULT_SUBPLOT_MIN_Y);
-                  if (!child->hasAttribute("plot_ymax")) child->setAttribute("plot_ymax", PLOT_DEFAULT_SUBPLOT_MAX_Y);
-                  auto kind = static_cast<std::string>(child->getAttribute("kind"));
-                  if (!child->hasAttribute("adjust_xlim"))
-                    {
-                      if (kind == "heatmap" || kind == "marginalheatmap")
-                        {
-                          child->setAttribute("adjust_xlim", 0);
-                        }
-                      else
-                        {
-                          child->setAttribute("adjust_xlim",
-                                              (child->hasAttribute("xlim_min") ? 0 : PLOT_DEFAULT_ADJUST_XLIM));
-                        }
-                    }
-                  if (!child->hasAttribute("adjust_ylim"))
-                    {
-                      if (kind == "heatmap" || kind == "marginalheatmap")
-                        {
-                          child->setAttribute("adjust_ylim", 0);
-                        }
-                      else
-                        {
-                          child->setAttribute("adjust_ylim",
-                                              (child->hasAttribute("ylim_min") ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
-                        }
-                    }
-                  if (!child->hasAttribute("adjust_zlim"))
-                    {
-                      if (kind != "heatmap" && kind != "marginalheatmap")
-                        {
-                          child->setAttribute("adjust_zlim",
-                                              (child->hasAttribute("zlim_min") ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
-                        }
-                    }
-                  if (!child->hasAttribute("line_spec")) child->setAttribute("line_spec", " ");
-                  if (!child->hasAttribute("xlog")) child->setAttribute("xlog", PLOT_DEFAULT_XLOG);
-                  if (!child->hasAttribute("ylog")) child->setAttribute("ylog", PLOT_DEFAULT_YLOG);
-                  if (!child->hasAttribute("zlog")) child->setAttribute("zlog", PLOT_DEFAULT_ZLOG);
-                  if (!child->hasAttribute("x_flip")) child->setAttribute("x_flip", PLOT_DEFAULT_XFLIP);
-                  if (!child->hasAttribute("y_flip")) child->setAttribute("y_flip", PLOT_DEFAULT_YFLIP);
-                  if (!child->hasAttribute("z_flip")) child->setAttribute("z_flip", PLOT_DEFAULT_ZFLIP);
-                  if (!child->hasAttribute("resample_method"))
-                    child->setAttribute("resample_method", (int)PLOT_DEFAULT_RESAMPLE_METHOD);
-                  if (!child->hasAttribute("font")) child->setAttribute("font", PLOT_DEFAULT_FONT);
-                  if (!child->hasAttribute("font_precision"))
-                    child->setAttribute("font_precision", PLOT_DEFAULT_FONT_PRECISION);
-                  if (!child->hasAttribute("colormap")) child->setAttribute("colormap", PLOT_DEFAULT_COLORMAP);
+                  applyPlotDefaults(child);
+                }
+              if (child->localName() == "layout_grid")
+                {
+                  applyPlotDefaultsHelper(child);
                 }
             }
         }
@@ -11731,6 +11777,7 @@ void GRM::Render::render()
         }
       if (static_cast<int>(root->getAttribute("clearws"))) gr_clearws();
       root->setAttribute("_modified", true);
+      finalizeGrid(active_figure);
       renderHelper(root, this->context);
       renderZQueue(this->context);
       root->setAttribute("_modified", false); // reset the modified flag, cause all updates are made
@@ -11811,11 +11858,16 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"None", "A context reference for the absolute upward errors"}},
       {std::string("absolute_upwards_flt"),
        std::vector<std::string>{"None", "The absolute upward error, when its always the same"}},
+      {std::string("absolute_height"), std::vector<std::string>{"None", "Absolut height in percent of window"}},
+      {std::string("absolute_height_pxl"), std::vector<std::string>{"None", "Absolut height in pixel"}},
+      {std::string("absolute_width"), std::vector<std::string>{"None", "Absolut width in percent of window"}},
+      {std::string("absolute_width_pxl"), std::vector<std::string>{"None", "Absolut width in pixel"}},
       {std::string("accelerate"), std::vector<std::string>{"None", "Sets if the GR3 or the GR surface should be used"}},
       {std::string("active"), std::vector<std::string>{"None", "Sets if the element is shown/active"}},
       {std::string("adjust_xlim"), std::vector<std::string>{"None", "Sets if the x-limits gets adjusted"}},
       {std::string("adjust_ylim"), std::vector<std::string>{"None", "Sets if the y-limits gets adjusted"}},
       {std::string("adjust_zlim"), std::vector<std::string>{"None", "Sets if the z-limits gets adjusted"}},
+      {std::string("aspect_ratio"), std::vector<std::string>{"None", "Aspect ratio"}},
       {std::string("algorithm"), std::vector<std::string>{"sum", "The algorithm for the calculation"}},
       {std::string("ambient"), std::vector<std::string>{"None", "The ambient light"}},
       {std::string("angle_ticks"),
@@ -11869,6 +11921,10 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("fill_color_rgb"), std::vector<std::string>{"None", "Color for the bars in rgb format"}},
       {std::string("fill_int_style"), std::vector<std::string>{"None", "Sets the index of the current fillstyle"}},
       {std::string("fill_style"), std::vector<std::string>{"None", "Sets the index of the current fillstyle"}},
+      {std::string("fit_parents_height"),
+       std::vector<std::string>{"None", "Toggle if the parent grid should match the element`s height"}},
+      {std::string("fit_parents_width"),
+       std::vector<std::string>{"None", "Toggle if the parent grid should match the element`s width"}},
       {std::string("font"), std::vector<std::string>{"None", "The text font"}},
       {std::string("font_precision"), std::vector<std::string>{"None", "The precision of the text font"}},
       {std::string("grplot"), std::vector<std::string>{"0", "GRPlot is used or not"}},
@@ -11903,6 +11959,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("name"), std::vector<std::string>{"None", "The name of the element"}},
       {std::string("num_bins"), std::vector<std::string>{"None", "Number of bins"}},
       {std::string("num_col"), std::vector<std::string>{"None", "Number of columns"}},
+      {std::string("num_row"), std::vector<std::string>{"None", "Number of rows"}},
       {std::string("norm"), std::vector<std::string>{"None", "Specify the used normalisation"}},
       {std::string("offset"), std::vector<std::string>{"None", "The offset for the colorbar"}},
       {std::string("orientation"), std::vector<std::string>{"vertical", "The orientation of the element"}},
@@ -11934,6 +11991,10 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"None", "A context reference for the relative downward errors"}},
       {std::string("relative_downwards_flt"),
        std::vector<std::string>{"None", "The relative downward error, when its always the same"}},
+      {std::string("relative_height"),
+       std::vector<std::string>{"None", "Height in percent relative to the parent`s height"}},
+      {std::string("relative_width"),
+       std::vector<std::string>{"None", "Width in percent relative to the parent`s width"}},
       {std::string("relative_upwards"),
        std::vector<std::string>{"None", "A context reference for the relative upward errors"}},
       {std::string("relative_upwards_flt"),
@@ -11945,7 +12006,6 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("scale"), std::vector<std::string>{"None", "The set scale"}},
       {std::string("scap_ymax"), std::vector<std::string>{"None", "The y-value for the upward scap"}},
       {std::string("scap_ymin"), std::vector<std::string>{"None", "The y-value for the downward scap"}},
-      {std::string("start_col"), std::vector<std::string>{"None", "Start column"}},
       {std::string("selntran"), std::vector<std::string>{"None", "The selntran"}},
       {std::string("series_index"), std::vector<std::string>{"None", "The index of the inner serie"}},
       {std::string("size_x"), std::vector<std::string>{"None", "The figure width"}},
@@ -11969,11 +12029,14 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("specular_power"), std::vector<std::string>{"None", "The specular light power"}},
       {std::string("set_text_color_for_background"),
        std::vector<std::string>{"None", "The background color for the text"}},
-      {std::string("start_row"), std::vector<std::string>{"None", "Start row"}},
       {std::string("stairs"),
        std::vector<std::string>{"0", "This is a format of the polar histogram where only outline edges are drawn"}},
       {std::string("start_angle"), std::vector<std::string>{"None", "The start angle of the element"}},
+      {std::string("start_col"), std::vector<std::string>{"None", "Start column"}},
+      {std::string("start_row"), std::vector<std::string>{"None", "Start row"}},
       {std::string("step_where"), std::vector<std::string>{"None", "Sets where the next stair step should start"}},
+      {std::string("stop_col"), std::vector<std::string>{"None", "Stop column"}},
+      {std::string("stop_row"), std::vector<std::string>{"None", "Stop row"}},
       {std::string("style"), std::vector<std::string>{"None", "The barplot style (default, lined, stacked)"}},
       {std::string("text"), std::vector<std::string>{"None", "The text displayed by this node"}},
       {std::string("textalign_horizontal"), std::vector<std::string>{"None", "The horizontal text alignment"}},
@@ -12123,6 +12186,14 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ create functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
+
+std::shared_ptr<GRM::Element> GRM::Render::createPlot(int plotId, const std::shared_ptr<GRM::Element> &extElement)
+{
+  std::shared_ptr<GRM::Element> plot = (extElement == nullptr) ? createElement("plot") : extElement;
+  plot->setAttribute("plot_id", "plot" + std::to_string(plotId));
+  plot->setAttribute("plot_group", true);
+  return plot;
+}
 
 std::shared_ptr<GRM::Element>
 GRM::Render::createPolymarker(const std::string &x_key, std::optional<std::vector<double>> x, const std::string &y_key,
@@ -13166,20 +13237,17 @@ std::shared_ptr<GRM::Element> GRM::Render::createLayoutGrid(const grm::Grid &gri
 {
   auto element = createElement("layout_grid");
 
-  element->setAttribute("absHeight", grid.absHeight);
-  element->setAttribute("absWidth", grid.absWidth);
-  element->setAttribute("absHeightPxl", grid.absHeightPxl);
-  element->setAttribute("absWidthPxl", grid.absWidthPxl);
-  element->setAttribute("fitParentsHeight", grid.fitParentsHeight);
-  element->setAttribute("fitParentsWidth", grid.fitParentsWidth);
-  element->setAttribute("relativeHeight", grid.relativeHeight);
-  element->setAttribute("relativeWidth", grid.relativeWidth);
-  element->setAttribute("aspectRatio", grid.aspectRatio);
-  element->setAttribute("widthSet", grid.widthSet);
-  element->setAttribute("heightSet", grid.heightSet);
-  element->setAttribute("arSet", grid.arSet);
-  element->setAttribute("nrows", grid.getNRows());
-  element->setAttribute("ncols", grid.getNCols());
+  if (grid.absHeight != -1) element->setAttribute("absolute_height", grid.absHeight);
+  if (grid.absWidth != -1) element->setAttribute("absolute_width", grid.absWidth);
+  if (grid.absHeightPxl != -1) element->setAttribute("absolute_height_pxl", grid.absHeightPxl);
+  if (grid.absWidthPxl != -1) element->setAttribute("absolute_width_pxl", grid.absWidthPxl);
+  if (grid.relativeHeight != -1) element->setAttribute("relative_height", grid.relativeHeight);
+  if (grid.relativeWidth != -1) element->setAttribute("relative_width", grid.relativeWidth);
+  if (grid.aspectRatio != -1) element->setAttribute("aspect_ratio", grid.aspectRatio);
+  element->setAttribute("fit_parents_height", grid.fitParentsHeight);
+  element->setAttribute("fit_parents_width", grid.fitParentsWidth);
+  element->setAttribute("num_row", grid.getNRows());
+  element->setAttribute("num_col", grid.getNCols());
 
   return element;
 }
@@ -13189,19 +13257,19 @@ std::shared_ptr<GRM::Element> GRM::Render::createLayoutGridElement(const grm::Gr
 {
   auto element = createElement("layout_gridelement");
 
-  element->setAttribute("absHeight", gridElement.absHeight);
-  element->setAttribute("absWidth", gridElement.absWidth);
-  element->setAttribute("absHeightPxl", gridElement.absHeightPxl);
-  element->setAttribute("absWidthPxl", gridElement.absWidthPxl);
-  element->setAttribute("fitParentsHeight", gridElement.fitParentsHeight);
-  element->setAttribute("fitParentsWidth", gridElement.fitParentsWidth);
-  element->setAttribute("relativeHeight", gridElement.relativeHeight);
-  element->setAttribute("relativeWidth", gridElement.relativeWidth);
-  element->setAttribute("aspectRatio", gridElement.aspectRatio);
-  element->setAttribute("rowStart", slice.rowStart);
-  element->setAttribute("rowStop", slice.rowStop);
-  element->setAttribute("colStart", slice.colStart);
-  element->setAttribute("colStop", slice.colStop);
+  if (gridElement.absHeight != -1) element->setAttribute("absolute_height", gridElement.absHeight);
+  if (gridElement.absWidth != -1) element->setAttribute("absolute_width", gridElement.absWidth);
+  if (gridElement.absHeightPxl != -1) element->setAttribute("absolute_height_pxl", gridElement.absHeightPxl);
+  if (gridElement.absWidthPxl != -1) element->setAttribute("absolute_width_pxl", gridElement.absWidthPxl);
+  element->setAttribute("fit_parents_height", gridElement.fitParentsHeight);
+  element->setAttribute("fit_parents_width", gridElement.fitParentsWidth);
+  if (gridElement.relativeHeight != -1) element->setAttribute("relative_height", gridElement.relativeHeight);
+  if (gridElement.relativeWidth != -1) element->setAttribute("relative_width", gridElement.relativeWidth);
+  if (gridElement.aspectRatio != -1) element->setAttribute("aspect_ratio", gridElement.aspectRatio);
+  element->setAttribute("start_row", slice.rowStart);
+  element->setAttribute("stop_row", slice.rowStop);
+  element->setAttribute("start_col", slice.colStart);
+  element->setAttribute("stop_col", slice.colStop);
 
   double *subplot = gridElement.subplot;
   GRM::Render::setSubplot(element, subplot[0], subplot[1], subplot[2], subplot[3]);
