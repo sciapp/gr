@@ -109,6 +109,32 @@ static void gr3_write_clipped_by(FILE *povfp)
     }
 }
 
+static void print_pigment_and_finish(GR3_DrawList_t_ *draw, char *alpha_text, float alpha_val, int i, FILE *povfp,
+                                     float red, float green, float blue)
+{
+  if (draw->alpha_mode == 0)
+    {
+      fprintf(povfp,
+              "pigment { color rgb <%f, %f, %f> } finish { ambient %f diffuse %f "
+              "specular %f roughness %f } \n",
+              draw->colors[i * 3 + 0] * red, draw->colors[i * 3 + 1] * green, draw->colors[i * 3 + 2] * blue,
+              context_struct_.light_parameters.ambient, context_struct_.light_parameters.diffuse,
+              context_struct_.light_parameters.specular, 1 / (context_struct_.light_parameters.specular_exponent + 1));
+    }
+  else
+    {
+      fprintf(povfp,
+              "pigment { color rgb <%f, %f, %f> %s %f} finish { ambient %f diffuse %f specular "
+              "%f roughness %f} \n",
+              draw->colors[i * 3 + 0] * red, draw->colors[i * 3 + 1] * green, draw->colors[i * 3 + 2] * blue,
+              alpha_text, alpha_val, context_struct_.light_parameters.ambient * (1 - alpha_val),
+              context_struct_.light_parameters.diffuse * (1 - alpha_val),
+              context_struct_.light_parameters.specular * (1 - alpha_val),
+              (1 - alpha_val) / (context_struct_.light_parameters.specular_exponent + 1));
+    }
+}
+
+
 int gr3_export_pov_(const char *filename, int width, int height)
 {
   int i, j, k, l;
@@ -172,8 +198,8 @@ int gr3_export_pov_(const char *filename, int width, int height)
           else
             {
               fprintf(povfp, "light_source { <%f, %f, %f> color rgb <%f, %f, %f> parallel point_at <0,0,0>}\n",
-                      -context_struct_.light_sources[i].x, -context_struct_.light_sources[i].y,
-                      -context_struct_.light_sources[i].z, context_struct_.light_sources[i].r,
+                      context_struct_.light_sources[i].x, context_struct_.light_sources[i].y,
+                      context_struct_.light_sources[i].z, context_struct_.light_sources[i].r,
                       context_struct_.light_sources[i].g, context_struct_.light_sources[i].b);
             }
         }
@@ -183,6 +209,22 @@ int gr3_export_pov_(const char *filename, int width, int height)
   draw = context_struct_.draw_list_;
   while (draw)
     {
+      float alpha_val;
+      char *alpha_text;
+      if (draw->alpha_mode == 0)
+        {
+          alpha_text = "";
+        }
+      else if (draw->alpha_mode == 1)
+        {
+          alpha_text = "transmit";
+          alpha_val = 1 - draw->alphas[0];
+        }
+      else
+        {
+          alpha_text = "filter";
+          alpha_val = 1 - (draw->alphas[0] + draw->alphas[1] + draw->alphas[2]) / 3;
+        }
       gr3_sortindexedmeshdata(draw->mesh);
       switch (context_struct_.mesh_list_[draw->mesh].data.type)
         {
@@ -193,12 +235,7 @@ int gr3_export_pov_(const char *filename, int width, int height)
               fprintf(povfp, "  <%f, %f, %f>, %f\n", draw->positions[i * 3 + 0], draw->positions[i * 3 + 1],
                       draw->positions[i * 3 + 2], draw->scales[i * 3 + 0]);
               fprintf(povfp, "  texture {\n");
-              fprintf(
-                  povfp,
-                  "    pigment { color rgb <%f, %f, %f> } finish { ambient %f diffuse %f phong %f phong_size %f }\n",
-                  draw->colors[i * 3 + 0], draw->colors[i * 3 + 1], draw->colors[i * 3 + 2],
-                  context_struct_.light_parameters.ambient, context_struct_.light_parameters.diffuse,
-                  context_struct_.light_parameters.specular, context_struct_.light_parameters.specular_exponent / 4);
+              print_pigment_and_finish(draw, alpha_text, alpha_val, i, povfp, 1, 1, 1);
               fprintf(povfp, "  }\n");
               gr3_write_clipped_by(povfp);
               fprintf(povfp, " no_shadow \n");
@@ -220,12 +257,7 @@ int gr3_export_pov_(const char *filename, int width, int height)
                       draw->positions[i * 3 + 2] + draw->directions[i * 3 + 2] / len * draw->scales[i * 3 + 2],
                       draw->scales[i * 3 + 0]);
               fprintf(povfp, "  texture {\n");
-              fprintf(
-                  povfp,
-                  "    pigment { color rgb <%f, %f, %f> } finish { ambient %f diffuse %f phong %f phong_size %f }\n",
-                  draw->colors[i * 3 + 0], draw->colors[i * 3 + 1], draw->colors[i * 3 + 2],
-                  context_struct_.light_parameters.ambient, context_struct_.light_parameters.diffuse,
-                  context_struct_.light_parameters.specular, context_struct_.light_parameters.specular_exponent / 4);
+              print_pigment_and_finish(draw, alpha_text, alpha_val, i, povfp, 1, 1, 1);
               fprintf(povfp, "  }\n");
               gr3_write_clipped_by(povfp);
               fprintf(povfp, " no_shadow \n");
@@ -246,12 +278,7 @@ int gr3_export_pov_(const char *filename, int width, int height)
                       draw->positions[i * 3 + 1] + draw->directions[i * 3 + 1] / len * draw->scales[i * 3 + 2],
                       draw->positions[i * 3 + 2] + draw->directions[i * 3 + 2] / len * draw->scales[i * 3 + 2], 0.0);
               fprintf(povfp, "  texture {\n");
-              fprintf(
-                  povfp,
-                  "    pigment { color rgb <%f, %f, %f> } finish { ambient %f diffuse %f phong %f phong_size %f }\n",
-                  draw->colors[i * 3 + 0], draw->colors[i * 3 + 1], draw->colors[i * 3 + 2],
-                  context_struct_.light_parameters.ambient, context_struct_.light_parameters.diffuse,
-                  context_struct_.light_parameters.specular, context_struct_.light_parameters.specular_exponent / 4);
+              print_pigment_and_finish(draw, alpha_text, alpha_val, i, povfp, 1, 1, 1);
               fprintf(povfp, "  }\n");
               gr3_write_clipped_by(povfp);
               fprintf(povfp, " no_shadow \n");
@@ -321,13 +348,9 @@ int gr3_export_pov_(const char *filename, int width, int height)
                   float red = (colors[j * 9 + 0] + colors[j * 9 + 3] + colors[j * 9 + 6]) / 3.0;
                   float green = (colors[j * 9 + 1] + colors[j * 9 + 4] + colors[j * 9 + 7]) / 3.0;
                   float blue = (colors[j * 9 + 2] + colors[j * 9 + 5] + colors[j * 9 + 8]) / 3.0;
-                  fprintf(povfp,
-                          "#local tex = texture { pigment { color rgb <%f, %f, %f> } finish { ambient %f diffuse %f "
-                          "phong %f phong_size %f } }\n",
-                          draw->colors[i * 3 + 0] * red, draw->colors[i * 3 + 1] * green,
-                          draw->colors[i * 3 + 2] * blue, context_struct_.light_parameters.ambient,
-                          context_struct_.light_parameters.diffuse, context_struct_.light_parameters.specular,
-                          context_struct_.light_parameters.specular_exponent / 4);
+                  fprintf(povfp, "#local tex = texture { ");
+                  print_pigment_and_finish(draw, alpha_text, alpha_val, i, povfp, red, green, blue);
+                  fprintf(povfp, "}\n");
                   fprintf(povfp, "  smooth_triangle {\n");
                   for (k = 0; k < 3; k++)
                     {
