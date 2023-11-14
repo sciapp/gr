@@ -72,6 +72,8 @@ GridElement::GridElement(double absHeight, double absWidth, int absHeightPxl, in
   subplot = new double[4];
 }
 
+GridElement::~GridElement() {}
+
 void GridElement::setSubplot(double x1, double x2, double y1, double y2)
 {
   if (finalized || subplotSet == 0)
