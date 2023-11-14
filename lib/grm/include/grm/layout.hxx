@@ -34,6 +34,7 @@ public:
   GridElement();
   GridElement(double absHeight, double absWidth, int absHeightPxl, int absWidthPxl, int fitParentsHeight,
               int fitParentsWidth, double relativeHeight, double relativeWidth, double aspectRatio);
+  virtual ~GridElement();
   virtual void finalizeSubplot();
   virtual bool isGrid();
   void setSubplot(double x1, double x2, double y1, double y2);
