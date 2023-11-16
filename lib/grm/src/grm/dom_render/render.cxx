@@ -7471,7 +7471,9 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
 
   render->setLineType(element, GKS_K_LINETYPE_SOLID);
 
-  if (kind == "polar_histogram" || (kind == "polar" && !subplotElement->hasAttribute("ylim_max")))
+  // without given ylims, except when keep_radii_axes is given
+  if ((kind == "polar_histogram" && (!subplotElement->hasAttribute("ylim_max")) || subplotElement->hasAttribute("keep_radii_axes")) ||
+      (kind == "polar" && !subplotElement->hasAttribute("ylim_max")))
     {
       auto max = static_cast<double>(central_region->getAttribute("r_max"));
       rings = (element->hasAttribute("rings")) ? static_cast<int>(element->getAttribute("rings")) : -1;
@@ -7499,12 +7501,14 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
     }
   else
     {
-      rings = grm_max(4, (int)(r_max - r_min));
+      rings = (element->hasAttribute("rings")) ? static_cast<int>(element->getAttribute("rings"))
+                                               : grm_max(4, (int)(r_max - r_min));
+      // todo better rings calculation when ylim is given
       element->setAttribute("rings", rings);
 
       if (subplotElement->hasAttribute("ylim_max") && subplotElement->hasAttribute("ylim_min"))
         {
-          tick = r_max / rings;
+          tick = (r_max - r_min) / rings;
         }
       else if (element->hasAttribute("tick"))
         {
@@ -9321,7 +9325,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
   std::vector<double> theta;
   std::string norm = "count";
   std::vector<int> classes, bin_counts;
-  double interval, start, max, temp_max, bin_width;
+  double interval, start, max, temp_max, bin_width, xrange_min, xrange_max;
   double *p, *phi_lim = nullptr;
   int max_observations = 0, total_observations = 0;
   std::vector<double> bin_edges, bin_widths;
@@ -9356,6 +9360,32 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
       auto theta_key = static_cast<std::string>(group->getAttribute("theta"));
       theta = GRM::get<std::vector<double>>((*context)[theta_key]);
       length = theta.size();
+
+      if (group->hasAttribute("xrange_min") && group->hasAttribute("xrange_max"))
+        {
+          xrange_min = static_cast<double>(group->getAttribute("xrange_min"));
+          xrange_max = static_cast<double>(group->getAttribute("xrange_max"));
+          // convert xrange_min and max to radian if xrange_max > 2 * M_PI
+          if (xrange_max > 2 * M_PI)
+            {
+              xrange_min = xrange_min / 180.0 * M_PI;
+              xrange_max = xrange_max / 180.0 * M_PI;
+            }
+          if (xrange_min > xrange_max)
+            {
+              // todo switch if xrange_min > xrange_max?
+              std::swap(xrange_min, xrange_max);
+              group->setAttribute("xrange_flip", 1);
+            }
+
+          double theta_min = *std::min_element(theta.begin(), theta.end());
+          double theta_max = *std::max_element(theta.begin(), theta.end());
+          transformCoordinatesVector(theta, theta_min, theta_max, xrange_min, xrange_max);
+        }
+    }
+  else
+    {
+      throw NotFoundError("Polar histogram series is missing data theta or bincounts\n");
     }
 
   if (plot_group->hasAttribute("phi_lim_min") || plot_group->hasAttribute("phi_lim_max"))
@@ -9723,7 +9753,8 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
   double r_min = 0.0, r_max = 1.0;
   double *r_lim = nullptr, *phi_lim = nullptr;
   double phi_lim_arr[2];
-  bool draw_edges = false, stairs = false, phiflip = false;
+  double ylim_min, ylim_max;
+  bool draw_edges = false, stairs = false, phiflip = false, keep_radii_axes = false, ylim = false, colormaps = false;
   std::string norm = "count";
   std::vector<double> r_lim_vec;
   std::vector<double> bin_edges, bin_widths;
@@ -9746,12 +9777,24 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
   if (element->hasAttribute("norm")) norm = static_cast<std::string>(element->getAttribute("norm"));
   if (plot_group->hasAttribute("phi_flip")) phiflip = static_cast<int>(plot_group->getAttribute("phi_flip"));
   if (element->hasAttribute("draw_edges")) draw_edges = static_cast<int>(element->getAttribute("draw_edges"));
+
   num_bins = static_cast<int>(element->getAttribute("num_bins"));
   max = static_cast<double>(element->parentElement()->getAttribute("r_max"));
   total_observations = static_cast<int>(element->getAttribute("total"));
   global_render->setTransparency(element, face_alpha);
   processTransparency(element);
 
+  if (plot_group->hasAttribute("ylim_min") && (plot_group->hasAttribute("ylim_max")))
+    {
+      ylim = true;
+      ylim_min = static_cast<double>(plot_group->getAttribute("ylim_min"));
+      ylim_max = static_cast<double>(plot_group->getAttribute("ylim_max"));
+
+      if (plot_group->hasAttribute("keep_radii_axes"))
+        {
+          keep_radii_axes = static_cast<int>(plot_group->getAttribute("keep_radii_axes"));
+        }
+    }
   if (plot_group->hasAttribute("phi_lim_min") || plot_group->hasAttribute("phi_lim_max"))
     {
       phi_lim = phi_lim_arr;
@@ -9840,6 +9883,170 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
       bin_edges = temp;
     }
 
+  // Special colormap case! Dont iterate through every bar because of the 2000x2000 drawimage size!
+  if (!(element->hasAttribute("x_colormap") && element->hasAttribute("y_colormap")))
+    {
+      if (draw_edges) logger((stderr, "\"draw_edges\" can only be used with colormap\n"));
+    }
+  else
+    {
+      xcolormap = static_cast<int>(element->getAttribute("x_colormap"));
+      ycolormap = static_cast<int>(element->getAttribute("y_colormap"));
+      colormaps = true;
+    }
+
+  // Create drawimage for colormap case here instead of in polarbar, but draw_edges is still in polarbar
+  if (colormaps)
+    {
+      if (-1 > xcolormap || xcolormap > 47 || ycolormap < -1 || ycolormap > 47)
+        {
+          logger((stderr, "The value for keyword \"colormap\" must contain two integer between -1 and 47\n"));
+        }
+      else
+        {
+          std::shared_ptr<GRM::Element> drawImage;
+          const int colormap_size = 500,
+                    image_size = 2000; // todo: maybe use dynamic image_size when using interactions
+          double radius, angle, max_radius;
+          double ylim_min_radius, ylim_max_radius;
+          int total = 0;
+          double norm_factor = 1;
+          std::vector<int> lineardata, bin_counts, colormap;
+          std::vector<double> angles;
+          int id = (int)global_root->getAttribute("_id");
+
+          global_root->setAttribute("_id", id + 1);
+          const std::string &str = std::to_string(id);
+
+          lineardata.resize(image_size * image_size);
+          bin_counts.resize(num_bins);
+
+          create_colormap(xcolormap, ycolormap, colormap_size, colormap);
+
+          if (num_bin_edges == 0)
+            {
+              angles.resize(num_bins + 1);
+              linspace(0.0, M_PI * 2, (int)num_bins + 1, angles);
+            }
+          else
+            {
+              angles = bin_edges;
+            }
+          max_radius = image_size / 2;
+
+          total = static_cast<int>(element->getAttribute("total"));
+
+          if (str_equals_any(norm.c_str(), 2, "probability", "cdf"))
+            norm_factor = total;
+          else if (num_bin_edges == 0 && norm == "pdf")
+            norm_factor = total * bin_width;
+          else if (num_bin_edges == 0 && norm == "countdensity")
+            norm_factor = bin_width;
+
+          // copy and substract ylim_min from classes if needed
+          std::vector<int> classes_copy(classes);
+          if (!keep_radii_axes)
+            {
+              for (auto &count : classes_copy)
+                {
+                  if (count > ylim_max)
+                    {
+                      count = ylim_max;
+                    }
+                  count -= ylim_min;
+                }
+            }
+          else
+            {
+              ylim_min_radius = ylim_min / ylim_max * max_radius;
+              ylim_max_radius = ylim_max * max_radius;
+            }
+
+          // go through every point in the image and check if its inside of a bar
+          for (int y = 0; y < image_size; y++)
+            {
+              for (int x = 0; x < image_size; x++)
+                {
+                  radius = sqrt(pow(x - max_radius, 2) + pow(y - max_radius, 2));
+                  angle = atan2(y - max_radius, x - max_radius);
+
+                  if (angle < 0) angle += M_PI * 2;
+                  if (!phiflip) angle = 2 * M_PI - angle;
+
+                  for (int class_nr = 0; class_nr < classes.size(); ++class_nr)
+                    {
+                      if (angle > angles[class_nr] && angle <= angles[class_nr + 1])
+                        {
+                          double count = classes_copy[class_nr];
+
+                          if (norm == "pdf" && num_bin_edges > 0)
+                            norm_factor = total * bin_widths[class_nr];
+                          else if (norm == "countdensity" && num_bin_edges > 0)
+                            norm_factor = bin_widths[class_nr];
+
+                          // todo: this could be done more efficiently if the if keep_radii_axes condition is
+                          // todo: moved outside the loop. One less condition per iteration.
+                          if (keep_radii_axes)
+                            {
+                              if ((grm_round(radius * 100) / 100) <=
+                                      (grm_round((count * 1.0 / norm_factor / ylim_max * max_radius) * 100) / 100) &&
+                                  radius <= ylim_max_radius && radius > ylim_min_radius)
+                                {
+                                  lineardata[y * image_size + x] =
+                                      colormap[(int)(radius / (max_radius * pow(2, 0.5)) * (colormap_size - 1)) *
+                                                   colormap_size +
+                                               grm_max(grm_min((int)(angle / (2 * M_PI) * colormap_size),
+                                                               colormap_size - 1),
+                                                       0)];
+                                }
+                            }
+                          else
+                            {
+                              if ((grm_round(radius * 100) / 100) <=
+                                      (grm_round((count / norm_factor / (ylim_max - ylim_min) * max_radius) * 100) /
+                                       100) &&
+                                  radius <= max_radius && count > 0.0)
+                                {
+                                  lineardata[y * image_size + x] =
+                                      colormap[(int)(radius / (max_radius * pow(2, 0.5)) * (colormap_size - 1)) *
+                                                   colormap_size +
+                                               grm_max(grm_min((int)(angle / (2 * M_PI) * colormap_size),
+                                                               colormap_size - 1),
+                                                       0)];
+                                }
+                            }
+
+                        } /* end angle check */
+                    }
+                } /* end x loop*/
+            }     /* end y loop */
+
+
+          /* save resample method and reset because it isn't restored with gr_restorestate */
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              drawImage = global_render->createDrawImage(-1.0, 1.0, 1.0, -1.0, image_size, image_size, "data" + str,
+                                                         lineardata, 0);
+              drawImage->setAttribute("_child_id", child_id++);
+              element->append(drawImage);
+            }
+          else
+            {
+              drawImage = element->querySelectors("drawimage[_child_id=" + std::to_string(child_id++) + "]");
+              if (drawImage != nullptr)
+                global_render->createDrawImage(-1.0, 1.0, 1.0, -1.0, image_size, image_size, "data" + str, lineardata,
+                                               0, nullptr, drawImage);
+            }
+          unsigned int resample;
+          gr_inqresamplemethod(&resample);
+          if (drawImage != nullptr) global_render->setResampleMethod(drawImage, static_cast<int>(0x2020202));
+          lineardata.clear();
+          colormap.clear();
+        }
+    }
+
+  // Iterate through the classes and create for every bar polarbar (except for colormap; if colormap and drawedges
+  // bars for drawedges will be created here)
   for (int class_nr = 0; class_nr < classes.size(); ++class_nr)
     {
       double count = classes[class_nr];
@@ -9879,17 +10086,8 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
             }
         }
 
-      if (!(element->hasAttribute("x_colormap") && element->hasAttribute("y_colormap")))
-        {
-          if (draw_edges) logger((stderr, "\"draw_edges\" can only be used with colormap\n"));
-        }
-      else
-        {
-          xcolormap = static_cast<int>(element->getAttribute("x_colormap"));
-          ycolormap = static_cast<int>(element->getAttribute("y_colormap"));
-        }
-
-      if (!stairs)
+      // no stairs and no colormaps except when using draw_edges
+      if (!stairs && ((draw_edges && colormaps) || (!colormaps)))
         {
           std::shared_ptr<GRM::Element> polar_bar;
 
@@ -9931,6 +10129,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
         }
       else if (!draw_edges && (xcolormap == -2 && ycolormap == -2)) /* stairs without draw_edges (not compatible) */
         {
+          // this is for drawing the arcs in stairs.TODO: improve overall readability and ylims
           double r, rect;
           std::complex<double> complex1, complex2;
           const double convert = 180.0 / M_PI;
@@ -9943,7 +10142,29 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
           processFillColorInd(element);
           processLineWidth(element);
 
-          r = pow((count / max), (num_bins * 2));
+          /* perform calculations for later usages, this r is used for complex calculations */
+          if (keep_radii_axes)
+            {
+              r = pow((count / max), num_bins * 2);
+              // todo: test limiting r here already
+              if (r > pow(ylim_max / max, num_bins * 2))
+                {
+                  r = pow(ylim_max / max, num_bins * 2);
+                }
+            }
+          else
+            {
+              // trim count to ylim_max if higher
+              if (count > ylim_max)
+                {
+                  count = ylim_max;
+                }
+              count -= ylim_min;
+              if (count < 0.0) count = 0.0;
+              r = pow((count / (ylim_max - ylim_min)), num_bins * 2);
+            }
+
+          //          r = pow((count / max), (num_bins * 2));
           complex1 = moivre(r, (2 * class_nr), (int)num_bins * 2);
           complex2 = moivre(r, (2 * class_nr + 2), ((int)num_bins * 2));
           rect = sqrt(pow(real(complex1), 2) + pow(imag(complex1), 2));
@@ -9959,7 +10180,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
               mlist[class_nr * 4 + 2] = real(complex2);
               mlist[class_nr * 4 + 3] = imag(complex2);
 
-              if (r_lim != nullptr)
+              if (ylim)
                 {
                   for (int i = 0; i < 2; ++i)
                     {
@@ -9972,8 +10193,8 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
                           mlist[class_nr * 4 + 3 - i * 2] *= factor;
                         }
                     }
-
-                  if (rect > r_min)
+                  // todo: ylims
+                  if ((count > 0 && !keep_radii_axes) || (count > ylim_min && keep_radii_axes))
                     {
                       if (del != del_values::update_without_default && del != del_values::update_with_default)
                         {
@@ -10078,6 +10299,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
         }
     } /* end of classes for loop */
 
+  // todo: this is for drawing the stairs straight lines. Improve overall stair case readability
   if (stairs && !draw_edges && (xcolormap == -2 && ycolormap == -2))
     {
       std::shared_ptr<GRM::Element> line;
@@ -10295,23 +10517,23 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
 static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   unsigned int resample;
-  double *r_lim = nullptr;
   double r, rect;
+  double ylim_min, ylim_max;
   std::complex<double> complex1, complex2;
   std::vector<double> angles, bin_edges;
   std::vector<int> colormap;
   const double convert = 180.0 / M_PI;
   std::vector<int> lineardata, bin_counts;
   std::vector<double> f1, f2, arc_2_x, arc_2_y;
-  std::vector<double> phi_vec, r_lim_vec;
+  std::vector<double> phi_vec;
   std::complex<double> r_min_complex1, r_min_complex2;
   int child_id = 0;
   int xcolormap = -2, ycolormap = -2;
   double count, bin_width = -1.0, bin_widths;
-  double r_min = 0.0, r_max = 1.0, max;
+  double max; // todo rename max -> radius_max?
   int num_bins, num_bin_edges = 0, class_nr;
   std::string norm = "count", str;
-  bool phiflip = false, draw_edges = false;
+  bool phiflip = false, draw_edges = false, keep_radii_axes = false, ylim = false;
   int edge_color = 1, face_color = 989;
   std::vector<double> mlist = {0.0, 0.0, 0.0, 0.0};
   std::shared_ptr<GRM::Element> plot_elem = element->parentElement();
@@ -10322,11 +10544,14 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
   clearOldChildren(&del, element);
 
+  // class_nr is used for the position of the bar in the histogram
   class_nr = static_cast<int>(element->getAttribute("class_nr"));
+  // count is already converted by normalization!
   count = static_cast<double>(element->getAttribute("count"));
 
   if (element->hasAttribute("bin_width")) bin_width = static_cast<double>(element->getAttribute("bin_width"));
   if (element->hasAttribute("norm")) norm = static_cast<std::string>(element->getAttribute("norm"));
+
   if (element->hasAttribute("phi_flip")) phiflip = static_cast<int>(element->getAttribute("phi_flip"));
   if (element->hasAttribute("draw_edges")) draw_edges = static_cast<int>(element->getAttribute("draw_edges"));
   if (element->hasAttribute("line_color_ind")) edge_color = static_cast<int>(element->getAttribute("line_color_ind"));
@@ -10349,27 +10574,7 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
       num_bins = (int)bin_widths_vec.size();
     }
 
-  if (plot_elem->hasAttribute("r_lim_min") && plot_elem->hasAttribute("r_lim_max"))
-    {
-      r_lim_vec.push_back(static_cast<double>(plot_elem->getAttribute("r_lim_min")));
-      r_lim_vec.push_back(static_cast<double>(plot_elem->getAttribute("r_lim_max")));
-      r_lim = &(r_lim_vec[0]);
-
-      r_min = grm_min(r_lim[0], r_lim[1]);
-      r_max = grm_max(r_lim[0], r_lim[1]);
-      if (r_lim[0] > r_lim[1])
-        {
-          r_lim[0] = r_min;
-          r_lim[1] = r_max;
-        }
-
-      if (r_max > 1.0)
-        {
-          r_max = 1.0;
-          logger((stderr, "The value of \"r_lim_max\" can not exceed 1.0\n"));
-        }
-      if (r_min < 0.0) r_min = 0.0;
-    }
+  // no ylims -> max = ylim_max; with ylims -> max = max_count of series
   for (const auto &child : plot_elem->children())
     {
       if (child->localName() == "central_region")
@@ -10379,387 +10584,227 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
         }
     }
 
-  if (element->hasAttribute("x_colormap") && element->hasAttribute("y_colormap"))
+  if (plot_elem->hasAttribute("ylim_min") && plot_elem->hasAttribute("ylim_max"))
     {
-      if (-1 > xcolormap || xcolormap > 47 || ycolormap < -1 || ycolormap > 47)
+      ylim = true;
+      ylim_min = static_cast<double>(plot_elem->getAttribute("ylim_min"));
+      ylim_max = static_cast<double>(plot_elem->getAttribute("ylim_max"));
+      if (plot_elem->hasAttribute("keep_radii_axes"))
         {
-          logger((stderr, "The value for keyword \"colormap\" must contain two integer between -1 and 47\n"));
+          // if true: max = true radius axes maximum!
+          keep_radii_axes = static_cast<int>(plot_elem->getAttribute("keep_radii_axes"));
+        }
+    }
+  else
+    {
+      ylim_min = 0.0;
+      ylim_max = max;
+    }
+
+  // substract ylim_min from count for ylim_min > 0.0
+  if (!keep_radii_axes)
+    {
+      // trim count to ylim_max if higher
+      if (count > ylim_max)
+        {
+          count = ylim_max;
+        }
+      count -= ylim_min;
+    }
+
+  /* perform calculations for later usages, this r is used for complex calculations */
+  if (keep_radii_axes)
+    {
+      r = pow((count / max), num_bins * 2);
+      // todo: test limiting r here already
+      if (r > pow(ylim_max / max, num_bins * 2))
+        {
+          r = pow(ylim_max / max, num_bins * 2);
+        }
+    }
+  else
+    {
+      r = pow((count / (ylim_max - ylim_min)), num_bins * 2);
+    }
+
+  complex1 = moivre(r, 2 * class_nr, (int)num_bins * 2);
+
+  // drawarc rectangle
+  rect = sqrt(pow(real(complex1), 2) + pow(imag(complex1), 2));
+
+  if (ylim)
+    {
+
+      // this r is used directly for the radii of each drawarc
+      if (keep_radii_axes)
+        {
+          r = count / max;
+          if (r > ylim_max / max) r = ylim_max / max;
         }
       else
         {
-          std::shared_ptr<GRM::Element> draw_image;
-          const int colormap_size = 500, image_size = 2000;
-          double radius, angle, max_radius;
-          int total = 0;
-          double norm_factor = 1;
-          auto id = static_cast<int>(global_root->getAttribute("_id"));
+          r = count / (ylim_max - ylim_min);
+          if (r > ylim_max) r = 1.0;
+        }
+    }
 
+  // if ylims are given, then arcs can not be easily drawn, so additional calculations are needed for arcs and lines
+  if (!ylim) /* no ylims given*/
+    {
+      std::shared_ptr<GRM::Element> arc, drawArc;
+      double start_angle, end_angle;
+
+      if (num_bin_edges != 0.0)
+        {
+          start_angle = bin_edges[0] * convert;
+          end_angle = bin_edges[1] * convert;
+        }
+      else
+        {
+          start_angle = class_nr * (360.0 / num_bins);
+          end_angle = (class_nr + 1) * (360.0 / num_bins);
+        }
+      if (!draw_edges)
+        {
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              arc = global_render->createFillArc(-rect, rect, -rect, rect, start_angle, end_angle);
+              arc->setAttribute("_child_id", child_id++);
+              element->append(arc);
+            }
+          else
+            {
+              arc = element->querySelectors("fill_arc[_child_id=" + std::to_string(child_id++) + "]");
+              if (arc != nullptr)
+                global_render->createFillArc(-rect, rect, -rect, rect, start_angle, end_angle, 0, 0, -1, arc);
+            }
+
+          if (arc != nullptr)
+            {
+              global_render->setFillIntStyle(arc, 1);
+              global_render->setFillColorInd(arc, face_color);
+            }
+        }
+
+      if (del != del_values::update_without_default && del != del_values::update_with_default)
+        {
+          draw_arc = global_render->createFillArc(-rect, rect, -rect, rect, start_angle, end_angle);
+          draw_arc->setAttribute("_child_id", child_id++);
+          element->append(draw_arc);
+        }
+      else
+        {
+          draw_arc = element->querySelectors("fill_arc[_child_id=" + std::to_string(child_id++) + "]");
+          if (draw_arc != nullptr)
+            global_render->createFillArc(-rect, rect, -rect, rect, start_angle, end_angle, 0, 0, -1, draw_arc);
+        }
+      if (draw_arc != nullptr)
+        {
+          global_render->setFillIntStyle(draw_arc, 0);
+          global_render->setFillColorInd(draw_arc, edge_color);
+          draw_arc->setAttribute("z_index", 2);
+        }
+    } /* end of no ylims given*/
+  else
+    {
+      int i, num_angle;
+      double start_angle, end_angle;
+      std::shared_ptr<GRM::Element> area;
+      int id = (int)global_root->getAttribute("_id");
+
+      if ((count > 0.0 && !keep_radii_axes) ||
+          (count > ylim_min && keep_radii_axes)) // check if original count (count + ylim_min) is larger than ylim_min
+        {
           global_root->setAttribute("_id", id + 1);
           str = std::to_string(id);
 
-          lineardata.resize(image_size * image_size);
-          bin_counts.resize(num_bins);
-
-          create_colormap(xcolormap, ycolormap, colormap_size, colormap);
-
-          if (num_bin_edges == 0)
+          if (num_bin_edges != 0.0)
             {
-              angles.resize(num_bins + 1);
-              linspace(0.0, M_PI * 2, (int)num_bins + 1, angles);
-            }
-          else
-            {
-              angles = bin_edges;
-            }
-          max_radius = image_size / 2;
-
-          total = static_cast<int>(element->getAttribute("total"));
-
-          if (str_equals_any(norm, "probability", "cdf"))
-            norm_factor = total;
-          else if (num_bin_edges == 0 && norm == "pdf")
-            norm_factor = total * bin_width;
-          else if (num_bin_edges == 0 && norm == "countdensity")
-            norm_factor = bin_width;
-
-          if (r_lim != nullptr)
-            {
-              r_min *= max_radius;
-              r_max *= max_radius;
-            }
-          else
-            {
-              r_min = 0.0;
-              r_max = max_radius;
-            }
-
-          for (int y = 0; y < image_size; y++)
-            {
-              for (int x = 0; x < image_size; x++)
-                {
-                  radius = sqrt(pow(x - max_radius, 2) + pow(y - max_radius, 2));
-                  angle = atan2(y - max_radius, x - max_radius);
-
-                  if (angle < 0) angle += M_PI * 2;
-                  if (!phiflip) angle = 2 * M_PI - angle;
-
-                  if (angle > angles[class_nr] && angle <= angles[class_nr + 1])
-                    {
-                      if (norm == "pdf" && num_bin_edges > 0)
-                        norm_factor = total * bin_widths;
-                      else if (norm == "countdensity" && num_bin_edges > 0)
-                        norm_factor = bin_widths;
-
-                      if ((grm_round(radius * 100) / 100) <=
-                              (grm_round((count * 1.0 / norm_factor / max * max_radius) * 100) / 100) &&
-                          radius <= r_max && radius > r_min)
-                        {
-                          lineardata[y * image_size + x] = colormap
-                              [(int)(radius / (max_radius * pow(2, 0.5)) * (colormap_size - 1)) * colormap_size +
-                               grm_max(grm_min((int)(angle / (2 * M_PI) * colormap_size), colormap_size - 1), 0)];
-                        }
-
-                    } /* end angle check */
-                }     /* end x loop */
-            }         /* end y loop */
-          if (r_lim != nullptr)
-            {
-              r_min = r_lim[0];
-              r_max = r_lim[1];
-            }
-
-          /* save resample method and reset because it isn't restored with gr_restorestate */
-          if (del != del_values::update_without_default && del != del_values::update_with_default)
-            {
-              draw_image = global_render->createDrawImage(-1.0, 1.0, 1.0, -1.0, image_size, image_size, "data" + str,
-                                                          lineardata, 0);
-              draw_image->setAttribute("_child_id", child_id++);
-              element->append(draw_image);
-            }
-          else
-            {
-              draw_image = element->querySelectors("draw_image[_child_id=" + std::to_string(child_id++) + "]");
-              if (draw_image != nullptr)
-                global_render->createDrawImage(-1.0, 1.0, 1.0, -1.0, image_size, image_size, "data" + str, lineardata,
-                                               0, nullptr, draw_image);
-            }
-          gr_inqresamplemethod(&resample);
-          if (draw_image != nullptr) global_render->setResampleMethod(draw_image, static_cast<int>(0x2020202));
-          lineardata.clear();
-          colormap.clear();
-        }
-    }
-
-  /* perform calculations for later usages */
-  r = pow((count / max), num_bins * 2);
-  complex1 = moivre(r, 2 * class_nr, (int)num_bins * 2);
-
-  rect = sqrt(pow(real(complex1), 2) + pow(imag(complex1), 2));
-
-  if (r_lim != nullptr)
-    {
-      complex2 = moivre(r, 2 * class_nr + 2, (int)num_bins * 2);
-
-      mlist[0] = real(complex1);
-      mlist[1] = imag(complex1);
-      mlist[2] = real(complex2);
-      mlist[3] = imag(complex2);
-
-      r_min_complex1 = moivre(pow((r_min), (num_bins * 2)), (class_nr * 2), (int)num_bins * 2);
-      r_min_complex2 = moivre(pow((r_min), (num_bins * 2)), (class_nr * 2 + 2), (int)num_bins * 2);
-
-      /* check if the segment is higher than rmax? */
-      for (int i = 0; i < 2; ++i)
-        {
-          double temporary = fabs(sqrt(pow(mlist[2 - i * 2], 2) + pow(mlist[3 - i * 2], 2)));
-          if (temporary > r_max)
-            {
-              double factor = fabs(r_max / temporary);
-              mlist[2 - i * 2] *= factor;
-              mlist[3 - i * 2] *= factor;
-            }
-        }
-      r = count / max;
-      if (r > r_max) r = r_max;
-    }
-
-  /* no bin_edges */
-  if (num_bin_edges == 0)
-    {
-      if (r_lim != nullptr)
-        {
-          int i, num_angle;
-          double start_angle, end_angle;
-          std::shared_ptr<GRM::Element> area;
-          auto id = static_cast<int>(global_root->getAttribute("_id"));
-
-          if (r > r_min)
-            {
-              global_root->setAttribute("_id", id + 1);
-              str = std::to_string(id);
-
-              start_angle = class_nr * (360.0 / num_bins) / convert;
-              end_angle = (class_nr + 1) * (360.0 / num_bins) / convert;
-
-              /* determine number of angles for arc approximations */
-              num_angle = (int)((end_angle - start_angle) / (0.2 / convert));
-
-              phi_vec.resize(num_angle);
-              linspace(start_angle, end_angle, num_angle, phi_vec);
-
-              /* 4 because of the 4 corner coordinates and 2 * num_angle for the arc approximations, top and bottom */
-              f1.resize(4 + 2 * num_angle);
-              /* line_1_x[0] and [1] */
-              f1[0] = real(r_min_complex1);
-              f1[1] = mlist[0];
-              /* arc_1_x */
-              listcomprehension(r, cos, phi_vec, num_angle, 2, f1);
-              /* reversed line_2_x [0] and [1] */
-              f1[2 + num_angle + 1] = real(r_min_complex2);
-              f1[2 + num_angle] = mlist[2];
-              /* reversed arc_2_x */
-              listcomprehension(r_min, cos, phi_vec, num_angle, 0, arc_2_x);
-              for (i = 0; i < num_angle; ++i)
-                {
-                  f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
-                }
-              arc_2_x.clear();
-
-              f2.resize(4 + 2 * num_angle);
-              /* line_1_y[0] and [1] */
-              f2[0] = imag(r_min_complex1);
-              f2[1] = mlist[1];
-              /* arc_1_y */
-              listcomprehension(r, sin, phi_vec, num_angle, 2, f2);
-              /* reversed line_2_y [0] and [1] */
-              f2[2 + num_angle + 1] = imag(r_min_complex2);
-              f2[2 + num_angle] = mlist[3];
-              /* reversed arc_2_y */
-              listcomprehension(r_min, sin, phi_vec, num_angle, 0, arc_2_y);
-              for (i = 0; i < num_angle; ++i)
-                {
-                  f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
-                }
-              arc_2_y.clear();
-
-              if (!draw_edges)
-                {
-                  /* with r_lim gr_fillarc cant be used because it will always draw from the origin instead use
-                   * gr_fillarea and approximate line segment with calculations from above */
-                  if (del != del_values::update_without_default && del != del_values::update_with_default)
-                    {
-                      area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
-                      area->setAttribute("_child_id", child_id++);
-                      element->append(area);
-                    }
-                  else
-                    {
-                      area = element->querySelectors("fill_area[_child_id=" + std::to_string(child_id++) + "]");
-                      if (area != nullptr)
-                        global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
-                    }
-
-                  if (area != nullptr)
-                    {
-                      global_render->setFillColorInd(area, face_color);
-                      global_render->setFillIntStyle(area, 1);
-                    }
-                }
-
-              /* draw_area more likely */
-              if (del != del_values::update_without_default && del != del_values::update_with_default)
-                {
-                  area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
-                  area->setAttribute("_child_id", child_id++);
-                  element->append(area);
-                }
-              else
-                {
-                  area = element->querySelectors("fill_area[_child_id=" + std::to_string(child_id++) + "]");
-                  if (area != nullptr)
-                    global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
-                }
-              if (area != nullptr)
-                {
-                  global_render->setFillColorInd(area, edge_color);
-                  global_render->setFillIntStyle(area, 0);
-                  area->setAttribute("z_index", 2);
-                }
-
-              /* clean up vectors for next iteration */
-              phi_vec.clear();
-              f1.clear();
-              f2.clear();
-            }
-        }  /* end r_lim condition */
-      else /* no r_lim */
-        {
-          std::shared_ptr<GRM::Element> arc, draw_arc;
-
-          if (!draw_edges)
-            {
-              if (del != del_values::update_without_default && del != del_values::update_with_default)
-                {
-                  arc = global_render->createFillArc(-rect, rect, -rect, rect, class_nr * (360.0 / num_bins),
-                                                     (class_nr + 1) * (360.0 / num_bins));
-                  arc->setAttribute("_child_id", child_id++);
-                  element->append(arc);
-                }
-              else
-                {
-                  arc = element->querySelectors("fill_arc[_child_id=" + std::to_string(child_id++) + "]");
-                  if (arc != nullptr)
-                    global_render->createFillArc(-rect, rect, -rect, rect, class_nr * (360.0 / num_bins),
-                                                 (class_nr + 1) * (360.0 / num_bins), 0, 0, -1, arc);
-                }
-
-              if (arc != nullptr)
-                {
-                  global_render->setFillIntStyle(arc, 1);
-                  global_render->setFillColorInd(arc, face_color);
-                }
-            }
-
-          if (del != del_values::update_without_default && del != del_values::update_with_default)
-            {
-              draw_arc = global_render->createFillArc(-rect, rect, -rect, rect, class_nr * (360.0 / num_bins),
-                                                      (class_nr + 1) * (360.0 / num_bins));
-              draw_arc->setAttribute("_child_id", child_id++);
-              element->append(draw_arc);
-            }
-          else
-            {
-              draw_arc = element->querySelectors("fill_arc[_child_id=" + std::to_string(child_id++) + "]");
-              if (draw_arc != nullptr)
-                global_render->createFillArc(-rect, rect, -rect, rect, class_nr * (360.0 / num_bins),
-                                             (class_nr + 1) * (360.0 / num_bins), 0, 0, -1, draw_arc);
-            }
-          if (draw_arc != nullptr)
-            {
-              global_render->setFillIntStyle(draw_arc, 0);
-              global_render->setFillColorInd(draw_arc, edge_color);
-              draw_arc->setAttribute("z_index", 2);
-            }
-        }
-    }
-  else /* bin_egdes */
-    {
-      if (r_lim != nullptr)
-        {
-          double start_angle, end_angle;
-          int num_angle, i;
-          std::shared_ptr<GRM::Element> area;
-          int id = (int)global_root->getAttribute("_id");
-
-          if (r > r_min)
-            {
-              global_root->setAttribute("_id", id + 1);
-              str = std::to_string(id);
-
               start_angle = bin_edges[0];
               end_angle = bin_edges[1];
+            }
+          else
+            {
+              start_angle = class_nr * (360.0 / num_bins) / convert;
+              end_angle = (class_nr + 1) * (360.0 / num_bins) / convert;
+            }
 
-              num_angle = (int)((end_angle - start_angle) / (0.2 / convert));
-              phi_vec.resize(num_angle);
-              linspace(start_angle, end_angle, num_angle, phi_vec);
+          // determine number of angles for arc approximations
+          num_angle = (int)((end_angle - start_angle) / (0.2 / convert));
+          phi_vec.resize(num_angle);
+          linspace(start_angle, end_angle, num_angle, phi_vec);
 
-              f1.resize(4 + 2 * num_angle);
-              /* line_1_x[0] and [1] */
-              f1[0] = cos(bin_edges[0]) * r_min;
-              f1[1] = grm_min(rect, r_max) * cos(bin_edges[0]);
-              /* arc_1_x */
-              listcomprehension(r, cos, phi_vec, num_angle, 2, f1);
-              /* reversed line_2_x [0] and [1] */
-              f1[2 + num_angle + 1] = cos(bin_edges[1]) * r_min;
-              f1[2 + num_angle] = grm_min(rect, r_max) * cos(bin_edges[1]);
-              /* reversed arc_2_x */
-              listcomprehension(r_min, cos, phi_vec, num_angle, 0, arc_2_x);
-              for (i = 0; i < num_angle; ++i)
-                {
-                  f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
-                }
-              arc_2_x.clear();
+          // 4 because of the 4 corner coordinates and 2 * num_angle for the arc approximations, top and
+          // bottom
+          f1.resize(4 + 2 * num_angle);
+          /* line_1_x[0] and [1]*/
+          // todo is r_min_complex actually needed?
+          //          f1[0] = real(r_min_complex1);
+          //          f1[1] = mlist[0];
+          f1[0] = cos(start_angle) * ylim_min / ylim_max;
+          f1[1] = grm_min(rect, ylim_max - ylim_min) * cos(start_angle);
 
-              f2.resize(4 + 2 * num_angle);
-              /* line_1_y[0] and [1] */
-              f2[0] = r_min * sin(bin_edges[0]);
-              f2[1] = grm_min(rect, r_max) * sin(bin_edges[0]);
-              /* arc_1_y */
-              listcomprehension(r, sin, phi_vec, num_angle, 2, f2);
-              /* reversed line_2_y [0] and [1] */
-              f2[2 + num_angle + 1] = r_min * sin(bin_edges[1]);
-              f2[2 + num_angle] = grm_min(rect, r_max) * sin(bin_edges[1]);
-              /* reversed arc_2_y */
-              listcomprehension(r_min, sin, phi_vec, num_angle, 0, arc_2_y);
-              for (i = 0; i < num_angle; ++i)
-                {
-                  f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
-                }
-              arc_2_y.clear();
+          /* arc_1_x */
+          listcomprehension(r, cos, phi_vec, num_angle, 2, f1);
 
-              if (!draw_edges)
-                {
-                  if (del != del_values::update_without_default && del != del_values::update_with_default)
-                    {
-                      area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
-                      area->setAttribute("_child_id", child_id++);
-                      element->append(area);
-                    }
-                  else
-                    {
-                      area = element->querySelectors("fill_area[_child_id=" + std::to_string(child_id++) + "]");
-                      if (area != nullptr)
-                        global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
-                    }
+          /* reversed line_2_x [0] and [1] */
+          // todo test withouth r_min_complex
+          //          f1[2 + num_angle + 1] = real(r_min_complex2);
+          //          f1[2 + num_angle] = mlist[2];
+          f1[2 + num_angle + 1] = cos(end_angle) * ylim_min / ylim_max;
+          f1[2 + num_angle] = grm_min(rect, ylim_max - ylim_min) * cos(end_angle);
+          /* reversed arc_2_x */
+          if (keep_radii_axes)
+            {
+              listcomprehension(ylim_min / max, cos, phi_vec, num_angle, 0, arc_2_x);
+            }
+          else
+            {
+              listcomprehension(0.0, cos, phi_vec, num_angle, 0, arc_2_x);
+            }
 
-                  if (area != nullptr)
-                    {
-                      global_render->setFillColorInd(area, face_color);
-                      global_render->setFillIntStyle(area, 1);
-                    }
-                }
+          for (i = 0; i < num_angle; ++i)
+            {
+              f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
+            }
+          arc_2_x.clear();
 
-              /* draw_area more likely */
+          f2.resize(4 + 2 * num_angle);
+          /* line_1_y[0] and [1] */
+          // todo: test without r_min_complex
+          //          f2[0] = imag(r_min_complex1);
+          //          f2[1] = mlist[1];
+          f2[0] = ylim_min / ylim_max * sin(start_angle);
+          f2[1] = grm_min(rect, ylim_max - ylim_min) * sin(start_angle);
+
+          /*arc_1_y */
+          listcomprehension(r, sin, phi_vec, num_angle, 2, f2);
+          /* reversed line_2_y [0] and [1] */
+          // todo: test without r_min_complex
+          //          f2[2 + num_angle + 1] = imag(r_min_complex2);
+          //          f2[2 + num_angle] = mlist[3];
+          f2[2 + num_angle + 1] = ylim_min / ylim_max * sin(end_angle);
+          f2[2 + num_angle] = grm_min(rect, ylim_max - ylim_min) * sin(end_angle);
+
+          /* reversed arc_2_y */
+          if (keep_radii_axes)
+            {
+              listcomprehension(ylim_min / max, sin, phi_vec, num_angle, 0, arc_2_y);
+            }
+          else
+            {
+              listcomprehension(0.0, sin, phi_vec, num_angle, 0, arc_2_y);
+            }
+          for (i = 0; i < num_angle; ++i)
+            {
+              f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
+            }
+          arc_2_y.clear();
+
+          if (!draw_edges)
+            {
+              // with rlim gr_fillarc cant be used because it will always draw from the origin
+              // instead use gr_fillarea and approximate line segment with calculations from above.
               if (del != del_values::update_without_default && del != del_values::update_with_default)
                 {
                   area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
@@ -10772,70 +10817,39 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
                   if (area != nullptr)
                     global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
                 }
+
               if (area != nullptr)
                 {
-                  global_render->setFillColorInd(area, edge_color);
-                  global_render->setFillIntStyle(area, 0);
-                  area->setAttribute("z_index", 2);
-                }
-
-              /* clean up vectors for next iteration */
-              phi_vec.clear();
-              f1.clear();
-              f2.clear();
-            }
-        }
-      else /* no r_lim */
-        {
-          std::shared_ptr<GRM::Element> arc, draw_arc;
-
-          if (!draw_edges)
-            {
-              if (del != del_values::update_without_default && del != del_values::update_with_default)
-                {
-                  arc = global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[0] * convert,
-                                                     bin_edges[1] * convert);
-                  arc->setAttribute("_child_id", child_id++);
-                  element->append(arc);
-                }
-              else
-                {
-                  arc = element->querySelectors("fill_arc[_child_id=" + std::to_string(child_id++) + "]");
-                  if (arc != nullptr)
-                    global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[0] * convert,
-                                                 bin_edges[1] * convert, 0, 0, -1, arc);
-                }
-
-              if (arc != nullptr)
-                {
-                  global_render->setFillIntStyle(arc, 1);
-                  global_render->setFillColorInd(arc, face_color);
+                  global_render->setFillColorInd(area, face_color);
+                  global_render->setFillIntStyle(area, 1);
                 }
             }
 
-          /* draw_arc */
+          // draw_area more likely
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
-              draw_arc = global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[0] * convert,
-                                                      bin_edges[1] * convert);
-              draw_arc->setAttribute("_child_id", child_id++);
-              element->append(draw_arc);
+              area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
+              area->setAttribute("_child_id", child_id++);
+              element->append(area);
             }
           else
             {
-              draw_arc = element->querySelectors("fill_arc[_child_id=" + std::to_string(child_id++) + "]");
-              if (draw_arc != nullptr)
-                global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[0] * convert, bin_edges[1] * convert,
-                                             0, 0, -1, draw_arc);
+              area = element->querySelectors("fill_area[_child_id=" + std::to_string(child_id++) + "]");
+              if (area != nullptr) global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
             }
-          if (draw_arc != nullptr)
+          if (area != nullptr)
             {
-              global_render->setFillIntStyle(draw_arc, 0);
-              global_render->setFillColorInd(draw_arc, edge_color);
-              draw_arc->setAttribute("z_index", 2);
+              global_render->setFillColorInd(area, edge_color);
+              global_render->setFillIntStyle(area, 0);
+              area->setAttribute("z_index", 2);
             }
+
+          /* clean up vectors for next iteration */
+          phi_vec.clear();
+          f1.clear();
+          f2.clear();
         }
-    }
+    } /* end of ylims given case */
 }
 
 static void processScatter(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
