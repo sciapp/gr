@@ -565,17 +565,17 @@ static double getLightness(int color)
   return 116 * pow(y / 100, 1.0 / 3) - 16;
 }
 
-static double transformCoordinates(double value, double vmin, double vmax, double rangeMin, double rangeMax)
+static double transformCoordinate(double value, double vmin, double vmax, double rangeMin, double rangeMax)
 {
   return (rangeMax - rangeMin) * (value - vmin) / (vmax - vmin) + rangeMin;
 }
 
-static void transformCoordinateVector(std::vector<double> &coords, double vmin, double vmax, double rangeMin,
-                                      double rangeMax)
+static void transformCoordinatesVector(std::vector<double> &coords, double vmin, double vmax, double rangeMin,
+                                       double rangeMax)
 {
   for (auto &coord : coords)
     {
-      coord = transformCoordinates(coord, vmin, vmax, rangeMin, rangeMax);
+      coord = transformCoordinate(coord, vmin, vmax, rangeMin, rangeMax);
     }
 }
 
@@ -7455,6 +7455,10 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
   if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap" || kind == "polar")
     {
       r_min = static_cast<double>(subplotElement->getAttribute("r_min"));
+      if (kind != "nonuniform_polar_heatmap")
+        {
+          r_min = 0.0;
+        }
       r_max = static_cast<double>(subplotElement->getAttribute("r_max"));
     }
   else
@@ -8835,9 +8839,9 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
    * \param[in] context The GRM::Context that contains the actual data
    */
   double r_min, r_max, tick;
-  double ylim_min, ylim_max, yrange_min, yrange_max;
+  double ylim_min, ylim_max, yrange_min, yrange_max, xrange_min, xrange_max;
   int n, i;
-  bool transform = false, ylim = false, clip_negative = false;
+  bool transform_radii = false, transform_angles = false, ylim = false, clip_negative = false;
   unsigned int rho_length, theta_length;
   std::string line_spec = SERIES_DEFAULT_SPEC;
   std::vector<double> theta_vec, rho_vec;
@@ -8855,7 +8859,7 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
     }
   if (element->hasAttribute("yrange_min") && element->hasAttribute("yrange_max"))
     {
-      transform = true;
+      transform_radii = true;
       yrange_min = static_cast<double>(element->getAttribute("yrange_min"));
       yrange_max = static_cast<double>(element->getAttribute("yrange_max"));
     }
@@ -8863,6 +8867,18 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
     {
       r_max = static_cast<double>(plot_parent->getAttribute("r_max"));
       r_min = 0.0;
+    }
+  if (element->hasAttribute("xrange_min") && element->hasAttribute("xrange_max"))
+    {
+      transform_angles = true;
+      xrange_min = static_cast<double>(element->getAttribute("xrange_min"));
+      xrange_max = static_cast<double>(element->getAttribute("xrange_max"));
+      if (xrange_max > 2 * M_PI)
+        {
+          // convert from degrees to radians
+          xrange_max = xrange_max * M_PI / 180.0;
+          xrange_min = xrange_min * M_PI / 180.0;
+        }
     }
 
   if (element->hasAttribute("line_spec"))
@@ -8891,7 +8907,7 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   r_min = *std::min_element(rho_vec.begin(), rho_vec.end());
   r_max = *std::max_element(rho_vec.begin(), rho_vec.end());
 
-  if (r_min == yrange_min && r_max == yrange_max) transform = false;
+  if (r_min == yrange_min && r_max == yrange_max) transform_radii = false;
   if (!ylim) ylim_max = r_max;
 
   if (rho_length != theta_length)
@@ -8915,12 +8931,20 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
         }
     }
 
-  // transform coordinates into yrange if given
-  if (transform)
+  // transform angles into xrange if given
+  if (transform_angles)
+    {
+      double theta_min = *std::min_element(theta_vec.begin(), theta_vec.end());
+      double theta_max = *std::max_element(theta_vec.begin(), theta_vec.end());
+      transformCoordinatesVector(theta_vec, theta_min, theta_max, xrange_min, xrange_max);
+    }
+
+  // transform radii into yrange if given
+  if (transform_radii)
     {
       for (i = 0; i < rho_length; ++i)
         {
-          double current_rho = transformCoordinates(rho_vec[i], r_min, r_max, yrange_min, yrange_max) / ylim_max;
+          double current_rho = transformCoordinate(rho_vec[i], r_min, r_max, yrange_min, yrange_max) / ylim_max;
           x[i] = current_rho * cos(theta_vec[i]);
           y[i] = current_rho * sin(theta_vec[i]);
         }
@@ -9107,25 +9131,25 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
           x_vec.resize(cols);
           for (col = 0; col < cols; ++col)
             {
-              x_vec[col] = transformCoordinates(col / (cols - 1.0) * 360.0, 0.0, 360.0, xrange_min * convert,
-                                                xrange_max * convert);
+              x_vec[col] = transformCoordinate(col / (cols - 1.0) * 360.0, 0.0, 360.0, xrange_min * convert,
+                                               xrange_max * convert);
             }
         }
       else
         {
-          transformCoordinateVector(x_vec, x_min, x_max, xrange_min * convert, xrange_max * convert);
+          transformCoordinatesVector(x_vec, x_min, x_max, xrange_min * convert, xrange_max * convert);
         }
       if (y_vec.empty())
         {
           y_vec.resize(rows);
           for (row = 0; row < rows; ++row)
             {
-              y_vec[row] = transformCoordinates(row / (rows - 1.0), 0.0, 1.0, yrange_min, yrange_max);
+              y_vec[row] = transformCoordinate(row / (rows - 1.0), 0.0, 1.0, yrange_min, yrange_max);
             }
         }
       else
         {
-          transformCoordinateVector(y_vec, y_min, y_max, yrange_min, yrange_max);
+          transformCoordinatesVector(y_vec, y_min, y_max, yrange_min, yrange_max);
         }
     }
 

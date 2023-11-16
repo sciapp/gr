@@ -3110,7 +3110,7 @@ err_t plot_polar(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       double *rho, *theta;
-      double y_min, y_max;
+      double y_min, y_max, x_min, x_max;
       unsigned int rho_length, theta_length;
       char *spec;
       auto subGroup = global_render->createSeries("polar");
@@ -3141,6 +3141,11 @@ err_t plot_polar(grm_args_t *subplot_args)
       if (grm_args_values(*current_series, "clip_negative", "i", &clip_negative))
         {
           subGroup->setAttribute("clip_negative", clip_negative);
+        }
+      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+        {
+          subGroup->setAttribute("xrange_min", x_min);
+          subGroup->setAttribute("xrange_max", x_max);
         }
 
       global_root->setAttribute("_id", id++);
