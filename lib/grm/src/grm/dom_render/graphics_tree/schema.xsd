@@ -144,6 +144,7 @@
             <xs:attribute name="font_precision" type="strint"/>
             <xs:attribute name="grplot" type="xs:integer"/> <!-- all plots are made with grplot or none -->
             <xs:attribute name="keep_aspect_ratio" type="xs:integer" use="required"/>
+            <xs:attribute name="keep_radii_axes" type="xs:integer"/>
             <xs:attribute name="kind" type="xs:string" use="required"/>
             <xs:attribute name="line_spec" type="xs:string"/>
             <xs:attribute name="location" type="strint"/>
