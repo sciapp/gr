@@ -275,6 +275,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "ind_edge_color",
                                     "ind_edge_width",
                                     "keep_aspect_ratio",
+                                    "keep_radii_axes",
                                     "kind",
                                     "labels",
                                     "levels",
@@ -3225,8 +3226,10 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   double *r_lim = nullptr;
   unsigned int dummy;
   int stairs;
+  int keep_radii_axes;
   int x_colormap, y_colormap;
   int draw_edges, phi_flip, edge_color, face_color, face_alpha;
+  double xrange_min, xrange_max, ylim_min, ylim_max;
   grm_args_t **series;
 
   std::shared_ptr<GRM::Element> plot_group = edit_figure->lastChildElement();
@@ -3268,6 +3271,11 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
       plot_group->setAttribute("phi_flip", phi_flip);
     }
 
+  if (grm_args_values(subplot_args, "keep_radii_axes", "i", &keep_radii_axes))
+    {
+      plot_group->setAttribute("keep_radii_axes", keep_radii_axes);
+    }
+
   if (grm_args_values(*series, "draw_edges", "i", &draw_edges))
     {
       series_group->setAttribute("draw_edges", draw_edges);
@@ -3282,6 +3290,18 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
     {
       plot_group->setAttribute("r_lim_min", r_lim[0]);
       plot_group->setAttribute("r_lim_max", r_lim[1]);
+    }
+
+  if (grm_args_values(subplot_args, "ylim", "dd", &ylim_min, &ylim_max))
+    {
+      plot_group->setAttribute("ylim_min", ylim_min);
+      plot_group->setAttribute("ylim_max", ylim_max);
+    }
+
+  if (grm_args_values(*series, "xrange", "dd", &xrange_min, &xrange_max))
+    {
+      series_group->setAttribute("xrange_min", xrange_min);
+      series_group->setAttribute("xrange_max", xrange_max);
     }
 
   if (grm_args_values(*series, "x_colormap", "i", &x_colormap))
