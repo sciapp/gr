@@ -4,7 +4,7 @@ UNAME := $(shell uname)
 ifeq ($(UNAME), Darwin)
  TARGETS += zeromq
 endif
-  EXTRAS = agg tiff ogg theora vpx openh264 ffmpeg glfw zeromq pixman cairo libxml2
+  EXTRAS = agg tiff ogg theora vpx openh264 ffmpeg glfw zeromq pixman cairo icu xerces-c
      DIR =
 
 default:

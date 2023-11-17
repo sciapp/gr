@@ -6,7 +6,7 @@ windows-32bit-cross:
   - tar xf cmake-3.23.0-linux-x86_64.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
-    EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo agg libxml2"
+    EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo agg xerces-c"
     HOST=i686-w64-mingw32
     ARCHITECTURE=i686
     OS=w64_x86-cross-mingw32
@@ -14,13 +14,13 @@ windows-32bit-cross:
     CXX=i686-w64-mingw32-g++
     AR=i686-w64-mingw32-ar
     GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/i686-w64-mingw32.cmake
+    XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/i686-w64-mingw32.cmake
     OGG_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     THEORA_EXTRA_CONFIGURE_FLAGS="--host=i686-w64-mingw32 --disable-asm"
     FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=i686-w64-mingw32- --arch=i686 --target-os=mingw32 --pkg-config=pkg-config"
     PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     CAIRO_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     TIFF_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
-    LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     OPENH264_EXTRA_MAKE_FLAGS="OS=mingw_nt ARCH=i386 CFLAGS=-fno-exceptions CXXFLAGS=-fno-exceptions LDFLAGS=-fno-exceptions"
   - MAKE="make -f makefile.mingw" make -f makefile.mingw
     GRDIR=./
@@ -73,7 +73,7 @@ windows-32bit-cmake-cross:
   - tar xf cmake-3.23.0-linux-x86_64.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
-    EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo agg libxml2"
+    EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo agg xerces-c"
     HOST=i686-w64-mingw32
     ARCHITECTURE=i686
     OS=w64_x86-cross-mingw32
@@ -82,30 +82,14 @@ windows-32bit-cmake-cross:
     AR=i686-w64-mingw32-ar
     OPENJP2_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/i686-w64-mingw32.cmake
     GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/i686-w64-mingw32.cmake
+    XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/i686-w64-mingw32.cmake
     OGG_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     THEORA_EXTRA_CONFIGURE_FLAGS="--host=i686-w64-mingw32 --disable-asm"
     FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=i686-w64-mingw32- --arch=i686 --target-os=mingw32 --pkg-config=pkg-config"
     PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     CAIRO_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     TIFF_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
-    LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     OPENH264_EXTRA_MAKE_FLAGS="OS=mingw_nt ARCH=i386 CFLAGS=-fno-exceptions CXXFLAGS=-fno-exceptions LDFLAGS=-fno-exceptions"
-  - cd 3rdparty/build/lib/cmake/libxml2
-  - |-
-    patch -N <<'EOF'
-    --- libxml2-config.cmake        2023-05-24 10:50:21.099243441 +0000
-    +++ libxml2-config.cmake.patched        2023-05-24 10:50:42.289604090 +0000
-    @@ -29,7 +29,7 @@
-     set(LIBXML2_VERSION_MINOR  10)
-     set(LIBXML2_VERSION_MICRO  4)
-     set(LIBXML2_VERSION_STRING "2.10.4")
-    -set(LIBXML2_DEFINITIONS    " -DLIBXML_STATIC")
-    +set(LIBXML2_DEFINITIONS    -DLIBXML_STATIC)
-     set(LIBXML2_INSTALL_PREFIX ${_libxml2_rootdir})
-     set(LIBXML2_INCLUDE_DIR    ${_libxml2_rootdir}/include/libxml2)
-     set(LIBXML2_LIBRARY_DIR    ${_libxml2_rootdir}/lib)
-    EOF
-  - cd -
   - mkdir build
   - cd build
   - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/i686-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-i686/cmake -DGR_MANUAL_MOC_AND_RCC=ON -DGR_USE_BUNDLED_LIBRARIES=ON
@@ -129,7 +113,7 @@ windows-64bit-cross:
   - tar xf cmake-3.23.0-linux-x86_64.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
-    EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo agg libxml2"
+    EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo agg xerces-c"
     HOST=x86_64-w64-mingw32
     ARCHITECTURE=x86_64
     OS=w64_amd64-cross-mingw32
@@ -137,13 +121,13 @@ windows-64bit-cross:
     CXX=x86_64-w64-mingw32-g++
     AR=x86_64-w64-mingw32-ar
     GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/x86_64-w64-mingw32.cmake
+    XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/x86_64-w64-mingw32.cmake
     OGG_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     THEORA_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=x86_64-w64-mingw32- --arch=x86_64 --target-os=mingw32 --pkg-config=pkg-config"
     PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     CAIRO_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     TIFF_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
-    LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     OPENH264_EXTRA_MAKE_FLAGS=OS=mingw_nt
   - MAKE="make -f makefile.mingw" make -f makefile.mingw
     GRDIR=./
@@ -196,7 +180,7 @@ windows-64bit-cmake-cross:
   - tar xf cmake-3.23.0-linux-x86_64.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
-    EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo agg libxml2"
+    EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo agg xerces-c"
     HOST=x86_64-w64-mingw32
     ARCHITECTURE=x86_64
     OS=w64_amd64-cross-mingw32
@@ -205,30 +189,14 @@ windows-64bit-cmake-cross:
     AR=x86_64-w64-mingw32-ar
     OPENJP2_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/x86_64-w64-mingw32.cmake
     GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/x86_64-w64-mingw32.cmake
+    XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/x86_64-w64-mingw32.cmake
     OGG_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     THEORA_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=x86_64-w64-mingw32- --arch=x86_64 --target-os=mingw32 --pkg-config=pkg-config"
     PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     CAIRO_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     TIFF_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
-    LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     OPENH264_EXTRA_MAKE_FLAGS=OS=mingw_nt
-  - cd 3rdparty/build/lib/cmake/libxml2
-  - |-
-    patch -N <<'EOF'
-    --- libxml2-config.cmake        2023-05-24 10:50:21.099243441 +0000
-    +++ libxml2-config.cmake.patched        2023-05-24 10:50:42.289604090 +0000
-    @@ -29,7 +29,7 @@
-     set(LIBXML2_VERSION_MINOR  10)
-     set(LIBXML2_VERSION_MICRO  4)
-     set(LIBXML2_VERSION_STRING "2.10.4")
-    -set(LIBXML2_DEFINITIONS    " -DLIBXML_STATIC")
-    +set(LIBXML2_DEFINITIONS    -DLIBXML_STATIC)
-     set(LIBXML2_INSTALL_PREFIX ${_libxml2_rootdir})
-     set(LIBXML2_INCLUDE_DIR    ${_libxml2_rootdir}/include/libxml2)
-     set(LIBXML2_LIBRARY_DIR    ${_libxml2_rootdir}/lib)
-    EOF
-  - cd -
   - mkdir build
   - cd build
   - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/x86_64-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-x86_64/cmake -DGR_MANUAL_MOC_AND_RCC=ON  -DGR_USE_BUNDLED_LIBRARIES=ON
@@ -242,7 +210,7 @@ windows-64bit-cmake-cross:
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-windows-64bit-cmake/
+    - artifacts-windows-64bit-cmake/
 
 windows-64bit-cmake-msvc:
   stage: build
@@ -261,7 +229,7 @@ windows-64bit-cmake-msvc:
   - cp -v /c/Qt/5.15.2/msvc2019_64/plugins/platforms/qwindows.dll platforms/
   - cd -
   - cd /c/local/bin
-  - cp -v cairo.dll freetype.dll jpeg62.dll libpng16.dll libxml2.dll pixman-1-0.dll qhull_r.dll tiff.dll tiffxx.dll turbojpeg.dll zlib.dll /c/gr/bin/
+  - cp -v cairo.dll freetype.dll jpeg62.dll libpng16.dll pixman-1-0.dll qhull_r.dll tiff.dll tiffxx.dll turbojpeg.dll xerces-c_3_2.dll zlib.dll /c/gr/bin/
   - cd -
   - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.31.31103/x64/Microsoft.VC143.CRT/vcruntime140.dll" /c/gr/bin/
   - cp -v "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Redist/MSVC/14.31.31103/x64/Microsoft.VC143.CRT/vcruntime140_1.dll" /c/gr/bin/
@@ -272,3 +240,4 @@ windows-64bit-cmake-msvc:
     expire_in: 1 week
     paths:
     - artifacts-windows-64bit-cmake-msvc/
+
