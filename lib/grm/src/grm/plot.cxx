@@ -25,11 +25,13 @@ extern "C" {
 #include "logging_int.h"
 }
 
+#if 0
 #ifndef NO_LIBXML2
 #include <libxml/globals.h>
 #include <libxml/xmlreader.h>
 #elif !defined(NO_EXPAT)
 #include <expat.h>
+#endif
 #endif
 
 #include "plot_int.h"
@@ -4104,6 +4106,7 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
 
 /* ------------------------- xml ------------------------------------------------------------------------------------ */
 
+#if 0
 #ifndef NO_LIBXML2
 #if LIBXML_VERSION >= 21200
 static void schema_parse_error_handler(void *has_schema_errors, const xmlError *error)
@@ -4169,9 +4172,11 @@ cleanup:
 }
 
 #endif
+#endif
 
 int validate_graphics_tree_with_error_messages(void)
 {
+#if 0
 #ifndef NO_LIBXML2
   err_t validation_error = validate_graphics_tree();
   if (validation_error == ERROR_NONE)
@@ -4195,6 +4200,7 @@ int validate_graphics_tree_with_error_messages(void)
     }
 #else
   fprintf(stderr, "No libxml2 support compiled in, no validation possible!\n");
+#endif
 #endif
   return 1;
 }
@@ -4334,6 +4340,7 @@ char *grm_dump_graphics_tree_str(void)
   return graphics_tree_cstr;
 }
 
+#if 0
 #ifndef NO_LIBXML2
 int grm_load_graphics_tree(FILE *file)
 {
@@ -4496,6 +4503,7 @@ static void xml_parse_end_handler(void *data, const char *tagName)
 
 int grm_load_graphics_tree(FILE *file)
 {
+#if 0
   std::string xmlstring;
   XML_Parser parser = XML_ParserCreate(nullptr);
   std::shared_ptr<GRM::Element> parentNode;
@@ -4519,7 +4527,11 @@ int grm_load_graphics_tree(FILE *file)
   XML_ParserFree(parser);
 
   return 1;
+#else
+  return 0;
+#endif
 }
+#endif
 #endif
 
 int grm_merge(const grm_args_t *args)
@@ -4994,6 +5006,7 @@ int grm_switch(unsigned int id)
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ c++ libxml util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+#if 0
 #ifndef NO_LIBXML2
 std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(void)
 {
@@ -5080,6 +5093,7 @@ cleanup:
 
   return (error == ERROR_NONE) ? document : nullptr;
 }
+#endif
 #endif
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ c++ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -5347,9 +5361,11 @@ int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, cons
 
 bool grm_validate(void)
 {
+#if 0
 #ifndef NO_LIBXML2
   err_t validation_error = validate_graphics_tree();
   return (validation_error == ERROR_NONE);
+#endif
 #endif
   return false;
 }
