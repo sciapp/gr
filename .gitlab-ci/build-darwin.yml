@@ -176,12 +176,12 @@ darwin-self-contained:
     CAIRO_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
     FFMPEG_EXTRA_CONFIGURE_FLAGS="--arch=x86_64 --cc=\"cc -arch x86_64\" --cxx=\"c++ -arch x86_64\" --enable-cross-compile"
     GLFW_EXTRA_CMAKE_FLAGS="-DCMAKE_OSX_ARCHITECTURES=x86_64"
-    LIBXML2_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
     OGG_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
     OPENH264_EXTRA_MAKE_FLAGS="ARCH=x86_64"
     PIXMAN_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
     THEORA_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin --disable-asm"
     TIFF_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
+    XERCES_C_EXTRA_CMAKE_FLAGS="-DCMAKE_OSX_ARCHITECTURES=x86_64"
     ZEROMQ_EXTRA_CONFIGURE_FLAGS="--host=x86_64-apple-darwin"
   - make self
     ARCH="x86_64"

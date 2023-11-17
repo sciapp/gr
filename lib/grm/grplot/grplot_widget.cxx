@@ -387,7 +387,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 
   if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
     {
-#if !defined(NO_LIBXML2)
+#if !defined(NO_LIBXML2) && 0
       schema_tree = grm_load_graphics_tree_schema();
 #else
       schema_tree = nullptr;
@@ -2566,7 +2566,9 @@ void GRPlotWidget::load_file_slot()
           QMessageBox::critical(this, "File open not possible", QString::fromStdString(text_stream.str()));
           return;
         }
+#if 0
       grm_load_graphics_tree(file);
+#endif
       redraw();
       grm_render();
 #else

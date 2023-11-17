@@ -1,0 +1,100 @@
+ifeq ($(strip $(PREFIX)),)
+override PREFIX = $(abspath $(CURDIR)/../build)
+endif
+
+VERSION = 74.2
+HOST = x86_64-apple-darwin
+ICU_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
+ICU_EXTRA_CONFIGURE_FLAGS += CXXFLAGS=-mmacosx-version-min=10.15
+
+ifeq ($(DOWNLOAD_CMD),)
+ifneq ($(shell curl --version 2>/dev/null),)
+DOWNLOAD_CMD := curl -f -k -OL
+endif
+endif
+ifeq ($(DOWNLOAD_CMD),)
+ifneq ($(shell wget --version 2>/dev/null),)
+DOWNLOAD_CMD := wget --no-check-certificate
+endif
+endif
+ifeq ($(DOWNLOAD_CMD),)
+DOWNLOAD_CMD := echo "Error: Unable to find curl or wget."; exit 1; \#
+endif
+
+default: install
+
+$(PREFIX)/src/icu4c-$(VERSION).tar.gz:
+	mkdir -p $(PREFIX)/src
+	cd $(PREFIX)/src/ && $(DOWNLOAD_CMD) https://gr-framework.org/downloads/3rdparty/icu4c-$(VERSION).tar.gz
+
+$(PREFIX)/src/icu/source/configure: $(PREFIX)/src/icu4c-$(VERSION).tar.gz
+	cd $(PREFIX)/src/ && tar -xf icu4c-$(VERSION).tar.gz
+	touch $@
+
+$(PREFIX)/src/icu-cross/source/configure: $(PREFIX)/src/icu4c-$(VERSION).tar.gz
+	mkdir -p $(PREFIX)/src/icu-cross
+	cd $(PREFIX)/src && tar -C icu-cross --strip-components=1 -xf icu4c-$(VERSION).tar.gz
+	touch $@
+
+$(PREFIX)/build/icu/build/Makefile: $(PREFIX)/src/icu/source/configure
+	mkdir -p $(PREFIX)/build/icu/build && \
+	cd $(PREFIX)/build/icu/build && \
+	ARCHS= \
+	CC=cc \
+	CXX=c++ \
+	CFLAGS="-fPIC" \
+	CXXFLAGS="-fPIC" \
+	$(PREFIX)/src/icu/source/configure
+	touch $@
+
+$(PREFIX)/build/icu/build/lib/libicuuc.dylib: $(PREFIX)/build/icu/build/Makefile
+	$(MAKE) -C $(PREFIX)/build/icu/build -j4 ARCHS= CC=cc CXX=c++
+
+$(PREFIX)/build/icu/build-cross/Makefile: $(PREFIX)/build/icu/build/lib/libicuuc.dylib $(PREFIX)/src/icu-cross/source/configure
+	mkdir -p $(PREFIX)/build/icu/build-cross && \
+	cd $(PREFIX)/src/icu-cross/source && \
+	( \
+	echo '--- runConfigureICU     2024-07-11 17:16:00.516208356 +0200'; \
+	echo '+++ runConfigureICU.patched     2024-07-11 17:14:02.226097097 +0200'; \
+	echo '@@ -325,6 +325,16 @@'; \
+	echo '         CC=gcc; export CC'; \
+	echo '         CXX=g++; export CXX'; \
+	echo '         ;;'; \
+	echo '+    macOS/cross/x86_64)'; \
+	echo '+        THE_OS="macOS (Darwin)"'; \
+	echo '+        THE_COMP="the default"'; \
+	echo '+        RELEASE_CFLAGS="-O2"'; \
+	echo '+        RELEASE_CXXFLAGS="-O2"'; \
+	echo '+        DEBUG_CFLAGS="-g -O0"'; \
+	echo '+        DEBUG_CXXFLAGS="-g -O0"'; \
+	echo '+        CC="cc -arch x86_64"; export CC'; \
+	echo '+        CXX="c++ -arch x86_64"; export CXX'; \
+	echo '+        ;;'; \
+	echo '     MinGW)'; \
+	echo '         THE_OS="MinGW"'; \
+	echo '         THE_COMP="the GNU C++"'; \
+	) | patch -Np1 && \
+	cd $(PREFIX)/build/icu/build-cross && \
+	CFLAGS="-fPIC" \
+	CXXFLAGS="-fPIC" \
+	$(PREFIX)/src/icu-cross/source/runConfigureICU macOS/cross/x86_64 \
+		--host=$(HOST) \
+		--prefix=$(PREFIX) \
+		--with-cross-build="$$(cd ../build && pwd)" \
+		--enable-static \
+		--disable-shared \
+		--disable-strict \
+		--disable-tools \
+		--disable-tests \
+		--disable-samples \
+		--disable-extras \
+		$(ICU_EXTRA_CONFIGURE_FLAGS)
+	touch $@
+
+$(PREFIX)/lib/libicuuc.a: $(PREFIX)/build/icu/build-cross/Makefile
+	$(MAKE) -C $(PREFIX)/build/icu/build-cross -j4
+	$(MAKE) -C $(PREFIX)/build/icu/build-cross install
+
+install: $(PREFIX)/lib/libicuuc.a
+
+.PHONY: default install

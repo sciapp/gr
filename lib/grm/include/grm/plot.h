@@ -44,8 +44,10 @@ EXPORT int grm_process_tree(void);
 EXPORT int grm_export(const char *file_path);
 EXPORT int grm_switch(unsigned int id);
 
+#if 0
 #if !defined(NO_EXPAT) || !defined(NO_LIBXML2)
 EXPORT int grm_load_graphics_tree(FILE *file);
+#endif
 #endif
 
 #ifdef __cplusplus
