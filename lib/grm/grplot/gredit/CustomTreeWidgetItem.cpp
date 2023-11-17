@@ -2,9 +2,10 @@
 #include <utility>
 
 CustomTreeWidgetItem::CustomTreeWidgetItem(QTreeWidgetItem *parent, std::shared_ptr<GRM::Element> pRef)
-    : QTreeWidgetItem(parent, 1001), ref(std::move(pRef))
+    : QTreeWidgetItem(parent), ref(pRef)
 {
-  this->setFlags(this->flags() | Qt::ItemIsEditable);
+  this->ref = pRef;
+  this->setFlags(this->flags());
 }
 
 std::shared_ptr<GRM::Element> CustomTreeWidgetItem::getRef()
@@ -12,7 +13,7 @@ std::shared_ptr<GRM::Element> CustomTreeWidgetItem::getRef()
   return ref;
 }
 
-CustomTreeWidgetItem::CustomTreeWidgetItem(const QTreeWidgetItem &other) : QTreeWidgetItem(other)
+CustomTreeWidgetItem::CustomTreeWidgetItem(QTreeWidgetItem *other) : QTreeWidgetItem(other)
 {
-  this->setFlags(this->flags() | Qt::ItemIsEditable);
+  this->setFlags(this->flags());
 }

@@ -100,6 +100,52 @@ enum class EXPORT CoordinateSpace
   NDC
 };
 
+/* ========================= cast functions ========================================================================= */
+
+EXPORT int algorithmStringToInt(const std::string &algorithm_str);
+EXPORT int colormapStringToInt(const std::string &colormap_str);
+EXPORT int fillIntStyleStringToInt(const std::string &fillintstyle_str);
+EXPORT int fillStyleStringToInt(const std::string &fillstyle_str);
+EXPORT int fontStringToInt(const std::string &font_str);
+EXPORT int fontPrecisionStringToInt(const std::string &font_precision_str);
+EXPORT int lineTypeStringToInt(const std::string &line_type_str);
+EXPORT int locationStringToInt(const std::string &location_str);
+EXPORT int markerTypeStringToInt(const std::string &marker_type_str);
+EXPORT int projectionTypeStringToInt(const std::string &projection_type_str);
+EXPORT int modelStringToInt(const std::string &model_str);
+EXPORT int textAlignHorizontalStringToInt(const std::string &textalign_horizontal_str);
+EXPORT int textAlignVerticalStringToInt(const std::string &textalign_vertical_str);
+EXPORT int textEncodingStringToInt(const std::string &text_encoding_str);
+EXPORT int tickOrientationStringToInt(const std::string &tick_orientation_str);
+
+EXPORT std::string algorithmIntToString(int algorithm);
+EXPORT std::string colormapIntToString(int colormap);
+EXPORT std::string fillIntStyleIntToString(int fillintstyle);
+EXPORT std::string fillStyleIntToString(int fillstyle);
+EXPORT std::string fontIntToString(int font);
+EXPORT std::string fontPrecisionIntToString(int font_precision);
+EXPORT std::string lineTypeIntToString(int line_type);
+EXPORT std::string locationIntToString(int location);
+EXPORT std::string markerTypeIntToString(int marker_type);
+EXPORT std::string projectionTypeIntToString(int projection_type);
+EXPORT std::string modelIntToString(int model);
+EXPORT std::string textAlignHorizontalIntToString(int textalign_horizontal);
+EXPORT std::string textAlignVerticalIntToString(int textalign_vertical);
+EXPORT std::string textEncodingIntToString(int text_encoding);
+EXPORT std::string tickOrientationIntToString(int tick_orientation);
+
+EXPORT std::vector<std::string> getSizeUnits();
+EXPORT std::vector<std::string> getColormaps();
+EXPORT std::vector<std::string> getFonts();
+EXPORT std::vector<std::string> getFontPrecisions();
+EXPORT std::vector<std::string> getLineTypes();
+EXPORT std::vector<std::string> getLocations();
+EXPORT std::vector<std::string> getMarkerTypes();
+EXPORT std::vector<std::string> getTextalignHorizontal();
+EXPORT std::vector<std::string> getTextalignVertical();
+EXPORT std::vector<std::string> getAlgorithm();
+EXPORT std::vector<std::string> getModel();
+
 /* ========================= classes ================================================================================ */
 
 
