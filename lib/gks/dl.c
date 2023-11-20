@@ -106,10 +106,10 @@ void printdl(char *d, int fctid)
         {
           switch (cur_fctid)
             {
-            case GRM_BEGIN_SELECTION:
+            case GKS_SET_BBOX_CALLBACK:
               printf("BEGIN SELECTION %d\n", ((int *)cur_pos)[0]);
               break;
-            case GRM_END_SELECTION:
+            case GKS_CANCEL_BBOX_CALLBACK:
               {
                 double *bbox = (double *)((int *)cur_pos + 1);
                 printf("END SELECTION %d with %f %f %f %f\n", ((int *)cur_pos)[0], bbox[0], bbox[1], bbox[2], bbox[3]);

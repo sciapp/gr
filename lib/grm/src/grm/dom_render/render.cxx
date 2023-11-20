@@ -11999,7 +11999,7 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
 
   if (bounding_boxes && !isDrawable(element))
     {
-      gr_begin_grm_selection(bounding_id, &receiverfunction);
+      gr_setbboxcallback(bounding_id, &receiverfunction);
       bounding_map[bounding_id] = element;
       bounding_id++;
     }
@@ -12015,7 +12015,7 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
     }
   if (bounding_boxes && !isDrawable(element))
     {
-      gr_end_grm_selection();
+      gr_cancelbboxcallback();
     }
 
   customColorIndexManager.restorestate();
@@ -12091,7 +12091,7 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
 
       if (bounding_boxes)
         {
-          gr_begin_grm_selection(bounding_id, &receiverfunction);
+          gr_setbboxcallback(bounding_id, &receiverfunction);
           bounding_map[bounding_id] = element;
           bounding_id++;
         }
@@ -12101,7 +12101,7 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
 
       if (bounding_boxes)
         {
-          gr_end_grm_selection();
+          gr_cancelbboxcallback();
         }
     }
   grContextIDManager.markAllIdsAsUnused();

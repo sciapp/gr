@@ -12062,18 +12062,18 @@ void gr_endselection(void)
   gks_end_selection();
 }
 
-void gr_begin_grm_selection(int index, void (*fun)(int, double, double, double, double))
+void gr_setbboxcallback(int id, void (*callback)(int, double, double, double, double))
 {
   check_autoinit;
 
-  gks_begin_grm_selection(index, fun);
+  gks_set_bbox_callback(id, callback);
 }
 
-void gr_end_grm_selection(void)
+void gr_cancelbboxcallback(void)
 {
   check_autoinit;
 
-  gks_end_grm_selection();
+  gks_cancel_bbox_callback();
 }
 
 void gr_moveselection(double x, double y)

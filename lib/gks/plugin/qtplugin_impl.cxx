@@ -1655,7 +1655,7 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       p->transparency = (int)(r1[0] * 255);
       break;
 
-    case GRM_BEGIN_SELECTION: /* 260 */
+    case GKS_SET_BBOX_CALLBACK: /* 260 */
       cur_id = ia[0];
 #ifdef _WIN32
       p->bounding_stack.push(
@@ -1666,7 +1666,7 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
 #endif
       break;
 
-    case GRM_END_SELECTION: /* 261 */
+    case GKS_CANCEL_BBOX_CALLBACK: /* 261 */
       assert(!p->bounding_stack.empty());
       top = &p->bounding_stack.top();
       top->fun_call(top->item_id, top->x_min, top->x_max, top->y_min, top->y_max);
