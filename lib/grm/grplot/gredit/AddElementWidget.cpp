@@ -110,12 +110,12 @@ void AddElementWidget::elementSelected(int i)
               for (const auto &pos_par : possible_parents)
                 {
                   auto bbox_id = static_cast<int>(pos_par->getAttribute("_bbox_id"));
-                  auto bbox_xmin = static_cast<double>(pos_par->getAttribute("_bbox_xmin"));
-                  auto bbox_xmax = static_cast<double>(pos_par->getAttribute("_bbox_xmax"));
-                  auto bbox_ymin = static_cast<double>(pos_par->getAttribute("_bbox_ymin"));
-                  auto bbox_ymax = static_cast<double>(pos_par->getAttribute("_bbox_ymax"));
+                  auto bbox_x_min = static_cast<double>(pos_par->getAttribute("_bbox_x_min"));
+                  auto bbox_x_max = static_cast<double>(pos_par->getAttribute("_bbox_x_max"));
+                  auto bbox_y_min = static_cast<double>(pos_par->getAttribute("_bbox_y_min"));
+                  auto bbox_y_max = static_cast<double>(pos_par->getAttribute("_bbox_y_max"));
                   const Bounding_object bbox =
-                      Bounding_object(bbox_id, bbox_xmin, bbox_xmax, bbox_ymin, bbox_ymax, pos_par);
+                      Bounding_object(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, pos_par);
 
                   // check if the new child can be added without passing max occurs
                   for (const auto &child : pos_par->children())

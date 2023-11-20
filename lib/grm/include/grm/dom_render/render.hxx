@@ -113,8 +113,8 @@ EXPORT int locationStringToInt(const std::string &location_str);
 EXPORT int markerTypeStringToInt(const std::string &marker_type_str);
 EXPORT int projectionTypeStringToInt(const std::string &projection_type_str);
 EXPORT int modelStringToInt(const std::string &model_str);
-EXPORT int textAlignHorizontalStringToInt(const std::string &textalign_horizontal_str);
-EXPORT int textAlignVerticalStringToInt(const std::string &textalign_vertical_str);
+EXPORT int textAlignHorizontalStringToInt(const std::string &text_align_horizontal_str);
+EXPORT int textAlignVerticalStringToInt(const std::string &text_align_vertical_str);
 EXPORT int textEncodingStringToInt(const std::string &text_encoding_str);
 EXPORT int tickOrientationStringToInt(const std::string &tick_orientation_str);
 
@@ -129,8 +129,8 @@ EXPORT std::string locationIntToString(int location);
 EXPORT std::string markerTypeIntToString(int marker_type);
 EXPORT std::string projectionTypeIntToString(int projection_type);
 EXPORT std::string modelIntToString(int model);
-EXPORT std::string textAlignHorizontalIntToString(int textalign_horizontal);
-EXPORT std::string textAlignVerticalIntToString(int textalign_vertical);
+EXPORT std::string textAlignHorizontalIntToString(int text_align_horizontal);
+EXPORT std::string textAlignVerticalIntToString(int text_align_vertical);
 EXPORT std::string textEncodingIntToString(int text_encoding);
 EXPORT std::string tickOrientationIntToString(int tick_orientation);
 
@@ -141,8 +141,8 @@ EXPORT std::vector<std::string> getFontPrecisions();
 EXPORT std::vector<std::string> getLineTypes();
 EXPORT std::vector<std::string> getLocations();
 EXPORT std::vector<std::string> getMarkerTypes();
-EXPORT std::vector<std::string> getTextalignHorizontal();
-EXPORT std::vector<std::string> getTextalignVertical();
+EXPORT std::vector<std::string> getTextAlignHorizontal();
+EXPORT std::vector<std::string> getTextAlignVertical();
 EXPORT std::vector<std::string> getAlgorithm();
 EXPORT std::vector<std::string> getModel();
 
@@ -363,8 +363,8 @@ public:
   std::shared_ptr<Element> createPolarBar(double count, int class_nr,
                                           const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
-  std::shared_ptr<Element> createErrorbar(double errorbar_x, double errorbar_ymin, double errorbar_ymax,
-                                          int color_errorbar,
+  std::shared_ptr<Element> createErrorBar(double error_bar_x, double error_bar_y_min, double error_bar_y_max,
+                                          int color_error_bar,
                                           const std::shared_ptr<GRM::Element> &extElement = nullptr);
   //! Modifierfunctions
 
@@ -449,7 +449,7 @@ public:
 
   void setSpace(const std::shared_ptr<Element> &element, double zmin, double zmax, int rotation, int tilt);
 
-  void setSelntran(const std::shared_ptr<Element> &element, int transform);
+  void setSelectSpecificXform(const std::shared_ptr<Element> &element, int transform);
 
   void setTextColorInd(const std::shared_ptr<Element> &element, int index);
 
@@ -470,11 +470,11 @@ public:
   void setSubplot(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
   void setXTickLabels(std::shared_ptr<GRM::Element> element, const std::string &key,
-                      std::optional<std::vector<std::string>> xticklabels,
+                      std::optional<std::vector<std::string>> x_tick_labels,
                       const std::shared_ptr<GRM::Context> &extContext = nullptr);
 
   void setYTickLabels(std::shared_ptr<GRM::Element> element, const std::string &key,
-                      std::optional<std::vector<std::string>> yticklabels,
+                      std::optional<std::vector<std::string>> y_tick_labels,
                       const std::shared_ptr<GRM::Context> &extContext = nullptr);
 
   void setOriginPosition(const std::shared_ptr<GRM::Element> &element, std::string x_org_pos, std::string y_org_pos);
