@@ -244,7 +244,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
           fprintf(stderr, "Plot types are not compatible with error-bars. The menu got disabled\n");
         }
       if (strcmp(kind, "contour") == 0 || strcmp(kind, "heatmap") == 0 || strcmp(kind, "imshow") == 0 ||
-          strcmp(kind, "marginalheatmap") == 0 || strcmp(kind, "surface") == 0 || strcmp(kind, "wireframe") == 0 ||
+          strcmp(kind, "marginal_heatmap") == 0 || strcmp(kind, "surface") == 0 || strcmp(kind, "wireframe") == 0 ||
           strcmp(kind, "contourf") == 0)
         {
           auto submenu = type->addMenu("&Marginal-heatmap");
@@ -281,7 +281,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
           algo->addAction(sumAct);
           algo->addAction(maxAct);
           algo->menuAction()->setVisible(false);
-          if (strcmp(kind, "marginalheatmap") == 0)
+          if (strcmp(kind, "marginal_heatmap") == 0)
             {
               algo->menuAction()->setVisible(true);
             }
@@ -305,14 +305,14 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
           type->addAction(volumeAct);
           type->addAction(isosurfaceAct);
         }
-      else if (strcmp(kind, "plot3") == 0 || strcmp(kind, "trisurf") == 0 || strcmp(kind, "tricont") == 0 ||
+      else if (strcmp(kind, "plot3") == 0 || strcmp(kind, "trisurface") == 0 || strcmp(kind, "tricontour") == 0 ||
                strcmp(kind, "scatter3") == 0 || strcmp(kind, "scatter") == 0)
         {
           plot3Act = new QAction(tr("&Plot3"), this);
           connect(plot3Act, &QAction::triggered, this, &GRPlotWidget::plot3);
-          trisurfAct = new QAction(tr("&Trisurf"), this);
+          trisurfAct = new QAction(tr("&Trisurface"), this);
           connect(trisurfAct, &QAction::triggered, this, &GRPlotWidget::trisurf);
-          tricontAct = new QAction(tr("&Tricont"), this);
+          tricontAct = new QAction(tr("&Tricontour"), this);
           connect(tricontAct, &QAction::triggered, this, &GRPlotWidget::tricont);
           scatter3Act = new QAction(tr("&Scatter3"), this);
           connect(scatter3Act, &QAction::triggered, this, &GRPlotWidget::scatter3);
@@ -607,7 +607,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       QStringList heatmap_group = {"contour",          "contourf", "heatmap",  "imshow",
                                    "marginal_heatmap", "surface",  "wireframe"};
       QStringList isosurface_group = {"isosurface", "volume"};
-      QStringList plot3_group = {"plot3", "scatter", "scatter3", "tricont", "trisurf"};
+      QStringList plot3_group = {"plot3", "scatter", "scatter3", "tricontour", "trisurface"};
       QStringList barplot_group = {"barplot", "hist", "stem", "stairs"};
       QStringList hexbin_group = {"hexbin", "shade"};
       QStringList other_kinds = {"pie", "polar_histogram", "polar", "polar_heatmap", "polar_histogram", "quiver"};
@@ -1344,7 +1344,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
               label.setDefaultStyleSheet(QString::fromStdString(tooltipStyle));
               label.setHtml(QString::fromStdString(info));
               grm_args_values(args_, "kind", "s", &kind);
-              if (strcmp(kind, "heatmap") == 0 || strcmp(kind, "marginalheatmap") == 0)
+              if (strcmp(kind, "heatmap") == 0 || strcmp(kind, "marginal_heatmap") == 0)
                 {
                   background.setAlpha(224);
                 }
@@ -1534,7 +1534,7 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
           collectTooltips();
           if (args_ && grm_args_values(args_, "kind", "s", &kind))
             {
-              if (strcmp(kind, "marginalheatmap") == 0)
+              if (strcmp(kind, "marginal_heatmap") == 0)
                 {
                   grm_args_t *input_args;
                   input_args = grm_args_new();
@@ -1769,8 +1769,8 @@ void GRPlotWidget::heatmap()
 void GRPlotWidget::marginalheatmapall()
 {
   algo->menuAction()->setVisible(true);
-  grm_args_push(args_, "kind", "s", "marginalheatmap");
-  grm_args_push(args_, "marginalheatmap_kind", "s", "all");
+  grm_args_push(args_, "kind", "s", "marginal_heatmap");
+  grm_args_push(args_, "marginal_heatmap_kind", "s", "all");
   grm_merge(args_);
   arguments_changed = true;
   redraw();
@@ -1779,8 +1779,8 @@ void GRPlotWidget::marginalheatmapall()
 void GRPlotWidget::marginalheatmapline()
 {
   algo->menuAction()->setVisible(true);
-  grm_args_push(args_, "kind", "s", "marginalheatmap");
-  grm_args_push(args_, "marginalheatmap_kind", "s", "line");
+  grm_args_push(args_, "kind", "s", "marginal_heatmap");
+  grm_args_push(args_, "marginal_heatmap_kind", "s", "line");
   grm_merge(args_);
   arguments_changed = true;
   redraw();
@@ -1889,7 +1889,7 @@ void GRPlotWidget::contourf()
 
 void GRPlotWidget::trisurf()
 {
-  grm_args_push(args_, "kind", "s", "trisurf");
+  grm_args_push(args_, "kind", "s", "trisurface");
   grm_merge(args_);
   arguments_changed = true;
   redraw();
@@ -1897,7 +1897,7 @@ void GRPlotWidget::trisurf()
 
 void GRPlotWidget::tricont()
 {
-  grm_args_push(args_, "kind", "s", "tricont");
+  grm_args_push(args_, "kind", "s", "tricontour");
   grm_merge(args_);
   arguments_changed = true;
   redraw();
