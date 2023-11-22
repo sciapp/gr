@@ -6,6 +6,7 @@
 #include <grm/dom_render/render.hxx>
 
 #include <string>
+#include <set>
 
 extern "C" {
 #include <grm/layout.h>
@@ -4873,10 +4874,7 @@ int grm_plot(const grm_args_t *args)
               auto gridDomElement = global_render->createLayoutGrid(*currentGrid);
               active_figure->append(gridDomElement);
 
-              for (auto const &elementToSlice : currentGrid->getElementToPosition())
-                {
-                  grm_plot_helper(elementToSlice.first, elementToSlice.second, gridDomElement, plot_id);
-                }
+              if (!grm_iterate_grid(currentGrid, gridDomElement, plot_id)) return 0;
             }
           else
             {
@@ -5106,6 +5104,29 @@ cleanup:
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ c++ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+int grm_iterate_grid(grm::Grid *grid, const std::shared_ptr<GRM::Element> &parentDomElement, int plotId)
+{
+  std::set<grm::GridElement *> processedGridElements;
+
+  auto rows = grid->getRows();
+  auto elementsToPosition = grid->getElementToPosition();
+
+  for (const auto &row : rows)
+    {
+      for (const auto &element : row)
+        {
+          if (!processedGridElements.count(element))
+            {
+              processedGridElements.insert(element);
+              auto slice = elementsToPosition.at(element);
+              if (!grm_plot_helper(element, slice, parentDomElement, plotId)) return 0;
+            }
+        }
+    }
+  return 1;
+}
+
+
 int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
                     const std::shared_ptr<GRM::Element> &parentDomElement, int plotId)
 {
@@ -5143,12 +5164,9 @@ int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
       gridDomElement->setAttribute("stop_col", slice->colStop);
       parentDomElement->append(gridDomElement);
 
-      for (auto const &elementToSlice : currentGrid->getElementToPosition())
-        {
-          grm_plot_helper(elementToSlice.first, elementToSlice.second, gridDomElement, plotId);
-        }
+      if (!grm_iterate_grid(currentGrid, gridDomElement, plotId)) return 0;
     }
-  return 0;
+  return 1;
 }
 
 std::shared_ptr<GRM::Element> grm_get_document_root()
