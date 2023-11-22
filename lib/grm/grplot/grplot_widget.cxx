@@ -109,22 +109,21 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "line_spec",
       "line_type",
       "location",
-      "marginalheatmap_kind",
+      "marginal_heatmap_kind",
       "marker_type",
       "model",
       "norm",
       "orientation",
-      "projectiontype",
+      "projection_type",
       "resample_method",
       "size_x_type",
       "size_y_type",
       "size_x_unit",
       "size_y_unit",
-      "spec",
       "style",
       "text_encoding",
-      "textalign_horizontal",
-      "textalign_vertical",
+      "text_align_horizontal",
+      "text_align_vertical",
       "tick_orientation",
       "x_org_pos",
       "y_org_pos",
@@ -133,13 +132,13 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   check_box_attr = QStringList{
       "accelerate",
       "active",
-      "adjust_xlim",
-      "adjust_ylim",
-      "adjust_zlim",
+      "adjust_x_lim",
+      "adjust_y_lim",
+      "adjust_z_lim",
       "grplot",
       "keep_aspect_ratio",
       "keep_window",
-      "marginalheatmap_side_plot",
+      "marginal_heatmap_side_plot",
       "phi_flip",
       "set_text_color_for_background",
       "space",
@@ -147,13 +146,13 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "title_margin",
       "x_flip",
       "x_label_margin",
-      "xlog",
+      "x_log",
       "y_flip",
       "y_label_margin",
-      "yline",
-      "ylog",
+      "y_line",
+      "y_log",
       "z_flip",
-      "zlog",
+      "z_log",
   };
 
 #ifdef _WIN32
@@ -242,13 +241,13 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       if (grm_args_contains(args_, "error"))
         {
           error = 1;
-          fprintf(stderr, "Plot types are not compatible with errorbars. The menu got disabled\n");
+          fprintf(stderr, "Plot types are not compatible with error-bars. The menu got disabled\n");
         }
       if (strcmp(kind, "contour") == 0 || strcmp(kind, "heatmap") == 0 || strcmp(kind, "imshow") == 0 ||
           strcmp(kind, "marginalheatmap") == 0 || strcmp(kind, "surface") == 0 || strcmp(kind, "wireframe") == 0 ||
           strcmp(kind, "contourf") == 0)
         {
-          auto submenu = type->addMenu("&Marginalheatmap");
+          auto submenu = type->addMenu("&Marginal-heatmap");
 
           heatmapAct = new QAction(tr("&Heatmap"), this);
           connect(heatmapAct, &QAction::triggered, this, &GRPlotWidget::heatmap);
@@ -423,7 +422,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
                                             QWidget **lineEdit)
 {
   QStringList size_unit_list, colormap_list, font_list, font_precision_list, line_type_list, location_list,
-      marker_type_list, textalign_horizontal_list, textalign_vertical_list, algorithm_volume_list, model_list;
+      marker_type_list, text_align_horizontal_list, text_align_vertical_list, algorithm_volume_list, model_list;
   auto size_unit_vec = getSizeUnits();
   size_unit_list.reserve((int)size_unit_vec.size());
   for (auto &i : size_unit_vec)
@@ -466,17 +465,17 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
     {
       marker_type_list.push_back(i.c_str());
     }
-  auto textalign_horizontal_vec = getTextalignHorizontal();
-  textalign_horizontal_list.reserve((int)textalign_horizontal_vec.size());
-  for (auto &i : textalign_horizontal_vec)
+  auto text_align_horizontal_vec = getTextAlignHorizontal();
+  text_align_horizontal_list.reserve((int)text_align_horizontal_vec.size());
+  for (auto &i : text_align_horizontal_vec)
     {
-      textalign_horizontal_list.push_back(i.c_str());
+      text_align_horizontal_list.push_back(i.c_str());
     }
-  auto textalign_vertical_vec = getTextalignVertical();
-  textalign_vertical_list.reserve((int)textalign_vertical_vec.size());
-  for (auto &i : textalign_vertical_vec)
+  auto text_align_vertical_vec = getTextAlignVertical();
+  text_align_vertical_list.reserve((int)text_align_vertical_vec.size());
+  for (auto &i : text_align_vertical_vec)
     {
-      textalign_vertical_list.push_back(i.c_str());
+      text_align_vertical_list.push_back(i.c_str());
     }
   auto algorithm_volume_vec = getAlgorithm();
   algorithm_volume_list.reserve((int)algorithm_volume_vec.size());
@@ -495,11 +494,11 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       "vertical",
       "horizontal",
   };
-  QStringList algorithm_marginalheatmap_list{
+  QStringList algorithm_marginal_heatmap_list{
       "sum",
       "max",
   };
-  QStringList marginalheatmap_kind_list{
+  QStringList marginal_heatmap_kind_list{
       "all",
       "line",
   };
@@ -550,19 +549,18 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"line_type", line_type_list},
       {"location", location_list},
       {"marker_type", marker_type_list},
-      {"textalign_vertical", textalign_vertical_list},
-      {"textalign_horizontal", textalign_horizontal_list},
+      {"text_align_vertical", text_align_vertical_list},
+      {"text_align_horizontal", text_align_horizontal_list},
       {"orientation", orientation_list},
-      {"marginalheatmap_kind", marginalheatmap_kind_list},
+      {"marginal_heatmap_kind", marginal_heatmap_kind_list},
       {"model", model_list},
       {"norm", norm_list},
-      {"projectiontype", projection_type_list},
+      {"projection_type", projection_type_list},
       {"resample_method", resample_method_list},
       {"size_x_type", size_type_list},
       {"size_y_type", size_type_list},
       {"style", style_list},
       {"text_encoding", text_encoding_list},
-      {"spec", line_spec_list},
       {"line_spec", line_spec_list},
       {"x_org_pos", org_pos_list},
       {"y_org_pos", org_pos_list},
@@ -592,13 +590,13 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       completer->setCaseSensitivity(Qt::CaseInsensitive);
       ((QComboBox *)*lineEdit)->setCompleter(completer);
     }
-  else if (cur_attr_name == "algorithm" && cur_elem_name == "series_marginalheatmap")
+  else if (cur_attr_name == "algorithm" && cur_elem_name == "series_marginal_heatmap")
     {
-      for (const auto &elem : algorithm_marginalheatmap_list)
+      for (const auto &elem : algorithm_marginal_heatmap_list)
         {
           ((QComboBox *)*lineEdit)->addItem(elem.toStdString().c_str());
         }
-      auto *completer = new QCompleter(algorithm_marginalheatmap_list, this);
+      auto *completer = new QCompleter(algorithm_marginal_heatmap_list, this);
       completer->setCaseSensitivity(Qt::CaseInsensitive);
       ((QComboBox *)*lineEdit)->setCompleter(completer);
     }
@@ -606,8 +604,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
     {
       QStringList list;
       QStringList line_group = {"line", "scatter"};
-      QStringList heatmap_group = {"contour",         "contourf", "heatmap",  "imshow",
-                                   "marginalheatmap", "surface",  "wireframe"};
+      QStringList heatmap_group = {"contour",          "contourf", "heatmap",  "imshow",
+                                   "marginal_heatmap", "surface",  "wireframe"};
       QStringList isosurface_group = {"isosurface", "volume"};
       QStringList plot3_group = {"plot3", "scatter", "scatter3", "tricont", "trisurf"};
       QStringList barplot_group = {"barplot", "hist", "stem", "stairs"};
@@ -665,12 +663,13 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
   ((QComboBox *)*lineEdit)->addItem(""); // entry to remove the attribute
 
   auto current_text = static_cast<std::string>(current_selection->get_ref()->getAttribute(cur_attr_name));
-  if (cur_attr_name == "textalign_vertical" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+  if (cur_attr_name == "text_align_vertical" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
       current_text =
           textAlignVerticalIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
     }
-  else if (cur_attr_name == "textalign_horizontal" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+  else if (cur_attr_name == "text_align_horizontal" &&
+           current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
       current_text =
           textAlignHorizontalIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
@@ -684,7 +683,7 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
     {
       current_text = modelIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
     }
-  else if (cur_attr_name == "projectiontype" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+  else if (cur_attr_name == "projection_type" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
       current_text =
           projectionTypeIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
@@ -738,11 +737,11 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
     }
   else if (attr_type == "xs:integer" || (attr_type == "strint" && util::is_digits(value)))
     {
-      if (label == "textalign_vertical")
+      if (label == "text_align_vertical")
         {
           element->setAttribute(label, textAlignVerticalStringToInt(value));
         }
-      else if (label == "textalign_horizontal")
+      else if (label == "text_align_horizontal")
         {
           element->setAttribute(label, textAlignHorizontalStringToInt(value));
         }
@@ -754,7 +753,7 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
         {
           element->setAttribute(label, modelStringToInt(value));
         }
-      else if (label == "projectiontype")
+      else if (label == "projection_type")
         {
           element->setAttribute(label, projectionTypeStringToInt(value));
         }
@@ -1414,11 +1413,11 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
               return;
             }
           amount_scrolled = 0;
-          // to remove yline, title, xlabel and ylabel from axis Node
+          // to remove y_line, title, xlabel and ylabel from axis Node
           auto elem_name = (std::string)current_selection->get_ref()->getAttribute("name");
           if (current_selection->get_ref()->parentElement()->hasAttribute(elem_name))
             {
-              if (elem_name == "yline")
+              if (elem_name == "y_line")
                 {
                   current_selection->get_ref()->parentElement()->setAttribute(elem_name, false);
                 }
@@ -1431,13 +1430,16 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
           while (parent != nullptr && parent->localName() != "root" && parent->childElementCount() <= 1)
             {
               auto tmp_parent = parent->parentElement();
-              // to remove xticklabels, yticklabels from coordinate_system
+              // to remove x_tick_labels, y_tick_labels from coordinate_system
               elem_name = (std::string)parent->getAttribute("name");
               if (tmp_parent->hasAttribute(elem_name)) tmp_parent->removeAttribute(elem_name);
               parent->remove();
               parent = tmp_parent;
             }
           current_selection->get_ref()->remove();
+          // to prevent recreation of the tree a new flag is introduced
+          if (parent->localName() == "root" && !parent->hasChildNodes())
+            parent->setAttribute("_removed_children", true);
           mouse_move_selection = nullptr;
           reset_pixmap();
         }
@@ -2015,10 +2017,10 @@ void GRPlotWidget::extract_bounding_boxes_from_grm(QPainter &painter)
       for (const auto &cur_child : global_root->querySelectorsAll("[_bbox_id]"))
         {
           id = static_cast<int>(cur_child->getAttribute("_bbox_id"));
-          xmin = static_cast<double>(cur_child->getAttribute("_bbox_xmin"));
-          xmax = static_cast<double>(cur_child->getAttribute("_bbox_xmax"));
-          ymin = static_cast<double>(cur_child->getAttribute("_bbox_ymin"));
-          ymax = static_cast<double>(cur_child->getAttribute("_bbox_ymax"));
+          xmin = static_cast<double>(cur_child->getAttribute("_bbox_x_min"));
+          xmax = static_cast<double>(cur_child->getAttribute("_bbox_x_max"));
+          ymin = static_cast<double>(cur_child->getAttribute("_bbox_y_min"));
+          ymax = static_cast<double>(cur_child->getAttribute("_bbox_y_max"));
 
           if (xmin == DBL_MAX || xmax == -DBL_MAX || ymin == DBL_MAX || ymax == -DBL_MAX)
             {
@@ -2062,10 +2064,10 @@ void GRPlotWidget::highlight_current_selection(QPainter &painter)
           auto rect = selected_parent->boundingRect();
           if (selected_parent->get_ref() != nullptr)
             {
-              auto bbox_xmin = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_xmin"));
-              auto bbox_xmax = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_xmax"));
-              auto bbox_ymin = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_ymin"));
-              auto bbox_ymax = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_ymax"));
+              auto bbox_xmin = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_x_min"));
+              auto bbox_xmax = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_x_max"));
+              auto bbox_ymin = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_y_min"));
+              auto bbox_ymax = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_y_max"));
               rect = QRectF(bbox_xmin, bbox_ymin, bbox_xmax - bbox_xmin, bbox_ymax - bbox_ymin);
               painter.drawText(rect.topLeft() + QPointF(5, 10), selected_parent->get_ref()->localName().c_str());
             }

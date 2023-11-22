@@ -55,11 +55,11 @@ bool TreeWidget::findSelectedItem(CustomTreeWidgetItem *item)
   else if (item->getRef() != nullptr)
     {
       auto bbox_id = static_cast<int>(item->getRef()->getAttribute("_bbox_id"));
-      auto bbox_xmin = static_cast<double>(item->getRef()->getAttribute("_bbox_xmin"));
-      auto bbox_xmax = static_cast<double>(item->getRef()->getAttribute("_bbox_xmax"));
-      auto bbox_ymin = static_cast<double>(item->getRef()->getAttribute("_bbox_ymin"));
-      auto bbox_ymax = static_cast<double>(item->getRef()->getAttribute("_bbox_ymax"));
-      auto *bbox = new Bounding_object(bbox_id, bbox_xmin, bbox_xmax, bbox_ymin, bbox_ymax, item->getRef());
+      auto bbox_x_min = static_cast<double>(item->getRef()->getAttribute("_bbox_x_min"));
+      auto bbox_x_max = static_cast<double>(item->getRef()->getAttribute("_bbox_x_max"));
+      auto bbox_y_min = static_cast<double>(item->getRef()->getAttribute("_bbox_y_min"));
+      auto bbox_y_max = static_cast<double>(item->getRef()->getAttribute("_bbox_y_max"));
+      auto *bbox = new Bounding_object(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, item->getRef());
 
       grplot_widget->set_current_selection(bbox);
       return true;
