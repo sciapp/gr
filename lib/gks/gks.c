@@ -3355,32 +3355,32 @@ void gks_resize_selection(int kind, double x, double y)
     gks_report_error(RESIZE_SELECTION, 5);
 }
 
-void gks_begin_grm_selection(int index, void (*fun)(int, double, double, double, double))
+void gks_set_bbox_callback(int id, void (*callback)(int, double, double, double, double))
 {
   if (state >= GKS_K_WSAC)
     {
-      i_arr[0] = index;
+      i_arr[0] = id;
 
       /* call the device driver link routine */
-      gks_ddlk(GRM_BEGIN_SELECTION, 1, 1, 1, i_arr, 1, (double *)fun, 0, f_arr_2, 0, c_arr, NULL);
+      gks_ddlk(GKS_SET_BBOX_CALLBACK, 1, 1, 1, i_arr, 1, (double *)callback, 0, f_arr_2, 0, c_arr, NULL);
     }
   else
     /* GKS not in proper state. GKS must be either in the state
        WSAC or in the state SGOP */
-    gks_report_error(GRM_BEGIN_SELECTION, 5);
+    gks_report_error(GKS_SET_BBOX_CALLBACK, 5);
 }
 
-void gks_end_grm_selection(void)
+void gks_cancel_bbox_callback(void)
 {
   if (state >= GKS_K_WSAC)
     {
       /* call the device driver link routine */
-      gks_ddlk(GRM_END_SELECTION, 0, 0, 0, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+      gks_ddlk(GKS_CANCEL_BBOX_CALLBACK, 0, 0, 0, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
     }
   else
     /* GKS not in proper state. GKS must be either in the state
        WSAC or in the state SGOP */
-    gks_report_error(GRM_END_SELECTION, 5);
+    gks_report_error(GKS_CANCEL_BBOX_CALLBACK, 5);
 }
 
 void gks_draw_image(double x, double y, double scalex, double scaley, int width, int height, int *data)
