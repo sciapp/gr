@@ -4118,7 +4118,11 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
 /* ------------------------- xml ------------------------------------------------------------------------------------ */
 
 #ifndef NO_LIBXML2
-static void schema_parse_error_handler(void *has_schema_errors, xmlErrorPtr error)
+#if LIBXML_VERSION >= 21200
+static void schema_parse_error_handler(void *has_schema_errors, const xmlError *error)
+#else
+static void schema_parse_error_handler(void *has_schema_errors, xmlError *error)
+#endif
 {
   fprintf(stderr, "XML validation error at line %d, column %d: %s", error->line, error->int2, error->message);
   *((bool *)has_schema_errors) = true;
@@ -4438,7 +4442,7 @@ int grm_load_graphics_tree(FILE *file)
 
   if (ret != 0)
     {
-      xmlErrorPtr xml_error = xmlGetLastError();
+      const xmlError *xml_error = xmlGetLastError();
       logger((stderr, "%s: failed to parse in line %d, col %d. Error %d: %s\n", xml_error->file, xml_error->line,
               xml_error->int2, xml_error->code, xml_error->message));
       cleanup_and_set_error(ERROR_PARSE_XML_PARSING);
@@ -5075,7 +5079,7 @@ std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(void)
 
   if (ret != 0)
     {
-      xmlErrorPtr xml_error = xmlGetLastError();
+      const xmlError *xml_error = xmlGetLastError();
       logger((stderr, "%s: failed to parse in line %d, col %d. Error %d: %s\n", xml_error->file, xml_error->line,
               xml_error->int2, xml_error->code, xml_error->message));
       cleanup_and_set_error(ERROR_PARSE_XML_PARSING);
