@@ -731,7 +731,7 @@ static int test_tricont(void)
   grm_args_push(args, "x", "nD", n, x);
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "z", "nD", n, z);
-  grm_args_push(args, "kind", "s", "tricont");
+  grm_args_push(args, "kind", "s", "tricontour");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   was_successful = grm_plot(args);
@@ -875,7 +875,7 @@ static int test_trisurf(void)
   grm_args_push(args, "x", "nD", n, x);
   grm_args_push(args, "y", "nD", n, y);
   grm_args_push(args, "z", "nD", n, z);
-  grm_args_push(args, "kind", "s", "trisurf");
+  grm_args_push(args, "kind", "s", "trisurface");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   was_successful = grm_plot(args);

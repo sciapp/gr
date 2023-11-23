@@ -42,7 +42,7 @@ int main()
   grm_send_args(handle, args);
   sleep(3);
   /* Draw the bar plot with locations specified by x */
-  grm_args_push(args, "xnotations", "nS", n_y, xnotations);
+  grm_args_push(args, "x_tick_labels", "nS", n_y, xnotations);
   grm_send_args(handle, args);
   sleep(3);
 

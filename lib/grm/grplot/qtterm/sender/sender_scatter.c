@@ -36,7 +36,7 @@ int test_sendmeta_ref(void)
   grm_send_ref(handle, "c", 'D', plots[0][3], n_points); // set color as array
 
   mt = -9;
-  grm_send_ref(handle, "markertype", 'i', markertype, 1); // set markertype
+  grm_send_ref(handle, "marker_type", 'i', markertype, 1); // set markertype
 
   grm_send_ref(handle, NULL, 'O', ",", 0);
   grm_send_ref(handle, "x", 'D', plots[0][1], n_points);
@@ -47,7 +47,7 @@ int test_sendmeta_ref(void)
   grm_send_ref(handle, "c", 'i', color, 1); // set color as integer
 
   mt = 4;
-  grm_send_ref(handle, "markertype", 'i', markertype, 1); // set markertype
+  grm_send_ref(handle, "marker_type", 'i', markertype, 1); // set markertype
 
   grm_send_ref(handle, NULL, 'O', "]", 0);
   grm_send_ref(handle, "kind", 's', "scatter", 0);

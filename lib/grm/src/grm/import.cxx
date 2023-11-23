@@ -41,74 +41,79 @@ static std::map<std::string, const char *> key_to_types{
     {"keep_aspect_ratio", "i"},
     {"kind", "s"},
     {"levels", "i"},
+    {"line_spec", "s"},
     {"location", "i"},
-    {"marginalheatmap_kind", "s"},
-    {"markertype", "i"},
-    {"nbins", "i"},
+    {"marginal_heatmap_kind", "s"},
+    {"marker_type", "i"},
+    {"num_bins", "i"},
     {"normalization", "s"},
     {"orientation", "s"},
-    {"phiflip", "i"},
-    {"philim", "dd"},
+    {"phi_flip", "i"},
+    {"phi_lim", "dd"},
     {"resample_method", "s"},
-    {"rlim", "dd"},
+    {"r_lim", "dd"},
     {"rotation", "d"},
     {"scale", "i"},
-    {"scatterz", "i"},
-    {"spec", "s"},
+    {"scatter_z", "i"},
     {"stairs", "i"},
     {"step_where", "s"},
     {"style", "s"},
     {"tilt", "d"},
     {"title", "s"},
+    {"transformation", "i"},
     {"use_bins", "i"},
-    {"xbins", "i"},
-    {"xcolormap", "i"},
-    {"xflip", "i"},
-    {"xform", "i"},
-    {"xgrid", "i"},
-    {"xlabel", "s"},
-    {"xlim", "dd"},
-    {"xlog", "i"},
-    {"xrange", "dd"},
-    {"xticklabels", "nS"},
-    {"ybins", "i"},
-    {"ycolormap", "i"},
-    {"yflip", "i"},
-    {"ygrid", "i"},
-    {"ylabel", "s"},
-    {"ylabels", "nS"},
-    {"ylim", "dd"},
-    {"ylog", "i"},
-    {"yrange", "dd"},
-    {"yticklabels", "nS"},
-    {"zgrid", "i"},
-    {"zlabel", "s"},
-    {"zlim", "dd"},
-    {"zlog", "i"},
-    {"zrange", "dd"},
+    {"x_bins", "i"},
+    {"x_colormap", "i"},
+    {"x_flip", "i"},
+    {"x_grid", "i"},
+    {"x_label", "s"},
+    {"x_lim", "dd"},
+    {"x_log", "i"},
+    {"x_range", "dd"},
+    {"x_tick_labels", "nS"},
+    {"y_bins", "i"},
+    {"y_colormap", "i"},
+    {"y_flip", "i"},
+    {"y_grid", "i"},
+    {"y_label", "s"},
+    {"y_labels", "nS"},
+    {"y_lim", "dd"},
+    {"y_log", "i"},
+    {"y_range", "dd"},
+    {"y_tick_labels", "nS"},
+    {"z_grid", "i"},
+    {"z_label", "s"},
+    {"z_lim", "dd"},
+    {"z_log", "i"},
+    {"z_range", "dd"},
 };
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static std::list<std::string> kind_types = {
-    "barplot",  "contour",         "contourf", "heatmap",       "hexbin",          "hist",    "imshow",  "isosurface",
-    "line",     "marginalheatmap", "polar",    "polar_heatmap", "polar_histogram", "pie",     "plot3",   "scatter",
-    "scatter3", "shade",           "surface",  "stem",          "stairs",          "tricont", "trisurf", "quiver",
-    "volume",   "wireframe"};
+    "barplot",         "contour",    "contourf", "heatmap",          "hexbin",     "hist",
+    "imshow",          "isosurface", "line",     "marginal_heatmap", "polar",      "polar_heatmap",
+    "polar_histogram", "pie",        "plot3",    "scatter",          "scatter3",   "shade",
+    "surface",         "stem",       "stairs",   "tricontour",       "trisurface", "quiver",
+    "volume",          "wireframe"};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ alias for keys ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static std::map<std::string, std::string> key_alias = {
-    {"hkind", "marginalheatmap_kind"}, {"aspect", "keep_aspect_ratio"}, {"cmap", "colormap"}};
+    {"h_kind", "marginal_heatmap_kind"}, {"aspect", "keep_aspect_ratio"}, {"cmap", "colormap"}};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ container parameter ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static std::map<std::string, const char *> container_params{
     {"error", "a"}, {"ind_bar_color", "nA"}, {"ind_edge_color", "nA"}, {"ind_edge_width", "nA"}};
 
-static std::map<std::string, const char *> container_to_types{
-    {"downwardscap_color", "i"}, {"errorbar_color", "i"}, {"indices", "i"}, {"indices", "nI"}, {"rgb", "ddd"},
-    {"upwardscap_color", "i"},   {"width", "d"}};
+static std::map<std::string, const char *> container_to_types{{"downward_scap_color", "i"},
+                                                              {"error_bar_color", "i"},
+                                                              {"indices", "i"},
+                                                              {"indices", "nI"},
+                                                              {"rgb", "ddd"},
+                                                              {"upward_scap_color", "i"},
+                                                              {"width", "d"}};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ scatter interpretation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -151,10 +156,6 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
   bool depth_change = true;
   int depth = 0, max_col = -1;
   int linecount = 0;
-
-  // Save locale setting
-  const std::string oldLocale = std::setlocale(LC_NUMERIC, nullptr);
-  std::setlocale(LC_NUMERIC, "C");
 
   /* read the columns from the colms string also converts slicing into numbers */
   std::stringstream scol(colms);
@@ -247,32 +248,32 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                   value = trim(token);
                 }
             }
-          if (str_equals_any(key.c_str(), 5, "title", "xlabel", "ylabel", "zlabel", "resample_method"))
+          if (str_equals_any(key.c_str(), 5, "title", "x_label", "y_label", "z_label", "resample_method"))
             {
               const char *tmp;
               if (!grm_args_values(args, key.c_str(), "s", &tmp)) grm_args_push(args, key.c_str(), "s", value.c_str());
             }
-          else if (str_equals_any(key.c_str(), 2, "xticklabels", "yticklabels"))
+          else if (str_equals_any(key.c_str(), 2, "x_tick_labels", "y_tick_labels"))
             {
-              std::vector<std::string> ticklabels;
+              std::vector<std::string> tick_labels;
               std::stringstream sv(value);
               int tmp_size;
               const char *tmp;
               for (size_t col = 0; std::getline(sv, token, ',') && token.length(); col++)
                 {
-                  ticklabels.push_back(token);
+                  tick_labels.push_back(token);
                 }
 
-              const int num = static_cast<const int>(ticklabels.size());
-              std::vector<const char *> c_ticklabel(num);
-              for (int i = 0; i < ticklabels.size(); i++)
+              const int num = static_cast<const int>(tick_labels.size());
+              std::vector<const char *> c_tick_label(num);
+              for (int i = 0; i < tick_labels.size(); i++)
                 {
-                  c_ticklabel[i] = (const char *)ticklabels[i].c_str();
+                  c_tick_label[i] = (const char *)tick_labels[i].c_str();
                 }
               if (!grm_args_values(args, key.c_str(), "nS", &tmp_size, &tmp))
-                grm_args_push(args, key.c_str(), "nS", ticklabels.size(), (const char *)c_ticklabel.data());
+                grm_args_push(args, key.c_str(), "nS", tick_labels.size(), (const char *)c_tick_label.data());
             }
-          else if (str_equals_any(key.c_str(), 7, "location", "xlog", "ylog", "zlog", "xgrid", "ygrid", "zgrid"))
+          else if (str_equals_any(key.c_str(), 7, "location", "x_log", "y_log", "z_log", "x_grid", "y_grid", "z_grid"))
             {
               try
                 {
@@ -287,8 +288,8 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                   return ERROR_PARSE_INT;
                 }
             }
-          else if (str_equals_any(key.c_str(), 8, "philim", "rlim", "xlim", "ylim", "zlim", "xrange", "yrange",
-                                  "zrange"))
+          else if (str_equals_any(key.c_str(), 8, "phi_lim", "r_lim", "x_lim", "y_lim", "z_lim", "x_range", "y_range",
+                                  "z_range"))
             {
               std::stringstream sv(value);
               std::string value1;
@@ -320,17 +321,17 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                 }
               if (!ret_val)
                 {
-                  if (strcmp(key.c_str(), "xrange") == 0)
+                  if (strcmp(key.c_str(), "x_range") == 0)
                     {
                       ranges->xmin = std::stod(value1);
                       ranges->xmax = std::stod(value2);
                     }
-                  else if (strcmp(key.c_str(), "yrange") == 0)
+                  else if (strcmp(key.c_str(), "y_range") == 0)
                     {
                       ranges->ymin = std::stod(value1);
                       ranges->ymax = std::stod(value2);
                     }
-                  else if (strcmp(key.c_str(), "zrange") == 0)
+                  else if (strcmp(key.c_str(), "z_range") == 0)
                     {
                       ranges->zmin = std::stod(value1);
                       ranges->zmax = std::stod(value2);
@@ -370,6 +371,10 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
           break;
         }
     }
+
+  // Save locale setting
+  const std::string oldLocale = std::setlocale(LC_NUMERIC, nullptr);
+  std::setlocale(LC_NUMERIC, "C");
 
   /* read the numeric data for the plot */
   for (size_t row = 0; std::getline(file, line); row++)
@@ -449,7 +454,8 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                 }
               catch (std::invalid_argument &e)
                 {
-                  fprintf(stderr, "Invalid argument for yrange parameter (%s) while using option use_bins in line %i\n",
+                  fprintf(stderr,
+                          "Invalid argument for y_range parameter (%s) while using option use_bins in line %i\n",
                           labels[0].c_str(), (int)row + linecount + 1);
                 }
             }
@@ -530,7 +536,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
 {
   std::string s;
   size_t row, col, rows, cols, depth;
-  std::vector<std::vector<std::vector<double>>> filedata;
+  std::vector<std::vector<std::vector<double>>> file_data;
   std::vector<std::string> labels;
   std::vector<const char *> labels_c;
   std::vector<grm_args_t *> series;
@@ -552,15 +558,15 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       fprintf(stderr, "File not found (%s)\n", file_args->file_path.c_str());
       return 0;
     }
-  if (read_data_file(file_args->file_path, filedata, labels, args, file_args->file_columns.c_str(), &ranges))
+  if (read_data_file(file_args->file_path, file_data, labels, args, file_args->file_columns.c_str(), &ranges))
     {
       return 0;
     }
-  if (!filedata.empty())
+  if (!file_data.empty())
     {
-      depth = filedata.size();
-      cols = filedata[0].size();
-      rows = filedata[0][0].size();
+      depth = file_data.size();
+      cols = file_data[0].size();
+      rows = file_data[0][0].size();
       depth = (depth == 1) ? 0 : depth;
     }
   else
@@ -603,7 +609,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       grm_args_push(args, "keep_aspect_ratio", "i", 0);
     }
 
-  if (str_equals_any(kind, 7, "contour", "contourf", "heatmap", "imshow", "marginalheatmap", "surface", "wireframe"))
+  if (str_equals_any(kind, 7, "contour", "contourf", "heatmap", "imshow", "marginal_heatmap", "surface", "wireframe"))
     {
       std::vector<double> xi(cols), yi(rows), zi(rows * cols);
 
@@ -621,7 +627,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             }
           catch (std::invalid_argument &e)
             {
-              fprintf(stderr, "Invalid argument for xrange parameter (%s, %s) while using option use_bins\n",
+              fprintf(stderr, "Invalid argument for x_range parameter (%s, %s) while using option use_bins\n",
                       labels[0].c_str(), labels[cols - 1].c_str());
             }
         }
@@ -638,7 +644,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 {
                   yi[row] = ranges.ymin + (ranges.ymax - ranges.ymin) * ((double)row / ((double)rows - 1));
                 }
-              zi[row * cols + col] = filedata[depth][col][row];
+              zi[row * cols + col] = file_data[depth][col][row];
             }
         }
 
@@ -682,18 +688,18 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           for (col = 0; col < cols - err; col++)
             {
               min_val =
-                  std::min<double>(min_val, *std::min_element(&filedata[depth][col][0], &filedata[depth][col][rows]));
+                  std::min<double>(min_val, *std::min_element(&file_data[depth][col][0], &file_data[depth][col][rows]));
               max_val =
-                  std::max<double>(max_val, *std::max_element(&filedata[depth][col][0], &filedata[depth][col][rows]));
+                  std::max<double>(max_val, *std::max_element(&file_data[depth][col][0], &file_data[depth][col][rows]));
             }
 
           for (col = 0; col < cols; ++col)
             {
               for (row = 0; row < rows; row++)
                 {
-                  filedata[depth][col][row] = ranges.ymin + (ranges.ymax - ranges.ymin) *
-                                                                (filedata[depth][col][row] - min_val) /
-                                                                (max_val - min_val);
+                  file_data[depth][col][row] = ranges.ymin + (ranges.ymax - ranges.ymin) *
+                                                                 (file_data[depth][col][row] - min_val) /
+                                                                 (max_val - min_val);
                 }
             }
         }
@@ -718,16 +724,16 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                   error_vec[col] = grm_args_new();
                   for (i = 0; i < rows; i++)
                     {
-                      errors_up[i] = filedata[depth][col + 1 + col * 2][i];
-                      errors_down[i] = filedata[depth][col + 2 + col * 2][i];
+                      errors_up[i] = file_data[depth][col + 1 + col * 2][i];
+                      errors_down[i] = file_data[depth][col + 2 + col * 2][i];
                     }
                   grm_args_push(error_vec[col], "relative", "nDD", rows, errors_up.data(), errors_down.data());
-                  if (grm_args_values(error, "errorbar_color", "i", &color))
-                    grm_args_push(error_vec[col], "errorbar_color", "i", color);
-                  if (grm_args_values(error, "downwardscap_color", "i", &color_down))
-                    grm_args_push(error_vec[col], "downwardscap_color", "i", color_down);
-                  if (grm_args_values(error, "upwardscap_color", "i", &color_up))
-                    grm_args_push(error_vec[col], "upwardscap_color", "i", color_up);
+                  if (grm_args_values(error, "error_bar_color", "i", &color))
+                    grm_args_push(error_vec[col], "error_bar_color", "i", color);
+                  if (grm_args_values(error, "downward_scap_color", "i", &color_down))
+                    grm_args_push(error_vec[col], "downward_scap_color", "i", color_down);
+                  if (grm_args_values(error, "upward_scap_color", "i", &color_up))
+                    grm_args_push(error_vec[col], "upward_scap_color", "i", color_up);
                 }
               err *= 2;
             }
@@ -736,13 +742,13 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         {
           series[col] = grm_args_new();
           grm_args_push(series[col], "x", "nD", rows, x.data());
-          grm_args_push(series[col], "y", "nD", rows, filedata[depth][col + ((col < err / 2) ? col * 2 : err)].data());
+          grm_args_push(series[col], "y", "nD", rows, file_data[depth][col + ((col < err / 2) ? col * 2 : err)].data());
           if (!labels.empty())
             {
               labels_c.push_back(labels[col].c_str());
             }
           if (col < err / 2) grm_args_push(series[col], "error", "a", error_vec[col]);
-          if (grm_args_values(args, "spec", "s", &spec)) grm_args_push(series[col], "spec", "s", spec);
+          if (grm_args_values(args, "line_spec", "s", &spec)) grm_args_push(series[col], "line_spec", "s", spec);
         }
       grm_args_push(args, "series", "nA", cols - err, series.data());
       if (!labels_c.empty())
@@ -762,7 +768,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             {
               for (k = 0; k < depth; ++k)
                 {
-                  data[k * cols * rows + j * rows + i] = filedata[k][j][i];
+                  data[k * cols * rows + j * rows + i] = file_data[k][j][i];
                 }
             }
         }
@@ -770,7 +776,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       grm_args_push(args, "c", "nD", n, data.data());
       grm_args_push(args, "c_dims", "nI", 3, dims.data());
     }
-  else if (str_equals_any(kind, 4, "plot3", "scatter3", "tricont", "trisurf") ||
+  else if (str_equals_any(kind, 4, "plot3", "scatter3", "tricontour", "trisurface") ||
            (strcmp(kind, "scatter") == 0 && scatter_with_z))
     {
       double min_x, max_x, min_y, max_y, min_z, max_z;
@@ -784,40 +790,40 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       /* apply the ranges to the data */
       if (ranges.xmax != INFINITY)
         {
-          min_x = *std::min_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
-          max_x = *std::max_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
+          min_x = *std::min_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
+          max_x = *std::max_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
           adjust_ranges(&ranges.xmin, &ranges.xmax, min_x, max_x);
         }
       if (ranges.ymax != INFINITY)
         {
-          min_y = *std::min_element(&filedata[depth][1][0], &filedata[depth][1][rows]);
-          max_y = *std::max_element(&filedata[depth][1][0], &filedata[depth][1][rows]);
+          min_y = *std::min_element(&file_data[depth][1][0], &file_data[depth][1][rows]);
+          max_y = *std::max_element(&file_data[depth][1][0], &file_data[depth][1][rows]);
           adjust_ranges(&ranges.ymin, &ranges.ymax, min_y, max_y);
           ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
         }
       if (ranges.zmax != INFINITY)
         {
-          min_z = *std::min_element(&filedata[depth][2][0], &filedata[depth][2][rows]);
-          max_z = *std::max_element(&filedata[depth][2][0], &filedata[depth][2][rows]);
+          min_z = *std::min_element(&file_data[depth][2][0], &file_data[depth][2][rows]);
+          max_z = *std::max_element(&file_data[depth][2][0], &file_data[depth][2][rows]);
           adjust_ranges(&ranges.zmin, &ranges.zmax, min_z, max_z);
           ranges.zmax = (ranges.zmax <= ranges.zmin) ? ranges.zmax + ranges.zmin : ranges.zmax;
         }
       for (row = 0; row < rows; ++row)
         {
           if (ranges.xmax != INFINITY)
-            filedata[depth][0][row] = ranges.xmin + (ranges.xmax - ranges.xmin) *
-                                                        (((double)filedata[depth][0][row]) - min_x) / (max_x - min_x);
+            file_data[depth][0][row] = ranges.xmin + (ranges.xmax - ranges.xmin) *
+                                                         (((double)file_data[depth][0][row]) - min_x) / (max_x - min_x);
           if (ranges.ymax != INFINITY)
-            filedata[depth][1][row] = ranges.ymin + (ranges.ymax - ranges.ymin) *
-                                                        (((double)filedata[depth][1][row]) - min_y) / (max_y - min_y);
+            file_data[depth][1][row] = ranges.ymin + (ranges.ymax - ranges.ymin) *
+                                                         (((double)file_data[depth][1][row]) - min_y) / (max_y - min_y);
           if (ranges.zmax != INFINITY)
-            filedata[depth][2][row] = ranges.zmin + (ranges.zmax - ranges.zmin) *
-                                                        (((double)filedata[depth][2][row]) - min_z) / (max_z - min_z);
+            file_data[depth][2][row] = ranges.zmin + (ranges.zmax - ranges.zmin) *
+                                                         (((double)file_data[depth][2][row]) - min_z) / (max_z - min_z);
         }
 
-      grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
-      grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
-      grm_args_push(args, "z", "nD", rows, filedata[depth][2].data());
+      grm_args_push(args, "x", "nD", rows, file_data[depth][0].data());
+      grm_args_push(args, "y", "nD", rows, file_data[depth][1].data());
+      grm_args_push(args, "z", "nD", rows, file_data[depth][2].data());
     }
   else if (str_equals_any(kind, 4, "barplot", "hist", "stem", "stairs"))
     {
@@ -837,36 +843,36 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         {
           x[row] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)row / ((double)rows - 1));
         }
-      if (!grm_args_values(args, "yrange", "dd", &ymin, &ymax))
+      if (!grm_args_values(args, "y_range", "dd", &ymin, &ymax))
         {
-          ymin = *std::min_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
-          ymax = *std::max_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
+          ymin = *std::min_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
+          ymax = *std::max_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
           adjust_ranges(&ranges.ymin, &ranges.ymax, std::min<double>(0.0, ymin), ymax);
-          grm_args_push(args, "yrange", "dd", ranges.ymin, ranges.ymax);
+          grm_args_push(args, "y_range", "dd", ranges.ymin, ranges.ymax);
         }
       else
         {
-          /* apply yrange to the data */
-          ymin = *std::min_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
-          ymax = *std::max_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
+          /* apply y_range to the data */
+          ymin = *std::min_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
+          ymax = *std::max_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
           for (row = 0; row < rows; ++row)
             {
-              filedata[depth][0][row] =
-                  ranges.ymin + (ranges.ymax - ranges.ymin) / (ymax - 0) * ((double)filedata[depth][0][row] - 0);
+              file_data[depth][0][row] =
+                  ranges.ymin + (ranges.ymax - ranges.ymin) / (ymax - 0) * ((double)file_data[depth][0][row] - 0);
             }
         }
-      if (!grm_args_values(args, "xrange", "dd", &xmin, &xmax))
+      if (!grm_args_values(args, "x_range", "dd", &xmin, &xmax))
         {
-          grm_args_push(args, "xrange", "dd", ranges.xmin, ranges.xmax);
+          grm_args_push(args, "x_range", "dd", ranges.xmin, ranges.xmax);
         }
 
       grm_args_push(args, "x", "nD", rows, x.data());
       /* for barplot */
-      grm_args_push(args, "y", "nD", rows, filedata[depth][0].data());
+      grm_args_push(args, "y", "nD", rows, file_data[depth][0].data());
       /* for hist */
-      grm_args_push(args, "weights", "nD", rows, filedata[depth][0].data());
+      grm_args_push(args, "weights", "nD", rows, file_data[depth][0].data());
       /* for stairs */
-      grm_args_push(args, "z", "nD", rows, filedata[depth][0].data());
+      grm_args_push(args, "z", "nD", rows, file_data[depth][0].data());
 
       /* the needed calculation to get the errorbars out of the data */
       if (grm_args_values(args, "error", "a", &error))
@@ -882,20 +888,20 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             }
           else if (str_equals_any(kind, 2, "barplot", "hist"))
             {
-              if (!grm_args_values(args, "nbins", "i", &nbins))
+              if (!grm_args_values(args, "num_bins", "i", &nbins))
                 {
                   if (!grm_args_values(args, "bins", "i", &nbins, &bins))
                     {
-                      if (strcmp(kind, "hist") == 0) nbins = (int)(3.3 * log10(rows) + 0.5) + 1;
+                      if (strcmp(kind, "hist") == 0) nbins = (int)(3.3 * log10((int)rows) + 0.5) + 1;
                     }
                 }
-              if (strcmp(kind, "barplot") == 0) nbins = rows;
+              if (strcmp(kind, "barplot") == 0) nbins = (int)rows;
               if (nbins <= rows)
                 {
                   for (i = 0; i < nbins; i++)
                     {
-                      errors_up[i] = filedata[depth][1][i];
-                      errors_down[i] = filedata[depth][2][i];
+                      errors_up[i] = file_data[depth][1][i];
+                      errors_down[i] = file_data[depth][2][i];
                     }
                   grm_args_push(error, "relative", "nDD", nbins, errors_up.data(), errors_down.data());
                 }
@@ -912,7 +918,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       std::vector<double> c(cols * 3);
       for (col = 0; col < cols; col++)
         {
-          x[col] = filedata[depth][col][0];
+          x[col] = file_data[depth][col][0];
           if (!labels.empty())
             {
               labels_c.push_back(labels[col].c_str());
@@ -930,7 +936,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             {
               for (row = 1; row < 4; row++)
                 {
-                  c[(row - 1) * cols + col] = (double)filedata[depth][col][row];
+                  c[(row - 1) * cols + col] = (double)file_data[depth][col][row];
                 }
             }
           grm_args_push(args, "c", "nD", c.size(), c.data());
@@ -943,13 +949,13 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   else if (strcmp(kind, "polar_histogram") == 0)
     {
       if (cols > 1) fprintf(stderr, "Only the first column gets displayed\n");
-      grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
+      grm_args_push(args, "x", "nD", rows, file_data[depth][0].data());
     }
   else if (strcmp(kind, "polar") == 0)
     {
       if (cols > 1) fprintf(stderr, "Only the first 2 columns get displayed\n");
-      grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
-      grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
+      grm_args_push(args, "x", "nD", rows, file_data[depth][0].data());
+      grm_args_push(args, "y", "nD", rows, file_data[depth][1].data());
     }
   else if (strcmp(kind, "polar_heatmap") == 0)
     {
@@ -973,7 +979,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 {
                   yi[row] = ranges.ymin + (ranges.ymax - ranges.ymin) * ((double)row / ((double)rows - 1));
                 }
-              zi[row * cols + col] = filedata[depth][col][row];
+              zi[row * cols + col] = file_data[depth][col][row];
             }
         }
       grm_args_push(args, "x", "nD", cols, xi.data());
@@ -1004,8 +1010,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           for (row = 0; row < rows; ++row)
             {
               if (col == 0) y[row] = ranges.ymin + (ranges.ymax - ranges.ymin) * ((double)row / ((double)rows - 1));
-              u[row * cols + col] = filedata[0][col][row];
-              v[row * cols + col] = filedata[1][col][row];
+              u[row * cols + col] = file_data[0][col][row];
+              v[row * cols + col] = file_data[1][col][row];
             }
         }
 
@@ -1022,20 +1028,20 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)cols - 1.0);
       adjust_ranges(&ranges.ymin, &ranges.ymax, 0.0, (double)rows - 1.0);
       ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
-      min_x = *std::min_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
-      max_x = *std::max_element(&filedata[depth][0][0], &filedata[depth][0][rows]);
-      min_y = *std::min_element(&filedata[depth][1][0], &filedata[depth][1][rows]);
-      max_y = *std::max_element(&filedata[depth][1][0], &filedata[depth][1][rows]);
+      min_x = *std::min_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
+      max_x = *std::max_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
+      min_y = *std::min_element(&file_data[depth][1][0], &file_data[depth][1][rows]);
+      max_y = *std::max_element(&file_data[depth][1][0], &file_data[depth][1][rows]);
 
       for (row = 0; row < rows; row++)
         {
-          filedata[depth][0][row] =
-              ranges.xmin + (ranges.xmax - ranges.xmin) * (filedata[depth][0][row] - min_x) / (max_x - min_x);
-          filedata[depth][1][row] =
-              ranges.ymin + (ranges.ymax - ranges.ymin) * (filedata[depth][0][row] - min_y) / (max_y - min_y);
+          file_data[depth][0][row] =
+              ranges.xmin + (ranges.xmax - ranges.xmin) * (file_data[depth][0][row] - min_x) / (max_x - min_x);
+          file_data[depth][1][row] =
+              ranges.ymin + (ranges.ymax - ranges.ymin) * (file_data[depth][0][row] - min_y) / (max_y - min_y);
         }
-      grm_args_push(args, "x", "nD", rows, filedata[depth][0].data());
-      grm_args_push(args, "y", "nD", rows, filedata[depth][1].data());
+      grm_args_push(args, "x", "nD", rows, file_data[depth][0].data());
+      grm_args_push(args, "y", "nD", rows, file_data[depth][1].data());
     }
   if (!grm_args_values(args, "grplot", "i", &grplot)) grm_args_push(args, "grplot", "i", 1);
   grm_merge(args);
@@ -1179,17 +1185,17 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                                           parse_parameter_dd(&value, &search->first, &x, &y);
                                           grm_args_push(args, search->first.c_str(), search->second, std::stod(x),
                                                         std::stod(y));
-                                          if (search->first == "xrange")
+                                          if (search->first == "x_range")
                                             {
                                               ranges->xmin = std::stod(x);
                                               ranges->xmax = std::stod(y);
                                             }
-                                          else if (search->first == "yrange")
+                                          else if (search->first == "y_range")
                                             {
                                               ranges->ymin = std::stod(x);
                                               ranges->ymax = std::stod(y);
                                             }
-                                          else if (search->first == "zrange")
+                                          else if (search->first == "z_range")
                                             {
                                               ranges->zmin = std::stod(x);
                                               ranges->zmax = std::stod(y);
@@ -1262,7 +1268,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                           if (strcmp(search->second, "i") == 0)
                             {
                               /* special case for scatter plot, to decide how the read data gets interpreted */
-                              if (strcmp(search->first.c_str(), "scatterz") == 0)
+                              if (strcmp(search->first.c_str(), "scatter_z") == 0)
                                 {
                                   scatter_with_z = std::stoi(value);
                                 }
@@ -1284,17 +1290,17 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                               std::string x, y;
                               parse_parameter_dd(&value, &search->first, &x, &y);
                               grm_args_push(args, search->first.c_str(), search->second, std::stod(x), std::stod(y));
-                              if (search->first == "xrange")
+                              if (search->first == "x_range")
                                 {
                                   ranges->xmin = std::stod(x);
                                   ranges->xmax = std::stod(y);
                                 }
-                              else if (search->first == "yrange")
+                              else if (search->first == "y_range")
                                 {
                                   ranges->ymin = std::stod(x);
                                   ranges->ymax = std::stod(y);
                                 }
-                              else if (search->first == "zrange")
+                              else if (search->first == "z_range")
                                 {
                                   ranges->zmin = std::stod(x);
                                   ranges->zmax = std::stod(y);
@@ -1312,17 +1318,17 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                               size_t pos = value.find(',');
                               std::string num = value.substr(0, pos);
                               std::vector<std::string> values(std::stoi(num));
-                              std::vector<const char *> cvalues(std::stoi(num));
+                              std::vector<const char *> c_values(std::stoi(num));
                               int no_err = parse_parameter_nS(&value, &search->first, &values);
                               if (no_err)
                                 {
                                   int ci;
                                   for (ci = 0; ci < std::stoi(num); ci++)
                                     {
-                                      cvalues[ci] = values[ci].c_str();
+                                      c_values[ci] = values[ci].c_str();
                                     }
                                   grm_args_push(args, search->first.c_str(), search->second, std::stoi(num),
-                                                cvalues.data());
+                                                c_values.data());
                                 }
                             }
                           else if (strcmp(search->second, "nD") == 0)
@@ -1371,7 +1377,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
       fprintf(stderr, "Invalid plot type (%s) - fallback to line plot\n", kind.c_str());
       kind = "line";
     }
-  if (!str_equals_any(kind.c_str(), 7, "contour", "contourf", "heatmap", "imshow", "marginalheatmap", "surface",
+  if (!str_equals_any(kind.c_str(), 7, "contour", "contourf", "heatmap", "imshow", "marginal_heatmap", "surface",
                       "wireframe"))
     {
       use_bins = 0; // this parameter is only for surface and similar types

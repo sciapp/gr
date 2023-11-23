@@ -222,7 +222,7 @@ static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},           {"hexbin",
                                            {"polar", "xys"},          {"shade", "xys"},
                                            {"stem", "xys"},           {"stairs", "xys"},
                                            {"contour", "xyzc"},       {"contourf", "xyzc"},
-                                           {"tricont", "xyzc"},       {"trisurf", "xyzc"},
+                                           {"tricontour", "xyzc"},    {"trisurface", "xyzc"},
                                            {"surface", "xyzc"},       {"wireframe", "xyzc"},
                                            {"plot3", "xyzc"},         {"scatter", "xyzc"},
                                            {"scatter3", "xyzc"},      {"quiver", "xyuv"},
@@ -1041,7 +1041,7 @@ static void getMajorCount(const std::shared_ptr<GRM::Element> &element, const st
     }
   else
     {
-      if (str_equals_any(kind.c_str(), 9, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf",
+      if (str_equals_any(kind.c_str(), 9, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurface",
                          "polar_heatmap", "nonuniformpolar_heatmap", "volume"))
         {
           major_count = 2;
@@ -2296,8 +2296,8 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
           context = render->getContext();
           auto orientation = static_cast<std::string>(child->getAttribute("orientation"));
           int is_vertical = orientation == "vertical";
-          int xind = static_cast<int>(element->getAttribute("x_ind"));
-          int yind = static_cast<int>(element->getAttribute("y_ind"));
+          int x_ind = static_cast<int>(element->getAttribute("x_ind"));
+          int y_ind = static_cast<int>(element->getAttribute("y_ind"));
 
           auto plot_group = element->parentElement();
 
@@ -2328,12 +2328,12 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
             {
               if (is_vertical)
                 {
-                  y[i] = std::isnan(z[xind + i * x_length]) ? 0 : z[xind + i * x_length];
+                  y[i] = std::isnan(z[x_ind + i * x_length]) ? 0 : z[x_ind + i * x_length];
                   y_max = grm_max(y_max, y[i]);
                 }
               else
                 {
-                  y[i] = std::isnan(z[x_length * yind + i]) ? 0 : z[x_length * yind + i];
+                  y[i] = std::isnan(z[x_length * y_ind + i]) ? 0 : z[x_length * y_ind + i];
                   y_max = grm_max(y_max, y[i]);
                 }
             }
@@ -2374,16 +2374,16 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
                 {
                   line_elem =
                       global_render->createPolyline("x" + id_str, y_step_values, "y" + id_str, x_step_boundaries);
-                  x_pos = (x_step_boundaries[yind * 2] + x_step_boundaries[yind * 2 + 1]) / 2;
-                  y_pos = y[yind];
+                  x_pos = (x_step_boundaries[y_ind * 2] + x_step_boundaries[y_ind * 2 + 1]) / 2;
+                  y_pos = y[y_ind];
                   marker_elem = global_render->createPolymarker(y_pos, x_pos);
                 }
               else
                 {
                   line_elem =
                       global_render->createPolyline("x" + id_str, x_step_boundaries, "y" + id_str, y_step_values);
-                  x_pos = (x_step_boundaries[xind * 2] + x_step_boundaries[xind * 2 + 1]) / 2;
-                  y_pos = y[xind];
+                  x_pos = (x_step_boundaries[x_ind * 2] + x_step_boundaries[x_ind * 2 + 1]) / 2;
+                  y_pos = y[x_ind];
                   marker_elem = global_render->createPolymarker(x_pos, y_pos);
                 }
 
@@ -2398,7 +2398,7 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
               child->append(line_elem);
               marker_elem->setAttribute("z_index", 2);
             }
-          else if (xind == -1 || yind == -1)
+          else if (x_ind == -1 || y_ind == -1)
             {
               child->remove();
             }
@@ -2427,15 +2427,15 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
                     {
                       if (is_vertical)
                         {
-                          x_pos = (x_step_boundaries[yind * 2] + x_step_boundaries[yind * 2 + 1]) / 2;
-                          y_pos = y[yind];
+                          x_pos = (x_step_boundaries[y_ind * 2] + x_step_boundaries[y_ind * 2 + 1]) / 2;
+                          y_pos = y[y_ind];
                           childchild->setAttribute("x", y_pos);
                           childchild->setAttribute("y", x_pos);
                         }
                       else
                         {
-                          x_pos = (x_step_boundaries[xind * 2] + x_step_boundaries[xind * 2 + 1]) / 2;
-                          y_pos = y[xind];
+                          x_pos = (x_step_boundaries[x_ind * 2] + x_step_boundaries[x_ind * 2 + 1]) / 2;
+                          y_pos = y[x_ind];
                           childchild->setAttribute("x", x_pos);
                           childchild->setAttribute("y", y_pos);
                         }
@@ -2447,10 +2447,10 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
         }
       else if (mkind == "all")
         {
-          auto xind = static_cast<int>(element->getAttribute("x_ind"));
-          auto yind = static_cast<int>(element->getAttribute("y_ind"));
+          auto x_ind = static_cast<int>(element->getAttribute("x_ind"));
+          auto y_ind = static_cast<int>(element->getAttribute("y_ind"));
 
-          if (xind == -1 && yind == -1)
+          if (x_ind == -1 && y_ind == -1)
             {
               for (const auto &bar : child->children())
                 {
@@ -2466,11 +2466,11 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
           bool is_horizontal = static_cast<std::string>(child->getAttribute("orientation")) == "horizontal";
           std::vector<std::shared_ptr<GRM::Element>> bar_groups = child->children();
 
-          if ((is_horizontal && xind == -1) || (!is_horizontal && yind == -1))
+          if ((is_horizontal && x_ind == -1) || (!is_horizontal && y_ind == -1))
             {
               continue;
             }
-          if ((is_horizontal ? xind : yind) >= bar_groups.size())
+          if ((is_horizontal ? x_ind : y_ind) >= bar_groups.size())
             {
               continue;
             }
@@ -2481,7 +2481,7 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
               for (const auto &rect : group->children())
                 {
                   if (rect->hasAttribute("line_color_ind")) continue;
-                  if (cnt == (is_horizontal ? xind : yind))
+                  if (cnt == (is_horizontal ? x_ind : y_ind))
                     {
                       rect->setAttribute("fill_color_ind", 2);
                     }
@@ -2634,7 +2634,8 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
         }
     }
 
-  if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume", "isosurface"))
+  if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
+                     "isosurface"))
     {
       double zmin = static_cast<double>(element->getAttribute("_z_lim_min"));
       double zmax = static_cast<double>(element->getAttribute("_z_lim_max"));
@@ -2987,7 +2988,7 @@ static void processSubplot(const std::shared_ptr<GRM::Element> &element)
         }
     }
 
-  if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
+  if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
     {
       double extent;
 
@@ -3007,7 +3008,7 @@ static void processSubplot(const std::shared_ptr<GRM::Element> &element)
 
   left_margin = y_label_margin ? 0.05 : 0;
   if (str_equals_any(kind.c_str(), 13, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface",
-                     "tricont", "trisurf", "volume", "marginal_heatmap", "quiver", "polar_heatmap",
+                     "tricontour", "trisurface", "volume", "marginal_heatmap", "quiver", "polar_heatmap",
                      "nonuniformpolar_heatmap"))
     {
       right_margin = (vp1 - vp0) * 0.1;
@@ -3367,7 +3368,8 @@ void GRM::Render::processWindow(const std::shared_ptr<GRM::Element> &element)
     {
       gr_setwindow(xmin, xmax, ymin, ymax);
     }
-  if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume", "isosurface"))
+  if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
+                     "isosurface"))
     {
       double zmin = static_cast<double>(element->getAttribute("window_z_min"));
       double zmax = static_cast<double>(element->getAttribute("window_z_max"));
@@ -3424,7 +3426,7 @@ void GRM::Render::processViewport(const std::shared_ptr<GRM::Element> &element)
   diag = std::sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
                    (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
 
-  if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
+  if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
     {
       char_height = grm_max(0.024 * diag, 0.012);
     }
@@ -9928,7 +9930,7 @@ static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
 
   double c_min, c_max;
   int flip, options;
-  int xind = PLOT_DEFAULT_MARGINAL_INDEX, yind = PLOT_DEFAULT_MARGINAL_INDEX;
+  int x_ind = PLOT_DEFAULT_MARGINAL_INDEX, y_ind = PLOT_DEFAULT_MARGINAL_INDEX;
   unsigned int i, j, k;
   std::string algorithm = PLOT_DEFAULT_MARGINAL_ALGORITHM, marginal_heatmap_kind = PLOT_DEFAULT_MARGINAL_KIND;
   std::vector<double> bins;
@@ -9943,19 +9945,19 @@ static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
 
   if (element->hasAttribute("x_ind"))
     {
-      xind = static_cast<int>(element->getAttribute("x_ind"));
+      x_ind = static_cast<int>(element->getAttribute("x_ind"));
     }
   else
     {
-      element->setAttribute("x_ind", xind);
+      element->setAttribute("x_ind", x_ind);
     }
   if (element->hasAttribute("y_ind"))
     {
-      yind = static_cast<int>(element->getAttribute("y_ind"));
+      y_ind = static_cast<int>(element->getAttribute("y_ind"));
     }
   else
     {
-      element->setAttribute("y_ind", yind);
+      element->setAttribute("y_ind", y_ind);
     }
   if (element->hasAttribute("algorithm"))
     {
@@ -10120,7 +10122,7 @@ static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
               subGroup->setAttribute("x", "x" + str);
             }
         }
-      else if (marginal_heatmap_kind == "line" && xind != -1 && yind != -1)
+      else if (marginal_heatmap_kind == "line" && x_ind != -1 && y_ind != -1)
         {
           // special case for marginal_heatmap_kind line - when new indices != -1 are recieved the 2 lines should be
           // displayed
@@ -10150,7 +10152,7 @@ static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
             }
         }
 
-      if (marginal_heatmap_kind == "all" || (marginal_heatmap_kind == "line" && xind != -1 && yind != -1))
+      if (marginal_heatmap_kind == "all" || (marginal_heatmap_kind == "line" && x_ind != -1 && y_ind != -1))
         {
           if (subGroup != nullptr)
             {
@@ -14806,7 +14808,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
           std::vector<std::string> heatmap_group = {"contour",          "contourf", "heatmap",  "imshow",
                                                     "marginal_heatmap", "surface",  "wireframe"};
           std::vector<std::string> isosurface_group = {"isosurface", "volume"};
-          std::vector<std::string> plot3_group = {"plot3", "scatter", "scatter3", "tricont", "trisurf"};
+          std::vector<std::string> plot3_group = {"plot3", "scatter", "scatter3", "tricontour", "trisurface"};
           std::vector<std::string> barplot_group = {"barplot", "hist", "stem", "stairs"};
           std::vector<std::string> hexbin_group = {"hexbin", "shade"};
           if (std::find(line_group.begin(), line_group.end(), value) != line_group.end() &&
@@ -15072,10 +15074,10 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                 }
               else if (kind == "marginal_heatmap" && (attr == "x_ind" || attr == "y_ind"))
                 {
-                  auto xind = static_cast<int>(element->getAttribute("x_ind"));
-                  auto yind = static_cast<int>(element->getAttribute("y_ind"));
-                  if (attr == "x_ind" && yind != -1) element->setAttribute("_update_required", true);
-                  if (attr == "y_ind" && xind != -1) element->setAttribute("_update_required", true);
+                  auto x_ind = static_cast<int>(element->getAttribute("x_ind"));
+                  auto y_ind = static_cast<int>(element->getAttribute("y_ind"));
+                  if (attr == "x_ind" && y_ind != -1) element->setAttribute("_update_required", true);
+                  if (attr == "y_ind" && x_ind != -1) element->setAttribute("_update_required", true);
                 }
             }
           else if ((attr == "size_x" || attr == "size_y") && element->localName() == "figure" &&

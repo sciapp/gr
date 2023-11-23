@@ -50,7 +50,7 @@ int test_plotmeta()
   grm_args_push(args, "labels", "nS", 2, labels);
   grm_args_push(args, "kind", "s", "line");
   grm_args_push(args, "keep_aspect_ratio", "i", 0);
-  grm_args_push(args, "yflip", "i", 0);
+  grm_args_push(args, "y_flip", "i", 0);
 
 
   printf("plotting data...\n");

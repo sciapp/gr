@@ -1,8 +1,8 @@
 # title : Confirmed SARS–CoV–2 infections
-# xlabel : Day
-# ylabel : Confirmed
-# xlim : 0.0, 917 + 1.0
-# ylog : 1
+# x_label : Day
+# y_label : Confirmed
+# x_lim : 0.0, 917 + 1.0
+# y_log : 1
 # location : 4
 Germany	Austria	Belgium	Netherlands	France	Italy	Spain		US
 NAN	NAN	NAN	NAN	NAN	NAN	NAN	1.0
