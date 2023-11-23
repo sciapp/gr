@@ -301,10 +301,10 @@ void GridElement::finalizeSubplot()
 
   if (elementInDOM != nullptr)
     {
-      elementInDOM->setAttribute("plot_xmin", subplot[0]);
-      elementInDOM->setAttribute("plot_xmax", subplot[1]);
-      elementInDOM->setAttribute("plot_ymin", subplot[2]);
-      elementInDOM->setAttribute("plot_ymax", subplot[3]);
+      elementInDOM->setAttribute("plot_x_min", subplot[0]);
+      elementInDOM->setAttribute("plot_x_max", subplot[1]);
+      elementInDOM->setAttribute("plot_y_min", subplot[2]);
+      elementInDOM->setAttribute("plot_y_max", subplot[3]);
     }
 
   finalized = 1;
