@@ -558,11 +558,12 @@ static void update_bbox(int x, int y)
 }
 
 
-#define drawRect(x, y, w, h)                                                             \
-  {                                                                                      \
-    if (type == 0 && p->pixmap) XDrawRectangle(p->dpy, p->pixmap, p->def, x, y, w, h);   \
-    if (!p->double_buf || type != 0) XDrawRectangle(p->dpy, p->win, p->def, x, y, w, h); \
-  }
+static void drawRect(int x, int y, int w, int h, int type)
+{
+  if (type == 0 && p->pixmap) XDrawRectangle(p->dpy, p->pixmap, p->def, x, y, w, h);
+  if (!p->double_buf || type != 0) XDrawRectangle(p->dpy, p->win, p->def, x, y, w, h);
+}
+
 
 static void draw_bbox(int type, int xoff, int yoff)
 {
@@ -581,15 +582,15 @@ static void draw_bbox(int type, int xoff, int yoff)
   if (type == 3 || type == 5 || type == 7) ymin += yoff;
   if (type == 4 || type == 6 || type == 8) ymax += yoff;
 
-  drawRect(xmin - 1, ymax - 1, xmax - xmin + 2, ymin - ymax + 2) if (p->bb->type & (1 << 0))
-      drawRect(xmin - 4, (ymin + ymax - 6) / 2, 6, 6) if (p->bb->type & (1 << 1))
-          drawRect(xmax - 2, (ymin + ymax - 6) / 2, 6, 6) if (p->bb->type & (1 << 2))
-              drawRect((xmin + xmax - 6) / 2, ymin - 2, 6, 6) if (p->bb->type & (1 << 3))
-                  drawRect((xmin + xmax - 6) / 2, ymax - 4, 6, 6) if (p->bb->type & (1 << 4))
-                      drawRect(xmin - 4, ymin - 2, 6, 6) if (p->bb->type & (1 << 5))
-                          drawRect(xmax - 2, ymax - 4, 6, 6) if (p->bb->type & (1 << 6))
-                              drawRect(xmax - 2, ymin - 2, 6, 6) if (p->bb->type & (1 << 7))
-                                  drawRect(xmin - 4, ymax - 4, 6, 6)
+  drawRect(xmin - 1, ymax - 1, xmax - xmin + 2, ymin - ymax + 2, type);
+  if (p->bb->type & (1 << 0)) drawRect(xmin - 4, (ymin + ymax - 6) / 2, 6, 6, type);
+  if (p->bb->type & (1 << 1)) drawRect(xmax - 2, (ymin + ymax - 6) / 2, 6, 6, type);
+  if (p->bb->type & (1 << 2)) drawRect((xmin + xmax - 6) / 2, ymin - 2, 6, 6, type);
+  if (p->bb->type & (1 << 3)) drawRect((xmin + xmax - 6) / 2, ymax - 4, 6, 6, type);
+  if (p->bb->type & (1 << 4)) drawRect(xmin - 4, ymin - 2, 6, 6, type);
+  if (p->bb->type & (1 << 5)) drawRect(xmax - 2, ymax - 4, 6, 6, type);
+  if (p->bb->type & (1 << 6)) drawRect(xmax - 2, ymin - 2, 6, 6, type);
+  if (p->bb->type & (1 << 7)) drawRect(xmin - 4, ymax - 4, 6, 6, type);
 }
 
 

@@ -107,6 +107,7 @@ typedef struct ws_state_list_t
   gks_display_list_t dl;
   QWidget *widget;
   QPixmap *pixmap;
+  QPixmap *selection;
   QPainter *painter;
   int state, wtype;
   int device_dpi_x, device_dpi_y;
@@ -1653,6 +1654,37 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       p->transparency = (int)(r1[0] * 255);
       break;
 
+    case BEGIN_SELECTION:
+      delete p->painter;
+      if (p->selection == NULL)
+        {
+          p->selection = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
+          p->selection->setDevicePixelRatio(p->device_pixel_ratio);
+#endif
+          p->selection->fill(Qt::white);
+        }
+      p->painter = new QPainter(p->selection);
+      break;
+
+    case END_SELECTION:
+      delete p->painter;
+      p->painter = new QPainter(p->pixmap);
+      break;
+
+    case MOVE_SELECTION:
+      if (p->selection != NULL)
+        {
+          int x_offset = (int)(p->a * r1[0] + 0.5);
+          int y_offset = (int)(p->c * r2[0] + 0.5);
+          QPainter::CompositionMode lastMode = p->painter->compositionMode();
+          p->painter->drawPixmap(QPoint(0, 0), *p->pixmap);
+          p->painter->setCompositionMode(QPainter::RasterOp_NotSourceXorDestination);
+          p->painter->drawPixmap(QPoint(x_offset, y_offset), *p->selection);
+          p->painter->setCompositionMode(lastMode);
+        }
+      break;
+
     case GKS_SET_BBOX_CALLBACK: /* 260 */
       cur_id = ia[0];
 #ifdef _WIN32
@@ -1729,7 +1761,7 @@ static void initialize_data()
 {
   int i;
 
-  p->pixmap = NULL;
+  p->pixmap = p->selection = NULL;
   p->font = new QFont();
 
   p->points = new QPolygonF(MAX_POINTS);
