@@ -1,9 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "libqhull/qhull_a.h"
 
 #include "gr.h"
+
+#ifdef isnan
+#define is_nan(a) isnan(a)
+#else
+#define is_nan(x) ((x) != (x))
+#endif
 
 void gr_delaunay(int npoints, const double *x, const double *y, int *ntri, int **triangles)
 {
@@ -16,6 +23,7 @@ void gr_delaunay(int npoints, const double *x, const double *y, int *ntri, int *
   int curlong, totlong;
   const int ndim = 2;
   int *tri = NULL;
+  int cnt = 0;
 
   *ntri = 0;
   *triangles = NULL;
@@ -26,12 +34,14 @@ void gr_delaunay(int npoints, const double *x, const double *y, int *ntri, int *
 
       for (i = 0; i < npoints; ++i)
         {
-          points[2 * i] = x[i];
-          points[2 * i + 1] = y[i];
+          if (is_nan(x[i]) || is_nan(y[i])) continue;
+          points[2 * cnt] = x[i];
+          points[2 * cnt + 1] = y[i];
+          cnt += 1;
         }
 
       /* Perform Delaunay triangulation */
-      if (qh_new_qhull(ndim, npoints, points, False, "qhull d Qt QbB Qz", NULL, stderr) == qh_ERRnone)
+      if (qh_new_qhull(ndim, cnt, points, False, "qhull d Qt QbB Qz", NULL, stderr) == qh_ERRnone)
         {
           /* Split facets so that they only have 3 points each */
           qh_triangulate();
