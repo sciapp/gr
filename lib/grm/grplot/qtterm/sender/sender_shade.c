@@ -54,9 +54,9 @@ int test_shading(int number_of_points)
 
   grm_args_push(subplot, "series", "A", &series);
   grm_args_push(subplot, "kind", "s", "shade");
-  grm_args_push(subplot, "xbins", "i", 250);
-  grm_args_push(subplot, "ybins", "i", 250);
-  grm_args_push(subplot, "xform", "i", 3);
+  grm_args_push(subplot, "x_bins", "i", 250);
+  grm_args_push(subplot, "y_bins", "i", 250);
+  grm_args_push(subplot, "transformation", "i", 3);
   grm_args_push(subplot, "colormap", "i", 3);
 
   args = grm_args_new();

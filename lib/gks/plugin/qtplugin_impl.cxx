@@ -106,8 +106,9 @@ typedef struct ws_state_list_t
 {
   gks_display_list_t dl;
   QWidget *widget;
-  QPixmap *pm;
-  QPainter *pixmap;
+  QPixmap *pixmap;
+  QPixmap *selection;
+  QPainter *painter;
   int state, wtype;
   int device_dpi_x, device_dpi_y;
   double device_pixel_ratio;
@@ -228,22 +229,22 @@ static void resize_window(void)
       p->nominal_size = min(p->width, p->height) / 500.0;
     }
 
-  if (p->pm)
+  if (p->pixmap)
     {
-      if (fabs(p->width * p->device_pixel_ratio - p->pm->size().width()) > FEPS ||
-          fabs(p->height * p->device_pixel_ratio - p->pm->size().height()) > FEPS)
+      if (fabs(p->width * p->device_pixel_ratio - p->pixmap->size().width()) > FEPS ||
+          fabs(p->height * p->device_pixel_ratio - p->pixmap->size().height()) > FEPS)
         {
+          delete p->painter;
           delete p->pixmap;
-          delete p->pm;
 
-          p->pm = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
+          p->pixmap = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
-          p->pm->setDevicePixelRatio(p->device_pixel_ratio);
+          p->pixmap->setDevicePixelRatio(p->device_pixel_ratio);
 #endif
-          p->pm->fill(Qt::white);
+          p->pixmap->fill(Qt::white);
 
-          p->pixmap = new QPainter(p->pm);
-          p->pixmap->setClipRect(0, 0, p->width, p->height);
+          p->painter = new QPainter(p->pixmap);
+          p->painter->setClipRect(0, 0, p->width, p->height);
         }
     }
 }
@@ -301,11 +302,11 @@ static void seg_xform_rel(double *x, double *y)
 static void set_clip_rect(int tnr)
 {
   if (gkss->clip_tnr != 0)
-    p->pixmap->setClipRect(p->rect[gkss->clip_tnr]);
+    p->painter->setClipRect(p->rect[gkss->clip_tnr]);
   else if (gkss->clip == GKS_K_CLIP)
-    p->pixmap->setClipRect(p->rect[tnr]);
+    p->painter->setClipRect(p->rect[tnr]);
   else
-    p->pixmap->setClipRect(p->rect[0]);
+    p->painter->setClipRect(p->rect[0]);
 }
 
 static void set_color_rep(int color, double red, double green, double blue)
@@ -338,8 +339,8 @@ static void set_color(int color)
 {
   QColor transparent_color(p->rgb[color]);
   transparent_color.setAlpha(p->transparency);
-  p->pixmap->setPen(transparent_color);
-  p->pixmap->setBrush(transparent_color);
+  p->painter->setPen(transparent_color);
+  p->painter->setBrush(transparent_color);
 }
 
 static QPixmap *create_pattern(int pattern, int color)
@@ -398,11 +399,11 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
        * Qt drawPolyline() is slow on calculating line joins for a large list of points.
        * Drawing each of the line segments using drawLine() does remove the problem.
        */
-      for (i = 1; i < p->npoints; i++) p->pixmap->drawLine((*p->points)[i - 1], (*p->points)[i]);
+      for (i = 1; i < p->npoints; i++) p->painter->drawLine((*p->points)[i - 1], (*p->points)[i]);
     }
   else
     {
-      p->pixmap->drawPolyline(p->points->constData(), p->npoints);
+      p->painter->drawPolyline(p->points->constData(), p->npoints);
     }
   if (!p->bounding_stack.empty())
     {
@@ -452,8 +453,8 @@ static void polyline(int n, double *px, double *py)
   /* line widths < 0.1 no longer provide meaningful results */
   if (ln_width < 0.1) ln_width = 0.1;
 
-  p->pixmap->save();
-  p->pixmap->setRenderHint(QPainter::Antialiasing);
+  p->painter->save();
+  p->painter->setRenderHint(QPainter::Antialiasing);
   QColor transparent_color(p->rgb[ln_color]);
   transparent_color.setAlpha(p->transparency);
 
@@ -465,14 +466,14 @@ static void polyline(int n, double *px, double *py)
 
       QPen pen(QPen(transparent_color, ln_width, Qt::CustomDashLine, Qt::FlatCap, Qt::RoundJoin));
       pen.setDashPattern(dashPattern);
-      p->pixmap->setPen(pen);
+      p->painter->setPen(pen);
     }
   else
-    p->pixmap->setPen(QPen(transparent_color, ln_width, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    p->painter->setPen(QPen(transparent_color, ln_width, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
 
   line_routine(n, px, py, ln_type, gkss->cntnr);
 
-  p->pixmap->restore();
+  p->painter->restore();
 }
 
 static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
@@ -512,8 +513,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
         {
 
         case 1: /* point */
-          p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
-          p->pixmap->drawPoint(QPointF(x, y));
+          p->painter->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
+          p->painter->drawPoint(QPointF(x, y));
           break;
 
         case 2: /* line */
@@ -524,9 +525,9 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               seg_xform_rel(&xr, &yr);
               (*p->points)[i] = QPointF(x - xr, y + yr);
             }
-          p->pixmap->setPen(
+          p->painter->setPen(
               QPen(marker_color, max(gkss->bwidth, gkss->lwidth) * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
-          p->pixmap->drawPolyline(p->points->constData(), 2);
+          p->painter->drawPolyline(p->points->constData(), 2);
           pc += 4;
           break;
 
@@ -542,9 +543,9 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                   seg_xform_rel(&xr, &yr);
                   (*points)[i] = QPointF(x - xr, y + yr);
                 }
-              p->pixmap->setPen(QPen(op == 3 ? marker_color : border_color, gkss->bwidth * p->nominal_size,
-                                     Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
-              p->pixmap->drawPolyline(points->constData(), marker[mtype][pc + 1]);
+              p->painter->setPen(QPen(op == 3 ? marker_color : border_color, gkss->bwidth * p->nominal_size,
+                                      Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
+              p->painter->drawPolyline(points->constData(), marker[mtype][pc + 1]);
               delete points;
             }
           pc += 1 + 2 * marker[mtype][pc + 1];
@@ -555,12 +556,12 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           points = new QPolygonF(marker[mtype][pc + 1]);
           if (op == 4)
             {
-              p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
+              p->painter->setBrush(QBrush(marker_color, Qt::SolidPattern));
               if (gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
-                p->pixmap->setPen(
+                p->painter->setPen(
                     QPen(border_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
               else
-                p->pixmap->setPen(Qt::NoPen);
+                p->painter->setPen(Qt::NoPen);
             }
           else
             set_color(0);
@@ -571,30 +572,30 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               seg_xform_rel(&xr, &yr);
               (*points)[i] = QPointF(x - xr, y + yr);
             }
-          p->pixmap->drawPolygon(points->constData(), marker[mtype][pc + 1]);
+          p->painter->drawPolygon(points->constData(), marker[mtype][pc + 1]);
           pc += 1 + 2 * marker[mtype][pc + 1];
           delete points;
           break;
 
         case 6: /* arc */
-          p->pixmap->setPen(
+          p->painter->setPen(
               QPen(marker_color, max(gkss->bwidth, gkss->lwidth) * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
-          p->pixmap->drawArc(QRectF(x - r, y - r, d, d), 0, 360 * 16);
+          p->painter->drawArc(QRectF(x - r, y - r, d, d), 0, 360 * 16);
           break;
 
         case 7: /* filled arc */
         case 8: /* hollow arc */
           if (op == 7)
             {
-              p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
+              p->painter->setBrush(QBrush(marker_color, Qt::SolidPattern));
               if (gkss->bcoli != gkss->pmcoli && gkss->bwidth > 0)
-                p->pixmap->setPen(QPen(border_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
+                p->painter->setPen(QPen(border_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
               else
-                p->pixmap->setPen(Qt::NoPen);
+                p->painter->setPen(Qt::NoPen);
             }
           else
             set_color(0);
-          p->pixmap->drawChord(QRectF(x - r, y - r, d, d), 0, 360 * 16);
+          p->painter->drawChord(QRectF(x - r, y - r, d, d), 0, 360 * 16);
           break;
         }
       if (!p->bounding_stack.empty())
@@ -643,12 +644,12 @@ static void polymarker(int n, double *px, double *py)
 
   if (mk_color < 0 || mk_color >= MAX_COLOR) mk_color = 1;
 
-  p->pixmap->save();
-  p->pixmap->setRenderHint(QPainter::Antialiasing);
+  p->painter->save();
+  p->painter->setRenderHint(QPainter::Antialiasing);
 
   marker_routine(n, px, py, mk_type, mk_size, mk_color);
 
-  p->pixmap->restore();
+  p->painter->restore();
 }
 
 static void text_routine(double x, double y, int nchars, char *chars)
@@ -691,19 +692,17 @@ static void text_routine(double x, double y, int nchars, char *chars)
 
   if (fabs(p->angle) > FEPS)
     {
-      p->pixmap->save();
-      p->pixmap->translate(xstart, ystart);
-      p->pixmap->rotate(-p->angle);
-      p->pixmap->drawText(0, 0, s);
-      p->pixmap->restore();
+      p->painter->save();
+      p->painter->translate(xstart, ystart);
+      p->painter->rotate(-p->angle);
+      p->painter->drawText(0, 0, s);
+      p->painter->restore();
     }
   else
-    p->pixmap->drawText(xstart, ystart, s);
+    p->painter->drawText(xstart, ystart, s);
 
   if (!p->bounding_stack.empty())
     {
-      double point_x = p->points->constData()[i].x();
-      double point_y = p->points->constData()[i].y();
       p->bounding_stack.top().x_max = xstart + xrel;
       p->bounding_stack.top().x_min = xstart;
       p->bounding_stack.top().y_max = ystart + yrel;
@@ -758,7 +757,7 @@ static void set_font(int font)
   p->font->setItalic(italic);
   p->font->setPixelSize(size);
 
-  p->pixmap->setFont(*p->font);
+  p->painter->setFont(*p->font);
 }
 
 static void fill_routine(int n, double *px, double *py, int tnr);
@@ -774,11 +773,11 @@ static void text(double px, double py, int nchars, char *chars)
 
   if (tx_color < 0 || tx_color >= MAX_COLOR) tx_color = 1;
 
-  p->pixmap->save();
-  p->pixmap->setRenderHint(QPainter::Antialiasing);
+  p->painter->save();
+  p->painter->setRenderHint(QPainter::Antialiasing);
   QColor transparent_color(p->rgb[tx_color]);
   transparent_color.setAlpha(p->transparency);
-  p->pixmap->setPen(QPen(transparent_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
+  p->painter->setPen(QPen(transparent_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
 
   if (tx_prec == GKS_K_TEXT_PRECISION_STRING)
     {
@@ -799,7 +798,7 @@ static void text(double px, double py, int nchars, char *chars)
       gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
     }
 
-  p->pixmap->restore();
+  p->painter->restore();
 }
 
 static void fill_routine(int n, double *px, double *py, int tnr)
@@ -825,7 +824,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
   if (points->size() >= 2)
     {
-      p->pixmap->drawPolygon(points->constData(), points->size());
+      p->painter->drawPolygon(points->constData(), points->size());
     }
 
   if (!p->bounding_stack.empty())
@@ -854,21 +853,21 @@ static void fillarea(int n, double *px, double *py)
 
   if (fl_color < 0 || fl_color >= MAX_COLOR) fl_color = 1;
 
-  p->pixmap->save();
-  p->pixmap->setRenderHint(QPainter::Antialiasing);
+  p->painter->save();
+  p->painter->setRenderHint(QPainter::Antialiasing);
   QColor transparent_color(p->rgb[fl_color]);
   transparent_color.setAlpha(p->transparency);
 
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
-      p->pixmap->setPen(
+      p->painter->setPen(
           QPen(transparent_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
       line_routine(n, px, py, DrawBorder, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
     {
-      p->pixmap->setPen(Qt::NoPen);
-      p->pixmap->setBrush(QBrush(transparent_color, Qt::SolidPattern));
+      p->painter->setPen(Qt::NoPen);
+      p->painter->setBrush(QBrush(transparent_color, Qt::SolidPattern));
       fill_routine(n, px, py, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_PATTERN || fl_inter == GKS_K_INTSTYLE_HATCH)
@@ -881,12 +880,12 @@ static void fillarea(int n, double *px, double *py)
           p->pattern[fl_style] = create_pattern(fl_style, fl_color);
           p->pcolor[fl_style] = fl_color;
         }
-      p->pixmap->setPen(Qt::NoPen);
-      p->pixmap->setBrush(QBrush(transparent_color, *p->pattern[fl_style]));
+      p->painter->setPen(Qt::NoPen);
+      p->painter->setBrush(QBrush(transparent_color, *p->pattern[fl_style]));
       fill_routine(n, px, py, gkss->cntnr);
     }
 
-  p->pixmap->restore();
+  p->painter->restore();
 }
 
 static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx, int dy, int dimx, int *colia,
@@ -953,7 +952,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
               img.setPixel(i, j, transparent_color.rgba());
             }
         }
-      p->pixmap->drawPixmap(QPointF(x, y), QPixmap::fromImage(img));
+      p->painter->drawPixmap(QPointF(x, y), QPixmap::fromImage(img));
     }
   else
     {
@@ -977,7 +976,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
 #if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
       img.setDevicePixelRatio(p->device_pixel_ratio);
 #endif
-      p->pixmap->drawPixmap(QPointF(x, y), QPixmap::fromImage(img));
+      p->painter->drawPixmap(QPointF(x, y), QPixmap::fromImage(img));
       gks_free(pixels);
     }
 }
@@ -1004,8 +1003,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   double start_x = 0, start_y = 0;
   QPainterPath path;
 
-  p->pixmap->save();
-  p->pixmap->setRenderHint(QPainter::Antialiasing);
+  p->painter->save();
+  p->painter->setRenderHint(QPainter::Antialiasing);
 
   QColor stroke_color(p->rgb[gkss->bcoli]);
   stroke_color.setAlpha(p->transparency);
@@ -1141,11 +1140,11 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           path.closeSubpath();
           cur_x = start_x;
           cur_y = start_y;
-          p->pixmap->strokePath(
+          p->painter->strokePath(
               path, QPen(stroke_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
           break;
         case 'S': /* stroke */
-          p->pixmap->strokePath(
+          p->painter->strokePath(
               path, QPen(stroke_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
           break;
         case 'F': /* fill (even-odd) and stroke */
@@ -1154,8 +1153,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           cur_x = start_x;
           cur_y = start_y;
           path.setFillRule(codes[i] == 'F' ? Qt::OddEvenFill : Qt::WindingFill);
-          p->pixmap->fillPath(path, fill_color);
-          p->pixmap->strokePath(
+          p->painter->fillPath(path, fill_color);
+          p->painter->strokePath(
               path, QPen(stroke_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
           break;
         case 'f': /* fill (even-odd) */
@@ -1164,7 +1163,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           cur_x = start_x;
           cur_y = start_y;
           path.setFillRule(codes[i] == 'f' ? Qt::OddEvenFill : Qt::WindingFill);
-          p->pixmap->fillPath(path, fill_color);
+          p->painter->fillPath(path, fill_color);
           break;
         case 'Z': /* closepath */
           path.closeSubpath();
@@ -1196,7 +1195,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           p->bounding_stack.top().y_min = tmp;
         }
     }
-  p->pixmap->restore();
+  p->painter->restore();
 }
 
 static void draw_lines(int n, double *px, double *py, int *attributes)
@@ -1205,8 +1204,8 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
   double x, y, xim1, yim1, xi, yi;
   float line_width, red, green, blue;
 
-  p->pixmap->save();
-  p->pixmap->setRenderHint(QPainter::Antialiasing);
+  p->painter->save();
+  p->painter->setRenderHint(QPainter::Antialiasing);
 
   WC_to_NDC(px[0], py[0], gkss->cntnr, x, y);
   seg_xform(&x, &y);
@@ -1228,11 +1227,11 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
       p->rgb[line_color].setRgb(red, green, blue);
       p->rgb[line_color].setAlpha(p->transparency);
 
-      p->pixmap->setPen(QPen(p->rgb[line_color], line_width * p->nominal_size, Qt::SolidLine, Qt::RoundCap));
-      p->pixmap->drawLine(xim1, yim1, xi, yi);
+      p->painter->setPen(QPen(p->rgb[line_color], line_width * p->nominal_size, Qt::SolidLine, Qt::RoundCap));
+      p->painter->drawLine(xim1, yim1, xi, yi);
     }
 
-  p->pixmap->restore();
+  p->painter->restore();
 }
 
 static void draw_markers(int n, double *px, double *py, int *attributes)
@@ -1244,8 +1243,8 @@ static void draw_markers(int n, double *px, double *py, int *attributes)
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
 
-  p->pixmap->save();
-  p->pixmap->setRenderHint(QPainter::Antialiasing);
+  p->painter->save();
+  p->painter->setRenderHint(QPainter::Antialiasing);
 
   for (i = 0; i < n; i++)
     {
@@ -1268,7 +1267,7 @@ static void draw_markers(int n, double *px, double *py, int *attributes)
       if (draw) draw_marker(x, y, mk_type, mk_size, mk_color);
     }
 
-  p->pixmap->restore();
+  p->painter->restore();
 }
 
 static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
@@ -1278,8 +1277,8 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
   int red, green, blue;
   QPolygonF *triangle;
 
-  p->pixmap->save();
-  p->pixmap->setRenderHint(QPainter::Antialiasing);
+  p->painter->save();
+  p->painter->setRenderHint(QPainter::Antialiasing);
 
   if (n > p->max_points)
     {
@@ -1322,14 +1321,14 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
       p->rgb[line_color].setRgb(red, green, blue);
       p->rgb[line_color].setAlpha(p->transparency);
 
-      p->pixmap->setPen(
+      p->painter->setPen(
           QPen(p->rgb[line_color], gkss->lwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
 
-      p->pixmap->drawPolygon(triangle->constData(), 3);
+      p->painter->drawPolygon(triangle->constData(), 3);
     }
   delete triangle;
 
-  p->pixmap->restore();
+  p->painter->restore();
 }
 
 static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
@@ -1339,8 +1338,8 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
   int red, green, blue, alpha;
   QColor fill_color;
 
-  p->pixmap->save();
-  p->pixmap->setRenderHint(QPainter::Antialiasing);
+  p->painter->save();
+  p->painter->setRenderHint(QPainter::Antialiasing);
 
   QColor border_color(p->rgb[gkss->bcoli]);
   border_color.setAlpha(p->transparency);
@@ -1392,12 +1391,12 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
       fill_color.setRgb(red, green, blue);
       fill_color.setAlpha(alpha);
 
-      p->pixmap->setBrush(QBrush(fill_color, Qt::SolidPattern));
-      p->pixmap->setPen(QPen(border_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
-      p->pixmap->drawPolygon(p->polygon->constData(), len);
+      p->painter->setBrush(QBrush(fill_color, Qt::SolidPattern));
+      p->painter->setPen(QPen(border_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
+      p->painter->drawPolygon(p->polygon->constData(), len);
     }
 
-  p->pixmap->restore();
+  p->painter->restore();
 }
 
 static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
@@ -1528,7 +1527,7 @@ static void gks_memory_plugin_write_page()
   width /= p->device_pixel_ratio;
   height /= p->device_pixel_ratio;
 
-  p->pixmap->drawPixmap((p->width - width) / 2, (p->height - height) / 2, QPixmap::fromImage(img));
+  p->painter->drawPixmap((p->width - width) / 2, (p->height - height) / 2, QPixmap::fromImage(img));
 }
 
 static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
@@ -1540,7 +1539,6 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
   static gks_state_list_t saved_gkss;
   int true_color;
   int cur_id;
-  bounding_struct s = {};
   bounding_struct *top;
 
   switch (fctid)
@@ -1656,21 +1654,52 @@ static void qt_dl_render(int fctid, int dx, int dy, int dimx, int *ia, int lr1, 
       p->transparency = (int)(r1[0] * 255);
       break;
 
-    case GRM_BEGIN_SELECTION: /* 260 */
-      cur_id = ia[0];
-#ifdef _WIN32
-      s = {DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX, (void (*)(int, double, double, double, double))r1, cur_id};
-#else
-      s = (bounding_struct){DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX, (void (*)(int, double, double, double, double))r1,
-                            cur_id};
+    case BEGIN_SELECTION:
+      delete p->painter;
+      if (p->selection == NULL)
+        {
+          p->selection = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
+          p->selection->setDevicePixelRatio(p->device_pixel_ratio);
 #endif
-      p->bounding_stack.push(s);
+          p->selection->fill(Qt::white);
+        }
+      p->painter = new QPainter(p->selection);
       break;
 
-    case GRM_END_SELECTION: /* 261 */
+    case END_SELECTION:
+      delete p->painter;
+      p->painter = new QPainter(p->pixmap);
+      break;
+
+    case MOVE_SELECTION:
+      if (p->selection != NULL)
+        {
+          int x_offset = (int)(p->a * r1[0] + 0.5);
+          int y_offset = (int)(p->c * r2[0] + 0.5);
+          QPainter::CompositionMode lastMode = p->painter->compositionMode();
+          p->painter->drawPixmap(QPoint(0, 0), *p->pixmap);
+          p->painter->setCompositionMode(QPainter::RasterOp_NotSourceXorDestination);
+          p->painter->drawPixmap(QPoint(x_offset, y_offset), *p->selection);
+          p->painter->setCompositionMode(lastMode);
+        }
+      break;
+
+    case GKS_SET_BBOX_CALLBACK: /* 260 */
+      cur_id = ia[0];
+#ifdef _WIN32
+      p->bounding_stack.push(
+          {DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX, (void (*)(int, double, double, double, double))r1, cur_id});
+#else
+      p->bounding_stack.push((bounding_struct){DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX,
+                                               (void (*)(int, double, double, double, double))r1, cur_id});
+#endif
+      break;
+
+    case GKS_CANCEL_BBOX_CALLBACK: /* 261 */
       assert(!p->bounding_stack.empty());
       top = &p->bounding_stack.top();
-      s.fun_call(top->item_id, top->x_min, top->x_max, top->y_min, top->y_max);
+      top->fun_call(top->item_id, top->x_min, top->x_max, top->y_min, top->y_max);
       p->bounding_stack.pop();
       break;
     }
@@ -1732,7 +1761,7 @@ static void initialize_data()
 {
   int i;
 
-  p->pm = NULL;
+  p->pixmap = p->selection = NULL;
   p->font = new QFont();
 
   p->points = new QPolygonF(MAX_POINTS);
@@ -1775,7 +1804,7 @@ static void release_data()
   delete p;
 }
 
-static int get_pixmap(void)
+static int get_paint_device(void)
 {
   char *env;
   QPaintDevice *device;
@@ -1790,27 +1819,27 @@ static int get_pixmap(void)
       bool has_hash_mark = strchr(env, '#');
       if (has_exclamation_mark && has_hash_mark)
         {
-          sscanf(env, "%p!%p#%lf", (void **)&p->widget, (void **)&p->pixmap, &p->device_pixel_ratio);
+          sscanf(env, "%p!%p#%lf", (void **)&p->widget, (void **)&p->painter, &p->device_pixel_ratio);
           device = p->widget;
           has_explicit_device_pixel_ratio = true;
         }
       else if (has_exclamation_mark)
         {
-          sscanf(env, "%p!%p", (void **)&p->widget, (void **)&p->pixmap);
+          sscanf(env, "%p!%p", (void **)&p->widget, (void **)&p->painter);
           device = p->widget;
         }
       else if (has_hash_mark)
         {
-          sscanf(env, "%p#%lf", (void **)&p->pixmap, &p->device_pixel_ratio);
+          sscanf(env, "%p#%lf", (void **)&p->painter, &p->device_pixel_ratio);
           p->widget = NULL;
-          device = p->pixmap->device();
+          device = p->painter->device();
           has_explicit_device_pixel_ratio = true;
         }
       else
         {
-          sscanf(env, "%p", (void **)&p->pixmap);
+          sscanf(env, "%p", (void **)&p->painter);
           p->widget = NULL;
-          device = p->pixmap->device();
+          device = p->painter->device();
         }
     }
   else
@@ -1903,7 +1932,7 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
 
       initialize_data();
 
-      if (get_pixmap() == 0)
+      if (get_paint_device() == 0)
         {
           f_arr_1[0] = p->mwidth;
           f_arr_2[0] = p->mheight;
@@ -1932,7 +1961,7 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
     case 8:
       if (i_arr[1] & GKS_K_PERFORM_FLAG)
         {
-          if (get_pixmap() == 0)
+          if (get_paint_device() == 0)
             interp(p->dl.buffer);
           else if (!p->empty)
             gks_perror("can't obtain Qt drawable");
@@ -1957,7 +1986,7 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
 
     case 209: /* inq_ws_state */
       aspect_ratio = (p->window[1] - p->window[0]) / (p->window[3] - p->window[2]);
-      get_pixmap();
+      get_paint_device();
       if (p->width > p->height * aspect_ratio)
         {
           i_arr[0] = nint(p->height * aspect_ratio);

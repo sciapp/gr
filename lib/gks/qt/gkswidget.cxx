@@ -37,16 +37,16 @@ QSize GKSWidget::frame_decoration_size_ = QSize();
 
 static void create_pixmap(ws_state_list *p)
 {
-  p->pm = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
+  p->pixmap = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-  p->pm->setDevicePixelRatio(p->device_pixel_ratio);
+  p->pixmap->setDevicePixelRatio(p->device_pixel_ratio);
 #endif
-  p->pm->fill(Qt::white);
+  p->pixmap->fill(Qt::white);
 
-  p->pixmap = new QPainter(p->pm);
-  p->pixmap->setClipRect(0, 0, p->width, p->height);
+  p->painter = new QPainter(p->pixmap);
+  p->painter->setClipRect(0, 0, p->width, p->height);
 
-  get_pixmap();
+  get_paint_device();
 }
 
 static void resize_pixmap(int width, int height)
@@ -56,19 +56,19 @@ static void resize_pixmap(int width, int height)
       p->width = width;
       p->height = height;
 
-      if (p->pm)
+      if (p->pixmap)
         {
+          delete p->painter;
           delete p->pixmap;
-          delete p->pm;
 
-          p->pm = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
+          p->pixmap = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-          p->pm->setDevicePixelRatio(p->device_pixel_ratio);
+          p->pixmap->setDevicePixelRatio(p->device_pixel_ratio);
 #endif
-          p->pm->fill(Qt::white);
+          p->pixmap->fill(Qt::white);
 
-          p->pixmap = new QPainter(p->pm);
-          p->pixmap->setClipRect(0, 0, p->width, p->height);
+          p->painter = new QPainter(p->pixmap);
+          p->painter->setClipRect(0, 0, p->width, p->height);
         }
     }
 }
@@ -130,9 +130,9 @@ void GKSWidget::paintEvent(QPaintEvent *)
     {
       QPainter painter(this);
       p = widget_state_list;
-      p->pm->fill(Qt::white);
+      p->pixmap->fill(Qt::white);
       interp(dl);
-      painter.drawPixmap(0, 0, *(p->pm));
+      painter.drawPixmap(0, 0, *(p->pixmap));
       if (p->memory_plugin_wstype)
         {
           QString renderer_string("");
@@ -185,7 +185,7 @@ void GKSWidget::keyPressEvent(QKeyEvent *event)
       window->setAttribute(Qt::WA_ShowWithoutActivating);
 
       QPalette palette;
-      palette.setBrush(QPalette::Window, QBrush(*p->pm));
+      palette.setBrush(QPalette::Window, QBrush(*p->pixmap));
       window->setPalette(palette);
       window->show();
 

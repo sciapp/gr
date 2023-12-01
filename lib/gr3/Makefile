@@ -19,11 +19,11 @@ UNAME := $(shell uname)
 
 ifeq ($(UNAME), Darwin)
 GR_SHARED_LIBRARY_SUFFIX ?= .dylib
-      CFLAGS+= -mmacosx-version-min=10.14
+      CFLAGS+= -mmacosx-version-min=10.15
       GLLIBS = -framework OpenGL -framework Cocoa
         OBJS+= gr3_cgl.o
 INSTALL_NAME = -Wl,-install_name,@rpath/libGR3${GR_SHARED_LIBRARY_SUFFIX}
-     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.14
+     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.15
      SOFLAGS = -dynamiclib
         LIBS =
 else

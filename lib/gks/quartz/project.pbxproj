@@ -298,7 +298,7 @@
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = $SRCROOT/../../../3rdparty/build/lib;
 				"LIBRARY_SEARCH_PATHS[arch=*]" = $SRCROOT/../../../3rdparty/build/lib;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				"OTHER_CFLAGS[arch=*]" = "-DNO_FT";
 				OTHER_LDFLAGS = "-lc++";
 				PRODUCT_NAME = GKSTerm;
@@ -321,7 +321,7 @@
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = $SRCROOT/../../../3rdparty/build/lib;
 				"LIBRARY_SEARCH_PATHS[arch=*]" = $SRCROOT/../../../3rdparty/build/lib;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				"OTHER_CFLAGS[arch=*]" = "-DNO_FT";
 				OTHER_LDFLAGS = "-lc++";
 				PRODUCT_NAME = GKSTerm;

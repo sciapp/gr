@@ -5,7 +5,7 @@ endif
 VERSION = 1.3.2
 OGG_EXTRA_CONFIGURE_FLAGS ?=
 ifeq ($(shell uname),Darwin)
-OGG_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.14
+OGG_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
 endif
 
 ifeq ($(DOWNLOAD_CMD),)

@@ -9,8 +9,8 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="figure" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attribute name="clearws" type="xs:string" use="required"/>
-            <xs:attribute name="updatews" type="xs:string" use="required"/>
+            <xs:attribute name="clear_ws" type="xs:integer" use="required"/>
+            <xs:attribute name="update_ws" type="xs:integer" use="required"/>
         </xs:complexType>
     </xs:element>
 
@@ -18,28 +18,29 @@
     <xs:element name="figure">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="draw_graphics" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="layout_grid" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="plot" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="drawgraphics" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attribute name="active" type="xs:string"/>
-            <xs:attribute name="figsize_x" type="xs:string"/>
-            <xs:attribute name="figsize_y" type="xs:string"/>
+            <xs:attribute name="active" type="xs:integer"/>
+            <xs:attribute name="fig_size_x" type="xs:double"/>
+            <xs:attribute name="fig_size_y" type="xs:double"/>
             <xs:attribute name="figure_id" type="xs:ID" use="required"/>
-            <xs:attribute name="size_x" type="xs:string"/>
+            <xs:attribute name="size_x" type="xs:double"/>
             <xs:attribute name="size_x_type" type="xs:string"/>
             <xs:attribute name="size_x_unit" type="xs:string"/>
-            <xs:attribute name="size_y" type="xs:string"/>
+            <xs:attribute name="size_y" type="xs:double"/>
             <xs:attribute name="size_y_type" type="xs:string"/>
             <xs:attribute name="size_y_unit" type="xs:string"/>
-            <xs:attribute name="textencoding" type="xs:string"/>
-            <xs:attribute name="wsviewport_xmax" type="xs:string"/>
-            <xs:attribute name="wsviewport_xmin" type="xs:string"/>
-            <xs:attribute name="wsviewport_ymax" type="xs:string"/>
-            <xs:attribute name="wsviewport_ymin" type="xs:string"/>
-            <xs:attribute name="wswindow_xmax" type="xs:string"/>
-            <xs:attribute name="wswindow_xmin" type="xs:string"/>
-            <xs:attribute name="wswindow_ymax" type="xs:string"/>
-            <xs:attribute name="wswindow_ymin" type="xs:string"/>
+            <xs:attribute name="text_encoding" type="strint"/>
+            <xs:attribute name="ws_viewport_x_max" type="xs:double"/>
+            <xs:attribute name="ws_viewport_x_min" type="xs:double"/>
+            <xs:attribute name="ws_viewport_y_max" type="xs:double"/>
+            <xs:attribute name="ws_viewport_y_min" type="xs:double"/>
+            <xs:attribute name="ws_window_x_max" type="xs:double"/>
+            <xs:attribute name="ws_window_x_min" type="xs:double"/>
+            <xs:attribute name="ws_window_y_max" type="xs:double"/>
+            <xs:attribute name="ws_window_y_min" type="xs:double"/>
         </xs:complexType>
         <xs:unique name="plotidisunique">
             <xs:selector xpath="plot"/>
@@ -47,8 +48,63 @@
         </xs:unique>
     </xs:element>
 
-    <!-- definition of drawgraphics -->
-    <xs:element name="drawgraphics">
+    <!-- definition of layout_grid -->
+    <xs:element name="layout_grid">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="layout_grid" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="layout_grid_element" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attribute name="absolute_height" type="xs:double"/>
+            <xs:attribute name="absolute_height_pxl" type="xs:int"/>
+            <xs:attribute name="absolute_width" type="xs:double"/>
+            <xs:attribute name="absolute_width_pxl" type="xs:int"/>
+            <xs:attribute name="aspect_ratio" type="xs:double"/>
+            <xs:attribute name="fit_parents_height" type="xs:int" use="required"/>
+            <xs:attribute name="fit_parents_width" type="xs:int" use="required"/>
+            <xs:attribute name="num_col" type="xs:int" use="required"/>
+            <xs:attribute name="num_row" type="xs:int" use="required"/>
+            <xs:attribute name="plot_x_max" type="xs:double"/>
+            <xs:attribute name="plot_x_min" type="xs:double"/>
+            <xs:attribute name="plot_y_max" type="xs:double"/>
+            <xs:attribute name="plot_y_min" type="xs:double"/>
+            <xs:attribute name="relative_height" type="xs:double"/>
+            <xs:attribute name="relative_width" type="xs:double"/>
+            <xs:attribute name="start_col" type="xs:int"/>
+            <xs:attribute name="start_row" type="xs:int"/>
+            <xs:attribute name="stop_col" type="xs:int"/>
+            <xs:attribute name="stop_row" type="xs:int"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of layout_grid_element -->
+    <xs:element name="layout_grid_element">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="plot" minOccurs="0" maxOccurs="1"/>
+            </xs:choice>
+            <xs:attribute name="absolute_height" type="xs:double"/>
+            <xs:attribute name="absolute_height_pxl" type="xs:int"/>
+            <xs:attribute name="absolute_width" type="xs:double"/>
+            <xs:attribute name="absolute_width_pxl" type="xs:int"/>
+            <xs:attribute name="aspect_ratio" type="xs:double"/>
+            <xs:attribute name="fit_parents_height" type="xs:int" use="required"/>
+            <xs:attribute name="fit_parents_width" type="xs:int" use="required"/>
+            <xs:attribute name="plot_x_max" type="xs:double"/>
+            <xs:attribute name="plot_x_min" type="xs:double"/>
+            <xs:attribute name="plot_y_max" type="xs:double"/>
+            <xs:attribute name="plot_y_min" type="xs:double"/>
+            <xs:attribute name="relative_height" type="xs:double"/>
+            <xs:attribute name="relative_width" type="xs:double"/>
+            <xs:attribute name="start_col" type="xs:int"/>
+            <xs:attribute name="start_row" type="xs:int"/>
+            <xs:attribute name="stop_col" type="xs:int"/>
+            <xs:attribute name="stop_row" type="xs:int"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of draw_graphics -->
+    <xs:element name="draw_graphics">
         <xs:complexType>
             <xs:attribute name="data" type="xs:string" use="required"/>
             <xs:attribute name="name" type="xs:string"/>
@@ -71,7 +127,7 @@
                 <xs:element ref="series_imshow" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_isosurface" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_line" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="series_marginalheatmap" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_marginal_heatmap" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_nonuniformheatmap" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_nonuniformpolar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_pie" minOccurs="0" maxOccurs="unbounded"/>
@@ -93,83 +149,83 @@
                 <xs:element ref="text" minOccurs="0" maxOccurs="1"/> <!-- title -->
             </xs:choice>
             <xs:attributeGroup ref="colorrep"/>
-            <xs:attribute name="adjust_xlim" type="xs:string" use="required"/>
-            <xs:attribute name="adjust_ylim" type="xs:string" use="required"/>
-            <xs:attribute name="adjust_zlim" type="xs:string"/>
-            <xs:attribute name="charheight" type="xs:string"/>
+            <xs:attribute name="adjust_x_lim" type="xs:integer" use="required"/>
+            <xs:attribute name="adjust_y_lim" type="xs:integer" use="required"/>
+            <xs:attribute name="adjust_z_lim" type="xs:integer"/>
+            <xs:attribute name="c_lim_max" type="xs:double"/>
+            <xs:attribute name="c_lim_min" type="xs:double"/>
+            <xs:attribute name="char_height" type="xs:double"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
-            <xs:attribute name="colormap" type="xs:string"/>
-            <xs:attribute name="fillcolorind" type="xs:string"/>
-            <xs:attribute name="fillintstyle" type="xs:string"/>
-            <xs:attribute name="font" type="xs:string"/>
-            <xs:attribute name="font_precision" type="xs:string"/>
-            <xs:attribute name="grplot" type="xs:string"/> <!-- all plots are made with grplot or none -->
-            <xs:attribute name="keep_aspect_ratio" type="xs:string" use="required"/>
-            <xs:attribute name="keep_window" type="xs:string"/>
+            <xs:attribute name="colormap" type="strint"/>
+            <xs:attribute name="fill_color_ind" type="xs:integer"/>
+            <xs:attribute name="fill_int_style" type="strint"/>
+            <xs:attribute name="font" type="strint"/>
+            <xs:attribute name="font_precision" type="strint"/>
+            <xs:attribute name="grplot" type="xs:integer"/> <!-- all plots are made with grplot or none -->
+            <xs:attribute name="keep_aspect_ratio" type="xs:integer" use="required"/>
+            <xs:attribute name="keep_window" type="xs:integer"/>
             <xs:attribute name="kind" type="xs:string" use="required"/>
-            <xs:attribute name="clim_max" type="xs:string"/>
-            <xs:attribute name="clim_min" type="xs:string"/>
-            <xs:attribute name="xlim_max" type="xs:string"/>
-            <xs:attribute name="xlim_min" type="xs:string"/>
-            <xs:attribute name="ylim_max" type="xs:string"/>
-            <xs:attribute name="ylim_min" type="xs:string"/>
-            <xs:attribute name="zlim_max" type="xs:string"/>
-            <xs:attribute name="zlim_min" type="xs:string"/>
-            <xs:attribute name="linespec" type="xs:string"/>
-            <xs:attribute name="location" type="xs:string"/>
-            <xs:attribute name="max_y_length" type="xs:string"/>
-            <xs:attribute name="phiflip" type="xs:string"/>
-            <xs:attribute name="philim_max" type="xs:string"/>
-            <xs:attribute name="philim_min" type="xs:string"/>
+            <xs:attribute name="line_spec" type="xs:string"/>
+            <xs:attribute name="location" type="strint"/>
+            <xs:attribute name="max_y_length" type="xs:integer"/>
+            <xs:attribute name="phi_flip" type="xs:integer"/>
+            <xs:attribute name="phi_lim_max" type="xs:double"/>
+            <xs:attribute name="phi_lim_min" type="xs:double"/>
+            <xs:attribute name="plot_group" type="xs:integer"/>
             <xs:attribute name="plot_id" type="xs:string" use="required"/>
-            <xs:attribute name="plot_xmax" type="xs:string" use="required"/>
-            <xs:attribute name="plot_xmin" type="xs:string" use="required"/>
-            <xs:attribute name="plot_ymax" type="xs:string" use="required"/>
-            <xs:attribute name="plot_ymin" type="xs:string" use="required"/>
-            <xs:attribute name="plotGroup" type="xs:string"/>
-            <xs:attribute name="projectiontype" type="xs:string"/>
-            <xs:attribute name="r_max" type="xs:string"/>
-            <xs:attribute name="r_min" type="xs:string"/>
-            <xs:attribute name="resample_method" type="xs:string"/>
-            <xs:attribute name="rings" type="xs:string"/>
-            <xs:attribute name="rlim_max" type="xs:string"/>
-            <xs:attribute name="rlim_min" type="xs:string"/>
-            <xs:attribute name="scale" type="xs:string"/>
-            <xs:attribute name="space" type="xs:string"/>
-            <xs:attribute name="space_rotation" type="xs:string"/>
-            <xs:attribute name="space_tilt" type="xs:string"/>
-            <xs:attribute name="space_zmax" type="xs:string"/>
-            <xs:attribute name="space_zmin" type="xs:string"/>
-            <xs:attribute name="space3d_camera_distance" type="xs:string"/>
-            <xs:attribute name="space3d_fov" type="xs:string"/>
-            <xs:attribute name="space3d_phi" type="xs:string"/>
-            <xs:attribute name="space3d_theta" type="xs:string"/>
-            <xs:attribute name="tick" type="xs:string"/>
+            <xs:attribute name="plot_x_max" type="xs:double" use="required"/>
+            <xs:attribute name="plot_x_min" type="xs:double" use="required"/>
+            <xs:attribute name="plot_y_max" type="xs:double" use="required"/>
+            <xs:attribute name="plot_y_min" type="xs:double" use="required"/>
+            <xs:attribute name="projection_type" type="xs:integer"/>
+            <xs:attribute name="r_lim_max" type="xs:double"/>
+            <xs:attribute name="r_lim_min" type="xs:double"/>
+            <xs:attribute name="r_max" type="xs:double"/>
+            <xs:attribute name="r_min" type="xs:double"/>
+            <xs:attribute name="resample_method" type="strint"/>
+            <xs:attribute name="rings" type="xs:integer"/>
+            <xs:attribute name="scale" type="xs:integer"/>
+            <xs:attribute name="space" type="xs:integer"/>
+            <xs:attribute name="space_rotation" type="xs:integer"/>
+            <xs:attribute name="space_tilt" type="xs:integer"/>
+            <xs:attribute name="space_z_max" type="xs:double"/>
+            <xs:attribute name="space_z_min" type="xs:double"/>
+            <xs:attribute name="space_3d_camera_distance" type="xs:double"/>
+            <xs:attribute name="space_3d_fov" type="xs:double"/>
+            <xs:attribute name="space_3d_phi" type="xs:double"/>
+            <xs:attribute name="space_3d_theta" type="xs:double"/>
+            <xs:attribute name="tick" type="xs:double"/>
             <xs:attribute name="title" type="xs:string"/>
-            <xs:attribute name="title_margin" type="xs:string"/>
-            <xs:attribute name="transparency" type="xs:string"/>
-            <xs:attribute name="viewport_xmax" type="xs:string"/>
-            <xs:attribute name="viewport_xmin" type="xs:string"/>
-            <xs:attribute name="viewport_ymax" type="xs:string"/>
-            <xs:attribute name="viewport_ymin" type="xs:string"/>
-            <xs:attribute name="vp_xmax" type="xs:string"/>
-            <xs:attribute name="vp_xmin" type="xs:string"/>
-            <xs:attribute name="vp_ymax" type="xs:string"/>
-            <xs:attribute name="vp_ymin" type="xs:string"/>
-            <xs:attribute name="window_xmax" type="xs:string"/>
-            <xs:attribute name="window_xmin" type="xs:string"/>
-            <xs:attribute name="window_ymax" type="xs:string"/>
-            <xs:attribute name="window_ymin" type="xs:string"/>
-            <xs:attribute name="window_zmax" type="xs:string"/>
-            <xs:attribute name="window_zmin" type="xs:string"/>
-            <xs:attribute name="xflip" type="xs:string"/>
-            <xs:attribute name="xlabel_margin" type="xs:string"/>
-            <xs:attribute name="xlog" type="xs:string"/>
-            <xs:attribute name="yflip" type="xs:string"/>
-            <xs:attribute name="ylabel_margin" type="xs:string"/>
-            <xs:attribute name="ylog" type="xs:string"/>
-            <xs:attribute name="zflip" type="xs:string"/>
-            <xs:attribute name="zlog" type="xs:string"/>
+            <xs:attribute name="title_margin" type="xs:integer"/>
+            <xs:attribute name="transparency" type="xs:double"/>
+            <xs:attribute name="viewport_x_max" type="xs:double"/>
+            <xs:attribute name="viewport_x_min" type="xs:double"/>
+            <xs:attribute name="viewport_y_max" type="xs:double"/>
+            <xs:attribute name="viewport_y_min" type="xs:double"/>
+            <xs:attribute name="vp_x_max" type="xs:double"/>
+            <xs:attribute name="vp_x_min" type="xs:double"/>
+            <xs:attribute name="vp_y_max" type="xs:double"/>
+            <xs:attribute name="vp_y_min" type="xs:double"/>
+            <xs:attribute name="window_x_max" type="xs:double"/>
+            <xs:attribute name="window_x_min" type="xs:double"/>
+            <xs:attribute name="window_y_max" type="xs:double"/>
+            <xs:attribute name="window_y_min" type="xs:double"/>
+            <xs:attribute name="window_z_max" type="xs:double"/>
+            <xs:attribute name="window_z_min" type="xs:double"/>
+            <xs:attribute name="x_flip" type="xs:integer"/>
+            <xs:attribute name="x_label_margin" type="xs:integer"/>
+            <xs:attribute name="x_lim_max" type="xs:double"/>
+            <xs:attribute name="x_lim_min" type="xs:double"/>
+            <xs:attribute name="x_log" type="xs:integer"/>
+            <xs:attribute name="y_flip" type="xs:integer"/>
+            <xs:attribute name="y_label_margin" type="xs:integer"/>
+            <xs:attribute name="y_lim_max" type="xs:double"/>
+            <xs:attribute name="y_lim_min" type="xs:double"/>
+            <xs:attribute name="y_log" type="xs:integer"/>
+            <xs:attribute name="z_flip" type="xs:integer"/>
+            <xs:attribute name="z_lim_max" type="xs:double"/>
+            <xs:attribute name="z_lim_min" type="xs:double"/>
+            <xs:attribute name="z_log" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -178,47 +234,45 @@
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="axes" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="axes3d" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="axes_3d" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="grid" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="grid3d" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="grid_3d" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polar_axes" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="titles3d" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="xticklabel_group" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="yticklabel_group" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="titles_3d" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="x_tick_label_group" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="y_tick_label_group" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
-            <xs:attribute name="linecolorind" type="xs:string"/>
-            <xs:attribute name="linewidth" type="xs:string"/>
-            <xs:attribute name="xticklabels" type="xs:string"/>
-            <xs:attribute name="yticklabels" type="xs:string"/>
+            <xs:attribute name="line_color_ind" type="xs:integer"/>
+            <xs:attribute name="line_width" type="xs:double"/>
+            <xs:attribute name="x_tick_labels" type="xs:string"/>
+            <xs:attribute name="y_line" type="xs:integer"/>
+            <xs:attribute name="y_tick_labels" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
     <!-- definition of grid -->
     <xs:element name="grid">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="grid"/>
-            <xs:attribute name="x_major" type="xs:string"/>
+            <xs:attribute name="x_major" type="xs:integer"/>
             <xs:attribute name="x_org_pos" type="xs:string"/>
-            <xs:attribute name="y_major" type="xs:string"/>
+            <xs:attribute name="y_major" type="xs:integer"/>
             <xs:attribute name="y_org_pos" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of grid3d -->
-    <xs:element name="grid3d">
+    <!-- definition of grid_3d -->
+    <xs:element name="grid_3d">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="grid"/>
-            <xs:attribute name="x_major" type="xs:string" use="required"/>
+            <xs:attribute name="x_major" type="xs:integer" use="required"/>
             <xs:attribute name="x_org_pos" type="xs:string" use="required"/>
-            <xs:attribute name="y_major" type="xs:string" use="required"/>
+            <xs:attribute name="y_major" type="xs:integer" use="required"/>
             <xs:attribute name="y_org_pos" type="xs:string" use="required"/>
-            <xs:attribute name="z_major" type="xs:string"/>
+            <xs:attribute name="z_major" type="xs:integer"/>
             <xs:attribute name="z_org_pos" type="xs:string"/>
-            <xs:attribute name="z_tick" type="xs:string"/>
+            <xs:attribute name="z_tick" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -229,81 +283,79 @@
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/> <!-- label -->
             </xs:choice>
             <xs:attributeGroup ref="axes"/>
-            <xs:attributeGroup ref="bbox"/>
-            <xs:attribute name="linecolorind" type="xs:string"/>
+            <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="name" type="xs:string"/>
-            <xs:attribute name="z_index" type="xs:string"/>
+            <xs:attribute name="scale" type="xs:integer"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of axes3d -->
-    <xs:element name="axes3d">
+    <!-- definition of axes_3d -->
+    <xs:element name="axes_3d">
         <xs:complexType>
             <xs:attributeGroup ref="axes"/>
-            <xs:attributeGroup ref="bbox"/>
-            <xs:attribute name="z_index" type="xs:string"/>
-            <xs:attribute name="z_major" type="xs:string"/>
-            <xs:attribute name="z_org" type="xs:string"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
+            <xs:attribute name="z_major" type="xs:integer"/>
+            <xs:attribute name="z_org" type="xs:double"/>
             <xs:attribute name="z_org_pos" type="xs:string"/>
-            <xs:attribute name="z_tick" type="xs:string"/>
+            <xs:attribute name="z_tick" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of xticklabel_group -->
-    <xs:element name="xticklabel_group">
+    <!-- definition of x_tick_label_group -->
+    <xs:element name="x_tick_label_group">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
-            <xs:attribute name="textalign_horizontal" type="xs:string"/>
-            <xs:attribute name="textalign_vertical" type="xs:string"/>
+            <xs:attribute name="name" type="xs:string"/>
+            <xs:attribute name="text_align_horizontal" type="strint"/>
+            <xs:attribute name="text_align_vertical" type="strint"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of yticklabel_group -->
-    <xs:element name="yticklabel_group">
+    <!-- definition of y_tick_label_group -->
+    <xs:element name="y_tick_label_group">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
-            <xs:attribute name="textalign_hrizontal" type="xs:string"/>
-            <xs:attribute name="textalign_vertical" type="xs:string"/>
+            <xs:attribute name="name" type="xs:string"/>
+            <xs:attribute name="text_align_horizontal" type="strint"/>
+            <xs:attribute name="text_align_vertical" type="strint"/>
         </xs:complexType>
     </xs:element>
 
     <!-- definition of title, label -->
     <xs:element name="text">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
-            <xs:attribute name="charup_x" type="xs:string"/>
-            <xs:attribute name="charup_y" type="xs:string"/>
-            <xs:attribute name="color_index" type="xs:string"/>
-            <xs:attribute name="height" type="xs:string"/>
-            <xs:attribute name="linecolorind" type="xs:string"/>
-            <xs:attribute name="linewidth" type="xs:string"/>
+            <xs:attribute name="char_up_x" type="xs:double"/>
+            <xs:attribute name="char_up_y" type="xs:double"/>
+            <xs:attribute name="color_ind" type="xs:integer"/>
+            <xs:attribute name="height" type="xs:double"/>
+            <xs:attribute name="line_color_ind" type="xs:integer"/>
+            <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="name" type="xs:string"/>
-            <xs:attribute name="set_text_color_for_background" type="xs:string"/>
-            <xs:attribute name="space" type="xs:string"/>
+            <xs:attribute name="set_text_color_for_background" type="xs:integer"/>
+            <xs:attribute name="space" type="xs:integer"/>
             <xs:attribute name="text" type="xs:string" use="required"/>
-            <xs:attribute name="textalign_horizontal" type="xs:string"/>
-            <xs:attribute name="textalign_vertical" type="xs:string"/>
-            <xs:attribute name="textcolorind" type="xs:string"/>
-            <xs:attribute name="width" type="xs:string"/>
-            <xs:attribute name="x" type="xs:string"/>
-            <xs:attribute name="y" type="xs:string"/>
+            <xs:attribute name="text_color_ind" type="xs:integer"/>
+            <xs:attribute name="text_align_horizontal" type="strint"/>
+            <xs:attribute name="text_align_vertical" type="strint"/>
+            <xs:attribute name="width" type="xs:double"/>
+            <xs:attribute name="x" type="xs:double"/>
+            <xs:attribute name="y" type="xs:double"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of titles3d -->
-    <xs:element name="titles3d">
+    <!-- definition of titles_3d -->
+    <xs:element name="titles_3d">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
-            <xs:attribute name="x" type="xs:string" use="required"/>
-            <xs:attribute name="y" type="xs:string" use="required"/>
-            <xs:attribute name="z" type="xs:string" use="required"/>
-            <xs:attribute name="z_index" type="xs:string"/>
+            <xs:attribute name="x_label_3d" type="xs:string" use="required"/>
+            <xs:attribute name="y_label_3d" type="xs:string" use="required"/>
+            <xs:attribute name="z_label_3d" type="xs:string" use="required"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -311,27 +363,27 @@
     <xs:element name="legend">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="drawrect" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="fillrect" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="draw_rect" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="fill_rect" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="labels_group" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attribute name="color_indices" type="xs:string"/>
+            <xs:attribute name="color_ind_values" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
-            <xs:attribute name="fillcolorind" type="xs:string"/>
-            <xs:attribute name="fillintstyle" type="xs:string"/>
+            <xs:attribute name="fill_color_ind" type="xs:integer"/>
+            <xs:attribute name="fill_int_style" type="strint"/>
             <xs:attribute name="labels" type="xs:string"/>
-            <xs:attribute name="linecolorind" type="xs:string"/>
-            <xs:attribute name="linespec" type="xs:string"/>
-            <xs:attribute name="linetype" type="xs:string"/>
-            <xs:attribute name="linewidth" type="xs:string"/>
-            <xs:attribute name="location" type="xs:string"/>
-            <xs:attribute name="scale" type="xs:string"/>
-            <xs:attribute name="selntran" type="xs:string"/>
+            <xs:attribute name="line_color_ind" type="xs:integer"/>
+            <xs:attribute name="line_spec" type="xs:string"/>
+            <xs:attribute name="line_type" type="strint"/>
+            <xs:attribute name="line_width" type="xs:double"/>
+            <xs:attribute name="location" type="strint"/>
+            <xs:attribute name="scale" type="xs:integer"/>
+            <xs:attribute name="select_specific_xform" type="xs:integer"/>
             <xs:attribute name="specs" type="xs:string"/>
-            <xs:attribute name="z_index" type="xs:string"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -341,9 +393,9 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="label" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attribute name="linespec" type="xs:string"/>
-            <xs:attribute name="textalign_horizontal" type="xs:string"/>
-            <xs:attribute name="textalign_vertical" type="xs:string"/>
+            <xs:attribute name="line_spec" type="xs:string"/>
+            <xs:attribute name="text_align_horizontal" type="strint"/>
+            <xs:attribute name="text_align_vertical" type="strint"/>
         </xs:complexType>
     </xs:element>
 
@@ -351,13 +403,13 @@
     <xs:element name="label">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="drawrect" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="fillrect" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="draw_rect" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="fill_rect" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="colorrep"/>
-            <xs:attribute name="fillcolorind" type="xs:string"/>
-            <xs:attribute name="linecolorind" type="xs:string"/>
+            <xs:attribute name="fill_color_ind" type="xs:integer"/>
+            <xs:attribute name="line_color_ind" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -365,22 +417,20 @@
     <xs:element name="polar_axes">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="drawarc" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="fillarc" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="draw_arc" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="fill_arc" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="axes_text_group" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
-            <xs:attribute name="angle_ticks" type="xs:string" use="required"/>
-            <xs:attribute name="charheight" type="xs:string"/>
-            <xs:attribute name="linetype" type="xs:string"/>
+            <xs:attribute name="angle_ticks" type="xs:integer" use="required"/>
+            <xs:attribute name="char_height" type="xs:double"/>
+            <xs:attribute name="line_type" type="strint"/>
             <xs:attribute name="norm" type="xs:string"/>
-            <xs:attribute name="rings" type="xs:string"/>
-            <xs:attribute name="textalign_horizontal" type="xs:string"/>
-            <xs:attribute name="textalign_vertical" type="xs:string"/>
-            <xs:attribute name="tick" type="xs:string"/>
-            <xs:attribute name="title" type="xs:string"/>
+            <xs:attribute name="rings" type="xs:integer"/>
+            <xs:attribute name="text_align_horizontal" type="strint"/>
+            <xs:attribute name="text_align_vertical" type="strint"/>
+            <xs:attribute name="tick" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -390,39 +440,37 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attribute name="charheight" type="xs:string"/>
+            <xs:attribute name="char_height" type="xs:double"/>
             <xs:attribute name="name" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of errorbars -->
-    <xs:element name="errorbars">
+    <!-- definition of error_bars -->
+    <xs:element name="error_bars">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="error_bar" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="absolute_downwards" type="xs:string"/>
-            <xs:attribute name="absolute_downwards_flt" type="xs:string"/>
+            <xs:attribute name="absolute_downwards_flt" type="xs:double"/>
             <xs:attribute name="absolute_upwards" type="xs:string"/>
-            <xs:attribute name="absolute_upwards_flt" type="xs:string"/>
-            <xs:attribute name="downwardscap_color" type="xs:string"/>
-            <xs:attribute name="errorbar_color" type="xs:string"/>
+            <xs:attribute name="absolute_upwards_flt" type="xs:double"/>
+            <xs:attribute name="downward_scap_color" type="xs:integer"/>
+            <xs:attribute name="error_bar_color" type="xs:integer"/>
             <xs:attribute name="relative_downwards" type="xs:string"/>
-            <xs:attribute name="relative_downwards_flt" type="xs:string"/>
+            <xs:attribute name="relative_downwards_flt" type="xs:double"/>
             <xs:attribute name="relative_upwards" type="xs:string"/>
-            <xs:attribute name="relative_upwards_flt" type="xs:string"/>
-            <xs:attribute name="upwardscap_color" type="xs:string"/>
+            <xs:attribute name="relative_upwards_flt" type="xs:double"/>
+            <xs:attribute name="upward_scap_color" type="xs:integer"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
-            <xs:attribute name="z_index" type="xs:string"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of polyline3d -->
-    <xs:element name="polyline3d">
+    <!-- definition of polyline_3d -->
+    <xs:element name="polyline_3d">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="polyline"/>
             <xs:attribute name="z" type="xs:string"/>
         </xs:complexType>
@@ -431,56 +479,52 @@
     <!-- definition of polyline -->
     <xs:element name="polyline">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="polyline"/>
-            <xs:attribute name="linespec" type="xs:string"/>
-            <xs:attribute name="x1" type="xs:string"/>
-            <xs:attribute name="x2" type="xs:string"/>
-            <xs:attribute name="y1" type="xs:string"/>
-            <xs:attribute name="y2" type="xs:string"/>
-            <xs:attribute name="z_index" type="xs:string"/>
+            <xs:attribute name="line_spec" type="xs:string"/>
+            <xs:attribute name="x1" type="xs:double"/>
+            <xs:attribute name="x2" type="xs:double"/>
+            <xs:attribute name="y1" type="xs:double"/>
+            <xs:attribute name="y2" type="xs:double"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
     <!-- definition of polymarker -->
     <xs:element name="polymarker">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="polymarker"/>
             <xs:attribute name="name" type="xs:string"/>
-            <xs:attribute name="z_index" type="xs:string"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of polymarker3d -->
-    <xs:element name="polymarker3d">
+    <!-- definition of polymarker_3d -->
+    <xs:element name="polymarker_3d">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="polymarker"/>
             <xs:attribute name="z" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
     <!-- definition of fillrect -->
-    <xs:element name="fillrect">
+    <xs:element name="fill_rect">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="rect"/>
-            <xs:attribute name="fillcolorind" type="xs:string"/>
-            <xs:attribute name="fillintstyle" type="xs:string"/>
+            <xs:attribute name="fill_color_ind" type="xs:integer"/>
+            <xs:attribute name="fill_int_style" type="strint"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of drawrect -->
-    <xs:element name="drawrect">
+    <!-- definition of draw_rect -->
+    <xs:element name="draw_rect">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="rect"/>
-            <xs:attribute name="linecolorind" type="xs:string"/>
-            <xs:attribute name="linetype" type="xs:string"/>
-            <xs:attribute name="linewidth" type="xs:string"/>
+            <xs:attribute name="line_color_ind" type="xs:integer"/>
+            <xs:attribute name="line_type" type="strint"/>
+            <xs:attribute name="line_width" type="xs:double"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -488,45 +532,39 @@
     <xs:element name="colorbar">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="axes" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="cellarray" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="axes" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="cellarray" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
-            <xs:attribute name="colorbar_position" type="xs:string"/>
-            <xs:attribute name="colors" type="xs:string"/>
-            <xs:attribute name="diag_factor" type="xs:string"/>
-            <xs:attribute name="lim_cmax" type="xs:string"/>
-            <xs:attribute name="lim_cmin" type="xs:string"/>
-            <xs:attribute name="max_charheight" type="xs:string"/>
-            <xs:attribute name="offset" type="xs:string"/>
-            <xs:attribute name="width" type="xs:string"/>
-            <xs:attribute name="xflip" type="xs:string"/>
-            <xs:attribute name="yflip" type="xs:string"/>
+            <xs:attribute name="color_ind" type="xs:integer"/>
+            <xs:attribute name="diag_factor" type="xs:double"/>
+            <xs:attribute name="max_char_height" type="xs:double"/>
+            <xs:attribute name="offset" type="xs:double"/>
+            <xs:attribute name="width" type="xs:double"/>
+            <xs:attribute name="x_flip" type="xs:integer"/>
+            <xs:attribute name="y_flip" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
     <!-- definition of cellarray -->
     <xs:element name="cellarray">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="cellarray"/>
-            <xs:attribute name="dimx" type="xs:string" use="required"/>
-            <xs:attribute name="dimy" type="xs:string" use="required"/>
+            <xs:attribute name="x_dim" type="xs:integer" use="required"/>
+            <xs:attribute name="y_dim" type="xs:integer" use="required"/>
             <xs:attribute name="name" type="xs:string"/>
-            <xs:attribute name="xmax" type="xs:string" use="required"/>
-            <xs:attribute name="xmin" type="xs:string" use="required"/>
-            <xs:attribute name="ymax" type="xs:string" use="required"/>
-            <xs:attribute name="ymin" type="xs:string" use="required"/>
+            <xs:attribute name="x_max" type="xs:double" use="required"/>
+            <xs:attribute name="x_min" type="xs:double" use="required"/>
+            <xs:attribute name="y_max" type="xs:double" use="required"/>
+            <xs:attribute name="y_min" type="xs:double" use="required"/>
         </xs:complexType>
     </xs:element>
 
     <!-- definition of nonuniformcellarray -->
     <xs:element name="nonuniformcellarray">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="cellarray"/>
-            <xs:attribute name="dimx" type="xs:string" use="required"/>
-            <xs:attribute name="dimy" type="xs:string" use="required"/>
+            <xs:attribute name="x_dim" type="xs:integer" use="required"/>
+            <xs:attribute name="y_dim" type="xs:integer" use="required"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
         </xs:complexType>
@@ -535,80 +573,76 @@
     <!-- definition of polarcellarray -->
     <xs:element name="polarcellarray">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="cellarray"/>
-            <xs:attribute name="dimphi" type="xs:string" use="required"/>
-            <xs:attribute name="dimr" type="xs:string" use="required"/>
-            <xs:attribute name="phimax" type="xs:string" use="required"/>
-            <xs:attribute name="phimin" type="xs:string" use="required"/>
-            <xs:attribute name="rmax" type="xs:string" use="required"/>
-            <xs:attribute name="rmin" type="xs:string" use="required"/>
-            <xs:attribute name="x_org" type="xs:string" use="required"/>
-            <xs:attribute name="y_org" type="xs:string" use="required"/>
+            <xs:attribute name="phi_dim" type="xs:integer" use="required"/>
+            <xs:attribute name="phi_max" type="xs:double" use="required"/>
+            <xs:attribute name="phi_min" type="xs:double" use="required"/>
+            <xs:attribute name="r_dim" type="xs:integer" use="required"/>
+            <xs:attribute name="r_max" type="xs:double" use="required"/>
+            <xs:attribute name="r_min" type="xs:double" use="required"/>
+            <xs:attribute name="x_org" type="xs:double" use="required"/>
+            <xs:attribute name="y_org" type="xs:double" use="required"/>
         </xs:complexType>
     </xs:element>
 
     <!-- definition of nonuniform_polarcellarray -->
     <xs:element name="nonuniform_polarcellarray">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="cellarray"/>
-            <xs:attribute name="dimphi" type="xs:string" use="required"/>
-            <xs:attribute name="dimr" type="xs:string" use="required"/>
             <xs:attribute name="phi" type="xs:string" use="required"/>
+            <xs:attribute name="phi_dim" type="xs:integer" use="required"/>
             <xs:attribute name="r" type="xs:string" use="required"/>
-            <xs:attribute name="x_org" type="xs:string" use="required"/>
-            <xs:attribute name="y_org" type="xs:string" use="required"/>
+            <xs:attribute name="r_dim" type="xs:integer" use="required"/>
+            <xs:attribute name="x_org" type="xs:double" use="required"/>
+            <xs:attribute name="y_org" type="xs:double" use="required"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of drawimage -->
-    <xs:element name="drawimage">
+    <!-- definition of draw_image -->
+    <xs:element name="draw_image">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="data" type="xs:string" use="required"/>
-            <xs:attribute name="height" type="xs:string" use="required"/>
-            <xs:attribute name="model" type="xs:string" use="required"/>
-            <xs:attribute name="resample_method" type="xs:string"/>
-            <xs:attribute name="width" type="xs:string" use="required"/>
-            <xs:attribute name="xmax" type="xs:string" use="required"/>
-            <xs:attribute name="xmin" type="xs:string" use="required"/>
-            <xs:attribute name="ymax" type="xs:string" use="required"/>
-            <xs:attribute name="ymin" type="xs:string" use="required"/>
+            <xs:attribute name="height" type="xs:integer" use="required"/>
+            <xs:attribute name="model" type="strint" use="required"/>
+            <xs:attribute name="resample_method" type="strint"/>
+            <xs:attribute name="width" type="xs:integer" use="required"/>
+            <xs:attribute name="x_max" type="xs:double" use="required"/>
+            <xs:attribute name="x_min" type="xs:double" use="required"/>
+            <xs:attribute name="y_max" type="xs:double" use="required"/>
+            <xs:attribute name="y_min" type="xs:double" use="required"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of drawarc -->
-    <xs:element name="drawarc">
+    <!-- definition of draw_arc -->
+    <xs:element name="draw_arc">
         <xs:complexType>
             <xs:attributeGroup ref="arc"/>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="colorrep"/>
-            <xs:attribute name="linecolorind" type="xs:string"/>
+            <xs:attribute name="line_color_ind" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
     <!-- definition of fillarc -->
-    <xs:element name="fillarc">
+    <xs:element name="fill_arc">
         <xs:complexType>
             <xs:attributeGroup ref="arc"/>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="colorrep"/>
-            <xs:attribute name="fillcolorind" type="xs:string" use="required"/>
-            <xs:attribute name="fillintstyle" type="xs:string"/>
+            <xs:attribute name="fill_color_ind" type="xs:integer"/>
+            <xs:attribute name="fill_int_style" type="strint"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
     <!-- definition of fillarea -->
-    <xs:element name="fillarea">
+    <xs:element name="fill_area">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="colorrep"/>
-            <xs:attribute name="fillcolorind" type="xs:string"/>
-            <xs:attribute name="fillintstyle" type="xs:string"/>
-            <xs:attribute name="fillstyle" type="xs:string"/>
+            <xs:attribute name="fill_color_ind" type="xs:integer"/>
+            <xs:attribute name="fill_int_style" type="strint"/>
+            <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -618,42 +652,31 @@
     <xs:element name="series_barplot">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="errorbars" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="drawrect" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="fillrect" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="bar" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="error_bars" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="ranges"/>
-            <xs:attribute name="bar_color" type="xs:string"/>
-            <xs:attribute name="bar_color_rgb" type="xs:string"/>
-            <xs:attribute name="bar_width" type="xs:string"/>
-            <xs:attribute name="c" type="xs:string"/>
-            <xs:attribute name="c_rgb" type="xs:string"/>
-            <xs:attribute name="clipxform" type="xs:string"/>
-            <xs:attribute name="edge_color" type="xs:string"/>
-            <xs:attribute name="edge_color_rgb" type="xs:string"/>
-            <xs:attribute name="edge_width" type="xs:string"/>
-            <xs:attribute name="fillcolorind" type="xs:string"/>
-            <xs:attribute name="fillintstyle" type="xs:string"/>
-            <xs:attribute name="ind_bar_color" type="xs:string"/>
-            <xs:attribute name="ind_edge_color" type="xs:string"/>
-            <xs:attribute name="ind_edge_width" type="xs:string"/>
+            <xs:attribute name="bar_width" type="xs:double"/>
+            <xs:attribute name="clip_transformation" type="xs:double"/>
+            <xs:attribute name="color_ind_values" type="xs:string"/>
+            <xs:attribute name="color_rgb_values" type="xs:string"/>
+            <xs:attribute name="edge_width" type="xs:double"/>
+            <xs:attribute name="fill_color_rgb" type="xs:string"/>
+            <xs:attribute name="fill_color_ind" type="xs:integer"/>
+            <xs:attribute name="fill_int_style" type="strint"/>
             <xs:attribute name="indices" type="xs:string"/>
-            <xs:attribute name="inner_series" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="linecolorind" type="xs:string"/>
-            <xs:attribute name="linewidth" type="xs:string"/>
+            <xs:attribute name="line_color_ind" type="xs:integer"/>
+            <xs:attribute name="line_color_rgb" type="xs:string"/>
+            <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="orientation" type="xs:string"/>
-            <xs:attribute name="rgb" type="xs:string"/>
-            <xs:attribute name="series_index" type="xs:string"/>
+            <xs:attribute name="series_index" type="xs:integer"/>
             <xs:attribute name="style" type="xs:string"/>
-            <xs:attribute name="textalign_horizontal" type="xs:string"/>
-            <xs:attribute name="textalign_vertical" type="xs:string"/>
-            <xs:attribute name="width" type="xs:string"/>
+            <xs:attribute name="text_align_horizontal" type="strint"/>
+            <xs:attribute name="text_align_vertical" type="strint"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
-            <xs:attribute name="ylabels" type="xs:string"/>
+            <xs:attribute name="y_labels" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -668,7 +691,7 @@
     <xs:element name="series_contourf">
         <xs:complexType>
             <xs:attributeGroup ref="contour"/>
-            <xs:attribute name="linecolorind" type="xs:string"/>
+            <xs:attribute name="line_color_ind" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -676,10 +699,9 @@
     <xs:element name="series_heatmap">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="drawimage" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="draw_image" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="nonuniformcellarray" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="heatmap"/>
             <xs:attributeGroup ref="ranges"/>
         </xs:complexType>
@@ -688,10 +710,9 @@
     <!-- definition of hexbin -->
     <xs:element name="series_hexbin">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="nbins" type="xs:string"/>
+            <xs:attribute name="num_bins" type="xs:integer"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
         </xs:complexType>
@@ -701,24 +722,24 @@
     <xs:element name="series_hist">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="drawrect" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="errorbars" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="fillrect" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="bar" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="error_bars" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="ranges"/>
-            <xs:attribute name="bar_color_index" type="xs:string"/>
-            <xs:attribute name="bar_color_rgb" type="xs:string"/>
             <xs:attribute name="bins" type="xs:string"/>
-            <xs:attribute name="calc_window_and_viewport_from_parent" type="xs:string"/>
-            <xs:attribute name="edge_color_index" type="xs:string"/>
-            <xs:attribute name="edge_color_rgb" type="xs:string"/>
+            <xs:attribute name="fill_color_rgb" type="xs:string"/>
+            <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="nbins" type="xs:string"/>
+            <xs:attribute name="line_color_ind" type="xs:integer"/>
+            <xs:attribute name="line_color_rgb" type="xs:string"/>
+            <xs:attribute name="num_bins" type="xs:integer"/>
             <xs:attribute name="orientation" type="xs:string"/>
+            <xs:attribute name="marginal_heatmap_side_plot" type="xs:integer"/>
             <xs:attribute name="weights" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="x_flip" type="xs:integer"/>
+            <xs:attribute name="y_flip" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -728,34 +749,31 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="cellarray" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
-            <xs:attribute name="c" type="xs:string" use="required"/>
-            <xs:attribute name="c_dims" type="xs:string" use="required"/>
-            <xs:attribute name="img_data_key" type="xs:string"/>
+            <xs:attribute name="data" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="scale" type="xs:string"/>
-            <xs:attribute name="selntran" type="xs:string"/>
+            <xs:attribute name="scale" type="xs:integer"/>
+            <xs:attribute name="select_specific_xform" type="xs:integer"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string"/>
-            <xs:attribute name="z" type="xs:string"/>
+            <xs:attribute name="z" type="xs:string" use="required"/>
+            <xs:attribute name="z_dims" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
 
     <!-- definition of isosurface -->
     <xs:element name="series_isosurface">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
-            <xs:attribute name="ambient" type="xs:string"/>
-            <xs:attribute name="c" type="xs:string" use="required"/>
-            <xs:attribute name="c_dims" type="xs:string" use="required"/>
-            <xs:attribute name="diffuse" type="xs:string"/>
-            <xs:attribute name="foreground_color" type="xs:string"/>
-            <xs:attribute name="isovalue" type="xs:string"/>
+            <xs:attribute name="ambient" type="xs:double"/>
+            <xs:attribute name="color_rgb_values" type="xs:string"/>
+            <xs:attribute name="diffuse" type="xs:double"/>
+            <xs:attribute name="isovalue" type="xs:double"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="specular" type="xs:string"/>
-            <xs:attribute name="specular_power" type="xs:string"/>
+            <xs:attribute name="specular" type="xs:double"/>
+            <xs:attribute name="specular_power" type="xs:double"/>
+            <xs:attribute name="z" type="xs:string" use="required"/>
+            <xs:attribute name="z_dims" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
 
@@ -763,40 +781,36 @@
     <xs:element name="series_line">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="errorbars" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="error_bars" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="markertype" type="xs:string"/>
+            <xs:attribute name="line_spec" type="xs:string"/>
+            <xs:attribute name="marker_type" type="strint"/>
             <xs:attribute name="orientation" type="xs:string"/>
-            <xs:attribute name="spec" type="xs:string"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of marginalheatmap -->
-    <xs:element name="series_marginalheatmap">
+    <!-- definition of marginal_heatmap -->
+    <xs:element name="series_marginal_heatmap">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="series_heatmap" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_hist" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_stairs" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="algorithm" type="xs:string"/>
-            <xs:attribute name="gr_option_flip_x" type="xs:string"/>
-            <xs:attribute name="gr_option_flip_y" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="marginalheatmap_kind" type="xs:string" use="required"/>
+            <xs:attribute name="marginal_heatmap_kind" type="xs:string" use="required"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
-            <xs:attribute name="xind" type="xs:string"/>
+            <xs:attribute name="x_ind" type="xs:integer"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
-            <xs:attribute name="yind" type="xs:string"/>
+            <xs:attribute name="y_ind" type="xs:integer"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
@@ -823,17 +837,15 @@
     <xs:element name="series_pie">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="fillarc" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="pie_segment" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
-            <xs:attribute name="color_indices" type="xs:string"/>
+            <xs:attribute name="color_ind_values" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
-            <xs:attribute name="fillintstyle" type="xs:string"/>
+            <xs:attribute name="fill_int_style" type="strint"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="textalign_horizontal" type="xs:string"/>
-            <xs:attribute name="textalign_vertical" type="xs:string"/>
+            <xs:attribute name="text_align_horizontal" type="strint"/>
+            <xs:attribute name="text_align_vertical" type="strint"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
@@ -842,9 +854,8 @@
     <xs:element name="series_plot3">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="polyline3d" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polyline_3d" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
@@ -859,13 +870,11 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="linespec" type="xs:string"/>
-            <xs:attribute name="r_max" type="xs:string"/>
-            <xs:attribute name="r_min" type="xs:string"/>
-            <xs:attribute name="spec" type="xs:string"/>
+            <xs:attribute name="line_spec" type="xs:string"/>
+            <xs:attribute name="r_max" type="xs:double"/>
+            <xs:attribute name="r_min" type="xs:double"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
         </xs:complexType>
@@ -878,7 +887,6 @@
                 <xs:element ref="nonuniform_polarcellarray" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polarcellarray" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="heatmap"/>
             <xs:attributeGroup ref="ranges"/>
         </xs:complexType>
@@ -888,46 +896,41 @@
     <xs:element name="series_polar_histogram">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="drawarc" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="drawimage" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="fillarea" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="fillarc" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="draw_arc" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polar_bar" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attribute name="bin_counts" type="xs:string"/>
             <xs:attribute name="bin_edges" type="xs:string"/>
-            <xs:attribute name="bin_width" type="xs:string"/>
+            <xs:attribute name="bin_width" type="xs:double"/>
             <xs:attribute name="bin_widths" type="xs:string"/>
             <xs:attribute name="classes" type="xs:string"/>
-            <xs:attribute name="draw_edges" type="xs:string"/>
-            <xs:attribute name="edge_color" type="xs:string"/>
-            <xs:attribute name="face_alpha" type="xs:string"/>
-            <xs:attribute name="face_color" type="xs:string"/>
-            <xs:attribute name="fillcolorind" type="xs:string"/>
+            <xs:attribute name="color_ind" type="xs:integer"/>
+            <xs:attribute name="draw_edges" type="xs:integer"/>
+            <xs:attribute name="face_alpha" type="xs:double"/>
+            <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="linecolorind" type="xs:string"/>
-            <xs:attribute name="linewidth" type="xs:string"/>
-            <xs:attribute name="nbins" type="xs:string"/>
-            <xs:attribute name="normalization" type="xs:string"/>
-            <xs:attribute name="r_max" type="xs:string"/>
-            <xs:attribute name="r_min" type="xs:string"/>
-            <xs:attribute name="stairs" type="xs:string"/>
+            <xs:attribute name="line_color_ind" type="xs:integer"/>
+            <xs:attribute name="line_width" type="xs:double"/>
+            <xs:attribute name="num_bins" type="xs:integer"/>
+            <xs:attribute name="norm" type="xs:string"/>
+            <xs:attribute name="r_max" type="xs:double"/>
+            <xs:attribute name="r_min" type="xs:double"/>
+            <xs:attribute name="stairs" type="xs:integer"/>
             <xs:attribute name="theta" type="xs:string"/>
-            <xs:attribute name="tick" type="xs:string"/>
-            <xs:attribute name="total" type="xs:string"/>
-            <xs:attribute name="transparency" type="xs:string"/>
-            <xs:attribute name="xcolormap" type="xs:string"/>
-            <xs:attribute name="ycolormap" type="xs:string"/>
+            <xs:attribute name="tick" type="xs:double"/>
+            <xs:attribute name="total" type="xs:integer"/>
+            <xs:attribute name="transparency" type="xs:double"/>
+            <xs:attribute name="x_colormap" type="xs:integer"/>
+            <xs:attribute name="y_colormap" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
     <!-- definition of quiver -->
     <xs:element name="series_quiver">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
-            <xs:attribute name="color" type="xs:string" use="required"/>
+            <xs:attribute name="color_ind" type="xs:integer" use="required"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="u" type="xs:string" use="required"/>
             <xs:attribute name="v" type="xs:string" use="required"/>
@@ -940,13 +943,12 @@
     <xs:element name="series_scatter">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="errorbars" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="error_bars" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="scatter"/>
-            <xs:attribute name="markersizes" type="xs:string"/>
+            <xs:attribute name="marker_sizes" type="xs:string"/>
             <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="z" type="xs:string"/>
         </xs:complexType>
@@ -956,9 +958,8 @@
     <xs:element name="series_scatter3">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="polymarker3d" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polymarker_3d" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attributeGroup ref="scatter"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
@@ -968,14 +969,13 @@
     <!-- definition of shade -->
     <xs:element name="series_shade">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="transformation" type="xs:integer"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
-            <xs:attribute name="xbins" type="xs:string"/>
-            <xs:attribute name="xform" type="xs:string"/>
+            <xs:attribute name="x_bins" type="xs:integer"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
-            <xs:attribute name="ybins" type="xs:string"/>
+            <xs:attribute name="y_bins" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -986,15 +986,16 @@
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
-            <xs:attribute name="calc_window_and_viewport_from_parent" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="line_spec" type="xs:string"/>
             <xs:attribute name="orientation" type="xs:string"/>
-            <xs:attribute name="spec" type="xs:string"/>
+            <xs:attribute name="marginal_heatmap_side_plot" type="xs:integer"/>
             <xs:attribute name="step_where" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="x_flip" type="xs:integer"/>
             <xs:attribute name="xi" type="xs:string"/>
+            <xs:attribute name="y_flip" type="xs:integer"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z" type="xs:string"/>
         </xs:complexType>
@@ -1007,12 +1008,10 @@
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="linespec" type="xs:string"/>
+            <xs:attribute name="line_spec" type="xs:string"/>
             <xs:attribute name="orientation" type="xs:string"/>
-            <xs:attribute name="spec" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
         </xs:complexType>
@@ -1021,25 +1020,22 @@
     <!-- definition of surface -->
     <xs:element name="series_surface">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
-            <xs:attribute name="accelerate" type="xs:string" use="required"/>
+            <xs:attribute name="accelerate" type="xs:integer" use="required"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
-            <xs:attribute name="zdims_max" type="xs:string"/>
-            <xs:attribute name="zdims_min" type="xs:string"/>
+            <xs:attribute name="z_dims" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
     <!-- definition of tricontour -->
     <xs:element name="series_tricontour">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="levels" type="xs:string" use="required"/>
+            <xs:attribute name="levels" type="xs:integer" use="required"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
@@ -1049,7 +1045,6 @@
     <!-- definition of trisurface -->
     <xs:element name="series_trisurface">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
@@ -1061,23 +1056,21 @@
     <!-- definition of volume -->
     <xs:element name="series_volume">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
-            <xs:attribute name="algorithm" type="xs:string" use="required"/>
-            <xs:attribute name="c" type="xs:string" use="required"/>
-            <xs:attribute name="c_dims" type="xs:string" use="required"/>
-            <xs:attribute name="dmax" type="xs:string" use="required"/>
-            <xs:attribute name="dmin" type="xs:string" use="required"/>
+            <xs:attribute name="algorithm" type="strint" use="required"/>
+            <xs:attribute name="d_max" type="xs:double" use="required"/>
+            <xs:attribute name="d_min" type="xs:double" use="required"/>
             <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="z" type="xs:string" use="required"/>
+            <xs:attribute name="z_dims" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
 
     <!-- definition of wireframe -->
     <xs:element name="series_wireframe">
         <xs:complexType>
-            <xs:attributeGroup ref="bbox"/>
             <xs:attributeGroup ref="ranges"/>
-            <xs:attribute name="fillcolorind" type="xs:string"/>
+            <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
@@ -1085,35 +1078,107 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- ||||||||||||||||||||||||||||| attribute groups |||||||||||||||||||||||||||||||||||||||| -->
+    <!-- ||||||||||||||||||||||||||||| series subgroups |||||||||||||||||||||||||||||||||||||||| -->
 
-    <!-- definition of boundingbox attributes -->
-    <xs:attributeGroup name="bbox">
-        <xs:attribute name="bbox_id" type="xs:string"/>
-        <xs:attribute name="bbox_xmax" type="xs:string"/>
-        <xs:attribute name="bbox_xmin" type="xs:string"/>
-        <xs:attribute name="bbox_ymax" type="xs:string"/>
-        <xs:attribute name="bbox_ymin" type="xs:string"/>
-    </xs:attributeGroup>
+    <!-- definition of error_bar -->
+    <xs:element name="error_bar">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="3">
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="3"/>
+            </xs:choice>
+            <xs:attribute name="downward_scap_color" type="xs:integer"/>
+            <xs:attribute name="e_downwards" type="xs:double"/>
+            <xs:attribute name="e_upwards" type="xs:double"/>
+            <xs:attribute name="error_bar_color" type="xs:integer" use="required"/>
+            <xs:attribute name="error_bar_x" type="xs:double" use="required"/>
+            <xs:attribute name="error_bar_y_max" type="xs:double" use="required"/>
+            <xs:attribute name="error_bar_y_min" type="xs:double" use="required"/>
+            <xs:attribute name="scap_x_max" type="xs:double"/>
+            <xs:attribute name="scap_x_min" type="xs:double"/>
+            <xs:attribute name="upward_scap_color" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of bar -->
+    <xs:element name="bar">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="draw_rect" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="fill_rect" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="1"/>
+            </xs:choice>
+            <xs:attributeGroup ref="colorrep"/>
+            <xs:attribute name="fill_color_ind" type="xs:integer"/>
+            <xs:attribute name="fill_color_rgb" type="xs:string"/>
+            <xs:attribute name="line_color_ind" type="xs:integer"/>
+            <xs:attribute name="line_color_rgb" type="xs:string"/>
+            <xs:attribute name="line_width" type="xs:double"/>
+            <xs:attribute name="text" type="xs:string"/>
+            <xs:attribute name="x1" type="xs:double" use="required"/>
+            <xs:attribute name="x2" type="xs:double" use="required"/>
+            <xs:attribute name="y1" type="xs:double" use="required"/>
+            <xs:attribute name="y2" type="xs:double" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polarBar -->
+    <xs:element name="polar_bar">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="2">
+                <xs:element ref="draw_image" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="fill_area" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="fill_arc" minOccurs="0" maxOccurs="1"/>
+            </xs:choice>
+            <xs:attribute name="bin_edges" type="xs:string"/>
+            <xs:attribute name="bin_width" type="xs:double"/>
+            <xs:attribute name="bin_widths" type="xs:double"/>
+            <xs:attribute name="class_nr" type="xs:integer" use="required"/>
+            <xs:attribute name="color_ind" type="xs:integer"/>
+            <xs:attribute name="count" type="xs:double" use="required"/>
+            <xs:attribute name="draw_edges" type="xs:integer"/>
+            <xs:attribute name="line_color_ind" type="xs:integer"/>
+            <xs:attribute name="norm" type="xs:string"/>
+            <xs:attribute name="phi_flip" type="xs:integer"/>
+            <xs:attribute name="x_colormap" type="xs:integer"/>
+            <xs:attribute name="y_colormap" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of pie_segment -->
+    <xs:element name="pie_segment">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="fill_arc" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="1"/>
+            </xs:choice>
+            <xs:attributeGroup ref="colorrep"/>
+            <xs:attribute name="color_ind" type="xs:integer" use="required"/>
+            <xs:attribute name="end_angle" type="xs:double" use="required"/>
+            <xs:attribute name="fill_color_ind" type="xs:integer"/>
+            <xs:attribute name="start_angle" type="xs:double" use="required"/>
+            <xs:attribute name="text" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- ||||||||||||||||||||||||||||| attribute groups |||||||||||||||||||||||||||||||||||||||| -->
 
     <!-- definition of range attributes -->
     <xs:attributeGroup name="ranges">
-        <xs:attribute name="xrange_max" type="xs:string"/>
-        <xs:attribute name="xrange_min" type="xs:string"/>
-        <xs:attribute name="yrange_max" type="xs:string"/>
-        <xs:attribute name="yrange_min" type="xs:string"/>
-        <xs:attribute name="zrange_max" type="xs:string"/>
-        <xs:attribute name="zrange_min" type="xs:string"/>
-        <xs:attribute name="crange_max" type="xs:string"/>
-        <xs:attribute name="crange_min" type="xs:string"/>
+        <xs:attribute name="x_range_max" type="xs:double"/>
+        <xs:attribute name="x_range_min" type="xs:double"/>
+        <xs:attribute name="y_range_max" type="xs:double"/>
+        <xs:attribute name="y_range_min" type="xs:double"/>
+        <xs:attribute name="z_range_max" type="xs:double"/>
+        <xs:attribute name="z_range_min" type="xs:double"/>
+        <xs:attribute name="c_range_max" type="xs:double"/>
+        <xs:attribute name="c_range_min" type="xs:double"/>
     </xs:attributeGroup>
 
     <!-- definition of contour attributes -->
     <xs:attributeGroup name="contour">
-        <xs:attributeGroup ref="bbox"/>
         <xs:attributeGroup ref="ranges"/>
         <xs:attribute name="kind" type="xs:string"/>
-        <xs:attribute name="levels" type="xs:string"/>
+        <xs:attribute name="levels" type="xs:integer"/>
         <xs:attribute name="px" type="xs:string"/>
         <xs:attribute name="py" type="xs:string"/>
         <xs:attribute name="pz" type="xs:string"/>
@@ -1124,37 +1189,37 @@
 
     <!-- definition of axes attributes -->
     <xs:attributeGroup name="axes">
-        <xs:attribute name="tick_orientation" type="xs:string" use="required"/>
-        <xs:attribute name="tick_size" type="xs:string"/>
-        <xs:attribute name="x_major" type="xs:string"/>
-        <xs:attribute name="x_org" type="xs:string"/>
+        <xs:attribute name="tick_orientation" type="xs:integer" use="required"/>
+        <xs:attribute name="tick_size" type="xs:double"/>
+        <xs:attribute name="x_label" type="xs:string"/>
+        <xs:attribute name="x_major" type="xs:integer"/>
+        <xs:attribute name="x_org" type="xs:double"/>
         <xs:attribute name="x_org_pos" type="xs:string"/>
-        <xs:attribute name="x_tick" type="xs:string"/>
-        <xs:attribute name="xlabel" type="xs:string"/>
-        <xs:attribute name="y_major" type="xs:string"/>
-        <xs:attribute name="y_org" type="xs:string"/>
+        <xs:attribute name="x_tick" type="xs:double"/>
+        <xs:attribute name="y_label" type="xs:string"/>
+        <xs:attribute name="y_major" type="xs:integer"/>
+        <xs:attribute name="y_org" type="xs:double"/>
         <xs:attribute name="y_org_pos" type="xs:string"/>
-        <xs:attribute name="y_tick" type="xs:string"/>
-        <xs:attribute name="ylabel" type="xs:string"/>
+        <xs:attribute name="y_tick" type="xs:double"/>
     </xs:attributeGroup>
 
     <!-- definition of arc attributes -->
     <xs:attributeGroup name="arc">
-        <xs:attribute name="a1" type="xs:string" use="required"/>
-        <xs:attribute name="a2" type="xs:string" use="required"/>
+        <xs:attribute name="end_angle" type="xs:double" use="required"/>
         <xs:attribute name="name" type="xs:string"/>
-        <xs:attribute name="xmax" type="xs:string" use="required"/>
-        <xs:attribute name="xmin" type="xs:string" use="required"/>
-        <xs:attribute name="ymax" type="xs:string" use="required"/>
-        <xs:attribute name="ymin" type="xs:string" use="required"/>
+        <xs:attribute name="start_angle" type="xs:double" use="required"/>
+        <xs:attribute name="x_max" type="xs:double" use="required"/>
+        <xs:attribute name="x_min" type="xs:double" use="required"/>
+        <xs:attribute name="y_max" type="xs:double" use="required"/>
+        <xs:attribute name="y_min" type="xs:double" use="required"/>
     </xs:attributeGroup>
 
     <!-- definition of grid attributes -->
     <xs:attributeGroup name="grid">
-        <xs:attribute name="x_org" type="xs:string"/>
-        <xs:attribute name="x_tick" type="xs:string"/>
-        <xs:attribute name="y_org" type="xs:string"/>
-        <xs:attribute name="y_tick" type="xs:string"/>
+        <xs:attribute name="x_org" type="xs:double"/>
+        <xs:attribute name="x_tick" type="xs:double"/>
+        <xs:attribute name="y_org" type="xs:double"/>
+        <xs:attribute name="y_tick" type="xs:double"/>
     </xs:attributeGroup>
 
     <!-- definition of heatmap attributes -->
@@ -1163,13 +1228,12 @@
         <xs:attribute name="x" type="xs:string"/>
         <xs:attribute name="y" type="xs:string"/>
         <xs:attribute name="z" type="xs:string" use="required"/>
-        <xs:attribute name="zdims_max" type="xs:string"/>
-        <xs:attribute name="zdims_min" type="xs:string"/>
+        <xs:attribute name="z_dims" type="xs:string"/>
     </xs:attributeGroup>
 
     <!-- definition of polyline attributes -->
     <xs:attributeGroup name="polyline">
-        <xs:attribute name="linecolorind" type="xs:string"/>
+        <xs:attribute name="line_color_ind" type="xs:integer"/>
         <xs:attribute name="name" type="xs:string"/>
         <xs:attribute name="x" type="xs:string"/>
         <xs:attribute name="y" type="xs:string"/>
@@ -1177,9 +1241,9 @@
 
     <!-- definition of polymarker attributes -->
     <xs:attributeGroup name="polymarker">
-        <xs:attribute name="markercolorind" type="xs:string"/>
-        <xs:attribute name="markersize" type="xs:string"/>
-        <xs:attribute name="markertype" type="xs:string"/>
+        <xs:attribute name="marker_color_ind" type="xs:integer"/>
+        <xs:attribute name="marker_size" type="xs:double"/>
+        <xs:attribute name="marker_type" type="strint"/>
         <xs:attribute name="x" type="xs:string"/>
         <xs:attribute name="y" type="xs:string"/>
     </xs:attributeGroup>
@@ -1188,28 +1252,28 @@
     <xs:attributeGroup name="rect">
         <xs:attribute name="x" type="xs:string"/>
         <xs:attribute name="y" type="xs:string"/>
-        <xs:attribute name="xmax" type="xs:string" use="required"/>
-        <xs:attribute name="xmin" type="xs:string" use="required"/>
-        <xs:attribute name="ymax" type="xs:string" use="required"/>
-        <xs:attribute name="ymin" type="xs:string" use="required"/>
+        <xs:attribute name="x_max" type="xs:double" use="required"/>
+        <xs:attribute name="x_min" type="xs:double" use="required"/>
+        <xs:attribute name="y_max" type="xs:double" use="required"/>
+        <xs:attribute name="y_min" type="xs:double" use="required"/>
     </xs:attributeGroup>
 
     <!-- definition of cellarray attributes -->
     <xs:attributeGroup name="cellarray">
-        <xs:attribute name="color" type="xs:string" use="required"/>
-        <xs:attribute name="ncol" type="xs:string" use="required"/>
-        <xs:attribute name="nrow" type="xs:string" use="required"/>
-        <xs:attribute name="scol" type="xs:string" use="required"/>
-        <xs:attribute name="srow" type="xs:string" use="required"/>
+        <xs:attribute name="color_ind_values" type="xs:string" use="required"/>
+        <xs:attribute name="num_col" type="xs:integer" use="required"/>
+        <xs:attribute name="num_row" type="xs:integer" use="required"/>
+        <xs:attribute name="start_col" type="xs:integer" use="required"/>
+        <xs:attribute name="start_row" type="xs:integer" use="required"/>
     </xs:attributeGroup>
 
     <!-- definition of scatter attributes -->
     <xs:attributeGroup name="scatter">
         <xs:attribute name="c" type="xs:string"/>
-        <xs:attribute name="c_index" type="xs:string"/>
+        <xs:attribute name="color_rgb_values" type="xs:string"/>
         <xs:attribute name="kind" type="xs:string"/>
-        <xs:attribute name="markercolorinds" type="xs:string"/>
-        <xs:attribute name="markertype" type="xs:string"/>
+        <xs:attribute name="marker_color_indices" type="xs:string"/>
+        <xs:attribute name="marker_type" type="strint"/>
         <xs:attribute name="x" type="xs:string" use="required"/>
         <xs:attribute name="y" type="xs:string" use="required"/>
     </xs:attributeGroup>
@@ -2473,5 +2537,12 @@
         <xs:attribute name="colorrep.1254" type="xs:string"/>
         <xs:attribute name="colorrep.1255" type="xs:string"/>
     </xs:attributeGroup>
+
+    <!-- ||||||||||||||||||||||||||||| simple types |||||||||||||||||||||||||||||||||||||||| -->
+
+    <!-- definition of string and int type -->
+    <xs:simpleType name="strint">
+        <xs:union memberTypes="xs:string xs:integer"/>
+    </xs:simpleType>
 </xs:schema>
 

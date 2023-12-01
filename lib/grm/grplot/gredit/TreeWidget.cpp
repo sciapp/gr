@@ -2,94 +2,99 @@
 #include <queue>
 #include <QHeaderView>
 #include "TreeWidget.h"
-#include "CustomTreeWidgetItem.h"
 
 
-TreeWidget::TreeWidget(QWidget *parent) : QTreeWidget(parent)
+TreeWidget::TreeWidget(GRPlotWidget *widget, QWidget *parent) : QTreeWidget(parent)
 {
-  this->setWindowTitle("DOM-Tree");
-  QStringList labels;
-  labels << tr("Object") << tr("Value");
-
-  this->setHeaderLabels(labels);
-  this->setColumnCount(2);
+  grplot_widget = widget;
+  this->setWindowTitle("DOM-Tree Elements");
+  this->setColumnCount(1);
   this->header()->setSectionResizeMode(QHeaderView::Stretch);
-  //    this->setHeaderHidden(true);
-  QString style = "QTreeWidget::item:!selected "
-                  "{ "
-                  "border: 1px solid gray; "
-                  "border-left: none; "
-                  "border-top: none; "
-                  "border-bottom: 1px solid gray;"
-                  "}"
-                  "QTreeWidget::item:selected {}";
-  this->setStyleSheet(style);
+  this->setHeaderHidden(true);
 }
-
 
 void TreeWidget::updateData(std::shared_ptr<GRM::Element> ref)
 {
   this->clear();
-  plotTree = new QTreeWidgetItem(this);
-  plotTree->setText(0, tr("Plot"));
+  auto tmp = new QTreeWidgetItem(this);
+  tmp->setExpanded(true);
+  plotTree = new CustomTreeWidgetItem(tmp, ref);
+  plotTree->setText(0, tr("root"));
   plotTree->setExpanded(true);
 
-  for (const auto &cur_attr : ref->getAttributeNames())
-    {
-      QTreeWidgetItem *item = new CustomTreeWidgetItem(plotTree, ref);
-      item->setText(0, tr(cur_attr.c_str()));
-      item->setText(1, tr(static_cast<std::string>(ref->getAttribute(cur_attr)).c_str()));
-      item->setExpanded(true);
-    }
   for (const auto &cur_elem : ref->children())
     {
       updateDataRecursion(cur_elem, plotTree);
     }
-
-
-  connect(this->model(), &QAbstractItemModel::dataChanged,
-          [](const QModelIndex &index, const QModelIndex &, const QVector<int> &roles) {
-            // TODO: Get current element and change value to ref
-            // This will be the return-channel from the TreeWidget to the DOM-Object
-            //
-
-
-            //            printf("(%d %d)", index.column(), index.row());
-
-            //            for (auto i : roles)
-            //              {
-            //                printf("%d ", i);
-            //              }
-            //            printf("\n");
-          });
 }
 
-void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, QTreeWidgetItem *parent)
+void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTreeWidgetItem *parent)
 {
   bool skip = false;
-  QTreeWidgetItem *item = new QTreeWidgetItem(parent);
-  item->setText(0, tr(ref->localName().c_str()));
-  std::string blacklist[] = {"name", "_bbox_xmin", "_bbox_xmax", "_bbox_ymin", "_bbox_ymax", "_bbox_id"};
-  item->setText(1, tr(static_cast<std::string>(ref->getAttribute(blacklist[0])).c_str()));
-  for (const auto &cur_attr : ref->getAttributeNames())
-    {
-      skip = false;
-      for (auto const &n : blacklist)
-        {
-          if (cur_attr == n)
-            {
-              skip = true;
-            }
-        }
-      if (skip) continue;
-      QTreeWidgetItem *attributes = new CustomTreeWidgetItem(item, ref);
-      attributes->setText(0, tr(cur_attr.c_str()));
-      attributes->setText(1, tr(static_cast<std::string>(ref->getAttribute(cur_attr)).c_str()));
-      //        attributes->setExpanded(true);
-    }
+  auto *item = new CustomTreeWidgetItem(parent, ref);
+  std::string name = ref->localName();
+
+  if (ref->hasAttribute("name")) name += " (" + static_cast<std::string>(ref->getAttribute("name")) + ")";
+  item->setText(0, tr(name.c_str()));
   item->setExpanded(true);
   for (const auto &cur_elem : ref->children())
     {
       updateDataRecursion(cur_elem, item);
     }
+}
+
+bool TreeWidget::findSelectedItem(CustomTreeWidgetItem *item)
+{
+  if (!item->isSelected() && item->getRef() != nullptr)
+    {
+      for (int i = 0; i < item->childCount(); ++i)
+        {
+          if (findSelectedItem(dynamic_cast<CustomTreeWidgetItem *>(item->child(i)))) break;
+        }
+    }
+  else if (item->getRef() != nullptr)
+    {
+      auto bbox_id = static_cast<int>(item->getRef()->getAttribute("_bbox_id"));
+      auto bbox_x_min = static_cast<double>(item->getRef()->getAttribute("_bbox_x_min"));
+      auto bbox_x_max = static_cast<double>(item->getRef()->getAttribute("_bbox_x_max"));
+      auto bbox_y_min = static_cast<double>(item->getRef()->getAttribute("_bbox_y_min"));
+      auto bbox_y_max = static_cast<double>(item->getRef()->getAttribute("_bbox_y_max"));
+      auto *bbox = new Bounding_object(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, item->getRef());
+
+      grplot_widget->set_current_selection(bbox);
+      return true;
+    }
+  return false;
+}
+
+void TreeWidget::mouseDoubleClickEvent(QMouseEvent *event)
+{
+  findSelectedItem(plotTree);
+  grplot_widget->AttributeEditEvent();
+}
+
+void TreeWidget::mousePressEvent(QMouseEvent *event)
+{
+  QTreeView::mousePressEvent(event);
+  findSelectedItem(plotTree);
+  grplot_widget->redraw(false);
+}
+
+bool TreeWidget::selectItem(std::shared_ptr<GRM::Element> ref, CustomTreeWidgetItem *tree_elem)
+{
+  auto item = plotTree;
+  if (tree_elem) item = tree_elem;
+  if (item->getRef() != nullptr && item->getRef() != ref)
+    {
+      for (int i = 0; i < item->childCount(); ++i)
+        {
+          if (selectItem(ref, dynamic_cast<CustomTreeWidgetItem *>(item->child(i)))) break;
+        }
+    }
+  else if (item->getRef() == ref)
+    {
+      item->setSelected(true);
+      return true;
+    }
+  return false;
 }

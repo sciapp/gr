@@ -4,7 +4,7 @@ endif
 
   CFLAGS = -O -I. -fPIC -fno-common $(ARCHS)
 ifeq ($(shell uname),Darwin)
- CFLAGS += -mmacosx-version-min=10.14
+ CFLAGS += -mmacosx-version-min=10.15
 endif
     OBJS = blocksort.o \
         huffman.o \

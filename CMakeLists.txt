@@ -942,8 +942,8 @@ if(Qt4_FOUND)
   add_library(qt4gr SHARED lib/gr/qtgr/grwidget.cxx)
   target_link_libraries(qt4gr PUBLIC GR::GR)
   target_link_libraries(qt4gr PUBLIC Qt4::QtCore Qt4::QtGui)
-  if(MINGW)
-    target_compile_options(qt4gr PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
+  if(MINGW AND CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
+    target_compile_options(qt4gr PRIVATE -fno-exceptions)
   endif()
   target_compile_options(qt4gr PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(qt4gr PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" INSTALL_RPATH "${INSTALL_RPATH}")
@@ -967,8 +967,8 @@ if(Qt5Widgets_FOUND AND Qt5Core_FOUND)
   add_library(qt5gr SHARED lib/gr/qtgr/grwidget.cxx)
   target_link_libraries(qt5gr PUBLIC GR::GR)
   target_link_libraries(qt5gr PUBLIC Qt5::Core Qt5::Widgets)
-  if(MINGW)
-    target_compile_options(qt5gr PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
+  if(MINGW AND CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
+    target_compile_options(qt5gr PRIVATE -fno-exceptions)
   endif()
   target_compile_options(qt5gr PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(qt5gr PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" INSTALL_RPATH "${INSTALL_RPATH}")
@@ -992,8 +992,8 @@ if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
   add_library(qt6gr SHARED lib/gr/qtgr/grwidget.cxx)
   target_link_libraries(qt6gr PUBLIC GR::GR)
   target_link_libraries(qt6gr PUBLIC Qt6::Core Qt6::Widgets)
-  if(MINGW)
-    target_compile_options(qt6gr PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
+  if(MINGW AND CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
+    target_compile_options(qt6gr PRIVATE -fno-exceptions)
   endif()
   target_compile_options(qt6gr PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(qt6gr PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" INSTALL_RPATH "${INSTALL_RPATH}")
@@ -1096,8 +1096,8 @@ if(Qt4_FOUND
   set_target_properties(
     gksqt PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH "${gksqt_INSTALL_RPATH}"
   )
-  if(MINGW)
-    target_compile_options(gksqt PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
+  if(MINGW AND CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
+    target_compile_options(gksqt PRIVATE -fno-exceptions)
   endif()
   target_compile_options(gksqt PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   if(GR_MANUAL_MOC_AND_RCC)
@@ -1163,17 +1163,20 @@ else()
   string(APPEND GR_REPORT "- gksqt: No (Qt4 / Qt5 / Qt6 not found)\n")
 endif()
 
-if((Qt6Widgets_FOUND
-    AND Qt6Core_FOUND
-    AND Qt6Gui_FOUND
+if(((Qt6Widgets_FOUND
+     AND Qt6Core_FOUND
+     AND Qt6Gui_FOUND
+    )
+    OR (Qt5Widgets_FOUND
+        AND Qt5Core_FOUND
+        AND Qt5Gui_FOUND
+       )
    )
-   OR (Qt5Widgets_FOUND
-       AND Qt5Core_FOUND
-       AND Qt5Gui_FOUND
-      )
+   AND (NOT MINGW OR NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
 )
   add_executable(
     grplot WIN32 MACOSX_BUNDLE
+    lib/grm/grplot/gredit/AddElementWidget.cpp
     lib/grm/grplot/gredit/Bounding_logic.cpp
     lib/grm/grplot/gredit/Bounding_object.cpp
     lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
@@ -1193,6 +1196,9 @@ if((Qt6Widgets_FOUND
     set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
   endif()
   target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
+  if(NOT TARGET LibXml2::LibXml2)
+    target_compile_definitions(grplot PRIVATE NO_LIBXML2)
+  endif()
   set_target_properties(
     grplot PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
                                                                                   "${grplot_INSTALL_RPATH}"
@@ -1275,6 +1281,14 @@ if((Qt6Widgets_FOUND
         ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
     )
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.h -o
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.h
+    )
     target_sources(
       grplot
       PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
@@ -1283,6 +1297,7 @@ if((Qt6Widgets_FOUND
               ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
               ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
               ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
+              ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
               ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
               ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
     )
@@ -1296,6 +1311,7 @@ if((Qt6Widgets_FOUND
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
+              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.h
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h
     )
@@ -1306,9 +1322,7 @@ if((Qt6Widgets_FOUND
   if(WIN32)
     target_compile_definitions(grplot PRIVATE GR_STATIC_LIB)
   endif()
-  if(MINGW)
-    target_compile_options(grplot PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
-  endif()
+  target_compile_options(grplot PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   string(APPEND GR_REPORT "- grplot: Yes\n")
 else()
   string(APPEND GR_REPORT "- grplot: No (Qt6 and Qt5 not found)\n")

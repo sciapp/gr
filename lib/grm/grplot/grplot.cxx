@@ -13,12 +13,9 @@ int main(int argc, char **argv)
 {
   int pass = 0;
   // Ensure that the `GRDIR` environment variable is set, so GR can find its components like fonts.
-#ifndef NO_EXCEPTIONS
   try
     {
-#endif
       util::setGrdir();
-#ifndef NO_EXCEPTIONS
     }
   // Catch an exception, print an error message but ignore it. If GR is located in its install location,
   // no environment variables need to be set at all.
@@ -35,7 +32,6 @@ int main(int argc, char **argv)
       std::cerr << "Failed to set the \"GRDIR\" envionment variable, falling back to GRDIR=\"" << GRDIR << "\"."
                 << std::endl;
     }
-#endif
 
   if (argc > 1)
     {

@@ -5,7 +5,7 @@ endif
  PNGCFLAGS = -O -I. -I../zlib/ -fPIC -fno-common $(PNG_EXTRA_CFLAGS) $(ARCHS)
 ifeq ($(shell uname),Darwin)
 ifneq ($(notdir $(CC)),emcc)
-PNGCFLAGS += -mmacosx-version-min=10.14
+PNGCFLAGS += -mmacosx-version-min=10.15
 ifeq ($(shell arch),arm64)
 PNGCFLAGS += -DPNG_ARM_NEON_OPT=0
 endif

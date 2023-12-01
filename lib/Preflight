@@ -141,9 +141,20 @@ else
 fi
 printf "%12s: %s\n" "dvipng" "$info" >&2
 
+function version {
+  echo "$@" | awk -F. '{ printf("%d\n", $1); }';
+}
+
 if [ "$qt" != "no" ]
 then
-  for qt_major_version in 4 5 6
+  qt_versions="4 5 6"
+  if [ `uname` == "Darwin" ]; then
+    if [ $(version "`sw_vers --productVersion`") -ge "14" ]; then
+      qt_versions="5 6"
+      qt4defs="QT4DEFS=-DNO_QT4 QT4_QMAKE=false"
+    fi
+  fi
+  for qt_major_version in ${qt_versions}
   do
     eval current_qt="$qt${qt_major_version}"
     if [ "${current_qt}" != "no" ]

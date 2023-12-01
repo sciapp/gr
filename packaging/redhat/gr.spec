@@ -30,7 +30,7 @@ Source6:			https://gr-framework.org/downloads/3rdparty/zeromq-4.3.4.tar.gz
 Source7:			https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
 Source8:			https://gr-framework.org/downloads/3rdparty/cairo-1.16.0.tar.xz
 Source9:			https://gr-framework.org/downloads/3rdparty/pixman-0.40.0.tar.gz
-Source10:			https://gr-framework.org/downloads/3rdparty/tiff-4.0.10.tar.gz
+Source10:			https://gr-framework.org/downloads/3rdparty/tiff-4.5.1.tar.gz
 Source11:			https://gr-framework.org/downloads/3rdparty/libopenh264-2.0.0.tar.gz
 Source12:			https://gr-framework.org/downloads/3rdparty/libxml2-2.10.4.tar.xz
 BuildRequires:		git
@@ -115,6 +115,7 @@ mkdir -p %{THIRDPARTY_SRC}
 %{__cp} %{SOURCE9} %{THIRDPARTY_SRC}
 %{__cp} %{SOURCE10} %{THIRDPARTY_SRC}
 %{__cp} %{SOURCE11} %{THIRDPARTY_SRC}
+%{__cp} %{SOURCE12} %{THIRDPARTY_SRC}
 %{__tar} -C %{THIRDPARTY} -xf %{SOURCE7}
 
 %build

@@ -13,7 +13,9 @@
 
 #include "gredit/Bounding_object.h"
 #include "gredit/Bounding_logic.h"
+class GRPlotWidget;
 #include "gredit/TreeWidget.h"
+#include "gredit/AddElementWidget.h"
 #include "qtterm/receiver_thread.h"
 #include "qtterm/grm_args_t_wrapper.h"
 #include "util.hxx"
@@ -27,10 +29,21 @@ class GRPlotWidget : public QWidget
 public:
   explicit GRPlotWidget(QMainWindow *parent, int argc, char **argv);
   ~GRPlotWidget() override;
+  void redraw(bool tree_update = true);
+  std::shared_ptr<GRM::Document> get_schema_tree();
+  void set_selected_parent(Bounding_object *parent);
+  Bounding_object *get_selected_parent();
+  void set_current_selection(Bounding_object *current_selection);
+  Bounding_object *get_current_selection();
+  void AttributeEditEvent();
+  void attributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name, QWidget **lineEdit);
+  QStringList getCheckBoxAttributes();
+  QStringList getComboBoxAttributes();
+  void attributeSetForComboBox(const std::string &attr_type, std::shared_ptr<GRM::Element> element,
+                               const std::string &value, const std::string &label);
 
 protected:
   virtual void draw();
-  void redraw();
   void collectTooltips();
   void keyPressEvent(QKeyEvent *event) override;
   void keyReleaseEvent(QKeyEvent *event) override;
@@ -80,6 +93,7 @@ private slots:
   void save_file_slot();
   void open_file_slot();
   void enable_editor_functions();
+  void add_element_slot();
   void received(grm_args_t_wrapper args);
   void screenChanged();
 
@@ -170,44 +184,32 @@ private:
   QTextDocument label;
   Bounding_logic *bounding_logic;
   std::vector<Bounding_object> clicked;
-  Bounding_object *current_selection, *mouse_move_selection;
+  Bounding_object *current_selection, *mouse_move_selection, *selected_parent;
   bool highlightBoundingObjects;
   TreeWidget *treewidget;
+  AddElementWidget *add_element_widget;
   int amount_scrolled;
   bool enable_editor;
   Receiver_Thread *receiver_thread;
+  std::shared_ptr<GRM::Document> schema_tree;
+  bool tree_update = true;
+  QSize size_hint;
+  QStringList check_box_attr, combo_box_attr;
 
   QMenuBar *menu;
   QMenu *type, *algo, *export_menu, *editor_menu;
-  QAction *heatmapAct;
-  QAction *marginalheatmapAllAct;
-  QAction *marginalheatmapLineAct;
-  QAction *lineAct;
-  QAction *sumAct;
-  QAction *maxAct;
-  QAction *volumeAct;
-  QAction *isosurfaceAct;
-  QAction *surfaceAct;
-  QAction *wireframeAct;
-  QAction *contourAct;
-  QAction *imshowAct;
-  QAction *plot3Act;
-  QAction *contourfAct;
-  QAction *trisurfAct;
-  QAction *tricontAct;
-  QAction *scatter3Act;
-  QAction *scatterAct;
-  QAction *histAct;
-  QAction *barplotAct;
-  QAction *stairsAct;
-  QAction *stemAct;
-  QAction *shadeAct;
-  QAction *hexbinAct;
-  QAction *PdfAct;
-  QAction *PngAct;
-  QAction *JpegAct;
-  QAction *SvgAct;
-  QAction *show_container_action, *show_bounding_boxes_action, *save_file_action, *open_file_action, *editor_action;
+  QMenu *file_menu, *configuration_menu;
+  QAction *marginalheatmapAllAct, *marginalheatmapLineAct;
+  QAction *sumAct, *maxAct;
+  QAction *lineAct, *scatterAct;
+  QAction *volumeAct, *isosurfaceAct;
+  QAction *heatmapAct, *surfaceAct, *wireframeAct, *contourAct, *imshowAct, *contourfAct;
+  QAction *plot3Act, *trisurfAct, *tricontAct, *scatter3Act;
+  QAction *histAct, *barplotAct, *stairsAct, *stemAct;
+  QAction *shadeAct, *hexbinAct;
+  QAction *PdfAct, *PngAct, *JpegAct, *SvgAct;
+  QAction *show_container_action, *show_bounding_boxes_action, *save_file_action, *open_file_action, *editor_action,
+      *add_element_action;
 
   void reset_pixmap();
   void moveEvent(QMoveEvent *event) override;
@@ -215,8 +217,11 @@ private:
   void extract_bounding_boxes_from_grm(QPainter &painter);
   void showEvent(QShowEvent *) override;
   void closeEvent(QCloseEvent *event) override;
+  QSize sizeHint() const override;
   void size_callback(const grm_event_t *);
   void cmd_callback(const grm_request_event_t *);
+  void advancedAttributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name,
+                                        QWidget **lineEdit);
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

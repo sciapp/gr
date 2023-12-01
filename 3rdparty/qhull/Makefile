@@ -5,7 +5,7 @@ endif
  CFLAGS = -O -fPIC -fno-common $(ARCHS)
 ifeq ($(shell uname),Darwin)
 ifneq ($(notdir $(CC)),emcc)
-CFLAGS += -mmacosx-version-min=10.14
+CFLAGS += -mmacosx-version-min=10.15
 endif
 endif
    LIBS = libqhull.a

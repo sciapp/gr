@@ -900,16 +900,8 @@ windows-32bit-cross:
     CXX=i686-w64-mingw32-g++
     AR=i686-w64-mingw32-ar
     ARCHITECTURE=i686
-  - MAKE="make -f makefile.mingw" make -f makefile.mingw -C lib/grm/grplot
-    GRDIR=./
-    CC=i686-w64-mingw32-gcc
-    CXX=i686-w64-mingw32-g++
-    AR=i686-w64-mingw32-ar
-    ARCHITECTURE=i686
   - mkdir artifacts
   - cp lib/gks/qt/gksqt.exe artifacts/
-  - cp lib/grm/grplot/grplot.exe artifacts/
-  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
   - cp lib/gks/qt/*.dll artifacts/
   - cp -r lib/gks/qt/platforms artifacts/
   - cp lib/gks/libGKS.lib lib/gks/libGKS.dll lib/gks/libGKS.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libGR.lib
@@ -1148,7 +1140,7 @@ darwin-self-contained-iff1600:
   - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-macos-universal.tar.gz
   - tar xf cmake-3.23.0-macos-universal.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.23.0-macos-universal/CMake.app/Contents/bin/cmake
-  - export MACOSX_DEPLOYMENT_TARGET=10.14
+  - export MACOSX_DEPLOYMENT_TARGET=10.15
   - rm -rf /usr/local/gr/*
   - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake
   - mkdir artifacts
@@ -1199,7 +1191,7 @@ darwin-self-contained:
   tags:
   - libvirt
   script:
-  - export MACOSX_DEPLOYMENT_TARGET=10.14
+  - export MACOSX_DEPLOYMENT_TARGET=10.15
   - sudo mkdir /usr/local/gr
   - sudo chown administrator:wheel /usr/local/gr
   - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake QT6_QMAKE=/usr/local/qt6/bin/qmake
@@ -1319,12 +1311,9 @@ packages-tar:
   script:
   - mkdir -p Windows-i686/gr/bin
   - mkdir -p Windows-i686/gr/lib
-  - mkdir -p Windows-i686/gr/share/doc/grplot
   - mv artifacts-windows32/*.dll Windows-i686/gr/bin/
   - mv artifacts-windows32/*.lib Windows-i686/gr/bin/
   - mv artifacts-windows32/gksqt.exe Windows-i686/gr/bin/
-  - mv artifacts-windows32/grplot.exe Windows-i686/gr/bin/
-  - mv artifacts-windows32/grplot.man.md Windows-i686/gr/share/doc/grplot/
   - mv artifacts-windows32/platforms Windows-i686/gr/bin/
   - mv artifacts-windows32/fonts Windows-i686/gr/
   - mv artifacts-windows32/include Windows-i686/gr/

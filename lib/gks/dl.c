@@ -106,10 +106,10 @@ void printdl(char *d, int fctid)
         {
           switch (cur_fctid)
             {
-            case GRM_BEGIN_SELECTION:
+            case GKS_SET_BBOX_CALLBACK:
               printf("BEGIN SELECTION %d\n", ((int *)cur_pos)[0]);
               break;
-            case GRM_END_SELECTION:
+            case GKS_CANCEL_BBOX_CALLBACK:
               {
                 double *bbox = (double *)((int *)cur_pos + 1);
                 printf("END SELECTION %d with %f %f %f %f\n", ((int *)cur_pos)[0], bbox[0], bbox[1], bbox[2], bbox[3]);
@@ -385,7 +385,37 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
       COPY(f_arr_1, 6 * sizeof(double));
       break;
 
-    case 260: /* begin grm selection */
+    case 250: /* begin selection */
+
+      len = 2 * sizeof(int) + 2 * sizeof(int);
+      if (d->nbytes + len >= d->size) reallocate(d, len);
+
+      COPY(&len, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(i_arr, 2 * sizeof(int));
+      break;
+
+    case 251: /* end selection */
+
+      len = 2 * sizeof(int);
+      if (d->nbytes + len >= d->size) reallocate(d, len);
+
+      COPY(&len, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      break;
+
+    case 252: /* move selection */
+
+      len = 2 * sizeof(int) + 2 * sizeof(double);
+      if (d->nbytes + len >= d->size) reallocate(d, len);
+
+      COPY(&len, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(f_arr_1, sizeof(double));
+      COPY(f_arr_2, sizeof(double));
+      break;
+
+    case 260: /* set bbox callback */
 
       len = 3 * sizeof(int) + sizeof(void(*));
       if (d->nbytes + len >= d->size) reallocate(d, len);
@@ -398,7 +428,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
       COPY(&f_arr_1, sizeof(void(*)));
       break;
 
-    case 261: /* end grm selection */
+    case 261: /* cancel bbox callback */
 
       len = 2 * sizeof(int);
       if (d->nbytes + len >= d->size) reallocate(d, len);
@@ -495,14 +525,15 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
       RESOLVE(ia, int, sizeof(int));
       break;
 
-    case 260:                        /* begin grm selection */
+    case 260:                        /* set bbox callback */
       RESOLVE(ia, int, sizeof(int)); /* id */
       r1 = *((double **)&s[sp]);     /* callback function */
       sp += sizeof(double *);
       break;
 
-    case 27: /* set text font and precision */
-    case 34: /* set text alignment */
+    case 27:  /* set text font and precision */
+    case 34:  /* set text alignment */
+    case 250: /* begin selection */
       RESOLVE(ia, int, 2 * sizeof(int));
       break;
 
@@ -517,7 +548,8 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
       RESOLVE(r1, double, sizeof(double));
       break;
 
-    case 32: /* set character up vector */
+    case 32:  /* set character up vector */
+    case 252: /* move selection */
       RESOLVE(r1, double, sizeof(double));
       RESOLVE(r2, double, sizeof(double));
       break;
@@ -547,6 +579,9 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
 
     case 204: /* set coord xform */
       RESOLVE(r1, double, 6 * sizeof(double));
+      break;
+
+    case 251: /* end selection */
       break;
     }
 

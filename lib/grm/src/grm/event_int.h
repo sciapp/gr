@@ -56,6 +56,7 @@ err_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int widt
 err_t event_queue_enqueue_merge_end_event(event_queue_t *queue, const char *identificator);
 err_t event_queue_enqueue_request_event(event_queue_t *queue, const char *request_string);
 
+void event_queue_discard_all_of_type(event_queue_t *queue, grm_event_type_t type);
 
 #undef DECLARE_LIST_METHODS
 

@@ -30,6 +30,7 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsScene>
 #include <QWindow>
+#include <QCompleter>
 
 #include "grplot_widget.hxx"
 #include "util.hxx"
@@ -95,8 +96,64 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   bounding_logic = new Bounding_logic();
   current_selection = nullptr;
   amount_scrolled = 0;
-  treewidget = new TreeWidget();
+  treewidget = new TreeWidget(this);
   treewidget->hide();
+  selected_parent = nullptr;
+
+  combo_box_attr = QStringList{
+      "algorithm",
+      "colormap",
+      "font",
+      "font_precision",
+      "kind",
+      "line_spec",
+      "line_type",
+      "location",
+      "marginal_heatmap_kind",
+      "marker_type",
+      "model",
+      "norm",
+      "orientation",
+      "projection_type",
+      "resample_method",
+      "size_x_type",
+      "size_y_type",
+      "size_x_unit",
+      "size_y_unit",
+      "style",
+      "text_encoding",
+      "text_align_horizontal",
+      "text_align_vertical",
+      "tick_orientation",
+      "x_org_pos",
+      "y_org_pos",
+      "z_org_pos",
+  };
+  check_box_attr = QStringList{
+      "accelerate",
+      "active",
+      "adjust_x_lim",
+      "adjust_y_lim",
+      "adjust_z_lim",
+      "grplot",
+      "keep_aspect_ratio",
+      "keep_window",
+      "marginal_heatmap_side_plot",
+      "phi_flip",
+      "set_text_color_for_background",
+      "space",
+      "stairs",
+      "title_margin",
+      "x_flip",
+      "x_label_margin",
+      "x_log",
+      "y_flip",
+      "y_label_margin",
+      "y_line",
+      "y_log",
+      "z_flip",
+      "z_log",
+  };
 
 #ifdef _WIN32
   putenv("GKS_WSTYPE=381");
@@ -184,13 +241,13 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       if (grm_args_contains(args_, "error"))
         {
           error = 1;
-          fprintf(stderr, "Plot types are not compatible with errorbars. The menu got disabled\n");
+          fprintf(stderr, "Plot types are not compatible with error-bars. The menu got disabled\n");
         }
       if (strcmp(kind, "contour") == 0 || strcmp(kind, "heatmap") == 0 || strcmp(kind, "imshow") == 0 ||
-          strcmp(kind, "marginalheatmap") == 0 || strcmp(kind, "surface") == 0 || strcmp(kind, "wireframe") == 0 ||
+          strcmp(kind, "marginal_heatmap") == 0 || strcmp(kind, "surface") == 0 || strcmp(kind, "wireframe") == 0 ||
           strcmp(kind, "contourf") == 0)
         {
-          auto submenu = type->addMenu("&Marginalheatmap");
+          auto submenu = type->addMenu("&Marginal-heatmap");
 
           heatmapAct = new QAction(tr("&Heatmap"), this);
           connect(heatmapAct, &QAction::triggered, this, &GRPlotWidget::heatmap);
@@ -223,6 +280,11 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
           type->addAction(contourfAct);
           algo->addAction(sumAct);
           algo->addAction(maxAct);
+          algo->menuAction()->setVisible(false);
+          if (strcmp(kind, "marginal_heatmap") == 0)
+            {
+              algo->menuAction()->setVisible(true);
+            }
         }
       else if (strcmp(kind, "line") == 0 ||
                (strcmp(kind, "scatter") == 0 && !grm_args_values(args_, "z", "D", &z, &z_length)))
@@ -243,14 +305,14 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
           type->addAction(volumeAct);
           type->addAction(isosurfaceAct);
         }
-      else if (strcmp(kind, "plot3") == 0 || strcmp(kind, "trisurf") == 0 || strcmp(kind, "tricont") == 0 ||
+      else if (strcmp(kind, "plot3") == 0 || strcmp(kind, "trisurface") == 0 || strcmp(kind, "tricontour") == 0 ||
                strcmp(kind, "scatter3") == 0 || strcmp(kind, "scatter") == 0)
         {
           plot3Act = new QAction(tr("&Plot3"), this);
           connect(plot3Act, &QAction::triggered, this, &GRPlotWidget::plot3);
-          trisurfAct = new QAction(tr("&Trisurf"), this);
+          trisurfAct = new QAction(tr("&Trisurface"), this);
           connect(trisurfAct, &QAction::triggered, this, &GRPlotWidget::trisurf);
-          tricontAct = new QAction(tr("&Tricont"), this);
+          tricontAct = new QAction(tr("&Tricontour"), this);
           connect(tricontAct, &QAction::triggered, this, &GRPlotWidget::tricont);
           scatter3Act = new QAction(tr("&Scatter3"), this);
           connect(scatter3Act, &QAction::triggered, this, &GRPlotWidget::scatter3);
@@ -296,15 +358,23 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
     }
   if (strcmp(argv[1], "--test") != 0 && !test_commands_stream) menu->addMenu(export_menu);
 
-  if (getenv("GRPLOT_ENABLE_EDITOR"))
+  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
     {
+#if !defined(NO_LIBXML2)
+      schema_tree = grm_load_graphics_tree_schema();
+#else
+      schema_tree = nullptr;
+#endif
+      add_element_widget = new AddElementWidget(this);
+      add_element_widget->hide();
+
       editor_menu = new QMenu(tr("&Editor"));
-      editor_action = new QAction(tr("&Activate Editor"));
+      editor_action = new QAction(tr("&Enable Editorview"));
       editor_action->setCheckable(true);
       editor_menu->addAction(editor_action);
       QObject::connect(editor_action, SIGNAL(triggered()), this, SLOT(enable_editor_functions()));
 
-      auto file_menu = editor_menu->addMenu(tr("&File"));
+      file_menu = editor_menu->addMenu(tr("&XML-File"));
       save_file_action = new QAction("&Save Plot");
       save_file_action->setShortcut(Qt::CTRL | Qt::Key_S);
       file_menu->addAction(save_file_action);
@@ -315,18 +385,28 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       file_menu->addAction(open_file_action);
       QObject::connect(open_file_action, SIGNAL(triggered()), this, SLOT(open_file_slot()));
 
-      auto configuration_menu = editor_menu->addMenu(tr("&Show"));
+      configuration_menu = editor_menu->addMenu(tr("&Show"));
+      configuration_menu->menuAction()->setVisible(false);
       show_container_action = new QAction(tr("&GRM Container"));
       show_container_action->setCheckable(true);
       show_container_action->setShortcut(Qt::CTRL | Qt::Key_C);
+      show_container_action->setVisible(false);
       configuration_menu->addAction(show_container_action);
       QObject::connect(show_container_action, SIGNAL(triggered()), this, SLOT(show_container_slot()));
 
       show_bounding_boxes_action = new QAction(tr("&Bounding Boxes"));
       show_bounding_boxes_action->setCheckable(true);
       show_bounding_boxes_action->setShortcut(Qt::CTRL | Qt::Key_B);
+      show_bounding_boxes_action->setVisible(false);
       configuration_menu->addAction(show_bounding_boxes_action);
       QObject::connect(show_bounding_boxes_action, SIGNAL(triggered()), this, SLOT(show_bounding_boxes_slot()));
+
+      add_element_action = new QAction("&Add Element");
+      add_element_action->setCheckable(true);
+      add_element_action->setShortcut(Qt::CTRL | Qt::Key_Plus);
+      editor_menu->addAction(add_element_action);
+      QObject::connect(add_element_action, SIGNAL(triggered()), this, SLOT(add_element_slot()));
+      add_element_action->setVisible(false);
 
       menu->addMenu(editor_menu);
     }
@@ -336,6 +416,734 @@ GRPlotWidget::~GRPlotWidget()
 {
   grm_args_delete(args_);
   grm_finalize();
+}
+
+void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name,
+                                            QWidget **lineEdit)
+{
+  QStringList size_unit_list, colormap_list, font_list, font_precision_list, line_type_list, location_list,
+      marker_type_list, text_align_horizontal_list, text_align_vertical_list, algorithm_volume_list, model_list;
+  auto size_unit_vec = getSizeUnits();
+  size_unit_list.reserve((int)size_unit_vec.size());
+  for (auto &i : size_unit_vec)
+    {
+      size_unit_list.push_back(i.c_str());
+    }
+  auto colormap_vec = getColormaps();
+  colormap_list.reserve((int)colormap_vec.size());
+  for (auto &i : colormap_vec)
+    {
+      colormap_list.push_back(i.c_str());
+    }
+  auto font_vec = getFonts();
+  font_list.reserve((int)font_vec.size());
+  for (auto &i : font_vec)
+    {
+      font_list.push_back(i.c_str());
+    }
+  auto font_precision_vec = getFontPrecisions();
+  font_precision_list.reserve((int)font_precision_vec.size());
+  for (auto &i : font_precision_vec)
+    {
+      font_precision_list.push_back(i.c_str());
+    }
+  auto line_type_vec = getLineTypes();
+  line_type_list.reserve((int)line_type_vec.size());
+  for (auto &i : line_type_vec)
+    {
+      line_type_list.push_back(i.c_str());
+    }
+  auto location_vec = getLocations();
+  location_list.reserve((int)location_vec.size());
+  for (auto &i : location_vec)
+    {
+      location_list.push_back(i.c_str());
+    }
+  auto marker_type_vec = getMarkerTypes();
+  marker_type_list.reserve((int)marker_type_vec.size());
+  for (auto &i : marker_type_vec)
+    {
+      marker_type_list.push_back(i.c_str());
+    }
+  auto text_align_horizontal_vec = getTextAlignHorizontal();
+  text_align_horizontal_list.reserve((int)text_align_horizontal_vec.size());
+  for (auto &i : text_align_horizontal_vec)
+    {
+      text_align_horizontal_list.push_back(i.c_str());
+    }
+  auto text_align_vertical_vec = getTextAlignVertical();
+  text_align_vertical_list.reserve((int)text_align_vertical_vec.size());
+  for (auto &i : text_align_vertical_vec)
+    {
+      text_align_vertical_list.push_back(i.c_str());
+    }
+  auto algorithm_volume_vec = getAlgorithm();
+  algorithm_volume_list.reserve((int)algorithm_volume_vec.size());
+  for (auto &i : algorithm_volume_vec)
+    {
+      algorithm_volume_list.push_back(i.c_str());
+    }
+  auto model_vec = getModel();
+  model_list.reserve((int)model_vec.size());
+  for (auto &i : model_vec)
+    {
+      model_list.push_back(i.c_str());
+    }
+
+  QStringList orientation_list{
+      "vertical",
+      "horizontal",
+  };
+  QStringList algorithm_marginal_heatmap_list{
+      "sum",
+      "max",
+  };
+  QStringList marginal_heatmap_kind_list{
+      "all",
+      "line",
+  };
+  QStringList norm_list{
+      "count", "countdensity", "pdf", "probability", "cumcount", "cdf",
+  };
+  QStringList projection_type_list{
+      "default",
+      "orthographic",
+      "perspective",
+  };
+  QStringList resample_method_list{
+      "default",
+      "nearest",
+      "linear",
+      "lanczos",
+  };
+  QStringList size_type_list{
+      "double",
+      "int",
+  };
+  QStringList style_list{
+      "default",
+      "lined",
+      "stacked",
+  };
+  QStringList text_encoding_list{
+      "latin1",
+      "utf8",
+  };
+  QStringList line_spec_list{
+      "-", ":", ".", "+", "o", "*", "x", "s", "d", "^", "v", "<", ">", "p", "h", "r", "g", "b", "c", "m", "y", "k", "w",
+  };
+  QStringList org_pos_list{
+      "low",
+      "high",
+  };
+  QStringList tick_orientation_list{
+      "up",
+      "down",
+  };
+  static std::map<std::string, QStringList> attributeToList{
+      {"size_x_unit", size_unit_list},
+      {"size_y_unit", size_unit_list},
+      {"colormap", colormap_list},
+      {"font", font_list},
+      {"font_precision", font_precision_list},
+      {"line_type", line_type_list},
+      {"location", location_list},
+      {"marker_type", marker_type_list},
+      {"text_align_vertical", text_align_vertical_list},
+      {"text_align_horizontal", text_align_horizontal_list},
+      {"orientation", orientation_list},
+      {"marginal_heatmap_kind", marginal_heatmap_kind_list},
+      {"model", model_list},
+      {"norm", norm_list},
+      {"projection_type", projection_type_list},
+      {"resample_method", resample_method_list},
+      {"size_x_type", size_type_list},
+      {"size_y_type", size_type_list},
+      {"style", style_list},
+      {"text_encoding", text_encoding_list},
+      {"line_spec", line_spec_list},
+      {"x_org_pos", org_pos_list},
+      {"y_org_pos", org_pos_list},
+      {"z_org_pos", org_pos_list},
+      {"tick_orientation", tick_orientation_list},
+  };
+
+  ((QComboBox *)*lineEdit)->setEditable(true);
+  if (attributeToList.count(cur_attr_name))
+    {
+      QStringList list = attributeToList[cur_attr_name];
+      for (const auto &elem : list)
+        {
+          ((QComboBox *)*lineEdit)->addItem(elem.toStdString().c_str());
+        }
+      auto *completer = new QCompleter(list, this);
+      completer->setCaseSensitivity(Qt::CaseInsensitive);
+      ((QComboBox *)*lineEdit)->setCompleter(completer);
+    }
+  else if (cur_attr_name == "algorithm" && cur_elem_name == "series_volume")
+    {
+      for (const auto &elem : algorithm_volume_list)
+        {
+          ((QComboBox *)*lineEdit)->addItem(elem.toStdString().c_str());
+        }
+      auto *completer = new QCompleter(algorithm_volume_list, this);
+      completer->setCaseSensitivity(Qt::CaseInsensitive);
+      ((QComboBox *)*lineEdit)->setCompleter(completer);
+    }
+  else if (cur_attr_name == "algorithm" && cur_elem_name == "series_marginal_heatmap")
+    {
+      for (const auto &elem : algorithm_marginal_heatmap_list)
+        {
+          ((QComboBox *)*lineEdit)->addItem(elem.toStdString().c_str());
+        }
+      auto *completer = new QCompleter(algorithm_marginal_heatmap_list, this);
+      completer->setCaseSensitivity(Qt::CaseInsensitive);
+      ((QComboBox *)*lineEdit)->setCompleter(completer);
+    }
+  else if (cur_attr_name == "kind")
+    {
+      QStringList list;
+      QStringList line_group = {"line", "scatter"};
+      QStringList heatmap_group = {"contour",          "contourf", "heatmap",  "imshow",
+                                   "marginal_heatmap", "surface",  "wireframe"};
+      QStringList isosurface_group = {"isosurface", "volume"};
+      QStringList plot3_group = {"plot3", "scatter", "scatter3", "tricontour", "trisurface"};
+      QStringList barplot_group = {"barplot", "hist", "stem", "stairs"};
+      QStringList hexbin_group = {"hexbin", "shade"};
+      QStringList other_kinds = {"pie", "polar_histogram", "polar", "polar_heatmap", "polar_histogram", "quiver"};
+      std::string kind;
+
+      if (util::startsWith(cur_elem_name, "series_")) kind = cur_elem_name.erase(0, 7);
+
+      if (heatmap_group.contains(kind.c_str()))
+        {
+          list = heatmap_group;
+        }
+      else if (kind == "line" || kind == "scatter")
+        {
+          list = line_group;
+        }
+      else if (kind == "isosurface" || kind == "volume")
+        {
+          list = isosurface_group;
+        }
+      else if (plot3_group.contains(kind.c_str()))
+        {
+          list = plot3_group;
+        }
+      else if (barplot_group.contains(kind.c_str()))
+        {
+          list = barplot_group;
+        }
+      else if (other_kinds.contains(kind.c_str()))
+        {
+          list.push_back(kind.c_str());
+        }
+      else if (kind == "hexbin" || kind == "shade")
+        {
+          list = hexbin_group;
+        }
+
+      for (const auto &elem : list)
+        {
+          ((QComboBox *)*lineEdit)->addItem(elem.toStdString().c_str());
+        }
+      auto *completer = new QCompleter(list, this);
+      completer->setCaseSensitivity(Qt::CaseInsensitive);
+      ((QComboBox *)*lineEdit)->setCompleter(completer);
+    }
+}
+
+void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name,
+                                                    QWidget **lineEdit)
+{
+  if (cur_attr_name == "kind")
+    cur_elem_name = "series_" + static_cast<std::string>(current_selection->get_ref()->getAttribute(cur_attr_name));
+  attributeComboBoxHandler(cur_attr_name, cur_elem_name, lineEdit);
+  ((QComboBox *)*lineEdit)->addItem(""); // entry to remove the attribute
+
+  auto current_text = static_cast<std::string>(current_selection->get_ref()->getAttribute(cur_attr_name));
+  if (cur_attr_name == "text_align_vertical" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          textAlignVerticalIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "text_align_horizontal" &&
+           current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          textAlignHorizontalIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "algorithm" && current_selection->get_ref()->localName() == "series_volume" &&
+           current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text = algorithmIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "model" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text = modelIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "projection_type" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          projectionTypeIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "location" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text = locationIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "colormap" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text = colormapIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "text_encoding" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          textEncodingIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "marker_type" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text = markerTypeIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "font" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text = fontIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "font_precision" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          fontPrecisionIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "line_type" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text = lineTypeIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "tick_orientation" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          tickOrientationIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  int index = ((QComboBox *)*lineEdit)->findText(current_text.c_str());
+  if (index == -1) index += ((QComboBox *)*lineEdit)->count();
+  ((QComboBox *)*lineEdit)->setCurrentIndex(index);
+}
+
+void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::shared_ptr<GRM::Element> element,
+                                           const std::string &value, const std::string &label)
+{
+  if (attr_type == "xs:string" || (attr_type == "strint" && !util::is_digits(value)))
+    {
+      element->setAttribute(label, value);
+    }
+  else if (attr_type == "xs:integer" || (attr_type == "strint" && util::is_digits(value)))
+    {
+      if (label == "text_align_vertical")
+        {
+          element->setAttribute(label, textAlignVerticalStringToInt(value));
+        }
+      else if (label == "text_align_horizontal")
+        {
+          element->setAttribute(label, textAlignHorizontalStringToInt(value));
+        }
+      else if (label == "algorithm")
+        {
+          element->setAttribute(label, algorithmStringToInt(value));
+        }
+      else if (label == "model")
+        {
+          element->setAttribute(label, modelStringToInt(value));
+        }
+      else if (label == "projection_type")
+        {
+          element->setAttribute(label, projectionTypeStringToInt(value));
+        }
+      else if (label == "location")
+        {
+          element->setAttribute(label, locationStringToInt(value));
+        }
+      else if (label == "colormap")
+        {
+          element->setAttribute(label, colormapStringToInt(value));
+        }
+      else if (label == "text_encoding")
+        {
+          element->setAttribute(label, textEncodingStringToInt(value));
+        }
+      else if (label == "marker_type")
+        {
+          element->setAttribute(label, markerTypeStringToInt(value));
+        }
+      else if (label == "font")
+        {
+          element->setAttribute(label, fontStringToInt(value));
+        }
+      else if (label == "font_precision")
+        {
+          element->setAttribute(label, fontPrecisionStringToInt(value));
+        }
+      else if (label == "line_type")
+        {
+          element->setAttribute(label, lineTypeStringToInt(value));
+        }
+      else if (label == "tick_orientation")
+        {
+          element->setAttribute(label, tickOrientationStringToInt(value));
+        }
+      else
+        {
+          element->setAttribute(label, std::stoi(value));
+        }
+    }
+}
+
+void GRPlotWidget::AttributeEditEvent()
+{
+  if (current_selection == nullptr)
+    {
+      return;
+    }
+  std::string currently_clicked_name = current_selection->get_ref()->localName();
+
+  QDialog dialog(this);
+  QString title("Selected: ");
+  title.append(currently_clicked_name.c_str());
+  dialog.setWindowTitle(title);
+  auto changeParametersLabel = new QLabel("Change Parameters:");
+  changeParametersLabel->setStyleSheet("font-weight: bold");
+  auto form = new QFormLayout;
+  form->addRow(changeParametersLabel);
+
+  QList<QString> labels;
+  QList<QWidget *> fields;
+  QWidget *lineEdit;
+  std::unordered_map<std::string, std::string> attr_type;
+
+  for (const auto &cur_attr_name : current_selection->get_ref()->getAttributeNames())
+    {
+      if (util::startsWith(cur_attr_name, "_"))
+        {
+          continue;
+        }
+      QString tooltipString = GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
+      tooltipString.append(".  Default: ");
+      tooltipString.append(GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
+
+      if (combo_box_attr.contains(cur_attr_name.c_str()))
+        {
+          lineEdit = new QComboBox(&dialog);
+          advancedAttributeComboBoxHandler(cur_attr_name, current_selection->get_ref()->localName(), &lineEdit);
+          if (current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+            {
+              attr_type.emplace(cur_attr_name, "xs:integer");
+            }
+          else if (current_selection->get_ref()->getAttribute(cur_attr_name).isDouble())
+            {
+              attr_type.emplace(cur_attr_name, "xs:double");
+            }
+          else
+            {
+              attr_type.emplace(cur_attr_name, "xs:string");
+            }
+          ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
+        }
+      else if (check_box_attr.contains(cur_attr_name.c_str()))
+        {
+          lineEdit = new QCheckBox(&dialog);
+          ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
+          ((QCheckBox *)lineEdit)
+              ->setChecked(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)) == 1);
+        }
+      else
+        {
+          if (current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+            {
+              attr_type.emplace(cur_attr_name, "xs:integer");
+            }
+          else if (current_selection->get_ref()->getAttribute(cur_attr_name).isDouble())
+            {
+              attr_type.emplace(cur_attr_name, "xs:double");
+            }
+          else
+            {
+              attr_type.emplace(cur_attr_name, "xs:string");
+            }
+          lineEdit = new QLineEdit(&dialog);
+          ((QLineEdit *)lineEdit)
+              ->setText(static_cast<std::string>(current_selection->get_ref()->getAttribute(cur_attr_name)).c_str());
+          ((QLineEdit *)lineEdit)->setToolTip(tooltipString);
+        }
+      QString text_label = QString(cur_attr_name.c_str());
+      form->addRow(text_label, lineEdit);
+
+      labels << text_label;
+      fields << lineEdit;
+    }
+
+  if (schema_tree != nullptr)
+    {
+      std::shared_ptr<GRM::Element> element;
+      auto selections = schema_tree->querySelectorsAll("[name=" + currently_clicked_name + "]");
+      for (const auto &selection : selections)
+        {
+          if (selection->localName() == "xs:element") element = selection->children()[0];
+        }
+
+      /* iterate through complextype elements */
+      for (const auto &child : element->children())
+        {
+          if (child->localName() == "xs:attribute")
+            {
+              auto attr_name = static_cast<std::string>(child->getAttribute("name"));
+              if (!current_selection->get_ref()->hasAttribute(attr_name))
+                {
+                  /* attributes of an element which aren't already in the tree getting added with red text color
+                   */
+                  auto type_name = static_cast<std::string>(child->getAttribute("type"));
+                  attr_type.emplace(attr_name, type_name);
+                  QString tooltipString =
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), attr_name)[1].c_str();
+                  tooltipString.append(".  Default: ");
+                  tooltipString.append(
+                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), attr_name)[0].c_str());
+
+                  if (combo_box_attr.contains(attr_name.c_str()))
+                    {
+                      lineEdit = new QComboBox(&dialog);
+                      advancedAttributeComboBoxHandler(attr_name, current_selection->get_ref()->localName(), &lineEdit);
+                      ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
+                    }
+                  else if (check_box_attr.contains(attr_name.c_str()))
+                    {
+                      lineEdit = new QCheckBox(&dialog);
+                      ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
+                      ((QCheckBox *)lineEdit)
+                          ->setChecked(static_cast<int>(current_selection->get_ref()->getAttribute(attr_name)) == 1);
+                    }
+                  else
+                    {
+                      lineEdit = new QLineEdit(&dialog);
+                      ((QLineEdit *)lineEdit)->setToolTip(tooltipString);
+                      ((QLineEdit *)lineEdit)->setText("");
+                    }
+                  QString text_label = QString("<span style='color:#ff0000;'>%1</span>").arg(attr_name.c_str());
+                  form->addRow(text_label, lineEdit);
+
+                  labels << text_label;
+                  fields << lineEdit;
+                }
+            }
+          else if (child->localName() == "xs:attributegroup")
+            {
+              /* when an element contains one or more attributegroups all attributes from these groups must be
+               * added */
+              std::shared_ptr<GRM::Element> group;
+              auto group_name = static_cast<std::string>(child->getAttribute("ref"));
+
+              if (group_name != "colorrep")
+                {
+                  auto attr_group_selections = schema_tree->querySelectorsAll("[name=" + group_name + "]");
+                  for (const auto &selection : attr_group_selections)
+                    {
+                      if (selection->localName() == "xs:attributegroup") group = selection;
+                    }
+
+                  /* iterate through attribute elements */
+                  for (const auto &childchild : group->children())
+                    {
+                      if (childchild->localName() == "xs:attribute")
+                        {
+                          auto attr_name = static_cast<std::string>(childchild->getAttribute("name"));
+                          if (!current_selection->get_ref()->hasAttribute(attr_name))
+                            {
+                              /* attributes of an element which aren't already in the tree getting added with
+                               * red text color */
+                              auto type_name = static_cast<std::string>(childchild->getAttribute("type"));
+                              attr_type.emplace(attr_name, type_name);
+                              QString tooltipString =
+                                  GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), attr_name)[1].c_str();
+                              tooltipString.append(".  Default: ");
+                              tooltipString.append(
+                                  GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), attr_name)[0]
+                                      .c_str());
+
+                              if (combo_box_attr.contains(attr_name.c_str()))
+                                {
+                                  lineEdit = new QComboBox(&dialog);
+                                  advancedAttributeComboBoxHandler(attr_name, current_selection->get_ref()->localName(),
+                                                                   &lineEdit);
+                                  ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
+                                }
+                              else if (check_box_attr.contains(attr_name.c_str()))
+                                {
+                                  lineEdit = new QCheckBox(&dialog);
+                                  ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
+                                  ((QCheckBox *)lineEdit)
+                                      ->setChecked(
+                                          static_cast<int>(current_selection->get_ref()->getAttribute(attr_name)) == 1);
+                                }
+                              else
+                                {
+                                  lineEdit = new QLineEdit(&dialog);
+                                  ((QLineEdit *)lineEdit)->setToolTip(tooltipString);
+                                  ((QLineEdit *)lineEdit)->setText("");
+                                }
+                              QString text_label =
+                                  QString("<span style='color:#ff0000;'>%1</span>").arg(attr_name.c_str());
+                              form->addRow(text_label, lineEdit);
+
+                              labels << text_label;
+                              fields << lineEdit;
+                            }
+                        }
+                    }
+                }
+              else
+                {
+                  /* special case for colorrep cause there are way to many attributes inside the attributegroup
+                   */
+                  lineEdit = new QLineEdit(&dialog);
+                  ((QLineEdit *)lineEdit)->setText("");
+                  QString text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("Colorrep-index");
+                  form->addRow(text_label, lineEdit);
+
+                  attr_type.emplace("Colorrep-index", "xs:string");
+                  labels << text_label;
+                  fields << lineEdit;
+
+                  lineEdit = new QLineEdit(&dialog);
+                  ((QLineEdit *)lineEdit)->setText("");
+                  text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("Colorrep-value");
+                  form->addRow(text_label, lineEdit);
+
+                  attr_type.emplace("Colorrep-value", "xs:string");
+                  labels << text_label;
+                  fields << lineEdit;
+                }
+            }
+        }
+    }
+
+  QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
+  form->addRow(&buttonBox);
+  QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+  QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+  auto scrollAreaContent = new QWidget;
+  scrollAreaContent->setLayout(form);
+  auto scrollArea = new QScrollArea;
+  scrollArea = new QScrollArea;
+  scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+  scrollArea->setWidgetResizable(true);
+  scrollArea->setWidget(scrollAreaContent);
+
+  auto groupBoxLayout = new QVBoxLayout;
+  groupBoxLayout->addWidget(scrollArea);
+  dialog.setLayout(groupBoxLayout);
+
+  if (dialog.exec() == QDialog::Accepted)
+    {
+      for (int i = 0; i < labels.count(); i++)
+        {
+          qDebug() << typeid(fields[i]).name();
+          auto &field = *fields[i]; // because typeid(*fields[i]) is bad :(
+          if (util::startsWith(labels[i].toStdString(), "<span style='color:#ff0000;'>") &&
+              util::endsWith(labels[i].toStdString(), "</span>"))
+            {
+              labels[i].remove(0, 29);
+              labels[i].remove(labels[i].size() - 7, 7);
+            }
+          std::string attr_name = labels[i].toStdString();
+          if (typeid(field) == typeid(QLineEdit) && ((QLineEdit *)fields[i])->isModified())
+            {
+              std::string name = std::string(current_selection->get_ref()->getAttribute("name"));
+              if (((QLineEdit *)fields[i])->text().toStdString().empty())
+                {
+                  /* remove attributes from tree when the value got removed */
+                  current_selection->get_ref()->removeAttribute(labels[i].toStdString());
+                }
+              else
+                {
+                  if (labels[i].toStdString() == "text" && (name == "title" || name == "xlabel" || name == "ylabel"))
+                    {
+                      const std::string value = ((QLineEdit *)fields[i])->text().toStdString();
+                      if (attr_type[attr_name] == "xs:string" ||
+                          (attr_type[attr_name] == "strint" && !util::is_digits(value)))
+                        {
+                          current_selection->get_ref()->parentElement()->setAttribute(name, value);
+                        }
+                      else if (attr_type[attr_name] == "xs:double")
+                        {
+                          current_selection->get_ref()->parentElement()->setAttribute(labels[i].toStdString(),
+                                                                                      std::stod(value));
+                        }
+                      else if (attr_type[attr_name] == "xs:integer" ||
+                               (attr_type[attr_name] == "strint" && util::is_digits(value)))
+                        {
+                          current_selection->get_ref()->parentElement()->setAttribute(labels[i].toStdString(),
+                                                                                      std::stoi(value));
+                        }
+                    }
+                  if (labels[i].toStdString() == "Colorrep-index")
+                    {
+                      /* special case for colorrep attribute */
+                      current_selection->get_ref()->setAttribute("colorrep." +
+                                                                     ((QLineEdit *)fields[i])->text().toStdString(),
+                                                                 ((QLineEdit *)fields[i + 1])->text().toStdString());
+                    }
+                  else if (labels[i].toStdString() != "Colorrep-value")
+                    {
+                      const std::string value = ((QLineEdit *)fields[i])->text().toStdString();
+                      if (attr_type[attr_name] == "xs:string" ||
+                          (attr_type[attr_name] == "strint" && !util::is_digits(value)))
+                        {
+                          current_selection->get_ref()->setAttribute(labels[i].toStdString(), value);
+                        }
+                      else if (attr_type[attr_name] == "xs:double")
+                        {
+                          current_selection->get_ref()->setAttribute(labels[i].toStdString(), std::stod(value));
+                        }
+                      else if (attr_type[attr_name] == "xs:integer" ||
+                               (attr_type[attr_name] == "strint" && util::is_digits(value)))
+                        {
+                          current_selection->get_ref()->setAttribute(labels[i].toStdString(), std::stoi(value));
+                        }
+                    }
+                }
+            }
+          else if (typeid(field) == typeid(QComboBox))
+            {
+              int index = ((QComboBox *)fields[i])->currentIndex();
+              if (((QComboBox *)fields[i])->itemText(index).toStdString().empty())
+                {
+                  /* remove attributes from tree when the value got removed */
+                  current_selection->get_ref()->removeAttribute(labels[i].toStdString());
+                }
+              else
+                {
+                  const std::string value = ((QComboBox *)fields[i])->itemText(index).toStdString();
+                  attributeSetForComboBox(attr_type[attr_name], current_selection->get_ref(), value,
+                                          (labels[i]).toStdString());
+                }
+            }
+          else if (typeid(field) == typeid(QCheckBox))
+            {
+              current_selection->get_ref()->setAttribute(labels[i].toStdString(),
+                                                         ((QCheckBox *)fields[i])->isChecked());
+            }
+        }
+      current_selection = nullptr;
+      mouse_move_selection = nullptr;
+      amount_scrolled = 0;
+      tree_update = true;
+      clicked.clear();
+      std::cerr << GRM::toXML(grm_get_document_root()) << std::endl;
+      reset_pixmap();
+    }
+  else
+    {
+      tree_update = false;
+    }
 }
 
 void GRPlotWidget::draw()
@@ -360,9 +1168,10 @@ void GRPlotWidget::draw()
     }
 }
 
-void GRPlotWidget::redraw()
+void GRPlotWidget::redraw(bool update_tree)
 {
   redraw_pixmap = true;
+  tree_update = update_tree;
 
   update();
 }
@@ -471,7 +1280,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
       painter.end();
       redraw_pixmap = false;
 
-      treewidget->updateData(grm_get_document_root());
+      if (tree_update) treewidget->updateData(grm_get_document_root());
     }
 
   painter.begin(paint_device);
@@ -535,7 +1344,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
               label.setDefaultStyleSheet(QString::fromStdString(tooltipStyle));
               label.setHtml(QString::fromStdString(info));
               grm_args_values(args_, "kind", "s", &kind);
-              if (strcmp(kind, "heatmap") == 0 || strcmp(kind, "marginalheatmap") == 0)
+              if (strcmp(kind, "heatmap") == 0 || strcmp(kind, "marginal_heatmap") == 0)
                 {
                   background.setAlpha(224);
                 }
@@ -586,6 +1395,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
         {
           current_selection = nullptr;
           mouse_move_selection = nullptr;
+          treewidget->updateData(grm_get_document_root());
           update();
         }
       else if (event->key() == Qt::Key_Space)
@@ -594,154 +1404,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
         }
       else if (event->key() == Qt::Key_Return)
         {
-          if (current_selection == nullptr)
-            {
-              return;
-            }
-          std::string currently_clicked_name = current_selection->get_ref()->localName();
-
-          QDialog dialog(this);
-          QFormLayout form(&dialog);
-          QString title("Selected: ");
-          title.append(currently_clicked_name.c_str());
-          dialog.setWindowTitle(title);
-          auto changeParametersLabel = new QLabel("Change Parameters:");
-          changeParametersLabel->setStyleSheet("font-weight: bold");
-          form.addRow(changeParametersLabel);
-
-          QList<QString> labels;
-          QList<QWidget *> fields;
-          QWidget *lineEdit;
-
-          for (const auto &cur_attr_name : current_selection->get_ref()->getAttributeNames())
-            {
-              if (cur_attr_name == "_bbox_id" || cur_attr_name == "_bbox_xmin" || cur_attr_name == "_bbox_xmax" ||
-                  cur_attr_name == "_bbox_ymin" || cur_attr_name == "_bbox_ymax")
-                {
-                  continue;
-                }
-              if (cur_attr_name == "render_method")
-                {
-                  lineEdit = new QComboBox(&dialog);
-                  QString tooltipString =
-                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
-                  tooltipString.append(" Default: ");
-                  tooltipString.append(
-                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
-                  ((QComboBox *)lineEdit)->setToolTip(tooltipString);
-                  ((QComboBox *)lineEdit)->addItem("gr_text");     // 0
-                  ((QComboBox *)lineEdit)->addItem("gr_mathtext"); // 1
-                  ((QComboBox *)lineEdit)->addItem("gr_textext");  // 2
-                  ((QComboBox *)lineEdit)
-                      ->setCurrentIndex(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
-                }
-              else if (cur_attr_name == "textalign_vertical")
-                {
-                  lineEdit = new QComboBox(&dialog);
-                  QString tooltipString =
-                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
-                  tooltipString.append(" Default: ");
-                  tooltipString.append(
-                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
-                  ((QComboBox *)lineEdit)->setToolTip(tooltipString);
-                  ((QComboBox *)lineEdit)->addItem("normal"); // 0
-                  ((QComboBox *)lineEdit)->addItem("top");    // 1
-                  ((QComboBox *)lineEdit)->addItem("cap");    // 2
-                  ((QComboBox *)lineEdit)->addItem("half");   // 3
-                  ((QComboBox *)lineEdit)->addItem("base");   // 4
-                  ((QComboBox *)lineEdit)->addItem("bottom"); // 5
-                  ((QComboBox *)lineEdit)
-                      ->setCurrentIndex(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
-                }
-              else if (cur_attr_name == "textalign_horizontal")
-                {
-                  lineEdit = new QComboBox(&dialog);
-                  QString tooltipString =
-                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
-                  tooltipString.append(" Default: ");
-                  tooltipString.append(
-                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
-                  ((QComboBox *)lineEdit)->setToolTip(tooltipString);
-                  ((QComboBox *)lineEdit)->addItem("normal"); // 0
-                  ((QComboBox *)lineEdit)->addItem("left");   // 1
-                  ((QComboBox *)lineEdit)->addItem("center"); // 2
-                  ((QComboBox *)lineEdit)->addItem("right");  // 3
-                  ((QComboBox *)lineEdit)
-                      ->setCurrentIndex(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
-                }
-              else if (cur_attr_name == "textalign")
-                {
-                  lineEdit = new QCheckBox(&dialog);
-                  QString tooltipString =
-                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
-                  tooltipString.append(" Default: ");
-                  tooltipString.append(
-                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
-                  ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
-                  ((QCheckBox *)lineEdit)
-                      ->setChecked(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)) == 1);
-                }
-              else
-                {
-                  lineEdit = new QLineEdit(&dialog);
-                  ((QLineEdit *)lineEdit)
-                      ->setText(
-                          static_cast<std::string>(current_selection->get_ref()->getAttribute(cur_attr_name)).c_str());
-                  QString tooltipString =
-                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
-                  tooltipString.append(" Default: ");
-                  tooltipString.append(
-                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
-                  ((QLineEdit *)lineEdit)->setToolTip(tooltipString);
-                }
-              QString label = QString(cur_attr_name.c_str());
-              form.addRow(label, lineEdit);
-
-              labels << label;
-              fields << lineEdit;
-            }
-
-          QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
-          form.addRow(&buttonBox);
-          QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
-          QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
-
-          if (dialog.exec() == QDialog::Accepted)
-            {
-              for (int i = 0; i < labels.count(); i++)
-                {
-                  qDebug() << typeid(fields[i]).name();
-                  auto &field = *fields[i]; // because typeid(*fields[i]) is bad :(
-                  if (typeid(field) == typeid(QLineEdit))
-                    {
-                      std::string name = std::string(current_selection->get_ref()->getAttribute("name"));
-                      if (labels[i].toStdString() == "text" &&
-                          (name == "title" || name == "xlabel" || name == "ylabel"))
-                        {
-                          current_selection->get_ref()->parentElement()->setAttribute(
-                              name, ((QLineEdit *)fields[i])->text().toStdString());
-                        }
-                      current_selection->get_ref()->setAttribute(labels[i].toStdString(),
-                                                                 ((QLineEdit *)fields[i])->text().toStdString());
-                    }
-                  else if (typeid(field) == typeid(QComboBox))
-                    {
-                      current_selection->get_ref()->setAttribute(labels[i].toStdString(),
-                                                                 ((QComboBox *)fields[i])->currentIndex());
-                    }
-                  else if (typeid(field) == typeid(QCheckBox))
-                    {
-                      current_selection->get_ref()->setAttribute(labels[i].toStdString(),
-                                                                 ((QCheckBox *)fields[i])->isChecked());
-                    }
-                }
-              current_selection = nullptr;
-              mouse_move_selection = nullptr;
-              amount_scrolled = 0;
-              clicked.clear();
-              std::cerr << GRM::toXML(grm_get_document_root()) << std::endl;
-              reset_pixmap();
-            }
+          AttributeEditEvent();
         }
       else if (event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace)
         {
@@ -750,23 +1413,59 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
               return;
             }
           amount_scrolled = 0;
-          // to remove title, xlabel and ylabel from axis Node
-          if (current_selection->get_ref()->parentElement()->hasAttribute(
-                  (std::string)current_selection->get_ref()->getAttribute("name")))
+          // to remove y_line, title, xlabel and ylabel from axis Node
+          auto elem_name = (std::string)current_selection->get_ref()->getAttribute("name");
+          if (current_selection->get_ref()->parentElement()->hasAttribute(elem_name))
             {
-              current_selection->get_ref()->parentElement()->removeAttribute(
-                  (std::string)current_selection->get_ref()->getAttribute("name"));
+              if (elem_name == "y_line")
+                {
+                  current_selection->get_ref()->parentElement()->setAttribute(elem_name, false);
+                }
+              else
+                {
+                  current_selection->get_ref()->parentElement()->removeAttribute(elem_name);
+                }
             }
           auto parent = current_selection->get_ref()->parentElement();
           while (parent != nullptr && parent->localName() != "root" && parent->childElementCount() <= 1)
             {
               auto tmp_parent = parent->parentElement();
+              // to remove x_tick_labels, y_tick_labels from coordinate_system
+              elem_name = (std::string)parent->getAttribute("name");
+              if (tmp_parent->hasAttribute(elem_name)) tmp_parent->removeAttribute(elem_name);
               parent->remove();
               parent = tmp_parent;
             }
           current_selection->get_ref()->remove();
+          // to prevent recreation of the tree a new flag is introduced
+          if (parent->localName() == "root" && !parent->hasChildNodes())
+            parent->setAttribute("_removed_children", true);
           mouse_move_selection = nullptr;
           reset_pixmap();
+        }
+      else if (event->key() == Qt::Key_Shift)
+        {
+          if (!clicked.empty() && current_selection != nullptr)
+            {
+              for (int i = 0; i < clicked.size(); i++)
+                {
+                  if (clicked[i].get_id() == current_selection->get_id())
+                    {
+                      if (i + 1 < clicked.size())
+                        {
+                          current_selection = &clicked[i + 1];
+                          break;
+                        }
+                      else
+                        {
+                          current_selection = &clicked[i + 1 - clicked.size()];
+                          break;
+                        }
+                    }
+                }
+            }
+          treewidget->updateData(grm_get_document_root());
+          treewidget->selectItem(current_selection->get_ref());
         }
     }
   else
@@ -785,11 +1484,6 @@ void GRPlotWidget::keyReleaseEvent(QKeyEvent *event)
 
 void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
 {
-  const char *kind;
-  if (!args_)
-    {
-      return;
-    }
   amount_scrolled = 0;
 
   if (enable_editor)
@@ -836,10 +1530,11 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
         }
       else
         {
+          const char *kind;
           collectTooltips();
-          if (grm_args_values(args_, "kind", "s", &kind))
+          if (args_ && grm_args_values(args_, "kind", "s", &kind))
             {
-              if (strcmp(kind, "marginalheatmap") == 0)
+              if (strcmp(kind, "marginal_heatmap") == 0)
                 {
                   grm_args_t *input_args;
                   input_args = grm_args_new();
@@ -879,6 +1574,7 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
             {
               clicked.clear();
               current_selection = nullptr;
+              treewidget->updateData(grm_get_document_root());
               update();
               return;
             }
@@ -887,6 +1583,8 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
               clicked = cur_clicked;
             }
           current_selection = &clicked[0];
+          treewidget->updateData(grm_get_document_root());
+          treewidget->selectItem(current_selection->get_ref());
           mouse_move_selection = nullptr;
         }
     }
@@ -926,14 +1624,23 @@ void GRPlotWidget::resizeEvent(QResizeEvent *event)
   grm_args_push(args_, "size", "dd", (double)event->size().width(), (double)event->size().height());
   grm_merge_hold(args_);
 
+  auto root = grm_get_document_root();
+  auto figure = root->querySelectors("[active=1]");
+  if (figure != nullptr)
+    {
+      figure->setAttribute("size_x", (double)event->size().width());
+      figure->setAttribute("size_y", (double)event->size().height());
+    }
+  else
+    {
+      arguments_changed = true;
+    }
+
   current_selection = nullptr;
   mouse_move_selection = nullptr;
   amount_scrolled = 0;
   clicked.clear();
   reset_pixmap();
-  arguments_changed = true;
-
-  redraw();
 }
 
 void GRPlotWidget::wheelEvent(QWheelEvent *event)
@@ -982,6 +1689,8 @@ void GRPlotWidget::wheelEvent(QWheelEvent *event)
                           if (i + 1 < clicked.size())
                             {
                               current_selection = &clicked[i + 1];
+                              treewidget->updateData(grm_get_document_root());
+                              treewidget->selectItem(current_selection->get_ref());
                               break;
                             }
                         }
@@ -1000,6 +1709,8 @@ void GRPlotWidget::wheelEvent(QWheelEvent *event)
                           if (i - 1 > 0)
                             {
                               current_selection = &clicked[i - 1];
+                              treewidget->updateData(grm_get_document_root());
+                              treewidget->selectItem(current_selection->get_ref());
                               break;
                             }
                         }
@@ -1024,20 +1735,31 @@ void GRPlotWidget::wheelEvent(QWheelEvent *event)
 
 void GRPlotWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
-  GR_UNUSED(event);
-  grm_args_t *args = grm_args_new();
-  QPoint pos = mapFromGlobal(QCursor::pos());
-  grm_args_push(args, "key", "s", "r");
-  grm_args_push(args, "x", "i", pos.x());
-  grm_args_push(args, "y", "i", pos.y());
-  grm_input(args);
-  grm_args_delete(args);
+  if (enable_editor)
+    {
+      if (event->button() == Qt::LeftButton)
+        {
+          AttributeEditEvent();
+        }
+    }
+  else
+    {
+      GR_UNUSED(event);
+      grm_args_t *args = grm_args_new();
+      QPoint pos = mapFromGlobal(QCursor::pos());
+      grm_args_push(args, "key", "s", "r");
+      grm_args_push(args, "x", "i", pos.x());
+      grm_args_push(args, "y", "i", pos.y());
+      grm_input(args);
+      grm_args_delete(args);
 
-  redraw();
+      redraw();
+    }
 }
 
 void GRPlotWidget::heatmap()
 {
+  algo->menuAction()->setVisible(false);
   grm_args_push(args_, "kind", "s", "heatmap");
   grm_merge(args_);
   arguments_changed = true;
@@ -1046,8 +1768,9 @@ void GRPlotWidget::heatmap()
 
 void GRPlotWidget::marginalheatmapall()
 {
-  grm_args_push(args_, "kind", "s", "marginalheatmap");
-  grm_args_push(args_, "marginalheatmap_kind", "s", "all");
+  algo->menuAction()->setVisible(true);
+  grm_args_push(args_, "kind", "s", "marginal_heatmap");
+  grm_args_push(args_, "marginal_heatmap_kind", "s", "all");
   grm_merge(args_);
   arguments_changed = true;
   redraw();
@@ -1055,8 +1778,9 @@ void GRPlotWidget::marginalheatmapall()
 
 void GRPlotWidget::marginalheatmapline()
 {
-  grm_args_push(args_, "kind", "s", "marginalheatmap");
-  grm_args_push(args_, "marginalheatmap_kind", "s", "line");
+  algo->menuAction()->setVisible(true);
+  grm_args_push(args_, "kind", "s", "marginal_heatmap");
+  grm_args_push(args_, "marginal_heatmap_kind", "s", "line");
   grm_merge(args_);
   arguments_changed = true;
   redraw();
@@ -1066,7 +1790,17 @@ void GRPlotWidget::line()
 {
   grm_args_push(args_, "kind", "s", "line");
   grm_merge(args_);
-  arguments_changed = true;
+  auto root = grm_get_document_root();
+  for (const auto &child : root->querySelectorsAll("series_scatter"))
+    {
+      child->setAttribute("kind", "line");
+    }
+
+  // to get the same lines then before all lines have to exist during render call so that the linespec work properly
+  for (const auto &child : root->querySelectorsAll("series_line"))
+    {
+      child->setAttribute("_update_required", true);
+    }
   redraw();
 }
 
@@ -1103,6 +1837,7 @@ void GRPlotWidget::isosurface()
 
 void GRPlotWidget::surface()
 {
+  algo->menuAction()->setVisible(false);
   grm_args_push(args_, "kind", "s", "surface");
   grm_merge(args_);
   arguments_changed = true;
@@ -1110,6 +1845,7 @@ void GRPlotWidget::surface()
 }
 void GRPlotWidget::wireframe()
 {
+  algo->menuAction()->setVisible(false);
   grm_args_push(args_, "kind", "s", "wireframe");
   grm_merge(args_);
   arguments_changed = true;
@@ -1118,6 +1854,7 @@ void GRPlotWidget::wireframe()
 
 void GRPlotWidget::contour()
 {
+  algo->menuAction()->setVisible(false);
   grm_args_push(args_, "kind", "s", "contour");
   grm_merge(args_);
   arguments_changed = true;
@@ -1126,6 +1863,7 @@ void GRPlotWidget::contour()
 
 void GRPlotWidget::imshow()
 {
+  algo->menuAction()->setVisible(false);
   grm_args_push(args_, "kind", "s", "imshow");
   grm_merge(args_);
   arguments_changed = true;
@@ -1142,6 +1880,7 @@ void GRPlotWidget::plot3()
 
 void GRPlotWidget::contourf()
 {
+  algo->menuAction()->setVisible(false);
   grm_args_push(args_, "kind", "s", "contourf");
   grm_merge(args_);
   arguments_changed = true;
@@ -1150,7 +1889,7 @@ void GRPlotWidget::contourf()
 
 void GRPlotWidget::trisurf()
 {
-  grm_args_push(args_, "kind", "s", "trisurf");
+  grm_args_push(args_, "kind", "s", "trisurface");
   grm_merge(args_);
   arguments_changed = true;
   redraw();
@@ -1158,7 +1897,7 @@ void GRPlotWidget::trisurf()
 
 void GRPlotWidget::tricont()
 {
-  grm_args_push(args_, "kind", "s", "tricont");
+  grm_args_push(args_, "kind", "s", "tricontour");
   grm_merge(args_);
   arguments_changed = true;
   redraw();
@@ -1176,7 +1915,11 @@ void GRPlotWidget::scatter()
 {
   grm_args_push(args_, "kind", "s", "scatter");
   grm_merge(args_);
-  arguments_changed = true;
+  auto root = grm_get_document_root();
+  for (const auto &child : root->querySelectorsAll("series_line"))
+    {
+      child->setAttribute("kind", "scatter");
+    }
   redraw();
 }
 
@@ -1274,10 +2017,10 @@ void GRPlotWidget::extract_bounding_boxes_from_grm(QPainter &painter)
       for (const auto &cur_child : global_root->querySelectorsAll("[_bbox_id]"))
         {
           id = static_cast<int>(cur_child->getAttribute("_bbox_id"));
-          xmin = static_cast<double>(cur_child->getAttribute("_bbox_xmin"));
-          xmax = static_cast<double>(cur_child->getAttribute("_bbox_xmax"));
-          ymin = static_cast<double>(cur_child->getAttribute("_bbox_ymin"));
-          ymax = static_cast<double>(cur_child->getAttribute("_bbox_ymax"));
+          xmin = static_cast<double>(cur_child->getAttribute("_bbox_x_min"));
+          xmax = static_cast<double>(cur_child->getAttribute("_bbox_x_max"));
+          ymin = static_cast<double>(cur_child->getAttribute("_bbox_y_min"));
+          ymax = static_cast<double>(cur_child->getAttribute("_bbox_y_max"));
 
           if (xmin == DBL_MAX || xmax == -DBL_MAX || ymin == DBL_MAX || ymax == -DBL_MAX)
             {
@@ -1291,7 +2034,7 @@ void GRPlotWidget::extract_bounding_boxes_from_grm(QPainter &painter)
               if (highlightBoundingObjects)
                 {
                   painter.drawRect(bounding_rect);
-                  painter.drawText(bounding_rect.bottomRight() + QPointF(5, 0), cur_child->localName().c_str());
+                  painter.drawText(bounding_rect.topLeft() + QPointF(5, 10), cur_child->localName().c_str());
                 }
             }
         }
@@ -1304,17 +2047,31 @@ void GRPlotWidget::highlight_current_selection(QPainter &painter)
     {
       if (current_selection != nullptr)
         {
-          painter.fillRect(current_selection->boundingRect(), QBrush(QColor("blue"), Qt::Dense5Pattern));
+          painter.fillRect(current_selection->boundingRect(), QBrush(QColor(190, 210, 232, 150), Qt::SolidPattern));
           if (current_selection->get_ref() != nullptr)
-            painter.drawText(current_selection->boundingRect().bottomRight() + QPointF(5, 0),
+            painter.drawText(current_selection->boundingRect().topLeft() + QPointF(5, 10),
                              current_selection->get_ref()->localName().c_str());
         }
       else if (mouse_move_selection != nullptr)
         {
-          painter.fillRect(mouse_move_selection->boundingRect(), QBrush(QColor("blue"), Qt::Dense7Pattern));
+          painter.fillRect(mouse_move_selection->boundingRect(), QBrush(QColor(190, 210, 232, 150), Qt::SolidPattern));
           if (mouse_move_selection->get_ref() != nullptr)
-            painter.drawText(mouse_move_selection->boundingRect().bottomRight() + QPointF(5, 0),
+            painter.drawText(mouse_move_selection->boundingRect().topLeft() + QPointF(5, 10),
                              mouse_move_selection->get_ref()->localName().c_str());
+        }
+      if (selected_parent != nullptr)
+        {
+          auto rect = selected_parent->boundingRect();
+          if (selected_parent->get_ref() != nullptr)
+            {
+              auto bbox_xmin = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_x_min"));
+              auto bbox_xmax = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_x_max"));
+              auto bbox_ymin = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_y_min"));
+              auto bbox_ymax = static_cast<double>(selected_parent->get_ref()->getAttribute("_bbox_y_max"));
+              rect = QRectF(bbox_xmin, bbox_ymin, bbox_xmax - bbox_xmin, bbox_ymax - bbox_ymin);
+              painter.drawText(rect.topLeft() + QPointF(5, 10), selected_parent->get_ref()->localName().c_str());
+            }
+          painter.fillRect(rect, QBrush(QColor(255, 0, 0, 30), Qt::SolidPattern));
         }
     }
 }
@@ -1347,8 +2104,27 @@ void GRPlotWidget::show_bounding_boxes_slot()
 
 void GRPlotWidget::open_file_slot()
 {
-  if (enable_editor) fprintf(stderr, "This functionality isnt`t implemented yet\n");
-  // probably want to be able to load a new dataset as a subplot
+  if (enable_editor)
+    {
+      std::string path =
+          QFileDialog::getOpenFileName(this, "Open XML", QDir::homePath(), "XML files (*.xml)").toStdString();
+      if (path.empty())
+        {
+          return;
+        }
+
+      auto file = fopen(path.c_str(), "r");
+      if (!file)
+        {
+          std::stringstream text_stream;
+          text_stream << "Could not open the XML file \"" << path << "\".";
+          QMessageBox::critical(this, "File open not possible", QString::fromStdString(text_stream.str()));
+          return;
+        }
+      grm_load_graphics_tree(file);
+      redraw();
+      grm_render();
+    }
 }
 
 void GRPlotWidget::save_file_slot()
@@ -1391,9 +2167,8 @@ void GRPlotWidget::show_container_slot()
         {
           treewidget->hide();
         }
-      treewidget->resize(400, height());
-      treewidget->move(this->pos().x() + this->width(),
-                       this->pos().y() - 28 + (treewidget->geometry().y() - treewidget->pos().y()));
+      treewidget->resize(350, height());
+      treewidget->move(this->pos().x() + 0.5 * this->width() - 61, this->pos().y() - 28 + treewidget->geometry().y());
     }
 }
 
@@ -1402,6 +2177,13 @@ void GRPlotWidget::enable_editor_functions()
   if (editor_action->isChecked())
     {
       enable_editor = true;
+      add_element_action->setVisible(true);
+      show_bounding_boxes_action->setVisible(true);
+      show_bounding_boxes_action->setChecked(false);
+      show_container_action->setVisible(true);
+      show_container_action->setChecked(false);
+      configuration_menu->menuAction()->setVisible(true);
+      editor_action->setText(tr("&Disable Editorview"));
 
       // dirty reset of screen position
       grm_args_t *args = grm_args_new();
@@ -1417,6 +2199,33 @@ void GRPlotWidget::enable_editor_functions()
   else
     {
       enable_editor = false;
+      add_element_action->setVisible(false);
+      show_bounding_boxes_action->setVisible(false);
+      show_bounding_boxes_action->setChecked(false);
+      show_container_action->setVisible(false);
+      show_container_action->setChecked(false);
+      configuration_menu->menuAction()->setVisible(false);
+      treewidget->hide();
+      add_element_widget->hide();
+      editor_action->setText(tr("&Enable Editorview"));
+    }
+}
+
+void GRPlotWidget::add_element_slot()
+{
+  if (enable_editor)
+    {
+      if (add_element_action->isChecked())
+        {
+          add_element_widget->show();
+        }
+      else
+        {
+          add_element_widget->hide();
+        }
+      add_element_widget->resize(400, height());
+      add_element_widget->move(this->pos().x() + this->width() + add_element_widget->width(),
+                               this->pos().y() + add_element_widget->geometry().y() - 28);
     }
 }
 
@@ -1453,6 +2262,18 @@ void GRPlotWidget::showEvent(QShowEvent *)
   QObject::connect(window()->windowHandle(), SIGNAL(screenChanged(QScreen *)), this, SLOT(screenChanged()));
 }
 
+QSize GRPlotWidget::sizeHint() const
+{
+  if (size_hint.isValid())
+    {
+      return size_hint;
+    }
+  else
+    {
+      return QWidget::sizeHint();
+    }
+}
+
 void GRPlotWidget::screenChanged()
 {
   gr_configurews();
@@ -1462,9 +2283,12 @@ void GRPlotWidget::screenChanged()
 void GRPlotWidget::size_callback(const grm_event_t *new_size_object)
 {
   // TODO: Get Plot ID
-  if (this->size() != QSize(new_size_object->size_event.width, new_size_object->size_event.height))
+  auto event_size = QSize(new_size_object->size_event.width, new_size_object->size_event.height);
+  if (this->size() != event_size)
     {
-      this->window()->resize(new_size_object->size_event.width, new_size_object->size_event.height);
+      size_hint = event_size;
+      setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+      window()->adjustSize();
     }
 }
 
@@ -1688,4 +2512,39 @@ void GRPlotWidget::processTestCommandsFile()
     }
   test_commands_file->close();
   QApplication::quit();
+}
+
+std::shared_ptr<GRM::Document> GRPlotWidget::get_schema_tree()
+{
+  return this->schema_tree;
+}
+
+void GRPlotWidget::set_selected_parent(Bounding_object *parent)
+{
+  this->selected_parent = parent;
+}
+
+Bounding_object *GRPlotWidget::get_selected_parent()
+{
+  return this->selected_parent;
+}
+
+void GRPlotWidget::set_current_selection(Bounding_object *p_current_selection)
+{
+  this->current_selection = p_current_selection;
+}
+
+Bounding_object *GRPlotWidget::get_current_selection()
+{
+  return this->current_selection;
+}
+
+QStringList GRPlotWidget::getCheckBoxAttributes()
+{
+  return check_box_attr;
+}
+
+QStringList GRPlotWidget::getComboBoxAttributes()
+{
+  return combo_box_attr;
 }

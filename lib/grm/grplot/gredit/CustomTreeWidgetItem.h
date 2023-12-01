@@ -8,7 +8,7 @@
 class CustomTreeWidgetItem : public QTreeWidgetItem
 {
 public:
-  explicit CustomTreeWidgetItem(const QTreeWidgetItem &other);
+  explicit CustomTreeWidgetItem(QTreeWidgetItem *other);
   explicit CustomTreeWidgetItem(QTreeWidgetItem *other, std::shared_ptr<GRM::Element> pRef = nullptr);
   //    void setData(int column, int role, const QVariant &value) override
   //    {
@@ -24,7 +24,7 @@ public:
   std::shared_ptr<GRM::Element> getRef();
 
 protected:
-  std::shared_ptr<GRM::Element> ref;
+  std::shared_ptr<GRM::Element> ref = nullptr;
 };
 
 #endif // QT_EXAMPLE_CUSTOMTREEWIDGETITEM_H

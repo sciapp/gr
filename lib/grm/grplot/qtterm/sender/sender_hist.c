@@ -45,15 +45,15 @@ static void test_plot(void)
 
   error = grm_args_new();
   grm_args_push(error, "relative", "nDD", NBINS, errors[0], errors[1]);
-  grm_args_push(error, "upwardscap_color", "i", 2);
-  grm_args_push(error, "downwardscap_color", "i", 3);
-  grm_args_push(error, "errorbar_color", "i", 4);
+  grm_args_push(error, "upward_scap_color", "i", 2);
+  grm_args_push(error, "downward_scap_color", "i", 3);
+  grm_args_push(error, "error_bar_color", "i", 4);
 
   args = grm_args_new();
 
   series[0] = grm_args_new();
   grm_args_push(series[0], "x", "nD", n, plot);
-  grm_args_push(series[0], "nbins", "i", NBINS);
+  grm_args_push(series[0], "num_bins", "i", NBINS);
   //    Not yet supported:
   //    grm_args_push(series[0], "bar_color", "ddd", 1., 0., 0.);
   //    grm_args_push(series[0], "edge_color", "ddd", 0., 1., 0.);

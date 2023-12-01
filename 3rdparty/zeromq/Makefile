@@ -45,8 +45,8 @@ $(PREFIX)/src/zeromq-$(VERSION)/Makefile: $(PREFIX)/src/zeromq-$(VERSION)/config
 		$(ZEROMQ_EXTRA_CONFIGURE_FLAGS)
 
 $(PREFIX)/lib/libzmq.a: $(PREFIX)/src/zeromq-$(VERSION)/Makefile
-	MACOSX_DEPLOYMENT_TARGET="10.14" $(MAKE) -C $(PREFIX)/src/zeromq-$(VERSION) -j4
-	MACOSX_DEPLOYMENT_TARGET="10.14" $(MAKE) -C $(PREFIX)/src/zeromq-$(VERSION) install
+	MACOSX_DEPLOYMENT_TARGET="10.15" $(MAKE) -C $(PREFIX)/src/zeromq-$(VERSION) -j4
+	MACOSX_DEPLOYMENT_TARGET="10.15" $(MAKE) -C $(PREFIX)/src/zeromq-$(VERSION) install
 
 install: $(PREFIX)/lib/libzmq.a
 
