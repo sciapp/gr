@@ -285,6 +285,7 @@
             <xs:attributeGroup ref="axes"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="name" type="xs:string"/>
+            <xs:attribute name="scale" type="xs:integer"/>
             <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
