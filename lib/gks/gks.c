@@ -1036,6 +1036,7 @@ void gks_redraw_seg_on_ws(int wkid)
             {
               if (gks_list_find(active_ws, wkid) != NULL)
                 {
+                  if (!seg_state) return;
                   /* save GKS state, restore segment state */
                   memmove(&sl, s, sizeof(gks_state_list_t));
                   memmove(s, seg_state, sizeof(gks_state_list_t));
@@ -2205,6 +2206,7 @@ void gks_assoc_seg_with_ws(int wkid, int segn)
             {
               if (gks_list_find(active_ws, wkid) != NULL)
                 {
+                  if (!seg_state) return;
                   /* save GKS state, restore segment state */
                   memmove(&sl, s, sizeof(gks_state_list_t));
                   memmove(s, seg_state, sizeof(gks_state_list_t));
@@ -2249,6 +2251,7 @@ void gks_copy_seg_to_ws(int wkid, int segn)
             {
               if (gks_list_find(active_ws, wkid) != NULL)
                 {
+                  if (!seg_state) return;
                   /* save GKS state, restore segment state */
                   memmove(&sl, s, sizeof(gks_state_list_t));
                   memmove(s, seg_state, sizeof(gks_state_list_t));
