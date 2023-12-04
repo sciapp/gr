@@ -23,6 +23,12 @@ extern float __cdecl sqrtf(float);
 #define NAN (0.0 / 0.0)
 #endif
 
+#ifdef isnan
+#define is_nan(a) isnan(a)
+#else
+#define is_nan(x) ((x) != (x))
+#endif
+
 #ifndef max
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #endif
@@ -320,7 +326,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
   float *new_vertices = NULL;
   float *new_normals = NULL;
   float *new_colors = NULL;
-  int new_idx, l, errind;
+  int new_idx, skipped_quads, l, errind;
   float linewidth_y = 0;
   float linewidth_x = 0;
 
@@ -497,7 +503,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               float a[3];
               float b[3];
 
-              if (i == 0)
+              if (i == 0 || is_nan(v[0 - dirx]) || is_nan(v[1 - dirx]) || is_nan(v[2 - dirx]))
                 {
                   a[0] = v[dirx + 0] - v[0];
                   a[1] = v[dirx + 1] - v[1];
@@ -516,7 +522,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
                   a[2] = (v[dirx + 2] - v[2 - dirx]) * 0.5;
                 }
 
-              if (j == 0)
+              if (j == 0 || is_nan(v[0 - diry]) || is_nan(v[1 - diry]) || is_nan(v[2 - diry]))
                 {
                   b[0] = v[diry + 0] - v[0];
                   b[1] = v[diry + 1] - v[1];
@@ -579,6 +585,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
         }
     }
   new_idx = 0;
+  skipped_quads = 0;
   /* create triangles */
   for (j = 0; j < ny - 1; j++)
     {
@@ -589,6 +596,19 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
            * The normals x-value of the first vertex determines the width of edge 0-1, the second vertex normal's x
            * coordinate to the edge 1-2 and the last one to 2-0.*/
           int k = j * nx + i;
+          int any_nan = 0;
+          for (l = 0; l < 3 && !any_nan; l++)
+            {
+              any_nan = is_nan(vertices[k * 3 + l]) || is_nan(vertices[(k + 1) * 3 + l]) ||
+                        is_nan(vertices[(k + nx) * 3 + l]) || is_nan(vertices[(k + nx + 1) * 3 + l]) ||
+                        is_nan(normals[k * 3 + l]) || is_nan(normals[(k + 1) * 3 + l]) ||
+                        is_nan(normals[(k + nx) * 3 + l]) || is_nan(normals[(k + nx + 1) * 3 + l]);
+            }
+          if (any_nan)
+            {
+              skipped_quads += 1;
+              continue;
+            }
           if (context_struct_.use_software_renderer && context_struct_.option <= OPTION_FILLED_MESH)
             {
               for (l = 0; l < 3; l++)
@@ -642,7 +662,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
             }
           else
             {
-              int *idx = indices + 6 * (j * (nx - 1) + i);
+              int *idx = indices + 6 * (j * (nx - 1) + i - skipped_quads);
               idx[0] = k;
               idx[1] = k + 1;
               idx[2] = k + nx;
@@ -658,7 +678,8 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
     }
   else
     {
-      result = gr3_createindexedmesh_nocopy(mesh, num_vertices, vertices, normals, colors, num_indices, indices);
+      result = gr3_createindexedmesh_nocopy(mesh, num_vertices, vertices, normals, colors,
+                                            num_indices - 6 * skipped_quads, indices);
     }
   if (result != GR3_ERROR_NONE && result != GR3_ERROR_OPENGL_ERR)
     {
