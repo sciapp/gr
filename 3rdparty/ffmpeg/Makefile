@@ -8,6 +8,15 @@ ifeq ($(shell uname),Darwin)
 FFMPEG_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-mmacosx-version-min=10.15
 endif
 
+
+# build for ARMv7 w/ FPU support when using armv8l and requested build arch is armhf
+ifeq ($(shell uname -m),armv8l)
+ifeq ($(DEB_BUILD_ARCH),armhf)
+FFMPEG_EXTRA_CONFIGURE_FLAGS += --cpu=armv7-a+fp
+endif
+endif
+
+
 ifeq ($(DOWNLOAD_CMD),)
 ifneq ($(shell curl --version 2>/dev/null),)
 DOWNLOAD_CMD := curl -k -OL
