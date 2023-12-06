@@ -1072,13 +1072,17 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
 
   getMajorCount(element, kind, major_count);
 
-  if (element->hasAttribute("x_major"))
+  if (scale & GR_OPTION_X_LOG)
     {
-      x_major = static_cast<int>(element->getAttribute("x_major"));
+      x_major = 1;
     }
   else
     {
-      if (!(scale & GR_OPTION_X_LOG))
+      if (element->hasAttribute("x_major"))
+        {
+          x_major = static_cast<int>(element->getAttribute("x_major"));
+        }
+      else
         {
           if (draw_axes_group->hasAttribute("x_tick_labels"))
             {
@@ -1093,20 +1097,21 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
               x_major = major_count;
             }
         }
-      else
-        {
-          x_major = 1;
-        }
       element->setAttribute("x_major", x_major);
     }
 
-  if (element->hasAttribute("x_tick"))
+  if (scale & GR_OPTION_X_LOG &&
+      !(element->hasAttribute("x_tick") && static_cast<std::string>(element->getAttribute("name")) == "colorbar"))
     {
-      x_tick = static_cast<double>(element->getAttribute("x_tick"));
+      x_tick = 1;
     }
   else
     {
-      if (!(scale & GR_OPTION_X_LOG))
+      if (element->hasAttribute("x_tick"))
+        {
+          x_tick = static_cast<double>(element->getAttribute("x_tick"));
+        }
+      else
         {
           if (kind == "barplot")
             {
@@ -1124,28 +1129,14 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
                 }
             }
         }
-      else
-        {
-          x_tick = 1;
-        }
     }
 
-  if (element->hasAttribute("x_org"))
+  if (scale & GR_OPTION_FLIP_X &&
+      !(element->hasAttribute("x_org") && (static_cast<std::string>(element->getAttribute("name")) == "colorbar" ||
+                                           element->localName() == "grid" || element->localName() == "grid3d")))
     {
-      x_org = static_cast<double>(element->getAttribute("x_org"));
-    }
-  else
-    {
-      if (!(scale & GR_OPTION_FLIP_X))
-        {
-          x_org_low = xmin;
-          x_org_high = xmax;
-        }
-      else
-        {
-          x_org_low = xmax;
-          x_org_high = xmin;
-        }
+      x_org_low = xmax;
+      x_org_high = xmin;
       if (x_org_pos == "low")
         {
           x_org = x_org_low;
@@ -1156,14 +1147,39 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
           x_major = -x_major;
         }
     }
-
-  if (element->hasAttribute("y_major"))
+  else
     {
-      y_major = static_cast<int>(element->getAttribute("y_major"));
+      if (element->hasAttribute("x_org"))
+        {
+          x_org = static_cast<double>(element->getAttribute("x_org"));
+        }
+      else
+        {
+          x_org_low = xmin;
+          x_org_high = xmax;
+          if (x_org_pos == "low")
+            {
+              x_org = x_org_low;
+            }
+          else
+            {
+              x_org = x_org_high;
+              x_major = -x_major;
+            }
+        }
+    }
+
+  if (scale & GR_OPTION_Y_LOG)
+    {
+      y_major = 1;
     }
   else
     {
-      if (!(scale & GR_OPTION_Y_LOG))
+      if (element->hasAttribute("y_major"))
+        {
+          y_major = static_cast<int>(element->getAttribute("y_major"));
+        }
+      else
         {
           if (draw_axes_group->hasAttribute("y_tick_labels"))
             {
@@ -1173,21 +1189,21 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
             {
               y_major = major_count;
             }
+          element->setAttribute("y_major", y_major);
         }
-      else
-        {
-          y_major = 1;
-        }
-      element->setAttribute("y_major", y_major);
     }
 
-  if (element->hasAttribute("y_tick"))
+  if (scale & GR_OPTION_Y_LOG && !(element->localName() == "axes_3d" && element->hasAttribute("y_tick")))
     {
-      y_tick = static_cast<double>(element->getAttribute("y_tick"));
+      y_tick = 1;
     }
   else
     {
-      if (!(scale & GR_OPTION_Y_LOG))
+      if (element->hasAttribute("y_tick"))
+        {
+          y_tick = static_cast<double>(element->getAttribute("y_tick"));
+        }
+      else
         {
           if (y_major != 0)
             {
@@ -1198,28 +1214,14 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
               y_tick = 1;
             }
         }
-      else
-        {
-          y_tick = 1;
-        }
     }
 
-  if (element->hasAttribute("y_org"))
+  if (scale & GR_OPTION_FLIP_Y &&
+      !(element->hasAttribute("y_org") && (static_cast<std::string>(element->getAttribute("name")) == "colorbar" ||
+                                           element->localName() == "grid" || element->localName() == "grid3d")))
     {
-      y_org = static_cast<double>(element->getAttribute("y_org"));
-    }
-  else
-    {
-      if (!(scale & GR_OPTION_FLIP_Y))
-        {
-          y_org_low = ymin;
-          y_org_high = ymax;
-        }
-      else
-        {
-          y_org_low = ymax;
-          y_org_high = ymin;
-        }
+      y_org_low = ymax;
+      y_org_high = ymin;
       if (y_org_pos == "low")
         {
           y_org = y_org_low;
@@ -1228,6 +1230,27 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
         {
           y_org = y_org_high;
           y_major = -y_major;
+        }
+    }
+  else
+    {
+      if (element->hasAttribute("y_org"))
+        {
+          y_org = static_cast<double>(element->getAttribute("y_org"));
+        }
+      else
+        {
+          y_org_low = ymin;
+          y_org_high = ymax;
+          if (y_org_pos == "low")
+            {
+              y_org = y_org_low;
+            }
+          else
+            {
+              y_org = y_org_high;
+              y_major = -y_major;
+            }
         }
     }
 }
@@ -1251,29 +1274,33 @@ static void getAxes3dInformation(const std::shared_ptr<GRM::Element> &element, s
 
   getMajorCount(element, kind, major_count);
 
-  if (element->hasAttribute("z_major"))
+  if (scale & GR_OPTION_Z_LOG)
     {
-      z_major = static_cast<int>(element->getAttribute("z_major"));
+      z_major = 1;
     }
   else
     {
-      if (!(scale & GR_OPTION_Z_LOG))
+      if (element->hasAttribute("z_major"))
         {
-          z_major = major_count;
+          z_major = static_cast<int>(element->getAttribute("z_major"));
         }
       else
         {
-          z_major = 1;
+          z_major = major_count;
         }
     }
 
-  if (element->hasAttribute("z_tick"))
+  if (scale & GR_OPTION_Z_LOG && !(element->localName() == "axes_3d" && element->hasAttribute("z_tick")))
     {
-      z_tick = static_cast<double>(element->getAttribute("z_tick"));
+      z_tick = 1;
     }
   else
     {
-      if (!(scale & GR_OPTION_Z_LOG))
+      if (element->hasAttribute("z_tick"))
+        {
+          z_tick = static_cast<double>(element->getAttribute("z_tick"));
+        }
+      else
         {
           if (z_major != 0)
             {
@@ -1284,28 +1311,12 @@ static void getAxes3dInformation(const std::shared_ptr<GRM::Element> &element, s
               z_tick = 1;
             }
         }
-      else
-        {
-          z_tick = 1;
-        }
     }
 
-  if (element->hasAttribute("z_org"))
+  if (scale & GR_OPTION_FLIP_Z)
     {
-      z_org = static_cast<double>(element->getAttribute("z_org"));
-    }
-  else
-    {
-      if (!(scale & GR_OPTION_FLIP_Z))
-        {
-          z_org_low = zmin;
-          z_org_high = zmax;
-        }
-      else
-        {
-          z_org_low = zmax;
-          z_org_high = zmin;
-        }
+      z_org_low = zmax;
+      z_org_high = zmin;
       if (z_org_pos == "low")
         {
           z_org = z_org_low;
@@ -1314,6 +1325,27 @@ static void getAxes3dInformation(const std::shared_ptr<GRM::Element> &element, s
         {
           z_org = z_org_high;
           z_major = -z_major;
+        }
+    }
+  else
+    {
+      if (element->hasAttribute("z_org"))
+        {
+          z_org = static_cast<double>(element->getAttribute("z_org"));
+        }
+      else
+        {
+          z_org_low = zmin;
+          z_org_high = zmax;
+          if (z_org_pos == "low")
+            {
+              z_org = z_org_low;
+            }
+          else
+            {
+              z_org = z_org_high;
+              z_major = -z_major;
+            }
         }
     }
 }
