@@ -9661,7 +9661,7 @@ static void processSurface(const std::shared_ptr<GRM::Element> &element, const s
 
   if (!element->hasAttribute("z")) throw NotFoundError("Surface series is missing required attribute z-data.\n");
 
-  auto z = static_cast<std::string>(element->getAttribute("z"));
+  auto z = static_cast<std::string>(element->getAttribute("_z_org"));
   z_vec = GRM::get<std::vector<double>>((*context)[z]);
   z_length = z_vec.size();
 
@@ -11770,7 +11770,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
   // set the x-, y- and z-data to NAN if the value is <= 0
   for (const auto &child : element->children())
     {
-      if (!starts_with(child->localName(), "series_")) continue;
+      if (!starts_with(child->localName(), "series_") || child->localName() == "series_imshow") continue;
       int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
 

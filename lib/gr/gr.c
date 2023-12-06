@@ -1227,21 +1227,6 @@ static void setspace(double zmin, double zmax, int rotation, int tilt)
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
-  if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
-    {
-      xmin = ix.xmin;
-      xmax = ix.xmax;
-      ymin = ix.ymin;
-      ymax = ix.ymax;
-    }
-  else
-    {
-      xmin = wn[0];
-      xmax = wn[1];
-      ymin = wn[2];
-      ymax = wn[3];
-    }
-
   xmin = wn[0];
   xmax = wn[1];
   ymin = wn[2];
@@ -1277,6 +1262,14 @@ static void setspace(double zmin, double zmax, int rotation, int tilt)
   wx.d = wx.d - wx.c1 * xmin - wx.c2 * ymin - wx.c3 * zmin;
 }
 
+static void setnormxform(const double *vp, double x_min, double x_max, double y_min, double y_max)
+{
+  nx.a = (vp[1] - vp[0]) / (x_max - x_min);
+  nx.b = vp[0] - x_min * nx.a;
+  nx.c = (vp[3] - vp[2]) / (y_max - y_min);
+  nx.d = vp[2] - y_min * nx.c;
+}
+
 static int setscale(int options)
 {
   int errind, tnr;
@@ -1294,10 +1287,7 @@ static int setscale(int options)
   z_min = wx.zmin;
   z_max = wx.zmax;
 
-  nx.a = (vp[1] - vp[0]) / (x_max - x_min);
-  nx.b = vp[0] - x_min * nx.a;
-  nx.c = (vp[3] - vp[2]) / (y_max - y_min);
-  nx.d = vp[2] - y_min * nx.c;
+  setnormxform(vp, x_min, x_max, y_min, y_max);
 
   lx.scale_options = 0;
 
@@ -2890,18 +2880,18 @@ void gr_gridit(int nd, double *xd, double *yd, double *zd, int nx, int ny, doubl
 
   check_autoinit;
 
-  xmin = xd[0];
-  xmax = xmin;
-  ymin = yd[0];
-  ymax = ymin;
+  xmin = xd[nd - 1];
+  xmax = xd[nd - 1];
+  ymin = yd[nd - 1];
+  ymax = yd[nd - 1];
 
   /* CALCULATION OF MIN/MAX VALUES */
-  for (i = 1; i < nd; ++i)
+  for (i = 0; i < nd; ++i)
     {
-      xmin = min(xmin, xd[i]);
-      xmax = max(xmax, xd[i]);
-      ymin = min(ymin, yd[i]);
-      ymax = max(ymax, yd[i]);
+      xmin = (is_nan(xd[i])) ? xmin : min(xmin, xd[i]);
+      xmax = (is_nan(xd[i])) ? xmax : max(xmax, xd[i]);
+      ymin = (is_nan(yd[i])) ? ymin : min(ymin, yd[i]);
+      ymax = (is_nan(yd[i])) ? ymax : max(ymax, yd[i]);
     }
 
   /* DETERMINE GRID POINTS INSIDE THE DATA AREA */
@@ -5528,7 +5518,6 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
       gks_inq_xform(WC, &errind, wn, vp);
 
       gks_set_window(WC, -1, 1, -1, 1);
-      setscale(lx.scale_options);
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
@@ -6135,7 +6124,14 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
       x1 = px[i];
       y1 = py[i];
       z1 = pz[i];
-      if (is_nan(x1) || is_nan(y1) || is_nan(z1)) break;
+      if (is_nan(x1) || is_nan(y1) || is_nan(z1)) continue;
+      if (is_nan(x0) || is_nan(y0) || is_nan(z0))
+        {
+          x0 = x1;
+          y0 = y1;
+          z0 = z1;
+          continue;
+        }
 
       x = x1;
       y = y1;
@@ -6314,6 +6310,7 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
 static double text3d_get_height(void)
 {
   double focus_point_x, focus_point_y, focus_point_z, focus_up_x, focus_up_y, focus_up_z;
+  int scale_save = lx.scale_options;
   /* Calculate char height */
   focus_point_x = tx.focus_point_x / tx.x_axis_scale;
   focus_point_y = tx.focus_point_y / tx.y_axis_scale;
@@ -6325,8 +6322,16 @@ static double text3d_get_height(void)
   gr_wc3towc(&focus_point_x, &focus_point_y, &focus_point_z);
   gr_wc3towc(&focus_up_x, &focus_up_y, &focus_up_z);
 
+  lx.scale_options = 0;
   gr_wctondc(&focus_point_x, &focus_point_y);
   gr_wctondc(&focus_up_x, &focus_up_y);
+  lx.scale_options = scale_save;
+
+  focus_point_x = (is_nan(x_lin(focus_point_x))) ? focus_point_x : x_lin(focus_point_x);
+  focus_point_y = (is_nan(y_lin(focus_point_y))) ? focus_point_y : y_lin(focus_point_y);
+  focus_up_x = (is_nan(x_lin(focus_up_x))) ? focus_up_x : x_lin(focus_up_x);
+  focus_up_y = (is_nan(y_lin(focus_up_y))) ? focus_up_y : y_lin(focus_up_y);
+
   return sqrt(pow(focus_point_x - focus_up_x, 2) + pow(focus_point_y - focus_up_y, 2)) /
          (min((vxmax - vxmin), (vymax - vymin)));
 }
@@ -6706,11 +6711,16 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (modern_projection_type)
     {
+      int errind_tmp;
+      double wn_tmp[4], vp_tmp[4];
+
       gks_select_xform(WC);
       gks_inq_xform(WC, &errind, wn, vp);
 
       gks_set_window(WC, -1, 1, -1, 1);
-      setscale(lx.scale_options);
+      gks_inq_xform(WC, &errind_tmp, wn_tmp, vp_tmp);
+      setnormxform(vp, -1, 1, -1, 1);
+
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
@@ -6869,10 +6879,10 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                           {
                             exponent = iround(blog(lx.basez, zi));
                             snprintf(string, 256, "%s^{%d}", lx.basez_s, exponent);
-                            text3d(x_label, y_label, zi, replace_minus_sign(string), 0);
+                            text3d(x_label, y_label, zi, replace_minus_sign(string), modern_projection_type ? axis : 0);
                           }
                         else
-                          text3d(x_label, y_label, zi, gr_ftoa(string, zi, NULL), 0);
+                          text3d(x_label, y_label, zi, gr_ftoa(string, zi, NULL), modern_projection_type ? axis : 0);
                       }
                 }
 
@@ -7034,10 +7044,10 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                           {
                             exponent = iround(blog(lx.basey, yi));
                             snprintf(string, 256, "%s^{%d}", lx.basey_s, exponent);
-                            text3d(x_label, yi, z_label, replace_minus_sign(string), 0);
+                            text3d(x_label, yi, z_label, replace_minus_sign(string), modern_projection_type ? axis : 0);
                           }
                         else
-                          text3d(x_label, yi, z_label, gr_ftoa(string, yi, NULL), 0);
+                          text3d(x_label, yi, z_label, gr_ftoa(string, yi, NULL), modern_projection_type ? axis : 0);
                       }
                 }
 
@@ -7198,10 +7208,10 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                           {
                             exponent = iround(blog(lx.basex, xi));
                             snprintf(string, 256, "%s^{%d}", lx.basex_s, exponent);
-                            text3d(xi, y_label, z_label, replace_minus_sign(string), 0);
+                            text3d(xi, y_label, z_label, replace_minus_sign(string), modern_projection_type ? axis : 0);
                           }
                         else
-                          text3d(xi, y_label, z_label, gr_ftoa(string, xi, NULL), 0);
+                          text3d(xi, y_label, z_label, gr_ftoa(string, xi, NULL), modern_projection_type ? axis : 0);
                       }
                 }
 
@@ -8138,7 +8148,6 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
       gks_inq_xform(WC, &errind, wn, vp);
 
       gks_set_window(WC, -1, 1, -1, 1);
-      setscale(lx.scale_options);
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
@@ -8817,6 +8826,8 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
               ya[j] = py[triangles[3 * i + j]];
               za[j] = pz[triangles[3 * i + j]];
             }
+          if (is_nan(xa[0]) || is_nan(xa[1]) || is_nan(xa[2])) continue;
+          if (is_nan(ya[0]) || is_nan(ya[1]) || is_nan(ya[2])) continue;
 
           /* calculate the distance of each edge midpoint */
           x_cord = (xa[1] + xa[0]) / 2;
@@ -8983,7 +8994,7 @@ void gr_quiver(int nx, int ny, double *x, double *y, double *u, double *v, int c
 {
   int i, j, ci;
   double gnorm, gmax = 0;
-  double dx, dy;
+  double dx = 0, dy = 0;
   int errind, linecolor, fillcolor;
 
   if ((nx <= 0) || (ny <= 0))
@@ -9028,8 +9039,22 @@ void gr_quiver(int nx, int ny, double *x, double *y, double *u, double *v, int c
       }
   gmax = sqrt(gmax);
 
-  dx = (x[nx - 1] - x[0]) / (nx - 1);
-  dy = (y[ny - 1] - y[0]) / (ny - 1);
+  for (j = 0; j < ny; j++)
+    {
+      if (dy == 0 && !is_nan(y[j]))
+        {
+          dy = (y[ny - 1] - y[j]) / (ny - 1 - j);
+          break;
+        }
+    }
+  for (i = 0; i < nx; i++)
+    {
+      if (dx == 0 && !is_nan(x[i]))
+        {
+          dx = (x[nx - 1] - x[i]) / (nx - 1 - i);
+          break;
+        }
+    }
 
   for (j = 0; j < ny; j++)
     for (i = 0; i < nx; i++)
@@ -9074,7 +9099,10 @@ static int islinspace(int n, double *a)
   step = (a[n - 1] - a[0]) / (n - 1);
   feps = step * FEPS;
   for (i = 1; i < n; i++)
-    if (fabs(a[i] - a[i - 1] - step) > feps) return 0;
+    {
+      if (is_nan(a[i]) || is_nan(a[i - 1])) return 0;
+      if (fabs(a[i] - a[i - 1] - step) > feps) return 0;
+    }
 
   return 1;
 }
@@ -9084,6 +9112,7 @@ static void rebin(int nx, int ny, double *px, double *py, double *pz, int *nxq, 
 {
   double step, *x, *y, *z;
   int i;
+  int xcnt = 0, ycnt = 0;
 
   *nxq = 500;
   *nyq = 500;
@@ -9092,11 +9121,25 @@ static void rebin(int nx, int ny, double *px, double *py, double *pz, int *nxq, 
   y = *yq = (double *)xmalloc(sizeof(double) * *nyq);
   z = *zq = (double *)xmalloc(sizeof(double) * *nxq * *nyq);
 
-  step = (px[nx - 1] - px[0]) / (*nxq - 1);
-  for (i = 0; i < *nxq; i++) x[i] = px[0] + i * step;
+  for (i = 0; i < *nxq; i++)
+    {
+      if (is_nan(px[i]))
+        xcnt += 1;
+      else
+        break;
+    }
+  step = (px[nx - 1] - px[xcnt]) / (*nxq - 1 - xcnt);
+  for (i = 0; i < *nxq; i++) x[i] = (i < xcnt) ? NAN : px[xcnt] + i * step;
 
-  step = (py[ny - 1] - py[0]) / (*nyq - 1);
-  for (i = 0; i < *nyq; i++) y[i] = py[0] + i * step;
+  for (i = 0; i < *nyq; i++)
+    {
+      if (is_nan(py[i]))
+        ycnt += 1;
+      else
+        break;
+    }
+  step = (py[ny - 1] - py[ycnt]) / (*nyq - 1 - ycnt);
+  for (i = 0; i < *nyq; i++) y[i] = (i < ycnt) ? NAN : py[ycnt] + i * step;
 
   gr_interp2(nx, ny, px, py, pz, *nxq, *nyq, x, y, z, 1, 0.0);
 }
@@ -9126,6 +9169,7 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
   double *xq = NULL, *yq = NULL, *zq = NULL;
   int scale_options;
   double *x = NULL, *y = NULL;
+  int x_has_nan = 0, y_has_nan = 0;
 
   if ((nx <= 0) || (ny <= 0))
     {
@@ -9152,6 +9196,7 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
   check_autoinit;
 
   scale_options = lx.scale_options;
+  /* calculate the position of the contour labels when the axes are logarithmic for example */
   if (scale_options != 0)
     {
       setscale(scale_options & ~(OPTION_FLIP_X | OPTION_FLIP_Y));
@@ -9281,6 +9326,7 @@ void gr_contourf(int nx, int ny, int nh, double *px, double *py, double *h, doub
   check_autoinit;
 
   scale_options = lx.scale_options;
+  /* calculate the position of the contour labels when the axes are logarithmic for example */
   if (scale_options != 0)
     {
       setscale(scale_options & ~(OPTION_FLIP_X | OPTION_FLIP_Y));
@@ -9423,6 +9469,7 @@ static int binning(double x[], double y[], int *cell, int *cnt, double size, dou
 
   for (i = 0; i < n; i++)
     {
+      if (is_nan(x[i]) || is_nan(y[i])) continue;
       xi = x[i];
       yi = y[i];
       gr_wctondc(&xi, &yi);
