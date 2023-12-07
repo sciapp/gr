@@ -1303,6 +1303,23 @@ emscripten:
     paths:
     - artifacts-js/
 
+binary-builder:
+  stage: build
+  script: noop
+  tags:
+  - julia-bb
+  allow_failure: true
+  needs:
+  - job: emscripten
+    artifacts: true
+  only:
+  - master@Scientific-IT-Systems/gr
+  - develop@Scientific-IT-Systems/gr
+  - tags@Scientific-IT-Systems/gr
+  variables:
+    GIT_STRATEGY: none
+    JULIA_VERSION: 1.9.4
+
 packages-tar:
   stage: package
   image: ubuntu:18.04
