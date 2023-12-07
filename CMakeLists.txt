@@ -1163,166 +1163,170 @@ else()
   string(APPEND GR_REPORT "- gksqt: No (Qt4 / Qt5 / Qt6 not found)\n")
 endif()
 
-if(((Qt6Widgets_FOUND
-     AND Qt6Core_FOUND
-     AND Qt6Gui_FOUND
-    )
-    OR (Qt5Widgets_FOUND
-        AND Qt5Core_FOUND
-        AND Qt5Gui_FOUND
-       )
+if((Qt6Widgets_FOUND
+    AND Qt6Core_FOUND
+    AND Qt6Gui_FOUND
    )
-   AND (NOT MINGW OR NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
+   OR (Qt5Widgets_FOUND
+       AND Qt5Core_FOUND
+       AND Qt5Gui_FOUND
+      )
 )
-  add_executable(
-    grplot WIN32 MACOSX_BUNDLE
-    lib/grm/grplot/gredit/AddElementWidget.cpp
-    lib/grm/grplot/gredit/Bounding_logic.cpp
-    lib/grm/grplot/gredit/Bounding_object.cpp
-    lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
-    lib/grm/grplot/gredit/TreeWidget.cpp
-    lib/grm/grplot/grplot.cxx
-    lib/grm/grplot/grplot_mainwindow.cxx
-    lib/grm/grplot/grplot_widget.cxx
-    lib/grm/grplot/qtterm/grm_args_t_wrapper.cpp
-    lib/grm/grplot/qtterm/receiver_thread.cpp
-    lib/grm/grplot/util.cxx
-  )
-  if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
-    target_link_libraries(grplot PRIVATE Qt6::Widgets Qt6::Core Qt6::Gui grm_static)
-    set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
-  else()
-    target_link_libraries(grplot PRIVATE Qt5::Widgets Qt5::Core Qt5::Gui grm_static)
-    set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
-  endif()
-  target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
-  if(NOT TARGET LibXml2::LibXml2)
-    target_compile_definitions(grplot PRIVATE NO_LIBXML2)
-  endif()
-  set_target_properties(
-    grplot PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
-                                                                                  "${grplot_INSTALL_RPATH}"
-  )
-  if(WIN32)
-    if(MINGW)
-      target_link_options(grplot PRIVATE -mconsole)
-    else()
-      target_link_options(grplot PRIVATE /SUBSYSTEM:CONSOLE)
-    endif()
-  endif()
-  if(GR_MANUAL_MOC_AND_RCC)
-    set_target_properties(grplot PROPERTIES AUTOMOC OFF AUTORCC OFF)
-    if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
-      set(MOC_INCLUDE_FLAGS ${QT6_MOC_INCLUDE_FLAGS})
-    else()
-      set(MOC_INCLUDE_FLAGS ${QT5_MOC_INCLUDE_FLAGS})
-    endif()
-    add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
-      COMMAND
-        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx -o
-        ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
-    )
-    add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
-      COMMAND
-        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx -o
-        ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
-    )
-    add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
-      COMMAND
-        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h -o
-        ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h
-    )
-    add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
-      COMMAND
-        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h -o
-        ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h
-    )
 
-    add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
-      COMMAND
-        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h -o
-        ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h
+  if(NOT MINGW OR NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
+    add_executable(
+      grplot WIN32 MACOSX_BUNDLE
+      lib/grm/grplot/gredit/AddElementWidget.cpp
+      lib/grm/grplot/gredit/Bounding_logic.cpp
+      lib/grm/grplot/gredit/Bounding_object.cpp
+      lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
+      lib/grm/grplot/gredit/TreeWidget.cpp
+      lib/grm/grplot/grplot.cxx
+      lib/grm/grplot/grplot_mainwindow.cxx
+      lib/grm/grplot/grplot_widget.cxx
+      lib/grm/grplot/qtterm/grm_args_t_wrapper.cpp
+      lib/grm/grplot/qtterm/receiver_thread.cpp
+      lib/grm/grplot/util.cxx
     )
-    add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
-      COMMAND
-        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h -o
-        ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h
+    if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
+      target_link_libraries(grplot PRIVATE Qt6::Widgets Qt6::Core Qt6::Gui grm_static)
+      set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
+    else()
+      target_link_libraries(grplot PRIVATE Qt5::Widgets Qt5::Core Qt5::Gui grm_static)
+      set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
+    endif()
+    target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
+    if(NOT TARGET LibXml2::LibXml2)
+      target_compile_definitions(grplot PRIVATE NO_LIBXML2)
+    endif()
+    set_target_properties(
+      grplot PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
+                                                                                    "${grplot_INSTALL_RPATH}"
     )
-    add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
-      COMMAND
-        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h -o
-        ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h
-    )
-    add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
-      COMMAND
-        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
-    )
-    add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
-      COMMAND
-        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.h -o
-        ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.h
-    )
-    target_sources(
-      grplot
-      PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
-              ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
-              ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
-              ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
-              ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
-              ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
-              ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
-              ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
-              ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
-    )
+    if(WIN32)
+      if(MINGW)
+        target_link_options(grplot PRIVATE -mconsole)
+      else()
+        target_link_options(grplot PRIVATE /SUBSYSTEM:CONSOLE)
+      endif()
+    endif()
+    if(GR_MANUAL_MOC_AND_RCC)
+      set_target_properties(grplot PROPERTIES AUTOMOC OFF AUTORCC OFF)
+      if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
+        set(MOC_INCLUDE_FLAGS ${QT6_MOC_INCLUDE_FLAGS})
+      else()
+        set(MOC_INCLUDE_FLAGS ${QT5_MOC_INCLUDE_FLAGS})
+      endif()
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h
+      )
+
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.h -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.h
+      )
+      target_sources(
+        grplot
+        PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
+      )
+    else()
+      set_target_properties(grplot PROPERTIES AUTOMOC ON AUTORCC ON)
+      target_sources(
+        grplot
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.h
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h
+      )
+    endif()
+    if(APPLE)
+      set_target_properties(grplot PROPERTIES MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.grplot")
+    endif()
+    if(WIN32)
+      target_compile_definitions(grplot PRIVATE GR_STATIC_LIB)
+    endif()
+    target_compile_options(grplot PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   else()
-    set_target_properties(grplot PROPERTIES AUTOMOC ON AUTORCC ON)
-    target_sources(
-      grplot
-      PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
-              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
-              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h
-              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h
-              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h
-              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
-              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.h
-              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h
-              ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h
-    )
+    add_executable(grplot lib/grm/grplot/grplot.cxx)
   endif()
-  if(APPLE)
-    set_target_properties(grplot PROPERTIES MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.grplot")
-  endif()
-  if(WIN32)
-    target_compile_definitions(grplot PRIVATE GR_STATIC_LIB)
-  endif()
-  target_compile_options(grplot PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   string(APPEND GR_REPORT "- grplot: Yes\n")
 else()
   string(APPEND GR_REPORT "- grplot: No (Qt6 and Qt5 not found)\n")
