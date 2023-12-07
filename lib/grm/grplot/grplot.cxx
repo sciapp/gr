@@ -1,3 +1,4 @@
+#if !(defined(__MINGW32__) && !defined(__MINGW64__))
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -78,3 +79,12 @@ int main(int argc, char **argv)
       return app.exec();
     }
 }
+#else
+#include <iostream>
+
+int main(int argc, char **argv)
+{
+  std::cerr << "grplot is not supported on MinGW 32-bit." << std::endl;
+  return 1;
+}
+#endif
