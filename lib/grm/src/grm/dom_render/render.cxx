@@ -9837,6 +9837,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
             {
               rectlist.resize(num_bins);
             }
+          rectlist.resize(num_bins); // todo: always use rectlist, dont use mlist anymore!
         }
     }
 
@@ -10046,18 +10047,23 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
     }
 
   // Iterate through the classes and create for every bar polarbar (except for colormap; if colormap and drawedges
-  // bars for drawedges will be created here)
-  for (int class_nr = 0; class_nr < classes.size(); ++class_nr)
+  // the bars for drawedges will be created here)
+  for (int class_nr = 0; class_nr < classes.size();
+       ++class_nr) // main loop used for each bar (and arc in stairs; but not the lines in stairs
     {
       double count = classes[class_nr];
+      // todo: if classes == 0 rectlist is adjusted, but what is rectlist?
+      // rectlist stores rectangle information of the previous run?
+      // rectlist is only used with bin_edges? mlist is only used without bin_edges. But why???
+      // todo: clean up mlist/rectlist stuff! Only use rectlist WIP (testin rn)
       if (classes[class_nr] == 0)
         {
-          /* stairs bin_edges / phi_lim */
-          if (!rectlist.empty() && phi_lim != nullptr)
-            rectlist[class_nr] = r_min;
-          else if (!rectlist.empty())
-            rectlist[class_nr] = 0.0;
-        }
+          if (keep_radii_axes)
+            {
+            }
+          else
+            {
+            }
 
       if (str_equals_any(norm, "probability", "cdf"))
         {
@@ -10130,6 +10136,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
       else if (!draw_edges && (xcolormap == -2 && ycolormap == -2)) /* stairs without draw_edges (not compatible) */
         {
           // this is for drawing the arcs in stairs.TODO: improve overall readability and ylims
+          // todo: merge no_bin_edges and bin_edges cases together
           double r, rect;
           std::complex<double> complex1, complex2;
           const double convert = 180.0 / M_PI;
@@ -10143,7 +10150,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
           processLineWidth(element);
 
           /* perform calculations for later usages, this r is used for complex calculations */
-          if (keep_radii_axes)
+          if (keep_radii_axes && ylim)
             {
               r = pow((count / max), num_bins * 2);
               // todo: test limiting r here already
@@ -10152,7 +10159,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
                   r = pow(ylim_max / max, num_bins * 2);
                 }
             }
-          else
+          else if (ylim)
             {
               // trim count to ylim_max if higher
               if (count > ylim_max)
@@ -10163,143 +10170,438 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
               if (count < 0.0) count = 0.0;
               r = pow((count / (ylim_max - ylim_min)), num_bins * 2);
             }
+          else
+            {
+              r = pow((count / max), (num_bins * 2));
+            }
 
-          //          r = pow((count / max), (num_bins * 2));
           complex1 = moivre(r, (2 * class_nr), (int)num_bins * 2);
           complex2 = moivre(r, (2 * class_nr + 2), ((int)num_bins * 2));
           rect = sqrt(pow(real(complex1), 2) + pow(imag(complex1), 2));
 
-          /* no bin_edges */
-          if (num_bin_edges == 0)
+          // TODO WIP: MERGE bin_edges and no_bin_edges cases together! ------------------------------
+          double start_angle, end_angle;
+          if (num_bin_edges)
             {
-              double arc_pos;
-              std::shared_ptr<GRM::Element> arc;
-
-              mlist[class_nr * 4] = real(complex1);
-              mlist[class_nr * 4 + 1] = imag(complex1);
-              mlist[class_nr * 4 + 2] = real(complex2);
-              mlist[class_nr * 4 + 3] = imag(complex2);
-
-              if (ylim)
-                {
-                  for (int i = 0; i < 2; ++i)
-                    {
-                      double temporary =
-                          fabs(sqrt(pow(mlist[class_nr * 4 + 2 - i * 2], 2) + pow(mlist[class_nr * 4 + 3 - i * 2], 2)));
-                      if (temporary > r_max)
-                        {
-                          double factor = fabs(r_max / temporary);
-                          mlist[class_nr * 4 + 2 - i * 2] *= factor;
-                          mlist[class_nr * 4 + 3 - i * 2] *= factor;
-                        }
-                    }
-                  // todo: ylims
-                  if ((count > 0 && !keep_radii_axes) || (count > ylim_min && keep_radii_axes))
-                    {
-                      if (del != del_values::update_without_default && del != del_values::update_with_default)
-                        {
-                          arc = global_render->createDrawArc(
-                              -grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max), grm_min(rect, r_max),
-                              class_nr * (360.0 / num_bins), (class_nr + 1) * 360.0 / num_bins);
-                          arc->setAttribute("_child_id", child_id++);
-                          element->append(arc);
-                        }
-                      else
-                        {
-                          arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
-                          if (arc != nullptr)
-                            global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max),
-                                                         -grm_min(rect, r_max), grm_min(rect, r_max),
-                                                         class_nr * (360.0 / num_bins),
-                                                         (class_nr + 1) * 360.0 / num_bins, arc);
-                        }
-
-                      arc_pos = r_min;
-                    }
-                }
-              else /* no r_lim */
-                {
-                  arc_pos = rect;
-                }
-              if (del != del_values::update_without_default && del != del_values::update_with_default)
-                {
-                  arc =
-                      global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, class_nr * (360.0 / num_bins),
-                                                   (class_nr + 1) * (360.0 / num_bins));
-                  arc->setAttribute("_child_id", child_id++);
-                  element->append(arc);
-                }
-              else
-                {
-                  arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
-                  if (arc != nullptr)
-                    global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, class_nr * (360.0 / num_bins),
-                                                 (class_nr + 1) * (360.0 / num_bins), arc);
-                }
+              start_angle = bin_edges[class_nr] * convert;
+              end_angle = bin_edges[class_nr + 1] * convert;
             }
-          else /* with bin_edges */
+          else
             {
-              /* r_lim and bin_edges */
-              std::shared_ptr<GRM::Element> arc;
-              double arc_pos;
+              start_angle = class_nr * (360.0 / num_bins);
+              end_angle = (class_nr + 1) * (360 / num_bins);
+            }
 
-              if (r_lim != nullptr)
+          /* wip: originally rlim and bin_edges */
+          std::shared_ptr<GRM::Element> arc;
+          double arc_pos;
+
+          if (ylim)
+            {
+              // todo insert keep_radii_check and adjust accordingly
+              if (keep_radii_axes)
                 {
-                  if (rect < r_min)
-                    rectlist[class_nr] = r_min;
+                  if (count < ylim_min)
+                    rectlist[class_nr] = ylim_min / ylim_max;
                   else if (rect > r_max)
-                    rectlist[class_nr] = r_max;
+                    rectlist[class_nr] = ylim_max;
                   else
                     rectlist[class_nr] = rect;
 
-                  if (rect > r_min)
-                    {
-                      if (del != del_values::update_without_default && del != del_values::update_with_default)
-                        {
-                          arc = global_render->createDrawArc(
-                              -grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max), grm_min(rect, r_max),
-                              bin_edges[class_nr] * convert, bin_edges[class_nr + 1] * convert);
-                          arc->setAttribute("_child_id", child_id++);
-                          element->append(arc);
-                        }
-                      else
-                        {
-                          arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
-                          if (arc != nullptr)
-                            global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max),
-                                                         -grm_min(rect, r_max), grm_min(rect, r_max),
-                                                         bin_edges[class_nr] * convert,
-                                                         bin_edges[class_nr + 1] * convert, arc);
-                        }
-
-                      arc_pos = r_min;
-                    }
-                }
-              else /* no r_lim */
-                {
-                  rectlist[class_nr] = rect;
-                  if (class_nr == num_bin_edges - 1) break;
-                  arc_pos = rect;
-                }
-              if (del != del_values::update_without_default && del != del_values::update_with_default)
-                {
-                  arc = global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos,
-                                                     bin_edges[class_nr] * convert, bin_edges[class_nr + 1] * convert);
-                  arc->setAttribute("_child_id", child_id++);
-                  element->append(arc);
+                  //
+                  auto complex_min = moivre(pow(ylim_min / ylim_max, num_bins * 2), (2 * class_nr), (int)num_bins * 2);
+                  arc_pos = sqrt(pow(real(complex_min), 2) + pow(imag(complex_min), 2));
+                  if (count < ylim_min) arc_pos = 0.0;
                 }
               else
                 {
-                  arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
-                  if (arc != nullptr)
-                    global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, bin_edges[class_nr] * convert,
-                                                 bin_edges[class_nr + 1] * convert, arc);
+                  if (count < ylim_min)
+                    rectlist[class_nr] = 0.0; // todo set to 0 if smaller?
+                  else if (count > ylim_max)
+                    rectlist[class_nr] = 1.0; // 1.0 equals ylim_max (when no keep_radii_axes is set)
+                  else
+                    rectlist[class_nr] = rect;
+
+                  arc_pos = 0.0;
+                }
+
+              //              if (rect < r_min)
+              //                rectlist[class_nr] = r_min;
+              //              else if (rect > r_max)
+              //                rectlist[class_nr] = r_max;
+              //              else
+              //                rectlist[class_nr] = rect;
+
+              // todo: this is the outer arc
+              if ((count > 0 && !keep_radii_axes) || (count > ylim_min && keep_radii_axes))
+                {
+                  if (del != del_values::update_without_default && del != del_values::update_with_default)
+                    {
+                      arc = global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max),
+                                                         -grm_min(rect, r_max), grm_min(rect, r_max), start_angle,
+                                                         end_angle);
+                      arc->setAttribute("_child_id", child_id++);
+                      element->append(arc);
+                    }
+                  else
+                    {
+                      arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
+                      if (arc != nullptr)
+                        global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max),
+                                                     grm_min(rect, r_max), start_angle, end_angle, arc);
+                    }
                 }
             }
+          else /* no rlim */
+            {
+              rectlist[class_nr] = rect;
+              // todo break here when class_nr == ????
+              if (class_nr == num_bin_edges - 1) break;
+              arc_pos = rect;
+            }
+          // todo: these are the inner arcs with ylim and the normal_arcs without ylim
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              arc = global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, start_angle, end_angle);
+              arc->setAttribute("_child_id", child_id++);
+              element->append(arc);
+            }
+          else
+            {
+              arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
+              if (arc != nullptr)
+                global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, start_angle, end_angle, arc);
+            }
+
+          continue; // todo test end here
+          // todo WIP: End of MERGE! ---------------------------------------------------------------
+
+          //          /*  no bin_edges */
+          //          if (num_bin_edges == 0)
+          //            {
+          //              double arc_pos;
+          //              std::shared_ptr<GRM::Element> arc;
+          //
+          //              mlist[class_nr * 4] = real(complex1);
+          //              mlist[class_nr * 4 + 1] = imag(complex1);
+          //              mlist[class_nr * 4 + 2] = real(complex2);
+          //              mlist[class_nr * 4 + 3] = imag(complex2);
+          //
+          //              if (ylim)
+          //                {
+          //                  for (int i = 0; i < 2; ++i)
+          //                    {
+          //                      double temporary =
+          //                          fabs(sqrt(pow(mlist[class_nr * 4 + 2 - i * 2], 2) + pow(mlist[class_nr * 4 + 3 - i
+          //                          * 2], 2)));
+          //                      if (temporary > r_max)
+          //                        {
+          //                          double factor = fabs(r_max / temporary);
+          //                          mlist[class_nr * 4 + 2 - i * 2] *= factor;
+          //                          mlist[class_nr * 4 + 3 - i * 2] *= factor;
+          //                        }
+          //                    }
+          //                  // todo: ylims
+          //                  if ((count > 0 && !keep_radii_axes) || (count > ylim_min && keep_radii_axes))
+          //                    {
+          //                      if (del != del_values::update_without_default && del !=
+          //                      del_values::update_with_default)
+          //                        {
+          //                          arc = global_render->createDrawArc(
+          //                              -grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max),
+          //                              grm_min(rect, r_max), class_nr * (360.0 / num_bins), (class_nr + 1) * 360.0 /
+          //                              num_bins);
+          //                          arc->setAttribute("_child_id", child_id++);
+          //                          element->append(arc);
+          //                        }
+          //                      else
+          //                        {
+          //                          arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) +
+          //                          "]"); if (arc != nullptr)
+          //                            global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max),
+          //                                                         -grm_min(rect, r_max), grm_min(rect, r_max),
+          //                                                         class_nr * (360.0 / num_bins),
+          //                                                         (class_nr + 1) * 360.0 / num_bins, arc);
+          //                        }
+          //
+          //                        // todo min arc_pos?
+          //                        arc_pos = ylim_min / ylim_max;
+          ////                      arc_pos = r_min;
+          //                    }
+          //                }
+          //              else /* no rlim */
+          //                {
+          //                  arc_pos = rect;
+          //                }
+          //              if (del != del_values::update_without_default && del != del_values::update_with_default)
+          //                {
+          //                  arc =
+          //                      global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, class_nr * (360.0 /
+          //                      num_bins),
+          //                                                   (class_nr + 1) * (360.0 / num_bins));
+          //                  arc->setAttribute("_child_id", child_id++);
+          //                  element->append(arc);
+          //                }
+          //              else
+          //                {
+          //                  arc = element->querySelectors("drawarc[_child_id=" + std::to_string(child_id++) + "]");
+          //                  if (arc != nullptr)
+          //                    global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, class_nr * (360.0 /
+          //                    num_bins),
+          //                                                 (class_nr + 1) * (360.0 / num_bins), arc);
+          //                }
+          //            }
+          //          else /* with bin_edges */
+          //            {
+          //              /* rlim and bin_edges*/
+          //              std::shared_ptr<GRM::Element> arc;
+          //              double arc_pos;
+          //
+          //              if (rlim != nullptr)
+          //                {
+          //                  if (rect < r_min)
+          //                    rectlist[class_nr] = r_min;
+          //                  else if (rect > r_max)
+          //                    rectlist[class_nr] = r_max;
+          //                  else
+          //                    rectlist[class_nr] = rect;
+          //
+          //                  if (rect > r_min)
+          //                    {
+          //                      if (del != del_values::update_without_default && del !=
+          //                      del_values::update_with_default)
+          //                        {
+          //                          arc = global_render->createDrawArc(
+          //                              -grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max),
+          //                              grm_min(rect, r_max), bin_edges[class_nr] * convert, bin_edges[class_nr + 1] *
+          //                              convert);
+          //                          arc->setAttribute("_child_id", child_id++);
+          //                          element->append(arc);
+          //                        }
+          //                      else
+          //                        {
+          //                          arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) +
+          //                          "]"); if (arc != nullptr)
+          //                            global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max),
+          //                                                         -grm_min(rect, r_max), grm_min(rect, r_max),
+          //                                                         bin_edges[class_nr] * convert,
+          //                                                         bin_edges[class_nr + 1] * convert, arc);
+          //                        }
+          //
+          //                      arc_pos = r_min;
+          //                    }
+          //                }
+          //              else /* no rlim */
+          //                {
+          //                  rectlist[class_nr] = rect;
+          //                  if (class_nr == num_bin_edges - 1) break;
+          //                  arc_pos = rect;
+          //                }
+          //              if (del != del_values::update_without_default && del != del_values::update_with_default)
+          //                {
+          //                  arc = global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos,
+          //                                                     bin_edges[class_nr] * convert, bin_edges[class_nr + 1]
+          //                                                     * convert);
+          //                  arc->setAttribute("_child_id", child_id++);
+          //                  element->append(arc);
+          //                }
+          //              else
+          //                {
+          //                  arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
+          //                  if (arc != nullptr)
+          //                    global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, bin_edges[class_nr] *
+          //                    convert,
+          //                                                 bin_edges[class_nr + 1] * convert, arc);
+          //                }
+          //            }
         }
     } /* end of classes for loop */
 
   // todo: this is for drawing the stairs straight lines. Improve overall stair case readability
+  // todo: merge bin_edges and no_bin_edges cases together!
+
+  // TODO: Beginning of merge __________________________________________________________________________________
+  if (stairs && !draw_edges && (xcolormap == -2 && ycolormap == -2))
+    {
+      std::shared_ptr<GRM::Element> line;
+      double line_x[2], line_y[2];
+
+      if (ylim)
+        {
+          double startx, starty;
+
+          // todo: to keep the code clean use a vector (like "angles") and put bin_edges or the non_bin_edges angles in
+          // it
+          // startx/y is the coordinate for minimum radius (ylim_min)
+          std::vector<double> angles_vec;
+
+          // todo: rectlist is not filled...
+          if (num_bin_edges != 0)
+            {
+              startx = grm_max(rectlist[0] * cos(bin_edges[0]), r_min * cos(bin_edges[0]));
+              starty = grm_max(rectlist[0] * sin(bin_edges[0]), r_min * sin(bin_edges[0]));
+              angles_vec = bin_edges;
+            }
+          else
+            {
+              startx = grm_max(rectlist[0] * cos(2 * M_PI / num_bins * 0), ylim_min / ylim_max * cos(0.0));
+              starty = grm_max(rectlist[0] * sin(2 * M_PI / num_bins * 0), ylim_min / ylim_max * sin(0.0));
+              linspace(0.0, 2 * M_PI, classes.size() + 1, angles_vec);
+            }
+
+          // todo: maybe size - 1?
+          for (int x = 0; x < classes.size(); ++x)
+            {
+              line_x[0] = startx;
+              line_x[1] = rectlist[x] * cos(angles_vec[x]);
+              line_y[0] = starty;
+              line_y[1] = rectlist[x] * sin(angles_vec[x]);
+
+              startx = rectlist[x] * cos(angles_vec[x + 1]);
+              starty = rectlist[x] * sin(angles_vec[x + 1]);
+
+              if ((!phiflip && (!((angles_vec[0] > 0.0 && angles_vec[0] < 0.001) &&
+                                  angles_vec[angles_vec.size() - 1] > 1.96 * M_PI) ||
+                                x > 0)) ||
+                  ((angles_vec[0] > 1.96 * M_PI &&
+                    !(angles_vec[angles_vec.size() - 1] > 0.0 && angles_vec[angles_vec.size() - 1] < 0.001)) ||
+                   x > 0))
+                {
+                  if (del != del_values::update_without_default && del != del_values::update_with_default)
+                    {
+                      line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
+                      line->setAttribute("_child_id", child_id++);
+                      element->append(line);
+                    }
+                  else
+                    {
+                      line = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
+                      if (line != nullptr)
+                        global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
+                    }
+                }
+            }
+
+          // todo: what are these lines for?
+          if (!(angles_vec[0] == 0.0 && angles_vec[angles_vec.size() - 1] > 1.96 * M_PI))
+            {
+              line_x[0] = ylim_min / ylim_max * cos(angles_vec[0]);
+              line_x[1] = rectlist[0] * cos(angles_vec[0]);
+              line_y[0] = ylim_min / ylim_max * sin(angles_vec[0]);
+              line_y[1] = rectlist[0] * sin(angles_vec[0]);
+
+              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                {
+                  line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
+                  line->setAttribute("_child_id", child_id++);
+                  element->append(line);
+                }
+              else
+                {
+                  line = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
+                  if (line != nullptr)
+                    global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
+                }
+            }
+
+          if (angles_vec[0] == 0.0 && angles_vec[angles_vec.size() - 1] > 1.96 * M_PI)
+            {
+              line_x[0] = rectlist[0] * cos(angles_vec[0]);
+              line_x[1] = rectlist[angles_vec.size() - 2] * cos(angles_vec[angles_vec.size() - 1]);
+              line_y[0] = rectlist[0] * sin(angles_vec[0]);
+              line_y[1] = rectlist[angles_vec.size() - 2] * sin(angles_vec[angles_vec.size() - 1]);
+            }
+          else
+            {
+              line_x[0] = rectlist[angles_vec.size() - 2] * cos(angles_vec[angles_vec.size() - 1]);
+              line_x[1] = ylim_min / ylim_max * cos(angles_vec[angles_vec.size() - 1]);
+              line_y[0] = rectlist[angles_vec.size() - 2] * sin(angles_vec[angles_vec.size() - 1]);
+              line_y[1] = ylim_min / ylim_max * sin(angles_vec[angles_vec.size() - 1]);
+            }
+        } // end of ylim case
+      else
+        { // without ylims todo: in progress
+          double startx = 0.0, starty = 0.0;
+
+          std::vector<double> angles_vec;
+
+          // todo: rectlist is not filled...
+          if (num_bin_edges != 0)
+            {
+              startx = grm_max(rectlist[0] * cos(bin_edges[0]), r_min * cos(bin_edges[0]));
+              starty = grm_max(rectlist[0] * sin(bin_edges[0]), r_min * sin(bin_edges[0]));
+              angles_vec = bin_edges;
+            }
+          else
+            {
+              startx = grm_max(rectlist[0] * cos(2 * M_PI / num_bins * 0), ylim_min / ylim_max * cos(0.0));
+              starty = grm_max(rectlist[0] * sin(2 * M_PI / num_bins * 0), ylim_min / ylim_max * sin(0.0));
+              linspace(0.0, 2 * M_PI, classes.size() + 1, angles_vec);
+            }
+
+          for (int x = 0; x < num_bin_edges - 1; ++x)
+            {
+              // todo: in progress without ylims
+              line_x[0] = startx;
+              line_x[1] = rectlist[x] * cos(angles_vec[x]);
+              line_y[0] = starty;
+              line_y[1] = rectlist[x] * sin(angles_vec[x]);
+
+              startx = rectlist[x] * cos(bin_edges[x + 1]);
+              starty = rectlist[x] * sin(bin_edges[x + 1]);
+
+              if (!(bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI) || x > 0)
+                {
+                  if (del != del_values::update_without_default && del != del_values::update_with_default)
+                    {
+                      line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
+                      line->setAttribute("_child_id", child_id++);
+                      element->append(line);
+                    }
+                  else
+                    {
+                      line = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
+                      if (line != nullptr)
+                        global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
+                    }
+                }
+            }
+
+          if (bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI)
+            {
+              line_x[0] = rectlist[0] * cos(bin_edges[0]);
+              line_x[1] = startx;
+              line_y[0] = rectlist[0] * sin(bin_edges[0]);
+              line_y[1] = starty;
+            }
+          else
+            {
+              line_x[0] = rectlist[num_bin_edges - 2] * cos(bin_edges[num_bin_edges - 1]);
+              line_x[1] = 0.0;
+              line_y[0] = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
+              line_y[1] = 0.0;
+            }
+        }
+
+      // todo what is this for?
+      if (del != del_values::update_without_default && del != del_values::update_with_default)
+        {
+          line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
+          line->setAttribute("_child_id", child_id++);
+          element->append(line);
+        }
+      else
+        {
+          line = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
+          if (line != nullptr)
+            global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
+        }
+    }
+
+  // TODO: End of Merge ________________________________________________________________________________________
+
+  // todo: testcase end here!
+  return;
   if (stairs && !draw_edges && (xcolormap == -2 && ycolormap == -2))
     {
       std::shared_ptr<GRM::Element> line;
