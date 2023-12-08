@@ -200,6 +200,17 @@ static std::set<std::string> valid_context_keys = {"absolute_downwards",
                                                    "z",
                                                    "z_dims"};
 
+static std::set<std::string> polarKinds = {
+    "polar",
+    "polar_histogram",
+    "polar_heatmap",
+    "nonuniformpolar_heatmap",
+};
+
+static std::set<std::string> kinds3D = {
+    "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
+};
+
 static std::map<std::string, double> symbol_to_meters_per_unit{
     {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
     {"\"", 0.0254}, {"ft", 0.3048}, {"'", 0.0254}, {"pc", 0.0254 / 6.0}, {"pt", 0.0254 / 72.0},
@@ -424,16 +435,29 @@ static void clearOldChildren(del_values *del, const std::shared_ptr<GRM::Element
     *del = del_values::recreate_own_children;
   else
     {
+      bool only_children_created_from_attributes = true;
       bool only_error_child = true;
+      /* types of children the coordinate system can have that are created from attributes */
+      std::vector<std::string> coordinate_system_children = {"x_tick_label_group", "y_tick_label_group", "text",
+                                                             "titles_3d"};
       for (const auto &child : element->children())
         {
+          if (element->localName() == "coordinate_system" &&
+              std::find(coordinate_system_children.begin(), coordinate_system_children.end(), child->localName()) ==
+                  coordinate_system_children.end())
+            {
+              only_children_created_from_attributes = false;
+              break;
+            }
           if (child->localName() != "error_bars" && child->localName() != "integral_group")
             {
               only_error_child = false;
               break;
             }
         }
-      if (only_error_child) *del = del_values::recreate_own_children;
+      if (element->localName() == "coordinate_system" && only_children_created_from_attributes)
+        *del = del_values::recreate_own_children;
+      if (starts_with(element->localName(), "series_") && only_error_child) *del = del_values::recreate_own_children;
     }
 }
 
@@ -3790,29 +3814,25 @@ static void processXlabel(const std::shared_ptr<GRM::Element> &element)
 {
   double viewport[4], vp[4], char_height;
   del_values del = del_values::update_without_default;
-
   auto subplot_element = getSubplotElement(element);
 
   gr_inqcharheight(&char_height);
-  viewport[0] = (double)subplot_element->getAttribute("viewport_x_min");
-  viewport[1] = (double)subplot_element->getAttribute("viewport_x_max");
-  viewport[2] = (double)subplot_element->getAttribute("viewport_y_min");
-  viewport[3] = (double)subplot_element->getAttribute("viewport_y_max");
-  vp[0] = (double)subplot_element->getAttribute("vp_x_min");
-  vp[1] = (double)subplot_element->getAttribute("vp_x_max");
-  vp[2] = (double)subplot_element->getAttribute("vp_y_min");
-  vp[3] = (double)subplot_element->getAttribute("vp_y_max");
-
+  viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_x_min"));
+  viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_x_max"));
+  viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_y_min"));
+  viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_y_max"));
+  vp[0] = static_cast<double>(subplot_element->getAttribute("vp_x_min"));
+  vp[1] = static_cast<double>(subplot_element->getAttribute("vp_x_max"));
+  vp[2] = static_cast<double>(subplot_element->getAttribute("vp_y_min"));
+  vp[3] = static_cast<double>(subplot_element->getAttribute("vp_y_max"));
   double x = 0.5 * (viewport[0] + viewport[1]);
   double y = vp[2] + 0.5 * char_height;
-  std::string x_label = (std::string)element->getAttribute("x_label");
+  std::string x_label = static_cast<std::string>(element->getAttribute("x_label"));
   if (x_label.empty()) return; // Empty xlabel is pointless, no need to waste the space for nothing
-
   if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()))
     {
       del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
       auto xlabel_elem = element->querySelectors("[name=\"x_label\"]");
-
       if ((del != del_values::update_without_default && del != del_values::update_with_default) ||
           xlabel_elem == nullptr)
         {
@@ -3834,30 +3854,26 @@ static void processYlabel(const std::shared_ptr<GRM::Element> &element)
   double viewport[4], vp[4], char_height;
   bool keep_aspect_ratio;
   del_values del = del_values::update_without_default;
-
   auto subplot_element = getSubplotElement(element);
 
   gr_inqcharheight(&char_height);
-  viewport[0] = (double)subplot_element->getAttribute("viewport_x_min");
-  viewport[1] = (double)subplot_element->getAttribute("viewport_x_max");
-  viewport[2] = (double)subplot_element->getAttribute("viewport_y_min");
-  viewport[3] = (double)subplot_element->getAttribute("viewport_y_max");
-  vp[0] = (double)subplot_element->getAttribute("vp_x_min");
-  vp[1] = (double)subplot_element->getAttribute("vp_x_max");
-  vp[2] = (double)subplot_element->getAttribute("vp_y_min");
-  vp[3] = (double)subplot_element->getAttribute("vp_y_max");
-  keep_aspect_ratio = (int)subplot_element->getAttribute("keep_aspect_ratio");
-
+  viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_x_min"));
+  viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_x_max"));
+  viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_y_min"));
+  viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_y_max"));
+  vp[0] = static_cast<double>(subplot_element->getAttribute("vp_x_min"));
+  vp[1] = static_cast<double>(subplot_element->getAttribute("vp_x_max"));
+  vp[2] = static_cast<double>(subplot_element->getAttribute("vp_y_min"));
+  vp[3] = static_cast<double>(subplot_element->getAttribute("vp_y_max"));
+  keep_aspect_ratio = static_cast<int>(subplot_element->getAttribute("keep_aspect_ratio"));
   double x = ((keep_aspect_ratio) ? 0.925 : 1) * vp[0] + 0.5 * char_height;
   double y = 0.5 * (viewport[2] + viewport[3]);
-  std::string y_label = (std::string)element->getAttribute("y_label");
+  std::string y_label = static_cast<std::string>(element->getAttribute("y_label"));
   if (y_label.empty()) return; // Empty ylabel is pointless, no need to waste the space for nothing
-
   if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()))
     {
       del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
       auto ylabel_elem = element->querySelectors("[name=\"y_label\"]");
-
       if ((del != del_values::update_without_default && del != del_values::update_with_default) ||
           ylabel_elem == nullptr)
         {
@@ -4070,7 +4086,6 @@ void GRM::Render::processAttributes(const std::shared_ptr<GRM::Element> &element
       {std::string("x_flip"), processFlip},              // y_flip is also set
       {std::string("x_label"), processXlabel},
       {std::string("x_tick_labels"), processXTickLabels},
-      {std::string("y_label"), processYlabel},
       {std::string("y_tick_labels"), processYTickLabels},
       {std::string("z_index"), processZIndex},
   };
@@ -4196,7 +4211,7 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &element, const std::s
     }
 }
 
-static void axes(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processAxes(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for axes
@@ -4236,24 +4251,7 @@ static void axes(const std::shared_ptr<GRM::Element> &element, const std::shared
   if (redraw_ws) gr_axes(x_tick, y_tick, x_org, y_org, x_major, y_major, tick_size);
 }
 
-static void processAxes(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
-{
-  auto subplot_element = getSubplotElement(element);
-
-  if (element->hasAttribute("x_label"))
-    {
-      processXlabel(element);
-    }
-  if (element->hasAttribute("y_label"))
-    {
-      processYlabel(element);
-    }
-
-  auto pushAxesToZQueue = PushDrawableToZQueue(axes);
-  pushAxesToZQueue(element, context);
-}
-
-static void axes3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processAxes3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for axes 3d
@@ -4288,21 +4286,6 @@ static void axes3d(const std::shared_ptr<GRM::Element> &element, const std::shar
   applyMoveTransformation(element);
 
   if (redraw_ws) gr_axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, x_major, y_major, z_major, tick_size);
-}
-
-static void processAxes3d(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
-{
-  if (element->hasAttribute("x_label"))
-    {
-      processXlabel(element);
-    }
-  if (element->hasAttribute("y_label"))
-    {
-      processYlabel(element);
-    }
-
-  auto pushAxes3dToZQueue = PushDrawableToZQueue(axes3d);
-  pushAxes3dToZQueue(element, context);
 }
 
 static void processCellArray(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -11095,11 +11078,16 @@ static void processTitles3d(const std::shared_ptr<GRM::Element> &element, const 
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
-  auto xlabel = static_cast<std::string>(element->getAttribute("x_label_3d"));
-  auto ylabel = static_cast<std::string>(element->getAttribute("y_label_3d"));
-  auto zlabel = static_cast<std::string>(element->getAttribute("z_label_3d"));
+  std::string xlabel, ylabel, zlabel;
+  auto coordinateSystem = element->parentElement();
+  bool draw =
+      (coordinateSystem->hasAttribute("draw")) ? static_cast<int>(coordinateSystem->getAttribute("draw")) : true;
+  std::string coordinateSystemType = static_cast<std::string>(coordinateSystem->getAttribute("type"));
+  xlabel = static_cast<std::string>(element->getAttribute("x_label_3d"));
+  ylabel = static_cast<std::string>(element->getAttribute("y_label_3d"));
+  zlabel = static_cast<std::string>(element->getAttribute("z_label_3d"));
   applyMoveTransformation(element);
-  if (redraw_ws) gr_titles3d(xlabel.data(), ylabel.data(), zlabel.data());
+  if (redraw_ws && draw && coordinateSystemType == "3d") gr_titles3d(xlabel.data(), ylabel.data(), zlabel.data());
 }
 
 static void processTriContour(const std::shared_ptr<GRM::Element> &element,
@@ -12083,6 +12071,15 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
 static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element,
                                     const std::shared_ptr<GRM::Context> &context)
 {
+  auto kind = static_cast<std::string>(element->parentElement()->getAttribute("kind"));
+  int child_id = 0;
+  del_values del = del_values::update_without_default;
+  std::shared_ptr<GRM::Element> polarAxes, axes, grid, grid3d, axes3d;
+  std::string type;
+
+  del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
+  clearOldChildren(&del, element);
+
   for (const auto &parentchild : element->parentElement()->children())
     {
       if (parentchild->localName() == "series_barplot" || parentchild->localName() == "series_stem")
@@ -12097,6 +12094,227 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
     }
   /* 0-line */
   if (element->hasAttribute("y_line") && static_cast<int>(element->getAttribute("y_line"))) drawYLine(element, context);
+
+  type = static_cast<std::string>(element->getAttribute("type"));
+
+  if (element->hasAttribute("draw") && !static_cast<int>(element->getAttribute("draw")))
+    {
+      del = del_values::recreate_own_children;
+      clearOldChildren(&del, element);
+      return;
+    }
+
+  if (type == "polar")
+    {
+      // create polar coordinate system
+      int angle_ticks, phiflip;
+      std::string norm = "";
+      double tick = 0.0;
+
+      if (element->hasAttribute("angle_ticks"))
+        {
+          angle_ticks = static_cast<int>(element->getAttribute("angle_ticks"));
+        }
+      else
+        {
+          angle_ticks = 8;
+        }
+
+      if (element->hasAttribute("phiflip"))
+        {
+          phiflip = static_cast<int>(element->getAttribute("phiflip"));
+        }
+      else
+        {
+          phiflip = 0;
+        }
+
+      if (kind == "polar_histogram")
+        {
+          if (element->hasAttribute("normalization"))
+            {
+              norm = static_cast<std::string>(element->getAttribute("normalization"));
+            }
+          else
+            {
+              norm = "count";
+            }
+          tick = 1.0;
+        }
+
+      if (del != del_values::update_without_default && del != del_values::update_with_default)
+        {
+          polarAxes = global_render->createDrawPolarAxes(angle_ticks, kind, phiflip, norm, tick, 0.0);
+          polarAxes->setAttribute("_child_id", child_id++);
+          element->append(polarAxes);
+        }
+      else
+        {
+          polarAxes = element->querySelectors("polarAxes[_child_id=" + std::to_string(child_id++) + "]");
+          if (polarAxes != nullptr)
+            global_render->createDrawPolarAxes(angle_ticks, kind, phiflip, norm, tick, 0.0, polarAxes);
+        }
+    }
+  else
+    {
+      int tick_orientation = 1;
+
+      int x_grid =
+          (element->hasAttribute("x_grid")) ? static_cast<int>(element->getAttribute("x_grid")) : PLOT_DEFAULT_XGRID;
+      int y_grid =
+          (element->hasAttribute("y_grid")) ? static_cast<int>(element->getAttribute("y_grid")) : PLOT_DEFAULT_YGRID;
+
+      global_render->setLineColorInd(element, 1);
+      global_render->setLineWidth(element, 1);
+      processLineColorInd(element);
+      processLineWidth(element);
+
+      if (type == "3d")
+        {
+
+          int z_grid = (element->hasAttribute("z_grid")) ? static_cast<int>(element->getAttribute("z_grid"))
+                                                         : PLOT_DEFAULT_ZGRID;
+
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              grid3d = global_render->createEmptyGrid3d(x_grid, false, z_grid);
+              grid3d->setAttribute("_child_id", child_id++);
+              element->append(grid3d);
+            }
+          else
+            {
+              grid3d = element->querySelectors("grid3d[_child_id=" + std::to_string(child_id++) + "]");
+              if (grid3d != nullptr) global_render->createEmptyGrid3d(x_grid, false, z_grid, grid3d);
+            }
+          if (grid3d != nullptr)
+            {
+              global_render->setOriginPosition3d(grid3d, "low", "high", "low");
+              grid3d->setAttribute("x_major", 2);
+              grid3d->setAttribute("y_major", 0);
+              grid3d->setAttribute("z_major", 2);
+            }
+
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              grid3d = global_render->createEmptyGrid3d(false, y_grid, false);
+              grid3d->setAttribute("_child_id", child_id++);
+              element->append(grid3d);
+            }
+          else
+            {
+              grid3d = element->querySelectors("grid3d[_child_id=" + std::to_string(child_id++) + "]");
+              if (grid3d != nullptr) global_render->createEmptyGrid3d(false, y_grid, false, grid3d);
+            }
+          if (grid3d != nullptr)
+            {
+              global_render->setOriginPosition3d(grid3d, "low", "high", "low");
+              grid3d->setAttribute("x_major", 0);
+              grid3d->setAttribute("y_major", 2);
+              grid3d->setAttribute("z_major", 0);
+            }
+
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              axes3d = global_render->createEmptyAxes3d(-tick_orientation);
+              axes3d->setAttribute("_child_id", child_id++);
+              element->append(axes3d);
+            }
+          else
+            {
+              axes3d = element->querySelectors("axes3d[_child_id=" + std::to_string(child_id++) + "]");
+              if (axes3d != nullptr) global_render->createEmptyAxes3d(-tick_orientation, axes3d);
+            }
+          if (axes3d != nullptr)
+            {
+              global_render->setOriginPosition3d(axes3d, "low", "low", "low");
+              axes3d->setAttribute("y_tick", 0);
+              axes3d->setAttribute("y_major", 0);
+              axes3d->setAttribute("z_index", 7);
+            }
+
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              axes3d = global_render->createEmptyAxes3d(tick_orientation);
+              axes3d->setAttribute("_child_id", child_id++);
+              element->append(axes3d);
+            }
+          else
+            {
+              axes3d = element->querySelectors("axes3d[_child_id=" + std::to_string(child_id++) + "]");
+              if (axes3d != nullptr) global_render->createEmptyAxes3d(tick_orientation, axes3d);
+            }
+          if (axes3d != nullptr)
+            {
+              global_render->setOriginPosition3d(axes3d, "high", "low", "low");
+              axes3d->setAttribute("x_tick", 0);
+              axes3d->setAttribute("z_tick", 0);
+              axes3d->setAttribute("x_major", 0);
+              axes3d->setAttribute("z_major", 0);
+              axes3d->setAttribute("z_index", 7);
+            }
+        }
+      else
+        {
+          if (str_equals_any(kind.c_str(), 3, "heatmap", "shade", "marginalheatmap"))
+            {
+              tick_orientation = -1;
+            }
+          if (!str_equals_any(kind.c_str(), 1, "shade"))
+            {
+              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                {
+                  grid = global_render->createEmptyGrid(x_grid, y_grid);
+                  grid->setAttribute("_child_id", child_id++);
+                  element->append(grid);
+                }
+              else
+                {
+                  grid = element->querySelectors("grid[_child_id=" + std::to_string(child_id++) + "]");
+                  if (grid != nullptr) global_render->createEmptyGrid(x_grid, y_grid, grid);
+                }
+              if (grid != nullptr)
+                {
+                  grid->setAttribute("x_org", 0);
+                  grid->setAttribute("y_org", 0);
+                }
+            }
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              axes = global_render->createEmptyAxes(tick_orientation);
+              axes->setAttribute("_child_id", child_id++);
+              element->append(axes);
+            }
+          else
+            {
+              axes = element->querySelectors("axes[_child_id=" + std::to_string(child_id++) + "]");
+              if (axes != nullptr) global_render->createEmptyAxes(tick_orientation, axes);
+            }
+          if (axes != nullptr)
+            {
+              global_render->setOriginPosition(axes, "low", "low");
+              if (kind == "barplot") axes->setAttribute("z_index", 7);
+            }
+
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              axes = global_render->createEmptyAxes(-tick_orientation);
+              axes->setAttribute("_child_id", child_id++);
+              element->append(axes);
+            }
+          else
+            {
+              axes = element->querySelectors("axes[_child_id=" + std::to_string(child_id++) + "]");
+              if (axes != nullptr) global_render->createEmptyAxes(-tick_orientation, axes);
+            }
+          if (axes != nullptr)
+            {
+              global_render->setOriginPosition(axes, "high", "high");
+              if (kind == "barplot") axes->setAttribute("z_index", 7);
+            }
+          if (element->hasAttribute("x_label")) processXlabel(element);
+          if (element->hasAttribute("y_label")) processYlabel(element);
+        }
+    }
 }
 
 static void processPlot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -12370,8 +12588,8 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
   static std::map<std::string,
                   std::function<void(const std::shared_ptr<GRM::Element>, const std::shared_ptr<GRM::Context>)>>
       elemStringToFunc{
-          {std::string("axes"), processAxes},
-          {std::string("axes_3d"), processAxes3d},
+          {std::string("axes"), PushDrawableToZQueue(processAxes)},
+          {std::string("axes_3d"), PushDrawableToZQueue(processAxes3d)},
           {std::string("bar"), processBar},
           {std::string("cellarray"), PushDrawableToZQueue(processCellArray)},
           {std::string("colorbar"), processColorbar},
@@ -13043,6 +13261,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("disable_y_trans"),
        std::vector<std::string>{"0", "Sets if the parameters for movable transformation in y-direction gets ignored."}},
       {std::string("downward_scap_color"), std::vector<std::string>{"None", "The color value for the downward scaps"}},
+      {std::string("draw"), std::vector<std::string>{"1", "Determines if the element will be drawn"}},
       {std::string("draw_edges"),
        std::vector<std::string>{"0", "Used in combination with x- and y-colormap to set if edges are drawn"}},
       {std::string("e_downwards"), std::vector<std::string>{"None", "The x-value for the downward error"}},
@@ -13642,14 +13861,15 @@ std::shared_ptr<GRM::Element> GRM::Render::createAxes(double x_tick, double y_ti
   return element;
 }
 
-std::shared_ptr<GRM::Element> GRM::Render::createEmptyAxes(int tick_orientation)
+std::shared_ptr<GRM::Element> GRM::Render::createEmptyAxes(int tick_orientation,
+                                                           const std::shared_ptr<GRM::Element> &extElement)
 {
   /*!
    * This function can be used for creating an Axes GRM::Element with missing information
    *
    * \param[in] tick_orientation A Int value specifing the direction of the ticks
    */
-  auto element = createElement("axes");
+  std::shared_ptr<GRM::Element> element = (extElement == nullptr) ? createElement("axes") : extElement;
   element->setAttribute("tick_orientation", tick_orientation);
   return element;
 }
@@ -13778,9 +13998,10 @@ std::shared_ptr<GRM::Element> GRM::Render::createGrid(double x_tick, double y_ti
   return element;
 }
 
-std::shared_ptr<GRM::Element> GRM::Render::createEmptyGrid(bool x_grid, bool y_grid)
+std::shared_ptr<GRM::Element> GRM::Render::createEmptyGrid(bool x_grid, bool y_grid,
+                                                           const std::shared_ptr<GRM::Element> &extElement)
 {
-  auto element = createElement("grid");
+  std::shared_ptr<GRM::Element> element = (extElement == nullptr) ? createElement("grid") : extElement;
   if (!x_grid)
     {
       element->setAttribute("x_tick", 0);
@@ -14239,9 +14460,10 @@ std::shared_ptr<GRM::Element> GRM::Render::createGrid3d(double x_tick, double y_
   return element;
 }
 
-std::shared_ptr<GRM::Element> GRM::Render::createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid)
+std::shared_ptr<GRM::Element> GRM::Render::createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid,
+                                                             const std::shared_ptr<GRM::Element> &extElement)
 {
-  auto element = createElement("grid_3d");
+  auto element = (extElement == nullptr) ? createElement("grid_3d") : extElement;
   if (!x_grid)
     {
       element->setAttribute("x_tick", 0);
@@ -14276,9 +14498,10 @@ std::shared_ptr<GRM::Element> GRM::Render::createAxes3d(double x_tick, double y_
   return element;
 }
 
-std::shared_ptr<GRM::Element> GRM::Render::createEmptyAxes3d(int tick_orientation)
+std::shared_ptr<GRM::Element> GRM::Render::createEmptyAxes3d(int tick_orientation,
+                                                             const std::shared_ptr<GRM::Element> &extElement)
 {
-  auto element = createElement("axes_3d");
+  std::shared_ptr<GRM::Element> element = (extElement == nullptr) ? createElement("axes_3d") : extElement;
   element->setAttribute("tick_orientation", tick_orientation);
   return element;
 }
@@ -15300,10 +15523,13 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       "y",
       "z",
   };
+  std::vector<std::string> coordinate_system{"angle_ticks", "normalization", "phi_flip", "x_grid",
+                                             "y_grid",      "z_grid",        "type"};
   static std::map<std::string, std::vector<std::string>> element_names{
       {std::string("bar"), bar},
       {std::string("error_bar"), error_bar},
       {std::string("polar_bar"), polar_bar},
+      {std::string("coordinate_system"), coordinate_system},
       {std::string("series_barplot"), series_barplot},
       {std::string("series_contour"), series_contour},
       {std::string("series_contourf"), series_contourf},
@@ -15362,11 +15588,14 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
           std::vector<std::string> plot3_group = {"plot3", "scatter", "scatter3", "tricontour", "trisurface"};
           std::vector<std::string> barplot_group = {"barplot", "hist", "stem", "stairs"};
           std::vector<std::string> hexbin_group = {"hexbin", "shade"};
+          std::shared_ptr<GRM::Element> newElement;
+
           if (std::find(line_group.begin(), line_group.end(), value) != line_group.end() &&
               std::find(line_group.begin(), line_group.end(),
                         static_cast<std::string>(element->getAttribute("kind"))) != line_group.end())
             {
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
+              newElement = new_series;
               element->parentElement()->insertBefore(new_series, element);
               new_series->parentElement()->setAttribute("kind",
                                                         static_cast<std::string>(element->getAttribute("kind")));
@@ -15393,6 +15622,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                              static_cast<std::string>(element->getAttribute("kind"))) != heatmap_group.end())
             {
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
+              newElement = new_series;
               element->parentElement()->insertBefore(new_series, element);
               new_series->parentElement()->setAttribute("kind",
                                                         static_cast<std::string>(element->getAttribute("kind")));
@@ -15430,6 +15660,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                              static_cast<std::string>(element->getAttribute("kind"))) != isosurface_group.end())
             {
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
+              newElement = new_series;
               element->parentElement()->insertBefore(new_series, element);
               new_series->parentElement()->setAttribute("kind",
                                                         static_cast<std::string>(element->getAttribute("kind")));
@@ -15449,6 +15680,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                              static_cast<std::string>(element->getAttribute("kind"))) != plot3_group.end())
             {
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
+              newElement = new_series;
               element->parentElement()->insertBefore(new_series, element);
               new_series->parentElement()->setAttribute("kind",
                                                         static_cast<std::string>(element->getAttribute("kind")));
@@ -15469,6 +15701,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                              static_cast<std::string>(element->getAttribute("kind"))) != barplot_group.end())
             {
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
+              newElement = new_series;
               element->parentElement()->insertBefore(new_series, element);
               new_series->parentElement()->setAttribute("kind",
                                                         static_cast<std::string>(element->getAttribute("kind")));
@@ -15527,6 +15760,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                              static_cast<std::string>(element->getAttribute("kind"))) != hexbin_group.end())
             {
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
+              newElement = new_series;
               element->parentElement()->insertBefore(new_series, element);
               new_series->parentElement()->setAttribute("kind",
                                                         static_cast<std::string>(element->getAttribute("kind")));
@@ -15547,6 +15781,70 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               fprintf(stderr, "Update kind %s to %s is not possible\n",
                       static_cast<std::string>(element->getAttribute("kind")).c_str(), value.c_str());
               std::cerr << toXML(element->getRootNode(), GRM::SerializerOptions{std::string(2, ' ')}) << "\n";
+            }
+
+          /* update coordinate system if needed */
+          std::shared_ptr<GRM::Element> coordinateSystem =
+              newElement->parentElement()->querySelectors("coordinate_system");
+          std::string newKind = static_cast<std::string>(newElement->getAttribute("kind"));
+          std::string newType = "2d";
+          if (polarKinds.count(newKind) != 0) newType = "polar";
+          if (kinds3D.count(newKind) != 0) newType = "3d";
+
+          if (coordinateSystem)
+            {
+              std::string oldKind = value;
+              std::string oldType = static_cast<std::string>(coordinateSystem->getAttribute("type"));
+
+              if (newKind == "imshow")
+                {
+                  coordinateSystem->setAttribute("draw", false);
+                }
+              else if (oldKind == "imshow")
+                {
+                  coordinateSystem->removeAttribute("draw");
+                }
+
+              if (newType != oldType)
+                {
+                  coordinateSystem->setAttribute("type", newType);
+                  coordinateSystem->setAttribute("_update_required", true);
+                  coordinateSystem->setAttribute("_delete_children", 2);
+
+                  if (newType == "2d")
+                    {
+                      auto titles3d = coordinateSystem->querySelectors("titles_3d");
+                      if (titles3d)
+                        {
+                          coordinateSystem->setAttribute(
+                              "x_label", static_cast<std::string>(titles3d->getAttribute("x_label_3d")));
+                          coordinateSystem->setAttribute(
+                              "y_label", static_cast<std::string>(titles3d->getAttribute("y_label_3d")));
+                        }
+                    }
+                  if (newType == "3d")
+                    {
+                      coordinateSystem->setAttribute("_delete_children", 3); /* delete x and y labels */
+                      if (!coordinateSystem->hasAttribute("z_grid")) coordinateSystem->setAttribute("z_grid", 1);
+
+                      auto titles3d = coordinateSystem->querySelectors("titles_3d");
+                      std::string xlabel = coordinateSystem->hasAttribute("x_label")
+                                               ? static_cast<std::string>(coordinateSystem->getAttribute("x_label"))
+                                               : "";
+                      std::string ylabel = coordinateSystem->hasAttribute("y_label")
+                                               ? static_cast<std::string>(coordinateSystem->getAttribute("y_label"))
+                                               : "";
+                      std::string zlabel =
+                          titles3d ? static_cast<std::string>(titles3d->getAttribute("z_label_3d")) : "z";
+                      titles3d = global_render->createTitles3d(xlabel, ylabel, zlabel, titles3d);
+                      if (!coordinateSystem->querySelectors("titles_3d")) coordinateSystem->append(titles3d);
+                    }
+                }
+            }
+          else
+            {
+              coordinateSystem = global_render->createElement("coordinate_system");
+              newElement->parentElement()->prepend(coordinateSystem);
             }
         }
       else
@@ -15574,6 +15872,10 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                         {
                           if (child->localName() == "polar_bar") child->setAttribute("_update_required", true);
                         }
+                    }
+                  if (element->localName() == "coordiante_system")
+                    {
+                      element->setAttribute("_delete_children", 0);
                     }
                 }
             }

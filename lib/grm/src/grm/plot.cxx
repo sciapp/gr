@@ -3447,6 +3447,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   char *x_label, *y_label, *z_label;
   int tick_orientation = 1;
   std::shared_ptr<GRM::Element> group;
+  std::string type = "2d";
 
   if (!current_dom_element || current_dom_element->getElementsByTagName("coordinate_system").empty())
     {
@@ -3468,44 +3469,14 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   grm_args_values(args, "x_grid", "i", &x_grid);
   grm_args_values(args, "y_grid", "i", &y_grid);
 
-  global_render->setLineColorInd(group, 1);
-  global_render->setLineWidth(group, 1);
+  group->setAttribute("x_grid", x_grid);
+  group->setAttribute("y_grid", y_grid);
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
     {
+      type = "3d";
       grm_args_values(args, "z_grid", "i", &z_grid);
-      if (pass == 1)
-        {
-          auto grid3d = global_render->createEmptyGrid3d(x_grid, false, z_grid);
-          global_render->setOriginPosition3d(grid3d, "low", "high", "low");
-          grid3d->setAttribute("x_major", 2);
-          grid3d->setAttribute("y_major", 0);
-          grid3d->setAttribute("z_major", 2);
-          group->append(grid3d);
-          grid3d = global_render->createEmptyGrid3d(false, y_grid, false);
-          global_render->setOriginPosition3d(grid3d, "low", "high", "low");
-          grid3d->setAttribute("x_major", 0);
-          grid3d->setAttribute("y_major", 2);
-          grid3d->setAttribute("z_major", 0);
-          group->append(grid3d);
-        }
-      else
-        {
-          auto axes3d = global_render->createEmptyAxes3d(-tick_orientation);
-          global_render->setOriginPosition3d(axes3d, "low", "low", "low");
-          axes3d->setAttribute("y_tick", 0);
-          axes3d->setAttribute("y_major", 0);
-          axes3d->setAttribute("z_index", 7);
-          group->append(axes3d);
-          axes3d = global_render->createEmptyAxes3d(tick_orientation);
-          global_render->setOriginPosition3d(axes3d, "high", "low", "low");
-          axes3d->setAttribute("x_tick", 0);
-          axes3d->setAttribute("z_tick", 0);
-          axes3d->setAttribute("x_major", 0);
-          axes3d->setAttribute("z_major", 0);
-          axes3d->setAttribute("z_index", 7);
-          group->append(axes3d);
-        }
+      group->setAttribute("z_grid", z_grid);
     }
   else
     {
@@ -3513,28 +3484,9 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         {
           tick_orientation = -1;
         }
-      if (!str_equals_any(kind, 1, "shade"))
-        {
-          if (pass == 1 || strcmp(kind, "barplot") != 0)
-            {
-              auto grid = global_render->createEmptyGrid(x_grid, y_grid);
-              grid->setAttribute("x_org", 0);
-              grid->setAttribute("y_org", 0);
-              group->append(grid);
-            }
-        }
       if (strcmp(kind, "barplot") != 0 || pass == 2)
         {
-          auto axes = global_render->createEmptyAxes(tick_orientation);
-          global_render->setOriginPosition(axes, "low", "low");
-          if (pass == 2) axes->setAttribute("z_index", 7);
-          group->append(axes);
-          axes = global_render->createEmptyAxes(-tick_orientation);
-          global_render->setOriginPosition(axes, "high", "high");
-          if (pass == 2) axes->setAttribute("z_index", 7);
-          group->append(axes);
-
-          /* x_tick_labels */
+          /* xticklabels */
           char **x_tick_labels = nullptr;
           unsigned int x_tick_labels_length;
 
@@ -3561,6 +3513,8 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
             }
         }
     }
+
+  group->setAttribute("type", type);
 
   if (pass == 1 && grm_args_values(args, "title", "s", &title))
     {
@@ -3597,19 +3551,11 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     {
       if (grm_args_values(args, "x_label", "s", &x_label))
         {
-          for (const auto &axes : group->getElementsByTagName("axes"))
-            {
-              if (static_cast<std::string>(axes->getAttribute("x_org_pos")) == "low")
-                axes->setAttribute("x_label", x_label);
-            }
+          group->setAttribute("x_label", x_label);
         }
       if (grm_args_values(args, "y_label", "s", &y_label))
         {
-          for (const auto &axes : group->getElementsByTagName("axes"))
-            {
-              if (static_cast<std::string>(axes->getAttribute("x_org_pos")) == "low")
-                axes->setAttribute("y_label", y_label);
-            }
+          group->setAttribute("y_label", y_label);
         }
     }
 
@@ -3641,31 +3587,29 @@ err_t plot_draw_polar_axes(grm_args_t *args)
       group = global_render->getElementsByTagName("coordinate_system")[0];
     }
 
-  if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
+  group->setAttribute("type", "polar");
+
+  if (grm_args_values(args, "angle_ticks", "i", &angle_ticks))
     {
-      angle_ticks = 8;
+      group->setAttribute("angle_ticks", angle_ticks);
     }
 
   grm_args_values(args, "kind", "s", &kind);
 
   if (strcmp(kind, "polar_histogram") == 0)
     {
-      if (grm_args_values(args, "normalization", "s", &norm) == 0) norm = "count";
+      if (grm_args_values(args, "normalization", "s", &norm))
+        {
+          group->setAttribute("normalization", norm);
+        }
     }
 
-  if (grm_args_values(args, "phi_flip", "i", &phi_flip) == 0) phi_flip = 0;
-
-  if (strcmp(kind, "polar_histogram") == 0)
+  if (grm_args_values(args, "phi_flip", "i", &phi_flip))
     {
-      subGroup = global_render->createDrawPolarAxes(angle_ticks, kind, phi_flip, norm, 1.0);
-    }
-  else
-    {
-      subGroup = global_render->createDrawPolarAxes(angle_ticks, kind, phi_flip, "");
+      group->setAttribute("phi_flip", phi_flip);
     }
   if (!grm_args_values(args, "title", "s", &title)) title = "";
   group->parentElement()->setAttribute("title", title);
-  group->append(subGroup);
   return ERROR_NONE;
 }
 

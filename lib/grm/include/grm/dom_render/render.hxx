@@ -62,6 +62,9 @@
 #define PLOT_DEFAULT_CONTOUR_MAJOR_H 1000
 #define PLOT_DEFAULT_CONTOURF_MAJOR_H 0
 #define PLOT_DEFAULT_ORG_POS "low"
+#define PLOT_DEFAULT_XGRID 1
+#define PLOT_DEFAULT_YGRID 1
+#define PLOT_DEFAULT_ZGRID 1
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -242,7 +245,8 @@ public:
                                       int y_major, int tick_orientation,
                                       const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
-  std::shared_ptr<GRM::Element> createEmptyAxes(int tick_orientation);
+  std::shared_ptr<GRM::Element> createEmptyAxes(int tick_orientation,
+                                                const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
   std::shared_ptr<GRM::Element> createEmptyDoubleAxes();
 
@@ -273,7 +277,8 @@ public:
   std::shared_ptr<Element> createGrid(double x_tick, double y_tick, double x_org, double y_org, int major_x,
                                       int major_y, const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
-  std::shared_ptr<GRM::Element> createEmptyGrid(bool x_grid, bool y_grid);
+  std::shared_ptr<GRM::Element> createEmptyGrid(bool x_grid, bool y_grid,
+                                                const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
   std::shared_ptr<Element> createSeries(const std::string &name);
 
@@ -321,14 +326,16 @@ public:
                                         double z_org, int major_x, int major_y, int major_z,
                                         const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
-  std::shared_ptr<GRM::Element> createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid);
+  std::shared_ptr<GRM::Element> createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid,
+                                                  const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
 
   std::shared_ptr<Element> createAxes3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org,
                                         double z_org, int major_x, int major_y, int major_z, int tick_orientation,
                                         const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
-  std::shared_ptr<GRM::Element> createEmptyAxes3d(int tick_orientation);
+  std::shared_ptr<GRM::Element> createEmptyAxes3d(int tick_orientation,
+                                                  const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
   std::shared_ptr<Element> createPolyline3d(const std::string &x_key, std::optional<std::vector<double>> x,
                                             const std::string &y_key, std::optional<std::vector<double>> y,

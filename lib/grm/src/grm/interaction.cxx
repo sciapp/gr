@@ -1204,15 +1204,11 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
   gr_ndctowc(&x, &y);
 
   auto axes_vec = subplot_element->querySelectorsAll("axes");
+  auto coordinate_system = subplot_element->querySelectors("coordinate_system");
   std::vector<std::shared_ptr<GRM::Element>> label_vec;
-  for (const auto &child : axes_vec)
-    {
-      if (child->hasAttribute("x_label") && child->hasAttribute("y_label"))
-        {
-          label_vec.push_back(child);
-          break;
-        }
-    }
+
+  if (coordinate_system && coordinate_system->hasAttribute("x_label") && coordinate_system->hasAttribute("y_label"))
+    label_vec.push_back(coordinate_system);
 
   if (label_vec.empty())
     {
