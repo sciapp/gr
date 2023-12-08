@@ -270,7 +270,7 @@ void gks_fit_ws_viewport(double *viewport, double xmax, double ymax, double marg
 void gks_set_norm_xform(int tnr, double *window, double *viewport);
 void gks_set_xform_matrix(double tran[3][2]);
 void gks_seg_xform(double *x, double *y);
-void gks_WC_to_NDC(int tnr, double *x, double *y);
+DLLEXPORT void gks_WC_to_NDC(int tnr, double *x, double *y);
 void gks_NDC_to_WC(int tnr, double *x, double *y);
 void gks_set_dev_xform(gks_state_list_t *s, double *window, double *viewport);
 void gks_inq_dev_xform(double *window, double *viewport);
