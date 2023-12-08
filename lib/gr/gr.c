@@ -6285,7 +6285,23 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
       zpoint[i] = point[i].z;
     }
 
-  if (m > 0) gks_polymarker(m, xpoint, ypoint);
+  if (m > 0)
+    {
+      int errind, tnr, modern_projection_type;
+
+      modern_projection_type =
+          gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC;
+      if (modern_projection_type)
+        {
+          gks_inq_current_xformno(&errind, &tnr);
+          gks_select_xform(MODERN_NDC);
+        }
+
+      gks_polymarker(m, xpoint, ypoint);
+      npoints = 0;
+
+      if (modern_projection_type) gks_select_xform(tnr);
+    }
 
   if (flag_stream)
     {
