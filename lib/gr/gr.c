@@ -348,6 +348,7 @@ static unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
 
 #define NDC 0
 #define WC 1
+#define MODERN_NDC 2
 
 #define POINT_INC 2048
 
@@ -1262,14 +1263,6 @@ static void setspace(double zmin, double zmax, int rotation, int tilt)
   wx.d = wx.d - wx.c1 * xmin - wx.c2 * ymin - wx.c3 * zmin;
 }
 
-static void setnormxform(const double *vp, double x_min, double x_max, double y_min, double y_max)
-{
-  nx.a = (vp[1] - vp[0]) / (x_max - x_min);
-  nx.b = vp[0] - x_min * nx.a;
-  nx.c = (vp[3] - vp[2]) / (y_max - y_min);
-  nx.d = vp[2] - y_min * nx.c;
-}
-
 static int setscale(int options)
 {
   int errind, tnr;
@@ -1287,7 +1280,10 @@ static int setscale(int options)
   z_min = wx.zmin;
   z_max = wx.zmax;
 
-  setnormxform(vp, x_min, x_max, y_min, y_max);
+  nx.a = (vp[1] - vp[0]) / (x_max - x_min);
+  nx.b = vp[0] - x_min * nx.a;
+  nx.c = (vp[3] - vp[2]) / (y_max - y_min);
+  nx.d = vp[2] - y_min * nx.c;
 
   lx.scale_options = 0;
 
@@ -1412,6 +1408,7 @@ static void initialize(int state)
     {
       gks_select_xform(tnr);
       gks_set_viewport(tnr, xmin, xmax, ymin, ymax);
+      gks_set_viewport(MODERN_NDC, xmin, xmax, ymin, ymax);
 
       gks_set_asf(asf);
       gks_set_pmark_size(size);
@@ -3848,6 +3845,7 @@ void gr_setwindow(double xmin, double xmax, double ymin, double ymax)
   check_autoinit;
 
   gks_set_window(tnr, xmin, xmax, ymin, ymax);
+  gks_set_window(MODERN_NDC, -1, 1, -1, 1);
   if (ctx)
     {
       ctx->wn[0] = xmin;
@@ -3914,6 +3912,7 @@ void gr_setviewport(double xmin, double xmax, double ymin, double ymax)
   check_autoinit;
 
   gks_set_viewport(tnr, xmin, xmax, ymin, ymax);
+  gks_set_viewport(MODERN_NDC, xmin, xmax, ymin, ymax);
   if (ctx)
     {
       ctx->vp[0] = xmin;
@@ -4558,6 +4557,28 @@ static void start_pline(double x, double y)
   pline(x, y);
 }
 
+static void end_pline3d(void)
+{
+  int errind, tnr;
+  int modern_projection_type;
+
+  if (npoints >= 2)
+    {
+      modern_projection_type =
+          gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC;
+      if (modern_projection_type)
+        {
+          gks_inq_current_xformno(&errind, &tnr);
+          gks_select_xform(MODERN_NDC);
+        }
+
+      gks_polyline(npoints, xpoint, ypoint);
+      npoints = 0;
+
+      if (modern_projection_type) gks_select_xform(tnr);
+    }
+}
+
 static void pline3d(double x, double y, double z)
 {
   if (npoints >= maxpath) reallocate(npoints);
@@ -4573,7 +4594,7 @@ static void pline3d(double x, double y, double z)
 
 static void start_pline3d(double x, double y, double z)
 {
-  end_pline();
+  end_pline3d();
 
   npoints = 0;
   pline3d(x, y, z);
@@ -5446,7 +5467,7 @@ static void grid_line3d(double x0, double y0, double z0, double x1, double y1, d
 
   start_pline3d(x0, y0, z0);
   pline3d(x1, y1, z1);
-  end_pline();
+  end_pline3d();
 }
 
 /*!
@@ -5515,9 +5536,6 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (modern_projection_type)
     {
-      gks_inq_xform(WC, &errind, wn, vp);
-
-      gks_set_window(WC, -1, 1, -1, 1);
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
@@ -5529,7 +5547,6 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
       x_max = ix.xmax;
       y_min = ix.ymin;
       y_max = ix.ymax;
-
       z_min = ix.zmin;
       z_max = ix.zmax;
     }
@@ -5539,7 +5556,6 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
       x_max = wn[1];
       y_min = wn[2];
       y_max = wn[3];
-
       z_min = wx.zmin;
       z_max = wx.zmax;
     }
@@ -5755,12 +5771,6 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                    "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
                    "majorx=\"%d\" majory=\"%d\" majorz=\"%d\"/>\n",
                    x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z);
-
-  if (modern_projection_type)
-    {
-      gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
-      setscale(lx.scale_options);
-    }
 }
 
 /*!
@@ -6077,10 +6087,6 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
 
   if (modern_projection_type)
     {
-      gks_inq_xform(WC, &errind, wn, vp);
-
-      gks_set_window(WC, -1, 1, -1, 1);
-      setscale(lx.scale_options);
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
@@ -6156,7 +6162,7 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
       z0 = z;
     }
 
-  end_pline();
+  end_pline3d();
 
   if (flag_stream)
     {
@@ -6165,12 +6171,6 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
       print_float_array("y", n, py);
       print_float_array("z", n, pz);
       gr_writestream("/>\n");
-    }
-
-  if (modern_projection_type)
-    {
-      gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
-      setscale(lx.scale_options);
     }
 }
 
@@ -6227,10 +6227,6 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
 
   if (modern_projection_type)
     {
-      gks_inq_xform(WC, &errind, wn, vp);
-
-      gks_set_window(WC, -1, 1, -1, 1);
-      setscale(lx.scale_options);
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
@@ -6289,7 +6285,23 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
       zpoint[i] = point[i].z;
     }
 
-  if (m > 0) gks_polymarker(m, xpoint, ypoint);
+  if (m > 0)
+    {
+      int errind, tnr, modern_projection_type;
+
+      modern_projection_type =
+          gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC;
+      if (modern_projection_type)
+        {
+          gks_inq_current_xformno(&errind, &tnr);
+          gks_select_xform(MODERN_NDC);
+        }
+
+      gks_polymarker(m, xpoint, ypoint);
+      npoints = 0;
+
+      if (modern_projection_type) gks_select_xform(tnr);
+    }
 
   if (flag_stream)
     {
@@ -6299,18 +6311,17 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
       print_float_array("z", n, pz);
       gr_writestream("/>\n");
     }
-
-  if (modern_projection_type)
-    {
-      gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
-      setscale(lx.scale_options);
-    }
 }
 
 static double text3d_get_height(void)
 {
+  int errind, tnr;
   double focus_point_x, focus_point_y, focus_point_z, focus_up_x, focus_up_y, focus_up_z;
   int scale_save = lx.scale_options;
+
+  gks_inq_current_xformno(&errind, &tnr);
+  gks_select_xform(MODERN_NDC);
+
   /* Calculate char height */
   focus_point_x = tx.focus_point_x / tx.x_axis_scale;
   focus_point_y = tx.focus_point_y / tx.y_axis_scale;
@@ -6323,14 +6334,11 @@ static double text3d_get_height(void)
   gr_wc3towc(&focus_up_x, &focus_up_y, &focus_up_z);
 
   lx.scale_options = 0;
-  gr_wctondc(&focus_point_x, &focus_point_y);
-  gr_wctondc(&focus_up_x, &focus_up_y);
+  gks_WC_to_NDC(MODERN_NDC, &focus_point_x, &focus_point_y);
+  gks_WC_to_NDC(MODERN_NDC, &focus_up_x, &focus_up_y);
   lx.scale_options = scale_save;
 
-  focus_point_x = (is_nan(x_lin(focus_point_x))) ? focus_point_x : x_lin(focus_point_x);
-  focus_point_y = (is_nan(y_lin(focus_point_y))) ? focus_point_y : y_lin(focus_point_y);
-  focus_up_x = (is_nan(x_lin(focus_up_x))) ? focus_up_x : x_lin(focus_up_x);
-  focus_up_y = (is_nan(y_lin(focus_up_y))) ? focus_up_y : y_lin(focus_up_y);
+  gks_select_xform(tnr);
 
   return sqrt(pow(focus_point_x - focus_up_x, 2) + pow(focus_point_y - focus_up_y, 2)) /
          (min((vxmax - vxmin), (vymax - vymin)));
@@ -6373,23 +6381,34 @@ static void text3d(double x, double y, double z, char *chars, int axis)
     }
   else
     {
+      gks_inq_current_xformno(&errind, &tnr);
+      gks_select_xform(MODERN_NDC);
+
       scaleFactors[0] = tx.x_axis_scale;
       scaleFactors[1] = tx.y_axis_scale;
       scaleFactors[2] = tx.z_axis_scale;
       gks_ft_text3d(p_x, p_y, p_z, chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp, gr_wc3towc);
+
+      gks_select_xform(tnr);
     }
 }
 
 void gr_text3d(double x, double y, double z, char *chars, int axis)
 {
+  int errind, tnr;
   double scaleFactors[3];
 
   check_autoinit;
+
+  gks_inq_current_xformno(&errind, &tnr);
+  gks_select_xform(MODERN_NDC);
 
   scaleFactors[0] = tx.x_axis_scale;
   scaleFactors[1] = tx.y_axis_scale;
   scaleFactors[2] = tx.z_axis_scale;
   gks_ft_text3d(x, y, z, chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp, gr_wc3towc);
+
+  gks_select_xform(tnr);
 
   if (flag_stream)
     gr_writestream("<text3d x=\"%g\" y=\"%g\" z=\"%g\" text=\"%s\" axis=\"%d\"/>\n", x, y, z, chars, axis);
@@ -6412,15 +6431,21 @@ void gr_text3d(double x, double y, double z, char *chars, int axis)
  */
 void gr_inqtext3d(double x, double y, double z, char *chars, int axis, double *tbx, double *tby)
 {
+  int errind, tnr;
   double scaleFactors[3];
 
   check_autoinit;
+
+  gks_inq_current_xformno(&errind, &tnr);
+  gks_select_xform(MODERN_NDC);
 
   scaleFactors[0] = tx.x_axis_scale;
   scaleFactors[1] = tx.y_axis_scale;
   scaleFactors[2] = tx.z_axis_scale;
   gks_ft_inq_text3d_extent(x, y, z, chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp, gr_wc3towc,
                            tbx, tby);
+
+  gks_select_xform(tnr);
 }
 
 static void axes3d_get_params(int axis, int *tick_axis, double x_org, double y_org, double z_org, int *text_axis)
@@ -6711,16 +6736,6 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (modern_projection_type)
     {
-      int errind_tmp;
-      double wn_tmp[4], vp_tmp[4];
-
-      gks_select_xform(WC);
-      gks_inq_xform(WC, &errind, wn, vp);
-
-      gks_set_window(WC, -1, 1, -1, 1);
-      gks_inq_xform(WC, &errind_tmp, wn_tmp, vp_tmp);
-      setnormxform(vp, -1, 1, -1, 1);
-
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
@@ -6732,7 +6747,6 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
       x_max = ix.xmax;
       y_min = ix.ymin;
       y_max = ix.ymax;
-
       z_min = ix.zmin;
       z_max = ix.zmax;
     }
@@ -6742,7 +6756,6 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
       x_max = wn[1];
       y_min = wn[2];
       y_max = wn[3];
-
       z_min = wx.zmin;
       z_max = wx.zmax;
     }
@@ -6875,7 +6888,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       {
                         xi = x_major_tick;
                         yi = y_major_tick;
-                        if (z_tick > 1)
+                        if (z_tick > 1 && !modern_projection_type)
                           {
                             exponent = iround(blog(lx.basez, zi));
                             snprintf(string, 256, "%s^{%d}", lx.basez_s, exponent);
@@ -6906,7 +6919,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           pline3d(x_org, y_org, z_max);
 
-          end_pline();
+          end_pline3d();
         }
       else
         {
@@ -6949,7 +6962,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           if (zi > z_max) pline3d(x_org, y_org, z_max);
 
-          end_pline();
+          end_pline3d();
         }
     }
 
@@ -7040,7 +7053,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       {
                         xi = x_major_tick;
                         zi = z_major_tick;
-                        if (y_tick > 1)
+                        if (y_tick > 1 && !modern_projection_type)
                           {
                             exponent = iround(blog(lx.basey, yi));
                             snprintf(string, 256, "%s^{%d}", lx.basey_s, exponent);
@@ -7071,7 +7084,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           pline3d(x_org, y_max, z_org);
 
-          end_pline();
+          end_pline3d();
         }
       else
         {
@@ -7113,7 +7126,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           if (yi > y_max) pline3d(x_org, y_max, z_org);
 
-          end_pline();
+          end_pline3d();
         }
     }
 
@@ -7204,7 +7217,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       {
                         yi = y_major_tick;
                         zi = z_major_tick;
-                        if (x_tick > 1)
+                        if (x_tick > 1 && !modern_projection_type)
                           {
                             exponent = iround(blog(lx.basex, xi));
                             snprintf(string, 256, "%s^{%d}", lx.basex_s, exponent);
@@ -7235,7 +7248,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           pline3d(x_max, y_org, z_org);
 
-          end_pline();
+          end_pline3d();
         }
       else
         {
@@ -7278,7 +7291,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           if (xi > x_max) pline3d(x_max, y_org, z_org);
 
-          end_pline();
+          end_pline3d();
         }
     }
 
@@ -7297,12 +7310,6 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                    "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
                    "majorx=\"%d\" majory=\"%d\" majorz=\"%d\" ticksize=\"%g\"/>\n",
                    x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z, tick_size);
-
-  if (modern_projection_type)
-    {
-      gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
-      setscale(lx.scale_options);
-    }
 }
 
 /*!
@@ -7352,20 +7359,13 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 
   if (modern_projection_type)
     {
-      gks_inq_xform(WC, &errind, wn, vp);
-
-      gks_set_window(WC, -1, 1, -1, 1);
-      setscale(lx.scale_options);
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
       lx.ymax = ix.ymax;
       lx.zmin = ix.zmin;
       lx.zmax = ix.zmax;
-    }
 
-  if (modern_projection_type)
-    {
       x_min = ix.xmin;
       x_max = ix.xmax;
       y_min = ix.ymin;
@@ -7686,12 +7686,6 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
     }
 
   if (flag_stream) gr_writestream("<titles3d xtitle=\"%s\" ytitle=\"%s\" ztitle=\"%s\"/>\n", x_title, y_title, z_title);
-
-  if (modern_projection_type)
-    {
-      gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
-      setscale(lx.scale_options);
-    }
 }
 
 static void init_hlr(void)
@@ -8145,9 +8139,6 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
   if (modern_projection_type)
     {
-      gks_inq_xform(WC, &errind, wn, vp);
-
-      gks_set_window(WC, -1, 1, -1, 1);
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
@@ -8629,6 +8620,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                         gks_set_fill_color_index(color);
                       }
 
+                    gks_select_xform(MODERN_NDC);
+
                     np = 4;
                     gks_fillarea(np, xn, yn);
 
@@ -8637,6 +8630,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                         np = 5;
                         gks_polyline(np, xn, yn);
                       }
+
+                    gks_select_xform(tnr);
                   }
 
                 j--;
@@ -8722,12 +8717,6 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
       print_float_array("z", nx * ny, pz);
       gr_writestream(" option=\"%d\"/>\n", option);
     }
-
-  if (modern_projection_type)
-    {
-      gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
-      setscale(lx.scale_options);
-    }
 }
 
 static const double *xp, *yp;
@@ -8763,8 +8752,7 @@ static int compar(const void *a, const void *b)
  */
 void gr_trisurface(int n, double *px, double *py, double *pz)
 {
-  int errind, coli, int_style;
-  double wn[4], vp[4];
+  int errind, tnr, coli, int_style;
   int modern_projection_type;
   int ntri, *triangles = NULL;
   double x[4], y[4], z[4], meanz;
@@ -8778,6 +8766,8 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
 
   check_autoinit;
 
+  gks_inq_current_xformno(&errind, &tnr);
+
   setscale(lx.scale_options);
 
   modern_projection_type =
@@ -8785,10 +8775,6 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
 
   if (modern_projection_type)
     {
-      gks_inq_xform(WC, &errind, wn, vp);
-
-      gks_set_window(WC, -1, 1, -1, 1);
-      setscale(lx.scale_options);
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
@@ -8904,12 +8890,16 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
       else if (color > last_color)
         color = last_color;
 
+      gks_select_xform(MODERN_NDC);
+
       gks_set_fill_color_index(color);
       gks_fillarea(3, x, y);
 
       x[3] = x[0];
       y[3] = y[0];
       gks_polyline(4, x, y);
+
+      gks_select_xform(tnr);
     }
 
   /* restore fill area interior style and color index */
@@ -8925,12 +8915,6 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
       print_float_array("y", n, py);
       print_float_array("z", n, pz);
       gr_writestream("/>\n");
-    }
-
-  if (modern_projection_type)
-    {
-      gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
-      setscale(lx.scale_options);
     }
 }
 
@@ -9163,13 +9147,12 @@ static void rebin(int nx, int ny, double *px, double *py, double *pz, int *nxq, 
 void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, double *pz, int major_h)
 {
   int i, j;
-  int errind, ltype, color, halign, valign;
+  int errind, tnr, ltype, color, halign, valign;
   double chux, chuy;
   int nxq, nyq;
   double *xq = NULL, *yq = NULL, *zq = NULL;
   int scale_options;
   double *x = NULL, *y = NULL;
-  int x_has_nan = 0, y_has_nan = 0;
 
   if ((nx <= 0) || (ny <= 0))
     {
@@ -9196,6 +9179,7 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
   check_autoinit;
 
   scale_options = lx.scale_options;
+
   /* calculate the position of the contour labels when the axes are logarithmic for example */
   if (scale_options != 0)
     {
@@ -12254,7 +12238,9 @@ void gr_restorestate(void)
 
       gks_select_xform(s->tnr);
       gks_set_window(WC, s->wn[0], s->wn[1], s->wn[2], s->wn[3]);
+      gks_set_window(MODERN_NDC, -1, 1, -1, 1);
       gks_set_viewport(WC, s->vp[0], s->vp[1], s->vp[2], s->vp[3]);
+      gks_set_viewport(MODERN_NDC, s->vp[0], s->vp[1], s->vp[2], s->vp[3]);
       vxmin = s->vp[0];
       vxmax = s->vp[1];
       vymin = s->vp[2];
@@ -12412,7 +12398,9 @@ void gr_selectcontext(int context)
 
       gks_select_xform(ctx->tnr);
       gks_set_window(WC, ctx->wn[0], ctx->wn[1], ctx->wn[2], ctx->wn[3]);
+      gks_set_window(MODERN_NDC, -1, 1, -1, 1);
       gks_set_viewport(WC, ctx->vp[0], ctx->vp[1], ctx->vp[2], ctx->vp[3]);
+      gks_set_viewport(MODERN_NDC, ctx->vp[0], ctx->vp[1], ctx->vp[2], ctx->vp[3]);
       vxmin = ctx->vp[0];
       vxmax = ctx->vp[1];
       vymin = ctx->vp[2];
