@@ -1409,6 +1409,7 @@ static void initialize(int state)
       gks_select_xform(tnr);
       gks_set_viewport(tnr, xmin, xmax, ymin, ymax);
       gks_set_viewport(MODERN_NDC, xmin, xmax, ymin, ymax);
+      gks_set_window(MODERN_NDC, -1, 1, -1, 1);
 
       gks_set_asf(asf);
       gks_set_pmark_size(size);
