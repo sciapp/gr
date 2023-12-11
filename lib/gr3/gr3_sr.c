@@ -2273,6 +2273,9 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
   matrix3x3 model_mat_3x3, view_mat_3x3, model_view_mat_3x3, normal_view_mat_3x3;
   color_float c_tmp;
   vertex_fp *vertices_fp;
+  GR3_LightSource_t_ light_sources[MAX_NUM_LIGHTS];
+  vector light_dir;
+  int num_lights = context_struct_.num_lights;
 
   /* initialize transformation matrices */
   for (i = 0; i < 4; i++)
@@ -2412,51 +2415,46 @@ static int draw_mesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int mesh, 
           rest_distributed += 1;
         }
     }
+
+  if (num_lights == 0)
+    {
+      num_lights = 1;
+      light_dir.x = context_struct_.camera_x;
+      light_dir.y = context_struct_.camera_y;
+      light_dir.z = context_struct_.camera_z;
+      mat_vec_mul_3x1(&view_mat_3x3, &light_dir);
+      light_sources[0].x = light_dir.x;
+      light_sources[0].y = light_dir.y;
+      light_sources[0].z = light_dir.z;
+      light_sources[0].r = 1;
+      light_sources[0].g = 1;
+      light_sources[0].b = 1;
+    }
+  else
+    {
+      int i;
+      for (i = 0; i < num_lights; i++)
+        {
+          light_dir.x = context_struct_.light_sources[i].x;
+          light_dir.y = context_struct_.light_sources[i].y;
+          light_dir.z = context_struct_.light_sources[i].z;
+          if (light_dir.x == 0 && light_dir.y == 0 && light_dir.z == 0)
+            {
+              light_dir.x = context_struct_.camera_x;
+              light_dir.y = context_struct_.camera_y;
+              light_dir.z = context_struct_.camera_z;
+            }
+          mat_vec_mul_3x1(&view_mat_3x3, &light_dir);
+          light_sources[i].x = light_dir.x;
+          light_sources[i].y = light_dir.y;
+          light_sources[i].z = light_dir.z;
+          light_sources[i].r = context_struct_.light_sources[i].r;
+          light_sources[i].g = context_struct_.light_sources[i].g;
+          light_sources[i].b = context_struct_.light_sources[i].b;
+        }
+    }
   for (thread_idx = 0; thread_idx < context_struct_.num_threads; thread_idx++)
     {
-      GR3_LightSource_t_ light_sources[MAX_NUM_LIGHTS];
-      vector light_dir;
-      int num_lights = context_struct_.num_lights;
-      if (num_lights == 0)
-        {
-          num_lights = 1;
-          light_dir.x = context_struct_.camera_x;
-          light_dir.y = context_struct_.camera_y;
-          light_dir.z = context_struct_.camera_z;
-          mat_vec_mul_3x1(&view_mat_3x3, &light_dir);
-          light_sources[0].x = light_dir.x;
-          light_sources[0].y = light_dir.y;
-          light_sources[0].z = light_dir.z;
-          light_sources[0].r = 1;
-          light_sources[0].g = 1;
-          light_sources[0].b = 1;
-        }
-      else
-        {
-          int i;
-          for (i = 0; i < num_lights; i++)
-            {
-              if (light_dir.x == 0 && light_dir.y == 0 && light_dir.z == 0)
-                {
-                  light_dir.x = context_struct_.camera_x;
-                  light_dir.y = context_struct_.camera_y;
-                  light_dir.z = context_struct_.camera_z;
-                }
-              else
-                {
-                  light_dir.x = context_struct_.light_sources[i].x;
-                  light_dir.y = context_struct_.light_sources[i].y;
-                  light_dir.z = context_struct_.light_sources[i].z;
-                }
-              mat_vec_mul_3x1(&view_mat_3x3, &light_dir);
-              light_sources[i].x = light_dir.x;
-              light_sources[i].y = light_dir.y;
-              light_sources[i].z = light_dir.z;
-              light_sources[i].r = context_struct_.light_sources[i].r;
-              light_sources[i].g = context_struct_.light_sources[i].g;
-              light_sources[i].b = context_struct_.light_sources[i].b;
-            }
-        }
       queue_enqueue(queues[thread_idx],
                     malloc_arg(thread_idx, mesh, model_mat, view_mat, perspective, viewport, model_view_mat_3x3,
                                normal_view_mat_3x3, colors_facs, scales, width, height, id, index_start_end[thread_idx],
