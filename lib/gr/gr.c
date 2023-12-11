@@ -123,6 +123,8 @@ typedef struct
   double focus_point_x, focus_point_y, focus_point_z;
   double s_x, s_y, s_z;
   double x_axis_scale, y_axis_scale, z_axis_scale;
+  int use_setspace3d;
+  double setspace3d_phi, setspace3d_theta, setspace3d_fov, setspace3d_cam;
 } transformation_xform;
 
 typedef struct
@@ -275,7 +277,7 @@ static linear_xform lx = {0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 10, 10, 10, "10
 
 static world_xform wx = {0, 1, 60, 60, 0, 0, 0, 0, 0, 0, 0};
 
-static transformation_xform tx = {0, 2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1};
+static transformation_xform tx = {0, 2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0};
 
 static projection_xform gpx = {-1, 1, -1, 1, 1, 0, 45, GR_PROJECTION_DEFAULT};
 
@@ -4323,6 +4325,8 @@ void settransformationparameters(double camera_pos_x, double camera_pos_y, doubl
   tx.x_axis_scale = 1;
   tx.y_axis_scale = 1;
   tx.z_axis_scale = 1;
+
+  tx.use_setspace3d = 0;
 }
 
 /*!
@@ -13628,6 +13632,7 @@ static void setscalefactors3d(double x_axis_scale, double y_axis_scale, double z
   tx.x_axis_scale = x_axis_scale;
   tx.y_axis_scale = y_axis_scale;
   tx.z_axis_scale = z_axis_scale;
+  tx.use_setspace3d = 0;
 }
 
 /*!
@@ -13795,8 +13800,35 @@ void gr_setspace3d(double phi, double theta, double fov, double cam)
 
   setscalefactors3d(scale_factor_x, scale_factor_y, scale_factor_z);
 
+  tx.use_setspace3d = 1;
+  tx.setspace3d_phi = phi;
+  tx.setspace3d_theta = theta;
+  tx.setspace3d_fov = fov;
+  tx.setspace3d_cam = cam;
+
   if (flag_stream)
     gr_writestream("<setspace3d phi=\"%g\" theta=\"%g\" fov=\"%g\" cam=\"%g\"/>\n", phi, theta, fov, cam);
+}
+
+void gr_inqspace3d(int *use_setspace3d, double *phi, double *theta, double *fov, double *cam)
+{
+  check_autoinit;
+
+  *use_setspace3d = tx.use_setspace3d;
+  if (tx.use_setspace3d)
+    {
+      *phi = tx.setspace3d_phi;
+      *theta = tx.setspace3d_theta;
+      *fov = tx.setspace3d_fov;
+      *cam = tx.setspace3d_cam;
+    }
+  else
+    {
+      *phi = NAN;
+      *theta = NAN;
+      *fov = NAN;
+      *cam = NAN;
+    }
 }
 
 void gr_settextencoding(int encoding)

@@ -398,6 +398,21 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
   gr3_ndctrans_(ymin, ymax, &ty, scale & OPTION_Y_LOG, !(scale & OPTION_FLIP_Y));
   gr3_ndctrans_(zmin, zmax, &tz, scale & OPTION_Z_LOG, scale & OPTION_FLIP_Z);
 
+  if (scale & OPTION_X_LOG)
+    {
+      xmin = gr3_log10_(xmin);
+      xmax = gr3_log10_(xmax);
+    }
+  if (scale & OPTION_Y_LOG)
+    {
+      ymin = gr3_log10_(ymin);
+      ymax = gr3_log10_(ymax);
+    }
+  if (scale & OPTION_Z_LOG)
+    {
+      zmin = gr3_log10_(zmin);
+      zmax = gr3_log10_(zmax);
+    }
   for (j = 0; j < ny; j++)
     {
       for (i = 0; i < nx; i++)
@@ -413,6 +428,18 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               v[0] = px[i];
               zvalue = pz[k];
               v[1] = py[j];
+              if (scale & OPTION_X_LOG)
+                {
+                  v[0] = gr3_log10_(v[0]);
+                }
+              if (scale & OPTION_Y_LOG)
+                {
+                  v[1] = gr3_log10_(v[1]);
+                }
+              if (scale & OPTION_Z_LOG)
+                {
+                  zvalue = gr3_log10_(zvalue);
+                }
               if (scale & OPTION_FLIP_X)
                 {
                   v[0] = -v[0] + xmin + xmax;
@@ -1069,6 +1096,23 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
       int mesh;
       int surfaceoption;
       int previous_option = context_struct_.option;
+      int use_setspace3d;
+      double phi, theta, fov, cam;
+      double xmin_orig, xmax_orig, ymin_orig, ymax_orig, zmin_orig, zmax_orig;
+      double xmin, xmax, ymin, ymax, zmin, zmax;
+      int scale_orig;
+      int scale;
+      gr_inqscale(&scale);
+      gr_inqwindow3d(&xmin, &xmax, &ymin, &ymax, &zmin, &zmax);
+      gr_inqspace3d(&use_setspace3d, &phi, &theta, &fov, &cam);
+      xmin_orig = xmin;
+      xmax_orig = xmax;
+      ymin_orig = ymin;
+      ymax_orig = ymax;
+      zmin_orig = zmin;
+      zmax_orig = zmax;
+      scale_orig = scale;
+
       context_struct_.option = option;
       surfaceoption = GR3_SURFACE_GRTRANSFORM;
       if (option == OPTION_Z_SHADED_MESH || option == OPTION_COLORED_MESH)
@@ -1092,11 +1136,43 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
           gr3_createsurfacemesh(&mesh, nx, ny, px, py, pz, surfaceoption);
         }
       if (gr3_geterror(0, NULL, NULL)) return;
+      if (scale & OPTION_X_LOG)
+        {
+          xmin = gr3_log10_(xmin);
+          xmax = gr3_log10_(xmax);
+        }
+      if (scale & OPTION_Y_LOG)
+        {
+          ymin = gr3_log10_(ymin);
+          ymax = gr3_log10_(ymax);
+        }
+      if (scale & OPTION_Z_LOG)
+        {
+          zmin = gr3_log10_(zmin);
+          zmax = gr3_log10_(zmax);
+        }
+      gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
+      if (use_setspace3d)
+        {
+          /* recalculate transformation parameters and scale factors */
+          gr_setspace3d(phi, theta, fov, cam);
+        }
       gr3_drawsurface(mesh);
       if (gr3_geterror(0, NULL, NULL)) return;
       gr3_deletemesh(mesh);
       if (gr3_geterror(0, NULL, NULL)) return;
+      /* set scale to 0 for gr3_drawimage_grlike, as it will use gr_drawimage, which must not apply additional
+       * transformations in 2d space */
+      gr_setscale(0);
       gr3_drawimage_grlike();
+      gr_setscale(scale_orig);
+
+      gr_setwindow3d(xmin_orig, xmax_orig, ymin_orig, ymax_orig, zmin_orig, zmax_orig);
+      if (use_setspace3d)
+        {
+          /* restore previous transformation parameters and scale factors */
+          gr_setspace3d(phi, theta, fov, cam);
+        }
       context_struct_.option = previous_option;
     }
   else
