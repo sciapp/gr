@@ -43,6 +43,7 @@ static std::map<std::string, const char *> key_to_types{
     {"levels", "i"},
     {"line_spec", "s"},
     {"location", "i"},
+    {"major_h", "i"},
     {"marginal_heatmap_kind", "s"},
     {"marker_type", "i"},
     {"num_bins", "i"},

@@ -1314,18 +1314,9 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                     }
                   else
                     {
-                      if (static_cast<int>(subplot_element->getAttribute("z_log")))
-                        {
-                          num = (grm_isnan(z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx]))
-                                    ? NAN
-                                    : exp(z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx]);
-                        }
-                      else
-                        {
-                          num = (grm_isnan(z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx]))
-                                    ? NAN
-                                    : z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx];
-                        }
+                      num = (grm_isnan(z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx]))
+                                ? NAN
+                                : z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx];
                       snprintf(output, 50, "%f", num);
                       info->label = output;
                     }

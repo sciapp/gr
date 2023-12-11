@@ -59,6 +59,8 @@
 #define PLOT_WIREFRAME_GRIDIT_N 50
 #define PLOT_SURFACE_GRIDIT_N 200
 #define PLOT_DEFAULT_ORIENTATION "horizontal"
+#define PLOT_DEFAULT_CONTOUR_MAJOR_H 1000
+#define PLOT_DEFAULT_CONTOURF_MAJOR_H 0
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
