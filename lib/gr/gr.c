@@ -5573,7 +5573,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (z_tick != 0)
     {
-      if (OPTION_Y_LOG & lx.scale_options)
+      if (OPTION_Z_LOG & lx.scale_options)
         {
           z0 = pow(lx.basez, gauss(blog(lx.basez, z_min)));
 
