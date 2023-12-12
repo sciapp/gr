@@ -964,6 +964,8 @@ static double sizex = 0;
 
 static int regeneration_flags = 0;
 
+static char *titles3d[3] = {NULL, NULL, NULL};
+
 static char *xcalloc(int count, int size)
 {
   char *result = (char *)calloc(count, size);
@@ -6706,9 +6708,9 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   int *anglep, which_rep, rep;
 
   double tick;
-  double x_minor_tick, x_major_tick, x_label;
-  double y_minor_tick, y_major_tick, y_label;
-  double z_minor_tick, z_major_tick, z_label;
+  double x_minor_tick, x_major_tick, x_label, x_title;
+  double y_minor_tick, y_major_tick, y_label, y_title;
+  double z_minor_tick, z_major_tick, z_label, z_title;
   double x0, y0, z0, xi, yi, zi;
   int64_t i;
   int decade, exponent;
@@ -6817,18 +6819,27 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
       y_minor_tick = y_log(y_lin(y_org) + tick);
       y_major_tick = y_log(y_lin(y_org) + 2. * tick);
       y_label = y_log(y_lin(y_org) + 3. * tick);
+      y_title = y_log(y_lin(y_org) + 10. * tick);
 
       /* set text alignment */
 
       if (y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
-          if (tick > 0) y_label = y_log(y_lin(y_org) - tick);
+          if (tick > 0)
+            {
+              y_label = y_log(y_lin(y_org) - tick);
+              y_title = y_log(y_lin(y_org) - 10. * tick);
+            }
         }
       else
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-          if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
+          if (tick < 0)
+            {
+              y_label = y_log(y_lin(y_org) - tick);
+              y_title = y_log(y_lin(y_org) - 10. * tick);
+            }
         }
 
 
@@ -6847,25 +6858,34 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           x_minor_tick = x_log(x_lin(x_org) + tick);
           x_major_tick = x_log(x_lin(x_org) + 2. * tick);
           x_label = x_log(x_lin(x_org) + 3. * tick);
+          x_title = x_log(x_lin(x_org) + 10. * tick);
 
           if (x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2.)
             {
-              if (tick > 0) x_label = x_log(x_lin(x_org) - tick);
+              if (tick > 0)
+                {
+                  x_label = x_log(x_lin(x_org) - tick);
+                  x_title = x_log(x_lin(x_org) - 10. * tick);
+                }
             }
           else
             {
-              if (tick < 0) x_label = x_log(x_lin(x_org) - tick);
+              if (tick < 0)
+                {
+                  x_label = x_log(x_lin(x_org) - tick);
+                  x_title = x_log(x_lin(x_org) - 10. * tick);
+                }
             }
           axes3d_get_params(2, &tick_axis, x_org, y_org, z_org, &axis);
         }
 
       if (tick_axis != 1)
         {
-          y_label = y_major_tick = y_minor_tick = y_org;
+          y_title = y_label = y_major_tick = y_minor_tick = y_org;
         }
       if (tick_axis != 0)
         {
-          x_label = x_major_tick = x_minor_tick = x_org;
+          x_title = x_label = x_major_tick = x_minor_tick = x_org;
         }
 
       if (OPTION_Z_LOG & lx.scale_options)
@@ -6969,6 +6989,23 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           end_pline3d();
         }
+
+      if (titles3d[2] != NULL)
+        {
+          gks_inq_text_upvec(&errind, &xi, &yi);
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          if (tick_axis == 0 && x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2. ||
+              tick_axis == 1 && y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
+            {
+              gks_set_text_upvec(1, 0);
+            }
+          else
+            {
+              gks_set_text_upvec(-1, 0);
+            }
+          text3d(x_title, y_title, z_log(0.5 * (z_lin(z_min) + z_lin(z_max))), titles3d[2],
+                 modern_projection_type ? axis : 0);
+        }
     }
 
   if (y_tick != 0)
@@ -6981,18 +7018,27 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
       x_minor_tick = x_log(x_lin(x_org) + tick);
       x_major_tick = x_log(x_lin(x_org) + 2. * tick);
       x_label = x_log(x_lin(x_org) + 3. * tick);
+      x_title = x_log(x_lin(x_org) + 10. * tick);
 
       /* set text alignment */
 
       if (x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2.)
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
-          if (tick > 0) x_label = x_log(x_lin(x_org) - tick);
+          if (tick > 0)
+            {
+              x_label = x_log(x_lin(x_org) - tick);
+              x_title = x_log(x_lin(x_org) - 10. * tick);
+            }
         }
       else
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-          if (tick < 0) x_label = x_log(x_lin(x_org) - tick);
+          if (tick < 0)
+            {
+              x_label = x_log(x_lin(x_org) - tick);
+              x_title = x_log(x_lin(x_org) - 10. * tick);
+            }
         }
 
       if (!modern_projection_type)
@@ -7011,14 +7057,23 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           z_minor_tick = z_log(z_lin(z_org) + tick);
           z_major_tick = z_log(z_lin(z_org) + 2. * tick);
           z_label = z_log(z_lin(z_org) + 3. * tick);
+          z_title = z_log(z_lin(z_org) + 10. * tick);
 
           if (z_lin(z_org) <= (z_lin(z_min) + z_lin(z_max)) / 2.)
             {
-              if (tick > 0) z_label = z_log(z_lin(z_org) - tick);
+              if (tick > 0)
+                {
+                  z_label = z_log(z_lin(z_org) - tick);
+                  z_title = z_log(z_lin(z_org) - 10. * tick);
+                }
             }
           else
             {
-              if (tick < 0) z_label = z_log(z_lin(z_org) - tick);
+              if (tick < 0)
+                {
+                  z_label = z_log(z_lin(z_org) - tick);
+                  z_title = z_log(z_lin(z_org) - 10. * tick);
+                }
             }
 
           axes3d_get_params(1, &tick_axis, x_org, y_org, z_org, &axis);
@@ -7026,11 +7081,11 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       if (tick_axis != 0)
         {
-          x_label = x_major_tick = x_minor_tick = x_org;
+          x_title = x_label = x_major_tick = x_minor_tick = x_org;
         }
       if (tick_axis != 2)
         {
-          z_label = z_major_tick = z_minor_tick = z_org;
+          z_title = z_label = z_major_tick = z_minor_tick = z_org;
         }
 
       if (OPTION_Y_LOG & lx.scale_options)
@@ -7133,6 +7188,30 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           end_pline3d();
         }
+
+      if (titles3d[1] != NULL)
+        {
+          gks_inq_text_upvec(&errind, &xi, &yi);
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          if (tick_axis == 2 && z_lin(z_org) <= (z_lin(z_min) + z_lin(z_max)) / 2.)
+            {
+              gks_set_text_upvec(0, 1);
+            }
+          else if (tick_axis == 2)
+            {
+              gks_set_text_upvec(0, -1);
+            }
+          else if (tick_axis == 0 && x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2.)
+            {
+              gks_set_text_upvec(1, 0);
+            }
+          else
+            {
+              gks_set_text_upvec(-1, 0);
+            }
+          text3d(x_title, y_log(0.5 * (y_lin(y_min) + y_lin(y_max))), z_title, titles3d[1],
+                 modern_projection_type ? axis : 0);
+        }
     }
 
   if (x_tick != 0)
@@ -7145,18 +7224,27 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
       y_minor_tick = y_log(y_lin(y_org) + tick);
       y_major_tick = y_log(y_lin(y_org) + 2. * tick);
       y_label = y_log(y_lin(y_org) + 3. * tick);
+      y_title = y_log(y_lin(y_org) + 10. * tick);
 
       /* set text alignment */
 
       if (y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
-          if (tick > 0) y_label = y_log(y_lin(y_org) - tick);
+          if (tick > 0)
+            {
+              y_label = y_log(y_lin(y_org) - tick);
+              y_title = y_log(y_lin(y_org) - 10. * tick);
+            }
         }
       else
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-          if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
+          if (tick < 0)
+            {
+              y_label = y_log(y_lin(y_org) - tick);
+              y_title = y_log(y_lin(y_org) - 10. * tick);
+            }
         }
 
       if (!modern_projection_type)
@@ -7175,14 +7263,23 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           z_minor_tick = z_log(z_lin(z_org) + tick);
           z_major_tick = z_log(z_lin(z_org) + 2. * tick);
           z_label = z_log(z_lin(z_org) + 3. * tick);
+          z_title = z_log(z_lin(z_org) + 10. * tick);
 
           if (z_lin(z_org) <= (z_lin(z_min) + z_lin(z_max)) / 2.)
             {
-              if (tick > 0) z_label = z_log(z_lin(z_org) - tick);
+              if (tick > 0)
+                {
+                  z_label = z_log(z_lin(z_org) - tick);
+                  z_title = z_log(z_lin(z_org) - 10. * tick);
+                }
             }
           else
             {
-              if (tick < 0) z_label = z_log(z_lin(z_org) - tick);
+              if (tick < 0)
+                {
+                  z_label = z_log(z_lin(z_org) - tick);
+                  z_title = z_log(z_lin(z_org) - 10. * tick);
+                }
             }
 
           axes3d_get_params(0, &tick_axis, x_org, y_org, z_org, &axis);
@@ -7190,11 +7287,11 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       if (tick_axis != 1)
         {
-          y_label = y_major_tick = y_minor_tick = y_org;
+          y_title = y_label = y_major_tick = y_minor_tick = y_org;
         }
       if (tick_axis != 2)
         {
-          z_label = z_major_tick = z_minor_tick = z_org;
+          z_title = z_label = z_major_tick = z_minor_tick = z_org;
         }
 
       if (OPTION_X_LOG & lx.scale_options)
@@ -7297,6 +7394,23 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           if (xi > x_max) pline3d(x_max, y_org, z_org);
 
           end_pline3d();
+        }
+
+      if (titles3d[0] != NULL)
+        {
+          gks_inq_text_upvec(&errind, &xi, &yi);
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          if (tick_axis == 1 && y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2. ||
+              tick_axis == 2 && z_lin(z_org) <= (z_lin(z_min) + z_lin(z_max)) / 2.)
+            {
+              gks_set_text_upvec(0, 1);
+            }
+          else
+            {
+              gks_set_text_upvec(0, -1);
+            }
+          text3d(x_log(0.5 * (x_lin(x_min) + x_lin(x_max))), y_title, z_title, titles3d[0],
+                 modern_projection_type ? axis : 0);
         }
     }
 
@@ -7691,6 +7805,47 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
     }
 
   if (flag_stream) gr_writestream("<titles3d xtitle=\"%s\" ytitle=\"%s\" ztitle=\"%s\"/>\n", x_title, y_title, z_title);
+}
+
+/*!
+ * Set axis titles to display when gr_axes3d is called, similar to gr_titles3d.
+ *
+ * \param[in] x_title The text to be displayed on the X axis
+ * \param[in] y_title The text to be displayed on the Y axis
+ * \param[in] z_title The text to be displayed on the Z axis
+ */
+void gr_settitles3d(char *x_title, char *y_title, char *z_title)
+{
+  check_autoinit;
+
+  if (titles3d[0] != NULL)
+    {
+      free(titles3d[0]);
+      titles3d[0] = NULL;
+    }
+  if (titles3d[1] != NULL)
+    {
+      free(titles3d[1]);
+      titles3d[1] = NULL;
+    }
+  if (titles3d[2] != NULL)
+    {
+      free(titles3d[2]);
+      titles3d[2] = NULL;
+    }
+
+  if (x_title != NULL)
+    {
+      titles3d[0] = strdup(x_title);
+    }
+  if (y_title != NULL)
+    {
+      titles3d[1] = strdup(y_title);
+    }
+  if (z_title != NULL)
+    {
+      titles3d[2] = strdup(z_title);
+    }
 }
 
 static void init_hlr(void)
