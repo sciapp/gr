@@ -12497,6 +12497,13 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
   GRM::Render::processWindow(element); /* needs to be set before space 3d is processed */
   GRM::Render::processScale(element);  /* needs to be set before flip is processed */
 
+  /* Ensure space3d is set for 3d plots */
+  auto kind = static_cast<std::string>(element->getAttribute("kind"));
+  if (kinds3D.count(kind) != 0 && !element->hasAttribute("space_3d_fov"))
+    {
+      global_render->setSpace3d(element, 30.0, 0.0);
+    }
+
   /* Map for calculations on the plot level */
   static std::map<std::string,
                   std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)>>
