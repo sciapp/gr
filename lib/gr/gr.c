@@ -7846,6 +7846,9 @@ void gr_settitles3d(char *x_title, char *y_title, char *z_title)
     {
       titles3d[2] = strdup(z_title);
     }
+
+  if (flag_stream)
+    gr_writestream("<settitles3d xtitle=\"%s\" ytitle=\"%s\" ztitle=\"%s\"/>\n", x_title, y_title, z_title);
 }
 
 static void init_hlr(void)
