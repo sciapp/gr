@@ -3699,6 +3699,8 @@ static void processTitle(const std::shared_ptr<GRM::Element> &element)
   std::string title = static_cast<std::string>(element->getAttribute("title"));
 
   if (title.empty()) return; // Empty title is pointless, no need to waste the space for nothing
+  if (static_cast<std::string>(getSubplotElement(element)->getAttribute("kind")) == "imshow")
+    return; // Don't draw a title for imshow
   if (auto render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument()))
     {
       // title is unique so child_id isn't needed here
@@ -12074,7 +12076,7 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
   auto kind = static_cast<std::string>(element->parentElement()->getAttribute("kind"));
   int child_id = 0;
   del_values del = del_values::update_without_default;
-  std::shared_ptr<GRM::Element> polarAxes, axes, grid, grid3d, axes3d;
+  std::shared_ptr<GRM::Element> polarAxes, axes, grid, grid3d, axes3d, titles_3d;
   std::string type;
 
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
@@ -12251,6 +12253,28 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
               axes3d->setAttribute("x_major", 0);
               axes3d->setAttribute("z_major", 0);
               axes3d->setAttribute("z_index", 7);
+            }
+
+          std::string x_label =
+              (element->hasAttribute("x_label")) ? static_cast<std::string>(element->getAttribute("x_label")) : "";
+          std::string y_label =
+              (element->hasAttribute("y_label")) ? static_cast<std::string>(element->getAttribute("y_label")) : "";
+          std::string z_label =
+              (element->hasAttribute("z_label")) ? static_cast<std::string>(element->getAttribute("z_label")) : "";
+          if (x_label != "" || y_label != "" || z_label != "")
+            {
+              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                {
+                  titles_3d = global_render->createTitles3d(x_label, y_label, z_label);
+                  titles_3d->setAttribute("_child_id", child_id++);
+                  element->append(titles_3d);
+                }
+              else
+                {
+                  titles_3d = element->querySelectors("titles_3d[_child_id=" + std::to_string(child_id++) + "]");
+                  if (titles_3d != nullptr)
+                    titles_3d = global_render->createTitles3d(x_label, y_label, z_label, titles_3d);
+                }
             }
         }
       else
@@ -15802,53 +15826,38 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
             {
               std::string oldKind = value;
               std::string oldType = static_cast<std::string>(coordinateSystem->getAttribute("type"));
-
-              if (newKind == "imshow")
-                {
-                  coordinateSystem->setAttribute("draw", false);
-                }
-              else if (oldKind == "imshow")
-                {
-                  coordinateSystem->removeAttribute("draw");
-                }
-
               if (newType != oldType)
                 {
                   coordinateSystem->setAttribute("type", newType);
                   coordinateSystem->setAttribute("_update_required", true);
-                  coordinateSystem->setAttribute("_delete_children", 2);
+                  coordinateSystem->setAttribute("_delete_children",
+                                                 static_cast<int>(del_values::recreate_all_children));
 
-                  if (newType == "2d")
+                  if (newKind == "imshow")
                     {
-                      auto titles3d = coordinateSystem->querySelectors("titles_3d");
-                      if (titles3d)
+                      coordinateSystem->setAttribute("draw", false);
+
+                      std::shared_ptr<GRM::Element> colorbar = newElement->parentElement()->querySelectors("colorbar");
+                      if (colorbar)
                         {
-                          coordinateSystem->setAttribute(
-                              "x_label", static_cast<std::string>(titles3d->getAttribute("x_label_3d")));
-                          coordinateSystem->setAttribute(
-                              "y_label", static_cast<std::string>(titles3d->getAttribute("y_label_3d")));
+                          for (const auto &child : colorbar->children())
+                            {
+                              child->remove();
+                            }
+                          colorbar->remove();
                         }
-                    }
-                  if (newType == "3d")
-                    {
-                      coordinateSystem->setAttribute("_delete_children", 3); /* delete x and y labels */
-                      if (!coordinateSystem->hasAttribute("z_grid")) coordinateSystem->setAttribute("z_grid", 1);
 
-                      auto titles3d = coordinateSystem->querySelectors("titles_3d");
-                      std::string xlabel = coordinateSystem->hasAttribute("x_label")
-                                               ? static_cast<std::string>(coordinateSystem->getAttribute("x_label"))
-                                               : "";
-                      std::string ylabel = coordinateSystem->hasAttribute("y_label")
-                                               ? static_cast<std::string>(coordinateSystem->getAttribute("y_label"))
-                                               : "";
-                      std::string zlabel =
-                          titles3d ? static_cast<std::string>(titles3d->getAttribute("z_label_3d")) : "z";
-                      titles3d = global_render->createTitles3d(xlabel, ylabel, zlabel, titles3d);
-                      if (!coordinateSystem->querySelectors("titles_3d")) coordinateSystem->append(titles3d);
+                      std::shared_ptr<GRM::Element> title =
+                          newElement->parentElement()->querySelectors("text[name=\"title\"]");
+                      if (title) title->remove();
+                    }
+                  else if (oldKind == "imshow")
+                    {
+                      coordinateSystem->removeAttribute("draw");
                     }
                 }
             }
-          else
+          else if (newKind != "imshow")
             {
               coordinateSystem = global_render->createElement("coordinate_system");
               newElement->parentElement()->prepend(coordinateSystem);

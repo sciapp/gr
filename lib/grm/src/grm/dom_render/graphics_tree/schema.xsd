@@ -265,6 +265,7 @@
             <xs:attribute name="y_tick_labels" type="xs:string"/>
             <xs:attribute name="y_label" type="xs:string"/>
             <xs:attribute name="z_grid" type="xs:integer"/>
+            <xs:attribute name="z_label" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 

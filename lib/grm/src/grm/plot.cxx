@@ -3521,42 +3521,17 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
       group->parentElement()->setAttribute("title", title);
     }
 
-  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
+  if (grm_args_values(args, "x_label", "s", &x_label))
     {
-      std::string xlabel, ylabel, zlabel;
-      bool title3d = false;
-      if (grm_args_values(args, "x_label", "s", &x_label))
-        {
-          xlabel = x_label;
-          title3d = true;
-        }
-      if (grm_args_values(args, "y_label", "s", &y_label))
-        {
-          ylabel = y_label;
-          title3d = true;
-        }
-      if (grm_args_values(args, "z_label", "s", &z_label))
-        {
-          zlabel = z_label;
-          title3d = true;
-        }
-      if (pass == 2 && title3d)
-        {
-          auto title3d_group = global_render->createTitles3d(xlabel, ylabel, zlabel);
-          title3d_group->setAttribute("z_index", 7);
-          group->append(title3d_group);
-        }
+      group->setAttribute("x_label", x_label);
     }
-  else
+  if (grm_args_values(args, "y_label", "s", &y_label))
     {
-      if (grm_args_values(args, "x_label", "s", &x_label))
-        {
-          group->setAttribute("x_label", x_label);
-        }
-      if (grm_args_values(args, "y_label", "s", &y_label))
-        {
-          group->setAttribute("y_label", y_label);
-        }
+      group->setAttribute("y_label", y_label);
+    }
+  if (grm_args_values(args, "z_label", "s", &z_label))
+    {
+      group->setAttribute("z_label", z_label);
     }
 
   return ERROR_NONE;
