@@ -37,7 +37,7 @@ For one-dimensional data sets there are also options to define if inside the dat
 
 There are more key-value parameters. These parameters only effect specific plot types. For example `bar_width` only makes sense, when bars are drawn. All possible parameters are:
 
-`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `c`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `grplot`, `int_lim`, `isovalue`, `kind`, `levels`, `line_spec`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `phi_flip`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `tilt`, `transformation`, `x_bins`, `x_colormap`, `x_flip`, `y_bins`, `y_colormap`, `y_flip`, `y_labels`
+`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `c`, `clip_negative`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `grplot`, `int_lim`, `isovalue`, `keep_radii_axes`, `kind`, `levels`, `line_spec`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `phi_flip`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `tilt`, `transformation`, `x_bins`, `x_colormap`, `x_flip`, `y_bins`, `y_colormap`, `y_flip`, `y_labels`
 
 All parameters are separated by a blank. Some parameters are more complex than others. These parameters represent a container inside GRM.
 
@@ -326,6 +326,10 @@ This plot type converts the data into a polar plot. A polar plot displays a poly
 
 The expected data are two columns containing the angles and values.
 
+Possible parameters for the polar plot are:
+
+1. `clip_negative`: When this parameter is set, only positive radii are displayed. Otherwise negative will be mirrored
+
 ### POLAR_HEATMAP
 
 This plot type converts the data into a polar heatmap. A polar heatmap is a heatmap in polar coordinates.
@@ -348,14 +352,15 @@ Possible parameters for the polar histogram are:
 2. `bin_edges`: This parameter sets the borders of the classes.
 3. `bin_width`: This parameter sets the width of all the bins.
 4. `draw_edges`: When a colormap is used this parameter decides whether the outer shape is drawn or not. The value can be either 0 or 1.
-5. `num_bins`: This parameter sets the number of classes which are respected during the binning.
-6. `normalization`: This parameter sets the type of normalization for the polar histogram. The value can be `count`, `probability`, `countdensity`, `pdf`, `cumcount` or `cdf`.
-7. `phi_flip`: This parameter decides whether the phi values are flipped or not. The value can be either 0 or 1.
-8. `stairs`: When this parameter is set, only the outer shapes of the bins are drawn. The value can be either 0 or 1.
-9. `x_colormap`: This parameter sets the colormap for the x-direction.
-10. `x_flip`: This parameter defines whether the x-axis is flipped or not.
-11. `y_colormap`: This parameter sets the colormap for the y-direction.
-12. `y_flip`: This parameter defines whether the y-axis is flipped or not.
+5. `keep_radii_axes` When y_lims are set and this parameter is set, the radii axes always start at 0.0
+6. `num_bins`: This parameter sets the number of classes which are respected during the binning.
+7. `normalization`: This parameter sets the type of normalization for the polar histogram. The value can be `count`, `probability`, `countdensity`, `pdf`, `cumcount` or `cdf`.
+8. `phi_flip`: This parameter decides whether the phi values are flipped or not. The value can be either 0 or 1.
+9. `stairs`: When this parameter is set, only the outer shapes of the bins are drawn. The value can be either 0 or 1.
+10. `x_colormap`: This parameter sets the colormap for the x-direction.
+11. `x_flip`: This parameter defines whether the x-axis is flipped or not.
+12. `y_colormap`: This parameter sets the colormap for the y-direction.
+13. `y_flip`: This parameter defines whether the y-axis is flipped or not.
 
 ### PIE
 

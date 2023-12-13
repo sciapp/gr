@@ -1078,7 +1078,11 @@
             <xs:attribute name="total" type="xs:integer"/>
             <xs:attribute name="transparency" type="xs:double"/>
             <xs:attribute name="x_colormap" type="xs:integer"/>
+            <xs:attribute name="x_range_max" type="xs:double"/>
+            <xs:attribute name="x_range_min" type="xs:double"/>
             <xs:attribute name="y_colormap" type="xs:integer"/>
+            <xs:attribute name="y_range_max" type="xs:double"/>
+            <xs:attribute name="y_range_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 

@@ -27,6 +27,7 @@ static std::map<std::string, const char *> key_to_types{
     {"bin_edges", "nD"},
     {"bin_width", "d"},
     {"c", "nD"},
+    {"clip_negative", "i"},
     {"colormap", "i"},
     {"draw_edges", "i"},
     {"edge_color", "ddd"},
@@ -42,6 +43,7 @@ static std::map<std::string, const char *> key_to_types{
     {"int_limits_low", "nD"},
     {"isovalue", "d"},
     {"keep_aspect_ratio", "i"},
+    {"keep_radii_axes", "i"},
     {"kind", "s"},
     {"levels", "i"},
     {"line_spec", "s"},
@@ -335,10 +337,6 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                       ranges->zmax = std::stod(value2);
                     }
                 }
-            }
-          else if (key == "clip_negative")
-            {
-              grm_args_push(args, key.c_str(), "i", std::stoi(value));
             }
           else
             {

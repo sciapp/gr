@@ -1,4 +1,7 @@
-#title:Polar Histogram dataset
+#title:Polar dataset
+#x_range: 60,260
+#y_range: 1,4
+#y_lim : 0, 8
 
 0.1 7.0
 1.1 0.5
