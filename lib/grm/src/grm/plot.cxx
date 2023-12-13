@@ -3445,7 +3445,6 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   int x_grid, y_grid, z_grid;
   char *title;
   char *x_label, *y_label, *z_label;
-  int tick_orientation = 1;
   std::shared_ptr<GRM::Element> group;
   std::string type = "2d";
 
@@ -3480,10 +3479,6 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     }
   else
     {
-      if (str_equals_any(kind, 3, "heatmap", "shade", "marginal_heatmap"))
-        {
-          tick_orientation = -1;
-        }
       if (strcmp(kind, "barplot") != 0 || pass == 2)
         {
           /* xticklabels */

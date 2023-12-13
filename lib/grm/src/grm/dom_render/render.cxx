@@ -12279,7 +12279,7 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
         }
       else
         {
-          if (str_equals_any(kind.c_str(), 3, "heatmap", "shade", "marginalheatmap"))
+          if (str_equals_any(kind.c_str(), 3, "heatmap", "shade", "marginal_heatmap"))
             {
               tick_orientation = -1;
             }
