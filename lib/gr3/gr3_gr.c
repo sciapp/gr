@@ -23,6 +23,12 @@ extern float __cdecl sqrtf(float);
 #define NAN (0.0 / 0.0)
 #endif
 
+#ifdef isnan
+#define is_nan(a) isnan(a)
+#else
+#define is_nan(x) ((x) != (x))
+#endif
+
 #ifndef max
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #endif
@@ -320,7 +326,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
   float *new_vertices = NULL;
   float *new_normals = NULL;
   float *new_colors = NULL;
-  int new_idx, l, errind;
+  int new_idx, skipped_quads, l, errind;
   float linewidth_y = 0;
   float linewidth_x = 0;
 
@@ -392,6 +398,21 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
   gr3_ndctrans_(ymin, ymax, &ty, scale & OPTION_Y_LOG, !(scale & OPTION_FLIP_Y));
   gr3_ndctrans_(zmin, zmax, &tz, scale & OPTION_Z_LOG, scale & OPTION_FLIP_Z);
 
+  if (scale & OPTION_X_LOG)
+    {
+      xmin = gr3_log10_(xmin);
+      xmax = gr3_log10_(xmax);
+    }
+  if (scale & OPTION_Y_LOG)
+    {
+      ymin = gr3_log10_(ymin);
+      ymax = gr3_log10_(ymax);
+    }
+  if (scale & OPTION_Z_LOG)
+    {
+      zmin = gr3_log10_(zmin);
+      zmax = gr3_log10_(zmax);
+    }
   for (j = 0; j < ny; j++)
     {
       for (i = 0; i < nx; i++)
@@ -407,6 +428,18 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               v[0] = px[i];
               zvalue = pz[k];
               v[1] = py[j];
+              if (scale & OPTION_X_LOG)
+                {
+                  v[0] = gr3_log10_(v[0]);
+                }
+              if (scale & OPTION_Y_LOG)
+                {
+                  v[1] = gr3_log10_(v[1]);
+                }
+              if (scale & OPTION_Z_LOG)
+                {
+                  zvalue = gr3_log10_(zvalue);
+                }
               if (scale & OPTION_FLIP_X)
                 {
                   v[0] = -v[0] + xmin + xmax;
@@ -497,7 +530,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               float a[3];
               float b[3];
 
-              if (i == 0)
+              if (i == 0 || is_nan(v[0 - dirx]) || is_nan(v[1 - dirx]) || is_nan(v[2 - dirx]))
                 {
                   a[0] = v[dirx + 0] - v[0];
                   a[1] = v[dirx + 1] - v[1];
@@ -516,7 +549,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
                   a[2] = (v[dirx + 2] - v[2 - dirx]) * 0.5;
                 }
 
-              if (j == 0)
+              if (j == 0 || is_nan(v[0 - diry]) || is_nan(v[1 - diry]) || is_nan(v[2 - diry]))
                 {
                   b[0] = v[diry + 0] - v[0];
                   b[1] = v[diry + 1] - v[1];
@@ -579,6 +612,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
         }
     }
   new_idx = 0;
+  skipped_quads = 0;
   /* create triangles */
   for (j = 0; j < ny - 1; j++)
     {
@@ -589,6 +623,19 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
            * The normals x-value of the first vertex determines the width of edge 0-1, the second vertex normal's x
            * coordinate to the edge 1-2 and the last one to 2-0.*/
           int k = j * nx + i;
+          int any_nan = 0;
+          for (l = 0; l < 3 && !any_nan; l++)
+            {
+              any_nan = is_nan(vertices[k * 3 + l]) || is_nan(vertices[(k + 1) * 3 + l]) ||
+                        is_nan(vertices[(k + nx) * 3 + l]) || is_nan(vertices[(k + nx + 1) * 3 + l]) ||
+                        is_nan(normals[k * 3 + l]) || is_nan(normals[(k + 1) * 3 + l]) ||
+                        is_nan(normals[(k + nx) * 3 + l]) || is_nan(normals[(k + nx + 1) * 3 + l]);
+            }
+          if (any_nan)
+            {
+              skipped_quads += 1;
+              continue;
+            }
           if (context_struct_.use_software_renderer && context_struct_.option <= OPTION_FILLED_MESH)
             {
               for (l = 0; l < 3; l++)
@@ -642,7 +689,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
             }
           else
             {
-              int *idx = indices + 6 * (j * (nx - 1) + i);
+              int *idx = indices + 6 * (j * (nx - 1) + i - skipped_quads);
               idx[0] = k;
               idx[1] = k + 1;
               idx[2] = k + nx;
@@ -658,7 +705,8 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
     }
   else
     {
-      result = gr3_createindexedmesh_nocopy(mesh, num_vertices, vertices, normals, colors, num_indices, indices);
+      result = gr3_createindexedmesh_nocopy(mesh, num_vertices, vertices, normals, colors,
+                                            num_indices - 6 * skipped_quads, indices);
     }
   if (result != GR3_ERROR_NONE && result != GR3_ERROR_OPENGL_ERR)
     {
@@ -1048,6 +1096,23 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
       int mesh;
       int surfaceoption;
       int previous_option = context_struct_.option;
+      int use_setspace3d;
+      double phi, theta, fov, cam;
+      double xmin_orig, xmax_orig, ymin_orig, ymax_orig, zmin_orig, zmax_orig;
+      double xmin, xmax, ymin, ymax, zmin, zmax;
+      int scale_orig;
+      int scale;
+      gr_inqscale(&scale);
+      gr_inqwindow3d(&xmin, &xmax, &ymin, &ymax, &zmin, &zmax);
+      gr_inqspace3d(&use_setspace3d, &phi, &theta, &fov, &cam);
+      xmin_orig = xmin;
+      xmax_orig = xmax;
+      ymin_orig = ymin;
+      ymax_orig = ymax;
+      zmin_orig = zmin;
+      zmax_orig = zmax;
+      scale_orig = scale;
+
       context_struct_.option = option;
       surfaceoption = GR3_SURFACE_GRTRANSFORM;
       if (option == OPTION_Z_SHADED_MESH || option == OPTION_COLORED_MESH)
@@ -1071,11 +1136,43 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
           gr3_createsurfacemesh(&mesh, nx, ny, px, py, pz, surfaceoption);
         }
       if (gr3_geterror(0, NULL, NULL)) return;
+      if (scale & OPTION_X_LOG)
+        {
+          xmin = gr3_log10_(xmin);
+          xmax = gr3_log10_(xmax);
+        }
+      if (scale & OPTION_Y_LOG)
+        {
+          ymin = gr3_log10_(ymin);
+          ymax = gr3_log10_(ymax);
+        }
+      if (scale & OPTION_Z_LOG)
+        {
+          zmin = gr3_log10_(zmin);
+          zmax = gr3_log10_(zmax);
+        }
+      gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
+      if (use_setspace3d)
+        {
+          /* recalculate transformation parameters and scale factors */
+          gr_setspace3d(phi, theta, fov, cam);
+        }
       gr3_drawsurface(mesh);
       if (gr3_geterror(0, NULL, NULL)) return;
       gr3_deletemesh(mesh);
       if (gr3_geterror(0, NULL, NULL)) return;
+      /* set scale to 0 for gr3_drawimage_grlike, as it will use gr_drawimage, which must not apply additional
+       * transformations in 2d space */
+      gr_setscale(0);
       gr3_drawimage_grlike();
+      gr_setscale(scale_orig);
+
+      gr_setwindow3d(xmin_orig, xmax_orig, ymin_orig, ymax_orig, zmin_orig, zmax_orig);
+      if (use_setspace3d)
+        {
+          /* restore previous transformation parameters and scale factors */
+          gr_setspace3d(phi, theta, fov, cam);
+        }
       context_struct_.option = previous_option;
     }
   else

@@ -123,6 +123,8 @@ typedef struct
   double focus_point_x, focus_point_y, focus_point_z;
   double s_x, s_y, s_z;
   double x_axis_scale, y_axis_scale, z_axis_scale;
+  int use_setspace3d;
+  double setspace3d_phi, setspace3d_theta, setspace3d_fov, setspace3d_cam;
 } transformation_xform;
 
 typedef struct
@@ -275,7 +277,7 @@ static linear_xform lx = {0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 10, 10, 10, "10
 
 static world_xform wx = {0, 1, 60, 60, 0, 0, 0, 0, 0, 0, 0};
 
-static transformation_xform tx = {0, 2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1};
+static transformation_xform tx = {0, 2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0};
 
 static projection_xform gpx = {-1, 1, -1, 1, 1, 0, 45, GR_PROJECTION_DEFAULT};
 
@@ -348,6 +350,7 @@ static unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
 
 #define NDC 0
 #define WC 1
+#define MODERN_NDC 2
 
 #define POINT_INC 2048
 
@@ -961,6 +964,10 @@ static double sizex = 0;
 
 static int regeneration_flags = 0;
 
+static char *titles3d[3] = {NULL, NULL, NULL};
+
+static double titles3d_text_height = 0;
+
 static char *xcalloc(int count, int size)
 {
   char *result = (char *)calloc(count, size);
@@ -1227,21 +1234,6 @@ static void setspace(double zmin, double zmax, int rotation, int tilt)
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
-  if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
-    {
-      xmin = ix.xmin;
-      xmax = ix.xmax;
-      ymin = ix.ymin;
-      ymax = ix.ymax;
-    }
-  else
-    {
-      xmin = wn[0];
-      xmax = wn[1];
-      ymin = wn[2];
-      ymax = wn[3];
-    }
-
   xmin = wn[0];
   xmax = wn[1];
   ymin = wn[2];
@@ -1422,6 +1414,8 @@ static void initialize(int state)
     {
       gks_select_xform(tnr);
       gks_set_viewport(tnr, xmin, xmax, ymin, ymax);
+      gks_set_viewport(MODERN_NDC, xmin, xmax, ymin, ymax);
+      gks_set_window(MODERN_NDC, -1, 1, -1, 1);
 
       gks_set_asf(asf);
       gks_set_pmark_size(size);
@@ -2890,18 +2884,18 @@ void gr_gridit(int nd, double *xd, double *yd, double *zd, int nx, int ny, doubl
 
   check_autoinit;
 
-  xmin = xd[0];
-  xmax = xmin;
-  ymin = yd[0];
-  ymax = ymin;
+  xmin = xd[nd - 1];
+  xmax = xd[nd - 1];
+  ymin = yd[nd - 1];
+  ymax = yd[nd - 1];
 
   /* CALCULATION OF MIN/MAX VALUES */
-  for (i = 1; i < nd; ++i)
+  for (i = 0; i < nd; ++i)
     {
-      xmin = min(xmin, xd[i]);
-      xmax = max(xmax, xd[i]);
-      ymin = min(ymin, yd[i]);
-      ymax = max(ymax, yd[i]);
+      xmin = (is_nan(xd[i])) ? xmin : min(xmin, xd[i]);
+      xmax = (is_nan(xd[i])) ? xmax : max(xmax, xd[i]);
+      ymin = (is_nan(yd[i])) ? ymin : min(ymin, yd[i]);
+      ymax = (is_nan(yd[i])) ? ymax : max(ymax, yd[i]);
     }
 
   /* DETERMINE GRID POINTS INSIDE THE DATA AREA */
@@ -3858,6 +3852,7 @@ void gr_setwindow(double xmin, double xmax, double ymin, double ymax)
   check_autoinit;
 
   gks_set_window(tnr, xmin, xmax, ymin, ymax);
+  gks_set_window(MODERN_NDC, -1, 1, -1, 1);
   if (ctx)
     {
       ctx->wn[0] = xmin;
@@ -3924,6 +3919,7 @@ void gr_setviewport(double xmin, double xmax, double ymin, double ymax)
   check_autoinit;
 
   gks_set_viewport(tnr, xmin, xmax, ymin, ymax);
+  gks_set_viewport(MODERN_NDC, xmin, xmax, ymin, ymax);
   if (ctx)
     {
       ctx->vp[0] = xmin;
@@ -4333,6 +4329,8 @@ void settransformationparameters(double camera_pos_x, double camera_pos_y, doubl
   tx.x_axis_scale = 1;
   tx.y_axis_scale = 1;
   tx.z_axis_scale = 1;
+
+  tx.use_setspace3d = 0;
 }
 
 /*!
@@ -4568,6 +4566,28 @@ static void start_pline(double x, double y)
   pline(x, y);
 }
 
+static void end_pline3d(void)
+{
+  int errind, tnr;
+  int modern_projection_type;
+
+  if (npoints >= 2)
+    {
+      modern_projection_type =
+          gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC;
+      if (modern_projection_type)
+        {
+          gks_inq_current_xformno(&errind, &tnr);
+          gks_select_xform(MODERN_NDC);
+        }
+
+      gks_polyline(npoints, xpoint, ypoint);
+      npoints = 0;
+
+      if (modern_projection_type) gks_select_xform(tnr);
+    }
+}
+
 static void pline3d(double x, double y, double z)
 {
   if (npoints >= maxpath) reallocate(npoints);
@@ -4583,7 +4603,7 @@ static void pline3d(double x, double y, double z)
 
 static void start_pline3d(double x, double y, double z)
 {
-  end_pline();
+  end_pline3d();
 
   npoints = 0;
   pline3d(x, y, z);
@@ -5456,7 +5476,7 @@ static void grid_line3d(double x0, double y0, double z0, double x1, double y1, d
 
   start_pline3d(x0, y0, z0);
   pline3d(x1, y1, z1);
-  end_pline();
+  end_pline3d();
 }
 
 /*!
@@ -5525,10 +5545,6 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (modern_projection_type)
     {
-      gks_inq_xform(WC, &errind, wn, vp);
-
-      gks_set_window(WC, -1, 1, -1, 1);
-      setscale(lx.scale_options);
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
@@ -5540,7 +5556,6 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
       x_max = ix.xmax;
       y_min = ix.ymin;
       y_max = ix.ymax;
-
       z_min = ix.zmin;
       z_max = ix.zmax;
     }
@@ -5550,7 +5565,6 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
       x_max = wn[1];
       y_min = wn[2];
       y_max = wn[3];
-
       z_min = wx.zmin;
       z_max = wx.zmax;
     }
@@ -5567,7 +5581,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (z_tick != 0)
     {
-      if (OPTION_Y_LOG & lx.scale_options)
+      if (OPTION_Z_LOG & lx.scale_options)
         {
           z0 = pow(lx.basez, gauss(blog(lx.basez, z_min)));
 
@@ -5766,12 +5780,6 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                    "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
                    "majorx=\"%d\" majory=\"%d\" majorz=\"%d\"/>\n",
                    x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z);
-
-  if (modern_projection_type)
-    {
-      gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
-      setscale(lx.scale_options);
-    }
 }
 
 /*!
@@ -6088,10 +6096,6 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
 
   if (modern_projection_type)
     {
-      gks_inq_xform(WC, &errind, wn, vp);
-
-      gks_set_window(WC, -1, 1, -1, 1);
-      setscale(lx.scale_options);
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
@@ -6135,7 +6139,14 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
       x1 = px[i];
       y1 = py[i];
       z1 = pz[i];
-      if (is_nan(x1) || is_nan(y1) || is_nan(z1)) break;
+      if (is_nan(x1) || is_nan(y1) || is_nan(z1)) continue;
+      if (is_nan(x0) || is_nan(y0) || is_nan(z0))
+        {
+          x0 = x1;
+          y0 = y1;
+          z0 = z1;
+          continue;
+        }
 
       x = x1;
       y = y1;
@@ -6160,7 +6171,7 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
       z0 = z;
     }
 
-  end_pline();
+  end_pline3d();
 
   if (flag_stream)
     {
@@ -6169,12 +6180,6 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
       print_float_array("y", n, py);
       print_float_array("z", n, pz);
       gr_writestream("/>\n");
-    }
-
-  if (modern_projection_type)
-    {
-      gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
-      setscale(lx.scale_options);
     }
 }
 
@@ -6231,10 +6236,6 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
 
   if (modern_projection_type)
     {
-      gks_inq_xform(WC, &errind, wn, vp);
-
-      gks_set_window(WC, -1, 1, -1, 1);
-      setscale(lx.scale_options);
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
@@ -6293,7 +6294,23 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
       zpoint[i] = point[i].z;
     }
 
-  if (m > 0) gks_polymarker(m, xpoint, ypoint);
+  if (m > 0)
+    {
+      int errind, tnr, modern_projection_type;
+
+      modern_projection_type =
+          gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC;
+      if (modern_projection_type)
+        {
+          gks_inq_current_xformno(&errind, &tnr);
+          gks_select_xform(MODERN_NDC);
+        }
+
+      gks_polymarker(m, xpoint, ypoint);
+      npoints = 0;
+
+      if (modern_projection_type) gks_select_xform(tnr);
+    }
 
   if (flag_stream)
     {
@@ -6303,17 +6320,17 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
       print_float_array("z", n, pz);
       gr_writestream("/>\n");
     }
-
-  if (modern_projection_type)
-    {
-      gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
-      setscale(lx.scale_options);
-    }
 }
 
 static double text3d_get_height(void)
 {
+  int errind, tnr;
   double focus_point_x, focus_point_y, focus_point_z, focus_up_x, focus_up_y, focus_up_z;
+  int scale_save = lx.scale_options;
+
+  gks_inq_current_xformno(&errind, &tnr);
+  gks_select_xform(MODERN_NDC);
+
   /* Calculate char height */
   focus_point_x = tx.focus_point_x / tx.x_axis_scale;
   focus_point_y = tx.focus_point_y / tx.y_axis_scale;
@@ -6325,8 +6342,13 @@ static double text3d_get_height(void)
   gr_wc3towc(&focus_point_x, &focus_point_y, &focus_point_z);
   gr_wc3towc(&focus_up_x, &focus_up_y, &focus_up_z);
 
-  gr_wctondc(&focus_point_x, &focus_point_y);
-  gr_wctondc(&focus_up_x, &focus_up_y);
+  lx.scale_options = 0;
+  gks_WC_to_NDC(MODERN_NDC, &focus_point_x, &focus_point_y);
+  gks_WC_to_NDC(MODERN_NDC, &focus_up_x, &focus_up_y);
+  lx.scale_options = scale_save;
+
+  gks_select_xform(tnr);
+
   return sqrt(pow(focus_point_x - focus_up_x, 2) + pow(focus_point_y - focus_up_y, 2)) /
          (min((vxmax - vxmin), (vymax - vymin)));
 }
@@ -6368,23 +6390,34 @@ static void text3d(double x, double y, double z, char *chars, int axis)
     }
   else
     {
+      gks_inq_current_xformno(&errind, &tnr);
+      gks_select_xform(MODERN_NDC);
+
       scaleFactors[0] = tx.x_axis_scale;
       scaleFactors[1] = tx.y_axis_scale;
       scaleFactors[2] = tx.z_axis_scale;
       gks_ft_text3d(p_x, p_y, p_z, chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp, gr_wc3towc);
+
+      gks_select_xform(tnr);
     }
 }
 
 void gr_text3d(double x, double y, double z, char *chars, int axis)
 {
+  int errind, tnr;
   double scaleFactors[3];
 
   check_autoinit;
+
+  gks_inq_current_xformno(&errind, &tnr);
+  gks_select_xform(MODERN_NDC);
 
   scaleFactors[0] = tx.x_axis_scale;
   scaleFactors[1] = tx.y_axis_scale;
   scaleFactors[2] = tx.z_axis_scale;
   gks_ft_text3d(x, y, z, chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp, gr_wc3towc);
+
+  gks_select_xform(tnr);
 
   if (flag_stream)
     gr_writestream("<text3d x=\"%g\" y=\"%g\" z=\"%g\" text=\"%s\" axis=\"%d\"/>\n", x, y, z, chars, axis);
@@ -6407,15 +6440,21 @@ void gr_text3d(double x, double y, double z, char *chars, int axis)
  */
 void gr_inqtext3d(double x, double y, double z, char *chars, int axis, double *tbx, double *tby)
 {
+  int errind, tnr;
   double scaleFactors[3];
 
   check_autoinit;
+
+  gks_inq_current_xformno(&errind, &tnr);
+  gks_select_xform(MODERN_NDC);
 
   scaleFactors[0] = tx.x_axis_scale;
   scaleFactors[1] = tx.y_axis_scale;
   scaleFactors[2] = tx.z_axis_scale;
   gks_ft_inq_text3d_extent(x, y, z, chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp, gr_wc3towc,
                            tbx, tby);
+
+  gks_select_xform(tnr);
 }
 
 static void axes3d_get_params(int axis, int *tick_axis, double x_org, double y_org, double z_org, int *text_axis)
@@ -6662,7 +6701,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   int modern_projection_type;
 
   int ltype, halign, valign, font, prec, clsw, axis, tick_axis;
-  double chux, chuy, slant;
+  double chux, chuy, slant, chh;
 
   double x_min = 0, x_max = 0, y_min = 0, y_max = 0, z_min = 0, z_max = 0;
 
@@ -6671,9 +6710,9 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   int *anglep, which_rep, rep;
 
   double tick;
-  double x_minor_tick, x_major_tick, x_label;
-  double y_minor_tick, y_major_tick, y_label;
-  double z_minor_tick, z_major_tick, z_label;
+  double x_minor_tick, x_major_tick, x_label, x_title;
+  double y_minor_tick, y_major_tick, y_label, y_title;
+  double z_minor_tick, z_major_tick, z_label, z_title;
   double x0, y0, z0, xi, yi, zi;
   int64_t i;
   int decade, exponent;
@@ -6706,11 +6745,6 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (modern_projection_type)
     {
-      gks_select_xform(WC);
-      gks_inq_xform(WC, &errind, wn, vp);
-
-      gks_set_window(WC, -1, 1, -1, 1);
-      setscale(lx.scale_options);
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
@@ -6722,7 +6756,6 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
       x_max = ix.xmax;
       y_min = ix.ymin;
       y_max = ix.ymax;
-
       z_min = ix.zmin;
       z_max = ix.zmax;
     }
@@ -6732,7 +6765,6 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
       x_max = wn[1];
       y_min = wn[2];
       y_max = wn[3];
-
       z_min = wx.zmin;
       z_max = wx.zmax;
     }
@@ -6768,6 +6800,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   gks_inq_text_fontprec(&errind, &font, &prec);
   gks_inq_text_slant(&errind, &slant);
   gks_inq_text_upvec(&errind, &chux, &chuy);
+  gks_inq_text_height(&errind, &chh);
   gks_inq_clip(&errind, &clsw, clrt);
 
   gks_set_pline_linetype(GKS_K_LINETYPE_SOLID);
@@ -6789,18 +6822,27 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
       y_minor_tick = y_log(y_lin(y_org) + tick);
       y_major_tick = y_log(y_lin(y_org) + 2. * tick);
       y_label = y_log(y_lin(y_org) + 3. * tick);
+      y_title = y_log(y_lin(y_org) + 10. * tick);
 
       /* set text alignment */
 
       if (y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
-          if (tick > 0) y_label = y_log(y_lin(y_org) - tick);
+          if (tick > 0)
+            {
+              y_label = y_log(y_lin(y_org) - tick);
+              y_title = y_log(y_lin(y_org) - 10. * tick);
+            }
         }
       else
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-          if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
+          if (tick < 0)
+            {
+              y_label = y_log(y_lin(y_org) - tick);
+              y_title = y_log(y_lin(y_org) - 10. * tick);
+            }
         }
 
 
@@ -6819,25 +6861,34 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           x_minor_tick = x_log(x_lin(x_org) + tick);
           x_major_tick = x_log(x_lin(x_org) + 2. * tick);
           x_label = x_log(x_lin(x_org) + 3. * tick);
+          x_title = x_log(x_lin(x_org) + 10. * tick);
 
           if (x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2.)
             {
-              if (tick > 0) x_label = x_log(x_lin(x_org) - tick);
+              if (tick > 0)
+                {
+                  x_label = x_log(x_lin(x_org) - tick);
+                  x_title = x_log(x_lin(x_org) - 10. * tick);
+                }
             }
           else
             {
-              if (tick < 0) x_label = x_log(x_lin(x_org) - tick);
+              if (tick < 0)
+                {
+                  x_label = x_log(x_lin(x_org) - tick);
+                  x_title = x_log(x_lin(x_org) - 10. * tick);
+                }
             }
           axes3d_get_params(2, &tick_axis, x_org, y_org, z_org, &axis);
         }
 
       if (tick_axis != 1)
         {
-          y_label = y_major_tick = y_minor_tick = y_org;
+          y_title = y_label = y_major_tick = y_minor_tick = y_org;
         }
       if (tick_axis != 0)
         {
-          x_label = x_major_tick = x_minor_tick = x_org;
+          x_title = x_label = x_major_tick = x_minor_tick = x_org;
         }
 
       if (OPTION_Z_LOG & lx.scale_options)
@@ -6865,14 +6916,14 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       {
                         xi = x_major_tick;
                         yi = y_major_tick;
-                        if (z_tick > 1)
+                        if (z_tick > 1 && !modern_projection_type)
                           {
                             exponent = iround(blog(lx.basez, zi));
                             snprintf(string, 256, "%s^{%d}", lx.basez_s, exponent);
-                            text3d(x_label, y_label, zi, replace_minus_sign(string), 0);
+                            text3d(x_label, y_label, zi, replace_minus_sign(string), modern_projection_type ? axis : 0);
                           }
                         else
-                          text3d(x_label, y_label, zi, gr_ftoa(string, zi, NULL), 0);
+                          text3d(x_label, y_label, zi, gr_ftoa(string, zi, NULL), modern_projection_type ? axis : 0);
                       }
                 }
 
@@ -6896,7 +6947,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           pline3d(x_org, y_org, z_max);
 
-          end_pline();
+          end_pline3d();
         }
       else
         {
@@ -6939,7 +6990,26 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           if (zi > z_max) pline3d(x_org, y_org, z_max);
 
-          end_pline();
+          end_pline3d();
+        }
+
+      if (titles3d[2] != NULL)
+        {
+          gks_inq_text_upvec(&errind, &xi, &yi);
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          gks_set_text_height(titles3d_text_height);
+          if (tick_axis == 0 && x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2. ||
+              tick_axis == 1 && y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
+            {
+              gks_set_text_upvec(1, 0);
+            }
+          else
+            {
+              gks_set_text_upvec(-1, 0);
+            }
+          text3d(x_title, y_title, z_log(0.5 * (z_lin(z_min) + z_lin(z_max))), titles3d[2],
+                 modern_projection_type ? axis : 0);
+          gks_set_text_height(chh);
         }
     }
 
@@ -6953,18 +7023,27 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
       x_minor_tick = x_log(x_lin(x_org) + tick);
       x_major_tick = x_log(x_lin(x_org) + 2. * tick);
       x_label = x_log(x_lin(x_org) + 3. * tick);
+      x_title = x_log(x_lin(x_org) + 10. * tick);
 
       /* set text alignment */
 
       if (x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2.)
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
-          if (tick > 0) x_label = x_log(x_lin(x_org) - tick);
+          if (tick > 0)
+            {
+              x_label = x_log(x_lin(x_org) - tick);
+              x_title = x_log(x_lin(x_org) - 10. * tick);
+            }
         }
       else
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-          if (tick < 0) x_label = x_log(x_lin(x_org) - tick);
+          if (tick < 0)
+            {
+              x_label = x_log(x_lin(x_org) - tick);
+              x_title = x_log(x_lin(x_org) - 10. * tick);
+            }
         }
 
       if (!modern_projection_type)
@@ -6983,14 +7062,23 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           z_minor_tick = z_log(z_lin(z_org) + tick);
           z_major_tick = z_log(z_lin(z_org) + 2. * tick);
           z_label = z_log(z_lin(z_org) + 3. * tick);
+          z_title = z_log(z_lin(z_org) + 10. * tick);
 
           if (z_lin(z_org) <= (z_lin(z_min) + z_lin(z_max)) / 2.)
             {
-              if (tick > 0) z_label = z_log(z_lin(z_org) - tick);
+              if (tick > 0)
+                {
+                  z_label = z_log(z_lin(z_org) - tick);
+                  z_title = z_log(z_lin(z_org) - 10. * tick);
+                }
             }
           else
             {
-              if (tick < 0) z_label = z_log(z_lin(z_org) - tick);
+              if (tick < 0)
+                {
+                  z_label = z_log(z_lin(z_org) - tick);
+                  z_title = z_log(z_lin(z_org) - 10. * tick);
+                }
             }
 
           axes3d_get_params(1, &tick_axis, x_org, y_org, z_org, &axis);
@@ -6998,11 +7086,11 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       if (tick_axis != 0)
         {
-          x_label = x_major_tick = x_minor_tick = x_org;
+          x_title = x_label = x_major_tick = x_minor_tick = x_org;
         }
       if (tick_axis != 2)
         {
-          z_label = z_major_tick = z_minor_tick = z_org;
+          z_title = z_label = z_major_tick = z_minor_tick = z_org;
         }
 
       if (OPTION_Y_LOG & lx.scale_options)
@@ -7030,14 +7118,14 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       {
                         xi = x_major_tick;
                         zi = z_major_tick;
-                        if (y_tick > 1)
+                        if (y_tick > 1 && !modern_projection_type)
                           {
                             exponent = iround(blog(lx.basey, yi));
                             snprintf(string, 256, "%s^{%d}", lx.basey_s, exponent);
-                            text3d(x_label, yi, z_label, replace_minus_sign(string), 0);
+                            text3d(x_label, yi, z_label, replace_minus_sign(string), modern_projection_type ? axis : 0);
                           }
                         else
-                          text3d(x_label, yi, z_label, gr_ftoa(string, yi, NULL), 0);
+                          text3d(x_label, yi, z_label, gr_ftoa(string, yi, NULL), modern_projection_type ? axis : 0);
                       }
                 }
 
@@ -7061,7 +7149,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           pline3d(x_org, y_max, z_org);
 
-          end_pline();
+          end_pline3d();
         }
       else
         {
@@ -7103,7 +7191,33 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           if (yi > y_max) pline3d(x_org, y_max, z_org);
 
-          end_pline();
+          end_pline3d();
+        }
+
+      if (titles3d[1] != NULL)
+        {
+          gks_inq_text_upvec(&errind, &xi, &yi);
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          gks_set_text_height(titles3d_text_height);
+          if (tick_axis == 2 && z_lin(z_org) <= (z_lin(z_min) + z_lin(z_max)) / 2.)
+            {
+              gks_set_text_upvec(0, 1);
+            }
+          else if (tick_axis == 2)
+            {
+              gks_set_text_upvec(0, -1);
+            }
+          else if (tick_axis == 0 && x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2.)
+            {
+              gks_set_text_upvec(1, 0);
+            }
+          else
+            {
+              gks_set_text_upvec(-1, 0);
+            }
+          text3d(x_title, y_log(0.5 * (y_lin(y_min) + y_lin(y_max))), z_title, titles3d[1],
+                 modern_projection_type ? axis : 0);
+          gks_set_text_height(chh);
         }
     }
 
@@ -7117,18 +7231,27 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
       y_minor_tick = y_log(y_lin(y_org) + tick);
       y_major_tick = y_log(y_lin(y_org) + 2. * tick);
       y_label = y_log(y_lin(y_org) + 3. * tick);
+      y_title = y_log(y_lin(y_org) + 10. * tick);
 
       /* set text alignment */
 
       if (y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
-          if (tick > 0) y_label = y_log(y_lin(y_org) - tick);
+          if (tick > 0)
+            {
+              y_label = y_log(y_lin(y_org) - tick);
+              y_title = y_log(y_lin(y_org) - 10. * tick);
+            }
         }
       else
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-          if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
+          if (tick < 0)
+            {
+              y_label = y_log(y_lin(y_org) - tick);
+              y_title = y_log(y_lin(y_org) - 10. * tick);
+            }
         }
 
       if (!modern_projection_type)
@@ -7147,14 +7270,23 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           z_minor_tick = z_log(z_lin(z_org) + tick);
           z_major_tick = z_log(z_lin(z_org) + 2. * tick);
           z_label = z_log(z_lin(z_org) + 3. * tick);
+          z_title = z_log(z_lin(z_org) + 10. * tick);
 
           if (z_lin(z_org) <= (z_lin(z_min) + z_lin(z_max)) / 2.)
             {
-              if (tick > 0) z_label = z_log(z_lin(z_org) - tick);
+              if (tick > 0)
+                {
+                  z_label = z_log(z_lin(z_org) - tick);
+                  z_title = z_log(z_lin(z_org) - 10. * tick);
+                }
             }
           else
             {
-              if (tick < 0) z_label = z_log(z_lin(z_org) - tick);
+              if (tick < 0)
+                {
+                  z_label = z_log(z_lin(z_org) - tick);
+                  z_title = z_log(z_lin(z_org) - 10. * tick);
+                }
             }
 
           axes3d_get_params(0, &tick_axis, x_org, y_org, z_org, &axis);
@@ -7162,11 +7294,11 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       if (tick_axis != 1)
         {
-          y_label = y_major_tick = y_minor_tick = y_org;
+          y_title = y_label = y_major_tick = y_minor_tick = y_org;
         }
       if (tick_axis != 2)
         {
-          z_label = z_major_tick = z_minor_tick = z_org;
+          z_title = z_label = z_major_tick = z_minor_tick = z_org;
         }
 
       if (OPTION_X_LOG & lx.scale_options)
@@ -7194,14 +7326,14 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       {
                         yi = y_major_tick;
                         zi = z_major_tick;
-                        if (x_tick > 1)
+                        if (x_tick > 1 && !modern_projection_type)
                           {
                             exponent = iround(blog(lx.basex, xi));
                             snprintf(string, 256, "%s^{%d}", lx.basex_s, exponent);
-                            text3d(xi, y_label, z_label, replace_minus_sign(string), 0);
+                            text3d(xi, y_label, z_label, replace_minus_sign(string), modern_projection_type ? axis : 0);
                           }
                         else
-                          text3d(xi, y_label, z_label, gr_ftoa(string, xi, NULL), 0);
+                          text3d(xi, y_label, z_label, gr_ftoa(string, xi, NULL), modern_projection_type ? axis : 0);
                       }
                 }
 
@@ -7225,7 +7357,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           pline3d(x_max, y_org, z_org);
 
-          end_pline();
+          end_pline3d();
         }
       else
         {
@@ -7268,7 +7400,26 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           if (xi > x_max) pline3d(x_max, y_org, z_org);
 
-          end_pline();
+          end_pline3d();
+        }
+
+      if (titles3d[0] != NULL)
+        {
+          gks_inq_text_upvec(&errind, &xi, &yi);
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          gks_set_text_height(titles3d_text_height);
+          if (tick_axis == 1 && y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2. ||
+              tick_axis == 2 && z_lin(z_org) <= (z_lin(z_min) + z_lin(z_max)) / 2.)
+            {
+              gks_set_text_upvec(0, 1);
+            }
+          else
+            {
+              gks_set_text_upvec(0, -1);
+            }
+          text3d(x_log(0.5 * (x_lin(x_min) + x_lin(x_max))), y_title, z_title, titles3d[0],
+                 modern_projection_type ? axis : 0);
+          gks_set_text_height(chh);
         }
     }
 
@@ -7287,12 +7438,6 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                    "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
                    "majorx=\"%d\" majory=\"%d\" majorz=\"%d\" ticksize=\"%g\"/>\n",
                    x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z, tick_size);
-
-  if (modern_projection_type)
-    {
-      gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
-      setscale(lx.scale_options);
-    }
 }
 
 /*!
@@ -7342,20 +7487,13 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 
   if (modern_projection_type)
     {
-      gks_inq_xform(WC, &errind, wn, vp);
-
-      gks_set_window(WC, -1, 1, -1, 1);
-      setscale(lx.scale_options);
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
       lx.ymax = ix.ymax;
       lx.zmin = ix.zmin;
       lx.zmax = ix.zmax;
-    }
 
-  if (modern_projection_type)
-    {
       x_min = ix.xmin;
       x_max = ix.xmax;
       y_min = ix.ymin;
@@ -7676,12 +7814,54 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
     }
 
   if (flag_stream) gr_writestream("<titles3d xtitle=\"%s\" ytitle=\"%s\" ztitle=\"%s\"/>\n", x_title, y_title, z_title);
+}
 
-  if (modern_projection_type)
+/*!
+ * Set axis titles to display when gr_axes3d is called, similar to gr_titles3d.
+ *
+ * \param[in] x_title The text to be displayed on the X axis
+ * \param[in] y_title The text to be displayed on the Y axis
+ * \param[in] z_title The text to be displayed on the Z axis
+ */
+void gr_settitles3d(char *x_title, char *y_title, char *z_title)
+{
+  int errind;
+
+  check_autoinit;
+
+  if (titles3d[0] != NULL)
     {
-      gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
-      setscale(lx.scale_options);
+      free(titles3d[0]);
+      titles3d[0] = NULL;
     }
+  if (titles3d[1] != NULL)
+    {
+      free(titles3d[1]);
+      titles3d[1] = NULL;
+    }
+  if (titles3d[2] != NULL)
+    {
+      free(titles3d[2]);
+      titles3d[2] = NULL;
+    }
+
+  if (x_title != NULL)
+    {
+      if (*x_title) titles3d[0] = strdup(x_title);
+    }
+  if (y_title != NULL)
+    {
+      if (*y_title) titles3d[1] = strdup(y_title);
+    }
+  if (z_title != NULL)
+    {
+      if (*z_title) titles3d[2] = strdup(z_title);
+    }
+
+  gks_inq_text_height(&errind, &titles3d_text_height);
+
+  if (flag_stream)
+    gr_writestream("<settitles3d xtitle=\"%s\" ytitle=\"%s\" ztitle=\"%s\"/>\n", x_title, y_title, z_title);
 }
 
 static void init_hlr(void)
@@ -8135,10 +8315,6 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
   if (modern_projection_type)
     {
-      gks_inq_xform(WC, &errind, wn, vp);
-
-      gks_set_window(WC, -1, 1, -1, 1);
-      setscale(lx.scale_options);
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
@@ -8620,6 +8796,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                         gks_set_fill_color_index(color);
                       }
 
+                    gks_select_xform(MODERN_NDC);
+
                     np = 4;
                     gks_fillarea(np, xn, yn);
 
@@ -8628,6 +8806,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                         np = 5;
                         gks_polyline(np, xn, yn);
                       }
+
+                    gks_select_xform(tnr);
                   }
 
                 j--;
@@ -8713,12 +8893,6 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
       print_float_array("z", nx * ny, pz);
       gr_writestream(" option=\"%d\"/>\n", option);
     }
-
-  if (modern_projection_type)
-    {
-      gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
-      setscale(lx.scale_options);
-    }
 }
 
 static const double *xp, *yp;
@@ -8754,8 +8928,7 @@ static int compar(const void *a, const void *b)
  */
 void gr_trisurface(int n, double *px, double *py, double *pz)
 {
-  int errind, coli, int_style;
-  double wn[4], vp[4];
+  int errind, tnr, coli, int_style;
   int modern_projection_type;
   int ntri, *triangles = NULL;
   double x[4], y[4], z[4], meanz;
@@ -8769,6 +8942,8 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
 
   check_autoinit;
 
+  gks_inq_current_xformno(&errind, &tnr);
+
   setscale(lx.scale_options);
 
   modern_projection_type =
@@ -8776,10 +8951,6 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
 
   if (modern_projection_type)
     {
-      gks_inq_xform(WC, &errind, wn, vp);
-
-      gks_set_window(WC, -1, 1, -1, 1);
-      setscale(lx.scale_options);
       lx.xmin = ix.xmin;
       lx.xmax = ix.xmax;
       lx.ymin = ix.ymin;
@@ -8817,6 +8988,8 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
               ya[j] = py[triangles[3 * i + j]];
               za[j] = pz[triangles[3 * i + j]];
             }
+          if (is_nan(xa[0]) || is_nan(xa[1]) || is_nan(xa[2])) continue;
+          if (is_nan(ya[0]) || is_nan(ya[1]) || is_nan(ya[2])) continue;
 
           /* calculate the distance of each edge midpoint */
           x_cord = (xa[1] + xa[0]) / 2;
@@ -8893,12 +9066,16 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
       else if (color > last_color)
         color = last_color;
 
+      gks_select_xform(MODERN_NDC);
+
       gks_set_fill_color_index(color);
       gks_fillarea(3, x, y);
 
       x[3] = x[0];
       y[3] = y[0];
       gks_polyline(4, x, y);
+
+      gks_select_xform(tnr);
     }
 
   /* restore fill area interior style and color index */
@@ -8914,12 +9091,6 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
       print_float_array("y", n, py);
       print_float_array("z", n, pz);
       gr_writestream("/>\n");
-    }
-
-  if (modern_projection_type)
-    {
-      gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
-      setscale(lx.scale_options);
     }
 }
 
@@ -8983,7 +9154,7 @@ void gr_quiver(int nx, int ny, double *x, double *y, double *u, double *v, int c
 {
   int i, j, ci;
   double gnorm, gmax = 0;
-  double dx, dy;
+  double dx = 0, dy = 0;
   int errind, linecolor, fillcolor;
 
   if ((nx <= 0) || (ny <= 0))
@@ -9028,8 +9199,22 @@ void gr_quiver(int nx, int ny, double *x, double *y, double *u, double *v, int c
       }
   gmax = sqrt(gmax);
 
-  dx = (x[nx - 1] - x[0]) / (nx - 1);
-  dy = (y[ny - 1] - y[0]) / (ny - 1);
+  for (j = 0; j < ny; j++)
+    {
+      if (dy == 0 && !is_nan(y[j]))
+        {
+          dy = (y[ny - 1] - y[j]) / (ny - 1 - j);
+          break;
+        }
+    }
+  for (i = 0; i < nx; i++)
+    {
+      if (dx == 0 && !is_nan(x[i]))
+        {
+          dx = (x[nx - 1] - x[i]) / (nx - 1 - i);
+          break;
+        }
+    }
 
   for (j = 0; j < ny; j++)
     for (i = 0; i < nx; i++)
@@ -9074,7 +9259,10 @@ static int islinspace(int n, double *a)
   step = (a[n - 1] - a[0]) / (n - 1);
   feps = step * FEPS;
   for (i = 1; i < n; i++)
-    if (fabs(a[i] - a[i - 1] - step) > feps) return 0;
+    {
+      if (is_nan(a[i]) || is_nan(a[i - 1])) return 0;
+      if (fabs(a[i] - a[i - 1] - step) > feps) return 0;
+    }
 
   return 1;
 }
@@ -9084,6 +9272,7 @@ static void rebin(int nx, int ny, double *px, double *py, double *pz, int *nxq, 
 {
   double step, *x, *y, *z;
   int i;
+  int xcnt = 0, ycnt = 0;
 
   *nxq = 500;
   *nyq = 500;
@@ -9092,11 +9281,25 @@ static void rebin(int nx, int ny, double *px, double *py, double *pz, int *nxq, 
   y = *yq = (double *)xmalloc(sizeof(double) * *nyq);
   z = *zq = (double *)xmalloc(sizeof(double) * *nxq * *nyq);
 
-  step = (px[nx - 1] - px[0]) / (*nxq - 1);
-  for (i = 0; i < *nxq; i++) x[i] = px[0] + i * step;
+  for (i = 0; i < *nxq; i++)
+    {
+      if (is_nan(px[i]))
+        xcnt += 1;
+      else
+        break;
+    }
+  step = (px[nx - 1] - px[xcnt]) / (*nxq - 1 - xcnt);
+  for (i = 0; i < *nxq; i++) x[i] = (i < xcnt) ? NAN : px[xcnt] + i * step;
 
-  step = (py[ny - 1] - py[0]) / (*nyq - 1);
-  for (i = 0; i < *nyq; i++) y[i] = py[0] + i * step;
+  for (i = 0; i < *nyq; i++)
+    {
+      if (is_nan(py[i]))
+        ycnt += 1;
+      else
+        break;
+    }
+  step = (py[ny - 1] - py[ycnt]) / (*nyq - 1 - ycnt);
+  for (i = 0; i < *nyq; i++) y[i] = (i < ycnt) ? NAN : py[ycnt] + i * step;
 
   gr_interp2(nx, ny, px, py, pz, *nxq, *nyq, x, y, z, 1, 0.0);
 }
@@ -9120,7 +9323,7 @@ static void rebin(int nx, int ny, double *px, double *py, double *pz, int *nxq, 
 void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, double *pz, int major_h)
 {
   int i, j;
-  int errind, ltype, color, halign, valign;
+  int errind, tnr, ltype, color, halign, valign;
   double chux, chuy;
   int nxq, nyq;
   double *xq = NULL, *yq = NULL, *zq = NULL;
@@ -9152,6 +9355,8 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
   check_autoinit;
 
   scale_options = lx.scale_options;
+
+  /* calculate the position of the contour labels when the axes are logarithmic for example */
   if (scale_options != 0)
     {
       setscale(scale_options & ~(OPTION_FLIP_X | OPTION_FLIP_Y));
@@ -9281,6 +9486,7 @@ void gr_contourf(int nx, int ny, int nh, double *px, double *py, double *h, doub
   check_autoinit;
 
   scale_options = lx.scale_options;
+  /* calculate the position of the contour labels when the axes are logarithmic for example */
   if (scale_options != 0)
     {
       setscale(scale_options & ~(OPTION_FLIP_X | OPTION_FLIP_Y));
@@ -9423,6 +9629,7 @@ static int binning(double x[], double y[], int *cell, int *cnt, double size, dou
 
   for (i = 0; i < n; i++)
     {
+      if (is_nan(x[i]) || is_nan(y[i])) continue;
       xi = x[i];
       yi = y[i];
       gr_wctondc(&xi, &yi);
@@ -12207,7 +12414,9 @@ void gr_restorestate(void)
 
       gks_select_xform(s->tnr);
       gks_set_window(WC, s->wn[0], s->wn[1], s->wn[2], s->wn[3]);
+      gks_set_window(MODERN_NDC, -1, 1, -1, 1);
       gks_set_viewport(WC, s->vp[0], s->vp[1], s->vp[2], s->vp[3]);
+      gks_set_viewport(MODERN_NDC, s->vp[0], s->vp[1], s->vp[2], s->vp[3]);
       vxmin = s->vp[0];
       vxmax = s->vp[1];
       vymin = s->vp[2];
@@ -12365,7 +12574,9 @@ void gr_selectcontext(int context)
 
       gks_select_xform(ctx->tnr);
       gks_set_window(WC, ctx->wn[0], ctx->wn[1], ctx->wn[2], ctx->wn[3]);
+      gks_set_window(MODERN_NDC, -1, 1, -1, 1);
       gks_set_viewport(WC, ctx->vp[0], ctx->vp[1], ctx->vp[2], ctx->vp[3]);
+      gks_set_viewport(MODERN_NDC, ctx->vp[0], ctx->vp[1], ctx->vp[2], ctx->vp[3]);
       vxmin = ctx->vp[0];
       vxmax = ctx->vp[1];
       vymin = ctx->vp[2];
@@ -13592,6 +13803,7 @@ static void setscalefactors3d(double x_axis_scale, double y_axis_scale, double z
   tx.x_axis_scale = x_axis_scale;
   tx.y_axis_scale = y_axis_scale;
   tx.z_axis_scale = z_axis_scale;
+  tx.use_setspace3d = 0;
 }
 
 /*!
@@ -13759,8 +13971,35 @@ void gr_setspace3d(double phi, double theta, double fov, double cam)
 
   setscalefactors3d(scale_factor_x, scale_factor_y, scale_factor_z);
 
+  tx.use_setspace3d = 1;
+  tx.setspace3d_phi = phi;
+  tx.setspace3d_theta = theta;
+  tx.setspace3d_fov = fov;
+  tx.setspace3d_cam = cam;
+
   if (flag_stream)
     gr_writestream("<setspace3d phi=\"%g\" theta=\"%g\" fov=\"%g\" cam=\"%g\"/>\n", phi, theta, fov, cam);
+}
+
+void gr_inqspace3d(int *use_setspace3d, double *phi, double *theta, double *fov, double *cam)
+{
+  check_autoinit;
+
+  *use_setspace3d = tx.use_setspace3d;
+  if (tx.use_setspace3d)
+    {
+      *phi = tx.setspace3d_phi;
+      *theta = tx.setspace3d_theta;
+      *fov = tx.setspace3d_fov;
+      *cam = tx.setspace3d_cam;
+    }
+  else
+    {
+      *phi = NAN;
+      *theta = NAN;
+      *fov = NAN;
+      *cam = NAN;
+    }
 }
 
 void gr_settextencoding(int encoding)

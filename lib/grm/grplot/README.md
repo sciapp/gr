@@ -29,7 +29,7 @@ For plots where multiple columns are read there is also a parameter that allows 
 
 There are more key-value parameters. These parameters only effect specific plot types. For example `bar_width` only makes sense, when bars are drawn. All possible parameters are:
 
-`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `c`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `grplot`, `isovalue`, `kind`, `levels`, `line_spec`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `phi_flip`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `tilt`, `transformation`, `x_bins`, `x_colormap`, `x_flip`, `y_bins`, `y_colormap`, `y_flip`, `y_labels`
+`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `c`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `grplot`, `isovalue`, `kind`, `levels`, `line_spec`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `phi_flip`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `tilt`, `transformation`, `x_bins`, `x_colormap`, `x_flip`, `y_bins`, `y_colormap`, `y_flip`, `y_labels`
 
 All parameters are separated by a blank. Some parameters are more complex than others. These parameters represent a container inside GRM.
 
@@ -180,8 +180,9 @@ Possible parameters for the contour plot are:
 
 1. `colormap` or `cmap`: This parameter defines the colormap to be used. The default is 44 (viridis).
 2. `levels`: This parameter defines how many contour lines should be drawn. The default is 20.
-3. `x_flip`: This parameter defines whether the x-axis is flipped or not.
-4. `y_flip`: This parameter defines whether the y-axis is flipped or not.
+3. `major_h`: This parameter defines if contour labels should be drawn or not. Any number greater 0 defines which lines will be labeled. An offset of 1000 to this parameter will color the lines aswell.
+4. `x_flip`: This parameter defines whether the x-axis is flipped or not.
+5. `y_flip`: This parameter defines whether the y-axis is flipped or not.
 
 ### CONTOURF
 
@@ -193,9 +194,10 @@ Possible parameters for the contourf plot are:
 
 1. `colormap` or `cmap`: This parameter defines the colormap to be used. The default is 44 (viridis).
 2. `levels`: This parameter defines how many contour lines should be drawn. The default is 20.
-3. `scale`: This parameter sets the type of transformation to be used (refer to [gr_setscale](https://gr-framework.org/c-gr.html?highlight=gr_setscale#_CPPv411gr_setscalei)).
-4. `x_flip`: This parameter defines whether the x-axis is flipped or not.
-5. `y_flip`: This parameter defines whether the y-axis is flipped or not.
+3. `major_h`: This parameter defines if contour labels should be drawn or not. Any number greater 0 defines which lines will be labeled. An offset of 1000 to this parameter will color the lines aswell.
+4. `scale`: This parameter sets the type of transformation to be used (refer to [gr_setscale](https://gr-framework.org/c-gr.html?highlight=gr_setscale#_CPPv411gr_setscalei)).
+5. `x_flip`: This parameter defines whether the x-axis is flipped or not.
+6. `y_flip`: This parameter defines whether the y-axis is flipped or not.
 
 ### HEATMAP
 

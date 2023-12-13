@@ -178,6 +178,7 @@ DLLEXPORT void gr_polyline3d(int, double *, double *, double *);
 DLLEXPORT void gr_polymarker3d(int, double *, double *, double *);
 DLLEXPORT void gr_axes3d(double, double, double, double, double, double, int, int, int, double);
 DLLEXPORT void gr_titles3d(char *, char *, char *);
+DLLEXPORT void gr_settitles3d(char *, char *, char *);
 DLLEXPORT void gr_surface(int, int, double *, double *, double *, int);
 DLLEXPORT void gr_contour(int, int, int, double *, double *, double *, double *, int);
 DLLEXPORT void gr_contourf(int, int, int, double *, double *, double *, double *, int);
@@ -279,6 +280,7 @@ DLLEXPORT void gr_inqwindow3d(double *, double *, double *, double *, double *, 
 DLLEXPORT void gr_setscalefactors3d(double, double, double);
 DLLEXPORT void gr_inqscalefactors3d(double *, double *, double *);
 DLLEXPORT void gr_setspace3d(double, double, double, double);
+DLLEXPORT void gr_inqspace3d(int *, double *, double *, double *, double *);
 DLLEXPORT void gr_text3d(double, double, double, char *, int axis);
 DLLEXPORT void gr_inqtext3d(double, double, double, char *, int axis, double *, double *);
 DLLEXPORT void gr_settextencoding(int);

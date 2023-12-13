@@ -1072,13 +1072,17 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
 
   getMajorCount(element, kind, major_count);
 
-  if (element->hasAttribute("x_major"))
+  if (scale & GR_OPTION_X_LOG)
     {
-      x_major = static_cast<int>(element->getAttribute("x_major"));
+      x_major = 1;
     }
   else
     {
-      if (!(scale & GR_OPTION_X_LOG))
+      if (element->hasAttribute("x_major"))
+        {
+          x_major = static_cast<int>(element->getAttribute("x_major"));
+        }
+      else
         {
           if (draw_axes_group->hasAttribute("x_tick_labels"))
             {
@@ -1093,20 +1097,21 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
               x_major = major_count;
             }
         }
-      else
-        {
-          x_major = 1;
-        }
       element->setAttribute("x_major", x_major);
     }
 
-  if (element->hasAttribute("x_tick"))
+  if (scale & GR_OPTION_X_LOG &&
+      !(element->hasAttribute("x_tick") && static_cast<std::string>(element->getAttribute("name")) == "colorbar"))
     {
-      x_tick = static_cast<double>(element->getAttribute("x_tick"));
+      x_tick = 1;
     }
   else
     {
-      if (!(scale & GR_OPTION_X_LOG))
+      if (element->hasAttribute("x_tick"))
+        {
+          x_tick = static_cast<double>(element->getAttribute("x_tick"));
+        }
+      else
         {
           if (kind == "barplot")
             {
@@ -1124,28 +1129,14 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
                 }
             }
         }
-      else
-        {
-          x_tick = 1;
-        }
     }
 
-  if (element->hasAttribute("x_org"))
+  if (scale & GR_OPTION_FLIP_X &&
+      !(element->hasAttribute("x_org") && (static_cast<std::string>(element->getAttribute("name")) == "colorbar" ||
+                                           element->localName() == "grid" || element->localName() == "grid3d")))
     {
-      x_org = static_cast<double>(element->getAttribute("x_org"));
-    }
-  else
-    {
-      if (!(scale & GR_OPTION_FLIP_X))
-        {
-          x_org_low = xmin;
-          x_org_high = xmax;
-        }
-      else
-        {
-          x_org_low = xmax;
-          x_org_high = xmin;
-        }
+      x_org_low = xmax;
+      x_org_high = xmin;
       if (x_org_pos == "low")
         {
           x_org = x_org_low;
@@ -1156,14 +1147,39 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
           x_major = -x_major;
         }
     }
-
-  if (element->hasAttribute("y_major"))
+  else
     {
-      y_major = static_cast<int>(element->getAttribute("y_major"));
+      if (element->hasAttribute("x_org"))
+        {
+          x_org = static_cast<double>(element->getAttribute("x_org"));
+        }
+      else
+        {
+          x_org_low = xmin;
+          x_org_high = xmax;
+          if (x_org_pos == "low")
+            {
+              x_org = x_org_low;
+            }
+          else
+            {
+              x_org = x_org_high;
+              x_major = -x_major;
+            }
+        }
+    }
+
+  if (scale & GR_OPTION_Y_LOG)
+    {
+      y_major = 1;
     }
   else
     {
-      if (!(scale & GR_OPTION_Y_LOG))
+      if (element->hasAttribute("y_major"))
+        {
+          y_major = static_cast<int>(element->getAttribute("y_major"));
+        }
+      else
         {
           if (draw_axes_group->hasAttribute("y_tick_labels"))
             {
@@ -1173,21 +1189,23 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
             {
               y_major = major_count;
             }
+          element->setAttribute("y_major", y_major);
         }
-      else
-        {
-          y_major = 1;
-        }
-      element->setAttribute("y_major", y_major);
     }
 
-  if (element->hasAttribute("y_tick"))
+  if (scale & GR_OPTION_Y_LOG &&
+      !((element->localName() == "axes_3d" || static_cast<std::string>(element->getAttribute("name")) == "colorbar") &&
+        element->hasAttribute("y_tick")))
     {
-      y_tick = static_cast<double>(element->getAttribute("y_tick"));
+      y_tick = 1;
     }
   else
     {
-      if (!(scale & GR_OPTION_Y_LOG))
+      if (element->hasAttribute("y_tick"))
+        {
+          y_tick = static_cast<double>(element->getAttribute("y_tick"));
+        }
+      else
         {
           if (y_major != 0)
             {
@@ -1198,28 +1216,14 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
               y_tick = 1;
             }
         }
-      else
-        {
-          y_tick = 1;
-        }
     }
 
-  if (element->hasAttribute("y_org"))
+  if (scale & GR_OPTION_FLIP_Y &&
+      !(element->hasAttribute("y_org") && (static_cast<std::string>(element->getAttribute("name")) == "colorbar" ||
+                                           element->localName() == "grid" || element->localName() == "grid3d")))
     {
-      y_org = static_cast<double>(element->getAttribute("y_org"));
-    }
-  else
-    {
-      if (!(scale & GR_OPTION_FLIP_Y))
-        {
-          y_org_low = ymin;
-          y_org_high = ymax;
-        }
-      else
-        {
-          y_org_low = ymax;
-          y_org_high = ymin;
-        }
+      y_org_low = ymax;
+      y_org_high = ymin;
       if (y_org_pos == "low")
         {
           y_org = y_org_low;
@@ -1228,6 +1232,27 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, std
         {
           y_org = y_org_high;
           y_major = -y_major;
+        }
+    }
+  else
+    {
+      if (element->hasAttribute("y_org"))
+        {
+          y_org = static_cast<double>(element->getAttribute("y_org"));
+        }
+      else
+        {
+          y_org_low = ymin;
+          y_org_high = ymax;
+          if (y_org_pos == "low")
+            {
+              y_org = y_org_low;
+            }
+          else
+            {
+              y_org = y_org_high;
+              y_major = -y_major;
+            }
         }
     }
 }
@@ -1251,29 +1276,33 @@ static void getAxes3dInformation(const std::shared_ptr<GRM::Element> &element, s
 
   getMajorCount(element, kind, major_count);
 
-  if (element->hasAttribute("z_major"))
+  if (scale & GR_OPTION_Z_LOG)
     {
-      z_major = static_cast<int>(element->getAttribute("z_major"));
+      z_major = 1;
     }
   else
     {
-      if (!(scale & GR_OPTION_Z_LOG))
+      if (element->hasAttribute("z_major"))
         {
-          z_major = major_count;
+          z_major = static_cast<int>(element->getAttribute("z_major"));
         }
       else
         {
-          z_major = 1;
+          z_major = major_count;
         }
     }
 
-  if (element->hasAttribute("z_tick"))
+  if (scale & GR_OPTION_Z_LOG && !(element->localName() == "axes_3d" && element->hasAttribute("z_tick")))
     {
-      z_tick = static_cast<double>(element->getAttribute("z_tick"));
+      z_tick = 1;
     }
   else
     {
-      if (!(scale & GR_OPTION_Z_LOG))
+      if (element->hasAttribute("z_tick"))
+        {
+          z_tick = static_cast<double>(element->getAttribute("z_tick"));
+        }
+      else
         {
           if (z_major != 0)
             {
@@ -1284,28 +1313,12 @@ static void getAxes3dInformation(const std::shared_ptr<GRM::Element> &element, s
               z_tick = 1;
             }
         }
-      else
-        {
-          z_tick = 1;
-        }
     }
 
-  if (element->hasAttribute("z_org"))
+  if (scale & GR_OPTION_FLIP_Z)
     {
-      z_org = static_cast<double>(element->getAttribute("z_org"));
-    }
-  else
-    {
-      if (!(scale & GR_OPTION_FLIP_Z))
-        {
-          z_org_low = zmin;
-          z_org_high = zmax;
-        }
-      else
-        {
-          z_org_low = zmax;
-          z_org_high = zmin;
-        }
+      z_org_low = zmax;
+      z_org_high = zmin;
       if (z_org_pos == "low")
         {
           z_org = z_org_low;
@@ -1314,6 +1327,27 @@ static void getAxes3dInformation(const std::shared_ptr<GRM::Element> &element, s
         {
           z_org = z_org_high;
           z_major = -z_major;
+        }
+    }
+  else
+    {
+      if (element->hasAttribute("z_org"))
+        {
+          z_org = static_cast<double>(element->getAttribute("z_org"));
+        }
+      else
+        {
+          z_org_low = zmin;
+          z_org_high = zmax;
+          if (z_org_pos == "low")
+            {
+              z_org = z_org_low;
+            }
+          else
+            {
+              z_org = z_org_high;
+              z_major = -z_major;
+            }
         }
     }
 }
@@ -1757,7 +1791,6 @@ void receiverfunction(int id, double x_min, double x_max, double y_min, double y
 static bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, double &c_min, double &c_max)
 {
   bool limits_found = true;
-  int z_log = 0;
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
 
@@ -1770,14 +1803,8 @@ static bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, d
   else if (!std::isnan(static_cast<double>(plot_parent->getAttribute("_z_lim_min"))) &&
            !std::isnan(static_cast<double>(plot_parent->getAttribute("_z_lim_max"))))
     {
-      z_log = static_cast<int>(plot_parent->getAttribute("z_log"));
       c_min = static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
       c_max = static_cast<double>(plot_parent->getAttribute("_z_lim_max"));
-      if (z_log)
-        {
-          c_min = exp(c_min);
-          c_max = exp(c_max);
-        }
     }
   else
     {
@@ -4621,7 +4648,7 @@ static void processContour(const std::shared_ptr<GRM::Element> &element, const s
   unsigned int x_length, y_length, z_length;
   std::vector<double> x_vec, y_vec, z_vec;
   std::vector<double> px_vec, py_vec, pz_vec;
-  int major_h = 1000;
+  int major_h = PLOT_DEFAULT_CONTOUR_MAJOR_H;
   auto plot_parent = element->parentElement();
 
   getPlotParent(plot_parent);
@@ -4634,6 +4661,10 @@ static void processContour(const std::shared_ptr<GRM::Element> &element, const s
   else
     {
       element->setAttribute("levels", num_levels);
+    }
+  if (element->hasAttribute("major_h"))
+    {
+      major_h = static_cast<int>(element->getAttribute("major_h"));
     }
 
   gr_setprojectiontype(0);
@@ -4747,7 +4778,7 @@ static void processContourf(const std::shared_ptr<GRM::Element> &element, const 
   unsigned int x_length, y_length, z_length;
   std::vector<double> x_vec, y_vec, z_vec;
   std::vector<double> px_vec, py_vec, pz_vec;
-  int major_h = 0;
+  int major_h = PLOT_DEFAULT_CONTOURF_MAJOR_H;
   auto plot_parent = element->parentElement();
 
   getPlotParent(plot_parent);
@@ -4760,6 +4791,10 @@ static void processContourf(const std::shared_ptr<GRM::Element> &element, const 
   else
     {
       element->setAttribute("levels", num_levels);
+    }
+  if (element->hasAttribute("major_h"))
+    {
+      major_h = static_cast<int>(element->getAttribute("major_h"));
     }
 
   global_render->setProjectionType(element->parentElement(), 0);
@@ -9954,8 +9989,11 @@ static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
   auto plot_parent = element->parentElement();
   del_values del = del_values::update_without_default;
   int child_id = 0;
+  bool z_log = false;
 
   getPlotParent(plot_parent);
+
+  z_log = static_cast<int>(plot_parent->getAttribute("z_log"));
 
   if (element->hasAttribute("x_ind"))
     {
@@ -10080,7 +10118,15 @@ static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
             {
               for (j = 0; j < x_len; j++)
                 {
-                  value = (grm_isnan(plot_vec[i * num_bins_x + j])) ? 0 : plot_vec[i * num_bins_x + j];
+                  if (z_log)
+                    {
+                      value =
+                          (grm_isnan(log10(plot_vec[i * num_bins_x + j]))) ? 0 : log10(plot_vec[i * num_bins_x + j]);
+                    }
+                  else
+                    {
+                      value = (grm_isnan(plot_vec[i * num_bins_x + j])) ? 0 : plot_vec[i * num_bins_x + j];
+                    }
                   if (algorithm == "sum")
                     {
                       bins[(k == 0) ? i : j] += value;
@@ -10531,6 +10577,8 @@ static void processImshow(const std::shared_ptr<GRM::Element> &element, const st
   auto plot_parent = element->parentElement();
   del_values del = del_values::update_without_default;
   int child_id = 0;
+  std::vector<double> z_data_vec;
+  std::vector<int> z_dims_vec;
 
   getPlotParent(plot_parent);
   if (plot_parent->hasAttribute("grplot"))
@@ -10545,8 +10593,6 @@ static void processImshow(const std::shared_ptr<GRM::Element> &element, const st
   z_max = static_cast<double>(element->getAttribute("z_range_max"));
   logger((stderr, "Got min, max %lf %lf\n", z_min, z_max));
 
-  std::vector<double> z_data_vec, z_dims_vec;
-
   if (!element->hasAttribute("z")) throw NotFoundError("Imshow series is missing required attribute z-data.\n");
   auto z_key = static_cast<std::string>(element->getAttribute("z"));
   if (!element->hasAttribute("z_dims"))
@@ -10554,15 +10600,15 @@ static void processImshow(const std::shared_ptr<GRM::Element> &element, const st
   auto z_dims_key = static_cast<std::string>(element->getAttribute("z_dims"));
 
   z_data_vec = GRM::get<std::vector<double>>((*context)[z_key]);
-  z_dims_vec = GRM::get<std::vector<double>>((*context)[z_dims_key]);
+  z_dims_vec = GRM::get<std::vector<int>>((*context)[z_dims_key]);
   z_data_length = z_data_vec.size();
   dims = z_dims_vec.size();
   if (dims != 2) throw std::length_error("The size of dims data from imshow has to be 2.\n");
   if (z_dims_vec[0] * z_dims_vec[1] != z_data_length)
     throw std::length_error("For imshow shape[0] * shape[1] must be z-data length.\n");
 
-  cols = (int)z_dims_vec[0];
-  rows = (int)z_dims_vec[1];
+  cols = z_dims_vec[0];
+  rows = z_dims_vec[1];
 
   std::vector<int> img_data(z_data_length);
 
@@ -11770,7 +11816,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
   // set the x-, y- and z-data to NAN if the value is <= 0
   for (const auto &child : element->children())
     {
-      if (!starts_with(child->localName(), "series_")) continue;
+      if (!starts_with(child->localName(), "series_") || child->localName() == "series_imshow") continue;
       int id = static_cast<int>(global_root->getAttribute("_id"));
       std::string str = std::to_string(id);
 
@@ -11850,7 +11896,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
           auto z_len = z_vec.size();
           for (int i = 0; i < z_len; i++)
             {
-              z_vec[i] = (z_vec[i] <= 0) ? NAN : log(z_vec[i]);
+              z_vec[i] = (z_vec[i] <= 0) ? NAN : z_vec[i];
               if (!grm_isnan(z_vec[i])) z_min = (z_min < z_vec[i]) ? z_min : z_vec[i];
               if (!grm_isnan(z_vec[i])) z_max = (z_max > z_vec[i]) ? z_max : z_vec[i];
             }
@@ -12683,6 +12729,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("line_type"), std::vector<std::string>{"None", "The type of the line"}},
       {std::string("line_width"), std::vector<std::string>{"None", "The width of the line"}},
       {std::string("location"), std::vector<std::string>{"top_right", "The elements location"}},
+      {std::string("major_h"),
+       std::vector<std::string>{"0 or 1000", "Defines if and which contour lines gets their value as a label. A offset "
+                                             "of 1000 to this parameter will color the contour lines"}},
       {std::string("marginal_heatmap_kind"), std::vector<std::string>{"all", "The marginal heatmap kind (all, line)"}},
       {std::string("marginal_heatmap_side_plot"),
        std::vector<std::string>{"None",
@@ -14960,29 +15009,25 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                                                         static_cast<std::string>(element->getAttribute("kind")));
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
+              new_series->setAttribute("z", element->getAttribute("z"));
               new_series->setAttribute("_bbox_id", -1);
               if (static_cast<std::string>(element->getAttribute("kind")) == "imshow")
                 {
-                  new_series->setAttribute("z", element->getAttribute("z"));
-
                   auto context = global_render->getContext();
                   int id = static_cast<int>(global_root->getAttribute("_id"));
                   std::string str = std::to_string(id);
                   auto x = static_cast<std::string>(element->getAttribute("x"));
                   auto x_vec = GRM::get<std::vector<double>>((*context)[x]);
-                  int x_length = x_vec.size();
+                  int x_length = (int)x_vec.size();
                   auto y = static_cast<std::string>(element->getAttribute("y"));
                   auto y_vec = GRM::get<std::vector<double>>((*context)[y]);
-                  int y_length = y_vec.size();
-                  std::vector<int> z_dims_vec = {y_length, x_length};
+                  int y_length = (int)y_vec.size();
+                  std::vector<int> z_dims_vec = {(int)x_length, (int)y_length};
                   (*context)["z_dims" + str] = z_dims_vec;
                   new_series->setAttribute("z_dims", "z_dims" + str);
                   global_root->setAttribute("_id", id++);
                 }
-              else
-                {
-                  new_series->setAttribute("z", element->getAttribute("z"));
-                }
+
               for (const auto &child : element->children())
                 {
                   child->remove();

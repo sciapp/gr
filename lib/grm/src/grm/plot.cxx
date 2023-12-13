@@ -275,6 +275,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "labels",
                                     "levels",
                                     "location",
+                                    "major_h",
                                     "normalization",
                                     "orientation",
                                     "panzoom",
@@ -2090,7 +2091,7 @@ cleanup:
 
 err_t plot_contour(grm_args_t *subplot_args)
 {
-  int num_levels = 20;
+  int num_levels = 20, major_h;
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
 
@@ -2140,6 +2141,7 @@ err_t plot_contour(grm_args_t *subplot_args)
           subGroup->setAttribute("z_range_min", z_min);
           subGroup->setAttribute("z_range_max", z_max);
         }
+      if (grm_args_values(subplot_args, "major_h", "i", &major_h)) subGroup->setAttribute("major_h", major_h);
 
       if (has_levels) subGroup->setAttribute("levels", num_levels);
 
@@ -2153,7 +2155,7 @@ err_t plot_contour(grm_args_t *subplot_args)
 
 err_t plot_contourf(grm_args_t *subplot_args)
 {
-  int num_levels = 20;
+  int num_levels = 20, major_h;
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
 
@@ -2203,6 +2205,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
           subGroup->setAttribute("z_range_min", z_min);
           subGroup->setAttribute("z_range_max", z_max);
         }
+      if (grm_args_values(subplot_args, "major_h", "i", &major_h)) subGroup->setAttribute("major_h", major_h);
 
       if (has_levels) subGroup->setAttribute("levels", num_levels);
 
@@ -2800,7 +2803,7 @@ err_t plot_imshow(grm_args_t *subplot_args)
       auto context = global_render->getContext();
 
       std::vector<double> c_data_vec(c_data, c_data + c_data_length);
-      std::vector<double> shape_vec(shape, shape + i);
+      std::vector<int> shape_vec(shape, shape + i);
 
       (*context)["z" + str] = c_data_vec;
       subGroup->setAttribute("z", "z" + str);

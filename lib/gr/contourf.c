@@ -5,7 +5,7 @@
 #include <math.h>
 
 #include "gr.h"
-#include "contour.h"
+#include "contourf.h"
 
 #ifndef NAN
 #define NAN (0.0 / 0.0)
@@ -19,6 +19,12 @@
 #define _inf (-logf(0.0))
 #else
 #define _inf (-INF)
+#endif
+
+#ifdef isnan
+#define is_nan(a) isnan(a)
+#else
+#define is_nan(x) ((x) != (x))
 #endif
 
 #define DEFAULT_CONTOUR_LINES 16 /* default number of contour lines */
@@ -271,8 +277,7 @@ static void marching_squares(const double *x, const double *y, const double *z, 
    * is repeated and 2 cells outside of z NAN. This assures that contour lines that cross the
    * border of z are also closed (outside of z).
    */
-  double x_step = x[1] - x[0];
-  double y_step = y[1] - y[0];
+  double x_step = 0, y_step = 0;
 
   double x_pos = 0, y_pos = 0;
   long i, j, fillarea_start_index, num_lines;
@@ -284,6 +289,23 @@ static void marching_squares(const double *x, const double *y, const double *z, 
   long nx_padded = nx + 4;
   long ny_padded = ny + 4;
   unsigned char *edges;
+
+  for (j = 0; j < ny; j++)
+    {
+      if (y_step == 0 && !is_nan(y[j]) && (j >= 1 && !is_nan(y[j - 1])))
+        {
+          y_step = y[j] - y[j - 1];
+          break;
+        }
+    }
+  for (i = 0; i < nx; i++)
+    {
+      if (x_step == 0 && !is_nan(x[i]) && (i >= 1 && !is_nan(x[i - 1])))
+        {
+          x_step = x[i] - x[i - 1];
+          break;
+        }
+    }
 
   if (nc > 1)
     {
@@ -428,8 +450,12 @@ static void marching_squares(const double *x, const double *y, const double *z, 
                           assert(edges[yi * nx_padded + xi] | EDGE_E);
                           edges[yi * nx_padded + xi] &= ~EDGE_E;
                         }
-                      list_append(polylines_x, &x_pos);
-                      list_append(polylines_y, &y_pos);
+
+                      if (!is_nan(x_pos) && !is_nan(y_pos))
+                        {
+                          list_append(polylines_x, &x_pos);
+                          list_append(polylines_y, &y_pos);
+                        }
                     }
                   assert(xi == i && yi == j && "contour line is not closed.");
                   /* Repeat first polyline point to get a closed line */
@@ -489,16 +515,20 @@ void gr_draw_contourf(int nx, int ny, int nh, double *px, double *py, double *h,
   double *contours = NULL;
   double z_space_min, z_space_max;
   int rotation, tilt;
-  zmin = zmax = pz[0];
+
+  zmin = pz[nx * ny - 1], zmax = pz[nx * ny - 1];
   for (i = 0; i < nx * ny; i++)
     {
-      if (pz[i] < zmin)
+      if (!is_nan(pz[i]))
         {
-          zmin = pz[i];
-        }
-      if (pz[i] > zmax)
-        {
-          zmax = pz[i];
+          if (pz[i] < zmin)
+            {
+              zmin = pz[i];
+            }
+          if (pz[i] > zmax)
+            {
+              zmax = pz[i];
+            }
         }
     }
 

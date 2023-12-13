@@ -17,6 +17,12 @@
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
+#ifdef isnan
+#define is_nan(a) isnan(a)
+#else
+#define is_nan(x) ((x) != (x))
+#endif
+
 #define huge_value 1.7e+37F
 
 #define contour_lines 16 /* default number of contour lines */
@@ -1193,6 +1199,8 @@ void gr_draw_contours(int nx, int ny, int nh, double *px, double *py, double *h,
   int eflag, error_ind = 0;
   int rotation, tilt;
   double char_height;
+  double xmin = huge_value, ymin = huge_value, dx = 0, dy = 0;
+  int xcnt = 0, ycnt = 0;
 
   gks_inq_open_ws(1, &error_ind, &n, &contour_vars.wkid);
 
@@ -1258,11 +1266,29 @@ void gr_draw_contours(int nx, int ny, int nh, double *px, double *py, double *h,
   k = 0;
   for (j = 0; j < ny; j++)
     {
+      if (is_nan(py[j]))
+        {
+          ycnt += 1;
+        }
+      else
+        {
+          ymin = min(ymin, py[j]);
+        }
+      if (dy == 0 && !is_nan(py[j]) && (j >= 1 && !is_nan(py[j - 1]))) dy = py[j] - py[j - 1];
       for (i = 0; i < nx; i++)
         {
-          if (contour_vars.z[k] > mmax)
+          if (is_nan(px[i]))
+            {
+              if (j == 0) xcnt += 1;
+            }
+          else
+            {
+              xmin = min(xmin, px[i]);
+            }
+          if (dx == 0 && !is_nan(px[i]) && (i >= 1 && !is_nan(px[i - 1]))) dx = px[i] - px[i - 1];
+          if (!is_nan(contour_vars.z[k]) && contour_vars.z[k] > mmax)
             mmax = contour_vars.z[k];
-          else if (contour_vars.z[k] < mmin)
+          else if (!is_nan(contour_vars.z[k]) && contour_vars.z[k] < mmin)
             mmin = contour_vars.z[k];
           k++;
         }
@@ -1306,12 +1332,12 @@ void gr_draw_contours(int nx, int ny, int nh, double *px, double *py, double *h,
     }
 
   bitmap = (int *)xmalloc(nx * ny * ncv * 2 * sizeof(int));
-  contour_vars.xmin = px[0];
-  contour_vars.ymin = py[0];
-  contour_vars.dx = px[1] - contour_vars.xmin;
-  contour_vars.dy = py[1] - contour_vars.ymin;
+  contour_vars.xmin = xmin;
+  contour_vars.ymin = ymin;
+  contour_vars.dx = dx;
+  contour_vars.dy = dy;
 
-  calc_contours(contour_vars.z, nx, nx, ny, cv, ncv, mmax, bitmap, contour_vars.xmin, contour_vars.ymin,
+  calc_contours(contour_vars.z, nx, nx - xcnt, ny - ycnt, cv, ncv, mmax, bitmap, contour_vars.xmin, contour_vars.ymin,
                 contour_vars.dx, contour_vars.dy);
 
   free(bitmap);

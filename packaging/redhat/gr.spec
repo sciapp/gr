@@ -75,7 +75,7 @@ BuildRequires:		cmake
 
 # wxWidgets BuildRequires
 %if 0%{?fedora_version}
-%if 0%{?fedora_version} >= 30
+%if 0%{?fedora_version} >= 30 && 0%{?fedora_version} <= 38
 BuildRequires:		wxGTK3-devel
 %else
 BuildRequires:		wxGTK-devel
