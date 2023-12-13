@@ -1179,6 +1179,7 @@
         <xs:attributeGroup ref="ranges"/>
         <xs:attribute name="kind" type="xs:string"/>
         <xs:attribute name="levels" type="xs:integer"/>
+        <xs:attribute name="major_h" type="xs:integer"/>
         <xs:attribute name="px" type="xs:string"/>
         <xs:attribute name="py" type="xs:string"/>
         <xs:attribute name="pz" type="xs:string"/>
