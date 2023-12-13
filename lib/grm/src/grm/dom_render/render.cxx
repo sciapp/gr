@@ -7463,8 +7463,8 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
     }
   else
     {
-      r_min = static_cast<double>(subplotElement->getAttribute("_y_lim_min"));
-      r_max = static_cast<double>(subplotElement->getAttribute("_y_lim_max"));
+      r_min = static_cast<double>(subplotElement->getAttribute("y_lim_min"));
+      r_max = static_cast<double>(subplotElement->getAttribute("y_lim_max"));
     }
 
   angle_ticks = static_cast<int>(element->getAttribute("angle_ticks"));
@@ -7472,8 +7472,9 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
   render->setLineType(element, GKS_K_LINETYPE_SOLID);
 
   // without given ylims, except when keep_radii_axes is given
-  if ((kind == "polar_histogram" && (!subplotElement->hasAttribute("ylim_max")) || subplotElement->hasAttribute("keep_radii_axes")) ||
-      (kind == "polar" && !subplotElement->hasAttribute("ylim_max")))
+  if ((kind == "polar_histogram" && (!subplotElement->hasAttribute("y_lim_max")) ||
+       subplotElement->hasAttribute("keep_radii_axes")) ||
+      (kind == "polar" && !subplotElement->hasAttribute("y_lim_max")))
     {
       auto max = static_cast<double>(central_region->getAttribute("r_max"));
       rings = (element->hasAttribute("rings")) ? static_cast<int>(element->getAttribute("rings")) : -1;
@@ -7490,7 +7491,7 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
         {
           r_min = 0.0;
           auto seriesElement = central_region->querySelectors("series_polar");
-          max = static_cast<double>(seriesElement->getAttribute("yrange_max"));
+          max = static_cast<double>(seriesElement->getAttribute("y_range_max"));
           tick = auto_tick_rings_polar(max, rings, "");
         }
       central_region->setAttribute("tick", tick);
@@ -7506,7 +7507,7 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
       // todo better rings calculation when ylim is given
       element->setAttribute("rings", rings);
 
-      if (subplotElement->hasAttribute("ylim_max") && subplotElement->hasAttribute("ylim_min"))
+      if (subplotElement->hasAttribute("y_lim_max") && subplotElement->hasAttribute("y_lim_min"))
         {
           tick = (r_max - r_min) / rings;
         }
@@ -8855,28 +8856,28 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
 
 
   getPlotParent(plot_parent);
-  if (plot_parent->hasAttribute("ylim_max") && plot_parent->hasAttribute("ylim_min"))
+  if (plot_parent->hasAttribute("y_lim_max") && plot_parent->hasAttribute("y_lim_min"))
     {
-      ylim_min = static_cast<double>(plot_parent->getAttribute("ylim_min"));
-      ylim_max = static_cast<double>(plot_parent->getAttribute("ylim_max"));
+      ylim_min = static_cast<double>(plot_parent->getAttribute("y_lim_min"));
+      ylim_max = static_cast<double>(plot_parent->getAttribute("y_lim_max"));
       ylim = true;
     }
-  if (element->hasAttribute("yrange_min") && element->hasAttribute("yrange_max"))
+  if (element->hasAttribute("y_range_min") && element->hasAttribute("y_range_max"))
     {
       transform_radii = true;
-      yrange_min = static_cast<double>(element->getAttribute("yrange_min"));
-      yrange_max = static_cast<double>(element->getAttribute("yrange_max"));
+      yrange_min = static_cast<double>(element->getAttribute("y_range_min"));
+      yrange_max = static_cast<double>(element->getAttribute("y_range_max"));
     }
   else
     {
       r_max = static_cast<double>(plot_parent->getAttribute("r_max"));
       r_min = 0.0;
     }
-  if (element->hasAttribute("xrange_min") && element->hasAttribute("xrange_max"))
+  if (element->hasAttribute("x_range_min") && element->hasAttribute("x_range_max"))
     {
       transform_angles = true;
-      xrange_min = static_cast<double>(element->getAttribute("xrange_min"));
-      xrange_max = static_cast<double>(element->getAttribute("xrange_max"));
+      xrange_min = static_cast<double>(element->getAttribute("x_range_min"));
+      xrange_max = static_cast<double>(element->getAttribute("x_range_max"));
       if (xrange_max > 2 * M_PI)
         {
           // convert from degrees to radians
@@ -9051,18 +9052,18 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
       rows = y_vec.size();
     }
 
-  if (element->hasAttribute("xrange_min") && element->hasAttribute("xrange_max"))
+  if (element->hasAttribute("x_range_min") && element->hasAttribute("x_range_max"))
     {
       transform = true;
-      xrange_min = static_cast<double>(element->getAttribute("xrange_min"));
-      xrange_max = static_cast<double>(element->getAttribute("xrange_max"));
+      xrange_min = static_cast<double>(element->getAttribute("x_range_min"));
+      xrange_max = static_cast<double>(element->getAttribute("x_range_max"));
       if (xrange_max <= 2 * M_PI) convert = 180.0 / M_PI;
     }
-  if (element->hasAttribute("yrange_min") && element->hasAttribute("yrange_max"))
+  if (element->hasAttribute("y_range_min") && element->hasAttribute("y_range_max"))
     {
       transform = true;
-      yrange_min = static_cast<double>(element->getAttribute("yrange_min"));
-      yrange_max = static_cast<double>(element->getAttribute("yrange_max"));
+      yrange_min = static_cast<double>(element->getAttribute("y_range_min"));
+      yrange_max = static_cast<double>(element->getAttribute("y_range_max"));
     }
   if (element->hasAttribute("zrange_min") && element->hasAttribute("zrange_max"))
     {
@@ -9361,10 +9362,10 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
       theta = GRM::get<std::vector<double>>((*context)[theta_key]);
       length = theta.size();
 
-      if (group->hasAttribute("xrange_min") && group->hasAttribute("xrange_max"))
+      if (group->hasAttribute("x_range_min") && group->hasAttribute("x_range_max"))
         {
-          xrange_min = static_cast<double>(group->getAttribute("xrange_min"));
-          xrange_max = static_cast<double>(group->getAttribute("xrange_max"));
+          xrange_min = static_cast<double>(group->getAttribute("x_range_min"));
+          xrange_max = static_cast<double>(group->getAttribute("x_range_max"));
           // convert xrange_min and max to radian if xrange_max > 2 * M_PI
           if (xrange_max > 2 * M_PI)
             {
@@ -9375,7 +9376,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
             {
               // todo switch if xrange_min > xrange_max?
               std::swap(xrange_min, xrange_max);
-              group->setAttribute("xrange_flip", 1);
+              group->setAttribute("x_range_flip", 1);
             }
 
           double theta_min = *std::min_element(theta.begin(), theta.end());
@@ -9784,11 +9785,11 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
   global_render->setTransparency(element, face_alpha);
   processTransparency(element);
 
-  if (plot_group->hasAttribute("ylim_min") && (plot_group->hasAttribute("ylim_max")))
+  if (plot_group->hasAttribute("y_lim_min") && (plot_group->hasAttribute("y_lim_max")))
     {
       ylim = true;
-      ylim_min = static_cast<double>(plot_group->getAttribute("ylim_min"));
-      ylim_max = static_cast<double>(plot_group->getAttribute("ylim_max"));
+      ylim_min = static_cast<double>(plot_group->getAttribute("y_lim_min"));
+      ylim_max = static_cast<double>(plot_group->getAttribute("y_lim_max"));
 
       if (plot_group->hasAttribute("keep_radii_axes"))
         {
@@ -9829,27 +9830,27 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
         }
     }
 
-  if (plot_group->hasAttribute("r_lim_min") && plot_group->hasAttribute("r_lim_max"))
-    {
-      r_lim_vec.push_back(static_cast<double>(plot_group->getAttribute("r_lim_min")));
-      r_lim_vec.push_back(static_cast<double>(plot_group->getAttribute("r_lim_max")));
-      r_lim = &(r_lim_vec[0]);
-
-      r_min = grm_min(rlim[0], rlim[1]);
-      r_max = grm_max(rlim[0], rlim[1]);
-      if (rlim[0] > rlim[1])
-        {
-          r_lim[0] = r_min;
-          r_lim[1] = r_max;
-        }
-
-      if (r_max > 1.0)
-        {
-          r_max = 1.0;
-          logger((stderr, "The value of \"r_lim_max\" can not exceed 1.0\n"));
-        }
-      if (r_min < 0.0) r_min = 0.0;
-    }
+  //  if (plot_group->hasAttribute("r_lim_min") && plot_group->hasAttribute("r_lim_max"))
+  //    {
+  //      r_lim_vec.push_back(static_cast<double>(plot_group->getAttribute("r_lim_min")));
+  //      r_lim_vec.push_back(static_cast<double>(plot_group->getAttribute("r_lim_max")));
+  //      r_lim = &(r_lim_vec[0]);
+  //
+  //      r_min = grm_min(r_lim[0], r_lim[1]);
+  //      r_max = grm_max(r_lim[0], r_lim[1]);
+  //      if (r_lim[0] > r_lim[1])
+  //        {
+  //          r_lim[0] = r_min;
+  //          r_lim[1] = r_max;
+  //        }
+  //
+  //      if (r_max > 1.0)
+  //        {
+  //          r_max = 1.0;
+  //          logger((stderr, "The value of \"r_lim_max\" can not exceed 1.0\n"));
+  //        }
+  //      if (r_min < 0.0) r_min = 0.0;
+  //    }
 
   if (phiflip) std::reverse(classes.begin(), classes.end());
 
@@ -9973,7 +9974,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
                             norm_factor = bin_widths[class_nr];
 
                           // todo: this could be done more efficiently if the if keep_radii_axes condition is
-                          // todo: moved outside the loop. One less condition per iteration.
+                          // todo: moved outside the loop. One less condition per iteration. But less readable
                           if (keep_radii_axes)
                             {
                               if ((grm_round(radius * 100) / 100) <=
@@ -10116,6 +10117,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
           std::complex<double> complex1, complex2;
           const double convert = 180.0 / M_PI;
           double edge_width = 2.3; /* only for stairs */
+          bool draw_inner = true;
 
           global_render->setFillColorInd(element, 1);
           global_render->setLineColorInd(element, edge_color);
@@ -10214,6 +10216,10 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
                                                      grm_min(rect, r_max), start_angle, end_angle, arc);
                     }
                 }
+              else
+                {
+                  draw_inner = false;
+                }
             }
           else /* no rlim */
             {
@@ -10221,18 +10227,22 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
               if (class_nr == classes.size()) break;
               arc_pos = rect;
             }
-          // these are the inner arcs with ylim and the normal_arcs without ylim
-          if (del != del_values::update_without_default && del != del_values::update_with_default)
+
+          // these are the inner arcs with ylim and the normal_arcs without ylim, only if its higher than ylim_min
+          if (draw_inner)
             {
-              arc = global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, start_angle, end_angle);
-              arc->setAttribute("_child_id", child_id++);
-              element->append(arc);
-            }
-          else
-            {
-              arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
-              if (arc != nullptr)
-                global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, start_angle, end_angle, arc);
+              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                {
+                  arc = global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, start_angle, end_angle);
+                  arc->setAttribute("_child_id", child_id++);
+                  element->append(arc);
+                }
+              else
+                {
+                  arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
+                  if (arc != nullptr)
+                    global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, start_angle, end_angle, arc);
+                }
             }
         }
     } /* end of classes for loop */
@@ -10295,7 +10305,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
                 }
             }
 
-          // todo: what are these lines for?
+          // draw a line when it is not a full circle
           if (!(angles_vec[0] == 0.0 && angles_vec[angles_vec.size() - 1] > 1.96 * M_PI))
             {
               line_x[0] = ylim_min / ylim_max * cos(angles_vec[0]);
@@ -10394,7 +10404,6 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
             }
         } // end of no ylim case
 
-      // todo what is this for?
       if (del != del_values::update_without_default && del != del_values::update_with_default)
         {
           line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
@@ -10479,11 +10488,11 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
         }
     }
 
-  if (plot_elem->hasAttribute("ylim_min") && plot_elem->hasAttribute("ylim_max"))
+  if (plot_elem->hasAttribute("y_lim_min") && plot_elem->hasAttribute("y_lim_max"))
     {
       ylim = true;
-      ylim_min = static_cast<double>(plot_elem->getAttribute("ylim_min"));
-      ylim_max = static_cast<double>(plot_elem->getAttribute("ylim_max"));
+      ylim_min = static_cast<double>(plot_elem->getAttribute("y_lim_min"));
+      ylim_max = static_cast<double>(plot_elem->getAttribute("y_lim_max"));
       if (plot_elem->hasAttribute("keep_radii_axes"))
         {
           // if true: max = true radius axes maximum!
@@ -10511,7 +10520,6 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
   if (keep_radii_axes)
     {
       r = pow((count / max), num_bins * 2);
-      // todo: test limiting r here already
       if (r > pow(ylim_max / max, num_bins * 2))
         {
           r = pow(ylim_max / max, num_bins * 2);
@@ -13335,8 +13343,8 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
         {
           if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap" || kind == "polar")
             {
-              auto ymax = static_cast<double>(element->getAttribute("_ylim_max"));
-              auto ymin = static_cast<double>(element->getAttribute("_ylim_min"));
+              auto ymax = static_cast<double>(element->getAttribute("_y_lim_max"));
+              auto ymin = static_cast<double>(element->getAttribute("_y_lim_min"));
 
               element->setAttribute("r_min", ymin);
               element->setAttribute("r_max", ymax);
@@ -14475,11 +14483,11 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           ((static_cast<int>(global_root->getAttribute("_modified")) &&
             (str_equals_any(element->localName(), "axes", "axes_3d", "cellarray", "colorbar", "draw_arc",
                             "draw_image", "draw_rect", "fill_arc", "fill_area", "fill_rect", "grid", "grid_3d",
-                            "legend", "nonuniform_polar_cellarray", "nonuniform_cellarray", "polar_cellarray", "polyline",
-                            "polyline_3d", "polymarker", "polymarker_3d", "series_contour", "series_contourf", "text",
-                            "titles_3d", "coordinate_system", "series_hexbin", "series_isosurface", "series_quiver",
-                            "series_shade", "series_surface", "series_tricontour", "series_trisurface",
-                            "series_volume") ||
+                            "legend", "nonuniform_polar_cellarray", "nonuniform_cellarray", "polar_cellarray",
+                            "polyline", "polyline_3d", "polymarker", "polymarker_3d", "series_contour",
+                            "series_contourf", "text", "titles_3d", "coordinate_system", "series_hexbin",
+                            "series_isosurface", "series_quiver", "series_shade", "series_surface", "series_tricontour",
+                            "series_trisurface", "series_volume") ||
              !element->hasChildNodes())) ||
            update_required))
         {

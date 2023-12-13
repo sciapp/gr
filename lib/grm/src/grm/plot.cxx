@@ -3134,19 +3134,19 @@ err_t plot_polar(grm_args_t *subplot_args)
       subGroup->setAttribute("y", "y" + str);
 
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) subGroup->setAttribute("spec", spec);
-      if (grm_args_values(*current_series, "yrange", "dd", &y_min, &y_max))
+      if (grm_args_values(*current_series, "y_range", "dd", &y_min, &y_max))
         {
-          subGroup->setAttribute("yrange_min", y_min);
-          subGroup->setAttribute("yrange_max", y_max);
+          subGroup->setAttribute("y_range_min", y_min);
+          subGroup->setAttribute("y_range_max", y_max);
         }
       if (grm_args_values(*current_series, "clip_negative", "i", &clip_negative))
         {
           subGroup->setAttribute("clip_negative", clip_negative);
         }
-      if (grm_args_values(*current_series, "xrange", "dd", &x_min, &x_max))
+      if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
         {
-          subGroup->setAttribute("xrange_min", x_min);
-          subGroup->setAttribute("xrange_max", x_max);
+          subGroup->setAttribute("x_range_min", x_min);
+          subGroup->setAttribute("x_range_max", x_max);
         }
 
       global_root->setAttribute("_id", id++);
@@ -3292,16 +3292,16 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
       plot_group->setAttribute("r_lim_max", r_lim[1]);
     }
 
-  if (grm_args_values(subplot_args, "ylim", "dd", &ylim_min, &ylim_max))
+  if (grm_args_values(subplot_args, "y_lim", "dd", &ylim_min, &ylim_max))
     {
-      plot_group->setAttribute("ylim_min", ylim_min);
-      plot_group->setAttribute("ylim_max", ylim_max);
+      plot_group->setAttribute("y_lim_min", ylim_min);
+      plot_group->setAttribute("y_lim_max", ylim_max);
     }
 
-  if (grm_args_values(*series, "xrange", "dd", &xrange_min, &xrange_max))
+  if (grm_args_values(*series, "x_range", "dd", &xrange_min, &xrange_max))
     {
-      series_group->setAttribute("xrange_min", xrange_min);
-      series_group->setAttribute("xrange_max", xrange_max);
+      series_group->setAttribute("x_range_min", xrange_min);
+      series_group->setAttribute("x_range_max", xrange_max);
     }
 
   if (grm_args_values(*series, "x_colormap", "i", &x_colormap))
