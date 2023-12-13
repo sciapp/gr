@@ -24,11 +24,15 @@ static void polar_histogram_ylim(void)
   double bin_edges[] = {0.0, M_PI / 2, M_PI * 1.0, M_PI * 1.33, 2 * M_PI};
   unsigned int bin_edges_length = sizeof(bin_edges) / sizeof(bin_edges[0]);
 
-  grm_args_push(args, "bin_edges", "nD", bin_edges_length, bin_edges);
+  /*
+    grm_args_push(args, "bin_edges", "nD", bin_edges_length, bin_edges);
+  */
 
   grm_args_push(args, "kind", "s", "polar_histogram");
   grm_args_push(args, "x", "nD", theta_length, &theta);
-  grm_args_push(args, "ylim", "dd", 2.0, 4.0);
+  /*
+    grm_args_push(args, "ylim", "dd", 2.0, 4.0);
+  */
 
   /*  grm_args_push(args, "xcolormap", "i", 44); */ /* VIRIDIS */ /*
       grm_args_push(args, "ycolormap", "i", 44);
