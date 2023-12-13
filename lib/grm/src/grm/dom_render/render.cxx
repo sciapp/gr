@@ -12275,6 +12275,10 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
                   if (titles_3d != nullptr)
                     titles_3d = global_render->createTitles3d(x_label, y_label, z_label, titles_3d);
                 }
+              if (titles_3d)
+                {
+                  titles_3d->setAttribute("z_index", 7);
+                }
             }
         }
       else
