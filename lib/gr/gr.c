@@ -966,6 +966,8 @@ static int regeneration_flags = 0;
 
 static char *titles3d[3] = {NULL, NULL, NULL};
 
+static double titles3d_text_height = 0;
+
 static char *xcalloc(int count, int size)
 {
   char *result = (char *)calloc(count, size);
@@ -6699,7 +6701,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   int modern_projection_type;
 
   int ltype, halign, valign, font, prec, clsw, axis, tick_axis;
-  double chux, chuy, slant;
+  double chux, chuy, slant, chh;
 
   double x_min = 0, x_max = 0, y_min = 0, y_max = 0, z_min = 0, z_max = 0;
 
@@ -6798,6 +6800,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   gks_inq_text_fontprec(&errind, &font, &prec);
   gks_inq_text_slant(&errind, &slant);
   gks_inq_text_upvec(&errind, &chux, &chuy);
+  gks_inq_text_height(&errind, &chh);
   gks_inq_clip(&errind, &clsw, clrt);
 
   gks_set_pline_linetype(GKS_K_LINETYPE_SOLID);
@@ -6994,6 +6997,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
         {
           gks_inq_text_upvec(&errind, &xi, &yi);
           gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          gks_set_text_height(titles3d_text_height);
           if (tick_axis == 0 && x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2. ||
               tick_axis == 1 && y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
             {
@@ -7005,6 +7009,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
             }
           text3d(x_title, y_title, z_log(0.5 * (z_lin(z_min) + z_lin(z_max))), titles3d[2],
                  modern_projection_type ? axis : 0);
+          gks_set_text_height(chh);
         }
     }
 
@@ -7193,6 +7198,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
         {
           gks_inq_text_upvec(&errind, &xi, &yi);
           gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          gks_set_text_height(titles3d_text_height);
           if (tick_axis == 2 && z_lin(z_org) <= (z_lin(z_min) + z_lin(z_max)) / 2.)
             {
               gks_set_text_upvec(0, 1);
@@ -7211,6 +7217,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
             }
           text3d(x_title, y_log(0.5 * (y_lin(y_min) + y_lin(y_max))), z_title, titles3d[1],
                  modern_projection_type ? axis : 0);
+          gks_set_text_height(chh);
         }
     }
 
@@ -7400,6 +7407,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
         {
           gks_inq_text_upvec(&errind, &xi, &yi);
           gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          gks_set_text_height(titles3d_text_height);
           if (tick_axis == 1 && y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2. ||
               tick_axis == 2 && z_lin(z_org) <= (z_lin(z_min) + z_lin(z_max)) / 2.)
             {
@@ -7411,6 +7419,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
             }
           text3d(x_log(0.5 * (x_lin(x_min) + x_lin(x_max))), y_title, z_title, titles3d[0],
                  modern_projection_type ? axis : 0);
+          gks_set_text_height(chh);
         }
     }
 
@@ -7816,6 +7825,8 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
  */
 void gr_settitles3d(char *x_title, char *y_title, char *z_title)
 {
+  int errind;
+
   check_autoinit;
 
   if (titles3d[0] != NULL)
@@ -7836,16 +7847,18 @@ void gr_settitles3d(char *x_title, char *y_title, char *z_title)
 
   if (x_title != NULL)
     {
-      titles3d[0] = strdup(x_title);
+      if (*x_title) titles3d[0] = strdup(x_title);
     }
   if (y_title != NULL)
     {
-      titles3d[1] = strdup(y_title);
+      if (*y_title) titles3d[1] = strdup(y_title);
     }
   if (z_title != NULL)
     {
-      titles3d[2] = strdup(z_title);
+      if (*z_title) titles3d[2] = strdup(z_title);
     }
+
+  gks_inq_text_height(&errind, &titles3d_text_height);
 
   if (flag_stream)
     gr_writestream("<settitles3d xtitle=\"%s\" ytitle=\"%s\" ztitle=\"%s\"/>\n", x_title, y_title, z_title);
