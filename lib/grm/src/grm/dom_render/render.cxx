@@ -15619,7 +15619,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
           std::vector<std::string> plot3_group = {"plot3", "scatter", "scatter3", "tricontour", "trisurface"};
           std::vector<std::string> barplot_group = {"barplot", "hist", "stem", "stairs"};
           std::vector<std::string> hexbin_group = {"hexbin", "shade"};
-          std::shared_ptr<GRM::Element> newElement;
+          std::shared_ptr<GRM::Element> newElement = nullptr;
 
           if (std::find(line_group.begin(), line_group.end(), value) != line_group.end() &&
               std::find(line_group.begin(), line_group.end(),
@@ -15815,52 +15815,56 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
             }
 
           /* update coordinate system if needed */
-          std::shared_ptr<GRM::Element> coordinateSystem =
-              newElement->parentElement()->querySelectors("coordinate_system");
-          std::string newKind = static_cast<std::string>(newElement->getAttribute("kind"));
-          std::string newType = "2d";
-          if (polarKinds.count(newKind) != 0) newType = "polar";
-          if (kinds3D.count(newKind) != 0) newType = "3d";
-
-          if (coordinateSystem)
+          if (newElement)
             {
-              std::string oldKind = value;
-              std::string oldType = static_cast<std::string>(coordinateSystem->getAttribute("type"));
-              if (newType != oldType)
+              std::shared_ptr<GRM::Element> coordinateSystem =
+                  newElement->parentElement()->querySelectors("coordinate_system");
+              std::string newKind = static_cast<std::string>(newElement->getAttribute("kind"));
+              std::string newType = "2d";
+              if (polarKinds.count(newKind) != 0) newType = "polar";
+              if (kinds3D.count(newKind) != 0) newType = "3d";
+
+              if (coordinateSystem)
                 {
-                  coordinateSystem->setAttribute("type", newType);
-                  coordinateSystem->setAttribute("_update_required", true);
-                  coordinateSystem->setAttribute("_delete_children",
-                                                 static_cast<int>(del_values::recreate_all_children));
-
-                  if (newKind == "imshow")
+                  std::string oldKind = value;
+                  std::string oldType = static_cast<std::string>(coordinateSystem->getAttribute("type"));
+                  if (newType != oldType)
                     {
-                      coordinateSystem->setAttribute("draw", false);
+                      coordinateSystem->setAttribute("type", newType);
+                      coordinateSystem->setAttribute("_update_required", true);
+                      coordinateSystem->setAttribute("_delete_children",
+                                                     static_cast<int>(del_values::recreate_all_children));
 
-                      std::shared_ptr<GRM::Element> colorbar = newElement->parentElement()->querySelectors("colorbar");
-                      if (colorbar)
+                      if (newKind == "imshow")
                         {
-                          for (const auto &child : colorbar->children())
-                            {
-                              child->remove();
-                            }
-                          colorbar->remove();
-                        }
+                          coordinateSystem->setAttribute("draw", false);
 
-                      std::shared_ptr<GRM::Element> title =
-                          newElement->parentElement()->querySelectors("text[name=\"title\"]");
-                      if (title) title->remove();
-                    }
-                  else if (oldKind == "imshow")
-                    {
-                      coordinateSystem->removeAttribute("draw");
+                          std::shared_ptr<GRM::Element> colorbar =
+                              newElement->parentElement()->querySelectors("colorbar");
+                          if (colorbar)
+                            {
+                              for (const auto &child : colorbar->children())
+                                {
+                                  child->remove();
+                                }
+                              colorbar->remove();
+                            }
+
+                          std::shared_ptr<GRM::Element> title =
+                              newElement->parentElement()->querySelectors("text[name=\"title\"]");
+                          if (title) title->remove();
+                        }
+                      else if (oldKind == "imshow")
+                        {
+                          coordinateSystem->removeAttribute("draw");
+                        }
                     }
                 }
-            }
-          else if (newKind != "imshow")
-            {
-              coordinateSystem = global_render->createElement("coordinate_system");
-              newElement->parentElement()->prepend(coordinateSystem);
+              else if (newKind != "imshow")
+                {
+                  coordinateSystem = global_render->createElement("coordinate_system");
+                  newElement->parentElement()->prepend(coordinateSystem);
+                }
             }
         }
       else
