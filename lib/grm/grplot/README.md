@@ -29,7 +29,7 @@ For plots where multiple columns are read there is also a parameter that allows 
 
 There are more key-value parameters. These parameters only effect specific plot types. For example `bar_width` only makes sense, when bars are drawn. All possible parameters are:
 
-`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `c`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `grplot`, `isovalue`, `kind`, `levels`, `line_spec`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `phi_flip`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `tilt`, `transformation`, `x_bins`, `x_colormap`, `x_flip`, `y_bins`, `y_colormap`, `y_flip`, `y_labels`
+`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `c`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `grplot`, `int_lim`, `isovalue`, `kind`, `levels`, `line_spec`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `phi_flip`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `tilt`, `transformation`, `x_bins`, `x_colormap`, `x_flip`, `y_bins`, `y_colormap`, `y_flip`, `y_labels`
 
 All parameters are separated by a blank. Some parameters are more complex than others. These parameters represent a container inside GRM.
 
@@ -283,7 +283,8 @@ Possible parameters for the line plot are:
 
    `error:{{error_bar_color:`color_index`},{downward_scap_color:`color_index`},{upward_scap_color:`color_index`}}`
 
-2. `orientation`: This parameter defines the orientation of the displayed lines. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
+2. `int_lim`: This parameter defines the boundary's of the integral which should get displayed.
+3. `orientation`: This parameter defines the orientation of the displayed lines. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
 
 ### MARGINAL_HEATMAP
 

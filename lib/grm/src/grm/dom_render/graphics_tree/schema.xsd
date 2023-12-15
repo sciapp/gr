@@ -782,10 +782,13 @@
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="error_bars" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="fill_area" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="int_lim_high" type="xs:double"/>
+            <xs:attribute name="int_lim_low" type="xs:double"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="line_spec" type="xs:string"/>
             <xs:attribute name="marker_type" type="strint"/>
