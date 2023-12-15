@@ -1879,7 +1879,7 @@ static void polyline(int n, double *x, double *y)
         npoints++;
     }
 
-  if (npoints != 0) gks_polyline(npoints, xpoint, ypoint);
+  if (npoints >= 2) gks_polyline(npoints, xpoint, ypoint);
 }
 
 /*!
