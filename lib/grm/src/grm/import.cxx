@@ -1040,7 +1040,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           file_data[depth][0][row] =
               ranges.xmin + (ranges.xmax - ranges.xmin) * (file_data[depth][0][row] - min_x) / (max_x - min_x);
           file_data[depth][1][row] =
-              ranges.ymin + (ranges.ymax - ranges.ymin) * (file_data[depth][0][row] - min_y) / (max_y - min_y);
+              ranges.ymin + (ranges.ymax - ranges.ymin) * (file_data[depth][1][row] - min_y) / (max_y - min_y);
         }
       grm_args_push(args, "x", "nD", rows, file_data[depth][0].data());
       grm_args_push(args, "y", "nD", rows, file_data[depth][1].data());
