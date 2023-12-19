@@ -37,6 +37,7 @@ static std::map<std::string, const char *> key_to_types{
     {"ind_bar_color", "nA"},
     {"ind_edge_color", "nA"},
     {"ind_edge_width", "nA"},
+    {"int_lim", "dd"},
     {"isovalue", "d"},
     {"keep_aspect_ratio", "i"},
     {"kind", "s"},

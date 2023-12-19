@@ -423,7 +423,8 @@ static void clearOldChildren(del_values *del, const std::shared_ptr<GRM::Element
       bool only_errorchild = true;
       for (const auto &child : element->children())
         {
-          if (child->localName() != "error_bars")
+          if (child->localName() != "error_bars" &&
+              !(child->localName() == "fill_area" && element->localName() == "series_line"))
             {
               only_errorchild = false;
               break;
@@ -2310,6 +2311,103 @@ static void processFont(const std::shared_ptr<GRM::Element> &element)
   /* TODO: Implement other datatypes for `font` and `font_precision` */
 }
 
+static void processIntegral(const std::shared_ptr<GRM::Element> &element)
+{
+  double int_lim_low = 0, int_lim_high;
+  std::vector<double> x_vec, y_vec, f1, f2;
+  int x_length;
+  del_values del = del_values::update_without_default;
+  int child_id = 1, id, i;
+  std::shared_ptr<GRM::Element> fill_area;
+  std::string str;
+  bool fill_area_child = false;
+  auto subplot_element = getSubplotElement(element);
+
+  del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
+
+  if (element->hasAttribute("int_lim_low"))
+    {
+      int_lim_low = static_cast<double>(element->getAttribute("int_lim_low"));
+    }
+  /* is allways given from definition */
+  int_lim_high = static_cast<double>(element->getAttribute("int_lim_high"));
+
+  if (int_lim_high < int_lim_low)
+    {
+      fprintf(stderr, "Integral low limit is greater than the high limit. The limits gets swapped.\n");
+      auto tmp = int_lim_high;
+      int_lim_high = int_lim_low;
+      int_lim_low = tmp;
+    }
+
+  auto context = global_render->getContext();
+  auto y = static_cast<std::string>(element->getAttribute("y"));
+  y_vec = GRM::get<std::vector<double>>((*context)[y]);
+
+  auto x = static_cast<std::string>(element->getAttribute("x"));
+  x_vec = GRM::get<std::vector<double>>((*context)[x]);
+  x_length = (int)x_vec.size();
+
+  /* get all points for the fill area from the current line */
+  f1.push_back(int_lim_low);
+  f2.push_back((static_cast<int>(subplot_element->getAttribute("y_log"))) ? 1 : 0);
+  for (i = 0; i < x_length; i++)
+    {
+      if (grm_isnan(x_vec[i]) || grm_isnan(y_vec[i])) continue;
+      if (x_vec[i] < int_lim_low && x_vec[i + 1] > int_lim_low)
+        {
+          f1.push_back(int_lim_low);
+          f2.push_back(y_vec[i] + (x_vec[i + 1] - int_lim_low) * (y_vec[i + 1] - y_vec[i]));
+        }
+      if (x_vec[i] > int_lim_low && x_vec[i] < int_lim_high)
+        {
+          f1.push_back(x_vec[i]);
+          f2.push_back(y_vec[i]);
+        }
+      if (x_vec[i] < int_lim_high && x_vec[i + 1] > int_lim_high)
+        {
+          f1.push_back(int_lim_high);
+          f2.push_back(y_vec[i] + (x_vec[i + 1] - int_lim_high) * (y_vec[i + 1] - y_vec[i]));
+        }
+    }
+  f1.push_back(int_lim_high);
+  f2.push_back((static_cast<int>(subplot_element->getAttribute("y_log"))) ? 1 : 0);
+
+  id = static_cast<int>(global_root->getAttribute("_id"));
+  global_root->setAttribute("_id", id + 1);
+  str = std::to_string(id);
+
+  for (const auto &child : element->children())
+    {
+      if (child->localName() == "fill_area") fill_area_child = true;
+    }
+  if ((del != del_values::update_without_default && del != del_values::update_with_default) || !fill_area_child)
+    {
+      fill_area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
+      fill_area->setAttribute("_child_id", child_id++);
+      element->append(fill_area);
+    }
+  else
+    {
+      fill_area = element->querySelectors("fill_area[_child_id=" + std::to_string(child_id++) + "]");
+      if (fill_area != nullptr)
+        global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, fill_area);
+    }
+
+  if (fill_area != nullptr)
+    {
+      int fill_color_ind = 989, fill_int_style = 2;
+      if (element->hasAttribute("fill_color_ind"))
+        fill_color_ind = static_cast<int>(element->getAttribute("line_color_ind"));
+      fill_area->setAttribute("fill_color_ind", fill_color_ind);
+      if (element->hasAttribute("fill_int_style"))
+        fill_int_style = static_cast<int>(element->getAttribute("fill_int_style"));
+      fill_area->setAttribute("fill_int_style", fill_int_style);
+      fill_area->setAttribute("name", "integral");
+    }
+}
+
+
 static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &element)
 {
   std::string mkind = static_cast<std::string>(element->getAttribute("marginal_heatmap_kind"));
@@ -3732,8 +3830,8 @@ void GRM::Render::processAttributes(const std::shared_ptr<GRM::Element> &element
       {std::string("fill_color_ind"), processFillColorInd},
       {std::string("fill_int_style"), processFillIntStyle},
       {std::string("fill_style"), processFillStyle},
-      {std::string("x_flip"), processFlip}, // yflip is also set
       {std::string("font"), processFont},
+      {std::string("int_lim_high"), processIntegral},
       {std::string("line_color_ind"), processLineColorInd},
       {std::string("line_spec"), processLineSpec},
       {std::string("line_type"), processLineType},
@@ -3755,6 +3853,7 @@ void GRM::Render::processAttributes(const std::shared_ptr<GRM::Element> &element
       {std::string("ws_viewport_x_min"),
        processWSViewport},                               // the xmin element can be used here cause all 4 are required
       {std::string("ws_window_x_min"), processWSWindow}, // the xmin element can be used here cause all 4 are required
+      {std::string("x_flip"), processFlip},              // yflip is also set
       {std::string("x_label"), processXlabel},
       {std::string("x_tick_labels"), processXTickLabels},
       {std::string("y_label"), processYlabel},
@@ -12714,6 +12813,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("indices"),
        std::vector<std::string>{"None",
                                 "References the bars which gets calculated as inner bars stored in the context"}},
+      {std::string("int_lim_high"), std::vector<std::string>{"None", "Sets the upper limit for the integral"}},
+      {std::string("int_lim_low"), std::vector<std::string>{"0", "Sets the lower limit for the integral"}},
       {std::string("isovalue"), std::vector<std::string>{"0.5", "The used isovalue"}},
       {std::string("keep_aspect_ratio"), std::vector<std::string>{"0", "Sets if the aspect ratio is kept"}},
       {std::string("keep_window"),
