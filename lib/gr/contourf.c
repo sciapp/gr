@@ -511,10 +511,39 @@ void gr_draw_contourf(int nx, int ny, int nh, double *px, double *py, double *h,
                       int last_color, int major_h)
 {
   double zmin, zmax;
-  int i;
+  int i, j;
   double *contours = NULL;
   double z_space_min, z_space_max;
   int rotation, tilt;
+  int scol = 0, srow = 0;
+
+  /* skip leading NaN rows/columns */
+  while (is_nan(px[scol]) && scol < nx - 1)
+    {
+      scol++;
+    }
+  while (is_nan(py[srow]) && srow < ny - 1)
+    {
+      srow++;
+    }
+
+  if (scol || srow)
+    {
+      double *pzn = malloc((nx - scol) * (ny - srow) * sizeof(double));
+      assert(pzn);
+      for (i = 0; i < ny - srow; i++)
+        {
+          for (j = 0; j < nx - scol; j++)
+            {
+              pzn[i * (nx - scol) + j] = pz[(i + srow) * nx + j + scol];
+            }
+        }
+      nx -= scol;
+      ny -= srow;
+      px += scol;
+      py += srow;
+      pz = pzn;
+    }
 
   zmin = pz[nx * ny - 1], zmax = pz[nx * ny - 1];
   for (i = 0; i < nx * ny; i++)
@@ -570,5 +599,10 @@ void gr_draw_contourf(int nx, int ny, int nh, double *px, double *py, double *h,
   if (contours)
     {
       free(contours);
+    }
+  if (srow || scol)
+    {
+      free(pz);
+      pz = NULL;
     }
 }
