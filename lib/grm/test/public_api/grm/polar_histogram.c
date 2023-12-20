@@ -30,12 +30,14 @@ static void polar_histogram_ylim(void)
 
   grm_args_push(args, "kind", "s", "polar_histogram");
   grm_args_push(args, "x", "nD", theta_length, &theta);
-  grm_args_push(args, "y_lim", "dd", 0.0, 8.0);
-  grm_args_push(args, "x_range", "dd", 60.0, 240.0);
+  /*
+    grm_args_push(args, "y_lim", "dd", 0.0, 8.0);
+    grm_args_push(args, "x_range", "dd", 60.0, 240.0);
+  */
 
-  /*grm_args_push(args, "x_colormap", "i", 44); */ /*VIRIDIS*/ /*
-    grm_args_push(args, "y_colormap", "i", 44);
-    grm_args_push(args, "draw_edges", "i", 1);*/
+  grm_args_push(args, "x_colormap", "i", 44);
+  grm_args_push(args, "y_colormap", "i", 44);
+  grm_args_push(args, "draw_edges", "i", 1);
 
   /*
     grm_args_push(args, "stairs", "i", 1);
