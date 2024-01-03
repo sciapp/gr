@@ -1159,12 +1159,14 @@ void GRPlotWidget::draw()
     }
   if (arguments_changed)
     {
-      assert(grm_plot(args_));
+      auto was_successful = grm_plot(args_);
+      assert(was_successful);
       arguments_changed = false;
     }
   else
     {
-      assert(grm_plot(nullptr));
+      auto was_successful = grm_plot(nullptr);
+      assert(was_successful);
     }
 }
 
