@@ -1616,7 +1616,7 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
   grm_input(args);
   grm_args_delete(args);
 
-  update();
+  redraw();
 }
 
 void GRPlotWidget::resizeEvent(QResizeEvent *event)

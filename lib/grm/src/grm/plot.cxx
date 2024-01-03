@@ -5289,7 +5289,7 @@ void grm_set_attribute_on_all_subplots(std::string attribute, int value)
 
 int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, const int y2, const int keep_aspect_ratio,
                                   double *factor_x, double *factor_y, double *focus_x, double *focus_y,
-                                  std::shared_ptr<GRM::Element> subplot_element)
+                                  std::shared_ptr<GRM::Element> &subplot_element)
 {
   double ndc_box_x[4], ndc_box_y[4], viewport[4], wswindow[4];
   double ndc_left, ndc_top, ndc_right, ndc_bottom;
