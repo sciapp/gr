@@ -1326,7 +1326,7 @@ binary-builder:
   - tags@Scientific-IT-Systems/gr
   variables:
     GIT_STRATEGY: none
-    JULIA_VERSION: 1.9.4
+    JULIA_VERSION: 1.10.0
 
 packages-tar:
   stage: package
