@@ -38,7 +38,7 @@ endif
      GKSLIBS = ../gks/libGKS.a
       FTLIBS = $(THIRDPARTYDIR)/lib/libfreetype.a
        ZLIBS = $(THIRDPARTYDIR)/lib/libz.a
-      QHLIBS = $(THIRDPARTYDIR)/lib/libqhull.a
+      QHLIBS = $(THIRDPARTYDIR)/lib/libqhull_r.a
 
 # Only update gr_version.h if it will result in an actual change
 GR_VERSION_H_GENERATED := $(shell ../../lib/Version)
