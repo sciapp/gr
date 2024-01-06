@@ -1,17 +1,16 @@
-/*<html><pre>  -<a                             href="qh-user.htm"
+/*<html><pre>  -<a                             href="qh-user_r.htm"
   >-------------------------------</a><a name="TOP">-</a>
 
-   user.h
+   user_r.h
    user redefinable constants
 
-   for each source file, user.h is included first
+   for each source file, user_r.h is included first
 
-   see qh-user.htm.  see COPYING for copyright information.
+   see qh-user_r.htm.  see COPYING for copyright information.
 
-   See user.c for sample code.
+   See user_r.c for sample code.
 
-   before reading any code, review libqhull.h for data structure definitions
-   and the "qh" macro.
+   before reading any code, review libqhull_r.h for data structure definitions
 
 Sections:
    ============= qhull library constants ======================
@@ -47,7 +46,7 @@ Code flags --
 /*============= qhull library constants ======================*/
 /*============================================================*/
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="filenamelen">-</a>
 
   FILENAMElen -- max length for TI and TO filenames
@@ -56,19 +55,19 @@ Code flags --
 
 #define qh_FILENAMElen 500
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="msgcode">-</a>
 
   msgcode -- Unique message codes for qh_fprintf
 
-  If add new messages, assign these values and increment in user.h and user.h
+  If add new messages, assign these values and increment in user.h and user_r.h
   See QhullError.h for 10000 error codes.
   Cannot use '0031' since it would be octal
 
   def counters =  [31/32/33/38, 1067, 2113, 3079, 4097, 5006,
      6429, 7027/7028/7035/7068/7070/7102, 8163, 9428, 10000, 11034]
 
-  See: qh_ERR* [libqhull.h]
+  See: qh_ERR* [libqhull_r.h]
 */
 
 #define MSG_TRACE0     0   /* always include if logging ('Tn') */
@@ -83,10 +82,10 @@ Code flags --
 #define MSG_OUTPUT  9000
 #define MSG_QHULL_ERROR 10000 /* errors thrown by QhullError.cpp (QHULLlastError is in QhullError.h) */
 #define MSG_FIX    11000   /* Document as 'QH11... FIX: ...' */
-#define MSG_MAXLEN  3000   /* qh_printhelp_degenerate() in user.c */
+#define MSG_MAXLEN  3000   /* qh_printhelp_degenerate() in user_r.c */
 
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="qh_OPTIONline">-</a>
 
   qh_OPTIONline -- max length of an option line 'FO'
@@ -97,7 +96,7 @@ Code flags --
 /*============= data types and configuration macros ==========*/
 /*============================================================*/
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="realT">-</a>
 
   realT
@@ -170,7 +169,7 @@ Code flags --
 #error unknown float option
 #endif
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="countT">-</a>
 
   countT
@@ -188,7 +187,7 @@ typedef int countT;
 #endif
 #define COUNTmax INT_MAX
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="qh_POINTSmax">-</a>
 
   qh_POINTSmax
@@ -196,7 +195,7 @@ typedef int countT;
 */
 #define qh_POINTSmax (INT_MAX-16)
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="CPUclock">-</a>
 
   qh_CPUclock
@@ -221,7 +220,7 @@ typedef int countT;
      1          for CLOCKS_PER_SEC, CLOCKS_PER_SECOND, or microsecond
                 Note:  may fail if more than 1 hour elapsed time
 
-     2          use qh_clock() with POSIX times() (see global.c)
+     2          use qh_clock() with POSIX times() (see global_r.c)
 */
 #define qh_CLOCKtype 1  /* change to the desired number */
 
@@ -252,7 +251,7 @@ typedef int countT;
 #error unknown clock option
 #endif
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="RANDOM">-</a>
 
   qh_RANDOMtype, qh_RANDOMmax, qh_RANDOMseed
@@ -266,7 +265,7 @@ typedef int countT;
     2       for rand() with RAND_MAX or 15 bits (system 5)
     3       for rand() with 31 bits (Sun)
     4       for lrand48() with 31 bits (Solaris)
-    5       for qh_rand() with 31 bits (included with Qhull)
+    5       for qh_rand(qh) with 31 bits (included with Qhull, requires 'qh')
 
   notes:
     Random numbers are used by rbox to generate point sets.  Random
@@ -289,7 +288,7 @@ typedef int countT;
 #if (qh_RANDOMtype == 1)
 #define qh_RANDOMmax ((realT)0x7fffffffUL)  /* 31 bits, random()/MAX */
 #define qh_RANDOMint random()
-#define qh_RANDOMseed_(seed) srandom(seed);
+#define qh_RANDOMseed_(qh, seed) srandom(seed);
 
 #elif (qh_RANDOMtype == 2)
 #ifdef RAND_MAX
@@ -298,29 +297,29 @@ typedef int countT;
 #define qh_RANDOMmax ((realT)32767)   /* 15 bits (System 5) */
 #endif
 #define qh_RANDOMint  rand()
-#define qh_RANDOMseed_(seed) srand((unsigned int)seed);
+#define qh_RANDOMseed_(qh, seed) srand((unsigned int)seed);
 
 #elif (qh_RANDOMtype == 3)
 #define qh_RANDOMmax ((realT)0x7fffffffUL)  /* 31 bits, Sun */
 #define qh_RANDOMint  rand()
-#define qh_RANDOMseed_(seed) srand((unsigned int)seed);
+#define qh_RANDOMseed_(qh, seed) srand((unsigned int)seed);
 
 #elif (qh_RANDOMtype == 4)
 #define qh_RANDOMmax ((realT)0x7fffffffUL)  /* 31 bits, lrand38()/MAX */
 #define qh_RANDOMint lrand48()
-#define qh_RANDOMseed_(seed) srand48(seed);
+#define qh_RANDOMseed_(qh, seed) srand48(seed);
 
-#elif (qh_RANDOMtype == 5)
+#elif (qh_RANDOMtype == 5)  /* 'qh' is an implicit parameter */
 #define qh_RANDOMmax ((realT)2147483646UL)  /* 31 bits, qh_rand/MAX */
-#define qh_RANDOMint qh_rand( )
-#define qh_RANDOMseed_(seed) qh_srand(seed);
+#define qh_RANDOMint qh_rand(qh)
+#define qh_RANDOMseed_(qh, seed) qh_srand(qh, seed);
 /* unlike rand(), never returns 0 */
 
 #else
 #error: unknown random option
 #endif
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="ORIENTclock">-</a>
 
   qh_ORIENTclock
@@ -328,7 +327,7 @@ typedef int countT;
 */
 #define qh_ORIENTclock 0
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="RANDOMdist">-</a>
 
   qh_RANDOMdist
@@ -343,7 +342,7 @@ typedef int countT;
 /*============= joggle constants =============================*/
 /*============================================================*/
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="JOGGLEdefault">-</a>
 
   qh_JOGGLEdefault
@@ -365,7 +364,7 @@ typedef int countT;
 */
 #define qh_JOGGLEdefault 30000.0
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="JOGGLEincrease">-</a>
 
   qh_JOGGLEincrease
@@ -373,7 +372,7 @@ typedef int countT;
 */
 #define qh_JOGGLEincrease 10.0
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="JOGGLEretry">-</a>
 
   qh_JOGGLEretry
@@ -384,7 +383,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_JOGGLEretry 2
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="JOGGLEagain">-</a>
 
   qh_JOGGLEagain
@@ -395,7 +394,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_JOGGLEagain 1
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="JOGGLEmaxincrease">-</a>
 
   qh_JOGGLEmaxincrease
@@ -407,7 +406,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_JOGGLEmaxincrease 1e-2
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="JOGGLEmaxretry">-</a>
 
   qh_JOGGLEmaxretry
@@ -419,7 +418,7 @@ try twice at the original value in case of bad luck the first time
 /*============= performance related constants ================*/
 /*============================================================*/
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="HASHfactor">-</a>
 
   qh_HASHfactor
@@ -430,7 +429,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_HASHfactor 2
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="VERIFYdirect">-</a>
 
   qh_VERIFYdirect
@@ -441,7 +440,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_VERIFYdirect 1000000
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="INITIALsearch">-</a>
 
   qh_INITIALsearch
@@ -449,7 +448,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_INITIALsearch 6
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="INITIALmax">-</a>
 
   qh_INITIALmax
@@ -465,15 +464,15 @@ try twice at the original value in case of bad luck the first time
 /*============= memory constants =============================*/
 /*============================================================*/
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="MEMalign">-</a>
 
   qh_MEMalign
-    memory alignment for qh_meminitbuffers() in global.c
+    memory alignment for qh_meminitbuffers() in global_r.c
 
   notes:
     to avoid bus errors, memory allocation must consider alignment requirements.
-    malloc() automatically takes care of alignment.   Since mem.c manages
+    malloc() automatically takes care of alignment.   Since mem_r.c manages
     its own memory, we need to explicitly specify alignment in
     qh_meminitbuffers().
 
@@ -481,34 +480,34 @@ try twice at the original value in case of bad luck the first time
     do not occur in data structures and pointers are the same size.  Be careful
     of machines (e.g., DEC Alpha) with large pointers.
 
-    If using gcc, best alignment is [fmax_() is defined in geom.h]
+    If using gcc, best alignment is [fmax_() is defined in geom_r.h]
               #define qh_MEMalign fmax_(__alignof__(realT),__alignof__(void *))
 */
 #define qh_MEMalign ((int)(fmax_(sizeof(realT), sizeof(void *))))
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="MEMbufsize">-</a>
 
   qh_MEMbufsize
     size of additional memory buffers
 
   notes:
-    used for qh_meminitbuffers() in global.c
+    used for qh_meminitbuffers() in global_r.c
 */
 #define qh_MEMbufsize 0x10000       /* allocate 64K memory buffers */
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="MEMinitbuf">-</a>
 
   qh_MEMinitbuf
     size of initial memory buffer
 
   notes:
-    use for qh_meminitbuffers() in global.c
+    use for qh_meminitbuffers() in global_r.c
 */
 #define qh_MEMinitbuf 0x20000      /* initially allocate 128K buffer */
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="INFINITE">-</a>
 
   qh_INFINITE
@@ -516,7 +515,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_INFINITE  -10.101
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="DEFAULTbox">-</a>
 
   qh_DEFAULTbox
@@ -532,7 +531,7 @@ try twice at the original value in case of bad luck the first time
 /*============= conditional compilation ======================*/
 /*============================================================*/
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="compiler">-</a>
 
   __cplusplus
@@ -551,7 +550,7 @@ try twice at the original value in case of bad luck the first time
     defined for strict ANSI C
 */
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="COMPUTEfurthest">-</a>
 
   qh_COMPUTEfurthest
@@ -565,7 +564,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_COMPUTEfurthest 0
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="KEEPstatistics">-</a>
 
   qh_KEEPstatistics
@@ -576,7 +575,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_KEEPstatistics 1
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="MAXoutside">-</a>
 
   qh_MAXoutside
@@ -589,12 +588,12 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_MAXoutside 1
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="NOmerge">-</a>
 
   qh_NOmerge
     disables facet merging if defined
-    For MSVC compiles, use qhull-exports-nomerge.def instead of qhull-exports.def
+    For MSVC compiles, use qhull_r-exports-nomerge.def instead of qhull_r-exports.def
 
   notes:
     This saves about 25% space, 30% space in combination with qh_NOtrace, 
@@ -604,14 +603,14 @@ try twice at the original value in case of bad luck the first time
       qh_NOmerge sets 'QJ' to avoid precision errors
 
   see:
-    <a href="mem.h#NOmem">qh_NOmem</a> in mem.h
+    <a href="mem_r.h#NOmem">qh_NOmem</a> in mem_r.h
 
-    see user.c/user_eg.c for removing io.o
+    see user_r.c/user_eg.c for removing io_r.o
 
   #define qh_NOmerge
 */
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="NOtrace">-</a>
 
   qh_NOtrace
@@ -626,64 +625,14 @@ try twice at the original value in case of bad luck the first time
   #define qh_NOtrace
 */
 
-/*-<a                             href="qh-user.htm#TOC"
-  >--------------------------------</a><a name="QHpointer">-</a>
-
-  qh_QHpointer
-    access global data with pointer or static structure
-
-  qh_QHpointer  = 1     access globals via a pointer to allocated memory
-                        enables qh_saveqhull() and qh_restoreqhull()
-                        [2010, gcc] costs about 4% in time and 4% in space
-                        [2003, msvc] costs about 8% in time and 2% in space
-
-                = 0     qh_qh and qh_qhstat are static data structures
-                        only one instance of qhull() can be active at a time
-                        default value
-
-  For msvc, define qh_QHpointer_dllimport or qh_dllimport for qh_qh as __declspec(dllimport) [libqhull.h]
-
-  notes:
-    [jan'16] qh_QHpointer is deprecated for Qhull.  Use libqhull_r instead.
-    all global variables for qhull are in qh, qhmem, and qhstat
-    qh is defined in libqhull.h
-    qhmem is defined in mem.h
-    qhstat is defined in stat.h
-
-  #define qh_QHpointer 1
-*/
-
-#ifdef qh_QHpointer
-#ifdef qh_dllimport
-#error QH6207 Qhull error: Define qh_QHpointer_dllimport instead of qh_dllimport with qh_QHpointer
-#endif
-#else
-#define qh_QHpointer 0
-#ifdef qh_QHpointer_dllimport
-#error QH6234 Qhull error: Define qh_dllimport instead of qh_QHpointer_dllimport when qh_QHpointer is not defined
-#endif
-#endif
 #if 0  /* sample code */
-    qhT *oldqhA, *oldqhB;
-
-    exitcode= qh_new_qhull(dim, numpoints, points, ismalloc,
+    exitcode= qh_new_qhull(qhT *qh, dim, numpoints, points, ismalloc,
                       flags, outfile, errfile);
-    /* use results from first call to qh_new_qhull */
-    oldqhA= qh_save_qhull();
-    exitcode= qh_new_qhull(dimB, numpointsB, pointsB, ismalloc,
-                      flags, outfile, errfile);
-    /* use results from second call to qh_new_qhull */
-    oldqhB= qh_save_qhull();
-    qh_restore_qhull(&oldqhA);
-    /* use results from first call to qh_new_qhull */
-    qh_freeqhull(qh_ALL);  /* frees all memory used by first call */
-    qh_restore_qhull(&oldqhB);
-    /* use results from second call to qh_new_qhull */
-    qh_freeqhull(!qh_ALL); /* frees long memory used by second call */
-    qh_memfreeshort(&curlong, &totlong);  /* frees short memory and memory allocator */
+    qh_freeqhull(qhT *qh, !qh_ALL); /* frees long memory used by second call */
+    qh_memfreeshort(qhT *qh, &curlong, &totlong);  /* frees short memory and memory allocator */
 #endif
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="QUICKhelp">-</a>
 
   qh_QUICKhelp
@@ -699,7 +648,7 @@ try twice at the original value in case of bad luck the first time
    to modify them.  They effect the performance of facet merging.
 */
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="BESTcentrum">-</a>
 
   qh_BESTcentrum
@@ -712,7 +661,7 @@ try twice at the original value in case of bad luck the first time
 #define qh_BESTcentrum 20
 #define qh_BESTcentrum2 2
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="BESTnonconvex">-</a>
 
   qh_BESTnonconvex
@@ -723,7 +672,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_BESTnonconvex 15
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="COPLANARratio">-</a>
 
   qh_COPLANARratio
@@ -734,7 +683,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_COPLANARratio 3
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="DIMmergeVertex">-</a>
 
   qh_DIMmergeVertex
@@ -742,7 +691,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_DIMmergeVertex 6
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="DIMreduceBuild">-</a>
 
   qh_DIMreduceBuild
@@ -750,7 +699,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_DIMreduceBuild 5
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="DISToutside">-</a>
 
   qh_DISToutside
@@ -779,9 +728,9 @@ try twice at the original value in case of bad luck the first time
     qh_USEfindbestnew -- when to use qh_findbestnew for qh_partitionpoint()
 */
 #define qh_DISToutside ((qh_USEfindbestnew ? 2 : 1) * \
-     fmax_((qh MERGING ? 2 : 1)*qh MINoutside, qh max_outside))
+     fmax_((qh->MERGING ? 2 : 1)*qh->MINoutside, qh->max_outside))
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="MAXcheckpoint">-</a>
 
   qh_MAXcheckpoint
@@ -789,7 +738,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_MAXcheckpoint 10
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="MAXcoplanarcentrum">-</a>
 
   qh_MAXcoplanarcentrum
@@ -803,7 +752,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_MAXcoplanarcentrum 10
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="MAXnewcentrum">-</a>
 
   qh_MAXnewcentrum
@@ -816,7 +765,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_MAXnewcentrum 5
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="MAXnewmerges">-</a>
 
   qh_MAXnewmerges
@@ -827,7 +776,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_MAXnewmerges 2
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="RATIOconcavehorizon">-</a>
 
   qh_RATIOconcavehorizon
@@ -836,7 +785,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_RATIOconcavehorizon 20.0
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="RATIOconvexmerge">-</a>
 
   qh_RATIOconvexmerge
@@ -847,7 +796,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_RATIOconvexmerge 10.0
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="RATIOcoplanarapex">-</a>
 
   qh_RATIOcoplanarapex
@@ -858,7 +807,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_RATIOcoplanarapex 3.0
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="RATIOcoplanaroutside">-</a>
 
   qh_RATIOcoplanaroutside
@@ -870,7 +819,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_RATIOcoplanaroutside 30.0
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="RATIOmaxsimplex">-</a>
 
   qh_RATIOmaxsimplex
@@ -883,7 +832,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_RATIOmaxsimplex 1.0e-3
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="RATIOnearinside">-</a>
 
   qh_RATIOnearinside
@@ -897,7 +846,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_RATIOnearinside 5
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="RATIOpinchedsubridge">-</a>
 
   qh_RATIOpinchedsubridge
@@ -907,7 +856,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_RATIOpinchedsubridge 10.0
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="RATIOtrypinched">-</a>
 
   qh_RATIOtrypinched
@@ -916,7 +865,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_RATIOtrypinched 4.0
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="RATIOtwisted">-</a>
 
   qh_RATIOtwisted
@@ -924,7 +873,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_RATIOtwisted 20.0
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="SEARCHdist">-</a>
 
   qh_SEARCHdist
@@ -937,9 +886,9 @@ try twice at the original value in case of bad luck the first time
     qh_USEfindbestnew -- when to use qh_findbestnew for qh_partitionpoint()
 */
 #define qh_SEARCHdist ((qh_USEfindbestnew ? 2 : 1) * \
-      (qh max_outside + 2 * qh DISTround + fmax_( qh MINvisible, qh MAXcoplanar)));
+      (qh->max_outside + 2 * qh->DISTround + fmax_( qh->MINvisible, qh->MAXcoplanar)));
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="USEfindbestnew">-</a>
 
   qh_USEfindbestnew
@@ -953,7 +902,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_USEfindbestnew (zzval_(Ztotmerge) > 50)
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="MAXnarrow">-</a>
 
   qh_MAXnarrow
@@ -969,7 +918,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_MAXnarrow -0.99999999
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="WARNnarrow">-</a>
 
   qh_WARNnarrow
@@ -981,7 +930,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_WARNnarrow -0.999999999999999
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
 >--------------------------------</a><a name="WIDEcoplanar">-</a>
 
   qh_WIDEcoplanar
@@ -997,7 +946,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_WIDEcoplanar 6
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
 >--------------------------------</a><a name="WIDEduplicate">-</a>
 
   qh_WIDEduplicate
@@ -1009,7 +958,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_WIDEduplicate 100
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
 >--------------------------------</a><a name="WIDEdupridge">-</a>
 
   qh_WIDEdupridge
@@ -1020,7 +969,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_WIDEdupridge 50
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
 >--------------------------------</a><a name="WIDEmaxoutside">-</a>
 
   qh_WIDEmaxoutside
@@ -1033,7 +982,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_WIDEmaxoutside 100
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
 >--------------------------------</a><a name="WIDEmaxoutside2">-</a>
 
   qh_WIDEmaxoutside2
@@ -1044,7 +993,7 @@ try twice at the original value in case of bad luck the first time
 #define qh_WIDEmaxoutside2 (10*qh_WIDEmaxoutside)
 
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
 >--------------------------------</a><a name="WIDEpinched">-</a>
 
   qh_WIDEpinched
@@ -1060,7 +1009,7 @@ try twice at the original value in case of bad luck the first time
 */
 #define qh_WIDEpinched 100
 
-/*-<a                             href="qh-user.htm#TOC"
+/*-<a                             href="qh-user_r.htm#TOC"
   >--------------------------------</a><a name="ZEROdelaunay">-</a>
 
   qh_ZEROdelaunay
@@ -1092,7 +1041,7 @@ try twice at the original value in case of bad luck the first time
    From 2005=>msvcr80d, 2010=>msvcr100d, 2012=>msvcr110d
 
    Watch: {,,msvcr80d.dll}_crtBreakAlloc  Value from {n} in the leak report
-   _CrtSetBreakAlloc(689); // qh_lib_check() [global.c]
+   _CrtSetBreakAlloc(689); // qh_lib_check() [global_r.c]
 
    Examples
      http://free-cad.sourceforge.net/SrcDocu/d2/d7f/MemDebug_8cpp_source.html

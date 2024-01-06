@@ -17,7 +17,7 @@ LIBXML2LIBS = $(THIRDPARTYDIR)/lib/libxml2.a $(THIRDPARTYDIR)/lib/libz.a
    JPEGLIBS = $(THIRDPARTYDIR)/lib/libjpeg.a
     PNGLIBS = $(THIRDPARTYDIR)/lib/libpng.a
       ZLIBS = $(THIRDPARTYDIR)/lib/libz.a
-     QHLIBS = $(THIRDPARTYDIR)/lib/libqhull.a
+     QHLIBS = $(THIRDPARTYDIR)/lib/libqhull_r.a
      FTLIBS = $(THIRDPARTYDIR)/lib/libfreetype.a
        LIBS = $(GR3LIBS) $(GRLIBS) $(GKSLIBS) -lm -lws2_32 -lmsimg32 -lgdi32 -lpthread
 

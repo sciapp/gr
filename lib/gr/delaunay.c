@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "libqhull/qhull_a.h"
+#include "libqhull_r/qhull_ra.h"
 
 #include "gr.h"
 
@@ -14,6 +14,8 @@
 
 void gr_delaunay(int npoints, const double *x, const double *y, int *ntri, int **triangles)
 {
+  qhT qh_qh;
+  qhT *qh = &qh_qh;
   coordT *points = NULL;
   facetT *facet;
   vertexT *vertex, **vertexp;
@@ -40,11 +42,13 @@ void gr_delaunay(int npoints, const double *x, const double *y, int *ntri, int *
           cnt += 1;
         }
 
+      qh_meminit(qh, stderr);
+
       /* Perform Delaunay triangulation */
-      if (qh_new_qhull(ndim, cnt, points, False, "qhull d Qt QbB Qz", NULL, stderr) == qh_ERRnone)
+      if (qh_new_qhull(qh, ndim, cnt, points, False, "qhull d Qt QbB Qz", NULL, stderr) == qh_ERRnone)
         {
           /* Split facets so that they only have 3 points each */
-          qh_triangulate();
+          qh_triangulate(qh);
 
           /* Determine ntri and max_facet_id */
           FORALLfacets
@@ -52,7 +56,7 @@ void gr_delaunay(int npoints, const double *x, const double *y, int *ntri, int *
             if (!facet->upperdelaunay) (*ntri)++;
           }
 
-          max_facet_id = qh facet_id - 1;
+          max_facet_id = qh->facet_id - 1;
 
           /* Create array to map facet id to triangle index */
           tri_indices = (int *)malloc((max_facet_id + 1) * sizeof(int));
@@ -73,7 +77,7 @@ void gr_delaunay(int npoints, const double *x, const double *y, int *ntri, int *
                         tri_indices[facet->id] = i++;
 
                         indicesp = indices;
-                        FOREACHvertex_(facet->vertices) *indicesp++ = qh_pointid(vertex->point);
+                        FOREACHvertex_(facet->vertices) *indicesp++ = qh_pointid(qh, vertex->point);
 
                         *tri++ = (facet->toporient ? indices[0] : indices[2]);
                         *tri++ = indices[1];
@@ -94,8 +98,8 @@ void gr_delaunay(int npoints, const double *x, const double *y, int *ntri, int *
       else
         fprintf(stderr, "Error in Delaunay triangulation calculation\n");
 
-      qh_freeqhull(!qh_ALL);
-      qh_memfreeshort(&curlong, &totlong);
+      qh_freeqhull(qh, !qh_ALL);
+      qh_memfreeshort(qh, &curlong, &totlong);
       if (curlong || totlong) fprintf(stderr, "Could not free all allocated memory\n");
 
       free(points);

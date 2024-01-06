@@ -126,7 +126,7 @@ INCLUDES = -I$(THIRDPARTYDIR)/include/ \
     LIBS = $(JPEGDIR)/libjpeg.a \
            $(PNGDIR)/libpng.a \
            $(ZLIBDIR)/libz.a \
-           $(QHULLDIR)/libqhull.a \
+           $(QHULLDIR)/libqhull_r.a \
            $(FTDIR)/libfreetype.a \
            $(EXPATDIR)/libexpat.a
 
@@ -160,7 +160,7 @@ $(PNGDIR)/libpng.a:
 $(ZLIBDIR)/libz.a:
 	$(MAKE) -C $(ZLIBDIR)
 
-$(QHULLDIR)/libqhull.a:
+$(QHULLDIR)/libqhull_r.a:
 	$(MAKE) -C $(QHULLDIR)
 
 $(FTDIR)/libfreetype.a:
