@@ -77,7 +77,15 @@ set(GR_SHARED_LIBRARY_SUFFIX
     CACHE STRING "File suffix for shared libraries"
 )
 
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG
+    TRUE
+    CACHE BOOL ""
+)
+
 find_package(Freetype)
+if(TARGET freetype AND NOT TARGET Freetype::Freetype)
+  add_library(Freetype::Freetype ALIAS freetype)
+endif()
 find_package(Jpeg REQUIRED)
 find_package(Libpng REQUIRED)
 find_package(ZLIB REQUIRED)
