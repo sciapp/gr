@@ -31,6 +31,7 @@
 #include <QGraphicsScene>
 #include <QWindow>
 #include <QCompleter>
+#include <QCursor>
 
 #include "grplot_widget.hxx"
 #include "util.hxx"
@@ -46,6 +47,7 @@ static QFile *test_commands_file = nullptr;
 static QTextStream *test_commands_stream = nullptr;
 static Qt::KeyboardModifiers modifiers = Qt::NoModifier;
 static std::vector<Bounding_object> cur_moved;
+static bool disable_movable_xform = false;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -99,6 +101,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   treewidget = new TreeWidget(this);
   treewidget->hide();
   selected_parent = nullptr;
+  csr = new QCursor(Qt::ArrowCursor);
+  setCursor(*csr);
 
   combo_box_attr = QStringList{
       "algorithm",
@@ -135,10 +139,13 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "adjust_x_lim",
       "adjust_y_lim",
       "adjust_z_lim",
+      "disable_x_trans",
+      "disable_y_trans",
       "grplot",
       "keep_aspect_ratio",
       "keep_window",
       "marginal_heatmap_side_plot",
+      "movable",
       "phi_flip",
       "set_text_color_for_background",
       "space",
@@ -236,6 +243,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 
       type = new QMenu("&Plot type");
       algo = new QMenu("&Algorithm");
+      modi_menu = new QMenu("&Modi");
 
       grm_args_values(args_, "kind", "s", &kind);
       if (grm_args_contains(args_, "error"))
@@ -350,10 +358,15 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
           type->addAction(shadeAct);
           type->addAction(hexbinAct);
         }
+      moveableModeAct = new QAction(tr("&Disable movable transformation"), this);
+      connect(moveableModeAct, &QAction::triggered, this, &GRPlotWidget::moveableMode);
+      modi_menu->addAction(moveableModeAct);
+
       if (strcmp(argv[1], "--test") != 0 && !test_commands_stream)
         {
           menu->addMenu(type);
           menu->addMenu(algo);
+          menu->addMenu(modi_menu);
         }
     }
   if (strcmp(argv[1], "--test") != 0 && !test_commands_stream) menu->addMenu(export_menu);
@@ -1187,7 +1200,7 @@ void GRPlotWidget::collectTooltips()
     {
       auto accumulated_tooltip = grm_get_accumulated_tooltip_x(mouse_pos.x(), mouse_pos.y());
       tooltips.clear();
-      if (accumulated_tooltip != nullptr) tooltips.push_back(accumulated_tooltip);
+      if (accumulated_tooltip != nullptr) tooltips.emplace_back(accumulated_tooltip);
     }
   else
     {
@@ -1210,7 +1223,7 @@ void GRPlotWidget::collectTooltips()
             }
           if (!found_current_tooltip)
             {
-              tooltips.push_back(current_tooltip);
+              tooltips.emplace_back(current_tooltip);
             }
         }
     }
@@ -1308,7 +1321,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
 
               if (tooltip.holds_alternative<grm_tooltip_info_t>())
                 {
-                  const grm_tooltip_info_t *single_tooltip = tooltip.get<grm_tooltip_info_t>();
+                  const auto *single_tooltip = tooltip.get<grm_tooltip_info_t>();
                   std::string y_label = single_tooltip->ylabel;
 
                   if (util::startsWith(y_label, "$") && util::endsWith(y_label, "$"))
@@ -1320,8 +1333,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
                 }
               else
                 {
-                  const grm_accumulated_tooltip_info_t *accumulated_tooltip =
-                      tooltip.get<grm_accumulated_tooltip_info_t>();
+                  const auto *accumulated_tooltip = tooltip.get<grm_accumulated_tooltip_info_t>();
                   std::vector<std::string> y_labels(accumulated_tooltip->ylabels,
                                                     accumulated_tooltip->ylabels + accumulated_tooltip->n);
 
@@ -1336,7 +1348,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
                         {
                           y_label = "y";
                         }
-                      info_parts.push_back("<br>\n");
+                      info_parts.emplace_back("<br>\n");
                       info_parts.push_back(util::string_format(accumulatedTooltipTemplate, y_label.c_str(), y));
                     }
                   std::ostringstream info_stream;
@@ -1521,8 +1533,31 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
 
           grm_args_push(args, "x", "i", mouseState.anchor.x());
           grm_args_push(args, "y", "i", mouseState.anchor.y());
-          grm_args_push(args, "xshift", "i", x - mouseState.anchor.x());
-          grm_args_push(args, "yshift", "i", y - mouseState.anchor.y());
+          grm_args_push(args, "x_shift", "i", x - mouseState.anchor.x());
+          grm_args_push(args, "y_shift", "i", y - mouseState.anchor.y());
+
+          grm_input(args);
+          grm_args_delete(args);
+
+          mouseState.anchor = event->pos();
+
+          redraw();
+        }
+      else if (mouseState.mode == MouseState::Mode::movable_xform)
+        {
+          int x, y;
+          getMousePos(event, &x, &y);
+          grm_args_t *args = grm_args_new();
+
+          grm_args_push(args, "x", "i", mouseState.anchor.x());
+          grm_args_push(args, "y", "i", mouseState.anchor.y());
+          grm_args_push(args, "x_shift", "i", x - mouseState.anchor.x());
+          grm_args_push(args, "y_shift", "i", y - mouseState.anchor.y());
+          if (disable_movable_xform) grm_args_push(args, "disable_movable_trans", "i", disable_movable_xform);
+
+          /* get the correct cursor and sets it */
+          int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
+          grm_args_push(args, "movable_state", "i", cursor_state);
 
           grm_input(args);
           grm_args_delete(args);
@@ -1533,6 +1568,8 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
       else
         {
           const char *kind;
+          int x, y;
+          getMousePos(event, &x, &y);
           collectTooltips();
           if (args_ && grm_args_values(args_, "kind", "s", &kind))
             {
@@ -1541,10 +1578,27 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
                   grm_args_t *input_args;
                   input_args = grm_args_new();
 
-                  grm_args_push(input_args, "x", "i", event->pos().x());
-                  grm_args_push(input_args, "y", "i", event->pos().y());
+                  grm_args_push(input_args, "x", "i", x);
+                  grm_args_push(input_args, "y", "i", y);
                   grm_input(input_args);
                 }
+
+              /* get the correct cursor and sets it */
+              int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
+              if (cursor_state == DEFAULT_HOVER_MODE)
+                {
+                  csr->setShape(Qt::ArrowCursor);
+                }
+              else if (cursor_state == MOVABLE_HOVER_MODE)
+                {
+                  csr->setShape(Qt::OpenHandCursor);
+                }
+              else if (cursor_state == INTEGRAL_SIDE_HOVER_MODE)
+                {
+                  csr->setShape(Qt::SizeHorCursor);
+                }
+              setCursor(*csr);
+
               redraw();
             }
           update();
@@ -1563,14 +1617,25 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
     }
   else if (event->button() == Qt::MouseButton::LeftButton)
     {
+      int x, y;
+      getMousePos(event, &x, &y);
       mouseState.mode = MouseState::Mode::pan;
       mouseState.anchor = event->pos();
+
+      int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
+      if (cursor_state != DEFAULT_HOVER_MODE)
+        {
+          grm_args_t *args = grm_args_new();
+          grm_args_push(args, "clear_locked_state", "i", 1);
+          grm_input(args);
+          grm_args_delete(args);
+
+          mouseState.mode = MouseState::Mode::movable_xform;
+        }
 
       if (enable_editor)
         {
           amount_scrolled = 0;
-          int x, y;
-          getMousePos(event, &x, &y);
           auto cur_clicked = bounding_logic->get_bounding_objects_at_point(x, y);
           if (cur_clicked.empty())
             {
@@ -1588,6 +1653,22 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
           treewidget->updateData(grm_get_document_root());
           treewidget->selectItem(current_selection->get_ref());
           mouse_move_selection = nullptr;
+        }
+      else
+        {
+          if (cursor_state == DEFAULT_HOVER_MODE)
+            {
+              csr->setShape(Qt::ArrowCursor);
+            }
+          else if (cursor_state == MOVABLE_HOVER_MODE)
+            {
+              csr->setShape(Qt::ClosedHandCursor);
+            }
+          else if (cursor_state == INTEGRAL_SIDE_HOVER_MODE)
+            {
+              csr->setShape(Qt::SizeHorCursor);
+            }
+          setCursor(*csr);
         }
     }
 }
@@ -1613,6 +1694,28 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
   else if (mouseState.mode == MouseState::Mode::pan)
     {
       mouseState.mode = MouseState::Mode::normal;
+    }
+  else if (mouseState.mode == MouseState::Mode::movable_xform)
+    {
+      mouseState.mode = MouseState::Mode::normal;
+
+      if (!enable_editor)
+        {
+          int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
+          if (cursor_state == DEFAULT_HOVER_MODE)
+            {
+              csr->setShape(Qt::ArrowCursor);
+            }
+          else if (cursor_state == MOVABLE_HOVER_MODE)
+            {
+              csr->setShape(Qt::OpenHandCursor);
+            }
+          else if (cursor_state == INTEGRAL_SIDE_HOVER_MODE)
+            {
+              csr->setShape(Qt::SizeHorCursor);
+            }
+          setCursor(*csr);
+        }
     }
 
   grm_input(args);
@@ -1704,7 +1807,7 @@ void GRPlotWidget::wheelEvent(QWheelEvent *event)
             {
               if (!clicked.empty() && current_selection != nullptr)
                 {
-                  for (int i = clicked.size() - 1; i >= 0; i--)
+                  for (int i = (int)clicked.size() - 1; i >= 0; i--)
                     {
                       if (clicked[i].get_id() == current_selection->get_id())
                         {
@@ -1997,6 +2100,11 @@ void GRPlotWidget::svg()
   redraw();
 }
 
+void GRPlotWidget::moveableMode()
+{
+  disable_movable_xform = !disable_movable_xform;
+}
+
 void GRPlotWidget::moveEvent(QMoveEvent *event)
 {
   if (enable_editor)
@@ -2170,7 +2278,8 @@ void GRPlotWidget::show_container_slot()
           treewidget->hide();
         }
       treewidget->resize(350, height());
-      treewidget->move(this->pos().x() + 0.5 * this->width() - 61, this->pos().y() - 28 + treewidget->geometry().y());
+      treewidget->move((int)(this->pos().x() + 0.5 * this->width() - 61),
+                       this->pos().y() - 28 + treewidget->geometry().y());
     }
 }
 
@@ -2313,7 +2422,7 @@ void GRPlotWidget::processTestCommandsFile()
     {
       QString line = test_commands_stream->readLine();
       QStringList words = line.split(",");
-      if (words.size())
+      if (!words.empty())
         {
           if (words[0] == "keyPressEvent" && words.size() == 2 && words[1].size() == 1 && words[1][0] >= 'A' &&
               words[1][0] <= 'Z')

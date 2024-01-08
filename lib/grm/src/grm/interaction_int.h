@@ -29,6 +29,9 @@ DECLARE_LIST_TYPE(tooltip, grm_tooltip_info_t *)
 
 #define INPUT_ANGLE_DELTA_FACTOR 0.001
 #define INPUT_DEFAULT_KEEP_ASPECT_RATIO 1
+#define DEFAULT_HOVER_MODE 0
+#define MOVABLE_HOVER_MODE 1
+#define INTEGRAL_SIDE_HOVER_MODE 2
 
 
 /* ========================= functions ============================================================================== */

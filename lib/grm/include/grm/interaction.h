@@ -50,6 +50,7 @@ EXPORT int grm_is3d(const int x, const int y);
 EXPORT grm_tooltip_info_t *grm_get_tooltip(int mouse_x, int mouse_y);
 EXPORT grm_tooltip_info_t **grm_get_tooltips_x(int mouse_x, int mouse_y, unsigned int *array_length);
 EXPORT grm_accumulated_tooltip_info_t *grm_get_accumulated_tooltip_x(int mouse_x, int mouse_y);
+EXPORT int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform);
 
 
 #ifdef __cplusplus

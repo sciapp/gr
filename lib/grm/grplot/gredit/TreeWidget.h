@@ -22,11 +22,13 @@ protected:
   void updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTreeWidgetItem *parent);
   void mouseDoubleClickEvent(QMouseEvent *event) override;
   void mousePressEvent(QMouseEvent *event) override;
+  void mouseReleaseEvent(QMouseEvent *event) override;
   CustomTreeWidgetItem *plotTree;
 
 private:
   GRPlotWidget *grplot_widget;
   bool findSelectedItem(CustomTreeWidgetItem *item);
+  bool checkboxStatusChanged(CustomTreeWidgetItem *item);
 };
 
 
