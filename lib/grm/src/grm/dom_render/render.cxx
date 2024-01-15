@@ -449,7 +449,8 @@ static void clearOldChildren(del_values *del, const std::shared_ptr<GRM::Element
               only_children_created_from_attributes = false;
               break;
             }
-          if (child->localName() != "error_bars" && child->localName() != "integral_group")
+          if (child->localName() != "error_bars" && child->localName() != "integral_group" &&
+              element->localName() != "coordinate_system")
             {
               only_error_child = false;
               break;
