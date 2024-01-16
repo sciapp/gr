@@ -29,8 +29,8 @@ void grm_dump(const grm_args_t *args, FILE *f)
 #define DEFAULT_ARRAY_PRINT_ELEMENTS_COUNT 10
 #define DARK_BACKGROUND_ENV_KEY "GRM_DARK_BACKGROUND"
 #define ARRAY_PRINT_TRUNCATION_ENV_KEY "GRM_ARRAY_PRINT_TRUNCATION"
-  args_iterator_t *it;
-  args_value_iterator_t *value_it;
+  grm_args_iterator_t *it;
+  grm_args_value_iterator_t *value_it;
   arg_t *arg;
   unsigned int i;
   char buffer[BUFFER_LEN];
@@ -207,12 +207,12 @@ void grm_dump(const grm_args_t *args, FILE *f)
 
   ++recursion_level;
 
-  it = args_iter(args);
+  it = grm_args_iter(args);
   while ((arg = it->next(it)) != NULL)
     {
       if (*arg->value_format)
         {
-          value_it = arg_value_iter(arg);
+          value_it = grm_arg_value_iter(arg);
           while (value_it->next(value_it) != NULL)
             {
               cursor_xpos = INDENT * recursion_level;
