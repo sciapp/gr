@@ -392,6 +392,37 @@ static std::map<std::string, int> model_string_to_int{
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+static std::tuple<double, int> getColorbarAttributes(std::string kind, std::shared_ptr<GRM::Element> plot)
+{
+  double offset = 0.0;
+  int colors = 256;
+  if (kind == "contour")
+    {
+      std::shared_ptr<GRM::Element> series = plot->querySelectors("series_contour");
+      if (series && series->hasAttribute("levels"))
+        colors = static_cast<int>(series->getAttribute("levels"));
+      else
+        colors = PLOT_DEFAULT_CONTOUR_LEVELS;
+    }
+  if (kind == "contourf")
+    {
+      std::shared_ptr<GRM::Element> series = plot->querySelectors("series_contourf");
+      if (series && series->hasAttribute("levels"))
+        colors = static_cast<int>(series->getAttribute("levels"));
+      else
+        colors = PLOT_DEFAULT_CONTOUR_LEVELS;
+    }
+  if (kind == "polar_heatmap")
+    {
+      offset = 0.025;
+    }
+  if (kind == "surface" || kind == "volume" || kind == "trisurf")
+    {
+      offset = 0.05;
+    }
+  return {offset, colors};
+}
+
 static double getLightness(int color)
 {
   unsigned char rgb[sizeof(int)];
@@ -15822,16 +15853,20 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
           /* update coordinate system if needed */
           if (newElement)
             {
-              std::shared_ptr<GRM::Element> coordinateSystem =
-                  newElement->parentElement()->querySelectors("coordinate_system");
+              std::shared_ptr<GRM::Element> plot = newElement->parentElement();
+              std::vector<std::string> colorbar_group = {"quiver",        "contour",   "contourf", "hexbin",
+                                                         "polar_heatmap", "heatmap",   "surface",  "volume",
+                                                         "trisurface",    "tricontour"};
+
+              std::shared_ptr<GRM::Element> coordinateSystem = plot->querySelectors("coordinate_system");
               std::string newKind = static_cast<std::string>(newElement->getAttribute("kind"));
               std::string newType = "2d";
+              std::string oldKind = value;
               if (polarKinds.count(newKind) != 0) newType = "polar";
               if (kinds3D.count(newKind) != 0) newType = "3d";
 
               if (coordinateSystem)
                 {
-                  std::string oldKind = value;
                   std::string oldType = static_cast<std::string>(coordinateSystem->getAttribute("type"));
                   if (newType != oldType)
                     {
@@ -15844,19 +15879,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                         {
                           coordinateSystem->setAttribute("draw", false);
 
-                          std::shared_ptr<GRM::Element> colorbar =
-                              newElement->parentElement()->querySelectors("colorbar");
-                          if (colorbar)
-                            {
-                              for (const auto &child : colorbar->children())
-                                {
-                                  child->remove();
-                                }
-                              colorbar->remove();
-                            }
-
-                          std::shared_ptr<GRM::Element> title =
-                              newElement->parentElement()->querySelectors("text[name=\"title\"]");
+                          std::shared_ptr<GRM::Element> title = plot->querySelectors("text[name=\"title\"]");
                           if (title) title->remove();
                         }
                       else if (oldKind == "imshow")
@@ -15868,7 +15891,37 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               else if (newKind != "imshow")
                 {
                   coordinateSystem = global_render->createElement("coordinate_system");
-                  newElement->parentElement()->prepend(coordinateSystem);
+                  plot->prepend(coordinateSystem);
+                }
+              if (std::find(colorbar_group.begin(), colorbar_group.end(), newKind) == colorbar_group.end())
+                {
+                  std::shared_ptr<GRM::Element> colorbar = plot->querySelectors("colorbar");
+                  if (colorbar)
+                    {
+                      for (const auto &child : colorbar->children())
+                        {
+                          child->remove();
+                        }
+                      colorbar->remove();
+                    }
+                }
+              else
+                {
+                  double offset;
+                  int colors;
+                  std::shared_ptr<GRM::Element> colorbar = plot->querySelectors("colorbar");
+                  std::tie(offset, colors) = getColorbarAttributes(newKind, newElement->parentElement());
+
+                  colorbar = global_render->createColorbar(colors, nullptr, colorbar);
+                  colorbar->setAttribute("offset", offset + 0.02);
+                  colorbar->setAttribute("width", 0.03);
+                  colorbar->setAttribute("diag_factor", 0.016);
+                  colorbar->setAttribute("max_char_height", 0.012);
+
+                  colorbar->setAttribute("_update_required", true);
+                  colorbar->setAttribute("_delete_children", static_cast<int>(del_values::recreate_all_children));
+
+                  if (!plot->querySelectors("colorbar")) plot->append(colorbar);
                 }
             }
         }
