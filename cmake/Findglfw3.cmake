@@ -1,5 +1,5 @@
 #.rst:
-# FindGlfw
+# Findglfw3
 # --------
 #
 # Find the GLFW library.
