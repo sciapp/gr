@@ -316,28 +316,27 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "z_lim",
                                     "z_log",
                                     nullptr};
-const char *valid_series_keys[] = {"a",          "algorithm",
-                                   "bin_width",  "bin_edges",
-                                   "bin_counts", "c",
-                                   "c_dims",     "c_range",
-                                   "draw_edges", "d_min",
-                                   "d_max",      "edge_color",
-                                   "edge_width", "error",
-                                   "face_color", "foreground_color",
-                                   "indices",    "inner_series",
-                                   "int_lim",    "isovalue",
-                                   "line_spec",  "marker_type",
-                                   "num_bins",   "phi_lim",
-                                   "rgb",        "r_lim",
-                                   "s",          "step_where",
-                                   "stairs",     "u",
-                                   "v",          "weights",
-                                   "x",          "x_colormap",
-                                   "x_range",    "y",
-                                   "y_colormap", "y_labels",
-                                   "y_range",    "z",
-                                   "z_dims",     "z_range",
-                                   nullptr};
+const char *valid_series_keys[] = {"a",           "algorithm",
+                                   "bin_width",   "bin_edges",
+                                   "bin_counts",  "c",
+                                   "c_dims",      "c_range",
+                                   "draw_edges",  "d_min",
+                                   "d_max",       "edge_color",
+                                   "edge_width",  "error",
+                                   "face_color",  "foreground_color",
+                                   "indices",     "inner_series",
+                                   "isovalue",    "line_spec",
+                                   "marker_type", "num_bins",
+                                   "phi_lim",     "rgb",
+                                   "r_lim",       "s",
+                                   "step_where",  "stairs",
+                                   "u",           "v",
+                                   "weights",     "x",
+                                   "x_colormap",  "x_range",
+                                   "y",           "y_colormap",
+                                   "y_labels",    "y_range",
+                                   "z",           "z_dims",
+                                   "z_range",     nullptr};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ valid types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -1425,7 +1424,6 @@ err_t plot_line(grm_args_t *subplot_args)
       unsigned int x_length = 0, y_length = 0;
       char *spec;
       double x_min, x_max, y_min, y_max;
-      double int_lim_low, int_lim_high;
       auto subGroup = global_render->createSeries("line");
       group->append(subGroup);
 
@@ -1460,11 +1458,6 @@ err_t plot_line(grm_args_t *subplot_args)
         {
           subGroup->setAttribute("y_range_min", y_min);
           subGroup->setAttribute("y_range_max", y_max);
-        }
-      if (grm_args_values(*current_series, "int_lim", "dd", &int_lim_low, &int_lim_high))
-        {
-          subGroup->setAttribute("int_lim_low", int_lim_low);
-          subGroup->setAttribute("int_lim_high", int_lim_high);
         }
 
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) subGroup->setAttribute("line_spec", spec);

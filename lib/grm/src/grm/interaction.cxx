@@ -22,6 +22,9 @@
 static tooltip_reflist_t *tooltip_list = nullptr;
 static grm_tooltip_info_t *nearest_tooltip = nullptr;
 
+/* ------------------------- movable xform -------------------------------------------------------------------------- */
+
+static std::weak_ptr<GRM::Element> movable_obj_ref;
 
 /* ========================= macros ================================================================================= */
 
@@ -369,13 +372,19 @@ int grm_input(const grm_args_t *input_args)
    * - `keep_aspect_ratio`: if set to `1`, the aspect ratio of the gr window is preserved (defaults to `1`)
    * pan:
    * - `x`, `y`: start point
-   * - `xshift`, `yshift`: shift in x and y direction
+   * - `x_shift`, `y_shift`: shift in x and y direction
+   * movable_xform:
+   * - `x_shift`, `y_shift`: shift in x and y direction
+   * - `disable_movable_trans`: disable movable transformation
+   * - `movable_state`: the status from grm_get_hover_mode
+   * - `clear_locked_state`: clear movable_obj_ref pointer
    *
    * All coordinates are expected to be given as workstation coordinates (integer type)
    */
   int width, height, max_width_height;
   int x, y, x1, y1, x2, y2;
   double viewport_mid_x, viewport_mid_y;
+  bool clear_locked_state = false;
 
   logger((stderr, "Processing input\n"));
 
@@ -388,6 +397,11 @@ int grm_input(const grm_args_t *input_args)
     {
       if (marginal_heatmap[0]->hasAttribute("x_ind")) marginal_heatmap[0]->setAttribute("x_ind", -1);
       if (marginal_heatmap[0]->hasAttribute("y_ind")) marginal_heatmap[0]->setAttribute("y_ind", -1);
+    }
+
+  if (grm_args_values(input_args, "clear_locked_state", "i", &clear_locked_state) && clear_locked_state)
+    {
+      movable_obj_ref.reset();
     }
 
   if (grm_args_values(input_args, "x", "i", &x) && grm_args_values(input_args, "y", "i", &y))
@@ -426,6 +440,7 @@ int grm_input(const grm_args_t *input_args)
         {
           double angle_delta, factor;
           int xshift, yshift, xind, yind;
+          int movable_status;
           std::string kind;
           double viewport[4];
           viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_x_min"));
@@ -440,6 +455,9 @@ int grm_input(const grm_args_t *input_args)
 
               unsigned int x_length, y_length;
               double x_0, x_end, y_0, y_end, x_step, y_step, xind_d, yind_d;
+              std::vector<double> x_steps, y_steps;
+              int x_offset = 0, y_offset = 0;
+              double x_min = 0, y_min = 0;
 
               grm_args_values(input_args, "x", "i", &x);
               grm_args_values(input_args, "y", "i", &y);
@@ -456,6 +474,33 @@ int grm_input(const grm_args_t *input_args)
               x_0 = x_series_vec[0], x_end = x_series_vec[x_length - 1];
               y_0 = y_series_vec[0], y_end = y_series_vec[y_length - 1];
 
+              if (static_cast<int>(subplot_element->getAttribute("x_log")))
+                {
+                  for (int j = 0; j < x_length; j++)
+                    {
+                      if (!grm_isnan(x_series_vec[j]))
+                        {
+                          x_min = x_series_vec[j];
+                          break;
+                        }
+                      x_offset += 1;
+                    }
+                  x_0 = x_min;
+                }
+              if (static_cast<int>(subplot_element->getAttribute("y_log")))
+                {
+                  for (int j = 0; j < y_length; j++)
+                    {
+                      if (!grm_isnan(y_series_vec[j]))
+                        {
+                          y_min = y_series_vec[j];
+                          break;
+                        }
+                      y_offset += 1;
+                    }
+                  y_0 = y_min;
+                }
+
               GRM::Render::processViewport(subplot_element);
               GRM::Render::processLimits(subplot_element);
               GRM::Render::processWindow(subplot_element);
@@ -471,6 +516,7 @@ int grm_input(const grm_args_t *input_args)
                       gr_setwindow(
                           (double)elem->getAttribute("window_x_min"), (double)elem->getAttribute("window_x_max"),
                           (double)elem->getAttribute("window_y_min"), (double)elem->getAttribute("window_y_max"));
+                      gr_setscale(static_cast<int>(elem->getAttribute("scale")));
                       break;
                     }
                 }
@@ -484,8 +530,61 @@ int grm_input(const grm_args_t *input_args)
 
               x_step = (x_end - x_0) / x_length;
               y_step = (y_end - y_0) / y_length;
+
+              if (static_cast<int>(subplot_element->getAttribute("x_log")))
+                {
+                  for (int j = 0; j < x_length - x_offset; j++)
+                    {
+                      double step_x = (x_series_vec[x_length - 1] - x_min) / (x_length - x_offset);
+                      double tmp = 0, a = x_min + j * step_x, b = x_min + (j + 1) * step_x;
+                      gr_wctondc(&a, &tmp);
+                      gr_wctondc(&b, &tmp);
+
+                      a = a * max_width_height;
+                      b = b * max_width_height;
+                      x_steps.push_back(b - a);
+                    }
+                }
+              if (static_cast<int>(subplot_element->getAttribute("y_log")))
+                {
+                  for (int j = 0; j < y_length - y_offset; j++)
+                    {
+                      double step_y = (y_series_vec[y_length - 1] - y_min) / (y_length - y_offset);
+                      double tmp = 0, a = y_min + j * step_y, b = y_min + (j + 1) * step_y;
+                      gr_wctondc(&tmp, &a);
+                      gr_wctondc(&tmp, &b);
+
+                      a = a * max_width_height;
+                      b = b * max_width_height;
+                      y_steps.push_back(-(b - a));
+                    }
+                }
+
               xind_d = (x - x_0) / x_step;
+              if (static_cast<int>(subplot_element->getAttribute("x_log")))
+                {
+                  double tmp = 0;
+                  xind_d = x_offset;
+                  for (int j = 0; j < x_length - x_offset; j++)
+                    {
+                      if (tmp + x_steps[j] > (x - x_0)) break;
+                      tmp += x_steps[j];
+                      xind_d += 1;
+                    }
+                }
+
               yind_d = (y - y_0) / y_step;
+              if (static_cast<int>(subplot_element->getAttribute("y_log")))
+                {
+                  double tmp = 0;
+                  yind_d = y_offset;
+                  for (int j = 0; j < y_length - y_offset; j++)
+                    {
+                      if (tmp + y_steps[j] < (y - y_0)) break;
+                      tmp += y_steps[j];
+                      yind_d += 1;
+                    }
+                }
 
               if (xind_d < 0 || xind_d >= x_length || yind_d < 0 || yind_d >= y_length)
                 {
@@ -602,8 +701,9 @@ int grm_input(const grm_args_t *input_args)
               return 1;
             }
 
-          if (grm_args_values(input_args, "xshift", "i", &xshift) &&
-              grm_args_values(input_args, "yshift", "i", &yshift))
+          if (grm_args_values(input_args, "x_shift", "i", &xshift) &&
+              grm_args_values(input_args, "y_shift", "i", &yshift) &&
+              !grm_args_values(input_args, "movable_state", "i", &movable_status))
             {
               double ndc_xshift, ndc_yshift, rotation, tilt;
               int shift_pressed;
@@ -649,6 +749,110 @@ int grm_input(const grm_args_t *input_args)
                   subplot_element->setAttribute("panzoom", true);
                 }
               return 1;
+            }
+          else if (grm_args_values(input_args, "x_shift", "i", &xshift) &&
+                   grm_args_values(input_args, "y_shift", "i", &yshift) &&
+                   grm_args_values(input_args, "movable_state", "i", &movable_status))
+            {
+              std::shared_ptr<GRM::Element> movable = movable_obj_ref.lock();
+              double min_diff = INFINITY;
+              bool disable_movable_trans = false;
+
+              grm_args_values(input_args, "disable_movable_trans", "i", &disable_movable_trans);
+
+              if (movable == nullptr)
+                {
+                  auto movable_elems = subplot_element->querySelectorsAll("[movable=1]");
+                  for (const auto &move_elem : movable_elems)
+                    {
+                      auto bbox_x_min = static_cast<double>(move_elem->getAttribute("_bbox_x_min"));
+                      auto bbox_x_max = static_cast<double>(move_elem->getAttribute("_bbox_x_max"));
+                      auto bbox_y_min = static_cast<double>(move_elem->getAttribute("_bbox_y_min"));
+                      auto bbox_y_max = static_cast<double>(move_elem->getAttribute("_bbox_y_max"));
+                      if (bbox_x_min <= x && bbox_x_max >= x && bbox_y_min <= y && bbox_y_max >= y)
+                        {
+                          double diff = sqrt(pow(((bbox_x_max + bbox_x_min) / 2 - x), 2) +
+                                             pow(((bbox_y_max + bbox_y_min) / 2 - y), 2));
+                          if (diff < min_diff)
+                            {
+                              movable = move_elem;
+                              min_diff = diff;
+                            }
+                        }
+                    }
+                }
+
+              if (!disable_movable_trans && movable != nullptr)
+                {
+                  double tmp = 0, x_with_shift, y_with_shift, x_ndc, y_ndc;
+                  double old_x_shift = 0, old_y_shift = 0, wc_x_shift, wc_y_shift;
+
+                  movable_obj_ref = movable;
+
+                  GRM::Render::processViewport(subplot_element);
+                  GRM::Render::processLimits(subplot_element);
+                  GRM::Render::processWindow(subplot_element);
+
+                  gr_savestate();
+                  for (const auto &elem : subplot_element->parentElement()->children())
+                    {
+                      if (elem->hasAttribute("viewport_x_min"))
+                        {
+                          gr_setviewport((double)elem->getAttribute("viewport_x_min"),
+                                         (double)elem->getAttribute("viewport_x_max"),
+                                         (double)elem->getAttribute("viewport_y_min"),
+                                         (double)elem->getAttribute("viewport_y_max"));
+                          gr_setwindow(
+                              (double)elem->getAttribute("window_x_min"), (double)elem->getAttribute("window_x_max"),
+                              (double)elem->getAttribute("window_y_min"), (double)elem->getAttribute("window_y_max"));
+                          gr_setscale(static_cast<int>(elem->getAttribute("scale")));
+                          break;
+                        }
+                    }
+
+                  x_with_shift = ndc_x + (double)xshift / max_width_height;
+                  x_ndc = ndc_x;
+                  y_with_shift = ndc_y + (double)yshift / max_width_height;
+                  y_ndc = ndc_y;
+
+                  gr_ndctowc(&x_with_shift, &y_with_shift);
+                  gr_ndctowc(&x_ndc, &y_ndc);
+
+                  wc_x_shift = x_with_shift - x_ndc;
+                  wc_y_shift = y_ndc - y_with_shift;
+
+                  if (movable->hasAttribute("x_shift"))
+                    old_x_shift = static_cast<double>(movable->getAttribute("x_shift"));
+                  if (movable->hasAttribute("y_shift"))
+                    old_y_shift = static_cast<double>(movable->getAttribute("y_shift"));
+
+                  if (xshift != 0)
+                    {
+                      if (movable->localName() == "polyline" &&
+                          static_cast<std::string>(movable->getAttribute("name")) == "integral_left")
+                        {
+                          double old_int_lim_low =
+                              static_cast<double>(movable->parentElement()->getAttribute("int_lim_low"));
+                          movable->parentElement()->setAttribute("int_lim_low", old_int_lim_low + wc_x_shift);
+                        }
+                      else if (movable->localName() == "polyline" &&
+                               static_cast<std::string>(movable->getAttribute("name")) == "integral_right")
+                        {
+                          double old_int_lim_high =
+                              static_cast<double>(movable->parentElement()->getAttribute("int_lim_high"));
+                          movable->parentElement()->setAttribute("int_lim_high", old_int_lim_high + wc_x_shift);
+                        }
+                      else
+                        {
+                          movable->setAttribute("x_shift", old_x_shift + wc_x_shift);
+                        }
+                    }
+                  if (yshift != 0)
+                    {
+                      movable->setAttribute("y_shift", old_y_shift + wc_y_shift);
+                    }
+                  gr_restorestate();
+                }
             }
         }
     }
@@ -994,6 +1198,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
           (double)subplot_element->getAttribute("window_x_min"), (double)subplot_element->getAttribute("window_x_max"),
           (double)subplot_element->getAttribute("window_y_min"), (double)subplot_element->getAttribute("window_y_max"));
     }
+  gr_setscale(static_cast<int>(subplot_element->getAttribute("scale")));
   z_log = static_cast<int>(subplot_element->getAttribute("z_log"));
 
   gr_ndctowc(&x, &y);
@@ -1238,6 +1443,8 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                          y_end = y_series_vec[y_length - 1];
                   double x_step, y_step, x_series_idx, y_series_idx;
                   double *u_series, *v_series;
+                  std::vector<double> x_steps, y_steps;
+                  int x_offset = 0, y_offset = 0;
 
                   if (static_cast<int>(subplot_element->getAttribute("x_log")))
                     {
@@ -1248,6 +1455,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                               x_min = x_series_vec[j];
                               break;
                             }
+                          x_offset += 1;
                         }
                       x_0 = x_min;
                     }
@@ -1260,6 +1468,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                               y_min = y_series_vec[j];
                               break;
                             }
+                          y_offset += 1;
                         }
                       y_0 = y_min;
                     }
@@ -1274,6 +1483,36 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
                   x_step = (x_end - x_0) / x_length;
                   y_step = (y_end - y_0) / y_length;
+
+                  if (static_cast<int>(subplot_element->getAttribute("x_log")))
+                    {
+                      for (int j = 0; j < x_length - x_offset; j++)
+                        {
+                          double step_x = (x_series_vec[x_length - 1] - x_min) / (x_length - x_offset);
+                          double tmp = 0, a = x_min + j * step_x, b = x_min + (j + 1) * step_x;
+                          gr_wctondc(&a, &tmp);
+                          gr_wctondc(&b, &tmp);
+
+                          a = a * max_width_height;
+                          b = b * max_width_height;
+                          x_steps.push_back(b - a);
+                        }
+                    }
+                  if (static_cast<int>(subplot_element->getAttribute("y_log")))
+                    {
+                      for (int j = 0; j < y_length - y_offset; j++)
+                        {
+                          double step_y = (y_series_vec[y_length - 1] - y_min) / (y_length - y_offset);
+                          double tmp = 0, a = y_min + j * step_y, b = y_min + (j + 1) * step_y;
+                          gr_wctondc(&tmp, &a);
+                          gr_wctondc(&tmp, &b);
+
+                          a = a * max_width_height;
+                          b = b * max_width_height;
+                          y_steps.push_back(-(b - a));
+                        }
+                    }
+
                   if (kind == "quiver")
                     {
                       auto u_key = static_cast<std::string>(current_series->getAttribute("u"));
@@ -1287,7 +1526,33 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
                   mindiff = 0;
                   x_series_idx = (mouse_x - x_0) / x_step;
+                  if (static_cast<int>(subplot_element->getAttribute("x_log")) &&
+                      str_equals_any(kind.c_str(), 4, "heatmap", "marginal_heatmap", "contour", "contourf"))
+                    {
+                      double tmp = 0;
+                      x_series_idx = x_offset;
+                      for (int j = 0; j < x_length - x_offset; j++)
+                        {
+                          if (tmp + x_steps[j] > (mouse_x - x_0)) break;
+                          tmp += x_steps[j];
+                          x_series_idx += 1;
+                        }
+                    }
+
                   y_series_idx = (mouse_y - y_0) / y_step;
+                  if (static_cast<int>(subplot_element->getAttribute("y_log")) &&
+                      str_equals_any(kind.c_str(), 4, "heatmap", "marginal_heatmap", "contour", "contourf"))
+                    {
+                      double tmp = 0;
+                      y_series_idx = y_offset;
+                      for (int j = 0; j < y_length - y_offset; j++)
+                        {
+                          if (tmp + y_steps[j] < (mouse_y - y_0)) break;
+                          tmp += y_steps[j];
+                          y_series_idx += 1;
+                        }
+                    }
+
                   if (x_series_idx < 0 || x_series_idx >= x_length || y_series_idx < 0 || y_series_idx >= y_length)
                     {
                       mindiff = DBL_MAX;
@@ -1364,4 +1629,49 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
     }
   gr_restorestate();
   return ERROR_NONE;
+}
+
+int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)
+{
+  if (!disable_movable_xform)
+    {
+      int width, height, max_width_height;
+      GRM::Render::get_figure_size(&width, &height, nullptr, nullptr);
+      max_width_height = grm_max(width, height);
+
+      double ndc_x, ndc_y;
+      ndc_x = (double)mouse_x / max_width_height;
+      ndc_y = (double)(height - mouse_y) / max_width_height;
+
+      auto subplot_element = get_subplot_from_ndc_point_using_dom(ndc_x, ndc_y);
+      if (subplot_element != nullptr)
+        {
+          std::shared_ptr<GRM::Element> movable = nullptr;
+
+          auto movable_elems = subplot_element->querySelectorsAll("[movable=1]");
+          for (const auto &move_elem : movable_elems)
+            {
+              if (move_elem != nullptr)
+                {
+                  double bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max;
+
+                  bbox_x_min = static_cast<double>(move_elem->getAttribute("_bbox_x_min"));
+                  bbox_x_max = static_cast<double>(move_elem->getAttribute("_bbox_x_max"));
+                  bbox_y_min = static_cast<double>(move_elem->getAttribute("_bbox_y_min"));
+                  bbox_y_max = static_cast<double>(move_elem->getAttribute("_bbox_y_max"));
+                  if (bbox_x_min <= mouse_x && bbox_x_max >= mouse_x && bbox_y_min <= mouse_y && bbox_y_max >= mouse_y)
+                    {
+                      if ((static_cast<std::string>(move_elem->getAttribute("name")) == "integral_left" ||
+                           static_cast<std::string>(move_elem->getAttribute("name")) == "integral_right") &&
+                          move_elem->localName() == "polyline")
+                        {
+                          return INTEGRAL_SIDE_HOVER_MODE;
+                        }
+                      return MOVABLE_HOVER_MODE;
+                    }
+                }
+            }
+        }
+    }
+  return DEFAULT_HOVER_MODE;
 }
