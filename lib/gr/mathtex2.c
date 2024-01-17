@@ -1128,7 +1128,6 @@ static size_t make_char(unsigned int codepoint)
     {
       if (codepoint == 8747)
         {
-          height *= 0.75;
           depth *= 1.25;
         }
       if (codepoint == ' ')
