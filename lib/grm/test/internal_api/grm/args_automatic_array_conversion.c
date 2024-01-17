@@ -14,7 +14,7 @@ void test(void)
   const int int_value = 42;
   const char *str_values[] = {"Hello", "World!"};
   grm_args_t *args;
-  args_iterator_t *it;
+  grm_args_iterator_t *it;
   arg_t *arg;
   int *int_ptr;
   const char **str_ptr;
@@ -26,7 +26,7 @@ void test(void)
   grm_args_push(args, "str_value", "s", str_values[0]);
   grm_args_push(args, "str_array", "nS", array_size(str_values), str_values);
 
-  it = args_iter(args);
+  it = grm_args_iter(args);
   assert((arg = it->next(it)) != NULL);
   assert(strcmp(arg->value_format, "i") == 0);
   assert((arg = it->next(it)) != NULL);

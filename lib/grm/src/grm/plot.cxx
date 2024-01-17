@@ -547,9 +547,9 @@ err_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char
   static int recursion_level = -1;
   int plot_id, subplot_id, series_id;
   int append_plots;
-  args_iterator_t *merge_it = nullptr;
+  grm_args_iterator_t *merge_it = nullptr;
   arg_t *arg, *merge_arg;
-  args_value_iterator_t *value_it = nullptr, *merge_value_it = nullptr;
+  grm_args_value_iterator_t *value_it = nullptr, *merge_value_it = nullptr;
   const char **current_hierarchy_name_ptr;
   grm_args_t **args_array, **merge_args_array, *current_args;
   unsigned int i;
@@ -638,7 +638,7 @@ err_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char
       logger((stderr, "\"hold_always\" is set\n"));
     }
 #endif /* ifndef  */
-  merge_it = args_iter(merge_args);
+  merge_it = grm_args_iter(merge_args);
   cleanup_and_set_error_if(merge_it == nullptr, ERROR_MALLOC);
   while ((merge_arg = merge_it->next(merge_it)) != nullptr)
     {
@@ -688,8 +688,8 @@ err_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char
            * before. If `arg` is nullptr, an internal error occurred. */
           arg = args_at(current_args, merge_arg->key);
           cleanup_and_set_error_if(arg == nullptr, ERROR_INTERNAL);
-          value_it = arg_value_iter(arg);
-          merge_value_it = arg_value_iter(merge_arg);
+          value_it = grm_arg_value_iter(arg);
+          merge_value_it = grm_arg_value_iter(merge_arg);
           cleanup_and_set_error_if(value_it == nullptr, ERROR_MALLOC);
           cleanup_and_set_error_if(merge_value_it == nullptr, ERROR_MALLOC);
           /* Do not support two-dimensional argument arrays like `nAnA`) -> a loop would be needed with more memory
@@ -702,7 +702,7 @@ err_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char
               error = plot_init_arg_structure(arg, current_hierarchy_name_ptr, merge_value_it->array_length);
               cleanup_if_error;
               args_value_iterator_delete(value_it);
-              value_it = arg_value_iter(arg);
+              value_it = grm_arg_value_iter(arg);
               cleanup_and_set_error_if(value_it == nullptr, ERROR_MALLOC);
               cleanup_and_set_error_if(value_it->next(value_it) == nullptr, ERROR_MALLOC);
               args_array = *(grm_args_t ***)value_it->value_ptr;
@@ -3723,7 +3723,7 @@ err_t extract_multi_type_argument(grm_args_t *error_container, const char *key, 
                                   double **upwards, double *downwards_flt, double *upwards_flt)
 {
   arg_t *arg_ptr;
-  args_value_iterator_t *value_it;
+  grm_args_value_iterator_t *value_it;
   unsigned int length;
   int i, *ii;
 
@@ -3734,7 +3734,7 @@ err_t extract_multi_type_argument(grm_args_t *error_container, const char *key, 
     }
   if (strcmp(arg_ptr->value_format, "nDnD") == 0)
     {
-      value_it = arg_value_iter(arg_ptr);
+      value_it = grm_arg_value_iter(arg_ptr);
       ARGS_VALUE_ITERATOR_GET(value_it, *downwards_length, *downwards);
       ARGS_VALUE_ITERATOR_GET(value_it, *upwards_length, *upwards);
       args_value_iterator_delete(value_it);

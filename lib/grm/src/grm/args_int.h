@@ -126,8 +126,6 @@ void *copy_value(char format, void *value_ptr);
 
 /* ------------------------- argument ------------------------------------------------------------------------------- */
 
-args_value_iterator_t *arg_value_iter(const arg_t *arg);
-
 err_t arg_increase_array(arg_t *arg, size_t increment);
 
 int arg_first_value(const arg_t *arg, const char *first_value_format, void *first_value, unsigned int *array_length);
@@ -169,26 +167,24 @@ arg_t *args_at(const grm_args_t *args, const char *keyword);
 args_node_t *args_find_node(const grm_args_t *args, const char *keyword);
 int args_find_previous_node(const grm_args_t *args, const char *keyword, args_node_t **previous_node);
 
-args_iterator_t *args_iter(const grm_args_t *args);
-
 
 /* ------------------------- argument iterator ---------------------------------------------------------------------- */
 
-args_iterator_t *args_iterator_new(const args_node_t *begin, const args_node_t *end);
-void args_iterator_init(args_iterator_t *args_iterator, const args_node_t *begin, const args_node_t *end);
-void args_iterator_delete(args_iterator_t *args_iterator);
-void args_iterator_finalize(args_iterator_t *args_iterator);
-arg_t *args_iterator_next(args_iterator_t *args_iterator);
+grm_args_iterator_t *args_iterator_new(const args_node_t *begin, const args_node_t *end);
+void args_iterator_init(grm_args_iterator_t *args_iterator, const args_node_t *begin, const args_node_t *end);
+void args_iterator_delete(grm_args_iterator_t *args_iterator);
+void args_iterator_finalize(grm_args_iterator_t *args_iterator);
+arg_t *args_iterator_next(grm_args_iterator_t *args_iterator);
 
 
 /* ------------------------- value iterator ------------------------------------------------------------------------- */
 
-args_value_iterator_t *args_value_iterator_new(const arg_t *arg);
-void args_value_iterator_init(args_value_iterator_t *args_value_iterator, const arg_t *arg);
-void args_value_iterator_delete(args_value_iterator_t *args_value_iterator);
-void args_value_iterator_finalize(args_value_iterator_t *args_value_iterator);
+grm_args_value_iterator_t *args_value_iterator_new(const arg_t *arg);
+void args_value_iterator_init(grm_args_value_iterator_t *args_value_iterator, const arg_t *arg);
+void args_value_iterator_delete(grm_args_value_iterator_t *args_value_iterator);
+void args_value_iterator_finalize(grm_args_value_iterator_t *args_value_iterator);
 
-void *args_value_iterator_next(args_value_iterator_t *args_value_iterator);
+void *args_value_iterator_next(grm_args_value_iterator_t *args_value_iterator);
 
 
 #ifdef __cplusplus

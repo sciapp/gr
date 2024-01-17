@@ -946,7 +946,7 @@ void args_decrease_arg_reference_count(args_node_t *args_node)
 {
   if (--(args_node->arg->priv->reference_count) == 0)
     {
-      args_value_iterator_t *value_it = arg_value_iter(args_node->arg);
+      grm_args_value_iterator_t *value_it = grm_arg_value_iter(args_node->arg);
       while (value_it->next(value_it) != NULL)
         {
           /* use a char pointer since chars have no memory alignment restrictions */
@@ -1024,7 +1024,7 @@ void *copy_value(char format, void *value_ptr)
 
 /* ------------------------- argument ------------------------------------------------------------------------------- */
 
-args_value_iterator_t *arg_value_iter(const arg_t *arg)
+grm_args_value_iterator_t *grm_arg_value_iter(const arg_t *arg)
 {
   return args_value_iterator_new(arg);
 }
@@ -1169,7 +1169,7 @@ int arg_values(const arg_t *arg, const char *expected_format, ...)
 
 int arg_values_vl(const arg_t *arg, const char *expected_format, va_list *vl)
 {
-  args_value_iterator_t *value_it = NULL;
+  grm_args_value_iterator_t *value_it = NULL;
   const char *current_va_format;
   int formats_are_equal = 0;
   int data_offset = 0;
@@ -1182,7 +1182,7 @@ int arg_values_vl(const arg_t *arg, const char *expected_format, va_list *vl)
   formats_are_equal = (formats_are_equal == 2);
 
   current_va_format = expected_format;
-  value_it = arg_value_iter(arg);
+  value_it = grm_arg_value_iter(arg);
   if (value_it->next(value_it) == NULL)
     {
       goto cleanup;
@@ -1308,7 +1308,7 @@ grm_args_t *args_flatcopy(const grm_args_t *copy_args)
 {
   /* Clone the linked list but share the referenced values */
   grm_args_t *args = NULL;
-  args_iterator_t *it = NULL;
+  grm_args_iterator_t *it = NULL;
   args_node_t *args_node;
   arg_t *copy_arg;
 
@@ -1318,7 +1318,7 @@ grm_args_t *args_flatcopy(const grm_args_t *copy_args)
       debug_print_malloc_error();
       goto error_cleanup;
     }
-  it = args_iter(copy_args);
+  it = grm_args_iter(copy_args);
   while ((copy_arg = it->next(it)) != NULL)
     {
       ++(copy_arg->priv->reference_count);
@@ -1373,8 +1373,8 @@ grm_args_t *args_copy_extended(const grm_args_t *copy_args, const char **keys_co
    * `ignore_keys` is an array of keys which will not be copied. The array must be terminated with a NULL pointer. */
   grm_args_t *args = NULL, **args_array = NULL, *copied_args = NULL, **copied_args_array = NULL,
              **current_args_copy = NULL;
-  args_iterator_t *it = NULL;
-  args_value_iterator_t *value_it = NULL;
+  grm_args_iterator_t *it = NULL;
+  grm_args_value_iterator_t *value_it = NULL;
   args_node_t *args_node;
   arg_t *copy_arg;
 
@@ -1384,7 +1384,7 @@ grm_args_t *args_copy_extended(const grm_args_t *copy_args, const char **keys_co
       debug_print_malloc_error();
       goto error_cleanup;
     }
-  it = args_iter(copy_args);
+  it = grm_args_iter(copy_args);
   error_cleanup_if(it == NULL);
   while ((copy_arg = it->next(it)) != NULL)
     {
@@ -1394,7 +1394,7 @@ grm_args_t *args_copy_extended(const grm_args_t *copy_args, const char **keys_co
         }
       if (strncmp(copy_arg->value_format, "a", 1) == 0 || strncmp(copy_arg->value_format, "nA", 2) == 0)
         {
-          value_it = arg_value_iter(copy_arg);
+          value_it = grm_arg_value_iter(copy_arg);
           error_cleanup_if(value_it == NULL);
           /* Do not support two dimensional argument arrays like `nAnA`) -> a loop would be needed with more memory
            * management */
@@ -1607,8 +1607,8 @@ err_t args_update_many(grm_args_t *args, const grm_args_t *update_args)
 
 err_t args_merge(grm_args_t *args, const grm_args_t *merge_args, const char *const *merge_keys)
 {
-  args_iterator_t *it = NULL;
-  args_value_iterator_t *value_it = NULL, *merge_value_it = NULL;
+  grm_args_iterator_t *it = NULL;
+  grm_args_value_iterator_t *value_it = NULL, *merge_value_it = NULL;
   arg_t *update_arg, *current_arg;
   grm_args_t **args_array, **merge_args_array;
   const char *const *current_key_ptr;
@@ -1616,7 +1616,7 @@ err_t args_merge(grm_args_t *args, const grm_args_t *merge_args, const char *con
   unsigned int i;
   err_t error = ERROR_NONE;
 
-  it = args_iter(merge_args);
+  it = grm_args_iter(merge_args);
   cleanup_and_set_error_if(it == NULL, ERROR_MALLOC);
   while ((update_arg = it->next(it)) != NULL)
     {
@@ -1636,8 +1636,8 @@ err_t args_merge(grm_args_t *args, const grm_args_t *merge_args, const char *con
         }
       if (merge && (current_arg = args_at(args, update_arg->key)) != NULL)
         {
-          value_it = arg_value_iter(current_arg);
-          merge_value_it = arg_value_iter(update_arg);
+          value_it = grm_arg_value_iter(current_arg);
+          merge_value_it = grm_arg_value_iter(update_arg);
           cleanup_and_set_error_if(value_it == NULL, ERROR_MALLOC);
           cleanup_and_set_error_if(merge_value_it == NULL, ERROR_MALLOC);
           /* Do not support two dimensional argument arrays like `nAnA`) -> a loop would be needed with more memory
@@ -1857,7 +1857,7 @@ int args_find_previous_node(const grm_args_t *args, const char *keyword, args_no
   return 0;
 }
 
-args_iterator_t *args_iter(const grm_args_t *args)
+grm_args_iterator_t *grm_args_iter(const grm_args_t *args)
 {
   return args_iterator_new(args->kwargs_head, NULL);
 }
@@ -1865,11 +1865,11 @@ args_iterator_t *args_iter(const grm_args_t *args)
 
 /* ------------------------- argument iterator ---------------------------------------------------------------------- */
 
-args_iterator_t *args_iterator_new(const args_node_t *begin, const args_node_t *end)
+grm_args_iterator_t *args_iterator_new(const args_node_t *begin, const args_node_t *end)
 {
-  args_iterator_t *args_iterator;
+  grm_args_iterator_t *args_iterator;
 
-  args_iterator = malloc(sizeof(args_iterator_t));
+  args_iterator = malloc(sizeof(grm_args_iterator_t));
   if (args_iterator == NULL)
     {
       debug_print_malloc_error();
@@ -1886,7 +1886,7 @@ args_iterator_t *args_iterator_new(const args_node_t *begin, const args_node_t *
   return args_iterator;
 }
 
-void args_iterator_init(args_iterator_t *args_iterator, const args_node_t *begin, const args_node_t *end)
+void args_iterator_init(grm_args_iterator_t *args_iterator, const args_node_t *begin, const args_node_t *end)
 {
   args_iterator->next = args_iterator_next;
   args_iterator->arg = NULL;
@@ -1894,16 +1894,16 @@ void args_iterator_init(args_iterator_t *args_iterator, const args_node_t *begin
   args_iterator->priv->end = end;
 }
 
-void args_iterator_delete(args_iterator_t *args_iterator)
+void args_iterator_delete(grm_args_iterator_t *args_iterator)
 {
   args_iterator_finalize(args_iterator);
   free(args_iterator->priv);
   free(args_iterator);
 }
 
-void args_iterator_finalize(args_iterator_t *args_iterator UNUSED) {}
+void args_iterator_finalize(grm_args_iterator_t *args_iterator UNUSED) {}
 
-arg_t *args_iterator_next(args_iterator_t *args_iterator)
+arg_t *args_iterator_next(grm_args_iterator_t *args_iterator)
 {
   arg_t *next_arg;
 
@@ -1923,11 +1923,11 @@ arg_t *args_iterator_next(args_iterator_t *args_iterator)
 
 /* ------------------------- value iterator ------------------------------------------------------------------------- */
 
-args_value_iterator_t *args_value_iterator_new(const arg_t *arg)
+grm_args_value_iterator_t *args_value_iterator_new(const arg_t *arg)
 {
-  args_value_iterator_t *args_value_iterator;
+  grm_args_value_iterator_t *args_value_iterator;
 
-  args_value_iterator = malloc(sizeof(args_value_iterator_t));
+  args_value_iterator = malloc(sizeof(grm_args_value_iterator_t));
   if (args_value_iterator == NULL)
     {
       debug_print_malloc_error();
@@ -1944,7 +1944,7 @@ args_value_iterator_t *args_value_iterator_new(const arg_t *arg)
   return args_value_iterator;
 }
 
-void args_value_iterator_init(args_value_iterator_t *args_value_iterator, const arg_t *arg)
+void args_value_iterator_init(grm_args_value_iterator_t *args_value_iterator, const arg_t *arg)
 {
   args_value_iterator->next = args_value_iterator_next;
   args_value_iterator->value_ptr = NULL;
@@ -1955,16 +1955,16 @@ void args_value_iterator_init(args_value_iterator_t *args_value_iterator, const 
   args_value_iterator->priv->value_format = arg->value_format;
 }
 
-void args_value_iterator_delete(args_value_iterator_t *args_value_iterator)
+void args_value_iterator_delete(grm_args_value_iterator_t *args_value_iterator)
 {
   args_value_iterator_finalize(args_value_iterator);
   free(args_value_iterator->priv);
   free(args_value_iterator);
 }
 
-void args_value_iterator_finalize(args_value_iterator_t *args_value_iterator UNUSED) {}
+void args_value_iterator_finalize(grm_args_value_iterator_t *args_value_iterator UNUSED) {}
 
-void *args_value_iterator_next(args_value_iterator_t *args_value_iterator)
+void *args_value_iterator_next(grm_args_value_iterator_t *args_value_iterator)
 {
   const char *format;
   char current_format;

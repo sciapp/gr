@@ -1687,10 +1687,10 @@ err_t tojson_write_arg(memwriter_t *memwriter, const arg_t *arg)
 
 err_t tojson_write_args(memwriter_t *memwriter, const grm_args_t *args)
 {
-  args_iterator_t *it;
+  grm_args_iterator_t *it;
   arg_t *arg;
 
-  it = args_iter(args);
+  it = grm_args_iter(args);
   if ((arg = it->next(it)))
     {
       tojson_write_buf(memwriter, "o(", NULL, 1);
