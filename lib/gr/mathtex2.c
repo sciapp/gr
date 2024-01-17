@@ -9,6 +9,7 @@
  */
 
 static const char *spaced_symbols[] = {":",
+                                       ":=",
                                        "<",
                                        "=",
                                        ">",
@@ -1127,7 +1128,6 @@ static size_t make_char(unsigned int codepoint)
     {
       if (codepoint == 8747)
         {
-          height *= 0.75;
           depth *= 1.25;
         }
       if (codepoint == ' ')
@@ -1836,6 +1836,10 @@ static unsigned int symbol_to_codepoint(const unsigned char *utf8_str, size_t le
           }
       }
       return (unsigned int)'?';
+    }
+  if (utf8_str[0] == ':' && length == 2 && utf8_str[1] == '=')
+    {
+      return 0x2254;
     }
 
   codepoint = str_utf8_to_unicode(utf8_str, &found_length);
