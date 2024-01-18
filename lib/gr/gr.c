@@ -3273,6 +3273,8 @@ void gr_inqmarkercolorind(int *coli)
  * +--------------------------------------+-----+
  * |FONT_DEJAVUSANS                       |  233|
  * +--------------------------------------+-----+
+ * |FONT_STIXTWOMATH                      |  234|
+ * +--------------------------------------+-----+
  *
  * The available text precisions are:
  *
