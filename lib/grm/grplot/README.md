@@ -283,7 +283,19 @@ Possible parameters for the line plot are:
 
    `error:{{error_bar_color:`color_index`},{downward_scap_color:`color_index`},{upward_scap_color:`color_index`}}`
 
-2. `orientation`: This parameter defines the orientation of the displayed lines. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
+2. `int_limits_high`: This parameter defines the upper limits of all integrals.
+   
+    The syntax for this parameter is:
+
+   `int_limits_high:`number_of_elements`,`elem_1`,`elem_2`,`...
+
+3. `int_limits_low`: This parameter defines the lower limits of all integrals.
+
+    The syntax for this parameter is:
+
+   `int_limits_low:`number_of_elements`,`elem_1`,`elem_2`,`...
+
+4. `orientation`: This parameter defines the orientation of the displayed lines. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
 
 ### MARGINAL_HEATMAP
 

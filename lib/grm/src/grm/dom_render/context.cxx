@@ -21,7 +21,7 @@ GRM::Context::Inner::Inner(const Context &context, std::string key)
     : context(&const_cast<Context &>(context)), key(std::move(key))
 {
   /*!
-   * The const construtor for GRM::Context::Inner
+   * The const constructor for GRM::Context::Inner
    *
    * \param[in] context A const GRM::Context it belongs to
    * \param[in] key The assigned key for Inner
@@ -130,7 +130,7 @@ GRM::Context::Inner::operator std::vector<int> &()
     {
       return context->tableInt[key];
     }
-  std::string msg = "No integer value found for given key " + key;
+  std::string msg = "No integer value found for given key: " + key;
   throw NotFoundError(msg);
 }
 
@@ -146,7 +146,7 @@ GRM::Context::Inner::operator const std::vector<int> &() const
     {
       return context->tableInt[key];
     }
-  std::string msg = "No integer value found for given key " + key;
+  std::string msg = "No integer value found for given key: " + key;
   throw NotFoundError(msg);
 }
 
@@ -162,7 +162,7 @@ GRM::Context::Inner::operator std::vector<double> &()
     {
       return context->tableDouble[key];
     }
-  std::string msg = "No double value found for given key " + key;
+  std::string msg = "No double value found for given key: " + key;
   throw NotFoundError(msg);
 }
 
@@ -178,7 +178,7 @@ GRM::Context::Inner::operator const std::vector<double> &() const
     {
       return context->tableDouble[key];
     }
-  std::string msg = "No double value found for given key " + key;
+  std::string msg = "No double value found for given key: " + key;
   throw NotFoundError(msg);
 }
 
@@ -194,7 +194,7 @@ GRM::Context::Inner::operator std::vector<std::string> &()
     {
       return context->tableString[key];
     }
-  std::string msg = "No string value found for given key " + key;
+  std::string msg = "No string value found for given key: " + key;
   throw NotFoundError(msg);
 }
 
@@ -210,7 +210,7 @@ GRM::Context::Inner::operator const std::vector<std::string> &() const
     {
       return context->tableString[key];
     }
-  std::string msg = "No string value found for given key " + key;
+  std::string msg = "No string value found for given key: " + key;
   throw NotFoundError(msg);
 }
 
@@ -226,7 +226,7 @@ GRM::Context::Inner::operator std::vector<int> *()
     {
       return &context->tableInt[key];
     }
-  std::string msg = "No integer value found for given key " + key;
+  std::string msg = "No integer value found for given key: " + key;
   throw NotFoundError(msg);
 }
 
@@ -242,7 +242,7 @@ GRM::Context::Inner::operator const std::vector<int> *() const
     {
       return &context->tableInt[key];
     }
-  std::string msg = "No integer value found for given key " + key;
+  std::string msg = "No integer value found for given key: " + key;
   throw NotFoundError(msg);
 }
 
@@ -259,7 +259,7 @@ GRM::Context::Inner::operator std::vector<double> *()
     {
       return &context->tableDouble[key];
     }
-  std::string msg = "No double value found for given key " + key;
+  std::string msg = "No double value found for given key: " + key;
   throw NotFoundError(msg);
 }
 
@@ -275,7 +275,7 @@ GRM::Context::Inner::operator const std::vector<double> *() const
     {
       return &context->tableDouble[key];
     }
-  std::string msg = "No double value found for given key " + key;
+  std::string msg = "No double value found for given key: " + key;
   throw NotFoundError(msg);
 }
 
@@ -291,7 +291,7 @@ GRM::Context::Inner::operator std::vector<std::string> *()
     {
       return &context->tableString[key];
     }
-  std::string msg = "No string value found for given key " + key;
+  std::string msg = "No string value found for given key: " + key;
   throw NotFoundError(msg);
 }
 
@@ -307,7 +307,7 @@ GRM::Context::Inner::operator const std::vector<std::string> *() const
     {
       return &context->tableString[key];
     }
-  std::string msg = "No string value found for given key " + key;
+  std::string msg = "No string value found for given key: " + key;
   throw NotFoundError(msg);
 }
 

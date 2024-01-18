@@ -1019,7 +1019,7 @@ static int test_heatmap_and_imshow(void)
   args = grm_args_new();
   cleanup_if(args == NULL);
   grm_args_push(args, "z", "nD", n * (n / 2), z);
-  grm_args_push(args, "z_dims", "ii", n / 2, n);
+  grm_args_push(args, "z_dims", "ii", n, n / 2);
   grm_args_push(args, "kind", "s", "heatmap");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 

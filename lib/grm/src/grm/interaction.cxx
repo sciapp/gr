@@ -1400,10 +1400,10 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
               z_length = z_series_vec.size();
             }
 
-          for (i = 0; i < x_series_vec.size(); i++)
+          if (!str_equals_any(kind.c_str(), 6, "heatmap", "marginal_heatmap", "contour", "imshow", "contourf",
+                              "quiver"))
             {
-              if (!str_equals_any(kind.c_str(), 6, "heatmap", "marginal_heatmap", "contour", "imshow", "contourf",
-                                  "quiver"))
+              for (i = 0; i < x_series_vec.size(); i++)
                 {
                   if (x_series_vec[i] < x_range_min || x_series_vec[i] > x_range_max)
                     {
@@ -1433,158 +1433,158 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                         }
                     }
                 }
+            }
+          else
+            {
+              static char output[50];
+              double num;
+              x_length = x_series_vec.size();
+              y_length = y_series_vec.size();
+              double x_0 = x_series_vec[0], x_end = x_series_vec[x_length - 1], y_0 = y_series_vec[0],
+                     y_end = y_series_vec[y_length - 1];
+              double x_step, y_step, x_series_idx, y_series_idx;
+              double *u_series, *v_series;
+              std::vector<double> x_steps, y_steps;
+              int x_offset = 0, y_offset = 0;
+
+              if (static_cast<int>(subplot_element->getAttribute("x_log")))
+                {
+                  for (int j = 0; j < x_length; j++)
+                    {
+                      if (!grm_isnan(x_series_vec[j]))
+                        {
+                          x_min = x_series_vec[j];
+                          break;
+                        }
+                      x_offset += 1;
+                    }
+                  x_0 = x_min;
+                }
+              if (static_cast<int>(subplot_element->getAttribute("y_log")))
+                {
+                  for (int j = 0; j < y_length; j++)
+                    {
+                      if (!grm_isnan(y_series_vec[j]))
+                        {
+                          y_min = y_series_vec[j];
+                          break;
+                        }
+                      y_offset += 1;
+                    }
+                  y_0 = y_min;
+                }
+              if (kind == "imshow") x_0 = x_min, x_end = x_max, y_0 = y_min, y_end = y_max;
+
+              gr_wctondc(&x_0, &y_0);
+              gr_wctondc(&x_end, &y_end);
+              x_0 = x_0 * max_width_height;
+              x_end = x_end * max_width_height;
+              y_0 = height - y_0 * max_width_height;
+              y_end = height - y_end * max_width_height;
+
+              x_step = (x_end - x_0) / x_length;
+              y_step = (y_end - y_0) / y_length;
+
+              if (static_cast<int>(subplot_element->getAttribute("x_log")))
+                {
+                  for (int j = 0; j < x_length - x_offset; j++)
+                    {
+                      double step_x = (x_series_vec[x_length - 1] - x_min) / (x_length - x_offset);
+                      double tmp = 0, a = x_min + j * step_x, b = x_min + (j + 1) * step_x;
+                      gr_wctondc(&a, &tmp);
+                      gr_wctondc(&b, &tmp);
+
+                      a = a * max_width_height;
+                      b = b * max_width_height;
+                      x_steps.push_back(b - a);
+                    }
+                }
+              if (static_cast<int>(subplot_element->getAttribute("y_log")))
+                {
+                  for (int j = 0; j < y_length - y_offset; j++)
+                    {
+                      double step_y = (y_series_vec[y_length - 1] - y_min) / (y_length - y_offset);
+                      double tmp = 0, a = y_min + j * step_y, b = y_min + (j + 1) * step_y;
+                      gr_wctondc(&tmp, &a);
+                      gr_wctondc(&tmp, &b);
+
+                      a = a * max_width_height;
+                      b = b * max_width_height;
+                      y_steps.push_back(-(b - a));
+                    }
+                }
+
+              if (kind == "quiver")
+                {
+                  auto u_key = static_cast<std::string>(current_series->getAttribute("u"));
+                  auto v_key = static_cast<std::string>(current_series->getAttribute("v"));
+
+                  auto u_series_vec = GRM::get<std::vector<double>>((*context)[u_key]);
+                  auto v_series_vec = GRM::get<std::vector<double>>((*context)[v_key]);
+                  u_series = &u_series_vec[0];
+                  v_series = &v_series_vec[0];
+                }
+
+              mindiff = 0;
+              x_series_idx = (mouse_x - x_0) / x_step;
+              if (static_cast<int>(subplot_element->getAttribute("x_log")) &&
+                  str_equals_any(kind.c_str(), 4, "heatmap", "marginal_heatmap", "contour", "contourf"))
+                {
+                  double tmp = 0;
+                  x_series_idx = x_offset;
+                  for (int j = 0; j < x_length - x_offset; j++)
+                    {
+                      if (tmp + x_steps[j] > (mouse_x - x_0)) break;
+                      tmp += x_steps[j];
+                      x_series_idx += 1;
+                    }
+                }
+
+              y_series_idx = (mouse_y - y_0) / y_step;
+              if (static_cast<int>(subplot_element->getAttribute("y_log")) &&
+                  str_equals_any(kind.c_str(), 4, "heatmap", "marginal_heatmap", "contour", "contourf"))
+                {
+                  double tmp = 0;
+                  y_series_idx = y_offset;
+                  for (int j = 0; j < y_length - y_offset; j++)
+                    {
+                      if (tmp + y_steps[j] < (mouse_y - y_0)) break;
+                      tmp += y_steps[j];
+                      y_series_idx += 1;
+                    }
+                }
+
+              if (x_series_idx < 0 || x_series_idx >= x_length || y_series_idx < 0 || y_series_idx >= y_length)
+                {
+                  mindiff = DBL_MAX;
+                  break;
+                }
+              if (kind == "quiver")
+                {
+                  info->xlabel = (char *)"u";
+                  info->ylabel = (char *)"v";
+                  info->x = u_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
+                  info->y = v_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
+                }
               else
                 {
-                  static char output[50];
-                  double num;
-                  x_length = x_series_vec.size();
-                  y_length = y_series_vec.size();
-                  double x_0 = x_series_vec[0], x_end = x_series_vec[x_length - 1], y_0 = y_series_vec[0],
-                         y_end = y_series_vec[y_length - 1];
-                  double x_step, y_step, x_series_idx, y_series_idx;
-                  double *u_series, *v_series;
-                  std::vector<double> x_steps, y_steps;
-                  int x_offset = 0, y_offset = 0;
+                  info->x = x_series_vec[(int)x_series_idx];
+                  info->y = y_series_vec[(int)y_series_idx];
+                }
+              info->x_px = mouse_x;
+              info->y_px = mouse_y;
 
-                  if (static_cast<int>(subplot_element->getAttribute("x_log")))
-                    {
-                      for (int j = 0; j < x_length; j++)
-                        {
-                          if (!grm_isnan(x_series_vec[j]))
-                            {
-                              x_min = x_series_vec[j];
-                              break;
-                            }
-                          x_offset += 1;
-                        }
-                      x_0 = x_min;
-                    }
-                  if (static_cast<int>(subplot_element->getAttribute("y_log")))
-                    {
-                      for (int j = 0; j < y_length; j++)
-                        {
-                          if (!grm_isnan(y_series_vec[j]))
-                            {
-                              y_min = y_series_vec[j];
-                              break;
-                            }
-                          y_offset += 1;
-                        }
-                      y_0 = y_min;
-                    }
-                  if (kind == "imshow") x_0 = x_min, x_end = x_max, y_0 = y_min, y_end = y_max;
-
-                  gr_wctondc(&x_0, &y_0);
-                  gr_wctondc(&x_end, &y_end);
-                  x_0 = x_0 * max_width_height;
-                  x_end = x_end * max_width_height;
-                  y_0 = height - y_0 * max_width_height;
-                  y_end = height - y_end * max_width_height;
-
-                  x_step = (x_end - x_0) / x_length;
-                  y_step = (y_end - y_0) / y_length;
-
-                  if (static_cast<int>(subplot_element->getAttribute("x_log")))
-                    {
-                      for (int j = 0; j < x_length - x_offset; j++)
-                        {
-                          double step_x = (x_series_vec[x_length - 1] - x_min) / (x_length - x_offset);
-                          double tmp = 0, a = x_min + j * step_x, b = x_min + (j + 1) * step_x;
-                          gr_wctondc(&a, &tmp);
-                          gr_wctondc(&b, &tmp);
-
-                          a = a * max_width_height;
-                          b = b * max_width_height;
-                          x_steps.push_back(b - a);
-                        }
-                    }
-                  if (static_cast<int>(subplot_element->getAttribute("y_log")))
-                    {
-                      for (int j = 0; j < y_length - y_offset; j++)
-                        {
-                          double step_y = (y_series_vec[y_length - 1] - y_min) / (y_length - y_offset);
-                          double tmp = 0, a = y_min + j * step_y, b = y_min + (j + 1) * step_y;
-                          gr_wctondc(&tmp, &a);
-                          gr_wctondc(&tmp, &b);
-
-                          a = a * max_width_height;
-                          b = b * max_width_height;
-                          y_steps.push_back(-(b - a));
-                        }
-                    }
-
-                  if (kind == "quiver")
-                    {
-                      auto u_key = static_cast<std::string>(current_series->getAttribute("u"));
-                      auto v_key = static_cast<std::string>(current_series->getAttribute("v"));
-
-                      auto u_series_vec = GRM::get<std::vector<double>>((*context)[u_key]);
-                      auto v_series_vec = GRM::get<std::vector<double>>((*context)[v_key]);
-                      u_series = &u_series_vec[0];
-                      v_series = &v_series_vec[0];
-                    }
-
-                  mindiff = 0;
-                  x_series_idx = (mouse_x - x_0) / x_step;
-                  if (static_cast<int>(subplot_element->getAttribute("x_log")) &&
-                      str_equals_any(kind.c_str(), 4, "heatmap", "marginal_heatmap", "contour", "contourf"))
-                    {
-                      double tmp = 0;
-                      x_series_idx = x_offset;
-                      for (int j = 0; j < x_length - x_offset; j++)
-                        {
-                          if (tmp + x_steps[j] > (mouse_x - x_0)) break;
-                          tmp += x_steps[j];
-                          x_series_idx += 1;
-                        }
-                    }
-
-                  y_series_idx = (mouse_y - y_0) / y_step;
-                  if (static_cast<int>(subplot_element->getAttribute("y_log")) &&
-                      str_equals_any(kind.c_str(), 4, "heatmap", "marginal_heatmap", "contour", "contourf"))
-                    {
-                      double tmp = 0;
-                      y_series_idx = y_offset;
-                      for (int j = 0; j < y_length - y_offset; j++)
-                        {
-                          if (tmp + y_steps[j] < (mouse_y - y_0)) break;
-                          tmp += y_steps[j];
-                          y_series_idx += 1;
-                        }
-                    }
-
-                  if (x_series_idx < 0 || x_series_idx >= x_length || y_series_idx < 0 || y_series_idx >= y_length)
-                    {
-                      mindiff = DBL_MAX;
-                      break;
-                    }
-                  if (kind == "quiver")
-                    {
-                      info->xlabel = (char *)"u";
-                      info->ylabel = (char *)"v";
-                      info->x = u_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
-                      info->y = v_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
-                    }
-                  else
-                    {
-                      info->x = x_series_vec[(int)x_series_idx];
-                      info->y = y_series_vec[(int)y_series_idx];
-                    }
-                  info->x_px = mouse_x;
-                  info->y_px = mouse_y;
-
-                  if (kind == "quiver")
-                    {
-                      info->label = (char *)"";
-                    }
-                  else
-                    {
-                      num = (grm_isnan(z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx]))
-                                ? NAN
-                                : z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx];
-                      snprintf(output, 50, "%f", num);
-                      info->label = output;
-                    }
+              if (kind == "quiver")
+                {
+                  info->label = (char *)"";
+                }
+              else
+                {
+                  num = (grm_isnan(z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx]))
+                            ? NAN
+                            : z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx];
+                  snprintf(output, 50, "%f", num);
+                  info->label = output;
                 }
             }
           tooltip_callback(mouse_x, mouse_y, info);

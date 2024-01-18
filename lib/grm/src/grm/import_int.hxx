@@ -44,9 +44,9 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
 grm_file_args_t *grm_file_args_new();
 void parse_parameter_dd(std::string *input, const std::string *key, std::string *x, std::string *y);
 void parse_parameter_ddd(std::string *input, const std::string *key, std::string *r, std::string *g, std::string *b);
-int parse_parameter_nI(std::string *input, const std::string *key, std::vector<int> values);
+int parse_parameter_nI(std::string *input, const std::string *key, std::vector<int> *values);
 int parse_parameter_nS(std::string *input, const std::string *key, std::vector<std::string> *values);
-int parse_parameter_nD(std::string *input, const std::string *key, std::vector<double> values);
+int parse_parameter_nD(std::string *input, const std::string *key, std::vector<double> *values);
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 

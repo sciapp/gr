@@ -274,6 +274,30 @@ error_cleanup:
   return error;
 }
 
+err_t event_queue_enqueue_integral_update_event(event_queue_t *queue, double int_lim_low, double int_lim_high)
+{
+  grm_integral_update_event_t *integral_update_event = NULL;
+  err_t error = ERROR_NONE;
+
+  integral_update_event = malloc(sizeof(grm_integral_update_event_t));
+  error_cleanup_and_set_error_if(integral_update_event == NULL, ERROR_MALLOC);
+  integral_update_event->type = GRM_EVENT_INTEGRAL_UPDATE;
+  integral_update_event->int_lim_low = int_lim_low;
+  integral_update_event->int_lim_high = int_lim_high;
+  error = event_reflist_enqueue(queue->queue, (grm_event_t *)integral_update_event);
+  error_cleanup_if_error;
+
+  return ERROR_NONE;
+
+error_cleanup:
+  if (integral_update_event != NULL)
+    {
+      free(integral_update_event);
+    }
+
+  return error;
+}
+
 void event_queue_discard_all_of_type(event_queue_t *queue, grm_event_type_t type)
 {
 
