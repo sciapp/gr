@@ -208,7 +208,7 @@ static std::set<std::string> polarKinds = {
 };
 
 static std::set<std::string> kinds3D = {
-    "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
+    "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
 };
 
 static std::map<std::string, double> symbol_to_meters_per_unit{
@@ -416,7 +416,7 @@ static std::tuple<double, int> getColorbarAttributes(std::string kind, std::shar
     {
       offset = 0.025;
     }
-  if (kind == "surface" || kind == "volume" || kind == "trisurf")
+  if (kind == "surface" || kind == "volume" || kind == "trisurface")
     {
       offset = 0.05;
     }
