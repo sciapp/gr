@@ -12542,8 +12542,13 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
     }
 
   if (!element->hasAttribute("_x_lim_min") || !element->hasAttribute("_x_lim_max") ||
-      !element->hasAttribute("_y_lim_min") || !element->hasAttribute("_y_lim_max"))
-    plotCoordinateRanges(element, context);
+      !element->hasAttribute("_y_lim_min") || !element->hasAttribute("_y_lim_max") ||
+      element->hasAttribute("_update_limits") && static_cast<int>(element->getAttribute("_update_limits")))
+    {
+
+      plotCoordinateRanges(element, context);
+      element->removeAttribute("_update_limits");
+    }
   processSubplot(element);
   GRM::Render::processViewport(element);
   // todo: there are cases that element does not have char_height set
@@ -15712,6 +15717,8 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                   (*context)["z_dims" + str] = z_dims_vec;
                   new_series->setAttribute("z_dims", "z_dims" + str);
                   global_root->setAttribute("_id", id++);
+                  auto plot = new_series->parentElement();
+                  plot->setAttribute("_update_limits", 1);
                 }
 
               for (const auto &child : element->children())
