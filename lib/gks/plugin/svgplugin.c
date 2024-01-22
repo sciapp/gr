@@ -173,7 +173,7 @@ static void svg_memcpy(SVG_stream *p, char *s, size_t n)
   if (p->length + n >= p->size)
     {
       while (p->length + n >= p->size) p->size += MEMORY_INCREMENT;
-      p->buffer = (unsigned char *)realloc(p->buffer, p->size);
+      p->buffer = (unsigned char *)gks_realloc(p->buffer, p->size);
     }
 
   memmove(p->buffer + p->length, s, n);
@@ -198,7 +198,7 @@ static SVG_stream *svg_alloc_stream(void)
 {
   SVG_stream *p;
 
-  p = (SVG_stream *)calloc(1, sizeof(SVG_stream));
+  p = (SVG_stream *)gks_malloc(sizeof(SVG_stream));
   p->buffer = NULL;
   p->size = p->length = 0;
 
@@ -333,10 +333,10 @@ static void create_pattern(void)
   png_infop info_ptr;
   png_bytep *row_pointers;
 
-  row_pointers = (png_bytep *)malloc(sizeof(png_bytep) * 8);
+  row_pointers = (png_bytep *)gks_malloc(sizeof(png_bytep) * 8);
   for (i = 0; i < 8; i++)
     {
-      row_pointers[i] = (png_byte *)malloc(sizeof(png_byte) * 4 * 8);
+      row_pointers[i] = (png_byte *)gks_malloc(sizeof(png_byte) * 4 * 8);
     }
   gks_inq_pattern_array(p->pattern, parray);
   height = (*parray == 32) ? 16 : (*parray == 4) ? 8 : *parray;
@@ -369,9 +369,9 @@ static void create_pattern(void)
   png_write_end(png_ptr, NULL);
   for (j = 0; j < 8; ++j)
     {
-      free(row_pointers[j]);
+      gks_free(row_pointers[j]);
     }
-  free(row_pointers);
+  gks_free(row_pointers);
   png_destroy_write_struct(&png_ptr, &info_ptr);
 }
 
@@ -722,7 +722,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
                   i = 0;
                 }
             }
-          free(s);
+          gks_free(s);
           svg_printf(p->stream, "\"/>\n  </pattern>\n</defs>\n");
         }
     }
@@ -794,7 +794,7 @@ static void polyline(int n, double *px, double *py)
 
   if (n > p->max_points)
     {
-      p->points = (SVG_point *)realloc(p->points, n * sizeof(SVG_point));
+      p->points = (SVG_point *)gks_realloc(p->points, n * sizeof(SVG_point));
       p->max_points = n;
     }
 
@@ -995,10 +995,10 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   swapx = ix1 > ix2;
   swapy = iy1 < iy2;
 
-  row_pointers = (png_bytep *)malloc(sizeof(png_bytep) * height);
+  row_pointers = (png_bytep *)gks_malloc(sizeof(png_bytep) * height);
   for (j = 0; j < height; ++j)
     {
-      row_pointers[j] = (png_byte *)malloc(width * 4);
+      row_pointers[j] = (png_byte *)gks_malloc(width * 4);
     }
   for (j = 0; j < height; j++)
     {
@@ -1047,9 +1047,9 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   png_write_end(png_ptr, NULL);
   for (j = 0; j < height; ++j)
     {
-      free(row_pointers[j]);
+      gks_free(row_pointers[j]);
     }
-  free(row_pointers);
+  gks_free(row_pointers);
   png_destroy_write_struct(&png_ptr, &info_ptr);
   slen = current_write_data.size * 4 / 3 + 4;
   s = (char *)gks_malloc(slen);
@@ -1072,7 +1072,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
         }
     }
   svg_printf(p->stream, "\" transform=\"translate(%d, %d)\"/>\n</g>\n", x, y);
-  free(s);
+  gks_free(s);
 }
 
 static void to_DC(int n, double *x, double *y)
@@ -1355,7 +1355,7 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
 
   if (n > p->max_points)
     {
-      p->points = (SVG_point *)realloc(p->points, n * sizeof(SVG_point));
+      p->points = (SVG_point *)gks_realloc(p->points, n * sizeof(SVG_point));
       p->max_points = n;
     }
 
@@ -1401,7 +1401,7 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
 
   if (n > p->max_points)
     {
-      p->points = (SVG_point *)realloc(p->points, n * sizeof(SVG_point));
+      p->points = (SVG_point *)gks_realloc(p->points, n * sizeof(SVG_point));
       p->max_points = n;
     }
 
@@ -1517,7 +1517,7 @@ static void set_clip_path(int tnr)
                  "Path>\n</defs>\n",
                  path_id, p->rect_index, x, y, width, height);
       p->clip_index++;
-      if (p->clip_index == MAX_CLIP_RECTS)
+      if (p->clip_index == p->max_clip_rects)
         {
           p->max_clip_rects += MAX_CLIP_RECTS;
           p->cr = (SVG_clip_rect *)gks_realloc(p->cr, p->max_clip_rects * sizeof(SVG_clip_rect));
@@ -1585,7 +1585,7 @@ void gks_drv_js(
 
       gks_init_core(gkss);
 
-      p = (ws_state_list *)calloc(1, sizeof(ws_state_list));
+      p = (ws_state_list *)gks_malloc(sizeof(ws_state_list));
 
       p->conid = ia[1];
       p->path = chars;
@@ -1631,11 +1631,11 @@ void gks_drv_js(
     case 3:
       if (!p->empty) write_page();
 
-      free(p->cr);
-      free(p->stream->buffer);
-      free(p->stream);
-      free(p->points);
-      free(p);
+      gks_free(p->cr);
+      gks_free(p->stream->buffer);
+      gks_free(p->stream);
+      gks_free(p->points);
+      gks_free(p);
       break;
 
       /* activate workstation */
