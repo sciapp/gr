@@ -2150,11 +2150,14 @@ err_t plot_contour(grm_args_t *subplot_args)
   int num_levels = 20, major_h;
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
+  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
 
   bool has_levels = grm_args_values(subplot_args, "levels", "i", &num_levels);
   grm_args_values(subplot_args, "series", "A", &current_series);
+  grm_args_values(subplot_args, "grplot", "i", &grplot);
+  group->setAttribute("grplot", grplot);
   while (*current_series != nullptr)
     {
       double *x, *y, *z;
@@ -2214,11 +2217,14 @@ err_t plot_contourf(grm_args_t *subplot_args)
   int num_levels = 20, major_h;
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
+  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
 
   bool has_levels = grm_args_values(subplot_args, "levels", "i", &num_levels);
   grm_args_values(subplot_args, "series", "A", &current_series);
+  grm_args_values(subplot_args, "grplot", "i", &grplot);
+  group->setAttribute("grplot", grplot);
   while (*current_series != nullptr)
     {
       double *x, *y, *z;
@@ -2417,6 +2423,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max;
   err_t error = ERROR_NONE;
   std::shared_ptr<GRM::Element> plot_parent;
+  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
 
@@ -2432,6 +2439,8 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "z_log", "i", &z_log);
+  grm_args_values(subplot_args, "grplot", "i", &grplot);
+  group->setAttribute("grplot", grplot);
   while (*current_series != nullptr)
     {
       x = y = nullptr;
@@ -2517,6 +2526,7 @@ err_t plot_marginal_heatmap(grm_args_t *subplot_args)
   grm_args_t **current_series;
   double *x, *y, *plot;
   unsigned int num_bins_x, num_bins_y, n;
+  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
   auto subGroup = global_render->createSeries("marginal_heatmap");
@@ -2532,6 +2542,8 @@ err_t plot_marginal_heatmap(grm_args_t *subplot_args)
   if (grm_args_values(subplot_args, "y_ind", "i", &y_ind)) subGroup->setAttribute("y_ind", y_ind);
 
   grm_args_values(subplot_args, "series", "A", &current_series);
+  grm_args_values(subplot_args, "grplot", "i", &grplot);
+  group->setAttribute("grplot", grplot);
   grm_args_first_value(*current_series, "x", "D", &x, &num_bins_x);
   grm_args_first_value(*current_series, "y", "D", &y, &num_bins_y);
   grm_args_first_value(*current_series, "z", "D", &plot, &n);
@@ -2568,10 +2580,13 @@ err_t plot_wireframe(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
+  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
+  grm_args_values(subplot_args, "grplot", "i", &grplot);
+  group->setAttribute("grplot", grplot);
   while (*current_series != nullptr)
     {
       double *x, *y, *z;
@@ -2626,10 +2641,13 @@ err_t plot_surface(grm_args_t *subplot_args)
   err_t error = ERROR_NONE;
   int accelerate; /* this argument decides if GR3 or GRM is used to plot the surface */
   double xmin, xmax, ymin, ymax;
+  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
+  grm_args_values(subplot_args, "grplot", "i", &grplot);
+  group->setAttribute("grplot", grplot);
   bool has_accelerate = grm_args_values(subplot_args, "accelerate", "i", &accelerate);
 
   while (*current_series != nullptr)
@@ -2840,6 +2858,7 @@ err_t plot_imshow(grm_args_t *subplot_args)
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "grplot", "i", &grplot);
+  group->setAttribute("grplot", grplot);
   if (grm_args_values(subplot_args, "c_lim", "dd", &c_min, &c_max))
     {
       group->setAttribute("z_lim_min", c_min);
@@ -2849,7 +2868,6 @@ err_t plot_imshow(grm_args_t *subplot_args)
     {
       auto subGroup = global_render->createSeries("imshow");
       group->append(subGroup);
-      group->setAttribute("grplot", grplot);
 
       grm_args_first_value(*current_series, "c", "D", &c_data, &c_data_length);
       grm_args_first_value(*current_series, "c_dims", "I", &shape, &i);
