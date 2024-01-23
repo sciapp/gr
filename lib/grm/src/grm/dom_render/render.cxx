@@ -13253,7 +13253,11 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
       element->setAttribute("_c_lim_max", NAN);
       kind = static_cast<std::string>(element->getAttribute("kind"));
       if (!string_map_at(fmt_map, static_cast<const char *>(kind.c_str()), static_cast<const char **>(&fmt)))
-        throw NotFoundError("Invalid kind was given.\n");
+        {
+          std::stringstream ss;
+          ss << "Invalid kind \"" << kind << "\" was given.";
+          throw NotFoundError(ss.str());
+        }
       if (!str_equals_any(kind, "pie", "polar_histogram"))
         {
           current_component_name = data_component_names.begin();
