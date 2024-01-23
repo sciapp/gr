@@ -44,10 +44,8 @@ EXPORT int grm_process_tree(void);
 EXPORT int grm_export(const char *file_path);
 EXPORT int grm_switch(unsigned int id);
 
-#if 0
-#if !defined(NO_EXPAT) || !defined(NO_LIBXML2)
+#if !defined(NO_XERCES_C)
 EXPORT int grm_load_graphics_tree(FILE *file);
-#endif
 #endif
 
 #ifdef __cplusplus
@@ -68,7 +66,7 @@ EXPORT int get_focus_and_factor_from_dom(const int x1, const int y1, const int x
                                          std::shared_ptr<GRM::Element> &subplot_element);
 EXPORT bool grm_validate(void);
 
-#if !defined(NO_LIBXML2)
+#if !defined(NO_XERCES_C)
 EXPORT std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(void);
 #endif
 #endif
