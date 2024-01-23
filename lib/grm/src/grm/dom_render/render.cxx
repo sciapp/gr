@@ -15717,8 +15717,6 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                   (*context)["z_dims" + str] = z_dims_vec;
                   new_series->setAttribute("z_dims", "z_dims" + str);
                   global_root->setAttribute("_id", id++);
-                  auto plot = new_series->parentElement();
-                  plot->setAttribute("_update_limits", 1);
                 }
 
               for (const auto &child : element->children())
@@ -15857,10 +15855,14 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               std::cerr << toXML(element->getRootNode(), GRM::SerializerOptions{std::string(2, ' ')}) << "\n";
             }
 
-          /* update coordinate system if needed */
           if (newElement)
             {
-              std::shared_ptr<GRM::Element> plot = newElement->parentElement();
+              auto plot = newElement->parentElement();
+
+              /* update the limits since they depend on the kind */
+              plot->setAttribute("_update_limits", 1);
+
+              /* update coordinate system if needed */
               std::vector<std::string> colorbar_group = {"quiver",        "contour",   "contourf", "hexbin",
                                                          "polar_heatmap", "heatmap",   "surface",  "volume",
                                                          "trisurface",    "tricontour"};
