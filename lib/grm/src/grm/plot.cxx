@@ -6,8 +6,18 @@
 #include <grm/dom_render/render.hxx>
 
 #include <algorithm>
-#include <string>
+#include <array>
+#include <functional>
+#include <memory>
+#include <optional>
 #include <set>
+#include <sstream>
+#include <string>
+#include <string_view>
+
+#ifdef __unix__
+#include <unistd.h>
+#endif
 
 extern "C" {
 #include <grm/layout.h>
@@ -27,13 +37,21 @@ extern "C" {
 #include "logging_int.h"
 }
 
-#if 0
-#ifndef NO_LIBXML2
-#include <libxml/globals.h>
-#include <libxml/xmlreader.h>
-#elif !defined(NO_EXPAT)
-#include <expat.h>
-#endif
+#ifndef NO_XERCES_C
+#include <xercesc/sax/InputSource.hpp>
+#include <xercesc/sax2/DefaultHandler.hpp>
+#include <xercesc/sax2/XMLReaderFactory.hpp>
+
+#include <xercesc/parsers/SAX2XMLReaderImpl.hpp>
+
+#include <xercesc/util/BinInputStream.hpp>
+#include <xercesc/util/OutOfMemoryException.hpp>
+#include <xercesc/util/TransService.hpp>
+
+#include <xercesc/framework/XMLFormatter.hpp>
+#include <xercesc/framework/psvi/PSVIAttributeList.hpp>
+#include <xercesc/framework/psvi/PSVIHandler.hpp>
+#include <xercesc/framework/psvi/XSAttributeDeclaration.hpp>
 #endif
 
 #include "plot_int.h"
@@ -4547,78 +4565,627 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
 
 /* ------------------------- xml ------------------------------------------------------------------------------------ */
 
-#if 0
-#ifndef NO_LIBXML2
-#if LIBXML_VERSION >= 21200
-static void schema_parse_error_handler(void *has_schema_errors, const xmlError *error)
-#else
-static void schema_parse_error_handler(void *has_schema_errors, xmlError *error)
-#endif
+#ifndef NO_XERCES_C
+namespace XERCES_CPP_NAMESPACE
 {
-  fprintf(stderr, "XML validation error at line %d, column %d: %s", error->line, error->int2, error->message);
-  *((bool *)has_schema_errors) = true;
+
+/*!
+ * \brief A helper class to encode Xerces strings in UTF-8.
+ *
+ * This class takes a Xerces string and encodes it in UTF-8. By overloading the `<<` operator, the encoding result can
+ * be used with C++ streams directly.
+ */
+class TranscodeToUtf8Str : public TranscodeToStr
+{
+public:
+  TranscodeToUtf8Str(const XMLCh *in) : TranscodeToStr(in, "UTF-8") {}
+};
+
+inline std::ostream &operator<<(std::ostream &target, const TranscodeToStr &to_dump)
+{
+  target << to_dump.str();
+  return target;
 }
 
+/*!
+ * \brief Another helper class to encode Xerces strings in another encoding.
+ *
+ * `TranscodeToUtf8Str` is meant to be used with temporary objects in a stream expression. In contrast, objects of
+ * `XMLStringBuffer` are meant to be used with permanent objects to avoid the overhead of constructing new objects for
+ * every string encoding operation.
+ */
+class XMLStringBuffer : public XMLFormatter, private XMLFormatTarget
+{
+public:
+  /*!
+   * \brief Construct a new XMLStringBuffer object.
+   *
+   * \param[in] encoding The encoding to apply to Xerces strings, e.g. "UTF-8".
+   */
+  XMLStringBuffer(const char *encoding) : XMLFormatter(encoding, this) {}
+
+  void writeChars(const XMLByte *const toWrite, const XMLSize_t count, XMLFormatter *const formatter) override
+  {
+    out_buffer_.write((char *)toWrite, (int)count);
+  }
+
+  /*!
+   * \brief Encode a given Xerces string and return the result.
+   *
+   * \param[in] chars Xerces string to encode.
+   * \return The encoded string.
+   */
+  std::string encode(std::optional<const XMLCh *> chars = std::nullopt)
+  {
+    if (chars)
+      {
+        *this << *chars;
+      }
+    std::string out = out_buffer_.str();
+    out_buffer_.str("");
+    return out;
+  }
+
+private:
+  std::stringstream out_buffer_;
+};
+
+
+/*!
+ * \brief A helper class for `FileInputSource` which manages the file reading.
+ */
+class FileBinInputStream : public BinInputStream
+{
+public:
+  FileBinInputStream(FILE *file) : file_(file) {}
+
+  XMLFilePos curPos() const override { return ftell(file_); }
+
+  XMLSize_t readBytes(XMLByte *const toFill, const XMLSize_t maxToRead) override
+  {
+    return fread(toFill, sizeof(XMLByte), maxToRead, file_);
+  }
+
+  const XMLCh *getContentType() const override { return nullptr; }
+
+private:
+  FILE *file_;
+};
+
+/*!
+ * \brief An adapter class to read XML data from a file.
+ */
+class FileInputSource : public InputSource
+{
+public:
+  FileInputSource(FILE *file)
+      : file_(file), recovered_filename_(recover_filename()),
+        system_id_transcoder_(reinterpret_cast<const XMLByte *>(recovered_filename_.c_str()),
+                              recovered_filename_.length(), "UTF-8")
+  {
+  }
+
+  BinInputStream *makeStream() const override { return new FileBinInputStream(file_); }
+
+  const XMLCh *getSystemId() const override { return system_id_transcoder_.str(); }
+
+private:
+  /*!
+   * \brief Recover the filename from a file descriptor.
+   *
+   * Xerces assigns a system id to input sources to make them distinguishable from each other. Thus, this function tries
+   * to recover the filename from the given FILE object to have a suitable system id. Currently, this is only possible
+   * on Unix systems with mounted `/proc` filesystem.
+   *
+   * \return The recovered filename if found, otherwise `<unknown>`.
+   */
+  std::string recover_filename() const
+  {
+#ifdef __unix__
+    std::stringstream proc_link_stream;
+    const unsigned int MAXSIZE = 4096;
+    std::array<char, MAXSIZE> filename;
+    ssize_t readlink_bytes;
+
+    proc_link_stream << "/proc/self/fd/" << fileno(file_);
+    auto proc_link{proc_link_stream.str()};
+    readlink_bytes = readlink(proc_link.c_str(), filename.data(), MAXSIZE);
+    filename[readlink_bytes] = '\0';
+    if (readlink_bytes >= 0)
+      {
+        filename[readlink_bytes] = '\0';
+        return filename.data();
+      }
+#endif
+    return "<unknown>";
+  }
+
+  FILE *file_;
+  std::string recovered_filename_;
+  TranscodeFromStr system_id_transcoder_;
+};
+
+/*!
+ * \brief A helper class for `StringInputSource` which reads data from a string.
+ */
+class StringInputStream : public BinInputStream
+{
+public:
+  StringInputStream(const std::string &str) : str_(str), cur_pos_(0) {}
+
+  XMLFilePos curPos() const override { return cur_pos_; }
+
+  XMLSize_t readBytes(XMLByte *const toFill, const XMLSize_t maxToRead) override
+  {
+    auto str_view = std::string_view(str_).substr(cur_pos_, maxToRead);
+    memcpy(toFill, str_view.data(), str_view.length());
+    cur_pos_ += str_view.length();
+    return str_view.length();
+  }
+
+  const XMLCh *getContentType() const override { return nullptr; }
+
+private:
+  const std::string &str_;
+  long cur_pos_;
+};
+
+/*!
+ * \brief An adapter class to read XML data from a string.
+ */
+class StringInputSource : public InputSource
+{
+public:
+  StringInputSource(const std::string &str)
+      : str_(str), system_id_transcoder_(reinterpret_cast<const XMLByte *>("<in-memory-string>"),
+                                         strlen("<in-memory-string>"), "UTF-8")
+  {
+  }
+
+  StringInputSource(std::string &&str)
+      : str_(std::move(str)), system_id_transcoder_(reinterpret_cast<const XMLByte *>("<in-memory-string>"),
+                                                    strlen("<in-memory-string>"), "UTF-8")
+  {
+  }
+
+  BinInputStream *makeStream() const override { return new StringInputStream(str_); }
+
+  const XMLCh *getSystemId() const override { return system_id_transcoder_.str(); }
+
+private:
+  std::string str_;
+  TranscodeFromStr system_id_transcoder_;
+};
+
+/*!
+ * \brief A class which manages error reporting for a SAX parser.
+ */
+class SaxErrorHandler : public ErrorHandler
+{
+public:
+  SaxErrorHandler() = default;
+
+  SaxErrorHandler(const std::string &schema_filepath) : schema_filepath_(schema_filepath), schema_invalid_(false) {}
+
+  void warning(const SAXParseException &e) override
+  {
+    std::cerr << "\nWarning at file " << TranscodeToUtf8Str(e.getSystemId()) << ", line " << e.getLineNumber()
+              << ", char " << e.getColumnNumber() << "\n  Message: " << TranscodeToUtf8Str(e.getMessage()) << std::endl;
+  }
+
+  void error(const SAXParseException &e) override
+  {
+    std::cerr << "\nError at file " << TranscodeToUtf8Str(e.getSystemId()) << ", line " << e.getLineNumber()
+              << ", char " << e.getColumnNumber() << "\n  Message: " << TranscodeToUtf8Str(e.getMessage()) << std::endl;
+  }
+
+  void fatalError(const SAXParseException &e) override
+  {
+    auto system_id{TranscodeToUtf8Str(e.getSystemId())};
+    std::cerr << "\nFatal Error at file " << system_id << ", line " << e.getLineNumber() << ", char "
+              << e.getColumnNumber() << "\n  Message: " << TranscodeToUtf8Str(e.getMessage()) << std::endl;
+    if (std::string(reinterpret_cast<const char *>(system_id.str())) == schema_filepath_)
+      {
+        schema_invalid_ = true;
+      }
+  }
+
+  void resetErrors() override
+  {
+    if (schema_filepath_)
+      {
+        schema_invalid_ = false;
+      }
+  }
+
+  std::optional<bool> schema_invalid() const { return schema_invalid_; }
+
+private:
+  std::optional<std::string> schema_filepath_;
+  std::optional<bool> schema_invalid_;
+};
+
+/*!
+ * \brief The core class to handle SAX parsing of XML encoded graphics trees.
+ *
+ * This class inherits from all parser types that are needed to handle the whole parsing process.
+ */
+class GraphicsTreeParseHandler : public DefaultHandler, public SaxErrorHandler, public PSVIHandler
+{
+public:
+  GraphicsTreeParseHandler() {}
+  ~GraphicsTreeParseHandler() {}
+
+  void startDocument() override {}
+
+  void endDocument() override {}
+
+  /*!
+   * \brief Handle the start of an XML tag in the document.
+   *
+   * This function creates a new GRM tree element and records all attributes which need to be inserted into the element.
+   * All further processing is delayed until the PSVI handler is called since it has access to the XML schema and the
+   * types of all attributes.
+   */
+  void startElement(const XMLCh *const uri, const XMLCh *const localname, const XMLCh *const qname,
+                    const Attributes &attributes) override
+  {
+    const std::string node_name = encode(qname);
+
+    if (node_name == "root")
+      {
+        global_root = global_render->createElement("root");
+        global_render->replaceChildren(global_root);
+        current_element_ = global_root;
+        insertion_parent_ = nullptr;
+      }
+    else
+      {
+        current_element_ = global_render->createElement(node_name);
+      }
+
+    XMLSize_t attribute_count = attributes.getLength();
+    current_attributes_.clear();
+    current_attributes_.reserve(attribute_count);
+    for (XMLSize_t i = 0; i < attribute_count; i++)
+      {
+        current_attributes_.push_back({encode(attributes.getQName(i)), encode(attributes.getValue(i))});
+      }
+  }
+
+  /*!
+   * \brief Handle a closing XML tag.
+   *
+   * This function navigates one level up in the graphics tree hierarchy and sets this value as the new insertion
+   * parent.
+   */
+  void endElement(const XMLCh *const uri, const XMLCh *const localname, const XMLCh *const qname) override
+  {
+    insertion_parent_ = insertion_parent_->parentElement();
+  }
+
+  /*!
+   * \brief Process the types of all attributes of a new XML tag.
+   *
+   * This handler is called after `startElement`. The type information in this method together with the previously
+   * recorded element data can be used to create a new element in the graphics tree.
+   */
+  void handleAttributesPSVI(const XMLCh *const localName, const XMLCh *const uri,
+                            PSVIAttributeList *psviAttributes) override
+  {
+    XMLSize_t attribute_count = psviAttributes->getLength();
+    for (XMLSize_t i = 0; i < attribute_count; i++)
+      {
+        auto attribute_declaration = psviAttributes->getAttributePSVIAtIndex(i)->getAttributeDeclaration();
+        if (attribute_declaration == nullptr)
+          {
+            continue;
+          }
+
+        const std::string &attribute_name = current_attributes_[i].first;
+        const std::string &attribute_value = current_attributes_[i].second;
+        assert(attribute_name == encode(attribute_declaration->getName()));
+        const std::string attribute_type = encode(attribute_declaration->getTypeDefinition()->getName());
+
+        std::vector<std::string> attribute_types;
+        if (attribute_type == "strint")
+          {
+            attribute_types = {"integer", "string"};
+          }
+        else
+          {
+            attribute_types = {attribute_type};
+          }
+
+        for (const auto &attribute_type : attribute_types)
+          {
+            try
+              {
+                if (attribute_type == "integer")
+                  {
+                    current_element_->setAttribute(attribute_name, std::stoi(attribute_value));
+                  }
+                else if (attribute_type == "double")
+                  {
+                    current_element_->setAttribute(attribute_name, std::stod(attribute_value));
+                  }
+                else
+                  {
+                    current_element_->setAttribute(attribute_name, attribute_value);
+                  }
+                break;
+              }
+            catch (const std::invalid_argument &)
+              {
+              }
+          }
+        if (attribute_name == "active" && attribute_value == "1")
+          {
+            global_render->setActiveFigure(current_element_);
+          }
+      }
+
+    if (insertion_parent_ != nullptr)
+      {
+        insertion_parent_->appendChild(current_element_);
+      }
+    insertion_parent_ = current_element_;
+  }
+
+  void handleElementPSVI(const XMLCh *const localName, const XMLCh *const uri, PSVIElement *elementInfo) override {}
+
+  void handlePartialElementPSVI(const XMLCh *const localName, const XMLCh *const uri, PSVIElement *elementInfo) override
+  {
+  }
+
+  void warning(const SAXParseException &e) override { SaxErrorHandler::warning(e); }
+
+  void error(const SAXParseException &e) override { SaxErrorHandler::error(e); }
+
+  void fatalError(const SAXParseException &e) override { SaxErrorHandler::fatalError(e); }
+
+  void resetErrors() override { SaxErrorHandler::resetErrors(); }
+
+private:
+  std::string encode(std::optional<const XMLCh *> chars = std::nullopt) { return xml_buffer_.encode(chars); }
+
+  XMLStringBuffer xml_buffer_{"UTF-8"};
+  std::shared_ptr<GRM::Element> insertion_parent_, current_element_;
+  std::vector<std::pair<std::string, std::string>> current_attributes_;
+};
+
+/*!
+ * \brief The core class to handle SAX parsing of XML schemas.
+ *
+ * This class inherits from all parser types that are needed to handle the whole parsing process.
+ */
+class SchemaParseHandler : public DefaultHandler, public SaxErrorHandler
+{
+public:
+  SchemaParseHandler(GRM::Document &document) : document_(document) {}
+  ~SchemaParseHandler() {}
+
+  void startDocument() override {}
+
+  void endDocument() override {}
+
+  /*!
+   * \brief Handle the start of an XML tag in the document.
+   *
+   * This function creates a new GRM tree element and adds all read attributes to the element.
+   */
+  void startElement(const XMLCh *const uri, const XMLCh *const localname, const XMLCh *const qname,
+                    const Attributes &attributes) override
+  {
+    const std::string node_name = encode(qname);
+
+    if (node_name == "xs:schema")
+      {
+        current_gr_element_ = document_.createElement("xs:schema");
+        document_.replaceChildren(current_gr_element_);
+        insertion_parent_ = nullptr;
+      }
+    else
+      {
+        current_gr_element_ = document_.createElement(node_name);
+      }
+
+    XMLSize_t attribute_count = attributes.getLength();
+    for (XMLSize_t i = 0; i < attribute_count; i++)
+      {
+        current_gr_element_->setAttribute(encode(attributes.getQName(i)), encode(attributes.getValue(i)));
+      }
+    if (insertion_parent_ != nullptr)
+      {
+        insertion_parent_->appendChild(current_gr_element_);
+      }
+    insertion_parent_ = current_gr_element_;
+  }
+
+  /*!
+   * \brief Handle a closing XML tag.
+   *
+   * This function navigates one level up in the graphics tree hierarchy and sets this value as the new insertion
+   * parent.
+   */
+  void endElement(const XMLCh *const uri, const XMLCh *const localname, const XMLCh *const qname) override
+  {
+    insertion_parent_ = insertion_parent_->parentElement();
+  }
+
+  void warning(const SAXParseException &e) override { SaxErrorHandler::warning(e); }
+
+  void error(const SAXParseException &e) override { SaxErrorHandler::error(e); }
+
+  void fatalError(const SAXParseException &e) override { SaxErrorHandler::fatalError(e); }
+
+  void resetErrors() override { SaxErrorHandler::resetErrors(); }
+
+private:
+  std::string encode(std::optional<const XMLCh *> chars = std::nullopt) { return xml_buffer_.encode(chars); }
+
+  XMLStringBuffer xml_buffer_{"UTF-8"};
+  GRM::Document &document_;
+  std::shared_ptr<GRM::Element> insertion_parent_, current_gr_element_;
+};
+} // namespace XERCES_CPP_NAMESPACE
+
+
+/*!
+ * \brief Load a graphics tree from an XML file.
+ *
+ * \param[in] file The file object to parse from.
+ * \return 1 on success, 0 on failure.
+ */
+int grm_load_graphics_tree(FILE *file)
+{
+  using namespace XERCES_CPP_NAMESPACE;
+
+  std::string schema_filepath{std::string(get_gr_dir()) + "/" + SCHEMA_REL_FILEPATH};
+
+  if (plot_init_static_variables() != ERROR_NONE)
+    {
+      return 0;
+    }
+
+  try
+    {
+      XMLPlatformUtils::Initialize();
+    }
+  catch (const XMLException &e)
+    {
+      std::cerr << "Error during initialization! :\n" << TranscodeToUtf8Str(e.getMessage()) << std::endl;
+      return 0;
+    }
+
+  bool auto_update;
+  global_render->getAutoUpdate(&auto_update);
+  global_render->setAutoUpdate(false);
+
+  XMLSize_t errorCount = 0;
+  {
+    auto parser =
+        std::unique_ptr<SAX2XMLReaderImpl>(static_cast<SAX2XMLReaderImpl *>(XMLReaderFactory::createXMLReader()));
+
+    // Activate validation
+    parser->setFeature(XMLUni::fgSAX2CoreValidation, true);
+    parser->setFeature(XMLUni::fgXercesDynamic, false);
+    parser->setFeature(XMLUni::fgXercesSchema, true);
+    parser->setFeature(XMLUni::fgXercesSchemaFullChecking, true);
+    auto schema_filepath_transcoder =
+        TranscodeFromStr(reinterpret_cast<const XMLByte *>(schema_filepath.c_str()), schema_filepath.length(), "UTF-8");
+    parser->setProperty(XMLUni::fgXercesSchemaExternalNoNameSpaceSchemaLocation,
+                        (void *)schema_filepath_transcoder.str());
+
+    try
+      {
+        GraphicsTreeParseHandler handler(*global_render->getContext());
+        parser->setPSVIHandler(&handler);
+        parser->setContentHandler(&handler);
+        parser->setErrorHandler(static_cast<SaxErrorHandler *>(&handler));
+        parser->parse(FileInputSource(file));
+        errorCount = parser->getErrorCount();
+      }
+    catch (const OutOfMemoryException &)
+      {
+        std::cerr << "OutOfMemoryException" << std::endl;
+      }
+    catch (const XMLException &e)
+      {
+        std::cerr << "\nAn error occurred\n  Error: " << TranscodeToUtf8Str(e.getMessage()) << "\n" << std::endl;
+      }
+
+  } // `parser` must be freed before `XMLPlatformUtils::Terminate()` is called
+
+  XMLPlatformUtils::Terminate();
+
+  edit_figure = global_render->getActiveFigure();
+  global_render->setAutoUpdate(auto_update);
+
+  return errorCount == 0;
+}
+
+/*!
+ * \brief Validate the currently loaded grapics tree against the internal XML schema definition.
+ *
+ * \return ERROR_NONE on success, an error code on failure.
+ */
 err_t validate_graphics_tree(void)
 {
-  char *gr_dir = get_gr_dir();
-  std::string schema_filepath{std::string(gr_dir) + "/" + SCHEMA_REL_FILEPATH};
-  free(reinterpret_cast<void *>(gr_dir));
-  xmlSchemaParserCtxtPtr schema_parser_ctxt = nullptr;
-  xmlSchemaPtr schema = nullptr;
-  bool has_schema_errors = false;
-  xmlSchemaValidCtxtPtr valid_ctxt = nullptr;
-  xmlDocPtr doc = nullptr;
-  err_t error = ERROR_NONE;
+  using namespace XERCES_CPP_NAMESPACE;
 
-  xmlInitParser();
-
+  std::string schema_filepath{std::string(get_gr_dir()) + "/" + SCHEMA_REL_FILEPATH};
   if (!file_exists(schema_filepath.c_str()))
     {
       return ERROR_PARSE_XML_NO_SCHEMA_FILE;
     }
-  schema_parser_ctxt = xmlSchemaNewParserCtxt(schema_filepath.c_str());
-  cleanup_and_set_error_if(schema_parser_ctxt == nullptr, ERROR_PARSE_XML_INVALID_SCHEMA);
-  schema = xmlSchemaParse(schema_parser_ctxt);
-  cleanup_and_set_error_if(schema == nullptr, ERROR_PARSE_XML_INVALID_SCHEMA);
-  xmlSchemaFreeParserCtxt(schema_parser_ctxt);
-  schema_parser_ctxt = nullptr;
-  valid_ctxt = xmlSchemaNewValidCtxt(schema);
-  doc = xmlReadDoc(BAD_CAST toXML(global_root).c_str(), nullptr, nullptr, XML_PARSE_NOBLANKS);
-  cleanup_and_set_error_if(doc == nullptr, ERROR_PARSE_XML_PARSING);
-  xmlSchemaSetValidStructuredErrors(valid_ctxt, schema_parse_error_handler, &has_schema_errors);
-  xmlSchemaValidateDoc(valid_ctxt, doc);
-  cleanup_and_set_error_if(has_schema_errors, ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION);
 
-cleanup:
-  if (doc != nullptr)
+  try
     {
-      xmlFreeDoc(doc);
+      XMLPlatformUtils::Initialize();
     }
-  if (valid_ctxt != nullptr)
+  catch (const XMLException &e)
     {
-      xmlSchemaFreeValidCtxt(valid_ctxt);
+      std::cerr << "Error during initialization! :\n" << TranscodeToUtf8Str(e.getMessage()) << std::endl;
+      return ERROR_PARSE_XML_PARSING;
     }
-  if (schema != nullptr)
-    {
-      xmlSchemaFree(schema);
-    }
-  if (schema_parser_ctxt != nullptr)
-    {
-      xmlSchemaFreeParserCtxt(schema_parser_ctxt);
-    }
-  xmlCleanupParser();
 
-  return error;
+  XMLSize_t errorCount = 0;
+  bool schema_invalid = false;
+  {
+    auto parser =
+        std::unique_ptr<SAX2XMLReaderImpl>(static_cast<SAX2XMLReaderImpl *>(XMLReaderFactory::createXMLReader()));
+
+    // Activate validation
+    parser->setFeature(XMLUni::fgSAX2CoreValidation, true);
+    parser->setFeature(XMLUni::fgXercesDynamic, false);
+    parser->setFeature(XMLUni::fgXercesSchema, true);
+    parser->setFeature(XMLUni::fgXercesSchemaFullChecking, true);
+    auto schema_filepath_transcoder =
+        TranscodeFromStr(reinterpret_cast<const XMLByte *>(schema_filepath.c_str()), schema_filepath.length(), "UTF-8");
+    parser->setProperty(XMLUni::fgXercesSchemaExternalNoNameSpaceSchemaLocation,
+                        (void *)schema_filepath_transcoder.str());
+
+    try
+      {
+        SaxErrorHandler error_handler(schema_filepath);
+        parser->setErrorHandler(&error_handler);
+        parser->parse(StringInputSource(toXML(global_root)));
+        errorCount = parser->getErrorCount();
+        schema_invalid = error_handler.schema_invalid().value();
+      }
+    catch (const OutOfMemoryException &)
+      {
+        std::cerr << "OutOfMemoryException" << std::endl;
+      }
+    catch (const XMLException &e)
+      {
+        std::cerr << "\nAn error occurred\n  Error: " << TranscodeToUtf8Str(e.getMessage()) << "\n" << std::endl;
+      }
+
+  } // `parser` must be freed before `XMLPlatformUtils::Terminate()` is called
+
+  XMLPlatformUtils::Terminate();
+
+  return schema_invalid ? ERROR_PARSE_XML_INVALID_SCHEMA
+                        : ((errorCount == 0) ? ERROR_NONE : ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION);
+}
 }
 
 #endif
-#endif
 
+extern "C" {
+
+/*!
+ * \brief Validate the currently loaded graphics tree and print error messages to stderr.
+ *
+ * This is a helper function to make `validate_graphics_tree` more convenient to use.
+ *
+ * \return 1 on success, 0 on failure.
+ */
 int validate_graphics_tree_with_error_messages(void)
 {
-#if 0
-#ifndef NO_LIBXML2
+#ifndef NO_XERCES_C
   err_t validation_error = validate_graphics_tree();
   if (validation_error == ERROR_NONE)
     {
@@ -4640,8 +5207,7 @@ int validate_graphics_tree_with_error_messages(void)
       return 0;
     }
 #else
-  fprintf(stderr, "No libxml2 support compiled in, no validation possible!\n");
-#endif
+  fprintf(stderr, "No Xerces-C++ support compiled in, no validation possible!\n");
 #endif
   return 1;
 }
@@ -4781,200 +5347,6 @@ char *grm_dump_graphics_tree_str(void)
   strcpy(graphics_tree_cstr, graphics_tree_str.c_str());
   return graphics_tree_cstr;
 }
-
-#if 0
-#ifndef NO_LIBXML2
-int grm_load_graphics_tree(FILE *file)
-{
-  char *gr_dir = get_gr_dir();
-  std::string schema_filepath{std::string(gr_dir) + "/" + SCHEMA_REL_FILEPATH};
-  free(reinterpret_cast<void *>(gr_dir));
-  bool xml_validation_enabled = false, use_xml_schema = false;
-  xmlSchemaParserCtxtPtr schema_parser_ctxt = nullptr;
-  xmlSchemaPtr schema = nullptr;
-  bool has_schema_errors = false;
-  int ret = -1;
-  xmlSchemaValidCtxtPtr valid_ctxt = nullptr;
-  xmlTextReaderPtr reader = nullptr;
-  std::shared_ptr<GRM::Element> insertion_parent, current_gr_element;
-  err_t error = ERROR_NONE;
-
-  error = plot_init_static_variables();
-  cleanup_if_error;
-
-  xmlInitParser();
-  xml_validation_enabled = is_env_variable_enabled(ENABLE_XML_VALIDATION_ENV_KEY.c_str());
-  use_xml_schema = xml_validation_enabled && file_exists(schema_filepath.c_str());
-  if (use_xml_schema)
-    {
-      schema_parser_ctxt = xmlSchemaNewParserCtxt(schema_filepath.c_str());
-      cleanup_and_set_error_if(schema_parser_ctxt == nullptr, ERROR_PARSE_XML_INVALID_SCHEMA);
-      schema = xmlSchemaParse(schema_parser_ctxt);
-      cleanup_and_set_error_if(schema == nullptr, ERROR_PARSE_XML_INVALID_SCHEMA);
-      xmlSchemaFreeParserCtxt(schema_parser_ctxt);
-      schema_parser_ctxt = nullptr;
-      valid_ctxt = xmlSchemaNewValidCtxt(schema);
-    }
-  reader = xmlReaderForFd(fileno(file), nullptr, nullptr, XML_PARSE_NOBLANKS);
-  cleanup_and_set_error_if(reader == nullptr, ERROR_PARSE_XML_PARSING);
-
-  if (use_xml_schema)
-    {
-      xmlTextReaderSchemaValidateCtxt(reader, valid_ctxt, 0);
-      xmlSchemaSetValidStructuredErrors(valid_ctxt, schema_parse_error_handler, &has_schema_errors);
-    }
-
-  ret = xmlTextReaderRead(reader);
-  cleanup_and_set_error_if(has_schema_errors, ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION);
-  global_render->setAutoUpdate(false);
-  while (ret == 1)
-    {
-      xmlNodePtr node = xmlTextReaderCurrentNode(reader);
-      int node_type = xmlTextReaderNodeType(reader);
-      const xmlChar *node_name = xmlTextReaderConstName(reader);
-      if (node_type == XML_READER_TYPE_ELEMENT)
-        {
-          if (xmlStrEqual(node_name, BAD_CAST "root"))
-            {
-              global_root = global_render->createElement("root");
-              global_render->replaceChildren(global_root);
-              insertion_parent = nullptr;
-              current_gr_element = global_root;
-            }
-          else
-            {
-              current_gr_element = global_render->createElement(reinterpret_cast<const char *>(node_name));
-            }
-          for (xmlAttrPtr attr = node->properties; attr != nullptr; attr = attr->next)
-            {
-              const xmlChar *attr_name = attr->name;
-              xmlChar *attr_value = xmlNodeListGetString(node->doc, attr->children, 1);
-
-              current_gr_element->setAttribute(reinterpret_cast<const char *>(attr_name),
-                                               reinterpret_cast<const char *>(attr_value));
-              if (reinterpret_cast<const char *>(attr_name) == "active" &&
-                  reinterpret_cast<const char *>(attr_value) == "1")
-                global_render->setActiveFigure(current_gr_element);
-              xmlFree(reinterpret_cast<void *>(attr_value));
-            }
-          if (insertion_parent != nullptr)
-            {
-              insertion_parent->appendChild(current_gr_element);
-            }
-          if (!xmlTextReaderIsEmptyElement(reader))
-            {
-              insertion_parent = current_gr_element;
-            }
-        }
-      else if (node_type == XML_READER_TYPE_END_ELEMENT)
-        {
-          insertion_parent = insertion_parent->parentElement();
-        }
-      ret = xmlTextReaderRead(reader);
-      cleanup_and_set_error_if(has_schema_errors, ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION);
-    }
-  edit_figure = global_render->getActiveFigure();
-  global_render->setAutoUpdate(true);
-
-  if (ret != 0)
-    {
-      const xmlError *xml_error = xmlGetLastError();
-      logger((stderr, "%s: failed to parse in line %d, col %d. Error %d: %s\n", xml_error->file, xml_error->line,
-              xml_error->int2, xml_error->code, xml_error->message));
-      cleanup_and_set_error(ERROR_PARSE_XML_PARSING);
-    }
-
-cleanup:
-  if (reader != nullptr)
-    {
-      xmlFreeTextReader(reader);
-    }
-  if (valid_ctxt != nullptr)
-    {
-      xmlSchemaFreeValidCtxt(valid_ctxt);
-    }
-  if (schema != nullptr)
-    {
-      xmlSchemaFree(schema);
-    }
-  if (schema_parser_ctxt)
-    {
-      xmlSchemaFreeParserCtxt(schema_parser_ctxt);
-    }
-  xmlCleanupParser();
-
-  return error == ERROR_NONE;
-}
-#elif !defined(NO_EXPAT)
-static void xml_parse_start_handler(void *data, const XML_Char *tagName, const XML_Char **attr)
-{
-  auto *insertionParent = (std::shared_ptr<GRM::Element> *)data;
-  if (strcmp(tagName, "root") == 0)
-    {
-      global_root = global_render->createElement("root");
-      global_render->replaceChildren(global_root);
-      if (attr[0])
-        {
-          global_root->setAttribute(attr[0], attr[1]);
-        }
-      (*insertionParent) = global_root;
-    }
-  else if (strcmp(tagName, "figure") == 0)
-    {
-      edit_figure = global_render->createElement("figure");
-      global_root->append(edit_figure);
-    }
-  else
-    {
-      std::shared_ptr<GRM::Element> child = global_render->createElement(tagName);
-      for (int i = 0; attr[i]; i += 2)
-        {
-          child->setAttribute(attr[i], attr[i + 1]);
-        }
-
-      (*insertionParent)->appendChild(child);
-      *insertionParent = child;
-    }
-}
-
-static void xml_parse_end_handler(void *data, const char *tagName)
-{
-  auto currentNode = (std::shared_ptr<GRM::Element> *)data;
-  *((std::shared_ptr<GRM::Element> *)data) = (*currentNode)->parentElement();
-}
-
-int grm_load_graphics_tree(FILE *file)
-{
-#if 0
-  std::string xmlstring;
-  XML_Parser parser = XML_ParserCreate(nullptr);
-  std::shared_ptr<GRM::Element> parentNode;
-
-  std::fseek(file, 0, SEEK_END);
-  xmlstring.resize(std::ftell(file));
-  std::rewind(file);
-  std::fread(&xmlstring[0], 1, xmlstring.size(), file);
-
-  plot_init_static_variables();
-
-  XML_SetUserData(parser, &parentNode);
-  XML_SetElementHandler(parser, xml_parse_start_handler, xml_parse_end_handler);
-
-  if (XML_Parse(parser, xmlstring.c_str(), xmlstring.length(), XML_TRUE) == XML_STATUS_ERROR)
-    {
-      logger((stderr, "Cannot parse XML-String\n"));
-      return 0;
-    }
-
-  XML_ParserFree(parser);
-
-  return 1;
-#else
-  return 0;
-#endif
-}
-#endif
-#endif
 
 int grm_merge(const grm_args_t *args)
 {
@@ -5433,96 +5805,60 @@ int grm_switch(unsigned int id)
 
 /* ========================= c++ ==================================================================================== */
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ c++ libxml util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ c++ xerces util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#if 0
-#ifndef NO_LIBXML2
+#ifndef NO_XERCES_C
 std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(void)
 {
-  char *gr_dir = get_gr_dir();
-  std::string schema_filepath{std::string(gr_dir) + "/" + SCHEMA_REL_FILEPATH};
-  free(reinterpret_cast<void *>(gr_dir));
-  int ret = -1;
-  xmlSchemaValidCtxtPtr valid_ctxt = nullptr;
-  xmlTextReaderPtr reader = nullptr;
-  std::shared_ptr<GRM::Document> document;
-  std::shared_ptr<GRM::Element> insertion_parent, current_element;
-  err_t error = ERROR_NONE;
-  FILE *schema_file;
+  using namespace XERCES_CPP_NAMESPACE;
 
-  error = plot_init_static_variables();
-  cleanup_if_error;
+  std::string schema_filepath{std::string(get_gr_dir()) + "/" + SCHEMA_REL_FILEPATH};
 
-  schema_file = fopen(schema_filepath.c_str(), "r");
-  cleanup_and_set_error_if(schema_file == nullptr, ERROR_PARSE_XML_NO_SCHEMA_FILE);
-  xmlInitParser();
-  reader = xmlReaderForFd(fileno(schema_file), nullptr, nullptr, XML_PARSE_NOBLANKS);
-  cleanup_and_set_error_if(reader == nullptr, ERROR_PARSE_XML_PARSING);
-  ret = xmlTextReaderRead(reader);
-  document = GRM::createDocument();
-  while (ret == 1)
+  try
     {
-      xmlNodePtr node = xmlTextReaderCurrentNode(reader);
-      int node_type = xmlTextReaderNodeType(reader);
-      const xmlChar *node_name = xmlTextReaderConstName(reader);
-      if (node_type == XML_READER_TYPE_ELEMENT)
-        {
-          current_element = document->createElement(reinterpret_cast<const char *>(node_name));
-          for (xmlAttrPtr attr = node->properties; attr != nullptr; attr = attr->next)
-            {
-              const xmlChar *attr_name = attr->name;
-              xmlChar *attr_value = xmlNodeListGetString(node->doc, attr->children, 1);
-
-              current_element->setAttribute(reinterpret_cast<const char *>(attr_name),
-                                            reinterpret_cast<const char *>(attr_value));
-              xmlFree(reinterpret_cast<void *>(attr_value));
-            }
-          if (insertion_parent != nullptr)
-            {
-              insertion_parent->append(current_element);
-            }
-          else
-            {
-              document->append(current_element);
-            }
-          if (!xmlTextReaderIsEmptyElement(reader))
-            {
-              insertion_parent = current_element;
-            }
-        }
-      else if (node_type == XML_READER_TYPE_END_ELEMENT)
-        {
-          insertion_parent = insertion_parent->parentElement();
-        }
-      ret = xmlTextReaderRead(reader);
+      XMLPlatformUtils::Initialize();
+    }
+  catch (const XMLException &e)
+    {
+      std::cerr << "Error during initialization! :\n" << TranscodeToUtf8Str(e.getMessage()) << std::endl;
+      return 0;
     }
 
-  if (ret != 0)
-    {
-      const xmlError *xml_error = xmlGetLastError();
-      logger((stderr, "%s: failed to parse in line %d, col %d. Error %d: %s\n", xml_error->file, xml_error->line,
-              xml_error->int2, xml_error->code, xml_error->message));
-      cleanup_and_set_error(ERROR_PARSE_XML_PARSING);
-    }
+  auto document = GRM::createDocument();
+  XMLSize_t errorCount = 0;
+  {
+    auto parser =
+        std::unique_ptr<SAX2XMLReaderImpl>(static_cast<SAX2XMLReaderImpl *>(XMLReaderFactory::createXMLReader()));
 
-cleanup:
-  if (reader != nullptr)
-    {
-      xmlFreeTextReader(reader);
-    }
-  if (valid_ctxt != nullptr)
-    {
-      xmlSchemaFreeValidCtxt(valid_ctxt);
-    }
-  xmlCleanupParser();
-  if (schema_file != nullptr)
-    {
-      fclose(schema_file);
-    }
+    // Activate validation
+    parser->setFeature(XMLUni::fgSAX2CoreValidation, false);
+    parser->setFeature(XMLUni::fgXercesDynamic, false);
+    parser->setFeature(XMLUni::fgXercesSchema, false);
+    parser->setFeature(XMLUni::fgXercesSchemaFullChecking, false);
 
-  return (error == ERROR_NONE) ? document : nullptr;
+    try
+      {
+        SchemaParseHandler handler(*document);
+        parser->setContentHandler(&handler);
+        parser->setErrorHandler(static_cast<SaxErrorHandler *>(&handler));
+        parser->parse(schema_filepath.c_str());
+        errorCount = parser->getErrorCount();
+      }
+    catch (const OutOfMemoryException &)
+      {
+        std::cerr << "OutOfMemoryException" << std::endl;
+      }
+    catch (const XMLException &e)
+      {
+        std::cerr << "\nAn error occurred\n  Error: " << TranscodeToUtf8Str(e.getMessage()) << "\n" << std::endl;
+      }
+
+  } // `parser` must be freed before `XMLPlatformUtils::Terminate()` is called
+
+  XMLPlatformUtils::Terminate();
+
+  return (errorCount == 0) ? document : nullptr;
 }
-#endif
 #endif
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ c++ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -5802,11 +6138,9 @@ int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, cons
 
 bool grm_validate(void)
 {
-#if 0
-#ifndef NO_LIBXML2
+#ifndef NO_XERCES_C
   err_t validation_error = validate_graphics_tree();
   return (validation_error == ERROR_NONE);
-#endif
 #endif
   return false;
 }

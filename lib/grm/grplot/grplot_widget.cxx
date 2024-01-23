@@ -387,7 +387,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 
   if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
     {
-#if !defined(NO_LIBXML2) && 0
+#if !defined(NO_XERCES_C)
       schema_tree = grm_load_graphics_tree_schema();
 #else
       schema_tree = nullptr;
@@ -2550,7 +2550,7 @@ void GRPlotWidget::load_file_slot()
 {
   if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
     {
-#ifndef NO_LIBXML2
+#ifndef NO_XERCES_C
       std::string path =
           QFileDialog::getOpenFileName(this, "Open XML", QDir::homePath(), "XML files (*.xml)").toStdString();
       if (path.empty())
@@ -2566,11 +2566,9 @@ void GRPlotWidget::load_file_slot()
           QMessageBox::critical(this, "File open not possible", QString::fromStdString(text_stream.str()));
           return;
         }
-#if 0
       grm_load_graphics_tree(file);
-#endif
+      global_root = grm_get_document_root();
       redraw();
-      grm_render();
 #else
       std::stringstream text_stream;
       text_stream << "XML support not compiled in. Please recompile GRPlot with libxml2 support.";
@@ -2603,7 +2601,8 @@ void GRPlotWidget::save_file_slot()
           QMessageBox::critical(this, "File save not possible", QString::fromStdString(text_stream.str()));
           return;
         }
-      save_file_stream << GRM::toXML(grm_get_render()) << std::endl;
+      auto graphics_tree_str = std::unique_ptr<char, decltype(&std::free)>(grm_dump_graphics_tree_str(), std::free);
+      save_file_stream << graphics_tree_str.get() << std::endl;
       save_file_stream.close();
     }
 }

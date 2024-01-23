@@ -174,7 +174,7 @@ int get_free_id_from_figure_elements();
 extern "C" {
 #endif
 
-#ifndef NO_LIBXML2
+#ifndef NO_XERCES_C
 err_t validate_graphics_tree_xml(void);
 #endif
 int validate_graphics_tree_with_error_messages(void);
