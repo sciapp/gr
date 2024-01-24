@@ -1040,7 +1040,7 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
     {
       plot_draw_polar_axes(subplot_args);
     }
-  else if (!str_equals_any(kind, 5, "imshow", "isosurface", "pie", "polar_heatmap", "nonuniformpolar_heatmap"))
+  else if (!str_equals_any(kind, 3, "pie", "polar_heatmap", "nonuniformpolar_heatmap"))
     {
       plot_draw_axes(subplot_args, 1);
     }
@@ -1909,8 +1909,8 @@ err_t plot_barplot(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       int inner_series_index;
-      double *y = nullptr;
-      unsigned int y_length = 0;
+      double *y = nullptr, *x = nullptr;
+      unsigned int y_length = 0, x_length = 0;
       grm_args_t **inner_series = nullptr;
       unsigned int inner_series_length = 0;
       int *c = nullptr;
@@ -1994,6 +1994,13 @@ err_t plot_barplot(grm_args_t *subplot_args)
           c_rgb_vec = std::vector<double>(c_rgb, c_rgb + c_rgb_length);
           (*context)["c_rgb" + id_str] = c_rgb_vec;
           subGroup->setAttribute("color_rgb_values", "c_rgb" + id_str);
+        }
+      if ((grm_args_first_value(*current_series, "x", "D", &x, &x_length)))
+        {
+          /* Process data for a flat series (no inner_series) */
+          auto x_vec = std::vector<double>(x, x + x_length);
+          (*context)["x" + id_str] = x_vec;
+          subGroup->setAttribute("x", "x" + id_str);
         }
 
       std::vector<double> y_vec;
@@ -2150,14 +2157,11 @@ err_t plot_contour(grm_args_t *subplot_args)
   int num_levels = 20, major_h;
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
-  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
 
   bool has_levels = grm_args_values(subplot_args, "levels", "i", &num_levels);
   grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "grplot", "i", &grplot);
-  group->setAttribute("grplot", grplot);
   while (*current_series != nullptr)
     {
       double *x, *y, *z;
@@ -2217,14 +2221,11 @@ err_t plot_contourf(grm_args_t *subplot_args)
   int num_levels = 20, major_h;
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
-  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
 
   bool has_levels = grm_args_values(subplot_args, "levels", "i", &num_levels);
   grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "grplot", "i", &grplot);
-  group->setAttribute("grplot", grplot);
   while (*current_series != nullptr)
     {
       double *x, *y, *z;
@@ -2423,7 +2424,6 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max;
   err_t error = ERROR_NONE;
   std::shared_ptr<GRM::Element> plot_parent;
-  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
 
@@ -2439,8 +2439,6 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "z_log", "i", &z_log);
-  grm_args_values(subplot_args, "grplot", "i", &grplot);
-  group->setAttribute("grplot", grplot);
   while (*current_series != nullptr)
     {
       x = y = nullptr;
@@ -2526,7 +2524,6 @@ err_t plot_marginal_heatmap(grm_args_t *subplot_args)
   grm_args_t **current_series;
   double *x, *y, *plot;
   unsigned int num_bins_x, num_bins_y, n;
-  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
   auto subGroup = global_render->createSeries("marginal_heatmap");
@@ -2542,8 +2539,6 @@ err_t plot_marginal_heatmap(grm_args_t *subplot_args)
   if (grm_args_values(subplot_args, "y_ind", "i", &y_ind)) subGroup->setAttribute("y_ind", y_ind);
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "grplot", "i", &grplot);
-  group->setAttribute("grplot", grplot);
   grm_args_first_value(*current_series, "x", "D", &x, &num_bins_x);
   grm_args_first_value(*current_series, "y", "D", &y, &num_bins_y);
   grm_args_first_value(*current_series, "z", "D", &plot, &n);
@@ -2580,13 +2575,10 @@ err_t plot_wireframe(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
-  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "grplot", "i", &grplot);
-  group->setAttribute("grplot", grplot);
   while (*current_series != nullptr)
     {
       double *x, *y, *z;
@@ -2641,13 +2633,10 @@ err_t plot_surface(grm_args_t *subplot_args)
   err_t error = ERROR_NONE;
   int accelerate; /* this argument decides if GR3 or GRM is used to plot the surface */
   double xmin, xmax, ymin, ymax;
-  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "grplot", "i", &grplot);
-  group->setAttribute("grplot", grplot);
   bool has_accelerate = grm_args_values(subplot_args, "accelerate", "i", &accelerate);
 
   while (*current_series != nullptr)
@@ -2852,13 +2841,10 @@ err_t plot_imshow(grm_args_t *subplot_args)
   double c_min, c_max;
   unsigned int c_data_length, i, j, k;
   unsigned int *shape;
-  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "grplot", "i", &grplot);
-  group->setAttribute("grplot", grplot);
   if (grm_args_values(subplot_args, "c_lim", "dd", &c_min, &c_max))
     {
       group->setAttribute("z_lim_min", c_min);
@@ -3497,7 +3483,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     }
   else
     {
-      if (strcmp(kind, "barplot") != 0 || pass == 2)
+      if ((strcmp(kind, "barplot") != 0 && strcmp(kind, "imshow") != 0) || pass == 2)
         {
           /* xticklabels */
           char **x_tick_labels = nullptr;
@@ -3525,6 +3511,14 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
               global_render->setYTickLabels(group, key, y_tick_labels_vec);
             }
         }
+      else if (strcmp(kind, "imshow") == 0)
+        {
+          group->setAttribute("hide", 1);
+        }
+    }
+  if (strcmp(kind, "isosurface") == 0)
+    {
+      group->setAttribute("hide", 1);
     }
 
   group->setAttribute("plot_type", type);
@@ -3690,11 +3684,8 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
       colorbar->setAttribute("y_flip", flip);
     }
 
-  colorbar->setAttribute("offset", off + 0.02);
-  colorbar->setAttribute("width", 0.03);
-
-  colorbar->setAttribute("diag_factor", 0.016);
-  colorbar->setAttribute("max_char_height", 0.012);
+  colorbar->setAttribute("offset", off + PLOT_DEFAULT_COLORBAR_OFFSET);
+  colorbar->setAttribute("max_char_height", PLOT_DEFAULT_COLORBAR_MAX_CHAR_HEIGHT);
 
   return ERROR_NONE;
 }
@@ -4584,6 +4575,7 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
   double x_lim_min, x_lim_max, y_lim_min, y_lim_max, z_lim_min, z_lim_max;
   double x_min, x_max, y_min, y_max, z_min, z_max;
   grm_args_t **current_series;
+  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
   grm_args_values(subplot_args, "kind", "s", &kind);
@@ -4646,6 +4638,11 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
   if (grm_args_values(subplot_args, "adjust_y_lim", "i", &adjust_y_lim))
     {
       group->setAttribute("adjust_y_lim", adjust_y_lim);
+    }
+
+  if (grm_args_values(subplot_args, "grplot", "i", &grplot))
+    {
+      group->setAttribute("grplot", grplot);
     }
 
   if (!plot_func_map_at(plot_func_map, kind, &plot_func))

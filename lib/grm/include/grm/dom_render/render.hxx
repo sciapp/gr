@@ -67,6 +67,10 @@
 #define PLOT_DEFAULT_ZGRID 1
 #define PLOT_DEFAULT_SPACE_3D_FOV 30.0
 #define PLOT_DEFAULT_SPACE_3D_DISTANCE 0.0
+#define PLOT_DEFAULT_COLORBAR_DIAG_FACTOR 0.016
+#define PLOT_DEFAULT_COLORBAR_WIDTH 0.03
+#define PLOT_DEFAULT_COLORBAR_MAX_CHAR_HEIGHT 0.012
+#define PLOT_DEFAULT_COLORBAR_OFFSET 0.02
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 

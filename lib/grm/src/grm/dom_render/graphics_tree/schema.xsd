@@ -725,6 +725,7 @@
             <xs:attribute name="style" type="xs:string"/>
             <xs:attribute name="text_align_horizontal" type="strint"/>
             <xs:attribute name="text_align_vertical" type="strint"/>
+            <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="y_labels" type="xs:string"/>
         </xs:complexType>
