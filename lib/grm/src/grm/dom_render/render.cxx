@@ -13015,7 +13015,10 @@ static void applyPlotDefaults(const std::shared_ptr<GRM::Element> &plot)
   if (!plot->hasAttribute("plot_y_min")) plot->setAttribute("plot_y_min", PLOT_DEFAULT_SUBPLOT_MIN_Y);
   if (!plot->hasAttribute("plot_y_max")) plot->setAttribute("plot_y_max", PLOT_DEFAULT_SUBPLOT_MAX_Y);
   auto kind = static_cast<std::string>(plot->getAttribute("kind"));
-  if (!plot->hasAttribute("adjust_x_lim"))
+  int overwrite = plot->hasAttribute("_overwrite_kind_dependent_defaults")
+                      ? static_cast<int>(plot->getAttribute("_overwrite_kind_dependent_defaults"))
+                      : 0;
+  if (!plot->hasAttribute("adjust_x_lim") || overwrite)
     {
       if (kind == "heatmap" || kind == "marginal_heatmap")
         {
@@ -13026,7 +13029,7 @@ static void applyPlotDefaults(const std::shared_ptr<GRM::Element> &plot)
           plot->setAttribute("adjust_x_lim", (plot->hasAttribute("x_lim_min") ? 0 : PLOT_DEFAULT_ADJUST_XLIM));
         }
     }
-  if (!plot->hasAttribute("adjust_y_lim"))
+  if (!plot->hasAttribute("adjust_y_lim") || overwrite)
     {
       if (kind == "heatmap" || kind == "marginal_heatmap")
         {
@@ -13037,7 +13040,7 @@ static void applyPlotDefaults(const std::shared_ptr<GRM::Element> &plot)
           plot->setAttribute("adjust_y_lim", (plot->hasAttribute("y_lim_min") ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
         }
     }
-  if (!plot->hasAttribute("adjust_z_lim"))
+  if (!plot->hasAttribute("adjust_z_lim") || overwrite)
     {
       if (kind != "heatmap" && kind != "marginal_heatmap")
         {
@@ -15861,6 +15864,15 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
 
               /* update the limits since they depend on the kind */
               plot->setAttribute("_update_limits", 1);
+
+              /* overwrite attributes for which a kind dependent default exists */
+              int grplot = plot->hasAttribute("grplot") ? static_cast<int>(plot->getAttribute("grplot")) : 0;
+              if (grplot)
+                {
+                  plot->setAttribute("_overwrite_kind_dependent_defaults", 1);
+                  applyPlotDefaults(plot);
+                  plot->removeAttribute("_overwrite_kind_dependent_defaults");
+                }
 
               /* update coordinate system if needed */
               std::vector<std::string> colorbar_group = {"quiver",        "contour",   "contourf", "hexbin",
