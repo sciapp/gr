@@ -565,17 +565,55 @@ static double getLightness(int color)
   return 116 * pow(y / 100, 1.0 / 3) - 16;
 }
 
-static double transformCoordinate(double value, double vmin, double vmax, double rangeMin, double rangeMax)
+// transform single coordinate (like x or y) into range (and or log scale)
+// first transform into range and then log scale
+// todo: when using only logScale skip the transform part here + in the vector wrapper
+static double transformCoordinate(double value, double vmin, double vmax, double rangeMin, double rangeMax,
+                                  int logScale = 0)
 {
+  if (logScale)
+    {
+      // todo: ylim and ylog?
+      double transVal, B, A; // A, B are the min and max after the y_log transformation
+      if (!(rangeMin == 0.0 && rangeMax == 0.0))
+        {
+          transVal = (rangeMax - rangeMin) * (value - vmin) / (vmax - vmin) + rangeMin;
+          B = rangeMax;
+          A = rangeMin;
+        }
+      else
+        {
+          transVal = value;
+          B = vmax;
+          A = vmin;
+        }
+      if (transVal == 0.0) return 0;
+
+      // negative radii -> abs -> log scale -> make negative again
+      int sign = 1;
+      if (transVal < 0)
+        {
+          transVal = abs(transVal);
+          sign = -1;
+        }
+
+      // 1.0 and 0.0 because of normalized canvas coords
+      // todo: dont use 1.0 and 0.0 here use the rangeMin and rangeMax values or the min and max of the vector because
+      // of ylim
+      double b = B / log(vmax / vmin);
+      double a = A - b * log(vmin);
+      double temp = sign * (a + b * log(transVal));
+      return sign * (a + b * log(transVal));
+    }
   return (rangeMax - rangeMin) * (value - vmin) / (vmax - vmin) + rangeMin;
 }
 
 static void transformCoordinatesVector(std::vector<double> &coords, double vmin, double vmax, double rangeMin,
-                                       double rangeMax)
+                                       double rangeMax, int logScale = 0)
 {
   for (auto &coord : coords)
     {
-      coord = transformCoordinate(coord, vmin, vmax, rangeMin, rangeMax);
+      coord = transformCoordinate(coord, vmin, vmax, rangeMin, rangeMax, logScale);
     }
 }
 
@@ -1901,8 +1939,9 @@ static double auto_tick(double amin, double amax)
   return tick;
 }
 
-static double auto_tick_rings_polar(double rmax, int &rings, const std::string &norm)
+static double auto_tick_rings_polar(double rmax, int &rings, const std::string &norm, int y_log = 0)
 {
+  // todo ylog with other cases! e.g. polarhistogram with "cdf" max is always 1
   double scale;
   bool is_decimal = false;
   std::vector<int> *whichVector;
@@ -1920,6 +1959,17 @@ static double auto_tick_rings_polar(double rmax, int &rings, const std::string &
 
       whichVector = (rmax > 20) ? &largeRings : &normalRings;
       scale = ceil(abs(log10(rmax)));
+
+      if (y_log == 1)
+        {
+          // use 10^x log
+          scale += scale / abs(scale);
+
+          // calc rings
+          whichVector = (abs(scale) > 3) ? &largeRings : &normalRings;
+          rings = abs(scale);
+          return pow(10, scale) / rings;
+        }
       if (rmax < 1.0)
         {
           is_decimal = true;
@@ -7426,6 +7476,9 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
   std::string title, norm;
   del_values del = del_values::update_without_default;
   int child_id = 0;
+  int y_log = 0;
+  double y_lim_min, y_lim_max;
+
   std::shared_ptr<GRM::Render> render;
   std::shared_ptr<GRM::Element> central_region;
 
@@ -7450,8 +7503,15 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
   viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
   viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
 
+  if (subplotElement->hasAttribute("y_log"))
+    {
+      y_log = static_cast<int>(subplotElement->getAttribute("y_log"));
+    }
+
   kind = static_cast<std::string>(subplotElement->getAttribute("kind"));
 
+  // todo: why this split? More descriptive comments
+  // todo: everything is kinda messy here...
   if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap" || kind == "polar")
     {
       r_min = static_cast<double>(subplotElement->getAttribute("r_min"));
@@ -7460,6 +7520,11 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
           r_min = 0.0;
         }
       r_max = static_cast<double>(subplotElement->getAttribute("r_max"));
+      if (subplotElement->hasAttribute("y_lim_max") && subplotElement->hasAttribute("y_lim_min"))
+        {
+          y_lim_min = static_cast<double>(subplotElement->getAttribute("y_lim_min"));
+          y_lim_max = static_cast<double>(subplotElement->getAttribute("y_lim_max"));
+        }
     }
   else
     {
@@ -7485,14 +7550,14 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
           max = static_cast<double>(central_region->getAttribute("r_max"));
           norm = static_cast<std::string>(element->getAttribute("norm"));
           r_min = 0.0;
-          tick = auto_tick_rings_polar(max, rings, norm);
+          tick = auto_tick_rings_polar(max, rings, norm, y_log);
         }
       else if (kind == "polar")
         {
           r_min = 0.0;
           auto seriesElement = central_region->querySelectors("series_polar");
           max = static_cast<double>(seriesElement->getAttribute("y_range_max"));
-          tick = auto_tick_rings_polar(max, rings, "");
+          tick = auto_tick_rings_polar(max, rings, "", y_log);
         }
       central_region->setAttribute("tick", tick);
       max = tick * rings;
@@ -7502,24 +7567,37 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
     }
   else
     {
-      rings = (element->hasAttribute("rings")) ? static_cast<int>(element->getAttribute("rings"))
-                                               : grm_max(4, (int)(r_max - r_min));
-      // todo better rings calculation when ylim is given
-      element->setAttribute("rings", rings);
-
-      if (subplotElement->hasAttribute("y_lim_max") && subplotElement->hasAttribute("y_lim_min"))
+      // with given ylims
+      if (y_log)
         {
-          tick = (r_max - r_min) / rings;
-        }
-      else if (element->hasAttribute("tick"))
-        {
-          tick = static_cast<double>(element->getAttribute("tick"));
+          // when using y_log no tick is needed
+          // one ring per magnitude difference?
+          rings = grm_min(static_cast<int>(std::log10(y_lim_max) - ((y_lim_min <= 0.0) ? 0.0 : std::log10(y_lim_min))),
+                          12); // number of rings should not exceed 12?
+          // todo what if number of rings is different than the magnitude difference?
+          element->setAttribute("rings", rings);
         }
       else
         {
-          tick = auto_tick_rings_polar(r_max, rings, norm);
-          subplotElement->setAttribute("r_max", tick * rings);
-          subplotElement->setAttribute("rings", rings);
+          rings = (element->hasAttribute("rings")) ? static_cast<int>(element->getAttribute("rings"))
+                                                   : grm_max(4, (int)(r_max - r_min));
+          // todo better rings calculation when ylim is given
+          element->setAttribute("rings", rings);
+
+          if (subplotElement->hasAttribute("y_lim_max") && subplotElement->hasAttribute("y_lim_min"))
+            {
+              tick = (r_max - r_min) / rings;
+            }
+          else if (element->hasAttribute("tick"))
+            {
+              tick = static_cast<double>(element->getAttribute("tick"));
+            }
+          else
+            {
+              tick = auto_tick_rings_polar(r_max, rings, norm);
+              subplotElement->setAttribute("r_max", tick * rings);
+              subplotElement->setAttribute("rings", rings);
+            }
         }
     }
 
@@ -7630,7 +7708,40 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
         {
           x[0] = 0.05;
           y[0] = r;
-          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + tick * i);
+          // todo: y_log scale with r_min???
+          if (y_log)
+            {
+              if (subplotElement->hasAttribute("y_lim_max")) // todo:ylog with ylims
+                {
+                  // if y_lim_min == 0
+                  if (y_lim_min == 0)
+                    {
+                      if (i == 0)
+                        {
+                          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", 0.0);
+                        }
+                      else
+                        {
+                          // so it goes from 0.0 to 10.0?
+                          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", pow(10, i));
+                        }
+                    }
+                  else // if y_lim_min > 0
+                    {
+                      // get scale of y_lim_min
+                      double scale = std::log10(y_lim_min);
+                      snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", pow(10, scale + i));
+                    }
+                }
+              else // no ylog
+                {
+                  snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", pow(10, i));
+                }
+            }
+          else
+            {
+              snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + tick * i);
+            }
 
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
@@ -8845,14 +8956,19 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
    */
   double r_min, r_max, tick;
   double ylim_min, ylim_max, yrange_min, yrange_max, xrange_min, xrange_max;
+  double theta_min, theta_max;
+
   int n, i;
   bool transform_radii = false, transform_angles = false, ylim = false, clip_negative = false;
   unsigned int rho_length, theta_length;
   std::string line_spec = SERIES_DEFAULT_SPEC;
+  unsigned int i, index;
   std::vector<double> theta_vec, rho_vec;
   auto plot_parent = element->parentElement();
   del_values del = del_values::update_without_default;
   int child_id = 0;
+  int y_log = 0;
+  std::vector<unsigned int> indices_vec;
 
 
   getPlotParent(plot_parent);
@@ -8873,6 +8989,13 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
       r_max = static_cast<double>(plot_parent->getAttribute("r_max"));
       r_min = 0.0;
     }
+  if (plot_parent->hasAttribute("y_log"))
+    {
+      y_log = static_cast<int>(plot_parent->getAttribute("y_log"));
+    }
+
+
+  // xranges are sometimes given, calculated by the min and max of the angles x
   if (element->hasAttribute("x_range_min") && element->hasAttribute("x_range_max"))
     {
       transform_angles = true;
@@ -8912,6 +9035,11 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   r_min = *std::min_element(rho_vec.begin(), rho_vec.end());
   r_max = *std::max_element(rho_vec.begin(), rho_vec.end());
 
+  theta_min = *std::min_element(theta_vec.begin(), theta_vec.end());
+  theta_max = *std::max_element(theta_vec.begin(), theta_vec.end());
+
+  if (theta_min == xrange_min && theta_max == xrange_max) transform_angles = false;
+
   if (r_min == yrange_min && r_max == yrange_max) transform_radii = false;
   if (!ylim) ylim_max = r_max;
 
@@ -8921,22 +9049,24 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   std::vector<double> x(rho_length);
   std::vector<double> y(rho_length);
 
+
+  // negative radii are clipped before the transformation into user specified yrange
   if (clip_negative)
     {
-      std::vector<int> indices;
-      for (int ind = 0; ind < theta_vec.size(); ++ind)
+      for (unsigned int ind = 0; ind < theta_vec.size(); ++ind)
         {
-          if (rho_vec[ind] < 0) indices.insert(indices.begin(), ind);
+          if (rho_vec[ind] < 0) indices_vec.insert(indices_vec.begin(), ind);
         }
 
-      for (auto ind : indices)
+      for (auto ind : indices_vec)
         {
           rho_vec.erase(rho_vec.begin() + ind);
           theta_vec.erase(theta_vec.begin() + ind);
         }
+      indices_vec.clear();
     }
 
-  // transform angles into xrange if given
+  // transform angles into user specified xranges if given
   if (transform_angles)
     {
       double theta_min = *std::min_element(theta_vec.begin(), theta_vec.end());
@@ -8944,40 +9074,70 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
       transformCoordinatesVector(theta_vec, theta_min, theta_max, xrange_min, xrange_max);
     }
 
-  // transform radii into yrange if given
-  if (transform_radii)
+  index = 0;
+  // transform radii into yrange if given or log scale
+  if (transform_radii || y_log)
     {
       for (i = 0; i < rho_length; ++i)
         {
-          double current_rho = transformCoordinate(rho_vec[i], r_min, r_max, yrange_min, yrange_max) / ylim_max;
-          x[i] = current_rho * cos(theta_vec[i]);
-          y[i] = current_rho * sin(theta_vec[i]);
+          double current_rho;
+          if (y_log && !transform_radii)
+            {
+              // todo: polar.dat some 0.0000 values are stored as nan?
+              if (std::isnan(rho_vec[i]))
+                {
+                  rho_vec[i] = 0.0;
+                }
+              // todo: with given ylims
+              current_rho = transformCoordinate(rho_vec[i], r_min, r_max, 0.0, 0.0, y_log);
+            }
+          else
+            {
+              current_rho = transformCoordinate(rho_vec[i], r_min, r_max, yrange_min, yrange_max, y_log);
+            }
+
+          // clip radii outside ylim after transformation. But how? radii transformed into range 0, 1
+          if (ylim && current_rho > ylim_max)
+            {
+              continue;
+            }
+          current_rho /= ylim_max;
+          x[index] = current_rho * cos(theta_vec[index]);
+          y[index] = current_rho * sin(theta_vec[index]);
+          ++index;
         }
     }
-  else
+  else // no radii_transformation and no y_log
     {
-      // iterate over rho_vec and for each negative value add 180 degrees in radian to the corresponding value in
-      // theta_vec and make the rho_vec value positive
       for (i = 0; i < rho_length; ++i)
         {
           if (rho_vec[i] < 0)
             {
+              // iterate over rho_vec and for each negative value add 180 degrees in radian to the corresponding value
+              // in theta_vec and make the rho_vec value positive
               theta_vec[i] += M_PI;
-              // if theta_vec[i] is bigger than 2 * PI, subtract 2 * PI
+              // if theta_vec[i] is bigger than 2 * PI, subtract 2 * PI todo: what if its bigger than 4 * PI?
               if (theta_vec[i] > 2 * M_PI)
                 {
                   theta_vec[i] -= 2 * M_PI;
                 }
               rho_vec[i] = -rho_vec[i];
             }
-        }
-      for (i = 0; i < rho_length; ++i)
-        {
+
+          if (ylim && rho_vec[i] > ylim_max) // for removing points outside ylim
+            {
+              continue;
+            }
           double current_rho = rho_vec[i] / ylim_max;
-          x[i] = current_rho * cos(theta_vec[i]);
-          y[i] = current_rho * sin(theta_vec[i]);
+          x[index] = current_rho * cos(theta_vec[index]);
+          y[index] = current_rho * sin(theta_vec[index]);
         }
     }
+
+  // resize x and y
+  x.resize(index);
+  y.resize(index);
+
 
   auto id = static_cast<int>(global_root->getAttribute("_id"));
   global_root->setAttribute("_id", id + 1);
