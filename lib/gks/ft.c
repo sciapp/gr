@@ -1961,17 +1961,58 @@ void gks_ft_text3d(double x, double y, double z, char *text, int axis, gks_state
 void gks_ft_inq_text3d_extent(double x, double y, double z, char *text, int axis, gks_state_list_t *gkss,
                               double heightFactor, double *scaleFactors,
                               void (*gdp)(int, double *, double *, int, int, int *),
-                              void (*wc3towc)(double *, double *, double *), double *bBoxX, double *bBoxY)
+                              void (*wc3towc)(double *, double *, double *), double *pbBoxX, double *pbBoxY)
 {
+  double bBoxX[16], bBoxY[16];
   double phi;
   double chux, chuy;
+  int alh, alv;
   FT_Face face = (FT_Face)gks_ft_get_face(gkss->txfont);
 
+  alh = gkss->txal[0];
+  alv = gkss->txal[1];
   chux = gkss->chup[0];
   chuy = gkss->chup[1];
 
+  process_glyphs3d(face, x, y, z, text, axis, 0, gkss, heightFactor, scaleFactors, gdp, wc3towc, bBoxX, bBoxY);
+  switch (alh)
+    {
+    case GKS_K_TEXT_HALIGN_LEFT:
+      horiAdvance = 0;
+      break;
+    case GKS_K_TEXT_HALIGN_CENTER:
+      horiAdvance = -0.5 * (bBoxX[1] - bBoxX[0]);
+      break;
+    case GKS_K_TEXT_HALIGN_RIGHT:
+      horiAdvance = -(bBoxX[1] - bBoxX[0]);
+      break;
+    default:
+      horiAdvance = 0;
+      break;
+    }
+  switch (alv)
+    {
+    case GKS_K_TEXT_VALIGN_TOP:
+      vertAdvance = bBoxY[4] - bBoxY[2];
+      break;
+    case GKS_K_TEXT_VALIGN_CAP:
+      vertAdvance = bBoxY[4] - bBoxY[6];
+      break;
+    case GKS_K_TEXT_VALIGN_HALF:
+      vertAdvance = (bBoxY[4] - bBoxY[6]) * 0.5;
+      break;
+    case GKS_K_TEXT_VALIGN_BASE:
+      vertAdvance = 0;
+      break;
+    case GKS_K_TEXT_VALIGN_BOTTOM:
+      vertAdvance = bBoxY[4] - bBoxY[0];
+      break;
+    default:
+      vertAdvance = 0;
+    }
+
   phi = -atan2(chux, chuy); /* character up vector */
-  process_glyphs3d(face, x, y, z, text, axis, phi, gkss, heightFactor, scaleFactors, gdp, wc3towc, bBoxX, bBoxY);
+  process_glyphs3d(face, x, y, z, text, axis, phi, gkss, heightFactor, scaleFactors, gdp, wc3towc, pbBoxX, pbBoxY);
 }
 
 #else

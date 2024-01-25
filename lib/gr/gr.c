@@ -6548,7 +6548,7 @@ static void axes3d_get_params(int axis, int *tick_axis, double x_org, double y_o
     }
   /* Reset options for consistent gr_inqtext3d values */
   gks_set_text_upvec(0, 1);
-  gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+  gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
   gr_inqwindow3d(&x_min, &x_max, &y_min, &y_max, &z_min, &z_max);
   fx = tx.camera_pos_x - tx.focus_point_x;
   fy = tx.camera_pos_y - tx.focus_point_y;
