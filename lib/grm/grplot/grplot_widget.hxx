@@ -10,6 +10,7 @@
 #include <QTextDocument>
 #include <QWidget>
 #include <QMainWindow>
+#include <QCursor>
 
 #include "gredit/Bounding_object.h"
 #include "gredit/Bounding_logic.h"
@@ -21,6 +22,10 @@ class GRPlotWidget;
 #include "util.hxx"
 
 #include <grm.h>
+
+#define DEFAULT_HOVER_MODE 0
+#define MOVABLE_HOVER_MODE 1
+#define INTEGRAL_SIDE_HOVER_MODE 2
 
 class GRPlotWidget : public QWidget
 {
@@ -88,6 +93,7 @@ private slots:
   void png();
   void jpeg();
   void svg();
+  void moveableMode();
   void show_container_slot();
   void show_bounding_boxes_slot();
   void save_file_slot();
@@ -104,7 +110,8 @@ private:
     {
       normal,
       pan,
-      boxzoom
+      boxzoom,
+      movable_xform
     };
     Mode mode;
     QPoint pressed;
@@ -197,7 +204,7 @@ private:
   QStringList check_box_attr, combo_box_attr;
 
   QMenuBar *menu;
-  QMenu *type, *algo, *export_menu, *editor_menu;
+  QMenu *type, *algo, *export_menu, *editor_menu, *modi_menu;
   QMenu *file_menu, *configuration_menu;
   QAction *marginalheatmapAllAct, *marginalheatmapLineAct;
   QAction *sumAct, *maxAct;
@@ -210,6 +217,8 @@ private:
   QAction *PdfAct, *PngAct, *JpegAct, *SvgAct;
   QAction *show_container_action, *show_bounding_boxes_action, *save_file_action, *open_file_action, *editor_action,
       *add_element_action;
+  QAction *moveableModeAct;
+  QCursor *csr;
 
   void reset_pixmap();
   void moveEvent(QMoveEvent *event) override;

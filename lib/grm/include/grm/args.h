@@ -50,7 +50,7 @@ typedef struct _args_iterator_t
   arg_t *(*next)(struct _args_iterator_t *);
   arg_t *arg;
   args_iterator_private_t *priv;
-} args_iterator_t;
+} grm_args_iterator_t;
 
 /* ------------------------- value iterator ------------------------------------------------------------------------- */
 
@@ -65,10 +65,14 @@ typedef struct _grm_args_value_iterator_t
   int is_array;
   size_t array_length;
   args_value_iterator_private_t *priv;
-} args_value_iterator_t;
+} grm_args_value_iterator_t;
 
 
 /* ========================= methods ================================================================================ */
+
+/* ------------------------- argument ------------------------------------------------------------------------------- */
+
+EXPORT grm_args_value_iterator_t *grm_arg_value_iter(const arg_t *arg);
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
 
@@ -89,6 +93,8 @@ EXPORT int grm_args_values(const grm_args_t *args, const char *keyword, const ch
 
 EXPORT void grm_args_clear(grm_args_t *args);
 EXPORT void grm_args_remove(grm_args_t *args, const char *key);
+
+EXPORT grm_args_iterator_t *grm_args_iter(const grm_args_t *args);
 
 
 /* ------------------------- utilities ------------------------------------------------------------------------------ */

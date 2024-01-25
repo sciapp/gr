@@ -9,6 +9,7 @@
  */
 
 static const char *spaced_symbols[] = {":",
+                                       ":=",
                                        "<",
                                        "=",
                                        ">",
@@ -793,8 +794,6 @@ static const unsigned int symbol_codepoints[] = {
 #define SHRINK_FACTOR 0.7
 #define NUM_SIZE_LEVELS 2
 
-#define MATH_FONT 232
-
 #ifndef GR_UNUSED
 #define GR_UNUSED(x) (void)(x)
 #endif
@@ -977,6 +976,7 @@ double canvas_width = 0;
 double canvas_depth = 0;
 
 static double font_size;
+static int math_font = GR_DEFAULT_MATH_FONT;
 static double transformation[6];
 static double window[4];
 
@@ -1068,7 +1068,7 @@ static double get_em_width(BoxModelState bm_state)
 {
   double advance;
   double bearing;
-  if (gks_ft_get_metrics(MATH_FONT, bm_state.fontsize * 1.16, 'm', bm_state.dpi, NULL, NULL, NULL, &advance, &bearing,
+  if (gks_ft_get_metrics(math_font, bm_state.fontsize * 1.16, 'm', bm_state.dpi, NULL, NULL, NULL, &advance, &bearing,
                          NULL, NULL, NULL, NULL))
     {
       return advance - bearing;
@@ -1121,13 +1121,12 @@ static size_t make_char(unsigned int codepoint)
   bm_node.size = 0;
   bm_node.u.character.state = *get_current_state();
   if (gks_ft_get_metrics(
-          MATH_FONT, bm_node.u.character.state.fontsize * size_factor,
+          math_font, bm_node.u.character.state.fontsize * size_factor,
           get_codepoint_for_character_variant(bm_node.u.character.codepoint, bm_node.u.character.state.font),
           bm_node.u.character.state.dpi, &width, &height, &depth, &advance, &bearing, NULL, NULL, NULL, NULL))
     {
       if (codepoint == 8747)
         {
-          height *= 0.75;
           depth *= 1.25;
         }
       if (codepoint == ' ')
@@ -1180,7 +1179,7 @@ static size_t make_accent(unsigned int c, double bearing_factor)
   bm_node.size = 0;
   bm_node.u.character.state = *get_current_state();
   if (gks_ft_get_metrics(
-          MATH_FONT, bm_node.u.character.state.fontsize * 1.16,
+          math_font, bm_node.u.character.state.fontsize * 1.16,
           get_codepoint_for_character_variant(bm_node.u.character.codepoint, bm_node.u.character.state.font),
           bm_node.u.character.state.dpi, NULL, NULL, NULL, NULL, &bearing, &xmin, &xmax, &ymin, &ymax))
     {
@@ -1836,6 +1835,10 @@ static unsigned int symbol_to_codepoint(const unsigned char *utf8_str, size_t le
           }
       }
       return (unsigned int)'?';
+    }
+  if (utf8_str[0] == ':' && length == 2 && utf8_str[1] == '=')
+    {
+      return 0x2254;
     }
 
   codepoint = str_utf8_to_unicode(utf8_str, &found_length);
@@ -2602,7 +2605,7 @@ static size_t convert_genfrac_to_box_model(ParserNode *node)
   append_to_vlist(vlist_index, centered_denominator_node_index);
   pack_vlist(vlist_index, 0, 1, INFINITY);
 
-  gks_ft_get_metrics(MATH_FONT, state->fontsize * 1.16, '=', state->dpi, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  gks_ft_get_metrics(math_font, state->fontsize * 1.16, '=', state->dpi, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                      &ymin, &ymax);
 
   shift = centered_denominator_node->u.hlist.height + default_thickness * 4 + rule_thickness / 2 - (ymax + ymin) / 2;
@@ -3170,7 +3173,8 @@ static void render_character(BoxModelNode *node, double x, double y)
       size_factor *= 1.25;
     }
   gks_set_text_height(node->u.character.state.fontsize * size_factor);
-  gks_set_text_fontprec(MATH_FONT, 3);
+  gr_inqmathfont(&math_font);
+  gks_set_text_fontprec(math_font, 3);
   gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BASE);
   if (node->u.character.bearing < 0)
     {

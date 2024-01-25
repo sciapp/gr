@@ -750,6 +750,11 @@ int yylex(void) {
         yylval.length = c_bytes;
         yylval.type = NT_TERMINAL_SYMBOL;
         cursor += c_bytes;
+        /* special case for := */
+        if (c == ':' && *cursor == '=') {
+          yylval.length += 1;
+          cursor += 1;
+        }
         return SINGLE_SYMBOL;
       } else if (strchr("()[]<>./{}|", c) != NULL) {
           yylval.source = cursor;

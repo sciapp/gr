@@ -89,9 +89,11 @@ static const FT_String *gks_font_list_pfb[] = {
 };
 
 static const FT_String *gks_font_list_ttf[] = {
-    NULL,        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL,        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, "CMUSerif-Math",
-    "DejaVuSans"};
+    NULL,         NULL,         NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL,         NULL,         NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL,         NULL,         NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL,         NULL,         NULL, NULL, NULL, NULL, NULL, "CMUSerif-Math",
+    "DejaVuSans", "STIXTwoMath"};
 
 static char gks_font_list_user_defined[MAX_NUM_USER_FONTS][MAXPATHLEN];
 
@@ -682,7 +684,7 @@ void gks_ft_terminate(void)
 static int gks_ft_convert_textfont(int textfont)
 {
   textfont = abs(textfont);
-  if (textfont >= 201 && textfont <= 233)
+  if (textfont >= 201 && textfont <= 234)
     {
       textfont -= 200;
     }

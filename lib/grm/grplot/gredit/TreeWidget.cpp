@@ -37,10 +37,53 @@ void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTr
   if (ref->hasAttribute("name")) name += " (" + static_cast<std::string>(ref->getAttribute("name")) + ")";
   item->setText(0, tr(name.c_str()));
   item->setExpanded(true);
+  // checkboxes for _selected attribute
+  if (ref->hasAttribute("_selected") && static_cast<int>(ref->getAttribute("_selected")))
+    {
+      item->setCheckState(0, Qt::Checked);
+    }
+  else
+    {
+      item->setCheckState(0, Qt::Unchecked);
+    }
+
   for (const auto &cur_elem : ref->children())
     {
       updateDataRecursion(cur_elem, item);
     }
+}
+
+static void changeChildSelectedStatus(CustomTreeWidgetItem *item, bool status)
+{
+  for (int i = 0; i < item->childCount(); ++i)
+    {
+      auto child = dynamic_cast<CustomTreeWidgetItem *>(item->child(i));
+      child->getRef()->setAttribute("_selected", status);
+      child->setCheckState(0, (status) ? Qt::Checked : Qt::Unchecked);
+      if (child->childCount() > 0) changeChildSelectedStatus(child, status);
+    }
+}
+
+bool TreeWidget::checkboxStatusChanged(CustomTreeWidgetItem *item)
+{
+  bool movable_status =
+      item->getRef()->hasAttribute("_selected") && static_cast<int>(item->getRef()->getAttribute("_selected"));
+  if (item->getRef()->localName() != "root" &&
+      ((item->checkState(0) == 0 && movable_status == true) || (item->checkState(0) == 2 && movable_status == false)))
+    {
+      // checkbox status got changed
+      item->getRef()->setAttribute("_selected", !movable_status);
+      changeChildSelectedStatus(item, !movable_status);
+    }
+
+  if (item->getRef() != nullptr)
+    {
+      for (int i = 0; i < item->childCount(); ++i)
+        {
+          if (checkboxStatusChanged(dynamic_cast<CustomTreeWidgetItem *>(item->child(i)))) break;
+        }
+    }
+  return false;
 }
 
 bool TreeWidget::findSelectedItem(CustomTreeWidgetItem *item)
@@ -78,6 +121,12 @@ void TreeWidget::mousePressEvent(QMouseEvent *event)
   QTreeView::mousePressEvent(event);
   findSelectedItem(plotTree);
   grplot_widget->redraw(false);
+}
+
+void TreeWidget::mouseReleaseEvent(QMouseEvent *event)
+{
+  QTreeView::mouseReleaseEvent(event);
+  checkboxStatusChanged(plotTree);
 }
 
 bool TreeWidget::selectItem(std::shared_ptr<GRM::Element> ref, CustomTreeWidgetItem *tree_elem)

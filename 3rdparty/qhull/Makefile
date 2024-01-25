@@ -8,94 +8,93 @@ ifneq ($(notdir $(CC)),emcc)
 CFLAGS += -mmacosx-version-min=10.15
 endif
 endif
-   LIBS = libqhull.a
 
    OBJS = \
-        global.o \
-        stat.o \
-        geom2.o \
-        poly2.o \
-        merge.o \
-        libqhull.o \
-        geom.o \
-        poly.o \
-        qset.o \
-        mem.o \
-        random.o \
-        usermem.o \
-        userprintf.o \
-        io.o \
-        user.o \
-        rboxlib.o \
-        userprintf_rbox.o
+        global_r.o \
+        stat_r.o \
+        geom2_r.o \
+        poly2_r.o \
+        merge_r.o \
+        libqhull_r.o \
+        geom_r.o \
+        poly_r.o \
+        qset_r.o \
+        mem_r.o \
+        random_r.o \
+        usermem_r.o \
+        userprintf_r.o \
+        io_r.o \
+        user_r.o \
+        rboxlib_r.o \
+        userprintf_rbox_r.o
 
 default: install
 
-libqhull.a: $(OBJS)
+libqhull_r.a: $(OBJS)
 	$(AR) crv $@ $?
 	$(AR) ts $@
 
 distclean: clean
 
 clean:
-	rm -f libqhull.a *.o
+	rm -f libqhull_r.a *.o
 
-$(PREFIX)/lib/libqhull.a: libqhull.a
+$(PREFIX)/lib/libqhull_r.a: libqhull_r.a
 	mkdir -p $(PREFIX)/lib/
-	mkdir -p $(PREFIX)/include/libqhull
-	cp libqhull.a $(PREFIX)/lib/
-	cp *.h $(PREFIX)/include/libqhull/
+	mkdir -p $(PREFIX)/include/libqhull_r
+	cp libqhull_r.a $(PREFIX)/lib/
+	cp *.h $(PREFIX)/include/libqhull_r/
 
-install: $(PREFIX)/lib/libqhull.a
+install: $(PREFIX)/lib/libqhull_r.a
 
 depend:
 	makedepend -Y -- \
-        global.c \
-        stat.c \
-        geom2.c \
-        poly2.c \
-        merge.c \
-        libqhull.c \
-        geom.c \
-        poly.c \
-        qset.c \
-        mem.c \
-        random.c \
-        usermem.c \
-        userprintf.c \
-        io.c \
-        user.c \
-        rboxlib.c \
-        userprintf_rbox.c 2> /dev/null
+        global_r.c \
+        stat_r.c \
+        geom2_r.c \
+        poly2_r.c \
+        merge_r.c \
+        libqhull_r.c \
+        geom_r.c \
+        poly_r.c \
+        qset_r.c \
+        mem_r.c \
+        random_r.c \
+        usermem_r.c \
+        userprintf_r.c \
+        io_r.c \
+        user_r.c \
+        rboxlib_r.c \
+        userprintf_rbox_r.c 2> /dev/null
 
 .PHONY: default install clean distclean depend
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
-global.o: qhull_a.h libqhull.h user.h mem.h qset.h stat.h random.h geom.h
-global.o: merge.h poly.h io.h
-stat.o: qhull_a.h libqhull.h user.h mem.h qset.h stat.h random.h geom.h
-stat.o: merge.h poly.h io.h
-geom2.o: qhull_a.h libqhull.h user.h mem.h qset.h stat.h random.h geom.h
-geom2.o: merge.h poly.h io.h
-poly2.o: qhull_a.h libqhull.h user.h mem.h qset.h stat.h random.h geom.h
-poly2.o: merge.h poly.h io.h
-merge.o: qhull_a.h libqhull.h user.h mem.h qset.h stat.h random.h geom.h
-merge.o: merge.h poly.h io.h
-libqhull.o: qhull_a.h libqhull.h user.h mem.h qset.h stat.h random.h geom.h
-libqhull.o: merge.h poly.h io.h
-geom.o: qhull_a.h libqhull.h user.h mem.h qset.h stat.h random.h geom.h
-geom.o: merge.h poly.h io.h
-poly.o: qhull_a.h libqhull.h user.h mem.h qset.h stat.h random.h geom.h
-poly.o: merge.h poly.h io.h
-qset.o: user.h qset.h mem.h
-mem.o: user.h mem.h
-random.o: libqhull.h user.h mem.h qset.h stat.h random.h
-usermem.o: libqhull.h user.h mem.h qset.h stat.h
-userprintf.o: libqhull.h user.h mem.h qset.h stat.h
-io.o: qhull_a.h libqhull.h user.h mem.h qset.h stat.h random.h geom.h merge.h
-io.o: poly.h io.h
-user.o: qhull_a.h libqhull.h user.h mem.h qset.h stat.h random.h geom.h
-user.o: merge.h poly.h io.h
-rboxlib.o: libqhull.h user.h mem.h qset.h stat.h random.h
-userprintf_rbox.o: libqhull.h user.h mem.h qset.h stat.h
+global_r.o: qhull_ra.h libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h
+global_r.o: random_r.h geom_r.h merge_r.h poly_r.h io_r.h
+stat_r.o: qhull_ra.h libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h
+stat_r.o: random_r.h geom_r.h merge_r.h poly_r.h io_r.h
+geom2_r.o: qhull_ra.h libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h
+geom2_r.o: random_r.h geom_r.h merge_r.h poly_r.h io_r.h
+poly2_r.o: qhull_ra.h libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h
+poly2_r.o: random_r.h geom_r.h merge_r.h poly_r.h io_r.h
+merge_r.o: qhull_ra.h libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h
+merge_r.o: random_r.h geom_r.h merge_r.h poly_r.h io_r.h
+libqhull_r.o: qhull_ra.h libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h
+libqhull_r.o: random_r.h geom_r.h merge_r.h poly_r.h io_r.h
+geom_r.o: qhull_ra.h libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h
+geom_r.o: random_r.h geom_r.h merge_r.h poly_r.h io_r.h
+poly_r.o: qhull_ra.h libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h
+poly_r.o: random_r.h geom_r.h merge_r.h poly_r.h io_r.h
+qset_r.o: libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h
+mem_r.o: libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h
+random_r.o: libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h random_r.h
+usermem_r.o: libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h
+userprintf_r.o: libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h poly_r.h
+io_r.o: qhull_ra.h libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h random_r.h
+io_r.o: geom_r.h merge_r.h poly_r.h io_r.h
+user_r.o: qhull_ra.h libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h
+user_r.o: random_r.h geom_r.h merge_r.h poly_r.h io_r.h
+rboxlib_r.o: libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h random_r.h
+userprintf_rbox_r.o: libqhull_r.h user_r.h mem_r.h qset_r.h stat_r.h

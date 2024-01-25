@@ -25,12 +25,12 @@
 #   If false, do not try to use Qhull.
 
 if(NOT QHULL_INCLUDE_DIR)
-  find_path(QHULL_INCLUDE_DIR libqhull/qhull_a.h)
+  find_path(QHULL_INCLUDE_DIR libqhull_r/qhull_ra.h)
 endif()
 
 if(NOT QHULL_LIBRARY)
   find_library(
-    QHULL_LIBRARY NAMES ${GR_THIRDPARTY_LIBRARY_PREFIX}qhull${GR_THIRDPARTY_LIBRARY_SUFFIX} qhullstatic qhull
+    QHULL_LIBRARY NAMES ${GR_THIRDPARTY_LIBRARY_PREFIX}qhull_r${GR_THIRDPARTY_LIBRARY_SUFFIX} qhullstatic_r qhull_r
   )
 endif()
 
@@ -45,7 +45,7 @@ if(NOT QHULL_VERSION_STRING
     file(
       WRITE "${CMAKE_CURRENT_BINARY_DIR}/qhull_get_version.c"
       "
-        #include \"libqhull/libqhull.h\"
+        #include \"libqhull_r/libqhull_r.h\"
 
         int main(void)
         {
@@ -85,10 +85,10 @@ if(Qhull_FOUND)
   set(QHULL_INCLUDE_DIRS ${QHULL_INCLUDE_DIR})
   set(QHULL_LIBRARIES ${QHULL_LIBRARY})
 
-  if(NOT TARGET Qhull::Qhull)
-    add_library(Qhull::Qhull UNKNOWN IMPORTED)
+  if(NOT TARGET Qhull::qhull_r)
+    add_library(Qhull::qhull_r UNKNOWN IMPORTED)
     set_target_properties(
-      Qhull::Qhull
+      Qhull::qhull_r
       PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${QHULL_INCLUDE_DIRS}"
                  IMPORTED_LINK_INTERFACE_LANGUAGES "C"
                  IMPORTED_LOCATION "${QHULL_LIBRARY}"

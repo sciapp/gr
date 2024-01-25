@@ -63,7 +63,7 @@ EXPORT void grm_set_attribute_on_all_subplots(std::string attribute, int value);
 EXPORT int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, const int y2,
                                          const int keep_aspect_ratio, double *factor_x, double *factor_y,
                                          double *focus_x, double *focus_y,
-                                         std::shared_ptr<GRM::Element> subplot_element);
+                                         std::shared_ptr<GRM::Element> &subplot_element);
 EXPORT bool grm_validate(void);
 
 #if !defined(NO_LIBXML2)

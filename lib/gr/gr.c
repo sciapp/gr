@@ -960,6 +960,8 @@ static font_alias_t font_aliases[] = {
 
 static int num_font_aliases = sizeof(font_aliases) / sizeof(font_aliases[0]);
 
+static int math_font = GR_DEFAULT_MATH_FONT;
+
 static double sizex = 0;
 
 static int regeneration_flags = 0;
@@ -1435,6 +1437,8 @@ static void initialize(int state)
   flag_stream = flag_graphics || debug != NULL;
 
   setscale(options);
+
+  math_font = GR_DEFAULT_MATH_FONT;
 }
 
 #ifdef SIGUSR1
@@ -1879,7 +1883,7 @@ static void polyline(int n, double *x, double *y)
         npoints++;
     }
 
-  if (npoints != 0) gks_polyline(npoints, xpoint, ypoint);
+  if (npoints >= 2) gks_polyline(npoints, xpoint, ypoint);
 }
 
 /*!
@@ -3272,6 +3276,8 @@ void gr_inqmarkercolorind(int *coli)
  * |FONT_COMPUTERMODERN                   |  232|
  * +--------------------------------------+-----+
  * |FONT_DEJAVUSANS                       |  233|
+ * +--------------------------------------+-----+
+ * |FONT_STIXTWOMATH                      |  234|
  * +--------------------------------------+-----+
  *
  * The available text precisions are:
@@ -16109,4 +16115,20 @@ void gr_volume_nogrid(unsigned long ndt_pt, const data_point3d_t *dt_pts, const 
 
     free(ipixels);
   }
+}
+
+void gr_setmathfont(int font)
+{
+  check_autoinit;
+
+  math_font = font;
+
+  if (flag_stream) gr_writestream("<setmathfont font=\"%d\"/>\n", font);
+}
+
+void gr_inqmathfont(int *font)
+{
+  check_autoinit;
+
+  *font = math_font;
 }
