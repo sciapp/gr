@@ -316,27 +316,50 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "z_lim",
                                     "z_log",
                                     nullptr};
-const char *valid_series_keys[] = {"a",           "algorithm",
-                                   "bin_width",   "bin_edges",
-                                   "bin_counts",  "c",
-                                   "c_dims",      "c_range",
-                                   "draw_edges",  "d_min",
-                                   "d_max",       "edge_color",
-                                   "edge_width",  "error",
-                                   "face_color",  "foreground_color",
-                                   "indices",     "inner_series",
-                                   "isovalue",    "line_spec",
-                                   "marker_type", "num_bins",
-                                   "phi_lim",     "rgb",
-                                   "r_lim",       "s",
-                                   "step_where",  "stairs",
-                                   "u",           "v",
-                                   "weights",     "x",
-                                   "x_colormap",  "x_range",
-                                   "y",           "y_colormap",
-                                   "y_labels",    "y_range",
-                                   "z",           "z_dims",
-                                   "z_range",     nullptr};
+const char *valid_series_keys[] = {"a",
+                                   "algorithm",
+                                   "bin_width",
+                                   "bin_edges",
+                                   "bin_counts",
+                                   "c",
+                                   "c_dims",
+                                   "c_range",
+                                   "draw_edges",
+                                   "d_min",
+                                   "d_max",
+                                   "edge_color",
+                                   "edge_width",
+                                   "error",
+                                   "face_color",
+                                   "foreground_color",
+                                   "indices",
+                                   "inner_series",
+                                   "int_limits_high",
+                                   "int_limits_low",
+                                   "isovalue",
+                                   "line_spec",
+                                   "marker_type",
+                                   "num_bins",
+                                   "phi_lim",
+                                   "rgb",
+                                   "r_lim",
+                                   "s",
+                                   "step_where",
+                                   "stairs",
+                                   "u",
+                                   "v",
+                                   "weights",
+                                   "x",
+                                   "x_colormap",
+                                   "x_range",
+                                   "y",
+                                   "y_colormap",
+                                   "y_labels",
+                                   "y_range",
+                                   "z",
+                                   "z_dims",
+                                   "z_range",
+                                   nullptr};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ valid types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -379,6 +402,8 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"ind_bar_color", "A"},
                                               {"ind_edge_color", "A"},
                                               {"ind_edge_width", "A"},
+                                              {"int_limits_high", "D"},
+                                              {"int_limits_low", "D"},
                                               {"isovalue", "d"},
                                               {"keep_aspect_ratio", "i"},
                                               {"kind", "s"},
@@ -1420,8 +1445,8 @@ err_t plot_line(grm_args_t *subplot_args)
 
   while (*current_series != nullptr)
     {
-      double *x = nullptr, *y = nullptr;
-      unsigned int x_length = 0, y_length = 0;
+      double *x = nullptr, *y = nullptr, *int_limits_high = nullptr, *int_limits_low = nullptr;
+      unsigned int x_length = 0, y_length = 0, limits_high_num = 0, limits_low_num = 0;
       char *spec;
       double x_min, x_max, y_min, y_max;
       auto subGroup = global_render->createSeries("line");
@@ -1463,6 +1488,37 @@ err_t plot_line(grm_args_t *subplot_args)
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) subGroup->setAttribute("line_spec", spec);
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
         subGroup->setAttribute("marker_type", marker_type);
+
+      // check if there are any attributes for integrals which should be created
+      if (grm_args_first_value(*current_series, "int_limits_high", "D", &int_limits_high, &limits_high_num))
+        {
+          if (grm_args_first_value(*current_series, "int_limits_low", "D", &int_limits_low, &limits_low_num))
+            {
+              if (limits_low_num != limits_high_num)
+                {
+                  error = ERROR_PLOT_MISSING_DATA;
+                  return_if_error;
+                }
+              else
+                {
+                  auto integral_group = global_render->createElement("integral_group");
+                  subGroup->append(integral_group);
+
+                  std::vector<double> limits_high_vec(int_limits_high, int_limits_high + limits_high_num);
+                  (*context)["int_limits_high" + str] = limits_high_vec;
+                  integral_group->setAttribute("int_limits_high", "int_limits_high" + str);
+
+                  std::vector<double> limits_low_vec(int_limits_low, int_limits_low + limits_low_num);
+                  (*context)["int_limits_low" + str] = limits_low_vec;
+                  integral_group->setAttribute("int_limits_low", "int_limits_low" + str);
+                }
+            }
+          else
+            {
+              error = ERROR_PLOT_MISSING_DATA;
+              return_if_error;
+            }
+        }
 
       global_root->setAttribute("_id", ++id);
       error = plot_draw_error_bars(*current_series, x_length);
@@ -2310,9 +2366,9 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
       if (x == nullptr && y == nullptr)
         {
           /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
-          grm_args_values(*current_series, "z_dims", "ii", &rows, &cols);
+          grm_args_values(*current_series, "z_dims", "ii", &cols, &rows);
 
-          auto z_dims_vec = std::vector<int>{(int)rows, (int)cols};
+          auto z_dims_vec = std::vector<int>{(int)cols, (int)rows};
           auto z_dims_key = "z_dims" + str;
           (*context)[z_dims_key] = z_dims_vec;
           subGroup->setAttribute("z_dims", z_dims_key);
@@ -2412,9 +2468,9 @@ err_t plot_heatmap(grm_args_t *subplot_args)
       if (x == nullptr && y == nullptr)
         {
           /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
-          grm_args_values(*current_series, "z_dims", "ii", &rows, &cols);
+          grm_args_values(*current_series, "z_dims", "ii", &cols, &rows);
 
-          auto z_dims_vec = std::vector<int>{(int)rows, (int)cols};
+          auto z_dims_vec = std::vector<int>{(int)cols, (int)rows};
           auto z_dims_key = "z_dims" + str;
           (*context)[z_dims_key] = z_dims_vec;
           subGroup->setAttribute("z_dims", z_dims_key);
@@ -2590,7 +2646,7 @@ err_t plot_surface(grm_args_t *subplot_args)
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
 
-      if (grm_args_values(*current_series, "z_dims", "ii", &y_length, &x_length))
+      if (grm_args_values(*current_series, "z_dims", "ii", &x_length, &y_length))
         {
           int id = static_cast<int>(global_root->getAttribute("_id"));
           std::string str = std::to_string(id);
