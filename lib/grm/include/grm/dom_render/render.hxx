@@ -65,6 +65,8 @@
 #define PLOT_DEFAULT_XGRID 1
 #define PLOT_DEFAULT_YGRID 1
 #define PLOT_DEFAULT_ZGRID 1
+#define PLOT_DEFAULT_SPACE_3D_FOV 30.0
+#define PLOT_DEFAULT_SPACE_3D_DISTANCE 0.0
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
