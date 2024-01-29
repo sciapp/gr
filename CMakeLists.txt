@@ -46,6 +46,7 @@ option(GR_INSTALL "Create installation target for GR" ON)
 option(GR_USE_BUNDLED_LIBRARIES "Use thirdparty libraries bundled with GR" OFF)
 option(GR_MANUAL_MOC_AND_RCC "Manually run moc and rcc instead of relying on AUTOMOC and AUTORCC" OFF)
 option(GR_FIND_QT5_BY_VARIABLES "Find Qt5 based on the variables Qt5_INCLUDE_DIR and Qt5_LIBRARY_DIR" OFF)
+option(GR_PREFER_XCODEBUILD "Prefer xcodebuild to build macOS applications if available" ON)
 
 if(GR_USE_BUNDLED_LIBRARIES)
   list(APPEND CMAKE_FIND_ROOT_PATH "${CMAKE_CURRENT_LIST_DIR}/3rdparty/build/")
@@ -1054,8 +1055,10 @@ string(APPEND GR_REPORT "\nGKS applications:\n")
 
 if(APPLE)
   if(Zeromq_FOUND)
-    find_program(XCODE_BUILD xcodebuild CMAKE_FIND_ROOT_PATH_BOTH)
-    if(XCODE_BUILD)
+    if(GR_PREFER_XCODEBUILD)
+      find_program(XCODE_BUILD xcodebuild CMAKE_FIND_ROOT_PATH_BOTH)
+    endif()
+    if(GR_PREFER_XCODEBUILD AND XCODE_BUILD)
       set(GKSTERM_SOURCES
           lib/gks/quartz/GKSTerm.h
           lib/gks/quartz/GKSTerm.icns
