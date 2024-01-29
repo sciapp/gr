@@ -243,10 +243,10 @@ public:
 
   std::shared_ptr<Element> createAxes(double x_tick, double y_tick, double x_org, double y_org, int x_major,
                                       int y_major, int tick_orientation,
-                                      const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                      const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
   std::shared_ptr<GRM::Element> createEmptyAxes(int tick_orientation,
-                                                const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                                const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
   std::shared_ptr<GRM::Element> createEmptyDoubleAxes();
 
@@ -324,18 +324,18 @@ public:
 
   std::shared_ptr<Element> createGrid3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org,
                                         double z_org, int major_x, int major_y, int major_z,
-                                        const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                        const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
   std::shared_ptr<GRM::Element> createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid,
-                                                  const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                                  const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
 
   std::shared_ptr<Element> createAxes3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org,
                                         double z_org, int major_x, int major_y, int major_z, int tick_orientation,
-                                        const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                        const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
   std::shared_ptr<GRM::Element> createEmptyAxes3d(int tick_orientation,
-                                                  const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                                  const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createPolyline3d(const std::string &x_key, std::optional<std::vector<double>> x,
                                             const std::string &y_key, std::optional<std::vector<double>> y,

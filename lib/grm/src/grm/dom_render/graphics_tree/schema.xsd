@@ -245,25 +245,24 @@
                 <xs:element ref="polar_axes" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="titles_3d" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="text" minOccurs="0" maxOccurs="2"/> <!-- label -->
                 <xs:element ref="x_tick_label_group" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="y_tick_label_group" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform"/>
             <xs:attribute name="angle_ticks" type="xs:integer"/>
-            <xs:attribute name="draw" type="xs:integer"/>
+            <xs:attribute name="hide" type="xs:integer"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="normalization" type="xs:string"/>
             <xs:attribute name="phi_flip" type="xs:integer"/>
-            <xs:attribute name="type" type="xs:string"/>
+            <xs:attribute name="plot_type" type="xs:string"/>
             <xs:attribute name="x_grid" type="xs:integer"/>
-            <xs:attribute name="x_tick_labels" type="xs:string"/>
             <xs:attribute name="x_label" type="xs:string"/>
+            <xs:attribute name="x_tick_labels" type="xs:string"/>
             <xs:attribute name="y_grid" type="xs:integer"/>
             <xs:attribute name="y_line" type="xs:integer"/>
-            <xs:attribute name="y_tick_labels" type="xs:string"/>
             <xs:attribute name="y_label" type="xs:string"/>
+            <xs:attribute name="y_tick_labels" type="xs:string"/>
             <xs:attribute name="z_grid" type="xs:integer"/>
             <xs:attribute name="z_label" type="xs:string"/>
         </xs:complexType>
@@ -299,6 +298,9 @@
     <!-- definition of axes -->
     <xs:element name="axes">
         <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/> <!-- label -->
+            </xs:choice>
             <xs:attributeGroup ref="axes"/>
             <xs:attributeGroup ref="move_xform"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>

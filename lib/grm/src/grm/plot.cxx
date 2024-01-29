@@ -3527,7 +3527,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         }
     }
 
-  group->setAttribute("type", type);
+  group->setAttribute("plot_type", type);
 
   if (pass == 1 && grm_args_values(args, "title", "s", &title))
     {
@@ -3575,7 +3575,7 @@ err_t plot_draw_polar_axes(grm_args_t *args)
       group = global_render->getElementsByTagName("coordinate_system")[0];
     }
 
-  group->setAttribute("type", "polar");
+  group->setAttribute("plot_type", "polar");
 
   if (grm_args_values(args, "angle_ticks", "i", &angle_ticks))
     {
