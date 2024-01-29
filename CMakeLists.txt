@@ -1080,21 +1080,50 @@ if(APPLE)
         COMMAND ${XCODE_BUILD} -arch ${CMAKE_SYSTEM_PROCESSOR} -project GKSTerm.xcodeproj
                 CONFIGURATION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}/GKSTerm
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj Zeromq::Zeromq
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj Zeromq::Zeromq gks_static
       )
+      # Disable autoformat to not break the `sed` command
+      # cmake-format: off
       add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj
         COMMAND ${CMAKE_COMMAND} -E copy_directory lib/gks ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build
-        COMMAND
-          sed -i .bak -e s%../../../3rdparty/build/lib/libzmq.a%${ZEROMQ_LIBRARY}% -e
-          s%../../../3rdparty/build/include/zmq.h%${ZEROMQ_INCLUDE_DIR}/zmq.h%
-          ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj/project.pbxproj
+        COMMAND sed -i .bak -e s%../../../3rdparty/build/lib/libzmq.a%${ZEROMQ_LIBRARY}% -e s%../../../3rdparty/build/include/zmq.h%${ZEROMQ_INCLUDE_DIR}/zmq.h% ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj/project.pbxproj
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         DEPENDS ${GKS_SOURCES} ${GKSTERM_SOURCES}
       )
-      string(APPEND GR_REPORT "- GKSTerm: Yes\n")
+      # cmake-format: on
+      string(APPEND GR_REPORT "- GKSTerm: Yes (Xcode build)\n")
     else()
-      string(APPEND GR_REPORT "- GKSTerm: No (XCode not found)\n")
+      add_executable(GKSTerm MACOSX_BUNDLE lib/gks/quartz/GKSTerm.m lib/gks/quartz/GKSView.m lib/gks/quartz/main.m)
+      target_link_libraries(GKSTerm PUBLIC Zeromq::Zeromq)
+      target_link_libraries(
+        GKSTerm PUBLIC gks_static
+                       "-framework CoreGraphics -framework CoreFoundation -framework CoreVideo -framework Cocoa"
+      )
+
+      add_custom_command(
+        TARGET GKSTerm
+        POST_BUILD
+        COMMAND
+          ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/English.lproj
+          ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/English.lproj DEPENDS
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/English.lproj
+        BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/English.lproj
+      )
+      target_sources(GKSTerm PRIVATE lib/gks/quartz/GKSTerm.icns)
+      set_source_files_properties(lib/gks/quartz/GKSTerm.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources/)
+      target_compile_options(GKSTerm PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+      set_target_properties(
+        GKSTerm
+        PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME "GKSTerm"
+                   MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.GKSTerm"
+                   MACOSX_BUNDLE_ICON_FILE "GKSTerm"
+                   MACOSX_BUNDLE_BUNDLE_VERSION "${GR_VERSION}"
+                   MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/MacOSXBundleInfo.plist.in"
+      )
+      set(GKSTerm_MACOSX_BUNDLE_SIGNATURE "GKST")
+      set(GKSTerm_MACOSX_MAIN_NIB_FILE "MainMenu")
+      string(APPEND GR_REPORT "- GKSTerm: Yes (Build without Xcode)\n")
     endif()
   else()
     string(APPEND GR_REPORT "- GKSTerm: No (ZeroMQ not found)\n")
@@ -1519,11 +1548,15 @@ if(GR_INSTALL)
     )
   endif()
   if(TARGET GKSTerm)
-    install(
-      DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm/GKSTerm.app
-      DESTINATION Applications
-      USE_SOURCE_PERMISSIONS
-    )
+    if(XCODE_BUILD)
+      install(
+        DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm/GKSTerm.app
+        DESTINATION Applications
+        USE_SOURCE_PERMISSIONS
+      )
+    else()
+      install(TARGETS GKSTerm BUNDLE DESTINATION Applications)
+    endif()
   endif()
   if(TARGET gksqt)
     install(
