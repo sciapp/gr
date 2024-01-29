@@ -82,6 +82,50 @@ set(CMAKE_FIND_PACKAGE_PREFER_CONFIG
     CACHE BOOL ""
 )
 
+# Find the following packages always in system locations even if `GR_USE_BUNDLED_LIBRARIES` is set, because they are not
+# located in 3rdparty
+find_package(X11)
+find_package(Fontconfig)
+find_package(OpenGL OPTIONAL_COMPONENTS OpenGL)
+if(${CMAKE_VERSION} VERSION_GREATER "3.16.0")
+  find_package(
+    Qt6
+    OPTIONAL_COMPONENTS
+      Widgets
+      Core
+      Network
+      Gui
+      PrintSupport
+  )
+endif()
+find_package(
+  Qt5
+  OPTIONAL_COMPONENTS
+    Widgets
+    Core
+    Network
+    Gui
+    PrintSupport
+)
+find_package(Qt4)
+# CMake ships with a `FindLibXml2.cmake` module which does not configure needed libxml2 dependencies.
+# Thus, use the `libxml2-config.cmake` config file shipped with libxml which configures dependencies correctly by
+# skipping module search mode.
+if(GR_USE_BUNDLED_LIBRARIES)
+  # Find `LibXml2` only in 3rdparty but allow to find its dependencies in system directories
+  # (`ONLY_CMAKE_FIND_ROOT_PATH` option is not inherited to `find_package` calls within the LibXml2 config file)
+  find_package(LibXml2 NO_MODULE ONLY_CMAKE_FIND_ROOT_PATH)
+else()
+  find_package(LibXml2 NO_MODULE)
+endif()
+
+# Find the following packages only in 3rdparty, if `GR_USE_BUNDLED_LIBRARIES` is set
+if(GR_USE_BUNDLED_LIBRARIES)
+  set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+  set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+  set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+  set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY)
+endif()
 find_package(Freetype)
 if(TARGET freetype AND NOT TARGET Freetype::Freetype)
   add_library(Freetype::Freetype ALIAS freetype)
@@ -108,37 +152,9 @@ if(NOT TARGET Zeromq::Zeromq)
   endif()
 endif()
 find_package(Cairo)
-find_package(X11)
 find_package(Agg)
-find_package(Fontconfig)
-find_package(OpenGL OPTIONAL_COMPONENTS OpenGL)
 find_package(Gs)
 find_package(Expat)
-# CMake ships with a `FindLibXml2.cmake` module which does not configure needed libxml2 dependencies.
-# Thus, use the `libxml2-config.cmake` config file shipped with libxml which configures dependencies correctly by
-# skipping module search mode.
-find_package(LibXml2 NO_MODULE)
-if(${CMAKE_VERSION} VERSION_GREATER "3.16.0")
-  find_package(
-    Qt6
-    OPTIONAL_COMPONENTS
-      Widgets
-      Core
-      Network
-      Gui
-      PrintSupport
-  )
-endif()
-find_package(
-  Qt5
-  OPTIONAL_COMPONENTS
-    Widgets
-    Core
-    Network
-    Gui
-    PrintSupport
-)
-find_package(Qt4)
 
 if(APPLE)
   set(INSTALL_RPATH "${GR_DIRECTORY}/lib/;@loader_path/.")
@@ -158,13 +174,13 @@ if(Qt4_FOUND
 )
   if(GR_MANUAL_MOC_AND_RCC)
     if(NOT QT_MOC_EXECUTABLE)
-      find_program(QT_MOC_EXECUTABLE moc)
+      find_program(QT_MOC_EXECUTABLE moc CMAKE_FIND_ROOT_PATH_BOTH)
     endif()
     if(NOT QT_MOC_EXECUTABLE)
       message(FATAL_ERROR "Could not find moc but GR_MANUAL_MOC_AND_RCC is set.")
     endif()
     if(NOT QT_RCC_EXECUTABLE)
-      find_program(QT_RCC_EXECUTABLE rcc)
+      find_program(QT_RCC_EXECUTABLE rcc CMAKE_FIND_ROOT_PATH_BOTH)
     endif()
     if(NOT QT_RCC_EXECUTABLE)
       message(FATAL_ERROR "Could not find rcc but GR_MANUAL_MOC_AND_RCC is set.")
@@ -1038,7 +1054,7 @@ string(APPEND GR_REPORT "\nGKS applications:\n")
 
 if(APPLE)
   if(Zeromq_FOUND)
-    find_program(XCODE_BUILD xcodebuild)
+    find_program(XCODE_BUILD xcodebuild CMAKE_FIND_ROOT_PATH_BOTH)
     if(XCODE_BUILD)
       set(GKSTERM_SOURCES
           lib/gks/quartz/GKSTerm.h
