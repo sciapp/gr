@@ -2009,27 +2009,43 @@ void gr_cellarray(double xmin, double xmax, double ymin, double ymax, int dimx, 
 /*!
  * Display a two dimensional color index array with nonuniform cell sizes.
  *
- * \param[in] x X coordinates of the cell edges
- * \param[in] y Y coordinates of the cell edges
- * \param[in] dimx actual X dimension of the color index array in the memory
- * \param[in] dimy actual Y dimension of the color index array in the memory
+ * \param[in] x ascending X coordinates of the cell edges in world coordinates
+ * \param[in] y ascending Y coordinates of the cell edges in world coordinates
+ * \param[in] dimx (possibly negated) X dimension of the color index array
+ * \param[in] dimy (possibly negated) Y dimension of the color index array
  * \param[in] scol 1-based starting column of color index and x array
  * \param[in] srow 1-based starting row of color index and y array
  * \param[in] ncol number of columns displayed
  * \param[in] nrow number of rows displayed
  * \param[in] color color index array
  *
- * The values for `x` and `y` are in world coordinates.
+ * These memory accesses must be valid:
+ * - `x[scol-1]` through `x[scol+ncol-2+clamp(dimx,0,1)]`
+ * - `y[scol-1]` through `y[scol+ncol-2+clamp(dimy,0,1)]`
+ * - `color[scol-1+(srow-1)*ncol]` through `color[scol+ncol-2+(srow+nrow-2)*ncol]`
  *
- * If `dimx` and `dimy` are positive `x` must contain `dimx`+1 elements and `y` must contain `dimy`+1 elements. The
- * elements i and i+1 are respectively the edges of the i-th cell in X and Y direction.
+ * If `dimx`/`dimy` is positive, `x`/`y` must contain `dimx+1`/`dimy+1` elements.
+ * The elements are the coordinates of the cell-edges, where the i-th and i+1-th
+ * elements are the edges of the i-th cell in X/Y direction.
  *
- * If `dimx` and `dimy` are negative `x` must contain `-dimx` elements and `y` must contain `-dimy` elements. The i-th
- * element is the center of the i-th cell, and the first and last elements will also be the edges of the outer cells.
+ * If `dimx`/`dimy` is negative, `x`/`y` must contain `-dimx`/`-dimy` elements.
+ * The elements are the coordinates of the cell-centers, where the i-th element
+ * is the center of the i-th cell in X/Y direction. The inner edges are placed
+ * halfway (in world coordinates) between the surrounding centers. The outer
+ * edges will be placed at the coordinates given by the first and last element
+ * respectively. However, they will still be considered centers for interpolating
+ * the edge-positions, which means the first and last cells will be half the size.
+ * Hence, -1 cannot be used as a dimension parameter, because the size of the only
+ * cell would be impossible to determine.
  *
- * To draw all cells of the color index array use:
+ * Assume you have a `dimx` by `dimy` color index array.
+ * To draw all cells of the color index array using edges use:
  *
  *      gr_nonuniformcellarray(x, y, dimx, dimy, 1, 1, dimx, dimy, color)
+ *
+ * To draw all cells of the color index array using centers use:
+ *
+ *      gr_nonuniformcellarray(x, y, -dimx, -dimy, 1, 1, dimx, dimy, color)
  *
  * `scol` and `srow` can be used to specify a (1-based) starting column and row
  * in the `color`, `x` and `y` array. `dimx` and `dimy` specify the actual dimension of the
@@ -2395,25 +2411,46 @@ void gr_polarcellarray(double x_org, double y_org, double phimin, double phimax,
  *
  * \param[in] x_org X coordinate of the disk center in world coordinates
  * \param[in] y_org Y coordinate of the disk center in world coordinates
- * \param[in] phi array with the angles of the disk sector in degrees
- * \param[in] r array with the radii of the disk in world coordinates
- * \param[in] dimphi Phi (X) dimension of the color index array
- * \param[in] dimr R (Y) dimension of the color index array
- * \param[in] scol number of leading columns in the color index array and the angle array
- * \param[in] srow number of leading rows in the color index array and the radii array
- * \param[in] ncol total number of columns in the color index array and the angle array
- * \param[in] nrow total number of rows in the color index array and the radii array
+ * \param[in] phi sorted array with the angles of the disk sectors in degrees
+ * \param[in] r sorted array with the radii of the cells in world coordinates
+ * \param[in] dimphi (possibly negated) Phi/X dimension of the color index array
+ * \param[in] dimr (possibly negated) R/Y dimension of the color index array
+ * \param[in] scol 1-based starting index of the angles and rows of the color index array
+ * \param[in] srow 1-based starting index of the radii and columns of the color index array
+ * \param[in] ncol number of angles/columns displayed
+ * \param[in] nrow number of radii/rows displayed
  * \param[in] color color index array
  *
  * The mapping of the polar coordinates and the drawing is performed simialr to `gr_polarcellarray`
  * with the difference that the individual cell sizes are specified allowing nonuniform sized cells.
  *
- * If `dimphi` and `dimr` are positive `phi` must contain `dimphi`+1 elements and `r` must contain `dimr`+1 elements and
- * the elements i and i+1 are respectively the edges of the i-th cell.
+ * These memory accesses must be valid:
+ * - `phi[scol-1]` through `phi[scol+ncol-2+clamp(dimphi,0,1)]`
+ * - `r[srow-1]` through `r[srow+nrow-2+clamp(dimr,0,1)]`
+ * - `color[scol-1+(srow-1)*ncol]` through `color[scol+ncol-2+(srow+nrow-2)*ncol]``
  *
- * If `dimphi` and `dimr` are negative `phi` must contain `-dimphi` elements and `r` must contain `-dimr` elements and
- * the i-th element is the center of the i-th cell, and the first and last elements will also be the edges of the outer
- * cells.
+ * If `dimphi`/`dimr` is positive, `phi`/`r` must contain `dimphi+1`/`dimr+1` elements.
+ * The elements are used to calculate the cell-edges, where the i-th and i+1-th
+ * elements are used for the edges of the i-th cell in Phi/R direction.
+ *
+ * If `dimphi`/`dimr` is negative, `phi`/`r` must contain `-dimphi`/`-dimr` elements.
+ * The elements are used to calculate the cell-centers, where the i-th element is used
+ * for the center of the i-th cell in Phi/R direction. The inner edges are placed
+ * halfway (in world coordinates) between the surrounding centers. The outer edges
+ * will be placed at the coordinates calculated for the center of the first and last
+ * cell respectively. However, they will still be considered centers for interpolating
+ * the edge-positions, which means the first and last cells will be half the size.
+ * Hence, -1 cannot be used as a dimension parameter, because the size of the only
+ * cell would be impossible to determine.
+ *
+ * Assume you have a `dimphi` by `dimr` color index array.
+ * To draw all cells of the color index array using edges use:
+ *
+ *      gr_nonuniformpolarcellarray(x_org, y_org, phi, r, dimphi, dimr, 1, 1, dimphi, dimr, color)
+ *
+ * To draw all cells of the color index array using centers use:
+ *
+ *      gr_nonuniformpolarcellarray(x_org, y_org, phi, r, -dimphi, -dimr, 1, 1, dimphi, dimr, color)
  *
  * `scol` and `srow` can be used to specify a (1-based) starting column and row
  * in the `color`, `phi` and `r` array. `dimr` and `dimphi` specify the actual dimension of the
@@ -2507,7 +2544,7 @@ void gr_nonuniformpolarcellarray(double x_org, double y_org, double *phi, double
         }
       if (y && r_sorted[y] < r_sorted[y - 1])
         {
-          fprintf(stderr, "radii not sorted in ascending order.\n");
+          fprintf(stderr, "radii not sorted.\n");
           gks_free(r_sorted);
           return;
         }
@@ -2566,7 +2603,7 @@ void gr_nonuniformpolarcellarray(double x_org, double y_org, double *phi, double
       phi_sorted[x] = phi_sorted[x] - phimax + 360;
       if (x && phi_sorted[x] < phi_sorted[x - 1])
         {
-          fprintf(stderr, "angles not sorted in ascending order.\n");
+          fprintf(stderr, "angles not sorted.\n");
           gks_free(r_sorted);
           gks_free(phi_sorted);
           return;
