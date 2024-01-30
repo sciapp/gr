@@ -1090,7 +1090,7 @@ if(APPLE)
       add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj
         COMMAND ${CMAKE_COMMAND} -E copy_directory lib/gks ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build
-        COMMAND sed -i .bak -e s%../../../3rdparty/build/lib/libzmq.a%${ZEROMQ_LIBRARY}% -e s%../../../3rdparty/build/include/zmq.h%${ZEROMQ_INCLUDE_DIR}/zmq.h% ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj/project.pbxproj
+        COMMAND sed -e s%../../../3rdparty/build/lib/libzmq.a%${ZEROMQ_LIBRARY}% -e s%../../../3rdparty/build/include/zmq.h%${ZEROMQ_INCLUDE_DIR}/zmq.h% ${CMAKE_SOURCE_DIR}/lib/gks/quartz/GKSTerm.xcodeproj/project.pbxproj >${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj/project.pbxproj
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         DEPENDS ${GKS_SOURCES} ${GKSTERM_SOURCES}
       )
