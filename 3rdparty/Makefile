@@ -1,4 +1,9 @@
+UNAME := $(shell uname)
+
  TARGETS = freetype jpeg libpng16 zlib qhull bzip2
+ifeq ($(UNAME), Darwin)
+ TARGETS += zeromq
+endif
   EXTRAS = agg tiff ogg theora vpx openh264 ffmpeg glfw zeromq pixman cairo libxml2
      DIR =
 
