@@ -1567,8 +1567,6 @@ void gks_emul_fillarea(int n, double *px, double *py, int tnr,
     }
 }
 
-#ifndef __APPLE__
-
 static int have_gksqt(void)
 {
   const char *env;
@@ -1614,8 +1612,6 @@ static int have_gksqt(void)
 
   return result != -1;
 }
-
-#endif
 
 #ifndef _WIN32
 
@@ -1736,7 +1732,7 @@ static int get_default_ws_type(void)
 #ifndef _WIN32
 #ifdef __APPLE__
       if (gks_getenv("TERM_PROGRAM") != NULL || gks_getenv("TERMINAL_EMULATOR") != NULL)
-        default_wstype = 400;
+        default_wstype = have_gksqt() ? 411 : 400;
       else
 #else
       if (gks_getenv("DISPLAY") != NULL)
@@ -1747,7 +1743,7 @@ static int get_default_ws_type(void)
           if (have_iterm()) default_wstype = 151;
 #ifdef __APPLE__
           else if (access("/dev/console", R_OK) == 0)
-            default_wstype = 400;
+            default_wstype = have_gksqt() ? 411 : 400;
 #endif
           else
             {
