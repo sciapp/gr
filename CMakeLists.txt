@@ -144,12 +144,13 @@ find_package(glfw3)
 if(TARGET glfw AND NOT TARGET Glfw::Glfw)
   add_library(Glfw::Glfw ALIAS glfw)
 endif()
-find_package(Zeromq)
-if(NOT TARGET Zeromq::Zeromq)
+find_package(ZeroMQ)
+if(NOT TARGET ZeroMQ::ZeroMQ)
   if(TARGET libzmq)
-    add_library(Zeromq::Zeromq ALIAS libzmq)
+    add_library(ZeroMQ::ZeroMQ ALIAS libzmq)
   elseif(TARGET libzmq-static)
-    add_library(Zeromq::Zeromq ALIAS libzmq-static)
+    add_library(ZeroMQ::ZeroMQ ALIAS libzmq-static)
+    get_target_property(ZeroMQ_LIBRARY libzmq-static LOCATION)
   endif()
 endif()
 find_package(Cairo)
@@ -825,9 +826,9 @@ set_target_properties(
 
 add_library(zmqplugin SHARED lib/gks/plugin/zmqplugin.c)
 target_link_libraries(zmqplugin PUBLIC gks_static)
-if(Zeromq_FOUND)
+if(ZeroMQ_FOUND)
   string(APPEND GR_REPORT "- zmqplugin: Yes\n")
-  target_link_libraries(zmqplugin PUBLIC Zeromq::Zeromq)
+  target_link_libraries(zmqplugin PUBLIC ZeroMQ::ZeroMQ)
 else()
   string(APPEND GR_REPORT "- zmqplugin: No (ZeroMQ not found)\n")
   target_compile_definitions(zmqplugin PRIVATE NO_ZMQ)
@@ -958,8 +959,8 @@ string(APPEND GR_REPORT "- gtkplugin: No (not implemented yet)\n")
 if(APPLE)
   add_library(quartzplugin SHARED lib/gks/plugin/quartzplugin.m)
   target_link_libraries(quartzplugin PUBLIC gks_static)
-  if(Zeromq_FOUND)
-    target_link_libraries(quartzplugin PUBLIC Zeromq::Zeromq)
+  if(ZeroMQ_FOUND)
+    target_link_libraries(quartzplugin PUBLIC ZeroMQ::ZeroMQ)
     target_link_libraries(quartzplugin PUBLIC "-framework Foundation -framework ApplicationServices -framework AppKit")
     target_compile_definitions(quartzplugin PRIVATE GRDIR="${GR_DIRECTORY}")
   else()
@@ -1054,7 +1055,7 @@ endif()
 string(APPEND GR_REPORT "\nGKS applications:\n")
 
 if(APPLE)
-  if(Zeromq_FOUND)
+  if(ZeroMQ_FOUND)
     if(GR_PREFER_XCODEBUILD)
       find_program(XCODE_BUILD xcodebuild CMAKE_FIND_ROOT_PATH_BOTH)
     endif()
@@ -1083,14 +1084,14 @@ if(APPLE)
         COMMAND ${XCODE_BUILD} -arch ${CMAKE_SYSTEM_PROCESSOR} -project GKSTerm.xcodeproj
                 CONFIGURATION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}/GKSTerm
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj Zeromq::Zeromq gks_static
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj ZeroMQ::ZeroMQ gks_static
       )
       # Disable autoformat to not break the `sed` command
       # cmake-format: off
       add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj
         COMMAND ${CMAKE_COMMAND} -E copy_directory lib/gks ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build
-        COMMAND sed -e s%../../../3rdparty/build/lib/libzmq.a%${ZEROMQ_LIBRARY}% -e s%../../../3rdparty/build/include/zmq.h%${ZEROMQ_INCLUDE_DIR}/zmq.h% ${CMAKE_SOURCE_DIR}/lib/gks/quartz/GKSTerm.xcodeproj/project.pbxproj >${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj/project.pbxproj
+        COMMAND sed -e s%../../../3rdparty/build/lib/libzmq.a%${ZeroMQ_LIBRARY}% -e s%../../../3rdparty/build/include/zmq.h%${ZeroMQ_INCLUDE_DIR}/zmq.h% ${CMAKE_SOURCE_DIR}/lib/gks/quartz/GKSTerm.xcodeproj/project.pbxproj >${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj/project.pbxproj
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         DEPENDS ${GKS_SOURCES} ${GKSTERM_SOURCES}
       )
@@ -1098,7 +1099,7 @@ if(APPLE)
       string(APPEND GR_REPORT "- GKSTerm: Yes (Xcode build)\n")
     else()
       add_executable(GKSTerm MACOSX_BUNDLE lib/gks/quartz/GKSTerm.m lib/gks/quartz/GKSView.m lib/gks/quartz/main.m)
-      target_link_libraries(GKSTerm PUBLIC Zeromq::Zeromq)
+      target_link_libraries(GKSTerm PUBLIC ZeroMQ::ZeroMQ)
       target_link_libraries(
         GKSTerm PUBLIC gks_static
                        "-framework CoreGraphics -framework CoreFoundation -framework CoreVideo -framework Cocoa"
