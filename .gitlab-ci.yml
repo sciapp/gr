@@ -697,7 +697,7 @@ centos7-cmake-system-dependencies:
     - make -C 3rdparty default TARGETS="qhull"
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_FIND_ROOT_PATH=$(cd ../3rdparty/build && pwd)
     - make
 
 centos7-32bit-self-contained:
@@ -775,7 +775,7 @@ centos7-32bit-cmake-system-dependencies:
     - mkdir build
     - cd build
     - LDFLAGS="-static-libstdc++ -static-libgcc"
-      $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
+      $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_FIND_ROOT_PATH=$(cd ../3rdparty/build && pwd)
     - make
 
 arch-self-contained:

@@ -2216,6 +2216,7 @@ void GRPlotWidget::open_file_slot()
 {
   if (enable_editor)
     {
+#ifndef NO_LIBXML2
       std::string path =
           QFileDialog::getOpenFileName(this, "Open XML", QDir::homePath(), "XML files (*.xml)").toStdString();
       if (path.empty())
@@ -2234,6 +2235,12 @@ void GRPlotWidget::open_file_slot()
       grm_load_graphics_tree(file);
       redraw();
       grm_render();
+#else
+      std::stringstream text_stream;
+      text_stream << "XML support not compiled in. Please recompile GRPlot with libxml2 support.";
+      QMessageBox::critical(this, "File open not possible", QString::fromStdString(text_stream.str()));
+      return;
+#endif
     }
 }
 
