@@ -46,6 +46,7 @@ option(GR_INSTALL "Create installation target for GR" ON)
 option(GR_USE_BUNDLED_LIBRARIES "Use thirdparty libraries bundled with GR" OFF)
 option(GR_MANUAL_MOC_AND_RCC "Manually run moc and rcc instead of relying on AUTOMOC and AUTORCC" OFF)
 option(GR_FIND_QT5_BY_VARIABLES "Find Qt5 based on the variables Qt5_INCLUDE_DIR and Qt5_LIBRARY_DIR" OFF)
+option(GR_PREFER_XCODEBUILD "Prefer xcodebuild to build macOS applications if available" ON)
 
 if(GR_USE_BUNDLED_LIBRARIES)
   list(APPEND CMAKE_FIND_ROOT_PATH "${CMAKE_CURRENT_LIST_DIR}/3rdparty/build/")
@@ -82,42 +83,11 @@ set(CMAKE_FIND_PACKAGE_PREFER_CONFIG
     CACHE BOOL ""
 )
 
-find_package(Freetype)
-if(TARGET freetype AND NOT TARGET Freetype::Freetype)
-  add_library(Freetype::Freetype ALIAS freetype)
-endif()
-find_package(Jpeg REQUIRED)
-find_package(Libpng REQUIRED)
-find_package(ZLIB REQUIRED)
-find_package(Qhull REQUIRED)
-if(TARGET Qhull::qhullstatic_r AND NOT TARGET Qhull::qhull_r)
-  add_library(Qhull::qhull_r ALIAS Qhull::qhullstatic_r)
-endif()
-find_package(Tiff)
-find_package(Ffmpeg 57.48.100)
-find_package(glfw3)
-if(TARGET glfw AND NOT TARGET Glfw::Glfw)
-  add_library(Glfw::Glfw ALIAS glfw)
-endif()
-find_package(Zeromq)
-if(NOT TARGET Zeromq::Zeromq)
-  if(TARGET libzmq)
-    add_library(Zeromq::Zeromq ALIAS libzmq)
-  elseif(TARGET libzmq-static)
-    add_library(Zeromq::Zeromq ALIAS libzmq-static)
-  endif()
-endif()
-find_package(Cairo)
+# Find the following packages always in system locations even if `GR_USE_BUNDLED_LIBRARIES` is set, because they are not
+# located in 3rdparty
 find_package(X11)
-find_package(Agg)
 find_package(Fontconfig)
 find_package(OpenGL OPTIONAL_COMPONENTS OpenGL)
-find_package(Gs)
-find_package(Expat)
-# CMake ships with a `FindLibXml2.cmake` module which does not configure needed libxml2 dependencies.
-# Thus, use the `libxml2-config.cmake` config file shipped with libxml which configures dependencies correctly by
-# skipping module search mode.
-find_package(LibXml2 NO_MODULE)
 if(${CMAKE_VERSION} VERSION_GREATER "3.16.0")
   find_package(
     Qt6
@@ -139,6 +109,54 @@ find_package(
     PrintSupport
 )
 find_package(Qt4)
+# CMake ships with a `FindLibXml2.cmake` module which does not configure needed libxml2 dependencies.
+# Thus, use the `libxml2-config.cmake` config file shipped with libxml which configures dependencies correctly by
+# skipping module search mode.
+if(GR_USE_BUNDLED_LIBRARIES)
+  # Find `LibXml2` only in 3rdparty but allow to find its dependencies in system directories
+  # (`ONLY_CMAKE_FIND_ROOT_PATH` option is not inherited to `find_package` calls within the LibXml2 config file)
+  find_package(LibXml2 NO_MODULE ONLY_CMAKE_FIND_ROOT_PATH)
+else()
+  find_package(LibXml2 NO_MODULE)
+endif()
+
+# Find the following packages only in 3rdparty, if `GR_USE_BUNDLED_LIBRARIES` is set
+if(GR_USE_BUNDLED_LIBRARIES)
+  set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+  set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+  set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+  set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY)
+endif()
+find_package(Freetype)
+if(TARGET freetype AND NOT TARGET Freetype::Freetype)
+  add_library(Freetype::Freetype ALIAS freetype)
+endif()
+find_package(Jpeg REQUIRED)
+find_package(Libpng REQUIRED)
+find_package(ZLIB REQUIRED)
+find_package(Qhull REQUIRED)
+if(TARGET Qhull::qhullstatic_r AND NOT TARGET Qhull::qhull_r)
+  add_library(Qhull::qhull_r ALIAS Qhull::qhullstatic_r)
+endif()
+find_package(Tiff)
+find_package(Ffmpeg 57.48.100)
+find_package(glfw3)
+if(TARGET glfw AND NOT TARGET Glfw::Glfw)
+  add_library(Glfw::Glfw ALIAS glfw)
+endif()
+find_package(ZeroMQ)
+if(NOT TARGET ZeroMQ::ZeroMQ)
+  if(TARGET libzmq)
+    add_library(ZeroMQ::ZeroMQ ALIAS libzmq)
+  elseif(TARGET libzmq-static)
+    add_library(ZeroMQ::ZeroMQ ALIAS libzmq-static)
+    get_target_property(ZeroMQ_LIBRARY libzmq-static LOCATION)
+  endif()
+endif()
+find_package(Cairo)
+find_package(Agg)
+find_package(Gs)
+find_package(Expat)
 
 if(APPLE)
   set(INSTALL_RPATH "${GR_DIRECTORY}/lib/;@loader_path/.")
@@ -158,13 +176,13 @@ if(Qt4_FOUND
 )
   if(GR_MANUAL_MOC_AND_RCC)
     if(NOT QT_MOC_EXECUTABLE)
-      find_program(QT_MOC_EXECUTABLE moc)
+      find_program(QT_MOC_EXECUTABLE moc CMAKE_FIND_ROOT_PATH_BOTH)
     endif()
     if(NOT QT_MOC_EXECUTABLE)
       message(FATAL_ERROR "Could not find moc but GR_MANUAL_MOC_AND_RCC is set.")
     endif()
     if(NOT QT_RCC_EXECUTABLE)
-      find_program(QT_RCC_EXECUTABLE rcc)
+      find_program(QT_RCC_EXECUTABLE rcc CMAKE_FIND_ROOT_PATH_BOTH)
     endif()
     if(NOT QT_RCC_EXECUTABLE)
       message(FATAL_ERROR "Could not find rcc but GR_MANUAL_MOC_AND_RCC is set.")
@@ -808,9 +826,9 @@ set_target_properties(
 
 add_library(zmqplugin SHARED lib/gks/plugin/zmqplugin.c)
 target_link_libraries(zmqplugin PUBLIC gks_static)
-if(Zeromq_FOUND)
+if(ZeroMQ_FOUND)
   string(APPEND GR_REPORT "- zmqplugin: Yes\n")
-  target_link_libraries(zmqplugin PUBLIC Zeromq::Zeromq)
+  target_link_libraries(zmqplugin PUBLIC ZeroMQ::ZeroMQ)
 else()
   string(APPEND GR_REPORT "- zmqplugin: No (ZeroMQ not found)\n")
   target_compile_definitions(zmqplugin PRIVATE NO_ZMQ)
@@ -941,8 +959,8 @@ string(APPEND GR_REPORT "- gtkplugin: No (not implemented yet)\n")
 if(APPLE)
   add_library(quartzplugin SHARED lib/gks/plugin/quartzplugin.m)
   target_link_libraries(quartzplugin PUBLIC gks_static)
-  if(Zeromq_FOUND)
-    target_link_libraries(quartzplugin PUBLIC Zeromq::Zeromq)
+  if(ZeroMQ_FOUND)
+    target_link_libraries(quartzplugin PUBLIC ZeroMQ::ZeroMQ)
     target_link_libraries(quartzplugin PUBLIC "-framework Foundation -framework ApplicationServices -framework AppKit")
     target_compile_definitions(quartzplugin PRIVATE GRDIR="${GR_DIRECTORY}")
   else()
@@ -1037,9 +1055,11 @@ endif()
 string(APPEND GR_REPORT "\nGKS applications:\n")
 
 if(APPLE)
-  if(Zeromq_FOUND)
-    find_program(XCODE_BUILD xcodebuild)
-    if(XCODE_BUILD)
+  if(ZeroMQ_FOUND)
+    if(GR_PREFER_XCODEBUILD)
+      find_program(XCODE_BUILD xcodebuild CMAKE_FIND_ROOT_PATH_BOTH)
+    endif()
+    if(GR_PREFER_XCODEBUILD AND XCODE_BUILD)
       set(GKSTERM_SOURCES
           lib/gks/quartz/GKSTerm.h
           lib/gks/quartz/GKSTerm.icns
@@ -1064,21 +1084,50 @@ if(APPLE)
         COMMAND ${XCODE_BUILD} -arch ${CMAKE_SYSTEM_PROCESSOR} -project GKSTerm.xcodeproj
                 CONFIGURATION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}/GKSTerm
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj Zeromq::Zeromq
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj ZeroMQ::ZeroMQ gks_static
       )
+      # Disable autoformat to not break the `sed` command
+      # cmake-format: off
       add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj
         COMMAND ${CMAKE_COMMAND} -E copy_directory lib/gks ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build
-        COMMAND
-          sed -i .bak -e s%../../../3rdparty/build/lib/libzmq.a%${ZEROMQ_LIBRARY}% -e
-          s%../../../3rdparty/build/include/zmq.h%${ZEROMQ_INCLUDE_DIR}/zmq.h%
-          ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj/project.pbxproj
+        COMMAND sed -e s%../../../3rdparty/build/lib/libzmq.a%${ZeroMQ_LIBRARY}% -e s%../../../3rdparty/build/include/zmq.h%${ZeroMQ_INCLUDE_DIR}/zmq.h% ${CMAKE_SOURCE_DIR}/lib/gks/quartz/GKSTerm.xcodeproj/project.pbxproj >${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj/project.pbxproj
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         DEPENDS ${GKS_SOURCES} ${GKSTERM_SOURCES}
       )
-      string(APPEND GR_REPORT "- GKSTerm: Yes\n")
+      # cmake-format: on
+      string(APPEND GR_REPORT "- GKSTerm: Yes (Xcode build)\n")
     else()
-      string(APPEND GR_REPORT "- GKSTerm: No (XCode not found)\n")
+      add_executable(GKSTerm MACOSX_BUNDLE lib/gks/quartz/GKSTerm.m lib/gks/quartz/GKSView.m lib/gks/quartz/main.m)
+      target_link_libraries(GKSTerm PUBLIC ZeroMQ::ZeroMQ)
+      target_link_libraries(
+        GKSTerm PUBLIC gks_static
+                       "-framework CoreGraphics -framework CoreFoundation -framework CoreVideo -framework Cocoa"
+      )
+
+      add_custom_command(
+        TARGET GKSTerm
+        POST_BUILD
+        COMMAND
+          ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/English.lproj
+          ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/English.lproj DEPENDS
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/English.lproj
+        BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/English.lproj
+      )
+      target_sources(GKSTerm PRIVATE lib/gks/quartz/GKSTerm.icns)
+      set_source_files_properties(lib/gks/quartz/GKSTerm.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources/)
+      target_compile_options(GKSTerm PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+      set_target_properties(
+        GKSTerm
+        PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME "GKSTerm"
+                   MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.GKSTerm"
+                   MACOSX_BUNDLE_ICON_FILE "GKSTerm"
+                   MACOSX_BUNDLE_BUNDLE_VERSION "${GR_VERSION}"
+                   MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/MacOSXBundleInfo.plist.in"
+      )
+      set(GKSTerm_MACOSX_BUNDLE_SIGNATURE "GKST")
+      set(GKSTerm_MACOSX_MAIN_NIB_FILE "MainMenu")
+      string(APPEND GR_REPORT "- GKSTerm: Yes (Build without Xcode)\n")
     endif()
   else()
     string(APPEND GR_REPORT "- GKSTerm: No (ZeroMQ not found)\n")
@@ -1503,11 +1552,15 @@ if(GR_INSTALL)
     )
   endif()
   if(TARGET GKSTerm)
-    install(
-      DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm/GKSTerm.app
-      DESTINATION Applications
-      USE_SOURCE_PERMISSIONS
-    )
+    if(XCODE_BUILD)
+      install(
+        DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm/GKSTerm.app
+        DESTINATION Applications
+        USE_SOURCE_PERMISSIONS
+      )
+    else()
+      install(TARGETS GKSTerm BUNDLE DESTINATION Applications)
+    endif()
   endif()
   if(TARGET gksqt)
     install(

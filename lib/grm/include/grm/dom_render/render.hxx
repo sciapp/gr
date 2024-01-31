@@ -61,6 +61,7 @@
 #define PLOT_DEFAULT_ORIENTATION "horizontal"
 #define PLOT_DEFAULT_CONTOUR_MAJOR_H 1000
 #define PLOT_DEFAULT_CONTOURF_MAJOR_H 0
+#define PLOT_DEFAULT_ORG_POS "low"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -156,7 +157,7 @@ class PushDrawableToZQueue
 public:
   PushDrawableToZQueue(
       std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> drawFunction);
-  void operator()(const std::shared_ptr<GRM::Element> element, const std::shared_ptr<GRM::Context> context);
+  void operator()(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);
 
 private:
   std::function<void(const std::shared_ptr<GRM::Element> &, const std::shared_ptr<GRM::Context> &)> drawFunction;
@@ -260,13 +261,13 @@ public:
                                            const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
   std::shared_ptr<GRM::Element> createPieSegment(const double start_angle, const double end_angle,
-                                                 const std::string text, const int color_index,
+                                                 const std::string &text, const int color_index,
                                                  const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
   std::shared_ptr<GRM::Element> createBar(const double x1, const double x2, const double y1, const double y2,
                                           const int bar_color_index, const int edge_color_index,
-                                          const std::string bar_color_rgb = "", const std::string edge_color_rgb = "",
-                                          const double linewidth = -1, const std::string text = "",
+                                          const std::string &bar_color_rgb = "", const std::string &edge_color_rgb = "",
+                                          const double linewidth = -1, const std::string &text = "",
                                           const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
   std::shared_ptr<Element> createGrid(double x_tick, double y_tick, double x_org, double y_org, int major_x,
@@ -367,6 +368,9 @@ public:
 
   std::shared_ptr<Element> createErrorBar(double error_bar_x, double error_bar_y_min, double error_bar_y_max,
                                           int color_error_bar,
+                                          const std::shared_ptr<GRM::Element> &extElement = nullptr);
+
+  std::shared_ptr<Element> createIntegral(double int_lim_low, double int_lim_high,
                                           const std::shared_ptr<GRM::Element> &extElement = nullptr);
   //! Modifierfunctions
 
@@ -471,18 +475,19 @@ public:
 
   void setSubplot(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
-  void setXTickLabels(std::shared_ptr<GRM::Element> element, const std::string &key,
+  void setXTickLabels(const std::shared_ptr<GRM::Element> &element, const std::string &key,
                       std::optional<std::vector<std::string>> x_tick_labels,
                       const std::shared_ptr<GRM::Context> &extContext = nullptr);
 
-  void setYTickLabels(std::shared_ptr<GRM::Element> element, const std::string &key,
+  void setYTickLabels(const std::shared_ptr<GRM::Element> &element, const std::string &key,
                       std::optional<std::vector<std::string>> y_tick_labels,
                       const std::shared_ptr<GRM::Context> &extContext = nullptr);
 
-  void setOriginPosition(const std::shared_ptr<GRM::Element> &element, std::string x_org_pos, std::string y_org_pos);
+  void setOriginPosition(const std::shared_ptr<GRM::Element> &element, const std::string &x_org_pos,
+                         const std::string &y_org_pos);
 
-  void setOriginPosition3d(const std::shared_ptr<GRM::Element> &element, std::string x_org_pos, std::string y_org_pos,
-                           std::string z_org_pos);
+  void setOriginPosition3d(const std::shared_ptr<GRM::Element> &element, const std::string &x_org_pos,
+                           const std::string &y_org_pos, const std::string &z_org_pos);
 
   void setGR3LightParameters(const std::shared_ptr<GRM::Element> &element, double ambient, double diffuse,
                              double specular, double specular_power);
@@ -514,7 +519,7 @@ public:
   static void processScale(const std::shared_ptr<GRM::Element> &elem);
   static void processAttributes(const std::shared_ptr<GRM::Element> &element);
   static std::vector<std::string> getDefaultAndTooltip(const std::shared_ptr<Element> &element,
-                                                       std::string attributeName);
+                                                       const std::string &attributeName);
 
 
 private:

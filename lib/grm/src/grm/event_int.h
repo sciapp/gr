@@ -55,6 +55,7 @@ err_t event_queue_enqueue_update_plot_event(event_queue_t *queue, int plot_id);
 err_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int width, int height);
 err_t event_queue_enqueue_merge_end_event(event_queue_t *queue, const char *identificator);
 err_t event_queue_enqueue_request_event(event_queue_t *queue, const char *request_string);
+err_t event_queue_enqueue_integral_update_event(event_queue_t *queue, double int_lim_low, double int_lim_high);
 
 void event_queue_discard_all_of_type(event_queue_t *queue, grm_event_type_t type);
 

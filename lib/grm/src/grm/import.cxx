@@ -37,6 +37,8 @@ static std::map<std::string, const char *> key_to_types{
     {"ind_bar_color", "nA"},
     {"ind_edge_color", "nA"},
     {"ind_edge_width", "nA"},
+    {"int_limits_high", "nD"},
+    {"int_limits_low", "nD"},
     {"isovalue", "d"},
     {"keep_aspect_ratio", "i"},
     {"kind", "s"},
@@ -1215,7 +1217,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                                           size_t con_pos = container_value.find(',');
                                           std::string param_num = container_value.substr(0, con_pos);
                                           std::vector<int> values(std::stoi(param_num));
-                                          int no_err = parse_parameter_nI(&container_value, &con->first, values);
+                                          int no_err = parse_parameter_nI(&container_value, &con->first, &values);
                                           if (no_err)
                                             {
                                               grm_args_push(new_args[ind], con->first.c_str(), con->second,
@@ -1337,7 +1339,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                               size_t pos = value.find(',');
                               std::string num = value.substr(0, pos);
                               std::vector<double> values(std::stoi(num));
-                              int no_err = parse_parameter_nD(&value, &search->first, values);
+                              int no_err = parse_parameter_nD(&value, &search->first, &values);
                               if (no_err)
                                 {
                                   grm_args_push(args, search->first.c_str(), search->second, std::stoi(num),
@@ -1430,7 +1432,7 @@ void parse_parameter_ddd(std::string *input, const std::string *key, std::string
   *b = *input;
 }
 
-int parse_parameter_nI(std::string *input, const std::string *key, std::vector<int> values)
+int parse_parameter_nI(std::string *input, const std::string *key, std::vector<int> *values)
 {
   size_t con_pos = (*input).find(',');
   int k = 0;
@@ -1438,11 +1440,11 @@ int parse_parameter_nI(std::string *input, const std::string *key, std::vector<i
   (*input).erase(0, con_pos + 1);
   while ((con_pos = (*input).find(',')) != std::string::npos)
     {
-      values[k] = std::stoi((*input).substr(0, con_pos));
+      (*values)[k] = std::stoi((*input).substr(0, con_pos));
       (*input).erase(0, con_pos + 1);
       k++;
     }
-  values[k] = std::stoi((*input));
+  (*values)[k] = std::stoi((*input));
   if (k != std::stoi(param_num) - 1 || (*input).length() == 0)
     {
       fprintf(stderr,
@@ -1479,7 +1481,7 @@ int parse_parameter_nS(std::string *input, const std::string *key, std::vector<s
   return 1;
 }
 
-int parse_parameter_nD(std::string *input, const std::string *key, std::vector<double> values)
+int parse_parameter_nD(std::string *input, const std::string *key, std::vector<double> *values)
 {
   size_t pos = (*input).find(',');
   int k = 0;
@@ -1487,11 +1489,11 @@ int parse_parameter_nD(std::string *input, const std::string *key, std::vector<d
   (*input).erase(0, pos + 1);
   while ((pos = (*input).find(',')) != std::string::npos)
     {
-      values[k] = std::stod((*input).substr(0, pos));
+      (*values)[k] = std::stod((*input).substr(0, pos));
       (*input).erase(0, pos + 1);
       k++;
     }
-  values[k] = std::stod((*input));
+  (*values)[k] = std::stod((*input));
   if (k != std::stoi(num) - 1 || (*input).length() == 0)
     {
       fprintf(stderr,

@@ -50,4 +50,9 @@ $(PREFIX)/lib/libzmq.a: $(PREFIX)/src/zeromq-$(VERSION)/Makefile
 
 install: $(PREFIX)/lib/libzmq.a
 
-.PHONY: default install
+distclean: clean
+
+clean:
+	rm -f libzmq.a *.o
+
+.PHONY: default install clean distclean

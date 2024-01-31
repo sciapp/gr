@@ -697,7 +697,7 @@
             <xs:attributeGroup ref="move_xform"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="bar_width" type="xs:double"/>
-            <xs:attribute name="clip_transformation" type="xs:double"/>
+            <xs:attribute name="clip_transformation" type="xs:integer"/>
             <xs:attribute name="color_ind_values" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="edge_width" type="xs:double"/>
@@ -828,7 +828,7 @@
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="error_bars" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="integral" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="integral_group" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
@@ -1203,6 +1203,20 @@
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="int_lim_high" type="xs:double" use="required"/>
             <xs:attribute name="int_lim_low" type="xs:double" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of integral_group -->
+    <xs:element name="integral_group">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="integral" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="move_xform"/>
+            <xs:attribute name="fill_color_ind" type="xs:integer"/>
+            <xs:attribute name="fill_int_style" type="xs:integer"/>
+            <xs:attribute name="int_limits_high" type="xs:string" use="required"/>
+            <xs:attribute name="int_limits_low" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
 
