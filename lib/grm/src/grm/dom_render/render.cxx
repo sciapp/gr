@@ -6538,7 +6538,7 @@ static void processContourf(const std::shared_ptr<GRM::Element> &element, const 
 static void processDrawArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
-   * Processing function for drawArc
+   * Processing function for draw_arc
    *
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
@@ -7515,9 +7515,9 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
   if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap" || kind == "polar")
     {
       r_min = static_cast<double>(subplotElement->getAttribute("r_min"));
-      if (kind != "nonuniform_polar_heatmap")
+      if (kind == "uniform_polar_heatmap")
         {
-          r_min = 0.0;
+          r_min = 0.0; // todo: why is that?
         }
       r_max = static_cast<double>(subplotElement->getAttribute("r_max"));
       if (subplotElement->hasAttribute("y_lim_max") && subplotElement->hasAttribute("y_lim_min"))
@@ -7532,13 +7532,20 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
       r_max = static_cast<double>(subplotElement->getAttribute("y_lim_max"));
     }
 
+  // if y_log and y_lim_min == 0 --> set y_lim_min = 10^-1 per default todo: what if y_lim_max is 10^-x [x > 1]?
+  if (y_log && y_lim_min == 0.0)
+    {
+      y_lim_min = pow(10, -1);
+      subplotElement->setAttribute("y_lim_min", y_lim_min);
+    }
+
   angle_ticks = static_cast<int>(element->getAttribute("angle_ticks"));
 
   render->setLineType(element, GKS_K_LINETYPE_SOLID);
 
-  // without given ylims, except when keep_radii_axes is given
-  if ((kind == "polar_histogram" && (!subplotElement->hasAttribute("y_lim_max")) ||
-       subplotElement->hasAttribute("keep_radii_axes")) ||
+  // for polar(no ylims) and polar_histogram (no ylims or keep_radii_axes)
+  if ((kind == "polar_histogram" &&
+       (!subplotElement->hasAttribute("y_lim_max") || subplotElement->hasAttribute("keep_radii_axes"))) ||
       (kind == "polar" && !subplotElement->hasAttribute("y_lim_max")))
     {
       auto max = static_cast<double>(central_region->getAttribute("r_max"));
@@ -7572,7 +7579,8 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
         {
           // when using y_log no tick is needed
           // one ring per magnitude difference?
-          rings = grm_min(static_cast<int>(std::log10(y_lim_max) - ((y_lim_min <= 0.0) ? 0.0 : std::log10(y_lim_min))),
+          rings = grm_min(static_cast<int>(std::log10(y_lim_max) -
+                                           ((y_lim_min <= 0.0) ? std::log10(pow(10, -9)) : std::log10(y_lim_min))),
                           12); // number of rings should not exceed 12?
           // todo what if number of rings is different than the magnitude difference?
           element->setAttribute("rings", rings);
@@ -7713,12 +7721,12 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
             {
               if (subplotElement->hasAttribute("y_lim_max")) // todo:ylog with ylims
                 {
-                  // if y_lim_min == 0
+                  // if y_lim_min == 0 TODO!
                   if (y_lim_min == 0)
                     {
                       if (i == 0)
                         {
-                          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", 0.0);
+                          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", pow(10, -9));
                         }
                       else
                         {
@@ -7767,7 +7775,7 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
 static void processDrawRect(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
-   * Processing function for drawArc
+   * Processing function for draw_arc
    *
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
@@ -7783,7 +7791,7 @@ static void processDrawRect(const std::shared_ptr<GRM::Element> &element, const 
 static void processFillArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
-   * Processing function for drawArc
+   * Processing function for draw_arc
    *
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
@@ -7801,7 +7809,7 @@ static void processFillArc(const std::shared_ptr<GRM::Element> &element, const s
 static void processFillRect(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
-   * Processing function for drawArc
+   * Processing function for draw_arc
    *
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
@@ -8958,7 +8966,7 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   double ylim_min, ylim_max, yrange_min, yrange_max, xrange_min, xrange_max;
   double theta_min, theta_max;
 
-  int n, i;
+  int n;
   bool transform_radii = false, transform_angles = false, ylim = false, clip_negative = false;
   unsigned int rho_length, theta_length;
   std::string line_spec = SERIES_DEFAULT_SPEC;
@@ -9088,7 +9096,6 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
                 {
                   rho_vec[i] = 0.0;
                 }
-              // todo: with given ylims
               current_rho = transformCoordinate(rho_vec[i], r_min, r_max, 0.0, 0.0, y_log);
             }
           else
@@ -9096,8 +9103,8 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
               current_rho = transformCoordinate(rho_vec[i], r_min, r_max, yrange_min, yrange_max, y_log);
             }
 
-          // clip radii outside ylim after transformation. But how? radii transformed into range 0, 1
-          if (ylim && current_rho > ylim_max)
+          // todo: clipping for > ylim_max is wip by Josef, but clipping for < ylim_min is not the correct solution
+          if (ylim && (current_rho > ylim_max || current_rho < ylim_min))
             {
               continue;
             }
@@ -9124,13 +9131,16 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
               rho_vec[i] = -rho_vec[i];
             }
 
-          if (ylim && rho_vec[i] > ylim_max) // for removing points outside ylim
+          if (ylim && (rho_vec[i] > ylim_max || rho_vec[i] < ylim_min)) // for removing points outside ylim
             {
               continue;
             }
+          // todo: canvas 0.0 equals ylim_min and canvas 1.0 equals ylim_max if ylims (just subtract ylim_min from
+          // rho_vec[i])
           double current_rho = rho_vec[i] / ylim_max;
           x[index] = current_rho * cos(theta_vec[index]);
           y[index] = current_rho * sin(theta_vec[index]);
+          ++index;
         }
     }
 
@@ -10701,7 +10711,7 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
   // additional calculations are needed for arcs and lines
   if (!keep_radii_axes) /* no keep_radii_axes given*/
     {
-      std::shared_ptr<GRM::Element> arc, drawArc;
+      std::shared_ptr<GRM::Element> arc, draw_arc;
       double start_angle, end_angle;
 
       if (num_bin_edges != 0.0)
@@ -16473,7 +16483,8 @@ std::shared_ptr<GRM::Element> GRM::Render::createNonUniformCellArray(
    * This function can be used to create a non uniform cell array GRM::Element
    */
   std::shared_ptr<GRM::Context> use_context = (ext_context == nullptr) ? context : ext_context;
-  std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("nonuniform_cellarray") : ext_element;
+  std::shared_ptr<GRM::Element> element =
+      (ext_element == nullptr) ? createElement("nonuniform_cellarray") : ext_element;
   element->setAttribute("x", x_key);
   element->setAttribute("y", y_key);
   element->setAttribute("color_ind_values", color_key);
