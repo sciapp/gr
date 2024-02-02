@@ -300,6 +300,8 @@ static void (*previous_handler)(int);
 
 static int autoinit = 1, double_buf = 0, state_saved = 0, def_color = 0;
 
+static double scale_factor = 1.0;
+
 static const char *display = NULL;
 
 static const char *debug = NULL;
@@ -1411,6 +1413,7 @@ static void initialize(int state)
   double xmin = 0.2, xmax = 0.9, ymin = 0.2, ymax = 0.9;
   int asf[13] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
   double size = 2, height = 0.027;
+  char *env;
 
   if (state == GKS_K_GKCL)
     {
@@ -1429,6 +1432,18 @@ static void initialize(int state)
 
   autoinit = 0;
   double_buf = gks_getenv("GKS_DOUBLE_BUF") != NULL;
+
+  env = gks_getenv("GR_SCALE_FACTOR");
+  if (env != NULL)
+    {
+      scale_factor = atof(env);
+      if (scale_factor <= 0)
+        {
+          fprintf(stderr, "invalid scale factor (%s) - ignored\n", env);
+          scale_factor = 1.0;
+        }
+    }
+
   display = gks_getenv("GR_DISPLAY");
   if (display)
     if (*display == '\0') display = NULL;
@@ -2054,7 +2069,8 @@ void gr_cellarray(double xmin, double xmax, double ymin, double ymax, int dimx, 
 void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, int srow, int ncol, int nrow,
                             int *color)
 {
-  int img_data_x, img_data_y, color_x_ind, color_y_ind, color_ind, edges_x = 1, edges_y = 1, size = 2000, scale_options;
+  int img_data_x, img_data_y, color_x_ind, color_y_ind, color_ind, edges_x = 1, edges_y = 1,
+                                                                   size = (int)(2000 * scale_factor), scale_options;
   int *img_data;
   double x_pos, y_pos, x_size, y_size, *x_orig = x, *y_orig = y;
   double xmin, xmax, ymin, ymax;
@@ -2289,7 +2305,7 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
 void gr_polarcellarray(double x_org, double y_org, double phimin, double phimax, double rmin, double rmax, int dimphi,
                        int dimr, int scol, int srow, int ncol, int nrow, int *color)
 {
-  int x, y, color_ind, r_ind, phi_ind, phi_reverse, phi_wrapped_reverse, r_reverse, size = 2000;
+  int x, y, color_ind, r_ind, phi_ind, phi_reverse, phi_wrapped_reverse, r_reverse, size = (int)(2000 * scale_factor);
   int *img_data;
   double r, phi, tmp, center = size / 2.;
 
@@ -2460,7 +2476,8 @@ void gr_polarcellarray(double x_org, double y_org, double phimin, double phimax,
 void gr_nonuniformpolarcellarray(double x_org, double y_org, double *phi, double *r, int dimphi, int dimr, int scol,
                                  int srow, int ncol, int nrow, int *color)
 {
-  int x, y, color_ind, r_ind, phi_ind, phi_reverse, r_reverse, start, end, edges_phi = 1, edges_r = 1, size = 2000;
+  int x, y, color_ind, r_ind, phi_ind, phi_reverse, r_reverse, start, end, edges_phi = 1, edges_r = 1,
+                                                                           size = (int)(2000 * scale_factor);
   int *img_data;
   double cur_r, cur_phi, tmp, phimin, phimax, rmin, rmax, center = size / 2.;
   double *r_sorted, *phi_sorted;
