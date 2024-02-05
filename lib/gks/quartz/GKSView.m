@@ -632,6 +632,10 @@ static void seg_xform_rel(double *x, double *y) {}
         case 208:
           gkss->clip_tnr = i_arr[0];
           break;
+
+        case 211:
+          gkss->clip_region = i_arr[0];
+          break;
         }
 
       RESOLVE(len, int, sizeof(int));
@@ -1125,7 +1129,16 @@ static void seg_xform_rel(double *x, double *y) {}
 static void begin_context(CGContextRef context)
 {
   CGContextSaveGState(context);
-  CGContextClipToRect(context, clipRect);
+  if (gkss->clip_region == GKS_K_REGION_ELLIPSE)
+    {
+      CGMutablePathRef path = CGPathCreateMutable();
+      CGPathAddEllipseInRect(path, NULL, clipRect);
+      CGContextAddPath(context, path);
+      CGContextClip(context);
+      CGPathRelease(path);
+    }
+  else
+    CGContextClipToRect(context, clipRect);
 }
 
 static void end_context(CGContextRef context)
