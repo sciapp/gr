@@ -248,6 +248,10 @@ static double xfac[4] = {0, 0, -0.5, -1};
 
 static double yfac[6] = {0, -1.2, -1, -0.5, 0, 0.2};
 
+static double cx[4][3] = {{0.5523, 1, 1}, {1, 0.5523, 0}, {-0.5523, -1, -1}, {-1, -0.5523, 0}};
+
+static double cy[4][3] = {{-1, -0.5523, 0}, {0.5523, 1, 1}, {1, 0.5523, 0}, {-0.5523, -1, -1}};
+
 static void fill_routine(int n, double *px, double *py, int tnr);
 
 static char buf_array[NO_OF_BUFS][20];
@@ -879,14 +883,35 @@ static void open_ws(int fd, int wstype)
 static void set_clip(double *clrt)
 {
   double x0, x1, y0, y1;
+  int curve, i;
+  double x, y, xr, yr;
 
   NDC_to_DC(clrt[0], clrt[2], x0, y0);
   NDC_to_DC(clrt[1], clrt[3], x1, y1);
 
-  pdf_moveto(p, x0, y0);
-  pdf_lineto(p, x1, y0);
-  pdf_lineto(p, x1, y1);
-  pdf_lineto(p, x0, y1);
+  if (gkss->clip_region == GKS_K_REGION_ELLIPSE)
+    {
+      x = 0.5 * (x0 + x1);
+      y = 0.5 * (y0 + y1);
+      xr = 0.5 * (x1 - x0);
+      yr = 0.5 * (y1 - y0);
+      pdf_moveto(p, x - xr * cx[3][2], y - yr * cy[3][2]);
+      for (curve = 0; curve < 4; curve++)
+        {
+          for (i = 0; i < 3; i++)
+            {
+              pdf_point(p, x - xr * cx[curve][i], y - yr * cy[curve][i]);
+            }
+          pdf_curveto(p);
+        }
+    }
+  else
+    {
+      pdf_moveto(p, x0, y0);
+      pdf_lineto(p, x1, y0);
+      pdf_lineto(p, x1, y1);
+      pdf_lineto(p, x0, y1);
+    }
   pdf_closepath(p);
   pdf_clip(p);
 }
@@ -1046,10 +1071,6 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
   int pc, op;
 
 #include "marker.h"
-
-  static double cx[4][3] = {{0.5523, 1, 1}, {1, 0.5523, 0}, {-0.5523, -1, -1}, {-1, -0.5523, 0}};
-
-  static double cy[4][3] = {{-1, -0.5523, 0}, {0.5523, 1, 1}, {1, 0.5523, 0}, {-0.5523, -1, -1}};
 
   mscale *= p->nominal_size;
   r = 3 * mscale;
