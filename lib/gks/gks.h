@@ -44,6 +44,11 @@ extern "C" {
 #define GKS_K_NOCLIP 0
 #define GKS_K_CLIP 1
 
+/* clip region type */
+
+#define GKS_K_REGION_RECTANGLE 0
+#define GKS_K_REGION_ELLIPSE 1
+
 /* coordinate switch */
 
 #define GKS_K_COORDINATES_WC 0
@@ -701,6 +706,8 @@ DLLEXPORT void *gks_state(void);
 DLLEXPORT void gks_set_resize_behaviour(int flag);
 DLLEXPORT void gks_inq_resize_behaviour(int *flag);
 
+DLLEXPORT void gks_set_clip_region(int region);
+DLLEXPORT void gks_inq_clip_region(int *errind, int *region);
 
 /* Entry point definitions */
 

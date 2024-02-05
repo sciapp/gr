@@ -179,6 +179,7 @@ typedef struct
   int bcoli;
   int clip_tnr;
   int resize_behaviour;
+  int clip_region;
   double alpha;
 } state_list;
 
@@ -12435,6 +12436,7 @@ void gr_savestate(void)
       gks_inq_border_color_index(&errind, &s->bcoli);
       gks_inq_clip_xform(&errind, &s->clip_tnr);
       gks_inq_resize_behaviour(&s->resize_behaviour);
+      gks_inq_clip_region(&errind, &s->clip_region);
     }
   else
     fprintf(stderr, "attempt to save state beyond implementation limit\n");
@@ -12488,6 +12490,7 @@ void gr_restorestate(void)
       gks_set_border_color_index(s->bcoli);
       gks_select_clip_xform(s->clip_tnr);
       gks_set_resize_behaviour(s->resize_behaviour);
+      gks_set_clip_region(s->clip_region);
 
       if (ctx)
         {
@@ -12528,6 +12531,7 @@ void gr_restorestate(void)
           ctx->bcoli = s->bcoli;
           ctx->clip_tnr = s->clip_tnr;
           ctx->resize_behaviour = s->resize_behaviour;
+          ctx->clip_region = s->clip_region;
         }
     }
   else
@@ -12607,6 +12611,7 @@ void gr_selectcontext(int context)
           ctx->bcoli = 1;
           ctx->clip_tnr = 0;
           ctx->resize_behaviour = GKS_K_RESIZE;
+          ctx->clip_region = GKS_K_REGION_RECTANGLE;
         }
       else
         {
@@ -12648,6 +12653,7 @@ void gr_selectcontext(int context)
       gks_set_border_color_index(ctx->bcoli);
       gks_select_clip_xform(ctx->clip_tnr);
       gks_set_resize_behaviour(ctx->resize_behaviour);
+      gks_set_clip_region(ctx->clip_region);
     }
   else
     {
@@ -12722,6 +12728,7 @@ void gr_savecontext(int context)
       gks_inq_border_color_index(&errind, &app_context->buf[id]->bcoli);
       gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
       gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
+      gks_inq_clip_region(&errind, &app_context->buf[id]->clip_region);
     }
   else
     {
@@ -12795,6 +12802,7 @@ void gr_destroycontext(int context)
       gks_inq_border_color_index(&errind, &app_context->buf[id]->bcoli);
       gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
       gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
+      gks_inq_clip_region(&errind, &app_context->buf[id]->clip_region);
     }
   else
     {
@@ -13967,6 +13975,25 @@ void gr_inqclipxform(int *tnr)
   check_autoinit;
 
   gks_inq_clip_xform(&errind, tnr);
+}
+
+void gr_setclipregion(int region)
+{
+  check_autoinit;
+
+  gks_set_clip_region(region);
+  if (ctx) ctx->clip_region = region;
+
+  if (flag_stream) gr_writestream("<setclipregion region=\"%d\"/>\n", region);
+}
+
+void gr_inqclipregion(int *region)
+{
+  int errind;
+
+  check_autoinit;
+
+  gks_inq_clip_region(&errind, region);
 }
 
 /*!
