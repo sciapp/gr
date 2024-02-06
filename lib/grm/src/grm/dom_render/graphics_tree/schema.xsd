@@ -249,11 +249,22 @@
                 <xs:element ref="y_tick_label_group" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform"/>
+            <xs:attribute name="angle_ticks" type="xs:integer"/>
+            <xs:attribute name="hide" type="xs:integer"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="line_width" type="xs:double"/>
+            <xs:attribute name="normalization" type="xs:string"/>
+            <xs:attribute name="phi_flip" type="xs:integer"/>
+            <xs:attribute name="plot_type" type="xs:string"/>
+            <xs:attribute name="x_grid" type="xs:integer"/>
+            <xs:attribute name="x_label" type="xs:string"/>
             <xs:attribute name="x_tick_labels" type="xs:string"/>
+            <xs:attribute name="y_grid" type="xs:integer"/>
             <xs:attribute name="y_line" type="xs:integer"/>
+            <xs:attribute name="y_label" type="xs:string"/>
             <xs:attribute name="y_tick_labels" type="xs:string"/>
+            <xs:attribute name="z_grid" type="xs:integer"/>
+            <xs:attribute name="z_label" type="xs:string"/>
         </xs:complexType>
     </xs:element>
 
@@ -714,6 +725,7 @@
             <xs:attribute name="style" type="xs:string"/>
             <xs:attribute name="text_align_horizontal" type="strint"/>
             <xs:attribute name="text_align_vertical" type="strint"/>
+            <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="y_labels" type="xs:string"/>
         </xs:complexType>

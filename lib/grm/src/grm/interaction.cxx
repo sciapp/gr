@@ -423,8 +423,19 @@ int grm_input(const grm_args_t *input_args)
             {
               if (subplot_element != nullptr)
                 {
-                  logger((stderr, "Reset single subplot coordinate ranges\n"));
-                  subplot_element->setAttribute("reset_ranges", 1);
+                  auto coordinate_system = subplot_element->querySelectors("coordinate_system");
+                  if (coordinate_system->hasAttribute("plot_type") &&
+                      static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "2d")
+                    {
+                      logger((stderr, "Reset single subplot coordinate ranges\n"));
+                      subplot_element->setAttribute("reset_ranges", 1);
+                    }
+                  if (coordinate_system->hasAttribute("plot_type") &&
+                      static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "3d")
+                    {
+                      logger((stderr, "Reset single subplot coordinate rotation\n"));
+                      subplot_element->setAttribute("reset_rotation", 1);
+                    }
                 }
               else
                 {
@@ -1204,15 +1215,11 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
   gr_ndctowc(&x, &y);
 
   auto axes_vec = subplot_element->querySelectorsAll("axes");
+  auto coordinate_system = subplot_element->querySelectors("coordinate_system");
   std::vector<std::shared_ptr<GRM::Element>> label_vec;
-  for (const auto &child : axes_vec)
-    {
-      if (child->hasAttribute("x_label") && child->hasAttribute("y_label"))
-        {
-          label_vec.push_back(child);
-          break;
-        }
-    }
+
+  if (coordinate_system && coordinate_system->hasAttribute("x_label") && coordinate_system->hasAttribute("y_label"))
+    label_vec.push_back(coordinate_system);
 
   if (label_vec.empty())
     {

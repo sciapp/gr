@@ -1040,7 +1040,7 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
     {
       plot_draw_polar_axes(subplot_args);
     }
-  else if (!str_equals_any(kind, 5, "imshow", "isosurface", "pie", "polar_heatmap", "nonuniformpolar_heatmap"))
+  else if (!str_equals_any(kind, 3, "pie", "polar_heatmap", "nonuniformpolar_heatmap"))
     {
       plot_draw_axes(subplot_args, 1);
     }
@@ -1909,8 +1909,8 @@ err_t plot_barplot(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       int inner_series_index;
-      double *y = nullptr;
-      unsigned int y_length = 0;
+      double *y = nullptr, *x = nullptr;
+      unsigned int y_length = 0, x_length = 0;
       grm_args_t **inner_series = nullptr;
       unsigned int inner_series_length = 0;
       int *c = nullptr;
@@ -1994,6 +1994,13 @@ err_t plot_barplot(grm_args_t *subplot_args)
           c_rgb_vec = std::vector<double>(c_rgb, c_rgb + c_rgb_length);
           (*context)["c_rgb" + id_str] = c_rgb_vec;
           subGroup->setAttribute("color_rgb_values", "c_rgb" + id_str);
+        }
+      if ((grm_args_first_value(*current_series, "x", "D", &x, &x_length)))
+        {
+          /* Process data for a flat series (no inner_series) */
+          auto x_vec = std::vector<double>(x, x + x_length);
+          (*context)["x" + id_str] = x_vec;
+          subGroup->setAttribute("x", "x" + id_str);
         }
 
       std::vector<double> y_vec;
@@ -2834,12 +2841,10 @@ err_t plot_imshow(grm_args_t *subplot_args)
   double c_min, c_max;
   unsigned int c_data_length, i, j, k;
   unsigned int *shape;
-  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "grplot", "i", &grplot);
   if (grm_args_values(subplot_args, "c_lim", "dd", &c_min, &c_max))
     {
       group->setAttribute("z_lim_min", c_min);
@@ -2849,7 +2854,6 @@ err_t plot_imshow(grm_args_t *subplot_args)
     {
       auto subGroup = global_render->createSeries("imshow");
       group->append(subGroup);
-      group->setAttribute("grplot", grplot);
 
       grm_args_first_value(*current_series, "c", "D", &c_data, &c_data_length);
       grm_args_first_value(*current_series, "c_dims", "I", &shape, &i);
@@ -3445,8 +3449,8 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   int x_grid, y_grid, z_grid;
   char *title;
   char *x_label, *y_label, *z_label;
-  int tick_orientation = 1;
   std::shared_ptr<GRM::Element> group;
+  std::string type = "2d";
 
   if (!current_dom_element || current_dom_element->getElementsByTagName("coordinate_system").empty())
     {
@@ -3468,73 +3472,24 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   grm_args_values(args, "x_grid", "i", &x_grid);
   grm_args_values(args, "y_grid", "i", &y_grid);
 
-  global_render->setLineColorInd(group, 1);
-  global_render->setLineWidth(group, 1);
+  group->setAttribute("x_grid", x_grid);
+  group->setAttribute("y_grid", y_grid);
 
-  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
+  if (str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume", "isosurface"))
     {
+      type = "3d";
       grm_args_values(args, "z_grid", "i", &z_grid);
-      if (pass == 1)
+      group->setAttribute("z_grid", z_grid);
+      if (strcmp(kind, "isosurface") == 0)
         {
-          auto grid3d = global_render->createEmptyGrid3d(x_grid, false, z_grid);
-          global_render->setOriginPosition3d(grid3d, "low", "high", "low");
-          grid3d->setAttribute("x_major", 2);
-          grid3d->setAttribute("y_major", 0);
-          grid3d->setAttribute("z_major", 2);
-          group->append(grid3d);
-          grid3d = global_render->createEmptyGrid3d(false, y_grid, false);
-          global_render->setOriginPosition3d(grid3d, "low", "high", "low");
-          grid3d->setAttribute("x_major", 0);
-          grid3d->setAttribute("y_major", 2);
-          grid3d->setAttribute("z_major", 0);
-          group->append(grid3d);
-        }
-      else
-        {
-          auto axes3d = global_render->createEmptyAxes3d(-tick_orientation);
-          global_render->setOriginPosition3d(axes3d, "low", "low", "low");
-          axes3d->setAttribute("y_tick", 0);
-          axes3d->setAttribute("y_major", 0);
-          axes3d->setAttribute("z_index", 7);
-          group->append(axes3d);
-          axes3d = global_render->createEmptyAxes3d(tick_orientation);
-          global_render->setOriginPosition3d(axes3d, "high", "low", "low");
-          axes3d->setAttribute("x_tick", 0);
-          axes3d->setAttribute("z_tick", 0);
-          axes3d->setAttribute("x_major", 0);
-          axes3d->setAttribute("z_major", 0);
-          axes3d->setAttribute("z_index", 7);
-          group->append(axes3d);
+          group->setAttribute("hide", 1);
         }
     }
   else
     {
-      if (str_equals_any(kind, 3, "heatmap", "shade", "marginal_heatmap"))
+      if ((strcmp(kind, "barplot") != 0 && strcmp(kind, "imshow") != 0) || pass == 2)
         {
-          tick_orientation = -1;
-        }
-      if (!str_equals_any(kind, 1, "shade"))
-        {
-          if (pass == 1 || strcmp(kind, "barplot") != 0)
-            {
-              auto grid = global_render->createEmptyGrid(x_grid, y_grid);
-              grid->setAttribute("x_org", 0);
-              grid->setAttribute("y_org", 0);
-              group->append(grid);
-            }
-        }
-      if (strcmp(kind, "barplot") != 0 || pass == 2)
-        {
-          auto axes = global_render->createEmptyAxes(tick_orientation);
-          global_render->setOriginPosition(axes, "low", "low");
-          if (pass == 2) axes->setAttribute("z_index", 7);
-          group->append(axes);
-          axes = global_render->createEmptyAxes(-tick_orientation);
-          global_render->setOriginPosition(axes, "high", "high");
-          if (pass == 2) axes->setAttribute("z_index", 7);
-          group->append(axes);
-
-          /* x_tick_labels */
+          /* xticklabels */
           char **x_tick_labels = nullptr;
           unsigned int x_tick_labels_length;
 
@@ -3560,57 +3515,30 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
               global_render->setYTickLabels(group, key, y_tick_labels_vec);
             }
         }
+      else if (strcmp(kind, "imshow") == 0)
+        {
+          group->setAttribute("hide", 1);
+        }
     }
+
+  group->setAttribute("plot_type", type);
 
   if (pass == 1 && grm_args_values(args, "title", "s", &title))
     {
       group->parentElement()->setAttribute("title", title);
     }
 
-  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
+  if (grm_args_values(args, "x_label", "s", &x_label))
     {
-      std::string xlabel, ylabel, zlabel;
-      bool title3d = false;
-      if (grm_args_values(args, "x_label", "s", &x_label))
-        {
-          xlabel = x_label;
-          title3d = true;
-        }
-      if (grm_args_values(args, "y_label", "s", &y_label))
-        {
-          ylabel = y_label;
-          title3d = true;
-        }
-      if (grm_args_values(args, "z_label", "s", &z_label))
-        {
-          zlabel = z_label;
-          title3d = true;
-        }
-      if (pass == 2 && title3d)
-        {
-          auto title3d_group = global_render->createTitles3d(xlabel, ylabel, zlabel);
-          title3d_group->setAttribute("z_index", 7);
-          group->append(title3d_group);
-        }
+      group->setAttribute("x_label", x_label);
     }
-  else
+  if (grm_args_values(args, "y_label", "s", &y_label))
     {
-      if (grm_args_values(args, "x_label", "s", &x_label))
-        {
-          for (const auto &axes : group->getElementsByTagName("axes"))
-            {
-              if (static_cast<std::string>(axes->getAttribute("x_org_pos")) == "low")
-                axes->setAttribute("x_label", x_label);
-            }
-        }
-      if (grm_args_values(args, "y_label", "s", &y_label))
-        {
-          for (const auto &axes : group->getElementsByTagName("axes"))
-            {
-              if (static_cast<std::string>(axes->getAttribute("x_org_pos")) == "low")
-                axes->setAttribute("y_label", y_label);
-            }
-        }
+      group->setAttribute("y_label", y_label);
+    }
+  if (grm_args_values(args, "z_label", "s", &z_label))
+    {
+      group->setAttribute("z_label", z_label);
     }
 
   return ERROR_NONE;
@@ -3641,31 +3569,29 @@ err_t plot_draw_polar_axes(grm_args_t *args)
       group = global_render->getElementsByTagName("coordinate_system")[0];
     }
 
-  if (grm_args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
+  group->setAttribute("plot_type", "polar");
+
+  if (grm_args_values(args, "angle_ticks", "i", &angle_ticks))
     {
-      angle_ticks = 8;
+      group->setAttribute("angle_ticks", angle_ticks);
     }
 
   grm_args_values(args, "kind", "s", &kind);
 
   if (strcmp(kind, "polar_histogram") == 0)
     {
-      if (grm_args_values(args, "normalization", "s", &norm) == 0) norm = "count";
+      if (grm_args_values(args, "normalization", "s", &norm))
+        {
+          group->setAttribute("normalization", norm);
+        }
     }
 
-  if (grm_args_values(args, "phi_flip", "i", &phi_flip) == 0) phi_flip = 0;
-
-  if (strcmp(kind, "polar_histogram") == 0)
+  if (grm_args_values(args, "phi_flip", "i", &phi_flip))
     {
-      subGroup = global_render->createDrawPolarAxes(angle_ticks, kind, phi_flip, norm, 1.0);
-    }
-  else
-    {
-      subGroup = global_render->createDrawPolarAxes(angle_ticks, kind, phi_flip, "");
+      group->setAttribute("phi_flip", phi_flip);
     }
   if (!grm_args_values(args, "title", "s", &title)) title = "";
   group->parentElement()->setAttribute("title", title);
-  group->append(subGroup);
   return ERROR_NONE;
 }
 
@@ -3758,11 +3684,8 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
       colorbar->setAttribute("y_flip", flip);
     }
 
-  colorbar->setAttribute("offset", off + 0.02);
-  colorbar->setAttribute("width", 0.03);
-
-  colorbar->setAttribute("diag_factor", 0.016);
-  colorbar->setAttribute("max_char_height", 0.012);
+  colorbar->setAttribute("offset", off + PLOT_DEFAULT_COLORBAR_OFFSET);
+  colorbar->setAttribute("max_char_height", PLOT_DEFAULT_COLORBAR_MAX_CHAR_HEIGHT);
 
   return ERROR_NONE;
 }
@@ -4652,6 +4575,7 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
   double x_lim_min, x_lim_max, y_lim_min, y_lim_max, z_lim_min, z_lim_max;
   double x_min, x_max, y_min, y_max, z_min, z_max;
   grm_args_t **current_series;
+  int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : active_figure->lastChildElement();
   grm_args_values(subplot_args, "kind", "s", &kind);
@@ -4714,6 +4638,11 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
   if (grm_args_values(subplot_args, "adjust_y_lim", "i", &adjust_y_lim))
     {
       group->setAttribute("adjust_y_lim", adjust_y_lim);
+    }
+
+  if (grm_args_values(subplot_args, "grplot", "i", &grplot))
+    {
+      group->setAttribute("grplot", grplot);
     }
 
   if (!plot_func_map_at(plot_func_map, kind, &plot_func))

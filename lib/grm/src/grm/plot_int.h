@@ -58,6 +58,8 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_DEFAULT_XGRID 1
 #define PLOT_DEFAULT_YGRID 1
 #define PLOT_DEFAULT_ZGRID 1
+#define PLOT_DEFAULT_COLORBAR_MAX_CHAR_HEIGHT 0.012
+#define PLOT_DEFAULT_COLORBAR_OFFSET 0.02
 
 /* ========================= datatypes ============================================================================== */
 
