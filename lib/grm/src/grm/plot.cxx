@@ -3475,11 +3475,15 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   group->setAttribute("x_grid", x_grid);
   group->setAttribute("y_grid", y_grid);
 
-  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
+  if (str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume", "isosurface"))
     {
       type = "3d";
       grm_args_values(args, "z_grid", "i", &z_grid);
       group->setAttribute("z_grid", z_grid);
+      if (strcmp(kind, "isosurface") == 0)
+        {
+          group->setAttribute("hide", 1);
+        }
     }
   else
     {
@@ -3515,10 +3519,6 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         {
           group->setAttribute("hide", 1);
         }
-    }
-  if (strcmp(kind, "isosurface") == 0)
-    {
-      group->setAttribute("hide", 1);
     }
 
   group->setAttribute("plot_type", type);
