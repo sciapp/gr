@@ -567,13 +567,11 @@ static double getLightness(int color)
 
 // transform single coordinate (like x or y) into range (and or log scale)
 // first transform into range and then log scale
-// todo: when using only logScale skip the transform part here + in the vector wrapper
 static double transformCoordinate(double value, double vmin, double vmax, double rangeMin, double rangeMax,
                                   int logScale = 0)
 {
   if (logScale)
     {
-      // todo: ylim and ylog?
       double transVal, B, A; // A, B are the min and max after the y_log transformation
       if (!(rangeMin == 0.0 && rangeMax == 0.0))
         {
@@ -597,9 +595,6 @@ static double transformCoordinate(double value, double vmin, double vmax, double
           sign = -1;
         }
 
-      // 1.0 and 0.0 because of normalized canvas coords
-      // todo: dont use 1.0 and 0.0 here use the rangeMin and rangeMax values or the min and max of the vector because
-      // of ylim
       double b = B / log(vmax / vmin);
       double a = A - b * log(vmin);
       double temp = sign * (a + b * log(transVal));
@@ -7510,14 +7505,13 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
 
   kind = static_cast<std::string>(subplotElement->getAttribute("kind"));
 
-  // todo: why this split? More descriptive comments
-  // todo: everything is kinda messy here...
+  // these kinds need r_min and r_max and y_lim_min and y_lim_max (if given)
   if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap" || kind == "polar")
     {
       r_min = static_cast<double>(subplotElement->getAttribute("r_min"));
       if (kind == "uniform_polar_heatmap")
         {
-          r_min = 0.0; // todo: why is that?
+          r_min = 0.0; // todo: uniform polar heatmap always starts at 0.0?
         }
       r_max = static_cast<double>(subplotElement->getAttribute("r_max"));
       if (subplotElement->hasAttribute("y_lim_max") && subplotElement->hasAttribute("y_lim_min"))
@@ -9089,25 +9083,35 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
       for (i = 0; i < rho_length; ++i)
         {
           double current_rho;
+          double temp_rho = rho_vec[i];
+          // todo: polar.dat some 0.0000 values are stored as nan?
+          rho_vec[i] = (std::isnan(rho_vec[i])) ? 0.0 : rho_vec[i];
+
+          if (ylim)
+            {
+              temp_rho - ylim_min;
+            }
+
           if (y_log && !transform_radii)
             {
-              // todo: polar.dat some 0.0000 values are stored as nan?
-              if (std::isnan(rho_vec[i]))
-                {
-                  rho_vec[i] = 0.0;
-                }
-              current_rho = transformCoordinate(rho_vec[i], r_min, r_max, 0.0, 0.0, y_log);
+
+              current_rho = transformCoordinate(temp_rho, r_min, r_max, 0.0, 0.0, y_log);
             }
           else
             {
-              current_rho = transformCoordinate(rho_vec[i], r_min, r_max, yrange_min, yrange_max, y_log);
+              current_rho = transformCoordinate(temp_rho, r_min, r_max, yrange_min, yrange_max, y_log);
             }
 
-          // todo: clipping for > ylim_max is wip by Josef, but clipping for < ylim_min is not the correct solution
-          if (ylim && (current_rho > ylim_max || current_rho < ylim_min))
+          if (ylim && ylim_min > 0.0 && current_rho < 0.0)
             {
+              current_rho = 0.0;
+            }
+          else if (ylim && temp_rho > ylim_max) // todo: polar clipping for > ylim_max is wip by Josef
+            {
+              // this is just some temporary fix for the clipping
               continue;
             }
+
           current_rho /= ylim_max;
           x[index] = current_rho * cos(theta_vec[index]);
           y[index] = current_rho * sin(theta_vec[index]);
@@ -9131,13 +9135,18 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
               rho_vec[i] = -rho_vec[i];
             }
 
-          if (ylim && (rho_vec[i] > ylim_max || rho_vec[i] < ylim_min)) // for removing points outside ylim
+          // subtract ylim_min from rho_vec if ylim is true
+          double current_rho;
+          if (ylim)
             {
-              continue;
+              current_rho = (rho_vec[i] - ylim_min) / ylim_max;
+              // just set negative radii to 0.0 if ylim_min > 0.0
+              if (current_rho < 0.0 && ylim_min > 0.0) current_rho = 0.0;
             }
-          // todo: canvas 0.0 equals ylim_min and canvas 1.0 equals ylim_max if ylims (just subtract ylim_min from
-          // rho_vec[i])
-          double current_rho = rho_vec[i] / ylim_max;
+          else
+            {
+              current_rho = rho_vec[i] / ylim_max;
+            }
           x[index] = current_rho * cos(theta_vec[index]);
           y[index] = current_rho * sin(theta_vec[index]);
           ++index;
@@ -9544,7 +9553,6 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
             }
           if (xrange_min > xrange_max)
             {
-              // todo switch if xrange_min > xrange_max?
               std::swap(xrange_min, xrange_max);
               group->setAttribute("x_range_flip", 1);
             }
