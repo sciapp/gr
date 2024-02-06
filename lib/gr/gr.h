@@ -313,6 +313,8 @@ DLLEXPORT double gr_volume_interp_tri_linear(const data_point3d_t *, const void 
 DLLEXPORT double gr_volume_interp_gauss(const data_point3d_t *, const void *, const point3d_t *, const point3d_t *);
 DLLEXPORT void gr_setmathfont(int font);
 DLLEXPORT void gr_inqmathfont(int *font);
+DLLEXPORT void gr_setclipregion(int region);
+DLLEXPORT void gr_inqclipregion(int *region);
 
 #ifdef __cplusplus
 }
