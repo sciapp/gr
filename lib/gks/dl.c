@@ -281,6 +281,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
     case 109: /* set resize behaviour */
     case 207: /* set border color index */
     case 208: /* select clipping transformation */
+    case 211: /* set clip region */
 
       len = 3 * sizeof(int);
       if (d->nbytes + len > d->size) reallocate(d, len);
@@ -522,6 +523,7 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
     case 109: /* set resize behaviour */
     case 207: /* set border color index */
     case 208: /* select clipping transformation */
+    case 211: /* set clip region */
       RESOLVE(ia, int, sizeof(int));
       break;
 
@@ -690,6 +692,9 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
       break;
     case 208:
       (*gkss)->clip_tnr = ia[0];
+      break;
+    case 211:
+      (*gkss)->clip_region = ia[0];
       break;
     }
 

@@ -325,6 +325,7 @@ static void seg_xform_rel(double *x, double *y) {}
         case 109: /* set resize behaviour */
         case 207: /* set border color index */
         case 208: /* select clipping transformation */
+        case 211: /* set clip region */
           RESOLVE(i_arr, int, sizeof(int));
           break;
 
