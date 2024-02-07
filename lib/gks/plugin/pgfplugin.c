@@ -914,10 +914,25 @@ static void set_clip_rect(int tnr)
           tnr = gkss->clip_tnr;
         }
       if (p->scoped) pgf_printf(p->stream, "\\end{scope}\n");
-      pgf_printf(p->stream,
-                 "\\begin{scope}\n"
-                 "\\clip (%f,%f) rectangle (%f,%f);\n",
-                 p->rect[tnr][0][0], p->rect[tnr][0][1], p->rect[tnr][1][0], p->rect[tnr][1][1]);
+      if (gkss->clip_region == GKS_K_REGION_ELLIPSE)
+        {
+          double x, y, w, h;
+          x = (p->rect[tnr][0][0] + p->rect[tnr][1][0]) / 2;
+          y = (p->rect[tnr][0][1] + p->rect[tnr][1][1]) / 2;
+          w = p->rect[tnr][1][0] - p->rect[tnr][0][0];
+          h = p->rect[tnr][1][1] - p->rect[tnr][0][1];
+          pgf_printf(p->stream,
+                     "\\begin{scope}\n"
+                     "\\clip (%f,%f) ellipse (%f and %f);\n",
+                     x, y, w / 2, h / 2);
+        }
+      else
+        {
+          pgf_printf(p->stream,
+                     "\\begin{scope}\n"
+                     "\\clip (%f,%f) rectangle (%f,%f);\n",
+                     p->rect[tnr][0][0], p->rect[tnr][0][1], p->rect[tnr][1][0], p->rect[tnr][1][1]);
+        }
       p->scoped = 1;
     }
 }

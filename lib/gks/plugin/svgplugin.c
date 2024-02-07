@@ -111,7 +111,9 @@ typedef struct SVG_point_t
 
 typedef struct SVG_clip_rect_t
 {
-  int x, y, width, height;
+  int x, y;
+  int width, height;
+  int region;
 } SVG_clip_rect;
 
 typedef struct ws_state_list_t
@@ -283,6 +285,7 @@ static void init_clip_rects(void)
     {
       p->cr[i].x = p->cr[i].y = -1;
       p->cr[i].width = p->cr[i].height = 0;
+      p->cr[i].region = GKS_K_REGION_RECTANGLE;
     }
 }
 
@@ -1494,7 +1497,8 @@ static void set_clip_path(int tnr)
 
   for (i = 0; i < p->clip_index && !found; i++)
     {
-      if (x == p->cr[i].x && y == p->cr[i].y && width == p->cr[i].width && height == p->cr[i].height)
+      if (x == p->cr[i].x && y == p->cr[i].y && width == p->cr[i].width && height == p->cr[i].height &&
+          p->cr[i].region == gkss->clip_region)
         {
           found = 1;
           index = i;
@@ -1510,12 +1514,20 @@ static void set_clip_path(int tnr)
       p->cr[p->clip_index].y = y;
       p->cr[p->clip_index].width = width;
       p->cr[p->clip_index].height = height;
+      p->cr[p->clip_index].region = gkss->clip_region;
       p->rect_index = p->clip_index;
-      svg_printf(p->stream,
-                 "<defs>\n  <clipPath id=\"clip%02d%d\">\n    <rect"
-                 " x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"/>\n  </clip"
-                 "Path>\n</defs>\n",
-                 path_id, p->rect_index, x, y, width, height);
+      if (gkss->clip_region == GKS_K_REGION_ELLIPSE && (gkss->clip_tnr != 0 || gkss->clip == GKS_K_CLIP))
+        svg_printf(p->stream,
+                   "<defs>\n  <clipPath id=\"clip%02d%d\">\n    <ellipse"
+                   " cx=\"%d\" cy=\"%d\" rx=\"%d\" ry=\"%d\"/>\n  </clip"
+                   "Path>\n</defs>\n",
+                   path_id, p->rect_index, x + width / 2, y + height / 2, width / 2, height / 2);
+      else
+        svg_printf(p->stream,
+                   "<defs>\n  <clipPath id=\"clip%02d%d\">\n    <rect"
+                   " x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"/>\n  </clip"
+                   "Path>\n</defs>\n",
+                   path_id, p->rect_index, x, y, width, height);
       p->clip_index++;
       if (p->clip_index == p->max_clip_rects)
         {
