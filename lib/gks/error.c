@@ -270,6 +270,12 @@ const char *gks_function_name(int routine)
       name = "SELECT_CLIP_XFORM";
       break;
     case 209:
+      name = "INQ_WS_STATE";
+      break;
+    case 210:
+      name = "SAMPLE_LOCATOR";
+      break;
+    case 211:
       name = "SET_CLIP_REGION";
       break;
     case 250:
