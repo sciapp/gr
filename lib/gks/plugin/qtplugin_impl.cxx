@@ -308,7 +308,7 @@ static void set_clip_rect(int tnr)
       else if (gkss->clip == GKS_K_CLIP)
         p->painter->setClipRegion(QRegion(p->rect[tnr].toRect(), QRegion::Ellipse));
       else
-        p->painter->setClipRegion(QRegion(p->rect[0].toRect(), QRegion::Ellipse));
+        p->painter->setClipRect(p->rect[0]);
     }
   else
     {

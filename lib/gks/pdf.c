@@ -889,7 +889,7 @@ static void set_clip(double *clrt)
   NDC_to_DC(clrt[0], clrt[2], x0, y0);
   NDC_to_DC(clrt[1], clrt[3], x1, y1);
 
-  if (gkss->clip_region == GKS_K_REGION_ELLIPSE)
+  if (gkss->clip_region == GKS_K_REGION_ELLIPSE && (gkss->clip_tnr != 0 || gkss->clip == GKS_K_CLIP))
     {
       x = 0.5 * (x0 + x1);
       y = 0.5 * (y0 + y1);
@@ -937,7 +937,6 @@ static void begin_page(void)
 {
   init_context();
   pdf_page(p, p->width, p->height);
-  set_clip(p->window);
   p->empty = 0;
 }
 
@@ -2240,7 +2239,6 @@ void gks_drv_js(
 
       set_xform();
       init_norm_xform();
-      if (!p->empty) set_clip(p->window);
       break;
 
     case 55:

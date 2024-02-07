@@ -850,7 +850,7 @@ static void set_clip(double *clrt)
   NDC_to_DC(clrt[i], clrt[j], cx1, cy1);
   NDC_to_DC(clrt[1 - i], clrt[5 - j], cx2, cy2);
 
-  if (gkss->clip_region == GKS_K_REGION_ELLIPSE)
+  if (gkss->clip_region == GKS_K_REGION_ELLIPSE && (gkss->clip_tnr != 0 || gkss->clip == GKS_K_CLIP))
     {
       int x, y, rx, ry;
 
@@ -1220,7 +1220,6 @@ static void ps_init(int *pages)
   set_markersize(-1.0);
   packb("0 ma");
   set_font(-1);
-  set_clip(p->window);
   packb("%%EndPageSetup");
   update();
 }
@@ -2402,7 +2401,6 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
       p->window[3] = r2[1];
       set_xform(p->window, p->viewpt);
       init_norm_xform();
-      if (p->init) set_clip(p->window);
       break;
 
       /* set workstation viewport */

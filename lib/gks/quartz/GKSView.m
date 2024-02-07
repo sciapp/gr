@@ -1130,7 +1130,7 @@ static void seg_xform_rel(double *x, double *y) {}
 static void begin_context(CGContextRef context)
 {
   CGContextSaveGState(context);
-  if (gkss->clip_region == GKS_K_REGION_ELLIPSE)
+  if (gkss->clip_region == GKS_K_REGION_ELLIPSE && (gkss->clip_tnr != 0 || gkss->clip == GKS_K_CLIP))
     {
       CGMutablePathRef path = CGPathCreateMutable();
       CGPathAddEllipseInRect(path, NULL, clipRect);

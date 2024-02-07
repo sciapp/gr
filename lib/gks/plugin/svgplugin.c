@@ -1516,7 +1516,7 @@ static void set_clip_path(int tnr)
       p->cr[p->clip_index].height = height;
       p->cr[p->clip_index].region = gkss->clip_region;
       p->rect_index = p->clip_index;
-      if (gkss->clip_region == GKS_K_REGION_ELLIPSE)
+      if (gkss->clip_region == GKS_K_REGION_ELLIPSE && (gkss->clip_tnr != 0 || gkss->clip == GKS_K_CLIP))
         svg_printf(p->stream,
                    "<defs>\n  <clipPath id=\"clip%02d%d\">\n    <ellipse"
                    " cx=\"%d\" cy=\"%d\" rx=\"%d\" ry=\"%d\"/>\n  </clip"
