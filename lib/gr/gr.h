@@ -227,6 +227,8 @@ DLLEXPORT int gr_drawgraphics(char *);
 DLLEXPORT int gr_startlistener(void);
 DLLEXPORT void gr_mathtex(double, double, char *);
 DLLEXPORT void gr_inqmathtex(double, double, char *, double *, double *);
+DLLEXPORT void gr_mathtex3d(double, double, double, char *, int);
+DLLEXPORT void gr_inqmathtex3d(double, double, double, char *, int, double *, double *, double *, double *);
 DLLEXPORT void gr_beginselection(int, int);
 DLLEXPORT void gr_endselection(void);
 DLLEXPORT void gr_setbboxcallback(int, void (*)(int, double, double, double, double));

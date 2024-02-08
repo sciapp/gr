@@ -6449,6 +6449,10 @@ static void text3d(double x, double y, double z, char *chars, int axis)
 
       if (tnr != NDC) gks_select_xform(tnr);
     }
+  else if (scientific_format == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
+    {
+      gr_mathtex3d(p_x, p_y, p_z, chars, axis);
+    }
   else
     {
       gks_inq_current_xformno(&errind, &tnr);
@@ -6472,6 +6476,10 @@ void gr_text3d(double x, double y, double z, char *chars, int axis)
 
   gks_inq_current_xformno(&errind, &tnr);
   gks_select_xform(MODERN_NDC);
+
+  x = x_lin(x);
+  y = y_lin(y);
+  z = z_lin(z);
 
   scaleFactors[0] = tx.x_axis_scale;
   scaleFactors[1] = tx.y_axis_scale;
@@ -6508,6 +6516,10 @@ void gr_inqtext3d(double x, double y, double z, char *chars, int axis, double *t
 
   gks_inq_current_xformno(&errind, &tnr);
   gks_select_xform(MODERN_NDC);
+
+  x = x_lin(x);
+  y = y_lin(y);
+  z = z_lin(z);
 
   scaleFactors[0] = tx.x_axis_scale;
   scaleFactors[1] = tx.y_axis_scale;
@@ -6977,7 +6989,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       {
                         xi = x_major_tick;
                         yi = y_major_tick;
-                        if (z_tick > 1 && !modern_projection_type)
+                        if (z_tick > 1)
                           {
                             exponent = iround(blog(lx.basez, zi));
                             snprintf(string, 256, "%s^{%d}", lx.basez_s, exponent);
@@ -7179,7 +7191,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       {
                         xi = x_major_tick;
                         zi = z_major_tick;
-                        if (y_tick > 1 && !modern_projection_type)
+                        if (y_tick > 1)
                           {
                             exponent = iround(blog(lx.basey, yi));
                             snprintf(string, 256, "%s^{%d}", lx.basey_s, exponent);
@@ -7387,7 +7399,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       {
                         yi = y_major_tick;
                         zi = z_major_tick;
-                        if (x_tick > 1 && !modern_projection_type)
+                        if (x_tick > 1)
                           {
                             exponent = iround(blog(lx.basex, xi));
                             snprintf(string, 256, "%s^{%d}", lx.basex_s, exponent);
@@ -11838,6 +11850,50 @@ void gr_inqmathtex(double x, double y, char *string, double *tbx, double *tby)
     {
       mathtex(x, y, string, 1, tbx, tby);
     }
+}
+
+void mathtex2_3d(double x, double y, double z, const char *formula, int axis, double textScale, int inquire,
+                 double *tbx, double *tby, double *tbz, double *baseline);
+
+/*!
+ * Generate a character string starting at the given location. Strings can be
+ * defined to create mathematical symbols and Greek letters using a limited LaTeX syntax.
+ *
+ * \param[in] x The X coordinate of the starting position of the text string
+ * \param[in] y The Y coordinate of the starting position of the text string
+ * \param[in] z The Z coordinate of the starting position of the text string
+ * \param[in] string The text string to be drawn
+ * \param[in] axis The plane to draw on (1: YX-plane, 2: XY plane, 3: YZ plane, 4: XZ plane), negative flips direction
+ */
+void gr_mathtex3d(double x, double y, double z, char *string, int axis)
+{
+  check_autoinit;
+
+  mathtex2_3d(x, y, z, string, axis, text3d_get_height(), 0, NULL, NULL, NULL, NULL);
+
+  if (flag_stream) gr_writestream("<mathtex3d x=\"%g\" y=\"%g\" z=\"%g\" text=\"%s\"/>\n", x, y, z, string);
+}
+
+/*!
+ * This function calculates the bounding box of the text that would be drawn using gr_mathtex3d. tbx, tby, tbz contain
+ * the corner coordinates, while baseline contains the baseline point.
+ *
+ * \param[in] x The X coordinate of the starting position of the text string in world coordinates
+ * \param[in] y The Y coordinate of the starting position of the text string in world coordinates
+ * \param[in] z The Z coordinate of the starting position of the text string in world coordinates
+ * \param[in] string The text string that would be drawn
+ * \param[in] axis The plane to draw on (1: YX-plane, 2: XY plane, 3: YZ plane, 4: XZ plane), negative flips direction
+ * \param[in] tbx A 4-element double array to write the x-coordinates of the corners
+ * \param[in] tby A 4-element double array to write the y-coordinates of the corners
+ * \param[in] tbz A 4-element double array to write the z-coordinates of the corners
+ * \param[in] baseline A 3-element (x, y, z) array to write the baseline point coordinates to
+ */
+void gr_inqmathtex3d(double x, double y, double z, char *string, int axis, double *tbx, double *tby, double *tbz,
+                     double *baseline)
+{
+  check_autoinit;
+
+  mathtex2_3d(x, y, z, string, axis, text3d_get_height(), 1, tbx, tby, tbz, baseline);
 }
 
 static void append(double x, double y, char *string, int line_number, int math)
