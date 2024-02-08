@@ -9,7 +9,10 @@
 #include "grm/utilcpp_int.hxx"
 
 static void nodeToXML(std::stringstream &os, const std::shared_ptr<const GRM::Node> &node,
-                      const GRM::SerializerOptions &options, const std::string &indent);
+                      const GRM::SerializerOptions &options, const std::string &indent,
+                      std::optional<std::function<bool(const std::string &attribute_name, const GRM::Element &,
+                                                       std::optional<std::string> &new_attribute_name)>>
+                          attribute_filter);
 
 static void documentToXML(std::stringstream &os, const std::shared_ptr<const GRM::Document> &document,
                           const GRM::SerializerOptions &options, const std::string &indent)
@@ -17,12 +20,16 @@ static void documentToXML(std::stringstream &os, const std::shared_ptr<const GRM
   os << indent << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
   for (const auto &child_node : document->childNodes())
     {
-      nodeToXML(os, child_node, options, indent);
+      nodeToXML(os, child_node, options, indent, std::nullopt);
     }
 }
 
-static void elementToXML(std::stringstream &os, const std::shared_ptr<const GRM::Element> &element,
-                         const GRM::SerializerOptions &options, const std::string &indent)
+static void
+elementToXML(std::stringstream &os, const std::shared_ptr<const GRM::Element> &element,
+             const GRM::SerializerOptions &options, const std::string &indent,
+             std::optional<std::function<bool(const std::string &attribute_name, const GRM::Element &element,
+                                              std::optional<std::string> &new_attribute_name)>>
+                 attribute_filter)
 {
   os << indent << "<" << element->localName();
   auto attribute_names_set = element->getAttributeNames();
@@ -34,33 +41,41 @@ static void elementToXML(std::stringstream &os, const std::shared_ptr<const GRM:
          << "name"
          << "=\"" << (std::string)element->getAttribute("name") << "\"";
     }
-  for (const auto &attribute_name : attribute_names)
+  for (const auto &original_attribute_name : attribute_names)
     {
-      if (attribute_name != "name" && (options.show_hidden || !starts_with(attribute_name, "_")))
+      auto attribute_name = std::ref(original_attribute_name);
+      std::optional<std::string> new_attribute_name;
+      if (original_attribute_name == "name" ||
+          (attribute_filter && !(*attribute_filter)(original_attribute_name, *element, new_attribute_name)))
+        continue;
+      if (new_attribute_name)
         {
-          auto value = (std::string)element->getAttribute(attribute_name);
-          if (value == "nan")
-            {
-              os << " " << attribute_name << "=\""
-                 << "NaN"
-                 << "\"";
-            }
-          else if (value == "inf")
-            {
-              os << " " << attribute_name << "=\""
-                 << "INF"
-                 << "\"";
-            }
-          else if (value == "-inf")
-            {
-              os << " " << attribute_name << "=\""
-                 << "-INF"
-                 << "\"";
-            }
-          else
-            {
-              os << " " << attribute_name << "=\"" << value << "\"";
-            }
+          attribute_name = *new_attribute_name;
+        }
+      if (!options.show_hidden && starts_with(attribute_name.get(), "_")) continue;
+
+      auto value = (std::string)element->getAttribute(original_attribute_name);
+      if (value == "nan")
+        {
+          os << " " << attribute_name.get() << "=\""
+             << "NaN"
+             << "\"";
+        }
+      else if (value == "inf")
+        {
+          os << " " << attribute_name.get() << "=\""
+             << "INF"
+             << "\"";
+        }
+      else if (value == "-inf")
+        {
+          os << " " << attribute_name.get() << "=\""
+             << "-INF"
+             << "\"";
+        }
+      else
+        {
+          os << " " << attribute_name.get() << "=\"" << value << "\"";
         }
     }
   if (element->hasChildNodes())
@@ -68,7 +83,7 @@ static void elementToXML(std::stringstream &os, const std::shared_ptr<const GRM:
       os << ">\n";
       for (const auto &child_node : element->childNodes())
         {
-          nodeToXML(os, child_node, options, indent + options.indent);
+          nodeToXML(os, child_node, options, indent + options.indent, attribute_filter);
         }
       os << indent << "</" << element->localName() << ">\n";
     }
@@ -85,7 +100,10 @@ static void commentToXML(std::stringstream &os, const std::shared_ptr<const GRM:
 }
 
 static void nodeToXML(std::stringstream &os, const std::shared_ptr<const GRM::Node> &node,
-                      const GRM::SerializerOptions &options, const std::string &indent)
+                      const GRM::SerializerOptions &options, const std::string &indent,
+                      std::optional<std::function<bool(const std::string &attribute_name, const GRM::Element &,
+                                                       std::optional<std::string> &new_attribute_name)>>
+                          attribute_filter)
 {
   switch (node->nodeType())
     {
@@ -98,7 +116,7 @@ static void nodeToXML(std::stringstream &os, const std::shared_ptr<const GRM::No
     case GRM::Node::Type::ELEMENT_NODE:
       {
         auto element = std::dynamic_pointer_cast<const GRM::Element>(node);
-        elementToXML(os, element, options, indent);
+        elementToXML(os, element, options, indent, attribute_filter);
         break;
       }
     case GRM::Node::Type::COMMENT_NODE:
@@ -110,14 +128,17 @@ static void nodeToXML(std::stringstream &os, const std::shared_ptr<const GRM::No
     }
 };
 
-std::string GRM::toXML(const std::shared_ptr<const GRM::Node> &node, const GRM::SerializerOptions &options)
+std::string GRM::toXML(const std::shared_ptr<const GRM::Node> &node, const GRM::SerializerOptions &options,
+                       std::optional<std::function<bool(const std::string &attribute_name, const GRM::Element &element,
+                                                        std::optional<std::string> &new_attribute_name)>>
+                           attribute_filter)
 {
   if (!node)
     {
       throw TypeError("node is null");
     }
   std::stringstream os;
-  nodeToXML(os, node, options, "");
+  nodeToXML(os, node, options, "", attribute_filter);
   return os.str();
 }
 
