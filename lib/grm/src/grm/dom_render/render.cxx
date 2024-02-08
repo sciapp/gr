@@ -15116,6 +15116,12 @@ static void applyRootDefaults(const std::shared_ptr<GRM::Element> &root)
     }
 }
 
+
+std::shared_ptr<GRM::Context> GRM::Render::getRenderContext()
+{
+  return this->context;
+}
+
 void GRM::Render::render(const std::shared_ptr<GRM::Document> &document,
                          const std::shared_ptr<GRM::Context> &ext_context)
 {

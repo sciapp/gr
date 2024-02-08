@@ -14,6 +14,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <variant>
 
 #ifdef __unix__
 #include <unistd.h>
@@ -34,8 +35,10 @@ extern "C" {
 #include "gks.h"
 #include "gr.h"
 #include "gr3.h"
+#include "json_int.h"
 #include "logging_int.h"
 }
+#include "utilcpp_int.hxx"
 
 #ifndef NO_XERCES_C
 #include <xercesc/sax/InputSource.hpp>
@@ -148,6 +151,17 @@ DECLARE_MAP_METHODS(args_set)
 /* ######################### internal implementation ################################################################ */
 
 /* ========================= static variables ======================================================================= */
+
+/* ------------------------- dump ----------------------------------------------------------------------------------- */
+
+/*!
+ * \brief List of attribute names in the graphics tree which will be exported as-is on XML dumps. Backup attributes
+ * (`_*_org) are ignored for these attribute names.
+ */
+const static std::unordered_set<std::string_view> restore_backup_format_excludes = {
+    "space_3d_phi",
+    "space_3d_theta",
+};
 
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
 
@@ -4561,6 +4575,260 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
 
   return error;
 }
+} /* end of extern "C" */
+
+/* ------------------------- dump ----------------------------------------------------------------------------------- */
+
+/*!
+ * \brief Dump the current GRM context object into a file object.
+ *
+ * \param[in] f The file object, the serialized context will be written to.
+ * \param[in] dump_encoding The encoding of the serialized context. The context is exported as JSON, but an additional
+ *                          encoding step can be necessary to embed the JSON document into a file (like an XML
+ *                          document). Possible values are:
+ *                          - `DUMP_JSON_PLAIN`: Do not apply any encoding.
+ *                          - `DUMP_JSON_ESCAPE_DOUBLE_MINUS`: Escape double minus signs (`--`) in the JSON document by
+ *                                                             replacing them with `-\-`. This can be used to embed the
+ *                                                             output into an XML comment.
+ *                          - `DUMP_JSON_BASE64`: Base64 encode the JSON document.
+ * \param[in] context_keys_to_discard The context keys which will be excluded in the dump.
+ */
+void dump_context(FILE *f, dump_encoding_t dump_encoding,
+                  const std::unordered_set<std::string> *context_keys_to_discard)
+{
+  char *base64_str = dump_context_str(dump_encoding, context_keys_to_discard);
+  fprintf(f, "%s", base64_str);
+  free(base64_str);
+}
+
+/*!
+ * \brief Dump the current GRM context object into a string.
+ *
+ * \param[in] dump_encoding The encoding of the serialized context. See `dump_context` for details.
+ * \param[in] context_keys_to_discard The context keys which will be excluded in the dump.
+ * \return A C-string containing the serialized context. The caller is responsible for freeing the returned string.
+ */
+char *dump_context_str(dump_encoding_t dump_encoding, const std::unordered_set<std::string> *context_keys_to_discard)
+{
+  auto memwriter = memwriter_new();
+  if (memwriter == nullptr)
+    {
+      debug_print_malloc_error();
+      return nullptr;
+    }
+  auto context = global_render->getContext();
+
+  tojson_write(memwriter, "o(");
+  for (auto item : *context)
+    {
+      std::visit(
+          GRM::overloaded{[&memwriter, &context_keys_to_discard](
+                              std::reference_wrapper<std::pair<const std::string, std::vector<double>>> pair_ref) {
+                            if (context_keys_to_discard->find(pair_ref.get().first) != context_keys_to_discard->end())
+                              return;
+                            std::stringstream format_stream;
+                            format_stream << pair_ref.get().first << ":nD";
+                            tojson_write(memwriter, format_stream.str().c_str(), pair_ref.get().second.size(),
+                                         pair_ref.get().second.data());
+                          },
+                          [&memwriter, &context_keys_to_discard](
+                              std::reference_wrapper<std::pair<const std::string, std::vector<int>>> pair_ref) {
+                            if (context_keys_to_discard->find(pair_ref.get().first) != context_keys_to_discard->end())
+                              return;
+                            std::stringstream format_stream;
+                            format_stream << pair_ref.get().first << ":nI";
+                            tojson_write(memwriter, format_stream.str().c_str(), pair_ref.get().second.size(),
+                                         pair_ref.get().second.data());
+                          },
+                          [&memwriter, &context_keys_to_discard](
+                              std::reference_wrapper<std::pair<const std::string, std::vector<std::string>>> pair_ref) {
+                            if (context_keys_to_discard->find(pair_ref.get().first) != context_keys_to_discard->end())
+                              return;
+                            std::stringstream format_stream;
+                            format_stream << pair_ref.get().first << ":nS";
+                            std::vector<const char *> c_strings;
+                            c_strings.reserve(pair_ref.get().second.size());
+                            for (const auto &str : pair_ref.get().second)
+                              {
+                                c_strings.push_back(str.c_str());
+                              }
+                            tojson_write(memwriter, format_stream.str().c_str(), pair_ref.get().second.size(),
+                                         c_strings.data());
+                          }},
+          item);
+    }
+  tojson_write(memwriter, ")");
+  char *encoded_string = nullptr;
+  switch (dump_encoding)
+    {
+    case DUMP_JSON_ESCAPE_DOUBLE_MINUS:
+      encoded_string = strdup(escape_double_minus(memwriter_buf(memwriter)).c_str());
+      break;
+    case DUMP_JSON_BASE64:
+      err_t error;
+      encoded_string = base64_encode(nullptr, memwriter_buf(memwriter), memwriter_size(memwriter), &error);
+      if (error != ERROR_NONE)
+        {
+          logger((stderr, "Got error \"%d\" (\"%s\")!\n", error, error_names[error]));
+        }
+      break;
+    default:
+      // Plain JSON
+      encoded_string = strdup(memwriter_buf(memwriter));
+    }
+  if (encoded_string == nullptr)
+    {
+      debug_print_malloc_error();
+    }
+
+  memwriter_delete(memwriter);
+  return encoded_string;
+}
+
+/*!
+ * \brief Dump the current GRM context object into an XML comment.
+ *
+ * This function generates a special XML comment and embeds the context object as a JSON document. In order to avoid a
+ * broken XML comment, double minus signs (`--`) in the JSON document are escaped by replacing them with `-\-`.
+ *
+ * \param[in] f The file object, the comment will be written into.
+ * \param[in] context_keys_to_discard The context keys which will be excluded in the dump.
+ */
+void dump_context_as_xml_comment(FILE *f, const std::unordered_set<std::string> *context_keys_to_discard)
+{
+  fprintf(f, "<!-- __grm_context__: ");
+  dump_context(f, DUMP_JSON_ESCAPE_DOUBLE_MINUS, context_keys_to_discard);
+  fprintf(f, " -->\n");
+}
+
+/*!
+ * \brief Dump the current GRM context object into an XML comment. See `dump_context_as_xml_comment` for details.
+ *
+ * \param[in] context_keys_to_discard The context keys which will be excluded in the dump.
+ * \return A C-string containing the XML comment. The caller is responsible for freeing the returned string.
+ */
+char *dump_context_as_xml_comment_str(const std::unordered_set<std::string> *context_keys_to_discard)
+{
+  char *escaped_json_str = nullptr;
+  size_t escaped_json_strlen;
+  char *xml_comment = nullptr;
+
+  escaped_json_str = dump_context_str(DUMP_JSON_ESCAPE_DOUBLE_MINUS, context_keys_to_discard);
+  cleanup_if(escaped_json_str == nullptr);
+  escaped_json_strlen = strlen(escaped_json_str);
+  /* 27 = strlen("<!-- __grm_context__:  -->") + 1 (`\0`) */
+  xml_comment = static_cast<char *>(malloc(escaped_json_strlen + 27));
+  cleanup_if(xml_comment == nullptr);
+  strcpy(xml_comment, "<!-- __grm_context__: ");
+  strcpy(xml_comment + 22, escaped_json_str);
+  strcpy(xml_comment + 22 + escaped_json_strlen, " -->");
+  xml_comment[escaped_json_strlen + 26] = '\0';
+
+cleanup:
+  free(escaped_json_str);
+
+  return xml_comment;
+}
+
+
+/* ------------------------- load ----------------------------------------------------------------------------------- */
+
+namespace internal
+{
+
+/*!
+ * \brief Helper template function to avoid code duplication in `load_context_str`.
+ *
+ * All arguments of this function are simply passed through from `load_context_str`.
+ *
+ * \tparam T The type of the value which is read from the context argument container.
+ * \tparam U The type of the value which is stored in the GRM context.
+ */
+template <typename T, typename U>
+static void put_value_into_context(arg_t *context_arg, grm_args_value_iterator_t *context_arg_value_it,
+                                   GRM::Context &context)
+{
+  if (context_arg_value_it->is_array)
+    {
+      T *value_array = *static_cast<T **>(context_arg_value_it->value_ptr);
+      context[context_arg->key] = std::vector<U>(value_array, value_array + context_arg_value_it->array_length);
+    }
+  else
+    {
+      T value = *static_cast<T *>(context_arg_value_it->value_ptr);
+      context[context_arg->key] = std::vector<U>{value};
+    }
+};
+} // namespace internal
+
+/*!
+ * \brief Load a GRM context object from a JSON string
+ *
+ * \param[in] context The context object to load into
+ * \param[in] context_str The serialized context string to deserialize
+ * \param[in] dump_encoding The encoding of the context string. Set to `DUMP_AUTO_DETECT` to detect the encoding.
+ *                          WARNING: Auto-detection may not be reliable. Currently, only Base64 and double minus escape
+ *                          formats can be detected. Plain JSON is always detected as double minus escape format.
+ * \throw std::runtime_error
+ */
+void load_context_str(GRM::Context &context, const std::string &context_str, dump_encoding_t dump_encoding)
+{
+  const char *serialized_context;
+  std::string serialized_context_tmp_;
+  if (dump_encoding == DUMP_AUTO_DETECT)
+    {
+      dump_encoding = context_str[0] == '{' ? DUMP_JSON_ESCAPE_DOUBLE_MINUS : DUMP_JSON_BASE64;
+    }
+  switch (dump_encoding)
+    {
+    case DUMP_JSON_ESCAPE_DOUBLE_MINUS:
+      serialized_context_tmp_ = unescape_double_minus(context_str);
+      serialized_context = serialized_context_tmp_.c_str();
+      break;
+    case DUMP_JSON_BASE64:
+      err_t error;
+      serialized_context = base64_decode(nullptr, context_str.c_str(), nullptr, &error);
+      if (error != ERROR_NONE)
+        {
+          std::stringstream error_description;
+          error_description << "error \"" << error << "\" (\"" << error_names[error] << "\")";
+          logger((stderr, "Got %s!\n", error_description.str().c_str()));
+          // TODO: Throw a custom exception type when `plot.cxx` has a better C++ interface
+          throw std::runtime_error("Failed to decode base64 context string (" + error_description.str() + ")");
+        }
+      break;
+    default:
+      // Plain JSON
+      serialized_context = context_str.c_str();
+    }
+  auto context_args = grm_args_new();
+  if (context_args == nullptr)
+    {
+      throw std::runtime_error("Failed to create context args object");
+    }
+  fromjson_read(context_args, serialized_context);
+  auto context_args_it = grm_args_iter(context_args);
+  arg_t *context_arg;
+  while ((context_arg = context_args_it->next(context_args_it)))
+    {
+      auto context_arg_value_it = grm_arg_value_iter(context_arg);
+      while (context_arg_value_it->next(context_arg_value_it) != NULL)
+        {
+          switch (context_arg_value_it->format)
+            {
+            case 'i':
+              internal::put_value_into_context<int, int>(context_arg, context_arg_value_it, context);
+              break;
+            case 'd':
+              internal::put_value_into_context<double, double>(context_arg, context_arg_value_it, context);
+              break;
+            case 's':
+              internal::put_value_into_context<char *, std::string>(context_arg, context_arg_value_it, context);
+              break;
+            }
+        }
+    }
+}
 
 
 /* ------------------------- xml ------------------------------------------------------------------------------------ */
@@ -4813,7 +5081,7 @@ private:
 class GraphicsTreeParseHandler : public DefaultHandler, public SaxErrorHandler, public PSVIHandler
 {
 public:
-  GraphicsTreeParseHandler() {}
+  GraphicsTreeParseHandler(GRM::Context &context) : context_(context) {}
   ~GraphicsTreeParseHandler() {}
 
   void startDocument() override {}
@@ -4862,6 +5130,24 @@ public:
   void endElement(const XMLCh *const uri, const XMLCh *const localname, const XMLCh *const qname) override
   {
     insertion_parent_ = insertion_parent_->parentElement();
+  }
+
+  /*!
+   * \brief Process comments in the XML document.
+   *
+   * This function parses special GRM comments to load a serialized context.
+   */
+  void comment(const XMLCh *const chars, const XMLSize_t length) override
+  {
+    std::string comment{encode(chars)};
+    std::string_view comment_view{comment};
+    comment_view = trim(comment_view);
+    if (starts_with(comment_view, "__grm_context__:"))
+      {
+        comment_view.remove_prefix(16);
+        comment_view = ltrim(comment_view);
+        load_context_str(context_, std::string(comment_view), DUMP_AUTO_DETECT);
+      }
   }
 
   /*!
@@ -4950,6 +5236,7 @@ private:
   std::string encode(std::optional<const XMLCh *> chars = std::nullopt) { return xml_buffer_.encode(chars); }
 
   XMLStringBuffer xml_buffer_{"UTF-8"};
+  GRM::Context &context_;
   std::shared_ptr<GRM::Element> insertion_parent_, current_element_;
   std::vector<std::pair<std::string, std::string>> current_attributes_;
 };
@@ -5030,6 +5317,7 @@ private:
 };
 } // namespace XERCES_CPP_NAMESPACE
 
+extern "C" {
 
 /*!
  * \brief Load a graphics tree from an XML file.
@@ -5082,6 +5370,7 @@ int grm_load_graphics_tree(FILE *file)
         GraphicsTreeParseHandler handler(*global_render->getContext());
         parser->setPSVIHandler(&handler);
         parser->setContentHandler(&handler);
+        parser->setLexicalHandler(&handler);
         parser->setErrorHandler(static_cast<SaxErrorHandler *>(&handler));
         parser->parse(FileInputSource(file));
         errorCount = parser->getErrorCount();
@@ -5322,10 +5611,84 @@ int grm_clear(void)
   return 1;
 }
 
+namespace internal
+{
+/*!
+ * \brief Restore backup attributes on the graphics tree when dumped with the `toXML` function.
+ *
+ * Use objects of this class as functor to filter attributes on the graphics tree which have a backup attribute. Rename
+ * backup attributes to match the names of the deleted attributes. This filter is needed to discard tranformed context
+ * data and to export the original data when the graphics tree is saved to an XML file.
+ */
+class RestoreBackupAttributeFilter
+{
+public:
+  /*!
+   * \brief The overloaded ()-operator to provide functor functionality.
+   *
+   * \param[in] attribute_name The name of attribute to filter.
+   * \param[in] element The element the currently processed attribute belongs to.
+   * \param[out] new_attribute_name Can be used to set a modified name for the current attribute. Leave unset or set to
+   *                                `std::nullopt` to keep the current attribute name.
+   * \return `true` if the attribute should be kept, `false` otherwise.
+   */
+  bool operator()(const std::string &attribute_name, const GRM::Element &element,
+                  std::optional<std::string> &new_attribute_name)
+  {
+    if (attribute_name.empty()) return false;
+
+    if (attribute_name[0] == '_')
+      {
+        std::optional<std::string_view> original_attribute_name = is_backup_attribute_for(attribute_name);
+        if (original_attribute_name &&
+            restore_backup_format_excludes.find(*original_attribute_name) == restore_backup_format_excludes.end())
+          {
+            new_attribute_name = *original_attribute_name;
+          }
+        return true;
+      }
+
+    if (restore_backup_format_excludes.find(attribute_name) == restore_backup_format_excludes.end())
+      {
+        std::stringstream potential_backup_attribute_name_stream;
+        potential_backup_attribute_name_stream << "_" << attribute_name << "_org";
+        auto potential_backup_attribute_name = potential_backup_attribute_name_stream.str();
+        if (element.hasAttribute(potential_backup_attribute_name))
+          {
+            if (element.getAttribute(attribute_name) != element.getAttribute(potential_backup_attribute_name) &&
+                str_equals_any(attribute_name, "x", "y", "z"))
+              {
+                context_keys_to_discard_.insert(static_cast<std::string>(element.getAttribute(attribute_name)));
+              }
+            return false;
+          }
+      }
+    return true;
+  }
+
+  /*!
+   * \brief Get the set of context keys which should be discarded when saving the graphics tree to an XML file.
+   */
+  const std::unordered_set<std::string> &context_keys_to_discard() const { return context_keys_to_discard_; }
+
+private:
+  std::unordered_set<std::string> context_keys_to_discard_;
+};
+} // namespace internal
+
 void grm_dump_graphics_tree(FILE *f)
 {
+  internal::RestoreBackupAttributeFilter restore_backup_attribute_filter;
   const unsigned int indent = 2;
-  fprintf(f, "%s\n", toXML(global_root, GRM::SerializerOptions{std::string(indent, ' ')}).c_str());
+  // Use a lambda around `restore_backup_attribute_filter` to make sure it is used by reference.
+  fprintf(f, "%s",
+          toXML(global_root, GRM::SerializerOptions{std::string(indent, ' ')},
+                [&restore_backup_attribute_filter](const std::string &attribute_name, const GRM::Element &element,
+                                                   std::optional<std::string> &new_attribute_name) -> bool {
+                  return restore_backup_attribute_filter(attribute_name, element, new_attribute_name);
+                })
+              .c_str());
+  dump_context_as_xml_comment(f, &restore_backup_attribute_filter.context_keys_to_discard());
 }
 
 unsigned int grm_max_plotid(void)
@@ -5342,10 +5705,21 @@ unsigned int grm_max_plotid(void)
 
 char *grm_dump_graphics_tree_str(void)
 {
-  std::string graphics_tree_str = toXML(global_root);
-  char *graphics_tree_cstr = new char[graphics_tree_str.length() + 1];
-  strcpy(graphics_tree_cstr, graphics_tree_str.c_str());
-  return graphics_tree_cstr;
+  internal::RestoreBackupAttributeFilter restore_backup_attribute_filter;
+  // Use a lambda around `restore_backup_attribute_filter` to make sure it is used by reference.
+  std::string graphics_tree_str =
+      toXML(global_root, GRM::SerializerOptions{},
+            [&restore_backup_attribute_filter](const std::string &attribute_name, const GRM::Element &element,
+                                               std::optional<std::string> &new_attribute_name) -> bool {
+              return restore_backup_attribute_filter(attribute_name, element, new_attribute_name);
+            });
+  char *context_cstr = dump_context_as_xml_comment_str(&restore_backup_attribute_filter.context_keys_to_discard());
+  char *graphics_tree_with_context_cstr =
+      static_cast<char *>(malloc(graphics_tree_str.length() + strlen(context_cstr) + 1));
+  strcpy(graphics_tree_with_context_cstr, graphics_tree_str.c_str());
+  strcpy(graphics_tree_with_context_cstr + graphics_tree_str.length(), context_cstr);
+  free(context_cstr);
+  return graphics_tree_with_context_cstr;
 }
 
 int grm_merge(const grm_args_t *args)
@@ -5800,8 +6174,7 @@ int grm_switch(unsigned int id)
 
   return 1;
 }
-
-} /* end of extern "C" block */
+}
 
 /* ========================= c++ ==================================================================================== */
 

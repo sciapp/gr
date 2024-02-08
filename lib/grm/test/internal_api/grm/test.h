@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #ifndef NDEBUG
 #define DEFINE_TEST_MAIN                                \
