@@ -15,6 +15,9 @@ extern "C" {
 #ifdef __cplusplus
 }
 
+#include <optional>
+
+#include <grm/dom_render/context.hxx>
 #include <grm/dom_render/graphics_tree/Element.hxx>
 
 #include <grm/plot.h>
@@ -66,6 +69,17 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_DEFAULT_COLORBAR_WIDTH 0.03
 
 /* ========================= datatypes ============================================================================== */
+
+/* ------------------------- dump ----------------------------------------------------------------------------------- */
+
+typedef enum
+{
+  DUMP_AUTO_DETECT = 0,
+  DUMP_JSON_PLAIN = 1,
+  DUMP_JSON_ESCAPE_DOUBLE_MINUS = 2,
+  DUMP_JSON_BASE64 = 3,
+} dump_encoding_t;
+
 
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
 
@@ -165,8 +179,27 @@ int get_free_id_from_figure_elements();
 
 #ifdef __cplusplus
 }
-
 #endif
+
+
+/* ------------------------- dump ----------------------------------------------------------------------------------- */
+
+#ifdef __cplusplus
+void dump_context(FILE *f, dump_encoding_t dump_encoding,
+                  const std::unordered_set<std::string> *context_keys_to_discard = nullptr);
+char *dump_context_str(dump_encoding_t dump_encoding,
+                       const std::unordered_set<std::string> *context_keys_to_discard = nullptr);
+
+void dump_context_as_xml_comment(FILE *f, const std::unordered_set<std::string> *context_keys_to_discard = nullptr);
+char *dump_context_as_xml_comment_str(const std::unordered_set<std::string> *context_keys_to_discard = nullptr);
+#endif
+
+/* ------------------------- load ----------------------------------------------------------------------------------- */
+
+#ifdef __cplusplus
+void load_context_str(GRM::Context &context, const std::string &context_str, dump_encoding_t dump_encoding);
+#endif
+
 
 /* ------------------------- xml ------------------------------------------------------------------------------------ */
 

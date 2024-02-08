@@ -515,6 +515,8 @@ public:
 
   static void getFigureSize(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height);
 
+  std::shared_ptr<Context> getRenderContext();
+
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context
   void render(const std::shared_ptr<Document> &document);  // external doc and render context
