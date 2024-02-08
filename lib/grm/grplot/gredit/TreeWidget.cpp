@@ -53,27 +53,39 @@ void TreeWidget::updateDataRecursion(std::shared_ptr<GRM::Element> ref, CustomTr
     }
 }
 
-static void changeChildSelectedStatus(CustomTreeWidgetItem *item, bool status)
-{
-  for (int i = 0; i < item->childCount(); ++i)
-    {
-      auto child = dynamic_cast<CustomTreeWidgetItem *>(item->child(i));
-      child->getRef()->setAttribute("_selected", status);
-      child->setCheckState(0, (status) ? Qt::Checked : Qt::Unchecked);
-      if (child->childCount() > 0) changeChildSelectedStatus(child, status);
-    }
-}
-
 bool TreeWidget::checkboxStatusChanged(CustomTreeWidgetItem *item)
 {
-  bool movable_status =
+  bool selected_status =
       item->getRef()->hasAttribute("_selected") && static_cast<int>(item->getRef()->getAttribute("_selected"));
   if (item->getRef()->localName() != "root" &&
-      ((item->checkState(0) == 0 && movable_status == true) || (item->checkState(0) == 2 && movable_status == false)))
+      ((item->checkState(0) == 0 && selected_status == true) || (item->checkState(0) == 2 && selected_status == false)))
     {
       // checkbox status got changed
-      item->getRef()->setAttribute("_selected", !movable_status);
-      changeChildSelectedStatus(item, !movable_status);
+      auto bbox_id = static_cast<int>(item->getRef()->getAttribute("_bbox_id"));
+      auto bbox_x_min = static_cast<double>(item->getRef()->getAttribute("_bbox_x_min"));
+      auto bbox_x_max = static_cast<double>(item->getRef()->getAttribute("_bbox_x_max"));
+      auto bbox_y_min = static_cast<double>(item->getRef()->getAttribute("_bbox_y_min"));
+      auto bbox_y_max = static_cast<double>(item->getRef()->getAttribute("_bbox_y_max"));
+      std::unique_ptr<Bounding_object> bbox(
+          new Bounding_object(bbox_id, bbox_x_min, bbox_x_max, bbox_y_min, bbox_y_max, item->getRef()));
+      if (!selected_status)
+        {
+          grplot_widget->add_current_selection(std::move(bbox));
+        }
+      else
+        {
+          const auto &selections = grplot_widget->get_current_selections();
+          for (auto it = std::begin(selections); it != std::end(selections); ++it)
+            {
+              if ((*it)->get_ref() == bbox->get_ref())
+                {
+                  it = grplot_widget->erase_current_selection(it);
+                  break;
+                }
+            }
+        }
+      item->getRef()->setAttribute("_selected", !selected_status);
+      grplot_widget->redraw(false);
     }
 
   if (item->getRef() != nullptr)

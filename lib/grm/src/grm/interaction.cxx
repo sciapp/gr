@@ -357,6 +357,90 @@ err_t tooltip_list_entry_delete(tooltip_list_entry_t entry)
 
 /* ------------------------- user interaction ----------------------------------------------------------------------- */
 
+static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &element, double ndc_x, double ndc_y,
+                                     double xshift, double yshift, bool is_movable)
+{
+  double tmp = 0, x_with_shift, y_with_shift, x_ndc, y_ndc;
+  double old_x_shift = 0, old_y_shift = 0, wc_x_shift, wc_y_shift;
+  int width, height, max_width_height;
+  std::string post_fix = "_wc";
+  std::vector<std::string> ndc_transformation_elems = {"figure",
+                                                       "plot",
+                                                       "colorbar",
+                                                       "labels_group",
+                                                       "titles_3d",
+                                                       "text",
+                                                       "y_tick_label_group",
+                                                       "x_tick_label_group",
+                                                       "draw_graphics",
+                                                       "layout_grid_element",
+                                                       "layout_grid",
+                                                       "central_region"};
+
+  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
+  max_width_height = grm_max(width, height);
+
+  if (std::find(ndc_transformation_elems.begin(), ndc_transformation_elems.end(), element->localName()) !=
+          ndc_transformation_elems.end() ||
+      (element->hasAttribute("marginal_heatmap_side_plot") &&
+       static_cast<int>(element->getAttribute("marginal_heatmap_side_plot"))))
+    post_fix = "_ndc";
+
+  x_with_shift = ndc_x + (double)xshift / max_width_height;
+  x_ndc = ndc_x;
+  y_with_shift = ndc_y + (double)yshift / max_width_height;
+  y_ndc = ndc_y;
+
+  gr_ndctowc(&x_with_shift, &y_with_shift);
+  gr_ndctowc(&x_ndc, &y_ndc);
+
+  wc_x_shift = x_with_shift - x_ndc;
+  wc_y_shift = y_ndc - y_with_shift;
+
+  if (element->hasAttribute("x_shift" + post_fix))
+    old_x_shift = static_cast<double>(element->getAttribute("x_shift" + post_fix));
+  if (element->hasAttribute("y_shift" + post_fix))
+    old_y_shift = static_cast<double>(element->getAttribute("y_shift" + post_fix));
+
+  if (xshift != 0)
+    {
+      if (post_fix == "_wc")
+        {
+          if (is_movable && element->localName() == "polyline" &&
+              static_cast<std::string>(element->getAttribute("name")) == "integral_left")
+            {
+              auto old_int_lim_low = static_cast<double>(element->parentElement()->getAttribute("int_lim_low"));
+              element->parentElement()->setAttribute("int_lim_low", old_int_lim_low + wc_x_shift);
+            }
+          else if (is_movable && element->localName() == "polyline" &&
+                   static_cast<std::string>(element->getAttribute("name")) == "integral_right")
+            {
+              auto old_int_lim_high = static_cast<double>(element->parentElement()->getAttribute("int_lim_high"));
+              element->parentElement()->setAttribute("int_lim_high", old_int_lim_high + wc_x_shift);
+            }
+          else
+            {
+              element->setAttribute("x_shift" + post_fix, old_x_shift + wc_x_shift);
+            }
+        }
+      else
+        {
+          element->setAttribute("x_shift" + post_fix, old_x_shift + (double)xshift / max_width_height);
+        }
+    }
+  if (yshift != 0)
+    {
+      if (post_fix == "_wc")
+        {
+          element->setAttribute("y_shift" + post_fix, old_y_shift + wc_y_shift);
+        }
+      else
+        {
+          element->setAttribute("y_shift" + post_fix, old_y_shift + (double)yshift / max_width_height);
+        }
+    }
+}
+
 int grm_input(const grm_args_t *input_args)
 {
   /*
@@ -385,10 +469,10 @@ int grm_input(const grm_args_t *input_args)
   int x, y, x1, y1, x2, y2;
   double viewport_mid_x, viewport_mid_y;
   bool clear_locked_state = false;
-
+  int selection_status;
   logger((stderr, "Processing input\n"));
 
-  GRM::Render::get_figure_size(&width, &height, nullptr, nullptr);
+  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
   logger((stderr, "Using size (%d, %d)\n", width, height));
 
@@ -414,6 +498,11 @@ int grm_input(const grm_args_t *input_args)
       logger((stderr, "x: %d, y: %d, ndc_x: %lf, ndc_y: %lf\n", x, y, ndc_x, ndc_y));
 
       auto subplot_element = get_subplot_from_ndc_point_using_dom(ndc_x, ndc_y);
+      if (subplot_element == nullptr && grm_args_values(input_args, "move_selection", "i", &selection_status))
+        {
+          // needed so the cursor doesn't need to be inside the window for gredit element moving
+          subplot_element = grm_get_document_root()->querySelectors("plot[plot_group]");
+        }
 
       if (grm_args_values(input_args, "key", "s", &key))
         {
@@ -434,7 +523,8 @@ int grm_input(const grm_args_t *input_args)
                       static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "3d")
                     {
                       logger((stderr, "Reset single subplot coordinate rotation\n"));
-                      subplot_element->setAttribute("reset_rotation", 1);
+                      auto central_region = subplot_element->querySelectors("central_region");
+                      central_region->setAttribute("reset_rotation", 1);
                     }
                 }
               else
@@ -714,7 +804,37 @@ int grm_input(const grm_args_t *input_args)
 
           if (grm_args_values(input_args, "x_shift", "i", &xshift) &&
               grm_args_values(input_args, "y_shift", "i", &yshift) &&
-              !grm_args_values(input_args, "movable_state", "i", &movable_status))
+              grm_args_values(input_args, "move_selection", "i", &selection_status))
+            {
+              GRM::Render::processViewport(subplot_element);
+              GRM::Render::processLimits(subplot_element);
+              GRM::Render::processWindow(subplot_element);
+
+              gr_savestate();
+              for (const auto &elem : subplot_element->parentElement()->children())
+                {
+                  if (elem->hasAttribute("viewport_x_min"))
+                    {
+                      gr_setviewport(
+                          (double)elem->getAttribute("viewport_x_min"), (double)elem->getAttribute("viewport_x_max"),
+                          (double)elem->getAttribute("viewport_y_min"), (double)elem->getAttribute("viewport_y_max"));
+                      gr_setwindow(
+                          (double)elem->getAttribute("window_x_min"), (double)elem->getAttribute("window_x_max"),
+                          (double)elem->getAttribute("window_y_min"), (double)elem->getAttribute("window_y_max"));
+                      gr_setscale(static_cast<int>(elem->getAttribute("scale")));
+                      break;
+                    }
+                }
+
+              for (const auto &selection : grm_get_document_root()->querySelectorsAll("[_selected=1]"))
+                {
+                  moveTransformationHelper(selection, ndc_x, ndc_y, xshift, yshift, false);
+                }
+              gr_restorestate();
+            }
+          else if (grm_args_values(input_args, "x_shift", "i", &xshift) &&
+                   grm_args_values(input_args, "y_shift", "i", &yshift) &&
+                   !grm_args_values(input_args, "movable_state", "i", &movable_status))
             {
               double ndc_xshift, ndc_yshift, rotation, tilt;
               int shift_pressed;
@@ -730,8 +850,9 @@ int grm_input(const grm_args_t *input_args)
                     }
                   else
                     {
-                      rotation = static_cast<double>(subplot_element->getAttribute("space_3d_phi"));
-                      tilt = static_cast<double>(subplot_element->getAttribute("space_3d_theta"));
+                      auto central_region = subplot_element->querySelectors("central_region");
+                      rotation = static_cast<double>(central_region->getAttribute("space_3d_phi"));
+                      tilt = static_cast<double>(central_region->getAttribute("space_3d_theta"));
 
                       rotation += xshift * 0.2;
                       tilt -= yshift * 0.2;
@@ -745,8 +866,8 @@ int grm_input(const grm_args_t *input_args)
                           tilt = 0;
                         }
                       grm_get_render()->setAutoUpdate(false);
-                      subplot_element->setAttribute("space_3d_phi", rotation);
-                      subplot_element->setAttribute("space_3d_theta", tilt);
+                      central_region->setAttribute("space_3d_phi", rotation);
+                      central_region->setAttribute("space_3d_theta", tilt);
                       grm_get_render()->setAutoUpdate(true);
                     }
                 }
@@ -795,9 +916,6 @@ int grm_input(const grm_args_t *input_args)
 
               if (!disable_movable_trans && movable != nullptr)
                 {
-                  double tmp = 0, x_with_shift, y_with_shift, x_ndc, y_ndc;
-                  double old_x_shift = 0, old_y_shift = 0, wc_x_shift, wc_y_shift;
-
                   movable_obj_ref = movable;
 
                   GRM::Render::processViewport(subplot_element);
@@ -821,47 +939,7 @@ int grm_input(const grm_args_t *input_args)
                         }
                     }
 
-                  x_with_shift = ndc_x + (double)xshift / max_width_height;
-                  x_ndc = ndc_x;
-                  y_with_shift = ndc_y + (double)yshift / max_width_height;
-                  y_ndc = ndc_y;
-
-                  gr_ndctowc(&x_with_shift, &y_with_shift);
-                  gr_ndctowc(&x_ndc, &y_ndc);
-
-                  wc_x_shift = x_with_shift - x_ndc;
-                  wc_y_shift = y_ndc - y_with_shift;
-
-                  if (movable->hasAttribute("x_shift"))
-                    old_x_shift = static_cast<double>(movable->getAttribute("x_shift"));
-                  if (movable->hasAttribute("y_shift"))
-                    old_y_shift = static_cast<double>(movable->getAttribute("y_shift"));
-
-                  if (xshift != 0)
-                    {
-                      if (movable->localName() == "polyline" &&
-                          static_cast<std::string>(movable->getAttribute("name")) == "integral_left")
-                        {
-                          double old_int_lim_low =
-                              static_cast<double>(movable->parentElement()->getAttribute("int_lim_low"));
-                          movable->parentElement()->setAttribute("int_lim_low", old_int_lim_low + wc_x_shift);
-                        }
-                      else if (movable->localName() == "polyline" &&
-                               static_cast<std::string>(movable->getAttribute("name")) == "integral_right")
-                        {
-                          double old_int_lim_high =
-                              static_cast<double>(movable->parentElement()->getAttribute("int_lim_high"));
-                          movable->parentElement()->setAttribute("int_lim_high", old_int_lim_high + wc_x_shift);
-                        }
-                      else
-                        {
-                          movable->setAttribute("x_shift", old_x_shift + wc_x_shift);
-                        }
-                    }
-                  if (yshift != 0)
-                    {
-                      movable->setAttribute("y_shift", old_y_shift + wc_y_shift);
-                    }
+                  moveTransformationHelper(movable, ndc_x, ndc_y, xshift, yshift, true);
                   gr_restorestate();
                 }
             }
@@ -904,7 +982,7 @@ int grm_is3d(const int x, const int y)
   double ndc_x, ndc_y;
   const char *kind;
 
-  GRM::Render::get_figure_size(&width, &height, nullptr, nullptr);
+  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
   ndc_x = (double)x / max_width_height;
   ndc_y = (double)y / max_width_height;
@@ -917,10 +995,7 @@ int grm_is3d(const int x, const int y)
     {
       return 1;
     }
-  else
-    {
-      return 0;
-    }
+  return 0;
 }
 
 int grm_get_box(const int x1, const int y1, const int x2, const int y2, const int keep_aspect_ratio, int *x, int *y,
@@ -931,7 +1006,7 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   double viewport_mid_x, viewport_mid_y;
   double ws_window[4], viewport[4];
   std::shared_ptr<GRM::Element> subplot_element;
-  GRM::Render::get_figure_size(&width, &height, nullptr, nullptr);
+  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
   if (!get_focus_and_factor_from_dom(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x, &focus_y,
                                      subplot_element))
@@ -1170,7 +1245,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
   info->ylabel = (char *)"y";
   info->label = (char *)"";
 
-  GRM::Render::get_figure_size(&width, &height, nullptr, nullptr);
+  GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
   x = (double)mouse_x / max_width_height;
   y = (double)(height - mouse_y) / max_width_height;
@@ -1643,7 +1718,7 @@ int grm_get_hover_mode(int mouse_x, int mouse_y, int disable_movable_xform)
   if (!disable_movable_xform)
     {
       int width, height, max_width_height;
-      GRM::Render::get_figure_size(&width, &height, nullptr, nullptr);
+      GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
       max_width_height = grm_max(width, height);
 
       double ndc_x, ndc_y;

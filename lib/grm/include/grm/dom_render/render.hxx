@@ -198,6 +198,8 @@ public:
 
   std::shared_ptr<GRM::Element> createPlot(int plotId, const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
+  std::shared_ptr<GRM::Element> createCentralRegion(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+
   std::shared_ptr<Element> createPolymarker(const std::string &x_key, std::optional<std::vector<double>> x,
                                             const std::string &y_key, std::optional<std::vector<double>> y,
                                             const std::shared_ptr<Context> &extContext = nullptr, int marker_type = 0,
@@ -515,7 +517,7 @@ public:
 
   static void getAutoUpdate(bool *update);
 
-  static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height);
+  static void getFigureSize(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height);
 
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context
