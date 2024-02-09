@@ -11906,7 +11906,8 @@ void gr_mathtex3d(double x, double y, double z, char *string, int axis)
 
   mathtex2_3d(x, y, z, start, axis, text3d_get_height(), 0, NULL, NULL, NULL, NULL);
 
-  if (flag_stream) gr_writestream("<mathtex3d x=\"%g\" y=\"%g\" z=\"%g\" text=\"%s\"/>\n", x, y, z, string);
+  if (flag_stream)
+    gr_writestream("<mathtex3d x=\"%g\" y=\"%g\" z=\"%g\" text=\"%s\" axis=\"%d\"/>\n", x, y, z, string, axis);
 
   free(s);
 }
