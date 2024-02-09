@@ -11816,40 +11816,64 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
  */
 void gr_mathtex(double x, double y, char *string)
 {
+  char *s, *start;
+  int len;
   int unused;
   int prec;
 
   check_autoinit;
 
+  s = start = strdup(string);
+  len = strlen(s);
+  if (*s == '$' && s[len - 1] == '$')
+    {
+      s[len - 1] = '\0';
+      start = s + 1;
+    }
+
   gks_inq_text_fontprec(&unused, &unused, &prec);
   if (prec == 3)
     {
-      mathtex2(x, y, string, 0, NULL, NULL, NULL);
+      mathtex2(x, y, start, 0, NULL, NULL, NULL);
     }
   else
     {
-      mathtex(x, y, string, 0, NULL, NULL);
+      mathtex(x, y, start, 0, NULL, NULL);
     }
 
   if (flag_stream) gr_writestream("<mathtex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+
+  free(s);
 }
 
 void gr_inqmathtex(double x, double y, char *string, double *tbx, double *tby)
 {
+  char *s, *start;
+  int len;
   int unused;
   int prec;
 
   check_autoinit;
 
+  s = start = strdup(string);
+  len = strlen(s);
+  if (*s == '$' && s[len - 1] == '$')
+    {
+      s[len - 1] = '\0';
+      start = s + 1;
+    }
+
   gks_inq_text_fontprec(&unused, &unused, &prec);
   if (prec == 3)
     {
-      mathtex2(x, y, string, 1, tbx, tby, NULL);
+      mathtex2(x, y, start, 1, tbx, tby, NULL);
     }
   else
     {
-      mathtex(x, y, string, 1, tbx, tby);
+      mathtex(x, y, start, 1, tbx, tby);
     }
+
+  free(s);
 }
 
 void mathtex2_3d(double x, double y, double z, const char *formula, int axis, double textScale, int inquire,
@@ -11867,11 +11891,24 @@ void mathtex2_3d(double x, double y, double z, const char *formula, int axis, do
  */
 void gr_mathtex3d(double x, double y, double z, char *string, int axis)
 {
+  char *s, *start;
+  int len;
+
   check_autoinit;
 
-  mathtex2_3d(x, y, z, string, axis, text3d_get_height(), 0, NULL, NULL, NULL, NULL);
+  s = start = strdup(string);
+  len = strlen(s);
+  if (*s == '$' && s[len - 1] == '$')
+    {
+      s[len - 1] = '\0';
+      start = s + 1;
+    }
+
+  mathtex2_3d(x, y, z, start, axis, text3d_get_height(), 0, NULL, NULL, NULL, NULL);
 
   if (flag_stream) gr_writestream("<mathtex3d x=\"%g\" y=\"%g\" z=\"%g\" text=\"%s\"/>\n", x, y, z, string);
+
+  free(s);
 }
 
 /*!
@@ -11891,9 +11928,22 @@ void gr_mathtex3d(double x, double y, double z, char *string, int axis)
 void gr_inqmathtex3d(double x, double y, double z, char *string, int axis, double *tbx, double *tby, double *tbz,
                      double *baseline)
 {
+  char *s, *start;
+  int len;
+
   check_autoinit;
 
-  mathtex2_3d(x, y, z, string, axis, text3d_get_height(), 1, tbx, tby, tbz, baseline);
+  s = start = strdup(string);
+  len = strlen(s);
+  if (*s == '$' && s[len - 1] == '$')
+    {
+      s[len - 1] = '\0';
+      start = s + 1;
+    }
+
+  mathtex2_3d(x, y, z, start, axis, text3d_get_height(), 1, tbx, tby, tbz, baseline);
+
+  free(s);
 }
 
 static void append(double x, double y, char *string, int line_number, int math)
