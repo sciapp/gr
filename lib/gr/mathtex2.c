@@ -986,6 +986,17 @@ extern enum State state;
 extern const char *symbol_start;
 extern int ignore_whitespace;
 
+typedef struct TransformationWC3_
+{
+  int enable;
+  int axis;
+  double base[3];
+  double heightFactor;
+  double scaleFactors[3];
+} TransformationWC3;
+
+TransformationWC3 transformationWC3;
+
 int yyparse(void);
 
 int has_parser_error = 0;
@@ -3123,8 +3134,43 @@ static void apply_transformation(double *x, double *y)
 {
   double x2 = *x;
   double y2 = *y;
+  if (transformationWC3.enable && transformationWC3.axis < 0)
+    {
+      x2 *= -1;
+    }
   *x = transformation[0] * x2 + transformation[1] * y2 + transformation[4];
   *y = transformation[2] * x2 + transformation[3] * y2 + transformation[5];
+}
+
+static void apply_axis3d(double *x3, double *y3, double *z3, double x, double y, double heightFac)
+{
+  *x3 = transformationWC3.base[0];
+  *y3 = transformationWC3.base[1];
+  *z3 = transformationWC3.base[2];
+  switch (transformationWC3.axis)
+    {
+    case -1:
+    case 1:
+      *x3 -= y / transformationWC3.scaleFactors[0] / heightFac;
+      *y3 += x / transformationWC3.scaleFactors[1] / heightFac;
+      break;
+    case -2:
+    case 2:
+      *x3 += x / transformationWC3.scaleFactors[0] / heightFac;
+      *y3 += y / transformationWC3.scaleFactors[1] / heightFac;
+      break;
+    case -3:
+    case 3:
+      *y3 += x / transformationWC3.scaleFactors[1] / heightFac;
+      *z3 += y / transformationWC3.scaleFactors[2] / heightFac;
+      break;
+    case -4:
+    case 4:
+    default:
+      *x3 += x / transformationWC3.scaleFactors[0] / heightFac;
+      *z3 += y / transformationWC3.scaleFactors[2] / heightFac;
+      break;
+    }
 }
 
 static void render_character(BoxModelNode *node, double x, double y)
@@ -3186,7 +3232,21 @@ static void render_character(BoxModelNode *node, double x, double y)
   gks_select_xform(0);
   x = (x - window[0]) / (window[1] - window[0]);
   y = (y - window[2]) / (window[3] - window[2]);
-  gks_text(x, y, (char *)utf8_str);
+  if (transformationWC3.enable)
+    {
+      double x3;
+      double y3;
+      double z3;
+      apply_axis3d(&x3, &y3, &z3, x, y, transformationWC3.heightFactor);
+
+      gks_select_xform(2);
+      gks_ft_text3d(x3, y3, z3, (char *)utf8_str, transformationWC3.axis, gks_state(), transformationWC3.heightFactor,
+                    transformationWC3.scaleFactors, gks_ft_gdp, gr_wc3towc);
+    }
+  else
+    {
+      gks_text(x, y, (char *)utf8_str);
+    }
 }
 
 typedef struct Ship_
@@ -3234,7 +3294,22 @@ static void render_rect(double x, double y, double width, double height)
         xs[i] = (xs[i] - window[0]) / (window[1] - window[0]);
         ys[i] = (ys[i] - window[2]) / (window[3] - window[2]);
       }
-    gks_select_xform(0);
+    if (transformationWC3.enable)
+      {
+        double x, y, z;
+        for (i = 0; i < 4; i++)
+          {
+            apply_axis3d(&x, &y, &z, xs[i], ys[i], transformationWC3.heightFactor);
+            gr_wc3towc(&x, &y, &z);
+            xs[i] = x;
+            ys[i] = y;
+          }
+        gks_select_xform(2);
+      }
+    else
+      {
+        gks_select_xform(0);
+      }
     gks_fillarea(4, xs, ys);
   }
 }
@@ -3619,6 +3694,10 @@ static void render_box_model(double x, double y, int horizontal_alignment, int v
   gks_set_fill_color_index(fillcolorind);
   gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
   calculate_alignment_offsets(horizontal_alignment, vertical_alignment, &x_offset, &y_offset);
+  if (transformationWC3.enable && transformationWC3.axis < 0)
+    {
+      x_offset *= -1;
+    }
   transformation[4] += x_offset * window_width * transformation[0] + y_offset * window_height * transformation[1];
   transformation[5] += x_offset * window_width * transformation[2] + y_offset * window_height * transformation[3];
   window[0] = -x * window_width;
@@ -3900,6 +3979,8 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
       tby = tby_fallback;
     }
 
+  transformationWC3.enable = 0;
+
   has_parser_error = 0;
   gks_ft_inq_bearing_x_direction(&previous_bearing_x_direction);
   gks_ft_set_bearing_x_direction(1);
@@ -4012,4 +4093,179 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
           gr_ndctowc(tbx + i, tby + i);
         }
     }
+}
+
+void mathtex2_3d(double x, double y, double z, const char *formula, int axis, double textScale, int inquire,
+                 double *tbx, double *tby, double *tbz, double *baseline)
+{
+  int unused;
+  int previous_bearing_x_direction;
+  double previous_char_height;
+  double chupx = 0;
+  double chupy = 0;
+  int previous_tnr;
+  int previous_fill_int_style;
+  int previous_fill_color_index = 0;
+  int previous_encoding = ENCODING_LATIN1;
+  int horizontal_alignment = GKS_K_TEXT_HALIGN_NORMAL;
+  int vertical_alignment = GKS_K_TEXT_VALIGN_NORMAL;
+  int font;
+  int prec;
+  double previous_viewport_xmin, previous_viewport_xmax, previous_viewport_ymin, previous_viewport_ymax;
+  /* TODO: inquire current workstation window height? */
+  int window_width = 2400;
+  int window_height = 2400;
+
+  double tbx_fallback[4];
+  double tby_fallback[4];
+  /* use fallback arrays to simplify handling of tbx and tby */
+  if (!tbx)
+    {
+      tbx = tbx_fallback;
+    }
+  if (!tby)
+    {
+      tby = tby_fallback;
+    }
+
+  transformationWC3.enable = 1;
+  transformationWC3.axis = axis;
+  transformationWC3.base[0] = x;
+  transformationWC3.base[1] = y;
+  transformationWC3.base[2] = z;
+  transformationWC3.heightFactor = textScale;
+  gr_inqscalefactors3d(transformationWC3.scaleFactors, transformationWC3.scaleFactors + 1,
+                       transformationWC3.scaleFactors + 2);
+
+  has_parser_error = 0;
+  gks_ft_inq_bearing_x_direction(&previous_bearing_x_direction);
+  gks_ft_set_bearing_x_direction(1);
+  /* gr call first to ensure autoinit has run */
+  gr_inqviewport(&previous_viewport_xmin, &previous_viewport_xmax, &previous_viewport_ymin, &previous_viewport_ymax);
+  gks_inq_current_xformno(&unused, &previous_tnr);
+  gks_inq_text_fontprec(&unused, &font, &prec);
+  gks_inq_text_align(&unused, &horizontal_alignment, &vertical_alignment);
+  gks_inq_fill_color_index(&unused, &previous_fill_color_index);
+  gks_inq_fill_int_style(&unused, &previous_fill_int_style);
+  gks_inq_encoding(&previous_encoding);
+  gks_set_encoding(ENCODING_UTF8);
+  gks_inq_text_height(&unused, &previous_char_height);
+  gks_inq_text_upvec(&unused, &chupx, &chupy);
+  if (chupx * chupx + chupy * chupy == 0)
+    {
+      chupx = 0;
+      chupy = 1;
+    }
+  else
+    {
+      double chup_length = sqrt(chupx * chupx + chupy * chupy);
+      chupx /= chup_length;
+      chupy /= chup_length;
+    }
+  transformation[0] = chupy;
+  transformation[1] = chupx;
+  transformation[2] = -chupx;
+  transformation[3] = chupy;
+  /* transformation offsets depend on the canvas size */
+  transformation[4] = 0;
+  transformation[5] = 0;
+  font_size = 16.0 * previous_char_height / 0.027 * window_height / 500;
+  mathtex_to_box_model(formula, NULL, NULL, NULL);
+  if (!has_parser_error)
+    {
+      double x_offset = 0;
+      double y_offset = 0;
+      if (!inquire)
+        {
+          render_box_model(0, 0, horizontal_alignment, vertical_alignment);
+        }
+      else
+        {
+          double xmin, xmax, ymin, ymax;
+          double rx, ry, tx, ty;
+          double angle;
+          int i;
+          calculate_alignment_offsets(horizontal_alignment, vertical_alignment, &x_offset, &y_offset);
+          xmin = x_offset;
+          xmax = x_offset + canvas_width / window_width;
+          ymin = y_offset;
+          ymax = y_offset + canvas_height / window_height;
+
+          /* 2d coordinates still in "text-space" */
+          tbx[0] = xmin;
+          tbx[1] = xmax;
+          tbx[2] = xmax;
+          tbx[3] = xmin;
+          tby[0] = ymin;
+          tby[1] = ymin;
+          tby[2] = ymax;
+          tby[3] = ymax;
+
+          angle = -atan2(chupx, chupy);
+          for (i = 0; i < 4; i++)
+            {
+              rx = tbx[i];
+              ry = tby[i];
+              if (transformationWC3.enable && transformationWC3.axis < 0)
+                {
+                  rx *= -1;
+                }
+              tx = rx * cos(angle) - ry * sin(angle);
+              ty = rx * sin(angle) + ry * cos(angle);
+              apply_axis3d(tbx + i, tby + i, tbz + i, tx, ty, textScale);
+            }
+
+          if (baseline)
+            {
+              rx = x_offset;
+              ry = y_offset + canvas_depth / window_height;
+              if (transformationWC3.enable && transformationWC3.axis < 0)
+                {
+                  rx *= -1;
+                }
+              tx = rx * cos(angle) - ry * sin(angle);
+              ty = rx * sin(angle) + ry * cos(angle);
+              apply_axis3d(baseline, baseline + 1, baseline + 2, tx, ty, textScale);
+            }
+        }
+    }
+  else if (inquire)
+    {
+      tbx[0] = x;
+      tbx[1] = x;
+      tbx[2] = x;
+      tbx[3] = x;
+
+      tby[0] = y;
+      tby[1] = y;
+      tby[2] = y;
+      tby[3] = y;
+
+      tbz[0] = z;
+      tbz[1] = z;
+      tbz[2] = z;
+      tbz[3] = z;
+
+      if (baseline)
+        {
+          baseline[0] = x;
+          baseline[1] = y;
+          baseline[2] = z;
+        }
+    }
+
+  free_parser_node_buffer();
+  free_box_model_node_buffer();
+  free_box_model_state_buffer();
+  current_box_model_state_index = 0;
+
+  gks_ft_set_bearing_x_direction(previous_bearing_x_direction);
+  gks_set_text_height(previous_char_height);
+  gks_set_encoding(previous_encoding);
+  gks_set_text_fontprec(font, prec);
+  gks_set_text_align(horizontal_alignment, vertical_alignment);
+  gks_set_fill_color_index(previous_fill_color_index);
+  gks_set_fill_int_style(previous_fill_int_style);
+  gks_set_viewport(1, previous_viewport_xmin, previous_viewport_xmax, previous_viewport_ymin, previous_viewport_ymax);
+  gks_select_xform(previous_tnr);
 }
