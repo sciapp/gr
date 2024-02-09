@@ -6174,7 +6174,17 @@ int grm_switch(unsigned int id)
 
   return 1;
 }
+
+
+int grm_validate(void)
+{
+#ifndef NO_XERCES_C
+  err_t validation_error = validate_graphics_tree();
+  return (validation_error == ERROR_NONE);
+#endif
+  return 0;
 }
+} /* end of extern "C" */
 
 /* ========================= c++ ==================================================================================== */
 
@@ -6507,13 +6517,4 @@ int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, cons
   *focus_x = (ndc_left - *factor_x * viewport[0]) / (1 - *factor_x) - (viewport[0] + viewport[1]) / 2.0;
   *focus_y = (ndc_top - *factor_y * viewport[3]) / (1 - *factor_y) - (viewport[2] + viewport[3]) / 2.0;
   return 1;
-}
-
-bool grm_validate(void)
-{
-#ifndef NO_XERCES_C
-  err_t validation_error = validate_graphics_tree();
-  return (validation_error == ERROR_NONE);
-#endif
-  return false;
 }

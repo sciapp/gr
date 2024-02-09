@@ -47,6 +47,7 @@ EXPORT int grm_switch(unsigned int id);
 #if !defined(NO_XERCES_C)
 EXPORT int grm_load_graphics_tree(FILE *file);
 #endif
+EXPORT int grm_validate(void);
 
 #ifdef __cplusplus
 }
@@ -64,7 +65,6 @@ EXPORT int get_focus_and_factor_from_dom(const int x1, const int y1, const int x
                                          const int keep_aspect_ratio, double *factor_x, double *factor_y,
                                          double *focus_x, double *focus_y,
                                          std::shared_ptr<GRM::Element> &subplot_element);
-EXPORT bool grm_validate(void);
 
 #if !defined(NO_XERCES_C)
 EXPORT std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(void);
