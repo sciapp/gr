@@ -6989,7 +6989,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       {
                         xi = x_major_tick;
                         yi = y_major_tick;
-                        if (z_tick > 1)
+                        if (z_tick > 1 && scientific_format == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
                           {
                             exponent = iround(blog(lx.basez, zi));
                             snprintf(string, 256, "%s^{%d}", lx.basez_s, exponent);
@@ -7191,7 +7191,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       {
                         xi = x_major_tick;
                         zi = z_major_tick;
-                        if (y_tick > 1)
+                        if (y_tick > 1 && scientific_format == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
                           {
                             exponent = iround(blog(lx.basey, yi));
                             snprintf(string, 256, "%s^{%d}", lx.basey_s, exponent);
@@ -7399,7 +7399,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       {
                         yi = y_major_tick;
                         zi = z_major_tick;
-                        if (x_tick > 1)
+                        if (x_tick > 1 && scientific_format == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
                           {
                             exponent = iround(blog(lx.basex, xi));
                             snprintf(string, 256, "%s^{%d}", lx.basex_s, exponent);
