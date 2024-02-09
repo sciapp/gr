@@ -4169,7 +4169,7 @@ void mathtex2_3d(double x, double y, double z, const char *formula, int axis, do
   /* transformation offsets depend on the canvas size */
   transformation[4] = 0;
   transformation[5] = 0;
-  font_size = 16.0 * previous_char_height / 0.027 * window_height / 500; /// textScale;
+  font_size = 16.0 * previous_char_height / 0.027 * window_height / 500;
   mathtex_to_box_model(formula, NULL, NULL, NULL);
   if (!has_parser_error)
     {
