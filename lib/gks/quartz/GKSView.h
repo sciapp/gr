@@ -10,6 +10,10 @@ typedef struct
   NSString *fontfamily;
 } _FontInfo;
 
+@interface GKSTermAppDelegate : NSObject <NSApplicationDelegate>
+- (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)app;
+@end
+
 @interface GKSView : NSView
 {
 @private

@@ -257,6 +257,13 @@ static void forward_message(void *input_socket, void *output_socket)
 
 static bool initialized = NO;
 
+@implementation GKSTermAppDelegate
+- (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)app
+{
+  return YES;
+}
+@end
+
 @implementation GKSTerm
 
 - (void)awakeFromNib
