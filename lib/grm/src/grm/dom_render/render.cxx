@@ -3805,7 +3805,7 @@ void GRM::Render::processWindow(const std::shared_ptr<GRM::Element> &element)
     }
   else
     {
-      gr_setwindow(xmin, xmax, ymin, ymax);
+      if (kind != "pie") gr_setwindow(xmin, xmax, ymin, ymax);
     }
   if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
                      "isosurface"))
@@ -6384,7 +6384,10 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
             }
         }
     }
-  processCharHeight(element);
+  if (element->hasAttribute("char_height"))
+    {
+      processCharHeight(element);
+    }
   processLineType(element);
   processTextAlign(element);
 }
