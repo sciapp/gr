@@ -4992,8 +4992,10 @@ static void processContour(const std::shared_ptr<GRM::Element> &element, const s
   auto plot_parent = element->parentElement();
 
   getPlotParent(plot_parent);
-  z_min = static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
-  z_max = static_cast<double>(plot_parent->getAttribute("_z_lim_max"));
+  z_min = element->hasAttribute("z_min") ? static_cast<double>(element->getAttribute("z_min"))
+                                         : static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
+  z_max = element->hasAttribute("z_max") ? static_cast<double>(element->getAttribute("z_max"))
+                                         : static_cast<double>(plot_parent->getAttribute("_z_lim_max"));
   if (element->hasAttribute("levels"))
     {
       num_levels = static_cast<int>(element->getAttribute("levels"));
@@ -5052,6 +5054,8 @@ static void processContour(const std::shared_ptr<GRM::Element> &element, const s
               z_min = grm_min(gridit_z[i], z_min);
               z_max = grm_max(gridit_z[i], z_max);
             }
+          element->setAttribute("z_min", z_min);
+          element->setAttribute("z_max", z_max);
 
           global_render->setSpace(element->parentElement(), z_min, z_max, 0, 90);
           processSpace(element->parentElement());
@@ -5123,7 +5127,10 @@ static void processContourf(const std::shared_ptr<GRM::Element> &element, const 
   auto plot_parent = element->parentElement();
 
   getPlotParent(plot_parent);
-  z_min = static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
+  z_min = element->hasAttribute("z_min") ? static_cast<double>(element->getAttribute("z_min"))
+                                         : static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
+  z_max = element->hasAttribute("z_max") ? static_cast<double>(element->getAttribute("z_max"))
+                                         : static_cast<double>(plot_parent->getAttribute("_z_lim_max"));
   z_max = static_cast<double>(plot_parent->getAttribute("_z_lim_max"));
   if (element->hasAttribute("levels"))
     {
@@ -5186,6 +5193,8 @@ static void processContourf(const std::shared_ptr<GRM::Element> &element, const 
               z_min = grm_min(gridit_z[i], z_min);
               z_max = grm_max(gridit_z[i], z_max);
             }
+          element->setAttribute("z_min", z_min);
+          element->setAttribute("z_max", z_max);
 
           global_render->setLineColorInd(element, 989);
           global_render->setSpace(element->parentElement(), z_min, z_max, 0, 90);
@@ -13736,6 +13745,14 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"5", "Unitless integer values specifying the number of minor tick intervals "
                                      "between major tick marks. Values of 0 or 1 imply no minor ticks. Negative "
                                      "values specify no labels will be drawn for the z-axis"}},
+      {std::string("z_max"),
+       std::vector<std::string>{
+           "None",
+           "The maximum z-coordinate of a contour(f) plot (after transforming the input data to a rectangular grid)"}},
+      {std::string("z_min"),
+       std::vector<std::string>{
+           "None",
+           "The minimum z-coordinate of a contour(f) plot (after transforming the input data to a rectangular grid)"}},
       {std::string("z_org"),
        std::vector<std::string>{"0", "The world coordinates of the origin (point of intersection) of the z-axis"}},
       {std::string("z_org_pos"),
@@ -15628,7 +15645,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       "y_labels",
   };
   std::vector<std::string> series_contour{
-      "levels", "px", "py", "pz", "x", "y", "z",
+      "levels", "px", "py", "pz", "x", "y", "z", "z_max", "z_min",
   };
   std::vector<std::string> series_contourf = series_contour;
   std::vector<std::string> series_heatmap{
