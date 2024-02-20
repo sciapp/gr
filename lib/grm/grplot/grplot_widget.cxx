@@ -1299,6 +1299,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
       redraw_pixmap = false;
 
       if (tree_update) treewidget->updateData(grm_get_document_root());
+      collectTooltips();
     }
 
   painter.begin(paint_device);
@@ -1606,10 +1607,15 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
                   csr->setShape(Qt::SizeHorCursor);
                 }
               setCursor(*csr);
-
+            }
+          if (plot_elem && kind == "marginal_heatmap")
+            {
               redraw();
             }
-          update();
+          else
+            {
+              update();
+            }
         }
     }
 }
