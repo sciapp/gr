@@ -2578,6 +2578,7 @@ void GRPlotWidget::processTestCommandsFile()
   while (test_commands_stream && !test_commands_stream->atEnd())
     {
       QString line = test_commands_stream->readLine();
+      if (line.startsWith("#")) continue;
       QStringList words = line.split(",");
       if (!words.empty())
         {
