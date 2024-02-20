@@ -2977,6 +2977,32 @@ void GRPlotWidget::processTestCommandsFile()
                   break;
                 }
             }
+          else if (words[0] == "openXML" && words.size() == 2)
+            {
+#ifndef NO_XERCES_C
+              auto file = fopen(words[1].toStdString().c_str(), "r");
+              if (file)
+                {
+                  grm_load_graphics_tree(file);
+                  global_root = grm_get_document_root();
+                  redraw();
+                  QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
+                  return;
+                }
+#else
+              std::cerr << "Xerces-C++ support not compiled in. XML files cannot be openend." << std::endl;
+#endif
+            }
+          else if (words[0] == "saveXML" && words.size() == 2)
+            {
+              std::ofstream save_file_stream(words[1].toStdString());
+              if (save_file_stream)
+                {
+                  auto graphics_tree_str =
+                      std::unique_ptr<char, decltype(&std::free)>(grm_dump_graphics_tree_str(), std::free);
+                  save_file_stream << graphics_tree_str.get() << std::endl;
+                }
+            }
           else
             {
               std::cerr << "Unknown test event: " << line.toStdString() << std::endl;
