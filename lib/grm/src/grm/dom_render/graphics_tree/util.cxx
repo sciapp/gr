@@ -8,6 +8,36 @@
 #include <cmath>
 #include "grm/utilcpp_int.hxx"
 
+static std::string escapeXMLAttribute(std::string_view attribute)
+{
+  std::stringstream os;
+  for (auto c : attribute)
+    {
+      switch (c)
+        {
+        case '&':
+          os << "&amp;";
+          break;
+        case '<':
+          os << "&lt;";
+          break;
+        case '>':
+          os << "&gt;";
+          break;
+        case '"':
+          os << "&quot;";
+          break;
+        case '\'':
+          os << "&apos;";
+          break;
+        default:
+          os << c;
+          break;
+        }
+    }
+  return os.str();
+}
+
 static void nodeToXML(std::stringstream &os, const std::shared_ptr<const GRM::Node> &node,
                       const GRM::SerializerOptions &options, const std::string &indent,
                       std::optional<std::function<bool(const std::string &attribute_name, const GRM::Element &,
@@ -75,7 +105,7 @@ elementToXML(std::stringstream &os, const std::shared_ptr<const GRM::Element> &e
         }
       else
         {
-          os << " " << attribute_name.get() << "=\"" << value << "\"";
+          os << " " << attribute_name.get() << "=\"" << escapeXMLAttribute(value) << "\"";
         }
     }
   if (element->hasChildNodes())
