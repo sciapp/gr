@@ -12,6 +12,7 @@ project(
 
 include(GNUInstallDirs)
 include(CheckCXXCompilerFlag)
+include(CMakeDependentOption)
 
 # Honor `C_VISIBILITY_PRESET hidden` and `CXX_VISIBILITY_PRESET hidden` in static libraries
 cmake_policy(SET CMP0063 NEW)
@@ -44,6 +45,13 @@ set(GR_DIRECTORY
 option(GR_BUILD_DEMOS "Build demos for GR" OFF)
 option(GR_INSTALL "Create installation target for GR" ON)
 option(GR_USE_BUNDLED_LIBRARIES "Use thirdparty libraries bundled with GR" OFF)
+cmake_dependent_option(
+  GR_BUILD_EXTRA_BUNDLED_LIBRARIES
+  "Build all thirdparty libraries, not only required ones"
+  OFF
+  "GR_USE_BUNDLED_LIBRARIES"
+  OFF
+)
 option(GR_MANUAL_MOC_AND_RCC "Manually run moc and rcc instead of relying on AUTOMOC and AUTORCC" OFF)
 option(GR_FIND_QT5_BY_VARIABLES "Find Qt5 based on the variables Qt5_INCLUDE_DIR and Qt5_LIBRARY_DIR" OFF)
 option(GR_PREFER_XCODEBUILD "Prefer xcodebuild to build macOS applications if available" ON)
@@ -255,6 +263,20 @@ if(X11_FOUND)
   endif()
 endif()
 
+if(GR_BUILD_EXTRA_BUNDLED_LIBRARIES)
+  add_custom_target(
+    bundled_libraries
+    COMMAND make extras
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/3rdparty
+  )
+else()
+  add_custom_target(
+    bundled_libraries
+    COMMAND make
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/3rdparty
+  )
+endif()
+
 set(GKS_SOURCES
     lib/gks/afm.c
     lib/gks/font.c
@@ -324,6 +346,9 @@ foreach(LIBRARY gks_static gks_shared)
                       $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
   target_compile_definitions(${LIBRARY} PRIVATE GRDIR="${GR_DIRECTORY}")
+  if(GR_USE_BUNDLED_LIBRARIES)
+    add_dependencies(${LIBRARY} bundled_libraries)
+  endif()
   set_target_properties(
     ${LIBRARY}
     PROPERTIES C_STANDARD 90
@@ -400,6 +425,9 @@ foreach(LIBRARY gr_static gr_shared)
   endif()
   target_compile_definitions(${LIBRARY} PRIVATE GRDIR="${GR_DIRECTORY}")
   target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  if(GR_USE_BUNDLED_LIBRARIES)
+    add_dependencies(${LIBRARY} bundled_libraries)
+  endif()
   set_target_properties(
     ${LIBRARY}
     PROPERTIES C_STANDARD 90
@@ -474,6 +502,9 @@ foreach(LIBRARY gr3_static gr3_shared)
     ${LIBRARY} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/>
                       $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
+  if(GR_USE_BUNDLED_LIBRARIES)
+    add_dependencies(${LIBRARY} bundled_libraries)
+  endif()
   set_target_properties(
     ${LIBRARY}
     PROPERTIES C_STANDARD 90
@@ -604,6 +635,9 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
   target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     target_compile_options(${LIBRARY} PRIVATE /permissive-)
+  endif()
+  if(GR_USE_BUNDLED_LIBRARIES)
+    add_dependencies(${LIBRARY} bundled_libraries)
   endif()
   set_target_properties(
     ${LIBRARY}

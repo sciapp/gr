@@ -81,13 +81,9 @@ ubuntu-cmake-self-contained:
     - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
     - tar xf cmake-3.23.0-linux-x86_64.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-    - make -C 3rdparty default extras
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_DEMOS=ON
-    - make
-    - make install
-    - cd ..
+    - $CMAKE_CMD -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_EXTRA_BUNDLED_LIBRARIES=ON -DGR_BUILD_DEMOS=ON
+    - $CMAKE_CMD --build build
+    - $CMAKE_CMD --install build
     - mv install artifacts-ubuntu2004-cmake
     - mv build/grm_test_public_api/grm_test_snoop/snoop ./grm_snoop
     - mv build/grm_test_public_api/grm_test_snoop/libc_rand.so ./
@@ -103,13 +99,9 @@ ubuntu-cmake-self-contained-debug:
     - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
     - tar xf cmake-3.23.0-linux-x86_64.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-    - make -C 3rdparty default extras
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_DEMOS=ON
-    - make
-    - make install
-    - cd ..
+    - $CMAKE_CMD -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_EXTRA_BUNDLED_LIBRARIES=ON -DGR_BUILD_DEMOS=ON
+    - $CMAKE_CMD --build build
+    - $CMAKE_CMD --install build
     - mv install artifacts-ubuntu2004-cmake
     - mv build/grm_test_public_api/grm_test_snoop/snoop ./grm_snoop
     - mv build/grm_test_public_api/grm_test_snoop/libc_rand.so ./
@@ -368,10 +360,8 @@ ubuntu-cmake-system-dependencies:
     - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
     - tar xf cmake-3.23.0-linux-x86_64.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
-    - make
+    - $CMAKE_CMD -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
+    - $CMAKE_CMD --build build
 
 debian-self-contained:
   stage: build
@@ -406,13 +396,9 @@ debian-cmake-self-contained:
     - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
     - tar xf cmake-3.23.0-linux-x86_64.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-    - make -C 3rdparty default extras
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
-    - make
-    - make install
-    - cd ..
+    - $CMAKE_CMD -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_EXTRA_BUNDLED_LIBRARIES=ON
+    - $CMAKE_CMD --build build
+    - $CMAKE_CMD --install build
     - mv install artifacts-debian10-cmake
   artifacts:
     expire_in: 1 week
@@ -546,11 +532,9 @@ debian-cmake-self-contained-aarch64:
     - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
     - tar xf cmake-3.23.0-linux-x86_64.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/aarch64-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DGR_USE_BUNDLED_LIBRARIES=ON
-    - make
-    - make install
+    - $CMAKE_CMD -S . -B build -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/aarch64-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(cd ../3rdparty/build && pwd)
+    - $CMAKE_CMD --build build
+    - $CMAKE_CMD --install build
     - mv /usr/local/gr ${CI_PROJECT_DIR}/artifacts-debian10-cmake-aarch64
   artifacts:
     expire_in: 1 week
@@ -583,11 +567,9 @@ debian-cmake-self-contained-armhf:
     - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
     - tar xf cmake-3.23.0-linux-x86_64.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/armhf-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DGR_USE_BUNDLED_LIBRARIES=ON
-    - make
-    - make install
+    - $CMAKE_CMD -S . -B build -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/armhf-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(cd ../3rdparty/build && pwd)
+    - $CMAKE_CMD --build build
+    - $CMAKE_CMD --install build
     - mv /usr/local/gr ${CI_PROJECT_DIR}/artifacts-debian10-cmake-armhf
   artifacts:
     expire_in: 1 week
@@ -624,10 +606,8 @@ debian-cmake-system-dependencies:
     - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
     - tar xf cmake-3.23.0-linux-x86_64.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
-    - make
+    - $CMAKE_CMD -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
+    - $CMAKE_CMD --build build
 
 centos7-self-contained:
   stage: build
@@ -664,14 +644,10 @@ centos7-cmake-self-contained:
     - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
     - tar xf cmake-3.23.0-linux-x86_64.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-    - make -C 3rdparty default extras
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
-    - make
-    - make install
-    - mv ../install/lib64/ ../install/lib/
-    - cd ..
+    - $CMAKE_CMD -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_EXTRA_BUNDLED_LIBRARIES=ON
+    - $CMAKE_CMD --build build
+    - $CMAKE_CMD --install build
+    - mv install/lib64/ install/lib/
     - mv install artifacts-centos7-cmake
   artifacts:
     expire_in: 1 week
@@ -695,10 +671,8 @@ centos7-cmake-system-dependencies:
     - tar xf cmake-3.23.0-linux-x86_64.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
     - make -C 3rdparty default TARGETS="qhull"
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_FIND_ROOT_PATH=$(cd ../3rdparty/build && pwd)
-    - make
+    - $CMAKE_CMD -S . -B build .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_PREFIX_PATH=$(cd ../3rdparty/build && pwd)
+    - $CMAKE_CMD --build build
 
 centos7-32bit-self-contained:
   stage: build
@@ -741,13 +715,10 @@ centos7-32bit-cmake-self-contained:
     - THEORA_EXTRA_CONFIGURE_FLAGS=--disable-asm
       OPENH264_EXTRA_MAKE_FLAGS=ARCH=i386
       make -C 3rdparty default extras
-    - mkdir build
-    - cd build
     - LDFLAGS="-static-libstdc++ -static-libgcc"
-      $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
-    - make
-    - make install
-    - cd ..
+      $CMAKE_CMD -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_PREFIX_PATH=$(cd ../3rdparty/build && pwd)
+    - $CMAKE_CMD --build build
+    - $CMAKE_CMD --install build
     - mv install artifacts-centos7-32bit-cmake
   artifacts:
     expire_in: 1 week
@@ -772,11 +743,9 @@ centos7-32bit-cmake-system-dependencies:
     - tar xf cmake-3.23.0-linux-i386.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-i386/bin/cmake
     - make -C 3rdparty default TARGETS="qhull"
-    - mkdir build
-    - cd build
     - LDFLAGS="-static-libstdc++ -static-libgcc"
-      $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_FIND_ROOT_PATH=$(cd ../3rdparty/build && pwd)
-    - make
+      $CMAKE_CMD -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_FIND_ROOT_PATH=$(cd ../3rdparty/build && pwd)
+    - $CMAKE_CMD --build build
 
 arch-self-contained:
   stage: build
@@ -805,13 +774,9 @@ arch-cmake-self-contained:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/arch-self-contained
   script:
-    - make -C 3rdparty default extras
-    - mkdir build
-    - cd build
-    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DCMAKE_INSTALL_LIBDIR=${CI_PROJECT_DIR}/install/lib
-    - make
-    - make install
-    - cd ..
+    - cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_EXTRA_BUNDLED_LIBRARIES=ON -DCMAKE_INSTALL_LIBDIR=${CI_PROJECT_DIR}/install/lib
+    - cmake --build build
+    - cmake --install build
     - mv install artifacts-arch-cmake
   artifacts:
     expire_in: 1 week
@@ -830,10 +795,8 @@ arch-cmake-system-dependencies:
   script:
     - pacman -Sy
     - pacman -S --noconfirm --needed qhull
-    - mkdir build
-    - cd build
-    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
-    - make
+    - cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
+    - cmake --build build
 
 freebsd-self-contained:
   stage: build
@@ -972,12 +935,9 @@ windows-32bit-cmake-cross:
        set(LIBXML2_LIBRARY_DIR    ${_libxml2_rootdir}/lib)
       EOF
     - cd -
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/i686-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-i686/cmake -DGR_MANUAL_MOC_AND_RCC=ON -DGR_USE_BUNDLED_LIBRARIES=ON
-    - make
-    - make install
-    - cd ..
+    - $CMAKE_CMD -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/i686-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-i686/cmake -DGR_MANUAL_MOC_AND_RCC=ON -DCMAKE_PREFIX_PATH=$(cd ../3rdparty/build && pwd)
+    - $CMAKE_CMD --build build
+    - $CMAKE_CMD --install build
     - mv qt5-runtime-Windows-i686/*.dll install/bin/
     - mv qt5-runtime-Windows-i686/platforms install/bin/platforms
     - cp /usr/lib/gcc/i686-w64-mingw32/8.3-win32/libgcc_s_sjlj-1.dll install/bin/
@@ -1095,12 +1055,9 @@ windows-64bit-cmake-cross:
        set(LIBXML2_LIBRARY_DIR    ${_libxml2_rootdir}/lib)
       EOF
     - cd -
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/x86_64-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-x86_64/cmake -DGR_MANUAL_MOC_AND_RCC=ON  -DGR_USE_BUNDLED_LIBRARIES=ON
-    - make
-    - make install
-    - cd ..
+    - $CMAKE_CMD -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/x86_64-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-x86_64/cmake -DGR_MANUAL_MOC_AND_RCC=ON -DCMAKE_PREFIX_PATH=$(cd ../3rdparty/build && pwd)
+    - $CMAKE_CMD --build build
+    - $CMAKE_CMD --install build
     - mv qt5-runtime-Windows-x86_64/*.dll install/bin/
     - mv qt5-runtime-Windows-x86_64/platforms install/bin/platforms
     - cp /usr/lib/gcc/x86_64-w64-mingw32/8.3-win32/libgcc_s_seh-1.dll install/bin/
