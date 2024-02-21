@@ -1964,6 +1964,10 @@ static double autoTickRingsPolar(double rmax, int &rings, const std::string &nor
   std::vector<int> largeRings = {6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
   std::vector<int> normalRings = {3, 4, 5, 6, 7};
 
+  // define good decimal rmax values and a fitting number of rings
+  // todo
+  std::map<double, int> decimalMap{{0.1, 4}};
+
   // -1 --> auto rings
   if (rings == -1)
     {
@@ -1977,14 +1981,44 @@ static double autoTickRingsPolar(double rmax, int &rings, const std::string &nor
 
       // todo: negative scales
       // todo: rmin is needed for negative scales
-      scale = ceil(abs(log10(rmax))) * (log10(rmax) / abs(log10(rmax)));
+      scale = ceil(abs(log10(rmax)));
 
-      if (rmax < 1.0)
+      // todo: values near 1... epsilon environment?
+      if (rmax != 1.0)
         {
-          is_decimal = true;
-          rmax = static_cast<int>(ceil(rmax * pow(10.0, scale)));
+          scale *= log10(rmax) / abs(log10(rmax));
         }
 
+      if (rmax <= 1.0)
+        {
+          is_decimal = true;
+
+          //          rmax = static_cast<int>(ceil(rmax * pow(10.0, scale)));
+
+          // todo: for decimalrings <= 1.0 don't make rmax bigger than 1.0
+          while (true)
+            {
+              for (int i : *whichVector)
+                {
+                  if (static_cast<int>(ceil(rmax)) % i == 0)
+                    {
+                      if (is_decimal)
+                        {
+                          rmax = rmax / pow(10.0, scale);
+                        }
+                      rings = i;
+                      return rmax / rings;
+                    }
+                }
+              // rmax not divisible by whichVector
+              ++rmax;
+              if (rmax > 1.0)
+                {
+                  rings = 4;
+                  return 1.0 / rings;
+                }
+            }
+        } // end decimal case <= 1.0
       else if (rmax < (*whichVector)[0])
         {
           // if rmax is bigger than 1.0 but smaller than the smallest amount of rings
@@ -9045,8 +9079,6 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   // transform angles into user specified xranges if given
   if (transform_angles)
     {
-      double theta_min = *std::min_element(theta_vec.begin(), theta_vec.end());
-      double theta_max = *std::max_element(theta_vec.begin(), theta_vec.end());
       transformCoordinatesVector(theta_vec, theta_min, theta_max, xrange_min, xrange_max);
     }
 
@@ -9066,7 +9098,8 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
 
           if (ylim)
             {
-              if (temp_rho < 0.0) continue;
+              // todo: skipping here causes problems for y_range with y_lim. Maybe this is not needed?
+              //              if (temp_rho < 0.0) continue;
             }
 
           if (y_log && !transform_radii)
@@ -9075,7 +9108,7 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
             }
           else
             {
-              // todo: yrange transformation with y_log?
+              // todo: yrange transformation with y_log? Maybe transform the vector before
               current_rho = transformCoordinate(temp_rho, r_min, r_max, yrange_min, yrange_max, y_log);
             }
 
