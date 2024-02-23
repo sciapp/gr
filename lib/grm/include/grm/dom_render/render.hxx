@@ -71,6 +71,8 @@
 #define PLOT_DEFAULT_COLORBAR_WIDTH 0.03
 #define PLOT_DEFAULT_COLORBAR_MAX_CHAR_HEIGHT 0.012
 #define PLOT_DEFAULT_COLORBAR_OFFSET 0.02
+#define PLOT_DEFAULT_SIDEPLOT_WIDTH 0.1
+#define PLOT_DEFAULT_SIDEPLOT_OFFSET 0.02
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -529,6 +531,7 @@ public:
   std::shared_ptr<Context> getContext();
 
   static void processViewport(const std::shared_ptr<GRM::Element> &elem);
+  static void calculateCharHeight(const std::shared_ptr<GRM::Element> &elem);
   static void processLimits(const std::shared_ptr<GRM::Element> &elem);
   static void processWindow(const std::shared_ptr<GRM::Element> &elem);
   static void processScale(const std::shared_ptr<GRM::Element> &elem);

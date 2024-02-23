@@ -74,7 +74,15 @@ void GRM::Element::setAttribute(const std::string &qualifiedName, const GRM::Val
         {
           ;
         }
-      update(elem_p, qualifiedName, static_cast<std::string>(old_value));
+      if (qualifiedName == "viewport_x_min" || qualifiedName == "viewport_x_max" || qualifiedName == "viewport_y_min" ||
+          qualifiedName == "viewport_y_max")
+        {
+          update(elem_p, qualifiedName, std::to_string(static_cast<double>(old_value)));
+        }
+      else
+        {
+          update(elem_p, qualifiedName, static_cast<std::string>(old_value));
+        }
       render();
     }
 }
