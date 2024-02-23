@@ -1,0 +1,268 @@
+ubuntu-cmake-self-contained-test-c:
+  stage: test
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing
+  rules:
+  - if: '$CI_MERGE_REQUEST_ID'
+    when: never
+  - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+    when: never
+  - if: '$GR_REBUILD_REFERENCE'
+    when: never
+  - when: on_success
+  needs:
+  - ubuntu-cmake-self-contained-debug
+  script:
+  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export GRM_VALIDATE=yes
+  - gr_test c `pwd`/test_result/
+  artifacts:
+    paths:
+    - test_result/
+    when: on_failure
+
+ubuntu-cmake-self-contained-test-cpp:
+  stage: test
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/cpp-testing
+  rules:
+    - if: '$CI_MERGE_REQUEST_ID'
+      when: never
+    - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+      when: never
+    - if: '$GR_REBUILD_REFERENCE'
+      when: never
+    - when: on_success
+  needs:
+    - ubuntu-cmake-self-contained-debug
+  script:
+    - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+    - export GRM_VALIDATE=yes
+    - gr_test cpp `pwd`/test_result/
+  artifacts:
+    paths:
+      - test_result/
+    when: on_failure
+
+ubuntu-cmake-self-contained-test-grplot:
+  stage: test
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/grplot-testing
+  rules:
+  - if: '$CI_MERGE_REQUEST_ID'
+    when: never
+  - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+    when: never
+  - if: '$GR_REBUILD_REFERENCE'
+    when: never
+  - when: on_success
+  needs:
+  - ubuntu-cmake-self-contained-debug
+  script:
+  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export GRM_VALIDATE=yes
+  - export LD_LIBRARY_PATH=$GRDIR/lib
+  - export PATH=$GRDIR/bin/:$PATH
+  - xvfb-run --server-args="-screen 0, 1920x1080x24" gr_test grplot `pwd`/test_result/
+  artifacts:
+    paths:
+    - test_result/
+    when: on_failure
+
+ubuntu-cmake-self-contained-rebuild-images-c:
+  stage: test
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing:latest
+  rules:
+  - if: '$CI_MERGE_REQUEST_ID'
+    when: never
+  - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+    when: on_success
+  - if: '$GR_REBUILD_REFERENCE'
+    when: on_success
+  needs:
+  - ubuntu-cmake-self-contained-debug
+  script:
+  - apt-get update && apt-get install -y python3-venv
+  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+
+  - mkdir -p ~/.ssh
+  - cat $SSH_KEY | base64 -d > ~/.ssh/id_rsa
+  - mv $SSH_KNOWN_HOSTS ~/.ssh/known_hosts
+  - chmod 600 ~/.ssh/id_rsa
+  - python3 -m venv env && source env/bin/activate
+  - git clone gitlab@iffgit.fz-juelich.de:scientific-it-systems/gr-test.git
+  - pip install -e gr-test/
+  - cd gr-test
+  - git checkout -b update-files/job-$CI_JOB_ID
+
+  - if [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+      export GR_REBUILD_REFERENCE=`echo $CI_COMMIT_MESSAGE | sed 's/.*RebuildReferenceImages(\([][ ?*_a-zA-Z0-9-]*\)).*/\1/'` ;
+    fi
+
+  - if [[ $GR_REBUILD_REFERENCE == "all" ]] || [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+      gr_test --create=REFERENCE c ;
+    else
+    gr_test --create=REFERENCE --filter ${GR_REBUILD_REFERENCE} -- c ;
+    fi
+  - git config user.name "GR-Test Reference Bot"
+  - git config user.email "$GITLAB_USER_EMAIL"
+  - git status
+  - git add -A gr_test/c_data/
+  - git commit -m "Rebuilt c images in build job $CI_JOB_ID"
+  - 'git push -o merge_request.description="Job initiator: @$GITLAB_USER_LOGIN" -o merge_request.label="auto-create" -o merge_request.label="reference-files-update" -o merge_request.remove_source_branch -o merge_request.create origin update-files/job-$CI_JOB_ID'
+
+ubuntu-cmake-self-contained-rebuild-images-cpp:
+  stage: test
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/cpp-testing:latest
+  rules:
+    - if: '$CI_MERGE_REQUEST_ID'
+      when: never
+    - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+      when: on_success
+    - if: '$GR_REBUILD_REFERENCE'
+      when: on_success
+  needs:
+    - ubuntu-cmake-self-contained-debug
+  script:
+    - apt-get update && apt-get install -y python3-venv
+    - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+
+    - mkdir -p ~/.ssh
+    - cat $SSH_KEY | base64 -d > ~/.ssh/id_rsa
+    - mv $SSH_KNOWN_HOSTS ~/.ssh/known_hosts
+    - chmod 600 ~/.ssh/id_rsa
+    - python3 -m venv env && source env/bin/activate
+    - git clone gitlab@iffgit.fz-juelich.de:scientific-it-systems/gr-test.git
+    - pip install -e gr-test/
+    - cd gr-test
+    - git checkout -b update-files/job-$CI_JOB_ID
+
+    - if [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+      export GR_REBUILD_REFERENCE=`echo $CI_COMMIT_MESSAGE | sed 's/.*RebuildReferenceImages(\([][ ?*_a-zA-Z0-9-]*\)).*/\1/'` ;
+      fi
+
+    - if [[ $GR_REBUILD_REFERENCE == "all" ]] || [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+      gr_test --create=REFERENCE cpp ;
+      else
+      gr_test --create=REFERENCE --filter ${GR_REBUILD_REFERENCE} -- cpp ;
+      fi
+    - git config user.name "GR-Test Reference Bot"
+    - git config user.email "$GITLAB_USER_EMAIL"
+    - git status
+    - git add -A gr_test/cpp_data/
+    - git commit -m "Rebuilt cpp images in build job $CI_JOB_ID"
+    - 'git push -o merge_request.description="Job initiator: @$GITLAB_USER_LOGIN" -o merge_request.label="auto-create" -o merge_request.label="reference-files-update" -o merge_request.remove_source_branch -o merge_request.create origin update-files/job-$CI_JOB_ID'
+
+ubuntu-cmake-self-contained-rebuild-images-grplot:
+  stage: test
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/grplot-testing:latest
+  rules:
+    - if: '$CI_MERGE_REQUEST_ID'
+      when: never
+    - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+      when: on_success
+    - if: '$GR_REBUILD_REFERENCE'
+      when: on_success
+  needs:
+    - ubuntu-cmake-self-contained-debug
+  script:
+    - apt-get update && apt-get install -y python3-venv
+    - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+    - export LD_LIBRARY_PATH=$GRDIR/lib
+    - export PATH=$GRDIR/bin/:$PATH
+
+    - mkdir -p ~/.ssh
+    - cat $SSH_KEY | base64 -d > ~/.ssh/id_rsa
+    - mv $SSH_KNOWN_HOSTS ~/.ssh/known_hosts
+    - chmod 600 ~/.ssh/id_rsa
+    - python3 -m venv env && source env/bin/activate
+    - git clone gitlab@iffgit.fz-juelich.de:scientific-it-systems/gr-test.git
+    - pip install -e gr-test/
+    - cd gr-test
+    - git checkout -b update-files/job-$CI_JOB_ID
+
+    - if [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+      export GR_REBUILD_REFERENCE=`echo $CI_COMMIT_MESSAGE | sed 's/.*RebuildReferenceImages(\([][ ?*_a-zA-Z0-9-]*\)).*/\1/'` ;
+      fi
+
+    - if [[ $GR_REBUILD_REFERENCE == "all" ]] || [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+      xvfb-run --server-args="-screen 0, 1920x1080x24" gr_test --create=REFERENCE grplot ;
+      else
+      xvfb-run --server-args="-screen 0, 1920x1080x24" gr_test --create=REFERENCE --filter ${GR_REBUILD_REFERENCE} -- grplot ;
+      fi
+    - git config user.name "GR-Test Reference Bot"
+    - git config user.email "$GITLAB_USER_EMAIL"
+    - git status
+    - git add -A gr_test/grplot_data/
+    - git commit -m "Rebuilt grplot images in build job $CI_JOB_ID"
+    - 'git push -o merge_request.description="Job initiator: @$GITLAB_USER_LOGIN" -o merge_request.label="auto-create" -o merge_request.label="reference-files-update" -o merge_request.remove_source_branch -o merge_request.create origin update-files/job-$CI_JOB_ID'
+
+
+
+ubuntu-cmake-self-contained-test-snoop:
+  stage: test
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
+  rules:
+  - if: '$CI_MERGE_REQUEST_ID'
+    when: never
+  - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+    when: never
+  - if: '$GR_REBUILD_REFERENCE'
+    when: never
+  - when: on_success
+  needs:
+  - ubuntu-cmake-self-contained-debug
+  variables:
+    JULIA_VERSION: 1.8.5
+  before_script:
+  - apt-get update && apt-get install -y curl
+  - curl -fLO "https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_VERSION%.*}/julia-${JULIA_VERSION}-linux-x86_64.tar.gz"
+  - tar -C/usr/local --strip=1 -xf "julia-${JULIA_VERSION}-linux-x86_64.tar.gz"
+  - julia -e "using Pkg; Pkg.add(\"Images\")"
+  - julia -e "using Pkg; Pkg.add(name=\"GR\", rev=\"master\")"
+  script:
+  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export LD_LIBRARY_PATH=`pwd`/artifacts-ubuntu2004-cmake/lib
+  - export LIBC_RAND_DIRPATH=`pwd`
+  - export GRM_SNOOP_EXECUTABLE_PATH=`pwd`/grm_snoop
+  - export GRM_VALIDATE=yes
+  - lib/grm/test/public_api/grm/snoop/compare_grm_julia.sh || {
+      mv lib/grm/test/public_api/grm/snoop/diff_images ./;
+      exit 1;
+    }
+  artifacts:
+    paths:
+    - diff_images
+    when: on_failure
+
+code-style-check:
+  stage: test
+  needs: []
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  script:
+  - set +e
+  - for file in $(git diff $(git describe --tags --abbrev=0) HEAD --name-only --diff-filter=ACMR); do
+      [[ "${file}" != 3rdparty* ]] && [[ "${file}" != apps* ]] || continue;
+      [[ "${file}" =~ \.(c|cpp|cxx|m|h|hpp|hxx)$ ]] || continue;
+      grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; exit 1; };
+      file --mime "${file}" | grep "charset=us-ascii" >/dev/null || { echo "${file} must be encoded as ASCII text."; exit 1; };
+      clang-format -verbose -style=file "${file}" > "${file}.formatted";
+      if ! diff -q "${file}" "${file}.formatted"; then
+        diff "${file}" "${file}.formatted";
+        >&2 echo "The code style of file \"${file}\" does not follow the code style guideline of this project.";
+        exit 1;
+      fi;
+      rm -f "${file}.formatted";
+    done
+  - for file in $(git diff $(git describe --tags --abbrev=0) HEAD --name-only --diff-filter=ACMR); do
+      [[ "${file}" != 3rdparty* ]] && [[ "${file}" != apps* ]] || continue;
+      [[ "${file}" =~ (^|/)CMakeLists.txt$ || "${file}" =~ \.cmake$ ]] || continue;
+      grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; exit 1; };
+      file --mime "${file}" | grep "charset=us-ascii" >/dev/null || { echo "${file} must be encoded as ASCII text."; exit 1; };
+      echo "Formatting ${file}";
+      cmake-format "${file}" > "${file}.formatted";
+      if ! diff -q "${file}" "${file}.formatted"; then
+        diff "${file}" "${file}.formatted";
+        >&2 echo "The code style of file \"${file}\" does not follow the code style guideline of this project.";
+        exit 1;
+      fi;
+      rm -f "${file}.formatted";
+    done
+  - exit 0

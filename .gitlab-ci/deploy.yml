@@ -1,0 +1,80 @@
+deploy-to-obs:
+  stage: deploy
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  only:
+    - develop@Scientific-IT-Systems/gr
+    - tags@Scientific-IT-Systems/gr
+  before_script:
+  - export OBS_PROJECT=science\:gr-framework
+  - if [[ -z "${CI_COMMIT_TAG}" ]]; then
+      export OBS_PROJECT=${OBS_PROJECT}\:unstable;
+      export VERSION="$(git describe --long --tags | sed 's/^v//;s/\(.*\)-\(.*\)-g\(.*\)/\1+\2~\3/;')";
+      export REVISION=${CI_COMMIT_SHORT_SHA};
+    else
+      export VERSION=`echo "$CI_COMMIT_TAG" | sed 's/^v//'`;
+      export REVISION="tags\/${CI_COMMIT_TAG}";
+    fi;
+  script:
+  - mkdir -p "${HOME}/.config/osc" && ln -s "${OSCRC}" "${HOME}/.config/osc/oscrc"
+  - osc co ${OBS_PROJECT}/gr
+  - sed 's/\(.*revision">\).*\(<.*\)/\1'$REVISION'\2/'
+    ${OBS_PROJECT}/gr/_service |
+    sed 's/\(.*version">\)[[:digit:]].*\(<.*\)/\1'$VERSION'\2/'
+    > ${OBS_PROJECT}/gr/_service.new &&
+    mv -f ${OBS_PROJECT}/gr/_service.new
+    ${OBS_PROJECT}/gr/_service
+  - osc commit ${OBS_PROJECT}/gr/_service -m "Release $REVISION"
+
+deploy-to-aur:
+  stage: deploy
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  only:
+    - develop@Scientific-IT-Systems/gr
+    - tags@Scientific-IT-Systems/gr
+  script:
+  - git config --global --add safe.directory "$(pwd)"
+  - mkdir --mode=700 ~/.ssh/
+  - (umask 0377 && echo "$AUR_GR_PRIVATE_KEY" > ~/.ssh/id_rsa
+                && echo "aur.archlinux.org $AUR_HOST_KEY" >> ~/.ssh/known_hosts)
+  - if [[ -n "${CI_COMMIT_TAG}" ]]; then
+      if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+        for repo in "gr-framework" "gr-framework-js"; do
+          git clone "ssh://aur@aur.archlinux.org/${repo}.git";
+          cd "${repo}";
+          sed -i -e "/^pkgver=/c\pkgver=\"${CI_COMMIT_TAG#v}\"" -e "/^pkgrel=/c\pkgrel=\"1\"" PKGBUILD;
+          (
+            source PKGBUILD;
+            curl -o source -L "${source[0]}";
+            SHA256SUM="$(sha256sum source | awk '{ print $1 }')";
+            if [[ "${repo}" == "gr-framework" ]]; then
+              sed -i "/^sha256sums=/c\sha256sums=(\"${SHA256SUM}\")" PKGBUILD;
+            else
+              sed -i "/^sha256sums=/c\sha256sums=(\"${SHA256SUM}\" \\\\" PKGBUILD;
+            fi;
+          );
+          makepkg --printsrcinfo > .SRCINFO;
+          if ! git diff --quiet; then
+            git commit -a -m "Update to version ${CI_COMMIT_TAG#v}";
+            git push;
+          else
+            echo "No changes to commit.";
+          fi;
+          cd ..;
+        done;
+      fi;
+    else
+      PKGVERS="$(git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g')";
+      for repo in "gr-framework-git" "gr-framework-js-git"; do
+        git clone "ssh://aur@aur.archlinux.org/${repo}.git";
+        cd "${repo}";
+        sed -i -e "/^pkgver=/c\pkgver=\"${PKGVERS}\"" -e "/^pkgrel=/c\pkgrel=\"1\"" PKGBUILD;
+        makepkg --printsrcinfo > .SRCINFO;
+        if ! git diff --quiet; then
+          git commit -a -m "Update to version ${PKGVERS}";
+          git push;
+        else
+          echo "No changes to commit.";
+        fi;
+        cd ..;
+      done;
+    fi
