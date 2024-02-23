@@ -236,11 +236,14 @@
             <xs:attribute name="diag_factor" type="xs:double"/>
             <xs:attribute name="keep_window" type="xs:integer"/>
             <xs:attribute name="location" type="strint"/>
+            <xs:attribute name="max_scale" type="xs:double"/>
+            <xs:attribute name="min_scale" type="xs:double"/>
             <xs:attribute name="projection_type" type="xs:integer"/>
             <xs:attribute name="r_max" type="xs:double"/>
             <xs:attribute name="r_min" type="xs:double"/>
             <xs:attribute name="resample_method" type="strint"/>
             <xs:attribute name="rings" type="xs:integer"/>
+            <xs:attribute name="skip_calculations" type="xs:integer"/>
             <xs:attribute name="space" type="xs:integer"/>
             <xs:attribute name="space_rotation" type="xs:integer"/>
             <xs:attribute name="space_tilt" type="xs:integer"/>

@@ -2539,7 +2539,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "z_log", "i", &z_log);
 
-  group->setAttribute("kind", kind);
+  plot_parent->setAttribute("kind", kind);
   while (*current_series != nullptr)
     {
       x = y = nullptr;
