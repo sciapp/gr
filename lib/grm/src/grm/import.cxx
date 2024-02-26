@@ -788,7 +788,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           fprintf(stderr, "Insufficient data for plot type (%s)\n", kind);
           return 0;
         }
-      if (cols > 3) fprintf(stderr, "Only the first 3 columns get displayed");
+      if (cols > 3) fprintf(stderr, "Only the first 3 columns get displayed\n");
 
       /* apply the ranges to the data */
       if (ranges.xmax != INFINITY)

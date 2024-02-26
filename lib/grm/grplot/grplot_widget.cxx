@@ -48,6 +48,7 @@ static Qt::KeyboardModifiers modifiers = Qt::NoModifier;
 static std::vector<Bounding_object> cur_moved;
 static bool disable_movable_xform = false;
 static std::shared_ptr<GRM::Element> global_root;
+static bool ctrl_key_mode = false;
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -1412,6 +1413,14 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
     {
       if (event->key() == Qt::Key_Escape)
         {
+          if (!current_selections.empty())
+            {
+              for (const auto &selection : current_selections)
+                {
+                  selection->get_ref()->setAttribute("_selected", 0);
+                }
+              current_selections.clear();
+            }
           current_selection = nullptr;
           mouse_move_selection = nullptr;
           treewidget->updateData(grm_get_document_root());
@@ -1486,6 +1495,10 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
           treewidget->updateData(grm_get_document_root());
           treewidget->selectItem(current_selection->get_ref());
         }
+      else if (event->key() == Qt::Key_Control)
+        {
+          ctrl_key_mode = true;
+        }
     }
   else
     {
@@ -1497,7 +1510,14 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
 void GRPlotWidget::keyReleaseEvent(QKeyEvent *event)
 {
   GR_UNUSED(event);
-  if (!enable_editor) collectTooltips();
+  if (enable_editor)
+    {
+      if (event->key() == Qt::Key_Control) ctrl_key_mode = false;
+    }
+  else
+    {
+      collectTooltips();
+    }
   update();
 }
 
@@ -1509,19 +1529,41 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
     {
       int x, y;
       getMousePos(event, &x, &y);
-      cur_moved = bounding_logic->get_bounding_objects_at_point(x, y);
-
-      if (current_selection == nullptr)
+      if (mouseState.mode == MouseState::Mode::move_selected && !ctrl_key_mode)
         {
-          if (cur_moved.empty())
+          grm_args_t *args = grm_args_new();
+
+          grm_args_push(args, "x", "i", mouseState.anchor.x());
+          grm_args_push(args, "y", "i", mouseState.anchor.y());
+          grm_args_push(args, "x_shift", "i", x - mouseState.anchor.x());
+          grm_args_push(args, "y_shift", "i", y - mouseState.anchor.y());
+
+          /* get the correct cursor and sets it */
+          int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
+          grm_args_push(args, "move_selection", "i", 1);
+
+          grm_input(args);
+          grm_args_delete(args);
+
+          mouseState.anchor = event->pos();
+          redraw();
+        }
+      else
+        {
+          cur_moved = bounding_logic->get_bounding_objects_at_point(x, y);
+
+          if (current_selection == nullptr)
             {
-              mouse_move_selection = nullptr;
+              if (cur_moved.empty())
+                {
+                  mouse_move_selection = nullptr;
+                }
+              else
+                {
+                  mouse_move_selection = &cur_moved[0];
+                }
+              update();
             }
-          else
-            {
-              mouse_move_selection = &cur_moved[0];
-            }
-          update();
         }
     }
   else
@@ -1627,7 +1669,14 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
     {
       int x, y;
       getMousePos(event, &x, &y);
-      mouseState.mode = MouseState::Mode::pan;
+      if (current_selections.empty() || ctrl_key_mode)
+        {
+          mouseState.mode = MouseState::Mode::pan;
+        }
+      else
+        {
+          mouseState.mode = MouseState::Mode::move_selected;
+        }
       mouseState.anchor = event->pos();
 
       int cursor_state = grm_get_hover_mode(x, y, disable_movable_xform);
@@ -1658,6 +1707,27 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
               clicked = cur_clicked;
             }
           current_selection = &clicked[0];
+          if (ctrl_key_mode)
+            {
+              bool removed_selection = false;
+              std::unique_ptr<Bounding_object> tmp(new Bounding_object(clicked[0]));
+              for (auto it = std::begin(current_selections); it != std::end(current_selections); ++it)
+                {
+                  if ((*it)->get_ref() == tmp->get_ref())
+                    {
+                      (*it)->get_ref()->setAttribute("_selected", 0);
+                      it = current_selections.erase(it);
+                      removed_selection = true;
+                      break;
+                    }
+                }
+              if (!removed_selection)
+                {
+                  tmp->get_ref()->setAttribute("_selected", 1);
+                  add_current_selection(std::move(tmp));
+                }
+              mouseState.mode = MouseState::Mode::move_selected;
+            }
           treewidget->updateData(grm_get_document_root());
           treewidget->selectItem(current_selection->get_ref());
           mouse_move_selection = nullptr;
@@ -1725,6 +1795,10 @@ void GRPlotWidget::mouseReleaseEvent(QMouseEvent *event)
           setCursor(*csr);
         }
     }
+  else if (mouseState.mode == MouseState::Mode::move_selected)
+    {
+      mouseState.mode = MouseState::Mode::normal;
+    }
 
   grm_input(args);
   grm_args_delete(args);
@@ -1743,6 +1817,11 @@ void GRPlotWidget::resizeEvent(QResizeEvent *event)
     }
 
   current_selection = nullptr;
+  for (const auto &selection : current_selections)
+    {
+      selection->get_ref()->setAttribute("_selected", 0);
+    }
+  current_selections.clear();
   mouse_move_selection = nullptr;
   amount_scrolled = 0;
   clicked.clear();
@@ -2298,19 +2377,36 @@ void GRPlotWidget::highlight_current_selection(QPainter &painter)
 {
   if (enable_editor)
     {
-      if (current_selection != nullptr)
+      if (!current_selections.empty())
         {
-          painter.fillRect(current_selection->boundingRect(), QBrush(QColor(190, 210, 232, 150), Qt::SolidPattern));
-          if (current_selection->get_ref() != nullptr)
-            painter.drawText(current_selection->boundingRect().topLeft() + QPointF(5, 10),
-                             current_selection->get_ref()->localName().c_str());
+          for (const auto &selection : current_selections)
+            {
+              painter.fillRect(selection->boundingRect(), QBrush(QColor(190, 210, 232, 150), Qt::Dense7Pattern));
+              if (selection->get_ref() != nullptr)
+                painter.drawText(selection->boundingRect().topLeft() + QPointF(5, 10),
+                                 selection->get_ref()->localName().c_str());
+            }
         }
-      else if (mouse_move_selection != nullptr)
+
+      // only highlight current_selection when ctrl isn't pressed, else an element doesn't get visually removed from the
+      // list cause it still gets highlighted
+      if (!ctrl_key_mode && mouseState.mode != MouseState::Mode::move_selected)
         {
-          painter.fillRect(mouse_move_selection->boundingRect(), QBrush(QColor(190, 210, 232, 150), Qt::SolidPattern));
-          if (mouse_move_selection->get_ref() != nullptr)
-            painter.drawText(mouse_move_selection->boundingRect().topLeft() + QPointF(5, 10),
-                             mouse_move_selection->get_ref()->localName().c_str());
+          if (current_selection != nullptr)
+            {
+              painter.fillRect(current_selection->boundingRect(), QBrush(QColor(190, 210, 232, 150), Qt::SolidPattern));
+              if (current_selection->get_ref() != nullptr)
+                painter.drawText(current_selection->boundingRect().topLeft() + QPointF(5, 10),
+                                 current_selection->get_ref()->localName().c_str());
+            }
+          else if (mouse_move_selection != nullptr)
+            {
+              painter.fillRect(mouse_move_selection->boundingRect(),
+                               QBrush(QColor(190, 210, 232, 150), Qt::SolidPattern));
+              if (mouse_move_selection->get_ref() != nullptr)
+                painter.drawText(mouse_move_selection->boundingRect().topLeft() + QPointF(5, 10),
+                                 mouse_move_selection->get_ref()->localName().c_str());
+            }
         }
       if (selected_parent != nullptr)
         {
@@ -2343,6 +2439,11 @@ void GRPlotWidget::reset_pixmap()
 {
   redraw_pixmap = true;
   current_selection = nullptr;
+  for (const auto &selection : current_selections)
+    {
+      selection->get_ref()->setAttribute("_selected", 0);
+    }
+  current_selections.clear();
   update();
 }
 
@@ -2828,4 +2929,20 @@ QStringList GRPlotWidget::getCheckBoxAttributes()
 QStringList GRPlotWidget::getComboBoxAttributes()
 {
   return combo_box_attr;
+}
+
+void GRPlotWidget::add_current_selection(std::unique_ptr<Bounding_object> curr_selection)
+{
+  current_selections.emplace_back(std::move(curr_selection));
+}
+
+std::list<std::unique_ptr<Bounding_object>>::iterator
+GRPlotWidget::erase_current_selection(std::list<std::unique_ptr<Bounding_object>>::const_iterator current_selection)
+{
+  return current_selections.erase(current_selection);
+}
+
+const std::list<std::unique_ptr<Bounding_object>> &GRPlotWidget::get_current_selections() const
+{
+  return current_selections;
 }
