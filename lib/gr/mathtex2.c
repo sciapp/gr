@@ -1759,10 +1759,12 @@ static size_t convert_function_to_box_model(ParserNode *node)
   push_state();
   get_current_state()->font = FV_RM;
   bm_node_index = make_hlist();
+  append_to_hlist(bm_node_index, make_space(0.15));
   for (i = 1; i < node->length; i++)
     {
       append_to_hlist(bm_node_index, make_char((unsigned int)(node->source[i])));
     }
+  append_to_hlist(bm_node_index, make_space(0.15));
   kern_hlist(bm_node_index);
   pack_hlist(bm_node_index, 0, 1);
   pop_state();
