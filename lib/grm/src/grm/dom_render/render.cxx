@@ -12792,33 +12792,19 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
 
   // Restore `_child_id` if necessary (after an import)
   {
-    bool skip_all_children = false;
-    // If any of the children cannot get a child id, no child gets one
+    int child_id = 0;
     for (const auto &child : element->children())
       {
-        if (str_equals_any(child->localName().c_str(), 16, "axes_text_group", "colorbar", "coordinate_system",
-                           "draw_graphics", "error_bars", "figure", "integral_group", "isosurface_render",
-                           "labels_group", "layout_grid", "layout_grid_element", "legend", "panzoom", "plot",
-                           "x_tick_label_group", "y_tick_label_group") ||
-            (starts_with(child->localName(), "series_") &&
-             (!str_equals_any(child->localName().c_str(), 2, "series_heatmap", "series_hist") ||
-              element->localName() != "series_marginal_heatmap")))
+        if (!child->hasAttribute("_child_id") &&
+            !str_equals_any(child->localName().c_str(), 16, "axes_text_group", "colorbar", "coordinate_system",
+                            "draw_graphics", "error_bars", "figure", "integral_group", "isosurface_render",
+                            "labels_group", "layout_grid", "layout_grid_element", "legend", "panzoom", "plot",
+                            "x_tick_label_group", "y_tick_label_group") &&
+            (!starts_with(child->localName(), "series_") ||
+             (str_equals_any(child->localName().c_str(), 2, "series_heatmap", "series_hist") &&
+              element->localName() == "series_marginal_heatmap")))
           {
-            skip_all_children = true;
-            break;
-          }
-      }
-
-    if (!skip_all_children)
-      {
-        int child_id = 0;
-        for (const auto &child : element->children())
-          {
-            if (!child->hasAttribute("_child_id"))
-              {
-                child->setAttribute("_child_id", child_id);
-              }
-            ++child_id;
+            child->setAttribute("_child_id", child_id++);
           }
       }
   }
