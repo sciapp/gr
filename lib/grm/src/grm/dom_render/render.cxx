@@ -11646,8 +11646,13 @@ void plotProcessWsWindowWsViewport(const std::shared_ptr<GRM::Element> &element,
        static_cast<int>(active_figure->getAttribute("_previous_pixel_height")) != pixel_height))
     {
       /* TODO: handle error return value? */
-      event_queue_enqueue_size_event(event_queue, static_cast<int>(active_figure->getAttribute("figure_id")),
-                                     pixel_width, pixel_height);
+      auto figure_id_str = static_cast<std::string>(active_figure->getAttribute("figure_id"));
+      if (starts_with(figure_id_str, "figure"))
+        {
+          figure_id_str = figure_id_str.substr(6);
+        }
+      int figure_id = std::stoi(figure_id_str);
+      event_queue_enqueue_size_event(event_queue, figure_id, pixel_width, pixel_height);
     }
 
   aspect_ratio_ws_pixel = (double)pixel_width / pixel_height;
