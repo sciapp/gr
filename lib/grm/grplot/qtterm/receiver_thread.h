@@ -7,14 +7,25 @@
 #include <QDebug>
 
 
-class Receiver_Thread : public QThread
+class Receiver : public QObject
 {
   Q_OBJECT
+
+public:
+  Receiver();
+  virtual ~Receiver();
+  void start();
+
 signals:
   void resultReady(grm_args_t_wrapper args);
 
+private slots:
+  void receiveData();
+  void dataProcessed();
+
 private:
-  void run() override;
+  QThread thread_;
+  void *grm_receiver_handle_ = nullptr;
 };
 
 #endif /* ifndef RECEIVER_THREAD_H_INCLUDED */

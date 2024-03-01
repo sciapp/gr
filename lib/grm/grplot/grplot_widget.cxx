@@ -200,10 +200,11 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   if (strcmp(argv[1], "--listen") == 0)
     {
       qRegisterMetaType<grm_args_t_wrapper>("grm_args_t_wrapper");
-      receiver_thread = new Receiver_Thread();
-      QObject::connect(receiver_thread, SIGNAL(resultReady(grm_args_t_wrapper)), this,
-                       SLOT(received(grm_args_t_wrapper)), Qt::QueuedConnection);
-      receiver_thread->start();
+      receiver = new Receiver();
+      QObject::connect(receiver, SIGNAL(resultReady(grm_args_t_wrapper)), this, SLOT(received(grm_args_t_wrapper)),
+                       Qt::QueuedConnection);
+      QObject::connect(this, SIGNAL(pixmapRedrawn()), receiver, SLOT(dataProcessed()), Qt::QueuedConnection);
+      receiver->start();
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
       ::size_callback = [this](auto &&PH1) { size_callback(std::forward<decltype(PH1)>(PH1)); };
@@ -433,6 +434,14 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 
 GRPlotWidget::~GRPlotWidget()
 {
+  /*
+   * TODO: Delete the receiver. Currently, this is not possible, since the underlying network thread is caught in
+   * blocking networking routines and cannot be signaled to exit.
+   * if (receiver != nullptr)
+   *   {
+   *     delete receiver;
+   *   }
+   */
   grm_args_delete(args_);
   grm_finalize();
 }
@@ -1300,6 +1309,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
       redraw_pixmap = false;
 
       if (tree_update) treewidget->updateData(grm_get_document_root());
+      emit pixmapRedrawn();
     }
 
   painter.begin(paint_device);
