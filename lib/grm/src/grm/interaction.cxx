@@ -374,15 +374,15 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
                                                        "x_tick_label_group",
                                                        "layout_grid_element",
                                                        "layout_grid",
-                                                       "central_region"};
+                                                       "central_region",
+                                                       "side_region",
+                                                       "marginal_heatmap_plot"};
 
   GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
 
   if (std::find(ndc_transformation_elems.begin(), ndc_transformation_elems.end(), element->localName()) !=
-          ndc_transformation_elems.end() ||
-      (element->hasAttribute("marginal_heatmap_side_plot") &&
-       static_cast<int>(element->getAttribute("marginal_heatmap_side_plot"))))
+      ndc_transformation_elems.end())
     post_fix = "_ndc";
 
   x_with_shift = ndc_x + (double)xshift / max_width_height;
@@ -475,7 +475,7 @@ int grm_input(const grm_args_t *input_args)
   max_width_height = grm_max(width, height);
   logger((stderr, "Using size (%d, %d)\n", width, height));
 
-  auto marginal_heatmap = grm_get_document_root()->querySelectorsAll("series_marginal_heatmap");
+  auto marginal_heatmap = grm_get_document_root()->querySelectorsAll("marginal_heatmap_plot");
   if (!marginal_heatmap.empty())
     {
       if (marginal_heatmap[0]->hasAttribute("x_ind")) marginal_heatmap[0]->setAttribute("x_ind", -1);
@@ -603,21 +603,21 @@ int grm_input(const grm_args_t *input_args)
                 }
 
               GRM::Render::processLimits(subplot_element);
-              GRM::Render::processWindow(subplot_element);
+              GRM::Render::processWindow(central_region);
 
               gr_savestate();
               for (const auto &elem : subplot_element->parentElement()->children())
                 {
-                  if (elem->hasAttribute("window_x_min"))
+                  if (elem->hasAttribute("scale"))
                     {
                       gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
                                      static_cast<double>(central_region->getAttribute("viewport_x_max")),
                                      static_cast<double>(central_region->getAttribute("viewport_y_min")),
                                      static_cast<double>(central_region->getAttribute("viewport_y_max")));
-                      gr_setwindow(static_cast<double>(elem->getAttribute("window_x_min")),
-                                   static_cast<double>(elem->getAttribute("window_x_max")),
-                                   static_cast<double>(elem->getAttribute("window_y_min")),
-                                   static_cast<double>(elem->getAttribute("window_y_max")));
+                      gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
+                                   static_cast<double>(central_region->getAttribute("window_x_max")),
+                                   static_cast<double>(central_region->getAttribute("window_y_min")),
+                                   static_cast<double>(central_region->getAttribute("window_y_max")));
                       gr_setscale(static_cast<int>(elem->getAttribute("scale")));
                       break;
                     }
@@ -667,7 +667,7 @@ int grm_input(const grm_args_t *input_args)
               if (static_cast<int>(subplot_element->getAttribute("x_log")))
                 {
                   double tmp = 0;
-                  xind_d = x_offset;
+                  xind_d = 0;
                   for (int j = 0; j < x_length - x_offset; j++)
                     {
                       if (tmp + x_steps[j] > (x - x_0)) break;
@@ -680,7 +680,7 @@ int grm_input(const grm_args_t *input_args)
               if (static_cast<int>(subplot_element->getAttribute("y_log")))
                 {
                   double tmp = 0;
-                  yind_d = y_offset;
+                  yind_d = 0;
                   for (int j = 0; j < y_length - y_offset; j++)
                     {
                       if (tmp + y_steps[j] < (y - y_0)) break;
@@ -700,49 +700,56 @@ int grm_input(const grm_args_t *input_args)
                   yind = (int)yind_d;
                 }
 
-              auto old_xind = static_cast<int>(current_series->parentElement()->getAttribute("x_ind"));
-              auto old_yind = static_cast<int>(current_series->parentElement()->getAttribute("y_ind"));
-              current_series->parentElement()->setAttribute("x_ind", xind);
-              current_series->parentElement()->setAttribute("y_ind", yind);
-              if (static_cast<std::string>(current_series->parentElement()->getAttribute("marginal_heatmap_kind")) ==
-                      "line" &&
+              auto old_xind = static_cast<int>(marginal_heatmap[0]->getAttribute("x_ind"));
+              auto old_yind = static_cast<int>(marginal_heatmap[0]->getAttribute("y_ind"));
+              marginal_heatmap[0]->setAttribute("x_ind", xind);
+              marginal_heatmap[0]->setAttribute("y_ind", yind);
+              if (static_cast<std::string>(marginal_heatmap[0]->getAttribute("marginal_heatmap_kind")) == "line" &&
                   ((old_xind == -1 || old_yind == -1) && xind != -1 && yind != -1))
-                current_series->parentElement()->setAttribute("_update_required", true);
+                marginal_heatmap[0]->setAttribute("_update_required", true);
 
-              for (auto &child : current_series->parentElement()->children())
+              for (auto &side_region : marginal_heatmap[0]->children())
                 {
-                  std::string childKind = static_cast<std::string>(child->getAttribute("kind"));
-                  if (childKind == "hist")
+                  if (side_region->localName() == "side_region")
                     {
-                      // reset bar colors
-                      bool is_horizontal = static_cast<std::string>(child->getAttribute("orientation")) == "horizontal";
-
-                      // bar level
-                      for (auto &bars : child->children())
+                      for (auto &child : side_region->children())
                         {
-                          // fill- and draw_rect level
-                          for (auto &childSeries : bars->children())
+                          std::string childKind = static_cast<std::string>(child->getAttribute("kind"));
+                          if (childKind == "hist")
                             {
-                              auto groups = childSeries->children(); // innerFillGroup and outerFillGroup
-                              std::shared_ptr<GRM::Element> innerFillGroup;
-                              if (groups.size() == 2)
-                                {
-                                  innerFillGroup = groups[0];
-                                }
-                              else
-                                {
-                                  // no fillGroups?
-                                  break;
-                                }
+                              // reset bar colors
+                              bool is_horizontal =
+                                  static_cast<std::string>(child->getAttribute("orientation")) == "horizontal";
 
-                              int fillColorInd = static_cast<int>(innerFillGroup->getAttribute("fill_color_ind"));
-                              if (xind != -1)
+                              // bar level
+                              for (auto &bars : child->children())
                                 {
-                                  innerFillGroup->children()[xind]->removeAttribute("fill_color_ind");
-                                }
-                              if (yind != -1)
-                                {
-                                  innerFillGroup->children()[yind]->removeAttribute("fill_color_ind");
+                                  // fill- and draw_rect level
+                                  for (auto &childSeries : bars->children())
+                                    {
+                                      auto groups = childSeries->children(); // innerFillGroup and outerFillGroup
+                                      std::shared_ptr<GRM::Element> innerFillGroup;
+                                      if (groups.size() == 2)
+                                        {
+                                          innerFillGroup = groups[0];
+                                        }
+                                      else
+                                        {
+                                          // no fillGroups?
+                                          break;
+                                        }
+
+                                      int fillColorInd =
+                                          static_cast<int>(innerFillGroup->getAttribute("fill_color_ind"));
+                                      if (xind != -1)
+                                        {
+                                          innerFillGroup->children()[xind]->removeAttribute("fill_color_ind");
+                                        }
+                                      if (yind != -1)
+                                        {
+                                          innerFillGroup->children()[yind]->removeAttribute("fill_color_ind");
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -808,21 +815,21 @@ int grm_input(const grm_args_t *input_args)
               grm_args_values(input_args, "move_selection", "i", &selection_status))
             {
               GRM::Render::processLimits(subplot_element);
-              GRM::Render::processWindow(subplot_element);
+              GRM::Render::processWindow(central_region);
 
               gr_savestate();
               for (const auto &elem : subplot_element->parentElement()->children())
                 {
-                  if (elem->hasAttribute("window_x_min"))
+                  if (elem->hasAttribute("scale"))
                     {
                       gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
                                      static_cast<double>(central_region->getAttribute("viewport_x_max")),
                                      static_cast<double>(central_region->getAttribute("viewport_y_min")),
                                      static_cast<double>(central_region->getAttribute("viewport_y_max")));
-                      gr_setwindow(static_cast<double>(elem->getAttribute("window_x_min")),
-                                   static_cast<double>(elem->getAttribute("window_x_max")),
-                                   static_cast<double>(elem->getAttribute("window_y_min")),
-                                   static_cast<double>(elem->getAttribute("window_y_max")));
+                      gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
+                                   static_cast<double>(central_region->getAttribute("window_x_max")),
+                                   static_cast<double>(central_region->getAttribute("window_y_min")),
+                                   static_cast<double>(central_region->getAttribute("window_y_max")));
                       gr_setscale(static_cast<int>(elem->getAttribute("scale")));
                       break;
                     }
@@ -921,21 +928,21 @@ int grm_input(const grm_args_t *input_args)
                   movable_obj_ref = movable;
 
                   GRM::Render::processLimits(subplot_element);
-                  GRM::Render::processWindow(subplot_element);
+                  GRM::Render::processWindow(central_region);
 
                   gr_savestate();
                   for (const auto &elem : subplot_element->parentElement()->children())
                     {
-                      if (elem->hasAttribute("window_x_min"))
+                      if (elem->hasAttribute("scale"))
                         {
                           gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
                                          static_cast<double>(central_region->getAttribute("viewport_x_max")),
                                          static_cast<double>(central_region->getAttribute("viewport_y_min")),
                                          static_cast<double>(central_region->getAttribute("viewport_y_max")));
-                          gr_setwindow(static_cast<double>(elem->getAttribute("window_x_min")),
-                                       static_cast<double>(elem->getAttribute("window_x_max")),
-                                       static_cast<double>(elem->getAttribute("window_y_min")),
-                                       static_cast<double>(elem->getAttribute("window_y_max")));
+                          gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
+                                       static_cast<double>(central_region->getAttribute("window_x_max")),
+                                       static_cast<double>(central_region->getAttribute("window_y_min")),
+                                       static_cast<double>(central_region->getAttribute("window_y_max")));
                           gr_setscale(static_cast<int>(elem->getAttribute("scale")));
                           break;
                         }
@@ -1237,7 +1244,6 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
   unsigned int x_length, y_length, z_length, series_i = 0, i;
   std::string orientation;
   int is_vertical = 0;
-  int z_log = 0;
 
   auto info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
   return_error_if(info == nullptr, ERROR_MALLOC);
@@ -1274,25 +1280,23 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
     }
 
   GRM::Render::processLimits(subplot_element);
-  GRM::Render::processWindow(subplot_element);
 
   gr_savestate();
   auto central_region = subplot_element->querySelectors("central_region");
-  if (subplot_element->hasAttribute("window_x_min"))
+  GRM::Render::processWindow(central_region);
+  if (central_region->hasAttribute("window_x_min"))
     {
       gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
                      static_cast<double>(central_region->getAttribute("viewport_x_max")),
                      static_cast<double>(central_region->getAttribute("viewport_y_min")),
                      static_cast<double>(central_region->getAttribute("viewport_y_max")));
-      gr_setwindow(static_cast<double>(subplot_element->getAttribute("window_x_min")),
-                   static_cast<double>(subplot_element->getAttribute("window_x_max")),
-                   static_cast<double>(subplot_element->getAttribute("window_y_min")),
-                   static_cast<double>(subplot_element->getAttribute("window_y_max")));
+      gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
+                   static_cast<double>(central_region->getAttribute("window_x_max")),
+                   static_cast<double>(central_region->getAttribute("window_y_min")),
+                   static_cast<double>(central_region->getAttribute("window_y_max")));
     }
   GRM::Render::calculateCharHeight(central_region);
   gr_setscale(static_cast<int>(subplot_element->getAttribute("scale")));
-  z_log = static_cast<int>(subplot_element->getAttribute("z_log"));
-
   gr_ndctowc(&x, &y);
 
   auto axes_vec = subplot_element->querySelectorsAll("axes");
@@ -1417,21 +1421,27 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
     {
       auto current_series_group_vec = subplot_element->querySelectorsAll("series_" + kind);
       std::vector<std::shared_ptr<GRM::Element>> current_series_vec;
-      for (const auto &current_series_group : current_series_group_vec)
+      if (kind != "marginal_heatmap")
         {
-          if (str_equals_any(kind.c_str(), 7, "hexbin", "imshow", "contour", "contourf", "heatmap", "quiver", "shade"))
+          for (const auto &current_series_group : current_series_group_vec)
             {
-              current_series_vec.push_back(current_series_group);
-            }
-          else
-            {
-              for (const auto &current_series_group_child : current_series_group->children())
+              if (str_equals_any(kind.c_str(), 7, "hexbin", "imshow", "contour", "contourf", "heatmap", "quiver",
+                                 "shade"))
                 {
-                  if ((kind == "marginal_heatmap" && current_series_group_child->localName() == "series_heatmap") ||
-                      kind != "marginal_heatmap")
-                    current_series_vec.push_back(current_series_group_child);
+                  current_series_vec.push_back(current_series_group);
+                }
+              else
+                {
+                  for (const auto &current_series_group_child : current_series_group->children())
+                    {
+                      current_series_vec.push_back(current_series_group_child);
+                    }
                 }
             }
+        }
+      else
+        {
+          current_series_vec.push_back(subplot_element->querySelectors("marginal_heatmap_plot"));
         }
 
       for (auto &current_series : current_series_vec)

@@ -607,10 +607,6 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       kind = "volume";
       grm_args_push(args, "kind", "s", kind);
     }
-  if (strcmp(kind, "line") == 0 || (strcmp(kind, "scatter") == 0 && !scatter_with_z) || cols != rows)
-    {
-      grm_args_push(args, "keep_aspect_ratio", "i", 0);
-    }
 
   if (str_equals_any(kind, 7, "contour", "contourf", "heatmap", "imshow", "marginal_heatmap", "surface", "wireframe"))
     {

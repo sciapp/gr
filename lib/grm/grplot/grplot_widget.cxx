@@ -574,6 +574,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       "up",
       "down",
   };
+  QStringList side_region_location_list{"top", "right", "bottom", "left"};
   static std::map<std::string, QStringList> attributeToList{
       {"size_x_unit", size_unit_list},
       {"size_y_unit", size_unit_list},
@@ -581,7 +582,6 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"font", font_list},
       {"font_precision", font_precision_list},
       {"line_type", line_type_list},
-      {"location", location_list},
       {"marker_type", marker_type_list},
       {"text_align_vertical", text_align_vertical_list},
       {"text_align_horizontal", text_align_horizontal_list},
@@ -625,7 +625,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       completer->setCaseSensitivity(Qt::CaseInsensitive);
       ((QComboBox *)*lineEdit)->setCompleter(completer);
     }
-  else if (cur_attr_name == "algorithm" && cur_elem_name == "series_marginal_heatmap")
+  else if (cur_attr_name == "algorithm" && cur_elem_name == "marginal_heatmap_plot")
     {
       for (const auto &elem : algorithm_marginal_heatmap_list)
         {
@@ -649,6 +649,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       std::string kind;
 
       if (util::startsWith(cur_elem_name, "series_")) kind = cur_elem_name.erase(0, 7);
+      if (util::endsWith(cur_elem_name, "_plot"))
+        kind = cur_elem_name.erase(cur_elem_name.size() - 6, cur_elem_name.size() - 1);
 
       if (heatmap_group.contains(kind.c_str()))
         {
@@ -684,6 +686,26 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
           ((QComboBox *)*lineEdit)->addItem(elem.toStdString().c_str());
         }
       auto *completer = new QCompleter(list, this);
+      completer->setCaseSensitivity(Qt::CaseInsensitive);
+      ((QComboBox *)*lineEdit)->setCompleter(completer);
+    }
+  else if (cur_attr_name == "location" && cur_elem_name == "side_region")
+    {
+      for (const auto &elem : side_region_location_list)
+        {
+          ((QComboBox *)*lineEdit)->addItem(elem.toStdString().c_str());
+        }
+      auto *completer = new QCompleter(side_region_location_list, this);
+      completer->setCaseSensitivity(Qt::CaseInsensitive);
+      ((QComboBox *)*lineEdit)->setCompleter(completer);
+    }
+  else if (cur_attr_name == "location" && cur_elem_name != "side_region")
+    {
+      for (const auto &elem : location_list)
+        {
+          ((QComboBox *)*lineEdit)->addItem(elem.toStdString().c_str());
+        }
+      auto *completer = new QCompleter(location_list, this);
       completer->setCaseSensitivity(Qt::CaseInsensitive);
       ((QComboBox *)*lineEdit)->setCompleter(completer);
     }
@@ -723,7 +745,8 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
       current_text =
           projectionTypeIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
     }
-  else if (cur_attr_name == "location" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+  else if (cur_attr_name == "location" && current_selection->get_ref()->localName() != "side_region" &&
+           current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
       current_text = locationIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
     }
@@ -1969,8 +1992,8 @@ void GRPlotWidget::heatmap()
 {
   algo->menuAction()->setVisible(false);
   if (global_root == nullptr) global_root = grm_get_document_root();
-  std::vector<std::string> valid_series_names = {"series_marginal_heatmap", "series_surface",  "series_wireframe",
-                                                 "series_contour",          "series_contourf", "series_imshow"};
+  std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_surface",  "series_wireframe",
+                                                 "series_contour",        "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
     {
       auto series_elements = global_root->querySelectorsAll(name);
@@ -1993,11 +2016,11 @@ void GRPlotWidget::marginalheatmapall()
       auto series_elements = global_root->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
-          if (series_elem->parentElement()->localName() != "series_marginal_heatmap")
+          if (series_elem->parentElement()->parentElement()->localName() != "marginal_heatmap_plot")
             series_elem->setAttribute("kind", "marginal_heatmap");
         }
     }
-  for (const auto &series_elem : global_root->querySelectorsAll("series_marginal_heatmap"))
+  for (const auto &series_elem : global_root->querySelectorsAll("marginal_heatmap_plot"))
     {
       series_elem->setAttribute("marginal_heatmap_kind", "all");
     }
@@ -2015,11 +2038,11 @@ void GRPlotWidget::marginalheatmapline()
       auto series_elements = global_root->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
-          if (series_elem->parentElement()->localName() != "series_marginal_heatmap")
+          if (series_elem->parentElement()->parentElement()->localName() != "marginal_heatmap_plot")
             series_elem->setAttribute("kind", "marginal_heatmap");
         }
     }
-  for (const auto &series_elem : global_root->querySelectorsAll("series_marginal_heatmap"))
+  for (const auto &series_elem : global_root->querySelectorsAll("marginal_heatmap_plot"))
     {
       series_elem->setAttribute("marginal_heatmap_kind", "line");
     }
@@ -2045,7 +2068,7 @@ void GRPlotWidget::line()
 void GRPlotWidget::sumalgorithm()
 {
   if (global_root == nullptr) global_root = grm_get_document_root();
-  for (const auto &elem : global_root->querySelectorsAll("series_marginal_heatmap"))
+  for (const auto &elem : global_root->querySelectorsAll("marginal_heatmap_plot"))
     {
       elem->setAttribute("algorithm", "sum");
     }
@@ -2055,7 +2078,7 @@ void GRPlotWidget::sumalgorithm()
 void GRPlotWidget::maxalgorithm()
 {
   if (global_root == nullptr) global_root = grm_get_document_root();
-  for (const auto &elem : global_root->querySelectorsAll("series_marginal_heatmap"))
+  for (const auto &elem : global_root->querySelectorsAll("marginal_heatmap_plot"))
     {
       elem->setAttribute("algorithm", "max");
     }
@@ -2085,8 +2108,8 @@ void GRPlotWidget::surface()
 {
   algo->menuAction()->setVisible(false);
   if (global_root == nullptr) global_root = grm_get_document_root();
-  std::vector<std::string> valid_series_names = {"series_marginal_heatmap", "series_heatmap",  "series_wireframe",
-                                                 "series_contour",          "series_contourf", "series_imshow"};
+  std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_heatmap",  "series_wireframe",
+                                                 "series_contour",        "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
     {
       auto series_elements = global_root->querySelectorsAll(name);
@@ -2101,8 +2124,8 @@ void GRPlotWidget::wireframe()
 {
   algo->menuAction()->setVisible(false);
   if (global_root == nullptr) global_root = grm_get_document_root();
-  std::vector<std::string> valid_series_names = {"series_marginal_heatmap", "series_surface",  "series_heatmap",
-                                                 "series_contour",          "series_contourf", "series_imshow"};
+  std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_surface",  "series_heatmap",
+                                                 "series_contour",        "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
     {
       auto series_elements = global_root->querySelectorsAll(name);
@@ -2118,8 +2141,8 @@ void GRPlotWidget::contour()
 {
   algo->menuAction()->setVisible(false);
   if (global_root == nullptr) global_root = grm_get_document_root();
-  std::vector<std::string> valid_series_names = {"series_marginal_heatmap", "series_surface",  "series_wireframe",
-                                                 "series_heatmap",          "series_contourf", "series_imshow"};
+  std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_surface",  "series_wireframe",
+                                                 "series_heatmap",        "series_contourf", "series_imshow"};
   for (const auto &name : valid_series_names)
     {
       auto series_elements = global_root->querySelectorsAll(name);
@@ -2135,8 +2158,8 @@ void GRPlotWidget::imshow()
 {
   algo->menuAction()->setVisible(false);
   if (global_root == nullptr) global_root = grm_get_document_root();
-  std::vector<std::string> valid_series_names = {"series_marginal_heatmap", "series_surface",  "series_wireframe",
-                                                 "series_contour",          "series_contourf", "series_heatmap"};
+  std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_surface",  "series_wireframe",
+                                                 "series_contour",        "series_contourf", "series_heatmap"};
   for (const auto &name : valid_series_names)
     {
       auto series_elements = global_root->querySelectorsAll(name);
@@ -2168,8 +2191,8 @@ void GRPlotWidget::contourf()
 {
   algo->menuAction()->setVisible(false);
   if (global_root == nullptr) global_root = grm_get_document_root();
-  std::vector<std::string> valid_series_names = {"series_marginal_heatmap", "series_surface", "series_wireframe",
-                                                 "series_contour",          "series_heatmap", "series_imshow"};
+  std::vector<std::string> valid_series_names = {"marginal_heatmap_plot", "series_surface", "series_wireframe",
+                                                 "series_contour",        "series_heatmap", "series_imshow"};
   for (const auto &name : valid_series_names)
     {
       auto series_elements = global_root->querySelectorsAll(name);
