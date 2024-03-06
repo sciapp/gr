@@ -190,6 +190,7 @@ private:
     std::variant<grm_tooltip_info_t *, grm_accumulated_tooltip_info_t *> tooltip_;
   };
 
+  bool in_listen_mode = false;
   QPixmap pixmap;
   bool redraw_pixmap;
   grm_args_t *args_;

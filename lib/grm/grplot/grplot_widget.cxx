@@ -199,6 +199,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 
   if (strcmp(argv[1], "--listen") == 0)
     {
+      in_listen_mode = true;
       qRegisterMetaType<grm_args_t_wrapper>("grm_args_t_wrapper");
       receiver = new Receiver();
       QObject::connect(receiver, SIGNAL(resultReady(grm_args_t_wrapper)), this, SLOT(received(grm_args_t_wrapper)),
@@ -1182,6 +1183,7 @@ void GRPlotWidget::AttributeEditEvent()
 
 void GRPlotWidget::draw()
 {
+  static bool called_at_least_once = false;
   if (!file_export.empty())
     {
       static char file[50];
@@ -1192,8 +1194,19 @@ void GRPlotWidget::draw()
       snprintf(file, 50, "grplot_%s.%s", kind.c_str(), file_export.c_str());
       grm_export(file);
     }
-  auto was_successful = grm_plot(nullptr);
+  bool was_successful;
+  if (!called_at_least_once || in_listen_mode)
+    {
+      /* Call `grm_plot` at least once to initialize the internal argument container structure,
+       * but use `grm_render` afterwards, so the graphics tree is not deleted every time. */
+      was_successful = grm_plot(nullptr);
+    }
+  else
+    {
+      was_successful = grm_render();
+    }
   assert(was_successful);
+  called_at_least_once = true;
 }
 
 void GRPlotWidget::redraw(bool update_tree)
