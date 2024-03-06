@@ -3028,7 +3028,7 @@ static void processResetRotation(const std::shared_ptr<GRM::Element> &element)
       element->setAttribute("space_3d_phi", phi);
       element->setAttribute("space_3d_theta", theta);
     }
-  element->parentElement()->removeAttribute("reset_rotation");
+  element->removeAttribute("reset_rotation");
 }
 
 void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
