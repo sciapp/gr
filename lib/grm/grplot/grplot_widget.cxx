@@ -199,11 +199,13 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 
   if (strcmp(argv[1], "--listen") == 0)
     {
+      in_listen_mode = true;
       qRegisterMetaType<grm_args_t_wrapper>("grm_args_t_wrapper");
-      receiver_thread = new Receiver_Thread();
-      QObject::connect(receiver_thread, SIGNAL(resultReady(grm_args_t_wrapper)), this,
-                       SLOT(received(grm_args_t_wrapper)), Qt::QueuedConnection);
-      receiver_thread->start();
+      receiver = new Receiver();
+      QObject::connect(receiver, SIGNAL(resultReady(grm_args_t_wrapper)), this, SLOT(received(grm_args_t_wrapper)),
+                       Qt::QueuedConnection);
+      QObject::connect(this, SIGNAL(pixmapRedrawn()), receiver, SLOT(dataProcessed()), Qt::QueuedConnection);
+      receiver->start();
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
       ::size_callback = [this](auto &&PH1) { size_callback(std::forward<decltype(PH1)>(PH1)); };
@@ -433,6 +435,14 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 
 GRPlotWidget::~GRPlotWidget()
 {
+  /*
+   * TODO: Delete the receiver. Currently, this is not possible, since the underlying network thread is caught in
+   * blocking networking routines and cannot be signaled to exit.
+   * if (receiver != nullptr)
+   *   {
+   *     delete receiver;
+   *   }
+   */
   grm_args_delete(args_);
   grm_finalize();
 }
@@ -1173,6 +1183,7 @@ void GRPlotWidget::AttributeEditEvent()
 
 void GRPlotWidget::draw()
 {
+  static bool called_at_least_once = false;
   if (!file_export.empty())
     {
       static char file[50];
@@ -1183,8 +1194,19 @@ void GRPlotWidget::draw()
       snprintf(file, 50, "grplot_%s.%s", kind.c_str(), file_export.c_str());
       grm_export(file);
     }
-  auto was_successful = grm_plot(nullptr);
+  bool was_successful;
+  if (!called_at_least_once || in_listen_mode)
+    {
+      /* Call `grm_plot` at least once to initialize the internal argument container structure,
+       * but use `grm_render` afterwards, so the graphics tree is not deleted every time. */
+      was_successful = grm_plot(nullptr);
+    }
+  else
+    {
+      was_successful = grm_render();
+    }
   assert(was_successful);
+  called_at_least_once = true;
 }
 
 void GRPlotWidget::redraw(bool update_tree)
@@ -1300,6 +1322,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
       redraw_pixmap = false;
 
       if (tree_update) treewidget->updateData(grm_get_document_root());
+      emit pixmapRedrawn();
     }
 
   painter.begin(paint_device);
@@ -2293,8 +2316,6 @@ void GRPlotWidget::hexbin()
     {
       elem->setAttribute("kind", "hexbin");
     }
-  grm_args_push(args_, "kind", "s", "hexbin");
-  grm_merge(args_);
   redraw();
 }
 

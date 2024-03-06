@@ -3028,7 +3028,7 @@ static void processResetRotation(const std::shared_ptr<GRM::Element> &element)
       element->setAttribute("space_3d_phi", phi);
       element->setAttribute("space_3d_theta", theta);
     }
-  element->parentElement()->removeAttribute("reset_rotation");
+  element->removeAttribute("reset_rotation");
 }
 
 void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
@@ -16132,6 +16132,8 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               plot_parent->setAttribute("kind", static_cast<std::string>(element->getAttribute("kind")));
               new_series->setAttribute("z", element->getAttribute("z"));
               new_series->setAttribute("z_dims", element->getAttribute("z_dims"));
+              if (element->hasAttribute("d_min")) new_series->setAttribute("d_min", element->getAttribute("d_min"));
+              if (element->hasAttribute("d_max")) new_series->setAttribute("d_max", element->getAttribute("d_max"));
               new_series->setAttribute("_bbox_id", -1);
               if (static_cast<int>(plot_parent->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())

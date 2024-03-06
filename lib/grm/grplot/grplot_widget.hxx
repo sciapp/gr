@@ -33,7 +33,7 @@ class GRPlotWidget : public QWidget
 
 public:
   explicit GRPlotWidget(QMainWindow *parent, int argc, char **argv);
-  ~GRPlotWidget() override;
+  virtual ~GRPlotWidget() override;
   void redraw(bool tree_update = true);
   std::shared_ptr<GRM::Document> get_schema_tree();
   void set_selected_parent(Bounding_object *parent);
@@ -67,6 +67,9 @@ protected:
   void paint(QPaintDevice *paint_device);
   void processTestCommandsFile();
   static Qt::KeyboardModifiers queryKeyboardModifiers();
+
+signals:
+  void pixmapRedrawn();
 
 private slots:
   void heatmap();
@@ -187,6 +190,7 @@ private:
     std::variant<grm_tooltip_info_t *, grm_accumulated_tooltip_info_t *> tooltip_;
   };
 
+  bool in_listen_mode = false;
   QPixmap pixmap;
   bool redraw_pixmap;
   grm_args_t *args_;
@@ -203,7 +207,7 @@ private:
   AddElementWidget *add_element_widget;
   int amount_scrolled;
   bool enable_editor;
-  Receiver_Thread *receiver_thread;
+  Receiver *receiver;
   std::shared_ptr<GRM::Document> schema_tree;
   bool tree_update = true;
   QSize size_hint;
