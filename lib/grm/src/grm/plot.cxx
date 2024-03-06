@@ -140,6 +140,7 @@ const char *plot_hierarchy_names[] = {"figure", "plots", "subplots", "series", n
 static grm_args_t *global_root_args = nullptr;
 grm_args_t *active_plot_args = nullptr;
 static unsigned int active_plot_index = 0;
+static bool args_changed_since_last_plot = false;
 grid_t *global_grid = nullptr;
 static std::shared_ptr<GRM::Render> global_render;
 static std::shared_ptr<GRM::Element> global_root;
@@ -148,7 +149,6 @@ static std::shared_ptr<GRM::Element> current_dom_element;
 static std::shared_ptr<GRM::Element> current_central_region_element;
 static bool hold_figures = false;
 static bool append_figures = false;
-static bool figure_switched = false;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ event handling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -4593,6 +4593,7 @@ int grm_merge_extended(const grm_args_t *args, int hold, const char *identificat
         {
           return 0;
         }
+      args_changed_since_last_plot = true;
     }
 
   process_events();
@@ -4722,72 +4723,61 @@ int grm_plot(const grm_args_t *args)
       return 0;
     }
 
-  if (!figure_switched)
+  if (!args_changed_since_last_plot && global_render->documentElement() &&
+      (global_render->documentElement()->hasChildNodes() ||
+       global_render->documentElement()->hasAttribute("_removed_children")))
     {
-      if (args == nullptr && global_render->documentElement() &&
-          (global_render->documentElement()->hasChildNodes() ||
-           global_render->documentElement()->hasAttribute("_removed_children")))
+      global_render->render();
+      return 1;
+    }
+  else
+    {
+      int temp;
+      global_render->setAutoUpdate(false);
+      if (grm_args_values(global_root_args, "hold_plots", "i", &temp))
         {
-          global_render->render();
-          return 1;
+          hold_figures = temp;
         }
-      else
+      if (grm_args_values(global_root_args, "append_plots", "i", &temp))
         {
-          int temp;
-          global_render->setAutoUpdate(false);
-          if (args != nullptr && grm_args_values(args, "hold_plots", "i", &temp))
-            {
-              hold_figures = temp;
-            }
-          if (args != nullptr && grm_args_values(args, "append_plots", "i", &temp))
-            {
-              append_figures = temp;
-            }
+          append_figures = temp;
+        }
 
-          int figure_id = 0;
-          if (args != nullptr && grm_args_values(args, "plot_id", "i", &figure_id))
-            {
-              figure_id_given = true;
-            }
-          /* check if given figure_id (even default 0) already exists in the render */
-          auto figure_element = global_root->querySelectors("[figure_id=figure" + std::to_string(figure_id) + "]");
+      int figure_id = 0;
+      grm_dump(active_plot_args, stderr);
+      if (grm_args_values(active_plot_args, "plot_id", "i", &figure_id))
+        {
+          figure_id_given = true;
+        }
+      /* check if given figure_id (even default 0) already exists in the render */
+      auto figure_element = global_root->querySelectors("[figure_id=figure" + std::to_string(figure_id) + "]");
 
-          if (append_figures && !figure_id_given)
-            {
-              /* automatically create new figures if no figure_id is given and set as active*/
-              active_figure = global_render->createElement("figure");
-              global_root->append(active_figure);
+      if (append_figures && !figure_id_given)
+        {
+          /* automatically create new figures if no figure_id is given and set as active*/
+          active_figure = global_render->createElement("figure");
+          global_root->append(active_figure);
 
-              /* set active (active attribute and set previous active figure inactive) */
-              global_render->setActiveFigure(active_figure);
+          /* set active (active attribute and set previous active figure inactive) */
+          global_render->setActiveFigure(active_figure);
 
-              /* also set a not given figure_id for identification */
-              figure_id = get_free_id_from_figure_elements();
-              active_figure->setAttribute("figure_id", "figure" + std::to_string(figure_id));
-            }
-          else if (figure_id_given)
+          /* also set a not given figure_id for identification */
+          figure_id = get_free_id_from_figure_elements();
+          active_figure->setAttribute("figure_id", "figure" + std::to_string(figure_id));
+        }
+      else if (figure_id_given)
+        {
+          /* figure_id given so append plots is ignored; also does not set as active (grm_switch) */
+          if (figure_element != nullptr)
             {
-              /* figure_id given so append plots is ignored; also does not set as active (grm_switch) */
-              if (figure_element != nullptr)
+              /* Check if hold_figures is true */
+              if (hold_figures)
                 {
-                  /* Check if hold_figures is true */
-                  if (hold_figures)
-                    {
-                      active_figure = figure_element;
-                    }
-                  else
-                    {
-                      figure_element->remove();
-                      active_figure = global_render->createElement("figure");
-                      global_root->append(active_figure);
-                      active_figure->setAttribute("figure_id", "figure" + std::to_string(figure_id));
-                    }
+                  active_figure = figure_element;
                 }
               else
                 {
-                  /* it is a new figure_id, but only with grm_switch will it be really active
-                   * active_figure is only set on this for creating the needed child_elements
-                   * without grm_switch it will not be rendered */
+                  figure_element->remove();
                   active_figure = global_render->createElement("figure");
                   global_root->append(active_figure);
                   active_figure->setAttribute("figure_id", "figure" + std::to_string(figure_id));
@@ -4795,38 +4785,42 @@ int grm_plot(const grm_args_t *args)
             }
           else
             {
-              /*  no given figure_id and no append -> so figure_id == 0*/
-              if (figure_element != nullptr)
+              /* it is a new figure_id, but only with grm_switch will it be really active
+               * active_figure is only set on this for creating the needed child_elements
+               * without grm_switch it will not be rendered */
+              active_figure = global_render->createElement("figure");
+              global_root->append(active_figure);
+              active_figure->setAttribute("figure_id", "figure" + std::to_string(figure_id));
+            }
+        }
+      else
+        {
+          /*  no given figure_id and no append -> so figure_id == 0*/
+          if (figure_element != nullptr)
+            {
+              if (hold_figures)
                 {
-                  if (hold_figures)
-                    {
-                      active_figure = figure_element;
-                    }
-                  else
-                    {
-                      global_root->removeChild(figure_element);
-                      active_figure = global_render->createElement("figure");
-                      global_root->append(active_figure);
-                      active_figure->setAttribute("figure_id", "figure" + std::to_string(figure_id));
-                    }
+                  active_figure = figure_element;
                 }
               else
                 {
+                  global_root->removeChild(figure_element);
                   active_figure = global_render->createElement("figure");
                   global_root->append(active_figure);
                   active_figure->setAttribute("figure_id", "figure" + std::to_string(figure_id));
                 }
-              /* this case should always set active figure? */
-              global_render->setActiveFigure(active_figure);
             }
-          current_dom_element = nullptr;
-          current_central_region_element = nullptr;
+          else
+            {
+              active_figure = global_render->createElement("figure");
+              global_root->append(active_figure);
+              active_figure->setAttribute("figure_id", "figure" + std::to_string(figure_id));
+            }
+          /* this case should always set active figure? */
+          global_render->setActiveFigure(active_figure);
         }
-    }
-  else
-    {
-      global_render->setAutoUpdate(false);
-      figure_switched = false;
+      current_dom_element = nullptr;
+      current_central_region_element = nullptr;
     }
 
   if (grm_args_values(active_plot_args, "raw", "s", &current_subplot_args))
@@ -4973,6 +4967,8 @@ int grm_plot(const grm_args_t *args)
 
 #endif
 
+  args_changed_since_last_plot = false;
+
   return 1;
 }
 
@@ -5027,13 +5023,11 @@ int grm_switch(unsigned int id)
       active_figure->setAttribute("figure_id", "figure" + std::to_string(id));
       global_render->setAutoUpdate(auto_update);
       global_render->setActiveFigure(active_figure);
-      figure_switched = true;
     }
   else
     {
       active_figure = figure_element;
       global_render->setActiveFigure(active_figure);
-      figure_switched = true;
     }
 
   if (plot_init_static_variables() != ERROR_NONE) return 0;
