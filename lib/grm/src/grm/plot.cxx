@@ -4734,7 +4734,10 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
       (global_render->documentElement()->hasChildNodes() ||
        global_render->documentElement()->hasAttribute("_removed_children")))
     {
-      global_render->render();
+      /*
+       * Use `grm_render` instead of `global_render->render()` because `grm_render` has additional checks in debug mode
+       */
+      grm_render();
       return 1;
     }
   else
@@ -4793,7 +4796,7 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
     {
       plot_raw(active_plot_args);
       global_render->setActiveFigure(edit_figure);
-      global_render->render();
+      grm_render();
     }
   else
     {
