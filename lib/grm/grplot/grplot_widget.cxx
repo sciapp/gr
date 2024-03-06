@@ -2303,8 +2303,6 @@ void GRPlotWidget::hexbin()
     {
       elem->setAttribute("kind", "hexbin");
     }
-  grm_args_push(args_, "kind", "s", "hexbin");
-  grm_merge(args_);
   redraw();
 }
 
