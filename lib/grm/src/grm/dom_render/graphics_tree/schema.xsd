@@ -838,6 +838,10 @@
             <xs:attribute name="ambient" type="xs:double"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="diffuse" type="xs:double"/>
+            <!-- `d_min` and `d_max` must only be set if a volume was switched
+                to an isosurface (so it can be switched back) -->
+            <xs:attribute name="d_max" type="xs:double"/>
+            <xs:attribute name="d_min" type="xs:double"/>
             <xs:attribute name="isovalue" type="xs:double"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="specular" type="xs:double"/>
@@ -1149,8 +1153,8 @@
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
             <xs:attribute name="algorithm" type="strint" use="required"/>
-            <xs:attribute name="d_max" type="xs:double" use="required"/>
-            <xs:attribute name="d_min" type="xs:double" use="required"/>
+            <xs:attribute name="d_max" type="xs:double"/>
+            <xs:attribute name="d_min" type="xs:double"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="z" type="xs:string" use="required"/>
             <xs:attribute name="z_dims" type="xs:string" use="required"/>
