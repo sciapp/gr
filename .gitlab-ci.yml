@@ -16,6 +16,8 @@ include:
   - local: "/.gitlab-ci/build-ubuntu.yml"
   - local: "/.gitlab-ci/build-windows.yml"
   - local: "/.gitlab-ci/test.yml"
+  - local: "/.gitlab-ci/test-emscripten.yml"
+  - local: "/.gitlab-ci/test-ubuntu.yml"
   - local: "/.gitlab-ci/package.yml"
   - local: "/.gitlab-ci/sync.yml"
   - local: "/.gitlab-ci/deploy.yml"
