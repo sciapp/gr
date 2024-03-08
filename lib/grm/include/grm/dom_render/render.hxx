@@ -62,6 +62,15 @@
 #define PLOT_DEFAULT_CONTOUR_MAJOR_H 1000
 #define PLOT_DEFAULT_CONTOURF_MAJOR_H 0
 #define PLOT_DEFAULT_ORG_POS "low"
+#define PLOT_DEFAULT_XGRID 1
+#define PLOT_DEFAULT_YGRID 1
+#define PLOT_DEFAULT_ZGRID 1
+#define PLOT_DEFAULT_SPACE_3D_FOV 30.0
+#define PLOT_DEFAULT_SPACE_3D_DISTANCE 0.0
+#define PLOT_DEFAULT_COLORBAR_DIAG_FACTOR 0.016
+#define PLOT_DEFAULT_COLORBAR_WIDTH 0.03
+#define PLOT_DEFAULT_COLORBAR_MAX_CHAR_HEIGHT 0.012
+#define PLOT_DEFAULT_COLORBAR_OFFSET 0.02
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -189,6 +198,8 @@ public:
 
   std::shared_ptr<GRM::Element> createPlot(int plotId, const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
+  std::shared_ptr<GRM::Element> createCentralRegion(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+
   std::shared_ptr<Element> createPolymarker(const std::string &x_key, std::optional<std::vector<double>> x,
                                             const std::string &y_key, std::optional<std::vector<double>> y,
                                             const std::shared_ptr<Context> &extContext = nullptr, int marker_type = 0,
@@ -240,9 +251,10 @@ public:
 
   std::shared_ptr<Element> createAxes(double x_tick, double y_tick, double x_org, double y_org, int x_major,
                                       int y_major, int tick_orientation,
-                                      const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                      const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
-  std::shared_ptr<GRM::Element> createEmptyAxes(int tick_orientation);
+  std::shared_ptr<GRM::Element> createEmptyAxes(int tick_orientation,
+                                                const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
   std::shared_ptr<GRM::Element> createEmptyDoubleAxes();
 
@@ -273,7 +285,8 @@ public:
   std::shared_ptr<Element> createGrid(double x_tick, double y_tick, double x_org, double y_org, int major_x,
                                       int major_y, const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
-  std::shared_ptr<GRM::Element> createEmptyGrid(bool x_grid, bool y_grid);
+  std::shared_ptr<GRM::Element> createEmptyGrid(bool x_grid, bool y_grid,
+                                                const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
   std::shared_ptr<Element> createSeries(const std::string &name);
 
@@ -319,16 +332,18 @@ public:
 
   std::shared_ptr<Element> createGrid3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org,
                                         double z_org, int major_x, int major_y, int major_z,
-                                        const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                        const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
-  std::shared_ptr<GRM::Element> createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid);
+  std::shared_ptr<GRM::Element> createEmptyGrid3d(bool x_grid, bool y_grid, bool z_grid,
+                                                  const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
 
   std::shared_ptr<Element> createAxes3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org,
                                         double z_org, int major_x, int major_y, int major_z, int tick_orientation,
-                                        const std::shared_ptr<GRM::Element> &extElement = nullptr);
+                                        const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
-  std::shared_ptr<GRM::Element> createEmptyAxes3d(int tick_orientation);
+  std::shared_ptr<GRM::Element> createEmptyAxes3d(int tick_orientation,
+                                                  const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createPolyline3d(const std::string &x_key, std::optional<std::vector<double>> x,
                                             const std::string &y_key, std::optional<std::vector<double>> y,
@@ -502,7 +517,7 @@ public:
 
   static void getAutoUpdate(bool *update);
 
-  static void get_figure_size(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height);
+  static void getFigureSize(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height);
 
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context

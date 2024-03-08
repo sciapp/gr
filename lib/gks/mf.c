@@ -141,6 +141,7 @@ static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_
     case 109: /* set resize behaviour */
     case 207: /* set border color index */
     case 208: /* select clipping transformation */
+    case 211: /* set clip region */
 
       len = 3 * sizeof(int);
       if (p->nbytes + len > p->size) reallocate(len);
@@ -387,6 +388,7 @@ void gks_drv_mo(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_1,
     case 206:
     case 207:
     case 208:
+    case 211:
 
       if (p->state == GKS_K_WS_ACTIVE)
         {
@@ -550,6 +552,7 @@ static void interp(char *str)
         case 109: /* set resize behaviour */
         case 207: /* set border color index */
         case 208: /* select clipping transformation */
+        case 211: /* set clip region */
 
           RESOLVE(i_arr, int, sizeof(int));
           break;
@@ -753,6 +756,9 @@ static void interp(char *str)
           break;
         case 208:
           gks_select_clip_xform(i_arr[0]);
+          break;
+        case 211:
+          gks_set_clip_region(i_arr[0]);
           break;
         }
 

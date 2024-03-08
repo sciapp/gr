@@ -1,9 +1,11 @@
 .*
 !.clang-format
+!.clang-tidy
 !.cmake-format.py
 !.git-blame-ignore-revs
 !.githooks/
 !.gitignore
+!.gitlab-ci
 !.gitlab-ci.yml
 !.setup_cmakeformat.sh
 *.a

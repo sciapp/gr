@@ -269,6 +269,15 @@ const char *gks_function_name(int routine)
     case 208:
       name = "SELECT_CLIP_XFORM";
       break;
+    case 209:
+      name = "INQ_WS_STATE";
+      break;
+    case 210:
+      name = "SAMPLE_LOCATOR";
+      break;
+    case 211:
+      name = "SET_CLIP_REGION";
+      break;
     case 250:
       name = "BEGIN_SELECTION";
       break;
@@ -463,6 +472,9 @@ void gks_report_error(int routine, int errnum)
     case 164:
       message = "Item type is not a valid GKS item in\
  routine %s";
+      break;
+    case 165:
+      message = "Clip region type is invalid in routine %s";
       break;
     case 401:
       message = "Dimensions of image are invalid in routine %s";

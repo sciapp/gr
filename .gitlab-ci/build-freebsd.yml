@@ -1,0 +1,28 @@
+freebsd-self-contained:
+  stage: build
+  image: freebsd:13-gr-build
+  tags:
+  - libvirt
+  script:
+  - sudo mkdir /usr/local/gr
+  - sudo chown administrator:administrator /usr/local/gr
+  - export CPATH="/usr/local/include"
+  - export LIBRARY_PATH="/usr/local/lib"
+  - gmake self GRDIR=/usr/local/gr MAKE=gmake
+  - mkdir artifacts
+  - cp lib/gks/demo artifacts/gksdemo
+  - cp lib/gks/qt/gksqt artifacts/gksqt
+  - cp lib/grm/grplot/grplot artifacts/grplot
+  - cp lib/grm/grplot/README.md artifacts/grplot.man.md
+  - cp lib/gr/demo artifacts/grdemo
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
+       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
+  - cp -r lib/gks/fonts artifacts/
+  - mkdir artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/include/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp -r lib/grm/include/grm artifacts/include/
+  - mv artifacts artifacts-freebsd13
+  artifacts:
+    expire_in: 1 week
+    paths:
+    - artifacts-freebsd13/

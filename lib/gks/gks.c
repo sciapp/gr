@@ -540,6 +540,7 @@ void gks_init_gks(void)
       s->bcoli = 0;
       s->clip_tnr = 0;
       s->resize_behaviour = GKS_K_RESIZE;
+      s->clip_region = GKS_K_REGION_RECTANGLE;
       s->aspect_ratio = 1;
 
       s->callback = NULL;
@@ -4526,6 +4527,33 @@ void gks_inq_clip_xform(int *errind, int *tnr)
 void *gks_state(void)
 {
   return (void *)s;
+}
+
+void gks_set_clip_region(int region)
+{
+  if (state >= GKS_K_GKOP)
+    {
+      if (region == GKS_K_REGION_RECTANGLE || region == GKS_K_REGION_ELLIPSE)
+        {
+          s->clip_region = i_arr[0] = region;
+
+          /* call the device driver link routine */
+          gks_ddlk(SET_CLIP_REGION, 1, 1, 1, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+        }
+      else
+        /* clip region type is invalid */
+        gks_report_error(SET_CLIP_REGION, 165);
+    }
+  else
+    /* GKS not in proper state. GKS must be in one of the states
+       GKOP, WSOP, WSAC or SGOP */
+    gks_report_error(SET_CLIP_REGION, 8);
+}
+
+void gks_inq_clip_region(int *errind, int *region)
+{
+  *errind = GKS_K_NO_ERROR;
+  *region = s->clip_region;
 }
 
 void gks_set_resize_behaviour(int flag)

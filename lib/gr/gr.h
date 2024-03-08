@@ -227,6 +227,8 @@ DLLEXPORT int gr_drawgraphics(char *);
 DLLEXPORT int gr_startlistener(void);
 DLLEXPORT void gr_mathtex(double, double, char *);
 DLLEXPORT void gr_inqmathtex(double, double, char *, double *, double *);
+DLLEXPORT void gr_mathtex3d(double, double, double, char *, int);
+DLLEXPORT void gr_inqmathtex3d(double, double, double, char *, int, double *, double *, double *, double *);
 DLLEXPORT void gr_beginselection(int, int);
 DLLEXPORT void gr_endselection(void);
 DLLEXPORT void gr_setbboxcallback(int, void (*)(int, double, double, double, double));
@@ -313,6 +315,8 @@ DLLEXPORT double gr_volume_interp_tri_linear(const data_point3d_t *, const void 
 DLLEXPORT double gr_volume_interp_gauss(const data_point3d_t *, const void *, const point3d_t *, const point3d_t *);
 DLLEXPORT void gr_setmathfont(int font);
 DLLEXPORT void gr_inqmathfont(int *font);
+DLLEXPORT void gr_setclipregion(int region);
+DLLEXPORT void gr_inqclipregion(int *region);
 
 #ifdef __cplusplus
 }

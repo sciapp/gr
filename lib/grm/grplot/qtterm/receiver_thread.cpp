@@ -1,44 +1,77 @@
 #include "receiver_thread.h"
 
-void Receiver_Thread::run()
+Receiver::Receiver()
 {
-  void *handle = nullptr;
-  grm_args_t_wrapper args;
-  bool ready = false;
+  moveToThread(&thread_);
+  connect(&thread_, &QThread::started, this, &Receiver::receiveData);
+}
 
-  while (true)
+Receiver::~Receiver()
+{
+  if (grm_receiver_handle_ != nullptr)
     {
-      fflush(stdout);
-      if (handle == nullptr)
+      grm_close(grm_receiver_handle_);
+    }
+  /*
+   * TODO: Actually, we should call
+   *   thread_.quit();
+   *   thread_.wait();
+   * but the thread cannot recognize this, since it will either be waiting in `grm_open` or `grm_recv`.
+   * As a result, the thread lives until the application is closed.
+   */
+}
+
+void Receiver::start()
+{
+  thread_.start();
+}
+
+void Receiver::dataProcessed()
+{
+  receiveData();
+}
+
+void Receiver::receiveData()
+{
+  grm_args_t_wrapper args;
+  bool received_data = false;
+
+  /*
+   * `gr_startlistener` opens and immediately closes a connection to test if `grplot` is running. Thus, we need to
+   * repeat `grm_open` and `grm_recv` calls until a *real* data connection is established.
+   */
+  while (!received_data)
+    {
+      if (grm_receiver_handle_ == nullptr)
         {
-          handle = grm_open(GRM_RECEIVER, "127.0.0.1", 8002, nullptr, nullptr);
-          if (handle == nullptr)
+          bool receiver_opened = false;
+          while (!receiver_opened)
             {
-              qCritical() << "receiver could not be created";
-              qCritical() << "Retrying in 5 seconds";
-              QThread::sleep(5);
-              ready = false;
-              continue;
+              grm_receiver_handle_ = grm_open(GRM_RECEIVER, "127.0.0.1", 8002, nullptr, nullptr);
+              if (grm_receiver_handle_ != nullptr)
+                {
+                  receiver_opened = true;
+                }
+              else
+                {
+                  qCritical() << "receiver could not be created";
+                  qCritical() << "Retrying in 5 seconds";
+                  QThread::sleep(5);
+                }
             }
         }
-      args.set_wrapper(grm_recv(handle, nullptr));
-      if (args.get_wrapper() == nullptr)
+
+      args.set_wrapper(grm_recv(grm_receiver_handle_, nullptr));
+      if (args.get_wrapper() != nullptr)
         {
-          if (ready)
-            {
-              qCritical() << "data could not be received from stream";
-            }
-          grm_close(handle);
-          handle = nullptr;
+          received_data = true;
         }
       else
         {
-          emit resultReady(args);
-          ready = true;
+          grm_close(grm_receiver_handle_);
+          grm_receiver_handle_ = nullptr;
         }
     }
-  if (handle != nullptr)
-    {
-      grm_close(handle);
-    }
+
+  emit resultReady(args);
 }

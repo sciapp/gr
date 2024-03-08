@@ -841,7 +841,6 @@ static void update(void)
 static void set_clip(double *clrt)
 {
   int i, j;
-  int ix1, ix2, iy1, iy2;
   double cx1, cy1, cx2, cy2;
   char buffer[120];
 
@@ -851,12 +850,28 @@ static void set_clip(double *clrt)
   NDC_to_DC(clrt[i], clrt[j], cx1, cy1);
   NDC_to_DC(clrt[1 - i], clrt[5 - j], cx2, cy2);
 
-  ix1 = ((int)cx1) - 2;
-  iy1 = ((int)cy1) - 2;
-  ix2 = NINT(cx2) + 2;
-  iy2 = NINT(cy2) + 2;
+  if (gkss->clip_region == GKS_K_REGION_ELLIPSE && (gkss->clip_tnr != 0 || gkss->clip == GKS_K_CLIP))
+    {
+      int x, y, rx, ry;
 
-  snprintf(buffer, 120, "np %d %d m %d %d l %d %d l %d %d l cp clip", ix1, iy1, ix1, iy2, ix2, iy2, ix2, iy1);
+      x = (int)(0.5 * (cx1 + cx2) + 0.5);
+      y = (int)(0.5 * (cy1 + cy2) + 0.5);
+      rx = (int)(0.5 * (cx2 - cx1) + 1);
+      ry = (int)(0.5 * (cy2 - cy1) + 1);
+
+      snprintf(buffer, 120, "np %d %d %d %d 0 360 ellipse clip", x, y, rx, ry);
+    }
+  else
+    {
+      int ix1, ix2, iy1, iy2;
+
+      ix1 = ((int)cx1) - 2;
+      iy1 = ((int)cy1) - 2;
+      ix2 = NINT(cx2) + 2;
+      iy2 = NINT(cy2) + 2;
+
+      snprintf(buffer, 120, "np %d %d m %d %d l %d %d l %d %d l cp clip", ix1, iy1, ix1, iy2, ix2, iy2, ix2, iy1);
+    }
   packb(buffer);
 }
 
@@ -1153,6 +1168,17 @@ static void ps_init(int *pages)
       packb("/Encoding exch def dup");
       packb("/FontName exch def currentdict");
       packb("definefont end} def");
+      packb("/ellipse {\
+ /endangle exch def\
+ /startangle exch def\
+ /yrad exch def\
+ /xrad exch def\
+ /y exch def\
+ /x exch def\
+ /savematrix matrix currentmatrix def\
+ x y translate xrad yrad scale 0 0 1 startangle endangle arc\
+ savematrix setmatrix\
+} def");
       packb("end");
 
       packb("%%EndProcSet");
@@ -1194,7 +1220,6 @@ static void ps_init(int *pages)
   set_markersize(-1.0);
   packb("0 ma");
   set_font(-1);
-  set_clip(p->window);
   packb("%%EndPageSetup");
   update();
 }
@@ -2376,7 +2401,6 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
       p->window[3] = r2[1];
       set_xform(p->window, p->viewpt);
       init_norm_xform();
-      if (p->init) set_clip(p->window);
       break;
 
       /* set workstation viewport */

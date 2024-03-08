@@ -179,6 +179,7 @@ typedef struct
   int bcoli;
   int clip_tnr;
   int resize_behaviour;
+  int clip_region;
   double alpha;
 } state_list;
 
@@ -299,6 +300,8 @@ static state_list *ctx = NULL, *state = NULL;
 static void (*previous_handler)(int);
 
 static int autoinit = 1, double_buf = 0, state_saved = 0, def_color = 0;
+
+static double scale_factor = 1.0;
 
 static const char *display = NULL;
 
@@ -1411,6 +1414,7 @@ static void initialize(int state)
   double xmin = 0.2, xmax = 0.9, ymin = 0.2, ymax = 0.9;
   int asf[13] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
   double size = 2, height = 0.027;
+  char *env;
 
   if (state == GKS_K_GKCL)
     {
@@ -1429,6 +1433,18 @@ static void initialize(int state)
 
   autoinit = 0;
   double_buf = gks_getenv("GKS_DOUBLE_BUF") != NULL;
+
+  env = gks_getenv("GR_SCALE_FACTOR");
+  if (env != NULL)
+    {
+      scale_factor = atof(env);
+      if (scale_factor <= 0)
+        {
+          fprintf(stderr, "invalid scale factor (%s) - ignored\n", env);
+          scale_factor = 1.0;
+        }
+    }
+
   display = gks_getenv("GR_DISPLAY");
   if (display)
     if (*display == '\0') display = NULL;
@@ -2054,7 +2070,8 @@ void gr_cellarray(double xmin, double xmax, double ymin, double ymax, int dimx, 
 void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, int srow, int ncol, int nrow,
                             int *color)
 {
-  int img_data_x, img_data_y, color_x_ind, color_y_ind, color_ind, edges_x = 1, edges_y = 1, size = 2000, scale_options;
+  int img_data_x, img_data_y, color_x_ind, color_y_ind, color_ind, edges_x = 1, edges_y = 1,
+                                                                   size = (int)(2000 * scale_factor), scale_options;
   int *img_data;
   double x_pos, y_pos, x_size, y_size, *x_orig = x, *y_orig = y;
   double xmin, xmax, ymin, ymax;
@@ -2289,7 +2306,7 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
 void gr_polarcellarray(double x_org, double y_org, double phimin, double phimax, double rmin, double rmax, int dimphi,
                        int dimr, int scol, int srow, int ncol, int nrow, int *color)
 {
-  int x, y, color_ind, r_ind, phi_ind, phi_reverse, phi_wrapped_reverse, r_reverse, size = 2000;
+  int x, y, color_ind, r_ind, phi_ind, phi_reverse, phi_wrapped_reverse, r_reverse, size = (int)(2000 * scale_factor);
   int *img_data;
   double r, phi, tmp, center = size / 2.;
 
@@ -2460,7 +2477,8 @@ void gr_polarcellarray(double x_org, double y_org, double phimin, double phimax,
 void gr_nonuniformpolarcellarray(double x_org, double y_org, double *phi, double *r, int dimphi, int dimr, int scol,
                                  int srow, int ncol, int nrow, int *color)
 {
-  int x, y, color_ind, r_ind, phi_ind, phi_reverse, r_reverse, start, end, edges_phi = 1, edges_r = 1, size = 2000;
+  int x, y, color_ind, r_ind, phi_ind, phi_reverse, r_reverse, start, end, edges_phi = 1, edges_r = 1,
+                                                                           size = (int)(2000 * scale_factor);
   int *img_data;
   double cur_r, cur_phi, tmp, phimin, phimax, rmin, rmax, center = size / 2.;
   double *r_sorted, *phi_sorted;
@@ -6431,6 +6449,10 @@ static void text3d(double x, double y, double z, char *chars, int axis)
 
       if (tnr != NDC) gks_select_xform(tnr);
     }
+  else if (scientific_format == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
+    {
+      gr_mathtex3d(p_x, p_y, p_z, chars, axis);
+    }
   else
     {
       gks_inq_current_xformno(&errind, &tnr);
@@ -6454,6 +6476,10 @@ void gr_text3d(double x, double y, double z, char *chars, int axis)
 
   gks_inq_current_xformno(&errind, &tnr);
   gks_select_xform(MODERN_NDC);
+
+  x = x_lin(x);
+  y = y_lin(y);
+  z = z_lin(z);
 
   scaleFactors[0] = tx.x_axis_scale;
   scaleFactors[1] = tx.y_axis_scale;
@@ -6490,6 +6516,10 @@ void gr_inqtext3d(double x, double y, double z, char *chars, int axis, double *t
 
   gks_inq_current_xformno(&errind, &tnr);
   gks_select_xform(MODERN_NDC);
+
+  x = x_lin(x);
+  y = y_lin(y);
+  z = z_lin(z);
 
   scaleFactors[0] = tx.x_axis_scale;
   scaleFactors[1] = tx.y_axis_scale;
@@ -6530,7 +6560,7 @@ static void axes3d_get_params(int axis, int *tick_axis, double x_org, double y_o
     }
   /* Reset options for consistent gr_inqtext3d values */
   gks_set_text_upvec(0, 1);
-  gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+  gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
   gr_inqwindow3d(&x_min, &x_max, &y_min, &y_max, &z_min, &z_max);
   fx = tx.camera_pos_x - tx.focus_point_x;
   fy = tx.camera_pos_y - tx.focus_point_y;
@@ -6959,7 +6989,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       {
                         xi = x_major_tick;
                         yi = y_major_tick;
-                        if (z_tick > 1 && !modern_projection_type)
+                        if (z_tick > 1 && scientific_format == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
                           {
                             exponent = iround(blog(lx.basez, zi));
                             snprintf(string, 256, "%s^{%d}", lx.basez_s, exponent);
@@ -7161,7 +7191,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       {
                         xi = x_major_tick;
                         zi = z_major_tick;
-                        if (y_tick > 1 && !modern_projection_type)
+                        if (y_tick > 1 && scientific_format == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
                           {
                             exponent = iround(blog(lx.basey, yi));
                             snprintf(string, 256, "%s^{%d}", lx.basey_s, exponent);
@@ -7369,7 +7399,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       {
                         yi = y_major_tick;
                         zi = z_major_tick;
-                        if (x_tick > 1 && !modern_projection_type)
+                        if (x_tick > 1 && scientific_format == SCIENTIFIC_FORMAT_OPTION_MATHTEX)
                           {
                             exponent = iround(blog(lx.basex, xi));
                             snprintf(string, 256, "%s^{%d}", lx.basex_s, exponent);
@@ -11786,40 +11816,135 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
  */
 void gr_mathtex(double x, double y, char *string)
 {
+  char *s, *start;
+  int len;
   int unused;
   int prec;
 
   check_autoinit;
 
+  s = start = strdup(string);
+  len = strlen(s);
+  if (*s == '$' && s[len - 1] == '$')
+    {
+      s[len - 1] = '\0';
+      start = s + 1;
+    }
+
   gks_inq_text_fontprec(&unused, &unused, &prec);
   if (prec == 3)
     {
-      mathtex2(x, y, string, 0, NULL, NULL, NULL);
+      mathtex2(x, y, start, 0, NULL, NULL, NULL);
     }
   else
     {
-      mathtex(x, y, string, 0, NULL, NULL);
+      mathtex(x, y, start, 0, NULL, NULL);
     }
 
   if (flag_stream) gr_writestream("<mathtex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+
+  free(s);
 }
 
 void gr_inqmathtex(double x, double y, char *string, double *tbx, double *tby)
 {
+  char *s, *start;
+  int len;
   int unused;
   int prec;
 
   check_autoinit;
 
+  s = start = strdup(string);
+  len = strlen(s);
+  if (*s == '$' && s[len - 1] == '$')
+    {
+      s[len - 1] = '\0';
+      start = s + 1;
+    }
+
   gks_inq_text_fontprec(&unused, &unused, &prec);
   if (prec == 3)
     {
-      mathtex2(x, y, string, 1, tbx, tby, NULL);
+      mathtex2(x, y, start, 1, tbx, tby, NULL);
     }
   else
     {
-      mathtex(x, y, string, 1, tbx, tby);
+      mathtex(x, y, start, 1, tbx, tby);
     }
+
+  free(s);
+}
+
+void mathtex2_3d(double x, double y, double z, const char *formula, int axis, double textScale, int inquire,
+                 double *tbx, double *tby, double *tbz, double *baseline);
+
+/*!
+ * Generate a character string starting at the given location. Strings can be
+ * defined to create mathematical symbols and Greek letters using a limited LaTeX syntax.
+ *
+ * \param[in] x The X coordinate of the starting position of the text string
+ * \param[in] y The Y coordinate of the starting position of the text string
+ * \param[in] z The Z coordinate of the starting position of the text string
+ * \param[in] string The text string to be drawn
+ * \param[in] axis The plane to draw on (1: YX-plane, 2: XY plane, 3: YZ plane, 4: XZ plane), negative flips direction
+ */
+void gr_mathtex3d(double x, double y, double z, char *string, int axis)
+{
+  char *s, *start;
+  int len;
+
+  check_autoinit;
+
+  s = start = strdup(string);
+  len = strlen(s);
+  if (*s == '$' && s[len - 1] == '$')
+    {
+      s[len - 1] = '\0';
+      start = s + 1;
+    }
+
+  mathtex2_3d(x, y, z, start, axis, text3d_get_height(), 0, NULL, NULL, NULL, NULL);
+
+  if (flag_stream)
+    gr_writestream("<mathtex3d x=\"%g\" y=\"%g\" z=\"%g\" text=\"%s\" axis=\"%d\"/>\n", x, y, z, string, axis);
+
+  free(s);
+}
+
+/*!
+ * This function calculates the bounding box of the text that would be drawn using gr_mathtex3d. tbx, tby, tbz contain
+ * the corner coordinates, while baseline contains the baseline point.
+ *
+ * \param[in] x The X coordinate of the starting position of the text string in world coordinates
+ * \param[in] y The Y coordinate of the starting position of the text string in world coordinates
+ * \param[in] z The Z coordinate of the starting position of the text string in world coordinates
+ * \param[in] string The text string that would be drawn
+ * \param[in] axis The plane to draw on (1: YX-plane, 2: XY plane, 3: YZ plane, 4: XZ plane), negative flips direction
+ * \param[in] tbx A 4-element double array to write the x-coordinates of the corners
+ * \param[in] tby A 4-element double array to write the y-coordinates of the corners
+ * \param[in] tbz A 4-element double array to write the z-coordinates of the corners
+ * \param[in] baseline A 3-element (x, y, z) array to write the baseline point coordinates to
+ */
+void gr_inqmathtex3d(double x, double y, double z, char *string, int axis, double *tbx, double *tby, double *tbz,
+                     double *baseline)
+{
+  char *s, *start;
+  int len;
+
+  check_autoinit;
+
+  s = start = strdup(string);
+  len = strlen(s);
+  if (*s == '$' && s[len - 1] == '$')
+    {
+      s[len - 1] = '\0';
+      start = s + 1;
+    }
+
+  mathtex2_3d(x, y, z, start, axis, text3d_get_height(), 1, tbx, tby, tbz, baseline);
+
+  free(s);
 }
 
 static void append(double x, double y, char *string, int line_number, int math)
@@ -12418,6 +12543,7 @@ void gr_savestate(void)
       gks_inq_border_color_index(&errind, &s->bcoli);
       gks_inq_clip_xform(&errind, &s->clip_tnr);
       gks_inq_resize_behaviour(&s->resize_behaviour);
+      gks_inq_clip_region(&errind, &s->clip_region);
     }
   else
     fprintf(stderr, "attempt to save state beyond implementation limit\n");
@@ -12471,6 +12597,7 @@ void gr_restorestate(void)
       gks_set_border_color_index(s->bcoli);
       gks_select_clip_xform(s->clip_tnr);
       gks_set_resize_behaviour(s->resize_behaviour);
+      gks_set_clip_region(s->clip_region);
 
       if (ctx)
         {
@@ -12511,6 +12638,7 @@ void gr_restorestate(void)
           ctx->bcoli = s->bcoli;
           ctx->clip_tnr = s->clip_tnr;
           ctx->resize_behaviour = s->resize_behaviour;
+          ctx->clip_region = s->clip_region;
         }
     }
   else
@@ -12590,6 +12718,7 @@ void gr_selectcontext(int context)
           ctx->bcoli = 1;
           ctx->clip_tnr = 0;
           ctx->resize_behaviour = GKS_K_RESIZE;
+          ctx->clip_region = GKS_K_REGION_RECTANGLE;
         }
       else
         {
@@ -12631,6 +12760,7 @@ void gr_selectcontext(int context)
       gks_set_border_color_index(ctx->bcoli);
       gks_select_clip_xform(ctx->clip_tnr);
       gks_set_resize_behaviour(ctx->resize_behaviour);
+      gks_set_clip_region(ctx->clip_region);
     }
   else
     {
@@ -12705,6 +12835,7 @@ void gr_savecontext(int context)
       gks_inq_border_color_index(&errind, &app_context->buf[id]->bcoli);
       gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
       gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
+      gks_inq_clip_region(&errind, &app_context->buf[id]->clip_region);
     }
   else
     {
@@ -12778,6 +12909,7 @@ void gr_destroycontext(int context)
       gks_inq_border_color_index(&errind, &app_context->buf[id]->bcoli);
       gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
       gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
+      gks_inq_clip_region(&errind, &app_context->buf[id]->clip_region);
     }
   else
     {
@@ -13950,6 +14082,25 @@ void gr_inqclipxform(int *tnr)
   check_autoinit;
 
   gks_inq_clip_xform(&errind, tnr);
+}
+
+void gr_setclipregion(int region)
+{
+  check_autoinit;
+
+  gks_set_clip_region(region);
+  if (ctx) ctx->clip_region = region;
+
+  if (flag_stream) gr_writestream("<setclipregion region=\"%d\"/>\n", region);
+}
+
+void gr_inqclipregion(int *region)
+{
+  int errind;
+
+  check_autoinit;
+
+  gks_inq_clip_region(&errind, region);
 }
 
 /*!
