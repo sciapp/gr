@@ -1,0 +1,18 @@
+binary-builder:
+  stage: build
+  script: noop
+  tags:
+  - julia-bb
+  rules:
+  - if: $CI_PROJECT_NAMESPACE == "Scientific-IT-Systems" &&
+        ($CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master" || $CI_COMMIT_TAG)
+    allow_failure: false
+  - if: $CI_PROJECT_NAMESPACE == "Scientific-IT-Systems" &&
+        ($CI_COMMIT_REF_NAME == "master" || $CI_COMMIT_REF_NAME == "develop")
+    allow_failure: true
+  needs:
+  - job: emscripten
+    artifacts: true
+  variables:
+    GIT_STRATEGY: none
+    JULIA_VERSION: 1.10.0
