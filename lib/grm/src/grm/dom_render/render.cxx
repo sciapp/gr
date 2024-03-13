@@ -10202,7 +10202,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
         }
 
       // no stairs
-      if (!stairs)
+      if (!stairs) // no stairs uses `polar_bar` logio is implemented in `processPolarBar`
         {
           std::shared_ptr<GRM::Element> polar_bar;
 
@@ -10307,21 +10307,22 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
               if (keep_radii_axes)
                 {
                   if (count < ylim_min)
-                    rectlist[class_nr] = ylim_min / ylim_max;
+                    rectlist[class_nr] = ylim_min / max;
                   else if (rect > r_max)
                     rectlist[class_nr] = ylim_max;
                   else
                     rectlist[class_nr] = rect;
 
-                  auto complex_min = moivre(pow(ylim_min / ylim_max, num_bins * 2), (2 * class_nr), (int)num_bins * 2);
+                  auto complex_min = moivre(pow(ylim_min / max, num_bins * 2), (2 * class_nr), (int)num_bins * 2);
                   arc_pos = sqrt(pow(real(complex_min), 2) + pow(imag(complex_min), 2));
                   if (count < ylim_min) arc_pos = 0.0;
                 }
               else
                 {
-                  if (count < ylim_min)
+                  // ylim_min is already subtracted from count
+                  if (count < 0)
                     rectlist[class_nr] = 0.0;
-                  else if (count > ylim_max)
+                  else if (count >= ylim_max - ylim_min)
                     rectlist[class_nr] = 1.0; // 1.0 equals ylim_max (when no keep_radii_axes is set)
                   else
                     rectlist[class_nr] = rect;
@@ -10407,6 +10408,10 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
 
           for (int x = 0; x < classes.size(); ++x)
             {
+              if (x == 2)
+                {
+                  ;
+                }
               line_x[0] = startx;
               line_x[1] = rectlist[x] * cos(angles_vec[x]);
               line_y[0] = starty;
@@ -10803,7 +10808,7 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
           count = y_lim_max;
         }
       count -= y_lim_min;
-      if (count < 0) count = 0.0; // TODO: keep watch here
+      if (count < 0) count = 0.0;
     }
 
   /* perform calculations for later usages, this r is used for complex calculations */
