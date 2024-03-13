@@ -1,4 +1,7 @@
 #title: Polar Testdata
+#x_range: 60,260
+#y_range: 1, 4
+#y_lim : 0, 8
 
 0.000000 0.000000
 0.157080 0.293893
