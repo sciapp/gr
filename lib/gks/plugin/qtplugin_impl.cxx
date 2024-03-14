@@ -253,7 +253,7 @@ static void set_xform(void)
 {
   double ratio, w, h, x, y;
 
-  ratio = (p->window[1] - p->window[0]) / (p->window[3] - p->window[2]);
+  ratio = (p->window[1] - p->window[0]) / (p->window[3] - p->window[2]) * (1.0 * p->device_dpi_x / p->device_dpi_y);
 
   if (p->width > p->height * ratio)
     {
