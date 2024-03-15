@@ -26,6 +26,7 @@
 #include <grm/dom_render/graphics_tree/util.hxx>
 #include <grm/dom_render/render.hxx>
 #include <grm/dom_render/NotFoundError.hxx>
+#include <grm/dom_render/InvalidValueError.hxx>
 #include <grm/dom_render/context.hxx>
 #include "gks.h"
 #include "gr.h"
@@ -540,7 +541,7 @@ static std::tuple<double, int> getColorbarAttributes(std::string kind, std::shar
       else
         colors = PLOT_DEFAULT_CONTOUR_LEVELS;
     }
-  if (kind == "polar_heatmap")
+  if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap")
     {
       offset = PLOT_POLAR_COLORBAR_OFFSET;
     }
@@ -1031,9 +1032,10 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
         }
     }
 
-  if (str_equals_any(kind, "pie", "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
-    {
-      double x_center, y_center, r;
+      if (str_equals_any(kind, "pie", "polar", "polar_histogram", "polar_heatmap",
+                         "nonuniform_polar_heatmap"))
+        {
+          double x_center, y_center, r;
 
       x_center = 0.5 * (viewport[0] + viewport[1]);
       y_center = 0.5 * (viewport[2] + viewport[3]);
@@ -1986,7 +1988,6 @@ static double autoTickRingsPolar(double rmax, int &rings, const std::string &nor
 
       scale = ceil(abs(log10(rmax)));
 
-      // todo: values near 1... epsilon environment?
       if (rmax == 1.0)
         {
           rings = decimalMap[1.0];
@@ -1998,7 +1999,7 @@ static double autoTickRingsPolar(double rmax, int &rings, const std::string &nor
         }
 
 
-      if (rmax <= 1.0)
+      if (rmax < 1.0)
         {
           // "up-scale" rmax to 0.x from 0.0...x
           rmax = rmax * pow(10.0, abs(scale) - 1);
@@ -4088,7 +4089,6 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
   auto kind = static_cast<std::string>(element->getAttribute("kind"));
   gr_inqscale(&scale);
 
-  // todo: log scales not for polar types?
   if (kind != "pie" && kind != "polar" && kind != "polar_histogram" && kind != "polar_heatmap" &&
       kind != "nonuniform_polar_heatmap")
     {
@@ -7406,7 +7406,6 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
 }
 
 
-// ToDo: get some attributes from coordinate_system element
 // element is `central_region`
 static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &element,
                                  const std::shared_ptr<GRM::Context> &context)
@@ -7452,7 +7451,7 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &element,
       r_min = static_cast<double>(central_region->getAttribute("r_min"));
       if (kind == "uniform_polar_heatmap")
         {
-          r_min = 0.0; // todo: uniform polar heatmap always starts at 0.0?
+          r_min = 0.0;
         }
       r_max = static_cast<double>(central_region->getAttribute("r_max"));
       if (subplotElement->hasAttribute("y_lim_max") && subplotElement->hasAttribute("y_lim_min"))
@@ -7467,7 +7466,6 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &element,
       r_max = static_cast<double>(subplotElement->getAttribute("y_lim_max"));
     }
 
-  // if y_log and y_lim_min == 0 --> set y_lim_min = 10^-1 per default todo: what if y_lim_max is 10^-x [x > 1]?
   if (y_log && y_lim_min == 0.0)
     {
       y_lim_min = pow(10, -1);
@@ -7506,7 +7504,10 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &element,
 
       if (kind == "polar" && y_log)
         {
-          // todo: what if r_max == 0.0; what error should be thrown?
+          if (r_max <= 0.0)
+            {
+              throw InvalidValueError("the max radius has to be bigger than 0.0 when using y_log");
+            }
           max_scale = ceil(abs(log10(r_max)));
           if (max_scale != 0.0) // add signum of max_scale if not 0.0
             {
@@ -7526,15 +7527,20 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &element,
               if (max_scale <= 0) min_scale = max_scale - 5;
             }
 
-          // todo: if max_scale == min_scale --> 0 rings problem... (wrong data for y_log...)
-          // todo: what is the desired outcome? Throw an error?
+          if (max_scale == min_scale)
+            {
+              throw InvalidValueError(
+                  "The minimum and maximum radius are of the same magnitude, incompatible with the y_log option");
+            }
 
-          // todo: smart ring calculation for y_log especially with large differences in magnitudes
+          // todo: smart ring calculation for y_log especially with large differences in magnitudes (other cases too)
           rings = abs(abs(max_scale) - abs(min_scale));
           central_region->setAttribute("rings", rings);
           // overwrite r_max and r_min because of rounded scales?
           central_region->setAttribute("r_max", pow(10, max_scale));
           central_region->setAttribute("r_min", pow(10, min_scale));
+          central_region->setAttribute("min_scale", min_scale);
+          central_region->setAttribute("max_scale", max_scale);
         }
       else
         {
@@ -7549,7 +7555,6 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &element,
       // with given ylims
       if (y_log)
         {
-          // todo: set y_lim_min to 10^x if y_lim_min == 0; x depends on the magnitude of y_lim_max...
           max_scale = ceil(abs(log10(y_lim_max)));
           if (max_scale != 0.0)
             {
@@ -7579,7 +7584,6 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &element,
             }
 
           rings = grm_min(static_cast<int>(max_scale - min_scale), 12); // number of rings should not exceed 12?
-          // todo what if number of rings is different than the magnitude difference?
           central_region->setAttribute("rings", rings);
 
           // used when printing ring texts
@@ -7590,7 +7594,6 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &element,
         {
           rings = (element->hasAttribute("rings")) ? static_cast<int>(element->getAttribute("rings"))
                                                    : grm_max(4, (int)(r_max - r_min));
-          central_region->setAttribute("rings", rings);
 
           // todo better rings calculation when ylim is given
           if (subplotElement->hasAttribute("y_lim_max") && subplotElement->hasAttribute("y_lim_min"))
@@ -7598,17 +7601,19 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &element,
               tick = (r_max - r_min) / rings;
               central_region->setAttribute("r_max", tick * rings);
               central_region->setAttribute("r_min", r_min);
+              central_region->setAttribute("rings", rings);
             }
           else if (element->hasAttribute("tick"))
             {
-              // todo: does this case work?
               tick = static_cast<double>(element->getAttribute("tick"));
               r_max = tick * rings;
+              central_region->setAttribute("r_max", r_max);
+              central_region->setAttribute("r_min", r_min);
+              central_region->setAttribute("rings", rings);
             }
           else
             {
-              // todo: where to check if rings are given
-              rings = -1; // use auto rings if user rings is not given
+              if (!element->hasAttribute("rings")) rings = -1; // use auto rings if user rings is not given
               tick = autoTickRingsPolar(r_max, rings, norm);
               r_max = tick * rings;
               central_region->setAttribute("r_max", r_max);
@@ -7655,10 +7660,9 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
   central_region = subplotElement->querySelectors("central_region");
 
   if (central_region->hasAttribute("skip_calculations"))
-    ;
-  {
-    skipCalculations = static_cast<int>(central_region->getAttribute("skip_calculations"));
-  }
+    {
+      skipCalculations = static_cast<int>(central_region->getAttribute("skip_calculations"));
+    }
 
   if (!skipCalculations)
     {
@@ -7797,12 +7801,12 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
           y[0] = r;
           if (y_log) // ylog uses the exponential notation
             {
-              // todo: if magnitude difference != rings -> i * n + ...
-              if (subplotElement->hasAttribute("y_lim_max")) // todo:ylog with ylims
+              if (rings != floor(max_scale) - floor(min_scale)) // rings != magnitudes
                 {
-                  snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1e", pow(10, min_scale + i));
+                  snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1e",
+                           pow(10, min_scale + i * (floor(max_scale) - floor(min_scale))));
                 }
-              else // no ylims
+              else // rings == magnitudes
                 {
                   snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1e", pow(10, min_scale + i));
                 }
@@ -7810,8 +7814,6 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
           else // no y_log
             {
               max_scale = log10(r_max);
-              // todo: what is this condition?
-              //              if (_r_max < 1.0) _r_max *= -1.0;
               const char *format = (max_scale > -2.0) ? "%.1lf" : "%.1e";
               snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, format, r_min + tick * i);
             }
@@ -9075,9 +9077,7 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
       y_lim_max = static_cast<double>(
           central_region->getAttribute("r_max")); // r_max is still needed because it is the axes maximum without y_lims
 
-      // todo: is r_min always needed?
       y_lim_min = static_cast<double>(central_region->getAttribute("r_min"));
-      //      y_lim_min = 0.0;
     }
 
   if (element->hasAttribute("y_range_min") && element->hasAttribute("y_range_max"))
@@ -9097,15 +9097,6 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
     {
       y_log = static_cast<int>(plot_parent->getAttribute("y_log"));
     }
-
-  // todo: this does not work; is this even needed?
-  // get _x_ranges from plot_parent --> for distinction between user and calculated(_x_ranges) ranges
-  //  if (element->hasAttribute("_x_range_min") && element->hasAttribute("_x_range_max"))
-  //    {
-  //
-  //      _x_range_min = static_cast<double>(element->getAttribute("_x_range_min"));
-  //      _x_range_max = static_cast<double>(element->getAttribute("_x_range_max"));
-  //    }
 
   // get x_ranges and check if they are user given
   if (element->hasAttribute("x_range_min") && element->hasAttribute("x_range_max"))
@@ -9204,7 +9195,6 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
             }
           else
             {
-              // todo: yrange transformation with y_log? Maybe transform the vector before
               current_rho = transformCoordinate(temp_rho, r_min, r_max, yrange_min, yrange_max, y_log);
             }
 
@@ -9233,7 +9223,7 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
               // iterate over rho_vec and for each negative value add 180 degrees in radian to the corresponding value
               // in theta_vec and make the rho_vec value positive
               theta_vec[i] += M_PI;
-              // if theta_vec[i] is bigger than 2 * PI, subtract 2 * PI todo: what if its bigger than 4 * PI?
+              // if theta_vec[i] is bigger than 2 * PI, subtract 2 * PI
               if (theta_vec[i] > 2 * M_PI)
                 {
                   theta_vec[i] -= 2 * M_PI;
@@ -9374,7 +9364,7 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
         throw NotFoundError("Polar-heatmap series is missing required attribute z_dims.\n");
       auto z_dims_key = static_cast<std::string>(element->getAttribute("z_dims"));
       auto z_dims_vec = GRM::get<std::vector<int>>((*context)[z_dims_key]);
-      cols = z_dims_vec[0]; // todo: is this switched?
+      cols = z_dims_vec[0];
       rows = z_dims_vec[1];
     }
   else if (x_vec.empty())
@@ -10569,7 +10559,7 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
   int child_id = 0;
   int x_colormap = -2, y_colormap = -2;
   double count, bin_width = -1.0;
-  double max; // todo rename max -> radius_max?
+  double max;
   int num_bins, num_bin_edges = 0, class_nr;
   std::string norm = "count", str;
   bool phiflip = false, draw_edges = false, keep_radii_axes = false, y_lim = false, is_colormap = false;
@@ -10661,10 +10651,10 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
         {
           std::shared_ptr<GRM::Element> drawImage;
           const int colormap_size = 500, image_size = 2000;
-          // todo: maybe use dynamic image_size when using interactions or maybe calculate a smaller rectangle in image
-          // todo: only one bar per rectangle -> no image_size * image_size iterations
-          // todo: or maybe don't iterate through image_size * image_size matrix
-          // todo: instead calculate the the coordinates and iterate through these coordinates somehow like in python
+          /* todo: maybe use dynamic image_size when using interactions or maybe calculate a smaller rectangle in image
+             only one bar per rectangle -> no image_size * image_size iterations
+             or maybe don't iterate through image_size * image_size matrix
+             instead calculate the the coordinates and iterate through these coordinates somehow like in python */
           double radius, angle, max_radius, count_radius;
           double start_angle, end_angle;
           double ylim_min_radius, ylim_max_radius;
@@ -10747,9 +10737,6 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
 
                   if (angle > start_angle && angle <= end_angle)
                     {
-
-                      // todo: this could be done more efficiently if the if keep_radii_axes condition is
-                      // todo: moved outside the loop. One less condition per iteration. But less readable
                       if (keep_radii_axes)
                         {
                           if (radius <= count_radius && radius <= ylim_max_radius && radius > ylim_min_radius)
@@ -13858,7 +13845,8 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
               if (!element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_min") ||
                   !element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_max") ||
-                  str_equals_any(kind, "heatmap", "marginal_heatmap", "polar_heatmap"))
+                  str_equals_any(kind, "heatmap", "marginal_heatmap", "polar_heatmap",
+                                 "nonuniform_polar_heatmap"))
                 {
                   std::shared_ptr<GRM::Element> series_parent = central_region;
                   if (kind == "marginal_heatmap") series_parent = element;
@@ -13922,7 +13910,8 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                               current_max_component = y_length - 1;
                             }
                           else if (ends_with(series->localName(), kind) &&
-                                   str_equals_any(kind, "heatmap", "marginal_heatmap", "polar_heatmap", "surface") &&
+                                   str_equals_any(kind, "heatmap", "marginal_heatmap", "polar_heatmap",
+                                                  "nonuniform_polar_heatmap", "surface") &&
                                    str_equals_any((*current_component_name), "x", "y"))
                             {
                               /* in this case `x` or `y` (or both) are missing
@@ -16684,8 +16673,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawPolarAxes(int angle_ticks, 
       element->setAttribute("line_width", line_width);
     }
   element->setAttribute("angle_ticks", angle_ticks);
-  // todo should phiflip be passed when creating a polarAxesElement
-  //  element->setAttribute("phi_flip", phiflip);
 
   return element;
 }
@@ -18625,9 +18612,9 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                 }
 
               /* update coordinate system if needed */
-              std::vector<std::string> colorbar_group = {"quiver",        "contour",   "contourf", "hexbin",
-                                                         "polar_heatmap", "heatmap",   "surface",  "volume",
-                                                         "trisurface",    "tricontour"};
+              std::vector<std::string> colorbar_group = {
+                  "quiver",  "contour", "contourf", "hexbin",     "polar_heatmap", "nonuniform_polar_heatmap",
+                  "heatmap", "surface", "volume",   "trisurface", "tricontour"};
 
               std::shared_ptr<GRM::Element> coordinate_system = plot->querySelectors("coordinate_system");
               std::string new_kind = static_cast<std::string>(new_element->getAttribute("kind"));
@@ -18970,7 +18957,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
             {
               // conditional critical attributes
               auto kind = static_cast<std::string>(element->getAttribute("kind"));
-              if (kind == "heatmap" || kind == "polar_heatmap")
+              if (kind == "heatmap" || kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap")
                 {
                   if (element->hasAttribute("c_range_max") && element->hasAttribute("c_range_min"))
                     {
@@ -18981,7 +18968,8 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                         }
                     }
                 }
-              if (kind == "heatmap" || kind == "surface" || kind == "polar_heatmap")
+              if (kind == "heatmap" || kind == "surface" || kind == "polar_heatmap" ||
+                  kind == "nonuniform_polar_heatmap")
                 {
                   if (!element->hasAttribute("x") && !element->hasAttribute("y"))
                     {
