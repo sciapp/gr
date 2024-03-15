@@ -6,8 +6,12 @@ project(
   LANGUAGES C CXX
 )
 
-set(EXECUTABLE_SOURCES args_automatic_array_conversion.c get_compatible_format.c datatype/string_array_map.c
-                       escape_minus.cxx
+set(EXECUTABLE_SOURCES
+    args_automatic_array_conversion.c
+    bson_serialize_deserialize.c
+    get_compatible_format.c
+    datatype/string_array_map.c
+    escape_minus.cxx
 )
 
 foreach(executable_source ${EXECUTABLE_SOURCES})
