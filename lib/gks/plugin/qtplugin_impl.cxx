@@ -1997,7 +1997,9 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       return;
 
     case 209: /* inq_ws_state */
-      aspect_ratio = (p->window[1] - p->window[0]) / (p->window[3] - p->window[2]);
+      aspect_ratio =
+          (p->window[1] - p->window[0]) / (p->window[3] - p->window[2]) * (1.0 * p->device_dpi_x / p->device_dpi_y);
+      ;
       get_paint_device();
       if (p->width > p->height * aspect_ratio)
         {
