@@ -300,74 +300,6 @@ void grm_dump_json(const grm_args_t *args, FILE *f)
     }
 }
 
-void grm_dump_bson(const grm_args_t *args, FILE *f)
-{
-  static memwriter_t *memwriter = NULL;
-  char *buf;
-  int length;
-
-  if (memwriter == NULL)
-    {
-      memwriter = memwriter_new();
-    }
-  tobson_write_args(memwriter, args);
-  if (tobson_is_complete())
-    {
-      memwriter_putc(memwriter, '\0');
-
-      buf = memwriter_buf(memwriter);
-
-      bytes_to_int(&length, buf);
-
-      while (length > 0)
-        {
-          fprintf(f, "\\x%x ", *(buf));
-          length--;
-          ++buf;
-        }
-      memwriter_delete(memwriter);
-      memwriter = NULL;
-    }
-}
-
-void grm_dump_bson_and_parse(const grm_args_t *args, FILE *f)
-{
-  static memwriter_t *memwriter = NULL;
-  char *buf;
-  int length;
-  grm_args_t *new_args = grm_args_new();
-
-  if (memwriter == NULL)
-    {
-      memwriter = memwriter_new();
-    }
-  tobson_write_args(memwriter, args);
-  if (tobson_is_complete())
-    {
-      memwriter_putc(memwriter, '\0');
-
-      buf = memwriter_buf(memwriter);
-
-      bytes_to_int(&length, buf);
-
-      while (length > 0)
-        {
-          fprintf(f, "\\x%x ", (unsigned char)*(buf));
-          length--;
-          ++buf;
-        }
-      fprintf(f, "\n");
-
-      buf = memwriter_buf(memwriter);
-      frombson_read(new_args, buf);
-
-      grm_dump(new_args, f);
-      grm_args_delete(new_args);
-      memwriter_delete(memwriter);
-      memwriter = NULL;
-    }
-}
-
 char *grm_dump_json_str(void)
 {
   static memwriter_t *memwriter = NULL;
@@ -391,4 +323,39 @@ char *grm_dump_json_str(void)
   return "";
 }
 
+void grm_dump_bson(const grm_args_t *args, FILE *f)
+{
+  static memwriter_t *memwriter = NULL;
+  char *buf;
+  int length;
+  int i;
+
+  if (memwriter == NULL)
+    {
+      memwriter = memwriter_new();
+    }
+  tobson_write_args(memwriter, args);
+  if (tobson_is_complete())
+    {
+      buf = memwriter_buf(memwriter);
+      bytes_to_int(&length, buf);
+
+      for (i = 0; i < length; i++, buf++)
+        {
+          fprintf(f, "%.2X", (unsigned char)*(buf));
+          if (i % 16 == 15)
+            {
+              putc('\n', f);
+            }
+          else if (i % 2 == 1)
+            {
+              putc(' ', f);
+            }
+        }
+      fprintf(f, "\n");
+
+      memwriter_delete(memwriter);
+      memwriter = NULL;
+    }
+}
 #endif
