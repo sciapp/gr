@@ -22,9 +22,8 @@ extern "C" {
 #ifndef NDEBUG
 EXPORT void grm_dump(const grm_args_t *args, FILE *f);
 EXPORT void grm_dump_json(const grm_args_t *args, FILE *f);
-EXPORT void grm_dump_bson(const grm_args_t *args, FILE *f);
-EXPORT void grm_dump_bson_and_parse(const grm_args_t *args, FILE *f);
 EXPORT char *grm_dump_json_str(void);
+EXPORT void grm_dump_bson(const grm_args_t *args, FILE *f);
 #else
 #define grm_dump
 #define grm_dump_json
