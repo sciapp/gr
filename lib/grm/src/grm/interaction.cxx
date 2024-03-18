@@ -372,7 +372,6 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
                                                        "text",
                                                        "y_tick_label_group",
                                                        "x_tick_label_group",
-                                                       "draw_graphics",
                                                        "layout_grid_element",
                                                        "layout_grid",
                                                        "central_region"};
@@ -544,10 +543,11 @@ int grm_input(const grm_args_t *input_args)
           int movable_status;
           std::string kind;
           double viewport[4];
-          viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_x_min"));
-          viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_x_max"));
-          viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_y_min"));
-          viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_y_max"));
+          auto central_region = subplot_element->querySelectors("central_region");
+          viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
+          viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
+          viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
+          viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
 
           kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
           if (kind == "marginal_heatmap")
@@ -602,25 +602,27 @@ int grm_input(const grm_args_t *input_args)
                   y_0 = y_min;
                 }
 
-              GRM::Render::processViewport(subplot_element);
               GRM::Render::processLimits(subplot_element);
               GRM::Render::processWindow(subplot_element);
 
               gr_savestate();
               for (const auto &elem : subplot_element->parentElement()->children())
                 {
-                  if (elem->hasAttribute("viewport_x_min"))
+                  if (elem->hasAttribute("window_x_min"))
                     {
-                      gr_setviewport(
-                          (double)elem->getAttribute("viewport_x_min"), (double)elem->getAttribute("viewport_x_max"),
-                          (double)elem->getAttribute("viewport_y_min"), (double)elem->getAttribute("viewport_y_max"));
-                      gr_setwindow(
-                          (double)elem->getAttribute("window_x_min"), (double)elem->getAttribute("window_x_max"),
-                          (double)elem->getAttribute("window_y_min"), (double)elem->getAttribute("window_y_max"));
+                      gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
+                                     static_cast<double>(central_region->getAttribute("viewport_x_max")),
+                                     static_cast<double>(central_region->getAttribute("viewport_y_min")),
+                                     static_cast<double>(central_region->getAttribute("viewport_y_max")));
+                      gr_setwindow(static_cast<double>(elem->getAttribute("window_x_min")),
+                                   static_cast<double>(elem->getAttribute("window_x_max")),
+                                   static_cast<double>(elem->getAttribute("window_y_min")),
+                                   static_cast<double>(elem->getAttribute("window_y_max")));
                       gr_setscale(static_cast<int>(elem->getAttribute("scale")));
                       break;
                     }
                 }
+              GRM::Render::calculateCharHeight(central_region);
 
               gr_wctondc(&x_0, &y_0);
               gr_wctondc(&x_end, &y_end);
@@ -798,7 +800,6 @@ int grm_input(const grm_args_t *input_args)
                   subplot_element->append(panzoom_element);
                   subplot_element->setAttribute("panzoom", true);
                 }
-
               return 1;
             }
 
@@ -806,25 +807,27 @@ int grm_input(const grm_args_t *input_args)
               grm_args_values(input_args, "y_shift", "i", &yshift) &&
               grm_args_values(input_args, "move_selection", "i", &selection_status))
             {
-              GRM::Render::processViewport(subplot_element);
               GRM::Render::processLimits(subplot_element);
               GRM::Render::processWindow(subplot_element);
 
               gr_savestate();
               for (const auto &elem : subplot_element->parentElement()->children())
                 {
-                  if (elem->hasAttribute("viewport_x_min"))
+                  if (elem->hasAttribute("window_x_min"))
                     {
-                      gr_setviewport(
-                          (double)elem->getAttribute("viewport_x_min"), (double)elem->getAttribute("viewport_x_max"),
-                          (double)elem->getAttribute("viewport_y_min"), (double)elem->getAttribute("viewport_y_max"));
-                      gr_setwindow(
-                          (double)elem->getAttribute("window_x_min"), (double)elem->getAttribute("window_x_max"),
-                          (double)elem->getAttribute("window_y_min"), (double)elem->getAttribute("window_y_max"));
+                      gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
+                                     static_cast<double>(central_region->getAttribute("viewport_x_max")),
+                                     static_cast<double>(central_region->getAttribute("viewport_y_min")),
+                                     static_cast<double>(central_region->getAttribute("viewport_y_max")));
+                      gr_setwindow(static_cast<double>(elem->getAttribute("window_x_min")),
+                                   static_cast<double>(elem->getAttribute("window_x_max")),
+                                   static_cast<double>(elem->getAttribute("window_y_min")),
+                                   static_cast<double>(elem->getAttribute("window_y_max")));
                       gr_setscale(static_cast<int>(elem->getAttribute("scale")));
                       break;
                     }
                 }
+              GRM::Render::calculateCharHeight(central_region);
 
               for (const auto &selection : grm_get_document_root()->querySelectorsAll("[_selected=1]"))
                 {
@@ -850,7 +853,6 @@ int grm_input(const grm_args_t *input_args)
                     }
                   else
                     {
-                      auto central_region = subplot_element->querySelectors("central_region");
                       rotation = static_cast<double>(central_region->getAttribute("space_3d_phi"));
                       tilt = static_cast<double>(central_region->getAttribute("space_3d_theta"));
 
@@ -918,26 +920,27 @@ int grm_input(const grm_args_t *input_args)
                 {
                   movable_obj_ref = movable;
 
-                  GRM::Render::processViewport(subplot_element);
                   GRM::Render::processLimits(subplot_element);
                   GRM::Render::processWindow(subplot_element);
 
                   gr_savestate();
                   for (const auto &elem : subplot_element->parentElement()->children())
                     {
-                      if (elem->hasAttribute("viewport_x_min"))
+                      if (elem->hasAttribute("window_x_min"))
                         {
-                          gr_setviewport((double)elem->getAttribute("viewport_x_min"),
-                                         (double)elem->getAttribute("viewport_x_max"),
-                                         (double)elem->getAttribute("viewport_y_min"),
-                                         (double)elem->getAttribute("viewport_y_max"));
-                          gr_setwindow(
-                              (double)elem->getAttribute("window_x_min"), (double)elem->getAttribute("window_x_max"),
-                              (double)elem->getAttribute("window_y_min"), (double)elem->getAttribute("window_y_max"));
+                          gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
+                                         static_cast<double>(central_region->getAttribute("viewport_x_max")),
+                                         static_cast<double>(central_region->getAttribute("viewport_y_min")),
+                                         static_cast<double>(central_region->getAttribute("viewport_y_max")));
+                          gr_setwindow(static_cast<double>(elem->getAttribute("window_x_min")),
+                                       static_cast<double>(elem->getAttribute("window_x_max")),
+                                       static_cast<double>(elem->getAttribute("window_y_min")),
+                                       static_cast<double>(elem->getAttribute("window_y_max")));
                           gr_setscale(static_cast<int>(elem->getAttribute("scale")));
                           break;
                         }
                     }
+                  GRM::Render::calculateCharHeight(central_region);
 
                   moveTransformationHelper(movable, ndc_x, ndc_y, xshift, yshift, true);
                   gr_restorestate();
@@ -1013,14 +1016,15 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
     {
       return 0;
     }
+  auto central_region = subplot_element->querySelectors("central_region");
   ws_window[0] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_x_min"));
   ws_window[1] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_x_max"));
   ws_window[2] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_y_min"));
   ws_window[3] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_y_max"));
-  viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_x_min"));
-  viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_x_max"));
-  viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_y_min"));
-  viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_y_max"));
+  viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
+  viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
+  viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
+  viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
   viewport_mid_x = (viewport[1] + viewport[0]) / 2.0;
   viewport_mid_y = (viewport[3] + viewport[2]) / 2.0;
   *w = (int)grm_round(factor_x * width * (viewport[1] - viewport[0]) / (ws_window[1] - ws_window[0]));
@@ -1269,21 +1273,23 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
       return ERROR_NONE;
     }
 
-  GRM::Render::processViewport(subplot_element);
   GRM::Render::processLimits(subplot_element);
   GRM::Render::processWindow(subplot_element);
 
   gr_savestate();
-  if (subplot_element->hasAttribute("viewport_x_min"))
+  auto central_region = subplot_element->querySelectors("central_region");
+  if (subplot_element->hasAttribute("window_x_min"))
     {
-      gr_setviewport((double)subplot_element->getAttribute("viewport_x_min"),
-                     (double)subplot_element->getAttribute("viewport_x_max"),
-                     (double)subplot_element->getAttribute("viewport_y_min"),
-                     (double)subplot_element->getAttribute("viewport_y_max"));
-      gr_setwindow(
-          (double)subplot_element->getAttribute("window_x_min"), (double)subplot_element->getAttribute("window_x_max"),
-          (double)subplot_element->getAttribute("window_y_min"), (double)subplot_element->getAttribute("window_y_max"));
+      gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
+                     static_cast<double>(central_region->getAttribute("viewport_x_max")),
+                     static_cast<double>(central_region->getAttribute("viewport_y_min")),
+                     static_cast<double>(central_region->getAttribute("viewport_y_max")));
+      gr_setwindow(static_cast<double>(subplot_element->getAttribute("window_x_min")),
+                   static_cast<double>(subplot_element->getAttribute("window_x_max")),
+                   static_cast<double>(subplot_element->getAttribute("window_y_min")),
+                   static_cast<double>(subplot_element->getAttribute("window_y_max")));
     }
+  GRM::Render::calculateCharHeight(central_region);
   gr_setscale(static_cast<int>(subplot_element->getAttribute("scale")));
   z_log = static_cast<int>(subplot_element->getAttribute("z_log"));
 

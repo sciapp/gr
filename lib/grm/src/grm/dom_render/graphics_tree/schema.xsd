@@ -22,7 +22,6 @@
                 <xs:element ref="layout_grid" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="plot" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="active" type="xs:integer"/>
             <xs:attribute name="fig_size_x" type="xs:double"/>
             <xs:attribute name="fig_size_y" type="xs:double"/>
@@ -159,14 +158,6 @@
             <xs:attribute name="title" type="xs:string"/>
             <xs:attribute name="title_margin" type="xs:integer"/>
             <xs:attribute name="transparency" type="xs:double"/>
-            <xs:attribute name="viewport_x_max" type="xs:double"/>
-            <xs:attribute name="viewport_x_min" type="xs:double"/>
-            <xs:attribute name="viewport_y_max" type="xs:double"/>
-            <xs:attribute name="viewport_y_min" type="xs:double"/>
-            <xs:attribute name="vp_x_max" type="xs:double"/>
-            <xs:attribute name="vp_x_min" type="xs:double"/>
-            <xs:attribute name="vp_y_max" type="xs:double"/>
-            <xs:attribute name="vp_y_min" type="xs:double"/>
             <xs:attribute name="window_x_max" type="xs:double"/>
             <xs:attribute name="window_x_min" type="xs:double"/>
             <xs:attribute name="window_y_max" type="xs:double"/>
@@ -805,6 +796,10 @@
             <xs:attribute name="num_bins" type="xs:integer"/>
             <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="weights" type="xs:string"/>
+            <xs:attribute name="window_x_max" type="xs:double"/> <!-- window only when the series is a sideplot -->
+            <xs:attribute name="window_x_min" type="xs:double"/>
+            <xs:attribute name="window_y_max" type="xs:double"/>
+            <xs:attribute name="window_y_min" type="xs:double"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="x_flip" type="xs:integer"/>
             <xs:attribute name="y_flip" type="xs:integer"/>
@@ -884,6 +879,8 @@
             <xs:attribute name="algorithm" type="xs:string"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="marginal_heatmap_kind" type="xs:string" use="required"/>
+            <xs:attribute name="offset" type="xs:double"/>
+            <xs:attribute name="width" type="xs:double"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="x_ind" type="xs:integer"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
@@ -1082,6 +1079,10 @@
             <xs:attribute name="orientation" type="xs:string"/>
             <xs:attribute name="marginal_heatmap_side_plot" type="xs:integer"/>
             <xs:attribute name="step_where" type="xs:string"/>
+            <xs:attribute name="window_x_max" type="xs:double"/> <!-- window only when the series is a sideplot -->
+            <xs:attribute name="window_x_min" type="xs:double"/>
+            <xs:attribute name="window_y_max" type="xs:double"/>
+            <xs:attribute name="window_y_min" type="xs:double"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="x_flip" type="xs:integer"/>
             <xs:attribute name="xi" type="xs:string"/>
@@ -1305,6 +1306,10 @@
 
     <!-- definition of move_xform_ndc attributes -->
     <xs:attributeGroup name="move_xform_ndc">
+        <xs:attribute name="viewport_x_max" type="xs:double"/>
+        <xs:attribute name="viewport_x_min" type="xs:double"/>
+        <xs:attribute name="viewport_y_max" type="xs:double"/>
+        <xs:attribute name="viewport_y_min" type="xs:double"/>
         <xs:attribute name="x_scale_ndc" type="xs:double"/>
         <xs:attribute name="x_shift_ndc" type="xs:double"/>
         <xs:attribute name="y_scale_ndc" type="xs:double"/>
