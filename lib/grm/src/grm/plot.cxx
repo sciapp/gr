@@ -5221,6 +5221,14 @@ std::shared_ptr<GRM::Element> get_subplot_from_ndc_point_using_dom_helper(std::s
       viewport[1] = static_cast<double>(element->getAttribute("viewport_x_max"));
       viewport[2] = static_cast<double>(element->getAttribute("viewport_y_min"));
       viewport[3] = static_cast<double>(element->getAttribute("viewport_y_max"));
+      if (elementIsSubplotGroup)
+        {
+          auto central_region = element->querySelectors("central_region");
+          viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
+          viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
+          viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
+          viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
+        }
       if (viewport[0] <= x && x <= viewport[1] && viewport[2] <= y && y <= viewport[3])
         {
           return element;
@@ -5346,10 +5354,11 @@ int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, cons
     {
       return 0;
     }
-  viewport[0] = static_cast<double>(subplot_element->getAttribute("viewport_x_min"));
-  viewport[1] = static_cast<double>(subplot_element->getAttribute("viewport_x_max"));
-  viewport[2] = static_cast<double>(subplot_element->getAttribute("viewport_y_min"));
-  viewport[3] = static_cast<double>(subplot_element->getAttribute("viewport_y_max"));
+  auto central_region = subplot_element->querySelectors("central_region");
+  viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
+  viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
+  viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
+  viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
   wswindow[0] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_x_min"));
   wswindow[1] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_x_max"));
   wswindow[2] = static_cast<double>(subplot_element->parentElement()->getAttribute("ws_window_y_min"));
