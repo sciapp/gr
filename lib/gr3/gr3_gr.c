@@ -39,13 +39,6 @@ extern float __cdecl sqrtf(float);
 
 #define arc(angle) (M_PI * (angle) / 180.0)
 
-#define OPTION_X_LOG (1 << 0)
-#define OPTION_Y_LOG (1 << 1)
-#define OPTION_Z_LOG (1 << 2)
-#define OPTION_FLIP_X (1 << 3)
-#define OPTION_FLIP_Y (1 << 4)
-#define OPTION_FLIP_Z (1 << 5)
-
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN 1
 #ifdef near
@@ -393,22 +386,22 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
       scale = 0;
     }
 
-  gr3_ndctrans_(xmin, xmax, &tx, scale & OPTION_X_LOG, scale & OPTION_FLIP_X);
+  gr3_ndctrans_(xmin, xmax, &tx, scale & GR_OPTION_X_LOG, scale & GR_OPTION_FLIP_X);
   /* flip because y-axis is projected to the negative z-axis */
-  gr3_ndctrans_(ymin, ymax, &ty, scale & OPTION_Y_LOG, !(scale & OPTION_FLIP_Y));
-  gr3_ndctrans_(zmin, zmax, &tz, scale & OPTION_Z_LOG, scale & OPTION_FLIP_Z);
+  gr3_ndctrans_(ymin, ymax, &ty, scale & GR_OPTION_Y_LOG, !(scale & GR_OPTION_FLIP_Y));
+  gr3_ndctrans_(zmin, zmax, &tz, scale & GR_OPTION_Z_LOG, scale & GR_OPTION_FLIP_Z);
 
-  if (scale & OPTION_X_LOG)
+  if (scale & GR_OPTION_X_LOG)
     {
       xmin = gr3_log10_(xmin);
       xmax = gr3_log10_(xmax);
     }
-  if (scale & OPTION_Y_LOG)
+  if (scale & GR_OPTION_Y_LOG)
     {
       ymin = gr3_log10_(ymin);
       ymax = gr3_log10_(ymax);
     }
-  if (scale & OPTION_Z_LOG)
+  if (scale & GR_OPTION_Z_LOG)
     {
       zmin = gr3_log10_(zmin);
       zmax = gr3_log10_(zmax);
@@ -428,27 +421,27 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               v[0] = px[i];
               zvalue = pz[k];
               v[1] = py[j];
-              if (scale & OPTION_X_LOG)
+              if (scale & GR_OPTION_X_LOG)
                 {
                   v[0] = gr3_log10_(v[0]);
                 }
-              if (scale & OPTION_Y_LOG)
+              if (scale & GR_OPTION_Y_LOG)
                 {
                   v[1] = gr3_log10_(v[1]);
                 }
-              if (scale & OPTION_Z_LOG)
+              if (scale & GR_OPTION_Z_LOG)
                 {
                   zvalue = gr3_log10_(zvalue);
                 }
-              if (scale & OPTION_FLIP_X)
+              if (scale & GR_OPTION_FLIP_X)
                 {
                   v[0] = -v[0] + xmin + xmax;
                 }
-              if (scale & OPTION_FLIP_Y)
+              if (scale & GR_OPTION_FLIP_Y)
                 {
                   v[1] = -v[1] + ymin + ymax;
                 }
-              if (scale & OPTION_FLIP_Z)
+              if (scale & GR_OPTION_FLIP_Z)
                 {
                   zvalue = -zvalue + zmin + zmax;
                 }
@@ -916,13 +909,13 @@ static void gr3_drawimage_grlike()
   gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
   gr_inqscale(&scale);
 
-  if (scale & OPTION_FLIP_X)
+  if (scale & GR_OPTION_FLIP_X)
     {
       double tmp = xmin;
       xmin = xmax;
       xmax = tmp;
     }
-  if (scale & OPTION_FLIP_Y)
+  if (scale & GR_OPTION_FLIP_Y)
     {
       double tmp = ymin;
       ymin = ymax;
@@ -1136,17 +1129,17 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
           gr3_createsurfacemesh(&mesh, nx, ny, px, py, pz, surfaceoption);
         }
       if (gr3_geterror(0, NULL, NULL)) return;
-      if (scale & OPTION_X_LOG)
+      if (scale & GR_OPTION_X_LOG)
         {
           xmin = gr3_log10_(xmin);
           xmax = gr3_log10_(xmax);
         }
-      if (scale & OPTION_Y_LOG)
+      if (scale & GR_OPTION_Y_LOG)
         {
           ymin = gr3_log10_(ymin);
           ymax = gr3_log10_(ymax);
         }
-      if (scale & OPTION_Z_LOG)
+      if (scale & GR_OPTION_Z_LOG)
         {
           zmin = gr3_log10_(zmin);
           zmax = gr3_log10_(zmax);
@@ -1266,10 +1259,10 @@ GR3API int gr3_createsurface3dmesh(int *mesh, int ncols, int nrows, float *px, f
     }
   gr_inqscale(&scale);
 
-  gr3_ndctrans_(xmin, xmax, &tx, scale & OPTION_X_LOG, scale & OPTION_FLIP_X);
+  gr3_ndctrans_(xmin, xmax, &tx, scale & GR_OPTION_X_LOG, scale & GR_OPTION_FLIP_X);
   /* flip because y-axis is projected to the negative z-axis */
-  gr3_ndctrans_(ymin, ymax, &ty, scale & OPTION_Y_LOG, !(scale & OPTION_FLIP_Y));
-  gr3_ndctrans_(zmin, zmax, &tz, scale & OPTION_Z_LOG, scale & OPTION_FLIP_Z);
+  gr3_ndctrans_(ymin, ymax, &ty, scale & GR_OPTION_Y_LOG, !(scale & GR_OPTION_FLIP_Y));
+  gr3_ndctrans_(zmin, zmax, &tz, scale & GR_OPTION_Z_LOG, scale & GR_OPTION_FLIP_Z);
 
   for (i = 0; i < ncols - 1; i++)
     {
@@ -1476,13 +1469,13 @@ GR3API void gr3_drawtrianglesurface(int n, const float *positions)
   gr_inqwindow(&window.x_min, &window.x_max, &window.y_min, &window.y_max);
   scale = 0;
   gr_inqscale(&scale);
-  if (scale & OPTION_FLIP_X)
+  if (scale & GR_OPTION_FLIP_X)
     {
       double tmp = window.x_min;
       window.x_min = window.x_max;
       window.x_max = tmp;
     }
-  if (scale & OPTION_FLIP_Y)
+  if (scale & GR_OPTION_FLIP_Y)
     {
       double tmp = window.y_min;
       window.y_min = window.y_max;
@@ -2049,13 +2042,13 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
 
       gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
       gr_inqscale(&scale);
-      if (scale & OPTION_FLIP_X)
+      if (scale & GR_OPTION_FLIP_X)
         {
           double tmp = xmin;
           xmin = xmax;
           xmax = tmp;
         }
-      if (scale & OPTION_FLIP_Y)
+      if (scale & GR_OPTION_FLIP_Y)
         {
           double tmp = ymin;
           ymin = ymax;
@@ -2671,13 +2664,13 @@ const gr3_volume_2pass_t *gr_volume_2pass(int nx, int ny, int nz, double *data, 
 
           gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
           gr_inqscale(&scale);
-          if (scale & OPTION_FLIP_X)
+          if (scale & GR_OPTION_FLIP_X)
             {
               double tmp = xmin;
               xmin = xmax;
               xmax = tmp;
             }
-          if (scale & OPTION_FLIP_Y)
+          if (scale & GR_OPTION_FLIP_Y)
             {
               double tmp = ymin;
               ymin = ymax;

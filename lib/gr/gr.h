@@ -36,6 +36,26 @@ extern "C" {
 
 #define GR_DEFAULT_MATH_FONT 232
 
+#define GR_OPTION_X_LOG (1 << 0)
+#define GR_OPTION_Y_LOG (1 << 1)
+#define GR_OPTION_Z_LOG (1 << 2)
+
+#define GR_OPTION_FLIP_X (1 << 3)
+#define GR_OPTION_FLIP_Y (1 << 4)
+#define GR_OPTION_FLIP_Z (1 << 5)
+
+#define GR_OPTION_X_LOG2 (1 << 6)
+#define GR_OPTION_Y_LOG2 (1 << 7)
+#define GR_OPTION_Z_LOG2 (1 << 8)
+
+#define GR_OPTION_X_LN (1 << 9)
+#define GR_OPTION_Y_LN (1 << 10)
+#define GR_OPTION_Z_LN (1 << 11)
+
+#define GR_SPEC_LINE (1 << 0)
+#define GR_SPEC_MARKER (1 << 1)
+#define GR_SPEC_COLOR (1 << 2)
+
 typedef struct
 {
   double x, y;
