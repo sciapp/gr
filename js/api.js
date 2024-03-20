@@ -255,6 +255,7 @@ function GR(canvas_id) {
     this.OPTION_COLORED_MESH = 4;
     this.OPTION_CELL_ARRAY = 5;
     this.OPTION_SHADED_MESH = 6;
+    this.OPTION_3D_MESH = 7;
 
     this.MODEL_RGB = 0;
     this.MODEL_HSV = 1;

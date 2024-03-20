@@ -110,10 +110,6 @@ extern "C" {
 #define GR3_TRANSPARENCY_TRANSMIT 1
 #define GR3_TRANSPARENCY_FILTER 2
 
-#define GR_VOLUME_EMISSION 0
-#define GR_VOLUME_ABSORPTION 1
-#define GR_VOLUME_MIP 2
-
 typedef struct
 {
   float x, y, z;

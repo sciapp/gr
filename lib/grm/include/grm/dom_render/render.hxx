@@ -90,24 +90,6 @@ typedef enum
   GR_COLOR_BORDER = 1 << 4
 } gr_color_type_t;
 
-typedef enum
-{
-  // GR_OPTION_X_LOG
-  // GR_OPTION_Y_LOG
-  // GR_OPTION_Z_LOG
-  // GR_OPTION_FLIP_X
-  // GR_OPTION_FLIP_Y
-  // GR_OPTION_FLIP_Z
-  GR_OPTION_LINES = 0,
-  GR_OPTION_MESH = 1,
-  GR_OPTION_FILLED_MESH = 2,
-  GR_OPTION_Z_SHADED_MESH = 3,
-  GR_OPTION_COLORED_MESH = 4,
-  GR_OPTION_CELL_ARRAY = 5,
-  GR_OPTION_SHADED_MESH = 6,
-  GR_OPTION_3D_MESH = 7
-} gr_option_t;
-
 enum class EXPORT CoordinateSpace
 {
   WC,

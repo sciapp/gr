@@ -54,18 +54,6 @@ typedef struct
   double a1, a2, b, c1, c2, c3, d;
 } gr_world_xform_t;
 
-typedef enum
-{
-  OPTION_LINES,
-  OPTION_MESH,
-  OPTION_FILLED_MESH,
-  OPTION_Z_SHADED_MESH,
-  OPTION_COLORED_MESH,
-  OPTION_CELL_ARRAY,
-  OPTION_SHADED_MESH,
-  OPTION_3D_MESH
-} gr_surface_option_t;
-
 typedef struct
 {
   double a, b;
@@ -567,7 +555,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
         }
     }
   new_num_vertices = num_indices;
-  if (context_struct_.use_software_renderer && context_struct_.option <= OPTION_FILLED_MESH)
+  if (context_struct_.use_software_renderer && context_struct_.option <= GR_OPTION_FILLED_MESH)
     {
       double linewidth;
       int quality = context_struct_.quality;
@@ -599,7 +587,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
         }
       linewidth_x = (float)linewidth;
       linewidth_y = (float)linewidth;
-      if (context_struct_.option == OPTION_LINES)
+      if (context_struct_.option == GR_OPTION_LINES)
         {
           linewidth_x = 0; /* set to zero to not be drawn */
         }
@@ -629,7 +617,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               skipped_quads += 1;
               continue;
             }
-          if (context_struct_.use_software_renderer && context_struct_.option <= OPTION_FILLED_MESH)
+          if (context_struct_.use_software_renderer && context_struct_.option <= GR_OPTION_FILLED_MESH)
             {
               for (l = 0; l < 3; l++)
                 {
@@ -692,7 +680,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
             }
         }
     }
-  if (context_struct_.use_software_renderer && context_struct_.option <= OPTION_FILLED_MESH)
+  if (context_struct_.use_software_renderer && context_struct_.option <= GR_OPTION_FILLED_MESH)
     {
       result = gr3_createmesh_nocopy(mesh, new_num_vertices, new_vertices, new_normals, new_colors);
     }
@@ -707,7 +695,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
       free(colors);
       free(normals);
       free(vertices);
-      if (context_struct_.use_software_renderer && context_struct_.option <= OPTION_FILLED_MESH)
+      if (context_struct_.use_software_renderer && context_struct_.option <= GR_OPTION_FILLED_MESH)
         {
           free(new_normals);
           free(new_vertices);
@@ -1083,8 +1071,8 @@ GR3API void gr3_isosurface(int nx, int ny, int nz, const float *data, float isov
 GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int option)
 {
   GR3_DO_INIT;
-  if (option == OPTION_Z_SHADED_MESH || option == OPTION_COLORED_MESH || option == OPTION_3D_MESH ||
-      (context_struct_.use_software_renderer && option <= OPTION_FILLED_MESH))
+  if (option == GR_OPTION_Z_SHADED_MESH || option == GR_OPTION_COLORED_MESH || option == GR_OPTION_3D_MESH ||
+      (context_struct_.use_software_renderer && option <= GR_OPTION_FILLED_MESH))
     {
       int mesh;
       int surfaceoption;
@@ -1108,11 +1096,11 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
 
       context_struct_.option = option;
       surfaceoption = GR3_SURFACE_GRTRANSFORM;
-      if (option == OPTION_Z_SHADED_MESH || option == OPTION_COLORED_MESH)
+      if (option == GR_OPTION_Z_SHADED_MESH || option == GR_OPTION_COLORED_MESH)
         {
           surfaceoption |= GR3_SURFACE_NORMALS;
         }
-      if (option == OPTION_Z_SHADED_MESH)
+      if (option == GR_OPTION_Z_SHADED_MESH)
         {
           surfaceoption |= GR3_SURFACE_GRZSHADED;
         }
@@ -1120,7 +1108,7 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
         {
           surfaceoption |= GR3_SURFACE_GRCOLOR;
         }
-      if (option == OPTION_3D_MESH)
+      if (option == GR_OPTION_3D_MESH)
         {
           gr3_createsurface3dmesh(&mesh, nx, ny, px, py, pz);
         }

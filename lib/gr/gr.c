@@ -294,7 +294,6 @@ static state_list_vector *app_context = NULL;
 
 static state_list *ctx = NULL, *state = NULL;
 
-#define MAX_CONTEXT 8192
 #define CONTEXT_VECTOR_INCREMENT 8
 
 static void (*previous_handler)(int);
@@ -386,23 +385,6 @@ static unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
 #define XML_HEADER "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n"
 #define GR_HEADER "<gr>\n"
 #define GR_TRAILER "</gr>\n"
-
-typedef enum
-{
-  OPTION_LINES,
-  OPTION_MESH,
-  OPTION_FILLED_MESH,
-  OPTION_Z_SHADED_MESH,
-  OPTION_COLORED_MESH,
-  OPTION_CELL_ARRAY,
-  OPTION_SHADED_MESH
-} surface_option_t;
-
-typedef enum
-{
-  MODEL_RGB,
-  MODEL_HSV
-} color_model_t;
 
 typedef struct
 {
@@ -8502,7 +8484,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
       switch (option)
         {
 
-        case OPTION_LINES:
+        case GR_OPTION_LINES:
           {
             j = 0;
             hlr.initialize = 1;
@@ -8573,7 +8555,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
             break;
           }
 
-        case OPTION_MESH:
+        case GR_OPTION_MESH:
           {
             k = 0;
 
@@ -8686,10 +8668,10 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
             break;
           }
 
-        case OPTION_FILLED_MESH:
-        case OPTION_Z_SHADED_MESH:
-        case OPTION_COLORED_MESH:
-        case OPTION_SHADED_MESH:
+        case GR_OPTION_FILLED_MESH:
+        case GR_OPTION_Z_SHADED_MESH:
+        case GR_OPTION_COLORED_MESH:
+        case GR_OPTION_SHADED_MESH:
           {
             j = ny - 1;
 
@@ -8797,7 +8779,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                     yn[4] = yn[0];
                     zn[4] = zn[0];
 
-                    if (option == OPTION_SHADED_MESH)
+                    if (option == GR_OPTION_SHADED_MESH)
                       {
                         for (k = 0; k < 4; k++)
                           {
@@ -8812,7 +8794,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
                     meanz = 0.25 * (Z(i - 1, j - 1) + Z(i, j - 1) + Z(i, j) + Z(i - 1, j));
 
-                    if (option == OPTION_Z_SHADED_MESH)
+                    if (option == GR_OPTION_Z_SHADED_MESH)
                       {
                         color = iround(meanz) + first_color;
 
@@ -8824,7 +8806,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                         gks_set_fill_color_index(color);
                       }
 
-                    else if (option == OPTION_COLORED_MESH)
+                    else if (option == GR_OPTION_COLORED_MESH)
                       {
                         color = iround((meanz - color_min) / (color_max - color_min) * (last_color - first_color)) +
                                 first_color;
@@ -8837,7 +8819,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                         gks_set_fill_color_index(color);
                       }
 
-                    else if (option == OPTION_SHADED_MESH)
+                    else if (option == GR_OPTION_SHADED_MESH)
                       {
                         color = iround(intensity * (last_color - first_color)) + first_color;
 
@@ -8854,7 +8836,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                     np = 4;
                     gks_fillarea(np, xn, yn);
 
-                    if (option == OPTION_FILLED_MESH)
+                    if (option == GR_OPTION_FILLED_MESH)
                       {
                         np = 5;
                         gks_polyline(np, xn, yn);
@@ -8869,7 +8851,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
             break;
           }
 
-        case OPTION_CELL_ARRAY:
+        case GR_OPTION_CELL_ARRAY:
 
           colia = (int *)xmalloc(nx * ny * sizeof(int));
           k = 0;
@@ -8915,7 +8897,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
       gks_set_pline_linetype(flip_z ? GKS_K_LINETYPE_SOLID : GKS_K_LINETYPE_DOTTED);
     }
-  while ((hlr.sign >= 0) && ((int)option <= (int)OPTION_MESH));
+  while ((hlr.sign >= 0) && ((int)option <= (int)GR_OPTION_MESH));
 
 #undef Z
 
@@ -11246,7 +11228,7 @@ static void drawimage_calculation(double xmin, double xmax, double ymin, double 
   int n, i, j, w, h;
   double hue, saturation, value, red, green, blue, x, y;
 
-  if (model == MODEL_HSV)
+  if (model == GR_MODEL_HSV)
     {
       n = width * height;
       img = (int *)xmalloc(n * sizeof(int));
@@ -11357,11 +11339,11 @@ static void drawimage_calculation(double xmin, double xmax, double ymin, double 
  *
  * The available color models are:
  *
- * +-----------------------+---+-----------+
- * |MODEL_RGB              |  0|   AABBGGRR|
- * +-----------------------+---+-----------+
- * |MODEL_HSV              |  1|   AAVVSSHH|
- * +-----------------------+---+-----------+
+ * +--------------------------+---+-----------+
+ * |GR_MODEL_RGB              |  0|   AABBGGRR|
+ * +--------------------------+---+-----------+
+ * |GR_MODEL_HSV              |  1|   AAVVSSHH|
+ * +--------------------------+---+-----------+
  *
  * \endverbatim
  */
