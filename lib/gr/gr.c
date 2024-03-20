@@ -4226,7 +4226,7 @@ void gr_emergencyclosegks(void)
   autoinit = 1;
 }
 
-static void updategks(int wkid, void *foo)
+static void updatews(int wkid, void *foo)
 {
   int errind, conid, wtype, wkcat;
   GR_UNUSED(foo);
@@ -4242,7 +4242,7 @@ static void updategks(int wkid, void *foo)
 
 void gr_updategks(void)
 {
-  foreach_openws(updategks, NULL);
+  foreach_openws(updatews, NULL);
 }
 
 /*!
