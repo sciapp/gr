@@ -4248,31 +4248,23 @@ void gr_emergencyclosegks(void)
   autoinit = 1;
 }
 
+static void updatews(int wkid, void *foo)
+{
+  int errind, conid, wtype, wkcat;
+  GR_UNUSED(foo);
+
+  gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
+  gks_inq_ws_category(wtype, &errind, &wkcat);
+
+  if (wkcat == GKS_K_WSCAT_OUTPUT || wkcat == GKS_K_WSCAT_OUTIN)
+    {
+      gks_update_ws(wkid, GKS_K_WRITE_PAGE_FLAG);
+    }
+}
+
 void gr_updategks(void)
 {
-  int state, count, n, errind, ol;
-  int wkid, conid, wtype, wkcat;
-
-  gks_inq_operating_state(&state);
-  if (state >= GKS_K_WSOP)
-    {
-      n = 1;
-      gks_inq_open_ws(n, &errind, &ol, &wkid);
-
-      for (count = 1; count <= ol; count++)
-        {
-          n = count;
-          gks_inq_open_ws(n, &errind, &ol, &wkid);
-
-          gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
-          gks_inq_ws_category(wtype, &errind, &wkcat);
-
-          if (wkcat == GKS_K_WSCAT_OUTPUT || wkcat == GKS_K_WSCAT_OUTIN)
-            {
-              gks_update_ws(wkid, GKS_K_WRITE_PAGE_FLAG);
-            }
-        }
-    }
+  foreach_openws(updatews, NULL);
 }
 
 /*!
