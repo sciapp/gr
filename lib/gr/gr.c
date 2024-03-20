@@ -267,6 +267,11 @@ struct hexbin_2pass_priv
   double *ycm;
 };
 
+typedef struct
+{
+  double min, max;
+} minmax_t;
+
 gauss_t interp_gauss_data = {1, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 tri_linear_t interp_tri_linear_data = {1, 1, 1};
 
@@ -1022,6 +1027,23 @@ static void reallocate(int npoints)
 static double blog(double base, double x)
 {
   return log(x) / log(base);
+}
+
+minmax_t find_minmax(int n, double *values)
+{
+  int i;
+  double d, min, max;
+  for (i = 0; i != n && is_nan(values[i]); ++i)
+    ;
+  if (i == n) return (minmax_t){NAN, NAN};
+  min = max = values[i];
+  for (++i; i != n; ++i)
+    {
+      d = values[i];
+      if (min > d) min = d;
+      if (max < d) max = d;
+    }
+  return (minmax_t){min, max};
 }
 
 static double x_lin(double x)
@@ -2926,6 +2948,7 @@ void gr_spline(int n, double *px, double *py, int m, int method)
 void gr_gridit(int nd, double *xd, double *yd, double *zd, int nx, int ny, double *x, double *y, double *z)
 {
   int i, md, ncp;
+  minmax_t xminmax, yminmax;
   double xmin, ymin, xmax, ymax;
   int *iwk;
   double *wk;
@@ -2943,18 +2966,17 @@ void gr_gridit(int nd, double *xd, double *yd, double *zd, int nx, int ny, doubl
 
   check_autoinit;
 
-  xmin = xd[nd - 1];
-  xmax = xd[nd - 1];
-  ymin = yd[nd - 1];
-  ymax = yd[nd - 1];
-
   /* CALCULATION OF MIN/MAX VALUES */
-  for (i = 0; i < nd; ++i)
+  xminmax = find_minmax(nd, xd);
+  yminmax = find_minmax(nd, yd);
+  xmin = xminmax.min;
+  xmax = xminmax.max;
+  ymin = yminmax.min;
+  ymax = yminmax.max;
+  if (is_nan(xmin) || is_nan(ymin))
     {
-      xmin = (is_nan(xd[i])) ? xmin : min(xmin, xd[i]);
-      xmax = (is_nan(xd[i])) ? xmax : max(xmax, xd[i]);
-      ymin = (is_nan(yd[i])) ? ymin : min(ymin, yd[i]);
-      ymax = (is_nan(yd[i])) ? ymax : max(ymax, yd[i]);
+      fprintf(stderr, "all coordinates are NAN\n");
+      return;
     }
 
   /* DETERMINE GRID POINTS INSIDE THE DATA AREA */
