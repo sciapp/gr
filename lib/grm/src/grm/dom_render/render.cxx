@@ -3169,6 +3169,13 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
         continue;
       if (mkind == "line")
         {
+          auto x_ind = static_cast<int>(element->getAttribute("x_ind"));
+          auto y_ind = static_cast<int>(element->getAttribute("y_ind"));
+          if (x_ind == -1 || y_ind == -1)
+            {
+              child->remove();
+              continue;
+            }
           int i;
           double y_max = 0;
           std::shared_ptr<GRM::Context> context;
@@ -3186,8 +3193,6 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
 
           auto orientation = static_cast<std::string>(child->getAttribute("orientation"));
           bool is_vertical = orientation == "vertical";
-          auto x_ind = static_cast<int>(element->getAttribute("x_ind"));
-          auto y_ind = static_cast<int>(element->getAttribute("y_ind"));
           auto c_min = static_cast<double>(plot_group->getAttribute("_z_lim_min"));
           auto c_max = static_cast<double>(plot_group->getAttribute("_z_lim_max"));
           auto xmin = static_cast<double>(element->getAttribute("x_range_min"));
@@ -3276,10 +3281,6 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
               child->append(marker_elem);
               child->append(line_elem);
               marker_elem->setAttribute("z_index", 2);
-            }
-          else if (x_ind == -1 || y_ind == -1)
-            {
-              child->remove();
             }
           else
             {
@@ -8104,7 +8105,7 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
       rows = z_length / cols;
     }
 
-  is_uniform_heatmap = is_equidistant_array(cols, &(x_vec[0])) && is_equidistant_array(rows, &(y_vec[0]));
+  is_uniform_heatmap = is_equidistant_array(cols, x_vec.data()) && is_equidistant_array(rows, y_vec.data());
   if (kind == "nonuniformpolar_heatmap") is_uniform_heatmap = false;
 
   if (!is_uniform_heatmap && (x_vec.empty() || y_vec.empty()))
