@@ -23,96 +23,101 @@ extern "C" {
  * These constants can be used to specify various properties
  * when calling gr3_init().
  */
-#define GR3_IA_END_OF_LIST                    \
-  0 /*!< This constant is used as a delimiter \
-         for the attribute list. */
-#define GR3_IA_FRAMEBUFFER_WIDTH                \
-  1 /*!< The next element of the attribute list \
-         will be used as the width of the       \
-         framebuffer used for rendering.        \
-         Default: 512 */
-#define GR3_IA_FRAMEBUFFER_HEIGHT               \
-  2 /*!< The next element of the attribute list \
-         will be used as the height of the      \
-         framebuffer used for rendering.        \
-         Default: 512 */
-#define GR3_IA_NUM_THREADS                      \
-  3 /*!< The next element of the attribute list \
-         will be used as the number of Threads  \
-         used by the Software-Renderer          \
-         Default: 0 (its then set to the number \
-         of cores) */
+typedef enum
+{
+  GR3_IA_END_OF_LIST,        /*!< This constant is used as a delimiter
+                                  for the attribute list. */
+  GR3_IA_FRAMEBUFFER_WIDTH,  /*!< The next element of the attribute list
+                                  will be used as the width of the
+                                  framebuffer used for rendering.
+                                  Default: 512 */
+  GR3_IA_FRAMEBUFFER_HEIGHT, /*!< The next element of the attribute list
+                                  will be used as the height of the
+                                  framebuffer used for rendering.
+                                  Default: 512 */
+  GR3_IA_NUM_THREADS         /*!< The next element of the attribute list
+                                  will be used as the number of Threads
+                                  used by the Software-Renderer
+                                  Default: 0 (its then set to the number
+                                  of cores) */
+} gr3_init_property_t;
+;
 
 /*!
  * These contants are error codes returned by gr3 functions.
  */
-#define GR3_ERROR_NONE 0 /*!< The function was successful */
-#define GR3_ERROR_INVALID_VALUE         \
-  1 /*!< The function failed because of \
-         an invalid value */
-#define GR3_ERROR_INVALID_ATTRIBUTE                                 \
-  2                             /*!< The function failed because of \
-                                     an invalid attribute */
-#define GR3_ERROR_INIT_FAILED 3 /*!< Initialization failed */
-#define GR3_ERROR_OPENGL_ERR 4  /*!< An OpenGL error occured */
-#define GR3_ERROR_OUT_OF_MEM            \
-  5 /*!< gr3 was unable to allocate     \
-         required memory. If this error \
-         occurs, gr3 state is undefined. */
-#define GR3_ERROR_NOT_INITIALIZED     \
-  6 /*!< A function was called before \
-         initializing gr3. */
-#define GR3_ERROR_CAMERA_NOT_INITIALIZED \
-  7 /*!< gr3_getpixmap() was called      \
-         before initializing the camera */
-#define GR3_ERROR_UNKNOWN_FILE_EXTENSION 8
-#define GR3_ERROR_CANNOT_OPEN_FILE 9
-#define GR3_ERROR_EXPORT 10
+typedef enum
+{
+  GR3_ERROR_NONE = 0,                   /*!< The function was successful */
+  GR3_ERROR_INVALID_VALUE = 1,          /*!< The function failed because of
+                                          an invalid value */
+  GR3_ERROR_INVALID_ATTRIBUTE = 2,      /*!< The function failed because of
+                                             an invalid attribute */
+  GR3_ERROR_INIT_FAILED = 3,            /*!< Initialization failed */
+  GR3_ERROR_OPENGL_ERR = 4,             /*!< An OpenGL error occured */
+  GR3_ERROR_OUT_OF_MEM = 5,             /*!< gr3 was unable to allocate
+                                             required memory. If this error \
+                                             occurs, gr3 state is undefined. */
+  GR3_ERROR_NOT_INITIALIZED = 6,        /*!< A function was called before
+                                             initializing gr3. */
+  GR3_ERROR_CAMERA_NOT_INITIALIZED = 7, /*!< gr3_getpixmap() was called
+                                            before initializing the camera */
+  GR3_ERROR_UNKNOWN_FILE_EXTENSION = 8,
+  GR3_ERROR_CANNOT_OPEN_FILE = 9,
+  GR3_ERROR_EXPORT = 10,
+} gr3_error_t;
 
-#define GR3_QUALITY_OPENGL_NO_SSAA 0
-#define GR3_QUALITY_OPENGL_2X_SSAA 2
-#define GR3_QUALITY_OPENGL_4X_SSAA 4
-#define GR3_QUALITY_OPENGL_8X_SSAA 8
-#define GR3_QUALITY_OPENGL_16X_SSAA 16
-#define GR3_QUALITY_POVRAY_NO_SSAA 1
-#define GR3_QUALITY_POVRAY_2X_SSAA 3
-#define GR3_QUALITY_POVRAY_4X_SSAA 5
-#define GR3_QUALITY_POVRAY_8X_SSAA 9
-#define GR3_QUALITY_POVRAY_16X_SSAA 17
+typedef enum
+{
+  GR3_QUALITY_OPENGL_NO_SSAA = 0,
+  GR3_QUALITY_POVRAY_NO_SSAA,
+  GR3_QUALITY_OPENGL_2X_SSAA = 2,
+  GR3_QUALITY_POVRAY_2X_SSAA,
+  GR3_QUALITY_OPENGL_4X_SSAA = 4,
+  GR3_QUALITY_POVRAY_4X_SSAA,
+  GR3_QUALITY_OPENGL_8X_SSAA = 8,
+  GR3_QUALITY_POVRAY_8X_SSAA,
+  GR3_QUALITY_OPENGL_16X_SSAA = 16,
+  GR3_QUALITY_POVRAY_16X_SSAA
+} gr3_quality_t;
 
-#define GR3_DRAWABLE_OPENGL 1
-#define GR3_DRAWABLE_GKS 2
+typedef enum
+{
+  GR3_DRAWABLE_OPENGL = 1,
+  GR3_DRAWABLE_GKS
+} gr3_drawable_t;
 
 #define GR3_MC_DTYPE unsigned short
 
-#define GR3_PROJECTION_PERSPECTIVE 0
-#define GR3_PROJECTION_PARALLEL 1
-#define GR3_PROJECTION_ORTHOGRAPHIC 2
+typedef enum
+{
+  GR3_PROJECTION_PERSPECTIVE,
+  GR3_PROJECTION_PARALLEL,
+  GR3_PROJECTION_ORTHOGRAPHIC
+} gr3_projection_t;
 
-#define GR3_SURFACE_DEFAULT 0 /*!< default behavior */
-#define GR3_SURFACE_NORMALS                                    \
-  1                        /*!< interpolate the vertex normals \
-                                from the gradient */
-#define GR3_SURFACE_FLAT 2 /*!< set all z-coordinates to zero */
-#define GR3_SURFACE_GRTRANSFORM           \
-  4 /*!< use gr_inqwindow, gr_inqspace    \
-         and gr_inqscale to transform the \
-         data to NDC coordinates */
-#define GR3_SURFACE_GRCOLOR             \
-  8 /*!< color the surface according to \
-         the current gr colormap */
-#define GR3_SURFACE_GRZSHADED           \
-  16 /*!< like GR3_SURFACE_GRCOLOR, but \
-          use the z-value directly as   \
-          color index */
+typedef enum
+{
+  GR3_SURFACE_DEFAULT = 0,     /*!< default behavior */
+  GR3_SURFACE_NORMALS = 1,     /*!< interpolate the vertex normals
+                                    from the gradient */
+  GR3_SURFACE_FLAT = 2,        /*!< set all z-coordinates to zero */
+  GR3_SURFACE_GRTRANSFORM = 4, /*!< use gr_inqwindow, gr_inqspace
+                                    and gr_inqscale to transform the
+                                    data to NDC coordinates */
+  GR3_SURFACE_GRCOLOR = 8,     /*!< color the surface according to
+                                    the current gr colormap */
+  GR3_SURFACE_GRZSHADED = 16,  /*!< like GR3_SURFACE_GRCOLOR, but
+                                    use the z-value directly as
+                                    color index */
+} gr3_surface_t;
 
-#define GR3_TRANSPARENCY_OPAQUE 0
-#define GR3_TRANSPARENCY_TRANSMIT 1
-#define GR3_TRANSPARENCY_FILTER 2
-
-#define GR_VOLUME_EMISSION 0
-#define GR_VOLUME_ABSORPTION 1
-#define GR_VOLUME_MIP 2
+typedef enum
+{
+  GR3_TRANSPARENCY_OPAQUE,
+  GR3_TRANSPARENCY_TRANSMIT,
+  GR3_TRANSPARENCY_FILTER
+} gr3_transparency_t;
 
 typedef struct
 {

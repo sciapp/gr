@@ -83,30 +83,12 @@
 typedef enum
 {
   GR_COLOR_RESET = 0,
-  GR_COLOR_LINE = 1 << 0,
-  GR_COLOR_MARKER = 1 << 1,
-  GR_COLOR_FILL = 1 << 2,
+  GR_COLOR_LINE = GR_SPEC_LINE,
+  GR_COLOR_MARKER = GR_SPEC_MARKER,
+  GR_COLOR_FILL = GR_SPEC_COLOR,
   GR_COLOR_TEXT = 1 << 3,
   GR_COLOR_BORDER = 1 << 4
 } gr_color_type_t;
-
-typedef enum
-{
-  GR_OPTION_X_LOG = 1 << 0,
-  GR_OPTION_Y_LOG = 1 << 1,
-  GR_OPTION_Z_LOG = 1 << 2,
-  GR_OPTION_FLIP_X = 1 << 3,
-  GR_OPTION_FLIP_Y = 1 << 4,
-  GR_OPTION_FLIP_Z = 1 << 5,
-  GR_OPTION_LINES = 0,
-  GR_OPTION_MESH = 1,
-  GR_OPTION_FILLED_MESH = 2,
-  GR_OPTION_Z_SHADED_MESH = 3,
-  GR_OPTION_COLORED_MESH = 4,
-  GR_OPTION_CELL_ARRAY = 5,
-  GR_OPTION_SHADED_MESH = 6,
-  GR_OPTION_3D_MESH = 7
-} gr_option_t;
 
 enum class EXPORT CoordinateSpace
 {

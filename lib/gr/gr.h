@@ -15,26 +15,85 @@
 extern "C" {
 #endif
 
-#define GR_PROJECTION_DEFAULT 0
-#define GR_PROJECTION_ORTHOGRAPHIC 1
-#define GR_PROJECTION_PERSPECTIVE 2
+typedef enum
+{
+  GR_PROJECTION_DEFAULT,
+  GR_PROJECTION_ORTHOGRAPHIC,
+  GR_PROJECTION_PERSPECTIVE
+} projection_type_t;
 
-#define GR_VOLUME_WITHOUT_BORDER 0
-#define GR_VOLUME_WITH_BORDER 1
+typedef enum
+{
+  GR_VOLUME_WITHOUT_BORDER,
+  GR_VOLUME_WITH_BORDER
+} volume_border_calculation_t;
 
-#define GR_VOLUME_EMISSION 0
-#define GR_VOLUME_ABSORPTION 1
-#define GR_VOLUME_MIP 2
+typedef enum
+{
+  GR_VOLUME_EMISSION,
+  GR_VOLUME_ABSORPTION,
+  GR_VOLUME_MIP
+} volume_rendering_model_t;
 
-#define GR_TEXT_USE_WC (1 << 0)
-#define GR_TEXT_ENABLE_INLINE_MATH (1 << 1)
+typedef enum
+{
+  GR_TEXT_USE_WC = 1u << 0u,
+  GR_TEXT_ENABLE_INLINE_MATH = 1u << 1u
+} textx_option_t;
 
-#define GR_2PASS_CLEANUP 1
-#define GR_2PASS_RENDER 2
+typedef enum
+{
+  GR_2PASS_CLEANUP = 1,
+  GR_2PASS_RENDER
+} f2pass_option_t;
 
 #define GR_MAX_CONTEXT 8192
 
 #define GR_DEFAULT_MATH_FONT 232
+
+typedef enum
+{
+  GR_OPTION_X_LOG = 1u << 0u,
+  GR_OPTION_Y_LOG = 1u << 1u,
+  GR_OPTION_Z_LOG = 1u << 2u,
+
+  GR_OPTION_FLIP_X = 1u << 3u,
+  GR_OPTION_FLIP_Y = 1u << 4u,
+  GR_OPTION_FLIP_Z = 1u << 5u,
+
+  /* for use within GR.jl */
+  GR_OPTION_X_LOG2 = 1u << 6u,
+  GR_OPTION_Y_LOG2 = 1u << 7u,
+  GR_OPTION_Z_LOG2 = 1u << 8u,
+  GR_OPTION_X_LN = 1u << 9u,
+  GR_OPTION_Y_LN = 1u << 10u,
+  GR_OPTION_Z_LN = 1u << 11u,
+} scale_option_t;
+
+typedef enum
+{
+  GR_SPEC_LINE = 1u << 0u,
+  GR_SPEC_MARKER = 1u << 1u,
+  GR_SPEC_COLOR = 1u << 2u,
+} linespec_t;
+
+typedef enum
+{
+  GR_OPTION_LINES,
+  GR_OPTION_MESH,
+  GR_OPTION_FILLED_MESH,
+  GR_OPTION_Z_SHADED_MESH,
+  GR_OPTION_COLORED_MESH,
+  GR_OPTION_CELL_ARRAY,
+  GR_OPTION_SHADED_MESH,
+  GR_OPTION_3D_MESH, /* for GR3 */
+} surface_option_t;
+
+typedef enum
+{
+  GR_MODEL_RGB,
+  GR_MODEL_HSV
+} color_model_t;
 
 typedef struct
 {
