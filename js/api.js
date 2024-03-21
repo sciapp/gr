@@ -247,6 +247,16 @@ function GR(canvas_id) {
     this.OPTION_FLIP_X = 8;
     this.OPTION_FLIP_Y = 16;
     this.OPTION_FLIP_Z = 32;
+    this.OPTION_X_LOG2 = 64;
+    this.OPTION_Y_LOG2 = 128;
+    this.OPTION_Z_LOG2 = 256;
+    this.OPTION_X_LN = 512;
+    this.OPTION_Y_LN = 1024;
+    this.OPTION_Z_LN = 204;
+
+    this.SPEC_LINE = 1;
+    this.SPEC_MARKER = 2;
+    this.SPEC_COLOR = 4;
 
     this.OPTION_LINES = 0;
     this.OPTION_MESH = 1;
