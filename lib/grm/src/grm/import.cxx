@@ -654,8 +654,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       if (ranges.zmax != INFINITY)
         {
           int elem;
-          double min_val = *std::min_element(zi.begin(), zi.end());
-          double max_val = *std::max_element(zi.begin(), zi.end());
+          double min_val = *std::min_element(std::begin(zi), std::end(zi));
+          double max_val = *std::max_element(std::begin(zi), std::end(zi));
 
           for (elem = 0; elem < rows * cols; ++elem)
             {
@@ -690,10 +690,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           double min_val = INFINITY, max_val = -INFINITY;
           for (col = 0; col < cols - err; col++)
             {
-              min_val =
-                  std::min<double>(min_val, *std::min_element(&file_data[depth][col][0], &file_data[depth][col][rows]));
-              max_val =
-                  std::max<double>(max_val, *std::max_element(&file_data[depth][col][0], &file_data[depth][col][rows]));
+              min_val = std::min<double>(
+                  min_val, *std::min_element(std::begin(file_data[depth][col]), std::end(file_data[depth][col])));
+              max_val = std::max<double>(
+                  max_val, *std::max_element(std::begin(file_data[depth][col]), std::end(file_data[depth][col])));
             }
 
           for (col = 0; col < cols; ++col)
@@ -793,21 +793,21 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       /* apply the ranges to the data */
       if (ranges.xmax != INFINITY)
         {
-          min_x = *std::min_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
-          max_x = *std::max_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
+          min_x = *std::min_element(std::begin(file_data[depth][0]), std::end(file_data[depth][0]));
+          max_x = *std::max_element(std::begin(file_data[depth][0]), std::end(file_data[depth][0]));
           adjust_ranges(&ranges.xmin, &ranges.xmax, min_x, max_x);
         }
       if (ranges.ymax != INFINITY)
         {
-          min_y = *std::min_element(&file_data[depth][1][0], &file_data[depth][1][rows]);
-          max_y = *std::max_element(&file_data[depth][1][0], &file_data[depth][1][rows]);
+          min_y = *std::min_element(std::begin(file_data[depth][1]), std::end(file_data[depth][1]));
+          max_y = *std::max_element(std::begin(file_data[depth][1]), std::end(file_data[depth][1]));
           adjust_ranges(&ranges.ymin, &ranges.ymax, min_y, max_y);
           ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
         }
       if (ranges.zmax != INFINITY)
         {
-          min_z = *std::min_element(&file_data[depth][2][0], &file_data[depth][2][rows]);
-          max_z = *std::max_element(&file_data[depth][2][0], &file_data[depth][2][rows]);
+          min_z = *std::min_element(std::begin(file_data[depth][2]), std::end(file_data[depth][2]));
+          max_z = *std::max_element(std::begin(file_data[depth][2]), std::end(file_data[depth][2]));
           adjust_ranges(&ranges.zmin, &ranges.zmax, min_z, max_z);
           ranges.zmax = (ranges.zmax <= ranges.zmin) ? ranges.zmax + ranges.zmin : ranges.zmax;
         }
@@ -848,16 +848,16 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         }
       if (!grm_args_values(args, "y_range", "dd", &ymin, &ymax))
         {
-          ymin = *std::min_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
-          ymax = *std::max_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
+          ymin = *std::min_element(std::begin(file_data[depth][0]), std::end(file_data[depth][0]));
+          ymax = *std::max_element(std::begin(file_data[depth][0]), std::end(file_data[depth][0]));
           adjust_ranges(&ranges.ymin, &ranges.ymax, std::min<double>(0.0, ymin), ymax);
           grm_args_push(args, "y_range", "dd", ranges.ymin, ranges.ymax);
         }
       else
         {
           /* apply y_range to the data */
-          ymin = *std::min_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
-          ymax = *std::max_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
+          ymin = *std::min_element(std::begin(file_data[depth][0]), std::end(file_data[depth][0]));
+          ymax = *std::max_element(std::begin(file_data[depth][0]), std::end(file_data[depth][0]));
           for (row = 0; row < rows; ++row)
             {
               file_data[depth][0][row] =
@@ -1031,10 +1031,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       adjust_ranges(&ranges.xmin, &ranges.xmax, 0.0, (double)cols - 1.0);
       adjust_ranges(&ranges.ymin, &ranges.ymax, 0.0, (double)rows - 1.0);
       ranges.ymax = (ranges.ymax <= ranges.ymin) ? ranges.ymax + ranges.ymin : ranges.ymax;
-      min_x = *std::min_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
-      max_x = *std::max_element(&file_data[depth][0][0], &file_data[depth][0][rows]);
-      min_y = *std::min_element(&file_data[depth][1][0], &file_data[depth][1][rows]);
-      max_y = *std::max_element(&file_data[depth][1][0], &file_data[depth][1][rows]);
+      min_x = *std::min_element(std::begin(file_data[depth][0]), std::end(file_data[depth][0]));
+      max_x = *std::max_element(std::begin(file_data[depth][0]), std::end(file_data[depth][0]));
+      min_y = *std::min_element(std::begin(file_data[depth][1]), std::end(file_data[depth][1]));
+      max_y = *std::max_element(std::begin(file_data[depth][1]), std::end(file_data[depth][1]));
 
       for (row = 0; row < rows; row++)
         {
