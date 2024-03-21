@@ -252,7 +252,7 @@ function GR(canvas_id) {
     this.OPTION_Z_LOG2 = 256;
     this.OPTION_X_LN = 512;
     this.OPTION_Y_LN = 1024;
-    this.OPTION_Z_LN = 204;
+    this.OPTION_Z_LN = 2048;
 
     this.SPEC_LINE = 1;
     this.SPEC_MARKER = 2;
