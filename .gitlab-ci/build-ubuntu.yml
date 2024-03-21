@@ -56,7 +56,7 @@ ubuntu-cmake-self-contained-debug:
     - make -C 3rdparty default extras
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_DEMOS=ON
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_DEMOS=ON -DCMAKE_CXX_FLAGS="-D_GLIBCXX_ASSERTIONS"
     - make
     - make install
     - cd ..
