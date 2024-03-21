@@ -1067,6 +1067,7 @@ GR3API void gr3_isosurface(int nx, int ny, int nz, const float *data, float isov
  * \param [in]  pz      an array of length nx * ny containing
  *                      the z-coordinates
  * \param [in]  option  see the option parameter of gr_surface
+ *                      additionally supports option 3D_MESH
  */
 GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int option)
 {

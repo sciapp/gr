@@ -61,10 +61,10 @@ typedef enum
   GR_OPTION_FLIP_Y = 1u << 4u,
   GR_OPTION_FLIP_Z = 1u << 5u,
 
+  /* for use within GR.jl */
   GR_OPTION_X_LOG2 = 1u << 6u,
   GR_OPTION_Y_LOG2 = 1u << 7u,
   GR_OPTION_Z_LOG2 = 1u << 8u,
-
   GR_OPTION_X_LN = 1u << 9u,
   GR_OPTION_Y_LN = 1u << 10u,
   GR_OPTION_Z_LN = 1u << 11u,

@@ -84,7 +84,7 @@ typedef enum
 typedef enum
 {
   GR3_DRAWABLE_OPENGL = 1,
-  GR3_DRAWABLE_GKS = 2
+  GR3_DRAWABLE_GKS
 } gr3_drawable_t;
 
 #define GR3_MC_DTYPE unsigned short
