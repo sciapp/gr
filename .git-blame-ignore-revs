@@ -11,3 +11,5 @@
 e9e9f129c8a87161b9727a5b94d3414d0e33a47c
 # Commit which applied new code formatting by upgrading to `clang-format` 13
 c9a848ed891ef494e2251fb289824d04cab4ed66
+# Commit to fix gr.c formatting (2024-03-22)
+754dae1e81e9652f317d1e2eae5a01014ae0668a
