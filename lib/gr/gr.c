@@ -9416,8 +9416,8 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
       y = (double *)xcalloc(ny, sizeof(double));
       for (i = 0; i < ny; i++) y[i] = y_lin(py[i]);
 
-      setscale(scale_options &
-               ~(GR_OPTION_X_LOG | GR_OPTION_Y_LOG | GR_OPTION_X_LOG2 | GR_OPTION_Y_LOG2 | GR_OPTION_X_LN | GR_OPTION_Y_LN));
+      setscale(scale_options & ~(GR_OPTION_X_LOG | GR_OPTION_Y_LOG | GR_OPTION_X_LOG2 | GR_OPTION_Y_LOG2 |
+                                 GR_OPTION_X_LN | GR_OPTION_Y_LN));
     }
   else
     {
@@ -9546,8 +9546,8 @@ void gr_contourf(int nx, int ny, int nh, double *px, double *py, double *h, doub
       y = (double *)xcalloc(ny, sizeof(double));
       for (i = 0; i < ny; i++) y[i] = y_lin(py[i]);
 
-      setscale(scale_options &
-               ~(GR_OPTION_X_LOG | GR_OPTION_Y_LOG | GR_OPTION_X_LOG2 | GR_OPTION_Y_LOG2 | GR_OPTION_X_LN | GR_OPTION_Y_LN));
+      setscale(scale_options & ~(GR_OPTION_X_LOG | GR_OPTION_Y_LOG | GR_OPTION_X_LOG2 | GR_OPTION_Y_LOG2 |
+                                 GR_OPTION_X_LN | GR_OPTION_Y_LN));
     }
   else
     {
