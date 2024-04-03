@@ -328,7 +328,7 @@ The expected data are two columns containing the angles and values.
 
 Possible parameters for the polar plot are:
 
-1. `clip_negative`: When this parameter is set, only positive radii are displayed. Otherwise negative will be mirrored
+1. `clip_negative`: When this parameter is set, only positive radii are displayed, otherwise negative will be mirrored
 
 ### POLAR_HEATMAP
 
