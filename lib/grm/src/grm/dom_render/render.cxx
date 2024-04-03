@@ -568,48 +568,48 @@ static double getLightness(int color)
 
 // transform single coordinate (like x or y) into range (and or log scale)
 // first transform into range and then log scale
-static double transformCoordinate(double value, double vmin, double vmax, double rangeMin, double rangeMax,
-                                  int logScale = 0)
+static double transformCoordinate(double value, double vmin, double vmax, double range_min, double range_max,
+                                  bool log_scale = false)
 {
-  if (logScale)
+  if (log_scale)
     {
-      double transVal, B, A; // A, B are the min and max after the y_log transformation
-      if (!(rangeMin == 0.0 && rangeMax == 0.0))
+      double trans_val, coordinate_max, coordinate_min;
+      if (!(range_min == 0.0 && range_max == 0.0))
         {
-          transVal = (rangeMax - rangeMin) * (value - vmin) / (vmax - vmin) + rangeMin;
-          B = rangeMax;
-          A = rangeMin;
+          trans_val = (range_max - range_min) * (value - vmin) / (vmax - vmin) + range_min;
+          coordinate_max = range_max;
+          coordinate_min = range_min;
         }
       else
         {
-          transVal = value;
-          B = vmax;
-          A = vmin;
+          trans_val = value;
+          coordinate_max = vmax;
+          coordinate_min = vmin;
         }
-      if (transVal == 0.0) return 0;
+      if (trans_val == 0.0) return 0;
 
       // negative radii -> abs -> log scale -> make negative again
       int sign = 1;
-      if (transVal < 0)
+      if (trans_val < 0)
         {
-          transVal = abs(transVal);
+          trans_val = abs(trans_val);
           sign = -1;
         }
 
-      double b = B / log10(vmax / vmin);
-      double a = A - b * log10(vmin);
-      double temp = sign * (a + b * log10(transVal));
-      return sign * (a + b * log10(transVal));
+      double b = coordinate_max / log10(vmax / vmin);
+      double a = coordinate_min - b * log10(vmin);
+      double temp = sign * (a + b * log10(trans_val));
+      return sign * (a + b * log10(trans_val));
     }
-  return (rangeMax - rangeMin) * (value - vmin) / (vmax - vmin) + rangeMin;
+  return (range_max - range_min) * (value - vmin) / (vmax - vmin) + range_min;
 }
 
-static void transformCoordinatesVector(std::vector<double> &coords, double vmin, double vmax, double rangeMin,
-                                       double rangeMax, int logScale = 0)
+static void transformCoordinatesVector(std::vector<double> &coords, double vmin, double vmax, double range_min,
+                                       double range_max, bool log_scale = false)
 {
   for (auto &coord : coords)
     {
-      coord = transformCoordinate(coord, vmin, vmax, rangeMin, rangeMax, logScale);
+      coord = transformCoordinate(coord, vmin, vmax, range_min, range_max, log_scale);
     }
 }
 
@@ -1936,7 +1936,7 @@ static double auto_tick(double amin, double amax)
   return tick;
 }
 
-static double auto_tick_rings_polar(double rmax, int &rings, const std::string &norm, int y_log = 0)
+static double auto_tick_rings_polar(double rmax, int &rings, const std::string &norm, bool y_log = false)
 {
   // todo ylog with other cases! e.g. polarhistogram with "cdf" max is always 1
   double scale;
@@ -1944,8 +1944,6 @@ static double auto_tick_rings_polar(double rmax, int &rings, const std::string &
   std::vector<int> *whichVector;
   std::vector<int> largeRings = {6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
   std::vector<int> normalRings = {3, 4, 5, 6, 7};
-
-  // define good decimal rmax values and a fitting number of rings
 
   // map of good decimal rmax values and their fitting number of rings
   std::map<double, int> decimalMap{{0.1, 4}, {0.2, 4}, {0.3, 3}, {0.4, 4}, {0.5, 5},
@@ -1962,11 +1960,8 @@ static double auto_tick_rings_polar(double rmax, int &rings, const std::string &
           rings = 4;
           return 1.0 / rings;
         }
-
       whichVector = (rmax > 20) ? &largeRings : &normalRings;
-
       scale = ceil(abs(log10(rmax)));
-
       if (rmax == 1.0)
         {
           rings = decimalMap[1.0];
@@ -1976,7 +1971,6 @@ static double auto_tick_rings_polar(double rmax, int &rings, const std::string &
         {
           scale *= log10(rmax) / abs(log10(rmax));
         }
-
 
       if (rmax < 1.0)
         {
@@ -1992,7 +1986,6 @@ static double auto_tick_rings_polar(double rmax, int &rings, const std::string &
                   difference = it.first - rmax;
                   tempRMax = it.first;
                   rings = it.second;
-
                   // now "down-scale" decimalMap-rmax (tempRmax)
                   tempRMax /= pow(10.0, abs(scale) - 1);
                   return tempRMax / rings;
@@ -2011,7 +2004,6 @@ static double auto_tick_rings_polar(double rmax, int &rings, const std::string &
                 }
             }
         }
-
       while (true)
         {
           for (int i : *whichVector)
@@ -2030,7 +2022,6 @@ static double auto_tick_rings_polar(double rmax, int &rings, const std::string &
           ++rmax;
         }
     }
-
   // given rings
   if (norm == "cdf")
     {
@@ -7500,14 +7491,9 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &element,
   std::string title, norm;
   del_values del = del_values::update_without_default;
   int child_id = 0;
-  int y_log = 0;
+  bool y_log = false;
   double y_lim_min, y_lim_max;
-  int skipCalculations = 0;
-
-  std::shared_ptr<GRM::Element> subsubGroup;
-
-  gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
-
+  bool skip_calculations = false;
   auto subplotElement = getSubplotElement(element);
   auto central_region = element; // just for better naming
 
@@ -7584,7 +7570,7 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &element,
         {
           if (r_max <= 0.0)
             {
-              throw InvalidValueError("the max radius has to be bigger than 0.0 when using y_log");
+              throw InvalidValueError("The max radius has to be bigger than 0.0 when using y_log");
             }
           max_scale = ceil(abs(log10(r_max)));
           if (max_scale != 0.0) // add signum of max_scale if not 0.0
@@ -7718,12 +7704,9 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
   std::string title, norm;
   del_values del = del_values::update_without_default;
   int child_id = 0;
-  int y_log = 0;
+  bool y_log = false;
   double y_lim_min, y_lim_max;
-  int skipCalculations = 0;
-
-  std::shared_ptr<GRM::Element> subsubGroup;
-
+  bool skip_calculations = false;
   std::shared_ptr<GRM::Render> render;
   std::shared_ptr<GRM::Element> central_region;
 
@@ -7735,14 +7718,20 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
 
   auto subplotElement = getSubplotElement(element);
   // find central_region_element
-  central_region = subplotElement->querySelectors("central_region");
-
+  for (const auto &child : subplotElement->children())
+    {
+      if (child->localName() == "central_region")
+        {
+          central_region = child;
+          break;
+        }
+    }
   if (central_region->hasAttribute("skip_calculations"))
     {
-      skipCalculations = static_cast<int>(central_region->getAttribute("skip_calculations"));
+      skip_calculations = static_cast<int>(central_region->getAttribute("skip_calculations"));
     }
 
-  if (!skipCalculations)
+  if (!skip_calculations)
     {
       calculatePolarLimits(central_region, context);
     }
@@ -9121,7 +9110,7 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   auto plot_parent = element->parentElement();
   del_values del = del_values::update_without_default;
   int child_id = 0;
-  int y_log = 0;
+  bool y_log = 1;
   std::vector<unsigned int> indices_vec;
 
   getPlotParent(plot_parent);
@@ -9469,8 +9458,8 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
   if (y_min > 0.0) is_uniform_heatmap = 0; /* when y range min > 0 for example */
 
   // Check if coordinate transformations are needed and then transform if needed
-  if (transform && ((!x_vec.empty() && (x_vec[0] < xrange_min || x_vec[-1] > xrange_max)) ||
-                    (!y_vec.empty() && (y_vec[0] < yrange_min || y_vec[-1] > yrange_max))))
+  if (transform && ((!x_vec.empty() && (x_vec[0] < xrange_min || x_vec[x_vec.size() - 1] > xrange_max)) ||
+                    (!y_vec.empty() && (y_vec[0] < yrange_min || y_vec[y_vec.size() - 1] > yrange_max))))
     {
       is_uniform_heatmap = 0;
       int col, row;
@@ -9664,7 +9653,7 @@ static void preBarplot(const std::shared_ptr<GRM::Element> &element, const std::
           auto y_key = static_cast<std::string>(series->getAttribute("y"));
           auto y_vec = GRM::get<std::vector<double>>((*context)[y_key]);
           indices_vec = std::vector<int>(y_vec.size(), 1);
-          int id = static_cast<int>(global_root->getAttribute("_id"));
+          auto id = static_cast<int>(global_root->getAttribute("_id"));
           std::string id_str = std::to_string(id);
 
           (*context)["indices" + id_str] = indices_vec;
@@ -10212,7 +10201,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
       bin_edges = temp;
     }
 
-  // Special colormap case! Dont iterate through every bar because of the 2000x2000 drawimage size!
+  // Special colormap case!
   if (!(element->hasAttribute("x_colormap") && element->hasAttribute("y_colormap")))
     {
       if (draw_edges) logger((stderr, "\"draw_edges\" can only be used with colormap\n"));
@@ -10729,10 +10718,10 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
           double norm_factor = 1;
           double original_count = count;
           std::vector<int> lineardata, colormap;
-          int id = (int)global_root->getAttribute("_id");
+          auto id = static_cast<int>(global_root->getAttribute("_id"));
 
           global_root->setAttribute("_id", id + 1);
-          const std::string &str = std::to_string(id);
+          str = std::to_string(id);
 
           lineardata.resize(image_size * image_size);
 
@@ -10750,7 +10739,6 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
             }
 
           max_radius = image_size / 2;
-
           total = static_cast<int>(element->getAttribute("total"));
 
           if (str_equals_any(norm.c_str(), 2, "probability", "cdf"))
@@ -10965,7 +10953,7 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
       int i, num_angle;
       double start_angle, end_angle;
       std::shared_ptr<GRM::Element> area;
-      int id = (int)global_root->getAttribute("_id");
+      auto id = static_cast<int>(global_root->getAttribute("_id"));
 
       if ((count > 0.0 && !keep_radii_axes) ||
           (count > y_lim_min && keep_radii_axes)) // check if original count (count + ylim_min) is larger than ylim_min
