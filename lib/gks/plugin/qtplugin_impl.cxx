@@ -133,6 +133,7 @@ typedef struct ws_state_list_t
   int pcolor[PATTERNS];
   bool empty;
   bool prevent_resize_by_dl;
+  bool window_stays_on_top;
   bool interp_was_called;
 
   void (*memory_plugin)(int, int, int, int, int *, int, double *, int, double *, int, char *, void **);
@@ -1795,6 +1796,7 @@ static void initialize_data()
 
   p->memory_plugin_initialised = false;
   p->prevent_resize_by_dl = false;
+  p->window_stays_on_top = false;
   p->interp_was_called = false;
 
   p->window[0] = 0.0;
