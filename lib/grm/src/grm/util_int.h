@@ -134,6 +134,7 @@ unsigned long next_or_equal_power2(unsigned long num);
 int is_env_variable_enabled(const char *env_variable_name);
 int file_exists(const char *file_path);
 char *get_gr_dir(void);
+const char *get_tmp_directory(void);
 #ifdef _WIN32
 char *convert_wstring_to_utf8(const wchar_t *wstring);
 wchar_t *convert_utf8_to_wstring(const char *utf8_bytes);
