@@ -2,14 +2,20 @@
 #define _POSIX_C_SOURCE 200112L
 #endif
 
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
+#define BACKTRACE_AVAILABLE 1
+#endif
+
 /* ######################### includes ############################################################################### */
 
+#ifdef BACKTRACE_AVAILABLE
 #include <execinfo.h>
 #include <fcntl.h>
-#include <stdio.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#endif
+#include <stdio.h>
 
 #include "backtrace_int.h"
 #include "util_int.h"
@@ -19,8 +25,10 @@
 
 /* ========================= functions ============================================================================== */
 
+#ifdef BACKTRACE_AVAILABLE
 static void backtrace_init(void);
 static void backtrace_handler(int sig);
+#endif
 
 
 /* ######################### private implementation ################################################################# */
@@ -34,11 +42,14 @@ static void backtrace_handler(int sig);
 
 /* ========================= static variables ======================================================================= */
 
+#ifdef BACKTRACE_AVAILABLE
 static int is_backtrace_enabled = -1;
 static int signals[] = {SIGABRT, SIGSEGV};
+#endif
 
 /* ========================= functions ============================================================================== */
 
+#ifdef BACKTRACE_AVAILABLE
 void backtrace_init(void)
 {
   if (is_backtrace_enabled < 0)
@@ -74,6 +85,7 @@ void backtrace_handler(int sig)
 
   exit(1);
 }
+#endif
 
 
 /* ######################### internal implementation ################################################################ */
@@ -82,42 +94,56 @@ void backtrace_handler(int sig)
 
 void install_backtrace_handler(void)
 {
+#ifdef BACKTRACE_AVAILABLE
   int i;
 
   for (i = 0; i < array_size(signals); ++i)
     {
       signal(signals[i], backtrace_handler);
     }
+#else
+  fprintf(stderr, "Backtrace support not compiled in.\n");
+#endif
 }
 
 void install_backtrace_handler_if_enabled(void)
 {
+#ifdef BACKTRACE_AVAILABLE
   if (backtrace_enabled())
     {
       install_backtrace_handler();
     }
+#endif
 }
 
 void uninstall_backtrace_handler(void)
 {
+#ifdef BACKTRACE_AVAILABLE
   int i;
 
   for (i = 0; i < array_size(signals); ++i)
     {
       signal(signals[i], SIG_DFL);
     }
+#endif
 }
 
 void uninstall_backtrace_handler_if_enabled(void)
 {
+#ifdef BACKTRACE_AVAILABLE
   if (backtrace_enabled())
     {
       uninstall_backtrace_handler();
     }
+#endif
 }
 
 int backtrace_enabled(void)
 {
+#ifdef BACKTRACE_AVAILABLE
   backtrace_init();
   return is_backtrace_enabled;
+#else
+  return 0;
+#endif
 }
