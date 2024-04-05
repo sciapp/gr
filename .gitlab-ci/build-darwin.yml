@@ -113,7 +113,7 @@ darwin-self-contained-iff1605:
   - export CMAKE_CMD=`pwd`/cmake-3.23.0-macos-universal/CMake.app/Contents/bin/cmake
   - export MACOSX_DEPLOYMENT_TARGET=11.0
   - rm -rf /usr/local/gr/*
-  - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt6/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake QT6_QMAKE=/usr/local/qt6/bin/qmake
+  - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt6/bin/qmake QT6_QMAKE=/usr/local/qt6/bin/qmake
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gr/demo artifacts/grdemo
