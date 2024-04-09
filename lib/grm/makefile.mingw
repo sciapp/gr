@@ -21,6 +21,7 @@ LIBXML2LIBS = $(THIRDPARTYDIR)/lib/libxml2.a $(THIRDPARTYDIR)/lib/libz.a
        LIBS = $(GR3LIBS) $(GRLIBS) $(GKSLIBS) $(LIBXML2LIBS) -lm -lws2_32 -lmsimg32 -lgdi32
 
        OBJS = src/grm/args.o \
+              src/grm/backtrace.o \
               src/grm/base64.o \
               src/grm/dump.o \
               src/grm/dynamic_args_array.o \

@@ -18,6 +18,7 @@ extern "C" {
 
 #include "base64_int.h"
 #include <grm/dump.h>
+#include "backtrace_int.h"
 #include "event_int.h"
 #include "gks.h"
 #include "gr.h"
@@ -525,6 +526,7 @@ err_t plot_init_static_variables(void)
       }
       type_map = string_array_map_new_from_string_split(array_size(key_to_formats), key_to_formats, '|');
       error_cleanup_and_set_error_if(type_map == nullptr, ERROR_MALLOC);
+      install_backtrace_handler_if_enabled();
       plot_static_variables_initialized = 1;
     }
   return ERROR_NONE;
@@ -4335,9 +4337,10 @@ void grm_finalize(void)
       plot_valid_keys_map = nullptr;
       string_array_map_delete(type_map);
       type_map = nullptr;
-      plot_static_variables_initialized = 0;
       grid_delete(global_grid);
       global_grid = nullptr;
+      uninstall_backtrace_handler_if_enabled();
+      plot_static_variables_initialized = 0;
     }
   GRM::Render::finalize();
 }

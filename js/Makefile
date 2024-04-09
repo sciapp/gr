@@ -88,6 +88,7 @@ INCLUDES = -I$(THIRDPARTYDIR)/include/ \
            $(GR3DIR)/gr3_povray.o \
            $(GR3DIR)/gr3_sr.o
  GRMOBJS = $(GRMDIR)/src/grm/args.o \
+           $(GRMDIR)/src/grm/backtrace.o \
            $(GRMDIR)/src/grm/base64.o \
            $(GRMDIR)/src/grm/dump.o \
            $(GRMDIR)/src/grm/dynamic_args_array.o \

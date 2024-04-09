@@ -373,6 +373,28 @@ error_cleanup:
 #endif
 }
 
+const char *get_tmp_directory(void)
+{
+  const char *tmpdir;
+  const char *env_vars[] = {
+      "TMPDIR",
+      "TMP",
+      "TEMP",
+      "TEMPDIR",
+  };
+  int i;
+
+  for (i = 0; i < array_size(env_vars); ++i)
+    {
+      if ((tmpdir = getenv(env_vars[i])) != NULL)
+        {
+          return tmpdir;
+        }
+    }
+
+  return "/tmp";
+}
+
 #ifdef _WIN32
 char *convert_wstring_to_utf8(const wchar_t *wstring)
 {
