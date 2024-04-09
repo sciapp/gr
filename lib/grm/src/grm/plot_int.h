@@ -58,8 +58,13 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_DEFAULT_XGRID 1
 #define PLOT_DEFAULT_YGRID 1
 #define PLOT_DEFAULT_ZGRID 1
-#define PLOT_DEFAULT_COLORBAR_MAX_CHAR_HEIGHT 0.012
-#define PLOT_DEFAULT_COLORBAR_OFFSET 0.02
+#define PLOT_DEFAULT_COLORBAR_MAX_CHAR_HEIGHT 0.016 * DEFAULT_ASPECT_RATIO_FOR_SCALING
+#define PLOT_DEFAULT_COLORBAR_OFFSET 0.02 * DEFAULT_ASPECT_RATIO_FOR_SCALING
+#define PLOT_3D_COLORBAR_OFFSET 0.05 * DEFAULT_ASPECT_RATIO_FOR_SCALING
+#define PLOT_POLAR_COLORBAR_OFFSET 0.025 * DEFAULT_ASPECT_RATIO_FOR_SCALING
+#define PLOT_DEFAULT_COLORBAR_LOCATION "right"
+#define PLOT_DEFAULT_COLORBAR_WIDTH 0.04
+#define DEFAULT_ASPECT_RATIO_FOR_SCALING 4.0 / 3.0
 
 /* ========================= datatypes ============================================================================== */
 
@@ -93,7 +98,6 @@ void plot_set_flag_defaults(void);
 void plot_set_attribute_defaults(grm_args_t *subplot_args);
 void plot_pre_plot(grm_args_t *plot_args);
 void plot_set_text_encoding(void);
-void plot_process_wswindow_wsviewport(grm_args_t *plot_args);
 err_t plot_pre_subplot(grm_args_t *subplot_args);
 int plot_process_subplot_args(grm_args_t *subplot_args);
 void plot_process_colormap(grm_args_t *subplot_args);

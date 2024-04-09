@@ -87,6 +87,7 @@ static std::set<std::string> parent_types = {
     "plot",
     "polar_axes",
     "polar_bar",
+    "marginal_heatmap_plot",
     "root",
     "series_barplot",
     "series_contour",
@@ -97,7 +98,6 @@ static std::set<std::string> parent_types = {
     "series_imshow",
     "series_isosurface",
     "series_line",
-    "series_marginal_heatmap",
     "series_nonuniformheatmap",
     "series_nonuniformpolar_heatmap",
     "series_pie",
@@ -116,6 +116,7 @@ static std::set<std::string> parent_types = {
     "series_trisurface",
     "series_volume",
     "series_wireframe",
+    "side_region",
     "x_tick_label_group",
     "y_tick_label_group",
 };
@@ -403,6 +404,53 @@ static void getPlotParent(std::shared_ptr<GRM::Element> &element)
   element = plot_parent;
 }
 
+static bool isUniformData(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  std::string x_key, y_key, kind;
+  kind = static_cast<std::string>(element->getAttribute("kind"));
+  if (str_equals_any(kind.c_str(), 11, "line", "scatter", "pie", "polar", "polar_histogram", "polar_heatmap", "imshow",
+                     "hist", "barplot", "stem", "stairs") ||
+      std::find(kinds_3d.begin(), kinds_3d.end(), kind) != kinds_3d.end())
+    return false;
+
+  if (kind == "heatmap" && (!element->hasAttribute("x") || !element->hasAttribute("y")))
+    {
+      auto z_key = static_cast<std::string>(element->getAttribute("z"));
+      std::vector<double> z_vec = GRM::get<std::vector<double>>((*context)[z_key]);
+      if (!element->hasAttribute("x") && !element->hasAttribute("y"))
+        {
+          auto z_dims_key = static_cast<std::string>(element->getAttribute("z_dims"));
+          auto z_dims_vec = GRM::get<std::vector<int>>((*context)[z_dims_key]);
+          return z_dims_vec[0] == z_dims_vec[1];
+        }
+      else if (!element->hasAttribute("x"))
+        {
+          y_key = static_cast<std::string>(element->getAttribute("y"));
+          std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y_key]);
+          return z_vec.size() / y_vec.size() == y_vec.size();
+        }
+      else if (!element->hasAttribute("y"))
+        {
+          x_key = static_cast<std::string>(element->getAttribute("x"));
+          std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x_key]);
+          return z_vec.size() / x_vec.size() == x_vec.size();
+        }
+    }
+  x_key = static_cast<std::string>(element->getAttribute("x"));
+  if (kind == "hist")
+    {
+      y_key = static_cast<std::string>(element->getAttribute("weights"));
+    }
+  else
+    {
+      y_key = static_cast<std::string>(element->getAttribute("y"));
+    }
+
+  std::vector<double> x_vec = GRM::get<std::vector<double>>((*context)[x_key]);
+  std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y_key]);
+  return x_vec.size() == y_vec.size();
+}
+
 static double getMaxViewport(const std::shared_ptr<GRM::Element> &element, bool x)
 {
   double max_vp;
@@ -417,8 +465,7 @@ static double getMaxViewport(const std::shared_ptr<GRM::Element> &element, bool 
   if (x)
     {
       max_vp = (aspect_ratio_ws < 1) ? static_cast<double>(plot_element->getAttribute("_viewport_x_max_org")) : 1;
-      if ((element->localName() != "series_hist" && element->localName() != "series_stairs") &&
-          element->hasAttribute("_bbox_x_max"))
+      if (element->localName() != "side_region" && element->hasAttribute("_bbox_x_max"))
         {
           max_vp -= abs(static_cast<double>(element->getAttribute("_viewport_x_max_org")) -
                         static_cast<double>(element->getAttribute("_bbox_x_max")) / max_width_height);
@@ -427,8 +474,8 @@ static double getMaxViewport(const std::shared_ptr<GRM::Element> &element, bool 
   else
     {
       max_vp = (aspect_ratio_ws > 1) ? static_cast<double>(plot_element->getAttribute("_viewport_y_max_org")) : 1;
-      if ((element->localName() != "series_hist" && element->localName() != "series_stairs") &&
-          element->localName() != "plot" &&
+      if (element->localName() != "side_region" && element->localName() != "plot" &&
+          element->localName() != "marginal_heatmap_plot" &&
           element->hasAttribute("_bbox_y_max")) // TODO: Exclude plot leads to problem with different aspect ration -
                                                 // need to fix bboxes to fix this issue here
         {
@@ -449,8 +496,7 @@ static double getMinViewport(const std::shared_ptr<GRM::Element> &element, bool 
 
   if (x)
     {
-      if ((element->localName() != "series_hist" && element->localName() != "series_stairs") &&
-          element->hasAttribute("_bbox_x_min"))
+      if (element->localName() != "side_region" && element->hasAttribute("_bbox_x_min"))
         {
           min_vp += abs(static_cast<double>(element->getAttribute("_viewport_x_min_org")) -
                         static_cast<double>(element->getAttribute("_bbox_x_min")) / max_width_height);
@@ -458,8 +504,7 @@ static double getMinViewport(const std::shared_ptr<GRM::Element> &element, bool 
     }
   else
     {
-      if ((element->localName() != "series_hist" && element->localName() != "series_stairs") &&
-          element->hasAttribute("_bbox_y_min"))
+      if (element->localName() != "side_region" && element->hasAttribute("_bbox_y_min"))
         {
           min_vp += abs(static_cast<double>(element->getAttribute("_viewport_y_min_org")) -
                         static_cast<double>(element->getAttribute("_bbox_y_min")) / max_width_height);
@@ -472,6 +517,7 @@ static std::tuple<double, int> getColorbarAttributes(std::string kind, std::shar
 {
   double offset = 0.0;
   int colors = 256;
+
   if (kind == "contour")
     {
       std::shared_ptr<GRM::Element> series = plot->querySelectors("series_contour");
@@ -490,11 +536,11 @@ static std::tuple<double, int> getColorbarAttributes(std::string kind, std::shar
     }
   if (kind == "polar_heatmap")
     {
-      offset = 0.025;
+      offset = PLOT_POLAR_COLORBAR_OFFSET;
     }
   if (kind == "surface" || kind == "volume" || kind == "trisurface")
     {
-      offset = 0.05;
+      offset = PLOT_3D_COLORBAR_OFFSET;
     }
   return {offset, colors};
 }
@@ -530,11 +576,22 @@ static void clearOldChildren(del_values *del, const std::shared_ptr<GRM::Element
         {
           if (*del == del_values::recreate_own_children)
             {
-              if (child->hasAttribute("_child_id")) child->remove();
+              if (child->hasAttribute("_child_id"))
+                {
+                  child->remove();
+                }
+              else if (element->localName() == "marginal_heatmap_plot")
+                {
+                  for (const auto &real_child : child->children())
+                    {
+                      if (real_child->hasAttribute("_child_id")) real_child->remove();
+                    }
+                }
             }
           else if (*del == del_values::recreate_all_children)
             {
-              child->remove();
+              if (!(element->localName() == "marginal_heatmap_plot" && child->localName() != "central_region"))
+                child->remove();
             }
         }
     }
@@ -544,6 +601,7 @@ static void clearOldChildren(del_values *del, const std::shared_ptr<GRM::Element
     {
       bool only_children_created_from_attributes = true;
       bool only_error_child = true;
+      bool only_central_region_child = true;
       /* types of children the coordinate system can have that are created from attributes */
       std::vector<std::string> coordinate_system_children = {"x_tick_label_group", "y_tick_label_group", "text",
                                                              "titles_3d"};
@@ -556,8 +614,14 @@ static void clearOldChildren(del_values *del, const std::shared_ptr<GRM::Element
               only_children_created_from_attributes = false;
               break;
             }
+          if (child->localName() != "central_region" && child->localName() != "text" &&
+              element->localName() == "marginal_heatmap_plot")
+            {
+              only_central_region_child = false;
+              break;
+            }
           if (child->localName() != "error_bars" && child->localName() != "integral_group" &&
-              element->localName() != "coordinate_system")
+              element->localName() != "coordinate_system" && element->localName() != "marginal_heatmap_plot")
             {
               only_error_child = false;
               break;
@@ -566,6 +630,8 @@ static void clearOldChildren(del_values *del, const std::shared_ptr<GRM::Element
       if (element->localName() == "coordinate_system" && only_children_created_from_attributes)
         *del = del_values::recreate_own_children;
       if (starts_with(element->localName(), "series_") && only_error_child) *del = del_values::recreate_own_children;
+      if (element->localName() == "marginal_heatmap_plot" && only_central_region_child)
+        *del = del_values::recreate_own_children;
     }
 }
 
@@ -612,169 +678,244 @@ static void legendSize(const std::vector<std::string> &labels, double *w, double
     }
 }
 
+static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::Element> element, double *vp_x_min,
+                                                     double *vp_x_max, double *vp_y_min, double *vp_y_max)
+{
+  bool y_label_margin = false, x_label_margin = false, title_margin;
+  std::string kind;
+  bool keep_aspect_ratio, uniform_data = true;
+  double metric_width, metric_height;
+  int pixel_width, pixel_height;
+  double aspect_ratio_ws;
+  double vp0, vp1, vp2, vp3;
+  double left_margin, right_margin, bottom_margin, top_margin;
+  double viewport[4] = {0.0, 0.0, 0.0, 0.0};
+  std::shared_ptr<GRM::Element> plot_parent = element;
+  auto render = grm_get_render();
+  getPlotParent(plot_parent);
+
+  kind = static_cast<std::string>(plot_parent->getAttribute("kind"));
+  title_margin = static_cast<int>(plot_parent->getAttribute("title_margin"));
+  keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
+
+  if (element != nullptr && element->hasAttribute("x_label_margin"))
+    x_label_margin = static_cast<int>(element->getAttribute("x_label_margin"));
+  if (element != nullptr && element->hasAttribute("y_label_margin"))
+    y_label_margin = static_cast<int>(element->getAttribute("y_label_margin"));
+
+  for (const auto &series : element->children())
+    {
+      if (!starts_with(series->localName(), "series_")) continue;
+      uniform_data = isUniformData(series, render->getContext());
+      if (!uniform_data) break;
+    }
+  if (kind == "marginal_heatmap" && uniform_data)
+    uniform_data = isUniformData(element->parentElement(), render->getContext());
+
+  GRM::Render::getFigureSize(&pixel_width, &pixel_height, nullptr, nullptr);
+  aspect_ratio_ws = (double)pixel_width / pixel_height;
+
+  if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
+    {
+      double extent;
+
+      extent = grm_min(*vp_x_max - *vp_x_min, *vp_y_max - *vp_y_min);
+      vp0 = 0.5 * (*vp_x_min + *vp_x_max - extent);
+      vp1 = 0.5 * (*vp_x_min + *vp_x_max + extent);
+      vp2 = 0.5 * (*vp_y_min + *vp_y_max - extent);
+      vp3 = 0.5 * (*vp_y_min + *vp_y_max + extent);
+    }
+  else
+    {
+      vp0 = *vp_x_min;
+      vp1 = *vp_x_max;
+      vp2 = *vp_y_min;
+      vp3 = *vp_y_max;
+    }
+
+  // TODO: add cases for left and bottom margin so side_plots can be placed there
+  left_margin = y_label_margin ? 0.05 : 0;
+  if (str_equals_any(kind.c_str(), 13, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface",
+                     "tricontour", "trisurface", "volume", "marginal_heatmap", "quiver", "polar_heatmap",
+                     "nonuniformpolar_heatmap"))
+    {
+      right_margin = (vp1 - vp0) * 0.1;
+    }
+  else
+    {
+      right_margin = 0;
+    }
+  bottom_margin = x_label_margin ? 0.05 : 0;
+
+  if (kind == "marginal_heatmap")
+    {
+      top_margin = title_margin ? 0.075 + 0.5 * (vp1 - vp0) * (1.0 - 1.0 / aspect_ratio_ws)
+                                : 0.5 * (vp1 - vp0) * (1.0 - 1.0 / aspect_ratio_ws);
+      if (keep_aspect_ratio && uniform_data) right_margin += title_margin ? 0.075 : 0;
+
+      if (keep_aspect_ratio && uniform_data)
+        {
+          if (bottom_margin != left_margin)
+            {
+              bottom_margin = grm_max(left_margin, bottom_margin);
+              left_margin = bottom_margin;
+            }
+          if (right_margin > top_margin)
+            {
+              auto diff = (0.975 - top_margin) - (0.95 - right_margin);
+              top_margin += 0.5 * diff;
+              bottom_margin += 0.5 * diff;
+            }
+          else
+            {
+              auto diff = (0.95 - right_margin) - (0.975 - top_margin);
+              right_margin += 0.5 * diff;
+              left_margin += 0.5 * diff;
+            }
+        }
+    }
+  else
+    {
+      top_margin = title_margin ? 0.075 : 0;
+      if (keep_aspect_ratio && uniform_data)
+        {
+          if (bottom_margin != left_margin)
+            {
+              bottom_margin = grm_max(left_margin, bottom_margin);
+              left_margin = bottom_margin;
+            }
+          right_margin -=
+              0.5 * (vp1 - vp0) * (1.0 - (aspect_ratio_ws > 1 ? 1.0 / aspect_ratio_ws : aspect_ratio_ws)) - top_margin;
+          right_margin = grm_max(right_margin, 0.1);
+          if (right_margin > top_margin)
+            {
+              auto diff = (0.975 - top_margin) - (0.95 - right_margin);
+              top_margin += 0.5 * diff;
+              bottom_margin += 0.5 * diff;
+            }
+          else
+            {
+              auto diff = (0.95 - right_margin) - (0.975 - top_margin);
+              right_margin += 0.5 * diff;
+              left_margin += 0.5 * diff;
+            }
+        }
+      else if (str_equals_any(kind.c_str(), 13, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap",
+                              "surface", "tricontour", "trisurface", "volume", "marginal_heatmap", "quiver",
+                              "polar_heatmap", "nonuniformpolar_heatmap") &&
+               aspect_ratio_ws <= 1.2)
+        {
+          // TODO: Overwork this condition and max value workaround
+          right_margin = grm_max(0.12, right_margin);
+        }
+    }
+  if (kind == "imshow")
+    {
+      unsigned int i;
+      unsigned int *shape;
+      double w, h, x_min, x_max, y_min, y_max, *x, *y;
+
+      auto cols = static_cast<int>(element->getAttribute("cols"));
+      auto rows = static_cast<int>(element->getAttribute("rows"));
+
+      h = (double)rows / (double)cols * (vp1 - vp0);
+      w = (double)cols / (double)rows * (vp3 - vp2);
+
+      x_min = grm_max(0.5 * (vp0 + vp1 - w), vp0);
+      x_max = grm_min(0.5 * (vp0 + vp1 + w), vp1);
+      y_min = grm_max(0.5 * (vp3 + vp2 - h), vp2);
+      y_max = grm_min(0.5 * (vp3 + vp2 + h), vp3);
+
+      left_margin = (x_min == vp0) ? -0.075 : (x_min - vp0) / (vp1 - vp0) - 0.075;
+      right_margin = (x_max == vp1) ? -0.05 : 0.95 - (x_max - vp0) / (vp1 - vp0);
+      bottom_margin = (y_min == vp2) ? -0.075 : (y_min - vp2) / (vp3 - vp2) - 0.075;
+      top_margin = (y_max == vp3) ? -0.025 : 0.975 - (y_max - vp2) / (vp3 - vp2);
+    }
+
+  viewport[0] = vp0 + (0.075 + left_margin) * (vp1 - vp0);
+  viewport[1] = vp0 + (0.95 - right_margin) * (vp1 - vp0);
+  viewport[2] = vp2 + (0.075 + bottom_margin) * (vp3 - vp2);
+  viewport[3] = vp2 + (0.975 - top_margin) * (vp3 - vp2);
+
+  if (str_equals_any(kind.c_str(), 4, "line", "stairs", "scatter", "stem"))
+    {
+      double w, h;
+      int location = PLOT_DEFAULT_LOCATION;
+      if (element->hasAttribute("location"))
+        {
+          if (element->getAttribute("location").isInt())
+            {
+              location = static_cast<int>(element->getAttribute("location"));
+            }
+          else if (element->getAttribute("location").isString())
+            {
+              location = locationStringToInt(static_cast<std::string>(element->getAttribute("location")));
+            }
+        }
+      else
+        {
+          element->setAttribute("location", location);
+        }
+
+      if (location == 11 || location == 12 || location == 13)
+        {
+          legendSize(element, &w, &h);
+          viewport[1] -= w + 0.1;
+        }
+    }
+
+  if (str_equals_any(kind.c_str(), 5, "pie", "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
+    {
+      double x_center, y_center, r;
+
+      x_center = 0.5 * (viewport[0] + viewport[1]);
+      y_center = 0.5 * (viewport[2] + viewport[3]);
+      r = 0.45 * grm_min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
+      if (title_margin)
+        {
+          r *= 0.975;
+          y_center -= 0.025 * r;
+        }
+      viewport[0] = x_center - r;
+      viewport[1] = x_center + r;
+      viewport[2] = y_center - r;
+      viewport[3] = y_center + r;
+    }
+  *vp_x_min = viewport[0];
+  *vp_x_max = viewport[1];
+  *vp_y_min = viewport[2];
+  *vp_y_max = viewport[3];
+}
+
 static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
 {
   auto render = grm_get_render();
   if (element->localName() == "central_region")
     {
-      bool y_label_margin = false, x_label_margin = false, title_margin;
-      std::string kind;
-      bool keep_aspect_ratio;
-      double metric_width, metric_height;
-      int pixel_width, pixel_height;
-      double aspect_ratio_ws;
       double vp[4];
-      double vp0, vp1, vp2, vp3;
-      double left_margin, right_margin, bottom_margin, top_margin;
-      double viewport[4] = {0.0, 0.0, 0.0, 0.0};
       std::shared_ptr<GRM::Element> plot_parent = element;
       getPlotParent(plot_parent);
 
-      vp[0] = static_cast<double>(plot_parent->getAttribute("viewport_x_min"));
-      vp[1] = static_cast<double>(plot_parent->getAttribute("viewport_x_max"));
-      vp[2] = static_cast<double>(plot_parent->getAttribute("viewport_y_min"));
-      vp[3] = static_cast<double>(plot_parent->getAttribute("viewport_y_max"));
-      kind = static_cast<std::string>(plot_parent->getAttribute("kind"));
-      title_margin = static_cast<int>(plot_parent->getAttribute("title_margin"));
-      keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
+      vp[0] = static_cast<double>(element->parentElement()->getAttribute("viewport_x_min"));
+      vp[1] = static_cast<double>(element->parentElement()->getAttribute("viewport_x_max"));
+      vp[2] = static_cast<double>(element->parentElement()->getAttribute("viewport_y_min"));
+      vp[3] = static_cast<double>(element->parentElement()->getAttribute("viewport_y_max"));
 
-      if (element != nullptr && element->hasAttribute("x_label_margin"))
-        x_label_margin = static_cast<int>(element->getAttribute("x_label_margin"));
-      if (element != nullptr && element->hasAttribute("y_label_margin"))
-        y_label_margin = static_cast<int>(element->getAttribute("y_label_margin"));
+      calculateCentralRegionMarginOrDiagFactor(element, &vp[0], &vp[1], &vp[2], &vp[3]);
 
-      GRM::Render::getFigureSize(&pixel_width, &pixel_height, nullptr, nullptr);
-      aspect_ratio_ws = (double)pixel_width / pixel_height;
-
-      if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
-        {
-          double extent;
-
-          extent = grm_min(vp[1] - vp[0], vp[3] - vp[2]);
-          vp0 = 0.5 * (vp[0] + vp[1] - extent);
-          vp1 = 0.5 * (vp[0] + vp[1] + extent);
-          vp2 = 0.5 * (vp[2] + vp[3] - extent);
-          vp3 = 0.5 * (vp[2] + vp[3] + extent);
-        }
-      else
-        {
-          vp0 = vp[0];
-          vp1 = vp[1];
-          vp2 = vp[2];
-          vp3 = vp[3];
-        }
-
-      left_margin = y_label_margin ? 0.05 : 0;
-      if (str_equals_any(kind.c_str(), 13, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface",
-                         "tricontour", "trisurface", "volume", "marginal_heatmap", "quiver", "polar_heatmap",
-                         "nonuniformpolar_heatmap"))
-        {
-          right_margin = (vp1 - vp0) * 0.1;
-        }
-      else
-        {
-          right_margin = 0;
-        }
-      bottom_margin = x_label_margin ? 0.05 : 0;
-
-      if (kind == "marginal_heatmap")
-        {
-          top_margin = title_margin ? 0.075 + 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws)
-                                    : 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws);
-          if (keep_aspect_ratio) right_margin += title_margin ? 0.075 : 0;
-        }
-      else
-        {
-          top_margin = title_margin ? 0.075 : 0;
-          if (keep_aspect_ratio && !str_equals_any(kind.c_str(), 2, "surface", "volume"))
-            right_margin -= 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws) - top_margin;
-        }
-      if (kind == "imshow")
-        {
-          unsigned int i;
-          unsigned int *shape;
-          double w, h, x_min, x_max, y_min, y_max, *x, *y;
-
-          auto cols = static_cast<int>(element->getAttribute("cols"));
-          auto rows = static_cast<int>(element->getAttribute("rows"));
-
-          h = (double)rows / (double)cols * (vp[1] - vp[0]);
-          w = (double)cols / (double)rows * (vp[3] - vp[2]);
-
-          x_min = grm_max(0.5 * (vp[0] + vp[1] - w), vp[0]);
-          x_max = grm_min(0.5 * (vp[0] + vp[1] + w), vp[1]);
-          y_min = grm_max(0.5 * (vp[3] + vp[2] - h), vp[2]);
-          y_max = grm_min(0.5 * (vp[3] + vp[2] + h), vp[3]);
-
-          left_margin = (x_min == vp[0]) ? -0.075 : (x_min - vp[0]) / (vp[1] - vp[0]) - 0.075;
-          right_margin = (x_max == vp[1]) ? -0.05 : 0.95 - (x_max - vp[0]) / (vp[1] - vp[0]);
-          bottom_margin = (y_min == vp[2]) ? -0.075 : (y_min - vp[2]) / (vp[3] - vp[2]) - 0.075;
-          top_margin = (y_max == vp[3]) ? -0.025 : 0.975 - (y_max - vp[2]) / (vp[3] - vp[2]);
-        }
-
-      viewport[0] = vp0 + (0.075 + left_margin) * (vp1 - vp0);
-      viewport[1] = vp0 + (0.95 - right_margin) * (vp1 - vp0);
-      viewport[2] = vp2 + (0.075 + bottom_margin) * (vp3 - vp2);
-      viewport[3] = vp2 + (0.975 - top_margin) * (vp3 - vp2);
-
-      if (str_equals_any(kind.c_str(), 4, "line", "stairs", "scatter", "stem"))
-        {
-          double w, h;
-          int location = PLOT_DEFAULT_LOCATION;
-          if (element->hasAttribute("location"))
-            {
-              if (element->getAttribute("location").isInt())
-                {
-                  location = static_cast<int>(element->getAttribute("location"));
-                }
-              else if (element->getAttribute("location").isString())
-                {
-                  location = locationStringToInt(static_cast<std::string>(element->getAttribute("location")));
-                }
-            }
-          else
-            {
-              element->setAttribute("location", location);
-            }
-
-          if (location == 11 || location == 12 || location == 13)
-            {
-              legendSize(element, &w, &h);
-              viewport[1] -= w + 0.1;
-            }
-        }
-
-      if (str_equals_any(kind.c_str(), 5, "pie", "polar", "polar_histogram", "polar_heatmap",
-                         "nonuniformpolar_heatmap"))
-        {
-          double x_center, y_center, r;
-
-          x_center = 0.5 * (viewport[0] + viewport[1]);
-          y_center = 0.5 * (viewport[2] + viewport[3]);
-          r = 0.45 * grm_min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
-          if (title_margin)
-            {
-              r *= 0.975;
-              y_center -= 0.025 * r;
-            }
-          viewport[0] = x_center - r;
-          viewport[1] = x_center + r;
-          viewport[2] = y_center - r;
-          viewport[3] = y_center + r;
-        }
-
-      render->setViewport(element, viewport[0], viewport[1], viewport[2], viewport[3]);
-      element->setAttribute("_viewport_x_min_org", viewport[0]);
-      element->setAttribute("_viewport_x_max_org", viewport[1]);
-      element->setAttribute("_viewport_y_min_org", viewport[2]);
-      element->setAttribute("_viewport_y_max_org", viewport[3]);
+      render->setViewport(element, vp[0], vp[1], vp[2], vp[3]);
+      element->setAttribute("_viewport_x_min_org", vp[0]);
+      element->setAttribute("_viewport_x_max_org", vp[1]);
+      element->setAttribute("_viewport_y_min_org", vp[2]);
+      element->setAttribute("_viewport_y_max_org", vp[3]);
     }
   else if (element->localName() == "plot")
     {
       double vp[4];
       int pixel_width, pixel_height;
       double aspect_ratio_ws;
-      bool keep_aspect_ratio;
+      bool keep_aspect_ratio, uniform_data = true;
+      std::string kind;
 
       /* when grids are being used for layouting the subplot information is stored in the parent of the plot */
       if (element->parentElement()->localName() == "layout_grid_element")
@@ -792,6 +933,16 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
           vp[3] = static_cast<double>(element->getAttribute("plot_y_max"));
         }
       keep_aspect_ratio = static_cast<int>(element->getAttribute("keep_aspect_ratio"));
+      kind = static_cast<std::string>(element->getAttribute("kind"));
+
+      for (const auto &series : element->querySelectors("central_region")->children())
+        {
+          if (!starts_with(series->localName(), "series_")) continue;
+          uniform_data = isUniformData(series, render->getContext());
+          if (!uniform_data) break;
+        }
+      if (kind == "marginal_heatmap" && uniform_data)
+        uniform_data = isUniformData(element->children()[0], render->getContext());
 
       GRM::Render::getFigureSize(&pixel_width, &pixel_height, nullptr, nullptr);
       aspect_ratio_ws = (double)pixel_width / pixel_height;
@@ -799,7 +950,7 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
         {
           vp[2] /= aspect_ratio_ws;
           vp[3] /= aspect_ratio_ws;
-          if (keep_aspect_ratio)
+          if (keep_aspect_ratio && uniform_data)
             {
               double border = 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws);
               vp[0] += border;
@@ -810,7 +961,7 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
         {
           vp[0] *= aspect_ratio_ws;
           vp[1] *= aspect_ratio_ws;
-          if (keep_aspect_ratio)
+          if (keep_aspect_ratio && uniform_data)
             {
               double border = 0.5 * (vp[3] - vp[2]) * (1.0 - aspect_ratio_ws);
               vp[2] += border;
@@ -824,11 +975,15 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
       element->setAttribute("_viewport_y_min_org", vp[2]);
       element->setAttribute("_viewport_y_max_org", vp[3]);
     }
-  else if (element->localName() == "colorbar")
+  else if (element->localName() == "side_region")
     {
-      double viewport[4];
-      double offset = 0, width = PLOT_DEFAULT_COLORBAR_WIDTH;
+      double viewport[4], plot_viewport[4];
+      double offset = PLOT_DEFAULT_SIDEREGION_OFFSET, width = PLOT_DEFAULT_SIDEREGION_WIDTH;
       std::shared_ptr<GRM::Element> central_region;
+      std::string location = PLOT_DEFAULT_SIDEREGION_LOCATION;
+      double max_vp, min_vp;
+      double offset_rel, width_rel;
+      int pixel_width, pixel_height;
 
       for (const auto &child : element->parentElement()->children())
         {
@@ -839,62 +994,134 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
             }
         }
 
+      auto plot_parent = central_region;
+      getPlotParent(plot_parent);
+
+      if (element->hasAttribute("location")) location = static_cast<std::string>(element->getAttribute("location"));
+
       // is set cause processElement is run for every Element even when only attributes gets processed; so the
-      // calculateViewport call from the plot element which causes the caluculation of the central_region viewport is
+      // calculateViewport call from the plot element which causes the calculation of the central_region viewport is
       // also processed
       viewport[0] = static_cast<double>(central_region->getAttribute("_viewport_x_min_org"));
       viewport[1] = static_cast<double>(central_region->getAttribute("_viewport_x_max_org"));
       viewport[2] = static_cast<double>(central_region->getAttribute("_viewport_y_min_org"));
       viewport[3] = static_cast<double>(central_region->getAttribute("_viewport_y_max_org"));
 
-      if (element->hasAttribute("offset")) offset = static_cast<double>(element->getAttribute("offset"));
-      if (element->hasAttribute("width")) width = static_cast<double>(element->getAttribute("width"));
-
-      render->setViewport(element, viewport[1] + offset, viewport[1] + offset + width, viewport[2], viewport[3]);
-      element->setAttribute("_viewport_x_min_org", viewport[1] + offset);
-      element->setAttribute("_viewport_x_max_org", viewport[1] + offset + width);
-      element->setAttribute("_viewport_y_min_org", viewport[2]);
-      element->setAttribute("_viewport_y_max_org", viewport[3]);
-    }
-  else if ((element->localName() == "series_hist" || element->localName() == "series_stairs") &&
-           element->hasAttribute("marginal_heatmap_side_plot") &&
-           static_cast<int>(element->getAttribute("marginal_heatmap_side_plot")))
-    {
-      double viewport[4];
-      double offset = PLOT_DEFAULT_SIDEPLOT_OFFSET, width = PLOT_DEFAULT_SIDEPLOT_WIDTH;
-      auto orientation = static_cast<std::string>(element->getAttribute("orientation"));
-      auto central_region = element->parentElement()->parentElement();
-      double max_vp;
-
-      // TODO: Exchange these viewports with the org variant when the sideplots get moved out of the central_region
-      viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
-      viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
-      viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
-      viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
+      plot_viewport[0] = static_cast<double>(plot_parent->getAttribute("_viewport_x_min_org"));
+      plot_viewport[1] = static_cast<double>(plot_parent->getAttribute("_viewport_x_max_org"));
+      plot_viewport[2] = static_cast<double>(plot_parent->getAttribute("_viewport_y_min_org"));
+      plot_viewport[3] = static_cast<double>(plot_parent->getAttribute("_viewport_y_max_org"));
 
       if (element->hasAttribute("offset")) offset = static_cast<double>(element->getAttribute("offset"));
       if (element->hasAttribute("width")) width = static_cast<double>(element->getAttribute("width"));
 
-      if (orientation == "vertical")
+      GRM::Render::getFigureSize(&pixel_width, &pixel_height, nullptr, nullptr);
+      auto aspect_ratio_ws = (double)pixel_width / pixel_height;
+
+      if (location == "right")
         {
+          if (aspect_ratio_ws <= 1)
+            {
+              offset_rel = offset * aspect_ratio_ws;
+              width_rel = width * aspect_ratio_ws;
+            }
+          else
+            {
+              offset_rel = offset / aspect_ratio_ws;
+              width_rel = width / aspect_ratio_ws;
+            }
           max_vp = getMaxViewport(element, true);
-          render->setViewport(element, viewport[1] + offset, grm_min(viewport[1] + offset + width, max_vp), viewport[2],
-                              viewport[3]);
-          element->setAttribute("_viewport_x_min_org", viewport[1] + offset);
-          element->setAttribute("_viewport_x_max_org", grm_min(viewport[1] + offset + width, max_vp));
+          render->setViewport(element, viewport[1] + offset_rel, grm_min(viewport[1] + offset_rel + width_rel, max_vp),
+                              viewport[2], viewport[3]);
+          element->setAttribute("_viewport_x_min_org", viewport[1] + offset_rel);
+          element->setAttribute("_viewport_x_max_org", grm_min(viewport[1] + offset_rel + width_rel, max_vp));
           element->setAttribute("_viewport_y_min_org", viewport[2]);
           element->setAttribute("_viewport_y_max_org", viewport[3]);
         }
-      else if (orientation == "horizontal")
+      else if (location == "left")
         {
+          if (aspect_ratio_ws <= 1)
+            {
+              offset_rel = offset * aspect_ratio_ws;
+              width_rel = width * aspect_ratio_ws;
+            }
+          else
+            {
+              offset_rel = offset / aspect_ratio_ws;
+              width_rel = width / aspect_ratio_ws;
+            }
+          min_vp = getMinViewport(element, true);
+          render->setViewport(element, grm_max(viewport[0], min_vp), viewport[0] + offset_rel + width_rel, viewport[2],
+                              viewport[3]);
+          element->setAttribute("_viewport_x_min_org", grm_max(viewport[0], min_vp));
+          element->setAttribute("_viewport_x_max_org", viewport[0] + offset_rel + width_rel);
+          element->setAttribute("_viewport_y_min_org", viewport[2]);
+          element->setAttribute("_viewport_y_max_org", viewport[3]);
+        }
+      else if (location == "top")
+        {
+          if (aspect_ratio_ws <= 1)
+            {
+              offset_rel = offset * aspect_ratio_ws;
+              width_rel = width * aspect_ratio_ws;
+            }
+          else
+            {
+              offset_rel = offset / aspect_ratio_ws;
+              width_rel = width / aspect_ratio_ws;
+            }
           max_vp = getMaxViewport(element, false);
-          render->setViewport(element, viewport[0], viewport[1], viewport[3] + offset,
-                              grm_min(viewport[3] + offset + width, max_vp));
+          render->setViewport(element, viewport[0], viewport[1], viewport[3] + offset_rel,
+                              grm_min(viewport[3] + offset_rel + width_rel, max_vp));
           element->setAttribute("_viewport_x_min_org", viewport[0]);
           element->setAttribute("_viewport_x_max_org", viewport[1]);
-          element->setAttribute("_viewport_y_min_org", viewport[3] + offset);
-          element->setAttribute("_viewport_y_max_org", grm_min(viewport[3] + offset + width, max_vp));
+          element->setAttribute("_viewport_y_min_org", viewport[3] + offset_rel);
+          element->setAttribute("_viewport_y_max_org", grm_min(viewport[3] + offset_rel + width_rel, max_vp));
         }
+      else if (location == "bottom")
+        {
+          if (aspect_ratio_ws <= 1)
+            {
+              offset_rel = offset * aspect_ratio_ws;
+              width_rel = width * aspect_ratio_ws;
+            }
+          else
+            {
+              offset_rel = offset / aspect_ratio_ws;
+              width_rel = width / aspect_ratio_ws;
+            }
+          min_vp = getMinViewport(element, false);
+          render->setViewport(element, viewport[0], viewport[1], grm_max(viewport[2], min_vp),
+                              viewport[2] + offset_rel + width_rel);
+          element->setAttribute("_viewport_x_min_org", viewport[0]);
+          element->setAttribute("_viewport_x_max_org", viewport[1]);
+          element->setAttribute("_viewport_y_min_org", grm_max(viewport[2], min_vp));
+          element->setAttribute("_viewport_y_max_org", viewport[2] + offset_rel + width_rel);
+        }
+    }
+  else if (element->localName() == "colorbar") // TODO: adjust this calculation when texts are included in side_region
+    {
+      auto vp_x_min = static_cast<double>(element->parentElement()->getAttribute("_viewport_x_min_org"));
+      auto vp_x_max = static_cast<double>(element->parentElement()->getAttribute("_viewport_x_max_org"));
+      auto vp_y_min = static_cast<double>(element->parentElement()->getAttribute("_viewport_y_min_org"));
+      auto vp_y_max = static_cast<double>(element->parentElement()->getAttribute("_viewport_y_max_org"));
+      render->setViewport(element, vp_x_min, vp_x_max, vp_y_min, vp_y_max);
+      element->setAttribute("_viewport_x_min_org", vp_x_min);
+      element->setAttribute("_viewport_x_max_org", vp_x_max);
+      element->setAttribute("_viewport_y_min_org", vp_y_min);
+      element->setAttribute("_viewport_y_max_org", vp_y_max);
+    }
+  else if (element->localName() == "marginal_heatmap_plot")
+    {
+      auto vp_x_min = static_cast<double>(element->parentElement()->getAttribute("viewport_x_min"));
+      auto vp_x_max = static_cast<double>(element->parentElement()->getAttribute("viewport_x_max"));
+      auto vp_y_min = static_cast<double>(element->parentElement()->getAttribute("viewport_y_min"));
+      auto vp_y_max = static_cast<double>(element->parentElement()->getAttribute("viewport_y_max"));
+      render->setViewport(element, vp_x_min, vp_x_max, vp_y_min, vp_y_max);
+      element->setAttribute("_viewport_x_min_org", vp_x_min);
+      element->setAttribute("_viewport_x_max_org", vp_x_max);
+      element->setAttribute("_viewport_y_min_org", vp_y_min);
+      element->setAttribute("_viewport_y_max_org", vp_y_max);
     }
   GRM::Render::processViewport(element);
 }
@@ -917,12 +1144,12 @@ static void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element
                                                        "x_tick_label_group",
                                                        "layout_grid_element",
                                                        "layout_grid",
-                                                       "central_region"};
+                                                       "central_region",
+                                                       "side_region",
+                                                       "marginal_heatmap_plot"};
 
   if (std::find(ndc_transformation_elems.begin(), ndc_transformation_elems.end(), element->localName()) !=
-          ndc_transformation_elems.end() ||
-      (element->hasAttribute("marginal_heatmap_side_plot") &&
-       static_cast<int>(element->getAttribute("marginal_heatmap_side_plot"))))
+      ndc_transformation_elems.end())
     post_fix = "_ndc";
 
   if (element->hasAttribute("x_scale" + post_fix))
@@ -993,7 +1220,6 @@ static void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element
       bool private_shift = false;
 
       GRM::Render::getFigureSize(&pixel_width, &pixel_height, nullptr, nullptr);
-      auto aspect_ratio_ws = (double)pixel_width / pixel_height;
 
       if (element->hasAttribute("viewport_x_min"))
         {
@@ -1310,7 +1536,7 @@ static double get_lightness_from_rbg(double r, double g, double b)
 
 /*
  * mixes gr color maps with size = size * size. If x and or y < 0
- * */
+ */
 void create_colormap(int x, int y, int size, std::vector<int> &colormap)
 {
   int r, g, b, a;
@@ -1463,7 +1689,7 @@ static void markerHelper(const std::shared_ptr<GRM::Element> &element, const std
 
   for (int i = 0; i < n; ++i)
     {
-      //! fallback to the last element when lists are too short
+      // fallback to the last element when lists are too short
       if (!type.empty())
         {
           if (type.size() > i)
@@ -1595,7 +1821,7 @@ static void lineHelper(const std::shared_ptr<GRM::Element> &element, const std::
       z_vec = *z_ptr;
     }
 
-  int n = std::min<int>((int)x_vec.size(), (int)y_vec.size());
+  auto n = std::min<int>((int)x_vec.size(), (int)y_vec.size());
   for (int i = 0; i < n; ++i)
     {
       if (!type.empty())
@@ -1668,15 +1894,39 @@ static void getTickSize(const std::shared_ptr<GRM::Element> &element, double &ti
 {
   if (element->hasAttribute("tick_size"))
     {
+      double plot_viewport[2], tick_size_rel;
+      int pixel_width, pixel_height;
+      auto plot_parent = element->parentElement();
+      getPlotParent(plot_parent);
+
+      plot_viewport[0] = static_cast<double>(plot_parent->getAttribute("_viewport_x_min_org"));
+      plot_viewport[1] = static_cast<double>(plot_parent->getAttribute("_viewport_x_max_org"));
+
+      GRM::Render::getFigureSize(&pixel_width, &pixel_height, nullptr, nullptr);
+      auto aspect_ratio_ws = (double)pixel_width / pixel_height;
+
       tick_size = static_cast<double>(element->getAttribute("tick_size"));
+
+      if (aspect_ratio_ws <= 1)
+        {
+          tick_size_rel = tick_size * aspect_ratio_ws;
+        }
+      else
+        {
+          tick_size_rel = tick_size / aspect_ratio_ws;
+        }
+      tick_size = tick_size_rel;
     }
   else
     {
       double viewport[4];
       auto plot_element = getSubplotElement(element);
-      std::shared_ptr<GRM::Element> central_region;
+      std::shared_ptr<GRM::Element> central_region, central_region_parent;
+      auto kind = static_cast<std::string>(plot_element->getAttribute("kind"));
 
-      for (const auto &child : plot_element->children())
+      central_region_parent = plot_element;
+      if (kind == "marginal_heatmap") central_region_parent = plot_element->children()[0];
+      for (const auto &child : central_region_parent->children())
         {
           if (child->localName() == "central_region")
             {
@@ -1693,7 +1943,7 @@ static void getTickSize(const std::shared_ptr<GRM::Element> &element, double &ti
       double diag = std::sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
                               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
 
-      tick_size = 0.0075 * diag;
+      tick_size = PLOT_DEFAULT_AXES_TICK_SIZE * diag;
     }
 }
 
@@ -1724,15 +1974,28 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, con
   double x_org_low, x_org_high;
   double y_org_low, y_org_high;
   int major_count;
+  std::shared_ptr<GRM::Element> central_region, central_region_parent;
 
   auto draw_axes_group = element->parentElement();
   auto subplot_element = getSubplotElement(element);
   auto kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
+
+  central_region_parent = subplot_element;
+  if (kind == "marginal_heatmap") central_region_parent = subplot_element->children()[0];
+  for (const auto &child : central_region_parent->children())
+    {
+      if (child->localName() == "central_region")
+        {
+          central_region = child;
+          break;
+        }
+    }
+
   auto scale = static_cast<int>(subplot_element->getAttribute("scale"));
-  auto xmin = static_cast<double>(subplot_element->getAttribute("window_x_min"));
-  auto xmax = static_cast<double>(subplot_element->getAttribute("window_x_max"));
-  auto ymin = static_cast<double>(subplot_element->getAttribute("window_y_min"));
-  auto ymax = static_cast<double>(subplot_element->getAttribute("window_y_max"));
+  auto xmin = static_cast<double>(central_region->getAttribute("window_x_min"));
+  auto xmax = static_cast<double>(central_region->getAttribute("window_x_max"));
+  auto ymin = static_cast<double>(central_region->getAttribute("window_y_min"));
+  auto ymax = static_cast<double>(central_region->getAttribute("window_y_max"));
 
   getMajorCount(element, kind, major_count);
 
@@ -1930,13 +2193,23 @@ static void getAxes3dInformation(const std::shared_ptr<GRM::Element> &element, c
 
   double z_org_low, z_org_high;
   int major_count;
+  std::shared_ptr<GRM::Element> central_region;
 
   auto draw_axes_group = element->parentElement();
   auto subplot_element = getSubplotElement(element);
+  for (const auto &child : subplot_element->children()) // don't need special case for marginal_heatmap cause it's 3d
+    {
+      if (child->localName() == "central_region")
+        {
+          central_region = child;
+          break;
+        }
+    }
+
   auto kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
   auto scale = static_cast<int>(subplot_element->getAttribute("scale"));
-  auto zmin = static_cast<double>(subplot_element->getAttribute("window_z_min"));
-  auto zmax = static_cast<double>(subplot_element->getAttribute("window_z_max"));
+  auto zmin = static_cast<double>(central_region->getAttribute("window_z_min"));
+  auto zmax = static_cast<double>(central_region->getAttribute("window_z_max"));
 
   getMajorCount(element, kind, major_count);
 
@@ -2137,7 +2410,7 @@ void drawXTickLabel(double x, double y, const char *label, double available_widt
  * \param[in] x The X coordinate of starting position of the label.
  * \param[in] y The Y coordinate of starting position of the label.
  * \param[in] label The label to be drawn.
- * \param[in] available_height The available space in Y direction around the starting position.
+ * \param[in] available_height The available space in y-direction around the starting position.
  */
 void drawYTickLabel(double x, double y, const char *label, double available_height,
                     const std::shared_ptr<GRM::Element> &element, bool init, int child_id)
@@ -2438,13 +2711,12 @@ static double findMaxStep(unsigned int n, std::vector<double> x)
   double max_step = 0.0;
   unsigned int i;
 
-  if (n < 2)
+  if (n >= 2)
     {
-      return 0.0;
-    }
-  for (i = 1; i < n; ++i)
-    {
-      max_step = grm_max(x[i] - x[i - 1], max_step);
+      for (i = 1; i < n; ++i)
+        {
+          max_step = grm_max(x[i] - x[i - 1], max_step);
+        }
     }
 
   return max_step;
@@ -2453,8 +2725,8 @@ static double findMaxStep(unsigned int n, std::vector<double> x)
 static void extendErrorBars(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context,
                             std::vector<double> x, std::vector<double> y)
 {
-  int id = static_cast<int>(global_root->getAttribute("_id"));
-  std::string str = std::to_string(id);
+  auto id = static_cast<int>(global_root->getAttribute("_id"));
+  auto str = std::to_string(id);
   global_root->setAttribute("_id", ++id);
 
   (*context)["x" + str] = x;
@@ -2565,13 +2837,14 @@ static void processBorderColorInd(const std::shared_ptr<GRM::Element> &element)
 
 static void processMarginalHeatmapSidePlot(const std::shared_ptr<GRM::Element> &element)
 {
-  std::string kind = static_cast<std::string>(element->getAttribute("kind"));
   double viewport[4], window[4];
-  double x_min, x_max, y_min, y_max, c_min, c_max;
+  double x_min, x_max, y_min, y_max, c_max;
+  auto kind = static_cast<std::string>(element->getAttribute("kind"));
 
-  if (element->parentElement()->hasAttribute("marginal_heatmap_kind"))
+  if (element->parentElement()->localName() == "marginal_heatmap_plot" &&
+      element->parentElement()->hasAttribute("marginal_heatmap_kind"))
     {
-      std::string orientation = static_cast<std::string>(element->getAttribute("orientation"));
+      auto location = static_cast<std::string>(element->getAttribute("location"));
       auto plot_group = element->parentElement();
       getPlotParent(plot_group);
       applyMoveTransformation(element);
@@ -2583,14 +2856,6 @@ static void processMarginalHeatmapSidePlot(const std::shared_ptr<GRM::Element> &
       x_max = static_cast<double>(plot_group->getAttribute("_x_lim_max"));
       y_min = static_cast<double>(plot_group->getAttribute("_y_lim_min"));
       y_max = static_cast<double>(plot_group->getAttribute("_y_lim_max"));
-      if (!std::isnan(static_cast<double>(plot_group->getAttribute("_c_lim_min"))))
-        {
-          c_min = static_cast<double>(plot_group->getAttribute("_c_lim_min"));
-        }
-      else
-        {
-          c_min = static_cast<double>(plot_group->getAttribute("_z_lim_min"));
-        }
       if (!std::isnan(static_cast<double>(plot_group->getAttribute("_c_lim_max"))))
         {
           c_max = static_cast<double>(plot_group->getAttribute("_c_lim_max"));
@@ -2604,14 +2869,14 @@ static void processMarginalHeatmapSidePlot(const std::shared_ptr<GRM::Element> &
       if (element->hasAttribute("window_x_max")) window[1] = static_cast<double>(element->getAttribute("window_x_max"));
       if (element->hasAttribute("window_y_min")) window[2] = static_cast<double>(element->getAttribute("window_y_min"));
       if (element->hasAttribute("window_y_max")) window[3] = static_cast<double>(element->getAttribute("window_y_max"));
-      if (orientation == "vertical")
+      if (location == "right")
         {
           window[0] = 0.0;
           window[1] = c_max / 10;
           window[2] = y_min;
           window[3] = y_max;
         }
-      else if (orientation == "horizontal")
+      else if (location == "top")
         {
           window[0] = x_min;
           window[1] = x_max;
@@ -2687,15 +2952,15 @@ static void processColorRep(const std::shared_ptr<GRM::Element> &element, const 
   int index, hex_int;
   double red, green, blue;
   std::string name, hex_string;
-  std::stringstream stringstream;
+  std::stringstream string_stream;
 
   auto end = attribute.find('.');
   index = std::stoi(attribute.substr(end + 1, attribute.size()));
 
   hex_int = 0;
   hex_string = static_cast<std::string>(element->getAttribute(attribute));
-  stringstream << std::hex << hex_string;
-  stringstream >> hex_int;
+  string_stream << std::hex << hex_string;
+  string_stream >> hex_int;
 
   red = ((hex_int >> 16) & 0xFF) / 255.0;
   green = ((hex_int >> 8) & 0xFF) / 255.0;
@@ -3161,215 +3426,237 @@ static void processIntegralGroup(const std::shared_ptr<GRM::Element> &element,
 
 static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &element)
 {
-  std::string mkind = static_cast<std::string>(element->getAttribute("marginal_heatmap_kind"));
-  for (const auto &child : element->children())
+  auto mkind = static_cast<std::string>(element->getAttribute("marginal_heatmap_kind"));
+  for (const auto &side_region : element->children())
     {
-      if (!child->hasAttribute("marginal_heatmap_side_plot") ||
+      if (!side_region->hasAttribute("marginal_heatmap_side_plot") ||
           static_cast<int>(element->getAttribute("_delete_children")) >= 2)
         continue;
       if (mkind == "line")
         {
-          auto x_ind = static_cast<int>(element->getAttribute("x_ind"));
-          auto y_ind = static_cast<int>(element->getAttribute("y_ind"));
-          if (x_ind == -1 || y_ind == -1)
+          for (const auto &series : side_region->children())
             {
-              child->remove();
-              continue;
-            }
-          int i;
-          double y_max = 0;
-          std::shared_ptr<GRM::Context> context;
-          std::shared_ptr<GRM::Render> render;
-          std::shared_ptr<GRM::Element> line_elem, marker_elem;
-
-          render = std::dynamic_pointer_cast<GRM::Render>(child->ownerDocument());
-          if (!render)
-            {
-              throw NotFoundError("Render-document not found for element\n");
-            }
-          context = render->getContext();
-          auto plot_group = element->parentElement();
-          getPlotParent(plot_group);
-
-          auto orientation = static_cast<std::string>(child->getAttribute("orientation"));
-          bool is_vertical = orientation == "vertical";
-          auto c_min = static_cast<double>(plot_group->getAttribute("_z_lim_min"));
-          auto c_max = static_cast<double>(plot_group->getAttribute("_z_lim_max"));
-          auto xmin = static_cast<double>(element->getAttribute("x_range_min"));
-          auto xmax = static_cast<double>(element->getAttribute("x_range_max"));
-          auto ymin = static_cast<double>(element->getAttribute("y_range_min"));
-          auto ymax = static_cast<double>(element->getAttribute("y_range_max"));
-
-          auto z = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(element->getAttribute("z"))]);
-          auto y = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(element->getAttribute("y"))]);
-          auto xi = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(child->getAttribute("xi"))]);
-          auto x = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(element->getAttribute("x"))]);
-          int y_length = (int)y.size();
-          int x_length = (int)xi.size();
-
-          // plot step in marginal
-          for (i = 0; i < (is_vertical ? y_length : x_length); i++)
-            {
-              if (is_vertical)
+              // when processing all elements the first side_region has a series with xi while the second side_regions
+              // wasn't processed yet so the series doesn't has the xi attribute; so we skip this side_region/series
+              if (!series->hasAttribute("xi")) continue;
+              int i, x_offset = 0, y_offset = 0;
+              auto x_ind = static_cast<int>(element->getAttribute("x_ind"));
+              auto y_ind = static_cast<int>(element->getAttribute("y_ind"));
+              if (x_ind == -1 || y_ind == -1)
                 {
-                  y[i] = std::isnan(z[x_ind + i * x_length]) ? 0 : z[x_ind + i * x_length];
-                  y_max = grm_max(y_max, y[i]);
+                  series->remove();
+                  continue;
                 }
-              else
+              double y_max = 0;
+              std::shared_ptr<GRM::Context> context;
+              std::shared_ptr<GRM::Render> render;
+              std::shared_ptr<GRM::Element> line_elem, marker_elem;
+
+              render = std::dynamic_pointer_cast<GRM::Render>(side_region->ownerDocument());
+              if (!render)
                 {
-                  y[i] = std::isnan(z[x_length * y_ind + i]) ? 0 : z[x_length * y_ind + i];
-                  y_max = grm_max(y_max, y[i]);
+                  throw NotFoundError("Render-document not found for element\n");
                 }
-            }
-          for (i = 0; i < (is_vertical ? y_length : x_length); i++)
-            {
-              y[i] = y[i] / y_max * (c_max / 15);
-              xi[i] = x[i] + (is_vertical ? ymin : xmin);
-            }
+              context = render->getContext();
+              auto plot_group = element->parentElement();
+              getPlotParent(plot_group);
 
-          double x_pos, y_pos;
-          unsigned int len = is_vertical ? y_length : x_length;
-          std::vector<double> x_step_boundaries(2 * len);
-          std::vector<double> y_step_values(2 * len);
+              auto location = static_cast<std::string>(side_region->getAttribute("location"));
+              auto c_max = static_cast<double>(plot_group->getAttribute("_z_lim_max"));
+              auto xmin = static_cast<double>(element->getAttribute("x_range_min"));
+              auto xmax = static_cast<double>(element->getAttribute("x_range_max"));
+              auto ymin = static_cast<double>(element->getAttribute("y_range_min"));
+              auto ymax = static_cast<double>(element->getAttribute("y_range_max"));
 
-          x_step_boundaries[0] = is_vertical ? ymin : xmin;
-          for (i = 2; i < 2 * len; i += 2)
-            {
-              x_step_boundaries[i - 1] = x_step_boundaries[i] =
-                  x_step_boundaries[0] + (i / 2) * (is_vertical ? (ymax - ymin) : (xmax - xmin)) / len;
-            }
-          x_step_boundaries[2 * len - 1] = is_vertical ? ymax : xmax;
-          y_step_values[0] = y[0];
-          for (i = 2; i < 2 * len; i += 2)
-            {
-              y_step_values[i - 1] = y[i / 2 - 1];
-              y_step_values[i] = y[i / 2];
-            }
-          y_step_values[2 * len - 1] = y[len - 1];
+              auto z = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(element->getAttribute("z"))]);
+              auto y = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(element->getAttribute("y"))]);
+              auto xi = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(series->getAttribute("xi"))]);
+              auto x = GRM::get<std::vector<double>>((*context)[static_cast<std::string>(element->getAttribute("x"))]);
+              auto y_length = (int)y.size();
+              auto x_length = (int)xi.size();
 
-          auto id = static_cast<int>(global_root->getAttribute("_id"));
-          global_root->setAttribute("_id", id + 1);
-          auto id_str = std::to_string(id);
-
-          // special case where it shouldn't be necessary to use the delete attribute from the children
-          if (!child->hasChildNodes())
-            {
-              if (is_vertical)
+              if (plot_group->hasAttribute("x_log") && static_cast<int>(plot_group->getAttribute("x_log")))
+                x_offset = (int)x.size() - x_length;
+              if (plot_group->hasAttribute("y_log") && static_cast<int>(plot_group->getAttribute("y_log")))
                 {
-                  line_elem =
-                      global_render->createPolyline("x" + id_str, y_step_values, "y" + id_str, x_step_boundaries);
-                  x_pos = (x_step_boundaries[y_ind * 2] + x_step_boundaries[y_ind * 2 + 1]) / 2;
-                  y_pos = y[y_ind];
-                  marker_elem = global_render->createPolymarker(y_pos, x_pos);
-                }
-              else
-                {
-                  line_elem =
-                      global_render->createPolyline("x" + id_str, x_step_boundaries, "y" + id_str, y_step_values);
-                  x_pos = (x_step_boundaries[x_ind * 2] + x_step_boundaries[x_ind * 2 + 1]) / 2;
-                  y_pos = y[x_ind];
-                  marker_elem = global_render->createPolymarker(x_pos, y_pos);
-                }
-
-              global_render->setLineColorInd(line_elem, 989);
-              global_render->setMarkerColorInd(marker_elem, 2);
-              global_render->setMarkerType(marker_elem, -1);
-              global_render->setMarkerSize(marker_elem, 1.5 * (len / (is_vertical ? (ymax - ymin) : (xmax - xmin))));
-
-              marker_elem->setAttribute("name", "line");
-              line_elem->setAttribute("name", "line");
-              child->append(marker_elem);
-              child->append(line_elem);
-              marker_elem->setAttribute("z_index", 2);
-            }
-          else
-            {
-              for (const auto &childchild : child->children())
-                {
-                  if (childchild->localName() == "polyline")
+                  for (i = 0; i < y_length; i++)
                     {
-                      std::string x_key = "x" + id_str;
-                      std::string y_key = "y" + id_str;
-                      if (is_vertical)
-                        {
-                          (*context)[x_key] = y_step_values;
-                          (*context)[y_key] = x_step_boundaries;
-                        }
-                      else
-                        {
-                          (*context)[y_key] = y_step_values;
-                          (*context)[x_key] = x_step_boundaries;
-                        }
-                      childchild->setAttribute("x", x_key);
-                      childchild->setAttribute("y", y_key);
+                      if (grm_isnan(y[i])) y_offset += 1;
                     }
-                  else if (childchild->localName() == "polymarker")
+                }
+
+              // plot step in marginal
+              for (i = 0; i < ((location == "right") ? (y_length - y_offset) : x_length); i++)
+                {
+                  if (location == "right")
                     {
-                      if (is_vertical)
+                      y[i] = std::isnan(z[(x_ind + x_offset) + (i + y_offset) * (x_length + x_offset)])
+                                 ? 0
+                                 : z[(x_ind + x_offset) + (i + y_offset) * (x_length + x_offset)];
+                      y_max = grm_max(y_max, y[i]);
+                    }
+                  else
+                    {
+                      y[i] = std::isnan(z[(x_length + x_offset) * (y_ind + y_offset) + (i + x_offset)])
+                                 ? 0
+                                 : z[(x_length + x_offset) * (y_ind + y_offset) + (i + x_offset)];
+                      y_max = grm_max(y_max, y[i]);
+                    }
+                }
+              for (i = 0; i < ((location == "right") ? (y_length - y_offset) : x_length); i++)
+                {
+                  y[i] = y[i] / y_max * (c_max / 15);
+                  xi[i] = x[i + x_offset] + ((location == "right") ? ymin : xmin);
+                }
+
+              double x_pos, y_pos;
+              unsigned int len = (location == "right") ? (y_length - y_offset) : x_length;
+              std::vector<double> x_step_boundaries(2 * len);
+              std::vector<double> y_step_values(2 * len);
+
+              x_step_boundaries[0] = (location == "right") ? ymin : xmin;
+              for (i = 2; i < 2 * len; i += 2)
+                {
+                  x_step_boundaries[i - 1] = x_step_boundaries[i] =
+                      x_step_boundaries[0] + (i / 2) * ((location == "right") ? (ymax - ymin) : (xmax - xmin)) / len;
+                }
+              x_step_boundaries[2 * len - 1] = (location == "right") ? ymax : xmax;
+              y_step_values[0] = y[0];
+              for (i = 2; i < 2 * len; i += 2)
+                {
+                  y_step_values[i - 1] = y[i / 2 - 1];
+                  y_step_values[i] = y[i / 2];
+                }
+              y_step_values[2 * len - 1] = y[len - 1];
+
+              auto id = static_cast<int>(global_root->getAttribute("_id"));
+              global_root->setAttribute("_id", id + 1);
+              auto id_str = std::to_string(id);
+
+              // special case where it shouldn't be necessary to use the delete attribute from the children
+              if (!series->hasChildNodes())
+                {
+                  if (location == "right")
+                    {
+                      line_elem =
+                          global_render->createPolyline("x" + id_str, y_step_values, "y" + id_str, x_step_boundaries);
+                      x_pos = (x_step_boundaries[y_ind * 2] + x_step_boundaries[y_ind * 2 + 1]) / 2;
+                      y_pos = y[y_ind];
+                      marker_elem = global_render->createPolymarker(y_pos, x_pos);
+                    }
+                  else
+                    {
+                      line_elem =
+                          global_render->createPolyline("x" + id_str, x_step_boundaries, "y" + id_str, y_step_values);
+                      x_pos = (x_step_boundaries[x_ind * 2] + x_step_boundaries[x_ind * 2 + 1]) / 2;
+                      y_pos = y[x_ind];
+                      marker_elem = global_render->createPolymarker(x_pos, y_pos);
+                    }
+
+                  global_render->setLineColorInd(line_elem, 989);
+                  global_render->setMarkerColorInd(marker_elem, 2);
+                  global_render->setMarkerType(marker_elem, -1);
+                  global_render->setMarkerSize(marker_elem,
+                                               1.5 * (len / ((location == "right") ? (ymax - ymin) : (xmax - xmin))));
+
+                  marker_elem->setAttribute("name", "line");
+                  line_elem->setAttribute("name", "line");
+                  series->append(marker_elem);
+                  series->append(line_elem);
+                  marker_elem->setAttribute("z_index", 2);
+                }
+              else
+                {
+                  for (const auto &childchild : series->children())
+                    {
+                      if (childchild->localName() == "polyline")
                         {
-                          x_pos = (x_step_boundaries[y_ind * 2] + x_step_boundaries[y_ind * 2 + 1]) / 2;
-                          y_pos = y[y_ind];
-                          childchild->setAttribute("x", y_pos);
-                          childchild->setAttribute("y", x_pos);
+                          std::string x_key = "x" + id_str;
+                          std::string y_key = "y" + id_str;
+                          if (location == "right")
+                            {
+                              (*context)[x_key] = y_step_values;
+                              (*context)[y_key] = x_step_boundaries;
+                            }
+                          else
+                            {
+                              (*context)[y_key] = y_step_values;
+                              (*context)[x_key] = x_step_boundaries;
+                            }
+                          childchild->setAttribute("x", x_key);
+                          childchild->setAttribute("y", y_key);
                         }
-                      else
+                      else if (childchild->localName() == "polymarker")
                         {
-                          x_pos = (x_step_boundaries[x_ind * 2] + x_step_boundaries[x_ind * 2 + 1]) / 2;
-                          y_pos = y[x_ind];
-                          childchild->setAttribute("x", x_pos);
-                          childchild->setAttribute("y", y_pos);
+                          if (location == "right")
+                            {
+                              x_pos = (x_step_boundaries[y_ind * 2] + x_step_boundaries[y_ind * 2 + 1]) / 2;
+                              y_pos = y[y_ind];
+                              childchild->setAttribute("x", y_pos);
+                              childchild->setAttribute("y", x_pos);
+                            }
+                          else
+                            {
+                              x_pos = (x_step_boundaries[x_ind * 2] + x_step_boundaries[x_ind * 2 + 1]) / 2;
+                              y_pos = y[x_ind];
+                              childchild->setAttribute("x", x_pos);
+                              childchild->setAttribute("y", y_pos);
+                            }
+                          global_render->setMarkerSize(
+                              childchild, 1.5 * (len / ((location == "right") ? (ymax - ymin) : (xmax - xmin))));
                         }
-                      global_render->setMarkerSize(childchild,
-                                                   1.5 * (len / (is_vertical ? (ymax - ymin) : (xmax - xmin))));
                     }
                 }
             }
         }
       else if (mkind == "all")
         {
-          auto x_ind = static_cast<int>(element->getAttribute("x_ind"));
-          auto y_ind = static_cast<int>(element->getAttribute("y_ind"));
-
-          if (x_ind == -1 && y_ind == -1)
+          for (const auto &series : side_region->children())
             {
-              for (const auto &bar : child->children())
+              int cnt = 0;
+              auto x_ind = static_cast<int>(element->getAttribute("x_ind"));
+              auto y_ind = static_cast<int>(element->getAttribute("y_ind"));
+
+              if (x_ind == -1 && y_ind == -1)
                 {
-                  for (const auto &rect : bar->children())
+                  for (const auto &bar : series->children())
+                    {
+                      for (const auto &rect : bar->children())
+                        {
+                          if (rect->hasAttribute("line_color_ind")) continue;
+                          rect->setAttribute("fill_color_ind", 989);
+                        }
+                    }
+                  continue;
+                }
+
+              bool is_horizontal = static_cast<std::string>(series->getAttribute("orientation")) == "horizontal";
+              std::vector<std::shared_ptr<GRM::Element>> bar_groups = series->children();
+
+              if ((is_horizontal && x_ind == -1) || (!is_horizontal && y_ind == -1))
+                {
+                  continue;
+                }
+              if ((is_horizontal ? x_ind : y_ind) >= bar_groups.size())
+                {
+                  continue;
+                }
+
+              for (const auto &group : bar_groups)
+                {
+                  for (const auto &rect : group->children())
                     {
                       if (rect->hasAttribute("line_color_ind")) continue;
-                      rect->setAttribute("fill_color_ind", 989);
+                      if (cnt == (is_horizontal ? x_ind : y_ind))
+                        {
+                          rect->setAttribute("fill_color_ind", 2);
+                        }
+                      else
+                        {
+                          rect->setAttribute("fill_color_ind", 989);
+                        }
+                      cnt += 1;
                     }
-                }
-              continue;
-            }
-
-          bool is_horizontal = static_cast<std::string>(child->getAttribute("orientation")) == "horizontal";
-          std::vector<std::shared_ptr<GRM::Element>> bar_groups = child->children();
-
-          if ((is_horizontal && x_ind == -1) || (!is_horizontal && y_ind == -1))
-            {
-              continue;
-            }
-          if ((is_horizontal ? x_ind : y_ind) >= bar_groups.size())
-            {
-              continue;
-            }
-
-          int cnt = 0;
-          for (const auto &group : bar_groups)
-            {
-              for (const auto &rect : group->children())
-                {
-                  if (rect->hasAttribute("line_color_ind")) continue;
-                  if (cnt == (is_horizontal ? x_ind : y_ind))
-                    {
-                      rect->setAttribute("fill_color_ind", 2);
-                    }
-                  else
-                    {
-                      rect->setAttribute("fill_color_ind", 989);
-                    }
-                  cnt += 1;
                 }
             }
         }
@@ -3412,7 +3699,6 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
       scale |= static_cast<int>(element->getAttribute("z_flip")) ? GR_OPTION_FLIP_Z : 0;
     }
   element->setAttribute("scale", scale);
-  processScale(element);
 
   auto xmin = static_cast<double>(element->getAttribute("_x_lim_min"));
   auto xmax = static_cast<double>(element->getAttribute("_x_lim_max"));
@@ -3447,10 +3733,24 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
   // reset rotation
   for (const auto &child : element->children())
     {
+      if (child->localName() == "marginal_heatmap_plot")
+        {
+          for (const auto &childchild : child->children())
+            {
+              if (childchild->localName() == "central_region")
+                {
+                  central_region = childchild;
+                  if (central_region->hasAttribute("reset_rotation")) processResetRotation(central_region);
+                  break;
+                }
+            }
+        }
       if (child->localName() == "central_region")
         {
           central_region = child;
           if (central_region->hasAttribute("reset_rotation")) processResetRotation(central_region);
+          processWindow(central_region);
+          processScale(element);
           break;
         }
     }
@@ -3495,14 +3795,15 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
       auto y_zoom = static_cast<double>(panzoom_element->getAttribute("y_zoom"));
 
       /* Ensure the correct window is set in GRM */
-      bool window_exists = (element->hasAttribute("window_x_min") && element->hasAttribute("window_x_max") &&
-                            element->hasAttribute("window_y_min") && element->hasAttribute("window_y_max"));
+      bool window_exists =
+          (central_region->hasAttribute("window_x_min") && central_region->hasAttribute("window_x_max") &&
+           central_region->hasAttribute("window_y_min") && central_region->hasAttribute("window_y_max"));
       if (window_exists)
         {
-          auto stored_window_xmin = static_cast<double>(element->getAttribute("window_x_min"));
-          auto stored_window_xmax = static_cast<double>(element->getAttribute("window_x_max"));
-          auto stored_window_ymin = static_cast<double>(element->getAttribute("window_y_min"));
-          auto stored_window_ymax = static_cast<double>(element->getAttribute("window_y_max"));
+          auto stored_window_xmin = static_cast<double>(central_region->getAttribute("window_x_min"));
+          auto stored_window_xmax = static_cast<double>(central_region->getAttribute("window_x_max"));
+          auto stored_window_ymin = static_cast<double>(central_region->getAttribute("window_y_min"));
+          auto stored_window_ymax = static_cast<double>(central_region->getAttribute("window_y_max"));
 
           gr_setwindow(stored_window_xmin, stored_window_xmax, stored_window_ymin, stored_window_ymax);
         }
@@ -3556,13 +3857,13 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
   if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
                      "isosurface"))
     {
-      double zmin = static_cast<double>(element->getAttribute("_z_lim_min"));
-      double zmax = static_cast<double>(element->getAttribute("_z_lim_max"));
+      auto zmin = static_cast<double>(element->getAttribute("_z_lim_min"));
+      auto zmax = static_cast<double>(element->getAttribute("_z_lim_max"));
       if (zmax > 0)
         {
           if (!(scale & GR_OPTION_Z_LOG))
             {
-              int adjust_z_lim = static_cast<int>(element->hasAttribute("adjust_z_lim"));
+              auto adjust_z_lim = static_cast<int>(element->hasAttribute("adjust_z_lim"));
               if (adjust_z_lim)
                 {
                   logger((stderr, "_z_lim before \"gr_adjustlimits\": (%lf, %lf)\n", zmin, zmax));
@@ -3571,14 +3872,15 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
                 }
             }
           logger((stderr, "Storing window 3d (%lf, %lf, %lf, %lf, %lf, %lf)\n", xmin, xmax, ymin, ymax, zmin, zmax));
-          global_render->setWindow3d(element, xmin, xmax, ymin, ymax, zmin, zmax);
+          global_render->setWindow3d(central_region, xmin, xmax, ymin, ymax, zmin, zmax);
         }
     }
   else
     {
       logger((stderr, "Storing window (%lf, %lf, %lf, %lf)\n", xmin, xmax, ymin, ymax));
-      global_render->setWindow(element, xmin, xmax, ymin, ymax);
+      global_render->setWindow(central_region, xmin, xmax, ymin, ymax);
     }
+  processWindow(central_region);
   processScale(element);
 }
 
@@ -3704,12 +4006,21 @@ static void processProjectionType(const std::shared_ptr<GRM::Element> &element)
 
 static void processRelativeCharHeight(const std::shared_ptr<GRM::Element> &element)
 {
-  double viewport[4];
+  double viewport[4], subplot_viewport[4];
   auto plot_element = getSubplotElement(element);
-  double char_height, diag_factor = PLOT_DEFAULT_COLORBAR_DIAG_FACTOR, max_char_height;
-  std::shared_ptr<GRM::Element> central_region;
+  double char_height, max_char_height, max_char_height_rel;
+  std::shared_ptr<GRM::Element> central_region, central_region_parent, subplot_parent;
+  auto kind = static_cast<std::string>(plot_element->getAttribute("kind"));
+  double diag_factor;
+  int pixel_width, pixel_height;
+  bool multiple_plots = false;
 
-  for (const auto &child : plot_element->children())
+  subplot_parent = (plot_element->parentElement()->localName() == "layout_grid_element")
+                       ? subplot_parent = plot_element->parentElement()
+                       : plot_element;
+  central_region_parent = plot_element;
+  if (kind == "marginal_heatmap") central_region_parent = plot_element->children()[0];
+  for (const auto &child : central_region_parent->children())
     {
       if (child->localName() == "central_region")
         {
@@ -3717,7 +4028,6 @@ static void processRelativeCharHeight(const std::shared_ptr<GRM::Element> &eleme
           break;
         }
     }
-
 
   if (!central_region->hasAttribute("viewport_x_min") || !central_region->hasAttribute("viewport_x_max") ||
       !central_region->hasAttribute("viewport_y_min") || !central_region->hasAttribute("viewport_y_max"))
@@ -3728,23 +4038,60 @@ static void processRelativeCharHeight(const std::shared_ptr<GRM::Element> &eleme
   viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
   viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
   viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
-  if (element->hasAttribute("diag_factor"))
-    {
-      diag_factor = static_cast<double>(element->getAttribute("diag_factor"));
-    }
-  else
-    {
-      element->setAttribute("diag_factor", diag_factor);
-    }
 
   // is always set otherwise the method wouldn't be called
   max_char_height = static_cast<double>(element->getAttribute("max_char_height"));
 
-  double diag = std::sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
-                          (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
+  subplot_viewport[0] = static_cast<double>(subplot_parent->getAttribute("plot_x_min"));
+  subplot_viewport[1] = static_cast<double>(subplot_parent->getAttribute("plot_x_max"));
+  subplot_viewport[2] =
+      static_cast<double>(subplot_parent->getAttribute("plot_y_min")) / (DEFAULT_ASPECT_RATIO_FOR_SCALING);
+  subplot_viewport[3] =
+      static_cast<double>(subplot_parent->getAttribute("plot_y_max")) / (DEFAULT_ASPECT_RATIO_FOR_SCALING);
 
-  char_height = std::max<double>(diag * diag_factor, max_char_height);
-  gr_setcharheight(char_height);
+  // special case for keep_aspect_ratio with uniform data which can lead to smaller plots
+  if (plot_element->hasAttribute("keep_aspect_ratio") &&
+      static_cast<int>(plot_element->getAttribute("keep_aspect_ratio")))
+    {
+      bool uniform_data = true;
+      auto render = grm_get_render();
+      for (const auto &series : plot_element->querySelectors("central_region")->children())
+        {
+          if (!starts_with(series->localName(), "series_")) continue;
+          uniform_data = isUniformData(series, render->getContext());
+          if (!uniform_data) break;
+        }
+      if (kind == "marginal_heatmap" && uniform_data)
+        uniform_data = isUniformData(plot_element->children()[0], render->getContext());
+      if (uniform_data)
+        {
+          double border =
+              0.5 * (subplot_viewport[1] - subplot_viewport[0]) * (1.0 - 1.0 / (DEFAULT_ASPECT_RATIO_FOR_SCALING));
+          subplot_viewport[0] += border;
+          subplot_viewport[1] -= border;
+        }
+    }
+
+  // calculate the diagonal viewport size of the default viewport with the fix aspect_ratio 4/3
+  calculateCentralRegionMarginOrDiagFactor(element, &subplot_viewport[0], &subplot_viewport[1], &subplot_viewport[2],
+                                           &subplot_viewport[3]);
+  diag_factor = std::sqrt((subplot_viewport[1] - subplot_viewport[0]) * (subplot_viewport[1] - subplot_viewport[0]) +
+                          (subplot_viewport[3] - subplot_viewport[2]) * (subplot_viewport[3] - subplot_viewport[2]));
+  if (!element->hasAttribute("diag_factor")) element->setAttribute("diag_factor", diag_factor);
+
+  GRM::Render::getFigureSize(&pixel_width, &pixel_height, nullptr, nullptr);
+  auto aspect_ratio_ws = (double)pixel_width / pixel_height;
+
+  if (aspect_ratio_ws <= 1)
+    {
+      max_char_height_rel = max_char_height * aspect_ratio_ws;
+    }
+  else
+    {
+      max_char_height_rel = max_char_height / aspect_ratio_ws;
+    }
+
+  gr_setcharheight(max_char_height_rel * diag_factor);
 }
 
 static void processResampleMethod(const std::shared_ptr<GRM::Element> &element)
@@ -4050,8 +4397,16 @@ static void processTitle(const std::shared_ptr<GRM::Element> &element)
           if (title_elem != nullptr) title_elem->remove();
           title_elem = render->createText(x, y, title);
           title_elem->setAttribute("name", "title");
+          title_elem->setAttribute("z_index", 2);
           render->setTextAlign(title_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-          element->append(title_elem);
+          if (static_cast<std::string>(element->getAttribute("kind")) == "marginal_heatmap")
+            {
+              element->querySelectors("marginal_heatmap_plot")->append(title_elem);
+            }
+          else
+            {
+              element->append(title_elem);
+            }
         }
       else if (title_elem != nullptr)
         {
@@ -4071,9 +4426,11 @@ void GRM::Render::processWindow(const std::shared_ptr<GRM::Element> &element)
   auto xmax = static_cast<double>(element->getAttribute("window_x_max"));
   auto ymin = static_cast<double>(element->getAttribute("window_y_min"));
   auto ymax = static_cast<double>(element->getAttribute("window_y_max"));
-  if (element->localName() == "plot")
+  if (element->localName() == "central_region")
     {
-      auto kind = static_cast<std::string>(element->getAttribute("kind"));
+      std::shared_ptr<GRM::Element> plot_element = element;
+      getPlotParent(plot_element);
+      auto kind = static_cast<std::string>(plot_element->getAttribute("kind"));
 
       if (str_equals_any(kind.c_str(), 4, "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
         {
@@ -4154,28 +4511,85 @@ void GRM::Render::calculateCharHeight(const std::shared_ptr<GRM::Element> &eleme
    * \param[in] element The GRM::Element that contains the attributes
    */
   double viewport[4];
-  double diag, char_height;
+  double subplot_viewport[4]; // the subplot vp is the figure vp unless there are more plots inside a figure
+  double char_height, diag_factor;
   std::string kind;
-  std::shared_ptr<GRM::Element> plot_parent = element;
+  int pixel_width, pixel_height;
+  std::shared_ptr<GRM::Element> plot_parent = element, subplot_parent;
   getPlotParent(plot_parent);
+
+  subplot_parent = (plot_parent->parentElement()->localName() == "layout_grid_element")
+                       ? subplot_parent = plot_parent->parentElement()
+                       : plot_parent;
 
   viewport[0] = static_cast<double>(element->getAttribute("viewport_x_min"));
   viewport[1] = static_cast<double>(element->getAttribute("viewport_x_max"));
   viewport[2] = static_cast<double>(element->getAttribute("viewport_y_min"));
   viewport[3] = static_cast<double>(element->getAttribute("viewport_y_max"));
+  subplot_viewport[0] = static_cast<double>(subplot_parent->getAttribute("plot_x_min"));
+  subplot_viewport[1] = static_cast<double>(subplot_parent->getAttribute("plot_x_max"));
+  subplot_viewport[2] =
+      static_cast<double>(subplot_parent->getAttribute("plot_y_min")) / (DEFAULT_ASPECT_RATIO_FOR_SCALING);
+  subplot_viewport[3] =
+      static_cast<double>(subplot_parent->getAttribute("plot_y_max")) / (DEFAULT_ASPECT_RATIO_FOR_SCALING);
   kind = static_cast<std::string>(plot_parent->getAttribute("kind"));
 
-  diag = std::sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
-                   (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
+  // special case for keep_aspect_ratio with uniform data which can lead to smaller plots
+  if (plot_parent->hasAttribute("keep_aspect_ratio") &&
+      static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio")))
+    {
+      bool uniform_data = true;
+      auto render = grm_get_render();
+      for (const auto &series : plot_parent->querySelectors("central_region")->children())
+        {
+          if (!starts_with(series->localName(), "series_")) continue;
+          uniform_data = isUniformData(series, render->getContext());
+          if (!uniform_data) break;
+        }
+      if (kind == "marginal_heatmap" && uniform_data)
+        uniform_data = isUniformData(plot_parent->children()[0], render->getContext());
+      if (uniform_data)
+        {
+          double border =
+              0.5 * (subplot_viewport[1] - subplot_viewport[0]) * (1.0 - 1.0 / (DEFAULT_ASPECT_RATIO_FOR_SCALING));
+          subplot_viewport[0] += border;
+          subplot_viewport[1] -= border;
+        }
+    }
+
+  // calculate the diagonal viewport size of the default viewport with the fix aspect_ratio 4/3
+  calculateCentralRegionMarginOrDiagFactor(element, &subplot_viewport[0], &subplot_viewport[1], &subplot_viewport[2],
+                                           &subplot_viewport[3]);
+  diag_factor = std::sqrt((subplot_viewport[1] - subplot_viewport[0]) * (subplot_viewport[1] - subplot_viewport[0]) +
+                          (subplot_viewport[3] - subplot_viewport[2]) * (subplot_viewport[3] - subplot_viewport[2]));
+  if (!element->hasAttribute("diag_factor")) element->setAttribute("diag_factor", diag_factor);
+
+  GRM::Render::getFigureSize(&pixel_width, &pixel_height, nullptr, nullptr);
+  double aspect_ratio_ws = (double)pixel_width / pixel_height;
 
   if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
     {
-      char_height = grm_max(0.024 * diag, 0.012);
+      char_height = PLOT_3D_CHAR_HEIGHT;
+    }
+  else if (str_equals_any(kind.c_str(), 4, "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
+    {
+      char_height = PLOT_POLAR_CHAR_HEIGHT;
     }
   else
     {
-      char_height = grm_max(0.018 * diag, 0.012);
+      char_height = PLOT_2D_CHAR_HEIGHT;
     }
+  char_height *= diag_factor;
+
+  if (aspect_ratio_ws > 1)
+    {
+      char_height /= aspect_ratio_ws;
+    }
+  else
+    {
+      char_height *= aspect_ratio_ws;
+    }
+
   plot_parent->setAttribute("char_height", char_height);
   processCharHeight(plot_parent);
 }
@@ -4283,9 +4697,12 @@ static void processXTickLabels(const std::shared_ptr<GRM::Element> &element)
   int child_id = 0;
   bool init = false;
   auto plot_element = getSubplotElement(element);
-  std::shared_ptr<GRM::Element> central_region;
+  std::shared_ptr<GRM::Element> central_region, central_region_parent;
+  auto kind = static_cast<std::string>(plot_element->getAttribute("kind"));
 
-  for (const auto &child : plot_element->children())
+  central_region_parent = plot_element;
+  if (kind == "marginal_heatmap") central_region_parent = plot_element->children()[0];
+  for (const auto &child : central_region_parent->children())
     {
       if (child->localName() == "central_region")
         {
@@ -4338,7 +4755,7 @@ static void processXTickLabels(const std::shared_ptr<GRM::Element> &element)
         init = true;
 
       int offset = 1;
-      auto kind = static_cast<std::string>(plot_element->getAttribute("kind"));
+      kind = static_cast<std::string>(plot_element->getAttribute("kind"));
 
       /* calculate width available for x_tick notations */
       gr_wctondc(&x_left, &null);
@@ -4363,9 +4780,12 @@ static void processYTickLabels(const std::shared_ptr<GRM::Element> &element)
   int child_id = 0;
   bool init = false;
   auto plot_element = getSubplotElement(element);
-  std::shared_ptr<GRM::Element> central_region;
+  std::shared_ptr<GRM::Element> central_region, central_region_parent;
+  auto kind = static_cast<std::string>(plot_element->getAttribute("kind"));
 
-  for (const auto &child : plot_element->children())
+  central_region_parent = plot_element;
+  if (kind == "marginal_heatmap") central_region_parent = plot_element->children()[0];
+  for (const auto &child : central_region_parent->children())
     {
       if (child->localName() == "central_region")
         {
@@ -4584,17 +5004,16 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &element, const std::s
   double window[4];
   double ymin;
   double line_x1, line_x2, line_y1, line_y2;
-  std::shared_ptr<GRM::Element> series = nullptr, line, central_region;
+  std::shared_ptr<GRM::Element> series = nullptr, line, central_region, central_region_parent;
   std::string orientation = PLOT_DEFAULT_ORIENTATION;
   del_values del = del_values::update_without_default;
 
   auto subplot_element = getSubplotElement(element);
-  window[0] = static_cast<double>(subplot_element->getAttribute("window_x_min"));
-  window[1] = static_cast<double>(subplot_element->getAttribute("window_x_max"));
-  window[2] = static_cast<double>(subplot_element->getAttribute("window_y_min"));
-  window[3] = static_cast<double>(subplot_element->getAttribute("window_y_max"));
+  auto kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
 
-  for (const auto &child : subplot_element->children())
+  central_region_parent = subplot_element;
+  if (kind == "marginal_heatmap") central_region_parent = subplot_element->children()[0];
+  for (const auto &child : central_region_parent->children())
     {
       if (child->localName() == "central_region")
         {
@@ -4602,6 +5021,11 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &element, const std::s
           break;
         }
     }
+
+  window[0] = static_cast<double>(central_region->getAttribute("window_x_min"));
+  window[1] = static_cast<double>(central_region->getAttribute("window_x_max"));
+  window[2] = static_cast<double>(central_region->getAttribute("window_y_min"));
+  window[3] = static_cast<double>(central_region->getAttribute("window_y_max"));
 
   for (const auto &child : central_region->children())
     {
@@ -4784,6 +5208,7 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
   z_log = static_cast<int>(plot_parent->getAttribute("z_log"));
+  global_render->setWindow(element->parentElement(), 0.0, 1.0, c_min, c_max);
   gr_setwindow(0.0, 1.0, c_min, c_max);
 
   calculateViewport(element);
@@ -4872,7 +5297,9 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
     }
   if (del != del_values::update_without_default && axes != nullptr)
     {
-      axes->setAttribute("tick_size", 0.005);
+      double tick_size = PLOT_DEFAULT_COLORBAR_TICK_SIZE;
+
+      axes->setAttribute("tick_size", tick_size);
       axes->setAttribute("name", "colorbar");
     }
   applyMoveTransformation(element);
@@ -4901,22 +5328,17 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
   unsigned int i;
 
   /* series level */
-  unsigned int y_length;
+  unsigned int y_length, c_length, c_rgb_length;
   std::vector<int> c;
-  unsigned int c_length;
   std::vector<double> c_rgb;
-  unsigned int c_rgb_length;
   std::vector<std::string> ylabels;
   unsigned int ylabels_left = 0, ylabels_length = 0;
-  int use_y_notations_from_inner_series = 1;
   /* style variance */
   double pos_vertical_change = 0, neg_vertical_change = 0;
   double x1, x2, y1, y2;
-  double x_min = 0, x_max, y_min = 0, y_max;
+  double x_min = 0, x_max, y_min = 0;
   bool is_vertical;
-  bool inner_series;
-  bool inner_c = false;
-  bool inner_c_rgb = false;
+  bool inner_series, inner_c = false, inner_c_rgb = false;
   del_values del = del_values::update_without_default;
   int child_id = 0;
 
@@ -5020,12 +5442,11 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
     }
 
   if (element->hasAttribute("x_range_min") && element->hasAttribute("x_range_max") &&
-      element->hasAttribute("y_range_min") && element->hasAttribute("y_range_max"))
+      element->hasAttribute("y_range_min"))
     {
       x_min = static_cast<double>(element->getAttribute("x_range_min"));
       x_max = static_cast<double>(element->getAttribute("x_range_max"));
       y_min = static_cast<double>(element->getAttribute("y_range_min"));
-      y_max = static_cast<double>(element->getAttribute("y_range_max"));
       if (!element->hasAttribute("bar_width"))
         {
           bar_width = (x_max - x_min) / (y_length - 1.0);
@@ -5072,10 +5493,6 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
           if ((c_rgb[i] > 1 || c_rgb[i] < 0) && c_rgb[i] != -1)
             throw std::out_of_range("For barplot series c_rgb must be inside [0, 1] or -1.\n");
         }
-    }
-  if (!ylabels.empty())
-    {
-      use_y_notations_from_inner_series = 0;
     }
 
   global_render->setFillIntStyle(element, 1);
@@ -6073,9 +6490,12 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
 
-  std::shared_ptr<GRM::Element> central_region;
+  std::shared_ptr<GRM::Element> central_region, central_region_parent;
+  auto kind = static_cast<std::string>(plot_parent->getAttribute("kind"));
 
-  for (const auto &child : plot_parent->children())
+  central_region_parent = plot_parent;
+  if (kind == "marginal_heatmap") central_region_parent = plot_parent->children()[0];
+  for (const auto &child : central_region_parent->children())
     {
       if (child->localName() == "central_region")
         {
@@ -6584,7 +7004,6 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
 static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   double viewport[4];
-  double diag, char_height;
   double r_min, r_max;
   double tick;
   double x[2], y[2];
@@ -6608,7 +7027,7 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
     }
 
   auto subplotElement = getSubplotElement(element);
-  for (const auto &child : subplotElement->children())
+  for (const auto &child : subplotElement->children()) // no special case for marginal_heatmap cause the plot is polar
     {
       if (child->localName() == "central_region")
         {
@@ -6621,10 +7040,6 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
   viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
   viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
   viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
-
-  diag = std::sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
-                   (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
-  char_height = grm_max(0.018 * diag, 0.012);
 
   r_min = static_cast<double>(subplotElement->getAttribute("_y_lim_min"));
   r_max = static_cast<double>(subplotElement->getAttribute("_y_lim_max"));
@@ -6765,7 +7180,6 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
       axes_text_group = render->createElement("axes_text_group");
       element->append(axes_text_group);
     }
-  render->setCharHeight(axes_text_group, char_height);
 
   for (i = 0; i <= n; i++)
     {
@@ -6940,9 +7354,16 @@ static void processHeatmap(const std::shared_ptr<GRM::Element> &element, const s
     }
   else
     {
-      element_context = element->parentElement();
       plot_parent = element->parentElement();
       getPlotParent(plot_parent);
+      for (const auto &children : plot_parent->children())
+        {
+          if (children->localName() == "marginal_heatmap_plot")
+            {
+              element_context = children;
+              break;
+            }
+        }
     }
 
   if (element_context->hasAttribute("x"))
@@ -7425,19 +7846,27 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
   y_max = static_cast<double>(element->getAttribute("y_range_max"));
   if (std::isnan(y_min)) y_min = 0.0;
 
-  if (element->parentElement()->hasAttribute("marginal_heatmap_kind"))
+  if (element->parentElement()->hasAttribute("marginal_heatmap_side_plot"))
     {
-      if (element->parentElement()->hasAttribute("x_range_min"))
-        x_min = static_cast<double>(element->parentElement()->getAttribute("x_range_min"));
-      if (element->parentElement()->hasAttribute("x_range_max"))
-        x_max = static_cast<double>(element->parentElement()->getAttribute("x_range_max"));
-      if (element->parentElement()->hasAttribute("y_range_min"))
-        y_min = static_cast<double>(element->parentElement()->getAttribute("y_range_min"));
-      if (element->parentElement()->hasAttribute("y_range_max"))
-        y_max = static_cast<double>(element->parentElement()->getAttribute("y_range_max"));
-      element->setAttribute("marginal_heatmap_side_plot", 1);
-      processMarginalHeatmapSidePlot(element);
-      processMarginalHeatmapKind(element->parentElement());
+      std::shared_ptr<GRM::Element> marginal_heatmap;
+      for (const auto &children : plot_parent->children())
+        {
+          if (children->localName() == "marginal_heatmap_plot")
+            {
+              marginal_heatmap = children;
+              break;
+            }
+        }
+      if (marginal_heatmap->hasAttribute("x_range_min"))
+        x_min = static_cast<double>(marginal_heatmap->getAttribute("x_range_min"));
+      if (marginal_heatmap->hasAttribute("x_range_max"))
+        x_max = static_cast<double>(marginal_heatmap->getAttribute("x_range_max"));
+      if (marginal_heatmap->hasAttribute("y_range_min"))
+        y_min = static_cast<double>(marginal_heatmap->getAttribute("y_range_min"));
+      if (marginal_heatmap->hasAttribute("y_range_max"))
+        y_max = static_cast<double>(marginal_heatmap->getAttribute("y_range_max"));
+      processMarginalHeatmapSidePlot(element->parentElement());
+      processMarginalHeatmapKind(marginal_heatmap);
 
       if (orientation == "vertical")
         {
@@ -8063,8 +8492,18 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
   std::vector<double> x_vec, y_vec, z_vec;
   del_values del = del_values::update_without_default;
   int child_id = 0;
+  std::shared_ptr<GRM::Element> central_region;
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
+
+  for (const auto &child : plot_parent->children())
+    {
+      if (child->localName() == "central_region")
+        {
+          central_region = child;
+          break;
+        }
+    }
 
   kind = static_cast<std::string>(plot_parent->getAttribute("kind"));
 
@@ -8211,8 +8650,8 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
     }
   else
     {
-      y_min = static_cast<double>(plot_parent->getAttribute("window_y_min"));
-      y_max = static_cast<double>(plot_parent->getAttribute("window_y_max"));
+      y_min = static_cast<double>(central_region->getAttribute("window_y_min"));
+      y_max = static_cast<double>(central_region->getAttribute("window_y_max"));
 
       std::vector<double> rho, phi;
       for (i = 0; i < ((cols > rows) ? cols : rows); ++i)
@@ -10123,7 +10562,8 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
   del_values del = del_values::update_without_default;
   int child_id = 0;
 
-  if (element->parentElement()->hasAttribute("marginal_heatmap_kind")) element_context = element->parentElement();
+  if (element->parentElement()->hasAttribute("marginal_heatmap_side_plot"))
+    element_context = element->parentElement()->parentElement();
 
   if (!element_context->hasAttribute("x")) throw NotFoundError("Stairs series is missing required attribute x-data.\n");
   auto x = static_cast<std::string>(element_context->getAttribute("x"));
@@ -10162,24 +10602,40 @@ static void processStairs(const std::shared_ptr<GRM::Element> &element, const st
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
   clearOldChildren(&del, element);
 
-  if (element->parentElement()->hasAttribute("marginal_heatmap_kind"))
+  if (element->parentElement()->hasAttribute("marginal_heatmap_side_plot"))
     {
       double y_max = 0;
       unsigned int z_length = 0;
+      int x_offset = 0, y_offset = 0;
       std::vector<double> z_vec;
 
-      element->setAttribute("marginal_heatmap_side_plot", 1);
+      if (element_context->parentElement()->hasAttribute("x_log") &&
+          static_cast<int>(element_context->parentElement()->getAttribute("x_log")))
+        {
+          for (i = 0; i < x_length; i++)
+            {
+              if (grm_isnan(x_vec[i])) x_offset += 1;
+            }
+        }
+      if (element_context->parentElement()->hasAttribute("y_log") &&
+          static_cast<int>(element_context->parentElement()->getAttribute("y_log")))
+        {
+          for (i = 0; i < y_length; i++)
+            {
+              if (grm_isnan(y_vec[i])) y_offset += 1;
+            }
+        }
 
       auto z = static_cast<std::string>(element_context->getAttribute("z"));
       z_vec = GRM::get<std::vector<double>>((*context)[z]);
       z_length = z_vec.size();
 
-      std::vector<double> xi_vec((is_vertical ? y_length : x_length));
+      std::vector<double> xi_vec((is_vertical ? y_length - y_offset : x_length - x_offset));
       (*context)["xi" + str] = xi_vec;
       element->setAttribute("xi", "xi" + str);
 
-      processMarginalHeatmapSidePlot(element);
-      processMarginalHeatmapKind(element->parentElement());
+      processMarginalHeatmapSidePlot(element->parentElement());
+      processMarginalHeatmapKind(element_context);
     }
   else
     {
@@ -10771,8 +11227,8 @@ static void processLine(const std::shared_ptr<GRM::Element> &element, const std:
     }
 }
 
-static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
-                                   const std::shared_ptr<GRM::Context> &context)
+static void processMarginalHeatmapPlot(const std::shared_ptr<GRM::Element> &element,
+                                       const std::shared_ptr<GRM::Context> &context)
 {
   /*!
    * Processing function for marginal heatmap
@@ -10781,20 +11237,29 @@ static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
    * \param[in] context The GRM::Context that contains the actual data
    */
 
-  double c_min, c_max;
+  double c_max;
   int flip, options;
   int x_ind = PLOT_DEFAULT_MARGINAL_INDEX, y_ind = PLOT_DEFAULT_MARGINAL_INDEX;
   unsigned int i, j, k;
   std::string algorithm = PLOT_DEFAULT_MARGINAL_ALGORITHM, marginal_heatmap_kind = PLOT_DEFAULT_MARGINAL_KIND;
   std::vector<double> bins;
-  unsigned int num_bins_x = 0, num_bins_y = 0, n = 0;
-  std::shared_ptr<GRM::Element> sub_group;
-  auto plot_parent = element->parentElement();
+  unsigned int num_bins_x = 0, num_bins_y = 0;
+  std::shared_ptr<GRM::Element> sub_group, central_region, side_region;
+  auto plot_parent = element;
   del_values del = del_values::update_without_default;
   int child_id = 0;
   bool z_log = false;
+  int x_offset = 0, y_offset = 0;
 
   getPlotParent(plot_parent);
+  for (const auto &children : element->children())
+    {
+      if (children->localName() == "central_region")
+        {
+          central_region = children;
+          break;
+        }
+    }
 
   z_log = static_cast<int>(plot_parent->getAttribute("z_log"));
 
@@ -10834,14 +11299,29 @@ static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
   auto x = static_cast<std::string>(element->getAttribute("x"));
   auto x_vec = GRM::get<std::vector<double>>((*context)[x]);
   num_bins_x = x_vec.size();
+  if (plot_parent->hasAttribute("x_log") && static_cast<int>(plot_parent->getAttribute("x_log")))
+    {
+      for (i = 0; i < num_bins_x; i++)
+        {
+          if (grm_isnan(x_vec[i])) x_offset += 1;
+        }
+    }
+  num_bins_x -= x_offset;
 
   auto y = static_cast<std::string>(element->getAttribute("y"));
   auto y_vec = GRM::get<std::vector<double>>((*context)[y]);
   num_bins_y = y_vec.size();
+  if (plot_parent->hasAttribute("y_log") && static_cast<int>(plot_parent->getAttribute("y_log")))
+    {
+      for (i = 0; i < num_bins_y; i++)
+        {
+          if (grm_isnan(y_vec[i])) y_offset += 1;
+        }
+    }
+  num_bins_y -= y_offset;
 
   auto plot = static_cast<std::string>(element->getAttribute("z"));
   auto plot_vec = GRM::get<std::vector<double>>((*context)[plot]);
-  n = plot_vec.size();
 
   /* clear old child nodes */
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
@@ -10855,7 +11335,7 @@ static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
     {
       heatmap = global_render->createSeries("heatmap");
       heatmap->setAttribute("_child_id", child_id++);
-      element->append(heatmap);
+      central_region->append(heatmap);
     }
   else
     {
@@ -10877,7 +11357,7 @@ static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
 
   for (k = 0; k < 2; k++)
     {
-      double x_min, x_max, y_min, y_max, value, bin_max = 0;
+      double value, bin_max = 0;
       int bar_color_index = 989;
       double bar_color_rgb[3] = {-1};
       int edge_color_index = 1;
@@ -10886,18 +11366,6 @@ static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
       id = static_cast<int>(global_root->getAttribute("_id"));
       str = std::to_string(id);
 
-      x_min = static_cast<double>(element->getAttribute("x_range_min"));
-      x_max = static_cast<double>(element->getAttribute("x_range_max"));
-      y_min = static_cast<double>(element->getAttribute("y_range_min"));
-      y_max = static_cast<double>(element->getAttribute("y_range_max"));
-      if (!std::isnan(static_cast<double>(plot_parent->getAttribute("_c_lim_min"))))
-        {
-          c_min = static_cast<double>(plot_parent->getAttribute("_c_lim_min"));
-        }
-      else
-        {
-          c_min = static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
-        }
       if (!std::isnan(static_cast<double>(plot_parent->getAttribute("_c_lim_max"))))
         {
           c_max = static_cast<double>(plot_parent->getAttribute("_c_lim_max"));
@@ -10923,12 +11391,15 @@ static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
                 {
                   if (z_log)
                     {
-                      value =
-                          (grm_isnan(log10(plot_vec[i * num_bins_x + j]))) ? 0 : log10(plot_vec[i * num_bins_x + j]);
+                      value = (grm_isnan(log10(plot_vec[(i + y_offset) * (num_bins_x + x_offset) + (j + x_offset)])))
+                                  ? 0
+                                  : log10(plot_vec[(i + y_offset) * (num_bins_x + x_offset) + (j + x_offset)]);
                     }
                   else
                     {
-                      value = (grm_isnan(plot_vec[i * num_bins_x + j])) ? 0 : plot_vec[i * num_bins_x + j];
+                      value = (grm_isnan(plot_vec[(i + y_offset) * (num_bins_x + x_offset) + (j + x_offset)]))
+                                  ? 0
+                                  : plot_vec[(i + y_offset) * (num_bins_x + x_offset) + (j + x_offset)];
                     }
                   if (algorithm == "sum")
                     {
@@ -10958,13 +11429,21 @@ static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
 
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
+              side_region = global_render->createElement("side_region");
+              side_region->setAttribute("_child_id", child_id++);
+              element->append(side_region);
+              if (k == 0) side_region->setAttribute("location", "right");
+              if (k == 1) side_region->setAttribute("location", "top");
+              side_region->setAttribute("marginal_heatmap_side_plot", true);
               sub_group = global_render->createSeries("hist");
-              sub_group->setAttribute("_child_id", child_id++);
-              element->append(sub_group);
+              sub_group->setAttribute("_child_id", 0);
+              side_region->append(sub_group);
             }
           else
             {
-              sub_group = element->querySelectors("series_hist[_child_id=" + std::to_string(child_id++) + "]");
+              side_region = element->querySelectors("side_region[_child_id=" + std::to_string(child_id++) + "]");
+              sub_group = side_region->querySelectors("series_hist[_child_id=0]");
+              sub_group->setAttribute("_update_required", true);
             }
 
           if (sub_group != nullptr)
@@ -10988,15 +11467,28 @@ static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
         }
       else if (marginal_heatmap_kind == "line" && x_ind != -1 && y_ind != -1)
         {
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              side_region = global_render->createElement("side_region");
+              side_region->setAttribute("_child_id", child_id++);
+              element->append(side_region);
+              if (k == 0) side_region->setAttribute("location", "right");
+              if (k == 1) side_region->setAttribute("location", "top");
+              side_region->setAttribute("marginal_heatmap_side_plot", true);
+            }
+          else
+            {
+              side_region = element->querySelectors("side_region[_child_id=" + std::to_string(child_id++) + "]");
+            }
           // special case for marginal_heatmap_kind line - when new indices != -1 are received the 2 lines should be
           // displayed
-          sub_group = element->querySelectors("[_child_id=" + std::to_string(child_id) + "]");
+          sub_group = side_region->querySelectors("[_child_id=0]");
           if ((del != del_values::update_without_default && del != del_values::update_with_default) ||
               (sub_group == nullptr && static_cast<int>(element->getAttribute("_update_required"))))
             {
               sub_group = global_render->createSeries("stairs");
-              sub_group->setAttribute("_child_id", child_id++);
-              element->append(sub_group);
+              sub_group->setAttribute("_child_id", 0);
+              side_region->append(sub_group);
             }
           else
             {
@@ -11034,23 +11526,25 @@ static void processMarginalHeatmap(const std::shared_ptr<GRM::Element> &element,
       auto tmp = element->querySelectorsAll("series_hist");
       for (const auto &child : tmp)
         {
-          if (child->parentElement()->localName() != "series_marginal_heatmap") continue;
+          if (!child->parentElement()->hasAttribute("marginal_heatmap_side_plot")) continue;
           if (static_cast<std::string>(child->getAttribute("kind")) == "hist" ||
               static_cast<std::string>(child->getAttribute("kind")) == "stairs")
             {
-              child->setAttribute("y_flip", 0);
-              child->setAttribute("x_flip", 0);
-              if (static_cast<int>(child->getAttribute("_child_id")) == 1)
+              child->parentElement()->setAttribute("y_flip", 0);
+              child->parentElement()->setAttribute("x_flip", 0);
+              if (static_cast<int>(child->parentElement()->getAttribute("_child_id")) == 1)
                 {
-                  child->setAttribute("x_flip", 0);
-                  if (static_cast<int>(plot_parent->getAttribute("y_flip")) == 1) child->setAttribute("y_flip", 1);
-                  processFlip(child);
+                  child->parentElement()->setAttribute("x_flip", 0);
+                  if (static_cast<int>(plot_parent->getAttribute("y_flip")) == 1)
+                    child->parentElement()->setAttribute("y_flip", 1);
+                  processFlip(child->parentElement());
                 }
-              if (static_cast<int>(child->getAttribute("_child_id")) == 2)
+              if (static_cast<int>(child->parentElement()->getAttribute("_child_id")) == 2)
                 {
-                  if (static_cast<int>(plot_parent->getAttribute("x_flip")) == 1) child->setAttribute("x_flip", 1);
-                  child->setAttribute("y_flip", 0);
-                  processFlip(child);
+                  if (static_cast<int>(plot_parent->getAttribute("x_flip")) == 1)
+                    child->parentElement()->setAttribute("x_flip", 1);
+                  child->parentElement()->setAttribute("y_flip", 0);
+                  processFlip(child->parentElement());
                 }
             }
         }
@@ -11993,9 +12487,11 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                   !element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_max") ||
                   str_equals_any(kind.c_str(), 3, "heatmap", "marginal_heatmap", "polar_heatmap"))
                 {
-                  for (const auto &series : central_region->children())
+                  std::shared_ptr<GRM::Element> series_parent = central_region;
+                  if (kind == "marginal_heatmap") series_parent = element;
+                  for (const auto &series : series_parent->children())
                     {
-                      if (!starts_with(series->localName(), "series")) continue;
+                      if (!starts_with(series->localName(), "series") && central_region == series_parent) continue;
                       if (series->hasAttribute("style"))
                         style = static_cast<std::string>(series->getAttribute("style"));
                       double current_min_component = DBL_MAX, current_max_component = -DBL_MAX;
@@ -12215,11 +12711,14 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                     }
                   // TODO: Support mixed orientations
                   std::string orientation = PLOT_DEFAULT_ORIENTATION;
-                  for (const auto &series : central_region->children())
+                  if (kind != "marginal_heatmap")
                     {
-                      if (series->hasAttribute("orientation"))
-                        orientation = static_cast<std::string>(series->getAttribute("orientation"));
-                      if (!starts_with(series->localName(), "series")) continue;
+                      for (const auto &series : central_region->children())
+                        {
+                          if (series->hasAttribute("orientation"))
+                            orientation = static_cast<std::string>(series->getAttribute("orientation"));
+                          if (!starts_with(series->localName(), "series")) continue;
+                        }
                     }
                   if (static_cast<std::string>(current_range_keys->subplot) == "x_lim")
                     {
@@ -12597,6 +13096,15 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
     }
 }
 
+static void processSideRegion(const std::shared_ptr<GRM::Element> &element,
+                              const std::shared_ptr<GRM::Context> &context)
+{
+  calculateViewport(element);
+  GRM::Render::processViewport(element);
+  GRM::Render::processWindow(element);                 /* needs to be set before space 3d is processed */
+  GRM::Render::processScale(element->parentElement()); /* needs to be set before flip is processed */
+}
+
 static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element,
                                     const std::shared_ptr<GRM::Context> &context)
 {
@@ -12635,6 +13143,26 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
     }
 
   type = static_cast<std::string>(element->getAttribute("plot_type"));
+  if (type == "3d")
+    {
+      std::shared_ptr<GRM::Element> central_region, central_region_parent = plot_parent;
+      if (kind == "marginal_heatmap") central_region_parent = element->querySelectors("marginal_heatmap_plot");
+
+      for (const auto &child : central_region_parent->children())
+        {
+          if (child->localName() == "central_region")
+            {
+              central_region = child;
+              break;
+            }
+        }
+
+      // 3d plots are always in keep_aspect_ratio mode so the scaling with the aspect_ratio isn't needed here
+      double char_height = PLOT_3D_CHAR_HEIGHT * 3.0 / 4.0;
+      auto diag_factor = static_cast<double>(central_region->getAttribute("diag_factor"));
+      element->setAttribute("char_height", char_height * diag_factor);
+      processCharHeight(element);
+    }
 
   if (element->hasAttribute("hide") && static_cast<int>(element->getAttribute("hide")))
     {
@@ -12896,8 +13424,11 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
 
 static void processPlot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
-  std::shared_ptr<GRM::Element> central_region;
-  for (const auto &child : element->children())
+  std::shared_ptr<GRM::Element> central_region, central_region_parent = element;
+  if (static_cast<std::string>(element->getAttribute("kind")) == "marginal_heatmap")
+    central_region_parent = element->querySelectors("marginal_heatmap_plot");
+
+  for (const auto &child : central_region_parent->children())
     {
       if (child->localName() == "central_region")
         {
@@ -12907,9 +13438,12 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
     }
 
   // set the x-, y- and z-data to NAN if the value is <= 0
-  for (const auto &child : central_region->children())
+  // if the plot contains the marginal_heatmap_plot the marginal_heatmap should be child in the following for
+  for (const auto &child : (central_region_parent == element) ? central_region->children() : element->children())
     {
-      if (!starts_with(child->localName(), "series_")) continue;
+      if ((!starts_with(child->localName(), "series_") && central_region_parent == element) ||
+          (child->localName() != "marginal_heatmap_plot" && central_region_parent != element))
+        continue;
       auto id = static_cast<int>(global_root->getAttribute("_id"));
       auto str = std::to_string(id);
 
@@ -13097,8 +13631,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
       processCharHeight(element);
     }
   GRM::Render::processLimits(element);
-  GRM::Render::processWindow(element); /* needs to be set before space 3d is processed */
-  GRM::Render::processScale(element);  /* needs to be set before flip is processed */
+  GRM::Render::processScale(element); /* needs to be set before flip is processed */
 
   /* Map for calculations on the plot level */
   static std::map<std::string,
@@ -13136,7 +13669,6 @@ static void processSeries(const std::shared_ptr<GRM::Element> &element, const st
           {std::string("imshow"), processImshow},
           {std::string("isosurface"), PushDrawableToZQueue(processIsosurface)},
           {std::string("line"), processLine},
-          {std::string("marginal_heatmap"), processMarginalHeatmap},
           {std::string("pie"), processPie},
           {std::string("plot3"), processPlot3},
           {std::string("polar"), processPolar},
@@ -13168,10 +13700,22 @@ static void processSeries(const std::shared_ptr<GRM::Element> &element, const st
       throw NotFoundError("Series is not in render implemented yet\n");
     }
 
+  std::shared_ptr<GRM::Element> central_region, central_region_parent;
+
+  central_region_parent = plot_elem;
+  if (kind == "marginal_heatmap") central_region_parent = plot_elem->children()[0];
+  for (const auto &child : central_region_parent->children())
+    {
+      if (child->localName() == "central_region")
+        {
+          central_region = child;
+          break;
+        }
+    }
   // special case where the data of a series could inflict the window
   // its important that the series gets first processed so the changed data gets used inside plotCoordinateRanges
   if (element->parentElement()->parentElement()->localName() == "plot" &&
-      !static_cast<int>(element->parentElement()->parentElement()->getAttribute("keep_window")))
+      !static_cast<int>(central_region->getAttribute("keep_window")))
     {
       plotCoordinateRanges(element->parentElement()->parentElement(), global_render->getContext());
     }
@@ -13214,6 +13758,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("integral_group"), processIntegralGroup},
           {std::string("isosurface_render"), PushDrawableToZQueue(processIsosurfaceRender)},
           {std::string("layout_grid"), PushDrawableToZQueue(processLayoutGrid)},
+          {std::string("marginal_heatmap_plot"), processMarginalHeatmapPlot},
           {std::string("nonuniform_polarcellarray"), PushDrawableToZQueue(processNonUniformPolarCellArray)},
           {std::string("nonuniformcellarray"), PushDrawableToZQueue(processNonuniformcellarray)},
           {std::string("panzoom"), PushDrawableToZQueue(processPanzoom)},
@@ -13225,13 +13770,15 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("polymarker"), PushDrawableToZQueue(processPolymarker)},
           {std::string("polymarker_3d"), PushDrawableToZQueue(processPolymarker3d)},
           {std::string("series"), processSeries},
+          {std::string("side_region"), processSideRegion},
           {std::string("text"), PushDrawableToZQueue(processText)},
           {std::string("titles_3d"), PushDrawableToZQueue(processTitles3d)},
       };
 
   /* Modifier */
-  if (str_equals_any(element->localName().c_str(), 10, "axes_text_group", "central_region", "figure", "plot", "label",
-                     "labels_group", "root", "x_tick_label_group", "y_tick_label_group", "layout_grid_element"))
+  if (str_equals_any(element->localName().c_str(), 11, "axes_text_group", "central_region", "figure", "plot", "label",
+                     "labels_group", "root", "side_region", "x_tick_label_group", "y_tick_label_group",
+                     "layout_grid_element"))
     {
       bool old_state = automatic_update;
       automatic_update = false;
@@ -13243,13 +13790,22 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
         }
       if (element->localName() == "plot")
         {
+          std::shared_ptr<GRM::Element> central_region_parent = element;
           processPlot(element, context);
-          for (const auto &child : element->children())
+          if (static_cast<std::string>(element->getAttribute("kind")) == "marginal_heatmap")
+            central_region_parent = element->children()[0]; // if the kind is marginal_heatmap plot can only has 1 child
+                                                            // and this child is the marginal_heatmap_plot
+
+          if (central_region_parent != element) calculateViewport(central_region_parent);
+
+          for (const auto &child : central_region_parent->children())
             {
               if (child->localName() == "central_region")
                 {
                   calculateViewport(child);
                   GRM::Render::calculateCharHeight(child);
+                  GRM::Render::processWindow(child);
+                  GRM::Render::processScale(element);
                   break;
                 }
             }
@@ -13264,6 +13820,14 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
     }
   else
     {
+      if (element->localName() == "marginal_heatmap_plot")
+        {
+          bool old_state = automatic_update;
+          automatic_update = false;
+          calculateViewport(element);
+          applyMoveTransformation(element);
+          automatic_update = old_state;
+        }
       // TODO: something like series_contour shouldn't be in this list
       if (!automatic_update ||
           ((static_cast<int>(global_root->getAttribute("_modified")) &&
@@ -13325,7 +13889,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           automatic_update = old_state;
         }
       else if (automatic_update && static_cast<int>(global_root->getAttribute("_modified")) ||
-               element->hasAttribute("marginal_heatmap_side_plot"))
+               element->parentElement()->hasAttribute("marginal_heatmap_side_plot"))
         {
           bool old_state = automatic_update;
           automatic_update = false;
@@ -13564,6 +14128,8 @@ static void applyCentralRegionDefaults(const std::shared_ptr<GRM::Element> &cent
 
   if (!central_region->hasAttribute("resample_method"))
     central_region->setAttribute("resample_method", (int)PLOT_DEFAULT_RESAMPLE_METHOD);
+  if (!central_region->hasAttribute("keep_window"))
+    central_region->setAttribute("keep_window", PLOT_DEFAULT_KEEP_WINDOW);
   if ((!central_region->hasAttribute("space_3d_fov") || overwrite) && kinds_3d.count(kind) != 0)
     {
       if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
@@ -13592,7 +14158,6 @@ static void applyPlotDefaults(const std::shared_ptr<GRM::Element> &plot)
 {
   if (!plot->hasAttribute("kind")) plot->setAttribute("kind", PLOT_DEFAULT_KIND);
   if (!plot->hasAttribute("keep_aspect_ratio")) plot->setAttribute("keep_aspect_ratio", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
-  if (!plot->hasAttribute("keep_window")) plot->setAttribute("keep_window", PLOT_DEFAULT_KEEP_WINDOW);
   if (!plot->hasAttribute("plot_x_min")) plot->setAttribute("plot_x_min", PLOT_DEFAULT_SUBPLOT_MIN_X);
   if (!plot->hasAttribute("plot_x_max")) plot->setAttribute("plot_x_max", PLOT_DEFAULT_SUBPLOT_MAX_X);
   if (!plot->hasAttribute("plot_y_min")) plot->setAttribute("plot_y_min", PLOT_DEFAULT_SUBPLOT_MIN_Y);
@@ -13641,7 +14206,9 @@ static void applyPlotDefaults(const std::shared_ptr<GRM::Element> &plot)
   if (!plot->hasAttribute("font_precision")) plot->setAttribute("font_precision", PLOT_DEFAULT_FONT_PRECISION);
   if (!plot->hasAttribute("colormap")) plot->setAttribute("colormap", PLOT_DEFAULT_COLORMAP);
 
-  for (const auto &child : plot->children())
+  auto central_region_parent = plot;
+  if (kind == "marginal_heatmap") central_region_parent = plot->children()[0];
+  for (const auto &child : central_region_parent->children())
     {
       if (child->localName() == "central_region")
         {
@@ -13918,7 +14485,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("colormap"), std::vector<std::string>{"viridis", "Sets the current colormap"}},
       {std::string("count"), std::vector<std::string>{"None", "The total number of bars"}},
       {std::string("data"), std::vector<std::string>{"None", "Data which gets displayed in the graphic"}},
-      {std::string("diag_factor"), std::vector<std::string>{"0.016", "Diagonal factor for the char height"}},
+      {std::string("diag_factor"),
+       std::vector<std::string>{
+           "None", "Diagonal factor for the char height. Its calculated from the plot viewport with aspect ratio 4/3"}},
       {std::string("diffuse"), std::vector<std::string>{"0.8", "The diffuse light"}},
       {std::string("d_max"), std::vector<std::string>{"None", "The ending dimension for the volume"}},
       {std::string("d_min"), std::vector<std::string>{"None", "The beginning dimension for the volume"}},
@@ -13978,7 +14547,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("line_spec"), std::vector<std::string>{"", "Sets the string specifier for line styles"}},
       {std::string("line_type"), std::vector<std::string>{"None", "The type of the line"}},
       {std::string("line_width"), std::vector<std::string>{"None", "The width of the line"}},
-      {std::string("location"), std::vector<std::string>{"top_right", "The elements location"}},
+      {std::string("location"), std::vector<std::string>{"None", "The elements location"}},
       {std::string("major_h"),
        std::vector<std::string>{"0 or 1000", "Defines if and which contour lines gets their value as a label. A offset "
                                              "of 1000 to this parameter will color the contour lines"}},
@@ -14005,7 +14574,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("num_col"), std::vector<std::string>{"None", "Number of columns"}},
       {std::string("num_row"), std::vector<std::string>{"None", "Number of rows"}},
       {std::string("norm"), std::vector<std::string>{"None", "Specify the used normalisation"}},
-      {std::string("offset"), std::vector<std::string>{"None", "The offset for the colorbar"}},
+      {std::string("offset"), std::vector<std::string>{"None", "The offset for the side region viewport"}},
       {std::string("orientation"), std::vector<std::string>{"horizontal", "The orientation of the element"}},
       {std::string("phi"), std::vector<std::string>{"None", "References the phi-angles stored in the context"}},
       {std::string("phi_dim"), std::vector<std::string>{"None", "The dimension of the phi-angles"}},
@@ -14107,7 +14676,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("viewport_y_max"), std::vector<std::string>{"None", "The ending viewport y-coordinate"}},
       {std::string("viewport_y_min"), std::vector<std::string>{"None", "The beginning viewport y-coordinate"}},
       {std::string("weights"), std::vector<std::string>{"None", "References the weights stored in the context"}},
-      {std::string("width"), std::vector<std::string>{"None", "The width of the element"}},
+      {std::string("width"),
+       std::vector<std::string>{"None", "The width of the side region element - inflicting the viewport"}},
       {std::string("window_x_max"), std::vector<std::string>{"None", "The ending window x-coordinate"}},
       {std::string("window_x_min"), std::vector<std::string>{"None", "The beginning window x-coordinate"}},
       {std::string("window_y_max"), std::vector<std::string>{"None", "The ending window y-coordinate"}},
@@ -16101,6 +16671,9 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
   std::vector<std::string> error_bar{
       "e_downwards", "e_upwards", "error_bar_x", "error_bar_y_max", "error_bar_y_min", "scap_x_max", "scap_x_min",
   };
+  std::vector<std::string> marginal_heatmap_plot{
+      "algorithm", "marginal_heatmap_kind", "x", "x_flip", "y", "y_flip", "z",
+  };
   std::vector<std::string> polar_bar{
       "bin_width",  "bin_widths", "bin_edges", "class_nr",   "count",
       "draw_edges", "norm",       "phi_flip",  "x_colormap", "y_colormap",
@@ -16148,9 +16721,6 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       "orientation",
       "x",
       "y",
-  };
-  std::vector<std::string> series_marginal_heatmap{
-      "algorithm", "marginal_heatmap_kind", "x", "x_flip", "y", "y_flip", "z",
   };
   std::vector<std::string> series_nonuniformheatmap = series_heatmap;
   std::vector<std::string> series_nonuniformpolar_heatmap{
@@ -16230,6 +16800,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       {std::string("error_bar"), error_bar},
       {std::string("polar_bar"), polar_bar},
       {std::string("coordinate_system"), coordinate_system_element},
+      {std::string("marginal_heatmap_plot"), marginal_heatmap_plot},
       {std::string("series_barplot"), series_barplot},
       {std::string("series_contour"), series_contour},
       {std::string("series_contourf"), series_contourf},
@@ -16239,7 +16810,6 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       {std::string("series_imshow"), series_imshow},
       {std::string("series_isosurface"), series_isosurface},
       {std::string("series_line"), series_line},
-      {std::string("series_marginal_heatmap"), series_marginal_heatmap},
       {std::string("series_nonuniformheatmap"), series_nonuniformheatmap},
       {std::string("series_nonuniformpolar_heatmap"), series_nonuniformpolar_heatmap},
       {std::string("series_pie"), series_pie},
@@ -16289,6 +16859,21 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
           std::vector<std::string> barplot_group = {"barplot", "hist", "stem", "stairs"};
           std::vector<std::string> hexbin_group = {"hexbin", "shade"};
           std::shared_ptr<GRM::Element> new_element = nullptr;
+          std::shared_ptr<GRM::Element> central_region, central_region_parent;
+
+          auto plot_parent = element->parentElement();
+          getPlotParent(plot_parent);
+          central_region_parent = plot_parent;
+          if (plot_parent->children()[0]->localName() == "marginal_heatmap_plot")
+            central_region_parent = plot_parent->children()[0];
+          for (const auto &child : central_region_parent->children())
+            {
+              if (child->localName() == "central_region")
+                {
+                  central_region = child;
+                  break;
+                }
+            }
 
           if (std::find(line_group.begin(), line_group.end(), value) != line_group.end() &&
               std::find(line_group.begin(), line_group.end(),
@@ -16297,13 +16882,11 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
               new_element = new_series;
               element->parentElement()->insertBefore(new_series, element);
-              auto plot_parent = new_series->parentElement();
-              getPlotParent(plot_parent);
               plot_parent->setAttribute("kind", static_cast<std::string>(element->getAttribute("kind")));
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
               new_series->setAttribute("_bbox_id", -1);
-              if (static_cast<int>(plot_parent->getAttribute("keep_window"))) setRanges(element, new_series);
+              if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())
                 {
                   if (child->localName() == "error_bars") new_series->append(child);
@@ -16323,17 +16906,61 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                    std::find(heatmap_group.begin(), heatmap_group.end(),
                              static_cast<std::string>(element->getAttribute("kind"))) != heatmap_group.end())
             {
-              auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
+              std::shared_ptr<GRM::Element> new_series;
+              if (static_cast<std::string>(element->getAttribute("kind")) == "marginal_heatmap")
+                {
+                  new_series = global_render->createElement("marginal_heatmap_plot");
+                  new_series->setAttribute("kind", "marginal_heatmap");
+                }
+              else
+                {
+                  new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
+                }
               new_element = new_series;
-              element->parentElement()->insertBefore(new_series, element);
-              auto plot_parent = new_series->parentElement();
-              getPlotParent(plot_parent);
+              if (value == "marginal_heatmap")
+                {
+                  // kind was 'marginal_heatmap' so the marginal_heatmap_plot must be removed and a new series created
+                  for (const auto &child : element->children())
+                    {
+                      if (child->localName() == "side_region") child->remove();
+                      if (child->localName() == "central_region")
+                        {
+                          for (const auto &central_region_child : child->children())
+                            {
+                              if (central_region_child->hasAttribute("_child_id") &&
+                                  static_cast<int>(central_region_child->getAttribute("_child_id")) == 0 &&
+                                  central_region_child->localName() == "series_heatmap")
+                                central_region_child->remove();
+                            }
+                        }
+                    }
+                  element->parentElement()->append(central_region);
+                  for (const auto &child : central_region_parent->children())
+                    {
+                      if (child->localName() == "text" &&
+                          static_cast<std::string>(child->getAttribute("name")) == "title")
+                        {
+                          element->parentElement()->append(child);
+                          break;
+                        }
+                    }
+                  central_region->append(new_series);
+                }
+              else if (static_cast<std::string>(element->getAttribute("kind")) == "marginal_heatmap")
+                {
+                  // create marginal_heatmap_plot as central_region father
+                  central_region->parentElement()->insertBefore(new_series, central_region);
+                }
+              else
+                {
+                  element->parentElement()->insertBefore(new_series, element);
+                }
               plot_parent->setAttribute("kind", static_cast<std::string>(element->getAttribute("kind")));
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
               new_series->setAttribute("z", element->getAttribute("z"));
               new_series->setAttribute("_bbox_id", -1);
-              if (static_cast<int>(plot_parent->getAttribute("keep_window"))) setRanges(element, new_series);
+              if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               if (static_cast<std::string>(element->getAttribute("kind")) == "imshow")
                 {
                   auto context = global_render->getContext();
@@ -16369,6 +16996,20 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                   child->remove();
                 }
               element->remove();
+              if (static_cast<std::string>(element->getAttribute("kind")) == "marginal_heatmap")
+                {
+                  // move title and central_region into marginal_heatmap_plot
+                  new_series->append(central_region);
+                  for (const auto &child : central_region_parent->children())
+                    {
+                      if (child->localName() == "text" &&
+                          static_cast<std::string>(child->getAttribute("name")) == "title")
+                        {
+                          new_series->append(child);
+                          break;
+                        }
+                    }
+                }
               new_series->setAttribute("_update_required", true);
               new_series->setAttribute("_delete_children", 2);
             }
@@ -16379,15 +17020,13 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
               new_element = new_series;
               element->parentElement()->insertBefore(new_series, element);
-              auto plot_parent = new_series->parentElement();
-              getPlotParent(plot_parent);
               plot_parent->setAttribute("kind", static_cast<std::string>(element->getAttribute("kind")));
               new_series->setAttribute("z", element->getAttribute("z"));
               new_series->setAttribute("z_dims", element->getAttribute("z_dims"));
               if (element->hasAttribute("d_min")) new_series->setAttribute("d_min", element->getAttribute("d_min"));
               if (element->hasAttribute("d_max")) new_series->setAttribute("d_max", element->getAttribute("d_max"));
               new_series->setAttribute("_bbox_id", -1);
-              if (static_cast<int>(plot_parent->getAttribute("keep_window"))) setRanges(element, new_series);
+              if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())
                 {
                   child->remove();
@@ -16403,14 +17042,12 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
               new_element = new_series;
               element->parentElement()->insertBefore(new_series, element);
-              auto plot_parent = new_series->parentElement();
-              getPlotParent(plot_parent);
               plot_parent->setAttribute("kind", static_cast<std::string>(element->getAttribute("kind")));
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
               new_series->setAttribute("z", element->getAttribute("z"));
               new_series->setAttribute("_bbox_id", -1);
-              if (static_cast<int>(plot_parent->getAttribute("keep_window"))) setRanges(element, new_series);
+              if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())
                 {
                   child->remove();
@@ -16426,25 +17063,11 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
               new_element = new_series;
               element->parentElement()->insertBefore(new_series, element);
-              auto plot_parent = new_series->parentElement();
-              getPlotParent(plot_parent);
               plot_parent->setAttribute("kind", static_cast<std::string>(element->getAttribute("kind")));
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("_bbox_id", -1);
-              if (static_cast<int>(plot_parent->getAttribute("keep_window"))) setRanges(element, new_series);
-              if (static_cast<std::string>(element->getAttribute("kind")) == "barplot" ||
-                  static_cast<std::string>(element->getAttribute("kind")) == "stem")
-                {
-                  if (value == "hist")
-                    {
-                      new_series->setAttribute("y", element->getAttribute("weights"));
-                    }
-                  else
-                    {
-                      new_series->setAttribute("y", element->getAttribute("y"));
-                    }
-                }
-              else if (static_cast<std::string>(element->getAttribute("kind")) == "hist")
+              if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
+              if (static_cast<std::string>(element->getAttribute("kind")) == "hist")
                 {
                   new_series->setAttribute("weights", element->getAttribute("y"));
                 }
@@ -16476,13 +17099,11 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
               new_element = new_series;
               element->parentElement()->insertBefore(new_series, element);
-              auto plot_parent = new_series->parentElement();
-              getPlotParent(plot_parent);
               plot_parent->setAttribute("kind", static_cast<std::string>(element->getAttribute("kind")));
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
               new_series->setAttribute("_bbox_id", -1);
-              if (static_cast<int>(plot_parent->getAttribute("keep_window"))) setRanges(element, new_series);
+              if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())
                 {
                   child->remove();
@@ -16594,33 +17215,40 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                 }
               if (std::find(colorbar_group.begin(), colorbar_group.end(), new_kind) == colorbar_group.end())
                 {
-                  std::shared_ptr<GRM::Element> colorbar = plot->querySelectors("colorbar");
+                  std::shared_ptr<GRM::Element> side_region, colorbar = plot->querySelectors("colorbar");
                   if (colorbar)
                     {
+                      side_region = colorbar->parentElement();
                       for (const auto &child : colorbar->children())
                         {
                           child->remove();
                         }
                       colorbar->remove();
+                      side_region->remove();
                     }
                 }
               else
                 {
                   double offset;
                   int colors;
-                  std::shared_ptr<GRM::Element> colorbar = plot->querySelectors("colorbar");
+                  std::shared_ptr<GRM::Element> side_region = plot->querySelectors("side_region"),
+                                                colorbar = plot->querySelectors("colorbar");
                   std::tie(offset, colors) = getColorbarAttributes(new_kind, plot);
 
+                  if (side_region == nullptr) side_region = global_render->createElement("side_region");
+                  side_region->setAttribute("offset", offset + PLOT_DEFAULT_COLORBAR_OFFSET);
+                  side_region->setAttribute("width", PLOT_DEFAULT_COLORBAR_WIDTH);
+                  side_region->setAttribute("location", PLOT_DEFAULT_SIDEREGION_LOCATION);
+                  side_region->setAttribute("_update_required", true);
+
                   colorbar = global_render->createColorbar(colors, nullptr, colorbar);
-                  colorbar->setAttribute("offset", offset + PLOT_DEFAULT_COLORBAR_OFFSET);
-                  colorbar->setAttribute("width", PLOT_DEFAULT_COLORBAR_WIDTH);
-                  colorbar->setAttribute("diag_factor", PLOT_DEFAULT_COLORBAR_DIAG_FACTOR);
                   colorbar->setAttribute("max_char_height", PLOT_DEFAULT_COLORBAR_MAX_CHAR_HEIGHT);
 
                   colorbar->setAttribute("_update_required", true);
                   colorbar->setAttribute("_delete_children", static_cast<int>(del_values::recreate_all_children));
 
-                  if (!plot->querySelectors("colorbar")) plot->append(colorbar);
+                  if (!plot->querySelectors("side_region")) plot->append(side_region);
+                  if (!plot->querySelectors("colorbar")) side_region->append(colorbar);
                 }
             }
         }
