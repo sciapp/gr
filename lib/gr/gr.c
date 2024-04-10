@@ -14108,9 +14108,9 @@ void gr_setspace3d(double phi, double theta, double fov, double cam)
   tx.focus_point_z = (ix.zmax + ix.zmin) / 2;
 
   bounding_sphere_radius = sqrt(3);
-  if (fov != fov || fov == 0)
+  if (is_nan(fov) || fov == 0)
     {
-      if (camera_distance == 0 || camera_distance != camera_distance)
+      if (camera_distance == 0 || is_nan(camera_distance))
         {
           camera_distance = bounding_sphere_radius;
         }
@@ -14119,7 +14119,7 @@ void gr_setspace3d(double phi, double theta, double fov, double cam)
     }
   else
     {
-      if (camera_distance == 0 || camera_distance != camera_distance)
+      if (camera_distance == 0 || is_nan(camera_distance))
         {
           camera_distance = fabs(bounding_sphere_radius / sin((fov * M_PI / 180) / 2));
         }
