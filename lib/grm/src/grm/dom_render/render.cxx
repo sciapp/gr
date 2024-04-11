@@ -408,8 +408,8 @@ static bool isUniformData(const std::shared_ptr<GRM::Element> &element, const st
 {
   std::string x_key, y_key, kind;
   kind = static_cast<std::string>(element->getAttribute("kind"));
-  if (str_equals_any(kind.c_str(), 11, "line", "scatter", "pie", "polar", "polar_histogram", "polar_heatmap", "imshow",
-                     "hist", "barplot", "stem", "stairs") ||
+  if (str_equals_any(kind, "line", "scatter", "pie", "polar", "polar_histogram", "polar_heatmap", "imshow", "hist",
+                     "barplot", "stem", "stairs") ||
       std::find(kinds_3d.begin(), kinds_3d.end(), kind) != kinds_3d.end())
     return false;
 
@@ -715,7 +715,7 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
   GRM::Render::getFigureSize(&pixel_width, &pixel_height, nullptr, nullptr);
   aspect_ratio_ws = (double)pixel_width / pixel_height;
 
-  if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
+  if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
     {
       double extent;
 
@@ -735,9 +735,8 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
 
   // TODO: add cases for left and bottom margin so side_plots can be placed there
   left_margin = y_label_margin ? 0.05 : 0;
-  if (str_equals_any(kind.c_str(), 13, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface",
-                     "tricontour", "trisurface", "volume", "marginal_heatmap", "quiver", "polar_heatmap",
-                     "nonuniformpolar_heatmap"))
+  if (str_equals_any(kind, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface", "tricontour",
+                     "trisurface", "volume", "marginal_heatmap", "quiver", "polar_heatmap", "nonuniformpolar_heatmap"))
     {
       right_margin = (vp1 - vp0) * 0.1;
     }
@@ -800,9 +799,9 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
               left_margin += 0.5 * diff;
             }
         }
-      else if (str_equals_any(kind.c_str(), 13, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap",
-                              "surface", "tricontour", "trisurface", "volume", "marginal_heatmap", "quiver",
-                              "polar_heatmap", "nonuniformpolar_heatmap") &&
+      else if (str_equals_any(kind, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface",
+                              "tricontour", "trisurface", "volume", "marginal_heatmap", "quiver", "polar_heatmap",
+                              "nonuniformpolar_heatmap") &&
                aspect_ratio_ws <= 1.2)
         {
           // TODO: Overwork this condition and max value workaround
@@ -837,7 +836,7 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
   viewport[2] = vp2 + (0.075 + bottom_margin) * (vp3 - vp2);
   viewport[3] = vp2 + (0.975 - top_margin) * (vp3 - vp2);
 
-  if (str_equals_any(kind.c_str(), 4, "line", "stairs", "scatter", "stem"))
+  if (str_equals_any(kind, "line", "stairs", "scatter", "stem"))
     {
       double w, h;
       int location = PLOT_DEFAULT_LOCATION;
@@ -864,7 +863,7 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
         }
     }
 
-  if (str_equals_any(kind.c_str(), 5, "pie", "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
+  if (str_equals_any(kind, "pie", "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
     {
       double x_center, y_center, r;
 
@@ -1955,8 +1954,8 @@ static void getMajorCount(const std::shared_ptr<GRM::Element> &element, const st
     }
   else
     {
-      if (str_equals_any(kind.c_str(), 9, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurface",
-                         "polar_heatmap", "nonuniformpolar_heatmap", "volume"))
+      if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurface", "polar_heatmap",
+                         "nonuniformpolar_heatmap", "volume"))
         {
           major_count = 2;
         }
@@ -3854,8 +3853,7 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
         }
     }
 
-  if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
-                     "isosurface"))
+  if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume", "isosurface"))
     {
       auto zmin = static_cast<double>(element->getAttribute("_z_lim_min"));
       auto zmax = static_cast<double>(element->getAttribute("_z_lim_max"));
@@ -4432,7 +4430,7 @@ void GRM::Render::processWindow(const std::shared_ptr<GRM::Element> &element)
       getPlotParent(plot_element);
       auto kind = static_cast<std::string>(plot_element->getAttribute("kind"));
 
-      if (str_equals_any(kind.c_str(), 4, "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
+      if (str_equals_any(kind, "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
         {
           gr_setwindow(-1, 1, -1, 1);
         }
@@ -4440,8 +4438,7 @@ void GRM::Render::processWindow(const std::shared_ptr<GRM::Element> &element)
         {
           if (kind != "pie") gr_setwindow(xmin, xmax, ymin, ymax);
         }
-      if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
-                         "isosurface"))
+      if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume", "isosurface"))
         {
           auto zmin = static_cast<double>(element->getAttribute("window_z_min"));
           auto zmax = static_cast<double>(element->getAttribute("window_z_max"));
@@ -4567,11 +4564,11 @@ void GRM::Render::calculateCharHeight(const std::shared_ptr<GRM::Element> &eleme
   GRM::Render::getFigureSize(&pixel_width, &pixel_height, nullptr, nullptr);
   double aspect_ratio_ws = (double)pixel_width / pixel_height;
 
-  if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
+  if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
     {
       char_height = PLOT_3D_CHAR_HEIGHT;
     }
-  else if (str_equals_any(kind.c_str(), 4, "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
+  else if (str_equals_any(kind, "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
     {
       char_height = PLOT_POLAR_CHAR_HEIGHT;
     }
@@ -4761,7 +4758,7 @@ static void processXTickLabels(const std::shared_ptr<GRM::Element> &element)
       gr_wctondc(&x_left, &null);
       gr_wctondc(&x_right, &null);
       available_width = x_right - x_left;
-      if (str_equals_any(kind.c_str(), 4, "barplot", "hist", "stem", "stairs")) offset = 0;
+      if (str_equals_any(kind, "barplot", "hist", "stem", "stairs")) offset = 0;
       for (int i = 1; i <= x_tick_labels.size(); i++)
         {
           x = i - offset;
@@ -8873,7 +8870,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
   if (group->hasAttribute("norm"))
     {
       norm = static_cast<std::string>(group->getAttribute("norm"));
-      if (!str_equals_any(norm.c_str(), 6, "count", "countdensity", "pdf", "probability", "cumcount", "cdf"))
+      if (!str_equals_any(norm, "count", "countdensity", "pdf", "probability", "cumcount", "cdf"))
         {
           logger((stderr, "Got keyword \"norm\"  with invalid value \"%s\"\n", norm.c_str()));
         }
@@ -9004,7 +9001,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
       classes.resize(num_bins);
 
       // bin_counts is affected by cumulative norms --> bin_counts are summed in later bins
-      if (str_equals_any(norm.c_str(), 2, "cdf", "cumcount"))
+      if (str_equals_any(norm, "cdf", "cumcount"))
         {
           for (i = 0; i < num_bins; ++i)
             {
@@ -9069,7 +9066,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
 
           // differentiate between cumulative and non-cumulative norms
           classes[x] = observations;
-          if (x != 0 && str_equals_any(norm.c_str(), 2, "cdf", "cumcount")) classes[x] += classes[x - 1];
+          if (x != 0 && str_equals_any(norm, "cdf", "cumcount")) classes[x] += classes[x - 1];
           // update the total number of observations; used for some norms
           total_observations += observations;
         }
@@ -9086,8 +9083,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
         {
           max = max_observations * 1.0 / (total_observations * bin_width);
         }
-      else if (num_bin_edges != 0 &&
-               str_equals_any(norm.c_str(), 2, "pdf", "countdensity")) // calc maximum with given bin_edges
+      else if (num_bin_edges != 0 && str_equals_any(norm, "pdf", "countdensity")) // calc maximum with given bin_edges
         {
           for (int i = 0; i < num_bins; ++i)
             {
@@ -9101,7 +9097,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
               if (temp_max > max) max = temp_max;
             }
         }
-      else if (str_equals_any(norm.c_str(), 2, "probability", "cdf"))
+      else if (str_equals_any(norm, "probability", "cdf"))
         {
           max = max_observations * 1.0 / total_observations;
         }
@@ -9255,7 +9251,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
             rectlist[class_nr] = 0.0;
         }
 
-      if (str_equals_any(norm.c_str(), 2, "probability", "cdf"))
+      if (str_equals_any(norm, "probability", "cdf"))
         {
           count /= total_observations;
         }
@@ -9818,7 +9814,7 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
 
           total = static_cast<int>(element->getAttribute("total"));
 
-          if (str_equals_any(norm.c_str(), 2, "probability", "cdf"))
+          if (str_equals_any(norm, "probability", "cdf"))
             norm_factor = total;
           else if (num_bin_edges == 0 && norm == "pdf")
             norm_factor = total * bin_width;
@@ -12466,7 +12462,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
       kind = static_cast<std::string>(element->getAttribute("kind"));
       if (!string_map_at(fmt_map, static_cast<const char *>(kind.c_str()), static_cast<const char **>(&fmt)))
         throw NotFoundError("Invalid kind was given.\n");
-      if (!str_equals_any(kind.c_str(), 2, "pie", "polar_histogram"))
+      if (!str_equals_any(kind, "pie", "polar_histogram"))
         {
           current_component_name = data_component_names.begin();
           current_range_keys = range_keys;
@@ -12485,7 +12481,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
               if (!element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_min") ||
                   !element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_max") ||
-                  str_equals_any(kind.c_str(), 3, "heatmap", "marginal_heatmap", "polar_heatmap"))
+                  str_equals_any(kind, "heatmap", "marginal_heatmap", "polar_heatmap"))
                 {
                   std::shared_ptr<GRM::Element> series_parent = central_region;
                   if (kind == "marginal_heatmap") series_parent = element;
@@ -12549,9 +12545,8 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                               current_max_component = y_length - 1;
                             }
                           else if (ends_with(series->localName(), kind) &&
-                                   str_equals_any(kind.c_str(), 4, "heatmap", "marginal_heatmap", "polar_heatmap",
-                                                  "surface") &&
-                                   str_equals_any((*current_component_name).c_str(), 2, "x", "y"))
+                                   str_equals_any(kind, "heatmap", "marginal_heatmap", "polar_heatmap", "surface") &&
+                                   str_equals_any((*current_component_name), "x", "y"))
                             {
                               /* in this case `x` or `y` (or both) are missing
                                * -> set the current grm_min/max_component to the dimensions of `z`
@@ -12824,7 +12819,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
           element->setAttribute("_z_lim_min", min_component);
           element->setAttribute("_z_lim_max", max_component);
         }
-      else if (str_equals_any(kind.c_str(), 3, "imshow", "isosurface", "volume"))
+      else if (str_equals_any(kind, "imshow", "isosurface", "volume"))
         {
           /* Iterate over `x` and `y` range keys (and `z` depending on `kind`) */
           current_range_keys = range_keys;
@@ -12876,7 +12871,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                 {
                   if (!starts_with(series->localName(), "series")) continue;
                   if (series->hasAttribute("style")) style = static_cast<std::string>(series->getAttribute("style"));
-                  if (str_equals_any(style.c_str(), 2, "lined", "stacked"))
+                  if (str_equals_any(style, "lined", "stacked"))
                     {
                       x_max = series_count + 1;
                     }
@@ -12903,7 +12898,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                       xmin = static_cast<double>(series->getAttribute("x_range_min"));
                       xmax = static_cast<double>(series->getAttribute("x_range_max"));
                       double step_x = (xmax - xmin) / (current_point_count - 1);
-                      if (!str_equals_any(style.c_str(), 2, "lined", "stacked"))
+                      if (!str_equals_any(style, "lined", "stacked"))
                         {
                           x_min = xmin - step_x;
                           x_max = xmax + step_x;
@@ -13047,7 +13042,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               y_max = static_cast<double>(element->getAttribute("y_lim_max"));
             }
         }
-      else if (str_equals_any(kind.c_str(), 2, "stem", "stairs"))
+      else if (str_equals_any(kind, "stem", "stairs"))
         {
           double x_min = 0.0, x_max = 0.0, y_min = 0.0, y_max = 0.0;
           std::string orientation = PLOT_DEFAULT_ORIENTATION;
@@ -13350,7 +13345,7 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
         }
       else
         {
-          if (str_equals_any(kind.c_str(), 3, "heatmap", "shade", "marginal_heatmap"))
+          if (str_equals_any(kind, "heatmap", "shade", "marginal_heatmap"))
             {
               tick_orientation = -1;
             }
@@ -13776,7 +13771,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
       };
 
   /* Modifier */
-  if (str_equals_any(element->localName().c_str(), 11, "axes_text_group", "central_region", "figure", "plot", "label",
+  if (str_equals_any(element->localName(), "axes_text_group", "central_region", "figure", "plot", "label",
                      "labels_group", "root", "side_region", "x_tick_label_group", "y_tick_label_group",
                      "layout_grid_element"))
     {
@@ -13831,9 +13826,9 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
       // TODO: something like series_contour shouldn't be in this list
       if (!automatic_update ||
           ((static_cast<int>(global_root->getAttribute("_modified")) &&
-            (str_equals_any(element->localName().c_str(), 33, "axes", "axes_3d", "cellarray", "colorbar", "draw_arc",
-                            "draw_image", "draw_rect", "fill_arc", "fill_area", "fill_rect", "grid", "grid_3d",
-                            "legend", "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
+            (str_equals_any(element->localName(), "axes", "axes_3d", "cellarray", "colorbar", "draw_arc", "draw_image",
+                            "draw_rect", "fill_arc", "fill_area", "fill_rect", "grid", "grid_3d", "legend",
+                            "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
                             "polyline_3d", "polymarker", "polymarker_3d", "series_contour", "series_contourf", "text",
                             "titles_3d", "coordinate_system", "series_hexbin", "series_isosurface", "series_quiver",
                             "series_shade", "series_surface", "series_tricontour", "series_trisurface",
@@ -13877,7 +13872,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
             {
               for (const auto &child : element->children())
                 {
-                  if (!str_equals_any(element->localName().c_str(), 9, "axes_text_group", "figure", "plot", "label",
+                  if (!str_equals_any(element->localName(), "axes_text_group", "figure", "plot", "label",
                                       "labels_group", "root", "x_tick_label_group", "y_tick_label_group",
                                       "layout_grid_element"))
                     {
@@ -14132,7 +14127,7 @@ static void applyCentralRegionDefaults(const std::shared_ptr<GRM::Element> &cent
     central_region->setAttribute("keep_window", PLOT_DEFAULT_KEEP_WINDOW);
   if ((!central_region->hasAttribute("space_3d_fov") || overwrite) && kinds_3d.count(kind) != 0)
     {
-      if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
+      if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
         {
           central_region->setAttribute("space_3d_fov", PLOT_DEFAULT_SPACE_3D_FOV);
         }
@@ -14143,7 +14138,7 @@ static void applyCentralRegionDefaults(const std::shared_ptr<GRM::Element> &cent
     }
   if ((!central_region->hasAttribute("space_3d_camera_distance") || overwrite) && kinds_3d.count(kind) != 0)
     {
-      if (str_equals_any(kind.c_str(), 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
+      if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
         {
           central_region->setAttribute("space_3d_camera_distance", PLOT_DEFAULT_SPACE_3D_DISTANCE);
         }
@@ -17261,9 +17256,9 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                 {
                   element->setAttribute("_update_required", true);
                   element->setAttribute("_delete_children", 1);
-                  if (str_equals_any(attr.c_str(), 20, "bin_edges", "bin_widths", "bins", "c", "draw_edges",
-                                     "inner_series", "levels", "marginal_heatmap_kind", "num_bins", "px", "py", "pz",
-                                     "stairs", "u", "v", "x", "x_colormap", "y", "y_colormap", "z"))
+                  if (str_equals_any(attr, "bin_edges", "bin_widths", "bins", "c", "draw_edges", "inner_series",
+                                     "levels", "marginal_heatmap_kind", "num_bins", "px", "py", "pz", "stairs", "u",
+                                     "v", "x", "x_colormap", "y", "y_colormap", "z"))
                     element->setAttribute("_delete_children", 2);
                   if (attr == "orientation")
                     {
