@@ -50,6 +50,7 @@ static std::map<std::string, const char *> key_to_types{
     {"marker_type", "i"},
     {"num_bins", "i"},
     {"normalization", "s"},
+    {"only_quadratic_aspect_ratio", "i"},
     {"orientation", "s"},
     {"phi_flip", "i"},
     {"phi_lim", "dd"},
@@ -594,7 +595,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     }
 
   grm_args_values(args, "kind", "s", &kind);
-  if ((strcmp(kind, "line") == 0 || (strcmp(kind, "scatter") == 0 && !scatter_with_z)) && (rows >= 50 && cols >= 50))
+  if ((strcmp(kind, "line") == 0 || (strcmp(kind, "scatter") == 0 && !scatter_with_z)) &&
+      ((rows >= 50 && cols >= 50) || (use_bins && rows >= 49 && cols >= 49)))
     {
       fprintf(stderr, "Too much data for %s plot - use heatmap instead\n", kind);
       kind = "heatmap";
@@ -605,6 +607,11 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       fprintf(stderr, "Too much data for %s plot - use volume instead\n", kind);
       kind = "volume";
       grm_args_push(args, "kind", "s", kind);
+    }
+
+  if (!str_equals_any(kind, "contour", "contourf", "heatmap", "imshow", "marginal_heatmap", "surface", "wireframe"))
+    {
+      use_bins = 0; // this parameter is only for surface and similar types
     }
 
   if (str_equals_any(kind, "contour", "contourf", "heatmap", "imshow", "marginal_heatmap", "surface", "wireframe"))
@@ -1373,10 +1380,6 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
     {
       fprintf(stderr, "Invalid plot type (%s) - fallback to line plot\n", kind.c_str());
       kind = "line";
-    }
-  if (!str_equals_any(kind, "contour", "contourf", "heatmap", "imshow", "marginal_heatmap", "surface", "wireframe"))
-    {
-      use_bins = 0; // this parameter is only for surface and similar types
     }
   grm_args_push(args, "kind", "s", kind.c_str());
   return 1;

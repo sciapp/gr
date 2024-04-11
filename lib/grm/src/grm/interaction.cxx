@@ -376,7 +376,8 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
                                                        "layout_grid",
                                                        "central_region",
                                                        "side_region",
-                                                       "marginal_heatmap_plot"};
+                                                       "marginal_heatmap_plot",
+                                                       "legend"};
 
   GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
@@ -1283,12 +1284,15 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
   gr_savestate();
   auto central_region = subplot_element->querySelectors("central_region");
   GRM::Render::processWindow(central_region);
-  if (central_region->hasAttribute("window_x_min"))
+  if (central_region->hasAttribute("viewport_x_min"))
     {
       gr_setviewport(static_cast<double>(central_region->getAttribute("viewport_x_min")),
                      static_cast<double>(central_region->getAttribute("viewport_x_max")),
                      static_cast<double>(central_region->getAttribute("viewport_y_min")),
                      static_cast<double>(central_region->getAttribute("viewport_y_max")));
+    }
+  if (central_region->hasAttribute("window_x_min") && kind != "pie")
+    {
       gr_setwindow(static_cast<double>(central_region->getAttribute("window_x_min")),
                    static_cast<double>(central_region->getAttribute("window_x_max")),
                    static_cast<double>(central_region->getAttribute("window_y_min")),

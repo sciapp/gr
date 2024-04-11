@@ -148,6 +148,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "keep_window",
       "marginal_heatmap_side_plot",
       "movable",
+      "only_quadratic_aspect_ratio",
       "phi_flip",
       "set_text_color_for_background",
       "space",
@@ -1871,6 +1872,7 @@ void GRPlotWidget::resizeEvent(QResizeEvent *event)
   mouse_move_selection = nullptr;
   amount_scrolled = 0;
   clicked.clear();
+  tooltips.clear();
   reset_pixmap();
 }
 
@@ -2903,6 +2905,7 @@ void GRPlotWidget::processTestCommandsFile()
               if (width_flag && height_flag)
                 {
                   window()->resize(width, height);
+                  tooltips.clear();
 
                   QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
                   return;
