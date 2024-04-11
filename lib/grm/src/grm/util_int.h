@@ -124,7 +124,10 @@ int is_equidistant_array(unsigned int length, const double *x);
 int is_int_number(const char *str);
 int str_to_uint(const char *str, unsigned int *value_ptr);
 int int_equals_any(int number, unsigned int n, ...);
-int str_equals_any(const char *str, unsigned int n, ...);
+#ifndef __cplusplus
+/* C++ code shall use the C++ version in `utilcpp_int.hxx` */
+int str_equals_any(const char *str, ...);
+#endif
 int str_equals_any_in_array(const char *str, const char **str_array);
 int uppercase_count(const char *str);
 char *str_filter(const char *str, const char *filter_chars);

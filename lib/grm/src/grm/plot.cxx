@@ -35,10 +35,10 @@ extern "C" {
 
 #include "plot_int.h"
 #include "grm/layout.hxx"
+#include "utilcpp_int.hxx"
 
 extern "C" {
 
-#include "util_int.h"
 
 #include "datatype/double_map_int.h"
 #include "datatype/string_array_map_int.h"
@@ -1068,11 +1068,11 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
   plot_process_font(subplot_args);
   plot_process_resample_method(subplot_args);
 
-  if (str_equals_any(kind, 2, "polar", "polar_histogram"))
+  if (str_equals_any(kind, "polar", "polar_histogram"))
     {
       plot_draw_polar_axes(subplot_args);
     }
-  else if (!str_equals_any(kind, 3, "pie", "polar_heatmap", "nonuniformpolar_heatmap"))
+  else if (!str_equals_any(kind, "pie", "polar_heatmap", "nonuniformpolar_heatmap"))
     {
       plot_draw_axes(subplot_args, 1);
     }
@@ -1291,7 +1291,7 @@ void plot_process_window(grm_args_t *subplot_args)
   if (grm_args_values(subplot_args, "y_flip", "i", &y_flip)) group->setAttribute("y_flip", y_flip);
   if (grm_args_values(subplot_args, "z_flip", "i", &z_flip)) group->setAttribute("z_flip", z_flip);
 
-  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
+  if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume"))
     {
       group->setAttribute("adjust_z_lim", true);
       global_render->setSpace3d(central_region, 30.0, 0.0);
@@ -1375,7 +1375,7 @@ void plot_post_subplot(grm_args_t *subplot_args)
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   if (grm_args_contains(subplot_args, "labels"))
     {
-      if (str_equals_any(kind, 4, "line", "stairs", "scatter", "stem"))
+      if (str_equals_any(kind, "line", "stairs", "scatter", "stem"))
         {
           plot_draw_legend(subplot_args);
         }
@@ -1388,7 +1388,7 @@ void plot_post_subplot(grm_args_t *subplot_args)
     {
       plot_draw_axes(subplot_args, 2);
     }
-  else if (str_equals_any(kind, 2, "polar_heatmap", "nonuniformpolar_heatmap"))
+  else if (str_equals_any(kind, "polar_heatmap", "nonuniformpolar_heatmap"))
     {
       plot_draw_polar_axes(subplot_args);
     }
@@ -3542,7 +3542,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   group->setAttribute("x_grid", x_grid);
   group->setAttribute("y_grid", y_grid);
 
-  if (str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume", "isosurface"))
+  if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume", "isosurface"))
     {
       type = "3d";
       grm_args_values(args, "z_grid", "i", &z_grid);

@@ -251,12 +251,12 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                   value = trim(token);
                 }
             }
-          if (str_equals_any(key.c_str(), 5, "title", "x_label", "y_label", "z_label", "resample_method"))
+          if (str_equals_any(key, "title", "x_label", "y_label", "z_label", "resample_method"))
             {
               const char *tmp;
               if (!grm_args_values(args, key.c_str(), "s", &tmp)) grm_args_push(args, key.c_str(), "s", value.c_str());
             }
-          else if (str_equals_any(key.c_str(), 2, "x_tick_labels", "y_tick_labels"))
+          else if (str_equals_any(key, "x_tick_labels", "y_tick_labels"))
             {
               std::vector<std::string> tick_labels;
               std::stringstream sv(value);
@@ -276,7 +276,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
               if (!grm_args_values(args, key.c_str(), "nS", &tmp_size, &tmp))
                 grm_args_push(args, key.c_str(), "nS", tick_labels.size(), (const char *)c_tick_label.data());
             }
-          else if (str_equals_any(key.c_str(), 7, "location", "x_log", "y_log", "z_log", "x_grid", "y_grid", "z_grid"))
+          else if (str_equals_any(key, "location", "x_log", "y_log", "z_log", "x_grid", "y_grid", "z_grid"))
             {
               try
                 {
@@ -291,8 +291,7 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
                   return ERROR_PARSE_INT;
                 }
             }
-          else if (str_equals_any(key.c_str(), 8, "phi_lim", "r_lim", "x_lim", "y_lim", "z_lim", "x_range", "y_range",
-                                  "z_range"))
+          else if (str_equals_any(key, "phi_lim", "r_lim", "x_lim", "y_lim", "z_lim", "x_range", "y_range", "z_range"))
             {
               std::stringstream sv(value);
               std::string value1;
@@ -601,14 +600,14 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       kind = "heatmap";
       grm_args_push(args, "kind", "s", kind);
     }
-  if (!str_equals_any(kind, 3, "isosurface", "quiver", "volume") && depth >= 1)
+  if (!str_equals_any(kind, "isosurface", "quiver", "volume") && depth >= 1)
     {
       fprintf(stderr, "Too much data for %s plot - use volume instead\n", kind);
       kind = "volume";
       grm_args_push(args, "kind", "s", kind);
     }
 
-  if (str_equals_any(kind, 7, "contour", "contourf", "heatmap", "imshow", "marginal_heatmap", "surface", "wireframe"))
+  if (str_equals_any(kind, "contour", "contourf", "heatmap", "imshow", "marginal_heatmap", "surface", "wireframe"))
     {
       std::vector<double> xi(cols), yi(rows), zi(rows * cols);
 
@@ -755,7 +754,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           grm_args_push(args, "labels", "nS", cols - err, labels_c.data());
         }
     }
-  else if (str_equals_any(kind, 2, "isosurface", "volume"))
+  else if (str_equals_any(kind, "isosurface", "volume"))
     {
       int i, j, k;
       std::vector<double> data(rows * cols * depth);
@@ -775,7 +774,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       grm_args_push(args, "c", "nD", n, data.data());
       grm_args_push(args, "c_dims", "nI", 3, dims.data());
     }
-  else if (str_equals_any(kind, 4, "plot3", "scatter3", "tricontour", "trisurface") ||
+  else if (str_equals_any(kind, "plot3", "scatter3", "tricontour", "trisurface") ||
            (strcmp(kind, "scatter") == 0 && scatter_with_z))
     {
       double min_x, max_x, min_y, max_y, min_z, max_z;
@@ -824,7 +823,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       grm_args_push(args, "y", "nD", rows, file_data[depth][1].data());
       grm_args_push(args, "z", "nD", rows, file_data[depth][2].data());
     }
-  else if (str_equals_any(kind, 4, "barplot", "hist", "stem", "stairs"))
+  else if (str_equals_any(kind, "barplot", "hist", "stem", "stairs"))
     {
       std::vector<double> x(rows);
       double xmin, xmax, ymin, ymax;
@@ -885,7 +884,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             {
               fprintf(stderr, "Not enough data for error parameter\n");
             }
-          else if (str_equals_any(kind, 2, "barplot", "hist"))
+          else if (str_equals_any(kind, "barplot", "hist"))
             {
               if (!grm_args_values(args, "num_bins", "i", &nbins))
                 {
@@ -1019,7 +1018,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       grm_args_push(args, "u", "nD", cols * row, u.data());
       grm_args_push(args, "v", "nD", cols * row, v.data());
     }
-  else if (str_equals_any(kind, 2, "hexbin", "shade"))
+  else if (str_equals_any(kind, "hexbin", "shade"))
     {
       double min_x, min_y, max_x, max_y;
       if (cols > 2) fprintf(stderr, "Only the first 2 columns get displayed\n");
@@ -1162,7 +1161,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                                   /* sometimes a parameter can be given by different types, the if makes sure the
                                    * correct one is used */
                                   if ((pos_a = value.find(',')) < (pos_b = value.find('}')) &&
-                                      (str_equals_any(con->second, 2, "i", "d")))
+                                      (str_equals_any(con->second, "i", "d")))
                                     {
                                       if (con.operator++()->second != NULL) con = con.operator++();
                                     }
@@ -1249,8 +1248,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
                   size_t pos_a;
                   /* sometimes a parameter can be given by different types, the 'if' makes sure the correct one is used
                    */
-                  if ((pos_a = value.find(',')) != std::string::npos &&
-                      (str_equals_any(search->second, 2, "i", "d", "s")))
+                  if ((pos_a = value.find(',')) != std::string::npos && (str_equals_any(search->second, "i", "d", "s")))
                     {
                       if (search.operator++()->second != NULL) search = search.operator++();
                     }
@@ -1376,8 +1374,7 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
       fprintf(stderr, "Invalid plot type (%s) - fallback to line plot\n", kind.c_str());
       kind = "line";
     }
-  if (!str_equals_any(kind.c_str(), 7, "contour", "contourf", "heatmap", "imshow", "marginal_heatmap", "surface",
-                      "wireframe"))
+  if (!str_equals_any(kind, "contour", "contourf", "heatmap", "imshow", "marginal_heatmap", "surface", "wireframe"))
     {
       use_bins = 0; // this parameter is only for surface and similar types
     }

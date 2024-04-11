@@ -7,7 +7,7 @@
 #include "args_int.h"
 #include "interaction_int.h"
 #include "plot_int.h"
-#include "util_int.h"
+#include "utilcpp_int.hxx"
 #include "gr.h"
 #include "grm/dom_render/render.hxx"
 #include <grm/dom_render/graphics_tree/util.hxx>
@@ -762,7 +762,7 @@ int grm_input(const grm_args_t *input_args)
             {
               double focus_x, focus_y;
 
-              if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
+              if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
                                  "isosurface"))
                 {
                   /*
@@ -789,7 +789,7 @@ int grm_input(const grm_args_t *input_args)
             {
               double focus_x, focus_y;
 
-              if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
+              if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
                                  "isosurface"))
                 {
                   /*
@@ -849,7 +849,7 @@ int grm_input(const grm_args_t *input_args)
               double ndc_xshift, ndc_yshift, rotation, tilt;
               int shift_pressed;
 
-              if (str_equals_any(kind.c_str(), 7, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
+              if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume",
                                  "isosurface"))
                 {
                   if (grm_args_values(input_args, "shift_pressed", "i", &shift_pressed) && shift_pressed)
@@ -999,9 +999,8 @@ int grm_is3d(const int x, const int y)
 
   auto subplot_element = get_subplot_from_ndc_points_using_dom(1, &ndc_x, &ndc_y);
 
-  if (subplot_element &&
-      str_equals_any(static_cast<std::string>(subplot_element->getAttribute("kind")).c_str(), 7, "wireframe", "surface",
-                     "plot3", "scatter3", "trisurface", "volume", "isosurface"))
+  if (subplot_element && str_equals_any(static_cast<std::string>(subplot_element->getAttribute("kind")), "wireframe",
+                                        "surface", "plot3", "scatter3", "trisurface", "volume", "isosurface"))
     {
       return 1;
     }
@@ -1272,8 +1271,8 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
         }
     }
   if (subplot_element == nullptr ||
-      !str_equals_any(kind.c_str(), 13, "line", "scatter", "stem", "stairs", "heatmap", "marginal_heatmap", "contour",
-                      "imshow", "contourf", "pie", "hexbin", "shade", "quiver"))
+      !str_equals_any(kind, "line", "scatter", "stem", "stairs", "heatmap", "marginal_heatmap", "contour", "imshow",
+                      "contourf", "pie", "hexbin", "shade", "quiver"))
     {
       tooltip_callback(mouse_x, mouse_y, info);
       return ERROR_NONE;
@@ -1425,8 +1424,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
         {
           for (const auto &current_series_group : current_series_group_vec)
             {
-              if (str_equals_any(kind.c_str(), 7, "hexbin", "imshow", "contour", "contourf", "heatmap", "quiver",
-                                 "shade"))
+              if (str_equals_any(kind, "hexbin", "imshow", "contour", "contourf", "heatmap", "quiver", "shade"))
                 {
                   current_series_vec.push_back(current_series_group);
                 }
@@ -1467,7 +1465,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
           auto x_key = static_cast<std::string>(current_series->getAttribute(x_key_string));
           auto y_key = static_cast<std::string>(current_series->getAttribute(y_key_string));
 
-          if (!str_equals_any(kind.c_str(), 7, "hexbin", "quiver", "line", "scatter", "stem", "stairs", "shade"))
+          if (!str_equals_any(kind, "hexbin", "quiver", "line", "scatter", "stem", "stairs", "shade"))
             {
               if (!current_series->hasAttribute(z_key_string))
                 {
@@ -1492,14 +1490,13 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
             }
           std::vector<double> z_series_vec;
 
-          if (str_equals_any(kind.c_str(), 5, "heatmap", "marginal_heatmap", "contour", "imshow", "contourf"))
+          if (str_equals_any(kind, "heatmap", "marginal_heatmap", "contour", "imshow", "contourf"))
             {
               z_series_vec = GRM::get<std::vector<double>>((*context)[z_key]);
               z_length = z_series_vec.size();
             }
 
-          if (!str_equals_any(kind.c_str(), 6, "heatmap", "marginal_heatmap", "contour", "imshow", "contourf",
-                              "quiver"))
+          if (!str_equals_any(kind, "heatmap", "marginal_heatmap", "contour", "imshow", "contourf", "quiver"))
             {
               for (i = 0; i < x_series_vec.size(); i++)
                 {
@@ -1626,7 +1623,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
               mindiff = 0;
               x_series_idx = (mouse_x - x_0) / x_step;
               if (static_cast<int>(subplot_element->getAttribute("x_log")) &&
-                  str_equals_any(kind.c_str(), 4, "heatmap", "marginal_heatmap", "contour", "contourf"))
+                  str_equals_any(kind, "heatmap", "marginal_heatmap", "contour", "contourf"))
                 {
                   double tmp = 0;
                   x_series_idx = x_offset;
@@ -1640,7 +1637,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
               y_series_idx = (mouse_y - y_0) / y_step;
               if (static_cast<int>(subplot_element->getAttribute("y_log")) &&
-                  str_equals_any(kind.c_str(), 4, "heatmap", "marginal_heatmap", "contour", "contourf"))
+                  str_equals_any(kind, "heatmap", "marginal_heatmap", "contour", "contourf"))
                 {
                   double tmp = 0;
                   y_series_idx = y_offset;

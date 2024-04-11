@@ -33,4 +33,9 @@ void listcomprehension(double factor, double (*pFunction)(double), std::vector<d
 
 std::complex<double> moivre(double r, int x, int n);
 
+template <typename... Args> constexpr bool str_equals_any(std::string_view target, const Args &...args)
+{
+  return ((target == args) || ...);
+}
+
 #endif // GRM_UTIL_INT_HXX_INCLUDED
