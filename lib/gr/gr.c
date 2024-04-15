@@ -181,6 +181,7 @@ typedef struct
   int resize_behaviour;
   int clip_region;
   double alpha;
+  double txoff[2];
 } state_list;
 
 typedef struct
@@ -298,6 +299,8 @@ static int predef_colors[20] = {9, 2, 0, 1, 16, 3, 15, 8, 6, 10, 11, 4, 12, 13, 
 static state_list_vector *app_context = NULL;
 
 static state_list *ctx = NULL, *state = NULL;
+
+static double txoff[2] = {0, 0};
 
 #define CONTEXT_VECTOR_INCREMENT 8
 
@@ -1437,6 +1440,8 @@ static void initialize(int state)
   flag_stream = flag_graphics || debug != NULL;
 
   setscale(options);
+
+  txoff[0] = txoff[1] = 0;
 
   math_font = GR_DEFAULT_MATH_FONT;
 }
@@ -12275,16 +12280,20 @@ static int is_math_text(char *s)
 void gr_text(double x, double y, char *string)
 {
   int errind, tnr;
+  double tx, ty;
 
   check_autoinit;
 
   gks_inq_current_xformno(&errind, &tnr);
   if (tnr != NDC) gks_select_xform(NDC);
 
+  tx = x + txoff[0];
+  ty = y + txoff[1];
+
   if (strchr(string, '\n') != NULL || is_math_text(string))
-    text_impl(x, y, string, 1, 0, NULL, NULL);
+    text_impl(tx, ty, string, 1, 0, NULL, NULL);
   else
-    gks_text(x, y, string);
+    gks_text(tx, ty, string);
 
   if (tnr != NDC) gks_select_xform(tnr);
 
@@ -12338,6 +12347,7 @@ void gr_textx(double x, double y, char *string, int opts)
 void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
 {
   int errind, tnr, n, wkid;
+  double tx, ty;
   double cpx, cpy;
 
   check_autoinit;
@@ -12345,12 +12355,15 @@ void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
   gks_inq_current_xformno(&errind, &tnr);
   if (tnr != NDC) gks_select_xform(NDC);
 
+  tx = x + txoff[0];
+  ty = y + txoff[1];
+
   if (strchr(string, '\n') != NULL || is_math_text(string))
-    text_impl(x, y, string, 1, 1, tbx, tby);
+    text_impl(tx, ty, string, 1, 1, tbx, tby);
   else
     {
       gks_inq_open_ws(1, &errind, &n, &wkid);
-      gks_inq_text_extent(wkid, x, y, string, &errind, &cpx, &cpy, tbx, tby);
+      gks_inq_text_extent(wkid, tx, ty, string, &errind, &cpx, &cpy, tbx, tby);
     }
 
   if (tnr != NDC) gks_select_xform(tnr);
@@ -12520,6 +12533,9 @@ void gr_savestate(void)
       gks_inq_clip_xform(&errind, &s->clip_tnr);
       gks_inq_resize_behaviour(&s->resize_behaviour);
       gks_inq_clip_region(&errind, &s->clip_region);
+
+      s->txoff[0] = txoff[0];
+      s->txoff[1] = txoff[1];
     }
   else
     fprintf(stderr, "attempt to save state beyond implementation limit\n");
@@ -12575,6 +12591,9 @@ void gr_restorestate(void)
       gks_set_resize_behaviour(s->resize_behaviour);
       gks_set_clip_region(s->clip_region);
 
+      s->txoff[0] = txoff[0];
+      s->txoff[1] = txoff[1];
+
       if (ctx)
         {
           ctx->ltype = s->ltype;
@@ -12615,6 +12634,9 @@ void gr_restorestate(void)
           ctx->clip_tnr = s->clip_tnr;
           ctx->resize_behaviour = s->resize_behaviour;
           ctx->clip_region = s->clip_region;
+
+          ctx->txoff[0] = s->txoff[0];
+          ctx->txoff[1] = s->txoff[1];
         }
     }
   else
@@ -12695,6 +12717,9 @@ void gr_selectcontext(int context)
           ctx->clip_tnr = 0;
           ctx->resize_behaviour = GKS_K_RESIZE;
           ctx->clip_region = GKS_K_REGION_RECTANGLE;
+
+          ctx->txoff[0] = 0;
+          ctx->txoff[1] = 0;
         }
       else
         {
@@ -12737,6 +12762,9 @@ void gr_selectcontext(int context)
       gks_select_clip_xform(ctx->clip_tnr);
       gks_set_resize_behaviour(ctx->resize_behaviour);
       gks_set_clip_region(ctx->clip_region);
+
+      txoff[0] = ctx->txoff[0];
+      txoff[1] = ctx->txoff[1];
     }
   else
     {
@@ -12812,6 +12840,9 @@ void gr_savecontext(int context)
       gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
       gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
       gks_inq_clip_region(&errind, &app_context->buf[id]->clip_region);
+
+      app_context->buf[id]->txoff[0] = txoff[0];
+      app_context->buf[id]->txoff[1] = txoff[1];
     }
   else
     {
@@ -12886,6 +12917,9 @@ void gr_destroycontext(int context)
       gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
       gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
       gks_inq_clip_region(&errind, &app_context->buf[id]->clip_region);
+
+      app_context->buf[id]->txoff[0] = txoff[0];
+      app_context->buf[id]->txoff[1] = txoff[1];
     }
   else
     {
@@ -14077,6 +14111,16 @@ void gr_inqclipregion(int *region)
   check_autoinit;
 
   gks_inq_clip_region(&errind, region);
+}
+
+void gr_settextoffset(double xoff, double yoff)
+{
+  check_autoinit;
+
+  txoff[0] = xoff;
+  txoff[1] = yoff;
+
+  if (flag_stream) gr_writestream("<settextoffset xoff=\"%g\" yoff=\"%g\"/>\n", xoff, yoff);
 }
 
 /*!
