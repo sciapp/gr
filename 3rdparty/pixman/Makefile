@@ -30,6 +30,7 @@ $(PREFIX)/src/pixman-$(VERSION).tar.gz:
 
 $(PREFIX)/src/pixman-$(VERSION)/configure: $(PREFIX)/src/pixman-$(VERSION).tar.gz
 	cd $(PREFIX)/src/ && tar -xf pixman-$(VERSION).tar.gz
+	cd $(PREFIX)/src/pixman-$(VERSION) && patch -p1 < $(CURDIR)/arm-a64-neon.patch
 	touch $@
 
 $(PREFIX)/src/pixman-$(VERSION)/Makefile: $(PREFIX)/src/pixman-$(VERSION)/configure
@@ -41,7 +42,6 @@ $(PREFIX)/src/pixman-$(VERSION)/Makefile: $(PREFIX)/src/pixman-$(VERSION)/config
 		--with-pic \
 		--disable-dependency-tracking \
                 --disable-silent-rules \
-                --disable-arm-a64-neon \
 		$(PIXMAN_EXTRA_CONFIGURE_FLAGS)
 	# Do not build tests or demos
 	cp dummy.Makefile $(PREFIX)/src/pixman-$(VERSION)/test/Makefile
