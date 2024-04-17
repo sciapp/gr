@@ -9364,11 +9364,12 @@ static void rebin(int nx, int ny, double *px, double *py, double *pz, int *nxq, 
  *
  * \param[in] nx The number of points along the X axis
  * \param[in] ny The number of points along the Y axis
- * \param[in] nh The number of height values
+ * \param[in] nh The number of height values. If less than 1, 16 evenly spaced
+ *               values will be used instead of h, which can safely be NULL
  * \param[in] px A pointer to the X coordinates
  * \param[in] py A pointer to the Y coordinates
  * \param[in] h A pointer to the height values
- * \param[in] pz A pointer to the Z coordinates
+ * \param[in] pz A pointer to the Z coordinates (at least nx * ny)
  * \param[in] major_h Directs GR to label contour lines. For example, a value of
  *                    3 would label every third line. A value of 1 will label
  *                    every line. A value of 0 produces no labels. To produce
@@ -9486,9 +9487,9 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
  * \param[in] nh The number of height values. 0 for default contours.
  * \param[in] px A pointer to the X coordinates
  * \param[in] py A pointer to the Y coordinates
- * \param[in] h A pointer to the height values. If NULL, use nh evenly distributed height values between
- *                      minimum and maximum Z value.
- * \param[in] pz A pointer to the Z coordinates
+ * \param[in] h A pointer to the height values in ascending order. If NULL, use nh
+ *              evenly distributed height values between minimum and maximum Z value.
+ * \param[in] pz A pointer to the Z coordinates (at least nx * ny)
  * \param[in] major_h Directs GR to label contour lines. For example, a value of
  *                    3 would label every third line. A value of 1 will label
  *                    every line. A value of 0 produces no labels. To produce
