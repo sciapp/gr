@@ -514,7 +514,8 @@ int grm_input(const grm_args_t *input_args)
                 {
                   auto coordinate_system = subplot_element->querySelectors("coordinate_system");
                   if (coordinate_system->hasAttribute("plot_type") &&
-                      static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "2d")
+                      (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "2d" ||
+                       static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar"))
                     {
                       logger((stderr, "Reset single subplot coordinate ranges\n"));
                       subplot_element->setAttribute("reset_ranges", 1);
