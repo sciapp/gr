@@ -95,6 +95,16 @@ typedef enum
   GR_MODEL_HSV
 } color_model_t;
 
+typedef enum
+{
+  GR_STOP = 0,
+  GR_MOVETO = 1,
+  GR_LINETO = 2,
+  GR_CURVE3 = 3,
+  GR_CURVE4 = 4,
+  GR_CLOSEPOLY = 0x4f,
+} path_code_t;
+
 typedef struct
 {
   double x, y;
