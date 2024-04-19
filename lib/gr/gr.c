@@ -364,14 +364,6 @@ static unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
 
 #define POINT_INC 2048
 
-/* Path definitions */
-#define STOP 0
-#define MOVETO 1
-#define LINETO 2
-#define CURVE3 3
-#define CURVE4 4
-#define CLOSEPOLY 0x4f
-
 #define RESOLUTION_X 4096
 #define BACKGROUND 0
 
@@ -11004,8 +10996,8 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
 
   if (codes == NULL)
     {
-      memset(opcode, LINETO, n);
-      opcode[0] = MOVETO;
+      memset(opcode, GR_LINETO, n);
+      opcode[0] = GR_MOVETO;
     }
   else
     memmove(opcode, codes, n);
@@ -11019,7 +11011,7 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
         }
       else
         {
-          opcode[j] = nan ? MOVETO : opcode[i];
+          opcode[j] = nan ? GR_MOVETO : opcode[i];
           nan = 0;
         }
       xpoint[j] = vertices[i].x;
@@ -11030,26 +11022,26 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
   for (i = 0; i < j; i++)
     {
       code = opcode[i];
-      if (code == STOP)
+      if (code == GR_STOP)
         break;
-      else if (code == MOVETO)
+      else if (code == GR_MOVETO)
         {
           closepath(fill);
           addpath(xpoint[i], ypoint[i]);
         }
-      else if (code == LINETO)
+      else if (code == GR_LINETO)
         addpath(xpoint[i], ypoint[i]);
-      else if (code == CURVE3)
+      else if (code == GR_CURVE3)
         {
           quad_bezier(xpoint + i - 1, ypoint + i - 1, 20);
           i += 1;
         }
-      else if (code == CURVE4)
+      else if (code == GR_CURVE4)
         {
           cubic_bezier(xpoint + i - 1, ypoint + i - 1, 20);
           i += 2;
         }
-      else if (code == CLOSEPOLY)
+      else if (code == GR_CLOSEPOLY)
         {
           addpath(xpoint[i], ypoint[i]);
           closepath(fill);
