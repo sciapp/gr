@@ -10469,7 +10469,7 @@ void gr_beginprint(char *pathname)
  * \param[in] pathname Filename for the print device.
  * \param[in] mode Output mode (Color, GrayScale)
  * \param[in] format Output format (see table)
- * \param[in] orientation Page orientation (Landscape, Portait)
+ * \param[in] orientation Page orientation (Landscape, Portrait)
  *
  * \verbatim embed:rst:leading-asterisk
  *
