@@ -156,6 +156,12 @@ typedef struct
   hexbin_2pass_priv_t *priv;
 } hexbin_2pass_t;
 
+typedef struct
+{
+  int scientific;
+  int decimal_digits;
+} format_reference_t;
+
 DLLEXPORT void gr_initgr(void);
 DLLEXPORT int gr_debug(void);
 DLLEXPORT void gr_opengks(void);
@@ -387,6 +393,9 @@ DLLEXPORT void gr_inqmathfont(int *font);
 DLLEXPORT void gr_setclipregion(int region);
 DLLEXPORT void gr_inqclipregion(int *region);
 DLLEXPORT void gr_settextoffset(double xoff, double yoff);
+DLLEXPORT char *gr_ftoa(char *string, double value, format_reference_t *reference);
+DLLEXPORT void gr_getformat(format_reference_t *result, double origin, double min, double max, double tick_width,
+                            int major);
 
 #ifdef __cplusplus
 }
