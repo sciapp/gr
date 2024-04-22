@@ -53,8 +53,8 @@ typedef __int64 int64_t;
 #define round(x) (((x) < 0) ? ceil((x)-.5) : floor((x) + .5))
 #endif
 
-format_reference_t *str_get_format_reference(format_reference_t *result, double origin, double min, double max,
-                                             double tick_width, int major)
+str_format_reference_t *str_get_format_reference(str_format_reference_t *result, double origin, double min, double max,
+                                                 double tick_width, int major)
 
 /*
  * str_get_reference - Checks for each value between min and max (step-size: tick_width) if there is one value which
@@ -193,7 +193,7 @@ static char *str_write_decimal(char *result, int64_t mantissa, int decimal_point
 }
 
 
-char *str_ftoa(char *result, double value, format_reference_t *reference, int format_option)
+char *str_ftoa(char *result, double value, str_format_reference_t *reference, int format_option)
 
 /*
  * str_ftoa - Convert a real value to string in scientific notation. The reference is used to specify the number of
@@ -206,7 +206,7 @@ char *str_ftoa(char *result, double value, format_reference_t *reference, int fo
 
   int64_t exponent, decimal_places, mantissa;
 
-  format_reference_t local_reference;
+  str_format_reference_t local_reference;
 
   if (value == 0)
     {

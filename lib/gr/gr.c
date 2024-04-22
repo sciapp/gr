@@ -4883,13 +4883,19 @@ static char *replace_minus_sign(char *string)
   return string;
 }
 
-static char *gr_ftoa(char *string, double value, format_reference_t *reference)
+char *gr_ftoa(char *string, double value, format_reference_t *reference)
 {
   char *s;
 
-  s = str_ftoa(string, value, reference, scientific_format);
+  s = str_ftoa(string, value, (str_format_reference_t *)reference, scientific_format);
 
   return replace_minus_sign(s);
+}
+
+void gr_getformat(format_reference_t *result, double origin, double min_value, double max_value, double tick_width,
+                  int major)
+{
+  str_get_format_reference((str_format_reference_t *)result, origin, min_value, max_value, tick_width, major);
 }
 
 /*!
@@ -5085,7 +5091,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           start_pline(x_org, y_min);
 
-          str_get_format_reference(&format_reference, y_org, yi, y_max, y_tick, major_y);
+          gr_getformat(&format_reference, y_org, yi, y_max, y_tick, major_y);
 
           while (yi <= y_max + feps)
             {
@@ -5211,7 +5217,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
 
-          str_get_format_reference(&format_reference, x_org, xi, x_max, x_tick, major_x);
+          gr_getformat(&format_reference, x_org, xi, x_max, x_tick, major_x);
 
           /* draw X-axis */
 
@@ -7002,7 +7008,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(z_min / z_tick);
           zi = i * z_tick;
 
-          str_get_format_reference(&format_reference, z_org, zi, z_max, z_tick, major_z);
+          gr_getformat(&format_reference, z_org, zi, z_max, z_tick, major_z);
 
           /* draw Z-axis */
 
@@ -7204,7 +7210,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(y_min / y_tick);
           yi = i * y_tick;
 
-          str_get_format_reference(&format_reference, y_org, yi, y_max, y_tick, major_y);
+          gr_getformat(&format_reference, y_org, yi, y_max, y_tick, major_y);
 
           /* draw Y-axis */
 
@@ -7412,8 +7418,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
 
-
-          str_get_format_reference(&format_reference, x_org, xi, x_max, x_tick, major_x);
+          gr_getformat(&format_reference, x_org, xi, x_max, x_tick, major_x);
 
           /* draw X-axis */
 
@@ -10115,7 +10120,7 @@ void gr_colorbar(void)
   gks_set_clipping(GKS_K_NOCLIP);
 
   x = xmax + 0.01 * (xmax - xmin) / (vp[1] - vp[0]);
-  str_get_format_reference(&format_reference, 0, zmin, zmax, dz, 0);
+  gr_getformat(&format_reference, 0, zmin, zmax, dz, 0);
 
   for (i = 0; i <= nz; i++)
     {
