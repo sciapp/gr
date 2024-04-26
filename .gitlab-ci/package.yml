@@ -1,6 +1,6 @@
 packages-tar:
   stage: package
-  image: ubuntu:18.04
+  image: ubuntu:20.04
   variables:
     GIT_STRATEGY: none
   script:
