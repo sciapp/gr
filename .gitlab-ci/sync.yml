@@ -4,9 +4,9 @@ sync:
   variables:
     GIT_STRATEGY: none
   only:
-    - master@Scientific-IT-Systems/gr
-    - develop@Scientific-IT-Systems/gr
-    - tags@Scientific-IT-Systems/gr
+  - master@Scientific-IT-Systems/gr
+  - develop@Scientific-IT-Systems/gr
+  - tags@Scientific-IT-Systems/gr
   script:
   - chmod 644 Downloads/*.tar.gz
   - chmod 644 Downloads/*.js

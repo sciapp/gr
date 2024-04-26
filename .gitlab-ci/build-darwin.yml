@@ -1,8 +1,8 @@
 darwin-self-contained-iff1600:
   stage: build
   only:
-    - branches@Scientific-IT-Systems/gr
-    - tags@Scientific-IT-Systems/gr
+  - branches@Scientific-IT-Systems/gr
+  - tags@Scientific-IT-Systems/gr
   script:
   - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-macos-universal.tar.gz
   - tar xf cmake-3.23.0-macos-universal.tar.gz
