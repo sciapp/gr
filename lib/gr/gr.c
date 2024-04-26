@@ -13137,12 +13137,12 @@ static void arg_min_max(int *min_index, int *max_index, int n, const double *arr
 /*!
  * Reduces the number of points of the x and y array.
  *
- * @param[in] n the number of points of the x and y arrays
- * @param[in] x the x value array
- * @param[in] y the y value array
- * @param[in] points the requested number of points
- * @param[out] x_array the return array for the x values
- * @param[out] y_array the return array for the y values
+ * \param[in] n the number of points of the x and y arrays
+ * \param[in] x the x value array
+ * \param[in] y the y value array
+ * \param[in] points the requested number of points
+ * \param[out] x_array the return array for the x values
+ * \param[out] y_array the return array for the y values
  */
 void gr_reducepoints(int n, const double *x, const double *y, int points, double *x_array, double *y_array)
 {

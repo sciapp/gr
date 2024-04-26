@@ -508,10 +508,10 @@ int grm_plot_from_file(int argc, char **argv)
 /**
  * Allows to create a plot from a file. The file is holding the data and the container arguments for the plot.
  *
- * @param argc: number of elements inside argv.
- * @param argv: contains the parameter which specify the displayed plot. For example where the data is or which plot
+ * \param argc: number of elements inside argv.
+ * \param argv: contains the parameter which specify the displayed plot. For example where the data is or which plot
  * should be drawn.
- * @return 1 when there was no error, 0 if there was an error.
+ * \return 1 when there was no error, 0 if there was an error.
  */
 {
   grm_args_t *args;
@@ -529,11 +529,11 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
  * Allows to create an interactive plot from a file. The file is holding the data and the container arguments for the
  * plot.
  *
- * @param args: a grm container. Should be the container, which also defines the window.
- * @param argc: number of elements inside argv.
- * @param argv: contains the parameter which specify the displayed plot. For example where the data is or which plot
+ * \param args: a grm container. Should be the container, which also defines the window.
+ * \param argc: number of elements inside argv.
+ * \param argv: contains the parameter which specify the displayed plot. For example where the data is or which plot
  * should be drawn.
- * @return 1 when there was no error, 0 if there was an error.
+ * \return 1 when there was no error, 0 if there was an error.
  */
 {
   std::string s;
