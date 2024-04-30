@@ -121,7 +121,6 @@ packages-tar:
   - mv artifacts-freebsd13/include FreeBSD-x86_64/gr/
   - cp artifacts-js/gr.js FreeBSD-x86_64/gr/lib/
   - rm -rf artifacts-freebsd13
-  - mkdir -p Darwin-x86_64/gr/bin
   - mkdir -p Darwin-x86_64/gr/lib
   - mkdir -p Darwin-x86_64/gr/share/doc/grplot
   - mv artifacts-darwin-x86_64/grplot.man.md Darwin-x86_64/gr/share/doc/grplot/
@@ -133,6 +132,8 @@ packages-tar:
   - cp artifacts-js/gr.js Darwin-x86_64/gr/lib/
   - rm -rf artifacts-darwin-x86_64
   - mkdir -p Darwin-aarch64/gr/lib
+  - mkdir -p Darwin-aarch64/gr/share/doc/grplot
+  - mv artifacts-darwin-aarch64/grplot.man.md Darwin-aarch64/gr/share/doc/grplot/
   - mv artifacts-darwin-aarch64/*.dylib Darwin-aarch64/gr/lib/
   - mv artifacts-darwin-aarch64/*.so Darwin-aarch64/gr/lib/
   - mv artifacts-darwin-aarch64/fonts Darwin-aarch64/gr/
@@ -141,6 +142,8 @@ packages-tar:
   - cp artifacts-js/gr.js Darwin-aarch64/gr/lib/
   - rm -rf artifacts-darwin-aarch64
   - mkdir -p Darwin-universal/gr/lib
+  - mkdir -p Darwin-universal/gr/share/doc/grplot
+  - mv artifacts-darwin-universal/grplot.man.md Darwin-universal/gr/share/doc/grplot/
   - mv artifacts-darwin-universal/*.dylib Darwin-universal/gr/lib/
   - mv artifacts-darwin-universal/*.so Darwin-universal/gr/lib/
   - mv artifacts-darwin-universal/fonts Darwin-universal/gr/
