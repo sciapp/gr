@@ -172,6 +172,7 @@ err_t tobson_serialize(memwriter_t *memwriter, char *data_desc, const void *data
                        tojson_serialization_result_t *serial_result, tobson_shared_state_t *shared_state);
 void tobson_init_static_variables(void);
 err_t tobson_init_variables(int *add_data, int *add_data_without_separator, char **_data_desc, const char *data_desc);
+err_t tobson_write(memwriter_t *memwriter, const char *data_desc, ...);
 err_t tobson_write_vl(memwriter_t *memwriter, const char *data_desc, va_list *vl);
 err_t tobson_write_buf(memwriter_t *memwriter, const char *data_desc, const void *buffer, int apply_padding);
 err_t tobson_write_arg(memwriter_t *memwriter, const arg_t *arg);

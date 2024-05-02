@@ -2573,6 +2573,18 @@ err_t tobson_init_variables(int *add_data, int *add_data_without_separator, char
   return ERROR_NONE;
 }
 
+err_t tobson_write(memwriter_t *memwriter, const char *data_desc, ...)
+{
+  va_list vl;
+  err_t error;
+
+  va_start(vl, data_desc);
+  error = tobson_write_vl(memwriter, data_desc, &vl);
+  va_end(vl);
+
+  return error;
+}
+
 err_t tobson_write_vl(memwriter_t *memwriter, const char *data_desc, va_list *vl)
 {
   int add_data, add_data_without_separator;
