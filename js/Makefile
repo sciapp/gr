@@ -107,6 +107,7 @@ XERCESCDIR = ../3rdparty/xerces-c
              $(GRMDIR)/src/grm/utilcpp.o \
              $(GRMDIR)/src/grm/import.o \
              $(GRMDIR)/src/grm/datatype/double_map.o \
+             $(GRMDIR)/src/grm/datatype/size_t_list.o \
              $(GRMDIR)/src/grm/datatype/string_array_map.o \
              $(GRMDIR)/src/grm/datatype/string_list.o \
              $(GRMDIR)/src/grm/datatype/string_map.o \

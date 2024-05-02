@@ -30,6 +30,7 @@ UNAME := $(shell uname)
                src/grm/utilcpp.o \
                src/grm/import.o \
                src/grm/datatype/double_map.o \
+               src/grm/datatype/size_t_list.o \
                src/grm/datatype/string_array_map.o \
                src/grm/datatype/string_list.o \
                src/grm/datatype/string_map.o \
