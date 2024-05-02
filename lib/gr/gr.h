@@ -105,6 +105,16 @@ typedef enum
   GR_CLOSEPOLY = 0x4f,
 } path_code_t;
 
+typedef enum
+{
+  GR_XFORM_BOOLEAN = 0,
+  GR_XFORM_LINEAR = 1,
+  GR_XFORM_LOG = 2,
+  GR_XFORM_LOGLOG = 3,
+  GR_XFORM_CUBIC = 4,
+  GR_XFORM_EQUALIZED = 5,
+} xform_types_t;
+
 typedef struct
 {
   double x, y;
