@@ -14,6 +14,8 @@ extern "C" {
 #include "memwriter_int.h"
 #include "json_int.h"
 
+#include "datatype/size_t_list_int.h"
+
 
 /* ######################### internal interface ##################################################################### */
 
@@ -84,6 +86,7 @@ typedef struct
 {
   tojson_serialization_result_t serial_result;
   unsigned int struct_nested_level;
+  size_t_list_t *memwriter_object_start_offset_stack;
 } tobson_permanent_state_t;
 
 /* ========================= small helper functions ================================================================= */
@@ -156,6 +159,7 @@ err_t tobson_args_array(tobson_state_t *state);
 err_t tobson_read_array_length(tobson_state_t *state);
 err_t tobson_skip_bytes(tobson_state_t *state);
 err_t tobson_object(tobson_state_t *state);
+err_t tobson_open_object(memwriter_t *memwriter);
 err_t tobson_close_object(tobson_state_t *state);
 
 int tobson_get_member_count(const char *data_desc);

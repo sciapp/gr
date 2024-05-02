@@ -535,6 +535,7 @@ set(GRM_SOURCES
     lib/grm/src/grm/import.cxx
     lib/grm/src/grm/utilcpp.cxx
     lib/grm/src/grm/datatype/double_map.c
+    lib/grm/src/grm/datatype/size_t_list.c
     lib/grm/src/grm/datatype/string_array_map.c
     lib/grm/src/grm/datatype/string_list.c
     lib/grm/src/grm/datatype/string_map.c

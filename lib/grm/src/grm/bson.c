@@ -42,7 +42,7 @@ static int frombson_static_variables_initialized = 0;
 
 static err_t (*tobson_datatype_to_func[128])(tobson_state_t *);
 static int tobson_static_variables_initialized = 0;
-static tobson_permanent_state_t tobson_permanent_state = {complete, 0};
+static tobson_permanent_state_t tobson_permanent_state = {complete, 0, NULL};
 static char tobson_datatype_to_byte[128];
 static char null = 0x00;
 
@@ -1160,6 +1160,9 @@ err_t tobson_args_value(memwriter_t *memwriter, grm_args_t *args)
 {
   err_t error = ERROR_NONE;
 
+  /* write object start */
+  tobson_open_object(memwriter);
+
   tobson_permanent_state.serial_result = incomplete_at_struct_beginning;
   if ((error = tobson_write_args(memwriter, args)) != ERROR_NONE)
     {
@@ -2004,11 +2007,8 @@ err_t tobson_object(tobson_state_t *state)
   err_t error = ERROR_NONE;
 
   /* IMPORTANT: additional_type_info is altered after the unzip call! */
-  if ((error = tobson_unzip_membernames_and_datatypes(state->additional_type_info, &member_names, &data_types)) !=
-      ERROR_NONE)
-    {
-      goto cleanup;
-    }
+  error = tobson_unzip_membernames_and_datatypes(state->additional_type_info, &member_names, &data_types);
+  cleanup_if_error;
 
   member_name_ptr = member_names;
   data_type_ptr = data_types;
@@ -2020,7 +2020,9 @@ err_t tobson_object(tobson_state_t *state)
     {
       if (!state->shared->add_data)
         {
+          tobson_open_object(state->memwriter);
           ++(state->shared->struct_nested_level);
+          cleanup_if_error;
         }
     }
   /* `add_data` is only relevant for the first object start; reset it to default afterwards since nested objects can
@@ -2045,26 +2047,17 @@ err_t tobson_object(tobson_state_t *state)
                 }
             }
           /* Datatype */
-          if ((error = memwriter_putc(state->memwriter, tobson_datatype_to_byte[**data_type_ptr])) != ERROR_NONE)
-            {
-              goto cleanup;
-            }
+          error = memwriter_putc(state->memwriter, tobson_datatype_to_byte[**data_type_ptr]);
+          cleanup_if_error;
           /* Key */
-          if ((error = memwriter_printf(state->memwriter, "%s", *member_name_ptr)) != ERROR_NONE)
-            {
-              goto cleanup;
-            }
+          error = memwriter_printf(state->memwriter, "%s", *member_name_ptr);
+          cleanup_if_error;
           /* End Of Key */
-          if ((error = memwriter_putc(state->memwriter, null)) != ERROR_NONE)
-            {
-              goto cleanup;
-            }
+          error = memwriter_putc(state->memwriter, null);
+          cleanup_if_error;
           /* Values */
-          if ((error = tobson_serialize(state->memwriter, *data_type_ptr, NULL, NULL, -1, -1, 0, NULL, NULL,
-                                        state->shared)) != ERROR_NONE)
-            {
-              goto cleanup;
-            }
+          error = tobson_serialize(state->memwriter, *data_type_ptr, NULL, NULL, -1, -1, 0, NULL, NULL, state->shared);
+          cleanup_if_error;
           ++member_name_ptr;
           ++data_type_ptr;
           if (*member_name_ptr == NULL || *data_type_ptr == NULL)
@@ -2076,11 +2069,8 @@ err_t tobson_object(tobson_state_t *state)
   /* write object end if the type info is complete */
   if (!state->is_type_info_incomplete)
     {
-      --(state->shared->struct_nested_level);
-      if ((error = memwriter_putc(state->memwriter, null)) != ERROR_NONE)
-        {
-          goto cleanup;
-        }
+      error = tobson_close_object(state);
+      cleanup_if_error;
     }
   /* Only set serial result if not set before */
   if (state->shared->serial_result == 0 && state->is_type_info_incomplete)
@@ -2196,14 +2186,49 @@ err_t tobson_skip_bytes(tobson_state_t *state)
   return ERROR_NONE;
 }
 
+err_t tobson_open_object(memwriter_t *memwriter)
+{
+  err_t error = ERROR_NONE;
+
+  const char length_placeholder[4] = {0x01, 0x01, 0x01, 0x01};
+  if (tobson_permanent_state.memwriter_object_start_offset_stack == NULL)
+    {
+      tobson_permanent_state.memwriter_object_start_offset_stack = size_t_list_new();
+      return_error_if(tobson_permanent_state.memwriter_object_start_offset_stack == NULL, ERROR_MALLOC);
+    }
+  size_t_list_push(tobson_permanent_state.memwriter_object_start_offset_stack, memwriter_size(memwriter));
+  error = memwriter_puts_with_len(memwriter, (char *)length_placeholder, 4);
+
+  return error;
+}
+
 err_t tobson_close_object(tobson_state_t *state)
 {
   err_t error;
-  --(state->shared->struct_nested_level);
+
+  size_t size_before = size_t_list_pop(tobson_permanent_state.memwriter_object_start_offset_stack);
+  char *length_as_bytes;
+  char *placeholder_pos;
+
+  /* Close object */
   if ((error = memwriter_putc(state->memwriter, null)) != ERROR_NONE)
     {
       return error;
     }
+
+  /* Set length of object*/
+  int_to_bytes(state->memwriter->size - size_before, &length_as_bytes);
+  placeholder_pos = state->memwriter->buf + size_before;
+  memcpy(placeholder_pos, length_as_bytes, 4);
+  free(length_as_bytes);
+  if (size_t_list_empty(tobson_permanent_state.memwriter_object_start_offset_stack))
+    {
+      size_t_list_delete(tobson_permanent_state.memwriter_object_start_offset_stack);
+      tobson_permanent_state.memwriter_object_start_offset_stack = NULL;
+    }
+
+  --(state->shared->struct_nested_level);
+
   return ERROR_NONE;
 }
 
@@ -2631,34 +2656,17 @@ err_t tobson_write_args(memwriter_t *memwriter, const grm_args_t *args)
   grm_args_iterator_t *it;
   arg_t *arg;
   err_t error;
-  char *length_as_bytes;
-  char length_placeholder[4] = {0x01, 0x01, 0x01, 0x01};
-  int size_before = memwriter->size;
-  char *placeholder_pos;
 
   it = grm_args_iter(args);
   if ((arg = it->next(it)))
     {
-      /* Placeholder for length of object */
-      if ((error = memwriter_puts_with_len(memwriter, length_placeholder, 4)) != ERROR_NONE)
-        {
-          return error;
-        }
-
       tobson_write_buf(memwriter, "o(", NULL, 1);
-
       do
         {
           tobson_write_arg(memwriter, arg);
         }
       while ((arg = it->next(it)));
       tobson_write_buf(memwriter, ")", NULL, 1);
-
-      /* Set length of object */
-      int_to_bytes(memwriter->size - size_before, &length_as_bytes);
-      placeholder_pos = (memwriter->buf) + size_before;
-      memcpy(placeholder_pos, length_as_bytes, 4);
-      free(length_as_bytes);
     }
   args_iterator_delete(it);
 
