@@ -10,6 +10,8 @@ ubuntu-cmake-self-contained-test-c:
   script:
   - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
   - export GRM_VALIDATE=yes
+  - export TERM=ansi
+  - export CLICOLOR_FORCE=1
   - gr_test c `pwd`/test_result/
   artifacts:
     paths:
@@ -20,18 +22,20 @@ ubuntu-cmake-self-contained-test-cpp:
   stage: test
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/cpp-testing
   rules:
-    - if: '$CI_MERGE_REQUEST_ID'
-      when: never
-    - when: on_success
+  - if: '$CI_MERGE_REQUEST_ID'
+    when: never
+  - when: on_success
   needs:
-    - ubuntu-cmake-self-contained-debug
+  - ubuntu-cmake-self-contained-debug
   script:
-    - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
-    - export GRM_VALIDATE=yes
-    - gr_test cpp `pwd`/test_result/
+  - export GRDIR=`pwd`/artifacts-ubuntu2004-cmake/
+  - export GRM_VALIDATE=yes
+  - export TERM=ansi
+  - export CLICOLOR_FORCE=1
+  - gr_test cpp `pwd`/test_result/
   artifacts:
     paths:
-      - test_result/
+    - test_result/
     when: on_failure
 
 ubuntu-cmake-self-contained-test-grplot:
@@ -48,6 +52,8 @@ ubuntu-cmake-self-contained-test-grplot:
   - export GRM_VALIDATE=yes
   - export LD_LIBRARY_PATH=$GRDIR/lib
   - export PATH=$GRDIR/bin/:$PATH
+  - export TERM=ansi
+  - export CLICOLOR_FORCE=1
   - xvfb-run --server-args="-screen 0, 1920x1080x24" gr_test grplot `pwd`/test_result/
   artifacts:
     paths:

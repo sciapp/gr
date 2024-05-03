@@ -54,7 +54,7 @@ void grm_dump(const grm_args_t *args, FILE *f)
   ioctl(0, TIOCGWINSZ, &w);
   columns = w.ws_col;
   if (getenv(DARK_BACKGROUND_ENV_KEY) != NULL &&
-      str_equals_any(getenv(DARK_BACKGROUND_ENV_KEY), 5, "1", "yes", "YES", "on", "ON"))
+      str_equals_any(getenv(DARK_BACKGROUND_ENV_KEY), "1", "yes", "YES", "on", "ON", NULL))
     {
       has_dark_bg = 1;
       color_codes.k = 122;
@@ -75,8 +75,8 @@ void grm_dump(const grm_args_t *args, FILE *f)
 #endif
   if (getenv(ARRAY_PRINT_TRUNCATION_ENV_KEY) != NULL)
     {
-      if (str_equals_any(getenv(ARRAY_PRINT_TRUNCATION_ENV_KEY), 8, "", "0", "inf", "INF", "unlimited", "UNLIMITED",
-                         "off", "OFF"))
+      if (str_equals_any(getenv(ARRAY_PRINT_TRUNCATION_ENV_KEY), "", "0", "inf", "INF", "unlimited", "UNLIMITED", "off",
+                         "OFF", NULL))
         {
           array_print_elements_count = UINT_MAX;
         }

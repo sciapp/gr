@@ -104,12 +104,14 @@ GKSWidget::GKSWidget(QWidget *parent)
   setWindowIcon(QIcon(":/images/gksqt.png"));
 
   std::string gks_qt_prevent_resize =
-      QProcessEnvironment::systemEnvironment().value("GKS_GKSQT_PREVENT_RESIZE").toLower().toStdString();
+      QProcessEnvironment::systemEnvironment().value("GKS_QT_PREVENT_RESIZE").toLower().toStdString();
   if (!gks_qt_prevent_resize.empty())
     {
       p->prevent_resize_by_dl =
           gks_qt_prevent_resize == "1" || gks_qt_prevent_resize == "true" || gks_qt_prevent_resize == "on";
     }
+
+  p->window_stays_on_top = QProcessEnvironment::systemEnvironment().value("GKS_QT_WINDOW_STAYS_ON_TOP") != nullptr;
 }
 
 GKSWidget::~GKSWidget()
@@ -260,6 +262,15 @@ void GKSWidget::interpret(char *dl)
     {
       is_mapped = true;
       create_pixmap(p);
+      if (p->window_stays_on_top)
+        {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+          setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
+#else
+          setWindowFlag(Qt::WindowStaysOnTopHint, true);
+#endif
+          setAttribute(Qt::WA_ShowWithoutActivating, true);
+        }
       show();
     }
 

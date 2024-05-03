@@ -181,6 +181,7 @@ typedef struct
   int resize_behaviour;
   int clip_region;
   double alpha;
+  double txoff[2];
 } state_list;
 
 typedef struct
@@ -267,6 +268,11 @@ struct hexbin_2pass_priv
   double *ycm;
 };
 
+typedef struct
+{
+  double min, max;
+} minmax_t;
+
 gauss_t interp_gauss_data = {1, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 tri_linear_t interp_tri_linear_data = {1, 1, 1};
 
@@ -294,7 +300,8 @@ static state_list_vector *app_context = NULL;
 
 static state_list *ctx = NULL, *state = NULL;
 
-#define MAX_CONTEXT 8192
+static double txoff[2] = {0, 0};
+
 #define CONTEXT_VECTOR_INCREMENT 8
 
 static void (*previous_handler)(int);
@@ -357,14 +364,6 @@ static unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
 
 #define POINT_INC 2048
 
-/* Path definitions */
-#define STOP 0
-#define MOVETO 1
-#define LINETO 2
-#define CURVE3 3
-#define CURVE4 4
-#define CLOSEPOLY 0x4f
-
 #define RESOLUTION_X 4096
 #define BACKGROUND 0
 
@@ -376,22 +375,6 @@ static unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
 #define M_PI 3.14159265358979323846
 #endif
 
-#define OPTION_X_LOG (1 << 0)
-#define OPTION_Y_LOG (1 << 1)
-#define OPTION_Z_LOG (1 << 2)
-
-#define OPTION_FLIP_X (1 << 3)
-#define OPTION_FLIP_Y (1 << 4)
-#define OPTION_FLIP_Z (1 << 5)
-
-#define OPTION_X_LOG2 (1 << 6)
-#define OPTION_Y_LOG2 (1 << 7)
-#define OPTION_Z_LOG2 (1 << 8)
-
-#define OPTION_X_LN (1 << 9)
-#define OPTION_Y_LN (1 << 10)
-#define OPTION_Z_LN (1 << 11)
-
 #define LEFT (1 << 0)
 #define RIGHT (1 << 1)
 #define FRONT (1 << 2)
@@ -399,30 +382,9 @@ static unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
 #define BOTTOM (1 << 4)
 #define TOP (1 << 5)
 
-#define SPEC_LINE (1 << 0)
-#define SPEC_MARKER (1 << 1)
-#define SPEC_COLOR (1 << 2)
-
 #define XML_HEADER "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n"
 #define GR_HEADER "<gr>\n"
 #define GR_TRAILER "</gr>\n"
-
-typedef enum
-{
-  OPTION_LINES,
-  OPTION_MESH,
-  OPTION_FILLED_MESH,
-  OPTION_Z_SHADED_MESH,
-  OPTION_COLORED_MESH,
-  OPTION_CELL_ARRAY,
-  OPTION_SHADED_MESH
-} surface_option_t;
-
-typedef enum
-{
-  MODEL_RGB,
-  MODEL_HSV
-} color_model_t;
 
 typedef struct
 {
@@ -1024,11 +986,28 @@ static double blog(double base, double x)
   return log(x) / log(base);
 }
 
+minmax_t find_minmax(int n, double *values)
+{
+  int i;
+  double d, min, max;
+  for (i = 0; i != n && is_nan(values[i]); ++i)
+    ;
+  if (i == n) return (minmax_t){NAN, NAN};
+  min = max = values[i];
+  for (++i; i != n; ++i)
+    {
+      d = values[i];
+      if (min > d) min = d;
+      if (max < d) max = d;
+    }
+  return (minmax_t){min, max};
+}
+
 static double x_lin(double x)
 {
   double result;
 
-  if (OPTION_X_LOG & lx.scale_options)
+  if (GR_OPTION_X_LOG & lx.scale_options)
     {
       if (x > 0)
         result = lx.a * blog(lx.basex, x) + lx.b;
@@ -1038,7 +1017,7 @@ static double x_lin(double x)
   else
     result = x;
 
-  if (OPTION_FLIP_X & lx.scale_options) result = lx.xmax - result + lx.xmin;
+  if (GR_OPTION_FLIP_X & lx.scale_options) result = lx.xmax - result + lx.xmin;
 
   return (result);
 }
@@ -1047,7 +1026,7 @@ static double y_lin(double y)
 {
   double result;
 
-  if (OPTION_Y_LOG & lx.scale_options)
+  if (GR_OPTION_Y_LOG & lx.scale_options)
     {
       if (y > 0)
         result = lx.c * blog(lx.basey, y) + lx.d;
@@ -1057,7 +1036,7 @@ static double y_lin(double y)
   else
     result = y;
 
-  if (OPTION_FLIP_Y & lx.scale_options) result = lx.ymax - result + lx.ymin;
+  if (GR_OPTION_FLIP_Y & lx.scale_options) result = lx.ymax - result + lx.ymin;
 
   return (result);
 }
@@ -1066,7 +1045,7 @@ static double z_lin(double z)
 {
   double result;
 
-  if (OPTION_Z_LOG & lx.scale_options)
+  if (GR_OPTION_Z_LOG & lx.scale_options)
     {
       if (z > 0)
         result = lx.e * blog(lx.basez, z) + lx.f;
@@ -1076,16 +1055,16 @@ static double z_lin(double z)
   else
     result = z;
 
-  if (OPTION_FLIP_Z & lx.scale_options) result = lx.zmax - result + lx.zmin;
+  if (GR_OPTION_FLIP_Z & lx.scale_options) result = lx.zmax - result + lx.zmin;
 
   return (result);
 }
 
 static double x_log(double x)
 {
-  if (OPTION_FLIP_X & lx.scale_options) x = lx.xmax - x + lx.xmin;
+  if (GR_OPTION_FLIP_X & lx.scale_options) x = lx.xmax - x + lx.xmin;
 
-  if (OPTION_X_LOG & lx.scale_options)
+  if (GR_OPTION_X_LOG & lx.scale_options)
     return (pow(lx.basex, (double)((x - lx.b) / lx.a)));
   else
     return (x);
@@ -1093,9 +1072,9 @@ static double x_log(double x)
 
 static double y_log(double y)
 {
-  if (OPTION_FLIP_Y & lx.scale_options) y = lx.ymax - y + lx.ymin;
+  if (GR_OPTION_FLIP_Y & lx.scale_options) y = lx.ymax - y + lx.ymin;
 
-  if (OPTION_Y_LOG & lx.scale_options)
+  if (GR_OPTION_Y_LOG & lx.scale_options)
     return (pow(lx.basey, (double)((y - lx.d) / lx.c)));
   else
     return (y);
@@ -1103,9 +1082,9 @@ static double y_log(double y)
 
 static double z_log(double z)
 {
-  if (OPTION_FLIP_Z & lx.scale_options) z = lx.zmax - z + lx.zmin;
+  if (GR_OPTION_FLIP_Z & lx.scale_options) z = lx.zmax - z + lx.zmin;
 
-  if (OPTION_Z_LOG & lx.scale_options)
+  if (GR_OPTION_Z_LOG & lx.scale_options)
     return (pow(lx.basez, (double)((z - lx.f) / lx.e)));
   else
     return (z);
@@ -1301,21 +1280,21 @@ static int setscale(int options)
   lx.xmin = x_min;
   lx.xmax = x_max;
 
-  if ((OPTION_X_LOG | OPTION_X_LOG2 | OPTION_X_LN) & options)
+  if ((GR_OPTION_X_LOG | GR_OPTION_X_LOG2 | GR_OPTION_X_LN) & options)
     {
       if (x_min > 0)
         {
-          if (OPTION_X_LOG2 & options)
+          if (GR_OPTION_X_LOG2 & options)
             {
               lx.basex = 2.0;
               lx.basex_s = "2";
-              lx.scale_options |= OPTION_X_LOG2;
+              lx.scale_options |= GR_OPTION_X_LOG2;
             }
-          else if (OPTION_X_LN & options)
+          else if (GR_OPTION_X_LN & options)
             {
               lx.basex = exp(1);
               lx.basex_s = "e";
-              lx.scale_options |= OPTION_X_LN;
+              lx.scale_options |= GR_OPTION_X_LN;
             }
           else
             {
@@ -1325,7 +1304,7 @@ static int setscale(int options)
 
           lx.a = (x_max - x_min) / blog(lx.basex, x_max / x_min);
           lx.b = x_min - lx.a * blog(lx.basex, x_min);
-          lx.scale_options |= OPTION_X_LOG;
+          lx.scale_options |= GR_OPTION_X_LOG;
         }
       else
         result = -1;
@@ -1334,21 +1313,21 @@ static int setscale(int options)
   lx.ymin = y_min;
   lx.ymax = y_max;
 
-  if ((OPTION_Y_LOG | OPTION_Y_LOG2 | OPTION_Y_LN) & options)
+  if ((GR_OPTION_Y_LOG | GR_OPTION_Y_LOG2 | GR_OPTION_Y_LN) & options)
     {
       if (y_min > 0)
         {
-          if (OPTION_Y_LOG2 & options)
+          if (GR_OPTION_Y_LOG2 & options)
             {
               lx.basey = 2.0;
               lx.basey_s = "2";
-              lx.scale_options |= OPTION_Y_LOG2;
+              lx.scale_options |= GR_OPTION_Y_LOG2;
             }
-          else if (OPTION_Y_LN & options)
+          else if (GR_OPTION_Y_LN & options)
             {
               lx.basey = exp(1);
               lx.basey_s = "e";
-              lx.scale_options |= OPTION_Y_LN;
+              lx.scale_options |= GR_OPTION_Y_LN;
             }
           else
             {
@@ -1358,7 +1337,7 @@ static int setscale(int options)
 
           lx.c = (y_max - y_min) / blog(lx.basey, y_max / y_min);
           lx.d = y_min - lx.c * blog(lx.basey, y_min);
-          lx.scale_options |= OPTION_Y_LOG;
+          lx.scale_options |= GR_OPTION_Y_LOG;
         }
       else
         result = -1;
@@ -1369,21 +1348,21 @@ static int setscale(int options)
   lx.zmin = z_min;
   lx.zmax = z_max;
 
-  if ((OPTION_Z_LOG | OPTION_Z_LOG2 | OPTION_Z_LN) & options)
+  if ((GR_OPTION_Z_LOG | GR_OPTION_Z_LOG2 | GR_OPTION_Z_LN) & options)
     {
       if (lx.zmin > 0)
         {
-          if (OPTION_Z_LOG2 & options)
+          if (GR_OPTION_Z_LOG2 & options)
             {
               lx.basez = 2.0;
               lx.basez_s = "2";
-              lx.scale_options |= OPTION_Z_LOG2;
+              lx.scale_options |= GR_OPTION_Z_LOG2;
             }
-          else if (OPTION_Z_LN & options)
+          else if (GR_OPTION_Z_LN & options)
             {
               lx.basez = exp(1);
               lx.basez_s = "e";
-              lx.scale_options |= OPTION_Z_LN;
+              lx.scale_options |= GR_OPTION_Z_LN;
             }
           else
             {
@@ -1393,17 +1372,17 @@ static int setscale(int options)
 
           lx.e = (lx.zmax - lx.zmin) / blog(lx.basez, lx.zmax / lx.zmin);
           lx.f = lx.zmin - lx.e * blog(lx.basez, lx.zmin);
-          lx.scale_options |= OPTION_Z_LOG;
+          lx.scale_options |= GR_OPTION_Z_LOG;
         }
       else
         result = -1;
     }
 
-  if (OPTION_FLIP_X & options) lx.scale_options |= OPTION_FLIP_X;
+  if (GR_OPTION_FLIP_X & options) lx.scale_options |= GR_OPTION_FLIP_X;
 
-  if (OPTION_FLIP_Y & options) lx.scale_options |= OPTION_FLIP_Y;
+  if (GR_OPTION_FLIP_Y & options) lx.scale_options |= GR_OPTION_FLIP_Y;
 
-  if (OPTION_FLIP_Z & options) lx.scale_options |= OPTION_FLIP_Z;
+  if (GR_OPTION_FLIP_Z & options) lx.scale_options |= GR_OPTION_FLIP_Z;
 
   return result;
 }
@@ -1453,6 +1432,8 @@ static void initialize(int state)
   flag_stream = flag_graphics || debug != NULL;
 
   setscale(options);
+
+  txoff[0] = txoff[1] = 0;
 
   math_font = GR_DEFAULT_MATH_FONT;
 }
@@ -2120,7 +2101,7 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
   xmin = x[scol];
   xmax = x[ncol];
 
-  if (lx.scale_options & (OPTION_X_LOG | OPTION_X_LOG2 | OPTION_X_LN))
+  if (lx.scale_options & (GR_OPTION_X_LOG | GR_OPTION_X_LOG2 | GR_OPTION_X_LN))
     {
       for (color_x_ind = scol; color_x_ind <= ncol; color_x_ind++)
         {
@@ -2144,7 +2125,7 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
   ymin = y[nrow];
   ymax = y[srow];
 
-  if (lx.scale_options & (OPTION_Y_LOG | OPTION_Y_LOG2 | OPTION_Y_LN))
+  if (lx.scale_options & (GR_OPTION_Y_LOG | GR_OPTION_Y_LOG2 | GR_OPTION_Y_LN))
     {
       for (color_y_ind = srow; color_y_ind <= nrow; color_y_ind++)
         {
@@ -2220,13 +2201,13 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
     }
 
   scale_options = lx.scale_options;
-  if (scale_options & OPTION_FLIP_X)
+  if (scale_options & GR_OPTION_FLIP_X)
     {
       double tmp = xmin;
       xmin = xmax;
       xmax = tmp;
     }
-  if (scale_options & OPTION_FLIP_Y)
+  if (scale_options & GR_OPTION_FLIP_Y)
     {
       double tmp = ymin;
       ymin = ymax;
@@ -2926,6 +2907,7 @@ void gr_spline(int n, double *px, double *py, int m, int method)
 void gr_gridit(int nd, double *xd, double *yd, double *zd, int nx, int ny, double *x, double *y, double *z)
 {
   int i, md, ncp;
+  minmax_t xminmax, yminmax;
   double xmin, ymin, xmax, ymax;
   int *iwk;
   double *wk;
@@ -2943,18 +2925,17 @@ void gr_gridit(int nd, double *xd, double *yd, double *zd, int nx, int ny, doubl
 
   check_autoinit;
 
-  xmin = xd[nd - 1];
-  xmax = xd[nd - 1];
-  ymin = yd[nd - 1];
-  ymax = yd[nd - 1];
-
   /* CALCULATION OF MIN/MAX VALUES */
-  for (i = 0; i < nd; ++i)
+  xminmax = find_minmax(nd, xd);
+  yminmax = find_minmax(nd, yd);
+  xmin = xminmax.min;
+  xmax = xminmax.max;
+  ymin = yminmax.min;
+  ymax = yminmax.max;
+  if (is_nan(xmin) || is_nan(ymin))
     {
-      xmin = (is_nan(xd[i])) ? xmin : min(xmin, xd[i]);
-      xmax = (is_nan(xd[i])) ? xmax : max(xmax, xd[i]);
-      ymin = (is_nan(yd[i])) ? ymin : min(ymin, yd[i]);
-      ymax = (is_nan(yd[i])) ? ymax : max(ymax, yd[i]);
+      fprintf(stderr, "all coordinates are NAN\n");
+      return;
     }
 
   /* DETERMINE GRID POINTS INSIDE THE DATA AREA */
@@ -3828,31 +3809,31 @@ void gr_setcolorrep(int index, double red, double green, double blue)
  *
  * \verbatim embed:rst:leading-asterisk
  *
- * +---------------+--------------------+
- * |OPTION_X_LOG   |Logarithmic X-axis  |
- * +---------------+--------------------+
- * |OPTION_Y_LOG   |Logarithmic Y-axis  |
- * +---------------+--------------------+
- * |OPTION_Z_LOG   |Logarithmic Z-axis  |
- * +---------------+--------------------+
- * |OPTION_FLIP_X  |Flip X-axis         |
- * +---------------+--------------------+
- * |OPTION_FLIP_Y  |Flip Y-axis         |
- * +---------------+--------------------+
- * |OPTION_FLIP_Z  |Flip Z-axis         |
- * +---------------+--------------------+
- * |OPTION_X_LOG2  |log2 scaled X-axis  |
- * +---------------+--------------------+
- * |OPTION_Y_LOG2  |log2 scaled Y-axis  |
- * +---------------+--------------------+
- * |OPTION_Z_LOG2  |log2 scaled Z-axis  |
- * +---------------+--------------------+
- * |OPTION_X_LN    |ln scaled X-axis    |
- * +---------------+--------------------+
- * |OPTION_Y_LN    |ln scaled Y-axis    |
- * +---------------+--------------------+
- * |OPTION_Z_LN    |ln scaled Z-axis    |
- * +---------------+--------------------+
+ * +------------------+--------------------+
+ * |GR_OPTION_X_LOG   |Logarithmic X-axis  |
+ * +------------------+--------------------+
+ * |GR_OPTION_Y_LOG   |Logarithmic Y-axis  |
+ * +------------------+--------------------+
+ * |GR_OPTION_Z_LOG   |Logarithmic Z-axis  |
+ * +------------------+--------------------+
+ * |GR_OPTION_FLIP_X  |Flip X-axis         |
+ * +------------------+--------------------+
+ * |GR_OPTION_FLIP_Y  |Flip Y-axis         |
+ * +------------------+--------------------+
+ * |GR_OPTION_FLIP_Z  |Flip Z-axis         |
+ * +------------------+--------------------+
+ * |GR_OPTION_X_LOG2  |log2 scaled X-axis  |
+ * +------------------+--------------------+
+ * |GR_OPTION_Y_LOG2  |log2 scaled Y-axis  |
+ * +------------------+--------------------+
+ * |GR_OPTION_Z_LOG2  |log2 scaled Z-axis  |
+ * +------------------+--------------------+
+ * |GR_OPTION_X_LN    |ln scaled X-axis    |
+ * +------------------+--------------------+
+ * |GR_OPTION_Y_LN    |ln scaled Y-axis    |
+ * +------------------+--------------------+
+ * |GR_OPTION_Z_LN    |ln scaled Z-axis    |
+ * +------------------+--------------------+
  *
  * \endverbatim
  *
@@ -4226,31 +4207,23 @@ void gr_emergencyclosegks(void)
   autoinit = 1;
 }
 
+static void updatews(int wkid, void *foo)
+{
+  int errind, conid, wtype, wkcat;
+  GR_UNUSED(foo);
+
+  gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
+  gks_inq_ws_category(wtype, &errind, &wkcat);
+
+  if (wkcat == GKS_K_WSCAT_OUTPUT || wkcat == GKS_K_WSCAT_OUTIN)
+    {
+      gks_update_ws(wkid, GKS_K_WRITE_PAGE_FLAG);
+    }
+}
+
 void gr_updategks(void)
 {
-  int state, count, n, errind, ol;
-  int wkid, conid, wtype, wkcat;
-
-  gks_inq_operating_state(&state);
-  if (state >= GKS_K_WSOP)
-    {
-      n = 1;
-      gks_inq_open_ws(n, &errind, &ol, &wkid);
-
-      for (count = 1; count <= ol; count++)
-        {
-          n = count;
-          gks_inq_open_ws(n, &errind, &ol, &wkid);
-
-          gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
-          gks_inq_ws_category(wtype, &errind, &wkcat);
-
-          if (wkcat == GKS_K_WSCAT_OUTPUT || wkcat == GKS_K_WSCAT_OUTIN)
-            {
-              gks_update_ws(wkid, GKS_K_WRITE_PAGE_FLAG);
-            }
-        }
-    }
+  foreach_openws(updatews, NULL);
 }
 
 /*!
@@ -4910,13 +4883,19 @@ static char *replace_minus_sign(char *string)
   return string;
 }
 
-static char *gr_ftoa(char *string, double value, format_reference_t *reference)
+char *gr_ftoa(char *string, double value, format_reference_t *reference)
 {
   char *s;
 
-  s = str_ftoa(string, value, reference, scientific_format);
+  s = str_ftoa(string, value, (str_format_reference_t *)reference, scientific_format);
 
   return replace_minus_sign(s);
+}
+
+void gr_getformat(format_reference_t *result, double origin, double min_value, double max_value, double tick_width,
+                  int major)
+{
+  str_get_format_reference((str_format_reference_t *)result, origin, min_value, max_value, tick_width, major);
 }
 
 /*!
@@ -5040,7 +5019,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
           if (tick < 0) x_label = x_log(x_lin(x_org) - tick);
         }
 
-      if (OPTION_Y_LOG & lx.scale_options)
+      if (GR_OPTION_Y_LOG & lx.scale_options)
         {
           y0 = pow(lx.basey, gauss(blog(lx.basey, y_min)));
 
@@ -5112,7 +5091,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           start_pline(x_org, y_min);
 
-          str_get_format_reference(&format_reference, y_org, yi, y_max, y_tick, major_y);
+          gr_getformat(&format_reference, y_org, yi, y_max, y_tick, major_y);
 
           while (yi <= y_max + feps)
             {
@@ -5170,7 +5149,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
           if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
         }
 
-      if (OPTION_X_LOG & lx.scale_options)
+      if (GR_OPTION_X_LOG & lx.scale_options)
         {
           x0 = pow(lx.basex, gauss(blog(lx.basex, x_min)));
 
@@ -5238,7 +5217,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
 
-          str_get_format_reference(&format_reference, x_org, xi, x_max, x_tick, major_x);
+          gr_getformat(&format_reference, x_org, xi, x_max, x_tick, major_x);
 
           /* draw X-axis */
 
@@ -5405,7 +5384,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
 
   if (y_tick != 0)
     {
-      if (OPTION_Y_LOG & lx.scale_options)
+      if (GR_OPTION_Y_LOG & lx.scale_options)
         {
           y0 = pow(lx.basey, gauss(blog(lx.basey, y_min)));
 
@@ -5461,7 +5440,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
 
   if (x_tick != 0)
     {
-      if (OPTION_X_LOG & lx.scale_options)
+      if (GR_OPTION_X_LOG & lx.scale_options)
         {
           x0 = pow(lx.basex, gauss(blog(lx.basex, x_min)));
 
@@ -5642,7 +5621,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (z_tick != 0)
     {
-      if (OPTION_Z_LOG & lx.scale_options)
+      if (GR_OPTION_Z_LOG & lx.scale_options)
         {
           z0 = pow(lx.basez, gauss(blog(lx.basez, z_min)));
 
@@ -5705,7 +5684,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (y_tick != 0)
     {
-      if (OPTION_Y_LOG & lx.scale_options)
+      if (GR_OPTION_Y_LOG & lx.scale_options)
         {
           y0 = pow(lx.basey, gauss(blog(lx.basey, y_min)));
 
@@ -5768,7 +5747,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (x_tick != 0)
     {
-      if (OPTION_X_LOG & lx.scale_options)
+      if (GR_OPTION_X_LOG & lx.scale_options)
         {
           x0 = pow(lx.basex, gauss(blog(lx.basex, x_min)));
 
@@ -6250,8 +6229,8 @@ static int cmp(const void *a, const void *b)
   const point_3d *pb = (const point_3d *)b;
   double x, y, da, db;
 
-  x = (OPTION_FLIP_X & lx.scale_options) ? lx.xmin : lx.xmax;
-  y = (OPTION_FLIP_Y & lx.scale_options) ? lx.ymin : lx.ymax;
+  x = (GR_OPTION_FLIP_X & lx.scale_options) ? lx.xmin : lx.xmax;
+  y = (GR_OPTION_FLIP_Y & lx.scale_options) ? lx.ymin : lx.ymax;
 
   da = sqrt(pow(x - pa->x, 2) + pow(y - pa->y, 2));
   db = sqrt(pow(x - pb->x, 2) + pow(y - pb->y, 2));
@@ -6572,15 +6551,15 @@ static void axes3d_get_params(int axis, int *tick_axis, double x_org, double y_o
   yi = (y_max + y_min) / 2;
   zi = (z_max + z_min) / 2;
 
-  if (lx.scale_options & OPTION_FLIP_X)
+  if (lx.scale_options & GR_OPTION_FLIP_X)
     {
       x_org = -x_org + x_min + x_max;
     }
-  if (lx.scale_options & OPTION_FLIP_Y)
+  if (lx.scale_options & GR_OPTION_FLIP_Y)
     {
       y_org = -y_org + y_min + y_max;
     }
-  if (lx.scale_options & OPTION_FLIP_Z)
+  if (lx.scale_options & GR_OPTION_FLIP_Z)
     {
       z_org = -z_org + z_min + z_max;
     }
@@ -6964,7 +6943,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           x_title = x_label = x_major_tick = x_minor_tick = x_org;
         }
 
-      if (OPTION_Z_LOG & lx.scale_options)
+      if (GR_OPTION_Z_LOG & lx.scale_options)
         {
           z0 = pow(lx.basez, gauss(blog(lx.basez, z_min)));
 
@@ -7029,7 +7008,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(z_min / z_tick);
           zi = i * z_tick;
 
-          str_get_format_reference(&format_reference, z_org, zi, z_max, z_tick, major_z);
+          gr_getformat(&format_reference, z_org, zi, z_max, z_tick, major_z);
 
           /* draw Z-axis */
 
@@ -7166,7 +7145,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           z_title = z_label = z_major_tick = z_minor_tick = z_org;
         }
 
-      if (OPTION_Y_LOG & lx.scale_options)
+      if (GR_OPTION_Y_LOG & lx.scale_options)
         {
           y0 = pow(lx.basey, gauss(blog(lx.basey, y_min)));
 
@@ -7231,7 +7210,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(y_min / y_tick);
           yi = i * y_tick;
 
-          str_get_format_reference(&format_reference, y_org, yi, y_max, y_tick, major_y);
+          gr_getformat(&format_reference, y_org, yi, y_max, y_tick, major_y);
 
           /* draw Y-axis */
 
@@ -7374,7 +7353,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           z_title = z_label = z_major_tick = z_minor_tick = z_org;
         }
 
-      if (OPTION_X_LOG & lx.scale_options)
+      if (GR_OPTION_X_LOG & lx.scale_options)
         {
           x0 = pow(lx.basex, gauss(blog(lx.basex, x_min)));
 
@@ -7439,8 +7418,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
 
-
-          str_get_format_reference(&format_reference, x_org, xi, x_max, x_tick, major_x);
+          gr_getformat(&format_reference, x_org, xi, x_max, x_tick, major_x);
 
           /* draw X-axis */
 
@@ -7704,9 +7682,9 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
       x_rel = xr * (x_lin(x_max) - x_lin(x_min));
       y_rel = yr * (y_lin(y_max) - y_lin(y_min));
 
-      flip_x = OPTION_FLIP_X & lx.scale_options;
-      flip_y = OPTION_FLIP_Y & lx.scale_options;
-      flip_z = OPTION_FLIP_Z & lx.scale_options;
+      flip_x = GR_OPTION_FLIP_X & lx.scale_options;
+      flip_y = GR_OPTION_FLIP_Y & lx.scale_options;
+      flip_z = GR_OPTION_FLIP_Z & lx.scale_options;
 
       if (*x_title)
         {
@@ -8426,7 +8404,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
       clipz = (double *)xmalloc(k);
     }
 
-  flip_x = OPTION_FLIP_X & lx.scale_options;
+  flip_x = GR_OPTION_FLIP_X & lx.scale_options;
   if ((gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC) &&
       tx.camera_pos_x < tx.focus_point_x)
     {
@@ -8435,7 +8413,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
   for (i = 0; i < nx; i++) x[i] = x_lin(px[flip_x ? nx - 1 - i : i]);
 
-  flip_y = OPTION_FLIP_Y & lx.scale_options;
+  flip_y = GR_OPTION_FLIP_Y & lx.scale_options;
   if ((gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC) &&
       tx.camera_pos_y > tx.focus_point_y)
     {
@@ -8476,7 +8454,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
   apply_world_xform(&hlr.xmin, &ymin, &zmin);
   apply_world_xform(&hlr.xmax, &ymax, &zmax);
 
-  flip_z = OPTION_FLIP_Z & lx.scale_options;
+  flip_z = GR_OPTION_FLIP_Z & lx.scale_options;
   gks_set_pline_linetype(flip_z ? GKS_K_LINETYPE_DOTTED : GKS_K_LINETYPE_SOLID);
   if ((gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC) &&
       tx.camera_pos_z < tx.focus_point_z)
@@ -8522,7 +8500,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
       switch (option)
         {
 
-        case OPTION_LINES:
+        case GR_OPTION_LINES:
           {
             j = 0;
             hlr.initialize = 1;
@@ -8593,7 +8571,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
             break;
           }
 
-        case OPTION_MESH:
+        case GR_OPTION_MESH:
           {
             k = 0;
 
@@ -8706,10 +8684,10 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
             break;
           }
 
-        case OPTION_FILLED_MESH:
-        case OPTION_Z_SHADED_MESH:
-        case OPTION_COLORED_MESH:
-        case OPTION_SHADED_MESH:
+        case GR_OPTION_FILLED_MESH:
+        case GR_OPTION_Z_SHADED_MESH:
+        case GR_OPTION_COLORED_MESH:
+        case GR_OPTION_SHADED_MESH:
           {
             j = ny - 1;
 
@@ -8817,7 +8795,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                     yn[4] = yn[0];
                     zn[4] = zn[0];
 
-                    if (option == OPTION_SHADED_MESH)
+                    if (option == GR_OPTION_SHADED_MESH)
                       {
                         for (k = 0; k < 4; k++)
                           {
@@ -8832,7 +8810,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
                     meanz = 0.25 * (Z(i - 1, j - 1) + Z(i, j - 1) + Z(i, j) + Z(i - 1, j));
 
-                    if (option == OPTION_Z_SHADED_MESH)
+                    if (option == GR_OPTION_Z_SHADED_MESH)
                       {
                         color = iround(meanz) + first_color;
 
@@ -8844,7 +8822,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                         gks_set_fill_color_index(color);
                       }
 
-                    else if (option == OPTION_COLORED_MESH)
+                    else if (option == GR_OPTION_COLORED_MESH)
                       {
                         color = iround((meanz - color_min) / (color_max - color_min) * (last_color - first_color)) +
                                 first_color;
@@ -8857,7 +8835,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                         gks_set_fill_color_index(color);
                       }
 
-                    else if (option == OPTION_SHADED_MESH)
+                    else if (option == GR_OPTION_SHADED_MESH)
                       {
                         color = iround(intensity * (last_color - first_color)) + first_color;
 
@@ -8874,7 +8852,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                     np = 4;
                     gks_fillarea(np, xn, yn);
 
-                    if (option == OPTION_FILLED_MESH)
+                    if (option == GR_OPTION_FILLED_MESH)
                       {
                         np = 5;
                         gks_polyline(np, xn, yn);
@@ -8889,7 +8867,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
             break;
           }
 
-        case OPTION_CELL_ARRAY:
+        case GR_OPTION_CELL_ARRAY:
 
           colia = (int *)xmalloc(nx * ny * sizeof(int));
           k = 0;
@@ -8935,7 +8913,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
       gks_set_pline_linetype(flip_z ? GKS_K_LINETYPE_SOLID : GKS_K_LINETYPE_DOTTED);
     }
-  while ((hlr.sign >= 0) && ((int)option <= (int)OPTION_MESH));
+  while ((hlr.sign >= 0) && ((int)option <= (int)GR_OPTION_MESH));
 
 #undef Z
 
@@ -9383,11 +9361,12 @@ static void rebin(int nx, int ny, double *px, double *py, double *pz, int *nxq, 
  *
  * \param[in] nx The number of points along the X axis
  * \param[in] ny The number of points along the Y axis
- * \param[in] nh The number of height values
+ * \param[in] nh The number of height values. If less than 1, 16 evenly spaced
+ *               values will be used instead of h, which can safely be NULL
  * \param[in] px A pointer to the X coordinates
  * \param[in] py A pointer to the Y coordinates
  * \param[in] h A pointer to the height values
- * \param[in] pz A pointer to the Z coordinates
+ * \param[in] pz A pointer to the Z coordinates (at least nx * ny)
  * \param[in] major_h Directs GR to label contour lines. For example, a value of
  *                    3 would label every third line. A value of 1 will label
  *                    every line. A value of 0 produces no labels. To produce
@@ -9432,7 +9411,7 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
   /* calculate the position of the contour labels when the axes are logarithmic for example */
   if (scale_options != 0)
     {
-      setscale(scale_options & ~(OPTION_FLIP_X | OPTION_FLIP_Y));
+      setscale(scale_options & ~(GR_OPTION_FLIP_X | GR_OPTION_FLIP_Y));
 
       x = (double *)xcalloc(nx, sizeof(double));
       for (i = 0; i < nx; i++) x[i] = x_lin(px[i]);
@@ -9440,8 +9419,8 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
       y = (double *)xcalloc(ny, sizeof(double));
       for (i = 0; i < ny; i++) y[i] = y_lin(py[i]);
 
-      setscale(scale_options &
-               ~(OPTION_X_LOG | OPTION_Y_LOG | OPTION_X_LOG2 | OPTION_Y_LOG2 | OPTION_X_LN | OPTION_Y_LN));
+      setscale(scale_options & ~(GR_OPTION_X_LOG | GR_OPTION_Y_LOG | GR_OPTION_X_LOG2 | GR_OPTION_Y_LOG2 |
+                                 GR_OPTION_X_LN | GR_OPTION_Y_LN));
     }
   else
     {
@@ -9505,9 +9484,9 @@ void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, doubl
  * \param[in] nh The number of height values. 0 for default contours.
  * \param[in] px A pointer to the X coordinates
  * \param[in] py A pointer to the Y coordinates
- * \param[in] h A pointer to the height values. If NULL, use nh evenly distributed height values between
- *                      minimum and maximum Z value.
- * \param[in] pz A pointer to the Z coordinates
+ * \param[in] h A pointer to the height values in ascending order. If NULL, use nh
+ *              evenly distributed height values between minimum and maximum Z value.
+ * \param[in] pz A pointer to the Z coordinates (at least nx * ny)
  * \param[in] major_h Directs GR to label contour lines. For example, a value of
  *                    3 would label every third line. A value of 1 will label
  *                    every line. A value of 0 produces no labels. To produce
@@ -9562,7 +9541,7 @@ void gr_contourf(int nx, int ny, int nh, double *px, double *py, double *h, doub
   /* calculate the position of the contour labels when the axes are logarithmic for example */
   if (scale_options != 0)
     {
-      setscale(scale_options & ~(OPTION_FLIP_X | OPTION_FLIP_Y));
+      setscale(scale_options & ~(GR_OPTION_FLIP_X | GR_OPTION_FLIP_Y));
 
       x = (double *)xcalloc(nx, sizeof(double));
       for (i = 0; i < nx; i++) x[i] = x_lin(px[i]);
@@ -9570,8 +9549,8 @@ void gr_contourf(int nx, int ny, int nh, double *px, double *py, double *h, doub
       y = (double *)xcalloc(ny, sizeof(double));
       for (i = 0; i < ny; i++) y[i] = y_lin(py[i]);
 
-      setscale(scale_options &
-               ~(OPTION_X_LOG | OPTION_Y_LOG | OPTION_X_LOG2 | OPTION_Y_LOG2 | OPTION_X_LN | OPTION_Y_LN));
+      setscale(scale_options & ~(GR_OPTION_X_LOG | GR_OPTION_Y_LOG | GR_OPTION_X_LOG2 | GR_OPTION_Y_LOG2 |
+                                 GR_OPTION_X_LN | GR_OPTION_Y_LN));
     }
   else
     {
@@ -10141,7 +10120,7 @@ void gr_colorbar(void)
   gks_set_clipping(GKS_K_NOCLIP);
 
   x = xmax + 0.01 * (xmax - xmin) / (vp[1] - vp[0]);
-  str_get_format_reference(&format_reference, 0, zmin, zmax, dz, 0);
+  gr_getformat(&format_reference, 0, zmin, zmax, dz, 0);
 
   for (i = 0; i <= nz; i++)
     {
@@ -10487,7 +10466,7 @@ void gr_beginprint(char *pathname)
  * \param[in] pathname Filename for the print device.
  * \param[in] mode Output mode (Color, GrayScale)
  * \param[in] format Output format (see table)
- * \param[in] orientation Page orientation (Landscape, Portait)
+ * \param[in] orientation Page orientation (Landscape, Portrait)
  *
  * \verbatim embed:rst:leading-asterisk
  *
@@ -11022,8 +11001,8 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
 
   if (codes == NULL)
     {
-      memset(opcode, LINETO, n);
-      opcode[0] = MOVETO;
+      memset(opcode, GR_LINETO, n);
+      opcode[0] = GR_MOVETO;
     }
   else
     memmove(opcode, codes, n);
@@ -11037,7 +11016,7 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
         }
       else
         {
-          opcode[j] = nan ? MOVETO : opcode[i];
+          opcode[j] = nan ? GR_MOVETO : opcode[i];
           nan = 0;
         }
       xpoint[j] = vertices[i].x;
@@ -11048,26 +11027,26 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
   for (i = 0; i < j; i++)
     {
       code = opcode[i];
-      if (code == STOP)
+      if (code == GR_STOP)
         break;
-      else if (code == MOVETO)
+      else if (code == GR_MOVETO)
         {
           closepath(fill);
           addpath(xpoint[i], ypoint[i]);
         }
-      else if (code == LINETO)
+      else if (code == GR_LINETO)
         addpath(xpoint[i], ypoint[i]);
-      else if (code == CURVE3)
+      else if (code == GR_CURVE3)
         {
           quad_bezier(xpoint + i - 1, ypoint + i - 1, 20);
           i += 1;
         }
-      else if (code == CURVE4)
+      else if (code == GR_CURVE4)
         {
           cubic_bezier(xpoint + i - 1, ypoint + i - 1, 20);
           i += 2;
         }
-      else if (code == CLOSEPOLY)
+      else if (code == GR_CLOSEPOLY)
         {
           addpath(xpoint[i], ypoint[i]);
           closepath(fill);
@@ -11266,7 +11245,7 @@ static void drawimage_calculation(double xmin, double xmax, double ymin, double 
   int n, i, j, w, h;
   double hue, saturation, value, red, green, blue, x, y;
 
-  if (model == MODEL_HSV)
+  if (model == GR_MODEL_HSV)
     {
       n = width * height;
       img = (int *)xmalloc(n * sizeof(int));
@@ -11280,7 +11259,7 @@ static void drawimage_calculation(double xmin, double xmax, double ymin, double 
         }
     }
 
-  if ((lx.scale_options & ~(OPTION_FLIP_X | OPTION_FLIP_Y | OPTION_FLIP_Z)) != 0)
+  if ((lx.scale_options & ~(GR_OPTION_FLIP_X | GR_OPTION_FLIP_Y | GR_OPTION_FLIP_Z)) != 0)
     {
       linear_xform lx_original;
       w = max(width, 2000);
@@ -11323,13 +11302,13 @@ static void drawimage_calculation(double xmin, double xmax, double ymin, double 
             }
         }
       lx = lx_original;
-      if (lx.scale_options & OPTION_FLIP_X)
+      if (lx.scale_options & GR_OPTION_FLIP_X)
         {
           double t = xmin;
           xmin = xmax;
           xmax = t;
         }
-      if (lx.scale_options & OPTION_FLIP_Y)
+      if (lx.scale_options & GR_OPTION_FLIP_Y)
         {
           double t = ymin;
           ymin = ymax;
@@ -11340,13 +11319,13 @@ static void drawimage_calculation(double xmin, double xmax, double ymin, double 
     }
   else
     {
-      if (lx.scale_options & OPTION_FLIP_X)
+      if (lx.scale_options & GR_OPTION_FLIP_X)
         {
           double tmp = xmin;
           xmin = xmax;
           xmax = tmp;
         }
-      if (lx.scale_options & OPTION_FLIP_Y)
+      if (lx.scale_options & GR_OPTION_FLIP_Y)
         {
           double tmp = ymin;
           ymin = ymax;
@@ -11377,11 +11356,11 @@ static void drawimage_calculation(double xmin, double xmax, double ymin, double 
  *
  * The available color models are:
  *
- * +-----------------------+---+-----------+
- * |MODEL_RGB              |  0|   AABBGGRR|
- * +-----------------------+---+-----------+
- * |MODEL_HSV              |  1|   AAVVSSHH|
- * +-----------------------+---+-----------+
+ * +--------------------------+---+-----------+
+ * |GR_MODEL_RGB              |  0|   AABBGGRR|
+ * +--------------------------+---+-----------+
+ * |GR_MODEL_HSV              |  1|   AAVVSSHH|
+ * +--------------------------+---+-----------+
  *
  * \endverbatim
  */
@@ -12299,16 +12278,20 @@ static int is_math_text(char *s)
 void gr_text(double x, double y, char *string)
 {
   int errind, tnr;
+  double tx, ty;
 
   check_autoinit;
 
   gks_inq_current_xformno(&errind, &tnr);
   if (tnr != NDC) gks_select_xform(NDC);
 
+  tx = x + txoff[0];
+  ty = y + txoff[1];
+
   if (strchr(string, '\n') != NULL || is_math_text(string))
-    text_impl(x, y, string, 1, 0, NULL, NULL);
+    text_impl(tx, ty, string, 1, 0, NULL, NULL);
   else
-    gks_text(x, y, string);
+    gks_text(tx, ty, string);
 
   if (tnr != NDC) gks_select_xform(tnr);
 
@@ -12362,6 +12345,7 @@ void gr_textx(double x, double y, char *string, int opts)
 void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
 {
   int errind, tnr, n, wkid;
+  double tx, ty;
   double cpx, cpy;
 
   check_autoinit;
@@ -12369,12 +12353,15 @@ void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
   gks_inq_current_xformno(&errind, &tnr);
   if (tnr != NDC) gks_select_xform(NDC);
 
+  tx = x + txoff[0];
+  ty = y + txoff[1];
+
   if (strchr(string, '\n') != NULL || is_math_text(string))
-    text_impl(x, y, string, 1, 1, tbx, tby);
+    text_impl(tx, ty, string, 1, 1, tbx, tby);
   else
     {
       gks_inq_open_ws(1, &errind, &n, &wkid);
-      gks_inq_text_extent(wkid, x, y, string, &errind, &cpx, &cpy, tbx, tby);
+      gks_inq_text_extent(wkid, tx, ty, string, &errind, &cpx, &cpy, tbx, tby);
     }
 
   if (tnr != NDC) gks_select_xform(tnr);
@@ -12544,6 +12531,9 @@ void gr_savestate(void)
       gks_inq_clip_xform(&errind, &s->clip_tnr);
       gks_inq_resize_behaviour(&s->resize_behaviour);
       gks_inq_clip_region(&errind, &s->clip_region);
+
+      s->txoff[0] = txoff[0];
+      s->txoff[1] = txoff[1];
     }
   else
     fprintf(stderr, "attempt to save state beyond implementation limit\n");
@@ -12599,6 +12589,9 @@ void gr_restorestate(void)
       gks_set_resize_behaviour(s->resize_behaviour);
       gks_set_clip_region(s->clip_region);
 
+      s->txoff[0] = txoff[0];
+      s->txoff[1] = txoff[1];
+
       if (ctx)
         {
           ctx->ltype = s->ltype;
@@ -12639,6 +12632,9 @@ void gr_restorestate(void)
           ctx->clip_tnr = s->clip_tnr;
           ctx->resize_behaviour = s->resize_behaviour;
           ctx->clip_region = s->clip_region;
+
+          ctx->txoff[0] = s->txoff[0];
+          ctx->txoff[1] = s->txoff[1];
         }
     }
   else
@@ -12719,6 +12715,9 @@ void gr_selectcontext(int context)
           ctx->clip_tnr = 0;
           ctx->resize_behaviour = GKS_K_RESIZE;
           ctx->clip_region = GKS_K_REGION_RECTANGLE;
+
+          ctx->txoff[0] = 0;
+          ctx->txoff[1] = 0;
         }
       else
         {
@@ -12761,6 +12760,9 @@ void gr_selectcontext(int context)
       gks_select_clip_xform(ctx->clip_tnr);
       gks_set_resize_behaviour(ctx->resize_behaviour);
       gks_set_clip_region(ctx->clip_region);
+
+      txoff[0] = ctx->txoff[0];
+      txoff[1] = ctx->txoff[1];
     }
   else
     {
@@ -12836,6 +12838,9 @@ void gr_savecontext(int context)
       gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
       gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
       gks_inq_clip_region(&errind, &app_context->buf[id]->clip_region);
+
+      app_context->buf[id]->txoff[0] = txoff[0];
+      app_context->buf[id]->txoff[1] = txoff[1];
     }
   else
     {
@@ -12910,6 +12915,9 @@ void gr_destroycontext(int context)
       gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
       gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
       gks_inq_clip_region(&errind, &app_context->buf[id]->clip_region);
+
+      app_context->buf[id]->txoff[0] = txoff[0];
+      app_context->buf[id]->txoff[1] = txoff[1];
     }
   else
     {
@@ -13025,12 +13033,12 @@ int gr_uselinespec(char *linespec)
   result = 0;
   if (linetype != 0)
     {
-      result |= SPEC_LINE;
+      result |= GR_SPEC_LINE;
       gr_setlinetype(linetype);
     }
   if (markertype != 0)
     {
-      result |= SPEC_MARKER;
+      result |= GR_SPEC_MARKER;
       gr_setmarkertype(markertype);
     }
   if (color == -1)
@@ -13040,8 +13048,8 @@ int gr_uselinespec(char *linespec)
     }
   else
     {
-      if (result == 0) result = SPEC_LINE;
-      result |= SPEC_COLOR;
+      if (result == 0) result = GR_SPEC_LINE;
+      result |= GR_SPEC_COLOR;
     }
 
   gr_setlinecolorind(color);
@@ -13129,12 +13137,12 @@ static void arg_min_max(int *min_index, int *max_index, int n, const double *arr
 /*!
  * Reduces the number of points of the x and y array.
  *
- * @param[in] n the number of points of the x and y arrays
- * @param[in] x the x value array
- * @param[in] y the y value array
- * @param[in] points the requested number of points
- * @param[out] x_array the return array for the x values
- * @param[out] y_array the return array for the y values
+ * \param[in] n the number of points of the x and y arrays
+ * \param[in] x the x value array
+ * \param[in] y the y value array
+ * \param[in] points the requested number of points
+ * \param[out] x_array the return array for the x values
+ * \param[out] y_array the return array for the y values
  */
 void gr_reducepoints(int n, const double *x, const double *y, int points, double *x_array, double *y_array)
 {
@@ -13357,13 +13365,13 @@ void gr_panzoom(double x, double y, double xzoom, double yzoom, double *xmin, do
   gr_ndctowc(&x0, &y0);
   gr_ndctowc(&x1, &y1);
 
-  if (OPTION_FLIP_X & lx.scale_options)
+  if (GR_OPTION_FLIP_X & lx.scale_options)
     {
       tmp = x0;
       x0 = x1;
       x1 = tmp;
     }
-  if (OPTION_FLIP_Y & lx.scale_options)
+  if (GR_OPTION_FLIP_Y & lx.scale_options)
     {
       tmp = y0;
       y0 = y1;
@@ -14103,6 +14111,16 @@ void gr_inqclipregion(int *region)
   gks_inq_clip_region(&errind, region);
 }
 
+void gr_settextoffset(double xoff, double yoff)
+{
+  check_autoinit;
+
+  txoff[0] = xoff;
+  txoff[1] = yoff;
+
+  if (flag_stream) gr_writestream("<settextoffset xoff=\"%g\" yoff=\"%g\"/>\n", xoff, yoff);
+}
+
 /*!
  * Set the camera for orthographic or perspective projection.
  *
@@ -14132,9 +14150,9 @@ void gr_setspace3d(double phi, double theta, double fov, double cam)
   tx.focus_point_z = (ix.zmax + ix.zmin) / 2;
 
   bounding_sphere_radius = sqrt(3);
-  if (fov != fov || fov == 0)
+  if (is_nan(fov) || fov == 0)
     {
-      if (camera_distance == 0 || camera_distance != camera_distance)
+      if (camera_distance == 0 || is_nan(camera_distance))
         {
           camera_distance = bounding_sphere_radius;
         }
@@ -14143,7 +14161,7 @@ void gr_setspace3d(double phi, double theta, double fov, double cam)
     }
   else
     {
-      if (camera_distance == 0 || camera_distance != camera_distance)
+      if (camera_distance == 0 || is_nan(camera_distance))
         {
           camera_distance = fabs(bounding_sphere_radius / sin((fov * M_PI / 180) / 2));
         }

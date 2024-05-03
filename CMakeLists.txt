@@ -525,6 +525,7 @@ endif()
 
 set(GRM_SOURCES
     lib/grm/src/grm/args.c
+    lib/grm/src/grm/backtrace.c
     lib/grm/src/grm/base64.c
     lib/grm/src/grm/dump.c
     lib/grm/src/grm/dynamic_args_array.c
@@ -1058,6 +1059,12 @@ if(APPLE)
   if(ZeroMQ_FOUND)
     if(GR_PREFER_XCODEBUILD)
       find_program(XCODE_BUILD xcodebuild CMAKE_FIND_ROOT_PATH_BOTH)
+      if(XCODE_BUILD)
+        execute_process(COMMAND ${XCODE_BUILD} -version RESULT_VARIABLE XCODE_BUILD_CHECK_RESULT)
+        if(NOT XCODE_BUILD_CHECK_RESULT EQUAL 0)
+          set(XCODE_BUILD "XCODE_BUILD-NOTFOUND")
+        endif()
+      endif()
     endif()
     if(GR_PREFER_XCODEBUILD AND XCODE_BUILD)
       set(GKSTERM_SOURCES

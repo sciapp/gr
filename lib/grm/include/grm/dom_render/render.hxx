@@ -68,9 +68,20 @@
 #define PLOT_DEFAULT_SPACE_3D_FOV 30.0
 #define PLOT_DEFAULT_SPACE_3D_DISTANCE 0.0
 #define PLOT_DEFAULT_COLORBAR_DIAG_FACTOR 0.016
-#define PLOT_DEFAULT_COLORBAR_WIDTH 0.03
-#define PLOT_DEFAULT_COLORBAR_MAX_CHAR_HEIGHT 0.012
-#define PLOT_DEFAULT_COLORBAR_OFFSET 0.02
+#define PLOT_DEFAULT_COLORBAR_WIDTH 0.03 * DEFAULT_ASPECT_RATIO_FOR_SCALING
+#define PLOT_DEFAULT_COLORBAR_MAX_CHAR_HEIGHT 0.016 * DEFAULT_ASPECT_RATIO_FOR_SCALING
+#define PLOT_DEFAULT_COLORBAR_OFFSET 0.02 * DEFAULT_ASPECT_RATIO_FOR_SCALING
+#define PLOT_3D_COLORBAR_OFFSET 0.05 * DEFAULT_ASPECT_RATIO_FOR_SCALING
+#define PLOT_POLAR_COLORBAR_OFFSET 0.025 * DEFAULT_ASPECT_RATIO_FOR_SCALING
+#define PLOT_DEFAULT_COLORBAR_TICK_SIZE 0.005 * DEFAULT_ASPECT_RATIO_FOR_SCALING
+#define PLOT_DEFAULT_SIDEREGION_WIDTH 0.1 * DEFAULT_ASPECT_RATIO_FOR_SCALING
+#define PLOT_DEFAULT_SIDEREGION_OFFSET 0.02 * DEFAULT_ASPECT_RATIO_FOR_SCALING
+#define PLOT_DEFAULT_SIDEREGION_LOCATION "right"
+#define PLOT_3D_CHAR_HEIGHT 0.024 * DEFAULT_ASPECT_RATIO_FOR_SCALING
+#define PLOT_2D_CHAR_HEIGHT 0.018 * DEFAULT_ASPECT_RATIO_FOR_SCALING
+#define PLOT_POLAR_CHAR_HEIGHT 0.018 * DEFAULT_ASPECT_RATIO_FOR_SCALING
+#define PLOT_DEFAULT_AXES_TICK_SIZE 0.0075
+#define DEFAULT_ASPECT_RATIO_FOR_SCALING 4.0 / 3.0
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -81,30 +92,12 @@
 typedef enum
 {
   GR_COLOR_RESET = 0,
-  GR_COLOR_LINE = 1 << 0,
-  GR_COLOR_MARKER = 1 << 1,
-  GR_COLOR_FILL = 1 << 2,
+  GR_COLOR_LINE = GR_SPEC_LINE,
+  GR_COLOR_MARKER = GR_SPEC_MARKER,
+  GR_COLOR_FILL = GR_SPEC_COLOR,
   GR_COLOR_TEXT = 1 << 3,
   GR_COLOR_BORDER = 1 << 4
 } gr_color_type_t;
-
-typedef enum
-{
-  GR_OPTION_X_LOG = 1 << 0,
-  GR_OPTION_Y_LOG = 1 << 1,
-  GR_OPTION_Z_LOG = 1 << 2,
-  GR_OPTION_FLIP_X = 1 << 3,
-  GR_OPTION_FLIP_Y = 1 << 4,
-  GR_OPTION_FLIP_Z = 1 << 5,
-  GR_OPTION_LINES = 0,
-  GR_OPTION_MESH = 1,
-  GR_OPTION_FILLED_MESH = 2,
-  GR_OPTION_Z_SHADED_MESH = 3,
-  GR_OPTION_COLORED_MESH = 4,
-  GR_OPTION_CELL_ARRAY = 5,
-  GR_OPTION_SHADED_MESH = 6,
-  GR_OPTION_3D_MESH = 7
-} gr_option_t;
 
 enum class EXPORT CoordinateSpace
 {
@@ -529,6 +522,7 @@ public:
   std::shared_ptr<Context> getContext();
 
   static void processViewport(const std::shared_ptr<GRM::Element> &elem);
+  static void calculateCharHeight(const std::shared_ptr<GRM::Element> &elem);
   static void processLimits(const std::shared_ptr<GRM::Element> &elem);
   static void processWindow(const std::shared_ptr<GRM::Element> &elem);
   static void processScale(const std::shared_ptr<GRM::Element> &elem);

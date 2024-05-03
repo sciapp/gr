@@ -7,25 +7,25 @@ stages:
 - deploy
 
 include:
-  - local: "/.gitlab-ci/build-arch.yml"
-  - local: "/.gitlab-ci/build-centos.yml"
-  - local: "/.gitlab-ci/build-darwin.yml"
-  - local: "/.gitlab-ci/build-debian.yml"
-  - local: "/.gitlab-ci/build-emscripten.yml"
-  - local: "/.gitlab-ci/build-freebsd.yml"
-  - local: "/.gitlab-ci/build-ubuntu.yml"
-  - local: "/.gitlab-ci/build-windows.yml"
-  - local: "/.gitlab-ci/test.yml"
-  - local: "/.gitlab-ci/test-emscripten.yml"
-  - local: "/.gitlab-ci/test-ubuntu.yml"
-  - local: "/.gitlab-ci/package.yml"
-  - local: "/.gitlab-ci/sync.yml"
-  - local: "/.gitlab-ci/deploy.yml"
+- local: "/.gitlab-ci/build-arch.yml"
+- local: "/.gitlab-ci/build-centos.yml"
+- local: "/.gitlab-ci/build-darwin.yml"
+- local: "/.gitlab-ci/build-debian.yml"
+- local: "/.gitlab-ci/build-emscripten.yml"
+- local: "/.gitlab-ci/build-freebsd.yml"
+- local: "/.gitlab-ci/build-ubuntu.yml"
+- local: "/.gitlab-ci/build-windows.yml"
+- local: "/.gitlab-ci/test.yml"
+- local: "/.gitlab-ci/test-emscripten.yml"
+- local: "/.gitlab-ci/test-ubuntu.yml"
+- local: "/.gitlab-ci/package.yml"
+- local: "/.gitlab-ci/sync.yml"
+- local: "/.gitlab-ci/deploy.yml"
 
 tag-type-check:
   stage: prebuild
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/deploy
   only:
-    - tags@Scientific-IT-Systems/gr
+  - tags@Scientific-IT-Systems/gr
   script:
-    - test `git cat-file -t $CI_COMMIT_TAG` = "tag"
+  - test `git cat-file -t $CI_COMMIT_TAG` = "tag"

@@ -28,47 +28,47 @@ ubuntu-cmake-self-contained:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
   script:
-    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-    - make -C 3rdparty default extras
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_DEMOS=ON
-    - make
-    - make install
-    - cd ..
-    - mv install artifacts-ubuntu2004-cmake
-    - mv build/grm_test_public_api/grm_test_snoop/snoop ./grm_snoop
-    - mv build/grm_test_public_api/grm_test_snoop/libc_rand.so ./
+  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
+  - make -C 3rdparty default extras
+  - mkdir build
+  - cd build
+  - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_DEMOS=ON
+  - make
+  - make install
+  - cd ..
+  - mv install artifacts-ubuntu2004-cmake
+  - mv build/grm_test_public_api/grm_test_snoop/snoop ./grm_snoop
+  - mv build/grm_test_public_api/grm_test_snoop/libc_rand.so ./
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-ubuntu2004-cmake/
+    - artifacts-ubuntu2004-cmake/
 
 ubuntu-cmake-self-contained-debug:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
   script:
-    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-    - make -C 3rdparty default extras
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_DEMOS=ON
-    - make
-    - make install
-    - cd ..
-    - mv install artifacts-ubuntu2004-cmake
-    - mv build/grm_test_public_api/grm_test_snoop/snoop ./grm_snoop
-    - mv build/grm_test_public_api/grm_test_snoop/libc_rand.so ./
+  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
+  - make -C 3rdparty default extras
+  - mkdir build
+  - cd build
+  - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DGR_BUILD_DEMOS=ON -DCMAKE_CXX_FLAGS="-D_GLIBCXX_ASSERTIONS"
+  - make
+  - make install
+  - cd ..
+  - mv install artifacts-ubuntu2004-cmake
+  - mv build/grm_test_public_api/grm_test_snoop/snoop ./grm_snoop
+  - mv build/grm_test_public_api/grm_test_snoop/libc_rand.so ./
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-ubuntu2004-cmake/
-      - grm_snoop
-      - libc_rand.so
+    - artifacts-ubuntu2004-cmake/
+    - grm_snoop
+    - libc_rand.so
 
 ubuntu-system-dependencies:
   stage: build
@@ -80,12 +80,12 @@ ubuntu-cmake-system-dependencies:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-system-dependencies
   script:
-    - apt-get update
-    - apt-get install -y libqhull-dev libbz2-dev libjpeg-turbo8-dev libavdevice-dev libtheora-dev libogg-dev libvpx-dev libfreetype6-dev
-    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
-    - tar xf cmake-3.23.0-linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
-    - make
+  - apt-get update
+  - apt-get install -y libqhull-dev libbz2-dev libjpeg-turbo8-dev libavdevice-dev libtheora-dev libogg-dev libvpx-dev libfreetype6-dev
+  - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
+  - tar xf cmake-3.23.0-linux-x86_64.tar.gz
+  - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
+  - mkdir build
+  - cd build
+  - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
+  - make

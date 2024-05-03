@@ -25,13 +25,6 @@ Link:
 #define log1p(x) (log(1 + (x)))
 #endif
 
-#define XFORM_BOOLEAN 0
-#define XFORM_LINEAR 1
-#define XFORM_LOG 2
-#define XFORM_LOGLOG 3
-#define XFORM_CUBIC 4
-#define XFORM_EQUALIZED 5
-
 static char *xcalloc(int count, int size)
 {
   char *result = (char *)calloc(count, size);
@@ -107,7 +100,7 @@ static void shade(int w, int h, int *bins, int xform)
         bmin = bins[i];
     }
 
-  if (xform == XFORM_EQUALIZED) /* equalize */
+  if (xform == GR_XFORM_EQUALIZED) /* equalize */
     {
       equalize(w, h, bins, bmax);
     }
@@ -115,15 +108,15 @@ static void shade(int w, int h, int *bins, int xform)
     {
       for (i = 0; i < num_bins; i++)
         {
-          if (xform == XFORM_BOOLEAN) /* boolean */
+          if (xform == GR_XFORM_BOOLEAN) /* boolean */
             bins[i] = bins[i] > 0 ? 255 : 0;
-          else if (xform == XFORM_LINEAR) /* linear */
+          else if (xform == GR_XFORM_LINEAR) /* linear */
             bins[i] = (int)((double)(bins[i] - bmin) / (bmax - bmin) * 255);
-          else if (xform == XFORM_LOG) /* log */
+          else if (xform == GR_XFORM_LOG) /* log */
             bins[i] = (int)(log1p(bins[i] - bmin) / log1p(bmax - bmin) * 255);
-          else if (xform == XFORM_LOGLOG) /* loglog */
+          else if (xform == GR_XFORM_LOGLOG) /* loglog */
             bins[i] = (int)(log1p(log1p(bins[i] - bmin)) / log1p(log1p(bmax - bmin)) * 255);
-          else if (xform == XFORM_CUBIC) /* cubic */
+          else if (xform == GR_XFORM_CUBIC) /* cubic */
             bins[i] = (int)(pow(bins[i], 0.3) / pow(bmax - bmin, 0.3) * 255);
         }
     }

@@ -8,6 +8,8 @@
 #include <math.h>
 #include <float.h>
 #include <stack>
+
+#include <QtGlobal>
 #include <QDebug>
 
 #endif
@@ -131,6 +133,7 @@ typedef struct ws_state_list_t
   int pcolor[PATTERNS];
   bool empty;
   bool prevent_resize_by_dl;
+  bool window_stays_on_top;
   bool interp_was_called;
 
   void (*memory_plugin)(int, int, int, int, int *, int, double *, int, double *, int, char *, void **);
@@ -253,7 +256,7 @@ static void set_xform(void)
 {
   double ratio, w, h, x, y;
 
-  ratio = (p->window[1] - p->window[0]) / (p->window[3] - p->window[2]);
+  ratio = (p->window[1] - p->window[0]) / (p->window[3] - p->window[2]) * (1.0 * p->device_dpi_x / p->device_dpi_y);
 
   if (p->width > p->height * ratio)
     {
@@ -1793,6 +1796,7 @@ static void initialize_data()
 
   p->memory_plugin_initialised = false;
   p->prevent_resize_by_dl = false;
+  p->window_stays_on_top = false;
   p->interp_was_called = false;
 
   p->window[0] = 0.0;
@@ -1898,7 +1902,6 @@ static int get_paint_device(void)
 
 static void inqdspsize(double *mwidth, double *mheight, int *width, int *height)
 {
-#include <QtGlobal>
 #if QT_VERSION >= 0x050000
   QScreen *screen = QGuiApplication::primaryScreen();
   if (screen)
@@ -1997,7 +2000,9 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       return;
 
     case 209: /* inq_ws_state */
-      aspect_ratio = (p->window[1] - p->window[0]) / (p->window[3] - p->window[2]);
+      aspect_ratio =
+          (p->window[1] - p->window[0]) / (p->window[3] - p->window[2]) * (1.0 * p->device_dpi_x / p->device_dpi_y);
+      ;
       get_paint_device();
       if (p->width > p->height * aspect_ratio)
         {
@@ -2022,25 +2027,32 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
 
 #else
 
-void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2,
-                          int lc, char *chars, void **ptr)
+#define QT_NAME_STRING "Qt"
+
+void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                          int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr)
 {
   GKS_UNUSED(dx);
   GKS_UNUSED(dy);
   GKS_UNUSED(dimx);
-  GKS_UNUSED(ia);
-  GKS_UNUSED(lr1);
-  GKS_UNUSED(r1);
-  GKS_UNUSED(lr2);
-  GKS_UNUSED(r2);
-  GKS_UNUSED(lc);
-  GKS_UNUSED(chars);
+  GKS_UNUSED(i_arr);
+  GKS_UNUSED(len_f_arr_1);
+  GKS_UNUSED(f_arr_1);
+  GKS_UNUSED(len_f_arr_2);
+  GKS_UNUSED(f_arr_2);
+  GKS_UNUSED(len_c_arr);
+  GKS_UNUSED(c_arr);
   GKS_UNUSED(ptr);
 
   if (fctid == 2)
     {
       gks_perror(QT_NAME_STRING " support not compiled in");
-      ia[0] = 0;
+      i_arr[0] = 0;
+      f_arr_1[0] = 0;
+      f_arr_2[0] = 0;
+      i_arr[0] = 0;
+      i_arr[1] = 0;
+      if (c_arr != nullptr) c_arr[0] = '\0';
     }
 }
 

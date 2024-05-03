@@ -10,7 +10,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv) : QMainWindow()
       QString s;
       std::string kind;
       static char path[MAXPATHLEN];
-      std::snprintf(path, MAXPATHLEN, "%s/bin", GRDIR);
+      std::snprintf(path, MAXPATHLEN, "%s/lib", GRDIR);
 
 
       auto *message = new QTextBrowser(w);

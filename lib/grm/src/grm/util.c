@@ -166,18 +166,19 @@ int int_equals_any(int number, unsigned int n, ...)
   return any_is_equal;
 }
 
-int str_equals_any(const char *str, unsigned int n, ...)
+int str_equals_any(const char *str, ...)
 {
   va_list vl;
   char *current_str;
   int any_is_equal;
   unsigned int i;
 
-  va_start(vl, n);
+  va_start(vl, str);
   any_is_equal = 0;
-  for (i = 0; i < n; i++)
+  while (1)
     {
       current_str = va_arg(vl, char *);
+      if (current_str == NULL) break;
       if (strcmp(str, current_str) == 0)
         {
           any_is_equal = 1;
@@ -304,7 +305,7 @@ unsigned long next_or_equal_power2(unsigned long num)
 int is_env_variable_enabled(const char *env_variable_name)
 {
   return getenv(env_variable_name) != NULL &&
-         str_equals_any(getenv(env_variable_name), 7, "1", "on", "ON", "true", "TRUE", "yes", "YES");
+         str_equals_any(getenv(env_variable_name), "1", "on", "ON", "true", "TRUE", "yes", "YES", NULL);
 }
 
 int file_exists(const char *file_path)
@@ -371,6 +372,28 @@ error_cleanup:
       return strdup(GRDIR);
     }
 #endif
+}
+
+const char *get_tmp_directory(void)
+{
+  const char *tmpdir;
+  const char *env_vars[] = {
+      "TMPDIR",
+      "TMP",
+      "TEMP",
+      "TEMPDIR",
+  };
+  int i;
+
+  for (i = 0; i < array_size(env_vars); ++i)
+    {
+      if ((tmpdir = getenv(env_vars[i])) != NULL)
+        {
+          return tmpdir;
+        }
+    }
+
+  return "/tmp";
 }
 
 #ifdef _WIN32
