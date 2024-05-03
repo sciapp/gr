@@ -2,7 +2,8 @@
 #define _POSIX_C_SOURCE 200112L
 #endif
 
-#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__)
+/* FreeBSD excluded due to BinaryBuilder issues */
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__EMSCRIPTEN__) && !defined(__FreeBSD__)
 #define BACKTRACE_AVAILABLE 1
 #endif
 
