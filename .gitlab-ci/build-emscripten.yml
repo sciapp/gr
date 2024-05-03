@@ -11,3 +11,7 @@ emscripten:
     expire_in: 1 week
     paths:
     - artifacts-js/
+  # Is needed to circumvent a bug in GitLab CI (if needed jobs do not contain a rule section, but the dependent job
+  # does, GitLab CI produces YAML errors)
+  rules:
+  - when: on_success
