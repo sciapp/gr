@@ -36,6 +36,7 @@ extern "C" {
 #include "gr.h"
 #include "gr3.h"
 #include "json_int.h"
+#include "bson_int.h"
 #include "logging_int.h"
 }
 #include "utilcpp_int.hxx"
@@ -4583,14 +4584,15 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
  * \brief Dump the current GRM context object into a file object.
  *
  * \param[in] f The file object, the serialized context will be written to.
- * \param[in] dump_encoding The encoding of the serialized context. The context is exported as JSON, but an additional
- *                          encoding step can be necessary to embed the JSON document into a file (like an XML
- *                          document). Possible values are:
- *                          - `DUMP_JSON_PLAIN`: Do not apply any encoding.
- *                          - `DUMP_JSON_ESCAPE_DOUBLE_MINUS`: Escape double minus signs (`--`) in the JSON document by
- *                                                             replacing them with `-\-`. This can be used to embed the
- *                                                             output into an XML comment.
- *                          - `DUMP_JSON_BASE64`: Base64 encode the JSON document.
+ * \param[in] dump_encoding The encoding of the serialized context. The context is exported as JSON or BSON, but an
+ *                          additional encoding step can be necessary to embed the JSON/BSON document into a file (like
+ *                          an XML document). Possible values are:
+ *                          - `DUMP_JSON_PLAIN`: Export as JSON and do not apply any encoding.
+ *                          - `DUMP_JSON_ESCAPE_DOUBLE_MINUS`: Export as JSON and escape double minus signs (`--`) in
+ *                                                             the JSON document by replacing them with `-\-`. This can
+ *                                                             be used to embed the output into an XML comment.
+ *                          - `DUMP_JSON_BASE64`: Export a Base64 encoded JSON document.
+ *                          - `DUMP_BSON_BASE64`: Export a Base64 encoded BSON document.
  * \param[in] context_keys_to_discard The context keys which will be excluded in the dump.
  */
 void dump_context(FILE *f, dump_encoding_t dump_encoding,
@@ -4618,29 +4620,30 @@ char *dump_context_str(dump_encoding_t dump_encoding, const std::unordered_set<s
     }
   auto context = global_render->getContext();
 
-  tojson_write(memwriter, "o(");
+  auto write_callback = (dump_encoding != DUMP_BSON_BASE64) ? tojson_write : tobson_write;
+  write_callback(memwriter, "o(");
   for (auto item : *context)
     {
       std::visit(
-          GRM::overloaded{[&memwriter, &context_keys_to_discard](
+          GRM::overloaded{[&memwriter, &context_keys_to_discard, &write_callback](
                               std::reference_wrapper<std::pair<const std::string, std::vector<double>>> pair_ref) {
                             if (context_keys_to_discard->find(pair_ref.get().first) != context_keys_to_discard->end())
                               return;
                             std::stringstream format_stream;
                             format_stream << pair_ref.get().first << ":nD";
-                            tojson_write(memwriter, format_stream.str().c_str(), pair_ref.get().second.size(),
-                                         pair_ref.get().second.data());
+                            write_callback(memwriter, format_stream.str().c_str(), pair_ref.get().second.size(),
+                                           pair_ref.get().second.data());
                           },
-                          [&memwriter, &context_keys_to_discard](
+                          [&memwriter, &context_keys_to_discard, &write_callback](
                               std::reference_wrapper<std::pair<const std::string, std::vector<int>>> pair_ref) {
                             if (context_keys_to_discard->find(pair_ref.get().first) != context_keys_to_discard->end())
                               return;
                             std::stringstream format_stream;
                             format_stream << pair_ref.get().first << ":nI";
-                            tojson_write(memwriter, format_stream.str().c_str(), pair_ref.get().second.size(),
-                                         pair_ref.get().second.data());
+                            write_callback(memwriter, format_stream.str().c_str(), pair_ref.get().second.size(),
+                                           pair_ref.get().second.data());
                           },
-                          [&memwriter, &context_keys_to_discard](
+                          [&memwriter, &context_keys_to_discard, &write_callback](
                               std::reference_wrapper<std::pair<const std::string, std::vector<std::string>>> pair_ref) {
                             if (context_keys_to_discard->find(pair_ref.get().first) != context_keys_to_discard->end())
                               return;
@@ -4652,20 +4655,22 @@ char *dump_context_str(dump_encoding_t dump_encoding, const std::unordered_set<s
                               {
                                 c_strings.push_back(str.c_str());
                               }
-                            tojson_write(memwriter, format_stream.str().c_str(), pair_ref.get().second.size(),
-                                         c_strings.data());
+                            write_callback(memwriter, format_stream.str().c_str(), pair_ref.get().second.size(),
+                                           c_strings.data());
                           }},
           item);
     }
-  tojson_write(memwriter, ")");
+  write_callback(memwriter, ")");
   char *encoded_string = nullptr;
   switch (dump_encoding)
     {
+      err_t error;
+
     case DUMP_JSON_ESCAPE_DOUBLE_MINUS:
       encoded_string = strdup(escape_double_minus(memwriter_buf(memwriter)).c_str());
       break;
     case DUMP_JSON_BASE64:
-      err_t error;
+    case DUMP_BSON_BASE64:
       encoded_string = base64_encode(nullptr, memwriter_buf(memwriter), memwriter_size(memwriter), &error);
       if (error != ERROR_NONE)
         {
@@ -4696,8 +4701,13 @@ char *dump_context_str(dump_encoding_t dump_encoding, const std::unordered_set<s
  */
 void dump_context_as_xml_comment(FILE *f, const std::unordered_set<std::string> *context_keys_to_discard)
 {
+#ifndef NDEBUG
+  auto dump_encoding = DUMP_JSON_ESCAPE_DOUBLE_MINUS;
+#else
+  auto dump_encoding = DUMP_BSON_BASE64;
+#endif
   fprintf(f, "<!-- __grm_context__: ");
-  dump_context(f, DUMP_JSON_ESCAPE_DOUBLE_MINUS, context_keys_to_discard);
+  dump_context(f, dump_encoding, context_keys_to_discard);
   fprintf(f, " -->\n");
 }
 
@@ -4709,23 +4719,28 @@ void dump_context_as_xml_comment(FILE *f, const std::unordered_set<std::string> 
  */
 char *dump_context_as_xml_comment_str(const std::unordered_set<std::string> *context_keys_to_discard)
 {
-  char *escaped_json_str = nullptr;
+  char *encoded_json_str = nullptr;
   size_t escaped_json_strlen;
   char *xml_comment = nullptr;
 
-  escaped_json_str = dump_context_str(DUMP_JSON_ESCAPE_DOUBLE_MINUS, context_keys_to_discard);
-  cleanup_if(escaped_json_str == nullptr);
-  escaped_json_strlen = strlen(escaped_json_str);
+#ifndef NDEBUG
+  auto dump_encoding = DUMP_JSON_ESCAPE_DOUBLE_MINUS;
+#else
+  auto dump_encoding = DUMP_BSON_BASE64;
+#endif
+  encoded_json_str = dump_context_str(dump_encoding, context_keys_to_discard);
+  cleanup_if(encoded_json_str == nullptr);
+  escaped_json_strlen = strlen(encoded_json_str);
   /* 27 = strlen("<!-- __grm_context__:  -->") + 1 (`\0`) */
   xml_comment = static_cast<char *>(malloc(escaped_json_strlen + 27));
   cleanup_if(xml_comment == nullptr);
   strcpy(xml_comment, "<!-- __grm_context__: ");
-  strcpy(xml_comment + 22, escaped_json_str);
+  strcpy(xml_comment + 22, encoded_json_str);
   strcpy(xml_comment + 22 + escaped_json_strlen, " -->");
   xml_comment[escaped_json_strlen + 26] = '\0';
 
 cleanup:
-  free(escaped_json_str);
+  free(encoded_json_str);
 
   return xml_comment;
 }
@@ -4777,7 +4792,19 @@ void load_context_str(GRM::Context &context, const std::string &context_str, dum
   std::string serialized_context_tmp_;
   if (dump_encoding == DUMP_AUTO_DETECT)
     {
-      dump_encoding = context_str[0] == '{' ? DUMP_JSON_ESCAPE_DOUBLE_MINUS : DUMP_JSON_BASE64;
+      if (context_str[0] == '{')
+        {
+          dump_encoding = DUMP_JSON_ESCAPE_DOUBLE_MINUS;
+        }
+      else if (context_str[0] == 'e' && context_str[1] == 'y')
+        {
+          // Base64 encoded `{"` is `ey`
+          dump_encoding = DUMP_JSON_BASE64;
+        }
+      else
+        {
+          dump_encoding = DUMP_BSON_BASE64;
+        }
     }
   switch (dump_encoding)
     {
@@ -4786,6 +4813,7 @@ void load_context_str(GRM::Context &context, const std::string &context_str, dum
       serialized_context = serialized_context_tmp_.c_str();
       break;
     case DUMP_JSON_BASE64:
+    case DUMP_BSON_BASE64:
       err_t error;
       serialized_context = base64_decode(nullptr, context_str.c_str(), nullptr, &error);
       if (error != ERROR_NONE)
@@ -4806,7 +4834,14 @@ void load_context_str(GRM::Context &context, const std::string &context_str, dum
     {
       throw std::runtime_error("Failed to create context args object");
     }
-  fromjson_read(context_args, serialized_context);
+  if (dump_encoding != DUMP_BSON_BASE64)
+    {
+      fromjson_read(context_args, serialized_context);
+    }
+  else
+    {
+      frombson_read(context_args, serialized_context);
+    }
   auto context_args_it = grm_args_iter(context_args);
   arg_t *context_arg;
   while ((context_arg = context_args_it->next(context_args_it)))

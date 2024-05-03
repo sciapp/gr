@@ -78,6 +78,7 @@ typedef enum
   DUMP_JSON_PLAIN = 1,
   DUMP_JSON_ESCAPE_DOUBLE_MINUS = 2,
   DUMP_JSON_BASE64 = 3,
+  DUMP_BSON_BASE64 = 4,
 } dump_encoding_t;
 
 
