@@ -8,7 +8,6 @@ stages:
 
 include:
 - local: "/.gitlab-ci/build-arch.yml"
-- local: "/.gitlab-ci/build-binary-builder.yml"
 - local: "/.gitlab-ci/build-centos.yml"
 - local: "/.gitlab-ci/build-darwin.yml"
 - local: "/.gitlab-ci/build-debian.yml"
@@ -16,6 +15,7 @@ include:
 - local: "/.gitlab-ci/build-freebsd.yml"
 - local: "/.gitlab-ci/build-ubuntu.yml"
 - local: "/.gitlab-ci/build-windows.yml"
+- local: "/.gitlab-ci/build-binary-builder.yml"  # Must be included after emscripten
 - local: "/.gitlab-ci/test.yml"
 - local: "/.gitlab-ci/test-emscripten.yml"
 - local: "/.gitlab-ci/test-ubuntu.yml"
