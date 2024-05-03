@@ -468,6 +468,7 @@
             <xs:attribute name="height" type="xs:double"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="line_width" type="xs:double"/>
+            <xs:attribute name="mathtex" type="xs:int"/>
             <xs:attribute name="name" type="xs:string"/>
             <xs:attribute name="scientific_format" type="strint"/>
             <xs:attribute name="set_text_color_for_background" type="xs:integer"/>

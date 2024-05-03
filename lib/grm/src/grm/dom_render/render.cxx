@@ -7840,17 +7840,17 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
             {
               if (rings != floor(max_scale) - floor(min_scale)) // rings != magnitudes
                 {
-                  snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1e",
-                           pow(10, min_scale + i * (floor(max_scale) - floor(min_scale))));
+                  snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d^{%.3f}", 10,
+                           min_scale + i * (floor(max_scale) - floor(min_scale)));
                 }
               else // rings == magnitudes
                 {
-                  snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1e", pow(10, min_scale + i));
+                  snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d^{%.1f}", 10, min_scale + i);
                 }
             }
           else // no y_log
             {
-              const char *format = (max_scale > -2.0) ? "%.1lf" : "%.1e";
+              const char *format = (max_scale > -2.0) ? "%.1lf" : "%d^{%.1f}";
               snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, format, first_tick + tick * i);
             }
 
@@ -7858,12 +7858,17 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
             {
               text = render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC);
               text->setAttribute("_child_id", child_id++);
+              text->setAttribute("scientific_format", 1);
               axes_text_group->append(text);
             }
           else
             {
               text = element->querySelectors("text[_child_id=" + std::to_string(child_id++) + "]");
-              if (text != nullptr) render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC, text);
+              if (text != nullptr)
+                {
+                  render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC, text);
+                  text->setAttribute("scientific_format", 1);
+                }
             }
         }
     }
@@ -10349,7 +10354,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
             {
               if (keep_radii_axes)
                 {
-                  if (count < ylim_min)
+                  if (count <= ylim_min)
                     rectlist[class_nr] = ylim_min / max;
                   else if (rect > r_max)
                     rectlist[class_nr] = ylim_max;
@@ -10358,7 +10363,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
 
                   auto complex_min = moivre(pow(ylim_min / max, num_bins * 2), (2 * class_nr), (int)num_bins * 2);
                   arc_pos = sqrt(pow(real(complex_min), 2) + pow(imag(complex_min), 2));
-                  if (count < ylim_min) arc_pos = 0.0;
+                  if (count <= ylim_min) arc_pos = 0.0;
                 }
               else
                 {
@@ -10401,7 +10406,8 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
               arc_pos = rect;
             }
 
-          // these are the inner arcs with ylim and the normal_arcs without ylim, only if its higher than ylim_min
+          // these are the inner arcs with ylim (keep_radii_axes only) and the normal_arcs without ylim, only if its
+          // higher than ylim_min
           if (draw_inner)
             {
               if (del != del_values::update_without_default && del != del_values::update_with_default)
