@@ -8,6 +8,7 @@ stages:
 
 include:
 - local: "/.gitlab-ci/build-arch.yml"
+- local: "/.gitlab-ci/build-binary-builder.yml"
 - local: "/.gitlab-ci/build-centos.yml"
 - local: "/.gitlab-ci/build-darwin.yml"
 - local: "/.gitlab-ci/build-debian.yml"
