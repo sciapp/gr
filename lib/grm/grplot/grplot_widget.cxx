@@ -1239,7 +1239,10 @@ void GRPlotWidget::AttributeEditEvent()
       clicked.clear();
       if (getenv("GRM_DEBUG"))
         {
-          std::cerr << toXML(grm_get_document_root(), GRM::SerializerOptions{std::string(2, ' '), true}) << "\n";
+          std::cerr << toXML(grm_get_document_root(),
+                             GRM::SerializerOptions{std::string(2, ' '),
+                                                    GRM::SerializerOptions::InternalAttributesFormat::Plain})
+                    << "\n";
         }
       reset_pixmap();
     }

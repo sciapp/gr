@@ -4702,7 +4702,9 @@ char *dump_context_str(dump_encoding_t dump_encoding, const std::unordered_set<s
 void dump_context_as_xml_comment(FILE *f, const std::unordered_set<std::string> *context_keys_to_discard)
 {
 #ifndef NDEBUG
-  auto dump_encoding = DUMP_JSON_ESCAPE_DOUBLE_MINUS;
+  // TODO: Undo
+  // auto dump_encoding = DUMP_JSON_ESCAPE_DOUBLE_MINUS;
+  auto dump_encoding = DUMP_BSON_BASE64;
 #else
   auto dump_encoding = DUMP_BSON_BASE64;
 #endif
@@ -4724,7 +4726,9 @@ char *dump_context_as_xml_comment_str(const std::unordered_set<std::string> *con
   char *xml_comment = nullptr;
 
 #ifndef NDEBUG
-  auto dump_encoding = DUMP_JSON_ESCAPE_DOUBLE_MINUS;
+  // TODO: Undo
+  // auto dump_encoding = DUMP_JSON_ESCAPE_DOUBLE_MINUS;
+  auto dump_encoding = DUMP_BSON_BASE64;
 #else
   auto dump_encoding = DUMP_BSON_BASE64;
 #endif
@@ -5717,7 +5721,9 @@ void grm_dump_graphics_tree(FILE *f)
   const unsigned int indent = 2;
   // Use a lambda around `restore_backup_attribute_filter` to make sure it is used by reference.
   fprintf(f, "%s",
-          toXML(global_root, GRM::SerializerOptions{std::string(indent, ' ')},
+          toXML(global_root,
+                GRM::SerializerOptions{std::string(indent, ' '),
+                                       GRM::SerializerOptions::InternalAttributesFormat::Obfuscated},
                 [&restore_backup_attribute_filter](const std::string &attribute_name, const GRM::Element &element,
                                                    std::optional<std::string> &new_attribute_name) -> bool {
                   return restore_backup_attribute_filter(attribute_name, element, new_attribute_name);
@@ -5743,7 +5749,7 @@ char *grm_dump_graphics_tree_str(void)
   internal::RestoreBackupAttributeFilter restore_backup_attribute_filter;
   // Use a lambda around `restore_backup_attribute_filter` to make sure it is used by reference.
   std::string graphics_tree_str =
-      toXML(global_root, GRM::SerializerOptions{},
+      toXML(global_root, GRM::SerializerOptions{"", GRM::SerializerOptions::InternalAttributesFormat::Obfuscated},
             [&restore_backup_attribute_filter](const std::string &attribute_name, const GRM::Element &element,
                                                std::optional<std::string> &new_attribute_name) -> bool {
               return restore_backup_attribute_filter(attribute_name, element, new_attribute_name);

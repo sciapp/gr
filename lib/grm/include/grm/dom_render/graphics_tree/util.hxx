@@ -17,11 +17,19 @@ class Node;
 
 struct EXPORT SerializerOptions
 {
+  enum class InternalAttributesFormat
+  {
+    None,       // Hide internal attributes
+    Plain,      // Export internal attributes like public attributes
+    Obfuscated, // Collect internal attributes and store them into a special `internal` attribute, BSON+Base64 encoded
+  };
+
   std::string indent = "";
-  bool show_hidden = false;
+  InternalAttributesFormat internal_attribute_format = InternalAttributesFormat::None;
 };
 EXPORT std::string
-toXML(const std::shared_ptr<const Node> &node, const SerializerOptions &options = {"", false},
+toXML(const std::shared_ptr<const Node> &node,
+      const SerializerOptions &options = {"", SerializerOptions::InternalAttributesFormat::None},
       std::optional<std::function<bool(const std::string &attribute_name, const GRM::Element &element,
                                        std::optional<std::string> &new_attribute_name)>>
           attribute_filter = std::nullopt);
