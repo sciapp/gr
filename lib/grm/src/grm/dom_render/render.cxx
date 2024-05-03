@@ -14804,7 +14804,9 @@ void GRM::Render::render()
       applyRootDefaults(root);
       if (logger_enabled())
         {
-          std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '), true}) << "\n";
+          std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '),
+                                                          GRM::SerializerOptions::InternalAttributesFormat::Plain})
+                    << "\n";
         }
       if (static_cast<int>(root->getAttribute("clear_ws"))) gr_clearws();
       root->setAttribute("_modified", true);
@@ -14825,7 +14827,9 @@ void GRM::Render::render()
         }
       if (logger_enabled())
         {
-          std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '), true}) << "\n";
+          std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '),
+                                                          GRM::SerializerOptions::InternalAttributesFormat::Plain})
+                    << "\n";
         }
       redraw_ws = false;
       // reset marker types
