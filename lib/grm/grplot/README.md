@@ -21,7 +21,8 @@ The following parameters are key-value pairs which can be used for every plot ty
 
 There is another parameter that can be used for all two-dimensional data sets:
 
-- `keep_aspect_ratio` or `aspect`: defines whether the aspect ratio of the data is kept or not. Possible values for this parameter are 0 or 1.
+- `keep_aspect_ratio` or `aspect`: defines whether the aspect ratio of the initial picture is kept or not. Possible values for this parameter are 0 or 1.
+- `only_quadratic_aspect_ratio`: defines whether the aspect ratio of quadratic data (x, y) is forced to be quadratic and kept this way or not. Notice this parameter will not work when the `keep_aspect_ratio` parameter has the value of 0. Possible values for this parameter are 0 or 1.
 
 For plots where multiple columns are read there is also a parameter that allows to select columns.
 

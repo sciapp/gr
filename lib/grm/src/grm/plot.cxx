@@ -280,6 +280,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "location",
                                     "major_h",
                                     "normalization",
+                                    "only_quadratic_aspect_ratio",
                                     "orientation",
                                     "panzoom",
                                     "phi_flip",
@@ -417,6 +418,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"marginal_heatmap_kind", "s"},
                                               {"marker_type", "i|D"},
                                               {"num_bins", "i"},
+                                              {"only_quadratic_aspect_ratio", "i"},
                                               {"orientation", "s"},
                                               {"panzoom", "D"},
                                               {"raw", "s"},
@@ -3671,8 +3673,7 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
   grm_args_t **current_series;
   int location;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : edit_figure->lastChildElement();
 
   return_error_if(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   logger((stderr, "Draw a legend with %d labels\n", num_labels));
@@ -3700,12 +3701,12 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
       ++current_series;
     }
 
-  auto subGroup = global_render->createLegend(labels_key, labels_vec, specs_key, specs_vec);
+  auto legend = global_render->createLegend(labels_key, labels_vec, specs_key, specs_vec);
   if (grm_args_values(subplot_args, "location", "i", &location))
     {
-      group->parentElement()->setAttribute("location", location);
+      legend->setAttribute("location", location);
     }
-  group->append(subGroup);
+  group->append(legend);
 
   return ERROR_NONE;
 }
@@ -3716,8 +3717,7 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
   unsigned int num_labels;
   grm_args_t *series;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : edit_figure->lastChildElement();
 
   return_error_if(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
@@ -4654,7 +4654,7 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
 {
   plot_func_t plot_func;
   char *y_label, *x_label, *title, *kind;
-  int keep_aspect_ratio, location, adjust_x_lim, adjust_y_lim;
+  int keep_aspect_ratio, location, adjust_x_lim, adjust_y_lim, only_quadratic_aspect_ratio;
   double *subplot;
   double x_lim_min, x_lim_max, y_lim_min, y_lim_max, z_lim_min, z_lim_max;
   double x_min, x_max, y_min, y_max, z_min, z_max;
@@ -4687,6 +4687,10 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
   if (grm_args_values(subplot_args, "keep_aspect_ratio", "i", &keep_aspect_ratio))
     {
       group->setAttribute("keep_aspect_ratio", keep_aspect_ratio);
+    }
+  if (grm_args_values(subplot_args, "only_quadratic_aspect_ratio", "i", &only_quadratic_aspect_ratio))
+    {
+      group->setAttribute("only_quadratic_aspect_ratio", only_quadratic_aspect_ratio);
     }
   if (grm_args_values(subplot_args, "location", "i", &location))
     {

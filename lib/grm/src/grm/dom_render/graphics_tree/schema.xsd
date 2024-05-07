@@ -120,6 +120,7 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="central_region" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="marginal_heatmap_plot" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="legend" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="side_region" minOccurs="0" maxOccurs="4"/>
                 <xs:element ref="text" minOccurs="0" maxOccurs="1"/> <!-- title -->
             </xs:choice>
@@ -144,6 +145,7 @@
             <xs:attribute name="line_spec" type="xs:string"/>
             <xs:attribute name="location" type="strint"/>
             <xs:attribute name="max_y_length" type="xs:integer"/>
+            <xs:attribute name="only_quadratic_aspect_ratio" type="xs:integer"/>
             <xs:attribute name="phi_flip" type="xs:integer"/>
             <xs:attribute name="phi_lim_max" type="xs:double"/>
             <xs:attribute name="phi_lim_min" type="xs:double"/>
@@ -179,7 +181,6 @@
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="coordinate_system" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="legend" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="series_barplot" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_contour" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_contourf" minOccurs="0" maxOccurs="unbounded"/>
@@ -424,7 +425,7 @@
                 <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="color_ind_values" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="fill_color_ind" type="xs:integer"/>
