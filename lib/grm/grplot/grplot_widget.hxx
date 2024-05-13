@@ -104,7 +104,7 @@ private slots:
   void show_container_slot();
   void show_bounding_boxes_slot();
   void save_file_slot();
-  void open_file_slot();
+  void load_file_slot();
   void enable_editor_functions();
   void add_element_slot();
   void received(grm_args_t_wrapper args);
@@ -225,7 +225,7 @@ private:
   QAction *histAct, *barplotAct, *stairsAct, *stemAct;
   QAction *shadeAct, *hexbinAct;
   QAction *PdfAct, *PngAct, *JpegAct, *SvgAct;
-  QAction *show_container_action, *show_bounding_boxes_action, *save_file_action, *open_file_action, *editor_action,
+  QAction *show_container_action, *show_bounding_boxes_action, *save_file_action, *load_file_action, *editor_action,
       *add_element_action;
   QAction *moveableModeAct;
   QCursor *csr;
