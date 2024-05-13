@@ -5,6 +5,7 @@
 #include <grm/dom_render/graphics_tree/util.hxx>
 #include <grm/dom_render/render.hxx>
 
+#include <algorithm>
 #include <string>
 #include <set>
 
