@@ -1,5 +1,6 @@
 /* ######################### includes ############################################################################### */
 
+#include <algorithm>
 #include <cmath>
 #include <cfloat>
 #include <climits>
