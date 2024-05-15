@@ -97,23 +97,31 @@ typedef enum
 
 typedef enum
 {
-  GR_STOP = 0,
-  GR_MOVETO = 1,
-  GR_LINETO = 2,
-  GR_CURVE3 = 3,
-  GR_CURVE4 = 4,
+  GR_STOP,
+  GR_MOVETO,
+  GR_LINETO,
+  GR_CURVE3,
+  GR_CURVE4,
   GR_CLOSEPOLY = 0x4f,
 } path_code_t;
 
 typedef enum
 {
-  GR_XFORM_BOOLEAN = 0,
-  GR_XFORM_LINEAR = 1,
-  GR_XFORM_LOG = 2,
-  GR_XFORM_LOGLOG = 3,
-  GR_XFORM_CUBIC = 4,
-  GR_XFORM_EQUALIZED = 5,
+  GR_XFORM_BOOLEAN,
+  GR_XFORM_LINEAR,
+  GR_XFORM_LOG,
+  GR_XFORM_LOGLOG,
+  GR_XFORM_CUBIC,
+  GR_XFORM_EQUALIZED,
 } xform_types_t;
+
+typedef enum
+{
+  GR_INTERP2_NEAREST,
+  GR_INTERP2_LINEAR,
+  GR_INTERP2_SPLINE,
+  GR_INTERP2_CUBIC,
+} interp2_method_t;
 
 typedef struct
 {
@@ -338,7 +346,7 @@ DLLEXPORT void gr_trisurface(int, double *, double *, double *);
 DLLEXPORT void gr_gradient(int, int, double *, double *, double *, double *, double *);
 DLLEXPORT void gr_quiver(int, int, double *, double *, double *, double *, int);
 DLLEXPORT void gr_interp2(int nx, int ny, const double *x, const double *y, const double *z, int nxq, int nyq,
-                          const double *xq, const double *yq, double *zq, int method, double extrapval);
+                          const double *xq, const double *yq, double *zq, interp2_method_t method, double extrapval);
 DLLEXPORT const char *gr_version(void);
 DLLEXPORT void gr_shade(int, double *, double *, int, int, double *, int, int, int *);
 DLLEXPORT void gr_shadepoints(int, double *, double *, int, int, int);
