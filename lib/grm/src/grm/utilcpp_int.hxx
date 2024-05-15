@@ -28,9 +28,10 @@ std::string_view rtrim(std::string_view s);
 std::string_view trim(std::string_view s);
 bool starts_with(std::string_view str, std::string_view prefix);
 bool ends_with(std::string_view str, std::string_view suffix);
+size_t ends_with_any_subprefix(std::string_view str, std::string_view prefix);
 size_t string_consists_of(std::string_view input, char c, char ends_with, size_t pos = 0);
 
-template <typename Iterator> std::string string_join(Iterator first, Iterator last, std::string_view delimiter)
+template <typename Iterator> std::string string_join(Iterator first, Iterator last, std::string_view delimiter = "")
 {
   if (first == last)
     {

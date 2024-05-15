@@ -4940,22 +4940,226 @@ private:
 
 /*!
  * \brief A helper class for `FileInputSource` which manages the file reading.
+ *
+ * This class reads XML data from a FILE handle and decodes obfuscated internal attributes on the fly.
  */
 class FileBinInputStream : public BinInputStream
 {
 public:
-  FileBinInputStream(FILE *file) : file_(file) {}
+  explicit FileBinInputStream(FILE *file) : file_(file) {}
 
-  XMLFilePos curPos() const override { return ftell(file_); }
+  [[nodiscard]] XMLFilePos curPos() const override { return cur_pos_; }
 
-  XMLSize_t readBytes(XMLByte *const toFill, const XMLSize_t maxToRead) override
+  /*!
+   * \brief Read the requested amoutn of bytes from the wrapped XML file handle, or less if EOF is reached.
+   *
+   * \param[out] to_fill The buffer which is filled with the read bytes. Must be allocated by the user.
+   * \param[in] max_to_read The maximum amount of bytes to read from the file. The buffer must be large enough.
+   * \return The real amount of read bytes.
+   */
+  [[nodiscard]] XMLSize_t readBytes(XMLByte *const to_fill, const XMLSize_t max_to_read) override
   {
-    return fread(toFill, sizeof(XMLByte), maxToRead, file_);
+    size_t max_to_read_from_file = grm_max(0L, static_cast<long>(max_to_read) - static_cast<long>(buffer_.size()));
+    buffer_.resize(buffer_.size() + max_to_read_from_file);
+    auto read_from_file =
+        fread(buffer_.data() + buffer_.size() - max_to_read_from_file, sizeof(char), max_to_read_from_file, file_);
+    buffer_.resize(buffer_.size() - max_to_read_from_file + read_from_file);
+    size_t look_ahead_pos = 0;
+    while (true)
+      {
+        auto buffer_view = std::string_view(buffer_.data(), buffer_.size());
+        look_ahead_pos = buffer_view.find(look_ahead_prefix_, look_ahead_pos);
+        if (look_ahead_pos == std::string_view::npos)
+          {
+            look_ahead_pos = ends_with_any_subprefix(buffer_view, look_ahead_prefix_);
+          }
+
+        if (look_ahead_pos != std::string_view::npos && look_ahead(buffer_, look_ahead_pos))
+          {
+            buffer_ = transform_look_ahead_buffer(buffer_, look_ahead_pos);
+          }
+        else
+          {
+            break;
+          }
+      }
+    size_t bytes_to_copy = grm_min(max_to_read, buffer_.size());
+    std::copy(std::begin(buffer_), std::begin(buffer_) + static_cast<long>(bytes_to_copy), to_fill);
+    buffer_.erase(std::begin(buffer_), std::begin(buffer_) + static_cast<long>(bytes_to_copy));
+
+    cur_pos_ += static_cast<long>(bytes_to_copy);
+    return bytes_to_copy;
   }
 
-  const XMLCh *getContentType() const override { return nullptr; }
+  [[nodiscard]] const XMLCh *getContentType() const override { return nullptr; }
+
+protected:
+  /*!
+   * \brief Look ahead in the opened file to find the end of the next obfuscated internal attribute.
+   *
+   * \param[inout] buffer The buffer to check for an internal attribute. If it only contains a part of an internal
+   *                      attribute, read more bytes from the file and append them to the buffer.
+   * \param[in] look_ahead_pos The position to start the search for the next internal attribute from.
+   * \return If a complete internal attribute was found.
+   */
+  [[nodiscard]] bool look_ahead(std::vector<char> &buffer, size_t look_ahead_pos)
+  {
+    const size_t chunk_size = 100;
+    size_t buffer_view_start = look_ahead_pos;
+    auto buffer_view = std::string_view(buffer.data(), buffer.size()).substr(buffer_view_start);
+    int delimiter_count = 0;
+    bool successful = false;
+
+    auto read_from_file_at_least_once = false;
+    while (true)
+      {
+        auto delimiter_found = false;
+        if (delimiter_count == 0)
+          {
+            if ((delimiter_found = starts_with(buffer_view, look_ahead_prefix_)))
+              {
+                buffer_view_start += look_ahead_prefix_.size();
+                buffer_view = buffer_view.substr(look_ahead_prefix_.size());
+                ++delimiter_count;
+              }
+            else if (read_from_file_at_least_once)
+              {
+                // In this case the first look ahead operation could not complete the searched prefix -> abort now
+                break;
+              }
+          }
+        if (delimiter_count == 1)
+          {
+            if ((delimiter_found = buffer_view.find(attribute_delimiter) != std::string_view::npos))
+              {
+                ++delimiter_count;
+              }
+          }
+        if (delimiter_count == 2)
+          {
+            successful = true;
+            break;
+          }
+        buffer.resize(buffer.size() + chunk_size);
+        auto read_bytes = fread(buffer.data() + buffer.size() - chunk_size, sizeof(char), chunk_size, file_);
+        read_from_file_at_least_once = true;
+        buffer.resize(buffer.size() - chunk_size + read_bytes);
+        if (read_bytes == 0) break;
+        buffer_view = std::string_view(buffer.data(), buffer.size()).substr(buffer_view_start);
+      }
+
+    return successful;
+  }
+
+  /*!
+   * \brief Decode the next internal attribute in the given look ahead buffer and return the result as new buffer.
+   *
+   * \param[in] look_ahead_buffer The buffer to operate on.
+   * \param[in] start_index An optional start_index to start the search for the next internal attribute from.
+   * \return A buffer containing the decoded internal attribute and the rest of the passed look ahead buffer.
+   */
+  [[nodiscard]] std::vector<char> transform_look_ahead_buffer(const std::vector<char> &look_ahead_buffer,
+                                                              size_t start_index = 0) const
+  {
+    auto look_ahead_buffer_view =
+        std::string_view(look_ahead_buffer.data(), look_ahead_buffer.size()).substr(start_index);
+    auto value_start_pos = look_ahead_buffer_view.find(attribute_delimiter) + 1;
+    auto value_end_pos = look_ahead_buffer_view.find(attribute_delimiter, value_start_pos);
+    auto attribute_value = std::string(look_ahead_buffer_view.substr(value_start_pos, value_end_pos - value_start_pos));
+    err_t error = ERROR_NONE;
+    auto bson_data = std::unique_ptr<char, void (*)(void *)>(
+        base64_decode(nullptr, attribute_value.c_str(), nullptr, &error), std::free);
+    if (error != ERROR_NONE)
+      {
+        logger((stderr, "Got error \"%d\" (\"%s\")!\n", error, error_names[error]));
+        throw std::runtime_error("Got error \"" + std::to_string(error) + "\" (\"" + error_names[error] + "\")!");
+      }
+
+    auto internal_args = std::unique_ptr<grm_args_t, void (*)(grm_args_t *)>(grm_args_new(), grm_args_delete);
+    error = frombson_read(internal_args.get(), bson_data.get());
+    if (error != ERROR_NONE)
+      {
+        logger((stderr, "Got error \"%d\" (\"%s\")!\n", error, error_names[error]));
+        throw std::runtime_error("Got error \"" + std::to_string(error) + "\" (\"" + error_names[error] + "\")!");
+      }
+    auto args_it = std::unique_ptr<grm_args_iterator_t, void (*)(grm_args_iterator_t *)>(
+        grm_args_iter(internal_args.get()), args_iterator_delete);
+    arg_t *arg;
+    auto transformed_attribute_value = std::stringstream();
+    while ((arg = args_it->next(args_it.get())) != nullptr)
+      {
+        /* Check if there is already content in the string stream (after first iteration) */
+        if (transformed_attribute_value.rdbuf()->in_avail() > 0)
+          {
+            transformed_attribute_value << " ";
+          }
+        transformed_attribute_value << arg->key << "=" << attribute_delimiter;
+        if (*arg->value_format)
+          {
+            auto value_it = std::unique_ptr<grm_args_value_iterator_t, void (*)(grm_args_value_iterator_t *)>(
+                grm_arg_value_iter(arg), args_value_iterator_delete);
+            while (value_it->next(value_it.get()) != nullptr)
+              {
+                /*
+                 * Decoded attributes must not
+                 * - be arrays
+                 * - be nested
+                 * - be of single char type
+                 * In these cases there is some internal error.
+                 */
+                assert(!value_it->is_array && value_it->format != 'a' && value_it->format != 'c');
+                switch (value_it->format)
+                  {
+                  case 'i':
+                    transformed_attribute_value << *static_cast<int *>(value_it->value_ptr);
+                    break;
+                  case 'd':
+                    {
+                      auto double_as_string = std::to_string(*static_cast<double *>(value_it->value_ptr));
+                      if (double_as_string == "inf" || double_as_string == "-inf")
+                        {
+                          std::transform(std::begin(double_as_string), std::end(double_as_string),
+                                         std::begin(double_as_string), [](auto c) { return std::toupper(c); });
+                        }
+                      else if (double_as_string == "nan")
+                        {
+                          double_as_string = "NaN";
+                        }
+                      transformed_attribute_value << double_as_string;
+                    }
+                    break;
+                  case 's':
+                    transformed_attribute_value << *static_cast<char **>(value_it->value_ptr);
+                    break;
+                  default:
+                    /* This branch should never be reached */
+                    logger((stderr, "Internal error!\n"));
+                    assert(false);
+                  }
+              }
+          }
+        transformed_attribute_value << attribute_delimiter;
+      }
+
+    auto transformed_look_ahead_buffer = std::vector<char>();
+    transformed_look_ahead_buffer.reserve(start_index + transformed_attribute_value.tellp() +
+                                          look_ahead_buffer_view.size() - value_end_pos - 1);
+    transformed_look_ahead_buffer.insert(std::end(transformed_look_ahead_buffer), std::begin(look_ahead_buffer),
+                                         std::begin(look_ahead_buffer) + static_cast<long>(start_index));
+    transformed_look_ahead_buffer.insert(std::end(transformed_look_ahead_buffer),
+                                         std::istreambuf_iterator<char>(transformed_attribute_value),
+                                         std::istreambuf_iterator<char>());
+    transformed_look_ahead_buffer.insert(std::end(transformed_look_ahead_buffer),
+                                         std::begin(look_ahead_buffer_view) + value_end_pos + 1,
+                                         std::end(look_ahead_buffer_view));
+    return transformed_look_ahead_buffer;
+  }
 
 private:
+  const char attribute_delimiter = '"';
+  const std::string look_ahead_prefix_ = "internal=" + std::string(1, attribute_delimiter);
+  std::vector<char> buffer_;
+  XMLFilePos cur_pos_ = 0;
   FILE *file_;
 };
 

@@ -45,6 +45,28 @@ bool ends_with(std::string_view str, std::string_view suffix)
 }
 
 /*!
+ * \brief Check if a given string ends with any subprefix of a given prefix (excluding the prefix itself). For example,
+ * the string "abcdefg" ends with any subprefix of "fghij" (subprefix "fg")."
+ *
+ * \param[in] str The input string which is checked at the end.
+ * \param[in] prefix The prefix which will be shortened to any subprefix (removing one character at the end in each
+ *            step).
+ * \return The position of a found subprefix. If no subprefix is found, `std::string_view::npos` is returned.
+ */
+size_t ends_with_any_subprefix(std::string_view str, std::string_view prefix)
+{
+  for (auto i = prefix.size() - 1; i > 0; --i)
+    {
+      if (ends_with(str, prefix.substr(0, i)))
+        {
+          return str.size() - i;
+        }
+    }
+
+  return std::string_view::npos;
+}
+
+/*!
  * \brief Check if a substring of a given input string consists of a certain character, ending with an another end
  *        character.
  *
