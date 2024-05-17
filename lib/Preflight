@@ -715,64 +715,54 @@ fi
 printf "%12s: %s\n" "agg" "$info" >&2
 rm -f $tmpsrc $tmpout $tmpver
 
-if [ "$libxml2" != "no" ]
-then
-  libxml2config=xml2-config
-  if [ "$LIBXML2_CONFIG" != "" ]
-  then
-    libxml2config=$LIBXML2_CONFIG
-  fi
-  if [ "`which $libxml2config 2>/dev/null`" = "" ]
-  then
-    libxml2defs="LIBXML2_CONFIG=false LIBXML2DEFS=-DNO_LIBXML2 LIBXML2INC= LIBXML2LIBS="
-    info="${red} no${normal} [xml2-config not found]"
-    ret=1
-  else
-    libxml2defs="LIBXML2_CONFIG=$libxml2config"
-    info="${green}yes${normal} [version `xml2-config --version`]"
-  fi
-else
-  libxml2defs="LIBXML2_CONFIG=false LIBXML2DEFS=-DNO_LIBXML2 LIBXML2INC= LIBXML2LIBS="
-  info="${yellow} no${normal} [disabled]"
-  ret=1
-fi
-printf "%12s: %s\n" "libxml2" "$info" >&2
-
-
-if [ "$expat" != "no" ] && [[ "$libxml2defs" =~ -DNO_LIBXML2 ]]
+if [ "$xerces" != "no" ]
 then
   tmpout=`mktemp /tmp/a.out.XXXXX`
   tmpsrc=`mktemp /tmp/a$$XXXXX.c`
   tmpver=`mktemp /tmp/a$$XXXXX.txt`
   cat >$tmpsrc << eof
 #include <stdio.h>
-#include <expat.h>
+#include <xercesc/util/XercesVersion.hpp>
 
 int main(void) {
-    XML_Expat_Version version_info;
-    version_info = XML_ExpatVersionInfo();
-    printf("%d.%d.%d\n", version_info.major, version_info.minor, version_info.micro);
+    const char *version = XERCES_FULLVERSIONDOT;
+    printf("%s\n", version);
     return 0;
 }
 eof
-  libs=""
-  cmd="${CXX} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lexpat"
-  $cmd $libs >/dev/null 2>&1
+  if [ "`which pkg-config 2>/dev/null`" != "" ]; then
+    xercesc_cflags="`pkg-config xerces-c --cflags 2>/dev/null`"
+    xercesc_libs="`pkg-config xerces-c --libs 2>/dev/null`"
+  else
+    xercesc_cflags=""
+    xercesc_libs=""
+  fi
+  cmd="${CXX} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc $xercesc_cflags"
+  $cmd $xercesc_libs >/dev/null 2>&1
   if [ $? -ne 0 ]; then
-    expatdefs="EXPATDEFS=-DNO_EXPAT EXPATLIBS="
-    info="${red} no${normal} [expat not found]"
+    xercescdefs="XERCESCDEFS=-DNO_XERCES_C XERCESCINC= XERCESCLIBS="
+    info="${red} no${normal} [xercesc not found]"
     ret=1
   else
     $tmpout >$tmpver 2>&1
+    xercescdefs=""
+    if [ -n "$xercesc_cflags" ]; then
+      xercescdefs="${xercescdefs} XERCESCINC=${xercesc_cflags}"
+    fi
+    if [ -n "$xercesc_libs" ]; then
+      xercescdefs="${xercescdefs} XERCESCLIBS=${xercesc_libs}"
+    fi
+    # Remove a trailing space
+    xercescdefs="${xercescdefs# }"
     info="${green}yes${normal} [version `cat $tmpver`]"
   fi
 else
   info="${yellow} no${normal} [disabled]"
-  expatdefs="EXPATDEFS=-DNO_EXPAT EXPATLIBS="
+  xercescdefs="XERCESCDEFS=-DNO_XERCES_C XERCESCINC= XERCESCLIBS="
   ret=1
 fi
-printf "%12s: %s\n" "expat" "$info" >&2
+printf "%12s: %s\n" "Xerces-C++" "$info" >&2
 rm -f $tmpsrc $tmpout $tmpver
 
 echo "" >&2
-echo $target $wxdefs $qt4defs $qt5defs $qt6defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $gldefs $zmqdefs $avdefs $cairodefs $tiffdefs $aggdefs $libxml2defs $expatdefs $extradefs
+echo $target $wxdefs $qt4defs $qt5defs $qt6defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $gldefs $zmqdefs $avdefs $cairodefs $tiffdefs $aggdefs $xercescdefs $extradefs

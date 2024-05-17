@@ -381,7 +381,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 
   if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
     {
-#if !defined(NO_LIBXML2)
+#if !defined(NO_XERCES_C)
       schema_tree = grm_load_graphics_tree_schema();
 #else
       schema_tree = nullptr;
@@ -1346,6 +1346,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
       redraw_pixmap = false;
 
       if (tree_update) treewidget->updateData(grm_get_document_root());
+      collectTooltips();
       emit pixmapRedrawn();
     }
 
@@ -1695,10 +1696,15 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
                   csr->setShape(Qt::SizeHorCursor);
                 }
               setCursor(*csr);
-
+            }
+          if (plot_elem && kind == "marginal_heatmap")
+            {
               redraw();
             }
-          update();
+          else
+            {
+              update();
+            }
         }
     }
 }
@@ -2506,7 +2512,7 @@ void GRPlotWidget::open_file_slot()
 {
   if (enable_editor)
     {
-#ifndef NO_LIBXML2
+#ifndef NO_XERCES_C
       std::string path =
           QFileDialog::getOpenFileName(this, "Open XML", QDir::homePath(), "XML files (*.xml)").toStdString();
       if (path.empty())
@@ -2523,8 +2529,8 @@ void GRPlotWidget::open_file_slot()
           return;
         }
       grm_load_graphics_tree(file);
+      global_root = grm_get_document_root();
       redraw();
-      grm_render();
 #else
       std::stringstream text_stream;
       text_stream << "XML support not compiled in. Please recompile GRPlot with libxml2 support.";
@@ -2557,7 +2563,8 @@ void GRPlotWidget::save_file_slot()
           QMessageBox::critical(this, "File save not possible", QString::fromStdString(text_stream.str()));
           return;
         }
-      save_file_stream << GRM::toXML(grm_get_render()) << std::endl;
+      auto graphics_tree_str = std::unique_ptr<char, decltype(&std::free)>(grm_dump_graphics_tree_str(), std::free);
+      save_file_stream << graphics_tree_str.get() << std::endl;
       save_file_stream.close();
     }
 }
@@ -2718,6 +2725,7 @@ void GRPlotWidget::processTestCommandsFile()
   while (test_commands_stream && !test_commands_stream->atEnd())
     {
       QString line = test_commands_stream->readLine();
+      if (line.startsWith("#")) continue;
       QStringList words = line.split(",");
       if (!words.empty())
         {
@@ -2930,6 +2938,32 @@ void GRPlotWidget::processTestCommandsFile()
                 {
                   std::cerr << "Failed to open: " << words[1].toStdString() << std::endl;
                   break;
+                }
+            }
+          else if (words[0] == "openXML" && words.size() == 2)
+            {
+#ifndef NO_XERCES_C
+              auto file = fopen(words[1].toStdString().c_str(), "r");
+              if (file)
+                {
+                  grm_load_graphics_tree(file);
+                  global_root = grm_get_document_root();
+                  redraw();
+                  QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
+                  return;
+                }
+#else
+              std::cerr << "Xerces-C++ support not compiled in. XML files cannot be openend." << std::endl;
+#endif
+            }
+          else if (words[0] == "saveXML" && words.size() == 2)
+            {
+              std::ofstream save_file_stream(words[1].toStdString());
+              if (save_file_stream)
+                {
+                  auto graphics_tree_str =
+                      std::unique_ptr<char, decltype(&std::free)>(grm_dump_graphics_tree_str(), std::free);
+                  save_file_stream << graphics_tree_str.get() << std::endl;
                 }
             }
           else
