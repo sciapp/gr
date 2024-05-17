@@ -7,7 +7,7 @@
 #include <grm/dom_render/graphics_tree/TypeError.hxx>
 
 GRM::Element::Element(std::string local_name, const std::shared_ptr<GRM::Document> &owner_document)
-    : GRM::Node(GRM::Node::Type::ELEMENT_NODE, owner_document), m_local_name(tolower(std::move(local_name)))
+    : GRM::Node(GRM::Node::Type::ELEMENT_NODE, owner_document), m_local_name(std::move(local_name))
 {
 }
 
@@ -149,7 +149,7 @@ bool GRM::Element::hasAttribute(const std::string &qualifiedName) const
 template <typename T>
 static std::vector<std::shared_ptr<T>> getElementsByTagName_impl(T &element, const std::string &qualifiedName)
 {
-  std::string local_name = GRM::tolower(qualifiedName);
+  std::string local_name = qualifiedName;
   std::vector<std::shared_ptr<T>> found_elements;
   for (const auto &child_element : element.children())
     {
