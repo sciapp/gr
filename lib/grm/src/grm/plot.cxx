@@ -5511,7 +5511,7 @@ public:
 
     if (node_name == "xs:schema")
       {
-        current_gr_element_ = document_.createElement("xs:schema");
+        current_gr_element_ = document_.createElement(node_name);
         document_.replaceChildren(current_gr_element_);
         insertion_parent_ = nullptr;
       }
@@ -5524,6 +5524,12 @@ public:
     for (XMLSize_t i = 0; i < attribute_count; i++)
       {
         current_gr_element_->setAttribute(encode(attributes.getQName(i)), encode(attributes.getValue(i)));
+      }
+    if (node_name == "xs:schema")
+      {
+        // xmlns namespace attributes are not handled as attributes in this method, so add the namespace explicitly.
+        current_gr_element_->setAttribute("xmlns:xs", "http://www.w3.org/2001/XMLSchema");
+        current_gr_element_->setAttribute("xmlns:vc", "http://www.w3.org/2007/XMLSchema-versioning");
       }
     if (insertion_parent_ != nullptr)
       {
