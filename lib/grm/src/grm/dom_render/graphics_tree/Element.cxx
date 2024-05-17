@@ -69,7 +69,7 @@ void GRM::Element::setAttribute(const std::string &qualifiedName, const GRM::Val
   if (value != old_value)
     {
       auto elem_p = std::static_pointer_cast<Element>(shared_from_this());
-      contextUpdate(elem_p, qualifiedName, old_value);
+      if (contextUpdate) contextUpdate(elem_p, qualifiedName, old_value);
       if (qualifiedName == "kind")
         {
           ;
@@ -77,13 +77,13 @@ void GRM::Element::setAttribute(const std::string &qualifiedName, const GRM::Val
       if (qualifiedName == "viewport_x_min" || qualifiedName == "viewport_x_max" || qualifiedName == "viewport_y_min" ||
           qualifiedName == "viewport_y_max")
         {
-          update(elem_p, qualifiedName, std::to_string(static_cast<double>(old_value)));
+          if (update) update(elem_p, qualifiedName, std::to_string(static_cast<double>(old_value)));
         }
       else
         {
-          update(elem_p, qualifiedName, static_cast<std::string>(old_value));
+          if (update) update(elem_p, qualifiedName, static_cast<std::string>(old_value));
         }
-      render();
+      if (render) render();
     }
 }
 
