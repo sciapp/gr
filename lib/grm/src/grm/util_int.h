@@ -20,6 +20,14 @@ extern "C" {
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
+#ifndef PATH_SEPARATOR
+#ifdef _WIN32
+#define PATH_SEPARATOR '\\'
+#else
+#define PATH_SEPARATOR '/'
+#endif
+#endif
+
 #define is_string_delimiter(char_ptr, str) ((*(char_ptr) == '"') && (((char_ptr) == (str)) || *((char_ptr)-1) != '\\'))
 
 #ifndef array_size

@@ -5652,7 +5652,7 @@ err_t validate_graphics_tree(void)
 {
   using namespace XERCES_CPP_NAMESPACE;
 
-  std::string schema_filepath{std::string(get_gr_dir()) + "/" + SCHEMA_REL_FILEPATH};
+  std::string schema_filepath{std::string(get_gr_dir()) + PATH_SEPARATOR + SCHEMA_REL_FILEPATH};
   if (!file_exists(schema_filepath.c_str()))
     {
       return ERROR_PARSE_XML_NO_SCHEMA_FILE;
