@@ -126,6 +126,8 @@ extern "C" {
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
 void bin_data(unsigned int num_points, double *points, unsigned int num_bins, double *bins, double *weights);
+const char *create_tmp_dir(void);
+int delete_tmp_dir(void);
 void linspace(double start, double end, unsigned int n, double *x);
 size_t djb2_hash(const char *str);
 int is_equidistant_array(unsigned int length, const double *x);
@@ -144,8 +146,9 @@ const char *private_name(const char *public_name);
 unsigned long next_or_equal_power2(unsigned long num);
 int is_env_variable_enabled(const char *env_variable_name);
 int file_exists(const char *file_path);
+char *get_env_variable(const char *name);
 char *get_gr_dir(void);
-const char *get_tmp_directory(void);
+char *get_tmp_directory(void);
 #ifdef _WIN32
 char *convert_wstring_to_utf8(const wchar_t *wstring);
 wchar_t *convert_utf8_to_wstring(const char *utf8_bytes);

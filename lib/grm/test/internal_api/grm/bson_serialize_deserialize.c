@@ -18,12 +18,12 @@
 
 static const char *tmp_dir = NULL;
 
-static char *create_tmp_dir(void)
+static char *create_bson_tmp_dir(void)
 {
   char *tmp_dir_;
   const char *dirname_template, *system_tmp_dir;
 
-  dirname_template = "grm.XXXXXX";
+  dirname_template = "grm.bson.XXXXXX";
   system_tmp_dir = getenv("TMPDIR");
   if (system_tmp_dir == NULL)
     {
@@ -166,7 +166,7 @@ int main(void)
   signal(SIGABRT, signal_handler);
   signal(SIGSEGV, signal_handler);
   atexit(cleanup);
-  create_tmp_dir();
+  create_bson_tmp_dir();
   assert(tmp_dir != NULL);
 
   test_bson();
