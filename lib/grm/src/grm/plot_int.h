@@ -217,4 +217,8 @@ int validate_graphics_tree_with_error_messages(void);
 }
 #endif
 
+#if defined(__cplusplus) && !defined(NO_XERCES_C)
+std::string get_merged_schema_filepath();
+#endif
+
 #endif /* ifndef GRM_PLOT_INT_H_INCLUDED */

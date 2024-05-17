@@ -1425,6 +1425,11 @@ if(GR_INSTALL)
     DESTINATION ${CMAKE_INSTALL_DATADIR}/xml/GRM
     RENAME grm_graphics_tree_schema.xsd
   )
+  install(
+    FILES lib/grm/src/grm/dom_render/graphics_tree/private_schema.xsd
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/xml/GRM
+    RENAME grm_graphics_tree_private_schema.xsd
+  )
   include(CMakePackageConfigHelpers)
   configure_package_config_file(
     "cmake/Config.cmake.in" "GRConfig.cmake" INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
