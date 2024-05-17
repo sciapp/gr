@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <fstream>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -76,6 +77,8 @@ extern "C" {
 /* ========================= constants ============================================================================== */
 
 static const std::string SCHEMA_REL_FILEPATH = "share/xml/GRM/grm_graphics_tree_schema.xsd";
+static const std::string PRIVATE_SCHEMA_REL_FILEPATH = "share/xml/GRM/grm_graphics_tree_private_schema.xsd";
+static const std::string FULL_SCHEMA_FILENAME = "grm_graphics_tree_full_schema.xsd";
 static const std::string ENABLE_XML_VALIDATION_ENV_KEY = "GRM_VALIDATE";
 
 /* ========================= datatypes ============================================================================== */
@@ -5499,7 +5502,10 @@ private:
 class SchemaParseHandler : public DefaultHandler, public SaxErrorHandler
 {
 public:
-  SchemaParseHandler(GRM::Document &document) : document_(document) {}
+  SchemaParseHandler(GRM::Document &document, GRM::Document *document_to_be_merged = nullptr)
+      : document_(document), document_to_be_merged_(document_to_be_merged)
+  {
+  }
   ~SchemaParseHandler() {}
 
   void startDocument() override {}
@@ -5553,6 +5559,49 @@ public:
    */
   void endElement(const XMLCh *const uri, const XMLCh *const localname, const XMLCh *const qname) override
   {
+    current_gr_element_ = insertion_parent_;
+    if (document_to_be_merged_ != nullptr)
+      {
+        if (current_gr_element_->localName() == "xs:element")
+          {
+            auto element_name_attribute = current_gr_element_->getAttribute("name");
+            if (element_name_attribute.isString())
+              {
+                std::stringstream selector;
+                /*
+                 * It would be better to use `xs:element[name="<name>"]` as selector, but `:element` is detected as
+                 * pseudo class in the selector although it part of the name. Thus, use only `[name="<name>"]` and check
+                 * if any result is an `xs:element`.
+                 */
+                selector << "[name=\"" << static_cast<std::string>(element_name_attribute) << "\"]";
+                std::shared_ptr<GRM::Element> element_to_be_merged;
+                for (const auto &matched_element : document_to_be_merged_->querySelectorsAll(selector.str()))
+                  {
+                    if (matched_element->localName() == "xs:element")
+                      {
+                        element_to_be_merged = matched_element;
+                        break;
+                      }
+                  }
+                if (element_to_be_merged)
+                  {
+                    merge_elements_(*current_gr_element_, *element_to_be_merged);
+                  }
+              }
+          }
+        else if (current_gr_element_->localName() == "xs:schema")
+          {
+            /*
+             * At this point, the end of the schema document is reached. Append all attribute groups of the other
+             * document now.
+             */
+            for (const auto &element : document_to_be_merged_->documentElement()->children())
+              {
+                if (element->localName() != "xs:attributeGroup") continue;
+                current_gr_element_->appendChild(element);
+              }
+          }
+      }
     insertion_parent_ = insertion_parent_->parentElement();
   }
 
@@ -5564,11 +5613,35 @@ public:
 
   void resetErrors() override { SaxErrorHandler::resetErrors(); }
 
+protected:
+  static void merge_elements_(GRM::Element &element, GRM::Element &element_to_be_merged)
+  {
+    for (auto &merge_child : element_to_be_merged.children())
+      {
+        auto found_child = false;
+        for (const auto &child : element.children())
+          {
+            if (child->localName() == merge_child->localName() && child->hasChildNodes() &&
+                merge_child->hasChildNodes())
+              {
+                merge_elements_(*child, *merge_child);
+                found_child = true;
+                break;
+              }
+          }
+        if (!found_child)
+          {
+            element.appendChild(merge_child);
+          }
+      }
+  }
+
 private:
   std::string encode(std::optional<const XMLCh *> chars = std::nullopt) { return xml_buffer_.encode(chars); }
 
   XMLStringBuffer xml_buffer_{"UTF-8"};
   GRM::Document &document_;
+  GRM::Document *document_to_be_merged_;
   std::shared_ptr<GRM::Element> insertion_parent_, current_gr_element_;
 };
 } // namespace XERCES_CPP_NAMESPACE
@@ -5585,12 +5658,12 @@ int grm_load_graphics_tree(FILE *file)
 {
   using namespace XERCES_CPP_NAMESPACE;
 
-  std::string schema_filepath{std::string(get_gr_dir()) + "/" + SCHEMA_REL_FILEPATH};
-
   if (plot_init_static_variables() != ERROR_NONE)
     {
       return 0;
     }
+
+  std::string schema_filepath{get_merged_schema_filepath()};
 
   try
     {
@@ -5756,11 +5829,34 @@ int validate_graphics_tree_with_error_messages(void)
 #endif
   return 1;
 }
+}
 
+#ifndef NO_XERCES_C
+std::string get_merged_schema_filepath()
+{
+  if (plot_init_static_variables() != ERROR_NONE)
+    {
+      throw std::runtime_error("Initialization of static plot variables failed.");
+    }
+
+  std::string schema_filepath{std::string(grm_tmp_dir) + PATH_SEPARATOR + FULL_SCHEMA_FILENAME};
+  if (!file_exists(schema_filepath.c_str()))
+    {
+      const unsigned int indent = 2;
+      auto merged_schema = grm_load_graphics_tree_schema(true);
+      std::ofstream schema_file{schema_filepath};
+      schema_file << toXML(merged_schema, GRM::SerializerOptions{std::string(indent, ' ')});
+    }
+
+  return schema_filepath;
+}
+#endif
 
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- args set ------------------------------------------------------------------------------- */
+
+extern "C" {
 
 DEFINE_SET_METHODS(args)
 
@@ -6450,11 +6546,13 @@ int grm_validate(void)
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ c++ xerces util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 #ifndef NO_XERCES_C
-std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(void)
+std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(bool with_private_attributes)
 {
   using namespace XERCES_CPP_NAMESPACE;
 
-  std::string schema_filepath{std::string(get_gr_dir()) + "/" + SCHEMA_REL_FILEPATH};
+  const std::string gr_dir{get_gr_dir()};
+  const std::string schema_filepath{gr_dir + PATH_SEPARATOR + SCHEMA_REL_FILEPATH};
+  const std::string private_schema_filepath{gr_dir + PATH_SEPARATOR + PRIVATE_SCHEMA_REL_FILEPATH};
 
   try
     {
@@ -6463,43 +6561,80 @@ std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(void)
   catch (const XMLException &e)
     {
       std::cerr << "Error during initialization! :\n" << TranscodeToUtf8Str(e.getMessage()) << std::endl;
-      return 0;
+      return nullptr;
     }
 
-  auto document = GRM::createDocument();
+  std::shared_ptr<GRM::Document> private_schema_document;
   XMLSize_t errorCount = 0;
-  {
-    auto parser =
-        std::unique_ptr<SAX2XMLReaderImpl>(static_cast<SAX2XMLReaderImpl *>(XMLReaderFactory::createXMLReader()));
+  if (with_private_attributes)
+    {
+      private_schema_document = GRM::createDocument();
+      auto parser =
+          std::unique_ptr<SAX2XMLReaderImpl>(static_cast<SAX2XMLReaderImpl *>(XMLReaderFactory::createXMLReader()));
 
-    // Activate validation
-    parser->setFeature(XMLUni::fgSAX2CoreValidation, false);
-    parser->setFeature(XMLUni::fgXercesDynamic, false);
-    parser->setFeature(XMLUni::fgXercesSchema, false);
-    parser->setFeature(XMLUni::fgXercesSchemaFullChecking, false);
+      // Deactivate validation since there is no schema to validate the schema
+      parser->setFeature(XMLUni::fgSAX2CoreValidation, false);
+      parser->setFeature(XMLUni::fgXercesDynamic, false);
+      parser->setFeature(XMLUni::fgXercesSchema, false);
+      parser->setFeature(XMLUni::fgXercesSchemaFullChecking, false);
 
-    try
-      {
-        SchemaParseHandler handler(*document);
-        parser->setContentHandler(&handler);
-        parser->setErrorHandler(static_cast<SaxErrorHandler *>(&handler));
-        parser->parse(schema_filepath.c_str());
-        errorCount = parser->getErrorCount();
-      }
-    catch (const OutOfMemoryException &)
-      {
-        std::cerr << "OutOfMemoryException" << std::endl;
-      }
-    catch (const XMLException &e)
-      {
-        std::cerr << "\nAn error occurred\n  Error: " << TranscodeToUtf8Str(e.getMessage()) << "\n" << std::endl;
-      }
+      try
+        {
+          SchemaParseHandler handler(*private_schema_document);
+          parser->setContentHandler(&handler);
+          parser->setErrorHandler(static_cast<SaxErrorHandler *>(&handler));
+          parser->parse(private_schema_filepath.c_str());
+          errorCount = parser->getErrorCount();
+        }
+      catch (const OutOfMemoryException &)
+        {
+          std::cerr << "OutOfMemoryException" << std::endl;
+        }
+      catch (const XMLException &e)
+        {
+          std::cerr << "\nAn error occurred\n  Error: " << TranscodeToUtf8Str(e.getMessage()) << "\n" << std::endl;
+        }
+    }
 
-  } // `parser` must be freed before `XMLPlatformUtils::Terminate()` is called
+  std::shared_ptr<GRM::Document> schema_document;
+  if (errorCount == 0)
+    {
+      errorCount = 0;
+      schema_document = GRM::createDocument();
+      {
+        auto parser =
+            std::unique_ptr<SAX2XMLReaderImpl>(static_cast<SAX2XMLReaderImpl *>(XMLReaderFactory::createXMLReader()));
+
+        // Deactivate validation since there is no schema to validate the schema
+        parser->setFeature(XMLUni::fgSAX2CoreValidation, false);
+        parser->setFeature(XMLUni::fgXercesDynamic, false);
+        parser->setFeature(XMLUni::fgXercesSchema, false);
+        parser->setFeature(XMLUni::fgXercesSchemaFullChecking, false);
+
+        try
+          {
+            SchemaParseHandler handler(*schema_document,
+                                       with_private_attributes ? private_schema_document.get() : nullptr);
+            parser->setContentHandler(&handler);
+            parser->setErrorHandler(static_cast<SaxErrorHandler *>(&handler));
+            parser->parse(schema_filepath.c_str());
+            errorCount = parser->getErrorCount();
+          }
+        catch (const OutOfMemoryException &)
+          {
+            std::cerr << "OutOfMemoryException" << std::endl;
+          }
+        catch (const XMLException &e)
+          {
+            std::cerr << "\nAn error occurred\n  Error: " << TranscodeToUtf8Str(e.getMessage()) << "\n" << std::endl;
+          }
+
+      } // `parser` must be freed before `XMLPlatformUtils::Terminate()` is called
+    }
 
   XMLPlatformUtils::Terminate();
 
-  return (errorCount == 0) ? document : nullptr;
+  return (errorCount == 0) ? schema_document : nullptr;
 }
 #endif
 

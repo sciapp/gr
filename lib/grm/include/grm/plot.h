@@ -67,7 +67,7 @@ EXPORT int get_focus_and_factor_from_dom(const int x1, const int y1, const int x
                                          std::shared_ptr<GRM::Element> &subplot_element);
 
 #if !defined(NO_XERCES_C)
-EXPORT std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(void);
+EXPORT std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(bool with_private_attributes = false);
 #endif
 #endif
 #endif /* ifndef GRM_PLOT_H_INCLUDED */

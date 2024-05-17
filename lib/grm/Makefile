@@ -143,6 +143,7 @@ install:
 	cp -rp include/grm $(INCDIR)/
 	@if [ ! -d $(SHAREDIR)/xml/GRM ]; then mkdir -m 755 -p $(SHAREDIR)/xml/GRM; fi
 	cp -p src/grm/dom_render/graphics_tree/schema.xsd $(SHAREDIR)/xml/GRM/grm_graphics_tree_schema.xsd
+	cp -p src/grm/dom_render/graphics_tree/private_schema.xsd $(SHAREDIR)/xml/GRM/grm_graphics_tree_private_schema.xsd
 ifeq ($(UNAME), Darwin)
 	@if [ -d grplot/grplot.app ]; then \
 		$(MAKE) -C grplot -f makefile.mak install; \

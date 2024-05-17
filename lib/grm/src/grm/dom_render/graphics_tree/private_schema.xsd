@@ -1,0 +1,731 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning"
+           vc:minVersion="1.1">
+
+    <!-- definition of root -->
+    <xs:element name="root">
+        <xs:complexType>
+            <xs:attribute name="_id" type="xs:integer" use="required"/>
+            <xs:attribute name="_modified" type="xs:integer" use="required"/>
+        </xs:complexType>
+        <xs:unique name="_bboxidisunique">
+            <xs:field xpath="@_bbox_id"/>
+        </xs:unique>
+    </xs:element>
+
+    <!-- definition of figure -->
+    <xs:element name="figure">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_previous_pixel_height" type="xs:integer"/>
+            <xs:attribute name="_previous_pixel_width" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of layout_grid -->
+    <xs:element name="layout_grid">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of layout_grid_element -->
+    <xs:element name="layout_grid_element">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of draw_graphics -->
+    <xs:element name="draw_graphics">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of plot -->
+    <xs:element name="plot">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_c_lim_max" type="xs:double"/>
+            <xs:attribute name="_c_lim_min" type="xs:double"/>
+            <xs:attribute name="_char_height_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_original_adjust_x_lim" type="xs:integer"/>
+            <xs:attribute name="_original_adjust_y_lim" type="xs:integer"/>
+            <xs:attribute name="_original_x_lim" type="xs:integer"/>
+            <xs:attribute name="_original_x_max" type="xs:double"/>
+            <xs:attribute name="_original_x_min" type="xs:double"/>
+            <xs:attribute name="_original_y_lim" type="xs:integer"/>
+            <xs:attribute name="_original_y_max" type="xs:double"/>
+            <xs:attribute name="_original_y_min" type="xs:double"/>
+            <xs:attribute name="_overwrite_kind_dependent_defaults" type="xs:integer"/>
+            <xs:attribute name="_start_aspect_ratio" type="xs:double"/>
+            <xs:attribute name="_update_limits" type="xs:integer"/>
+            <xs:attribute name="_x_lim_max" type="xs:double"/>
+            <xs:attribute name="_x_lim_min" type="xs:double"/>
+            <xs:attribute name="_y_lim_max" type="xs:double"/>
+            <xs:attribute name="_y_lim_min" type="xs:double"/>
+            <xs:attribute name="_z_lim_max" type="xs:double"/>
+            <xs:attribute name="_z_lim_min" type="xs:double"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of marginal_heatmap_plot -->
+    <xs:element name="marginal_heatmap_plot">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attributeGroup ref="_viewport"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of central_region -->
+    <xs:element name="central_region">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_space_3d_phi_org" type="xs:double"/>
+            <xs:attribute name="_space_3d_theta_org" type="xs:double"/>
+            <xs:attribute name="_zoomed" type="xs:int"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of side_region -->
+    <xs:element name="side_region">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_offset_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_width_set_by_user" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of side_plot_region -->
+    <xs:element name="side_plot_region">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_offset_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_width_set_by_user" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of text_region -->
+    <xs:element name="text_region">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_offset_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_width_set_by_user" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of coordinate_system -->
+    <xs:element name="coordinate_system">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_char_height_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_default_diag_factor" type="xs:double"/>
+        </xs:complexType>
+        <xs:unique name="axisidisunique">
+            <xs:selector xpath="axis"/>
+            <xs:field xpath="@_axis_id"/>
+        </xs:unique>
+    </xs:element>
+
+    <!-- definition of grid_3d -->
+    <xs:element name="grid_3d">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of axis -->
+    <xs:element name="axis">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_axis_id" type="xs:integer" use="required"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_tick_size_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_window_old_x_max" type="xs:double"/>
+            <xs:attribute name="_window_old_x_min" type="xs:double"/>
+            <xs:attribute name="_window_old_y_max" type="xs:double"/>
+            <xs:attribute name="_window_old_y_min" type="xs:double"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of tick_group -->
+    <xs:element name="tick_group">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of tick -->
+    <xs:element name="tick">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of grid_line -->
+    <xs:element name="grid_line">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of axes_3d -->
+    <xs:element name="axes_3d">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of title, label -->
+    <xs:element name="text">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of titles_3d -->
+    <xs:element name="titles_3d">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of legend -->
+    <xs:element name="legend">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_legend_elems" type="xs:integer"/>
+            <xs:attribute name="_scale_factor" type="xs:double"/>
+            <xs:attribute name="_start_h" type="xs:double"/>
+            <xs:attribute name="_start_w" type="xs:double"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of labels_group -->
+    <xs:element name="labels_group">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of label -->
+    <xs:element name="label">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polar_axes -->
+    <xs:element name="polar_axes">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of axes_text_group -->
+    <xs:element name="axes_text_group">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_char_height_set_by_user" type="xs:integer"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_default_diag_factor" type="xs:double"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of error_bars -->
+    <xs:element name="error_bars">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polyline_3d -->
+    <xs:element name="polyline_3d">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polyline -->
+    <xs:element name="polyline">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polymarker -->
+    <xs:element name="polymarker">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polymarker_3d -->
+    <xs:element name="polymarker_3d">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of fill_rect -->
+    <xs:element name="fill_rect">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of draw_rect -->
+    <xs:element name="draw_rect">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of colorbar -->
+    <xs:element name="colorbar">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_max_char_height_set_by_user" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of cellarray -->
+    <xs:element name="cellarray">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of nonuniformcellarray -->
+    <xs:element name="nonuniformcellarray">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polarcellarray -->
+    <xs:element name="polarcellarray">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of nonuniform_polarcellarray -->
+    <xs:element name="nonuniform_polarcellarray">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of draw_image -->
+    <xs:element name="draw_image">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of draw_arc -->
+    <xs:element name="draw_arc">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of fillarc -->
+    <xs:element name="fill_arc">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of fillarea -->
+    <xs:element name="fill_area">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- ||||||||||||||||||||||||||||| Plottypes |||||||||||||||||||||||||||||||||||||||| -->
+
+    <!-- definition of barplot -->
+    <xs:element name="series_barplot">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of contour -->
+    <xs:element name="series_contour">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of contourf -->
+    <xs:element name="series_contourf">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of heatmap -->
+    <xs:element name="series_heatmap">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of hexbin -->
+    <xs:element name="series_hexbin">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_hexbin_context_address" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of hist -->
+    <xs:element name="series_hist">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of imshow -->
+    <xs:element name="series_imshow">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of isosurface -->
+    <xs:element name="series_isosurface">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of line -->
+    <xs:element name="series_line">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of nonuniformheatmap -->
+    <xs:element name="series_nonuniformheatmap">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of nonuniformpolar_heatmap -->
+    <xs:element name="series_nonuniformpolar_heatmap">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of pie -->
+    <xs:element name="series_pie">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of plot3 -->
+    <xs:element name="series_plot3">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polar -->
+    <xs:element name="series_polar">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polar_heatmap -->
+    <xs:element name="series_polar_heatmap">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polar_histogram -->
+    <xs:element name="series_polar_histogram">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of quiver -->
+    <xs:element name="series_quiver">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of scatter -->
+    <xs:element name="series_scatter">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of scatter3 -->
+    <xs:element name="series_scatter3">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of shade -->
+    <xs:element name="series_shade">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of stairs -->
+    <xs:element name="series_stairs">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of stem -->
+    <xs:element name="series_stem">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of surface -->
+    <xs:element name="series_surface">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of tricontour -->
+    <xs:element name="series_tricontour">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of trisurface -->
+    <xs:element name="series_trisurface">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of volume -->
+    <xs:element name="series_volume">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_volume_context_address" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of wireframe -->
+    <xs:element name="series_wireframe">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- ||||||||||||||||||||||||||||| series subgroups |||||||||||||||||||||||||||||||||||||||| -->
+
+    <!-- definition of error_bar -->
+    <xs:element name="error_bar">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of bar -->
+    <xs:element name="bar">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of integral -->
+    <xs:element name="integral">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of integral_group -->
+    <xs:element name="integral_group">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polar_bar -->
+    <xs:element name="polar_bar">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of pie_segment -->
+    <xs:element name="pie_segment">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+
+    <!-- ||||||||||||||||||||||||||||| attribute groups |||||||||||||||||||||||||||||||||||||||| -->
+
+    <!-- definition of _bbox attributes -->
+    <xs:attributeGroup name="_bbox">
+        <xs:attribute name="_bbox_id" type="xs:integer"/>
+        <xs:attribute name="_bbox_x_max" type="xs:double"/>
+        <xs:attribute name="_bbox_x_min" type="xs:double"/>
+        <xs:attribute name="_bbox_y_max" type="xs:double"/>
+        <xs:attribute name="_bbox_y_min" type="xs:double"/>
+        <xs:attribute name="_delete_children" type="xs:integer"/>
+        <xs:attribute name="_update_required" type="xs:integer"/>
+    </xs:attributeGroup>
+
+    <!-- definition of _data attributes -->
+    <xs:attributeGroup name="_data">
+        <xs:attribute name="_x_org" type="xs:string"/>
+        <xs:attribute name="_x_range_max_org" type="xs:double"/>
+        <xs:attribute name="_x_range_min_org" type="xs:double"/>
+        <xs:attribute name="_y_org" type="xs:string"/>
+        <xs:attribute name="_y_range_max_org" type="xs:double"/>
+        <xs:attribute name="_y_range_min_org" type="xs:double"/>
+        <xs:attribute name="_z_org" type="xs:string"/>
+        <xs:attribute name="_z_range_max_org" type="xs:double"/>
+        <xs:attribute name="_z_range_min_org" type="xs:double"/>
+    </xs:attributeGroup>
+
+    <!-- definition of _viewport attributes -->
+    <!-- TODO: re-add `required` attribute when all elemnts have a bbox -->
+    <xs:attributeGroup name="_viewport">
+        <xs:attribute name="_x_max_shift" type="xs:double"/>
+        <xs:attribute name="_x_min_shift" type="xs:double"/>
+        <xs:attribute name="_y_max_shift" type="xs:double"/>
+        <xs:attribute name="_y_min_shift" type="xs:double"/>
+        <xs:attribute name="_viewport_x_max_org" type="xs:double"/>
+        <xs:attribute name="_viewport_x_min_org" type="xs:double"/>
+        <xs:attribute name="_viewport_y_max_org" type="xs:double"/>
+        <xs:attribute name="_viewport_y_min_org" type="xs:double"/>
+    </xs:attributeGroup>
+</xs:schema>
