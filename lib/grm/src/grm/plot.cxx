@@ -505,6 +505,11 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"z_range", "D"},
                                               {"z_log", "i"}};
 
+/* ------------------------- util ----------------------------------------------------------------------------------- */
+
+static const char *grm_tmp_dir = NULL;
+
+
 /* ========================= functions ============================================================================== */
 
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
@@ -564,6 +569,8 @@ err_t plot_init_static_variables(void)
       }
       type_map = string_array_map_new_from_string_split(array_size(key_to_formats), key_to_formats, '|');
       error_cleanup_and_set_error_if(type_map == nullptr, ERROR_MALLOC);
+      grm_tmp_dir = create_tmp_dir();
+      error_cleanup_and_set_error_if(grm_tmp_dir == nullptr, ERROR_TMP_DIR_CREATION);
       install_backtrace_handler_if_enabled();
       plot_static_variables_initialized = 1;
     }
@@ -5839,6 +5846,7 @@ void grm_finalize(void)
       type_map = nullptr;
       grid_delete(global_grid);
       global_grid = nullptr;
+      delete_tmp_dir();
       uninstall_backtrace_handler_if_enabled();
       plot_static_variables_initialized = 0;
     }

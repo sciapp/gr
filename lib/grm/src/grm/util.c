@@ -1,5 +1,6 @@
 #ifdef __unix__
 #define _POSIX_C_SOURCE 200809L
+#define _XOPEN_SOURCE 500
 #endif
 
 /* ######################### includes ############################################################################### */
@@ -38,6 +39,11 @@
 #define PRIVATE_NAME_BUFFER_LEN 80
 
 
+/* ========================= static variables ======================================================================= */
+
+static const char *tmp_dir_ = NULL;
+
+
 /* ========================= functions ============================================================================== */
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
@@ -61,6 +67,145 @@ void bin_data(unsigned int n, double *x, unsigned int num_bins, double *bins, do
       if (current_bin == num_bins) --current_bin;
       bins[current_bin] += (weights != NULL) ? weights[i] : 1;
     }
+}
+
+/*!
+ * \brief Create an exclusive temporary directory. Consecutive calls return the same directory, unless deleted with
+ *        delete_tmp_dir().
+ *
+ * \return The path to the directory or `NULL` if an error occurred.
+ */
+const char *create_tmp_dir(void)
+{
+  char *system_tmp_dir = NULL, *tmp_dir = NULL;
+#ifdef _WIN32
+  LPWSTR tmp_dir_wide = NULL;
+#endif
+
+  if (tmp_dir_ == NULL)
+    {
+      const char *dirname_template = "grm.XXXXXX";
+      size_t tmp_dir_len;
+
+      system_tmp_dir = get_tmp_directory();
+      tmp_dir_len = strlen(system_tmp_dir) + strlen(dirname_template) + 1;
+      tmp_dir = malloc(tmp_dir_len + 1);
+      error_cleanup_if(tmp_dir == NULL);
+      sprintf(tmp_dir, "%s%c%s", system_tmp_dir, PATH_SEPARATOR, dirname_template);
+#ifdef _WIN32
+      {
+        char *tmp_dir_utf8;
+
+        tmp_dir_wide = convert_utf8_to_wstring(tmp_dir);
+        error_cleanup_if(_wmktemp_s(tmp_dir_wide, tmp_dir_len + 1) != ERROR_SUCCESS ||
+                         !CreateDirectoryW(tmp_dir_wide, NULL));
+        tmp_dir_utf8 = convert_wstring_to_utf8(tmp_dir_wide);
+        error_cleanup_if(tmp_dir_utf8 == NULL);
+        free(tmp_dir);
+        tmp_dir = tmp_dir_utf8;
+      }
+#else
+      error_cleanup_if(mkdtemp(tmp_dir) == NULL);
+#endif
+
+      tmp_dir_ = tmp_dir;
+    }
+
+  goto cleanup;
+
+error_cleanup:
+  free(tmp_dir);
+  tmp_dir = NULL;
+
+cleanup:
+  free(system_tmp_dir);
+#ifdef _WIN32
+  free(tmp_dir_wide);
+#endif
+
+  return tmp_dir_;
+}
+
+#ifdef _WIN32
+BOOL remove_directory_recursively(LPCWSTR dir_path)
+{
+  WIN32_FIND_DATAW find_file_data;
+  wchar_t search_pattern[MAX_PATH];
+  HANDLE find_handle = INVALID_HANDLE_VALUE;
+  BOOL successful = FALSE;
+
+  cleanup_if(_snwprintf_s(search_pattern, MAX_PATH, MAX_PATH, L"%s\\*", dir_path) < 0);
+  find_handle = FindFirstFileW(search_pattern, &find_file_data);
+  cleanup_if(find_handle == INVALID_HANDLE_VALUE);
+
+  do
+    {
+      wchar_t current_path[MAX_PATH];
+      if (wcscmp(find_file_data.cFileName, L".") == 0 || wcscmp(find_file_data.cFileName, L"..") == 0)
+        {
+          continue;
+        }
+      cleanup_if(_snwprintf_s(current_path, MAX_PATH, MAX_PATH, L"%s\\%s", dir_path, find_file_data.cFileName) < 0);
+      if (find_file_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+        {
+          cleanup_if(!remove_directory_recursively(current_path));
+        }
+      else
+        {
+          cleanup_if(!DeleteFileW(current_path));
+        }
+    }
+  while (FindNextFileW(find_handle, &find_file_data));
+
+  cleanup_if(!RemoveDirectoryW(dir_path));
+
+  successful = TRUE;
+
+cleanup:
+  if (find_handle != INVALID_HANDLE_VALUE)
+    {
+      FindClose(find_handle);
+    }
+
+  return successful;
+}
+#else
+static int remove_callback(const char *fpath, const struct stat *sb UNUSED, int typeflag UNUSED,
+                           struct FTW *ftwbuf UNUSED)
+{
+  int rv = remove(fpath);
+  if (rv) perror(fpath);
+  return rv;
+}
+#endif
+
+/*!
+ * \brief Delete the temporary directory and all its contents created by create_tmp_dir().
+ */
+/*!
+ * \brief Delete the temporary directory and all its contents created by create_tmp_dir().
+ */
+int delete_tmp_dir(void)
+{
+  int successful = 0;
+  if (tmp_dir_ == NULL) return 0;
+#ifdef _WIN32
+  {
+    LPWSTR tmp_dir_wide = convert_utf8_to_wstring(tmp_dir_);
+    if (tmp_dir_wide == NULL) return 0;
+    successful = remove_directory_recursively(tmp_dir_wide);
+    free(tmp_dir_wide);
+  }
+#else
+  successful = (nftw(tmp_dir_, remove_callback, 64, FTW_DEPTH | FTW_PHYS) == 0);
+#endif
+  if (successful)
+    {
+      free((void *)tmp_dir_);
+      tmp_dir_ = NULL;
+    }
+
+  return successful;
 }
 
 void linspace(double start, double end, unsigned int n, double *x)
@@ -326,75 +471,85 @@ int file_exists(const char *file_path)
 #endif
 }
 
-char *get_gr_dir(void)
+char *get_env_variable(const char *name)
 {
 #ifdef _WIN32
-  DWORD env_variable_char_count;
-  LPWSTR env_variable_value_wide = NULL;
-  LPSTR env_variable_value_utf8 = NULL;
-  DWORD error;
+  DWORD char_count;
+  LPWSTR name_wide = NULL, value_wide = NULL;
+  LPSTR value_utf8 = NULL;
 
-  env_variable_char_count = GetEnvironmentVariableW(L"GRDIR", NULL, 0) + 1;
-  error = GetLastError();
-  if (error == ERROR_ENVVAR_NOT_FOUND)
-    {
-      return _strdup(GRDIR);
-    }
-  else if (error != ERROR_SUCCESS)
-    {
-      goto error_cleanup;
-    }
-  env_variable_value_wide = malloc(sizeof(wchar_t) * env_variable_char_count);
-  error_cleanup_if(env_variable_value_wide == NULL);
-  GetEnvironmentVariableW(L"GRDIR", env_variable_value_wide, env_variable_char_count);
-  error_cleanup_if(GetLastError() != ERROR_SUCCESS);
+  name_wide = convert_utf8_to_wstring(name);
+  error_cleanup_if(name_wide == NULL);
+  char_count = GetEnvironmentVariableW(name_wide, NULL, 0) + 1;
+  error_cleanup_if(char_count == 0);
+  value_wide = malloc(sizeof(wchar_t) * char_count);
+  error_cleanup_if(value_wide == NULL);
+  char_count = GetEnvironmentVariableW(name_wide, value_wide, char_count);
+  error_cleanup_if(char_count == 0);
 
-  env_variable_value_utf8 = convert_wstring_to_utf8(env_variable_value_wide);
-  error_cleanup_if(env_variable_value_utf8 == NULL);
+  value_utf8 = convert_wstring_to_utf8(value_wide);
+  error_cleanup_if(value_utf8 == NULL);
 
-  free(env_variable_value_wide);
-
-  return env_variable_value_utf8;
+  goto cleanup;
 
 error_cleanup:
-  free(env_variable_value_wide);
-  free(env_variable_value_utf8);
+  free(value_utf8);
+  value_utf8 = NULL;
 
-  return NULL;
+cleanup:
+  free(name_wide);
+  free(value_wide);
+
+  return value_utf8;
 
 #else
-  const char *env_variable_value;
-  if ((env_variable_value = getenv("GRDIR")) != NULL)
+  const char *value;
+  if ((value = getenv(name)) != NULL)
     {
-      return strdup(env_variable_value);
+      return strdup(value);
+    }
+
+  return NULL;
+#endif
+}
+
+char *get_gr_dir(void)
+{
+  char *env_variable_value;
+  if ((env_variable_value = get_env_variable("GRDIR")) != NULL)
+    {
+      return env_variable_value;
     }
   else
     {
       return strdup(GRDIR);
     }
-#endif
 }
 
-const char *get_tmp_directory(void)
+char *get_tmp_directory(void)
 {
-  const char *tmpdir;
+  char *tmp_dir;
   const char *env_vars[] = {
       "TMPDIR",
       "TMP",
       "TEMP",
       "TEMPDIR",
   };
-  int i;
+  unsigned int i;
 
   for (i = 0; i < array_size(env_vars); ++i)
     {
-      if ((tmpdir = getenv(env_vars[i])) != NULL)
+      if ((tmp_dir = get_env_variable(env_vars[i])) != NULL)
         {
-          return tmpdir;
+          break;
         }
     }
+  if (tmp_dir == NULL)
+    {
+      tmp_dir = strdup("/tmp");
+    }
 
-  return "/tmp";
+  return tmp_dir;
 }
 
 #ifdef _WIN32
