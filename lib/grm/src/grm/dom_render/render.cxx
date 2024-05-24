@@ -1044,6 +1044,12 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
       x_center = 0.5 * (viewport[0] + viewport[1]);
       y_center = 0.5 * (viewport[2] + viewport[3]);
       r = 0.45 * grm_min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
+      if (!diag_factor && kind != "pie")
+        {
+          element->setAttribute("_polar_r_org", r * (0.495 / 0.45 - 1));
+          r /= (0.45 / 0.495);
+        }
+
       if (top_text_margin)
         {
           r *= 0.975;
@@ -1067,6 +1073,8 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
   std::string location = PLOT_DEFAULT_SIDEREGION_LOCATION;
   double max_vp, min_vp;
   double offset_rel, width_rel;
+  double r = 0.0;
+  std::string kind;
   double metric_width, metric_height, start_aspect_ratio_ws;
   bool keep_aspect_ratio = false, only_quadratic_aspect_ratio = false;
   std::shared_ptr<GRM::Element> plot_parent = element, central_region, side_region = element;
@@ -1074,15 +1082,23 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
 
   central_region = plot_parent->querySelectors("central_region");
   if (element->localName() != "side_region") side_region = element->parentElement();
+  kind = static_cast<std::string>(plot_parent->getAttribute("kind"));
+  location = static_cast<std::string>(side_region->getAttribute("location"));
 
-  viewport[0] = static_cast<double>(central_region->getAttribute("_viewport_x_min_org"));
-  viewport[1] = static_cast<double>(central_region->getAttribute("_viewport_x_max_org"));
-  viewport[2] = static_cast<double>(central_region->getAttribute("_viewport_y_min_org"));
-  viewport[3] = static_cast<double>(central_region->getAttribute("_viewport_y_max_org"));
+  if (polar_kinds.count(kind) > 0)
+    {
+      r = static_cast<double>(central_region->getAttribute("_polar_r_org"));
+      auto top_side_region = central_region->querySelectors("side_region[location='top']");
+      if (top_side_region && top_side_region->hasAttribute("text_content")) r *= 1.024375;
+    }
+
+  viewport[0] = static_cast<double>(central_region->getAttribute("_viewport_x_min_org")) + r;
+  viewport[1] = static_cast<double>(central_region->getAttribute("_viewport_x_max_org")) - r;
+  viewport[2] = static_cast<double>(central_region->getAttribute("_viewport_y_min_org")) + r;
+  viewport[3] = static_cast<double>(central_region->getAttribute("_viewport_y_max_org")) - r;
   keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
   only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
   start_aspect_ratio_ws = static_cast<double>(plot_parent->getAttribute("_start_aspect_ratio"));
-  location = static_cast<std::string>(side_region->getAttribute("location"));
 
   GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
   auto aspect_ratio_ws = metric_width / metric_height;
@@ -3499,6 +3515,11 @@ static void processCharUp(const std::shared_ptr<GRM::Element> &element)
                static_cast<double>(element->getAttribute("char_up_y")));
 }
 
+static void processClipRegion(const std::shared_ptr<GRM::Element> &element)
+{
+  gr_setclipregion(static_cast<int>(element->getAttribute("clip_region")));
+}
+
 static void processClipTransformation(const std::shared_ptr<GRM::Element> &element)
 {
   gr_selectclipxform(static_cast<int>(element->getAttribute("clip_transformation")));
@@ -5423,6 +5444,7 @@ void GRM::Render::processAttributes(const std::shared_ptr<GRM::Element> &element
       {std::string("char_expan"), processCharExpan},
       {std::string("char_space"), processCharSpace},
       {std::string("char_up_x"), processCharUp}, // the x element can be used cause both must be set
+      {std::string("clip_region"), processClipRegion},
       {std::string("clip_transformation"), processClipTransformation},
       {std::string("colormap"), processColormap},
       {std::string("fill_color_ind"), processFillColorInd},
@@ -5748,7 +5770,12 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
       global_render->createCellArray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, "data" + str, data_vec, context,
                                      cellArray);
     }
-  if (cellArray != nullptr) cellArray->setAttribute("name", "colorbar");
+  if (cellArray != nullptr)
+    {
+      cellArray->setAttribute("name", "colorbar");
+      global_render->setSelectSpecificXform(cellArray, 1);
+      global_render->setClipRegion(cellArray, 0);
+    }
 
   /* create axes */
   gr_inqscale(&options);
@@ -7936,7 +7963,6 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
             {
               text = render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC);
               text->setAttribute("_child_id", child_id++);
-              text->setAttribute("mathtex", 1);
               axes_text_group->append(text);
             }
           else
@@ -7945,8 +7971,11 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
               if (text != nullptr)
                 {
                   render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC, text);
-                  text->setAttribute("mathtex", 1);
                 }
+            }
+          if (text != nullptr && del != del_values::update_without_default)
+            {
+              text->setAttribute("mathtex", y_log);
             }
         }
     }
@@ -9708,6 +9737,8 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
                                                           "color_ind_values" + str, data, nullptr, polar_cellarray);
         }
     }
+  global_render->setClipRegion(polar_cellarray, 1);
+  global_render->setSelectSpecificXform(polar_cellarray, 1);
 }
 
 static void preBarplot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -13776,10 +13807,11 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               central_region->setAttribute("r_max", ymax);
             }
           // this is needed for interactions replaces gr_setwindow(-1,1,-1,1);
-          element->setAttribute("_x_lim_min", -1.0);
-          element->setAttribute("_x_lim_max", 1.0);
-          element->setAttribute("_y_lim_min", -1.0);
-          element->setAttribute("_y_lim_max", 1.0);
+          double temp = 1.01;
+          element->setAttribute("_x_lim_min", -temp);
+          element->setAttribute("_x_lim_max", temp);
+          element->setAttribute("_y_lim_min", -temp);
+          element->setAttribute("_y_lim_max", temp);
         }
 
       /* For quiver plots use u^2 + v^2 as z value */
@@ -14473,8 +14505,8 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
 static void processPlot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   std::shared_ptr<GRM::Element> central_region, central_region_parent = element;
-  if (static_cast<std::string>(element->getAttribute("kind")) == "marginal_heatmap")
-    central_region_parent = element->querySelectors("marginal_heatmap_plot");
+  auto kind = static_cast<std::string>(element->getAttribute("kind"));
+  if (kind == "marginal_heatmap") central_region_parent = element->querySelectors("marginal_heatmap_plot");
 
   for (const auto &child : central_region_parent->children())
     {
@@ -14483,6 +14515,12 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
           central_region = child;
           break;
         }
+    }
+
+  if (str_equals_any(kind, "polar", "polar_histogram", "polar_heatmap", "nonuniform_polar_heatmap"))
+    {
+      global_render->setClipRegion(central_region, 1);
+      global_render->setSelectSpecificXform(central_region, 1);
     }
 
   // set the x-, y- and z-data to NAN if the value is <= 0
@@ -14693,7 +14731,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
     {
       if (child->localName() == "series_barplot" || child->localName() == "series_polar_histogram")
         {
-          auto kind = static_cast<std::string>(child->getAttribute("kind"));
+          kind = static_cast<std::string>(child->getAttribute("kind"));
           if (kindNameToFunc.find(kind) != kindNameToFunc.end())
             {
               kindNameToFunc[kind](element, context);
@@ -14703,7 +14741,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
     }
 
   std::shared_ptr<GRM::Element> side_region;
-  auto kind = static_cast<std::string>(element->getAttribute("kind"));
+  kind = static_cast<std::string>(element->getAttribute("kind"));
 
   if (!element->querySelectors("side_region[location=\"right\"]"))
     {
@@ -15264,7 +15302,14 @@ static void applyPlotDefaults(const std::shared_ptr<GRM::Element> &plot)
         }
       else
         {
-          plot->setAttribute("adjust_y_lim", (plot->hasAttribute("y_lim_min") ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
+          if (polar_kinds.count(kind) > 0 || kind == "pie")
+            {
+              plot->setAttribute("adjust_y_lim", PLOT_DEFAULT_ADJUST_YLIM);
+            }
+          else
+            {
+              plot->setAttribute("adjust_y_lim", (plot->hasAttribute("y_lim_min") ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
+            }
         }
     }
   if (!plot->hasAttribute("adjust_z_lim") || overwrite)
@@ -17072,6 +17117,17 @@ std::shared_ptr<GRM::Element> GRM::Render::createSidePlotRegion(const std::share
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ modifier functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
+
+void GRM::Render::setClipRegion(const std::shared_ptr<GRM::Element> &element, int region)
+{
+  /*!
+   * This function can be used to set the clip region of a GRM::Element
+   *
+   * \param[in] element A GRM::Element
+   * \param[in] region The desired clip region
+   */
+  element->setAttribute("clip_region", region);
+}
 
 void GRM::Render::setViewport(const std::shared_ptr<GRM::Element> &element, double xmin, double xmax, double ymin,
                               double ymax)
