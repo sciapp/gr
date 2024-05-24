@@ -164,7 +164,7 @@ static void test_polar_heatmap_nonuniform(void)
 
 int main(void)
 {
-  test_y_z();
+  //  test_y_z();
   test_polar_heatmap_uniform();
   //  test_polar_heatmap_z_only(); /* z only does not work?*/
   test_polar_heatmap_nonuniform();

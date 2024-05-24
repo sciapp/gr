@@ -233,6 +233,7 @@
                 <xs:element ref="series_wireframe" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attribute name="clip_region" type="xs:integer"/>
             <xs:attribute name="diag_factor" type="xs:double"/>
             <xs:attribute name="keep_window" type="xs:integer"/>
             <xs:attribute name="location" type="strint"/>
@@ -241,6 +242,7 @@
             <xs:attribute name="r_min" type="xs:double"/>
             <xs:attribute name="resample_method" type="strint"/>
             <xs:attribute name="rings" type="xs:integer"/>
+            <xs:attribute name="select_specific_xform" type="xs:integer"/>
             <xs:attribute name="space" type="xs:integer"/>
             <xs:attribute name="space_rotation" type="xs:integer"/>
             <xs:attribute name="space_tilt" type="xs:integer"/>
@@ -268,6 +270,7 @@
                 <xs:element ref="text_region" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attribute name="clip_region" type="xs:integer"/>
             <xs:attribute name="location" type="strint" use="required"/>
             <xs:attribute name="marginal_heatmap_side_plot" type="xs:integer"/>
             <xs:attribute name="offset" type="xs:double"/>
@@ -1487,6 +1490,8 @@
 
     <!-- definition of cellarray attributes -->
     <xs:attributeGroup name="cellarray">
+        <xs:attribute name="clip_region" type="xs:integer"/>
+        <xs:attribute name="select_specific_xform" type="xs:integer"/>
         <xs:attribute name="color_ind_values" type="xs:string" use="required"/>
         <xs:attribute name="num_col" type="xs:integer" use="required"/>
         <xs:attribute name="num_row" type="xs:integer" use="required"/>

@@ -411,6 +411,8 @@ public:
   //! Use Fallback
   void setNextColor(const std::shared_ptr<Element> &element);
 
+  void setClipRegion(const std::shared_ptr<Element> &element, int region);
+
   void setViewport(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
   void setWSViewport(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
