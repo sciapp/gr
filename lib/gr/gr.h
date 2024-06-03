@@ -180,6 +180,32 @@ typedef struct
   int decimal_digits;
 } format_reference_t;
 
+typedef struct
+{
+  double value;
+  int is_major;
+} tick_t;
+
+typedef struct
+{
+  double tick;
+  char *label;
+  double width;
+} tick_label_t;
+
+typedef struct
+{
+  int dry_run;
+  double axis_min, axis_max, axis_org;
+  int major_count;
+  int num_ticks;
+  tick_t *ticks;
+  int num_tick_labels;
+  tick_label_t *tick_label;
+  double tick_size;
+  int draw_grid_line;
+} axis_t;
+
 DLLEXPORT void gr_initgr(void);
 DLLEXPORT int gr_debug(void);
 DLLEXPORT void gr_opengks(void);
@@ -265,6 +291,9 @@ DLLEXPORT void gr_axes(double, double, double, double, int, int, double);
 DLLEXPORT void gr_axeslbl(double, double, double, double, int, int, double,
                           void (*)(double, double, const char *, double),
                           void (*)(double, double, const char *, double));
+DLLEXPORT void gr_axis(char, axis_t *);
+DLLEXPORT void gr_draw_axis(char, axis_t *);
+DLLEXPORT void gr_free_axis(axis_t *);
 DLLEXPORT void gr_grid(double, double, double, double, int, int);
 DLLEXPORT void gr_grid3d(double, double, double, double, double, double, int, int, int);
 DLLEXPORT void gr_verrorbars(int, double *, double *, double *, double *);
