@@ -722,6 +722,44 @@ static void legendSize(const std::vector<std::string> &labels, double *w, double
     }
 }
 
+static void sidePlotMargin(const std::shared_ptr<GRM::Element> side_region, double *margin, double inc,
+                           bool aspect_ratio_scale, double aspect_ratio_ws, double start_aspect_ratio_ws)
+{
+  if (side_region->querySelectors("side_plot_region") ||
+      (side_region->hasAttribute("marginal_heatmap_side_plot") &&
+       static_cast<int>(side_region->getAttribute("marginal_heatmap_side_plot"))))
+    {
+      *margin += inc;
+      if (aspect_ratio_scale)
+        {
+          if (aspect_ratio_ws > start_aspect_ratio_ws)
+            {
+              *margin /= (start_aspect_ratio_ws / aspect_ratio_ws);
+            }
+          else
+            {
+              if (aspect_ratio_ws < 1) *margin /= aspect_ratio_ws;
+            }
+        }
+    }
+}
+
+static void capSidePlotMarginInNonKeepAspectRatio(const std::shared_ptr<GRM::Element> side_region, double *margin,
+                                                  std::string kind)
+{
+  if (side_region->querySelectors("side_plot_region"))
+    {
+      if (str_equals_any(kind, "surface", "volume", "trisurface"))
+        {
+          *margin = grm_max(0.12, *margin);
+        }
+      else
+        {
+          *margin = grm_max(0.075, *margin);
+        }
+    }
+}
+
 static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::Element> element, double *vp_x_min,
                                                      double *vp_x_max, double *vp_y_min, double *vp_y_max,
                                                      bool diag_factor = false)
@@ -823,31 +861,37 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
       vp3 = *vp_y_max;
     }
 
-  // TODO: add cases for left and bottom margin so side_plots can be placed there
+  // margin respects colorbar and sideplot in the specific side_region
+  // TODO: respect individual size defined by user
+  sidePlotMargin(left_side_region, &left_margin, (vp1 - vp0) * 0.1, (keep_aspect_ratio && !diag_factor),
+                 aspect_ratio_ws, start_aspect_ratio_ws);
+  sidePlotMargin(right_side_region, &right_margin, (vp1 - vp0) * 0.1, (keep_aspect_ratio && !diag_factor),
+                 aspect_ratio_ws, start_aspect_ratio_ws);
+  sidePlotMargin(bottom_side_region, &bottom_margin, (vp3 - vp2) * 0.1, (keep_aspect_ratio && !diag_factor),
+                 aspect_ratio_ws, start_aspect_ratio_ws);
+  sidePlotMargin(top_side_region, &top_margin, (vp3 - vp2) * 0.1, (keep_aspect_ratio && !diag_factor), aspect_ratio_ws,
+                 start_aspect_ratio_ws);
+
+  // in the non keep_aspect_ratio case the viewport vp0 - vp3 can be too small for the resulting side_plot; use a
+  // predefined maximum in these cases
+  if (kind != "marginal_heatmap" && !keep_aspect_ratio)
+    {
+      // TODO: Overwork this condition and max value workaround
+      capSidePlotMarginInNonKeepAspectRatio(left_side_region, &left_margin, kind);
+      capSidePlotMarginInNonKeepAspectRatio(right_side_region, &right_margin, kind);
+      capSidePlotMarginInNonKeepAspectRatio(bottom_side_region, &bottom_margin, kind);
+      capSidePlotMarginInNonKeepAspectRatio(top_side_region, &top_margin, kind);
+    }
+
+  // margin respects text in the specific side_region
   if (left_text_margin) left_margin = 0.05;
   if (right_text_margin) right_margin = 0.05;
-  if (str_equals_any(kind, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface", "tricontour",
-                     "trisurface", "volume", "marginal_heatmap", "quiver", "polar_heatmap", "nonuniformpolar_heatmap"))
-    {
-      right_margin += (vp1 - vp0) * 0.1;
-    }
   if (bottom_text_margin) bottom_margin = 0.05;
 
-  if (keep_aspect_ratio && !diag_factor)
-    {
-      if (aspect_ratio_ws > start_aspect_ratio_ws)
-        {
-          right_margin /= (start_aspect_ratio_ws / aspect_ratio_ws);
-        }
-      else
-        {
-          if (aspect_ratio_ws < 1) right_margin /= aspect_ratio_ws;
-        }
-    }
-
+  // calculate text impact for top_margin and adjust all margins if defined by attributes
   if (kind == "marginal_heatmap")
     {
-      top_margin = right_margin + (top_text_margin ? top_text_is_title ? 0.075 : 0.05 : 0.025);
+      top_margin += (right_margin - top_margin) + (top_text_margin ? top_text_is_title ? 0.075 : 0.05 : 0.025);
 
       if (keep_aspect_ratio && uniform_data && only_quadratic_aspect_ratio)
         {
@@ -888,21 +932,6 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
               auto diff = (0.95 - right_margin) - (0.975 - top_margin);
               right_margin += 0.5 * diff;
               left_margin += 0.5 * diff;
-            }
-        }
-      else if (str_equals_any(kind, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface",
-                              "tricontour", "trisurface", "volume", "marginal_heatmap", "quiver", "polar_heatmap",
-                              "nonuniformpolar_heatmap") &&
-               !keep_aspect_ratio)
-        {
-          // TODO: Overwork this condition and max value workaround
-          if (str_equals_any(kind, "surface", "volume", "trisurface"))
-            {
-              right_margin = grm_max(0.12, right_margin);
-            }
-          else
-            {
-              right_margin = grm_max(0.075, right_margin);
             }
         }
     }
@@ -1260,11 +1289,14 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
         {
           if (location == "top")
             {
-              width += (0.025 + ((element->parentElement()->hasAttribute("text_is_title") &&
-                                  static_cast<int>(element->parentElement()->getAttribute("text_is_title")))
-                                     ? 0.075
-                                     : 0.05)) *
-                       (plot_viewport[3] - plot_viewport[2]);
+              if (!element->parentElement()->hasAttribute("marginal_heatmap_side_plot"))
+                {
+                  width += (0.025 + ((element->parentElement()->hasAttribute("text_is_title") &&
+                                      static_cast<int>(element->parentElement()->getAttribute("text_is_title")))
+                                         ? 0.075
+                                         : 0.05)) *
+                           (plot_viewport[3] - plot_viewport[2]);
+                }
               if (element->parentElement()->hasAttribute("offset"))
                 offset = static_cast<double>(element->parentElement()->getAttribute("offset"));
               if (element->parentElement()->hasAttribute("width"))
@@ -3906,6 +3938,7 @@ static void processMarginalHeatmapKind(const std::shared_ptr<GRM::Element> &elem
   for (const auto &side_region : element->children())
     {
       if (!side_region->hasAttribute("marginal_heatmap_side_plot") ||
+          !side_region->querySelectors("side_plot_region") ||
           static_cast<int>(element->getAttribute("_delete_children")) >= 2)
         continue;
       if (mkind == "line")
@@ -6511,7 +6544,7 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
   std::vector<double> absolute_upwards_vec, absolute_downwards_vec, relative_upwards_vec, relative_downwards_vec;
   std::string absolute_upwards, absolute_downwards, relative_upwards, relative_downwards;
   double absolute_upwards_flt, relative_upwards_flt, absolute_downwards_flt, relative_downwards_flt;
-  unsigned int upwards_length, downwards_length, i;
+  unsigned int i;
   int scale_options, color_upward_scap, color_downward_scap, color_error_bar;
   double marker_size, x_min, x_max, y_min, y_max, tick, a, b, e_upwards, e_downwards, x_value;
   double line_x[2], line_y[2];
@@ -6558,25 +6591,21 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
     {
       absolute_downwards = static_cast<std::string>(element->getAttribute("absolute_downwards"));
       absolute_downwards_vec = GRM::get<std::vector<double>>((*context)[absolute_downwards]);
-      downwards_length = absolute_downwards_vec.size();
     }
   if (element->hasAttribute("relative_downwards"))
     {
       relative_downwards = static_cast<std::string>(element->getAttribute("relative_downwards"));
       relative_downwards_vec = GRM::get<std::vector<double>>((*context)[relative_downwards]);
-      downwards_length = absolute_downwards_vec.size();
     }
   if (element->hasAttribute("absolute_upwards"))
     {
       absolute_upwards = static_cast<std::string>(element->getAttribute("absolute_upwards"));
       absolute_upwards_vec = GRM::get<std::vector<double>>((*context)[absolute_upwards]);
-      upwards_length = absolute_upwards_vec.size();
     }
   if (element->hasAttribute("relative_upwards"))
     {
       relative_upwards = static_cast<std::string>(element->getAttribute("relative_upwards"));
       relative_upwards_vec = GRM::get<std::vector<double>>((*context)[relative_upwards]);
-      upwards_length = absolute_upwards_vec.size();
     }
   if (element->hasAttribute("absolute_downwards_flt"))
     absolute_downwards_flt = static_cast<double>(element->getAttribute("absolute_downwards_flt"));
@@ -6703,7 +6732,7 @@ static void processErrorBar(const std::shared_ptr<GRM::Element> &element, const 
 {
   double scap_x_min, scap_x_max, e_upwards = FLT_MAX, e_downwards = FLT_MAX;
   double error_bar_x, error_bar_y_min, error_bar_y_max;
-  int color_upward_scap, color_downward_scap, color_error_bar;
+  int color_upward_scap = 0, color_downward_scap = 0, color_error_bar;
   std::shared_ptr<GRM::Element> line;
   del_values del = del_values::update_without_default;
   int child_id = 0;
@@ -17495,6 +17524,11 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                   // create marginal_heatmap_plot as central_region father
                   central_region->parentElement()->insertBefore(new_series, central_region);
                   new_series->append(central_region);
+                  // declare which side_region contains the marginal_heatmap side_plot
+                  new_series->querySelectors("side_region[location=\"top\"]")
+                      ->setAttribute("marginal_heatmap_side_plot", 1);
+                  new_series->querySelectors("side_region[location=\"right\"]")
+                      ->setAttribute("marginal_heatmap_side_plot", 1);
                 }
               else
                 {
