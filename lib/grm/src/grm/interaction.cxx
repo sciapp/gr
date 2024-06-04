@@ -361,7 +361,7 @@ err_t tooltip_list_entry_delete(tooltip_list_entry_t entry)
 static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &element, double ndc_x, double ndc_y,
                                      double xshift, double yshift, bool is_movable)
 {
-  double tmp = 0, x_with_shift, y_with_shift, x_ndc, y_ndc;
+  double x_with_shift, y_with_shift, x_ndc, y_ndc;
   double old_x_shift = 0, old_y_shift = 0, wc_x_shift, wc_y_shift;
   int width, height, max_width_height;
   std::string post_fix = "_wc";
@@ -579,7 +579,7 @@ int grm_input(const grm_args_t *input_args)
 
               if (static_cast<int>(subplot_element->getAttribute("x_log")))
                 {
-                  for (int j = 0; j < x_length; j++)
+                  for (int j = 0; j < (int)x_length; j++)
                     {
                       if (!grm_isnan(x_series_vec[j]))
                         {
@@ -592,7 +592,7 @@ int grm_input(const grm_args_t *input_args)
                 }
               if (static_cast<int>(subplot_element->getAttribute("y_log")))
                 {
-                  for (int j = 0; j < y_length; j++)
+                  for (int j = 0; j < (int)y_length; j++)
                     {
                       if (!grm_isnan(y_series_vec[j]))
                         {
@@ -638,7 +638,7 @@ int grm_input(const grm_args_t *input_args)
 
               if (static_cast<int>(subplot_element->getAttribute("x_log")))
                 {
-                  for (int j = 0; j < x_length - x_offset; j++)
+                  for (int j = 0; j < (int)x_length - x_offset; j++)
                     {
                       double step_x = (x_series_vec[x_length - 1] - x_min) / (x_length - x_offset);
                       double tmp = 0, a = x_min + j * step_x, b = x_min + (j + 1) * step_x;
@@ -652,7 +652,7 @@ int grm_input(const grm_args_t *input_args)
                 }
               if (static_cast<int>(subplot_element->getAttribute("y_log")))
                 {
-                  for (int j = 0; j < y_length - y_offset; j++)
+                  for (int j = 0; j < (int)y_length - y_offset; j++)
                     {
                       double step_y = (y_series_vec[y_length - 1] - y_min) / (y_length - y_offset);
                       double tmp = 0, a = y_min + j * step_y, b = y_min + (j + 1) * step_y;
@@ -670,7 +670,7 @@ int grm_input(const grm_args_t *input_args)
                 {
                   double tmp = 0;
                   xind_d = 0;
-                  for (int j = 0; j < x_length - x_offset; j++)
+                  for (int j = 0; j < (int)x_length - x_offset; j++)
                     {
                       if (tmp + x_steps[j] > (x - x_0)) break;
                       tmp += x_steps[j];
@@ -683,7 +683,7 @@ int grm_input(const grm_args_t *input_args)
                 {
                   double tmp = 0;
                   yind_d = 0;
-                  for (int j = 0; j < y_length - y_offset; j++)
+                  for (int j = 0; j < (int)y_length - y_offset; j++)
                     {
                       if (tmp + y_steps[j] < (y - y_0)) break;
                       tmp += y_steps[j];
@@ -720,9 +720,6 @@ int grm_input(const grm_args_t *input_args)
                           if (childKind == "hist")
                             {
                               // reset bar colors
-                              bool is_horizontal =
-                                  static_cast<std::string>(child->getAttribute("orientation")) == "horizontal";
-
                               // bar level
                               for (auto &bars : child->children())
                                 {
@@ -741,8 +738,6 @@ int grm_input(const grm_args_t *input_args)
                                           break;
                                         }
 
-                                      int fillColorInd =
-                                          static_cast<int>(innerFillGroup->getAttribute("fill_color_ind"));
                                       if (xind != -1)
                                         {
                                           innerFillGroup->children()[xind]->removeAttribute("fill_color_ind");
@@ -992,7 +987,6 @@ int grm_is3d(const int x, const int y)
 {
   int width, height, max_width_height;
   double ndc_x, ndc_y;
-  const char *kind;
 
   GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
@@ -1236,7 +1230,7 @@ error_cleanup:
 
 err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int, grm_tooltip_info_t *))
 {
-  double *x_series, *y_series, *z_series, x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
+  double x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
   double x_range_min, x_range_max, y_range_min, y_range_max, x_px, y_px;
   int width, height, max_width_height;
   std::vector<std::string> labels;
@@ -1305,10 +1299,12 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
   auto axes_vec = subplot_element->querySelectorsAll("axes");
   auto coordinate_system = subplot_element->querySelectors("coordinate_system");
+  auto left_side_region = subplot_element->querySelectors("side_region[location=\"left\"]");
+  auto bottom_side_region = subplot_element->querySelectors("side_region[location=\"bottom\"]");
   std::vector<std::shared_ptr<GRM::Element>> label_vec;
 
-  if (coordinate_system && coordinate_system->hasAttribute("x_label") && coordinate_system->hasAttribute("y_label"))
-    label_vec.push_back(coordinate_system);
+  if (bottom_side_region && bottom_side_region->hasAttribute("text_content")) label_vec.push_back(bottom_side_region);
+  if (left_side_region && left_side_region->hasAttribute("text_content")) label_vec.push_back(left_side_region);
 
   if (label_vec.empty())
     {
@@ -1317,22 +1313,22 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
     }
   else
     {
-      if (!label_vec[0]->hasAttribute("x_label"))
+      if (!label_vec[0]->hasAttribute("text_content"))
         {
           info->xlabel = (char *)"x";
         }
       else
         {
-          static std::string xlabel = static_cast<std::string>(label_vec[0]->getAttribute("x_label"));
+          static auto xlabel = static_cast<std::string>(label_vec[0]->getAttribute("text_content"));
           info->xlabel = (char *)xlabel.c_str();
         }
-      if (!label_vec[0]->hasAttribute("y_label"))
+      if (!label_vec[1]->hasAttribute("text_content"))
         {
           info->ylabel = (char *)"y";
         }
       else
         {
-          static std::string ylabel = static_cast<std::string>(label_vec[0]->getAttribute("y_label"));
+          static auto ylabel = static_cast<std::string>(label_vec[1]->getAttribute("text_content"));
           info->ylabel = (char *)ylabel.c_str();
         }
     }
@@ -1549,7 +1545,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
               if (static_cast<int>(subplot_element->getAttribute("x_log")))
                 {
-                  for (int j = 0; j < x_length; j++)
+                  for (int j = 0; j < (int)x_length; j++)
                     {
                       if (!grm_isnan(x_series_vec[j]))
                         {
@@ -1562,7 +1558,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                 }
               if (static_cast<int>(subplot_element->getAttribute("y_log")))
                 {
-                  for (int j = 0; j < y_length; j++)
+                  for (int j = 0; j < (int)y_length; j++)
                     {
                       if (!grm_isnan(y_series_vec[j]))
                         {
@@ -1587,7 +1583,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
               if (static_cast<int>(subplot_element->getAttribute("x_log")))
                 {
-                  for (int j = 0; j < x_length - x_offset; j++)
+                  for (int j = 0; j < (int)x_length - x_offset; j++)
                     {
                       double step_x = (x_series_vec[x_length - 1] - x_min) / (x_length - x_offset);
                       double tmp = 0, a = x_min + j * step_x, b = x_min + (j + 1) * step_x;
@@ -1601,7 +1597,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                 }
               if (static_cast<int>(subplot_element->getAttribute("y_log")))
                 {
-                  for (int j = 0; j < y_length - y_offset; j++)
+                  for (int j = 0; j < (int)y_length - y_offset; j++)
                     {
                       double step_y = (y_series_vec[y_length - 1] - y_min) / (y_length - y_offset);
                       double tmp = 0, a = y_min + j * step_y, b = y_min + (j + 1) * step_y;
@@ -1632,7 +1628,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                 {
                   double tmp = 0;
                   x_series_idx = x_offset;
-                  for (int j = 0; j < x_length - x_offset; j++)
+                  for (int j = 0; j < (int)x_length - x_offset; j++)
                     {
                       if (tmp + x_steps[j] > (mouse_x - x_0)) break;
                       tmp += x_steps[j];
@@ -1646,7 +1642,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                 {
                   double tmp = 0;
                   y_series_idx = y_offset;
-                  for (int j = 0; j < y_length - y_offset; j++)
+                  for (int j = 0; j < (int)y_length - y_offset; j++)
                     {
                       if (tmp + y_steps[j] < (mouse_y - y_0)) break;
                       tmp += y_steps[j];
@@ -1702,22 +1698,22 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                 }
               else
                 {
-                  if (!label_vec[0]->hasAttribute("x_label"))
+                  if (!label_vec[0]->hasAttribute("text_content"))
                     {
                       info->xlabel = (char *)"x";
                     }
                   else
                     {
-                      static std::string xlabel = static_cast<std::string>(label_vec[0]->getAttribute("x_label"));
+                      static auto xlabel = static_cast<std::string>(label_vec[0]->getAttribute("text_content"));
                       info->xlabel = (char *)xlabel.c_str();
                     }
-                  if (!label_vec[0]->hasAttribute("y_label"))
+                  if (!label_vec[1]->hasAttribute("text_content"))
                     {
                       info->ylabel = (char *)"y";
                     }
                   else
                     {
-                      static std::string ylabel = static_cast<std::string>(label_vec[0]->getAttribute("y_label"));
+                      static auto ylabel = static_cast<std::string>(label_vec[1]->getAttribute("text_content"));
                       info->ylabel = (char *)ylabel.c_str();
                     }
                 }

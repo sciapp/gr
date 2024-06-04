@@ -383,6 +383,11 @@ public:
 
   std::shared_ptr<Element> createSideRegion(std::string location,
                                             const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+
+  std::shared_ptr<Element> createTextRegion(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+
+  std::shared_ptr<Element> createSidePlotRegion(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+
   //! Modifierfunctions
 
   /* ------------------------------- setter functions ----------------------------------------------------------------*/
