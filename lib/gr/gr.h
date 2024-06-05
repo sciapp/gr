@@ -195,8 +195,8 @@ typedef struct
 
 typedef struct
 {
-  int dry_run;
-  double axis_min, axis_max, axis_org;
+  double min, max;
+  double tick, org;
   int major_count;
   int num_ticks;
   tick_t *ticks;
