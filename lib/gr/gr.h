@@ -291,8 +291,8 @@ DLLEXPORT void gr_axeslbl(double, double, double, double, int, int, double,
                           void (*)(double, double, const char *, double),
                           void (*)(double, double, const char *, double));
 DLLEXPORT void gr_axis(char, axis_t *);
-DLLEXPORT void gr_draw_axis(char, axis_t *);
-DLLEXPORT void gr_free_axis(axis_t *);
+DLLEXPORT void gr_drawaxis(char, axis_t *);
+DLLEXPORT void gr_freeaxis(axis_t *);
 DLLEXPORT void gr_grid(double, double, double, double, int, int);
 DLLEXPORT void gr_grid3d(double, double, double, double, double, double, int, int, int);
 DLLEXPORT void gr_verrorbars(int, double *, double *, double *, double *);
