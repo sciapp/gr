@@ -5435,7 +5435,7 @@ void gr_axis(char which, axis_t *axis)
     }
 }
 
-void gr_draw_axis(char which, axis_t *axis)
+void gr_drawaxis(char which, axis_t *axis)
 {
   int errind, tnr;
   double wn[4], vp[4];
@@ -5500,7 +5500,7 @@ void gr_draw_axis(char which, axis_t *axis)
     }
 }
 
-void gr_free_axis(axis_t *axis)
+void gr_freeaxis(axis_t *axis)
 {
   int i;
   for (i = 0; i < axis->num_tick_labels; i++)
