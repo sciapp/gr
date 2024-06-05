@@ -201,9 +201,8 @@ typedef struct
   int num_ticks;
   tick_t *ticks;
   int num_tick_labels;
-  tick_label_t *tick_label;
+  tick_label_t *tick_labels;
   double tick_size;
-  int draw_grid_line;
 } axis_t;
 
 DLLEXPORT void gr_initgr(void);
