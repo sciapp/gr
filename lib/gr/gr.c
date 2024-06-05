@@ -5355,7 +5355,7 @@ void gr_axis(char which, axis_t *axis)
   if (scale_option & lx.scale_options)
     {
       axis->num_tick_labels = igauss(blog(base, axis->max / axis->min)) + 2;
-      axis->tick_label = (tick_label_t *)xcalloc(axis->num_tick_labels, sizeof(tick_label_t));
+      axis->tick_labels = (tick_label_t *)xcalloc(axis->num_tick_labels, sizeof(tick_label_t));
       axis->num_ticks = axis->num_tick_labels * base;
       axis->ticks = (tick_t *)xcalloc(axis->num_ticks, sizeof(tick_t));
 
@@ -5377,10 +5377,10 @@ void gr_axis(char which, axis_t *axis)
                       exponent = iround(blog(base, a));
                       s = (char *)xcalloc(256, sizeof(char));
                       snprintf(s, 255, "%d^{%d}", base, exponent);
-                      axis->tick_label[k].tick = a;
-                      axis->tick_label[k].label = replace_minus_sign(s);
-                      gr_inqtext(0, 0, axis->tick_label[k].label, tbx, tby);
-                      axis->tick_label[k].width = tbx[2] - tbx[0];
+                      axis->tick_labels[k].tick = a;
+                      axis->tick_labels[k].label = replace_minus_sign(s);
+                      gr_inqtext(0, 0, axis->tick_labels[k].label, tbx, tby);
+                      axis->tick_labels[k].width = tbx[2] - tbx[0];
                       k++;
                     }
                 }
@@ -5407,7 +5407,7 @@ void gr_axis(char which, axis_t *axis)
       axis->num_ticks = (int)((axis->max - axis->min) / axis->tick + 0.5) + 1;
       axis->ticks = (double *)xcalloc(axis->num_ticks, sizeof(tick_t));
       axis->num_tick_labels = axis->num_ticks / axis->major_count;
-      axis->tick_label = (tick_label_t *)xcalloc(axis->num_tick_labels, sizeof(tick_label_t));
+      axis->tick_labels = (tick_label_t *)xcalloc(axis->num_tick_labels, sizeof(tick_label_t));
 
       epsilon = FEPS * (axis->max - axis->min);
 
@@ -5423,10 +5423,10 @@ void gr_axis(char which, axis_t *axis)
             {
               s = (char *)xcalloc(256, sizeof(char));
               gr_ftoa(s, a, &formatReference);
-              axis->tick_label[k].tick = a;
-              axis->tick_label[k].label = replace_minus_sign(s);
-              gr_inqtext(0, 0, axis->tick_label[k].label, tbx, tby);
-              axis->tick_label[k].width = tbx[2] - tbx[0];
+              axis->tick_labels[k].tick = a;
+              axis->tick_labels[k].label = replace_minus_sign(s);
+              gr_inqtext(0, 0, axis->tick_labels[k].label, tbx, tby);
+              axis->tick_labels[k].width = tbx[2] - tbx[0];
               k++;
             }
           i++;
@@ -5494,9 +5494,9 @@ void gr_draw_axis(char which, axis_t *axis)
   for (i = 0; i < axis->num_tick_labels; i++)
     {
       if (which == 'X')
-        text2d(axis->tick_label[i].tick, label_org, axis->tick_label[i].label);
+        text2d(axis->tick_labels[i].tick, label_org, axis->tick_labels[i].label);
       else
-        text2d(label_org, axis->tick_label[i].tick, axis->tick_label[i].label);
+        text2d(label_org, axis->tick_labels[i].tick, axis->tick_labels[i].label);
     }
 }
 
@@ -5505,9 +5505,9 @@ void gr_free_axis(axis_t *axis)
   int i;
   for (i = 0; i < axis->num_tick_labels; i++)
     {
-      free(axis->tick_label[i].label);
+      free(axis->tick_labels[i].label);
     }
-  free(axis->tick_label);
+  free(axis->tick_labels);
   free(axis->ticks);
 }
 
