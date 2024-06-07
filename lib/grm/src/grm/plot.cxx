@@ -2620,6 +2620,22 @@ err_t plot_marginal_heatmap(grm_args_t *subplot_args)
       if (grm_args_values(*current_series, "algorithm", "s", &algorithm))
         subGroup->setAttribute("algorithm", algorithm);
     }
+
+  std::shared_ptr<GRM::Element> top_side_region;
+  if (!subGroup->querySelectors("side_region[location=\"top\"]"))
+    {
+      top_side_region = global_render->createSideRegion("top");
+      subGroup->append(top_side_region);
+    }
+  else
+    {
+      top_side_region = subGroup->querySelectors("side_region[location=\"top\"]");
+    }
+  top_side_region->setAttribute("marginal_heatmap_side_plot", 1);
+  auto right_side_region = global_render->createSideRegion("right");
+  right_side_region->setAttribute("marginal_heatmap_side_plot", 1);
+  subGroup->append(right_side_region);
+
   grm_args_push(subplot_args, "kind", "s", "marginal_heatmap");
   global_root->setAttribute("_id", ++id);
 
@@ -3303,8 +3319,16 @@ err_t plot_pie(grm_args_t *subplot_args)
     }
   if (grm_args_values(subplot_args, "title", "s", &title))
     {
-      auto side_region = global_render->createElement("side_region");
-      group->parentElement()->append(side_region);
+      std::shared_ptr<GRM::Element> side_region;
+      if (!group->parentElement()->querySelectors("side_region[location=\"top\"]"))
+        {
+          side_region = global_render->createElement("side_region");
+          group->parentElement()->append(side_region);
+        }
+      else
+        {
+          side_region = group->parentElement()->querySelectors("side_region[location=\"top\"]");
+        }
       side_region->setAttribute("text_content", title);
       side_region->setAttribute("location", "top");
       side_region->setAttribute("text_is_title", true);
