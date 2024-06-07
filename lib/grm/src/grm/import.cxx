@@ -114,12 +114,12 @@ static std::map<std::string, std::string> key_alias = {
 static std::map<std::string, const char *> container_params{
     {"error", "a"}, {"ind_bar_color", "nA"}, {"ind_edge_color", "nA"}, {"ind_edge_width", "nA"}};
 
-static std::map<std::string, const char *> container_to_types{{"downward_scap_color", "i"},
+static std::map<std::string, const char *> container_to_types{{"downwards_cap_color", "i"},
                                                               {"error_bar_color", "i"},
                                                               {"indices", "i"},
                                                               {"indices", "nI"},
                                                               {"rgb", "ddd"},
-                                                              {"upward_scap_color", "i"},
+                                                              {"upwards_cap_color", "i"},
                                                               {"width", "d"}};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ global flags defined by the user input ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -864,10 +864,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                       grm_args_push(error_vec[col], "relative", "nDD", rows, errors_up.data(), errors_down.data());
                       if (grm_args_values(error, "error_bar_color", "i", &color))
                         grm_args_push(error_vec[col], "error_bar_color", "i", color);
-                      if (grm_args_values(error, "downward_scap_color", "i", &color_down))
-                        grm_args_push(error_vec[col], "downward_scap_color", "i", color_down);
-                      if (grm_args_values(error, "upward_scap_color", "i", &color_up))
-                        grm_args_push(error_vec[col], "upward_scap_color", "i", color_up);
+                      if (grm_args_values(error, "downwards_cap_color", "i", &color_down))
+                        grm_args_push(error_vec[col], "downwards_cap_color", "i", color_down);
+                      if (grm_args_values(error, "upwards_cap_color", "i", &color_up))
+                        grm_args_push(error_vec[col], "upwards_cap_color", "i", color_up);
                     }
                   err *= down_err_off;
                 }
@@ -876,9 +876,18 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                   int cnt = 0;
                   err = 0;
                   error_vec.resize(equal_up_and_down_error ? error_data.size() : error_data.size() / 2);
+                  for (i = 0; i < error_vec.size(); i++)
+                    {
+                      error_vec[i] = grm_args_new();
+                      if (grm_args_values(error, "error_bar_color", "i", &color))
+                        grm_args_push(error_vec[i], "error_bar_color", "i", color);
+                      if (grm_args_values(error, "downwards_cap_color", "i", &color_down))
+                        grm_args_push(error_vec[i], "downwards_cap_color", "i", color_down);
+                      if (grm_args_values(error, "upwards_cap_color", "i", &color_up))
+                        grm_args_push(error_vec[i], "upwards_cap_color", "i", color_up);
+                    }
                   for (int error_col : error_data)
                     {
-                      error_vec[cnt] = grm_args_new();
                       for (i = 0; i < rows; i++)
                         {
                           if (equal_up_and_down_error)
@@ -897,19 +906,13 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                         }
                       if (cnt % 2 != 0 || equal_up_and_down_error)
                         {
-                          grm_args_push(error_vec[cnt / (equal_up_and_down_error ? 1 : 2)], "relative", "nDD", rows,
-                                        errors_up.data(), errors_down.data());
+                          grm_args_push(error_vec[floor(cnt / (equal_up_and_down_error ? 1 : 2))], "relative", "nDD",
+                                        rows, errors_up.data(), errors_down.data());
                         }
                       else
                         {
                           filtered_error_columns.push_back(error_col);
                         }
-                      if (grm_args_values(error, "error_bar_color", "i", &color))
-                        grm_args_push(error_vec[cnt], "error_bar_color", "i", color);
-                      if (grm_args_values(error, "downward_scap_color", "i", &color_down))
-                        grm_args_push(error_vec[cnt], "downward_scap_color", "i", color_down);
-                      if (grm_args_values(error, "upward_scap_color", "i", &color_up))
-                        grm_args_push(error_vec[cnt], "upward_scap_color", "i", color_up);
                       cnt += 1;
                     }
                 }

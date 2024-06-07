@@ -3895,7 +3895,7 @@ err_t plot_draw_error_bars(grm_args_t *series_args, unsigned int x_length)
          *relative_downwards = nullptr;
   double absolute_upwards_flt, relative_upwards_flt, absolute_downwards_flt, relative_downwards_flt;
   unsigned int upwards_length, downwards_length, i;
-  int color_upward_scap, color_downward_scap, color_error_bar;
+  int color_upwards_cap, color_downwards_cap, color_error_bar;
 
   std::shared_ptr<GRM::Element> group = (current_central_region_element)
                                             ? current_central_region_element->lastChildElement()
@@ -3974,10 +3974,10 @@ err_t plot_draw_error_bars(grm_args_t *series_args, unsigned int x_length)
 
   if (error_container != nullptr)
     {
-      if (grm_args_values(error_container, "upward_scap_color", "i", &color_upward_scap))
-        subGroup->setAttribute("upward_scap_color", color_upward_scap);
-      if (grm_args_values(error_container, "downward_scap_color", "i", &color_downward_scap))
-        subGroup->setAttribute("downward_scap_color", color_downward_scap);
+      if (grm_args_values(error_container, "upwards_cap_color", "i", &color_upwards_cap))
+        subGroup->setAttribute("upwards_cap_color", color_upwards_cap);
+      if (grm_args_values(error_container, "downwards_cap_color", "i", &color_downwards_cap))
+        subGroup->setAttribute("downwards_cap_color", color_downwards_cap);
       if (grm_args_values(error_container, "error_bar_color", "i", &color_error_bar))
         subGroup->setAttribute("error_bar_color", color_error_bar);
     }

@@ -6545,7 +6545,7 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
   std::string absolute_upwards, absolute_downwards, relative_upwards, relative_downwards;
   double absolute_upwards_flt, relative_upwards_flt, absolute_downwards_flt, relative_downwards_flt;
   unsigned int i;
-  int scale_options, color_upward_scap, color_downward_scap, color_error_bar;
+  int scale_options, color_upwards_cap, color_downwards_cap, color_error_bar;
   double marker_size, x_min, x_max, y_min, y_max, tick, a, b, e_upwards, e_downwards, x_value;
   double line_x[2], line_y[2];
   std::vector<double> x_vec, y_vec;
@@ -6637,11 +6637,11 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
   gr_inqlinecolorind(&color_error_bar);
   // special case for barplot
   if (kind == "barplot") color_error_bar = static_cast<int>(element->parentElement()->getAttribute("line_color_ind"));
-  color_upward_scap = color_downward_scap = color_error_bar;
-  if (element->hasAttribute("upward_scap_color"))
-    color_upward_scap = static_cast<int>(element->getAttribute("upward_scap_color"));
-  if (element->hasAttribute("downward_scap_color"))
-    color_downward_scap = static_cast<int>(element->getAttribute("downward_scap_color"));
+  color_upwards_cap = color_downwards_cap = color_error_bar;
+  if (element->hasAttribute("upwards_cap_color"))
+    color_upwards_cap = static_cast<int>(element->getAttribute("upwards_cap_color"));
+  if (element->hasAttribute("downwards_cap_color"))
+    color_downwards_cap = static_cast<int>(element->getAttribute("downwards_cap_color"));
   if (element->hasAttribute("error_bar_color"))
     color_error_bar = static_cast<int>(element->getAttribute("error_bar_color"));
 
@@ -6710,17 +6710,17 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
               if (e_upwards != FLT_MAX)
                 {
                   error_bar->setAttribute("e_upwards", e_upwards);
-                  error_bar->setAttribute("upward_scap_color", color_upward_scap);
+                  error_bar->setAttribute("upwards_cap_color", color_upwards_cap);
                 }
               if (e_downwards != FLT_MAX)
                 {
                   error_bar->setAttribute("e_downwards", e_downwards);
-                  error_bar->setAttribute("downward_scap_color", color_downward_scap);
+                  error_bar->setAttribute("downwards_cap_color", color_downwards_cap);
                 }
               if (e_downwards != FLT_MAX || e_upwards != FLT_MAX)
                 {
-                  error_bar->setAttribute("scap_x_min", line_x[0]);
-                  error_bar->setAttribute("scap_x_max", line_x[1]);
+                  error_bar->setAttribute("cap_x_min", line_x[0]);
+                  error_bar->setAttribute("cap_x_max", line_x[1]);
                 }
             }
         }
@@ -6730,9 +6730,9 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
 
 static void processErrorBar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
-  double scap_x_min, scap_x_max, e_upwards = FLT_MAX, e_downwards = FLT_MAX;
+  double cap_x_min, cap_x_max, e_upwards = FLT_MAX, e_downwards = FLT_MAX;
   double error_bar_x, error_bar_y_min, error_bar_y_max;
-  int color_upward_scap = 0, color_downward_scap = 0, color_error_bar;
+  int color_upwards_cap = 0, color_downwards_cap = 0, color_error_bar;
   std::shared_ptr<GRM::Element> line;
   del_values del = del_values::update_without_default;
   int child_id = 0;
@@ -6746,20 +6746,20 @@ static void processErrorBar(const std::shared_ptr<GRM::Element> &element, const 
   error_bar_y_max = static_cast<double>(element->getAttribute("error_bar_y_max"));
   color_error_bar = static_cast<int>(element->getAttribute("error_bar_color"));
 
-  if (element->hasAttribute("scap_x_min")) scap_x_min = static_cast<double>(element->getAttribute("scap_x_min"));
-  if (element->hasAttribute("scap_x_max")) scap_x_max = static_cast<double>(element->getAttribute("scap_x_max"));
+  if (element->hasAttribute("cap_x_min")) cap_x_min = static_cast<double>(element->getAttribute("cap_x_min"));
+  if (element->hasAttribute("cap_x_max")) cap_x_max = static_cast<double>(element->getAttribute("cap_x_max"));
   if (element->hasAttribute("e_upwards")) e_upwards = static_cast<double>(element->getAttribute("e_upwards"));
   if (element->hasAttribute("e_downwards")) e_downwards = static_cast<double>(element->getAttribute("e_downwards"));
-  if (element->hasAttribute("upward_scap_color"))
-    color_upward_scap = static_cast<int>(element->getAttribute("upward_scap_color"));
-  if (element->hasAttribute("downward_scap_color"))
-    color_downward_scap = static_cast<int>(element->getAttribute("downward_scap_color"));
+  if (element->hasAttribute("upwards_cap_color"))
+    color_upwards_cap = static_cast<int>(element->getAttribute("upwards_cap_color"));
+  if (element->hasAttribute("downwards_cap_color"))
+    color_downwards_cap = static_cast<int>(element->getAttribute("downwards_cap_color"));
 
-  if (e_upwards != FLT_MAX && color_upward_scap >= 0)
+  if (e_upwards != FLT_MAX && color_upwards_cap >= 0)
     {
       if (del != del_values::update_without_default && del != del_values::update_with_default)
         {
-          line = global_render->createPolyline(scap_x_min, scap_x_max, e_upwards, e_upwards, 0, 0.0, color_upward_scap);
+          line = global_render->createPolyline(cap_x_min, cap_x_max, e_upwards, e_upwards, 0, 0.0, color_upwards_cap);
           line->setAttribute("_child_id", child_id++);
           element->append(line);
         }
@@ -6767,17 +6767,16 @@ static void processErrorBar(const std::shared_ptr<GRM::Element> &element, const 
         {
           line = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
           if (line != nullptr)
-            global_render->createPolyline(scap_x_min, scap_x_max, e_upwards, e_upwards, 0, 0.0, color_upward_scap,
-                                          line);
+            global_render->createPolyline(cap_x_min, cap_x_max, e_upwards, e_upwards, 0, 0.0, color_upwards_cap, line);
         }
     }
 
-  if (e_downwards != FLT_MAX && color_downward_scap >= 0)
+  if (e_downwards != FLT_MAX && color_downwards_cap >= 0)
     {
       if (del != del_values::update_without_default && del != del_values::update_with_default)
         {
-          line = global_render->createPolyline(scap_x_min, scap_x_max, e_downwards, e_downwards, 0, 0.0,
-                                               color_downward_scap);
+          line = global_render->createPolyline(cap_x_min, cap_x_max, e_downwards, e_downwards, 0, 0.0,
+                                               color_downwards_cap);
           line->setAttribute("_child_id", child_id++);
           element->append(line);
         }
@@ -6785,7 +6784,7 @@ static void processErrorBar(const std::shared_ptr<GRM::Element> &element, const 
         {
           line = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
           if (line != nullptr)
-            global_render->createPolyline(scap_x_min, scap_x_max, e_downwards, e_downwards, 0, 0.0, color_downward_scap,
+            global_render->createPolyline(cap_x_min, cap_x_max, e_downwards, e_downwards, 0, 0.0, color_downwards_cap,
                                           line);
         }
     }
@@ -15006,6 +15005,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("c_lim_min"), std::vector<std::string>{"NAN", "The beginning color limit"}},
       {std::string("c_range_max"), std::vector<std::string>{"None", "The ending color-value"}},
       {std::string("c_range_min"), std::vector<std::string>{"None", "The beginning color-value"}},
+      {std::string("cap_y_max"), std::vector<std::string>{"None", "The y-value for the upwards cap"}},
+      {std::string("cap_y_min"), std::vector<std::string>{"None", "The y-value for the downwards cap"}},
       {std::string("char_height"), std::vector<std::string>{"None", "The height of the chars"}},
       {std::string("char_up_x"), std::vector<std::string>{"None", "Upside char angle in x-direction of the text"}},
       {std::string("char_up_y"), std::vector<std::string>{"None", "Upside char angle in y-direction of the text"}},
@@ -15031,7 +15032,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"0", "Sets if the parameters for movable transformation in x-direction gets ignored."}},
       {std::string("disable_y_trans"),
        std::vector<std::string>{"0", "Sets if the parameters for movable transformation in y-direction gets ignored."}},
-      {std::string("downward_scap_color"), std::vector<std::string>{"None", "The color value for the downward scaps"}},
+      {std::string("downwards_cap_color"), std::vector<std::string>{"None", "The color value for the downwards caps"}},
       {std::string("hide"), std::vector<std::string>{"1", "Determines if the element will be visible or not"}},
       {std::string("draw_edges"),
        std::vector<std::string>{"0", "Used in combination with x- and y-colormap to set if edges are drawn"}},
@@ -15040,7 +15041,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("edge_width"), std::vector<std::string>{"None", "The width of all edges"}},
       {std::string("end_angle"), std::vector<std::string>{"None", "The end angle of the element"}},
       {std::string("error_bar_color"),
-       std::vector<std::string>{"None", "The color value for the middle error-bar scaps"}},
+       std::vector<std::string>{"None", "The color value for the middle error-bar caps"}},
       {std::string("error_bar_x"), std::vector<std::string>{"None", "The x-value for the error"}},
       {std::string("error_bar_y_max"), std::vector<std::string>{"None", "The ending y-value for the error"}},
       {std::string("error_bar_y_min"), std::vector<std::string>{"None", "The beginning y-value for the error"}},
@@ -15157,8 +15158,6 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("resample_method"), std::vector<std::string>{"None", "The used resample method"}},
       {std::string("rings"), std::vector<std::string>{"None", "The number of rings for polar coordinate systems"}},
       {std::string("scale"), std::vector<std::string>{"None", "The set scale"}},
-      {std::string("scap_y_max"), std::vector<std::string>{"None", "The y-value for the upward scap"}},
-      {std::string("scap_y_min"), std::vector<std::string>{"None", "The y-value for the downward scap"}},
       {std::string("select_specific_xform"),
        std::vector<std::string>{
            "None", "Selects a predefined transformation from world coordinates to normalized device coordinates"}},
@@ -15206,7 +15205,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("transformation"), std::vector<std::string>{"5", "The used transformation"}},
       {std::string("transparency"), std::vector<std::string>{"None", "Sets the transparency value"}},
       {std::string("u"), std::vector<std::string>{"None", "References the u-values stored in the context"}},
-      {std::string("upward_scap_color"), std::vector<std::string>{"None", "The color value for the upward scaps"}},
+      {std::string("upwards_cap_color"), std::vector<std::string>{"None", "The color value for the upwards caps"}},
       {std::string("v"), std::vector<std::string>{"None", "References the v-values stored in the context"}},
       {std::string("viewport_x_max"), std::vector<std::string>{"None", "The ending viewport x-coordinate"}},
       {std::string("viewport_x_min"), std::vector<std::string>{"None", "The beginning viewport x-coordinate"}},
@@ -17227,7 +17226,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       "fill_color_rgb", "fill_color_ind", "line_color_rgb", "line_color_ind", "text", "x1", "x2", "y1", "y2",
   };
   std::vector<std::string> error_bar{
-      "e_downwards", "e_upwards", "error_bar_x", "error_bar_y_max", "error_bar_y_min", "scap_x_max", "scap_x_min",
+      "cap_x_max", "cap_x_min", "e_downwards", "e_upwards", "error_bar_x", "error_bar_y_max", "error_bar_y_min",
   };
   std::vector<std::string> marginal_heatmap_plot{
       "algorithm", "marginal_heatmap_kind", "x", "x_flip", "y", "y_flip", "z",

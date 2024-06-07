@@ -428,7 +428,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       QObject::connect(add_element_action, SIGNAL(triggered()), this, SLOT(add_element_slot()));
       add_element_action->setVisible(false);
 
-      menu->addMenu(editor_menu);
+      if (strcmp(argv[1], "--test") != 0 && !test_commands_stream) menu->addMenu(editor_menu);
     }
   global_root = grm_get_document_root();
 }
