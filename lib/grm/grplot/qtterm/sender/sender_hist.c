@@ -45,8 +45,8 @@ static void test_plot(void)
 
   error = grm_args_new();
   grm_args_push(error, "relative", "nDD", NBINS, errors[0], errors[1]);
-  grm_args_push(error, "upward_scap_color", "i", 2);
-  grm_args_push(error, "downward_scap_color", "i", 3);
+  grm_args_push(error, "upwards_cap_color", "i", 2);
+  grm_args_push(error, "downwards_cap_color", "i", 3);
   grm_args_push(error, "error_bar_color", "i", 4);
 
   args = grm_args_new();

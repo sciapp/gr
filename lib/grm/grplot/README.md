@@ -45,11 +45,11 @@ The valid container parameters are `error`, `ind_bar_color`, `ind_edge_color`, `
 
 Each parameter container can contain one or more of the following parameters:
 
-1. `downward_scap_color`: only available for `error`
+1. `downwards_cap_color`: only available for `error`
 2. `error_bar_color`: only available for `error`
 3. `indices`: only available for `ind_bar_color`, `ind_edge_color`, `ind_edge_width`
 4. `rgb`: only available for `ind_bar_color`, `ind_edge_color`
-5. `upward_scap_color`: only available for `error`
+5. `upwards_cap_color`: only available for `error`
 6. `width`: only available for `ind_edge_width`
 
 Container parameters follow a different syntax than normal parameters. The parameters inside the container are enclosed by `{` `}`. If more than one parameter is given to the container each of the key-value pairs is enclosed by `{` `}` while the parameters are seperated by `,` without whitespace characters.
@@ -143,12 +143,12 @@ Possible parameters for the bar plot are:
 4. `edge_width`: This parameter defines the width of all edges inside the plot except those which are referred with `ind_edge_width`. The value of this parameter is a double number where its default is 1.0.
 5. `error`: With this parameter the relative error of each bar can be displayed. The values for this parameter are key-value pairs with the following keys:
     - `error_bar_color`: Defines the color of the error bars as an integer. If no color is given an error is raised.
-    - `downward_scap_color`: Defines the downward scap color of the error bars as an integer.
-    - `upward_scap_color`: Defines the upward scap color of the error bars as an integer.
+    - `downwards_cap_color`: Defines the downwards cap color of the error bars as an integer.
+    - `upwards_cap_color`: Defines the upwards cap color of the error bars as an integer.
 
    Note: If the error of the bars is to be displayed, the last two columns of the data are used for the error. If the up and down error are equal use `equal_up_and_down_error` with a value of `1`. In that case only one column is expected for the error data instead of the two. This parameter flag also does not need the `error` parameter to be set. Like by the `error` parameter some of the columns inside the data will get interpreted as error-values. The syntax of this parameter is:
 
-   `error:{{error_bar_color:`color_index`},{downward_scap_color:`color_index`},{upward_scap_color:`color_index`}}`
+   `error:{{error_bar_color:`color_index`},{downwards_cap_color:`color_index`},{upwards_cap_color:`color_index`}}`
 
 6. `ind_bar_color`: With this parameter the color of specific bars can be changed. The value of this parameter are key-value pairs with the following keys:
     - `indices`: The index number of the bar, which color should be changed.
@@ -241,12 +241,12 @@ Possible parameters for the histogram are:
 3. `edge_color`: This parameter defines the color of all edges inside the plot. The value of this parameter can either be an integer which represents a color index or three doubles which represents the RGB value of the color. If the parameter is omitted color 1 (black) will be used.
 4. `error`: With this parameter the relative error of each bar can be displayed. The parameters are key-value pairs with the following keys:
     - `error_bar_color`: Defines the color of the error bars. If no color is given an error is raised.
-    - `downward_scap_color`: Defines the downward scap color of the error bars.
-    - `upward_scap_color`: Defines the upward scap color of the error bars.
+    - `downwards_cap_color`: Defines the downwards cap color of the error bars.
+    - `upwards_cap_color`: Defines the upwards cap color of the error bars.
 
    Note: If the error of the bars is to be displayed, the last two columns of the data are used for the error. If the up and down error are equal use `equal_up_and_down_error` with a value of `1`. In that case only one column is expected for the error data instead of the two. This parameter flag also does not need the `error` parameter to be set. Like by the `error` parameter some of the columns inside the data will get interpreted as error-values. The syntax of this parameter is:
 
-   `error:{{error_bar_color:`color_index`},{downward_scap_color:`color_index`},{upward_scap_color:`color_index`}}`
+   `error:{{error_bar_color:`color_index`},{downwards_cap_color:`color_index`},{upwards_cap_color:`color_index`}}`
 5. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
 
 ### IMSHOW
@@ -284,12 +284,12 @@ Possible parameters for the line plot are:
 
 1. `error`: With this parameter the relative error of each line can be displayed. The value of this parameter are key-value pairs with the following keys:
     - `error_bar_color`: Defines the color of the error bars. The value of this parameter has to be an integer. When no color is given this leads to an error.
-    - `downward_scap_color`: Defines the downward scap color of the error bars. The value of this parameter has to be an integer.
-    - `upward_scap_color`: Defines the upward scap color of the error bars. The value of this parameter has to be an integer.
+    - `downwards_cap_color`: Defines the downwards cap color of the error bars. The value of this parameter has to be an integer.
+    - `upwards_cap_color`: Defines the upwards cap color of the error bars. The value of this parameter has to be an integer.
 
       Note: If the error of the points is to be displayed, the last two columns of each pair of three columns from the data are used for the error. This means for a dataset with eight columns that columns 2, 3, 5, 6 are used for the error bars. If the up and down error are equal use `equal_up_and_down_error` with a value of `1`. In that case only one column is expected for the error data instead of the two. This parameter flag also does not need the `error` parameter to be set. Like by the `error` parameter some of the columns inside the data will get interpreted as error-values. The syntax of this parameter is:
 
-   `error:{{error_bar_color:`color_index`},{downward_scap_color:`color_index`},{upward_scap_color:`color_index`}}`
+   `error:{{error_bar_color:`color_index`},{downwards_cap_color:`color_index`},{upwards_cap_color:`color_index`}}`
 
 2. `int_limits_high`: This parameter defines the upper limits of all integrals.
    
@@ -380,12 +380,12 @@ Possible parameters for the scatter plot are:
 
 1. `error`: With this parameter the relative error of each line can be displayed. The value of this parameter are key-value pairs with the following keys:
     - `error_bar_color`: Defines the color of the error bars. The value of this parameter has to be an integer. When no color is given this leads to an error.
-    - `downward_scap_color`: Defines the downward scap color of the error bars. The value of this parameter has to be an integer.
-    - `upward_scap_color`: Defines the upward scap color of the error bars. The value of this parameter has to be an integer.
+    - `downwards_cap_color`: Defines the downwards cap color of the error bars. The value of this parameter has to be an integer.
+    - `upwards_cap_color`: Defines the upwards cap color of the error bars. The value of this parameter has to be an integer.
 
    Note: If the error of the points is to be displayed, the last two columns of the data are used for the error. If the up and down error are equal use `equal_up_and_down_error` with a value of `1`. In that case only one column is expected for the error data instead of the two. This parameter flag also does not need the `error` parameter to be set. Like by the `error` parameter some of the columns inside the data will get interpreted as error-values. The syntax of this parameter is:
 
-   `error:{{error_bar_color:`color_index`},{downward_scap_color:`color_index`},{upward_scap_color:`color_index`}}`
+   `error:{{error_bar_color:`color_index`},{downwards_cap_color:`color_index`},{upwards_cap_color:`color_index`}}`
 
 2. `marker_type`: This parameter defines the style of the visualized data points, where the effect belonging to the numbers is the same as for [gr_setmarkertype](https://gr-framework.org/c-gr.html?highlight=gr_setmarkertype#_CPPv416gr_setmarkertypei).
 
