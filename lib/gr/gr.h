@@ -197,6 +197,7 @@ typedef struct
 {
   double min, max;
   double tick, org;
+  double position;
   int major_count;
   int num_ticks;
   tick_t *ticks;
