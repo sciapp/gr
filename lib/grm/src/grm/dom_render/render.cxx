@@ -1044,21 +1044,25 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
       x_center = 0.5 * (viewport[0] + viewport[1]);
       y_center = 0.5 * (viewport[2] + viewport[3]);
       r = 0.45 * grm_min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
+
+      double old_r = r;
       if (!diag_factor && kind != "pie")
         {
           element->setAttribute("_polar_r_org", r * (0.495 / 0.45 - 1));
           r /= (0.45 / 0.495);
         }
 
+      double top_text_r;
       if (top_text_margin)
         {
+          top_text_r = 0.45 * grm_min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
+          top_text_r *= 0.975;
           r *= 0.975;
-          y_center -= 0.025 * r;
         }
       viewport[0] = x_center - r;
       viewport[1] = x_center + r;
-      viewport[2] = y_center - r;
-      viewport[3] = y_center + r;
+      viewport[2] = y_center - (top_text_r * 0.025) - r;
+      viewport[3] = y_center - (top_text_r * 0.025) + r;
     }
   *vp_x_min = viewport[0];
   *vp_x_max = viewport[1];
@@ -1073,7 +1077,7 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
   std::string location = PLOT_DEFAULT_SIDEREGION_LOCATION;
   double max_vp, min_vp;
   double offset_rel, width_rel;
-  double r = 0.0;
+  double r = 0.0, r2 = 0.0;
   std::string kind;
   double metric_width, metric_height, start_aspect_ratio_ws;
   bool keep_aspect_ratio = false, only_quadratic_aspect_ratio = false;
@@ -1087,15 +1091,15 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
 
   if (polar_kinds.count(kind) > 0)
     {
-      r = static_cast<double>(central_region->getAttribute("_polar_r_org"));
-      auto top_side_region = central_region->querySelectors("side_region[location='top']");
-      if (top_side_region && top_side_region->hasAttribute("text_content")) r *= 1.024375;
+      r = r2 = static_cast<double>(central_region->getAttribute("_polar_r_org"));
+      auto top_side_region = plot_parent->querySelectors("side_region[location='top']");
+      if (top_side_region && top_side_region->hasAttribute("text_content")) r2 *= 0.975;
     }
 
   viewport[0] = static_cast<double>(central_region->getAttribute("_viewport_x_min_org")) + r;
   viewport[1] = static_cast<double>(central_region->getAttribute("_viewport_x_max_org")) - r;
-  viewport[2] = static_cast<double>(central_region->getAttribute("_viewport_y_min_org")) + r;
-  viewport[3] = static_cast<double>(central_region->getAttribute("_viewport_y_max_org")) - r;
+  viewport[2] = static_cast<double>(central_region->getAttribute("_viewport_y_min_org")) + r2;
+  viewport[3] = static_cast<double>(central_region->getAttribute("_viewport_y_max_org")) - r2;
   keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
   only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
   start_aspect_ratio_ws = static_cast<double>(plot_parent->getAttribute("_start_aspect_ratio"));
