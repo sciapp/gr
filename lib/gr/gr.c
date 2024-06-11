@@ -5435,10 +5435,10 @@ void gr_axis(char which, axis_t *axis)
     }
 }
 
-void gr_drawaxis(char which, axis_t *axis)
+void gr_drawaxis(char which, axis_t *axis, int draw_axis_line, int draw_grid_lines)
 {
-  int errind, tnr;
-  double wn[4], vp[4];
+  int errind, tnr, ltype, color, clsw;
+  double wn[4], vp[4], width, clrt[4];
   double tick, minor_tick, major_tick, label_org;
   int i;
 
@@ -5449,6 +5449,14 @@ void gr_drawaxis(char which, axis_t *axis)
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
+  /* save linetype, line width, line color and clipping indicator */
+
+  gks_inq_pline_linetype(&errind, &ltype);
+  gks_inq_pline_linewidth(&errind, &width);
+  gks_inq_pline_color_index(&errind, &color);
+  gks_inq_clip(&errind, &clsw, clrt);
+
+  gks_set_pline_linetype(GKS_K_LINETYPE_SOLID);
   gks_set_clipping(GKS_K_NOCLIP);
 
   if (which == 'X')
@@ -5457,9 +5465,12 @@ void gr_drawaxis(char which, axis_t *axis)
       minor_tick = y_log(y_lin(axis->org) + tick);
       major_tick = y_log(y_lin(axis->org) + 2 * tick);
       label_org = y_log(y_lin(axis->org) - tick);
-      pline(axis->min, axis->org);
-      pline(axis->max, axis->org);
-      end_pline();
+      if (draw_axis_line)
+        {
+          start_pline(axis->min, axis->org);
+          pline(axis->max, axis->org);
+          end_pline();
+        }
       gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
     }
   else
@@ -5468,10 +5479,42 @@ void gr_drawaxis(char which, axis_t *axis)
       minor_tick = x_log(x_lin(axis->org) + tick);
       major_tick = x_log(x_lin(axis->org) + 2 * tick);
       label_org = x_log(x_lin(axis->org) - tick);
-      pline(axis->org, axis->min);
-      pline(axis->org, axis->max);
-      end_pline();
+      if (draw_axis_line)
+        {
+          start_pline(axis->org, axis->min);
+          pline(axis->org, axis->max);
+          end_pline();
+        }
       gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+    }
+
+  if (draw_grid_lines)
+    {
+      for (i = 0; i < axis->num_ticks; i++)
+        {
+          if (color != 0)
+            gks_set_pline_color_index(axis->ticks[i].is_major ? 88 : 90);
+          else
+            gks_set_pline_linewidth(axis->ticks[i].is_major ? 2.0 : 1.0);
+
+          if (which == 'X')
+            {
+              pline(axis->ticks[i].value, wn[2]);
+              pline(axis->ticks[i].value, wn[3]);
+              end_pline();
+            }
+          else
+            {
+              pline(wn[0], axis->ticks[i].value);
+              pline(wn[1], axis->ticks[i].value);
+              end_pline();
+            }
+        }
+
+      /* restore line width, line color */
+
+      gks_set_pline_linewidth(width);
+      gks_set_pline_color_index(color);
     }
 
   for (i = 0; i < axis->num_ticks; i++)
@@ -5498,6 +5541,11 @@ void gr_drawaxis(char which, axis_t *axis)
       else
         text2d(label_org, axis->tick_labels[i].tick, axis->tick_labels[i].label);
     }
+
+  /* restore linetype and clipping indicator */
+
+  gks_set_pline_linetype(ltype);
+  gks_set_clipping(clsw);
 }
 
 void gr_freeaxis(axis_t *axis)
