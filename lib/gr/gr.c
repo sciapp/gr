@@ -5441,6 +5441,7 @@ void gr_drawaxis(char which, axis_t *axis, int draw_axis_line, int draw_grid_lin
   double wn[4], vp[4], width, clrt[4];
   double tick, minor_tick, major_tick, label_org;
   int i;
+  double epsilon;
 
   check_autoinit;
 
@@ -5490,6 +5491,8 @@ void gr_drawaxis(char which, axis_t *axis, int draw_axis_line, int draw_grid_lin
 
   if (draw_grid_lines)
     {
+      epsilon = FEPS * (axis->max - axis->min);
+
       for (i = 0; i < axis->num_ticks; i++)
         {
           if (color != 0)
@@ -5497,17 +5500,20 @@ void gr_drawaxis(char which, axis_t *axis, int draw_axis_line, int draw_grid_lin
           else
             gks_set_pline_linewidth(axis->ticks[i].is_major ? 2.0 : 1.0);
 
-          if (which == 'X')
+          if (fabs(axis->ticks[i].value - axis->min) > epsilon || draw_axis_line == 0)
             {
-              pline(axis->ticks[i].value, wn[2]);
-              pline(axis->ticks[i].value, wn[3]);
-              end_pline();
-            }
-          else
-            {
-              pline(wn[0], axis->ticks[i].value);
-              pline(wn[1], axis->ticks[i].value);
-              end_pline();
+              if (which == 'X')
+                {
+                  pline(axis->ticks[i].value, wn[2]);
+                  pline(axis->ticks[i].value, wn[3]);
+                  end_pline();
+                }
+              else
+                {
+                  pline(wn[0], axis->ticks[i].value);
+                  pline(wn[1], axis->ticks[i].value);
+                  end_pline();
+                }
             }
         }
 
