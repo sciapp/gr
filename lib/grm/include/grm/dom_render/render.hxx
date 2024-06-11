@@ -82,6 +82,8 @@
 #define PLOT_DEFAULT_AXES_TICK_SIZE 0.0075
 #define DEFAULT_ASPECT_RATIO_FOR_SCALING 4.0 / 3.0
 #define PLOT_DEFAULT_ONLY_QUADRATIC_ASPECT_RATIO 0
+#define MIRRORED_AXIS_DEFAULT 1
+#define SCIENTIFIC_FORMAT_OPTION 2
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -242,14 +244,21 @@ public:
                                                 const std::shared_ptr<Context> &extContext = nullptr,
                                                 const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
-  std::shared_ptr<Element> createAxes(double x_tick, double y_tick, double x_org, double y_org, int x_major,
-                                      int y_major, int tick_orientation,
+  std::shared_ptr<GRM::Element> createEmptyAxis(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+
+  std::shared_ptr<Element> createAxis(double min_val, double max_val, double tick, double org, double pos,
+                                      int major_count, int num_ticks, int num_tick_labels, double tick_size,
+                                      int tick_orientation, double label_pos,
                                       const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
-  std::shared_ptr<GRM::Element> createEmptyAxes(int tick_orientation,
-                                                const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createTickGroup(int is_major, std::string tick_label, double value, double width,
+                                           const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
-  std::shared_ptr<GRM::Element> createEmptyDoubleAxes();
+  std::shared_ptr<Element> createTick(int is_major, double value,
+                                      const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+
+  std::shared_ptr<Element> createGridLine(int is_major, double value,
+                                          const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createLegend(const std::string &labels_key, std::optional<std::vector<std::string>> labels,
                                         const std::string &specs_key, std::optional<std::vector<std::string>> specs,
@@ -274,12 +283,6 @@ public:
                                           const std::string &bar_color_rgb = "", const std::string &edge_color_rgb = "",
                                           const double linewidth = -1, const std::string &text = "",
                                           const std::shared_ptr<GRM::Element> &extElement = nullptr);
-
-  std::shared_ptr<Element> createGrid(double x_tick, double y_tick, double x_org, double y_org, int major_x,
-                                      int major_y, const std::shared_ptr<GRM::Element> &extElement = nullptr);
-
-  std::shared_ptr<GRM::Element> createEmptyGrid(bool x_grid, bool y_grid,
-                                                const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
   std::shared_ptr<Element> createSeries(const std::string &name);
 

@@ -371,14 +371,13 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
                                                        "labels_group",
                                                        "titles_3d",
                                                        "text",
-                                                       "y_tick_label_group",
-                                                       "x_tick_label_group",
                                                        "layout_grid_element",
                                                        "layout_grid",
                                                        "central_region",
                                                        "side_region",
                                                        "marginal_heatmap_plot",
-                                                       "legend"};
+                                                       "legend",
+                                                       "axis"};
 
   GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);

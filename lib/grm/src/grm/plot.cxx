@@ -447,9 +447,9 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"x_grid", "i"},
                                               {"x_label", "s"},
                                               {"x_lim", "D"},
+                                              {"x_log", "i"},
                                               {"x_ind", "i"},
                                               {"x_range", "D"},
-                                              {"x_log", "i"},
                                               {"y", "D"},
                                               {"y_bins", "i"},
                                               {"y_colormap", "i"},
@@ -458,9 +458,9 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"y_grid", "i"},
                                               {"y_label", "s"},
                                               {"y_lim", "D"},
+                                              {"y_log", "i"},
                                               {"y_ind", "i"},
                                               {"y_range", "D"},
-                                              {"y_log", "i"},
                                               {"z", "D"},
                                               {"z_dims", "I"},
                                               {"z_flip", "i"},
@@ -3585,38 +3585,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     }
   else
     {
-      if ((strcmp(kind, "barplot") != 0 && strcmp(kind, "imshow") != 0) || pass == 2)
-        {
-          /* xticklabels */
-          char **x_tick_labels = nullptr;
-          unsigned int x_tick_labels_length;
-
-          if (grm_args_first_value(args, "x_tick_labels", "S", &x_tick_labels, &x_tick_labels_length))
-            {
-              std::vector<std::string> x_tick_labels_vec(x_tick_labels, x_tick_labels + x_tick_labels_length);
-              int id = static_cast<int>(global_root->getAttribute("_id"));
-              std::string key = "x_tick_labels" + std::to_string(id);
-              global_root->setAttribute("_id", ++id);
-              global_render->setXTickLabels(group, key, x_tick_labels_vec);
-            }
-
-          /* y_tick_labels */
-          char **y_tick_labels = nullptr;
-          unsigned int y_tick_labels_length;
-
-          if (grm_args_first_value(args, "y_tick_labels", "S", &y_tick_labels, &y_tick_labels_length))
-            {
-              std::vector<std::string> y_tick_labels_vec(y_tick_labels, y_tick_labels + y_tick_labels_length);
-              int id = static_cast<int>(global_root->getAttribute("_id"));
-              std::string key = "y_tick_labels" + std::to_string(id);
-              global_root->setAttribute("_id", ++id);
-              global_render->setYTickLabels(group, key, y_tick_labels_vec);
-            }
-        }
-      else if (strcmp(kind, "imshow") == 0)
-        {
-          group->setAttribute("hide", 1);
-        }
+      if (strcmp(kind, "imshow") == 0) group->setAttribute("hide", 1);
     }
 
   group->setAttribute("plot_type", type);
@@ -3668,6 +3637,33 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     {
       group->setAttribute("z_label", z_label);
     }
+
+  /* xticklabels */
+  char **x_tick_labels = nullptr;
+  unsigned int x_tick_labels_length;
+
+  if (grm_args_first_value(args, "x_tick_labels", "S", &x_tick_labels, &x_tick_labels_length))
+    {
+      std::vector<std::string> x_tick_labels_vec(x_tick_labels, x_tick_labels + x_tick_labels_length);
+      int id = static_cast<int>(global_root->getAttribute("_id"));
+      std::string key = "x_tick_labels" + std::to_string(id);
+      global_root->setAttribute("_id", ++id);
+      global_render->setXTickLabels(group, key, x_tick_labels_vec);
+    }
+
+  /* y_tick_labels */
+  char **y_tick_labels = nullptr;
+  unsigned int y_tick_labels_length;
+
+  if (grm_args_first_value(args, "y_tick_labels", "S", &y_tick_labels, &y_tick_labels_length))
+    {
+      std::vector<std::string> y_tick_labels_vec(y_tick_labels, y_tick_labels + y_tick_labels_length);
+      int id = static_cast<int>(global_root->getAttribute("_id"));
+      std::string key = "y_tick_labels" + std::to_string(id);
+      global_root->setAttribute("_id", ++id);
+      global_render->setYTickLabels(group, key, y_tick_labels_vec);
+    }
+
 
   return ERROR_NONE;
 }
@@ -3814,7 +3810,7 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
     {
       colorbar->setAttribute("x_flip", flip);
     }
-  else if (grm_args_values(subplot_args, "y_flip", "i", &flip) && flip)
+  if (grm_args_values(subplot_args, "y_flip", "i", &flip) && flip)
     {
       colorbar->setAttribute("y_flip", flip);
     }
