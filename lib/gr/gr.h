@@ -204,7 +204,11 @@ typedef struct
   int num_tick_labels;
   tick_label_t *tick_labels;
   double tick_size;
+  int draw_axis_line;
 } axis_t;
+
+#define GR_AXES_WITH_GRID (1 << 0)
+#define GR_AXES_WITH_FRAME (1 << 1)
 
 DLLEXPORT void gr_initgr(void);
 DLLEXPORT int gr_debug(void);
@@ -292,7 +296,8 @@ DLLEXPORT void gr_axeslbl(double, double, double, double, int, int, double,
                           void (*)(double, double, const char *, double),
                           void (*)(double, double, const char *, double));
 DLLEXPORT void gr_axis(char, axis_t *);
-DLLEXPORT void gr_drawaxis(char, axis_t *, int, int);
+DLLEXPORT void gr_drawaxis(char, axis_t *);
+DLLEXPORT void gr_drawaxes(axis_t *, axis_t *, int);
 DLLEXPORT void gr_freeaxis(axis_t *);
 DLLEXPORT void gr_grid(double, double, double, double, int, int);
 DLLEXPORT void gr_grid3d(double, double, double, double, double, double, int, int, int);
