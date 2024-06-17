@@ -5616,30 +5616,36 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
 
   if ((options & GR_AXES_WITH_GRID) != 0)
     {
-      draw_axis_grid('X', x_axis);
-      draw_axis_grid('Y', y_axis);
+      if (x_axis != NULL) draw_axis_grid('X', x_axis);
+      if (y_axis != NULL) draw_axis_grid('Y', y_axis);
     }
 
-  gr_drawaxis('X', x_axis);
-  gr_drawaxis('Y', y_axis);
+  if (x_axis != NULL) gr_drawaxis('X', x_axis);
+  if (y_axis != NULL) gr_drawaxis('Y', y_axis);
 
   if ((options & GR_AXES_WITH_FRAME) != 0)
     {
       axis_t axis;
 
-      memcpy(&axis, x_axis, sizeof(axis_t));
-      x_axis->position = wn[3];
-      x_axis->tick_size = -x_axis->tick_size;
-      x_axis->major_count = -x_axis->major_count;
-      gr_drawaxis('X', x_axis);
-      memcpy(x_axis, &axis, sizeof(axis_t));
+      if (x_axis != NULL)
+        {
+          memcpy(&axis, x_axis, sizeof(axis_t));
+          x_axis->position = wn[3];
+          x_axis->tick_size = -x_axis->tick_size;
+          x_axis->major_count = -x_axis->major_count;
+          gr_drawaxis('X', x_axis);
+          memcpy(x_axis, &axis, sizeof(axis_t));
+        }
 
-      memcpy(&axis, y_axis, sizeof(axis_t));
-      y_axis->position = wn[1];
-      y_axis->tick_size = -y_axis->tick_size;
-      y_axis->major_count = -y_axis->major_count;
-      gr_drawaxis('Y', y_axis);
-      memcpy(y_axis, &axis, sizeof(axis_t));
+      if (y_axis != NULL)
+        {
+          memcpy(&axis, y_axis, sizeof(axis_t));
+          y_axis->position = wn[1];
+          y_axis->tick_size = -y_axis->tick_size;
+          y_axis->major_count = -y_axis->major_count;
+          gr_drawaxis('Y', y_axis);
+          memcpy(y_axis, &axis, sizeof(axis_t));
+        }
     }
 
   /* restore linetype and clipping indicator */
