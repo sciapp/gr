@@ -5313,7 +5313,7 @@ void gr_axis(char which, axis_t *axis)
   double wn[4], vp[4];
   double x_min, x_max, y_min, y_max;
   int scale_option, base, decade, exponent;
-  double epsilon;
+  double tick, epsilon;
   int i, j, k;
   double a, a0, tbx[4], tby[4];
   char *s;
@@ -5331,28 +5331,54 @@ void gr_axis(char which, axis_t *axis)
   y_min = wn[2];
   y_max = wn[3];
 
+  if (is_nan(axis->tick_size)) axis->tick_size = 0.0075;
+
   if (which == 'X')
     {
       scale_option = GR_OPTION_X_LOG;
       base = lx.basex;
-      if (scale_option & GR_OPTION_X_LOG == 0) gr_adjustrange(&x_min, &x_max);
+      if ((lx.scale_options & GR_OPTION_X_LOG) == 0) gr_adjustrange(&x_min, &x_max);
       if (is_nan(axis->min)) axis->min = x_min;
       if (is_nan(axis->max)) axis->max = x_max;
       if (is_nan(axis->org)) axis->org = x_min;
       if (is_nan(axis->position)) axis->position = y_min;
+      if (is_nan(axis->label_position))
+        {
+          tick = axis->tick_size * (wn[3] - wn[2]) / (vp[3] - vp[2]);
+          axis->label_position = y_log(y_lin(axis->position) + 3 * tick);
+          if (y_lin(axis->position) <= 0.5 * (y_lin(wn[2] + y_lin(wn[3]))))
+            {
+              if (tick > 0) axis->label_position = y_log(y_lin(axis->position) - tick);
+            }
+          else
+            {
+              if (tick < 0) axis->label_position = y_log(y_lin(axis->position) - tick);
+            }
+        }
     }
   else if (which == 'Y')
     {
       scale_option = GR_OPTION_Y_LOG;
       base = lx.basey;
-      if (scale_option & GR_OPTION_Y_LOG == 0) gr_adjustrange(&y_min, &y_max);
+      if ((lx.scale_options & GR_OPTION_Y_LOG) == 0) gr_adjustrange(&y_min, &y_max);
       if (is_nan(axis->min)) axis->min = y_min;
       if (is_nan(axis->max)) axis->max = y_max;
       if (is_nan(axis->org)) axis->org = y_min;
       if (is_nan(axis->position)) axis->position = x_min;
+      if (is_nan(axis->label_position))
+        {
+          tick = axis->tick_size * (wn[1] - wn[0]) / (vp[1] - vp[0]);
+          axis->label_position = x_log(x_lin(axis->position) + 3 * tick);
+          if (x_lin(axis->position) <= 0.5 * (x_lin(wn[0] + x_lin(wn[1]))))
+            {
+              if (tick > 0) axis->label_position = x_log(x_lin(axis->position) - tick);
+            }
+          else
+            {
+              if (tick < 0) axis->label_position = x_log(x_lin(axis->position) - tick);
+            }
+        }
     }
-
-  if (is_nan(axis->tick_size)) axis->tick_size = 0.0075;
 
   if (scale_option & lx.scale_options)
     {
@@ -5441,7 +5467,7 @@ void gr_drawaxis(char which, axis_t *axis)
 {
   int errind, tnr, ltype, clsw;
   double wn[4], vp[4], clrt[4];
-  double tick, minor_tick, major_tick, label_position;
+  double tick, minor_tick, major_tick;
   int i;
   double epsilon;
 
@@ -5465,7 +5491,6 @@ void gr_drawaxis(char which, axis_t *axis)
       tick = axis->tick_size * (wn[3] - wn[2]) / (vp[3] - vp[2]);
       minor_tick = y_log(y_lin(axis->position) + tick);
       major_tick = y_log(y_lin(axis->position) + 2 * tick);
-      label_position = y_log(y_lin(axis->position) + 3 * tick);
       if (axis->draw_axis_line)
         {
           start_pline(axis->min, axis->position);
@@ -5473,22 +5498,15 @@ void gr_drawaxis(char which, axis_t *axis)
           end_pline();
         }
       if (y_lin(axis->position) <= 0.5 * (y_lin(wn[2] + y_lin(wn[3]))))
-        {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-          if (tick > 0) label_position = y_log(y_lin(axis->position) - tick);
-        }
+        gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
       else
-        {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
-          if (tick < 0) label_position = y_log(y_lin(axis->position) - tick);
-        }
+        gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
     }
   else
     {
       tick = axis->tick_size * (wn[1] - wn[0]) / (vp[1] - vp[0]);
       minor_tick = x_log(x_lin(axis->position) + tick);
       major_tick = x_log(x_lin(axis->position) + 2 * tick);
-      label_position = x_log(x_lin(axis->position) + 3 * tick);
       if (axis->draw_axis_line)
         {
           start_pline(axis->position, axis->min);
@@ -5496,15 +5514,9 @@ void gr_drawaxis(char which, axis_t *axis)
           end_pline();
         }
       if (x_lin(axis->position) <= 0.5 * (x_lin(wn[0] + x_lin(wn[1]))))
-        {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
-          if (tick > 0) label_position = x_log(x_lin(axis->position) - tick);
-        }
+        gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
       else
-        {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-          if (tick < 0) label_position = x_log(x_lin(axis->position) - tick);
-        }
+        gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
     }
 
   for (i = 0; i < axis->num_ticks; i++)
@@ -5529,12 +5541,11 @@ void gr_drawaxis(char which, axis_t *axis)
       for (i = 0; i < axis->num_tick_labels; i++)
         {
           if (which == 'X')
-            text2d(axis->tick_labels[i].tick, label_position, axis->tick_labels[i].label);
+            text2d(axis->tick_labels[i].tick, axis->label_position, axis->tick_labels[i].label);
           else
-            text2d(label_position, axis->tick_labels[i].tick, axis->tick_labels[i].label);
+            text2d(axis->label_position, axis->tick_labels[i].tick, axis->tick_labels[i].label);
         }
     }
-  axis->label_position = label_position;
 
   /* restore linetype and clipping indicator */
 
