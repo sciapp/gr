@@ -5534,6 +5534,7 @@ void gr_drawaxis(char which, axis_t *axis)
             text2d(label_position, axis->tick_labels[i].tick, axis->tick_labels[i].label);
         }
     }
+  axis->label_position = label_position;
 
   /* restore linetype and clipping indicator */
 
@@ -5595,7 +5596,7 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
 {
   int errind, tnr, ltype, clsw;
   double wn[4], vp[4], clrt[4];
-  double tick, minor_tick, major_tick, label_position;
+  double tick, minor_tick, major_tick;
   int i;
   double epsilon;
 

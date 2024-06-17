@@ -201,9 +201,10 @@ typedef struct
   int major_count;
   int num_ticks;
   tick_t *ticks;
+  double tick_size;
   int num_tick_labels;
   tick_label_t *tick_labels;
-  double tick_size;
+  double label_position;
   int draw_axis_line;
 } axis_t;
 
