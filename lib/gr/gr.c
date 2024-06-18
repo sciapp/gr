@@ -5458,6 +5458,8 @@ void gr_axis(char which, axis_t *axis)
           i++;
           a = i * axis->tick;
         }
+      axis->num_ticks = j;
+      axis->num_tick_labels = k;
     }
 }
 
