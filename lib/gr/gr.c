@@ -5429,11 +5429,19 @@ void gr_axis(char which, axis_t *axis)
   else
     {
       if (is_nan(axis->tick)) axis->tick = gr_tick(axis->min, axis->max);
-      if (axis->major_count == 0) axis->major_count = 1;
+      if (axis->major_count > 0) axis->tick /= axis->major_count;
       axis->num_ticks = (int)((axis->max - axis->min) / axis->tick + 0.5) + 1;
       axis->ticks = (double *)xcalloc(axis->num_ticks, sizeof(tick_t));
-      axis->num_tick_labels = axis->num_ticks / axis->major_count;
-      axis->tick_labels = (tick_label_t *)xcalloc(axis->num_tick_labels, sizeof(tick_label_t));
+      if (axis->major_count > 0)
+        {
+          axis->num_tick_labels = axis->num_ticks / axis->major_count;
+          axis->tick_labels = (tick_label_t *)xcalloc(axis->num_tick_labels, sizeof(tick_label_t));
+        }
+      else
+        {
+          axis->num_tick_labels = 0;
+          axis->tick_labels = NULL;
+        }
 
       epsilon = FEPS * (axis->max - axis->min);
 
@@ -5443,17 +5451,24 @@ void gr_axis(char which, axis_t *axis)
       while (a <= axis->max + epsilon)
         {
           axis->ticks[j].value = a;
-          axis->ticks[j++].is_major = (i % axis->major_count == 0);
-          gr_getformat(&formatReference, axis->min, a, axis->max, axis->tick, axis->major_count);
-          if (i % axis->major_count == 0)
+          if (axis->major_count > 0)
             {
-              s = (char *)xcalloc(256, sizeof(char));
-              gr_ftoa(s, a, &formatReference);
-              axis->tick_labels[k].tick = a;
-              axis->tick_labels[k].label = replace_minus_sign(s);
-              gr_inqtext(0, 0, axis->tick_labels[k].label, tbx, tby);
-              axis->tick_labels[k].width = tbx[2] - tbx[0];
-              k++;
+              axis->ticks[j++].is_major = (i % axis->major_count == 0);
+              gr_getformat(&formatReference, axis->min, a, axis->max, axis->tick, axis->major_count);
+              if (i % axis->major_count == 0)
+                {
+                  s = (char *)xcalloc(256, sizeof(char));
+                  gr_ftoa(s, a, &formatReference);
+                  axis->tick_labels[k].tick = a;
+                  axis->tick_labels[k].label = replace_minus_sign(s);
+                  gr_inqtext(0, 0, axis->tick_labels[k].label, tbx, tby);
+                  axis->tick_labels[k].width = tbx[2] - tbx[0];
+                  k++;
+                }
+            }
+          else
+            {
+              axis->ticks[j++].is_major = 1;
             }
           i++;
           a = i * axis->tick;
@@ -5688,7 +5703,10 @@ void gr_freeaxis(axis_t *axis)
     {
       free(axis->tick_labels[i].label);
     }
-  free(axis->tick_labels);
+  if (axis->tick_labels != NULL)
+    {
+      free(axis->tick_labels);
+    }
   free(axis->ticks);
 }
 
