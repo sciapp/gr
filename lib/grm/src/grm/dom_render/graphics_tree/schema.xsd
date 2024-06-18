@@ -120,8 +120,8 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="central_region" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="marginal_heatmap_plot" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="legend" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="side_region" minOccurs="0" maxOccurs="4"/>
-                <xs:element ref="text" minOccurs="0" maxOccurs="1"/> <!-- title -->
             </xs:choice>
             <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="move_xform_ndc"/>
@@ -144,6 +144,7 @@
             <xs:attribute name="line_spec" type="xs:string"/>
             <xs:attribute name="location" type="strint"/>
             <xs:attribute name="max_y_length" type="xs:integer"/>
+            <xs:attribute name="only_quadratic_aspect_ratio" type="xs:integer"/>
             <xs:attribute name="phi_flip" type="xs:integer"/>
             <xs:attribute name="phi_lim_max" type="xs:double"/>
             <xs:attribute name="phi_lim_min" type="xs:double"/>
@@ -156,8 +157,6 @@
             <xs:attribute name="r_lim_max" type="xs:double"/>
             <xs:attribute name="r_lim_min" type="xs:double"/>
             <xs:attribute name="scale" type="xs:integer"/>
-            <xs:attribute name="title" type="xs:string"/>
-            <xs:attribute name="title_margin" type="xs:integer"/>
             <xs:attribute name="transparency" type="xs:double"/>
             <xs:attribute name="x_flip" type="xs:integer"/>
             <xs:attribute name="x_lim_max" type="xs:double"/>
@@ -179,7 +178,6 @@
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="coordinate_system" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="legend" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="series_barplot" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_contour" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_contourf" minOccurs="0" maxOccurs="unbounded"/>
@@ -233,8 +231,6 @@
             <xs:attribute name="window_y_min" type="xs:double"/>
             <xs:attribute name="window_z_max" type="xs:double"/>
             <xs:attribute name="window_z_min" type="xs:double"/>
-            <xs:attribute name="x_label_margin" type="xs:integer"/>
-            <xs:attribute name="y_label_margin" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -242,14 +238,35 @@
     <xs:element name="side_region">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="colorbar" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="series_hist" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="series_stairs" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="text" minOccurs="0" maxOccurs="1"/> <!-- TODO: move f.e. title into side_regions -->
+                <xs:element ref="side_plot_region" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="text_region" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="location" type="strint" use="required"/>
             <xs:attribute name="marginal_heatmap_side_plot" type="xs:integer"/>
+            <xs:attribute name="offset" type="xs:double"/>
+            <xs:attribute name="text_content" type="xs:string"/>
+            <xs:attribute name="text_is_title" type="xs:integer"/>
+            <xs:attribute name="width" type="xs:double"/>
+            <xs:attribute name="window_x_max" type="xs:double"/>
+            <xs:attribute name="window_x_min" type="xs:double"/>
+            <xs:attribute name="window_y_max" type="xs:double"/>
+            <xs:attribute name="window_y_min" type="xs:double"/>
+            <xs:attribute name="x_flip" type="xs:integer"/>
+            <xs:attribute name="y_flip" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of side_plot_region -->
+    <xs:element name="side_plot_region">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="colorbar" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="series_hist" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="series_stairs" minOccurs="0" maxOccurs="1"/>
+            </xs:choice>
+            <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attribute name="location" type="strint"/>
             <xs:attribute name="offset" type="xs:double"/>
             <xs:attribute name="width" type="xs:double"/>
             <xs:attribute name="window_x_max" type="xs:double"/>
@@ -258,6 +275,19 @@
             <xs:attribute name="window_y_min" type="xs:double"/>
             <xs:attribute name="x_flip" type="xs:integer"/>
             <xs:attribute name="y_flip" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of text_region -->
+    <xs:element name="text_region">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="text" minOccurs="0" maxOccurs="1"/>
+            </xs:choice>
+            <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attribute name="location" type="strint"/>
+            <xs:attribute name="offset" type="xs:double"/>
+            <xs:attribute name="width" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -385,6 +415,7 @@
             <xs:attribute name="char_up_y" type="xs:double"/>
             <xs:attribute name="color_ind" type="xs:integer"/>
             <xs:attribute name="font" type="strint"/>
+            <xs:attribute name="font_precision" type="strint"/>
             <xs:attribute name="height" type="xs:double"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="line_width" type="xs:double"/>
@@ -424,7 +455,7 @@
                 <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="color_ind_values" type="xs:string"/>
             <xs:attribute name="color_rgb_values" type="xs:string"/>
             <xs:attribute name="fill_color_ind" type="xs:integer"/>
@@ -514,13 +545,13 @@
             <xs:attribute name="absolute_downwards_flt" type="xs:double"/>
             <xs:attribute name="absolute_upwards" type="xs:string"/>
             <xs:attribute name="absolute_upwards_flt" type="xs:double"/>
-            <xs:attribute name="downward_scap_color" type="xs:integer"/>
+            <xs:attribute name="downwards_cap_color" type="xs:integer"/>
             <xs:attribute name="error_bar_color" type="xs:integer"/>
             <xs:attribute name="relative_downwards" type="xs:string"/>
             <xs:attribute name="relative_downwards_flt" type="xs:double"/>
             <xs:attribute name="relative_upwards" type="xs:string"/>
             <xs:attribute name="relative_upwards_flt" type="xs:double"/>
-            <xs:attribute name="upward_scap_color" type="xs:integer"/>
+            <xs:attribute name="upwards_cap_color" type="xs:integer"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z_index" type="xs:integer"/>
@@ -1189,16 +1220,16 @@
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="3"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attribute name="downward_scap_color" type="xs:integer"/>
+            <xs:attribute name="cap_x_max" type="xs:double"/>
+            <xs:attribute name="cap_x_min" type="xs:double"/>
+            <xs:attribute name="downwards_cap_color" type="xs:integer"/>
             <xs:attribute name="e_downwards" type="xs:double"/>
             <xs:attribute name="e_upwards" type="xs:double"/>
             <xs:attribute name="error_bar_color" type="xs:integer" use="required"/>
             <xs:attribute name="error_bar_x" type="xs:double" use="required"/>
             <xs:attribute name="error_bar_y_max" type="xs:double" use="required"/>
             <xs:attribute name="error_bar_y_min" type="xs:double" use="required"/>
-            <xs:attribute name="scap_x_max" type="xs:double"/>
-            <xs:attribute name="scap_x_min" type="xs:double"/>
-            <xs:attribute name="upward_scap_color" type="xs:integer"/>
+            <xs:attribute name="upwards_cap_color" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -1351,12 +1382,10 @@
     <xs:attributeGroup name="axes">
         <xs:attribute name="tick_orientation" type="xs:integer" use="required"/>
         <xs:attribute name="tick_size" type="xs:double"/>
-        <xs:attribute name="x_label" type="xs:string"/>
         <xs:attribute name="x_major" type="xs:integer"/>
         <xs:attribute name="x_org" type="xs:double"/>
         <xs:attribute name="x_org_pos" type="xs:string"/>
         <xs:attribute name="x_tick" type="xs:double"/>
-        <xs:attribute name="y_label" type="xs:string"/>
         <xs:attribute name="y_major" type="xs:integer"/>
         <xs:attribute name="y_org" type="xs:double"/>
         <xs:attribute name="y_org_pos" type="xs:string"/>

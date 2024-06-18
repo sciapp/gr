@@ -148,18 +148,17 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "keep_window",
       "marginal_heatmap_side_plot",
       "movable",
+      "only_quadratic_aspect_ratio",
       "phi_flip",
       "set_text_color_for_background",
       "space",
       "stairs",
-      "title_margin",
+      "text_is_title",
       "x_flip",
       "x_grid",
-      "x_label_margin",
       "x_log",
       "y_flip",
       "y_grid",
-      "y_label_margin",
       "y_line",
       "y_log",
       "z_flip",
@@ -183,7 +182,9 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   mouseState.anchor = {0, 0};
 
   menu = parent->menuBar();
-  export_menu = new QMenu("&Export");
+  file_menu = new QMenu("&File");
+  export_menu = file_menu->addMenu("&Export");
+
   PdfAct = new QAction(tr("&PDF"), this);
   connect(PdfAct, &QAction::triggered, this, &GRPlotWidget::pdf);
   export_menu->addAction(PdfAct);
@@ -371,12 +372,12 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 
       if (strcmp(argv[1], "--test") != 0 && !test_commands_stream)
         {
+          menu->addMenu(file_menu);
           menu->addMenu(type);
           menu->addMenu(algo);
           menu->addMenu(modi_menu);
         }
     }
-  if (strcmp(argv[1], "--test") != 0 && !test_commands_stream) menu->addMenu(export_menu);
 
   if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
     {
@@ -394,16 +395,15 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       editor_menu->addAction(editor_action);
       QObject::connect(editor_action, SIGNAL(triggered()), this, SLOT(enable_editor_functions()));
 
-      file_menu = editor_menu->addMenu(tr("&XML-File"));
-      save_file_action = new QAction("&Save Plot");
+      save_file_action = new QAction("&Save");
       save_file_action->setShortcut(Qt::CTRL | Qt::Key_S);
       file_menu->addAction(save_file_action);
       QObject::connect(save_file_action, SIGNAL(triggered()), this, SLOT(save_file_slot()));
 
-      open_file_action = new QAction("&Open Plot");
-      open_file_action->setShortcut(Qt::CTRL | Qt::Key_O);
-      file_menu->addAction(open_file_action);
-      QObject::connect(open_file_action, SIGNAL(triggered()), this, SLOT(open_file_slot()));
+      load_file_action = new QAction("&Load");
+      load_file_action->setShortcut(Qt::CTRL | Qt::Key_O);
+      file_menu->addAction(load_file_action);
+      QObject::connect(load_file_action, SIGNAL(triggered()), this, SLOT(load_file_slot()));
 
       configuration_menu = editor_menu->addMenu(tr("&Show"));
       configuration_menu->menuAction()->setVisible(false);
@@ -428,7 +428,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       QObject::connect(add_element_action, SIGNAL(triggered()), this, SLOT(add_element_slot()));
       add_element_action->setVisible(false);
 
-      menu->addMenu(editor_menu);
+      if (strcmp(argv[1], "--test") != 0 && !test_commands_stream) menu->addMenu(editor_menu);
     }
   global_root = grm_get_document_root();
 }
@@ -689,7 +689,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       completer->setCaseSensitivity(Qt::CaseInsensitive);
       ((QComboBox *)*lineEdit)->setCompleter(completer);
     }
-  else if (cur_attr_name == "location" && cur_elem_name == "side_region")
+  else if (cur_attr_name == "location" &&
+           (cur_elem_name == "side_region" || cur_elem_name == "side_plot_region" || cur_elem_name == "text_region"))
     {
       for (const auto &elem : side_region_location_list)
         {
@@ -699,7 +700,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       completer->setCaseSensitivity(Qt::CaseInsensitive);
       ((QComboBox *)*lineEdit)->setCompleter(completer);
     }
-  else if (cur_attr_name == "location" && cur_elem_name != "side_region")
+  else if (cur_attr_name == "location" &&
+           !(cur_elem_name == "side_region" || cur_elem_name == "side_plot_region" || cur_elem_name == "text_region"))
     {
       for (const auto &elem : location_list)
         {
@@ -745,7 +747,10 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
       current_text =
           projectionTypeIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
     }
-  else if (cur_attr_name == "location" && current_selection->get_ref()->localName() != "side_region" &&
+  else if (cur_attr_name == "location" &&
+           !(current_selection->get_ref()->localName() == "side_region" ||
+             current_selection->get_ref()->localName() == "side_plot_region" ||
+             current_selection->get_ref()->localName() == "text_region") &&
            current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
       current_text = locationIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
@@ -1122,13 +1127,25 @@ void GRPlotWidget::AttributeEditEvent()
                 }
               else
                 {
-                  if (labels[i].toStdString() == "text" && (name == "title" || name == "xlabel" || name == "ylabel"))
+                  if (labels[i].toStdString() == "text")
                     {
                       const std::string value = ((QLineEdit *)fields[i])->text().toStdString();
                       if (attr_type[attr_name] == "xs:string" ||
                           (attr_type[attr_name] == "strint" && !util::is_digits(value)))
                         {
-                          current_selection->get_ref()->parentElement()->setAttribute(name, value);
+                          if (current_selection->get_ref()->parentElement()->localName() == "text_region")
+                            {
+                              current_selection->get_ref()->parentElement()->parentElement()->setAttribute(
+                                  "text_content", value);
+                            }
+                          else if (name == "xlabel" || name == "ylabel")
+                            {
+                              current_selection->get_ref()
+                                  ->parentElement()
+                                  ->parentElement()
+                                  ->querySelectors(name)
+                                  ->setAttribute(name, value);
+                            }
                         }
                       else if (attr_type[attr_name] == "xs:double")
                         {
@@ -1871,6 +1888,7 @@ void GRPlotWidget::resizeEvent(QResizeEvent *event)
   mouse_move_selection = nullptr;
   amount_scrolled = 0;
   clicked.clear();
+  tooltips.clear();
   reset_pixmap();
 }
 
@@ -2500,7 +2518,7 @@ void GRPlotWidget::show_bounding_boxes_slot()
     }
 }
 
-void GRPlotWidget::open_file_slot()
+void GRPlotWidget::load_file_slot()
 {
   if (enable_editor)
     {
@@ -2903,6 +2921,7 @@ void GRPlotWidget::processTestCommandsFile()
               if (width_flag && height_flag)
                 {
                   window()->resize(width, height);
+                  tooltips.clear();
 
                   QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
                   return;

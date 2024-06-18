@@ -5307,6 +5307,418 @@ void gr_axes(double x_tick, double y_tick, double x_org, double y_org, int major
   gr_axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size, NULL, NULL);
 }
 
+void gr_axis(char which, axis_t *axis)
+{
+  int errind, tnr;
+  double wn[4], vp[4];
+  double x_min, x_max, y_min, y_max;
+  int scale_option, base, decade, exponent;
+  double tick, epsilon;
+  int i, j, k;
+  double a, a0, tbx[4], tby[4];
+  char *s;
+  format_reference_t formatReference;
+
+  check_autoinit;
+
+  /* inquire current normalization transformation */
+
+  gks_inq_current_xformno(&errind, &tnr);
+  gks_inq_xform(tnr, &errind, wn, vp);
+
+  x_min = wn[0];
+  x_max = wn[1];
+  y_min = wn[2];
+  y_max = wn[3];
+
+  if (is_nan(axis->tick_size)) axis->tick_size = 0.0075;
+
+  if (which == 'X')
+    {
+      scale_option = GR_OPTION_X_LOG;
+      base = lx.basex;
+      if (is_nan(axis->min)) axis->min = x_min;
+      if (is_nan(axis->max)) axis->max = x_max;
+      if (is_nan(axis->org)) axis->org = x_min;
+      if (is_nan(axis->position)) axis->position = y_min;
+      if (is_nan(axis->label_position))
+        {
+          tick = axis->tick_size * (wn[3] - wn[2]) / (vp[3] - vp[2]);
+          axis->label_position = y_log(y_lin(axis->position) + 3 * tick);
+          if (y_lin(axis->position) <= 0.5 * (y_lin(wn[2] + y_lin(wn[3]))))
+            {
+              if (tick > 0) axis->label_position = y_log(y_lin(axis->position) - tick);
+            }
+          else
+            {
+              if (tick < 0) axis->label_position = y_log(y_lin(axis->position) - tick);
+            }
+        }
+    }
+  else if (which == 'Y')
+    {
+      scale_option = GR_OPTION_Y_LOG;
+      base = lx.basey;
+      if (is_nan(axis->min)) axis->min = y_min;
+      if (is_nan(axis->max)) axis->max = y_max;
+      if (is_nan(axis->org)) axis->org = y_min;
+      if (is_nan(axis->position)) axis->position = x_min;
+      if (is_nan(axis->label_position))
+        {
+          tick = axis->tick_size * (wn[1] - wn[0]) / (vp[1] - vp[0]);
+          axis->label_position = x_log(x_lin(axis->position) + 3 * tick);
+          if (x_lin(axis->position) <= 0.5 * (x_lin(wn[0] + x_lin(wn[1]))))
+            {
+              if (tick > 0) axis->label_position = x_log(x_lin(axis->position) - tick);
+            }
+          else
+            {
+              if (tick < 0) axis->label_position = x_log(x_lin(axis->position) - tick);
+            }
+        }
+    }
+
+  if (scale_option & lx.scale_options)
+    {
+      axis->num_tick_labels = igauss(blog(base, axis->max / axis->min)) + 2;
+      axis->tick_labels = (tick_label_t *)xcalloc(axis->num_tick_labels, sizeof(tick_label_t));
+      axis->num_ticks = axis->num_tick_labels * base;
+      axis->ticks = (tick_t *)xcalloc(axis->num_ticks, sizeof(tick_t));
+
+      a0 = pow(base, gauss(blog(base, axis->min)));
+      i = ipred(axis->min / a0);
+      a = a0 + i * a0;
+      decade = igauss(blog(base, axis->min / axis->org));
+      j = k = 0;
+      while (a <= axis->max)
+        {
+          axis->ticks[j].value = a;
+          axis->ticks[j++].is_major = (i == 0);
+          if (i == 0)
+            {
+              if (axis->major_count > 0)
+                {
+                  if (decade % axis->major_count == 0)
+                    {
+                      exponent = iround(blog(base, a));
+                      s = (char *)xcalloc(256, sizeof(char));
+                      snprintf(s, 255, "%d^{%d}", base, exponent);
+                      axis->tick_labels[k].tick = a;
+                      axis->tick_labels[k].label = replace_minus_sign(s);
+                      gr_inqtext(0, 0, axis->tick_labels[k].label, tbx, tby);
+                      axis->tick_labels[k].width = tbx[2] - tbx[0];
+                      k++;
+                    }
+                }
+            }
+          if (i == 8 || base < 10)
+            {
+              a0 = a0 * base;
+              i = 0;
+              decade++;
+            }
+          else
+            {
+              i++;
+            }
+          a = a0 + i * a0;
+        }
+      axis->num_ticks = j;
+      axis->num_tick_labels = k;
+    }
+  else
+    {
+      if (is_nan(axis->tick)) axis->tick = gr_tick(axis->min, axis->max);
+      if (axis->major_count > 0) axis->tick /= axis->major_count;
+      axis->num_ticks = (int)((axis->max - axis->min) / axis->tick + 0.5) + 1;
+      axis->ticks = (double *)xcalloc(axis->num_ticks, sizeof(tick_t));
+      if (axis->major_count > 0)
+        {
+          axis->num_tick_labels = (int)(axis->num_ticks / axis->major_count + 0.5) + 1;
+          axis->tick_labels = (tick_label_t *)xcalloc(axis->num_tick_labels, sizeof(tick_label_t));
+        }
+      else
+        {
+          axis->num_tick_labels = 0;
+          axis->tick_labels = NULL;
+        }
+
+      epsilon = FEPS * (axis->max - axis->min);
+
+      i = isucc(axis->min / axis->tick);
+      a = i * axis->tick;
+      j = k = 0;
+      while (a <= axis->max + epsilon)
+        {
+          axis->ticks[j].value = a;
+          if (axis->major_count > 0)
+            {
+              axis->ticks[j++].is_major = (i % axis->major_count == 0);
+              gr_getformat(&formatReference, axis->min, a, axis->max, axis->tick, axis->major_count);
+              if (i % axis->major_count == 0)
+                {
+                  s = (char *)xcalloc(256, sizeof(char));
+                  gr_ftoa(s, a, &formatReference);
+                  axis->tick_labels[k].tick = a;
+                  axis->tick_labels[k].label = replace_minus_sign(s);
+                  gr_inqtext(0, 0, axis->tick_labels[k].label, tbx, tby);
+                  axis->tick_labels[k].width = tbx[2] - tbx[0];
+                  k++;
+                }
+            }
+          else
+            {
+              axis->ticks[j++].is_major = 1;
+            }
+          i++;
+          a = i * axis->tick;
+        }
+      axis->num_ticks = j;
+      axis->num_tick_labels = k;
+    }
+
+  if (axis->num_ticks > 0)
+    {
+      axis->ticks = (tick_t *)xrealloc(axis->ticks, axis->num_ticks * sizeof(tick_t));
+    }
+  if (axis->num_tick_labels > 0)
+    {
+      axis->tick_labels = (tick_label_t *)xrealloc(axis->tick_labels, axis->num_tick_labels * sizeof(tick_label_t));
+    }
+}
+
+void gr_drawaxis(char which, axis_t *axis)
+{
+  int errind, tnr, ltype, clsw, halign, valign;
+  double wn[4], vp[4], clrt[4];
+  double tick, minor_tick, major_tick;
+  int i;
+  double epsilon;
+
+  check_autoinit;
+
+  /* inquire current normalization transformation */
+
+  gks_inq_current_xformno(&errind, &tnr);
+  gks_inq_xform(tnr, &errind, wn, vp);
+
+  /* save linetype and clipping indicator */
+
+  gks_inq_pline_linetype(&errind, &ltype);
+  gks_inq_clip(&errind, &clsw, clrt);
+
+  gks_set_pline_linetype(GKS_K_LINETYPE_SOLID);
+  gks_set_clipping(GKS_K_NOCLIP);
+
+  if (which == 'X')
+    {
+      tick = axis->tick_size * (wn[3] - wn[2]) / (vp[3] - vp[2]);
+      minor_tick = y_log(y_lin(axis->position) + tick);
+      major_tick = y_log(y_lin(axis->position) + 2 * tick);
+      if (axis->draw_axis_line)
+        {
+          start_pline(axis->min, axis->position);
+          pline(axis->max, axis->position);
+          end_pline();
+        }
+    }
+  else
+    {
+      tick = axis->tick_size * (wn[1] - wn[0]) / (vp[1] - vp[0]);
+      minor_tick = x_log(x_lin(axis->position) + tick);
+      major_tick = x_log(x_lin(axis->position) + 2 * tick);
+      if (axis->draw_axis_line)
+        {
+          start_pline(axis->position, axis->min);
+          pline(axis->position, axis->max);
+          end_pline();
+        }
+    }
+
+  for (i = 0; i < axis->num_ticks; i++)
+    {
+      tick = axis->ticks[i].is_major ? major_tick : minor_tick;
+      if (which == 'X')
+        {
+          pline(axis->ticks[i].value, axis->position);
+          pline(axis->ticks[i].value, tick);
+          end_pline();
+        }
+      else
+        {
+          pline(axis->position, axis->ticks[i].value);
+          pline(tick, axis->ticks[i].value);
+          end_pline();
+        }
+    }
+
+  if (axis->major_count > 0)
+    {
+      if (axis->num_tick_labels > 0)
+        {
+          /* save text alignment */
+          gks_inq_text_align(&errind, &halign, &valign);
+
+          if (which == 'X')
+            {
+              if (axis->position <= wn[2])
+                gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+              else
+                gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
+            }
+          else
+            {
+              if (axis->position <= wn[0])
+                gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+              else
+                gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+            }
+          for (i = 0; i < axis->num_tick_labels; i++)
+            {
+              if (which == 'X')
+                text2d(axis->tick_labels[i].tick, axis->label_position, axis->tick_labels[i].label);
+              else
+                text2d(axis->label_position, axis->tick_labels[i].tick, axis->tick_labels[i].label);
+            }
+
+          /* restore text alignment */
+          gks_set_text_align(halign, valign);
+        }
+    }
+
+  /* restore linetype and clipping indicator */
+
+  gks_set_pline_linetype(ltype);
+  gks_set_clipping(clsw);
+}
+
+static void draw_axis_grid(char which, axis_t *axis)
+{
+  int errind, tnr, color;
+  double wn[4], vp[4], width, epsilon;
+  int i;
+
+  /* inquire current normalization transformation */
+
+  gks_inq_current_xformno(&errind, &tnr);
+  gks_inq_xform(tnr, &errind, wn, vp);
+
+  /* save line width and line color */
+
+  gks_inq_pline_linewidth(&errind, &width);
+  gks_inq_pline_color_index(&errind, &color);
+
+  gks_inq_pline_color_index(&errind, &color);
+
+  epsilon = FEPS * (axis->max - axis->min);
+
+  for (i = 0; i < axis->num_ticks; i++)
+    {
+      if (color != 0)
+        gks_set_pline_color_index(axis->ticks[i].is_major ? 88 : 90);
+      else
+        gks_set_pline_linewidth(axis->ticks[i].is_major ? 2.0 : 1.0);
+
+      if (fabs(axis->ticks[i].value - axis->org) > epsilon)
+        {
+          if (which == 'X')
+            {
+              pline(axis->ticks[i].value, wn[2]);
+              pline(axis->ticks[i].value, wn[3]);
+              end_pline();
+            }
+          else
+            {
+              pline(wn[0], axis->ticks[i].value);
+              pline(wn[1], axis->ticks[i].value);
+              end_pline();
+            }
+        }
+    }
+
+  /* restore line width and line color */
+
+  gks_set_pline_linewidth(width);
+  gks_set_pline_color_index(color);
+}
+
+void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
+{
+  int errind, tnr, ltype, clsw;
+  double wn[4], vp[4], clrt[4];
+  double tick, minor_tick, major_tick;
+  int i;
+  double epsilon;
+
+  check_autoinit;
+
+  /* inquire current normalization transformation */
+
+  gks_inq_current_xformno(&errind, &tnr);
+  gks_inq_xform(tnr, &errind, wn, vp);
+
+  /* save linetype and clipping indicator */
+
+  gks_inq_pline_linetype(&errind, &ltype);
+  gks_inq_clip(&errind, &clsw, clrt);
+
+  gks_set_pline_linetype(GKS_K_LINETYPE_SOLID);
+  gks_set_clipping(GKS_K_NOCLIP);
+
+  if ((options & GR_AXES_WITH_GRID) != 0)
+    {
+      if (x_axis != NULL) draw_axis_grid('X', x_axis);
+      if (y_axis != NULL) draw_axis_grid('Y', y_axis);
+    }
+
+  if (x_axis != NULL) gr_drawaxis('X', x_axis);
+  if (y_axis != NULL) gr_drawaxis('Y', y_axis);
+
+  if ((options & GR_AXES_WITH_FRAME) != 0)
+    {
+      axis_t axis;
+
+      if (x_axis != NULL)
+        {
+          memcpy(&axis, x_axis, sizeof(axis_t));
+          x_axis->position = wn[3];
+          x_axis->tick_size = -x_axis->tick_size;
+          x_axis->major_count = -x_axis->major_count;
+          gr_drawaxis('X', x_axis);
+          memcpy(x_axis, &axis, sizeof(axis_t));
+        }
+
+      if (y_axis != NULL)
+        {
+          memcpy(&axis, y_axis, sizeof(axis_t));
+          y_axis->position = wn[1];
+          y_axis->tick_size = -y_axis->tick_size;
+          y_axis->major_count = -y_axis->major_count;
+          gr_drawaxis('Y', y_axis);
+          memcpy(y_axis, &axis, sizeof(axis_t));
+        }
+    }
+
+  /* restore linetype and clipping indicator */
+
+  gks_set_pline_linetype(ltype);
+  gks_set_clipping(clsw);
+}
+
+void gr_freeaxis(axis_t *axis)
+{
+  int i;
+  for (i = 0; i < axis->num_tick_labels; i++)
+    {
+      free(axis->tick_labels[i].label);
+    }
+  if (axis->tick_labels != NULL)
+    {
+      free(axis->tick_labels);
+    }
+  free(axis->ticks);
+}
+
 static void grid_line(double x0, double y0, double x1, double y1, int color, int major)
 {
   if (color != 0)

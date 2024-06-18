@@ -97,23 +97,31 @@ typedef enum
 
 typedef enum
 {
-  GR_STOP = 0,
-  GR_MOVETO = 1,
-  GR_LINETO = 2,
-  GR_CURVE3 = 3,
-  GR_CURVE4 = 4,
+  GR_STOP,
+  GR_MOVETO,
+  GR_LINETO,
+  GR_CURVE3,
+  GR_CURVE4,
   GR_CLOSEPOLY = 0x4f,
 } path_code_t;
 
 typedef enum
 {
-  GR_XFORM_BOOLEAN = 0,
-  GR_XFORM_LINEAR = 1,
-  GR_XFORM_LOG = 2,
-  GR_XFORM_LOGLOG = 3,
-  GR_XFORM_CUBIC = 4,
-  GR_XFORM_EQUALIZED = 5,
+  GR_XFORM_BOOLEAN,
+  GR_XFORM_LINEAR,
+  GR_XFORM_LOG,
+  GR_XFORM_LOGLOG,
+  GR_XFORM_CUBIC,
+  GR_XFORM_EQUALIZED,
 } xform_types_t;
+
+typedef enum
+{
+  GR_INTERP2_NEAREST,
+  GR_INTERP2_LINEAR,
+  GR_INTERP2_SPLINE,
+  GR_INTERP2_CUBIC,
+} interp2_method_t;
 
 typedef struct
 {
@@ -171,6 +179,37 @@ typedef struct
   int scientific;
   int decimal_digits;
 } format_reference_t;
+
+typedef struct
+{
+  double value;
+  int is_major;
+} tick_t;
+
+typedef struct
+{
+  double tick;
+  char *label;
+  double width;
+} tick_label_t;
+
+typedef struct
+{
+  double min, max;
+  double tick, org;
+  double position;
+  int major_count;
+  int num_ticks;
+  tick_t *ticks;
+  double tick_size;
+  int num_tick_labels;
+  tick_label_t *tick_labels;
+  double label_position;
+  int draw_axis_line;
+} axis_t;
+
+#define GR_AXES_WITH_GRID (1 << 0)
+#define GR_AXES_WITH_FRAME (1 << 1)
 
 DLLEXPORT void gr_initgr(void);
 DLLEXPORT int gr_debug(void);
@@ -257,6 +296,10 @@ DLLEXPORT void gr_axes(double, double, double, double, int, int, double);
 DLLEXPORT void gr_axeslbl(double, double, double, double, int, int, double,
                           void (*)(double, double, const char *, double),
                           void (*)(double, double, const char *, double));
+DLLEXPORT void gr_axis(char, axis_t *);
+DLLEXPORT void gr_drawaxis(char, axis_t *);
+DLLEXPORT void gr_drawaxes(axis_t *, axis_t *, int);
+DLLEXPORT void gr_freeaxis(axis_t *);
 DLLEXPORT void gr_grid(double, double, double, double, int, int);
 DLLEXPORT void gr_grid3d(double, double, double, double, double, double, int, int, int);
 DLLEXPORT void gr_verrorbars(int, double *, double *, double *, double *);
@@ -338,7 +381,7 @@ DLLEXPORT void gr_trisurface(int, double *, double *, double *);
 DLLEXPORT void gr_gradient(int, int, double *, double *, double *, double *, double *);
 DLLEXPORT void gr_quiver(int, int, double *, double *, double *, double *, int);
 DLLEXPORT void gr_interp2(int nx, int ny, const double *x, const double *y, const double *z, int nxq, int nyq,
-                          const double *xq, const double *yq, double *zq, int method, double extrapval);
+                          const double *xq, const double *yq, double *zq, interp2_method_t method, double extrapval);
 DLLEXPORT const char *gr_version(void);
 DLLEXPORT void gr_shade(int, double *, double *, int, int, double *, int, int, int *);
 DLLEXPORT void gr_shadepoints(int, double *, double *, int, int, int);
