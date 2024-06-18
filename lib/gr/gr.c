@@ -5434,7 +5434,7 @@ void gr_axis(char which, axis_t *axis)
       axis->ticks = (double *)xcalloc(axis->num_ticks, sizeof(tick_t));
       if (axis->major_count > 0)
         {
-          axis->num_tick_labels = axis->num_ticks / axis->major_count;
+          axis->num_tick_labels = (int)(axis->num_ticks / axis->major_count + 0.5) + 1;
           axis->tick_labels = (tick_label_t *)xcalloc(axis->num_tick_labels, sizeof(tick_label_t));
         }
       else
@@ -5475,6 +5475,15 @@ void gr_axis(char which, axis_t *axis)
         }
       axis->num_ticks = j;
       axis->num_tick_labels = k;
+    }
+
+  if (axis->num_ticks > 0)
+    {
+      axis->ticks = (tick_t *)xrealloc(axis->ticks, axis->num_ticks * sizeof(tick_t));
+    }
+  if (axis->num_tick_labels > 0)
+    {
+      axis->tick_labels = (tick_label_t *)xrealloc(axis->tick_labels, axis->num_tick_labels * sizeof(tick_label_t));
     }
 }
 
