@@ -5,10 +5,6 @@
 
 #include "gr.h"
 
-#define INTERP2_NEAREST 0
-#define INTERP2_LINEAR 1
-#define INTERP2_CUBIC 3
-#define INTERP2_SPLINE 2
 
 static char *xmalloc(int size)
 {
@@ -241,12 +237,12 @@ static void create_splines(const double *x, const double *y, int n, double **spl
  * \param[in] extrapval The extrapolation value
  */
 void gr_interp2(int nx, int ny, const double *x, const double *y, const double *z, int nxq, int nyq, const double *xq,
-                const double *yq, double *zq, int method, double extrapval)
+                const double *yq, double *zq, interp2_method_t method, double extrapval)
 {
   int ixq, iyq, ix, iy, ind, i;
   double ***x_splines = NULL, **spline = NULL, *a = NULL, diff;
 
-  if (method == INTERP2_SPLINE)
+  if (method == GR_INTERP2_SPLINE)
     {
       x_splines = (double ***)xmalloc(ny * sizeof(double **));
       spline = (double **)xmalloc(ny * sizeof(double *));
@@ -303,7 +299,7 @@ void gr_interp2(int nx, int ny, const double *x, const double *y, const double *
                     }
                 }
 
-              if (method == INTERP2_NEAREST)
+              if (method == GR_INTERP2_NEAREST)
                 {
                   if (ix + 1 < nx && xq[ixq] - x[ix] > x[ix + 1] - xq[ixq])
                     {
@@ -315,7 +311,7 @@ void gr_interp2(int nx, int ny, const double *x, const double *y, const double *
                     }
                   zq[iyq * nxq + ixq] = z[iy * nx + ix];
                 }
-              else if (method == INTERP2_SPLINE)
+              else if (method == GR_INTERP2_SPLINE)
                 {
                   /* interpolation in X direction: */
                   diff = xq[ixq] - x[ix];
@@ -337,18 +333,18 @@ void gr_interp2(int nx, int ny, const double *x, const double *y, const double *
                   zq[iyq * nxq + ixq] = zq[iyq * nxq + ixq] * diff + spline[iy][1];
                   zq[iyq * nxq + ixq] = zq[iyq * nxq + ixq] * diff + spline[iy][0];
                 }
-              else if (method == INTERP2_CUBIC)
+              else if (method == GR_INTERP2_CUBIC)
                 {
                   zq[iyq * nxq + ixq] = bicubic_interp(x, y, z, ix, iy, nx, ny, xq[ixq], yq[iyq]);
                 }
-              else if (method == INTERP2_LINEAR)
+              else if (method == GR_INTERP2_LINEAR)
                 {
                   zq[iyq * nxq + ixq] = bilinear_interp(x, y, z, ix, iy, nx, xq[ixq], yq[iyq]);
                 }
             }
         }
     }
-  if (method == INTERP2_SPLINE)
+  if (method == GR_INTERP2_SPLINE)
     {
       /* free allocated memory */
       for (ind = 0; ind < ny; ind++)

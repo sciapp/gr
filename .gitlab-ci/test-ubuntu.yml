@@ -1,10 +1,6 @@
 ubuntu-cmake-self-contained-test-c:
   stage: test
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing
-  rules:
-  - if: '$CI_MERGE_REQUEST_ID'
-    when: never
-  - when: on_success
   needs:
   - ubuntu-cmake-self-contained-debug
   script:
@@ -21,10 +17,6 @@ ubuntu-cmake-self-contained-test-c:
 ubuntu-cmake-self-contained-test-cpp:
   stage: test
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/cpp-testing
-  rules:
-  - if: '$CI_MERGE_REQUEST_ID'
-    when: never
-  - when: on_success
   needs:
   - ubuntu-cmake-self-contained-debug
   script:
@@ -41,10 +33,6 @@ ubuntu-cmake-self-contained-test-cpp:
 ubuntu-cmake-self-contained-test-grplot:
   stage: test
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/grplot-testing
-  rules:
-  - if: '$CI_MERGE_REQUEST_ID'
-    when: never
-  - when: on_success
   needs:
   - ubuntu-cmake-self-contained-debug
   script:
@@ -64,8 +52,6 @@ ubuntu-cmake-self-contained-test-snoop:
   stage: test
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/ubuntu-self-contained
   rules:
-  - if: '$CI_MERGE_REQUEST_ID'
-    when: never
   - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
     when: never
   - if: '$GR_REBUILD_REFERENCE'

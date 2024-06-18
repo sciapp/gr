@@ -6,6 +6,23 @@ stages:
 - sync
 - deploy
 
+workflow:
+  # This workflow section prevents branch and merge request pipelines from
+  # being created at the same time avoiding duplicate pipelines:
+  # - if: $CI_PIPELINE_SOURCE == "merge_request_event" -> Create pipelines for open merge requests
+  # - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS && $CI_PIPELINE_SOURCE == "push"
+  #   ->  Do not create branch pipelines for open merge requests on push events but allow all other events (e.g.
+  #       pipeline trigger, API calls, etc.)
+  # - when: always -> Create all other pipeline types as usual
+  # Using workflow rules also ensures that all jobs are included in both branch and merge request pipelines
+  # See <https://docs.gitlab.com/ee/ci/yaml/workflow.html#switch-between-branch-pipelines-and-merge-request-pipelines>
+  # for more information
+  rules:
+  - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS && $CI_PIPELINE_SOURCE == "push"
+    when: never
+  - when: always
+
 include:
 - local: "/.gitlab-ci/build-arch.yml"
 - local: "/.gitlab-ci/build-binary-builder.yml"

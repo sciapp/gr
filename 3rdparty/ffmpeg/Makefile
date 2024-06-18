@@ -6,6 +6,8 @@ VERSION = 4.2.1
 FFMPEG_EXTRA_CONFIGURE_FLAGS ?=
 ifeq ($(shell uname),Darwin)
 FFMPEG_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-mmacosx-version-min=10.15
+else ifeq ($(shell uname),Linux)
+FFMPEG_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-Wno-error=incompatible-pointer-types
 endif
 
 

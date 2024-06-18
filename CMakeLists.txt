@@ -117,7 +117,13 @@ if(GR_USE_BUNDLED_LIBRARIES)
   # (`ONLY_CMAKE_FIND_ROOT_PATH` option is not inherited to `find_package` calls within the LibXml2 config file)
   find_package(LibXml2 NO_MODULE ONLY_CMAKE_FIND_ROOT_PATH)
 else()
-  find_package(LibXml2 NO_MODULE)
+  # On RHEL 9 based Linux distributions, `libxml2` is found in `/lib64` by default since the `PATH` variable is
+  # inspected by CMake to find potential prefix paths (`/bin` is present in `PATH` before `/usr/bin`). This causes
+  # errors because no `/include` directory is present on Linux and this is not checked by the LibXml2 config file.
+  # Therefore, disable the inspection of the `PATH` variable by setting `NO_SYSTEM_ENVIRONMENT_PATH` option.
+  # See <https://cmake.org/cmake/help/v3.30/command/find_package.html#:~:text=Search the standard system environment
+  # variables> for more details.
+  find_package(LibXml2 NO_MODULE NO_SYSTEM_ENVIRONMENT_PATH)
 endif()
 
 # Find the following packages only in 3rdparty, if `GR_USE_BUNDLED_LIBRARIES` is set

@@ -128,8 +128,8 @@ clang-tidy-check:
       -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       -DGR_USE_BUNDLED_LIBRARIES=OFF
   - clang_tidy_failed=0;
-    ancestor=$(git merge-base upstream/develop HEAD)
-    [[ "${ancestor}" != "$(git rev-parse HEAD)" ]] || ancestor="HEAD~"
+    ancestor=$(git merge-base upstream/develop HEAD);
+    [[ "${ancestor}" != "$(git rev-parse HEAD)" ]] || ancestor="HEAD~";
     while IFS= read -r file; do
       [[ "${file}" != 3rdparty* ]] && [[ "${file}" != apps* ]] || continue;
       [[ "${file}" =~ \.(c|cpp|cxx|m|h|hpp|hxx)$ ]] || continue;

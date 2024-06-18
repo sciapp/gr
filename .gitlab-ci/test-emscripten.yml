@@ -1,10 +1,6 @@
 emscripten-test:
   stage: test
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/js-testing
-  rules:
-  - if: '$CI_MERGE_REQUEST_ID'
-    when: never
-  - when: on_success
   needs:
   - emscripten
   script:

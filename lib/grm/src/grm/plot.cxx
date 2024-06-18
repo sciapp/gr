@@ -5,6 +5,7 @@
 #include <grm/dom_render/graphics_tree/util.hxx>
 #include <grm/dom_render/render.hxx>
 
+#include <algorithm>
 #include <string>
 #include <set>
 
@@ -280,6 +281,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "location",
                                     "major_h",
                                     "normalization",
+                                    "only_quadratic_aspect_ratio",
                                     "orientation",
                                     "panzoom",
                                     "phi_flip",
@@ -417,6 +419,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"marginal_heatmap_kind", "s"},
                                               {"marker_type", "i|D"},
                                               {"num_bins", "i"},
+                                              {"only_quadratic_aspect_ratio", "i"},
                                               {"orientation", "s"},
                                               {"panzoom", "D"},
                                               {"raw", "s"},
@@ -2617,6 +2620,22 @@ err_t plot_marginal_heatmap(grm_args_t *subplot_args)
       if (grm_args_values(*current_series, "algorithm", "s", &algorithm))
         subGroup->setAttribute("algorithm", algorithm);
     }
+
+  std::shared_ptr<GRM::Element> top_side_region;
+  if (!subGroup->querySelectors("side_region[location=\"top\"]"))
+    {
+      top_side_region = global_render->createSideRegion("top");
+      subGroup->append(top_side_region);
+    }
+  else
+    {
+      top_side_region = subGroup->querySelectors("side_region[location=\"top\"]");
+    }
+  top_side_region->setAttribute("marginal_heatmap_side_plot", 1);
+  auto right_side_region = global_render->createSideRegion("right");
+  right_side_region->setAttribute("marginal_heatmap_side_plot", 1);
+  subGroup->append(right_side_region);
+
   grm_args_push(subplot_args, "kind", "s", "marginal_heatmap");
   global_root->setAttribute("_id", ++id);
 
@@ -3300,7 +3319,19 @@ err_t plot_pie(grm_args_t *subplot_args)
     }
   if (grm_args_values(subplot_args, "title", "s", &title))
     {
-      group->parentElement()->setAttribute("title", title);
+      std::shared_ptr<GRM::Element> side_region;
+      if (!group->parentElement()->querySelectors("side_region[location=\"top\"]"))
+        {
+          side_region = global_render->createElement("side_region");
+          group->parentElement()->append(side_region);
+        }
+      else
+        {
+          side_region = group->parentElement()->querySelectors("side_region[location=\"top\"]");
+        }
+      side_region->setAttribute("text_content", title);
+      side_region->setAttribute("location", "top");
+      side_region->setAttribute("text_is_title", true);
     }
   global_root->setAttribute("_id", id++);
 
@@ -3592,23 +3623,46 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 
   if (pass == 1 && grm_args_values(args, "title", "s", &title))
     {
-      if (strcmp(kind, "marginal_heatmap") == 0)
-        {
-          group->parentElement()->parentElement()->parentElement()->setAttribute("title", title);
-        }
-      else
-        {
-          group->parentElement()->parentElement()->setAttribute("title", title);
-        }
+      auto side_region = global_render->createElement("side_region");
+      current_central_region_element->parentElement()->append(side_region);
+      side_region->setAttribute("text_content", title);
+      side_region->setAttribute("location", "top");
+      side_region->setAttribute("text_is_title", true);
     }
 
   if (grm_args_values(args, "x_label", "s", &x_label))
     {
-      group->setAttribute("x_label", x_label);
+      if (type == "3d")
+        {
+          group->setAttribute("x_label", x_label);
+        }
+      else
+        {
+          if (!current_central_region_element->parentElement()->querySelectors("side_region[location=\"bottom\"]"))
+            {
+              auto side_region = global_render->createElement("side_region");
+              current_central_region_element->parentElement()->append(side_region);
+              side_region->setAttribute("text_content", x_label);
+              side_region->setAttribute("location", "bottom");
+            }
+        }
     }
   if (grm_args_values(args, "y_label", "s", &y_label))
     {
-      group->setAttribute("y_label", y_label);
+      if (type == "3d")
+        {
+          group->setAttribute("y_label", y_label);
+        }
+      else
+        {
+          if (!current_central_region_element->parentElement()->querySelectors("side_region[location=\"left\"]"))
+            {
+              auto side_region = global_render->createElement("side_region");
+              current_central_region_element->parentElement()->append(side_region);
+              side_region->setAttribute("text_content", y_label);
+              side_region->setAttribute("location", "left");
+            }
+        }
     }
   if (grm_args_values(args, "z_label", "s", &z_label))
     {
@@ -3659,8 +3713,16 @@ err_t plot_draw_polar_axes(grm_args_t *args)
     {
       subGroup->setAttribute("phi_flip", phi_flip);
     }
-  if (!grm_args_values(args, "title", "s", &title)) title = "";
-  group->parentElement()->setAttribute("title", title);
+
+  if (grm_args_values(args, "title", "s", &title))
+    {
+      auto side_region = global_render->createElement("side_region");
+      current_central_region_element->parentElement()->append(side_region);
+      side_region->setAttribute("text_content", title);
+      side_region->setAttribute("location", "top");
+      side_region->setAttribute("text_is_title", true);
+    }
+
   return ERROR_NONE;
 }
 
@@ -3671,8 +3733,7 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
   grm_args_t **current_series;
   int location;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : edit_figure->lastChildElement();
 
   return_error_if(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   logger((stderr, "Draw a legend with %d labels\n", num_labels));
@@ -3700,12 +3761,12 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
       ++current_series;
     }
 
-  auto subGroup = global_render->createLegend(labels_key, labels_vec, specs_key, specs_vec);
+  auto legend = global_render->createLegend(labels_key, labels_vec, specs_key, specs_vec);
   if (grm_args_values(subplot_args, "location", "i", &location))
     {
-      group->parentElement()->setAttribute("location", location);
+      legend->setAttribute("location", location);
     }
-  group->append(subGroup);
+  group->append(legend);
 
   return ERROR_NONE;
 }
@@ -3716,8 +3777,7 @@ err_t plot_draw_pie_legend(grm_args_t *subplot_args)
   unsigned int num_labels;
   grm_args_t *series;
 
-  std::shared_ptr<GRM::Element> group =
-      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+  std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : edit_figure->lastChildElement();
 
   return_error_if(!grm_args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   grm_args_values(subplot_args, "series", "a", &series); /* series exists always */
@@ -3743,8 +3803,10 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
 
   auto side_region = global_render->createElement("side_region");
   group->append(side_region);
+  auto side_plot_region = global_render->createElement("side_plot_region");
+  side_region->append(side_plot_region);
   auto colorbar = global_render->createColorbar(colors);
-  side_region->append(colorbar);
+  side_plot_region->append(colorbar);
 
   colorbar->setAttribute("x_flip", 0);
   colorbar->setAttribute("y_flip", 0);
@@ -3833,7 +3895,7 @@ err_t plot_draw_error_bars(grm_args_t *series_args, unsigned int x_length)
          *relative_downwards = nullptr;
   double absolute_upwards_flt, relative_upwards_flt, absolute_downwards_flt, relative_downwards_flt;
   unsigned int upwards_length, downwards_length, i;
-  int color_upward_scap, color_downward_scap, color_error_bar;
+  int color_upwards_cap, color_downwards_cap, color_error_bar;
 
   std::shared_ptr<GRM::Element> group = (current_central_region_element)
                                             ? current_central_region_element->lastChildElement()
@@ -3912,10 +3974,10 @@ err_t plot_draw_error_bars(grm_args_t *series_args, unsigned int x_length)
 
   if (error_container != nullptr)
     {
-      if (grm_args_values(error_container, "upward_scap_color", "i", &color_upward_scap))
-        subGroup->setAttribute("upward_scap_color", color_upward_scap);
-      if (grm_args_values(error_container, "downward_scap_color", "i", &color_downward_scap))
-        subGroup->setAttribute("downward_scap_color", color_downward_scap);
+      if (grm_args_values(error_container, "upwards_cap_color", "i", &color_upwards_cap))
+        subGroup->setAttribute("upwards_cap_color", color_upwards_cap);
+      if (grm_args_values(error_container, "downwards_cap_color", "i", &color_downwards_cap))
+        subGroup->setAttribute("downwards_cap_color", color_downwards_cap);
       if (grm_args_values(error_container, "error_bar_color", "i", &color_error_bar))
         subGroup->setAttribute("error_bar_color", color_error_bar);
     }
@@ -4108,12 +4170,14 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
   err_t error = ERROR_NONE;
 
   std::shared_ptr<GRM::Element> plot_group = edit_figure->lastChildElement();
-  std::shared_ptr<GRM::Element> series_group = edit_figure->lastChildElement()->lastChildElement()->lastChildElement();
+  std::shared_ptr<GRM::Element> series_group = (current_central_region_element)
+                                                   ? current_central_region_element->lastChildElement()
+                                                   : getCentralRegion()->lastChildElement();
 
   std::shared_ptr<GRM::Context> context = global_render->getContext();
 
 
-  int id = static_cast<int>(global_root->getAttribute("_id"));
+  auto id = static_cast<int>(global_root->getAttribute("_id"));
   global_root->setAttribute("_id", id++);
   auto str = std::to_string(id);
 
@@ -4654,7 +4718,7 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
 {
   plot_func_t plot_func;
   char *y_label, *x_label, *title, *kind;
-  int keep_aspect_ratio, location, adjust_x_lim, adjust_y_lim;
+  int keep_aspect_ratio, location, adjust_x_lim, adjust_y_lim, only_quadratic_aspect_ratio;
   double *subplot;
   double x_lim_min, x_lim_max, y_lim_min, y_lim_max, z_lim_min, z_lim_max;
   double x_min, x_max, y_min, y_max, z_min, z_max;
@@ -4672,21 +4736,13 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
     }
 
   auto central_region = getCentralRegion();
-  if (grm_args_values(subplot_args, "y_label", "s", &y_label))
-    {
-      central_region->setAttribute("y_label_margin", 1);
-    }
-  if (grm_args_values(subplot_args, "x_label", "s", &x_label))
-    {
-      central_region->setAttribute("x_label_margin", 1);
-    }
-  if (grm_args_values(subplot_args, "title", "s", &title))
-    {
-      group->setAttribute("title_margin", 1);
-    }
   if (grm_args_values(subplot_args, "keep_aspect_ratio", "i", &keep_aspect_ratio))
     {
       group->setAttribute("keep_aspect_ratio", keep_aspect_ratio);
+    }
+  if (grm_args_values(subplot_args, "only_quadratic_aspect_ratio", "i", &only_quadratic_aspect_ratio))
+    {
+      group->setAttribute("only_quadratic_aspect_ratio", only_quadratic_aspect_ratio);
     }
   if (grm_args_values(subplot_args, "location", "i", &location))
     {
