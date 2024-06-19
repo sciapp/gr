@@ -1,6 +1,6 @@
 ubuntu-cmake-self-contained-test-c:
   stage: test
-  image: iffregistry.fz-juelich.de/knguyen/gr-test/c-testing
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing
   needs:
   - ubuntu-cmake-self-contained-debug
   script:
@@ -16,7 +16,7 @@ ubuntu-cmake-self-contained-test-c:
 
 ubuntu-cmake-self-contained-test-cpp:
   stage: test
-  image: iffregistry.fz-juelich.de/knguyen/gr-test/cpp-testing
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/cpp-testing
   needs:
   - ubuntu-cmake-self-contained-debug
   script:
@@ -32,7 +32,7 @@ ubuntu-cmake-self-contained-test-cpp:
 
 ubuntu-cmake-self-contained-test-grplot:
   stage: test
-  image: iffregistry.fz-juelich.de/knguyen/gr-test/grplot-testing
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/grplot-testing
   needs:
   - ubuntu-cmake-self-contained-debug
   script:

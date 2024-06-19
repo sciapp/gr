@@ -89,6 +89,7 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_polar_r_org" type="xs:double"/>
             <xs:attribute name="_space_3d_phi_org" type="xs:double"/>
             <xs:attribute name="_space_3d_theta_org" type="xs:double"/>
             <xs:attribute name="_zoomed" type="xs:int"/>
@@ -340,23 +341,23 @@
     </xs:element>
 
     <!-- definition of nonuniformcellarray -->
-    <xs:element name="nonuniformcellarray">
+    <xs:element name="nonuniform_cellarray">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of polarcellarray -->
-    <xs:element name="polarcellarray">
+    <!-- definition of polar_cellarray -->
+    <xs:element name="polar_cellarray">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniform_polarcellarray -->
-    <xs:element name="nonuniform_polarcellarray">
+    <!-- definition of nonuniform_polar_cellarray -->
+    <xs:element name="nonuniform_polar_cellarray">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
@@ -489,11 +490,13 @@
     </xs:element>
 
     <!-- definition of nonuniformpolar_heatmap -->
-    <xs:element name="series_nonuniformpolar_heatmap">
+    <xs:element name="series_nonuniform_polar_heatmap">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_x_range_max" type="xs:double"/>
+            <xs:attribute name="_x_range_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -521,6 +524,8 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_x_range_max" type="xs:double"/>
+            <xs:attribute name="_x_range_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -530,6 +535,8 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_x_range_max" type="xs:double"/>
+            <xs:attribute name="_x_range_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 

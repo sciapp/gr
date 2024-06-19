@@ -1034,20 +1034,19 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
 
   if (str_equals_any(kind, "pie", "polar", "polar_histogram", "polar_heatmap", "nonuniform_polar_heatmap"))
     {
-      double x_center, y_center, r;
+      double x_center, y_center, r, new_r, top_text_r = 0.0;
 
       x_center = 0.5 * (viewport[0] + viewport[1]);
       y_center = 0.5 * (viewport[2] + viewport[3]);
       r = 0.45 * grm_min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
 
-      double old_r = r;
       if (!diag_factor && kind != "pie")
         {
-          element->setAttribute("_polar_r_org", r * (0.495 / 0.45 - 1));
-          r /= (0.45 / 0.495);
+          double new_r = 0.495 * grm_min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
+          element->setAttribute("_polar_r_org", new_r - r);
+          r = new_r;
         }
 
-      double top_text_r;
       if (top_text_margin)
         {
           top_text_r = 0.45 * grm_min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
@@ -1072,7 +1071,7 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
   std::string location = PLOT_DEFAULT_SIDEREGION_LOCATION;
   double max_vp, min_vp;
   double offset_rel, width_rel;
-  double r = 0.0, r2 = 0.0;
+  double r = 0.0;
   std::string kind;
   double metric_width, metric_height, start_aspect_ratio_ws;
   bool keep_aspect_ratio = false, only_quadratic_aspect_ratio = false;
@@ -1086,15 +1085,15 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
 
   if (polar_kinds.count(kind) > 0)
     {
-      r = r2 = static_cast<double>(central_region->getAttribute("_polar_r_org"));
+      r = static_cast<double>(central_region->getAttribute("_polar_r_org"));
       auto top_side_region = plot_parent->querySelectors("side_region[location='top']");
-      if (top_side_region && top_side_region->hasAttribute("text_content")) r2 *= 0.975;
+      if (top_side_region && top_side_region->hasAttribute("text_content")) r *= 0.975;
     }
 
   viewport[0] = static_cast<double>(central_region->getAttribute("_viewport_x_min_org")) + r;
   viewport[1] = static_cast<double>(central_region->getAttribute("_viewport_x_max_org")) - r;
-  viewport[2] = static_cast<double>(central_region->getAttribute("_viewport_y_min_org")) + r2;
-  viewport[3] = static_cast<double>(central_region->getAttribute("_viewport_y_max_org")) - r2;
+  viewport[2] = static_cast<double>(central_region->getAttribute("_viewport_y_min_org")) + r;
+  viewport[3] = static_cast<double>(central_region->getAttribute("_viewport_y_max_org")) - r;
   keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
   only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
   start_aspect_ratio_ws = static_cast<double>(plot_parent->getAttribute("_start_aspect_ratio"));
@@ -2044,6 +2043,7 @@ static double autoTickRingsPolar(double rmax, int &rings, const std::string &nor
                 }
             }
         }
+
       while (true)
         {
           for (int i : *whichVector)
@@ -2059,6 +2059,7 @@ static double autoTickRingsPolar(double rmax, int &rings, const std::string &nor
           ++rmax;
         }
     }
+
   // given rings
   if (norm == "cdf") return 1.0 / rings;
 
@@ -5659,8 +5660,8 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
   if (cell_array != nullptr)
     {
       cell_array->setAttribute("name", "colorbar");
-      global_render->setSelectSpecificXform(cellArray, 1);
-      global_render->setClipRegion(cellArray, 0);
+      global_render->setSelectSpecificXform(cell_array, 1);
+      global_render->setClipRegion(cell_array, 0);
     }
 
   /* create axes */
@@ -6512,7 +6513,7 @@ static void processContourf(const std::shared_ptr<GRM::Element> &element, const 
 static void processDrawArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
-   * Processing function for draw_arc
+   * Processing function for drawArc
    *
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
@@ -7517,7 +7518,7 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &element,
           max = static_cast<double>(central_region->getAttribute("r_max"));
           norm = static_cast<std::string>(element->getAttribute("norm"));
           r_min = 0.0;
-          tick = auto_tick_rings_polar(max, rings, norm, y_log);
+          tick = autoTickRingsPolar(max, rings, norm, y_log);
         }
       else if (kind == "polar" && !y_log)
         {
@@ -7525,7 +7526,7 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &element,
           central_region->setAttribute("r_min", 0.0);
           auto seriesElement = central_region->querySelectors("series_polar");
           max = static_cast<double>(seriesElement->getAttribute("y_range_max"));
-          tick = auto_tick_rings_polar(max, rings, "", y_log);
+          tick = autoTickRingsPolar(max, rings, "", y_log);
         }
 
       if (kind == "polar" && y_log)
@@ -7889,7 +7890,6 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
             {
               text = render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC);
               text->setAttribute("_child_id", child_id++);
-              text->setAttribute("scientific_format", 1);
               axes_text_group->append(text);
             }
           else
@@ -7898,12 +7898,11 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
               if (text != nullptr)
                 {
                   render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC, text);
-                  text->setAttribute("scientific_format", 1);
                 }
             }
           if (text != nullptr && del != del_values::update_without_default)
             {
-              text->setAttribute("mathtex", y_log);
+              text->setAttribute("scientific_format", y_log ? 3 : 1);
             }
         }
     }
@@ -7918,7 +7917,7 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
 static void processDrawRect(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
-   * Processing function for draw_arc
+   * Processing function for drawArc
    *
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
@@ -7934,7 +7933,7 @@ static void processDrawRect(const std::shared_ptr<GRM::Element> &element, const 
 static void processFillArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
-   * Processing function for draw_arc
+   * Processing function for drawArc
    *
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
@@ -7952,7 +7951,7 @@ static void processFillArc(const std::shared_ptr<GRM::Element> &element, const s
 static void processFillRect(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
-   * Processing function for draw_arc
+   * Processing function for drawArc
    *
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
@@ -9261,7 +9260,7 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   if (rho_length != theta_length)
     throw std::length_error("For polar series y(rho)- and x(theta)-data must have the same size.\n");
 
-  std::vector<double> x(rho_length), std::vector<double> y(rho_length);
+  std::vector<double> x(rho_length), y(rho_length);
 
   // transform angles into user specified xranges if given
   if (transform_angles)
@@ -9296,9 +9295,8 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
             {
               current_rho = 0.0;
             }
-          else if (ylim && temp_rho > y_lim_max) // todo: polar clipping for > ylim_max is wip by Josef
+          else if (ylim && temp_rho > y_lim_max) // todo: somehow use gks_polar_clipping but with a smaller radius?
             {
-              // this is just some temporary fix for the clipping
               continue;
             }
 
@@ -9329,9 +9327,10 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
           double current_rho;
           if (ylim)
             {
-              current_rho = (rho_vec[i] - y_lim_min) / y_lim_max;
+              current_rho = (rho_vec[i] - y_lim_min) / y_lim_max; // todo: not the correct clipping... see above todo
               // just set negative radii to 0.0 if ylim_min > 0.0
               if (current_rho < 0.0 && y_lim_min > 0.0) current_rho = 0.0;
+              if (current_rho > 1.0) continue;
             }
           else
             {
@@ -9346,7 +9345,6 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   // resize x and y
   x.resize(index);
   y.resize(index);
-
 
   auto id = static_cast<int>(global_root->getAttribute("_id"));
   global_root->setAttribute("_id", id + 1);
@@ -10168,7 +10166,6 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
   if (element->hasAttribute("norm")) norm = static_cast<std::string>(element->getAttribute("norm"));
   if (plot_group->hasAttribute("phi_flip")) phiflip = static_cast<int>(plot_group->getAttribute("phi_flip"));
   if (element->hasAttribute("draw_edges")) draw_edges = static_cast<int>(element->getAttribute("draw_edges"));
-
   num_bins = static_cast<int>(element->getAttribute("num_bins"));
   max = static_cast<double>(element->parentElement()->getAttribute("r_max"));
   total_observations = static_cast<int>(element->getAttribute("total"));
@@ -10286,8 +10283,7 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
             }
         }
 
-      // no stairs
-      if (!stairs) // no stairs uses `polar_bar` logio is implemented in `processPolarBar`
+      if (!stairs) // no stairs uses `polar_bar` logic is implemented in `processPolarBar`
         {
           std::shared_ptr<GRM::Element> polar_bar;
 
@@ -10392,7 +10388,10 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
               if (keep_radii_axes)
                 {
                   if (count <= ylim_min)
-                    rectlist[class_nr] = ylim_min / max;
+                    {
+                      rectlist[class_nr] = ylim_min / max;
+                      draw_inner = false;
+                    }
                   else if (rect > r_max)
                     rectlist[class_nr] = ylim_max;
                   else
@@ -10697,7 +10696,6 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
     }
 
   num_bins = static_cast<int>(element->parentElement()->getAttribute("num_bins"));
-
   if (element->parentElement()->hasAttribute("bin_widths"))
     {
       auto bin_widths_key = static_cast<std::string>(element->parentElement()->getAttribute("bin_widths"));
@@ -10761,7 +10759,6 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
           str = std::to_string(id);
 
           lineardata.resize(image_size * image_size);
-
           createColormap(x_colormap, y_colormap, colormap_size, colormap);
 
           if (num_bin_edges == 0)
@@ -10849,10 +10846,8 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
                         }
 
                     } /* end angle check */
-
-                } /* end x loop*/
-            }     /* end y loop */
-
+                }     /* end x loop */
+            }         /* end y loop */
 
           /* save resample method and reset because it isn't restored with gr_restorestate */
           if (del != del_values::update_without_default && del != del_values::update_with_default)
@@ -10909,8 +10904,6 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
   // drawarc rectangle
   rect = sqrt(pow(real(complex1), 2) + pow(imag(complex1), 2));
 
-
-  // this does not affect rect
   if (y_lim)
     {
 
@@ -10992,8 +10985,7 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
       std::shared_ptr<GRM::Element> area;
       auto id = static_cast<int>(global_root->getAttribute("_id"));
 
-      if ((count > 0.0 && !keep_radii_axes) ||
-          (count > y_lim_min && keep_radii_axes)) // check if original count (count + ylim_min) is larger than ylim_min
+      if (count > y_lim_min && keep_radii_axes) // check if original count (count + ylim_min) is larger than ylim_min
         {
           global_root->setAttribute("_id", id + 1);
           str = std::to_string(id);
