@@ -1091,9 +1091,10 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
 
   if (polar_kinds.count(kind) > 0)
     {
+      // todo: cleanup + colorbar not right (polar heatmap with title)
       r = r2 = static_cast<double>(central_region->getAttribute("_polar_r_org"));
       auto top_side_region = plot_parent->querySelectors("side_region[location='top']");
-      if (top_side_region && top_side_region->hasAttribute("text_content")) r2 *= 0.975;
+      if (top_side_region && top_side_region->hasAttribute("text_content")) r2 *= 0.9749;
     }
 
   viewport[0] = static_cast<double>(central_region->getAttribute("_viewport_x_min_org")) + r;
@@ -10457,7 +10458,10 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
               if (keep_radii_axes)
                 {
                   if (count <= ylim_min)
-                    rectlist[class_nr] = ylim_min / max;
+                    {
+                      rectlist[class_nr] = ylim_min / max;
+                      draw_inner = false;
+                    }
                   else if (rect > r_max)
                     rectlist[class_nr] = ylim_max;
                   else
@@ -11057,8 +11061,7 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
       std::shared_ptr<GRM::Element> area;
       auto id = static_cast<int>(global_root->getAttribute("_id"));
 
-      if ((count > 0.0 && !keep_radii_axes) ||
-          (count > y_lim_min && keep_radii_axes)) // check if original count (count + ylim_min) is larger than ylim_min
+      if (count > y_lim_min && keep_radii_axes) // check if original count (count + ylim_min) is larger than ylim_min
         {
           global_root->setAttribute("_id", id + 1);
           str = std::to_string(id);
