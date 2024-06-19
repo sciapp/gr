@@ -5428,8 +5428,7 @@ void gr_axis(char which, axis_t *axis)
     }
   else
     {
-      if (is_nan(axis->tick)) axis->tick = gr_tick(axis->min, axis->max);
-      if (axis->major_count > 0) axis->tick /= axis->major_count;
+      if (is_nan(axis->tick)) axis->tick = gr_tick(axis->min, axis->max) / 5;
       axis->num_ticks = (int)((axis->max - axis->min) / axis->tick + 0.5) + 1;
       axis->ticks = (double *)xcalloc(axis->num_ticks, sizeof(tick_t));
       if (axis->major_count > 0)
