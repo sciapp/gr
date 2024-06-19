@@ -37,7 +37,7 @@ default: install
 
 $(PREFIX)/src/ffmpeg-$(VERSION).tar.gz:
 	mkdir -p $(PREFIX)/src
-	cd $(PREFIX)/src/ && $(DOWNLOAD_CMD) https://ffmpeg.org/releases/ffmpeg-$(VERSION).tar.gz
+	cd $(PREFIX)/src/ && $(DOWNLOAD_CMD) https://gr-framework.org/downloads/3rdparty/ffmpeg-$(VERSION).tar.gz
 
 $(PREFIX)/src/ffmpeg-$(VERSION)/configure: $(PREFIX)/src/ffmpeg-$(VERSION).tar.gz
 	cd $(PREFIX)/src/ && tar -xf ffmpeg-$(VERSION).tar.gz
