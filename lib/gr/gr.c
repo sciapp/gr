@@ -5514,24 +5514,12 @@ void gr_drawaxis(char which, axis_t *axis)
       tick = axis->tick_size * (wn[3] - wn[2]) / (vp[3] - vp[2]);
       minor_tick = y_log(y_lin(axis->position) + tick);
       major_tick = y_log(y_lin(axis->position) + 2 * tick);
-      if (axis->draw_axis_line)
-        {
-          start_pline(axis->min, axis->position);
-          pline(axis->max, axis->position);
-          end_pline();
-        }
     }
   else
     {
       tick = axis->tick_size * (wn[1] - wn[0]) / (vp[1] - vp[0]);
       minor_tick = x_log(x_lin(axis->position) + tick);
       major_tick = x_log(x_lin(axis->position) + 2 * tick);
-      if (axis->draw_axis_line)
-        {
-          start_pline(axis->position, axis->min);
-          pline(axis->position, axis->max);
-          end_pline();
-        }
     }
 
   for (i = 0; i < axis->num_ticks; i++)
@@ -5547,6 +5535,22 @@ void gr_drawaxis(char which, axis_t *axis)
         {
           pline(axis->position, axis->ticks[i].value);
           pline(tick, axis->ticks[i].value);
+          end_pline();
+        }
+    }
+
+  if (axis->draw_axis_line)
+    {
+      if (which == 'X')
+        {
+          start_pline(axis->min, axis->position);
+          pline(axis->max, axis->position);
+          end_pline();
+        }
+      else
+        {
+          start_pline(axis->position, axis->min);
+          pline(axis->position, axis->max);
           end_pline();
         }
     }
@@ -5595,7 +5599,7 @@ static void draw_axis_grid(char which, axis_t *axis)
 {
   int errind, tnr, color;
   double wn[4], vp[4], width, epsilon;
-  int i;
+  int pass, i;
 
   /* inquire current normalization transformation */
 
@@ -5611,26 +5615,32 @@ static void draw_axis_grid(char which, axis_t *axis)
 
   epsilon = FEPS * (axis->max - axis->min);
 
-  for (i = 0; i < axis->num_ticks; i++)
+  for (pass = 0; pass <= 1; pass++)
     {
-      if (color != 0)
-        gks_set_pline_color_index(axis->ticks[i].is_major ? 88 : 90);
-      else
-        gks_set_pline_linewidth(axis->ticks[i].is_major ? 2.0 : 1.0);
-
-      if (fabs(axis->ticks[i].value - axis->org) > epsilon)
+      for (i = 0; i < axis->num_ticks; i++)
         {
-          if (which == 'X')
+          if (axis->ticks[i].is_major == pass)
             {
-              pline(axis->ticks[i].value, wn[2]);
-              pline(axis->ticks[i].value, wn[3]);
-              end_pline();
-            }
-          else
-            {
-              pline(wn[0], axis->ticks[i].value);
-              pline(wn[1], axis->ticks[i].value);
-              end_pline();
+              if (color != 0)
+                gks_set_pline_color_index(axis->ticks[i].is_major ? 88 : 90);
+              else
+                gks_set_pline_linewidth(axis->ticks[i].is_major ? 2.0 : 1.0);
+
+              if (fabs(axis->ticks[i].value - axis->org) > epsilon)
+                {
+                  if (which == 'X')
+                    {
+                      pline(axis->ticks[i].value, wn[2]);
+                      pline(axis->ticks[i].value, wn[3]);
+                      end_pline();
+                    }
+                  else
+                    {
+                      pline(wn[0], axis->ticks[i].value);
+                      pline(wn[1], axis->ticks[i].value);
+                      end_pline();
+                    }
+                }
             }
         }
     }
