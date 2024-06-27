@@ -5029,12 +5029,8 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           /* draw Y-axis */
 
-          start_pline(x_org, y_min);
-
           while (yi <= y_max)
             {
-              pline(x_org, yi);
-
               xi = minor_tick;
               if (i == 0)
                 {
@@ -5058,8 +5054,9 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
               if (i == 0 || abs(major_y) == 1)
                 {
+                  start_pline(x_org, yi);
                   pline(xi, yi);
-                  pline(x_org, yi);
+                  end_pline();
                 }
 
               if (i == 9 || lx.basey < 10)
@@ -5073,10 +5070,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
               yi = y0 + i * y0;
             }
-
-          if (yi > y_max) pline(x_org, y_max);
-
-          end_pline();
         }
       else
         {
@@ -5089,14 +5082,10 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           /* draw Y-axis */
 
-          start_pline(x_org, y_min);
-
           gr_getformat(&format_reference, y_org, yi, y_max, y_tick, major_y);
 
           while (yi <= y_max + feps)
             {
-              pline(x_org, yi);
-
               if (major_y != 0)
                 {
                   if (i % major_y == 0)
@@ -5113,17 +5102,18 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
               else
                 xi = major_tick;
 
+              start_pline(x_org, yi);
               pline(xi, yi);
-              pline(x_org, yi);
+              end_pline();
 
               i++;
               yi = i * y_tick;
             }
-
-          if (yi > y_max + feps) pline(x_org, y_max);
-
-          end_pline();
         }
+
+      start_pline(x_org, y_min);
+      pline(x_org, y_max);
+      end_pline();
     }
 
   if (x_tick != 0)
@@ -5159,12 +5149,8 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           /* draw X-axis */
 
-          start_pline(x_min, y_org);
-
           while (xi <= x_max)
             {
-              pline(xi, y_org);
-
               yi = minor_tick;
               if (i == 0)
                 {
@@ -5188,8 +5174,9 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
               if (i == 0 || abs(major_x) == 1)
                 {
+                  start_pline(xi, y_org);
                   pline(xi, yi);
-                  pline(xi, y_org);
+                  end_pline();
                 }
 
               if (i == 9 || lx.basex < 10)
@@ -5203,10 +5190,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
               xi = x0 + i * x0;
             }
-
-          if (xi > x_max) pline(x_max, y_org);
-
-          end_pline();
         }
       else
         {
@@ -5221,12 +5204,8 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
           /* draw X-axis */
 
-          start_pline(x_min, y_org);
-
           while (xi <= x_max + feps)
             {
-              pline(xi, y_org);
-
               if (major_x != 0)
                 {
                   if (i % major_x == 0)
@@ -5243,17 +5222,18 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
               else
                 yi = major_tick;
 
+              start_pline(xi, y_org);
               pline(xi, yi);
-              pline(xi, y_org);
+              end_pline();
 
               i++;
               xi = i * x_tick;
             }
-
-          if (xi > x_max + feps) pline(x_max, y_org);
-
-          end_pline();
         }
+
+      start_pline(x_min, y_org);
+      pline(x_max, y_org);
+      end_pline();
     }
 
   /* restore linetype, text alignment, character-up vector
@@ -5595,11 +5575,11 @@ void gr_drawaxis(char which, axis_t *axis)
   gks_set_clipping(clsw);
 }
 
-static void draw_axis_grid(char which, axis_t *axis)
+static void draw_axis_grid(char which, axis_t *axis, int pass)
 {
   int errind, tnr, color;
   double wn[4], vp[4], width, epsilon;
-  int pass, i;
+  int i;
 
   /* inquire current normalization transformation */
 
@@ -5615,31 +5595,28 @@ static void draw_axis_grid(char which, axis_t *axis)
 
   epsilon = FEPS * (axis->max - axis->min);
 
-  for (pass = 0; pass <= 1; pass++)
+  for (i = 0; i < axis->num_ticks; i++)
     {
-      for (i = 0; i < axis->num_ticks; i++)
+      if (axis->ticks[i].is_major == pass)
         {
-          if (axis->ticks[i].is_major == pass)
-            {
-              if (color != 0)
-                gks_set_pline_color_index(axis->ticks[i].is_major ? 88 : 90);
-              else
-                gks_set_pline_linewidth(axis->ticks[i].is_major ? 2.0 : 1.0);
+          if (color != 0)
+            gks_set_pline_color_index(axis->ticks[i].is_major ? 88 : 90);
+          else
+            gks_set_pline_linewidth(axis->ticks[i].is_major ? 2.0 : 1.0);
 
-              if (fabs(axis->ticks[i].value - axis->org) > epsilon)
+          if (fabs(axis->ticks[i].value - axis->org) > epsilon)
+            {
+              if (which == 'X')
                 {
-                  if (which == 'X')
-                    {
-                      pline(axis->ticks[i].value, wn[2]);
-                      pline(axis->ticks[i].value, wn[3]);
-                      end_pline();
-                    }
-                  else
-                    {
-                      pline(wn[0], axis->ticks[i].value);
-                      pline(wn[1], axis->ticks[i].value);
-                      end_pline();
-                    }
+                  pline(axis->ticks[i].value, wn[2]);
+                  pline(axis->ticks[i].value, wn[3]);
+                  end_pline();
+                }
+              else
+                {
+                  pline(wn[0], axis->ticks[i].value);
+                  pline(wn[1], axis->ticks[i].value);
+                  end_pline();
                 }
             }
         }
@@ -5656,7 +5633,7 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
   int errind, tnr, ltype, clsw;
   double wn[4], vp[4], clrt[4];
   double tick, minor_tick, major_tick;
-  int i;
+  int i, pass;
   double epsilon;
 
   check_autoinit;
@@ -5676,26 +5653,19 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
 
   if ((options & GR_AXES_WITH_GRID) != 0)
     {
-      if (x_axis != NULL) draw_axis_grid('X', x_axis);
-      if (y_axis != NULL) draw_axis_grid('Y', y_axis);
+      for (pass = 0; pass <= 1; pass++)
+        {
+          if (y_axis != NULL) draw_axis_grid('Y', y_axis, pass);
+          if (x_axis != NULL) draw_axis_grid('X', x_axis, pass);
+        }
     }
 
-  if (x_axis != NULL) gr_drawaxis('X', x_axis);
   if (y_axis != NULL) gr_drawaxis('Y', y_axis);
+  if (x_axis != NULL) gr_drawaxis('X', x_axis);
 
   if ((options & GR_AXES_WITH_FRAME) != 0)
     {
       axis_t axis;
-
-      if (x_axis != NULL)
-        {
-          memcpy(&axis, x_axis, sizeof(axis_t));
-          x_axis->position = wn[3];
-          x_axis->tick_size = -x_axis->tick_size;
-          x_axis->major_count = -x_axis->major_count;
-          gr_drawaxis('X', x_axis);
-          memcpy(x_axis, &axis, sizeof(axis_t));
-        }
 
       if (y_axis != NULL)
         {
@@ -5705,6 +5675,16 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
           y_axis->major_count = -y_axis->major_count;
           gr_drawaxis('Y', y_axis);
           memcpy(y_axis, &axis, sizeof(axis_t));
+        }
+
+      if (x_axis != NULL)
+        {
+          memcpy(&axis, x_axis, sizeof(axis_t));
+          x_axis->position = wn[3];
+          x_axis->tick_size = -x_axis->tick_size;
+          x_axis->major_count = -x_axis->major_count;
+          gr_drawaxis('X', x_axis);
+          memcpy(x_axis, &axis, sizeof(axis_t));
         }
     }
 
@@ -5774,6 +5754,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
 
   double x0, y0, xi, yi;
   int64_t i;
+  int pass;
 
   if (x_tick < 0 || y_tick < 0)
     {
@@ -5803,114 +5784,123 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
   gks_set_pline_linetype(GKS_K_LINETYPE_SOLID);
   gks_set_clipping(GKS_K_NOCLIP);
 
-  if (y_tick != 0)
+  for (pass = 0; pass <= 1; pass++)
     {
-      if (GR_OPTION_Y_LOG & lx.scale_options)
+      if (y_tick != 0)
         {
-          y0 = pow(lx.basey, gauss(blog(lx.basey, y_min)));
-
-          i = ipred(y_min / y0);
-          yi = y0 + i * y0;
-
-          /* draw horizontal grid lines */
-
-          while (yi <= y_max)
+          if (GR_OPTION_Y_LOG & lx.scale_options)
             {
-              if (i == 0 || major_y == 1)
-                {
-                  major = i == 0;
-                  if (yi != y_min) grid_line(x_min, yi, x_max, yi, color, major);
-                }
+              y0 = pow(lx.basey, gauss(blog(lx.basey, y_min)));
 
-              if (i == 9 || lx.basey < 10)
-                {
-                  y0 = y0 * lx.basey;
-                  i = 0;
-                }
-              else
-                i++;
-
+              i = ipred(y_min / y0);
               yi = y0 + i * y0;
+
+              /* draw horizontal grid lines */
+
+              while (yi <= y_max)
+                {
+                  if (i == 0 || major_y == 1)
+                    {
+                      major = i == 0 ? 1 : 0;
+                      if (yi != y_min)
+                        {
+                          if (pass == major) grid_line(x_min, yi, x_max, yi, color, major);
+                        }
+                    }
+
+                  if (i == 9 || lx.basey < 10)
+                    {
+                      y0 = y0 * lx.basey;
+                      i = 0;
+                    }
+                  else
+                    i++;
+
+                  yi = y0 + i * y0;
+                }
             }
-        }
-      else
-        {
-          feps = FEPS * (y_max - y_min);
-
-          check_tick_marks(y_min, y_max, y_tick, 'Y');
-
-          i = isucc((y_min - y_org) / y_tick);
-          yi = y_org + i * y_tick;
-
-          /* draw horizontal grid lines */
-
-          while (yi <= y_max + feps)
+          else
             {
-              if (major_y > 0)
-                major = i % major_y == 0 && major_y > 1;
-              else
-                major = 0;
+              feps = FEPS * (y_max - y_min);
 
-              grid_line(x_min, yi, x_max, yi, color, major);
+              check_tick_marks(y_min, y_max, y_tick, 'Y');
 
-              i++;
+              i = isucc((y_min - y_org) / y_tick);
               yi = y_org + i * y_tick;
+
+              /* draw horizontal grid lines */
+
+              while (yi <= y_max + feps)
+                {
+                  if (major_y > 0)
+                    major = (i % major_y == 0 && major_y > 1) ? 1 : 0;
+                  else
+                    major = 0;
+
+                  if (pass == major) grid_line(x_min, yi, x_max, yi, color, major);
+
+                  i++;
+                  yi = y_org + i * y_tick;
+                }
             }
         }
-    }
 
-  if (x_tick != 0)
-    {
-      if (GR_OPTION_X_LOG & lx.scale_options)
+      if (x_tick != 0)
         {
-          x0 = pow(lx.basex, gauss(blog(lx.basex, x_min)));
-
-          i = ipred(x_min / x0);
-          xi = x0 + i * x0;
-
-          /* draw vertical grid lines */
-
-          while (xi <= x_max)
+          if (GR_OPTION_X_LOG & lx.scale_options)
             {
-              if (i == 0 || major_x == 1)
-                {
-                  major = i == 0;
-                  if (xi != x_min) grid_line(xi, y_min, xi, y_max, color, major);
-                }
+              x0 = pow(lx.basex, gauss(blog(lx.basex, x_min)));
 
-              if (i == 9 || lx.basex < 10)
-                {
-                  x0 = x0 * lx.basex;
-                  i = 0;
-                }
-              else
-                i++;
-
+              i = ipred(x_min / x0);
               xi = x0 + i * x0;
+
+              /* draw vertical grid lines */
+
+              while (xi <= x_max)
+                {
+                  if (i == 0 || major_x == 1)
+                    {
+                      major = i == 0 ? 1 : 0;
+                      if (xi != x_min)
+                        {
+                          if (pass == major) grid_line(xi, y_min, xi, y_max, color, major);
+                        }
+                    }
+
+                  if (i == 9 || lx.basex < 10)
+                    {
+                      x0 = x0 * lx.basex;
+                      i = 0;
+                    }
+                  else
+                    i++;
+
+                  xi = x0 + i * x0;
+                }
             }
-        }
-      else
-        {
-          feps = FEPS * (x_max - x_min);
-
-          check_tick_marks(x_min, x_max, x_tick, 'X');
-
-          i = isucc((x_min - x_org) / x_tick);
-          xi = x_org + i * x_tick;
-
-          /* draw vertical grid lines */
-
-          while (xi <= x_max + feps)
+          else
             {
-              if (major_x > 0)
-                major = i % major_x == 0 && major_x > 1;
-              else
-                major = 0;
+              feps = FEPS * (x_max - x_min);
 
-              grid_line(xi, y_min, xi, y_max, color, major);
+              check_tick_marks(x_min, x_max, x_tick, 'X');
 
-              i++;
+              i = isucc((x_min - x_org) / x_tick);
               xi = x_org + i * x_tick;
+
+              /* draw vertical grid lines */
+
+              while (xi <= x_max + feps)
+                {
+                  if (major_x > 0)
+                    major = (i % major_x == 0 && major_x > 1) ? 1 : 0;
+                  else
+                    major = 0;
+
+                  if (pass == major) grid_line(xi, y_min, xi, y_max, color, major);
+
+                  i++;
+                  xi = x_org + i * x_tick;
+                }
             }
         }
     }
