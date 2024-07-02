@@ -5502,20 +5502,23 @@ void gr_drawaxis(char which, axis_t *axis)
       major_tick = x_log(x_lin(axis->position) + 2 * tick);
     }
 
-  for (i = 0; i < axis->num_ticks; i++)
+  if (axis->tick_size != 0)
     {
-      tick = axis->ticks[i].is_major ? major_tick : minor_tick;
-      if (which == 'X')
+      for (i = 0; i < axis->num_ticks; i++)
         {
-          pline(axis->ticks[i].value, axis->position);
-          pline(axis->ticks[i].value, tick);
-          end_pline();
-        }
-      else
-        {
-          pline(axis->position, axis->ticks[i].value);
-          pline(tick, axis->ticks[i].value);
-          end_pline();
+          tick = axis->ticks[i].is_major ? major_tick : minor_tick;
+          if (which == 'X')
+            {
+              pline(axis->ticks[i].value, axis->position);
+              pline(axis->ticks[i].value, tick);
+              end_pline();
+            }
+          else
+            {
+              pline(axis->position, axis->ticks[i].value);
+              pline(tick, axis->ticks[i].value);
+              end_pline();
+            }
         }
     }
 
@@ -5578,7 +5581,7 @@ void gr_drawaxis(char which, axis_t *axis)
 static void draw_axis_grid(char which, axis_t *axis, int pass)
 {
   int errind, tnr, color;
-  double wn[4], vp[4], width, epsilon;
+  double wn[4], vp[4], width;
   int i;
 
   /* inquire current normalization transformation */
@@ -5593,8 +5596,6 @@ static void draw_axis_grid(char which, axis_t *axis, int pass)
 
   gks_inq_pline_color_index(&errind, &color);
 
-  epsilon = FEPS * (axis->max - axis->min);
-
   for (i = 0; i < axis->num_ticks; i++)
     {
       if (axis->ticks[i].is_major == pass)
@@ -5604,20 +5605,17 @@ static void draw_axis_grid(char which, axis_t *axis, int pass)
           else
             gks_set_pline_linewidth(axis->ticks[i].is_major ? 2.0 : 1.0);
 
-          if (fabs(axis->ticks[i].value - axis->org) > epsilon)
+          if (which == 'X')
             {
-              if (which == 'X')
-                {
-                  pline(axis->ticks[i].value, wn[2]);
-                  pline(axis->ticks[i].value, wn[3]);
-                  end_pline();
-                }
-              else
-                {
-                  pline(wn[0], axis->ticks[i].value);
-                  pline(wn[1], axis->ticks[i].value);
-                  end_pline();
-                }
+              pline(axis->ticks[i].value, wn[2]);
+              pline(axis->ticks[i].value, wn[3]);
+              end_pline();
+            }
+          else
+            {
+              pline(wn[0], axis->ticks[i].value);
+              pline(wn[1], axis->ticks[i].value);
+              end_pline();
             }
         }
     }
