@@ -140,6 +140,7 @@
             <xs:attribute name="font_precision" type="strint"/>
             <xs:attribute name="grplot" type="xs:integer"/> <!-- all plots are made with grplot or none -->
             <xs:attribute name="keep_aspect_ratio" type="xs:integer" use="required"/>
+            <xs:attribute name="keep_radii_axes" type="xs:integer"/>
             <xs:attribute name="kind" type="xs:string" use="required"/>
             <xs:attribute name="line_spec" type="xs:string"/>
             <xs:attribute name="location" type="strint"/>
@@ -187,8 +188,8 @@
                 <xs:element ref="series_imshow" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_isosurface" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_line" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="series_nonuniformheatmap" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="series_nonuniformpolar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_nonuniform_heatmap" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_nonuniform_polar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_pie" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_plot3" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_polar" minOccurs="0" maxOccurs="unbounded"/>
@@ -207,6 +208,7 @@
                 <xs:element ref="series_wireframe" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attribute name="clip_region" type="xs:integer"/>
             <xs:attribute name="diag_factor" type="xs:double"/>
             <xs:attribute name="keep_window" type="xs:integer"/>
             <xs:attribute name="location" type="strint"/>
@@ -215,6 +217,7 @@
             <xs:attribute name="r_min" type="xs:double"/>
             <xs:attribute name="resample_method" type="strint"/>
             <xs:attribute name="rings" type="xs:integer"/>
+            <xs:attribute name="select_specific_xform" type="xs:integer"/>
             <xs:attribute name="space" type="xs:integer"/>
             <xs:attribute name="space_rotation" type="xs:integer"/>
             <xs:attribute name="space_tilt" type="xs:integer"/>
@@ -242,6 +245,7 @@
                 <xs:element ref="text_region" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attribute name="clip_region" type="xs:integer"/>
             <xs:attribute name="location" type="strint" use="required"/>
             <xs:attribute name="marginal_heatmap_side_plot" type="xs:integer"/>
             <xs:attribute name="offset" type="xs:double"/>
@@ -419,6 +423,7 @@
             <xs:attribute name="height" type="xs:double"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="line_width" type="xs:double"/>
+            <xs:attribute name="mathtex" type="xs:int"/>
             <xs:attribute name="name" type="xs:string"/>
             <xs:attribute name="set_text_color_for_background" type="xs:integer"/>
             <xs:attribute name="space" type="xs:integer"/>
@@ -656,8 +661,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniformcellarray -->
-    <xs:element name="nonuniformcellarray">
+    <!-- definition of nonuniform_cellarray -->
+    <xs:element name="nonuniform_cellarray">
         <xs:complexType>
             <xs:attributeGroup ref="cellarray"/>
             <xs:attributeGroup ref="move_xform_wc"/>
@@ -668,8 +673,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of polarcellarray -->
-    <xs:element name="polarcellarray">
+    <!-- definition of polar_cellarray -->
+    <xs:element name="polar_cellarray">
         <xs:complexType>
             <xs:attributeGroup ref="cellarray"/>
             <xs:attributeGroup ref="move_xform_wc"/>
@@ -684,8 +689,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniform_polarcellarray -->
-    <xs:element name="nonuniform_polarcellarray">
+    <!-- definition of nonuniform_polar_cellarray -->
+    <xs:element name="nonuniform_polar_cellarray">
         <xs:complexType>
             <xs:attributeGroup ref="cellarray"/>
             <xs:attributeGroup ref="move_xform_wc"/>
@@ -830,7 +835,7 @@
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="draw_image" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="nonuniformcellarray" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="nonuniform_cellarray" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="heatmap"/>
             <xs:attributeGroup ref="move_xform_wc"/>
@@ -933,8 +938,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniformheatmap -->
-    <xs:element name="series_nonuniformheatmap">
+    <!-- definition of nonuniform_heatmap -->
+    <xs:element name="series_nonuniform_heatmap">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="series_heatmap" minOccurs="0" maxOccurs="unbounded"/>
@@ -943,8 +948,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniformpolar_heatmap -->
-    <xs:element name="series_nonuniformpolar_heatmap">
+    <!-- definition of nonuniform_polar_heatmap -->
+    <xs:element name="series_nonuniform_polar_heatmap">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="series_polar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
@@ -994,6 +999,7 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="clip_negative" type="xs:int"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="line_spec" type="xs:string"/>
             <xs:attribute name="r_max" type="xs:double"/>
@@ -1007,8 +1013,8 @@
     <xs:element name="series_polar_heatmap">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="nonuniform_polarcellarray" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="polarcellarray" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="nonuniform_polar_cellarray" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polar_cellarray" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="heatmap"/>
             <xs:attributeGroup ref="move_xform_wc"/>
@@ -1047,7 +1053,11 @@
             <xs:attribute name="total" type="xs:integer"/>
             <xs:attribute name="transparency" type="xs:double"/>
             <xs:attribute name="x_colormap" type="xs:integer"/>
+            <xs:attribute name="x_range_max" type="xs:double"/>
+            <xs:attribute name="x_range_min" type="xs:double"/>
             <xs:attribute name="y_colormap" type="xs:integer"/>
+            <xs:attribute name="y_range_max" type="xs:double"/>
+            <xs:attribute name="y_range_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -1449,6 +1459,8 @@
 
     <!-- definition of cellarray attributes -->
     <xs:attributeGroup name="cellarray">
+        <xs:attribute name="clip_region" type="xs:integer"/>
+        <xs:attribute name="select_specific_xform" type="xs:integer"/>
         <xs:attribute name="color_ind_values" type="xs:string" use="required"/>
         <xs:attribute name="num_col" type="xs:integer" use="required"/>
         <xs:attribute name="num_row" type="xs:integer" use="required"/>

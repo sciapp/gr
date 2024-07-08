@@ -26,6 +26,7 @@
 #include <grm/dom_render/graphics_tree/util.hxx>
 #include <grm/dom_render/render.hxx>
 #include <grm/dom_render/NotFoundError.hxx>
+#include <grm/dom_render/InvalidValueError.hxx>
 #include <grm/dom_render/context.hxx>
 #include "gks.h"
 #include "gr.h"
@@ -98,8 +99,8 @@ static std::set<std::string> parent_types = {
     "series_imshow",
     "series_isosurface",
     "series_line",
-    "series_nonuniformheatmap",
-    "series_nonuniformpolar_heatmap",
+    "series_nonuniform_heatmap",
+    "series_nonuniform_polar_heatmap",
     "series_pie",
     "series_plot3",
     "series_polar",
@@ -140,7 +141,7 @@ static std::set<std::string> drawable_types = {
     "layout_grid",
     "layout_grid_element",
     "legend",
-    "nonuniformcellarray",
+    "nonuniform_cellarray",
     "panzoom",
     "polyline",
     "polyline_3d",
@@ -208,7 +209,7 @@ static std::set<std::string> polar_kinds = {
     "polar",
     "polar_histogram",
     "polar_heatmap",
-    "nonuniformpolar_heatmap",
+    "nonuniform_polar_heatmap",
 };
 
 static std::set<std::string> kinds_3d = {
@@ -252,10 +253,10 @@ static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},           {"hexbin",
                                            {"scatter3", "xyzc"},      {"quiver", "xyuv"},
                                            {"heatmap", "xyzc"},       {"hist", "x"},
                                            {"barplot", "y"},          {"isosurface", "z"},
-                                           {"imshow", "z"},           {"nonuniformheatmap", "xyzc"},
+                                           {"imshow", "z"},           {"nonuniform_heatmap", "xyzc"},
                                            {"polar_histogram", "x"},  {"pie", "x"},
                                            {"volume", "z"},           {"marginal_heatmap", "xyzc"},
-                                           {"polar_heatmap", "xyzc"}, {"nonuniformpolar_heatmap", "xyzc"}};
+                                           {"polar_heatmap", "xyzc"}, {"nonuniform_polar_heatmap", "xyzc"}};
 
 static string_map_t *fmt_map = string_map_new_with_data(array_size(kind_to_fmt), kind_to_fmt);
 
@@ -545,7 +546,7 @@ static std::tuple<double, int> getColorbarAttributes(std::string kind, std::shar
       else
         colors = PLOT_DEFAULT_CONTOUR_LEVELS;
     }
-  if (kind == "polar_heatmap")
+  if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap")
     {
       offset = PLOT_POLAR_COLORBAR_OFFSET;
     }
@@ -564,6 +565,54 @@ static double getLightness(int color)
   double y = (0.2126729 * rgb[0] / 255 + 0.7151522 * rgb[1] / 255 + 0.0721750 * rgb[2] / 255);
   return 116 * pow(y / 100, 1.0 / 3) - 16;
 }
+
+// transform single coordinate (like x or y) into range (and or log scale)
+// first transform into range and then log scale
+static double transformCoordinate(double value, double vmin, double vmax, double range_min, double range_max,
+                                  bool log_scale = false)
+{
+  if (log_scale)
+    {
+      double trans_val, coordinate_max, coordinate_min;
+      if (!(range_min == 0.0 && range_max == 0.0))
+        {
+          trans_val = (range_max - range_min) * (value - vmin) / (vmax - vmin) + range_min;
+          coordinate_max = range_max;
+          coordinate_min = range_min;
+        }
+      else
+        {
+          trans_val = value;
+          coordinate_max = vmax;
+          coordinate_min = vmin;
+        }
+      if (trans_val == 0.0) return 0;
+
+      // negative radii -> abs -> log scale -> make negative again
+      int sign = 1;
+      if (trans_val < 0)
+        {
+          trans_val = abs(trans_val);
+          sign = -1;
+        }
+
+      double b = coordinate_max / log10(vmax / vmin);
+      double a = coordinate_min - b * log10(vmin);
+      double temp = sign * (a + b * log10(trans_val));
+      return sign * (a + b * log10(trans_val));
+    }
+  return (range_max - range_min) * (value - vmin) / (vmax - vmin) + range_min;
+}
+
+static void transformCoordinatesVector(std::vector<double> &coords, double vmin, double vmax, double range_min,
+                                       double range_max, bool log_scale = false)
+{
+  for (auto &coord : coords)
+    {
+      coord = transformCoordinate(coord, vmin, vmax, range_min, range_max, log_scale);
+    }
+}
+
 
 static void resetOldBoundingBoxes(const std::shared_ptr<GRM::Element> &element)
 {
@@ -988,22 +1037,32 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
         }
     }
 
-  if (str_equals_any(kind, "pie", "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
+  if (str_equals_any(kind, "pie", "polar", "polar_histogram", "polar_heatmap", "nonuniform_polar_heatmap"))
     {
       double x_center, y_center, r;
 
       x_center = 0.5 * (viewport[0] + viewport[1]);
       y_center = 0.5 * (viewport[2] + viewport[3]);
       r = 0.45 * grm_min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
+
+      double old_r = r;
+      if (!diag_factor && kind != "pie")
+        {
+          element->setAttribute("_polar_r_org", r * (0.495 / 0.45 - 1));
+          r /= (0.45 / 0.495);
+        }
+
+      double top_text_r;
       if (top_text_margin)
         {
+          top_text_r = 0.45 * grm_min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
+          top_text_r *= 0.975;
           r *= 0.975;
-          y_center -= 0.025 * r;
         }
       viewport[0] = x_center - r;
       viewport[1] = x_center + r;
-      viewport[2] = y_center - r;
-      viewport[3] = y_center + r;
+      viewport[2] = y_center - (top_text_r * 0.025) - r;
+      viewport[3] = y_center - (top_text_r * 0.025) + r;
     }
   *vp_x_min = viewport[0];
   *vp_x_max = viewport[1];
@@ -1018,6 +1077,8 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
   std::string location = PLOT_DEFAULT_SIDEREGION_LOCATION;
   double max_vp, min_vp;
   double offset_rel, width_rel;
+  double r = 0.0, r2 = 0.0;
+  std::string kind;
   double metric_width, metric_height, start_aspect_ratio_ws;
   bool keep_aspect_ratio = false, only_quadratic_aspect_ratio = false;
   std::shared_ptr<GRM::Element> plot_parent = element, central_region, side_region = element;
@@ -1025,15 +1086,24 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
 
   central_region = plot_parent->querySelectors("central_region");
   if (element->localName() != "side_region") side_region = element->parentElement();
+  kind = static_cast<std::string>(plot_parent->getAttribute("kind"));
+  location = static_cast<std::string>(side_region->getAttribute("location"));
 
-  viewport[0] = static_cast<double>(central_region->getAttribute("_viewport_x_min_org"));
-  viewport[1] = static_cast<double>(central_region->getAttribute("_viewport_x_max_org"));
-  viewport[2] = static_cast<double>(central_region->getAttribute("_viewport_y_min_org"));
-  viewport[3] = static_cast<double>(central_region->getAttribute("_viewport_y_max_org"));
+  if (polar_kinds.count(kind) > 0)
+    {
+      // todo: cleanup + colorbar not right (polar heatmap with title)
+      r = r2 = static_cast<double>(central_region->getAttribute("_polar_r_org"));
+      auto top_side_region = plot_parent->querySelectors("side_region[location='top']");
+      if (top_side_region && top_side_region->hasAttribute("text_content")) r2 *= 0.9749;
+    }
+
+  viewport[0] = static_cast<double>(central_region->getAttribute("_viewport_x_min_org")) + r;
+  viewport[1] = static_cast<double>(central_region->getAttribute("_viewport_x_max_org")) - r;
+  viewport[2] = static_cast<double>(central_region->getAttribute("_viewport_y_min_org")) + r2;
+  viewport[3] = static_cast<double>(central_region->getAttribute("_viewport_y_max_org")) - r2;
   keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
   only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
   start_aspect_ratio_ws = static_cast<double>(plot_parent->getAttribute("_start_aspect_ratio"));
-  location = static_cast<std::string>(side_region->getAttribute("location"));
 
   GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
   auto aspect_ratio_ws = metric_width / metric_height;
@@ -1886,13 +1956,21 @@ static double auto_tick(double amin, double amax)
   return tick;
 }
 
-static double auto_tick_rings_polar(double rmax, int &rings, const std::string &norm)
+static double auto_tick_rings_polar(double rmax, int &rings, const std::string &norm, bool y_log = false)
 {
+  // todo ylog with other cases! e.g. polarhistogram with "cdf" max is always 1
   double scale;
   bool is_decimal = false;
   std::vector<int> *whichVector;
   std::vector<int> largeRings = {6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
   std::vector<int> normalRings = {3, 4, 5, 6, 7};
+
+  // map of good decimal rmax values and their fitting number of rings
+  std::map<double, int> decimalMap{{0.1, 4}, {0.2, 4}, {0.3, 3}, {0.4, 4}, {0.5, 5},
+                                   {0.6, 4}, {0.7, 7}, {0.8, 4}, {0.9, 3}, {1.0, 4}};
+
+  // todo: maybe create the same for rmax > 1.0
+  // todo: maybe fuse all rmax-value approaches into one single map with fitting "up"- and "down"-scales
 
   // -1 --> auto rings
   if (rings == -1)
@@ -1902,27 +1980,55 @@ static double auto_tick_rings_polar(double rmax, int &rings, const std::string &
           rings = 4;
           return 1.0 / rings;
         }
-
-      if (rmax > 20)
+      whichVector = (rmax > 20) ? &largeRings : &normalRings;
+      scale = ceil(abs(log10(rmax)));
+      if (rmax == 1.0)
         {
-          whichVector = &largeRings;
+          rings = decimalMap[1.0];
+          return 1.0 / rings;
         }
       else
         {
-          whichVector = &normalRings;
-        }
-      scale = ceil(abs(log10(rmax)));
-      if (rmax < 1.0)
-        {
-          is_decimal = true;
-          rmax = static_cast<int>(ceil(rmax * pow(10.0, scale)));
+          scale *= log10(rmax) / abs(log10(rmax));
         }
 
+      if (rmax < 1.0)
+        {
+          // "up-scale" rmax to 0.x from 0.0...x
+          rmax = rmax * pow(10.0, abs(scale) - 1);
+          // now check what the nearest decimalMap-rmax is:
+          double difference = 1.0; // max difference can not succeed 1.0 because it's decimal and > 0
+          double tempRMax = 0.0;
+          for (auto &it : decimalMap)
+            {
+              if (it.first >= rmax && it.first - rmax < difference)
+                {
+                  difference = it.first - rmax;
+                  tempRMax = it.first;
+                  rings = it.second;
+                  // now "down-scale" decimalMap-rmax (tempRmax)
+                  tempRMax /= pow(10.0, abs(scale) - 1);
+                  return tempRMax / rings;
+                }
+            }
+        } // end decimal case <= 1.0
+      else if (rmax < (*whichVector)[0])
+        {
+          // if rmax is bigger than 1.0 but smaller than the smallest amount of rings
+          for (int i : *whichVector)
+            {
+              if (static_cast<int>((rmax * 100)) % i == 0)
+                {
+                  rings = i;
+                  return floor(rmax * 100) / 100 / i;
+                }
+            }
+        }
       while (true)
         {
           for (int i : *whichVector)
             {
-              if (static_cast<int>(rmax) % i == 0)
+              if (static_cast<int>(ceil(rmax)) % i == 0)
                 {
                   if (is_decimal)
                     {
@@ -1936,7 +2042,6 @@ static double auto_tick_rings_polar(double rmax, int &rings, const std::string &
           ++rmax;
         }
     }
-
   // given rings
   if (norm == "cdf")
     {
@@ -1945,7 +2050,7 @@ static double auto_tick_rings_polar(double rmax, int &rings, const std::string &
 
   if (rmax > rings)
     {
-      return (static_cast<int>(rmax) + (rings - (static_cast<int>(rmax) % rings))) / rings;
+      return (static_cast<int>(ceil(rmax)) + (rings - (static_cast<int>(rmax) % rings))) / rings;
     }
   else if (rmax > (rings * 0.6))
     {
@@ -2461,7 +2566,7 @@ static void getMajorCount(const std::shared_ptr<GRM::Element> &element, const st
   else
     {
       if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurface", "polar_heatmap",
-                         "nonuniformpolar_heatmap", "volume"))
+                         "nonuniform_polar_heatmap", "volume"))
         {
           major_count = 2;
         }
@@ -3415,6 +3520,11 @@ static void processCharUp(const std::shared_ptr<GRM::Element> &element)
                static_cast<double>(element->getAttribute("char_up_y")));
 }
 
+static void processClipRegion(const std::shared_ptr<GRM::Element> &element)
+{
+  gr_setclipregion(static_cast<int>(element->getAttribute("clip_region")));
+}
+
 static void processClipTransformation(const std::shared_ptr<GRM::Element> &element)
 {
   gr_selectclipxform(static_cast<int>(element->getAttribute("clip_transformation")));
@@ -4198,7 +4308,7 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
   gr_inqscale(&scale);
 
   if (kind != "pie" && kind != "polar" && kind != "polar_histogram" && kind != "polar_heatmap" &&
-      kind != "nonuniformpolar_heatmap")
+      kind != "nonuniform_polar_heatmap")
     {
       scale |= static_cast<int>(element->getAttribute("x_log")) ? GR_OPTION_X_LOG : 0;
       scale |= static_cast<int>(element->getAttribute("y_log")) ? GR_OPTION_Y_LOG : 0;
@@ -4927,16 +5037,9 @@ void GRM::Render::processWindow(const std::shared_ptr<GRM::Element> &element)
       getPlotParent(plot_element);
       auto kind = static_cast<std::string>(plot_element->getAttribute("kind"));
 
-      if (str_equals_any(kind, "polar", "polar_histogram", "polar_heatmap", "nonuniformpolar_heatmap"))
+      if (kind != "pie")
         {
-          gr_setwindow(-1, 1, -1, 1);
-        }
-      else
-        {
-          if (kind != "pie")
-            {
-              if (xmax - xmin > 0.0 && ymax - ymin > 0.0) gr_setwindow(xmin, xmax, ymin, ymax);
-            }
+          if (xmax - xmin > 0.0 && ymax - ymin > 0.0) gr_setwindow(xmin, xmax, ymin, ymax);
         }
       if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "trisurface", "volume", "isosurface"))
         {
@@ -5346,6 +5449,7 @@ void GRM::Render::processAttributes(const std::shared_ptr<GRM::Element> &element
       {std::string("char_expan"), processCharExpan},
       {std::string("char_space"), processCharSpace},
       {std::string("char_up_x"), processCharUp}, // the x element can be used cause both must be set
+      {std::string("clip_region"), processClipRegion},
       {std::string("clip_transformation"), processClipTransformation},
       {std::string("colormap"), processColormap},
       {std::string("fill_color_ind"), processFillColorInd},
@@ -5671,7 +5775,12 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
       global_render->createCellArray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, "data" + str, data_vec, context,
                                      cellArray);
     }
-  if (cellArray != nullptr) cellArray->setAttribute("name", "colorbar");
+  if (cellArray != nullptr)
+    {
+      cellArray->setAttribute("name", "colorbar");
+      global_render->setSelectSpecificXform(cellArray, 1);
+      global_render->setClipRegion(cellArray, 0);
+    }
 
   /* create axes */
   gr_inqscale(&options);
@@ -6474,7 +6583,7 @@ static void processContourf(const std::shared_ptr<GRM::Element> &element, const 
 static void processDrawArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
-   * Processing function for drawArc
+   * Processing function for draw_arc
    *
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
@@ -7396,10 +7505,236 @@ static void processLegend(const std::shared_ptr<GRM::Element> &element, const st
   processFillColorInd(element);
 }
 
-static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+
+// element is `central_region`
+static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &element,
+                                 const std::shared_ptr<GRM::Context> &context)
 {
   double viewport[4];
-  double r_min, r_max;
+  double r_min, r_max, _r_max;
+  double min_scale = 0, max_scale; // used for y_log (with negative exponents)
+  double tick;
+  double x[2], y[2];
+  int i, n;
+  std::string kind;
+  int angle_ticks, rings;
+  bool phiflip = false, keep_radii_axes = false;
+  std::string title, norm;
+  del_values del = del_values::update_without_default;
+  int child_id = 0;
+  bool y_log = false;
+  double y_lim_min, y_lim_max;
+  bool y_lims = false;
+  bool skip_calculations = false;
+  std::shared_ptr<GRM::Element> plot_parent = element;
+  auto central_region = element; // just for better naming
+
+  getPlotParent(plot_parent);
+
+  viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
+  viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
+  viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
+  viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
+
+  if (plot_parent->hasAttribute("y_log"))
+    {
+      y_log = static_cast<int>(plot_parent->getAttribute("y_log"));
+    }
+
+  kind = static_cast<std::string>(plot_parent->getAttribute("kind"));
+
+  // these kinds need r_min and r_max; y_lim_min and y_lim_max (if given)
+  if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap" || kind == "polar")
+    {
+      r_min = static_cast<double>(central_region->getAttribute("r_min"));
+      if (kind == "uniform_polar_heatmap")
+        {
+          r_min = 0.0;
+        }
+      r_max = static_cast<double>(central_region->getAttribute("r_max"));
+      if (plot_parent->hasAttribute("y_lim_max") && plot_parent->hasAttribute("y_lim_min"))
+        {
+          y_lims = true;
+          y_lim_min = static_cast<double>(plot_parent->getAttribute("y_lim_min"));
+          y_lim_max = static_cast<double>(plot_parent->getAttribute("y_lim_max"));
+        }
+    }
+  else
+    {
+      // this case includes: polarhistogram.
+      if (plot_parent->hasAttribute("y_lim_min") && plot_parent->hasAttribute("y_lim_max"))
+        {
+          y_lims = true;
+          y_lim_min = static_cast<double>(plot_parent->getAttribute("y_lim_min"));
+          y_lim_max = static_cast<double>(plot_parent->getAttribute("y_lim_max"));
+        }
+      //      r_min = static_cast<double>(plot_parent->getAttribute("y_lim_min"));
+      //      r_max = static_cast<double>(plot_parent->getAttribute("y_lim_max"));
+    }
+
+  if (y_log && y_lim_min == 0.0)
+    {
+      y_lim_min = pow(10, -1);
+      plot_parent->setAttribute("y_lim_min", y_lim_min);
+    }
+
+  if (plot_parent->hasAttribute("keep_radii_axes"))
+    {
+      keep_radii_axes = static_cast<int>(plot_parent->getAttribute("keep_radii_axes"));
+    }
+
+  // todo: restructure this...
+  // for polar(no ylims) and polar_histogram (no ylims or if keep_radii_axes is given)
+  if ((kind == "polar_histogram" && (!y_lims || keep_radii_axes)) || (kind == "polar" && !y_lims))
+    {
+      double max;
+      rings = (element->hasAttribute("rings")) ? static_cast<int>(element->getAttribute("rings")) : -1;
+
+
+      if (kind == "polar_histogram")
+        {
+          max = static_cast<double>(central_region->getAttribute("r_max"));
+          norm = static_cast<std::string>(element->getAttribute("norm"));
+          r_min = 0.0;
+          tick = auto_tick_rings_polar(max, rings, norm, y_log);
+        }
+      else if (kind == "polar" && !y_log)
+        {
+          r_min = 0.0;
+          central_region->setAttribute("r_min", 0.0);
+          auto seriesElement = central_region->querySelectors("series_polar");
+          max = static_cast<double>(seriesElement->getAttribute("y_range_max"));
+          tick = auto_tick_rings_polar(max, rings, "", y_log);
+        }
+
+      if (kind == "polar" && y_log)
+        {
+          if (r_max <= 0.0)
+            {
+              throw InvalidValueError("The max radius has to be bigger than 0.0 when using y_log");
+            }
+          max_scale = ceil(abs(log10(r_max)));
+          if (max_scale != 0.0) // add signum of max_scale if not 0.0
+            {
+              max_scale *= log10(r_max) / abs(log10(r_max));
+            }
+
+          if (r_min > 0.0)
+            {
+              min_scale = ceil(abs(log10(r_min)));
+              if (min_scale != 0.0)
+                {
+                  min_scale *= (log10(r_min) / abs(log10(r_min)));
+                }
+            }
+          else
+            {
+              if (max_scale <= 0)
+                min_scale = max_scale - 5;
+              else
+                min_scale = 0.0;
+            }
+
+          if (max_scale == min_scale)
+            {
+              throw InvalidValueError(
+                  "The minimum and maximum radius are of the same magnitude, incompatible with the y_log option");
+            }
+
+          // todo: smart ring calculation for y_log especially with large differences in magnitudes (other cases too)
+          rings = abs(abs(max_scale) - abs(min_scale));
+          central_region->setAttribute("rings", rings);
+          // overwrite r_max and r_min because of rounded scales?
+          central_region->setAttribute("r_max", pow(10, max_scale));
+          central_region->setAttribute("r_min", pow(10, min_scale));
+        }
+      else
+        {
+          central_region->setAttribute("tick", tick);
+          _r_max = tick * rings;
+          central_region->setAttribute("r_max", _r_max);
+          central_region->setAttribute("rings", rings);
+        }
+    }
+  else
+    {
+      // currently only plot_polar y_log is supported
+      if (kind == "polar" && y_log) // also with y_lims
+        {
+          max_scale = ceil(abs(log10(y_lim_max)));
+          if (max_scale != 0.0)
+            {
+              max_scale *= log10(y_lim_max) / abs(log10(y_lim_max));
+            }
+
+          if (y_lim_min <= 0.0)
+            {
+              if (r_min > 0.0)
+                {
+                  min_scale = ceil(abs(log10(r_min))) * (log10(r_min) / abs(log10(r_min)));
+                }
+              else
+                {
+                  min_scale = (max_scale <= 0) ? max_scale - 5 : 0;
+                }
+              y_lim_min = pow(10, min_scale);
+              plot_parent->setAttribute("y_lim_min", y_lim_min);
+            }
+          else
+            {
+              min_scale = ceil(abs(log10(y_lim_min)));
+              if (min_scale != 0.0)
+                {
+                  min_scale *= (log10(y_lim_min) / abs(log10(y_lim_min)));
+                }
+            }
+
+          rings = grm_min(static_cast<int>(max_scale - min_scale), 12); // number of rings should not exceed 12?
+          central_region->setAttribute("rings", rings);
+
+          central_region->setAttribute("r_min", pow(10, min_scale));
+          central_region->setAttribute("r_max", pow(10, max_scale));
+        }
+      else // this currently includes polar(ylims), p_hist(ylims, !keep_radii_axes), polar_heatmap(all cases)
+        {
+          rings = (element->hasAttribute("rings")) ? static_cast<int>(element->getAttribute("rings"))
+                                                   : grm_max(4, (int)(r_max - r_min));
+
+          if (y_lims)
+            {
+              rings = (element->hasAttribute("rings")) ? static_cast<int>(element->getAttribute("rings"))
+                                                       : grm_min(12, grm_max(4, (int)(y_lim_max - y_lim_min)));
+
+              tick = (y_lim_max - y_lim_min) / rings;
+              central_region->setAttribute("r_max", y_lim_max);
+              central_region->setAttribute("r_min", y_lim_min);
+              central_region->setAttribute("rings", rings);
+            }
+          else if (element->hasAttribute("tick"))
+            {
+              tick = static_cast<double>(element->getAttribute("tick"));
+              r_max = tick * rings;
+              central_region->setAttribute("r_max", r_max);
+              central_region->setAttribute("r_min", r_min);
+              central_region->setAttribute("rings", rings);
+            }
+          else // nothing given
+            {
+              if (!element->hasAttribute("rings")) rings = -1; // use auto rings if user rings is not given
+              tick = auto_tick_rings_polar(r_max, rings, norm);
+              r_max = tick * rings;
+              central_region->setAttribute("r_max", r_max);
+              central_region->setAttribute("rings", rings);
+            }
+        }
+    }
+}
+
+static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+{
+  double char_height;
+  double r_min, r_max, _r_max;     // _r_max is the max of the radius axis
+  double min_scale = 0, max_scale; // used for y_log (with negative exponents)
   double tick;
   double x[2], y[2];
   int i, n;
@@ -7407,13 +7742,17 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
   char text_buffer[PLOT_POLAR_AXES_TEXT_BUFFER];
   std::string kind;
   int angle_ticks, rings;
-  bool phiflip = false;
+  bool phiflip = false, keep_radii_axes = false;
   double interval;
   std::string title, norm;
   del_values del = del_values::update_without_default;
   int child_id = 0;
+  bool y_log = false;
+  double y_lim_min, y_lim_max;
+  bool y_lims = false;
+  bool skip_calculations = false;
   std::shared_ptr<GRM::Render> render;
-  std::shared_ptr<GRM::Element> central_region;
+  std::shared_ptr<GRM::Element> central_region, plot_parent = element;
 
   render = std::dynamic_pointer_cast<GRM::Render>(element->ownerDocument());
   if (!render)
@@ -7421,8 +7760,10 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
       throw NotFoundError("No render-document for element found\n");
     }
 
-  auto subplotElement = getSubplotElement(element);
-  for (const auto &child : subplotElement->children()) // no special case for marginal_heatmap cause the plot is polar
+  //  auto subplotElement = getSubplotElement(element);
+  getPlotParent(plot_parent);
+  // find central_region_element
+  for (const auto &child : plot_parent->children())
     {
       if (child->localName() == "central_region")
         {
@@ -7431,58 +7772,46 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
         }
     }
 
-  viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
-  viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
-  viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
-  viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
+  if (plot_parent->hasAttribute("y_lim_min") && plot_parent->hasAttribute("y_lim_max"))
+    {
+      y_lims = true;
+      y_lim_min = static_cast<double>(plot_parent->getAttribute("y_lim_min"));
+      y_lim_max = static_cast<double>(plot_parent->getAttribute("y_lim_max"));
+      if (plot_parent->hasAttribute("keep_radii_axes"))
+        keep_radii_axes = static_cast<int>(plot_parent->getAttribute("keep_radii_axes"));
+    }
 
-  r_min = static_cast<double>(subplotElement->getAttribute("_y_lim_min"));
-  r_max = static_cast<double>(subplotElement->getAttribute("_y_lim_max"));
+  if (central_region->hasAttribute("_skip_calculations"))
+    {
+      skip_calculations = static_cast<int>(central_region->getAttribute("_skip_calculations"));
+      central_region->removeAttribute("_skip_calculations");
+    }
 
+  if (!skip_calculations) calculatePolarLimits(central_region, context);
+
+
+  if (plot_parent->hasAttribute("y_log"))
+    {
+      y_log = static_cast<int>(plot_parent->getAttribute("y_log"));
+    }
+
+  if (central_region->hasAttribute("char_height"))
+    {
+      char_height = static_cast<double>(central_region->getAttribute("char_height"));
+    }
+
+  kind = static_cast<std::string>(plot_parent->getAttribute("kind"));
   angle_ticks = static_cast<int>(element->getAttribute("angle_ticks"));
-
-  kind = static_cast<std::string>(subplotElement->getAttribute("kind"));
+  rings = static_cast<int>(central_region->getAttribute("rings"));
 
   render->setLineType(element, GKS_K_LINETYPE_SOLID);
-
-  if (kind == "polar_histogram")
-    {
-      auto max = static_cast<double>(central_region->getAttribute("r_max"));
-
-      // check if rings are given
-      rings = -1;
-      norm = static_cast<std::string>(element->getAttribute("norm"));
-
-      tick = auto_tick_rings_polar(max, rings, norm);
-      central_region->setAttribute("tick", tick);
-      max = tick * rings;
-
-      central_region->setAttribute("r_max", max);
-      central_region->setAttribute("rings", rings);
-
-      r_min = 0.0;
-    }
-  else
-    {
-      rings = grm_max(4, (int)(r_max - r_min));
-      element->setAttribute("rings", rings);
-
-      if (element->hasAttribute("tick"))
-        {
-          tick = static_cast<double>(element->getAttribute("tick"));
-        }
-      else
-        {
-          tick = auto_tick(r_min, r_max);
-        }
-    }
 
   /* clear old polar_axes_elements */
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
   clearOldChildren(&del, element);
 
   n = rings;
-  phiflip = static_cast<int>(subplotElement->getAttribute("phi_flip"));
+  phiflip = static_cast<int>(plot_parent->getAttribute("phi_flip"));
 
   // Draw rings
   for (i = 0; i <= n; i++)
@@ -7576,6 +7905,39 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
       element->append(axes_text_group);
     }
 
+  double first_tick, last_tick;
+  if (y_lims && !keep_radii_axes)
+    {
+      first_tick = y_lim_min;
+      last_tick = y_lim_max;
+      tick = (last_tick - first_tick) / rings;
+    }
+  else
+    {
+      // without y_lims the origin is always 0.0 except for y_log
+      last_tick = static_cast<double>(central_region->getAttribute("r_max"));
+      first_tick = (y_log) ? static_cast<double>(central_region->getAttribute("r_min")) : 0.0;
+      tick = last_tick / rings;
+    }
+
+  max_scale = ceil(abs(log10(last_tick)));
+  if (max_scale != 0.0) // add signum of max_scale if not 0.0
+    {
+      max_scale *= log10(last_tick) / abs(log10(last_tick));
+    }
+
+  if (y_log) // min_scale only needed with y_log
+    {
+      min_scale = ceil(abs(log10(first_tick)));
+      if (min_scale != 0.0)
+        {
+          min_scale *= (log10(first_tick) / abs(log10(first_tick)));
+        }
+    }
+
+  // for currently unsupported y_log polar plots (hist, heatmap)
+  if (std::isnan(min_scale)) y_log = false;
+
   for (i = 0; i <= n; i++)
     {
       std::shared_ptr<GRM::Element> text;
@@ -7584,7 +7946,23 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
         {
           x[0] = 0.05;
           y[0] = r;
-          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + tick * i);
+          if (y_log) // ylog uses the exponential notation
+            {
+              if (rings != floor(max_scale) - floor(min_scale)) // rings != magnitudes
+                {
+                  snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d^{%.3f}", 10,
+                           min_scale + i * (floor(max_scale) - floor(min_scale)));
+                }
+              else // rings == magnitudes
+                {
+                  snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d^{%.1f}", 10, min_scale + i);
+                }
+            }
+          else // no y_log
+            {
+              const char *format = (max_scale > -2.0) ? "%.1lf" : "%d^{%.1f}";
+              snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, format, first_tick + tick * i);
+            }
 
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
@@ -7595,7 +7973,14 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
           else
             {
               text = element->querySelectors("text[_child_id=" + std::to_string(child_id++) + "]");
-              if (text != nullptr) render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC, text);
+              if (text != nullptr)
+                {
+                  render->createText(x[0], y[0], text_buffer, CoordinateSpace::WC, text);
+                }
+            }
+          if (text != nullptr && del != del_values::update_without_default)
+            {
+              text->setAttribute("mathtex", y_log);
             }
         }
     }
@@ -7610,7 +7995,7 @@ static void processPolarAxes(const std::shared_ptr<GRM::Element> &element, const
 static void processDrawRect(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
-   * Processing function for drawArc
+   * Processing function for draw_arc
    *
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
@@ -7626,7 +8011,7 @@ static void processDrawRect(const std::shared_ptr<GRM::Element> &element, const 
 static void processFillArc(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
-   * Processing function for drawArc
+   * Processing function for draw_arc
    *
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
@@ -7644,7 +8029,7 @@ static void processFillArc(const std::shared_ptr<GRM::Element> &element, const s
 static void processFillRect(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
-   * Processing function for drawArc
+   * Processing function for draw_arc
    *
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
@@ -8798,17 +9183,72 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
    * \param[in] context The GRM::Context that contains the actual data
    */
   double r_min, r_max, tick;
-  int n, i;
+  double y_lim_min, y_lim_max, yrange_min, yrange_max, xrange_min, xrange_max;
+  double _x_range_min, _x_range_max;
+  double theta_min, theta_max;
+
+  int n;
+  bool transform_radii = false, transform_angles = false, ylim = false, clip_negative = false;
   unsigned int rho_length, theta_length;
   std::string line_spec = SERIES_DEFAULT_SPEC;
+  unsigned int i, index;
   std::vector<double> theta_vec, rho_vec;
   auto plot_parent = element->parentElement();
   del_values del = del_values::update_without_default;
   int child_id = 0;
+  bool y_log = 1;
+  std::vector<unsigned int> indices_vec;
 
   getPlotParent(plot_parent);
-  r_min = static_cast<double>(plot_parent->getAttribute("_y_lim_min"));
-  r_max = static_cast<double>(plot_parent->getAttribute("_y_lim_max"));
+  auto central_region = plot_parent->querySelectors("central_region");
+
+  if (plot_parent->hasAttribute("y_lim_max") && plot_parent->hasAttribute("y_lim_min"))
+    {
+      y_lim_min = static_cast<double>(plot_parent->getAttribute("y_lim_min"));
+      y_lim_max = static_cast<double>(plot_parent->getAttribute("y_lim_max"));
+      ylim = true;
+    }
+  else
+    {
+      y_lim_max = static_cast<double>(
+          central_region->getAttribute("r_max")); // r_max is still needed because it is the axes maximum without y_lims
+
+      y_lim_min = static_cast<double>(central_region->getAttribute("r_min"));
+    }
+
+  if (element->hasAttribute("y_range_min") && element->hasAttribute("y_range_max"))
+    {
+      transform_radii = true;
+      yrange_min = static_cast<double>(element->getAttribute("y_range_min"));
+      yrange_max = static_cast<double>(element->getAttribute("y_range_max"));
+    }
+  else // todo: is this case even needed?
+    {
+      r_max = static_cast<double>(central_region->getAttribute("r_max"));
+      r_min = 0.0;
+    }
+
+
+  if (plot_parent->hasAttribute("y_log"))
+    {
+      y_log = static_cast<int>(plot_parent->getAttribute("y_log"));
+    }
+
+  // get x_ranges and check if they are user given
+  if (element->hasAttribute("x_range_min") && element->hasAttribute("x_range_max"))
+    {
+      xrange_min = static_cast<double>(element->getAttribute("x_range_min"));
+      xrange_max = static_cast<double>(element->getAttribute("x_range_max"));
+      transform_angles = true;
+      //      if (!(xrange_min == _x_range_min && xrange_max == _x_range_max)) transform_angles = true;
+
+      if (xrange_max > 2 * M_PI)
+        {
+          // convert from degrees to radians
+          xrange_max = xrange_max * M_PI / 180.0;
+          xrange_min = xrange_min * M_PI / 180.0;
+        }
+    }
 
   if (element->hasAttribute("line_spec"))
     {
@@ -8818,11 +9258,11 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
     {
       element->setAttribute("line_spec", line_spec);
     }
-  element->setAttribute("r_min", r_min);
-  element->setAttribute("r_max", r_max);
-  tick = 0.5 * auto_tick(r_min, r_max);
-  n = (int)ceil((r_max - r_min) / tick);
-  r_max = r_min + n * tick;
+
+  if (element->hasAttribute("clip_negative"))
+    {
+      clip_negative = static_cast<int>(element->getAttribute("clip_negative"));
+    }
 
   if (!element->hasAttribute("x")) throw NotFoundError("Polar series is missing required attribute x-data (theta).\n");
   auto x_key = static_cast<std::string>(element->getAttribute("x"));
@@ -8832,18 +9272,142 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   rho_vec = GRM::get<std::vector<double>>((*context)[y_key]);
   theta_length = theta_vec.size();
   rho_length = rho_vec.size();
+
+  // negative radii or nan are clipped before the transformation into user specified yrange (also when y_log is given)
+  if (clip_negative || y_log)
+    {
+      for (unsigned int ind = 0; ind < rho_length; ++ind)
+        {
+          if (std::signbit(rho_vec[ind]) || std::isnan(rho_vec[ind])) indices_vec.insert(indices_vec.begin(), ind);
+        }
+
+      for (auto ind : indices_vec)
+        {
+          rho_vec.erase(rho_vec.begin() + ind);
+          theta_vec.erase(theta_vec.begin() + ind);
+        }
+      indices_vec.clear();
+      rho_length = rho_vec.size();
+      theta_length = theta_vec.size();
+    }
+
+  // get the maxima and minima from the data for possible transformations
+  r_min = *std::min_element(rho_vec.begin(), rho_vec.end());
+  r_max = *std::max_element(rho_vec.begin(), rho_vec.end());
+
+  theta_min = *std::min_element(theta_vec.begin(), theta_vec.end());
+  theta_max = *std::max_element(theta_vec.begin(), theta_vec.end());
+
+  // clip_negative is not compatible with user given ranges, it overwrites
+  if (clip_negative)
+    {
+      if (std::signbit(yrange_min))
+        {
+          yrange_min = r_min;
+          xrange_min = theta_min;
+        }
+      if (std::signbit(xrange_max))
+        {
+          xrange_max = theta_max;
+          yrange_max = r_max;
+        }
+      transform_radii = false;
+      transform_angles = false;
+    }
+  if (r_min == yrange_min && r_max == yrange_max) transform_radii = false;
+  if (theta_min == xrange_min && theta_max == xrange_max) transform_angles = false;
+
+
   if (rho_length != theta_length)
     throw std::length_error("For polar series y(rho)- and x(theta)-data must have the same size.\n");
 
   std::vector<double> x(rho_length);
   std::vector<double> y(rho_length);
 
-  for (i = 0; i < rho_length; ++i)
+  // transform angles into user specified xranges if given
+  if (transform_angles)
     {
-      double current_rho = rho_vec[i] / r_max;
-      x[i] = current_rho * cos(theta_vec[i]);
-      y[i] = current_rho * sin(theta_vec[i]);
+      transformCoordinatesVector(theta_vec, theta_min, theta_max, xrange_min, xrange_max);
     }
+
+  index = 0;
+  // transform radii into yrange if given or log scale
+  if (transform_radii || y_log)
+    {
+      for (i = 0; i < rho_length; ++i)
+        {
+          double current_rho;
+          double temp_rho = rho_vec[i];
+          // skip nan data
+          if (std::isnan(rho_vec[i]))
+            {
+              continue;
+            }
+
+          if (y_log && !transform_radii)
+            {
+              current_rho = transformCoordinate(temp_rho, y_lim_min, y_lim_max, 0.0, 0.0, y_log);
+            }
+          else
+            {
+              current_rho = transformCoordinate(temp_rho, r_min, r_max, yrange_min, yrange_max, y_log);
+            }
+
+          if (ylim && y_lim_min > 0.0 && current_rho < 0.0)
+            {
+              current_rho = 0.0;
+            }
+          else if (ylim && temp_rho > y_lim_max) // todo: polar clipping for > ylim_max is wip by Josef
+            {
+              // this is just some temporary fix for the clipping
+              continue;
+            }
+
+          current_rho /= y_lim_max;
+          x[index] = current_rho * cos(theta_vec[index]);
+          y[index] = current_rho * sin(theta_vec[index]);
+          ++index;
+        }
+    }
+  else // no radii_transformation and no y_log
+    {
+      for (i = 0; i < rho_length; ++i)
+        {
+          if (rho_vec[i] < 0)
+            {
+              // iterate over rho_vec and for each negative value add 180 degrees in radian to the corresponding value
+              // in theta_vec and make the rho_vec value positive
+              theta_vec[i] += M_PI;
+              // if theta_vec[i] is bigger than 2 * PI, subtract 2 * PI
+              if (theta_vec[i] > 2 * M_PI)
+                {
+                  theta_vec[i] -= 2 * M_PI;
+                }
+              rho_vec[i] = -rho_vec[i];
+            }
+
+          // subtract ylim_min from rho_vec if ylim is true
+          double current_rho;
+          if (ylim)
+            {
+              current_rho = (rho_vec[i] - y_lim_min) / y_lim_max;
+              // just set negative radii to 0.0 if ylim_min > 0.0
+              if (current_rho < 0.0 && y_lim_min > 0.0) current_rho = 0.0;
+            }
+          else
+            {
+              current_rho = rho_vec[i] / y_lim_max;
+            }
+          x[index] = current_rho * cos(theta_vec[index]);
+          y[index] = current_rho * sin(theta_vec[index]);
+          ++index;
+        }
+    }
+
+  // resize x and y
+  x.resize(index);
+  y.resize(index);
+
 
   auto id = static_cast<int>(global_root->getAttribute("_id"));
   global_root->setAttribute("_id", id + 1);
@@ -8882,11 +9446,14 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
   int icmap[256];
   unsigned int i, cols, rows, z_length;
   double x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv;
+  double xrange_min, xrange_max, yrange_min, yrange_max, zrange_min, zrange_max;
   bool is_uniform_heatmap;
   std::vector<int> data;
   std::vector<double> x_vec, y_vec, z_vec;
   del_values del = del_values::update_without_default;
   int child_id = 0;
+  bool zrange = false, transform = false;
+  double convert = 1.0;
   std::shared_ptr<GRM::Element> central_region;
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
@@ -8902,6 +9469,10 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
 
   kind = static_cast<std::string>(plot_parent->getAttribute("kind"));
 
+  // calculate polar limits (r_max)
+  calculatePolarLimits(central_region, context);
+  central_region->setAttribute("_skip_calculations", 1);
+
   if (element->hasAttribute("x"))
     {
       auto x = static_cast<std::string>(element->getAttribute("x"));
@@ -8913,6 +9484,26 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
       auto y = static_cast<std::string>(element->getAttribute("y"));
       y_vec = GRM::get<std::vector<double>>((*context)[y]);
       rows = y_vec.size();
+    }
+
+  if (element->hasAttribute("x_range_min") && element->hasAttribute("x_range_max"))
+    {
+      transform = true;
+      xrange_min = static_cast<double>(element->getAttribute("x_range_min"));
+      xrange_max = static_cast<double>(element->getAttribute("x_range_max"));
+      if (xrange_max <= 2 * M_PI) convert = 180.0 / M_PI;
+    }
+  if (element->hasAttribute("y_range_min") && element->hasAttribute("y_range_max"))
+    {
+      transform = true;
+      yrange_min = static_cast<double>(element->getAttribute("y_range_min"));
+      yrange_max = static_cast<double>(element->getAttribute("y_range_max"));
+    }
+  if (element->hasAttribute("zrange_min") && element->hasAttribute("zrange_max"))
+    {
+      zrange_min = static_cast<double>(element->getAttribute("zrange_min"));
+      zrange = true;
+      zrange_max = static_cast<double>(element->getAttribute("zrange_max"));
     }
 
   if (!element->hasAttribute("z")) throw NotFoundError("Polar-heatmap series is missing required attribute z-data.\n");
@@ -8940,7 +9531,7 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
     }
 
   is_uniform_heatmap = is_equidistant_array(cols, x_vec.data()) && is_equidistant_array(rows, y_vec.data());
-  if (kind == "nonuniformpolar_heatmap") is_uniform_heatmap = false;
+  if (kind == "nonuniform_polar_heatmap") is_uniform_heatmap = false;
 
   if (!is_uniform_heatmap && (x_vec.empty() || y_vec.empty()))
     throw NotFoundError("Polar-heatmap series is missing x- or y-data or the data has to be uniform.\n");
@@ -8964,6 +9555,55 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
     {
       y_min = y_vec[0];
       y_max = y_vec[rows - 1];
+    }
+
+  double y_lim_max = static_cast<double>(central_region->getAttribute("r_max"));
+  if (y_min > 0.0) is_uniform_heatmap = 0; /* when y range min > 0 for example */
+
+  // Check if coordinate transformations are needed and then transform if needed
+  if (transform && ((!x_vec.empty() && (x_vec[0] < xrange_min || x_vec[x_vec.size() - 1] > xrange_max)) ||
+                    (!y_vec.empty() && (y_vec[0] < yrange_min || y_vec[y_vec.size() - 1] > yrange_max))))
+    {
+      is_uniform_heatmap = 0;
+      int col, row;
+
+      if (x_vec.empty())
+        {
+          x_vec.resize(cols);
+          for (col = 0; col < cols; ++col)
+            {
+              x_vec[col] = transformCoordinate(col / (cols - 1.0) * 360.0, 0.0, 360.0, xrange_min * convert,
+                                               xrange_max * convert);
+            }
+        }
+      else
+        {
+          transformCoordinatesVector(x_vec, x_min, x_max, xrange_min * convert, xrange_max * convert);
+        }
+      if (y_vec.empty())
+        {
+          y_vec.resize(rows);
+          for (row = 0; row < rows; ++row)
+            {
+              y_vec[row] = transformCoordinate(row / (rows - 1.0), 0.0, 1.0, yrange_min, yrange_max);
+            }
+        }
+      else
+        {
+          transformCoordinatesVector(y_vec, y_min, y_max, yrange_min, yrange_max);
+        }
+    }
+
+  if (zrange)
+    {
+      int elem;
+      double min_val = *std::min_element(z_vec.begin(), z_vec.end());
+      double max_val = *std::max_element(z_vec.begin(), z_vec.end());
+
+      for (elem = 0; elem < rows * cols; ++elem)
+        {
+          z_vec[elem] = zrange_min + (zrange_max - zrange_min) * (z_vec[elem] - min_val) / (max_val - min_val);
+        }
     }
 
   z_min = static_cast<double>(element->getAttribute("z_range_min"));
@@ -9017,6 +9657,12 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
         }
     }
 
+  // for cases like y_max = 3.2342 -> calc new r_max = 4.0 and use nonuniform_polarcellarray
+  if (y_max != y_lim_max)
+    {
+      is_uniform_heatmap = false;
+    }
+
   auto id = static_cast<int>(global_root->getAttribute("_id"));
   global_root->setAttribute("_id", id + 1);
   auto str = std::to_string(id);
@@ -9045,19 +9691,36 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
     }
   else
     {
-      y_min = static_cast<double>(central_region->getAttribute("window_y_min"));
-      y_max = static_cast<double>(central_region->getAttribute("window_y_max"));
-
-      std::vector<double> rho, phi;
+      if (central_region->hasAttribute("r_max"))
+        {
+          y_max = static_cast<double>(central_region->getAttribute("r_max"));
+        }
+      else
+        {
+          y_max = static_cast<double>(element->parentElement()->getAttribute("r_max"));
+        }
+      if (central_region->hasAttribute("r_min"))
+        {
+          y_min = static_cast<double>(central_region->getAttribute("r_min"));
+        }
+      else
+        {
+          y_min = static_cast<double>(element->parentElement()->getAttribute("r_min"));
+        }
+      std::vector<double> rho(rows), phi(cols);
+      if (x_vec[cols - 1] <= 2 * M_PI)
+        {
+          convert = 180.0 / M_PI;
+        }
       for (i = 0; i < ((cols > rows) ? cols : rows); ++i)
         {
           if (i < cols)
             {
-              phi.push_back(x_vec[i] * 180 / M_PI);
+              phi[i] = (x_vec[i]) * convert;
             }
           if (i < rows)
             {
-              rho.push_back(y_min + y_vec[i] / (y_max - y_min));
+              rho[i] = (y_vec[i] / y_max);
             }
         }
 
@@ -9079,6 +9742,8 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
                                                           "color_ind_values" + str, data, nullptr, polar_cellarray);
         }
     }
+  global_render->setClipRegion(polar_cellarray, 1);
+  global_render->setSelectSpecificXform(polar_cellarray, 1);
 }
 
 static void preBarplot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -9093,7 +9758,7 @@ static void preBarplot(const std::shared_ptr<GRM::Element> &element, const std::
           auto y_key = static_cast<std::string>(series->getAttribute("y"));
           auto y_vec = GRM::get<std::vector<double>>((*context)[y_key]);
           indices_vec = std::vector<int>(y_vec.size(), 1);
-          int id = static_cast<int>(global_root->getAttribute("_id"));
+          auto id = static_cast<int>(global_root->getAttribute("_id"));
           std::string id_str = std::to_string(id);
 
           (*context)["indices" + id_str] = indices_vec;
@@ -9118,7 +9783,7 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
   std::vector<double> theta;
   std::string norm = "count";
   std::vector<int> classes, bin_counts;
-  double interval, start, max, temp_max, bin_width;
+  double interval, start, max, temp_max, bin_width, xrange_min, xrange_max;
   double *p, *phi_lim = nullptr;
   int max_observations = 0, total_observations = 0;
   std::vector<double> bin_edges, bin_widths;
@@ -9153,6 +9818,31 @@ static void prePolarHistogram(const std::shared_ptr<GRM::Element> &element,
       auto theta_key = static_cast<std::string>(group->getAttribute("theta"));
       theta = GRM::get<std::vector<double>>((*context)[theta_key]);
       length = theta.size();
+
+      if (group->hasAttribute("x_range_min") && group->hasAttribute("x_range_max"))
+        {
+          xrange_min = static_cast<double>(group->getAttribute("x_range_min"));
+          xrange_max = static_cast<double>(group->getAttribute("x_range_max"));
+          // convert xrange_min and max to radian if xrange_max > 2 * M_PI
+          if (xrange_max > 2 * M_PI)
+            {
+              xrange_min = xrange_min / 180.0 * M_PI;
+              xrange_max = xrange_max / 180.0 * M_PI;
+            }
+          if (xrange_min > xrange_max)
+            {
+              std::swap(xrange_min, xrange_max);
+              group->setAttribute("x_range_flip", 1);
+            }
+
+          double theta_min = *std::min_element(theta.begin(), theta.end());
+          double theta_max = *std::max_element(theta.begin(), theta.end());
+          transformCoordinatesVector(theta, theta_min, theta_max, xrange_min, xrange_max);
+        }
+    }
+  else
+    {
+      throw NotFoundError("Polar histogram series is missing data theta or bincounts\n");
     }
 
   if (plot_group->hasAttribute("phi_lim_min") || plot_group->hasAttribute("phi_lim_max"))
@@ -9520,11 +10210,12 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
   double r_min = 0.0, r_max = 1.0;
   double *r_lim = nullptr, *phi_lim = nullptr;
   double phi_lim_arr[2];
-  bool draw_edges = false, stairs = false, phiflip = false;
+  double ylim_min, ylim_max;
+  bool draw_edges = false, stairs = false, phiflip = false, keep_radii_axes = false, ylim = false, colormaps = false;
   std::string norm = "count";
   std::vector<double> r_lim_vec;
   std::vector<double> bin_edges, bin_widths;
-  std::vector<double> mlist, rectlist;
+  std::vector<double> rectlist;
   std::vector<int> classes;
   std::shared_ptr<GRM::Element> plot_group = element->parentElement();
   getPlotParent(plot_group);
@@ -9543,12 +10234,24 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
   if (element->hasAttribute("norm")) norm = static_cast<std::string>(element->getAttribute("norm"));
   if (plot_group->hasAttribute("phi_flip")) phiflip = static_cast<int>(plot_group->getAttribute("phi_flip"));
   if (element->hasAttribute("draw_edges")) draw_edges = static_cast<int>(element->getAttribute("draw_edges"));
+
   num_bins = static_cast<int>(element->getAttribute("num_bins"));
   max = static_cast<double>(element->parentElement()->getAttribute("r_max"));
   total_observations = static_cast<int>(element->getAttribute("total"));
   global_render->setTransparency(element, face_alpha);
   processTransparency(element);
 
+  if (plot_group->hasAttribute("y_lim_min") && (plot_group->hasAttribute("y_lim_max")))
+    {
+      ylim = true;
+      ylim_min = static_cast<double>(plot_group->getAttribute("y_lim_min"));
+      ylim_max = static_cast<double>(plot_group->getAttribute("y_lim_max"));
+
+      if (plot_group->hasAttribute("keep_radii_axes"))
+        {
+          keep_radii_axes = static_cast<int>(plot_group->getAttribute("keep_radii_axes"));
+        }
+    }
   if (plot_group->hasAttribute("phi_lim_min") || plot_group->hasAttribute("phi_lim_max"))
     {
       phi_lim = phi_lim_arr;
@@ -9579,42 +10282,8 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
       stairs = static_cast<int>(element->getAttribute("stairs"));
       if (stairs)
         {
-          if (draw_edges)
-            {
-              logger((stderr, "\"stairs\" is not compatible with \"draw_edges\" / colormap\n"));
-            }
-          else if (num_bin_edges == 0) /* no bin_edges */
-            {
-              mlist.resize(num_bins * 4);
-            }
-          else
-            {
-              rectlist.resize(num_bins);
-            }
+          rectlist.resize(num_bins);
         }
-    }
-
-  if (plot_group->hasAttribute("r_lim_min") && plot_group->hasAttribute("r_lim_max"))
-    {
-      r_lim_vec.push_back(static_cast<double>(plot_group->getAttribute("r_lim_min")));
-      r_lim_vec.push_back(static_cast<double>(plot_group->getAttribute("r_lim_max")));
-      r_lim = &(r_lim_vec[0]);
-
-      mlist.resize((num_bins + 1) * 4);
-      r_min = grm_min(r_lim[0], r_lim[1]);
-      r_max = grm_max(r_lim[0], r_lim[1]);
-      if (r_lim[0] > r_lim[1])
-        {
-          r_lim[0] = r_min;
-          r_lim[1] = r_max;
-        }
-
-      if (r_max > 1.0)
-        {
-          r_max = 1.0;
-          logger((stderr, "The value of \"r_lim_max\" can not exceed 1.0\n"));
-        }
-      if (r_min < 0.0) r_min = 0.0;
     }
 
   if (phiflip) std::reverse(classes.begin(), classes.end());
@@ -9637,18 +10306,25 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
       bin_edges = temp;
     }
 
-  for (int class_nr = 0; class_nr < classes.size(); ++class_nr)
+  // Special colormap case!
+  if (!(element->hasAttribute("x_colormap") && element->hasAttribute("y_colormap")))
+    {
+      if (draw_edges) logger((stderr, "\"draw_edges\" can only be used with colormap\n"));
+    }
+  else
+    {
+      xcolormap = static_cast<int>(element->getAttribute("x_colormap"));
+      ycolormap = static_cast<int>(element->getAttribute("y_colormap"));
+      colormaps = true;
+    }
+
+  // Iterate through the classes and create for every bar polarbar
+  for (int class_nr = 0; class_nr < classes.size();
+       ++class_nr) // main loop used for each bar (and arc in stairs; but not the lines in stairs
     {
       double count = classes[class_nr];
-      if (classes[class_nr] == 0)
-        {
-          /* stairs bin_edges / phi_lim */
-          if (!rectlist.empty() && phi_lim != nullptr)
-            rectlist[class_nr] = r_min;
-          else if (!rectlist.empty())
-            rectlist[class_nr] = 0.0;
-        }
 
+      // adjust count according to the given normalization
       if (str_equals_any(norm, "probability", "cdf"))
         {
           count /= total_observations;
@@ -9676,17 +10352,8 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
             }
         }
 
-      if (!(element->hasAttribute("x_colormap") && element->hasAttribute("y_colormap")))
-        {
-          if (draw_edges) logger((stderr, "\"draw_edges\" can only be used with colormap\n"));
-        }
-      else
-        {
-          xcolormap = static_cast<int>(element->getAttribute("x_colormap"));
-          ycolormap = static_cast<int>(element->getAttribute("y_colormap"));
-        }
-
-      if (!stairs)
+      // no stairs
+      if (!stairs) // no stairs uses `polar_bar` logio is implemented in `processPolarBar`
         {
           std::shared_ptr<GRM::Element> polar_bar;
 
@@ -9728,10 +10395,12 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
         }
       else if (!draw_edges && (xcolormap == -2 && ycolormap == -2)) /* stairs without draw_edges (not compatible) */
         {
+          // this is for drawing the arcs in stairs.
           double r, rect;
           std::complex<double> complex1, complex2;
           const double convert = 180.0 / M_PI;
           double edge_width = 2.3; /* only for stairs */
+          bool draw_inner = true;
 
           global_render->setFillColorInd(element, 1);
           global_render->setLineColorInd(element, edge_color);
@@ -9740,127 +10409,116 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
           processFillColorInd(element);
           processLineWidth(element);
 
-          r = pow((count / max), (num_bins * 2));
+          /* perform calculations for later usages, this r is used for complex calculations */
+          if (keep_radii_axes && ylim)
+            {
+              r = pow((count / max), num_bins * 2);
+              if (r > pow(ylim_max / max, num_bins * 2))
+                {
+                  r = pow(ylim_max / max, num_bins * 2);
+                }
+            }
+          else if (ylim)
+            {
+              // trim count to ylim_max if higher
+              if (count > ylim_max)
+                {
+                  count = ylim_max;
+                }
+              count -= ylim_min;
+              if (count < 0.0) count = 0.0;
+              r = pow((count / (ylim_max - ylim_min)), num_bins * 2);
+            }
+          else
+            {
+              r = pow((count / max), (num_bins * 2));
+            }
+
           complex1 = moivre(r, (2 * class_nr), (int)num_bins * 2);
           complex2 = moivre(r, (2 * class_nr + 2), ((int)num_bins * 2));
           rect = sqrt(pow(real(complex1), 2) + pow(imag(complex1), 2));
 
-          /* no bin_edges */
-          if (num_bin_edges == 0)
+          double start_angle, end_angle;
+          if (num_bin_edges)
             {
-              double arc_pos;
-              std::shared_ptr<GRM::Element> arc;
-
-              mlist[class_nr * 4] = real(complex1);
-              mlist[class_nr * 4 + 1] = imag(complex1);
-              mlist[class_nr * 4 + 2] = real(complex2);
-              mlist[class_nr * 4 + 3] = imag(complex2);
-
-              if (r_lim != nullptr)
-                {
-                  for (int i = 0; i < 2; ++i)
-                    {
-                      double temporary =
-                          fabs(sqrt(pow(mlist[class_nr * 4 + 2 - i * 2], 2) + pow(mlist[class_nr * 4 + 3 - i * 2], 2)));
-                      if (temporary > r_max)
-                        {
-                          double factor = fabs(r_max / temporary);
-                          mlist[class_nr * 4 + 2 - i * 2] *= factor;
-                          mlist[class_nr * 4 + 3 - i * 2] *= factor;
-                        }
-                    }
-
-                  if (rect > r_min)
-                    {
-                      if (del != del_values::update_without_default && del != del_values::update_with_default)
-                        {
-                          arc = global_render->createDrawArc(
-                              -grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max), grm_min(rect, r_max),
-                              class_nr * (360.0 / num_bins), (class_nr + 1) * 360.0 / num_bins);
-                          arc->setAttribute("_child_id", child_id++);
-                          element->append(arc);
-                        }
-                      else
-                        {
-                          arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
-                          if (arc != nullptr)
-                            global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max),
-                                                         -grm_min(rect, r_max), grm_min(rect, r_max),
-                                                         class_nr * (360.0 / num_bins),
-                                                         (class_nr + 1) * 360.0 / num_bins, arc);
-                        }
-
-                      arc_pos = r_min;
-                    }
-                }
-              else /* no r_lim */
-                {
-                  arc_pos = rect;
-                }
-              if (del != del_values::update_without_default && del != del_values::update_with_default)
-                {
-                  arc =
-                      global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, class_nr * (360.0 / num_bins),
-                                                   (class_nr + 1) * (360.0 / num_bins));
-                  arc->setAttribute("_child_id", child_id++);
-                  element->append(arc);
-                }
-              else
-                {
-                  arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
-                  if (arc != nullptr)
-                    global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, class_nr * (360.0 / num_bins),
-                                                 (class_nr + 1) * (360.0 / num_bins), arc);
-                }
+              start_angle = bin_edges[class_nr] * convert;
+              end_angle = bin_edges[class_nr + 1] * convert;
             }
-          else /* with bin_edges */
+          else
             {
-              /* r_lim and bin_edges */
-              std::shared_ptr<GRM::Element> arc;
-              double arc_pos;
+              start_angle = class_nr * (360.0 / num_bins);
+              end_angle = (class_nr + 1) * (360.0 / num_bins);
+            }
 
-              if (r_lim != nullptr)
+          std::shared_ptr<GRM::Element> arc;
+          double arc_pos;
+
+          if (ylim)
+            {
+              if (keep_radii_axes)
                 {
-                  if (rect < r_min)
-                    rectlist[class_nr] = r_min;
+                  if (count <= ylim_min)
+                    {
+                      rectlist[class_nr] = ylim_min / max;
+                      draw_inner = false;
+                    }
                   else if (rect > r_max)
-                    rectlist[class_nr] = r_max;
+                    rectlist[class_nr] = ylim_max;
                   else
                     rectlist[class_nr] = rect;
 
-                  if (rect > r_min)
-                    {
-                      if (del != del_values::update_without_default && del != del_values::update_with_default)
-                        {
-                          arc = global_render->createDrawArc(
-                              -grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max), grm_min(rect, r_max),
-                              bin_edges[class_nr] * convert, bin_edges[class_nr + 1] * convert);
-                          arc->setAttribute("_child_id", child_id++);
-                          element->append(arc);
-                        }
-                      else
-                        {
-                          arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
-                          if (arc != nullptr)
-                            global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max),
-                                                         -grm_min(rect, r_max), grm_min(rect, r_max),
-                                                         bin_edges[class_nr] * convert,
-                                                         bin_edges[class_nr + 1] * convert, arc);
-                        }
+                  auto complex_min = moivre(pow(ylim_min / max, num_bins * 2), (2 * class_nr), (int)num_bins * 2);
+                  arc_pos = sqrt(pow(real(complex_min), 2) + pow(imag(complex_min), 2));
+                  if (count <= ylim_min) arc_pos = 0.0;
+                }
+              else
+                {
+                  // ylim_min is already subtracted from count
+                  if (count < 0)
+                    rectlist[class_nr] = 0.0;
+                  else if (count >= ylim_max - ylim_min)
+                    rectlist[class_nr] = 1.0; // 1.0 equals ylim_max (when no keep_radii_axes is set)
+                  else
+                    rectlist[class_nr] = rect;
 
-                      arc_pos = r_min;
+                  arc_pos = 0.0;
+                  draw_inner = false; // without keep_radii_axes draw_inner is not needed!
+                }
+
+              // this is the outer arc
+              if ((count > 0 && !keep_radii_axes) || (count > ylim_min && keep_radii_axes))
+                {
+                  if (del != del_values::update_without_default && del != del_values::update_with_default)
+                    {
+                      arc = global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max),
+                                                         -grm_min(rect, r_max), grm_min(rect, r_max), start_angle,
+                                                         end_angle);
+                      arc->setAttribute("_child_id", child_id++);
+                      element->append(arc);
+                    }
+                  else
+                    {
+                      arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
+                      if (arc != nullptr)
+                        global_render->createDrawArc(-grm_min(rect, r_max), grm_min(rect, r_max), -grm_min(rect, r_max),
+                                                     grm_min(rect, r_max), start_angle, end_angle, arc);
                     }
                 }
-              else /* no r_lim */
-                {
-                  rectlist[class_nr] = rect;
-                  if (class_nr == num_bin_edges - 1) break;
-                  arc_pos = rect;
-                }
+            }
+          else /* no rlim */
+            {
+              rectlist[class_nr] = rect;
+              if (class_nr == classes.size()) break;
+              arc_pos = rect;
+            }
+
+          // these are the inner arcs with ylim (keep_radii_axes only) and the normal_arcs without ylim, only if its
+          // higher than ylim_min
+          if (draw_inner)
+            {
               if (del != del_values::update_without_default && del != del_values::update_with_default)
                 {
-                  arc = global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos,
-                                                     bin_edges[class_nr] * convert, bin_edges[class_nr + 1] * convert);
+                  arc = global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, start_angle, end_angle);
                   arc->setAttribute("_child_id", child_id++);
                   element->append(arc);
                 }
@@ -9868,158 +10526,57 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
                 {
                   arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
                   if (arc != nullptr)
-                    global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, bin_edges[class_nr] * convert,
-                                                 bin_edges[class_nr + 1] * convert, arc);
+                    global_render->createDrawArc(-arc_pos, arc_pos, -arc_pos, arc_pos, start_angle, end_angle, arc);
                 }
             }
         }
     } /* end of classes for loop */
 
+  // this is for drawing the stairs straight lines.
   if (stairs && !draw_edges && (xcolormap == -2 && ycolormap == -2))
     {
       std::shared_ptr<GRM::Element> line;
       double line_x[2], line_y[2];
 
-      /* stairs without bin_edges, r_lim */
-      if (!mlist.empty() && r_lim == nullptr && rectlist.empty())
+      if (ylim)
         {
-          for (int s = 0; s < num_bins * 4; s += 2)
+          double startx, starty;
+
+          // startx/y is the coordinate for minimum radius (ylim_min)
+          std::vector<double> angles_vec;
+
+          if (num_bin_edges != 0)
             {
-              if (s > 2 && s % 4 == 0)
-                {
-                  line_x[0] = mlist[s];
-                  line_x[1] = mlist[s - 2];
-                  line_y[0] = mlist[s + 1];
-                  line_y[1] = mlist[s - 1];
-
-                  if (del != del_values::update_without_default && del != del_values::update_with_default)
-                    {
-                      line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
-                      line->setAttribute("_child_id", child_id++);
-                      element->append(line);
-                    }
-                  else
-                    {
-                      line = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
-                      if (line != nullptr)
-                        global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
-                    }
-                }
-            }
-          line_x[0] = mlist[0];
-          line_x[1] = mlist[(num_bins - 1) * 4 + 2];
-          line_y[0] = mlist[1];
-          line_y[1] = mlist[(num_bins - 1) * 4 + 3];
-        }
-      else if (!mlist.empty() && r_lim != nullptr && rectlist.empty()) /* stairs without bin_edges with r_lim*/
-        {
-          double rect1, rect2;
-
-          for (int x = 0; x < num_bins; ++x)
-            {
-              rect1 = sqrt(pow(mlist[x * 4], 2) + pow(mlist[x * 4 + 1], 2));
-              rect2 = sqrt(pow(mlist[(x - 1) * 4 + 2], 2) + pow(mlist[(x - 1) * 4 + 3], 2));
-
-              if (rect1 < r_min && rect2 < r_min) continue;
-              if (rect1 < r_min)
-                {
-                  mlist[4 * x] = r_min * cos(2 * M_PI / num_bins * x);
-                  mlist[4 * x + 1] = r_min * sin(2 * M_PI / num_bins * x);
-                }
-              else if (rect2 < r_min)
-                {
-                  mlist[(x - 1) * 4 + 2] = r_min * cos(2 * M_PI / num_bins * x);
-                  mlist[(x - 1) * 4 + 3] = r_min * sin(2 * M_PI / num_bins * x);
-                }
-              line_x[0] = mlist[x * 4];
-              line_x[1] = mlist[(x - 1) * 4 + 2];
-              line_y[0] = mlist[x * 4 + 1];
-              line_y[1] = mlist[(x - 1) * 4 + 3];
-
-              if (del != del_values::update_without_default && del != del_values::update_with_default)
-                {
-                  line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
-                  line->setAttribute("_child_id", child_id++);
-                  element->append(line);
-                }
-              else
-                {
-                  line = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
-                  if (line != nullptr)
-                    global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
-                }
-            }
-          line_x[0] = mlist[(num_bins - 1) * 4 + 2] = grm_max(mlist[(num_bins - 1) * 4 + 2], r_min * cos(0));
-          line_y[0] = mlist[(num_bins - 1) * 4 + 3] = grm_max(mlist[(num_bins - 1) * 4 + 3], r_min * sin(0));
-          line_x[1] = mlist[0] = grm_max(mlist[0], r_min * cos(0));
-          line_y[1] = mlist[1] = grm_max(mlist[1], r_min * sin(0));
-        }
-      else if (!rectlist.empty() && r_lim == nullptr) /* stairs with bin_edges without r_lim */
-        {
-          double startx = 0.0, starty = 0.0;
-
-          for (int x = 0; x < num_bin_edges - 1; ++x)
-            {
-              line_x[0] = startx;
-              line_x[1] = rectlist[x] * cos(bin_edges[x]);
-              line_y[0] = starty;
-              line_y[1] = rectlist[x] * sin(bin_edges[x]);
-
-              startx = rectlist[x] * cos(bin_edges[x + 1]);
-              starty = rectlist[x] * sin(bin_edges[x + 1]);
-
-              if (!(bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI) || x > 0)
-                {
-                  if (del != del_values::update_without_default && del != del_values::update_with_default)
-                    {
-                      line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
-                      line->setAttribute("_child_id", child_id++);
-                      element->append(line);
-                    }
-                  else
-                    {
-                      line = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
-                      if (line != nullptr)
-                        global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
-                    }
-                }
-            }
-
-          if (bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI)
-            {
-              line_x[0] = rectlist[0] * cos(bin_edges[0]);
-              line_x[1] = startx;
-              line_y[0] = rectlist[0] * sin(bin_edges[0]);
-              line_y[1] = starty;
+              startx = grm_max(rectlist[0] * cos(bin_edges[0]), r_min * cos(bin_edges[0]));
+              starty = grm_max(rectlist[0] * sin(bin_edges[0]), r_min * sin(bin_edges[0]));
+              angles_vec = bin_edges;
             }
           else
             {
-              line_x[0] = rectlist[num_bin_edges - 2] * cos(bin_edges[num_bin_edges - 1]);
-              line_x[1] = 0.0;
-              line_y[0] = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
-              line_y[1] = 0.0;
+              startx = grm_max(rectlist[0] * cos(2 * M_PI / num_bins * 0), ylim_min / ylim_max * cos(0.0));
+              starty = grm_max(rectlist[0] * sin(2 * M_PI / num_bins * 0), ylim_min / ylim_max * sin(0.0));
+              linspace(0.0, 2 * M_PI, classes.size() + 1, angles_vec);
             }
-        }
-      else if (!rectlist.empty() && r_lim != nullptr) /* stairs with bin_edges and r_lim */
-        {
-          double startx = grm_max(rectlist[0] * cos(bin_edges[0]), r_min * cos(bin_edges[0]));
-          double starty = grm_max(rectlist[0] * sin(bin_edges[0]), r_min * sin(bin_edges[0]));
 
-          for (int x = 0; x < num_bin_edges - 1; ++x)
+          for (int x = 0; x < classes.size(); ++x)
             {
+              if (x == 2)
+                {
+                  ;
+                }
               line_x[0] = startx;
-              line_x[1] = rectlist[x] * cos(bin_edges[x]);
+              line_x[1] = rectlist[x] * cos(angles_vec[x]);
               line_y[0] = starty;
-              line_y[1] = rectlist[x] * sin(bin_edges[x]);
+              line_y[1] = rectlist[x] * sin(angles_vec[x]);
 
-              startx = rectlist[x] * cos(bin_edges[x + 1]);
-              starty = rectlist[x] * sin(bin_edges[x + 1]);
+              startx = rectlist[x] * cos(angles_vec[x + 1]);
+              starty = rectlist[x] * sin(angles_vec[x + 1]);
 
-              if ((!phiflip &&
-                   (!((bin_edges[0] > 0.0 && bin_edges[0] < 0.001) && bin_edges[num_bin_edges - 1] > 1.96 * M_PI) ||
-                    x > 0)) ||
-                  ((bin_edges[0] > 1.96 * M_PI &&
-                    !(bin_edges[num_bin_edges - 1] > 0.0 && bin_edges[num_bin_edges - 1] < 0.001)) ||
+              if ((!phiflip && (!((angles_vec[0] > 0.0 && angles_vec[0] < 0.001) &&
+                                  angles_vec[angles_vec.size() - 1] > 1.96 * M_PI) ||
+                                x > 0)) ||
+                  ((angles_vec[0] > 1.96 * M_PI &&
+                    !(angles_vec[angles_vec.size() - 1] > 0.0 && angles_vec[angles_vec.size() - 1] < 0.001)) ||
                    x > 0))
                 {
                   if (del != del_values::update_without_default && del != del_values::update_with_default)
@@ -10037,12 +10594,13 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
                 }
             }
 
-          if (!(bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI))
+          // draw a line when it is not a full circle
+          if (!(angles_vec[0] == 0.0 && angles_vec[angles_vec.size() - 1] > 1.96 * M_PI))
             {
-              line_x[0] = r_min * cos(bin_edges[0]);
-              line_x[1] = rectlist[0] * cos(bin_edges[0]);
-              line_y[0] = r_min * sin(bin_edges[0]);
-              line_y[1] = rectlist[0] * sin(bin_edges[0]);
+              line_x[0] = ylim_min / ylim_max * cos(angles_vec[0]);
+              line_x[1] = rectlist[0] * cos(angles_vec[0]);
+              line_y[0] = ylim_min / ylim_max * sin(angles_vec[0]);
+              line_y[1] = rectlist[0] * sin(angles_vec[0]);
 
               if (del != del_values::update_without_default && del != del_values::update_with_default)
                 {
@@ -10058,21 +10616,82 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
                 }
             }
 
-          if (bin_edges[0] == 0.0 && bin_edges[num_bin_edges - 1] > 1.96 * M_PI)
+          if (angles_vec[0] == 0.0 && angles_vec[angles_vec.size() - 1] > 1.96 * M_PI)
             {
-              line_x[0] = rectlist[0] * cos(bin_edges[0]);
-              line_x[1] = rectlist[num_bin_edges - 2] * cos(bin_edges[num_bin_edges - 1]);
-              line_y[0] = rectlist[0] * sin(bin_edges[0]);
-              line_y[1] = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
+              line_x[0] = rectlist[0] * cos(angles_vec[0]);
+              line_x[1] = rectlist[angles_vec.size() - 2] * cos(angles_vec[angles_vec.size() - 1]);
+              line_y[0] = rectlist[0] * sin(angles_vec[0]);
+              line_y[1] = rectlist[angles_vec.size() - 2] * sin(angles_vec[angles_vec.size() - 1]);
             }
           else
             {
-              line_x[0] = rectlist[num_bin_edges - 2] * cos(bin_edges[num_bin_edges - 1]);
-              line_x[1] = r_min * cos(bin_edges[num_bin_edges - 1]);
-              line_y[0] = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
-              line_y[1] = r_min * sin(bin_edges[num_bin_edges - 1]);
+              line_x[0] = rectlist[angles_vec.size() - 2] * cos(angles_vec[angles_vec.size() - 1]);
+              line_x[1] = ylim_min / ylim_max * cos(angles_vec[angles_vec.size() - 1]);
+              line_y[0] = rectlist[angles_vec.size() - 2] * sin(angles_vec[angles_vec.size() - 1]);
+              line_y[1] = ylim_min / ylim_max * sin(angles_vec[angles_vec.size() - 1]);
             }
-        }
+        } // end of ylim case
+      else
+        { // without ylims
+          double startx = 0.0, starty = 0.0;
+
+          std::vector<double> angles_vec;
+
+          if (num_bin_edges != 0)
+            {
+              startx = grm_max(rectlist[0] * cos(bin_edges[0]), r_min * cos(bin_edges[0]));
+              starty = grm_max(rectlist[0] * sin(bin_edges[0]), r_min * sin(bin_edges[0]));
+              angles_vec = bin_edges;
+            }
+          else
+            {
+              startx = grm_max(rectlist[0] * cos(2 * M_PI / num_bins * 0), ylim_min / ylim_max * cos(0.0));
+              starty = grm_max(rectlist[0] * sin(2 * M_PI / num_bins * 0), ylim_min / ylim_max * sin(0.0));
+              linspace(0.0, 2 * M_PI, classes.size() + 1, angles_vec);
+            }
+
+          for (int x = 0; x < angles_vec.size() - 1; ++x)
+            {
+              line_x[0] = startx;
+              line_x[1] = rectlist[x] * cos(angles_vec[x]);
+              line_y[0] = starty;
+              line_y[1] = rectlist[x] * sin(angles_vec[x]);
+
+              startx = rectlist[x] * cos(angles_vec[x + 1]);
+              starty = rectlist[x] * sin(angles_vec[x + 1]);
+
+              if (!(angles_vec[0] == 0.0 && angles_vec[angles_vec.size() - 1] > 1.96 * M_PI) || x > 0)
+                {
+                  if (del != del_values::update_without_default && del != del_values::update_with_default)
+                    {
+                      line = global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1]);
+                      line->setAttribute("_child_id", child_id++);
+                      element->append(line);
+                    }
+                  else
+                    {
+                      line = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
+                      if (line != nullptr)
+                        global_render->createPolyline(line_x[0], line_x[1], line_y[0], line_y[1], 0, 0.0, 0, line);
+                    }
+                }
+            }
+
+          if (angles_vec[0] == 0.0 && angles_vec[angles_vec.size() - 1] > 1.96 * M_PI)
+            {
+              line_x[0] = rectlist[0] * cos(angles_vec[0]);
+              line_x[1] = startx;
+              line_y[0] = rectlist[0] * sin(angles_vec[0]);
+              line_y[1] = starty;
+            }
+          else
+            {
+              line_x[0] = rectlist[angles_vec.size() - 2] * cos(angles_vec[angles_vec.size() - 1]);
+              line_x[1] = 0.0;
+              line_y[0] = rectlist[angles_vec.size() - 2] * sin(angles_vec[angles_vec.size() - 1]);
+              line_y[1] = 0.0;
+            }
+        } // end of no ylim case
 
       if (del != del_values::update_without_default && del != del_values::update_with_default)
         {
@@ -10092,25 +10711,21 @@ static void processPolarHistogram(const std::shared_ptr<GRM::Element> &element,
 static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   unsigned int resample;
-  double *r_lim = nullptr;
   double r, rect;
-  std::complex<double> complex1, complex2;
-  std::vector<double> angles, bin_edges;
-  std::vector<int> colormap;
+  double y_lim_min, y_lim_max;
+  std::complex<double> complex1;
+  std::vector<double> bin_edges;
   const double convert = 180.0 / M_PI;
-  std::vector<int> lineardata, bin_counts;
   std::vector<double> f1, f2, arc_2_x, arc_2_y;
-  std::vector<double> phi_vec, r_lim_vec;
-  std::complex<double> r_min_complex1, r_min_complex2;
+  std::vector<double> phi_vec;
   int child_id = 0;
-  int xcolormap = -2, ycolormap = -2;
-  double count, bin_width = -1.0, bin_widths;
-  double r_min = 0.0, r_max = 1.0, max;
+  int x_colormap = -2, y_colormap = -2;
+  double count, bin_width = -1.0;
+  double max;
   int num_bins, num_bin_edges = 0, class_nr;
   std::string norm = "count", str;
-  bool phiflip = false, draw_edges = false;
+  bool phiflip = false, draw_edges = false, keep_radii_axes = false, y_lim = false, is_colormap = false;
   int edge_color = 1, face_color = 989;
-  std::vector<double> mlist = {0.0, 0.0, 0.0, 0.0};
   std::shared_ptr<GRM::Element> plot_elem = element->parentElement();
   getPlotParent(plot_elem);
   del_values del = del_values::update_without_default;
@@ -10119,54 +10734,48 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
   clearOldChildren(&del, element);
 
+  // class_nr is used for the position of the bar in the histogram
   class_nr = static_cast<int>(element->getAttribute("class_nr"));
+  // count is already converted by normalization!
   count = static_cast<double>(element->getAttribute("count"));
 
   if (element->hasAttribute("bin_width")) bin_width = static_cast<double>(element->getAttribute("bin_width"));
   if (element->hasAttribute("norm")) norm = static_cast<std::string>(element->getAttribute("norm"));
+
   if (element->hasAttribute("phi_flip")) phiflip = static_cast<int>(element->getAttribute("phi_flip"));
   if (element->hasAttribute("draw_edges")) draw_edges = static_cast<int>(element->getAttribute("draw_edges"));
   if (element->hasAttribute("line_color_ind")) edge_color = static_cast<int>(element->getAttribute("line_color_ind"));
   if (element->hasAttribute("color_ind")) face_color = static_cast<int>(element->getAttribute("color_ind"));
-  if (element->hasAttribute("x_colormap")) xcolormap = static_cast<int>(element->getAttribute("x_colormap"));
-  if (element->hasAttribute("y_colormap")) ycolormap = static_cast<int>(element->getAttribute("y_colormap"));
+
+  if (element->hasAttribute("x_colormap"))
+    {
+      x_colormap = static_cast<int>(element->getAttribute("x_colormap"));
+      is_colormap = true;
+    }
+  if (element->hasAttribute("y_colormap"))
+    {
+      y_colormap = static_cast<int>(element->getAttribute("y_colormap"));
+      is_colormap = true;
+    }
+
   if (element->hasAttribute("bin_edges"))
     {
       auto bin_edges_key = static_cast<std::string>(element->getAttribute("bin_edges"));
       bin_edges = GRM::get<std::vector<double>>((*context)[bin_edges_key]);
       num_bin_edges = (int)bin_edges.size();
     }
-  if (element->hasAttribute("bin_widths")) bin_widths = static_cast<double>(element->getAttribute("bin_widths"));
 
   num_bins = static_cast<int>(element->parentElement()->getAttribute("num_bins"));
+
   if (element->parentElement()->hasAttribute("bin_widths"))
     {
       auto bin_widths_key = static_cast<std::string>(element->parentElement()->getAttribute("bin_widths"));
       auto bin_widths_vec = GRM::get<std::vector<double>>((*context)[bin_widths_key]);
       num_bins = (int)bin_widths_vec.size();
+      bin_width = bin_widths_vec[class_nr];
     }
 
-  if (plot_elem->hasAttribute("r_lim_min") && plot_elem->hasAttribute("r_lim_max"))
-    {
-      r_lim_vec.push_back(static_cast<double>(plot_elem->getAttribute("r_lim_min")));
-      r_lim_vec.push_back(static_cast<double>(plot_elem->getAttribute("r_lim_max")));
-      r_lim = &(r_lim_vec[0]);
-
-      r_min = grm_min(r_lim[0], r_lim[1]);
-      r_max = grm_max(r_lim[0], r_lim[1]);
-      if (r_lim[0] > r_lim[1])
-        {
-          r_lim[0] = r_min;
-          r_lim[1] = r_max;
-        }
-
-      if (r_max > 1.0)
-        {
-          r_max = 1.0;
-          logger((stderr, "The value of \"r_lim_max\" can not exceed 1.0\n"));
-        }
-      if (r_min < 0.0) r_min = 0.0;
-    }
+  // no ylims -> max = ylim_max; with ylims -> max = max_count of series
   for (const auto &child : plot_elem->children())
     {
       if (child->localName() == "central_region")
@@ -10176,40 +10785,66 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
         }
     }
 
-  if (element->hasAttribute("x_colormap") && element->hasAttribute("y_colormap"))
+  if (plot_elem->hasAttribute("y_lim_min") && plot_elem->hasAttribute("y_lim_max"))
     {
-      if (-1 > xcolormap || xcolormap > 47 || ycolormap < -1 || ycolormap > 47)
+      y_lim = true;
+      y_lim_min = static_cast<double>(plot_elem->getAttribute("y_lim_min"));
+      y_lim_max = static_cast<double>(plot_elem->getAttribute("y_lim_max"));
+      if (plot_elem->hasAttribute("keep_radii_axes"))
+        {
+          // if true: max = true radius axes maximum!
+          keep_radii_axes = static_cast<int>(plot_elem->getAttribute("keep_radii_axes"));
+        }
+    }
+  else
+    {
+      y_lim_min = 0.0;
+      y_lim_max = max;
+    }
+
+  // creates an image for draw_image
+  if (is_colormap)
+    {
+      if (-1 > x_colormap || x_colormap > 47 || y_colormap < -1 || y_colormap > 47)
         {
           logger((stderr, "The value for keyword \"colormap\" must contain two integer between -1 and 47\n"));
         }
       else
         {
-          std::shared_ptr<GRM::Element> draw_image;
+          std::shared_ptr<GRM::Element> drawImage;
           const int colormap_size = 500, image_size = 2000;
-          double radius, angle, max_radius;
+          /* todo: maybe use dynamic image_size when using interactions or maybe calculate a smaller rectangle in image
+             only one bar per rectangle -> no image_size * image_size iterations
+             or maybe don't iterate through image_size * image_size matrix
+             instead calculate the the coordinates and iterate through these coordinates somehow like in python */
+          double radius, angle, max_radius, count_radius;
+          double start_angle, end_angle;
+          double ylim_min_radius, ylim_max_radius;
           int total = 0;
           double norm_factor = 1;
+          double original_count = count;
+          std::vector<int> lineardata, colormap;
           auto id = static_cast<int>(global_root->getAttribute("_id"));
 
           global_root->setAttribute("_id", id + 1);
           str = std::to_string(id);
 
           lineardata.resize(image_size * image_size);
-          bin_counts.resize(num_bins);
 
-          create_colormap(xcolormap, ycolormap, colormap_size, colormap);
+          create_colormap(x_colormap, y_colormap, colormap_size, colormap);
 
           if (num_bin_edges == 0)
             {
-              angles.resize(num_bins + 1);
-              linspace(0.0, M_PI * 2, (int)num_bins + 1, angles);
+              start_angle = M_PI * 2 / ((int)num_bins) * class_nr;
+              end_angle = M_PI * 2 / ((int)num_bins) * (class_nr + 1);
             }
           else
             {
-              angles = bin_edges;
+              start_angle = bin_edges[class_nr];
+              end_angle = bin_edges[class_nr + 1];
             }
-          max_radius = image_size / 2;
 
+          max_radius = image_size / 2;
           total = static_cast<int>(element->getAttribute("total"));
 
           if (str_equals_any(norm, "probability", "cdf"))
@@ -10219,344 +10854,292 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
           else if (num_bin_edges == 0 && norm == "countdensity")
             norm_factor = bin_width;
 
-          if (r_lim != nullptr)
+          if (!keep_radii_axes)
             {
-              r_min *= max_radius;
-              r_max *= max_radius;
+              if (count > y_lim_max)
+                {
+                  count = y_lim_max;
+                }
+              count -= y_lim_min;
             }
           else
             {
-              r_min = 0.0;
-              r_max = max_radius;
+              // if keep_radii_axes-> max = true y axis maximum!
+              ylim_min_radius = y_lim_min / max * max_radius;
+              ylim_max_radius = grm_min(y_lim_max, max) / max * max_radius;
             }
 
+          if (norm == "pdf" && num_bin_edges > 0)
+            norm_factor = total * bin_width;
+          else if (norm == "countdensity" && num_bin_edges > 0)
+            norm_factor = bin_width;
+
+          // calculate the radius of the bar with height count
+          if (keep_radii_axes)
+            {
+              count_radius = (grm_round((count * 1.0 / norm_factor / max * max_radius) * 100) / 100);
+            }
+          else
+            {
+              count_radius = (grm_round((count / norm_factor / (y_lim_max - y_lim_min) * max_radius) * 100) / 100);
+            }
+
+          // go through every point in the image and check if its inside of a bar
           for (int y = 0; y < image_size; y++)
             {
               for (int x = 0; x < image_size; x++)
                 {
                   radius = sqrt(pow(x - max_radius, 2) + pow(y - max_radius, 2));
+                  radius = grm_round(radius * 100) / 100;
                   angle = atan2(y - max_radius, x - max_radius);
 
                   if (angle < 0) angle += M_PI * 2;
                   if (!phiflip) angle = 2 * M_PI - angle;
 
-                  if (angle > angles[class_nr] && angle <= angles[class_nr + 1])
+                  if (angle > start_angle && angle <= end_angle)
                     {
-                      if (norm == "pdf" && num_bin_edges > 0)
-                        norm_factor = total * bin_widths;
-                      else if (norm == "countdensity" && num_bin_edges > 0)
-                        norm_factor = bin_widths;
-
-                      if ((grm_round(radius * 100) / 100) <=
-                              (grm_round((count * 1.0 / norm_factor / max * max_radius) * 100) / 100) &&
-                          radius <= r_max && radius > r_min)
+                      if (keep_radii_axes)
                         {
-                          lineardata[y * image_size + x] = colormap
-                              [(int)(radius / (max_radius * pow(2, 0.5)) * (colormap_size - 1)) * colormap_size +
-                               grm_max(grm_min((int)(angle / (2 * M_PI) * colormap_size), colormap_size - 1), 0)];
+                          if (radius <= count_radius && radius <= ylim_max_radius && radius > ylim_min_radius)
+                            {
+                              lineardata[y * image_size + x] = colormap
+                                  [(int)(radius / (max_radius * pow(2, 0.5)) * (colormap_size - 1)) * colormap_size +
+                                   grm_max(grm_min((int)(angle / (2 * M_PI) * colormap_size), colormap_size - 1), 0)];
+                            }
+                        }
+                      else
+                        {
+                          if ((grm_round(radius * 100) / 100) <= count_radius && radius <= max_radius && count > 0.0)
+                            {
+                              lineardata[y * image_size + x] = colormap
+                                  [(int)(radius / (max_radius * pow(2, 0.5)) * (colormap_size - 1)) * colormap_size +
+                                   grm_max(grm_min((int)(angle / (2 * M_PI) * colormap_size), colormap_size - 1), 0)];
+                            }
                         }
 
                     } /* end angle check */
-                }     /* end x loop */
-            }         /* end y loop */
-          if (r_lim != nullptr)
-            {
-              r_min = r_lim[0];
-              r_max = r_lim[1];
-            }
+
+                } /* end x loop*/
+            }     /* end y loop */
+
 
           /* save resample method and reset because it isn't restored with gr_restorestate */
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
-              draw_image = global_render->createDrawImage(-1.0, 1.0, 1.0, -1.0, image_size, image_size, "data" + str,
-                                                          lineardata, 0);
-              draw_image->setAttribute("_child_id", child_id++);
-              element->append(draw_image);
+              drawImage = global_render->createDrawImage(-1.0, 1.0, 1.0, -1.0, image_size, image_size, "data" + str,
+                                                         lineardata, 0);
+              drawImage->setAttribute("_child_id", child_id++);
+              element->append(drawImage);
             }
           else
             {
-              draw_image = element->querySelectors("draw_image[_child_id=" + std::to_string(child_id++) + "]");
-              if (draw_image != nullptr)
+              drawImage = element->querySelectors("drawimage[_child_id=" + std::to_string(child_id++) + "]");
+              if (drawImage != nullptr)
                 global_render->createDrawImage(-1.0, 1.0, 1.0, -1.0, image_size, image_size, "data" + str, lineardata,
-                                               0, nullptr, draw_image);
+                                               0, nullptr, drawImage);
             }
+          unsigned int resample;
           gr_inqresamplemethod(&resample);
-          if (draw_image != nullptr) global_render->setResampleMethod(draw_image, static_cast<int>(0x2020202));
+          if (drawImage != nullptr) global_render->setResampleMethod(drawImage, static_cast<int>(0x2020202));
           lineardata.clear();
           colormap.clear();
+          count = original_count;
         }
+    } // end of colormaps
+
+  // substract ylim_min from count for ylim_min > 0.0
+  if (!keep_radii_axes)
+    {
+      // trim count to ylim_max if higher
+      if (count > y_lim_max)
+        {
+          count = y_lim_max;
+        }
+      count -= y_lim_min;
+      if (count < 0) count = 0.0;
     }
 
-  /* perform calculations for later usages */
-  r = pow((count / max), num_bins * 2);
+  /* perform calculations for later usages, this r is used for complex calculations */
+  if (keep_radii_axes)
+    {
+      r = pow((count / max), num_bins * 2);
+      if (r > pow(y_lim_max / max, num_bins * 2))
+        {
+          r = pow(y_lim_max / max, num_bins * 2);
+        }
+    }
+  else
+    {
+      r = pow((count / (y_lim_max - y_lim_min)), num_bins * 2);
+    }
+
   complex1 = moivre(r, 2 * class_nr, (int)num_bins * 2);
 
+  // drawarc rectangle
   rect = sqrt(pow(real(complex1), 2) + pow(imag(complex1), 2));
 
-  if (r_lim != nullptr)
+
+  // this does not affect rect
+  if (y_lim)
     {
-      complex2 = moivre(r, 2 * class_nr + 2, (int)num_bins * 2);
 
-      mlist[0] = real(complex1);
-      mlist[1] = imag(complex1);
-      mlist[2] = real(complex2);
-      mlist[3] = imag(complex2);
-
-      r_min_complex1 = moivre(pow((r_min), (num_bins * 2)), (class_nr * 2), (int)num_bins * 2);
-      r_min_complex2 = moivre(pow((r_min), (num_bins * 2)), (class_nr * 2 + 2), (int)num_bins * 2);
-
-      /* check if the segment is higher than rmax? */
-      for (int i = 0; i < 2; ++i)
+      // this r is used directly for the radii of each drawarc
+      if (keep_radii_axes)
         {
-          double temporary = fabs(sqrt(pow(mlist[2 - i * 2], 2) + pow(mlist[3 - i * 2], 2)));
-          if (temporary > r_max)
-            {
-              double factor = fabs(r_max / temporary);
-              mlist[2 - i * 2] *= factor;
-              mlist[3 - i * 2] *= factor;
-            }
+          r = count / max;
+          if (r > y_lim_max / max) r = y_lim_max / max;
         }
-      r = count / max;
-      if (r > r_max) r = r_max;
+      else
+        {
+          r = count / (y_lim_max - y_lim_min);
+          if (r > y_lim_max) r = 1.0;
+        }
     }
 
-  /* no bin_edges */
-  if (num_bin_edges == 0)
+  // if keep_radii_axes is given, then arcs can not be easily drawn (because of the lower arc [donut shaped]), so
+  // additional calculations are needed for arcs and lines
+  if (!keep_radii_axes) /* no keep_radii_axes given*/
     {
-      if (r_lim != nullptr)
+      std::shared_ptr<GRM::Element> arc, draw_arc;
+      double start_angle, end_angle;
+
+      if (num_bin_edges != 0.0)
         {
-          int i, num_angle;
-          double start_angle, end_angle;
-          std::shared_ptr<GRM::Element> area;
-          auto id = static_cast<int>(global_root->getAttribute("_id"));
-
-          if (r > r_min)
-            {
-              global_root->setAttribute("_id", id + 1);
-              str = std::to_string(id);
-
-              start_angle = class_nr * (360.0 / num_bins) / convert;
-              end_angle = (class_nr + 1) * (360.0 / num_bins) / convert;
-
-              /* determine number of angles for arc approximations */
-              num_angle = (int)((end_angle - start_angle) / (0.2 / convert));
-
-              phi_vec.resize(num_angle);
-              linspace(start_angle, end_angle, num_angle, phi_vec);
-
-              /* 4 because of the 4 corner coordinates and 2 * num_angle for the arc approximations, top and bottom */
-              f1.resize(4 + 2 * num_angle);
-              /* line_1_x[0] and [1] */
-              f1[0] = real(r_min_complex1);
-              f1[1] = mlist[0];
-              /* arc_1_x */
-              listcomprehension(r, cos, phi_vec, num_angle, 2, f1);
-              /* reversed line_2_x [0] and [1] */
-              f1[2 + num_angle + 1] = real(r_min_complex2);
-              f1[2 + num_angle] = mlist[2];
-              /* reversed arc_2_x */
-              listcomprehension(r_min, cos, phi_vec, num_angle, 0, arc_2_x);
-              for (i = 0; i < num_angle; ++i)
-                {
-                  f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
-                }
-              arc_2_x.clear();
-
-              f2.resize(4 + 2 * num_angle);
-              /* line_1_y[0] and [1] */
-              f2[0] = imag(r_min_complex1);
-              f2[1] = mlist[1];
-              /* arc_1_y */
-              listcomprehension(r, sin, phi_vec, num_angle, 2, f2);
-              /* reversed line_2_y [0] and [1] */
-              f2[2 + num_angle + 1] = imag(r_min_complex2);
-              f2[2 + num_angle] = mlist[3];
-              /* reversed arc_2_y */
-              listcomprehension(r_min, sin, phi_vec, num_angle, 0, arc_2_y);
-              for (i = 0; i < num_angle; ++i)
-                {
-                  f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
-                }
-              arc_2_y.clear();
-
-              if (!draw_edges)
-                {
-                  /* with r_lim gr_fillarc cant be used because it will always draw from the origin instead use
-                   * gr_fillarea and approximate line segment with calculations from above */
-                  if (del != del_values::update_without_default && del != del_values::update_with_default)
-                    {
-                      area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
-                      area->setAttribute("_child_id", child_id++);
-                      element->append(area);
-                    }
-                  else
-                    {
-                      area = element->querySelectors("fill_area[_child_id=" + std::to_string(child_id++) + "]");
-                      if (area != nullptr)
-                        global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
-                    }
-
-                  if (area != nullptr)
-                    {
-                      global_render->setFillColorInd(area, face_color);
-                      global_render->setFillIntStyle(area, 1);
-                    }
-                }
-
-              /* draw_area more likely */
-              if (del != del_values::update_without_default && del != del_values::update_with_default)
-                {
-                  area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
-                  area->setAttribute("_child_id", child_id++);
-                  element->append(area);
-                }
-              else
-                {
-                  area = element->querySelectors("fill_area[_child_id=" + std::to_string(child_id++) + "]");
-                  if (area != nullptr)
-                    global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
-                }
-              if (area != nullptr)
-                {
-                  global_render->setFillColorInd(area, edge_color);
-                  global_render->setFillIntStyle(area, 0);
-                  area->setAttribute("z_index", 2);
-                }
-
-              /* clean up vectors for next iteration */
-              phi_vec.clear();
-              f1.clear();
-              f2.clear();
-            }
-        }  /* end r_lim condition */
-      else /* no r_lim */
+          start_angle = bin_edges[0] * convert;
+          end_angle = bin_edges[1] * convert;
+        }
+      else
         {
-          std::shared_ptr<GRM::Element> arc, draw_arc;
-
-          if (!draw_edges)
-            {
-              if (del != del_values::update_without_default && del != del_values::update_with_default)
-                {
-                  arc = global_render->createFillArc(-rect, rect, -rect, rect, class_nr * (360.0 / num_bins),
-                                                     (class_nr + 1) * (360.0 / num_bins));
-                  arc->setAttribute("_child_id", child_id++);
-                  element->append(arc);
-                }
-              else
-                {
-                  arc = element->querySelectors("fill_arc[_child_id=" + std::to_string(child_id++) + "]");
-                  if (arc != nullptr)
-                    global_render->createFillArc(-rect, rect, -rect, rect, class_nr * (360.0 / num_bins),
-                                                 (class_nr + 1) * (360.0 / num_bins), 0, 0, -1, arc);
-                }
-
-              if (arc != nullptr)
-                {
-                  global_render->setFillIntStyle(arc, 1);
-                  global_render->setFillColorInd(arc, face_color);
-                }
-            }
-
+          start_angle = class_nr * (360.0 / num_bins);
+          end_angle = (class_nr + 1) * (360.0 / num_bins);
+        }
+      if (!draw_edges)
+        {
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
-              draw_arc = global_render->createFillArc(-rect, rect, -rect, rect, class_nr * (360.0 / num_bins),
-                                                      (class_nr + 1) * (360.0 / num_bins));
-              draw_arc->setAttribute("_child_id", child_id++);
-              element->append(draw_arc);
+              arc = global_render->createFillArc(-rect, rect, -rect, rect, start_angle, end_angle);
+              arc->setAttribute("_child_id", child_id++);
+              element->append(arc);
             }
           else
             {
-              draw_arc = element->querySelectors("fill_arc[_child_id=" + std::to_string(child_id++) + "]");
-              if (draw_arc != nullptr)
-                global_render->createFillArc(-rect, rect, -rect, rect, class_nr * (360.0 / num_bins),
-                                             (class_nr + 1) * (360.0 / num_bins), 0, 0, -1, draw_arc);
+              arc = element->querySelectors("fill_arc[_child_id=" + std::to_string(child_id++) + "]");
+              if (arc != nullptr)
+                global_render->createFillArc(-rect, rect, -rect, rect, start_angle, end_angle, 0, 0, -1, arc);
             }
-          if (draw_arc != nullptr)
+
+          if (arc != nullptr)
             {
-              global_render->setFillIntStyle(draw_arc, 0);
-              global_render->setFillColorInd(draw_arc, edge_color);
-              draw_arc->setAttribute("z_index", 2);
+              global_render->setFillIntStyle(arc, 1);
+              global_render->setFillColorInd(arc, face_color);
             }
         }
-    }
-  else /* bin_egdes */
-    {
-      if (r_lim != nullptr)
+
+      if (del != del_values::update_without_default && del != del_values::update_with_default)
         {
-          double start_angle, end_angle;
-          int num_angle, i;
-          std::shared_ptr<GRM::Element> area;
-          int id = (int)global_root->getAttribute("_id");
+          draw_arc = global_render->createFillArc(-rect, rect, -rect, rect, start_angle, end_angle);
+          draw_arc->setAttribute("_child_id", child_id++);
+          element->append(draw_arc);
+        }
+      else
+        {
+          draw_arc = element->querySelectors("fill_arc[_child_id=" + std::to_string(child_id++) + "]");
+          if (draw_arc != nullptr)
+            global_render->createFillArc(-rect, rect, -rect, rect, start_angle, end_angle, 0, 0, -1, draw_arc);
+        }
+      if (draw_arc != nullptr)
+        {
+          global_render->setFillIntStyle(draw_arc, 0);
+          global_render->setFillColorInd(draw_arc, edge_color);
+          draw_arc->setAttribute("z_index", 2);
+        }
+    }  /* end of no keep_radii_axes given*/
+  else /* keep_radii_axes is given so extra calculations are needed */
+    {
+      int i, num_angle;
+      double start_angle, end_angle;
+      std::shared_ptr<GRM::Element> area;
+      auto id = static_cast<int>(global_root->getAttribute("_id"));
 
-          if (r > r_min)
+      if (count > y_lim_min && keep_radii_axes) // check if original count (count + ylim_min) is larger than ylim_min
+        {
+          global_root->setAttribute("_id", id + 1);
+          str = std::to_string(id);
+
+          if (num_bin_edges != 0.0)
             {
-              global_root->setAttribute("_id", id + 1);
-              str = std::to_string(id);
-
               start_angle = bin_edges[0];
               end_angle = bin_edges[1];
+            }
+          else
+            {
+              start_angle = class_nr * (360.0 / num_bins) / convert;
+              end_angle = (class_nr + 1) * (360.0 / num_bins) / convert;
+            }
 
-              num_angle = (int)((end_angle - start_angle) / (0.2 / convert));
-              phi_vec.resize(num_angle);
-              linspace(start_angle, end_angle, num_angle, phi_vec);
+          // determine number of angles for arc approximations
+          num_angle = (int)((end_angle - start_angle) / (0.2 / convert));
+          phi_vec.resize(num_angle);
+          linspace(start_angle, end_angle, num_angle, phi_vec);
 
-              f1.resize(4 + 2 * num_angle);
-              /* line_1_x[0] and [1] */
-              f1[0] = cos(bin_edges[0]) * r_min;
-              f1[1] = grm_min(rect, r_max) * cos(bin_edges[0]);
-              /* arc_1_x */
-              listcomprehension(r, cos, phi_vec, num_angle, 2, f1);
-              /* reversed line_2_x [0] and [1] */
-              f1[2 + num_angle + 1] = cos(bin_edges[1]) * r_min;
-              f1[2 + num_angle] = grm_min(rect, r_max) * cos(bin_edges[1]);
-              /* reversed arc_2_x */
-              listcomprehension(r_min, cos, phi_vec, num_angle, 0, arc_2_x);
-              for (i = 0; i < num_angle; ++i)
-                {
-                  f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
-                }
-              arc_2_x.clear();
+          // 4 because of the 4 corner coordinates and 2 * num_angle for the arc approximations, top and
+          // bottom
+          f1.resize(4 + 2 * num_angle);
+          /* line_1_x[0] and [1]*/
+          f1[0] = cos(start_angle) * y_lim_min / max;
+          f1[1] = rect * cos(start_angle);
 
-              f2.resize(4 + 2 * num_angle);
-              /* line_1_y[0] and [1] */
-              f2[0] = r_min * sin(bin_edges[0]);
-              f2[1] = grm_min(rect, r_max) * sin(bin_edges[0]);
-              /* arc_1_y */
-              listcomprehension(r, sin, phi_vec, num_angle, 2, f2);
-              /* reversed line_2_y [0] and [1] */
-              f2[2 + num_angle + 1] = r_min * sin(bin_edges[1]);
-              f2[2 + num_angle] = grm_min(rect, r_max) * sin(bin_edges[1]);
-              /* reversed arc_2_y */
-              listcomprehension(r_min, sin, phi_vec, num_angle, 0, arc_2_y);
-              for (i = 0; i < num_angle; ++i)
-                {
-                  f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
-                }
-              arc_2_y.clear();
+          /* arc_1_x */
+          listcomprehension(r, cos, phi_vec, num_angle, 2, f1);
 
-              if (!draw_edges)
-                {
-                  if (del != del_values::update_without_default && del != del_values::update_with_default)
-                    {
-                      area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
-                      area->setAttribute("_child_id", child_id++);
-                      element->append(area);
-                    }
-                  else
-                    {
-                      area = element->querySelectors("fill_area[_child_id=" + std::to_string(child_id++) + "]");
-                      if (area != nullptr)
-                        global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
-                    }
+          /* reversed line_2_x [0] and [1] */
+          f1[2 + num_angle + 1] = cos(end_angle) * y_lim_min / max;
+          f1[2 + num_angle] = rect * cos(end_angle);
+          /* reversed arc_2_x */
+          if (keep_radii_axes)
+            {
+              listcomprehension(y_lim_min / max, cos, phi_vec, num_angle, 0, arc_2_x);
+            }
+          else
+            {
+              listcomprehension(0.0, cos, phi_vec, num_angle, 0, arc_2_x);
+            }
 
-                  if (area != nullptr)
-                    {
-                      global_render->setFillColorInd(area, face_color);
-                      global_render->setFillIntStyle(area, 1);
-                    }
-                }
+          for (i = 0; i < num_angle; ++i)
+            {
+              f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
+            }
+          arc_2_x.clear();
 
-              /* draw_area more likely */
+          f2.resize(4 + 2 * num_angle);
+          /* line_1_y[0] and [1] */
+          f2[0] = y_lim_min / max * sin(start_angle);
+          f2[1] = rect * sin(start_angle);
+
+          /*arc_1_y */
+          listcomprehension(r, sin, phi_vec, num_angle, 2, f2);
+          /* reversed line_2_y [0] and [1] */
+          f2[2 + num_angle + 1] = y_lim_min / max * sin(end_angle);
+          f2[2 + num_angle] = rect * sin(end_angle);
+          /* reversed arc_2_y */
+          if (keep_radii_axes)
+            {
+              listcomprehension(y_lim_min / max, sin, phi_vec, num_angle, 0, arc_2_y);
+            }
+          else
+            {
+              listcomprehension(0.0, sin, phi_vec, num_angle, 0, arc_2_y);
+            }
+          for (i = 0; i < num_angle; ++i)
+            {
+              f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
+            }
+          arc_2_y.clear();
+
+          if (!draw_edges)
+            {
+              // with rlim gr_fillarc cant be used because it will always draw from the origin
+              // instead use gr_fillarea and approximate line segment with calculations from above.
               if (del != del_values::update_without_default && del != del_values::update_with_default)
                 {
                   area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
@@ -10569,71 +11152,41 @@ static void processPolarBar(const std::shared_ptr<GRM::Element> &element, const 
                   if (area != nullptr)
                     global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
                 }
+
               if (area != nullptr)
                 {
-                  global_render->setFillColorInd(area, edge_color);
-                  global_render->setFillIntStyle(area, 0);
-                  area->setAttribute("z_index", 2);
-                }
-
-              /* clean up vectors for next iteration */
-              phi_vec.clear();
-              f1.clear();
-              f2.clear();
-            }
-        }
-      else /* no r_lim */
-        {
-          std::shared_ptr<GRM::Element> arc, draw_arc;
-
-          if (!draw_edges)
-            {
-              if (del != del_values::update_without_default && del != del_values::update_with_default)
-                {
-                  arc = global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[0] * convert,
-                                                     bin_edges[1] * convert);
-                  arc->setAttribute("_child_id", child_id++);
-                  element->append(arc);
-                }
-              else
-                {
-                  arc = element->querySelectors("fill_arc[_child_id=" + std::to_string(child_id++) + "]");
-                  if (arc != nullptr)
-                    global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[0] * convert,
-                                                 bin_edges[1] * convert, 0, 0, -1, arc);
-                }
-
-              if (arc != nullptr)
-                {
-                  global_render->setFillIntStyle(arc, 1);
-                  global_render->setFillColorInd(arc, face_color);
+                  global_render->setFillColorInd(area, face_color);
+                  global_render->setFillIntStyle(area, 1);
                 }
             }
 
-          /* draw_arc */
+          // draw_area more likely
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
-              draw_arc = global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[0] * convert,
-                                                      bin_edges[1] * convert);
-              draw_arc->setAttribute("_child_id", child_id++);
-              element->append(draw_arc);
+              area = global_render->createFillArea("x" + str, f1, "y" + str, f2);
+              area->setAttribute("_child_id", child_id++);
+              element->append(area);
             }
           else
             {
-              draw_arc = element->querySelectors("fill_arc[_child_id=" + std::to_string(child_id++) + "]");
-              if (draw_arc != nullptr)
-                global_render->createFillArc(-rect, rect, -rect, rect, bin_edges[0] * convert, bin_edges[1] * convert,
-                                             0, 0, -1, draw_arc);
+              area = element->querySelectors("fill_area[_child_id=" + std::to_string(child_id++) + "]");
+              if (area != nullptr) global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, -1, area);
             }
-          if (draw_arc != nullptr)
+          if (area != nullptr)
             {
-              global_render->setFillIntStyle(draw_arc, 0);
-              global_render->setFillColorInd(draw_arc, edge_color);
-              draw_arc->setAttribute("z_index", 2);
+              global_render->setFillColorInd(area, edge_color);
+              global_render->setFillIntStyle(area, 0);
+              area->setAttribute("z_index", 2);
             }
+
+          /* clean up vectors for next iteration */
+          phi_vec.clear();
+          f1.clear();
+          f2.clear();
         }
-    }
+    } /* end of ylims given case */
 }
+
 
 static void processScatter(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
@@ -12424,6 +12977,8 @@ static void processText(const std::shared_ptr<GRM::Element> &element, const std:
   auto space = static_cast<CoordinateSpace>(static_cast<int>(element->getAttribute("space")));
   if (element->hasAttribute("text_color_ind"))
     text_color_ind = static_cast<int>(element->getAttribute("text_color_ind"));
+  bool mathtex = false;
+  if (element->hasAttribute("mathtex")) mathtex = static_cast<int>(element->getAttribute("mathtex"));
 
   applyMoveTransformation(element);
   if (space == CoordinateSpace::WC)
@@ -12461,7 +13016,12 @@ static void processText(const std::shared_ptr<GRM::Element> &element, const std:
             }
         }
     }
-  if (text_fits && redraw_ws)
+  if (text_fits && redraw_ws && mathtex)
+    {
+      gr_settextcolorind(text_color_ind); // needed to have a visible text after update
+      gr_mathtex(x, y, &str[0]);
+    }
+  else if (text_fits && redraw_ws)
     {
       gr_settextcolorind(text_color_ind); // needed to have a visible text after update
       gr_text(x, y, &str[0]);
@@ -12955,7 +13515,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
               if (!element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_min") ||
                   !element->hasAttribute(static_cast<std::string>(current_range_keys->subplot) + "_max") ||
-                  str_equals_any(kind, "heatmap", "marginal_heatmap", "polar_heatmap"))
+                  str_equals_any(kind, "heatmap", "marginal_heatmap", "polar_heatmap", "nonuniform_polar_heatmap"))
                 {
                   std::shared_ptr<GRM::Element> series_parent = central_region;
                   if (kind == "marginal_heatmap") series_parent = element;
@@ -13019,7 +13579,8 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                               current_max_component = y_length - 1;
                             }
                           else if (ends_with(series->localName(), kind) &&
-                                   str_equals_any(kind, "heatmap", "marginal_heatmap", "polar_heatmap", "surface") &&
+                                   str_equals_any(kind, "heatmap", "marginal_heatmap", "polar_heatmap",
+                                                  "nonuniform_polar_heatmap", "surface") &&
                                    str_equals_any((*current_component_name), "x", "y"))
                             {
                               /* in this case `x` or `y` (or both) are missing
@@ -13230,12 +13791,34 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               ++current_component_name;
             }
         }
-      else if (kind == "polar_histogram")
+      if (str_equals_any(kind, "polar_histogram", "polar", "polar_heatmap", "nonuniform_heatmap",
+                         "nonuniform_polar_heatmap"))
         {
-          element->setAttribute("_x_lim_min", -1.0);
-          element->setAttribute("_x_lim_max", 1.0);
-          element->setAttribute("_y_lim_min", -1.0);
-          element->setAttribute("_y_lim_max", 1.0);
+          if (kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap" || kind == "polar")
+            {
+              if (kind == "nonuniform_polar_heatmap") kind = "polar_heatmap";
+
+              auto series_vec = element->getElementsByTagName("series_" + kind);
+              auto series = series_vec[0];
+
+              // set calc ranges  _x_ranges for later distinction from user ranges
+              auto xmin = static_cast<double>(series->getAttribute("x_range_min"));
+              auto xmax = static_cast<double>(series->getAttribute("x_range_max"));
+              series->setAttribute("_x_range_min", xmin);
+              series->setAttribute("_x_range_max", xmax);
+
+              auto ymax = static_cast<double>(element->getAttribute("_y_lim_max"));
+              auto ymin = static_cast<double>(element->getAttribute("_y_lim_min"));
+
+              central_region->setAttribute("r_min", ymin);
+              central_region->setAttribute("r_max", ymax);
+            }
+          // this is needed for interactions replaces gr_setwindow(-1,1,-1,1);
+          double temp = 1.01;
+          element->setAttribute("_x_lim_min", -temp);
+          element->setAttribute("_x_lim_max", temp);
+          element->setAttribute("_y_lim_min", -temp);
+          element->setAttribute("_y_lim_max", temp);
         }
 
       /* For quiver plots use u^2 + v^2 as z value */
@@ -13929,8 +14512,8 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
 static void processPlot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   std::shared_ptr<GRM::Element> central_region, central_region_parent = element;
-  if (static_cast<std::string>(element->getAttribute("kind")) == "marginal_heatmap")
-    central_region_parent = element->querySelectors("marginal_heatmap_plot");
+  auto kind = static_cast<std::string>(element->getAttribute("kind"));
+  if (kind == "marginal_heatmap") central_region_parent = element->querySelectors("marginal_heatmap_plot");
 
   for (const auto &child : central_region_parent->children())
     {
@@ -13939,6 +14522,12 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
           central_region = child;
           break;
         }
+    }
+
+  if (str_equals_any(kind, "polar", "polar_histogram", "polar_heatmap", "nonuniform_polar_heatmap"))
+    {
+      global_render->setClipRegion(central_region, 1);
+      global_render->setSelectSpecificXform(central_region, 1);
     }
 
   // set the x-, y- and z-data to NAN if the value is <= 0
@@ -14149,7 +14738,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
     {
       if (child->localName() == "series_barplot" || child->localName() == "series_polar_histogram")
         {
-          auto kind = static_cast<std::string>(child->getAttribute("kind"));
+          kind = static_cast<std::string>(child->getAttribute("kind"));
           if (kindNameToFunc.find(kind) != kindNameToFunc.end())
             {
               kindNameToFunc[kind](element, context);
@@ -14159,7 +14748,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
     }
 
   std::shared_ptr<GRM::Element> side_region;
-  auto kind = static_cast<std::string>(element->getAttribute("kind"));
+  kind = static_cast<std::string>(element->getAttribute("kind"));
 
   if (!element->querySelectors("side_region[location=\"right\"]"))
     {
@@ -14287,12 +14876,12 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           {std::string("isosurface_render"), PushDrawableToZQueue(processIsosurfaceRender)},
           {std::string("layout_grid"), PushDrawableToZQueue(processLayoutGrid)},
           {std::string("marginal_heatmap_plot"), processMarginalHeatmapPlot},
-          {std::string("nonuniform_polarcellarray"), PushDrawableToZQueue(processNonUniformPolarCellArray)},
-          {std::string("nonuniformcellarray"), PushDrawableToZQueue(processNonuniformcellarray)},
+          {std::string("nonuniform_polar_cellarray"), PushDrawableToZQueue(processNonUniformPolarCellArray)},
+          {std::string("nonuniform_cellarray"), PushDrawableToZQueue(processNonuniformcellarray)},
           {std::string("panzoom"), PushDrawableToZQueue(processPanzoom)},
           {std::string("pie_segment"), processPieSegment},
           {std::string("polar_bar"), processPolarBar},
-          {std::string("polarcellarray"), PushDrawableToZQueue(processPolarCellArray)},
+          {std::string("polar_cellarray"), PushDrawableToZQueue(processPolarCellArray)},
           {std::string("polyline"), PushDrawableToZQueue(processPolyline)},
           {std::string("polyline_3d"), PushDrawableToZQueue(processPolyline3d)},
           {std::string("polymarker"), PushDrawableToZQueue(processPolymarker)},
@@ -14366,7 +14955,7 @@ static void processElement(const std::shared_ptr<GRM::Element> &element, const s
           ((static_cast<int>(global_root->getAttribute("_modified")) &&
             (str_equals_any(element->localName(), "axes", "axes_3d", "cellarray", "colorbar", "draw_arc", "draw_image",
                             "draw_rect", "fill_arc", "fill_area", "fill_rect", "grid", "grid_3d", "legend",
-                            "nonuniform_polarcellarray", "nonuniformcellarray", "polarcellarray", "polyline",
+                            "nonuniform_polar_cellarray", "nonuniform_cellarray", "polar_cellarray", "polyline",
                             "polyline_3d", "polymarker", "polymarker_3d", "series_contour", "series_contourf", "text",
                             "titles_3d", "coordinate_system", "series_hexbin", "series_isosurface", "series_quiver",
                             "series_shade", "series_surface", "series_tricontour", "series_trisurface",
@@ -14720,7 +15309,14 @@ static void applyPlotDefaults(const std::shared_ptr<GRM::Element> &plot)
         }
       else
         {
-          plot->setAttribute("adjust_y_lim", (plot->hasAttribute("y_lim_min") ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
+          if (polar_kinds.count(kind) > 0 || kind == "pie")
+            {
+              plot->setAttribute("adjust_y_lim", PLOT_DEFAULT_ADJUST_YLIM);
+            }
+          else
+            {
+              plot->setAttribute("adjust_y_lim", (plot->hasAttribute("y_lim_min") ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
+            }
         }
     }
   if (!plot->hasAttribute("adjust_z_lim") || overwrite)
@@ -15014,6 +15610,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("classes"),
        std::vector<std::string>{"None", "References the histogram classes stored in the context"}},
       {std::string("clip_transformation"), std::vector<std::string>{"None", "The transformation for clipping"}},
+      {std::string("clip_negative"),
+       std::vector<std::string>{"0", "Sets if negative radii get clipped, otherwise mirror"}},
       {std::string("color_ind"), std::vector<std::string>{"None", "The index of the used color"}},
       {std::string("color_ind_values"),
        std::vector<std::string>{"None", "References the color-values stored in the context in index format"}},
@@ -15072,6 +15670,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"None", "References the lower integral limit-values stored in the context"}},
       {std::string("isovalue"), std::vector<std::string>{"0.5", "The used isovalue"}},
       {std::string("keep_aspect_ratio"), std::vector<std::string>{"1", "Sets if the aspect ratio is kept"}},
+      {std::string("keep_radii_axes"),
+       std::vector<std::string>{"0", "Sets if the radii_axes start at 0.0 when using y_lims"}},
       {std::string("keep_window"),
        std::vector<std::string>{"1", "Sets if the window will be inflicted by attribute changes"}},
       {std::string("kind"),
@@ -15716,8 +16316,6 @@ std::shared_ptr<GRM::Element> GRM::Render::createDrawPolarAxes(int angle_ticks, 
       element->setAttribute("line_width", line_width);
     }
   element->setAttribute("angle_ticks", angle_ticks);
-  // todo should phiflip be passed when creating a polarAxesElement
-  //  element->setAttribute("phi_flip", phiflip);
 
   return element;
 }
@@ -16076,7 +16674,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createPolarCellArray(
    */
 
   std::shared_ptr<GRM::Context> use_context = (ext_context == nullptr) ? context : ext_context;
-  std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("polarcellarray") : ext_element;
+  std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("polar_cellarray") : ext_element;
   element->setAttribute("x_org", x_org);
   element->setAttribute("y_org", y_org);
   element->setAttribute("phi_min", phimin);
@@ -16168,7 +16766,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createNonUniformPolarCellArray(
 
   std::shared_ptr<GRM::Context> use_context = (ext_context == nullptr) ? context : ext_context;
   std::shared_ptr<GRM::Element> element =
-      (ext_element == nullptr) ? createElement("nonuniform_polarcellarray") : ext_element;
+      (ext_element == nullptr) ? createElement("nonuniform_polar_cellarray") : ext_element;
   element->setAttribute("x_org", x_org);
   element->setAttribute("y_org", y_org);
   element->setAttribute("r", r_key);
@@ -16205,7 +16803,8 @@ std::shared_ptr<GRM::Element> GRM::Render::createNonUniformCellArray(
    * This function can be used to create a non uniform cell array GRM::Element
    */
   std::shared_ptr<GRM::Context> use_context = (ext_context == nullptr) ? context : ext_context;
-  std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("nonuniformcellarray") : ext_element;
+  std::shared_ptr<GRM::Element> element =
+      (ext_element == nullptr) ? createElement("nonuniform_cellarray") : ext_element;
   element->setAttribute("x", x_key);
   element->setAttribute("y", y_key);
   element->setAttribute("color_ind_values", color_key);
@@ -16525,6 +17124,17 @@ std::shared_ptr<GRM::Element> GRM::Render::createSidePlotRegion(const std::share
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ modifier functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
+
+void GRM::Render::setClipRegion(const std::shared_ptr<GRM::Element> &element, int region)
+{
+  /*!
+   * This function can be used to set the clip region of a GRM::Element
+   *
+   * \param[in] element A GRM::Element
+   * \param[in] region The desired clip region
+   */
+  element->setAttribute("clip_region", region);
+}
 
 void GRM::Render::setViewport(const std::shared_ptr<GRM::Element> &element, double xmin, double xmax, double ymin,
                               double ymax)
@@ -17293,13 +17903,14 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       "z",
   };
   std::vector<std::string> series_polar{
-      "line_spec", "r_max", "r_min", "x", "y",
+      "clip_negative", "line_spec", "r_max", "r_min", "x", "y",
   };
   std::vector<std::string> series_polar_heatmap = series_nonuniformpolar_heatmap;
   std::vector<std::string> series_polar_histogram{
-      "bin_counts", "bin_edges", "bin_width", "bin_widths",   "classes",    "draw_edges",
-      "face_alpha", "num_bins",  "norm",      "r_max",        "r_min",      "stairs",
-      "theta",      "tick",      "total",     "transparency", "x_colormap", "y_colormap",
+      "bin_counts", "bin_edges",    "bin_width",       "bin_widths", "classes",
+      "draw_edges", "face_alpha",   "keep_radii_axes", "num_bins",   "norm",
+      "r_max",      "r_min",        "stairs",          "theta",      "tick",
+      "total",      "transparency", "x_colormap",      "y_colormap",
   };
   std::vector<std::string> series_quiver{
       "color_ind", "u", "v", "x", "y",
@@ -17367,8 +17978,8 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       {std::string("series_imshow"), series_imshow},
       {std::string("series_isosurface"), series_isosurface},
       {std::string("series_line"), series_line},
-      {std::string("series_nonuniformheatmap"), series_nonuniformheatmap},
-      {std::string("series_nonuniformpolar_heatmap"), series_nonuniformpolar_heatmap},
+      {std::string("series_nonuniform_heatmap"), series_nonuniformheatmap},
+      {std::string("series_nonuniform_polar_heatmap"), series_nonuniformpolar_heatmap},
       {std::string("series_pie"), series_pie},
       {std::string("series_plot3"), series_plot3},
       {std::string("series_polar"), series_polar},
@@ -17702,9 +18313,9 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                 }
 
               /* update coordinate system if needed */
-              std::vector<std::string> colorbar_group = {"quiver",        "contour",   "contourf", "hexbin",
-                                                         "polar_heatmap", "heatmap",   "surface",  "volume",
-                                                         "trisurface",    "tricontour"};
+              std::vector<std::string> colorbar_group = {
+                  "quiver",  "contour", "contourf", "hexbin",     "polar_heatmap", "nonuniform_polar_heatmap",
+                  "heatmap", "surface", "volume",   "trisurface", "tricontour"};
 
               std::shared_ptr<GRM::Element> coordinate_system = plot->querySelectors("coordinate_system");
               std::string new_kind = static_cast<std::string>(new_element->getAttribute("kind"));
@@ -17919,7 +18530,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
             {
               // conditional critical attributes
               auto kind = static_cast<std::string>(element->getAttribute("kind"));
-              if (kind == "heatmap" || kind == "polar_heatmap")
+              if (kind == "heatmap" || kind == "polar_heatmap" || kind == "nonuniform_polar_heatmap")
                 {
                   if (element->hasAttribute("c_range_max") && element->hasAttribute("c_range_min"))
                     {
@@ -17930,7 +18541,8 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                         }
                     }
                 }
-              if (kind == "heatmap" || kind == "surface" || kind == "polar_heatmap")
+              if (kind == "heatmap" || kind == "surface" || kind == "polar_heatmap" ||
+                  kind == "nonuniform_polar_heatmap")
                 {
                   if (!element->hasAttribute("x") && !element->hasAttribute("y"))
                     {

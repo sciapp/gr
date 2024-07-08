@@ -170,10 +170,10 @@ static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},           {"hexbin",
                                            {"scatter3", "xyzc"},      {"quiver", "xyuv"},
                                            {"heatmap", "xyzc"},       {"hist", "x"},
                                            {"barplot", "y"},          {"isosurface", "c"},
-                                           {"imshow", "c"},           {"nonuniformheatmap", "xyzc"},
+                                           {"imshow", "c"},           {"nonuniform_heatmap", "xyzc"},
                                            {"polar_histogram", "x"},  {"pie", "x"},
                                            {"volume", "c"},           {"marginal_heatmap", "xyzc"},
-                                           {"polar_heatmap", "xyzc"}, {"nonuniformpolar_heatmap", "xyzc"}};
+                                           {"polar_heatmap", "xyzc"}, {"nonuniform_polar_heatmap", "xyzc"}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -200,8 +200,8 @@ static plot_func_map_entry_t kind_to_func[] = {{"line", plot_line},
                                                {"trisurface", plot_trisurface},
                                                {"tricontour", plot_tricontour},
                                                {"shade", plot_shade},
-                                               {"nonuniformheatmap", plot_heatmap},
-                                               {"nonuniformpolar_heatmap", plot_polar_heatmap},
+                                               {"nonuniform_heatmap", plot_heatmap},
+                                               {"nonuniform_polar_heatmap", plot_polar_heatmap},
                                                {"polar_histogram", plot_polar_histogram},
                                                {"polar_heatmap", plot_polar_heatmap},
                                                {"pie", plot_pie},
@@ -275,6 +275,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "ind_edge_color",
                                     "ind_edge_width",
                                     "keep_aspect_ratio",
+                                    "keep_radii_axes",
                                     "kind",
                                     "labels",
                                     "levels",
@@ -329,6 +330,7 @@ const char *valid_series_keys[] = {"a",
                                    "c",
                                    "c_dims",
                                    "c_range",
+                                   "clip_negative",
                                    "draw_edges",
                                    "d_min",
                                    "d_max",
@@ -1075,7 +1077,7 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
     {
       plot_draw_polar_axes(subplot_args);
     }
-  else if (!str_equals_any(kind, "pie", "polar_heatmap", "nonuniformpolar_heatmap"))
+  else if (!str_equals_any(kind, "pie", "polar_heatmap", "nonuniform_polar_heatmap"))
     {
       plot_draw_axes(subplot_args, 1);
     }
@@ -1391,7 +1393,7 @@ void plot_post_subplot(grm_args_t *subplot_args)
     {
       plot_draw_axes(subplot_args, 2);
     }
-  else if (str_equals_any(kind, "polar_heatmap", "nonuniformpolar_heatmap"))
+  else if (str_equals_any(kind, "polar_heatmap", "nonuniform_polar_heatmap"))
     {
       plot_draw_polar_axes(subplot_args);
     }
@@ -2381,6 +2383,7 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
   unsigned int i, cols, rows, z_length;
   double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max;
   err_t error = ERROR_NONE;
+  char *kind;
 
   std::shared_ptr<GRM::Element> group =
       (current_central_region_element) ? current_central_region_element : getCentralRegion();
@@ -2490,6 +2493,8 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "z_log", "i", &z_log);
+
+  plot_parent->setAttribute("kind", kind);
   while (*current_series != nullptr)
     {
       x = y = nullptr;
@@ -3103,9 +3108,11 @@ err_t plot_polar(grm_args_t *subplot_args)
   while (*current_series != nullptr)
     {
       double *rho, *theta;
+      double y_min, y_max, x_min, x_max;
       unsigned int rho_length, theta_length;
       char *spec;
       auto subGroup = global_render->createSeries("polar");
+      int clip_negative = 0;
       group->append(subGroup);
 
       grm_args_first_value(*current_series, "x", "D", &theta, &theta_length);
@@ -3123,7 +3130,21 @@ err_t plot_polar(grm_args_t *subplot_args)
       (*context)["y" + str] = rho_vec;
       subGroup->setAttribute("y", "y" + str);
 
-      if (grm_args_values(*current_series, "line_spec", "s", &spec)) subGroup->setAttribute("line_spec", spec);
+      if (grm_args_values(*current_series, "line_spec", "s", &spec)) subGroup->setAttribute("spec", spec);
+      if (grm_args_values(*current_series, "y_range", "dd", &y_min, &y_max))
+        {
+          subGroup->setAttribute("y_range_min", y_min);
+          subGroup->setAttribute("y_range_max", y_max);
+        }
+      if (grm_args_values(*current_series, "clip_negative", "i", &clip_negative))
+        {
+          subGroup->setAttribute("clip_negative", clip_negative);
+        }
+      if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
+        {
+          subGroup->setAttribute("x_range_min", x_min);
+          subGroup->setAttribute("x_range_max", x_max);
+        }
 
       global_root->setAttribute("_id", id++);
       ++current_series;
@@ -3202,8 +3223,10 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   double *r_lim = nullptr;
   unsigned int dummy;
   int stairs;
+  int keep_radii_axes;
   int x_colormap, y_colormap;
   int draw_edges, phi_flip, edge_color, face_color, face_alpha;
+  double xrange_min, xrange_max, ylim_min, ylim_max;
   grm_args_t **series;
 
   std::shared_ptr<GRM::Element> plot_group = edit_figure->lastChildElement();
@@ -3245,6 +3268,11 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
       plot_group->setAttribute("phi_flip", phi_flip);
     }
 
+  if (grm_args_values(subplot_args, "keep_radii_axes", "i", &keep_radii_axes))
+    {
+      plot_group->setAttribute("keep_radii_axes", keep_radii_axes);
+    }
+
   if (grm_args_values(*series, "draw_edges", "i", &draw_edges))
     {
       series_group->setAttribute("draw_edges", draw_edges);
@@ -3259,6 +3287,18 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
     {
       plot_group->setAttribute("r_lim_min", r_lim[0]);
       plot_group->setAttribute("r_lim_max", r_lim[1]);
+    }
+
+  if (grm_args_values(subplot_args, "y_lim", "dd", &ylim_min, &ylim_max))
+    {
+      plot_group->setAttribute("y_lim_min", ylim_min);
+      plot_group->setAttribute("y_lim_max", ylim_max);
+    }
+
+  if (grm_args_values(*series, "x_range", "dd", &xrange_min, &xrange_max))
+    {
+      series_group->setAttribute("x_range_min", xrange_min);
+      series_group->setAttribute("x_range_max", xrange_max);
     }
 
   if (grm_args_values(*series, "x_colormap", "i", &x_colormap))
