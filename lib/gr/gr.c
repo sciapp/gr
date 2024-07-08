@@ -5471,7 +5471,7 @@ void gr_drawaxis(char which, axis_t *axis)
   int errind, tnr, ltype, clsw, halign, valign;
   double wn[4], vp[4], clrt[4];
   double tick, minor_tick, major_tick;
-  int i;
+  int i, pass;
   double epsilon;
 
   check_autoinit;
@@ -5504,20 +5504,26 @@ void gr_drawaxis(char which, axis_t *axis)
 
   if (axis->tick_size != 0)
     {
-      for (i = 0; i < axis->num_ticks; i++)
+      for (pass = 0; pass <= 1; pass++)
         {
-          tick = axis->ticks[i].is_major ? major_tick : minor_tick;
-          if (which == 'X')
+          for (i = 0; i < axis->num_ticks; i++)
             {
-              pline(axis->ticks[i].value, axis->position);
-              pline(axis->ticks[i].value, tick);
-              end_pline();
-            }
-          else
-            {
-              pline(axis->position, axis->ticks[i].value);
-              pline(tick, axis->ticks[i].value);
-              end_pline();
+              if (pass != axis->ticks[i].is_major)
+                {
+                  tick = axis->ticks[i].is_major ? major_tick : minor_tick;
+                  if (which == 'X')
+                    {
+                      pline(axis->ticks[i].value, axis->position);
+                      pline(axis->ticks[i].value, tick);
+                      end_pline();
+                    }
+                  else
+                    {
+                      pline(axis->position, axis->ticks[i].value);
+                      pline(tick, axis->ticks[i].value);
+                      end_pline();
+                    }
+                }
             }
         }
     }
@@ -5633,6 +5639,7 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
   double tick, minor_tick, major_tick;
   int i, pass;
   double epsilon;
+  axis_t axis;
 
   check_autoinit;
 
@@ -5658,13 +5665,8 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
         }
     }
 
-  if (y_axis != NULL) gr_drawaxis('Y', y_axis);
-  if (x_axis != NULL) gr_drawaxis('X', x_axis);
-
   if ((options & GR_AXES_WITH_FRAME) != 0)
     {
-      axis_t axis;
-
       if (y_axis != NULL)
         {
           memcpy(&axis, y_axis, sizeof(axis_t));
@@ -5674,7 +5676,11 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
           gr_drawaxis('Y', y_axis);
           memcpy(y_axis, &axis, sizeof(axis_t));
         }
+    }
+  if (y_axis != NULL) gr_drawaxis('Y', y_axis);
 
+  if ((options & GR_AXES_WITH_FRAME) != 0)
+    {
       if (x_axis != NULL)
         {
           memcpy(&axis, x_axis, sizeof(axis_t));
@@ -5685,6 +5691,7 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
           memcpy(x_axis, &axis, sizeof(axis_t));
         }
     }
+  if (x_axis != NULL) gr_drawaxis('X', x_axis);
 
   /* restore linetype and clipping indicator */
 
