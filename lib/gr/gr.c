@@ -5665,7 +5665,7 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
         }
     }
 
-  if ((options & GR_AXES_WITH_FRAME) != 0)
+  if ((options & GR_AXES_TWIN_AXES) != 0)
     {
       if (y_axis != NULL)
         {
@@ -5677,9 +5677,12 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
           memcpy(y_axis, &axis, sizeof(axis_t));
         }
     }
-  if (y_axis != NULL) gr_drawaxis('Y', y_axis);
+  if ((options & GR_AXES_SIMPLE_AXES) != 0)
+    {
+      if (y_axis != NULL) gr_drawaxis('Y', y_axis);
+    }
 
-  if ((options & GR_AXES_WITH_FRAME) != 0)
+  if ((options & GR_AXES_TWIN_AXES) != 0)
     {
       if (x_axis != NULL)
         {
@@ -5691,7 +5694,10 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
           memcpy(x_axis, &axis, sizeof(axis_t));
         }
     }
-  if (x_axis != NULL) gr_drawaxis('X', x_axis);
+  if ((options & GR_AXES_SIMPLE_AXES) != 0)
+    {
+      if (x_axis != NULL) gr_drawaxis('X', x_axis);
+    }
 
   /* restore linetype and clipping indicator */
 
