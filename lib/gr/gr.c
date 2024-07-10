@@ -5671,6 +5671,7 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
         {
           memcpy(&axis, y_axis, sizeof(axis_t));
           y_axis->position = wn[1];
+          if (lx.scale_options & GR_OPTION_FLIP_X) y_axis->position = wn[0];
           y_axis->tick_size = -y_axis->tick_size;
           y_axis->major_count = -y_axis->major_count;
           gr_drawaxis('Y', y_axis);
@@ -5688,6 +5689,7 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
         {
           memcpy(&axis, x_axis, sizeof(axis_t));
           x_axis->position = wn[3];
+          if (lx.scale_options & GR_OPTION_FLIP_Y) x_axis->position = wn[2];
           x_axis->tick_size = -x_axis->tick_size;
           x_axis->major_count = -x_axis->major_count;
           gr_drawaxis('X', x_axis);
