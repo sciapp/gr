@@ -38,7 +38,7 @@ bool file_exists(const std::string &name)
   return (access(name.c_str(), F_OK) != -1);
 }
 
-bool starts_with(const std::string &str, const std::string &prefix)
+bool starts_with(std::string_view str, std::string_view prefix)
 {
   return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
 }
@@ -93,4 +93,16 @@ std::complex<double> moivre(double r, int x, int n)
     {
       return {1.0, 0.0};
     }
+}
+
+bool is_number(std::string_view str)
+{
+  const std::string em_dash = u8"—"; // gr minus sign
+  size_t start_pos = 0;
+  if (starts_with(str, em_dash))
+    {
+      start_pos = em_dash.size();
+    }
+  auto pos = str.find_first_not_of(".-0123456789", start_pos);
+  return pos == std::string::npos;
 }
