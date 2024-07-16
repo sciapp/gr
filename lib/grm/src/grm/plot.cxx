@@ -6566,6 +6566,10 @@ std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(bool with_private_a
       return nullptr;
     }
 
+  bool auto_update;
+  global_render->getAutoUpdate(&auto_update);
+  global_render->setAutoUpdate(false);
+
   std::shared_ptr<GRM::Document> private_schema_document;
   XMLSize_t errorCount = 0;
   if (with_private_attributes)
@@ -6635,6 +6639,8 @@ std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(bool with_private_a
     }
 
   XMLPlatformUtils::Terminate();
+
+  global_render->setAutoUpdate(auto_update);
 
   return (errorCount == 0) ? schema_document : nullptr;
 }
