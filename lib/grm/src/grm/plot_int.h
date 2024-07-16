@@ -205,17 +205,12 @@ void load_context_str(GRM::Context &context, const std::string &context_str, dum
 /* ------------------------- xml ------------------------------------------------------------------------------------ */
 
 #ifdef __cplusplus
-extern "C" {
-#endif
-
 #ifndef NO_XERCES_C
-err_t validate_graphics_tree_xml(void);
+err_t validate_graphics_tree(bool include_private_attributes = false);
 #endif
-int validate_graphics_tree_with_error_messages(void);
+bool validate_graphics_tree_with_error_messages();
+#endif
 
-#ifdef __cplusplus
-}
-#endif
 
 #if defined(__cplusplus) && !defined(NO_XERCES_C)
 std::string get_merged_schema_filepath();

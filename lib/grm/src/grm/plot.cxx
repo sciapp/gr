@@ -5722,17 +5722,19 @@ int grm_load_graphics_tree(FILE *file)
 
   return errorCount == 0;
 }
+}
 
 /*!
  * \brief Validate the currently loaded grapics tree against the internal XML schema definition.
  *
  * \return ERROR_NONE on success, an error code on failure.
  */
-err_t validate_graphics_tree(void)
+err_t validate_graphics_tree(bool include_private_attributes)
 {
   using namespace XERCES_CPP_NAMESPACE;
 
-  std::string schema_filepath{std::string(get_gr_dir()) + PATH_SEPARATOR + SCHEMA_REL_FILEPATH};
+  auto schema_filepath{include_private_attributes ? get_merged_schema_filepath()
+                                                  : (std::string(get_gr_dir()) + PATH_SEPARATOR + SCHEMA_REL_FILEPATH)};
   if (!file_exists(schema_filepath.c_str()))
     {
       return ERROR_PARSE_XML_NO_SCHEMA_FILE;
@@ -5768,7 +5770,10 @@ err_t validate_graphics_tree(void)
       {
         SaxErrorHandler error_handler(schema_filepath);
         parser->setErrorHandler(&error_handler);
-        parser->parse(StringInputSource(toXML(global_root)));
+        parser->parse(StringInputSource(toXML(
+            global_root, GRM::SerializerOptions{"", include_private_attributes
+                                                        ? GRM::SerializerOptions::InternalAttributesFormat::Plain
+                                                        : GRM::SerializerOptions::InternalAttributesFormat::None})));
         errorCount = parser->getErrorCount();
         schema_invalid = error_handler.schema_invalid().value();
       }
@@ -5788,11 +5793,8 @@ err_t validate_graphics_tree(void)
   return schema_invalid ? ERROR_PARSE_XML_INVALID_SCHEMA
                         : ((errorCount == 0) ? ERROR_NONE : ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION);
 }
-}
 
 #endif
-
-extern "C" {
 
 /*!
  * \brief Validate the currently loaded graphics tree and print error messages to stderr.
@@ -5801,10 +5803,10 @@ extern "C" {
  *
  * \return 1 on success, 0 on failure.
  */
-int validate_graphics_tree_with_error_messages(void)
+bool validate_graphics_tree_with_error_messages()
 {
 #ifndef NO_XERCES_C
-  err_t validation_error = validate_graphics_tree();
+  err_t validation_error = validate_graphics_tree(true);
   if (validation_error == ERROR_NONE)
     {
       fprintf(stderr, "The internal graphics tree passed the validity check.\n");
@@ -5829,7 +5831,7 @@ int validate_graphics_tree_with_error_messages(void)
 #endif
   return 1;
 }
-}
+
 
 #ifndef NO_XERCES_C
 std::string get_merged_schema_filepath()
