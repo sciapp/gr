@@ -5363,9 +5363,8 @@ void gr_axis(char which, axis_t *axis)
     {
       axis->num_tick_labels = igauss(blog(base, axis->max / axis->min)) + 2;
       axis->tick_labels = (tick_label_t *)xcalloc(axis->num_tick_labels, sizeof(tick_label_t));
-      axis->num_ticks = axis->num_tick_labels * base;
+      axis->num_ticks = (axis->num_tick_labels + 1) * base;
       axis->ticks = (tick_t *)xcalloc(axis->num_ticks, sizeof(tick_t));
-
       a0 = pow(base, gauss(blog(base, axis->min)));
       i = ipred(axis->min / a0);
       a = a0 + i * a0;
@@ -5392,10 +5391,11 @@ void gr_axis(char which, axis_t *axis)
                     }
                 }
             }
-          if (i == 8 || base < 10)
+          if (i == 9 || base < 10)
             {
               a0 = a0 * base;
               i = 0;
+              if (j > 0) j--;
               decade++;
             }
           else
