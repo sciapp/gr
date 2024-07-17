@@ -222,10 +222,11 @@ static int plot_scatter_markertypes[] = {
 static int *previous_scatter_marker_type = plot_scatter_markertypes;
 static int *previous_line_marker_type = plot_scatter_markertypes;
 
-static int bounding_id = 0;
+static int bounding_id = 0, axis_id = 0;
 static bool automatic_update = false;
 static bool redraw_ws = false;
 static std::map<int, std::shared_ptr<GRM::Element>> bounding_map;
+static std::map<int, std::map<double, std::map<std::string, GRM::Value>>> tick_modification_map;
 
 static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},           {"hexbin", "xys"},
                                            {"polar", "xys"},          {"shade", "xys"},
@@ -364,6 +365,10 @@ static std::map<std::string, int> marker_type_string_to_int{
     {"hline", -31},
     {"omark", -32},
 };
+static std::map<std::string, int> scientific_format_string_to_int{
+    {"textex", 2},
+    {"mathtex", 3},
+};
 static std::map<std::string, int> text_align_horizontal_string_to_int{
     {"normal", 0},
     {"left", 1},
@@ -383,6 +388,11 @@ static std::map<std::string, int> model_string_to_int{
     {"rgb", 0},
     {"hsv", 1},
 };
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ static function header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static void processTickGroup(const std::shared_ptr<GRM::Element> &element,
+                             const std::shared_ptr<GRM::Context> &context);
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -1799,6 +1809,30 @@ std::string algorithmIntToString(int algorithm)
     }
   logger((stderr, "Got unknown volume algorithm \"%i\"\n", algorithm));
   throw std::logic_error("For volume series the given algorithm is unknown.\n");
+}
+
+int scientificFormatStringToInt(const std::string &scientific_format_str)
+{
+  if (scientific_format_string_to_int.count(scientific_format_str))
+    return scientific_format_string_to_int[scientific_format_str];
+  else
+    {
+      logger((stderr, "Got unknown scientific_format \"%s\"\n", scientific_format_str.c_str()));
+      throw std::logic_error("Given scientific_format is unknown.\n");
+    }
+}
+
+std::string scientificFormatIntToString(int scientific_format)
+{
+  for (auto const &map_elem : scientific_format_string_to_int)
+    {
+      if (map_elem.second == scientific_format)
+        {
+          return map_elem.first;
+        }
+    }
+  logger((stderr, "Got unknown scientific_format \"%i\"\n", scientific_format));
+  throw std::logic_error("Given scientific_format is unknown.\n");
 }
 
 int getVolumeAlgorithm(const std::shared_ptr<GRM::Element> &element)
@@ -4674,25 +4708,9 @@ static void axisArgumentsConvertedIntoTickGroups(tick_t *ticks, tick_label_t *ti
 {
   int child_id = 1, label_ind = 0;
   std::shared_ptr<GRM::Element> tick_group;
-  std::vector<std::string> x_tick_labels_vec, y_tick_labels_vec;
-  int x_tick_labels_len = 0, y_tick_labels_len = 0;
   auto num_ticks = static_cast<int>(axis->getAttribute("num_ticks"));
   auto num_labels = static_cast<int>(axis->getAttribute("num_tick_labels"));
   auto axis_type = static_cast<std::string>(axis->getAttribute("axis_type"));
-
-  auto context = global_render->getContext();
-  if (axis->parentElement()->hasAttribute("_x_tick_labels"))
-    {
-      auto tick_key = static_cast<std::string>(axis->parentElement()->getAttribute("_x_tick_labels"));
-      x_tick_labels_vec = GRM::get<std::vector<std::string>>((*context)[tick_key]);
-      x_tick_labels_len = x_tick_labels_vec.size();
-    }
-  if (axis->parentElement()->hasAttribute("_y_tick_labels"))
-    {
-      auto tick_key = static_cast<std::string>(axis->parentElement()->getAttribute("_y_tick_labels"));
-      y_tick_labels_vec = GRM::get<std::vector<std::string>>((*context)[tick_key]);
-      y_tick_labels_len = y_tick_labels_vec.size();
-    }
 
   if (static_cast<int>(axis->getAttribute("mirrored_axis"))) child_id += 1;
   for (int i = 0; i < num_ticks; i++)
@@ -4703,16 +4721,6 @@ static void axisArgumentsConvertedIntoTickGroups(tick_t *ticks, tick_label_t *ti
         {
           if (tick_labels[label_ind].label) label = tick_labels[label_ind].label;
           if (tick_labels[label_ind].width) width = tick_labels[label_ind].width;
-          if (axis_type == "x" && x_tick_labels_len > 0)
-            {
-              label = "";
-              if (label_ind <= x_tick_labels_len && label_ind >= 1) label = x_tick_labels_vec[label_ind - 1];
-            }
-          if (axis_type == "y" && y_tick_labels_len > 0)
-            {
-              label = "";
-              if (label_ind <= y_tick_labels_len && label_ind >= 1) label = y_tick_labels_vec[label_ind - 1];
-            }
           label_ind += 1;
         }
 
@@ -12503,11 +12511,25 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
         {
           char text_c[256];
           format_reference_t reference = {1, 1};
+          int sc_format = 2;
+          const char minus[3] = {(char)0xe2, (char)0x88, (char)0x92}; // gr minus sign
+          auto em_dash = std::string(minus);
+          size_t start_pos = 0;
 
-          gr_setscientificformat(3);
-          snprintf(text_c, 256, "%s", text.c_str());
-          text = gr_ftoa(text_c, atof(text.c_str()), &reference);
-          scientific_format = 3;
+          if (tick_group->parentElement()->hasAttribute("scientific_format"))
+            sc_format = static_cast<int>(tick_group->parentElement()->getAttribute("scientific_format"));
+          gr_setscientificformat(sc_format);
+
+          if (starts_with(text, em_dash))
+            {
+              start_pos = em_dash.size();
+            }
+          auto without_minus = text.substr(start_pos);
+
+          snprintf(text_c, 256, "%s", without_minus.c_str());
+          text = gr_ftoa(text_c, atof(without_minus.c_str()), &reference);
+          text = em_dash + text;
+          scientific_format = sc_format;
         }
     }
   else
@@ -12630,14 +12652,64 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
                 }
             }
         }
-      if (scientific_format == 3 || tick_group->parentElement()->hasAttribute("scientific_format"))
+      if (scientific_format == 2 || tick_group->parentElement()->hasAttribute("scientific_format"))
         {
-          if (scientific_format != 3)
+          if (scientific_format != 2)
             scientific_format = static_cast<int>(tick_group->parentElement()->getAttribute("scientific_format"));
           text_elem->setAttribute("scientific_format", scientific_format);
           gr_setscientificformat(scientific_format);
         }
     }
+}
+
+static void applyTickModificationMap(const std::shared_ptr<GRM::Element> &tick_group,
+                                     const std::shared_ptr<GRM::Context> &context, int child_id)
+{
+  std::shared_ptr<GRM::Element> text_elem = nullptr;
+  bool tick_group_attr_changed = false, old_automatic_update = automatic_update;
+
+  auto value = static_cast<double>(tick_group->getAttribute("value"));
+  auto map_idx = static_cast<int>(tick_group->parentElement()->getAttribute("_axis_id"));
+  for (const auto &child : tick_group->children())
+    {
+      if (child->localName() == "text")
+        {
+          text_elem = child;
+          break;
+        }
+    }
+
+  automatic_update = false;
+  if (tick_modification_map.find(map_idx) != tick_modification_map.end())
+    {
+      auto tick_value_to_map = tick_modification_map[map_idx];
+      if (tick_value_to_map.find(value) != tick_value_to_map.end())
+        {
+          auto key_value_map = tick_value_to_map[value];
+          for (auto const &[attr, val] : key_value_map)
+            {
+              if (str_equals_any(attr, "is_major", "line_color_ind", "line_spec", "line_type", "line_width",
+                                 "text_align_horizontal", "text_align_vertical", "tick_label", "tick_size", "value"))
+                {
+                  tick_group->setAttribute(attr, val);
+                  if (text_elem != nullptr && attr == "tick_label")
+                    text_elem->setAttribute("text", val);
+                  else if (text_elem == nullptr && attr == "tick_label")
+                    tickLabelAdjustment(tick_group, child_id, del_values::recreate_own_children);
+                  else if (str_equals_any(attr, "is_major", "value"))
+                    tick_group->setAttribute("_update_required", true);
+                  tick_group_attr_changed = true;
+                }
+              else if (str_equals_any(attr, "font", "font_precision", "scientific_format", "text", "text_color_ind",
+                                      "text_align_horizontal", "text_align_vertical", "x", "y"))
+                {
+                  text_elem->setAttribute(attr, val);
+                }
+            }
+          if (tick_group_attr_changed) GRM::Render::processAttributes(tick_group);
+        }
+    }
+  automatic_update = old_automatic_update;
 }
 
 static void processTickGroup(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -12743,6 +12815,7 @@ static void processTickGroup(const std::shared_ptr<GRM::Element> &element, const
     }
 
   tickLabelAdjustment(element, child_id, del);
+  applyTickModificationMap(element, context, child_id);
 }
 
 static void processTick(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -12764,6 +12837,8 @@ static void processTick(const std::shared_ptr<GRM::Element> &element, const std:
   auto tick = static_cast<double>(axis_elem->getAttribute("tick"));
   auto major_count = static_cast<int>(axis_elem->getAttribute("major_count"));
   auto tick_size = static_cast<double>(axis_elem->getAttribute("tick_size"));
+  if (element->parentElement()->hasAttribute("tick_size"))
+    tick_size = static_cast<double>(element->parentElement()->getAttribute("tick_size"));
   auto tick_orientation = static_cast<int>(axis_elem->getAttribute("tick_orientation"));
   auto value = static_cast<double>(element->getAttribute("value"));
   auto is_major = static_cast<int>(element->getAttribute("is_major"));
@@ -15219,6 +15294,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("ambient"), std::vector<std::string>{"0.2", "The ambient light"}},
       {std::string("angle_ticks"),
        std::vector<std::string>{"None", "The interval between minor tick marks on the angle-axis"}},
+      {std::string("axis_type"), std::vector<std::string>{"None", "Defines if the axis is getting used for x or y"}},
       {std::string("bar_width"), std::vector<std::string>{"None", "The width of all bars"}},
       {std::string("bin_counts"), std::vector<std::string>{"None", "References the bin-counts stored in the context"}},
       {std::string("bin_edges"), std::vector<std::string>{"None", "References the bin-edges stored in the context"}},
@@ -15261,6 +15337,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("hide"), std::vector<std::string>{"1", "Determines if the element will be visible or not"}},
       {std::string("draw_edges"),
        std::vector<std::string>{"0", "Used in combination with x- and y-colormap to set if edges are drawn"}},
+      {std::string("draw_grid"), std::vector<std::string>{"None", "Defines if the axis has grid lines or not"}},
       {std::string("e_downwards"), std::vector<std::string>{"None", "The x-value for the downward error"}},
       {std::string("e_upwards"), std::vector<std::string>{"None", "The x-value for the upward error"}},
       {std::string("edge_width"), std::vector<std::string>{"None", "The width of all edges"}},
@@ -15295,6 +15372,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"None", "References the upper integral limit-values stored in the context"}},
       {std::string("int_limits_low"),
        std::vector<std::string>{"None", "References the lower integral limit-values stored in the context"}},
+      {std::string("is_major"), std::vector<std::string>{"None", "Defines if the tick is a major tick"}},
+      {std::string("is_mirrored"), std::vector<std::string>{"None", "Defines if the tick is mirrored"}},
       {std::string("isovalue"), std::vector<std::string>{"0.5", "The used isovalue"}},
       {std::string("keep_aspect_ratio"), std::vector<std::string>{"1", "Sets if the aspect ratio is kept"}},
       {std::string("keep_window"),
@@ -15303,6 +15382,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{
            "None", "Defines which kind the displayed series has. Depending on the set kind the kind can be changed."}},
       {std::string("labels"), std::vector<std::string>{"None", "The labels which are displayed in the legend"}},
+      {std::string("label_pos"),
+       std::vector<std::string>{"None", "The offset from the axis where the label should be placed"}},
       {std::string("levels"), std::vector<std::string>{"20", "Number of contour levels"}},
       {std::string("line_color_ind"), std::vector<std::string>{"1", "The line-color index"}},
       {std::string("line_color_rgb"), std::vector<std::string>{"None", "Color for the edges in rgb format"}},
@@ -15310,6 +15391,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("line_type"), std::vector<std::string>{"None", "The type of the line"}},
       {std::string("line_width"), std::vector<std::string>{"None", "The width of the line"}},
       {std::string("location"), std::vector<std::string>{"None", "The elements location"}},
+      {std::string("major_count"), std::vector<std::string>{"None", "Defines the how many tick is a major tick"}},
       {std::string("major_h"),
        std::vector<std::string>{"0 or 1000", "Defines if and which contour lines gets their value as a label. A offset "
                                              "of 1000 to this parameter will color the contour lines"}},
@@ -15325,7 +15407,10 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"None", "References the marker-sizes stored in the context"}},
       {std::string("marker_type"), std::vector<std::string>{"None", "Sets the marker type"}},
       {std::string("max_char_height"), std::vector<std::string>{"0.012", "The maximum height of the chars"}},
+      {std::string("max_value"), std::vector<std::string>{"None", "The maximum value of the axis"}},
       {std::string("max_y_length"), std::vector<std::string>{"None", "The maximum y length inside the barplot"}},
+      {std::string("min_value"), std::vector<std::string>{"None", "The minimum value of the axis"}},
+      {std::string("mirrored_axis"), std::vector<std::string>{"0", "Defines if the axis should be mirrored"}},
       {std::string("model"), std::vector<std::string>{"None", "The used model for the image"}},
       {std::string("movable"),
        std::vector<std::string>{
@@ -15335,10 +15420,13 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("num_bins"), std::vector<std::string>{"None", "Number of bins"}},
       {std::string("num_col"), std::vector<std::string>{"None", "Number of columns"}},
       {std::string("num_row"), std::vector<std::string>{"None", "Number of rows"}},
+      {std::string("num_tick_labels"), std::vector<std::string>{"None", "Number of tick labels"}},
+      {std::string("num_ticks"), std::vector<std::string>{"None", "Number of ticks"}},
       {std::string("norm"), std::vector<std::string>{"None", "Specify the used normalisation"}},
       {std::string("offset"), std::vector<std::string>{"None", "The offset for the side region viewport"}},
       {std::string("only_quadratic_aspect_ratio"),
        std::vector<std::string>{"0", "Sets if the aspect ratio is forced to be quadratic and kept this way"}},
+      {std::string("org"), std::vector<std::string>{"None", "The org of the axis. Needed if org != min_value"}},
       {std::string("orientation"), std::vector<std::string>{"horizontal", "The orientation of the element"}},
       {std::string("phi"), std::vector<std::string>{"None", "References the phi-angles stored in the context"}},
       {std::string("phi_dim"), std::vector<std::string>{"None", "The dimension of the phi-angles"}},
@@ -15355,6 +15443,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("plot_x_min"), std::vector<std::string>{"None", "The beginning x-coordinate of the plot"}},
       {std::string("plot_y_max"), std::vector<std::string>{"None", "The ending y-coordinate of the plot"}},
       {std::string("plot_y_min"), std::vector<std::string>{"None", "The beginning y-coordinate of the plot"}},
+      {std::string("pos"),
+       std::vector<std::string>{
+           "None", "F.e. where the x-axis should be placed in relation to the y-axis (position on the y-axis)"}},
       {std::string("projection_type"), std::vector<std::string>{"None", "The used projection type"}},
       {std::string("px"), std::vector<std::string>{"None", "References the px-values stored in the context. The "
                                                            "px-values are the modified version of the x-values"}},
@@ -15383,6 +15474,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("resample_method"), std::vector<std::string>{"None", "The used resample method"}},
       {std::string("rings"), std::vector<std::string>{"None", "The number of rings for polar coordinate systems"}},
       {std::string("scale"), std::vector<std::string>{"None", "The set scale"}},
+      {std::string("scientific_format"),
+       std::vector<std::string>{"None", "Set the used format which will determine how a specific text will be drawn. "
+                                        "The text can be plain or for example interpreted with LaTeX."}},
       {std::string("select_specific_xform"),
        std::vector<std::string>{
            "None", "Selects a predefined transformation from world coordinates to normalized device coordinates"}},
@@ -15426,7 +15520,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("text_color_ind"), std::vector<std::string>{"None", "The index of the text-color"}},
       {std::string("text_encoding"), std::vector<std::string>{"utf8", "The internal text encoding"}},
       {std::string("theta"), std::vector<std::string>{"None", "References the theta-values stored in the context"}},
-      {std::string("tick"), std::vector<std::string>{"None", "The polar ticks"}},
+      {std::string("tick"), std::vector<std::string>{"None", "The polar ticks or the interval between minor ticks"}},
+      {std::string("tick_label"), std::vector<std::string>{"", "The label which will be placed next to the tick"}},
       {std::string("tick_orientation"), std::vector<std::string>{"None", "The orientation of the axes ticks"}},
       {std::string("tick_size"), std::vector<std::string>{"0.005", "The size of the ticks"}},
       {std::string("title"), std::vector<std::string>{"None", "The plot title"}},
@@ -15436,6 +15531,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("u"), std::vector<std::string>{"None", "References the u-values stored in the context"}},
       {std::string("upwards_cap_color"), std::vector<std::string>{"None", "The color value for the upwards caps"}},
       {std::string("v"), std::vector<std::string>{"None", "References the v-values stored in the context"}},
+      {std::string("value"), std::vector<std::string>{"None", "The value/number of the tick"}},
       {std::string("viewport_x_max"), std::vector<std::string>{"None", "The ending viewport x-coordinate"}},
       {std::string("viewport_x_min"), std::vector<std::string>{"None", "The beginning viewport x-coordinate"}},
       {std::string("viewport_y_max"), std::vector<std::string>{"None", "The ending viewport y-coordinate"}},
@@ -15566,6 +15662,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
     {
       if (element->localName() == "text")
         {
+          if (attribute_name == "width") return std::vector<std::string>{"None", "The width of the text"};
           if (attribute_name == "x") return std::vector<std::string>{"None", "x-position of the text"};
           if (attribute_name == "y") return std::vector<std::string>{"None", "y-position of the text"};
         }
@@ -15577,8 +15674,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
     }
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ create functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ create functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 std::shared_ptr<GRM::Element> GRM::Render::createPlot(int plotId, const std::shared_ptr<GRM::Element> &ext_element)
 {
@@ -15852,6 +15948,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createCellArray(double xmin, double x
 std::shared_ptr<GRM::Element> GRM::Render::createEmptyAxis(const std::shared_ptr<GRM::Element> &ext_element)
 {
   std::shared_ptr<GRM::Element> element = (ext_element == nullptr) ? createElement("axis") : ext_element;
+  if (!element->hasAttribute("_axis_id")) element->setAttribute("_axis_id", axis_id++);
   return element;
 }
 
@@ -15872,6 +15969,7 @@ std::shared_ptr<GRM::Element> GRM::Render::createAxis(double min_val, double max
   element->setAttribute("tick_size", tick_size);
   element->setAttribute("tick_orientation", tick_orientation);
   element->setAttribute("label_pos", label_pos);
+  if (!element->hasAttribute("_axis_id")) element->setAttribute("_axis_id", axis_id++);
   return element;
 }
 
@@ -17290,45 +17388,6 @@ void GRM::Render::setSubplot(const std::shared_ptr<GRM::Element> &element, doubl
   element->setAttribute("plot_y_max", ymax);
 }
 
-void GRM::Render::setXTickLabels(const std::shared_ptr<GRM::Element> &element, const std::string &key,
-                                 std::optional<std::vector<std::string>> x_tick_labels,
-                                 const std::shared_ptr<GRM::Context> &ext_context)
-{
-  /*!
-   * This function can be used to create a XTickLabel GRM::Element
-   *
-   * \param[in] key A string used for storing the x_tick_labels in GRM::Context
-   * \param[in] x_tick_labels A vector containing string values representing x_tick_labels
-   * \param[in] ext_context A GRM::Context that is used for storing the vectors. By default it uses GRM::Render's
-   * GRM::Context object but an external GRM::Context can be used
-   */
-  std::shared_ptr<GRM::Context> use_context = (ext_context == nullptr) ? context : ext_context;
-  if (x_tick_labels != std::nullopt)
-    {
-      (*use_context)[key] = *x_tick_labels;
-    }
-  element->setAttribute("_x_tick_labels", key);
-}
-void GRM::Render::setYTickLabels(const std::shared_ptr<GRM::Element> &element, const std::string &key,
-                                 std::optional<std::vector<std::string>> y_tick_labels,
-                                 const std::shared_ptr<GRM::Context> &ext_context)
-{
-  /*!
-   * This function can be used to create a YTickLabel GRM::Element
-   *
-   * \param[in] key A string used for storing the y_tick_labels in GRM::Context
-   * \param[in] y_tick_labels A vector containing string values representing y_tick_labels
-   * \param[in] ext_context A GRM::Context that is used for storing the vectors. By default it uses GRM::Render's
-   * GRM::Context object but an external GRM::Context can be used
-   */
-  std::shared_ptr<GRM::Context> use_context = (ext_context == nullptr) ? context : ext_context;
-  if (y_tick_labels != std::nullopt)
-    {
-      (*use_context)[key] = *y_tick_labels;
-    }
-  element->setAttribute("_y_tick_labels", key);
-}
-
 void GRM::Render::setNextColor(const std::shared_ptr<GRM::Element> &element, const std::string &color_indices_key,
                                const std::vector<int> &color_indices, const std::shared_ptr<GRM::Context> &ext_context)
 {
@@ -17411,6 +17470,16 @@ void GRM::Render::setAutoUpdate(bool update)
 void GRM::Render::getAutoUpdate(bool *update)
 {
   *update = automatic_update;
+}
+
+std::map<int, std::map<double, std::map<std::string, GRM::Value>>> *GRM::Render::getTickModificationMap()
+{
+  return &tick_modification_map;
+}
+
+int GRM::Render::getAxisId()
+{
+  return axis_id;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ filter functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -18498,6 +18567,18 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               element->setAttribute("_y_max_shift",
                                     old_shift + static_cast<double>(element->getAttribute(attr)) - std::stod(value));
               element->setAttribute("_update_required", true);
+            }
+          else if (element->localName() == "tick_group")
+            {
+              auto val = static_cast<double>(element->getAttribute("value"));
+              auto map_idx = static_cast<int>(element->parentElement()->getAttribute("_axis_id"));
+              tick_modification_map[map_idx][val].emplace(attr, element->getAttribute(attr));
+            }
+          else if (element->localName() == "text" && element->parentElement()->localName() == "tick_group")
+            {
+              auto val = static_cast<double>(element->parentElement()->getAttribute("value"));
+              auto map_idx = static_cast<int>(element->parentElement()->parentElement()->getAttribute("_axis_id"));
+              tick_modification_map[map_idx][val].emplace(attr, element->getAttribute(attr));
             }
         }
       global_root->setAttribute("_modified", true);
