@@ -107,6 +107,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 
   combo_box_attr = QStringList{
       "algorithm",
+      "axis_type",
       "colormap",
       "font",
       "font_precision",
@@ -121,6 +122,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "orientation",
       "projection_type",
       "resample_method",
+      "scientific_format",
       "size_x_type",
       "size_y_type",
       "size_x_unit",
@@ -142,11 +144,15 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "adjust_z_lim",
       "disable_x_trans",
       "disable_y_trans",
+      "draw_grid",
       "grplot",
       "hide",
+      "is_major",
+      "is_mirrored",
       "keep_aspect_ratio",
       "keep_window",
       "marginal_heatmap_side_plot",
+      "mirrored_axis",
       "movable",
       "only_quadratic_aspect_ratio",
       "phi_flip",
@@ -519,6 +525,10 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       model_list.push_back(i.c_str());
     }
 
+  QStringList axis_type_list{
+      "x",
+      "y",
+  };
   QStringList orientation_list{
       "vertical",
       "horizontal",
@@ -570,12 +580,17 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       "low",
       "high",
   };
+  QStringList scientific_format_list{
+      "textex",
+      "mathtex",
+  };
   QStringList tick_orientation_list{
       "up",
       "down",
   };
   QStringList side_region_location_list{"top", "right", "bottom", "left"};
   static std::map<std::string, QStringList> attributeToList{
+      {"axis_type", axis_type_list},
       {"size_x_unit", size_unit_list},
       {"size_y_unit", size_unit_list},
       {"colormap", colormap_list},
@@ -592,6 +607,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"plot_type", plot_type_list},
       {"projection_type", projection_type_list},
       {"resample_method", resample_method_list},
+      {"scientific_format", scientific_format_list},
       {"size_x_type", size_type_list},
       {"size_y_type", size_type_list},
       {"style", style_list},
@@ -781,6 +797,11 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
     {
       current_text = lineTypeIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
     }
+  else if (cur_attr_name == "scientific_format" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          scientificFormatIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
   else if (cur_attr_name == "tick_orientation" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
       current_text =
@@ -851,6 +872,10 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
       else if (label == "tick_orientation")
         {
           element->setAttribute(label, tickOrientationStringToInt(value));
+        }
+      else if (label == "scientific_format")
+        {
+          element->setAttribute(label, scientificFormatStringToInt(value));
         }
       else
         {
@@ -1212,7 +1237,10 @@ void GRPlotWidget::AttributeEditEvent()
       amount_scrolled = 0;
       tree_update = true;
       clicked.clear();
-      std::cerr << GRM::toXML(grm_get_document_root()) << std::endl;
+      if (getenv("GRM_DEBUG"))
+        {
+          std::cerr << toXML(grm_get_document_root(), GRM::SerializerOptions{std::string(2, ' '), true}) << "\n";
+        }
       reset_pixmap();
     }
   else
@@ -2520,7 +2548,7 @@ void GRPlotWidget::show_bounding_boxes_slot()
 
 void GRPlotWidget::load_file_slot()
 {
-  if (enable_editor)
+  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
     {
 #ifndef NO_LIBXML2
       std::string path =
@@ -2552,7 +2580,7 @@ void GRPlotWidget::load_file_slot()
 
 void GRPlotWidget::save_file_slot()
 {
-  if (enable_editor)
+  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
     {
       if (grm_get_render() == nullptr)
         {

@@ -120,6 +120,7 @@ EXPORT int locationStringToInt(const std::string &location_str);
 EXPORT int markerTypeStringToInt(const std::string &marker_type_str);
 EXPORT int projectionTypeStringToInt(const std::string &projection_type_str);
 EXPORT int modelStringToInt(const std::string &model_str);
+EXPORT int scientificFormatStringToInt(const std::string &scientific_format_str);
 EXPORT int textAlignHorizontalStringToInt(const std::string &text_align_horizontal_str);
 EXPORT int textAlignVerticalStringToInt(const std::string &text_align_vertical_str);
 EXPORT int textEncodingStringToInt(const std::string &text_encoding_str);
@@ -136,6 +137,7 @@ EXPORT std::string locationIntToString(int location);
 EXPORT std::string markerTypeIntToString(int marker_type);
 EXPORT std::string projectionTypeIntToString(int projection_type);
 EXPORT std::string modelIntToString(int model);
+EXPORT std::string scientificFormatIntToString(int scientific_format);
 EXPORT std::string textAlignHorizontalIntToString(int text_align_horizontal);
 EXPORT std::string textAlignVerticalIntToString(int text_align_vertical);
 EXPORT std::string textEncodingIntToString(int text_encoding);
@@ -494,14 +496,6 @@ public:
 
   void setSubplot(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
-  void setXTickLabels(const std::shared_ptr<GRM::Element> &element, const std::string &key,
-                      std::optional<std::vector<std::string>> x_tick_labels,
-                      const std::shared_ptr<GRM::Context> &extContext = nullptr);
-
-  void setYTickLabels(const std::shared_ptr<GRM::Element> &element, const std::string &key,
-                      std::optional<std::vector<std::string>> y_tick_labels,
-                      const std::shared_ptr<GRM::Context> &extContext = nullptr);
-
   void setOriginPosition(const std::shared_ptr<GRM::Element> &element, const std::string &x_org_pos,
                          const std::string &y_org_pos);
 
@@ -522,6 +516,10 @@ public:
   static void getAutoUpdate(bool *update);
 
   static void getFigureSize(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height);
+
+  std::map<int, std::map<double, std::map<std::string, GRM::Value>>> *getTickModificationMap();
+
+  int getAxisId();
 
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context

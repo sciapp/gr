@@ -258,6 +258,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "alpha",
                                     "angle_ticks",
                                     "aspect_ratio",
+                                    "axes_mod",
                                     "background_color",
                                     "bar_color",
                                     "bar_width",
@@ -306,7 +307,6 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "x_lim",
                                     "x_log",
                                     "x_ind",
-                                    "x_tick_labels",
                                     "y_bins",
                                     "y_flip",
                                     "y_grid",
@@ -314,7 +314,6 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "y_lim",
                                     "y_log",
                                     "y_ind",
-                                    "y_tick_labels",
                                     "z_flip",
                                     "z_grid",
                                     "z_label",
@@ -382,6 +381,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"alpha", "d"},
                                               {"aspect_ratio", "d"},
                                               {"append_plots", "i"},
+                                              {"axes_mod", "a"},
                                               {"background_color", "i"},
                                               {"bar_color", "D|i"},
                                               {"c", "D|I"},
@@ -3638,32 +3638,337 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
       group->setAttribute("z_label", z_label);
     }
 
-  /* xticklabels */
-  char **x_tick_labels = nullptr;
-  unsigned int x_tick_labels_length;
+  /* axes modifications */
+  grm_args_t *axes_mod = nullptr;
+  auto tick_modification_map = global_render->getTickModificationMap();
 
-  if (grm_args_first_value(args, "x_tick_labels", "S", &x_tick_labels, &x_tick_labels_length))
+  if (grm_args_values(args, "axes_mod", "a", &axes_mod))
     {
-      std::vector<std::string> x_tick_labels_vec(x_tick_labels, x_tick_labels + x_tick_labels_length);
-      int id = static_cast<int>(global_root->getAttribute("_id"));
-      std::string key = "x_tick_labels" + std::to_string(id);
-      global_root->setAttribute("_id", ++id);
-      global_render->setXTickLabels(group, key, x_tick_labels_vec);
+      grm_args_iterator_t *axis_it = grm_args_iter(axes_mod);
+      arg_t *axis_arg;
+      int axis_id;
+      while ((axis_arg = axis_it->next(axis_it)) != nullptr)
+        {
+          logger((stderr, "Got axis name \"%s\" in \"axes_mod\"\n", axis_arg->key));
+          if (!str_equals_any(axis_arg->key, "x", "y"))
+            {
+              logger((stderr, "Ignoring invalid axis name \"%s\" in \"axes_mod\"\n", axis_arg->key));
+              continue;
+            }
+          if (strcmp(axis_arg->key, "x") == 0)
+            axis_id = global_render->getAxisId() + 1;
+          else if (strcmp(axis_arg->key, "y") == 0)
+            axis_id = global_render->getAxisId();
+
+          grm_args_t **axis_mods;
+          if (!grm_args_values(axes_mod, axis_arg->key, "A", &axis_mods))
+            {
+              logger((stderr, "Expected an array of sub containers for axis \"%s\" in \"axes_mod\"\n", axis_arg->key));
+              continue;
+            }
+          grm_args_t **current_axis_mod = axis_mods;
+          while (*current_axis_mod != nullptr)
+            {
+              double tick_value;
+              if (!grm_args_values(*current_axis_mod, "tick_value", "d", &tick_value))
+                {
+                  int int_tick_value;
+                  if (grm_args_values(*current_axis_mod, "tick_value", "i", &int_tick_value))
+                    {
+                      tick_value = int_tick_value;
+                    }
+                  else
+                    {
+                      logger((stderr, "Expected a number (integer or double) for \"tick_value\".\n"));
+                      ++current_axis_mod;
+                      continue;
+                    }
+                }
+              logger((stderr, "Got tick value \"%lf\" for axis \"%s\"\n", tick_value, axis_arg->key));
+              grm_args_iterator_t *tick_it = grm_args_iter(*current_axis_mod);
+              arg_t *tick_arg;
+              while ((tick_arg = tick_it->next(tick_it)) != nullptr)
+                {
+                  // `tick_value` was read before, so ignore it in this loop
+                  if (strcmp(tick_arg->key, "tick_value") == 0) continue;
+                  logger((stderr, "Next tick_arg: \"%s\" on axis \"%s\"\n", tick_arg->key, axis_arg->key));
+                  if (strcmp(tick_arg->key, "tick_color") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "i") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      int tick_color;
+                      tick_color = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("line_color_ind", tick_color);
+                      logger((stderr, "Got tick_color \"%i\"\n", tick_color));
+                    }
+                  else if (strcmp(tick_arg->key, "line_spec") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "s") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      const char *line_spec;
+                      line_spec = *reinterpret_cast<const char **>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("line_spec", std::string(line_spec));
+                      logger((stderr, "Got line_spec \"%s\"\n", line_spec));
+                    }
+                  else if (strcmp(tick_arg->key, "line_type") == 0)
+                    {
+                      if (str_equals_any(tick_arg->value_format, "s", "i") != 0)
+                        {
+                          logger((stderr,
+                                  "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\" or "
+                                  "\"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      if (strcmp(tick_arg->value_format, "s") == 0)
+                        {
+                          const char *line_type;
+                          line_type = *reinterpret_cast<const char **>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("line_type", std::string(line_type));
+                          logger((stderr, "Got line_type \"%s\"\n", line_type));
+                        }
+                      else
+                        {
+                          int line_type;
+                          line_type = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("line_type", line_type);
+                          logger((stderr, "Got line_type \"%i\"\n", line_type));
+                        }
+                    }
+                  else if (strcmp(tick_arg->key, "tick_length") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "d") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"d\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      double tick_length;
+                      tick_length = *reinterpret_cast<double *>(tick_arg->value_ptr);
+                      (*tick_modification_map)[axis_id][tick_value].emplace("tick_size", tick_length);
+                      logger((stderr, "Got tick_length \"%lf\"\n", tick_length));
+                    }
+                  else if (strcmp(tick_arg->key, "text_align_horizontal") == 0)
+                    {
+                      if (str_equals_any(tick_arg->value_format, "s", "i") != 0)
+                        {
+                          logger((stderr,
+                                  "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\" or "
+                                  "\"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      if (strcmp(tick_arg->value_format, "s") == 0)
+                        {
+                          const char *text_align_horizontal;
+                          text_align_horizontal = *reinterpret_cast<const char **>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("text_align_horizontal",
+                                                                                std::string(text_align_horizontal));
+                          logger((stderr, "Got text_align_horizontal \"%s\"\n", text_align_horizontal));
+                        }
+                      else
+                        {
+                          int text_align_horizontal;
+                          text_align_horizontal = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("text_align_horizontal",
+                                                                                text_align_horizontal);
+                          logger((stderr, "Got text_align_horizontal \"%i\"\n", text_align_horizontal));
+                        }
+                    }
+                  else if (strcmp(tick_arg->key, "text_align_vertical") == 0)
+                    {
+                      if (str_equals_any(tick_arg->value_format, "s", "i") != 0)
+                        {
+                          logger((stderr,
+                                  "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\" or "
+                                  "\"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      if (strcmp(tick_arg->value_format, "s") == 0)
+                        {
+                          const char *text_align_vertical;
+                          text_align_vertical = *reinterpret_cast<const char **>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("text_align_vertical",
+                                                                                std::string(text_align_vertical));
+                          logger((stderr, "Got text_align_vertical \"%s\"\n", text_align_vertical));
+                        }
+                      else
+                        {
+                          int text_align_vertical;
+                          text_align_vertical = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("text_align_vertical",
+                                                                                text_align_vertical);
+                          logger((stderr, "Got text_align_vertical \"%i\"\n", text_align_vertical));
+                        }
+                    }
+                  else if (strcmp(tick_arg->key, "tick_label") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "s") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      const char *tick_label;
+                      tick_label = *reinterpret_cast<const char **>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("tick_label", std::string(tick_label));
+                      logger((stderr, "Got tick_label \"%s\"\n", tick_label));
+                    }
+                  else if (strcmp(tick_arg->key, "tick_width") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "d") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"d\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      double tick_width;
+                      tick_width = *reinterpret_cast<double *>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("tick_size", tick_width);
+                      logger((stderr, "Got tick_width \"%lf\"\n", tick_width));
+                    }
+                  else if (strcmp(tick_arg->key, "new_tick_value") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "d") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"d\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      double new_tick_value;
+                      new_tick_value = *reinterpret_cast<double *>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("value", new_tick_value);
+                      logger((stderr, "Got new_tick_value \"%lf\"\n", new_tick_value));
+                    }
+                  else if (strcmp(tick_arg->key, "tick_is_major") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "i") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      int tick_is_major;
+                      tick_is_major = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("is_major", tick_is_major);
+                      logger((stderr, "Got tick_is_major \"%i\"\n", tick_is_major));
+                    }
+                  else if (strcmp(tick_arg->key, "tick_label_color") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "i") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      int tick_label_color;
+                      tick_label_color = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("text_color_ind", tick_label_color);
+                      logger((stderr, "Got tick_label_color \"%i\"\n", tick_label_color));
+                    }
+                  else if (strcmp(tick_arg->key, "font") == 0)
+                    {
+                      if (str_equals_any(tick_arg->value_format, "s", "i") != 0)
+                        {
+                          logger((stderr,
+                                  "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\" or "
+                                  "\"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      if (strcmp(tick_arg->value_format, "s") == 0)
+                        {
+                          const char *font;
+                          font = *reinterpret_cast<const char **>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("font", std::string(font));
+                          logger((stderr, "Got font \"%s\"\n", font));
+                        }
+                      else
+                        {
+                          int font;
+                          font = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("font", font);
+                          logger((stderr, "Got font \"%i\"\n", font));
+                        }
+                    }
+                  else if (strcmp(tick_arg->key, "font_precision") == 0)
+                    {
+                      if (str_equals_any(tick_arg->value_format, "s", "i") != 0)
+                        {
+                          logger((stderr,
+                                  "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\" or "
+                                  "\"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      if (strcmp(tick_arg->value_format, "s") == 0)
+                        {
+                          const char *font_precision;
+                          font_precision = *reinterpret_cast<const char **>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("font_precision",
+                                                                                std::string(font_precision));
+                          logger((stderr, "Got font_precision \"%s\"\n", font_precision));
+                        }
+                      else
+                        {
+                          int font_precision;
+                          font_precision = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("font_precision", font_precision);
+                          logger((stderr, "Got font_precision \"%i\"\n", font_precision));
+                        }
+                    }
+                  else if (strcmp(tick_arg->key, "scientific_format") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "i") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      int scientific_format;
+                      scientific_format = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("scientific_format", scientific_format);
+                      logger((stderr, "Got scientific_format \"%i\"\n", scientific_format));
+                    }
+                  else
+                    {
+                      logger((stderr, "Ignoring unknown axis modification \"%s\" for tick \"%lf\" on axis \"%s\"\n",
+                              tick_arg->key, tick_value, axis_arg->key));
+                    }
+                }
+              args_iterator_delete(tick_it);
+              ++current_axis_mod;
+            }
+        }
+      args_iterator_delete(axis_it);
     }
-
-  /* y_tick_labels */
-  char **y_tick_labels = nullptr;
-  unsigned int y_tick_labels_length;
-
-  if (grm_args_first_value(args, "y_tick_labels", "S", &y_tick_labels, &y_tick_labels_length))
-    {
-      std::vector<std::string> y_tick_labels_vec(y_tick_labels, y_tick_labels + y_tick_labels_length);
-      int id = static_cast<int>(global_root->getAttribute("_id"));
-      std::string key = "y_tick_labels" + std::to_string(id);
-      global_root->setAttribute("_id", ++id);
-      global_render->setYTickLabels(group, key, y_tick_labels_vec);
-    }
-
 
   return ERROR_NONE;
 }

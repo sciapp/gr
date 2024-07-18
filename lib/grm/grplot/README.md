@@ -103,7 +103,6 @@ Valid keys are:
 7. `phi_lim`, `r_lim`: defines which part of the specific polar axis should be displayed
 8. `x_lim`, `y_lim`, `z_lim`: defines which part of the respective axis should be displayed
 9. `x_range`, `y_range`, `z_range`: defines the range of the values on the respective axis
-10. `x_tick_labels`, `y_tick_labels`: sets the custom labels for the x-, y-axis ticks
 
 Values are seperated through commas (`,`), e.g. `3, 5`.
 
