@@ -173,6 +173,27 @@
         </xs:complexType>
     </xs:element>
 
+    <!-- definition of marginal_heatmap_plot -->
+    <xs:element name="marginal_heatmap_plot">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="central_region" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="side_region" minOccurs="0" maxOccurs="4"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="1"/> <!-- title -->
+            </xs:choice>
+            <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="algorithm" type="xs:string"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="marginal_heatmap_kind" type="xs:string" use="required"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="x_ind" type="xs:integer"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="y_ind" type="xs:integer"/>
+            <xs:attribute name="z" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
     <!-- definition of central_region -->
     <xs:element name="central_region">
         <xs:complexType>
@@ -360,7 +381,7 @@
             <xs:attribute name="pos" type="xs:double"/>
             <xs:attribute name="org" type="xs:double"/>
             <xs:attribute name="scale" type="xs:integer"/>
-            <xs:attribute name="scientific_format" type="xs:integer"/>
+            <xs:attribute name="scientific_format" type="strint"/>
             <xs:attribute name="tick" type="xs:double"/>
             <xs:attribute name="tick_orientation" type="xs:integer"/>
             <xs:attribute name="tick_size" type="xs:double"/>
@@ -382,9 +403,14 @@
             </xs:choice>
         <xs:attributeGroup ref="move_xform_ndc"/>
         <xs:attribute name="is_major" type="xs:integer"/>
+        <xs:attribute name="line_color_ind" type="xs:integer"/>
+        <xs:attribute name="line_spec" type="xs:string"/>
+        <xs:attribute name="line_type" type="strint"/>
+        <xs:attribute name="line_width" type="xs:double"/>
         <xs:attribute name="text_align_horizontal" type="strint"/>
         <xs:attribute name="text_align_vertical" type="strint"/>
         <xs:attribute name="tick_label" type="xs:string"/>
+        <xs:attribute name="tick_size" type="xs:double"/>
         <xs:attribute name="value" type="xs:double"/>
         <xs:attribute name="width" type="xs:double"/>
         </xs:complexType>
@@ -394,10 +420,10 @@
     <xs:element name="tick">
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_wc"/>
-        <xs:attribute name="is_major" type="xs:integer"/>
-        <xs:attribute name="is_mirrored" type="xs:integer"/>
-        <xs:attribute name="value" type="xs:double"/>
-        <xs:attribute name="z_index" type="xs:integer"/>
+            <xs:attribute name="is_major" type="xs:integer"/>
+            <xs:attribute name="is_mirrored" type="xs:integer"/>
+            <xs:attribute name="value" type="xs:double"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -437,7 +463,7 @@
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="name" type="xs:string"/>
-            <xs:attribute name="scientific_format" type="xs:integer"/>
+            <xs:attribute name="scientific_format" type="strint"/>
             <xs:attribute name="set_text_color_for_background" type="xs:integer"/>
             <xs:attribute name="space" type="xs:integer"/>
             <xs:attribute name="text" type="xs:string" use="required"/>
@@ -767,27 +793,6 @@
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z_index" type="xs:integer"/>
-        </xs:complexType>
-    </xs:element>
-
-    <!-- definition of marginal_heatmap_plot -->
-    <xs:element name="marginal_heatmap_plot">
-        <xs:complexType>
-            <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="central_region" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="side_region" minOccurs="0" maxOccurs="4"/>
-                <xs:element ref="text" minOccurs="0" maxOccurs="1"/> <!-- title -->
-            </xs:choice>
-            <xs:attributeGroup ref="move_xform_ndc"/>
-            <xs:attributeGroup ref="ranges"/>
-            <xs:attribute name="algorithm" type="xs:string"/>
-            <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="marginal_heatmap_kind" type="xs:string" use="required"/>
-            <xs:attribute name="x" type="xs:string" use="required"/>
-            <xs:attribute name="x_ind" type="xs:integer"/>
-            <xs:attribute name="y" type="xs:string" use="required"/>
-            <xs:attribute name="y_ind" type="xs:integer"/>
-            <xs:attribute name="z" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
 
