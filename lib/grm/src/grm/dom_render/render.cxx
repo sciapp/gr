@@ -12512,7 +12512,7 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
           char text_c[256];
           format_reference_t reference = {1, 1};
           int sc_format = 2;
-          const char minus[3] = {(char)0xe2, (char)0x88, (char)0x92}; // gr minus sign
+          const char minus[] = {(char)0xe2, (char)0x88, (char)0x92, '\0'}; // gr minus sign
           auto em_dash = std::string(minus);
           size_t start_pos = 0;
 
@@ -12528,7 +12528,7 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
 
           snprintf(text_c, 256, "%s", without_minus.c_str());
           text = gr_ftoa(text_c, atof(without_minus.c_str()), &reference);
-          text = em_dash + text;
+          if (start_pos != 0) text = em_dash + text;
           scientific_format = sc_format;
         }
     }

@@ -98,7 +98,7 @@ std::complex<double> moivre(double r, int x, int n)
 
 bool is_number(std::string_view str)
 {
-  const char minus[3] = {(char)0xe2, (char)0x88, (char)0x92}; // gr minus sign
+  const char minus[] = {(char)0xe2, (char)0x88, (char)0x92, '\0'}; // gr minus sign
   auto em_dash = std::string(minus);
   size_t start_pos = 0;
   if (starts_with(str, em_dash))
