@@ -2985,6 +2985,7 @@ void GRPlotWidget::processTestCommandsFile()
                 {
                   grm_load_graphics_tree(file);
                   global_root = grm_get_document_root();
+                  tooltips.clear();
                   redraw();
                   QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
                   return;
