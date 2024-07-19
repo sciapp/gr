@@ -5663,6 +5663,8 @@ int grm_load_graphics_tree(FILE *file)
       return 0;
     }
 
+  gr_setscale(0); // TODO: Check why scale is not restored after a render call in `render.cxx` automatically
+
   std::string schema_filepath{get_merged_schema_filepath()};
 
   try
