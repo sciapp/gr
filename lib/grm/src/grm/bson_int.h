@@ -166,7 +166,6 @@ int tobson_get_member_count(const char *data_desc);
 int tobson_is_bson_array_needed(const char *data_desc);
 void tobson_read_datatype(tobson_state_t *state);
 err_t tobson_unzip_membernames_and_datatypes(char *mixed_ptr, char ***member_name_ptr, char ***data_type_ptr);
-err_t tobson_escape_special_chars(char **escaped_string, const char *unescaped_string, unsigned int *length);
 err_t tobson_serialize(memwriter_t *memwriter, char *data_desc, const void *data, va_list *vl, int apply_padding,
                        int add_data, int add_data_without_separator, unsigned int *struct_nested_level,
                        tojson_serialization_result_t *serial_result, tobson_shared_state_t *shared_state);

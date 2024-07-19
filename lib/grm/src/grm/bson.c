@@ -1102,21 +1102,15 @@ err_t tobson_double_value(memwriter_t *memwriter, double value)
 
 err_t tobson_string_value(memwriter_t *memwriter, char *value)
 {
-  char *escaped_chars = NULL;
-  unsigned int length = 0;
   err_t error = ERROR_NONE;
   char *length_as_bytes;
 
-  if ((error = tobson_escape_special_chars(&escaped_chars, value, &length)))
-    {
-      goto cleanup;
-    }
-  int_to_bytes(length + 1, &length_as_bytes); /* plus one for the null byte */
+  int_to_bytes(strlen(value) + 1, &length_as_bytes); /* plus one for the null byte */
   if ((error = memwriter_puts_with_len(memwriter, length_as_bytes, sizeof(int))) != ERROR_NONE)
     {
       goto cleanup;
     }
-  if ((error = memwriter_printf(memwriter, "%s", escaped_chars)) != ERROR_NONE)
+  if ((error = memwriter_printf(memwriter, "%s", value)) != ERROR_NONE)
     {
       goto cleanup;
     }
@@ -1126,7 +1120,6 @@ err_t tobson_string_value(memwriter_t *memwriter, char *value)
     }
 
 cleanup:
-  free(escaped_chars);
   free(length_as_bytes);
   return error;
 }
@@ -1639,7 +1632,6 @@ err_t tobson_optimized_array(tobson_state_t *state)
 err_t tobson_char_array(tobson_state_t *state)
 {
   char *chars;
-  char *escaped_chars = NULL;
   unsigned int length;
   err_t error = ERROR_NONE;
 
@@ -1664,31 +1656,28 @@ err_t tobson_char_array(tobson_state_t *state)
         {
           debug_print_error(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
                              state->additional_type_info));
-          goto cleanup;
+          return error;
         }
     }
   else
     {
       if (state->shared->read_length_from_string)
         {
-          length = 0;
+          length = strlen(chars);
         }
       else
         {
           length = state->shared->array_length;
         }
     }
-  if ((error = tobson_escape_special_chars(&escaped_chars, chars, &length)) != ERROR_NONE)
+  /* TODO: Is it correct that `chars` is written twice here? */
+  if ((error = memwriter_printf(state->memwriter, "\"%.*s\"", length, chars)) != ERROR_NONE)
     {
-      goto cleanup;
+      return error;
     }
-  if ((error = memwriter_printf(state->memwriter, "\"%.*s\"", length, escaped_chars)) != ERROR_NONE)
+  if ((error = tobson_string_value(state->memwriter, chars)) != ERROR_NONE)
     {
-      goto cleanup;
-    }
-  if ((error = tobson_string_value(state->memwriter, escaped_chars)) != ERROR_NONE)
-    {
-      goto cleanup;
+      return error;
     }
   state->shared->wrote_output = 1;
 
@@ -1698,8 +1687,6 @@ err_t tobson_char_array(tobson_state_t *state)
       state->shared->data_offset += sizeof(char *);
     }
 
-cleanup:
-  free(escaped_chars);
   return error;
 }
 
@@ -2316,56 +2303,6 @@ err_t tobson_unzip_membernames_and_datatypes(char *mixed_ptr, char ***member_nam
     }
   *arrays[member_name] = NULL;
   *arrays[data_type] = NULL;
-  return ERROR_NONE;
-}
-
-err_t tobson_escape_special_chars(char **escaped_string, const char *unescaped_string, unsigned int *length)
-{
-  /* characters '\' and '"' must be escaped before written to a bson string value */
-  /* length can be `0` -> use `strlen(unescaped_string)` instead */
-  const char *src_ptr;
-  char *dest_ptr;
-  size_t needed_memory;
-  unsigned int remaining_chars;
-  unsigned int len;
-  const char *chars_to_escape = "\\\"";
-
-  len = (length != NULL && *length != 0) ? *length : strlen(unescaped_string);
-  needed_memory = len + 1; /* reserve memory for the terminating `\0` character */
-  src_ptr = unescaped_string;
-  remaining_chars = len;
-  while (remaining_chars)
-    {
-      if (strchr(chars_to_escape, *src_ptr) != NULL)
-        {
-          ++needed_memory;
-        }
-      ++src_ptr;
-      --remaining_chars;
-    }
-  dest_ptr = malloc(needed_memory);
-  if (dest_ptr == NULL)
-    {
-      return ERROR_MALLOC;
-    }
-  *escaped_string = dest_ptr;
-  src_ptr = unescaped_string;
-  remaining_chars = len;
-  while (remaining_chars)
-    {
-      if (strchr(chars_to_escape, *src_ptr) != NULL)
-        {
-          *dest_ptr++ = '\\';
-        }
-      *dest_ptr++ = *src_ptr++;
-      --remaining_chars;
-    }
-  *dest_ptr = '\0';
-  if (length != NULL)
-    {
-      *length = needed_memory - 1;
-    }
-
   return ERROR_NONE;
 }
 
