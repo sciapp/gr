@@ -786,7 +786,7 @@ static const unsigned int symbol_codepoints[] = {
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #endif
 #ifndef round
-#define round(x) (((x) < 0) ? ceil((x)-.5) : floor((x) + .5))
+#define round(x) (((x) < 0) ? ceil((x) - .5) : floor((x) + .5))
 #endif
 
 #include "mathtex2.h"
@@ -1324,8 +1324,7 @@ static void vlist_set_glue_(BoxModelNode *vlist_node, double x, int sign, const 
 {
 
   int o;
-  for (o = 0; o < 4 && totals[o] == 0.0; o++)
-    ;
+  for (o = 0; o < 4 && totals[o] == 0.0; o++);
   o = o % 4;
   vlist_node->u.vlist.glue_order = o;
   vlist_node->u.vlist.glue_sign = sign;
@@ -1516,8 +1515,7 @@ static void hlist_set_glue_(BoxModelNode *hlist_node, double x, int sign, const 
 {
 
   int o;
-  for (o = 0; o < 4 && totals[o] == 0.0; o++)
-    ;
+  for (o = 0; o < 4 && totals[o] == 0.0; o++);
   o = o % 4;
   hlist_node->u.hlist.glue_order = o;
   hlist_node->u.hlist.glue_sign = sign;
@@ -1889,8 +1887,7 @@ static size_t convert_symbol_to_box_model(ParserNode *node)
     {
       char previous_char;
       const char *cursor;
-      for (cursor = node->source - 1; cursor >= input && isspace(*cursor); cursor--)
-        ;
+      for (cursor = node->source - 1; cursor >= input && isspace(*cursor); cursor--);
       if (cursor >= input)
         {
           previous_char = *cursor;
@@ -1943,8 +1940,7 @@ static size_t convert_symbol_to_box_model(ParserNode *node)
         {
           const char *cursor;
           char previous_char;
-          for (cursor = node->source - 1; cursor >= input && isspace(*cursor); cursor--)
-            ;
+          for (cursor = node->source - 1; cursor >= input && isspace(*cursor); cursor--);
           if (cursor >= input)
             {
               previous_char = *cursor;
@@ -1956,8 +1952,7 @@ static size_t convert_symbol_to_box_model(ParserNode *node)
           if (previous_char == '{')
             {
               char next_char;
-              for (cursor = node->source + 1; isspace(*cursor); cursor++)
-                ;
+              for (cursor = node->source + 1; isspace(*cursor); cursor++);
               next_char = *cursor;
               if (next_char == '}')
                 {
@@ -1997,8 +1992,7 @@ static size_t convert_symbol_to_box_model(ParserNode *node)
   if (node->source[0] == '\'' && node->length == 1)
     {
       const char *cursor;
-      for (cursor = node->source - 1; cursor >= input && isspace(*cursor); cursor--)
-        ;
+      for (cursor = node->source - 1; cursor >= input && isspace(*cursor); cursor--);
       if (cursor >= input && cursor[0] != '\'')
         {
           size_t hlist_index = make_hlist();
@@ -2733,7 +2727,6 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
           sub_and_super_filled = 1;
         }
     }
-  /* TODO: better default height? */
   previous_node_height = state->fontsize;
   if (previous_node)
     {
@@ -2754,26 +2747,27 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
             {
               previous_node_width = tmp_hlist->u.hlist.width;
             }
-          if (is_overunder)
-            {
-              padding = -previous_node_width / 2 - body_width / 2;
-              previous_node_kern_width = body_width / 2 - default_thickness * 2;
-            }
         }
       else if (!isnan(previous_node->u.hlist.subsuper_height))
         {
           previous_node_height = previous_node->u.hlist.subsuper_height;
           previous_node_depth = previous_node->u.hlist.subsuper_depth;
           previous_node_width = previous_node->u.hlist.subsuper_width;
-          if (previous_node_width < 0)
-            {
-              previous_node_width = -previous_node_width;
-            }
-          if (is_overunder)
-            {
-              padding = -previous_node_width / 2 - body_width / 2;
-              previous_node_kern_width = body_width / 2 - default_thickness * 2;
-            }
+        }
+      else
+        {
+          previous_node_depth = previous_node->u.hlist.depth;
+          previous_node_width = previous_node->u.hlist.width;
+          previous_node_height = previous_node->u.hlist.height;
+        }
+      if (previous_node_width < 0)
+        {
+          previous_node_width = -previous_node_width;
+        }
+      if (is_overunder)
+        {
+          padding = -previous_node_width / 2 - body_width / 2;
+          previous_node_kern_width = body_width / 2 - default_thickness * 2;
         }
     }
   if (previous_node_kern_index)
