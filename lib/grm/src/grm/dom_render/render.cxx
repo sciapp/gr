@@ -6118,9 +6118,10 @@ static void processContour(const std::shared_ptr<GRM::Element> &element, const s
   int major_h = PLOT_DEFAULT_CONTOUR_MAJOR_H;
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
-
-  z_min = static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
-  z_max = static_cast<double>(plot_parent->getAttribute("_z_lim_max"));
+  z_min = element->hasAttribute("z_min") ? static_cast<double>(element->getAttribute("z_min"))
+                                         : static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
+  z_max = element->hasAttribute("z_max") ? static_cast<double>(element->getAttribute("z_max"))
+                                         : static_cast<double>(plot_parent->getAttribute("_z_lim_max"));
   if (element->hasAttribute("levels"))
     {
       num_levels = static_cast<int>(element->getAttribute("levels"));
@@ -6179,6 +6180,8 @@ static void processContour(const std::shared_ptr<GRM::Element> &element, const s
               z_min = grm_min(gridit_z[i], z_min);
               z_max = grm_max(gridit_z[i], z_max);
             }
+          element->setAttribute("z_min", z_min);
+          element->setAttribute("z_max", z_max);
 
           global_render->setSpace(element->parentElement(), z_min, z_max, 0,
                                   90); // not plot_parent because it should be now on central_region
@@ -6250,9 +6253,10 @@ static void processContourf(const std::shared_ptr<GRM::Element> &element, const 
   int major_h = PLOT_DEFAULT_CONTOURF_MAJOR_H;
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
-
-  z_min = static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
-  z_max = static_cast<double>(plot_parent->getAttribute("_z_lim_max"));
+  z_min = element->hasAttribute("z_min") ? static_cast<double>(element->getAttribute("z_min"))
+                                         : static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
+  z_max = element->hasAttribute("z_max") ? static_cast<double>(element->getAttribute("z_max"))
+                                         : static_cast<double>(plot_parent->getAttribute("_z_lim_max"));
   if (element->hasAttribute("levels"))
     {
       num_levels = static_cast<int>(element->getAttribute("levels"));
@@ -6314,6 +6318,8 @@ static void processContourf(const std::shared_ptr<GRM::Element> &element, const 
               z_min = grm_min(gridit_z[i], z_min);
               z_max = grm_max(gridit_z[i], z_max);
             }
+          element->setAttribute("z_min", z_min);
+          element->setAttribute("z_max", z_max);
 
           global_render->setLineColorInd(element, 989);
           global_render->setSpace(element->parentElement(), z_min, z_max, 0, 90); // central_region
@@ -13253,7 +13259,11 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
       element->setAttribute("_c_lim_max", NAN);
       kind = static_cast<std::string>(element->getAttribute("kind"));
       if (!string_map_at(fmt_map, static_cast<const char *>(kind.c_str()), static_cast<const char **>(&fmt)))
-        throw NotFoundError("Invalid kind was given.\n");
+        {
+          std::stringstream ss;
+          ss << "Invalid kind \"" << kind << "\" was given.";
+          throw NotFoundError(ss.str());
+        }
       if (!str_equals_any(kind, "pie", "polar_histogram"))
         {
           current_component_name = data_component_names.begin();
@@ -15112,6 +15122,12 @@ static void applyRootDefaults(const std::shared_ptr<GRM::Element> &root)
     }
 }
 
+
+std::shared_ptr<GRM::Context> GRM::Render::getRenderContext()
+{
+  return this->context;
+}
+
 void GRM::Render::render(const std::shared_ptr<GRM::Document> &document,
                          const std::shared_ptr<GRM::Context> &ext_context)
 {
@@ -15195,7 +15211,9 @@ void GRM::Render::render()
       applyRootDefaults(root);
       if (logger_enabled())
         {
-          std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '), true}) << "\n";
+          std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '),
+                                                          GRM::SerializerOptions::InternalAttributesFormat::Plain})
+                    << "\n";
         }
       if (static_cast<int>(root->getAttribute("clear_ws"))) gr_clearws();
       root->setAttribute("_modified", true);
@@ -15216,7 +15234,9 @@ void GRM::Render::render()
         }
       if (logger_enabled())
         {
-          std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '), true}) << "\n";
+          std::cerr << toXML(root, GRM::SerializerOptions{std::string(indent, ' '),
+                                                          GRM::SerializerOptions::InternalAttributesFormat::Plain})
+                    << "\n";
         }
       redraw_ws = false;
       // reset marker types
@@ -15649,6 +15669,14 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
        std::vector<std::string>{"5", "Unitless integer values specifying the number of minor tick intervals "
                                      "between major tick marks. Values of 0 or 1 imply no minor ticks. Negative "
                                      "values specify no labels will be drawn for the z-axis"}},
+      {std::string("z_max"),
+       std::vector<std::string>{
+           "None",
+           "The maximum z-coordinate of a contour(f) plot (after transforming the input data to a rectangular grid)"}},
+      {std::string("z_min"),
+       std::vector<std::string>{
+           "None",
+           "The minimum z-coordinate of a contour(f) plot (after transforming the input data to a rectangular grid)"}},
       {std::string("z_org"),
        std::vector<std::string>{"0", "The world coordinates of the origin (point of intersection) of the z-axis"}},
       {std::string("z_org_pos"),
@@ -17532,7 +17560,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       "y_labels",
   };
   std::vector<std::string> series_contour{
-      "levels", "px", "py", "pz", "x", "y", "z",
+      "levels", "px", "py", "pz", "x", "y", "z", "z_max", "z_min",
   };
   std::vector<std::string> series_contourf = series_contour;
   std::vector<std::string> series_heatmap{

@@ -12,6 +12,10 @@
             <xs:attribute name="clear_ws" type="xs:integer" use="required"/>
             <xs:attribute name="update_ws" type="xs:integer" use="required"/>
         </xs:complexType>
+        <xs:unique name="figureidisunique">
+            <xs:selector xpath="figure"/>
+            <xs:field xpath="@figure_id"/>
+        </xs:unique>
     </xs:element>
 
     <!-- definition of figure -->
@@ -25,7 +29,7 @@
             <xs:attribute name="active" type="xs:integer"/>
             <xs:attribute name="fig_size_x" type="xs:double"/>
             <xs:attribute name="fig_size_y" type="xs:double"/>
-            <xs:attribute name="figure_id" type="xs:ID" use="required"/>
+            <xs:attribute name="figure_id" type="xs:string" use="required"/>
             <xs:attribute name="size_x" type="xs:double"/>
             <xs:attribute name="size_x_type" type="xs:string"/>
             <xs:attribute name="size_x_unit" type="xs:string"/>
@@ -1400,6 +1404,8 @@
         <xs:attribute name="x" type="xs:string" use="required"/>
         <xs:attribute name="y" type="xs:string" use="required"/>
         <xs:attribute name="z" type="xs:string" use="required"/>
+        <xs:attribute name="z_max" type="xs:double"/>
+        <xs:attribute name="z_min" type="xs:double"/>
     </xs:attributeGroup>
 
     <!-- definition of axes attributes -->
