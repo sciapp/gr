@@ -51,6 +51,28 @@ static int signals[] = {SIGABRT, SIGSEGV};
 /* ========================= functions ============================================================================== */
 
 #ifdef BACKTRACE_AVAILABLE
+static const char *get_tmp_directory_no_malloc(void)
+{
+  const char *tmp_dir;
+  const char *env_vars[] = {
+      "TMPDIR",
+      "TMP",
+      "TEMP",
+      "TEMPDIR",
+  };
+  int i;
+
+  for (i = 0; i < array_size(env_vars); ++i)
+    {
+      if ((tmp_dir = getenv(env_vars[i])) != NULL)
+        {
+          return tmp_dir;
+        }
+    }
+
+  return "/tmp";
+}
+
 void backtrace_init(void)
 {
   if (is_backtrace_enabled < 0)
@@ -66,7 +88,7 @@ void backtrace_handler(int sig)
   char backtrace_filepath[MAX_FILEPATH_LENGTH];
   int backtrace_fd;
 
-  snprintf(backtrace_filepath, MAX_FILEPATH_LENGTH, "%s/grm_backtrace", get_tmp_directory());
+  snprintf(backtrace_filepath, MAX_FILEPATH_LENGTH, "%s/grm_backtrace", get_tmp_directory_no_malloc());
   frames = backtrace(callstack, MAX_CALLSTACK_DEPTH);
   backtrace_fd = open(backtrace_filepath, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IRGRP | S_IROTH);
   backtrace_symbols_fd(callstack, frames, backtrace_fd);

@@ -8,7 +8,7 @@ DEFINES += GRDIR=\\\"$(GRDIR)\\\"
 # Qt versions < 5.12 ignore `CONFIG`, so repeat the language flag here.
 # Only using `QMAKE_CXXFLAGS` does not work since newer Qt installations set
 # conflicting language flags themselves without setting `CONFIG`.
-QMAKE_CXXFLAGS += -std=c++17 $$(LIBXML2DEFS) $$(EXTRA_CXXFLAGS)
+QMAKE_CXXFLAGS += -std=c++17 $$(XERCESCDEFS) $$(EXTRA_CXXFLAGS)
 QMAKE_LFLAGS += $$(EXTRA_LDFLAGS)
 QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.15
 HEADERS += grplot_widget.hxx grplot_mainwindow.hxx util.hxx gredit/Bounding_logic.h gredit/Bounding_object.h gredit/CustomTreeWidgetItem.h gredit/TreeWidget.h gredit/AddElementWidget.h qtterm/grm_args_t_wrapper.h qtterm/receiver_thread.h

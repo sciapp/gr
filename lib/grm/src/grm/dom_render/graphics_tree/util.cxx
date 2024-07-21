@@ -6,10 +6,46 @@
 #include <sstream>
 #include <algorithm>
 #include <cmath>
+#include "grm/base64_int.h"
+#include "grm/bson_int.h"
+#include "grm/memwriter_int.h"
 #include "grm/utilcpp_int.hxx"
 
+static std::string escapeXMLAttribute(std::string_view attribute)
+{
+  std::stringstream os;
+  for (auto c : attribute)
+    {
+      switch (c)
+        {
+        case '&':
+          os << "&amp;";
+          break;
+        case '<':
+          os << "&lt;";
+          break;
+        case '>':
+          os << "&gt;";
+          break;
+        case '"':
+          os << "&quot;";
+          break;
+        case '\'':
+          os << "&apos;";
+          break;
+        default:
+          os << c;
+          break;
+        }
+    }
+  return os.str();
+}
+
 static void nodeToXML(std::stringstream &os, const std::shared_ptr<const GRM::Node> &node,
-                      const GRM::SerializerOptions &options, const std::string &indent);
+                      const GRM::SerializerOptions &options, const std::string &indent,
+                      std::optional<std::function<bool(const std::string &attribute_name, const GRM::Element &,
+                                                       std::optional<std::string> &new_attribute_name)>>
+                          attribute_filter);
 
 static void documentToXML(std::stringstream &os, const std::shared_ptr<const GRM::Document> &document,
                           const GRM::SerializerOptions &options, const std::string &indent)
@@ -17,13 +53,18 @@ static void documentToXML(std::stringstream &os, const std::shared_ptr<const GRM
   os << indent << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
   for (const auto &child_node : document->childNodes())
     {
-      nodeToXML(os, child_node, options, indent);
+      nodeToXML(os, child_node, options, indent, std::nullopt);
     }
 }
 
-static void elementToXML(std::stringstream &os, const std::shared_ptr<const GRM::Element> &element,
-                         const GRM::SerializerOptions &options, const std::string &indent)
+static void
+elementToXML(std::stringstream &os, const std::shared_ptr<const GRM::Element> &element,
+             const GRM::SerializerOptions &options, const std::string &indent,
+             std::optional<std::function<bool(const std::string &attribute_name, const GRM::Element &element,
+                                              std::optional<std::string> &new_attribute_name)>>
+                 attribute_filter)
 {
+  std::map<std::string, GRM::Value> internal_attributes;
   os << indent << "<" << element->localName();
   auto attribute_names_set = element->getAttributeNames();
   std::vector<std::string> attribute_names{attribute_names_set.begin(), attribute_names_set.end()};
@@ -34,41 +75,104 @@ static void elementToXML(std::stringstream &os, const std::shared_ptr<const GRM:
          << "name"
          << "=\"" << (std::string)element->getAttribute("name") << "\"";
     }
-  for (const auto &attribute_name : attribute_names)
+  for (const auto &original_attribute_name : attribute_names)
     {
-      if (attribute_name != "name" && (options.show_hidden || !starts_with(attribute_name, "_")))
+      auto attribute_name = std::ref(original_attribute_name);
+      std::optional<std::string> new_attribute_name;
+      if (original_attribute_name == "name" ||
+          (attribute_filter && !(*attribute_filter)(original_attribute_name, *element, new_attribute_name)))
+        continue;
+      if (new_attribute_name)
         {
-          auto value = (std::string)element->getAttribute(attribute_name);
-          if (value == "nan")
+          attribute_name = *new_attribute_name;
+        }
+      if (starts_with(attribute_name.get(), "_"))
+        {
+          switch (options.internal_attribute_format)
             {
-              os << " " << attribute_name << "=\""
-                 << "NaN"
-                 << "\"";
-            }
-          else if (value == "inf")
-            {
-              os << " " << attribute_name << "=\""
-                 << "INF"
-                 << "\"";
-            }
-          else if (value == "-inf")
-            {
-              os << " " << attribute_name << "=\""
-                 << "-INF"
-                 << "\"";
-            }
-          else
-            {
-              os << " " << attribute_name << "=\"" << value << "\"";
+            case GRM::SerializerOptions::InternalAttributesFormat::None:
+              continue;
+            case GRM::SerializerOptions::InternalAttributesFormat::Obfuscated:
+              internal_attributes[attribute_name.get()] = element->getAttribute(original_attribute_name);
+              continue;
+            default:
+              break;
             }
         }
+
+      auto value = (std::string)element->getAttribute(original_attribute_name);
+      if (value == "nan")
+        {
+          os << " " << attribute_name.get() << "=\""
+             << "NaN"
+             << "\"";
+        }
+      else if (value == "inf")
+        {
+          os << " " << attribute_name.get() << "=\""
+             << "INF"
+             << "\"";
+        }
+      else if (value == "-inf")
+        {
+          os << " " << attribute_name.get() << "=\""
+             << "-INF"
+             << "\"";
+        }
+      else
+        {
+          os << " " << attribute_name.get() << "=\"" << escapeXMLAttribute(value) << "\"";
+        }
+    }
+  if (options.internal_attribute_format == GRM::SerializerOptions::InternalAttributesFormat::Obfuscated &&
+      !internal_attributes.empty())
+    {
+      auto memwriter = std::unique_ptr<memwriter_t, void (*)(memwriter_t *)>(memwriter_new(), memwriter_delete);
+      if (!memwriter)
+        {
+          throw std::bad_alloc();
+        }
+      tobson_write(memwriter.get(), "o(");
+      for (const auto &attribute : internal_attributes)
+        {
+          std::stringstream format_stream;
+          format_stream << attribute.first;
+          switch (attribute.second.type())
+            {
+            case GRM::Value::Type::DOUBLE:
+              format_stream << ":d";
+              tobson_write(memwriter.get(), format_stream.str().c_str(), static_cast<double>(attribute.second));
+              break;
+            case GRM::Value::Type::INT:
+              format_stream << ":i";
+              tobson_write(memwriter.get(), format_stream.str().c_str(), static_cast<int>(attribute.second));
+              break;
+            case GRM::Value::Type::STRING:
+              format_stream << ":s";
+              tobson_write(memwriter.get(), format_stream.str().c_str(),
+                           static_cast<std::string>(attribute.second).c_str());
+              break;
+            default:
+              break;
+            }
+        }
+      tobson_write(memwriter.get(), ")");
+      err_t error = ERROR_NONE;
+      auto base64_encoded_cstr = std::unique_ptr<char, void (*)(void *)>(
+          base64_encode(nullptr, memwriter_buf(memwriter.get()), memwriter_size(memwriter.get()), &error), std::free);
+      if (error != ERROR_NONE)
+        {
+          logger((stderr, "Got error \"%d\" (\"%s\")!\n", error, error_names[error]));
+          throw std::runtime_error("Got error \"" + std::to_string(error) + "\" (\"" + error_names[error] + "\")!");
+        }
+      os << " internal=\"" << base64_encoded_cstr.get() << "\"";
     }
   if (element->hasChildNodes())
     {
       os << ">\n";
       for (const auto &child_node : element->childNodes())
         {
-          nodeToXML(os, child_node, options, indent + options.indent);
+          nodeToXML(os, child_node, options, indent + options.indent, attribute_filter);
         }
       os << indent << "</" << element->localName() << ">\n";
     }
@@ -85,7 +189,10 @@ static void commentToXML(std::stringstream &os, const std::shared_ptr<const GRM:
 }
 
 static void nodeToXML(std::stringstream &os, const std::shared_ptr<const GRM::Node> &node,
-                      const GRM::SerializerOptions &options, const std::string &indent)
+                      const GRM::SerializerOptions &options, const std::string &indent,
+                      std::optional<std::function<bool(const std::string &attribute_name, const GRM::Element &,
+                                                       std::optional<std::string> &new_attribute_name)>>
+                          attribute_filter)
 {
   switch (node->nodeType())
     {
@@ -98,7 +205,7 @@ static void nodeToXML(std::stringstream &os, const std::shared_ptr<const GRM::No
     case GRM::Node::Type::ELEMENT_NODE:
       {
         auto element = std::dynamic_pointer_cast<const GRM::Element>(node);
-        elementToXML(os, element, options, indent);
+        elementToXML(os, element, options, indent, attribute_filter);
         break;
       }
     case GRM::Node::Type::COMMENT_NODE:
@@ -110,14 +217,17 @@ static void nodeToXML(std::stringstream &os, const std::shared_ptr<const GRM::No
     }
 };
 
-std::string GRM::toXML(const std::shared_ptr<const GRM::Node> &node, const GRM::SerializerOptions &options)
+std::string GRM::toXML(const std::shared_ptr<const GRM::Node> &node, const GRM::SerializerOptions &options,
+                       std::optional<std::function<bool(const std::string &attribute_name, const GRM::Element &element,
+                                                        std::optional<std::string> &new_attribute_name)>>
+                           attribute_filter)
 {
   if (!node)
     {
       throw TypeError("node is null");
     }
   std::stringstream os;
-  nodeToXML(os, node, options, "");
+  nodeToXML(os, node, options, "", attribute_filter);
   return os.str();
 }
 

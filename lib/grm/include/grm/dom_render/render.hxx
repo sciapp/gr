@@ -521,6 +521,8 @@ public:
 
   int getAxisId();
 
+  std::shared_ptr<Context> getRenderContext();
+
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context
   void render(const std::shared_ptr<Document> &document);  // external doc and render context
