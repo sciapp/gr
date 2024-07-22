@@ -12,7 +12,7 @@
 AddElementWidget::AddElementWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(parent)
 {
   grplot_widget = widget;
-#if !defined(NO_LIBXML2)
+#if !defined(NO_XERCES_C)
   schema_tree = grplot_widget->get_schema_tree();
 #else
   schema_tree = nullptr;

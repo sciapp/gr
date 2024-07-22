@@ -82,6 +82,8 @@
 #define PLOT_DEFAULT_AXES_TICK_SIZE 0.0075
 #define DEFAULT_ASPECT_RATIO_FOR_SCALING 4.0 / 3.0
 #define PLOT_DEFAULT_ONLY_QUADRATIC_ASPECT_RATIO 0
+#define MIRRORED_AXIS_DEFAULT 1
+#define SCIENTIFIC_FORMAT_OPTION 2
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -118,6 +120,7 @@ EXPORT int locationStringToInt(const std::string &location_str);
 EXPORT int markerTypeStringToInt(const std::string &marker_type_str);
 EXPORT int projectionTypeStringToInt(const std::string &projection_type_str);
 EXPORT int modelStringToInt(const std::string &model_str);
+EXPORT int scientificFormatStringToInt(const std::string &scientific_format_str);
 EXPORT int textAlignHorizontalStringToInt(const std::string &text_align_horizontal_str);
 EXPORT int textAlignVerticalStringToInt(const std::string &text_align_vertical_str);
 EXPORT int textEncodingStringToInt(const std::string &text_encoding_str);
@@ -134,6 +137,7 @@ EXPORT std::string locationIntToString(int location);
 EXPORT std::string markerTypeIntToString(int marker_type);
 EXPORT std::string projectionTypeIntToString(int projection_type);
 EXPORT std::string modelIntToString(int model);
+EXPORT std::string scientificFormatIntToString(int scientific_format);
 EXPORT std::string textAlignHorizontalIntToString(int text_align_horizontal);
 EXPORT std::string textAlignVerticalIntToString(int text_align_vertical);
 EXPORT std::string textEncodingIntToString(int text_encoding);
@@ -242,14 +246,21 @@ public:
                                                 const std::shared_ptr<Context> &extContext = nullptr,
                                                 const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
-  std::shared_ptr<Element> createAxes(double x_tick, double y_tick, double x_org, double y_org, int x_major,
-                                      int y_major, int tick_orientation,
+  std::shared_ptr<GRM::Element> createEmptyAxis(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+
+  std::shared_ptr<Element> createAxis(double min_val, double max_val, double tick, double org, double pos,
+                                      int major_count, int num_ticks, int num_tick_labels, double tick_size,
+                                      int tick_orientation, double label_pos,
                                       const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
-  std::shared_ptr<GRM::Element> createEmptyAxes(int tick_orientation,
-                                                const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+  std::shared_ptr<Element> createTickGroup(int is_major, std::string tick_label, double value, double width,
+                                           const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
-  std::shared_ptr<GRM::Element> createEmptyDoubleAxes();
+  std::shared_ptr<Element> createTick(int is_major, double value,
+                                      const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+
+  std::shared_ptr<Element> createGridLine(int is_major, double value,
+                                          const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createLegend(const std::string &labels_key, std::optional<std::vector<std::string>> labels,
                                         const std::string &specs_key, std::optional<std::vector<std::string>> specs,
@@ -274,12 +285,6 @@ public:
                                           const std::string &bar_color_rgb = "", const std::string &edge_color_rgb = "",
                                           const double linewidth = -1, const std::string &text = "",
                                           const std::shared_ptr<GRM::Element> &extElement = nullptr);
-
-  std::shared_ptr<Element> createGrid(double x_tick, double y_tick, double x_org, double y_org, int major_x,
-                                      int major_y, const std::shared_ptr<GRM::Element> &extElement = nullptr);
-
-  std::shared_ptr<GRM::Element> createEmptyGrid(bool x_grid, bool y_grid,
-                                                const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
   std::shared_ptr<Element> createSeries(const std::string &name);
 
@@ -491,14 +496,6 @@ public:
 
   void setSubplot(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
-  void setXTickLabels(const std::shared_ptr<GRM::Element> &element, const std::string &key,
-                      std::optional<std::vector<std::string>> x_tick_labels,
-                      const std::shared_ptr<GRM::Context> &extContext = nullptr);
-
-  void setYTickLabels(const std::shared_ptr<GRM::Element> &element, const std::string &key,
-                      std::optional<std::vector<std::string>> y_tick_labels,
-                      const std::shared_ptr<GRM::Context> &extContext = nullptr);
-
   void setOriginPosition(const std::shared_ptr<GRM::Element> &element, const std::string &x_org_pos,
                          const std::string &y_org_pos);
 
@@ -519,6 +516,12 @@ public:
   static void getAutoUpdate(bool *update);
 
   static void getFigureSize(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height);
+
+  std::map<int, std::map<double, std::map<std::string, GRM::Value>>> *getTickModificationMap();
+
+  int getAxisId();
+
+  std::shared_ptr<Context> getRenderContext();
 
   void render();                                           // render doc and render context
   void render(const std::shared_ptr<Context> &extContext); // render doc and external context

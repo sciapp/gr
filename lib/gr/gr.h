@@ -208,8 +208,9 @@ typedef struct
   int draw_axis_line;
 } axis_t;
 
-#define GR_AXES_WITH_GRID (1 << 0)
-#define GR_AXES_WITH_FRAME (1 << 1)
+#define GR_AXES_SIMPLE_AXES (1 << 0)
+#define GR_AXES_TWIN_AXES (1 << 1)
+#define GR_AXES_WITH_GRID (1 << 2)
 
 DLLEXPORT void gr_initgr(void);
 DLLEXPORT int gr_debug(void);

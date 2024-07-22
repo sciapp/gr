@@ -58,6 +58,7 @@ debian-self-contained-armhf:
     STRIP=arm-linux-gnueabihf-strip \
     PNG_EXTRA_CFLAGS="-DPNG_ARM_NEON_OPT=0" \
     GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/armhf-linux-gnu.cmake \
+    XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/armhf-linux-gnu.cmake \
     OGG_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
     THEORA_EXTRA_CONFIGURE_FLAGS="--host=arm-linux --disable-asm" \
     FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=arm-linux-gnueabihf- --arch=armhf --target-os=linux --pkg-config=pkg-config" \
@@ -65,8 +66,7 @@ debian-self-contained-armhf:
     CAIRO_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihfnu \
     TIFF_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
     OPENH264_EXTRA_MAKE_FLAGS="OS=linux ARCH=armhf" \
-    ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
-    LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf
+    ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf
   - make self \
     CC=arm-linux-gnueabihf-gcc \
     LD=arm-linux-gnueabihf-ld \
@@ -109,6 +109,7 @@ debian-self-contained-aarch64:
     STRIP=aarch64-linux-gnu-strip \
     PNG_EXTRA_CFLAGS="-DPNG_ARM_NEON_OPT=0" \
     GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/aarch64-linux-gnu.cmake \
+    XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/aarch64-linux-gnu.cmake \
     OGG_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
     THEORA_EXTRA_CONFIGURE_FLAGS="--host=arm-linux --disable-asm" \
     FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=aarch64-linux-gnu- --arch=aarch64 --target-os=linux --pkg-config=pkg-config" \
@@ -116,8 +117,7 @@ debian-self-contained-aarch64:
     CAIRO_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
     TIFF_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
     OPENH264_EXTRA_MAKE_FLAGS="OS=linux ARCH=aarch64" \
-    ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
-    LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
+    ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
   - make self \
     CC=aarch64-linux-gnu-gcc \
     LD=aarch64-linux-gnu-ld \
@@ -159,6 +159,7 @@ debian-cmake-self-contained-aarch64:
     STRIP=aarch64-linux-gnu-strip \
     PNG_EXTRA_CFLAGS="-DPNG_ARM_NEON_OPT=0" \
     GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/aarch64-linux-gnu.cmake \
+    XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/aarch64-linux-gnu.cmake \
     OGG_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
     THEORA_EXTRA_CONFIGURE_FLAGS="--host=arm-linux --disable-asm" \
     FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=aarch64-linux-gnu- --arch=aarch64 --target-os=linux --pkg-config=pkg-config" \
@@ -166,8 +167,7 @@ debian-cmake-self-contained-aarch64:
     CAIRO_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
     TIFF_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
     OPENH264_EXTRA_MAKE_FLAGS="OS=linux ARCH=aarch64" \
-    ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
-    LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
+    ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
   - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
   - tar xf cmake-3.23.0-linux-x86_64.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake
@@ -180,7 +180,7 @@ debian-cmake-self-contained-aarch64:
   artifacts:
     expire_in: 1 week
     paths:
-    - artifacts-debian10-cmake-aarch64/
+      - artifacts-debian10-cmake-aarch64/
 
 debian-cmake-self-contained-armhf:
   stage: build
@@ -196,6 +196,7 @@ debian-cmake-self-contained-armhf:
     STRIP=arm-linux-gnueabihf-strip \
     PNG_EXTRA_CFLAGS="-DPNG_ARM_NEON_OPT=0" \
     GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/armhf-linux-gnu.cmake \
+    XERCES_C_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/armhf-linux-gnu.cmake \
     OGG_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
     THEORA_EXTRA_CONFIGURE_FLAGS="--host=arm-linux --disable-asm" \
     FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=arm-linux-gnueabihf- --arch=armhf --target-os=linux --pkg-config=pkg-config" \
@@ -203,8 +204,7 @@ debian-cmake-self-contained-armhf:
     CAIRO_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
     TIFF_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
     OPENH264_EXTRA_MAKE_FLAGS="OS=linux ARCH=armhf" \
-    ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf \
-    LIBXML2_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf
+    ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=arm-linux-gnueabihf
   - wget https://gr-framework.org/downloads/3rdparty/cmake-3.23.0-linux-x86_64.tar.gz
   - tar xf cmake-3.23.0-linux-x86_64.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.23.0-linux-x86_64/bin/cmake

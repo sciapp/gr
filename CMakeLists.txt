@@ -109,22 +109,6 @@ find_package(
     PrintSupport
 )
 find_package(Qt4)
-# CMake ships with a `FindLibXml2.cmake` module which does not configure needed libxml2 dependencies.
-# Thus, use the `libxml2-config.cmake` config file shipped with libxml which configures dependencies correctly by
-# skipping module search mode.
-if(GR_USE_BUNDLED_LIBRARIES)
-  # Find `LibXml2` only in 3rdparty but allow to find its dependencies in system directories
-  # (`ONLY_CMAKE_FIND_ROOT_PATH` option is not inherited to `find_package` calls within the LibXml2 config file)
-  find_package(LibXml2 NO_MODULE ONLY_CMAKE_FIND_ROOT_PATH)
-else()
-  # On RHEL 9 based Linux distributions, `libxml2` is found in `/lib64` by default since the `PATH` variable is
-  # inspected by CMake to find potential prefix paths (`/bin` is present in `PATH` before `/usr/bin`). This causes
-  # errors because no `/include` directory is present on Linux and this is not checked by the LibXml2 config file.
-  # Therefore, disable the inspection of the `PATH` variable by setting `NO_SYSTEM_ENVIRONMENT_PATH` option.
-  # See <https://cmake.org/cmake/help/v3.30/command/find_package.html#:~:text=Search the standard system environment
-  # variables> for more details.
-  find_package(LibXml2 NO_MODULE NO_SYSTEM_ENVIRONMENT_PATH)
-endif()
 
 # Find the following packages only in 3rdparty, if `GR_USE_BUNDLED_LIBRARIES` is set
 if(GR_USE_BUNDLED_LIBRARIES)
@@ -162,7 +146,7 @@ endif()
 find_package(Cairo)
 find_package(Agg)
 find_package(Gs)
-find_package(Expat)
+find_package(XercesC)
 
 if(APPLE)
   set(INSTALL_RPATH "${GR_DIRECTORY}/lib/;@loader_path/.")
@@ -533,6 +517,7 @@ set(GRM_SOURCES
     lib/grm/src/grm/args.c
     lib/grm/src/grm/backtrace.c
     lib/grm/src/grm/base64.c
+    lib/grm/src/grm/bson.c
     lib/grm/src/grm/dump.c
     lib/grm/src/grm/dynamic_args_array.c
     lib/grm/src/grm/error.c
@@ -550,6 +535,7 @@ set(GRM_SOURCES
     lib/grm/src/grm/import.cxx
     lib/grm/src/grm/utilcpp.cxx
     lib/grm/src/grm/datatype/double_map.c
+    lib/grm/src/grm/datatype/size_t_list.c
     lib/grm/src/grm/datatype/string_array_map.c
     lib/grm/src/grm/datatype/string_list.c
     lib/grm/src/grm/datatype/string_map.c
@@ -584,16 +570,10 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GKS)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GR)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GR3)
-  if(TARGET LibXml2::LibXml2)
-    target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} LibXml2::LibXml2)
-  elseif(EXPAT_FOUND)
-    target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} Expat::Expat)
-  endif()
-  if(NOT TARGET LibXml2::LibXml2)
-    target_compile_definitions(${LIBRARY} PRIVATE NO_LIBXML2)
-  endif()
-  if(NOT EXPAT_FOUND OR TARGET LibXml2::LibXml2)
-    target_compile_definitions(${LIBRARY} PRIVATE NO_EXPAT)
+  if(TARGET XercesC::XercesC)
+    target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} XercesC::XercesC)
+  else()
+    target_compile_definitions(${LIBRARY} PRIVATE NO_XERCES_C)
   endif()
   if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"))
     target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} m)
@@ -1279,8 +1259,8 @@ if((Qt6Widgets_FOUND
       set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
     endif()
     target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
-    if(NOT TARGET LibXml2::LibXml2)
-      target_compile_definitions(grplot PRIVATE NO_LIBXML2)
+    if(NOT TARGET XercesC::XercesC)
+      target_compile_definitions(grplot PRIVATE NO_XERCES_C)
     endif()
     set_target_properties(
       grplot PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
@@ -1416,12 +1396,10 @@ else()
 endif()
 
 string(APPEND GR_REPORT "\nGRM integrations:\n")
-if(TARGET LibXml2::LibXml2)
-  string(APPEND GR_REPORT "- libxml2: Yes\n- Expat: No\n")
-elseif(EXPAT_FOUND)
-  string(APPEND GR_REPORT "- libxml2: No\n- Expat: Yes\n")
+if(TARGET XercesC::XercesC)
+  string(APPEND GR_REPORT "- Xerces-C++: Yes\n")
 else()
-  string(APPEND GR_REPORT "- libxml2: No\n- Expat: No\n")
+  string(APPEND GR_REPORT "- Xerces-C++: No\n")
 endif()
 
 if(GR_BUILD_DEMOS)
@@ -1446,6 +1424,11 @@ if(GR_INSTALL)
     FILES lib/grm/src/grm/dom_render/graphics_tree/schema.xsd
     DESTINATION ${CMAKE_INSTALL_DATADIR}/xml/GRM
     RENAME grm_graphics_tree_schema.xsd
+  )
+  install(
+    FILES lib/grm/src/grm/dom_render/graphics_tree/private_schema.xsd
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/xml/GRM
+    RENAME grm_graphics_tree_private_schema.xsd
   )
   include(CMakePackageConfigHelpers)
   configure_package_config_file(

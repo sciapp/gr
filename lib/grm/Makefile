@@ -12,6 +12,7 @@ UNAME := $(shell uname)
      GRMOBJS = src/grm/args.o \
                src/grm/backtrace.o \
                src/grm/base64.o \
+               src/grm/bson.o \
                src/grm/dump.o \
                src/grm/dynamic_args_array.o \
                src/grm/error.o \
@@ -29,6 +30,7 @@ UNAME := $(shell uname)
                src/grm/utilcpp.o \
                src/grm/import.o \
                src/grm/datatype/double_map.o \
+               src/grm/datatype/size_t_list.o \
                src/grm/datatype/string_array_map.o \
                src/grm/datatype/string_list.o \
                src/grm/datatype/string_map.o \
@@ -45,25 +47,22 @@ UNAME := $(shell uname)
                src/grm/dom_render/graphics_tree/Node.o \
                src/grm/dom_render/graphics_tree/Value.o \
                src/grm/dom_render/graphics_tree/util.o
-   EXPATDEFS =
-ifdef USE_STATIC_EXPAT_LIBS
-   EXPATLIBS = $(THIRDPARTYDIR)/lib/libexpat.a
+   XERCESCDEFS =
+   XERCESCINC =
+ifdef USE_STATIC_XERCESC_LIBS
+   XERCESCLIBS = $(THIRDPARTYDIR)/lib/libxerces-c.a $(THIRDPARTYDIR)/lib/libicuuc.a $(THIRDPARTYDIR)/lib/libicudata.a
 else
-   EXPATLIBS = -lexpat
+   XERCESCLIBS = -lxerces-c
 endif
-LIBXML2_CONFIG = false
-   LIBXML2DEFS =
-    LIBXML2INC = `$(LIBXML2_CONFIG) --cflags 2>/dev/null`
-   LIBXML2LIBS = `$(LIBXML2_CONFIG) --libs 2>/dev/null`
 
-     DEFINES = -DBUILDING_GR -DGRDIR=\"$(GRDIR)\" $(EXPATDEFS) $(LIBXML2DEFS)
+     DEFINES = -DBUILDING_GR -DGRDIR=\"$(GRDIR)\" $(XERCESCDEFS)
     INCLUDES = -I./include \
                -I./src \
                -I../gks \
                -I../gr \
                -I../gr3 \
                -I$(THIRDPARTYDIR)/include \
-               $(LIBXML2INC)
+               $(XERCESCINC)
           CC = cc
       CFLAGS = $(DEFINES) -std=c90 -O3 -Wall -fPIC -fvisibility=hidden $(EXTRA_CFLAGS)
     CXXFLAGS = $(DEFINES) -std=c++17 -O3 -Wall -fPIC -fvisibility=hidden $(EXTRA_CXXFLAGS)
@@ -84,7 +83,7 @@ INSTALL_NAME =
 endif
       GRLIBS = -L ../gr/ -lGR
      GR3LIBS = -L ../gr3/ -lGR3
-        LIBS = $(GRLIBS) $(GR3LIBS) $(EXPATLIBS) $(LIBXML2LIBS) -lm
+        LIBS = $(GRLIBS) $(GR3LIBS) $(XERCESCLIBS) -lm
 
 grplot_support =
 ifneq ($(QT5_QMAKE),)
@@ -144,6 +143,7 @@ install:
 	cp -rp include/grm $(INCDIR)/
 	@if [ ! -d $(SHAREDIR)/xml/GRM ]; then mkdir -m 755 -p $(SHAREDIR)/xml/GRM; fi
 	cp -p src/grm/dom_render/graphics_tree/schema.xsd $(SHAREDIR)/xml/GRM/grm_graphics_tree_schema.xsd
+	cp -p src/grm/dom_render/graphics_tree/private_schema.xsd $(SHAREDIR)/xml/GRM/grm_graphics_tree_private_schema.xsd
 ifeq ($(UNAME), Darwin)
 	@if [ -d grplot/grplot.app ]; then \
 		$(MAKE) -C grplot -f makefile.mak install; \

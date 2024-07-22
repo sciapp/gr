@@ -12,6 +12,7 @@
 
 #include "dump_int.h"
 #include "json_int.h"
+#include "bson_int.h"
 #include "memwriter_int.h"
 #include "plot_int.h"
 
@@ -322,4 +323,39 @@ char *grm_dump_json_str(void)
   return "";
 }
 
+void grm_dump_bson(const grm_args_t *args, FILE *f)
+{
+  static memwriter_t *memwriter = NULL;
+  char *buf;
+  int length;
+  int i;
+
+  if (memwriter == NULL)
+    {
+      memwriter = memwriter_new();
+    }
+  tobson_write_args(memwriter, args);
+  if (tobson_is_complete())
+    {
+      buf = memwriter_buf(memwriter);
+      bytes_to_int(&length, buf);
+
+      for (i = 0; i < length; i++, buf++)
+        {
+          fprintf(f, "%.2X", (unsigned char)*(buf));
+          if (i % 16 == 15)
+            {
+              putc('\n', f);
+            }
+          else if (i % 2 == 1)
+            {
+              putc(' ', f);
+            }
+        }
+      fprintf(f, "\n");
+
+      memwriter_delete(memwriter);
+      memwriter = NULL;
+    }
+}
 #endif

@@ -2,7 +2,7 @@ ifeq ($(strip $(PREFIX)),)
 override PREFIX = $(abspath $(CURDIR)/../build)
 endif
 
-VERSION = 4.2.1
+VERSION = 5.1.4
 FFMPEG_EXTRA_CONFIGURE_FLAGS ?=
 ifeq ($(shell uname),Darwin)
 FFMPEG_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-mmacosx-version-min=10.15

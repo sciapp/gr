@@ -2,27 +2,26 @@ ifeq ($(strip $(THIRDPARTYDIR)),)
 override THIRDPARTYDIR = $(abspath $(CURDIR)/../../3rdparty/build)
 endif
 
-    DEFINES = -DGRDIR=\"$(GRDIR)\" -DNO_GS -DNO_X11 -D_WIN32_WINNT=0x0600 -DBUILDING_DLL -DLIBXML_STATIC
+    DEFINES = -DGRDIR=\"$(GRDIR)\" -DNO_GS -DNO_X11 -D_WIN32_WINNT=0x0600 -DBUILDING_DLL
      CFLAGS = $(DEFINES) -std=c90
    CXXFLAGS = $(DEFINES) -std=c++17
- LIBXML2INC = -I$(THIRDPARTYDIR)/include/libxml2
    INCLUDES = -I./include \
               -I./src \
               -I../gks \
               -I../gr \
               -I../gr3 \
-              -I$(THIRDPARTYDIR)/include \
-              $(LIBXML2INC)
-LIBXML2LIBS = $(THIRDPARTYDIR)/lib/libxml2.a $(THIRDPARTYDIR)/lib/libz.a
+              -I$(THIRDPARTYDIR)/include
+XERCESCLIBS = $(THIRDPARTYDIR)/lib/libxerces-c.a $(THIRDPARTYDIR)/lib/libicuuc.a $(THIRDPARTYDIR)/lib/libicudata.a
     GKSLIBS = -L ../gks/ -lGKS
      GRLIBS = -L ../gr/ -lGR
     GR3LIBS = -L ../gr3/ -lGR3
     LDFLAGS = -Wl,--out-implib,$(@:.dll=.a)
-       LIBS = $(GR3LIBS) $(GRLIBS) $(GKSLIBS) $(LIBXML2LIBS) -lm -lws2_32 -lmsimg32 -lgdi32
+       LIBS = $(GR3LIBS) $(GRLIBS) $(GKSLIBS) $(XERCESCLIBS) -lm -lws2_32 -lmsimg32 -lgdi32 -lpthread
 
        OBJS = src/grm/args.o \
               src/grm/backtrace.o \
               src/grm/base64.o \
+              src/grm/bson.o \
               src/grm/dump.o \
               src/grm/dynamic_args_array.o \
               src/grm/error.o \
@@ -40,6 +39,7 @@ LIBXML2LIBS = $(THIRDPARTYDIR)/lib/libxml2.a $(THIRDPARTYDIR)/lib/libz.a
               src/grm/utilcpp.o \
               src/grm/import.o \
               src/grm/datatype/double_map.o \
+              src/grm/datatype/size_t_list.o \
               src/grm/datatype/string_array_map.o \
               src/grm/datatype/string_list.o \
               src/grm/datatype/string_map.o \

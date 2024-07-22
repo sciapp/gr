@@ -37,7 +37,7 @@ if [ -z "${QTDIR}" ]; then
   done
 fi
 
-opts="${opts} USE_STATIC_CAIRO_LIBS=1 USE_STATIC_AGG_LIBS=1"
+opts="${opts} USE_STATIC_CAIRO_LIBS=1 USE_STATIC_AGG_LIBS=1 USE_STATIC_XERCESC_LIBS=1"
 
 extras=`pwd`/3rdparty/build
 extras_lib=${extras}/lib

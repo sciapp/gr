@@ -75,7 +75,6 @@ static std::map<std::string, const char *> key_to_types{
     {"x_lim", "dd"},
     {"x_log", "i"},
     {"x_range", "dd"},
-    {"x_tick_labels", "nS"},
     {"xye_file", "i"},
     {"xyz_file", "i"},
     {"y_bins", "i"},
@@ -87,7 +86,6 @@ static std::map<std::string, const char *> key_to_types{
     {"y_lim", "dd"},
     {"y_log", "i"},
     {"y_range", "dd"},
-    {"y_tick_labels", "nS"},
     {"z_grid", "i"},
     {"z_label", "s"},
     {"z_lim", "dd"},
@@ -273,26 +271,6 @@ err_t read_data_file(const std::string &path, std::vector<std::vector<std::vecto
             {
               const char *tmp;
               if (!grm_args_values(args, key.c_str(), "s", &tmp)) grm_args_push(args, key.c_str(), "s", value.c_str());
-            }
-          else if (str_equals_any(key, "x_tick_labels", "y_tick_labels"))
-            {
-              std::vector<std::string> tick_labels;
-              std::stringstream sv(value);
-              int tmp_size;
-              const char *tmp;
-              for (size_t col = 0; std::getline(sv, token, ',') && token.length(); col++)
-                {
-                  tick_labels.push_back(token);
-                }
-
-              const int num = static_cast<const int>(tick_labels.size());
-              std::vector<const char *> c_tick_label(num);
-              for (int i = 0; i < tick_labels.size(); i++)
-                {
-                  c_tick_label[i] = (const char *)tick_labels[i].c_str();
-                }
-              if (!grm_args_values(args, key.c_str(), "nS", &tmp_size, &tmp))
-                grm_args_push(args, key.c_str(), "nS", tick_labels.size(), (const char *)c_tick_label.data());
             }
           else if (str_equals_any(key, "location", "x_log", "y_log", "z_log", "x_grid", "y_grid", "z_grid"))
             {

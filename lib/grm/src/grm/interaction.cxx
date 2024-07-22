@@ -371,14 +371,13 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
                                                        "labels_group",
                                                        "titles_3d",
                                                        "text",
-                                                       "y_tick_label_group",
-                                                       "x_tick_label_group",
                                                        "layout_grid_element",
                                                        "layout_grid",
                                                        "central_region",
                                                        "side_region",
                                                        "marginal_heatmap_plot",
-                                                       "legend"};
+                                                       "legend",
+                                                       "axis"};
 
   GRM::Render::getFigureSize(&width, &height, nullptr, nullptr);
   max_width_height = grm_max(width, height);
@@ -1301,36 +1300,31 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
   auto coordinate_system = subplot_element->querySelectors("coordinate_system");
   auto left_side_region = subplot_element->querySelectors("side_region[location=\"left\"]");
   auto bottom_side_region = subplot_element->querySelectors("side_region[location=\"bottom\"]");
-  std::vector<std::shared_ptr<GRM::Element>> label_vec;
+  struct
+  {
+    std::shared_ptr<GRM::Element> x, y;
+  } label_elements{};
 
-  if (bottom_side_region && bottom_side_region->hasAttribute("text_content")) label_vec.push_back(bottom_side_region);
-  if (left_side_region && left_side_region->hasAttribute("text_content")) label_vec.push_back(left_side_region);
+  if (bottom_side_region && bottom_side_region->hasAttribute("text_content")) label_elements.x = bottom_side_region;
+  if (left_side_region && left_side_region->hasAttribute("text_content")) label_elements.y = left_side_region;
 
-  if (label_vec.empty())
+  if (label_elements.x && label_elements.x->hasAttribute("text_content"))
     {
-      info->xlabel = (char *)"x";
-      info->ylabel = (char *)"y";
+      static auto xlabel = static_cast<std::string>(label_elements.x->getAttribute("text_content"));
+      info->xlabel = (char *)xlabel.c_str();
     }
   else
     {
-      if (!label_vec[0]->hasAttribute("text_content"))
-        {
-          info->xlabel = (char *)"x";
-        }
-      else
-        {
-          static auto xlabel = static_cast<std::string>(label_vec[0]->getAttribute("text_content"));
-          info->xlabel = (char *)xlabel.c_str();
-        }
-      if (!label_vec[1]->hasAttribute("text_content"))
-        {
-          info->ylabel = (char *)"y";
-        }
-      else
-        {
-          static auto ylabel = static_cast<std::string>(label_vec[1]->getAttribute("text_content"));
-          info->ylabel = (char *)ylabel.c_str();
-        }
+      info->xlabel = (char *)"x";
+    }
+  if (label_elements.y && label_elements.y->hasAttribute("text_content"))
+    {
+      static auto ylabel = static_cast<std::string>(label_elements.y->getAttribute("text_content"));
+      info->ylabel = (char *)ylabel.c_str();
+    }
+  else
+    {
+      info->ylabel = (char *)"y";
     }
 
   x_range_min = (double)(mouse_x - 50) / max_width_height;
@@ -1691,31 +1685,23 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
               info->y_px = -1;
               info->x = 0;
               info->y = 0;
-              if (label_vec.empty())
+              if (label_elements.x && label_elements.x->hasAttribute("text_content"))
                 {
-                  info->xlabel = (char *)"x";
-                  info->ylabel = (char *)"y";
+                  static auto xlabel = static_cast<std::string>(label_elements.x->getAttribute("text_content"));
+                  info->xlabel = (char *)xlabel.c_str();
                 }
               else
                 {
-                  if (!label_vec[0]->hasAttribute("text_content"))
-                    {
-                      info->xlabel = (char *)"x";
-                    }
-                  else
-                    {
-                      static auto xlabel = static_cast<std::string>(label_vec[0]->getAttribute("text_content"));
-                      info->xlabel = (char *)xlabel.c_str();
-                    }
-                  if (!label_vec[1]->hasAttribute("text_content"))
-                    {
-                      info->ylabel = (char *)"y";
-                    }
-                  else
-                    {
-                      static auto ylabel = static_cast<std::string>(label_vec[1]->getAttribute("text_content"));
-                      info->ylabel = (char *)ylabel.c_str();
-                    }
+                  info->xlabel = (char *)"x";
+                }
+              if (label_elements.y && label_elements.y->hasAttribute("text_content"))
+                {
+                  static auto ylabel = static_cast<std::string>(label_elements.y->getAttribute("text_content"));
+                  info->ylabel = (char *)ylabel.c_str();
+                }
+              else
+                {
+                  info->ylabel = (char *)"y";
                 }
               info->label = (char *)"";
               return_error_if(info == nullptr, ERROR_MALLOC);

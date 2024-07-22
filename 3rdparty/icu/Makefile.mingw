@@ -1,0 +1,134 @@
+ifeq ($(strip $(PREFIX)),)
+override PREFIX = $(abspath $(CURDIR)/../build)
+endif
+
+VERSION = 74.2
+MINGW_STD_THREADS_COMMIT_SHORT_HASH = c931bac2
+HOST = x86_64-w64-mingw32
+ICU_EXTRA_CONFIGURE_FLAGS ?=
+
+ifeq ($(DOWNLOAD_CMD),)
+ifneq ($(shell curl --version 2>/dev/null),)
+DOWNLOAD_CMD := curl -f -k -OL
+endif
+endif
+ifeq ($(DOWNLOAD_CMD),)
+ifneq ($(shell wget --version 2>/dev/null),)
+DOWNLOAD_CMD := wget --no-check-certificate
+endif
+endif
+ifeq ($(DOWNLOAD_CMD),)
+DOWNLOAD_CMD := echo "Error: Unable to find curl or wget."; exit 1; \#
+endif
+
+default: install
+
+$(PREFIX)/src/icu4c-$(VERSION).tar.gz:
+	mkdir -p $(PREFIX)/src
+	cd $(PREFIX)/src/ && $(DOWNLOAD_CMD) https://gr-framework.org/downloads/3rdparty/icu4c-$(VERSION).tar.gz
+
+$(PREFIX)/src/mingw-std-threads-g$(MINGW_STD_THREADS_COMMIT_SHORT_HASH).tar.gz:
+	mkdir -p $(PREFIX)/src
+	cd $(PREFIX)/src/ && \
+	$(DOWNLOAD_CMD) https://gr-framework.org/downloads/3rdparty/mingw-std-threads-g$(MINGW_STD_THREADS_COMMIT_SHORT_HASH).tar.gz
+
+$(PREFIX)/src/icu/source/configure: $(PREFIX)/src/icu4c-$(VERSION).tar.gz
+	cd $(PREFIX)/src/ && tar -xf icu4c-$(VERSION).tar.gz
+	touch $@
+
+$(PREFIX)/src/icu-cross/source/configure: $(PREFIX)/src/icu4c-$(VERSION).tar.gz
+	mkdir -p $(PREFIX)/src/icu-cross
+	cd $(PREFIX)/src && tar -C icu-cross --strip-components=1 -xf icu4c-$(VERSION).tar.gz
+	touch $@
+	cd $(PREFIX)/src/icu-cross && \
+	( \
+	echo 'diff --git a/source/common/umutex.h b/source/common/umutex.h'; \
+	echo 'index 1b83324..ea0d1e2 100644'; \
+	echo '--- a/source/common/umutex.h'; \
+	echo '+++ b/source/common/umutex.h'; \
+	echo '@@ -21,8 +21,8 @@'; \
+	echo ' #define UMUTEX_H'; \
+	echo; \
+	echo ' #include <atomic>'; \
+	echo '-#include <condition_variable>'; \
+	echo '-#include <mutex>'; \
+	echo '+#include "mingw.condition_variable.h"'; \
+	echo '+#include "mingw.mutex.h"'; \
+	echo ' #include <type_traits>'; \
+	echo; \
+	echo ' #include "unicode/utypes.h"'; \
+	echo 'diff --git a/source/common/unifiedcache.cpp b/source/common/unifiedcache.cpp'; \
+	echo 'index 1284c03..025d64c 100644'; \
+	echo '--- a/source/common/unifiedcache.cpp'; \
+	echo '+++ b/source/common/unifiedcache.cpp'; \
+	echo '@@ -13,7 +13,7 @@'; \
+	echo ' #include "unifiedcache.h"'; \
+	echo; \
+	echo ' #include <algorithm>      // For std::max()'; \
+	echo '-#include <mutex>'; \
+	echo '+#include "mingw.mutex.h"'; \
+	echo; \
+	echo ' #include "uassert.h"'; \
+	echo ' #include "uhash.h"'; \
+	) | patch -Np1
+
+$(PREFIX)/src/mingw-std-threads/mingw.thread.h: $(PREFIX)/src/mingw-std-threads-g$(MINGW_STD_THREADS_COMMIT_SHORT_HASH).tar.gz
+	mkdir -p $(PREFIX)/src/mingw-std-threads
+	cd $(PREFIX)/src/ && tar -C mingw-std-threads --strip-components=1 -xf mingw-std-threads-g$(MINGW_STD_THREADS_COMMIT_SHORT_HASH).tar.gz
+
+$(PREFIX)/build/icu/build/Makefile: $(PREFIX)/src/mingw-std-threads/mingw.thread.h $(PREFIX)/src/icu/source/configure
+	mkdir -p $(PREFIX)/build/icu/build && \
+	cd $(PREFIX)/build/icu/build && \
+	AR=ar \
+	CC=cc \
+	CXX=c++ \
+	HOST= \
+	OS= \
+	CFLAGS="-fPIC" \
+	CXXFLAGS="-fPIC" \
+	CPPFLAGS="-I$(PREFIX)/src/mingw-std-threads" \
+	$(PREFIX)/src/icu/source/configure
+	touch $@
+
+$(PREFIX)/build/icu/build/lib/libicuuc.so: $(PREFIX)/build/icu/build/Makefile
+	$(MAKE) -C $(PREFIX)/build/icu/build -j4 AR=ar CC=cc CXX=c++ HOST= OS=
+
+$(PREFIX)/build/icu/build-cross/Makefile: $(PREFIX)/build/icu/build/lib/libicuuc.so $(PREFIX)/src/mingw-std-threads/mingw.thread.h $(PREFIX)/src/icu-cross/source/configure
+	mkdir -p $(PREFIX)/build/icu/build-cross && \
+	cd $(PREFIX)/build/icu/build-cross && \
+	CFLAGS="-fPIC" \
+	CXXFLAGS="-fPIC" \
+	CPPFLAGS="-I$(PREFIX)/src/mingw-std-threads" \
+	$(PREFIX)/src/icu-cross/source/runConfigureICU MinGW \
+		--host=$(HOST) \
+		--prefix=/usr/$(HOST) \
+		--with-cross-build="$$(cd ../build && pwd)" \
+		--enable-static \
+		--disable-shared \
+		--disable-strict \
+		--disable-tools \
+		--disable-tests \
+		--disable-samples \
+		--disable-extras \
+		$(ICU_EXTRA_CONFIGURE_FLAGS)
+	touch $@
+
+/usr/$(HOST)/lib/libsicuuc.a: $(PREFIX)/build/icu/build-cross/Makefile
+	$(MAKE) -C $(PREFIX)/build/icu/build-cross -j4
+	$(MAKE) -C $(PREFIX)/build/icu/build-cross install
+
+/usr/$(HOST)/lib/libicuuc.a: /usr/$(HOST)/lib/libsicuuc.a
+	for component in dt in io uc; do \
+		ln -sf libsicu$${component}.a "/usr/$(HOST)/lib/libicu$${component}.a"; \
+	done
+	ln -sf libicudt.a /usr/$(HOST)/lib/libicudata.a
+
+$(PREFIX)/lib/libicuuc.a: /usr/$(HOST)/lib/libicuuc.a
+	for component in dt in io uc; do \
+		cp "/usr/$(HOST)/lib/libicu$${component}.a" "$(PREFIX)/lib/libicu$${component}.a"; \
+	done
+	ln -sf libicudt.a "$(PREFIX)/lib/libicudata.a"
+
+install: $(PREFIX)/lib/libicuuc.a
+
+.PHONY: default install
