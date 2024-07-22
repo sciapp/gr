@@ -2733,7 +2733,6 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
           sub_and_super_filled = 1;
         }
     }
-  /* TODO: better default height? */
   previous_node_height = state->fontsize;
   if (previous_node)
     {
@@ -2754,26 +2753,27 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
             {
               previous_node_width = tmp_hlist->u.hlist.width;
             }
-          if (is_overunder)
-            {
-              padding = -previous_node_width / 2 - body_width / 2;
-              previous_node_kern_width = body_width / 2 - default_thickness * 2;
-            }
         }
       else if (!isnan(previous_node->u.hlist.subsuper_height))
         {
           previous_node_height = previous_node->u.hlist.subsuper_height;
           previous_node_depth = previous_node->u.hlist.subsuper_depth;
           previous_node_width = previous_node->u.hlist.subsuper_width;
-          if (previous_node_width < 0)
-            {
-              previous_node_width = -previous_node_width;
-            }
-          if (is_overunder)
-            {
-              padding = -previous_node_width / 2 - body_width / 2;
-              previous_node_kern_width = body_width / 2 - default_thickness * 2;
-            }
+        }
+      else
+        {
+          previous_node_depth = previous_node->u.hlist.depth;
+          previous_node_width = previous_node->u.hlist.width;
+          previous_node_height = previous_node->u.hlist.height;
+        }
+      if (previous_node_width < 0)
+        {
+          previous_node_width = -previous_node_width;
+        }
+      if (is_overunder)
+        {
+          padding = -previous_node_width / 2 - body_width / 2;
+          previous_node_kern_width = body_width / 2 - default_thickness * 2;
         }
     }
   if (previous_node_kern_index)
