@@ -107,6 +107,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 
   combo_box_attr = QStringList{
       "algorithm",
+      "axis_type",
       "colormap",
       "font",
       "font_precision",
@@ -121,6 +122,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "orientation",
       "projection_type",
       "resample_method",
+      "scientific_format",
       "size_x_type",
       "size_y_type",
       "size_x_unit",
@@ -142,11 +144,15 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "adjust_z_lim",
       "disable_x_trans",
       "disable_y_trans",
+      "draw_grid",
       "grplot",
       "hide",
+      "is_major",
+      "is_mirrored",
       "keep_aspect_ratio",
       "keep_window",
       "marginal_heatmap_side_plot",
+      "mirrored_axis",
       "movable",
       "only_quadratic_aspect_ratio",
       "phi_flip",
@@ -381,7 +387,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
 
   if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
     {
-#if !defined(NO_LIBXML2)
+#if !defined(NO_XERCES_C)
       schema_tree = grm_load_graphics_tree_schema();
 #else
       schema_tree = nullptr;
@@ -519,6 +525,10 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       model_list.push_back(i.c_str());
     }
 
+  QStringList axis_type_list{
+      "x",
+      "y",
+  };
   QStringList orientation_list{
       "vertical",
       "horizontal",
@@ -570,12 +580,17 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       "low",
       "high",
   };
+  QStringList scientific_format_list{
+      "textex",
+      "mathtex",
+  };
   QStringList tick_orientation_list{
       "up",
       "down",
   };
   QStringList side_region_location_list{"top", "right", "bottom", "left"};
   static std::map<std::string, QStringList> attributeToList{
+      {"axis_type", axis_type_list},
       {"size_x_unit", size_unit_list},
       {"size_y_unit", size_unit_list},
       {"colormap", colormap_list},
@@ -592,6 +607,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"plot_type", plot_type_list},
       {"projection_type", projection_type_list},
       {"resample_method", resample_method_list},
+      {"scientific_format", scientific_format_list},
       {"size_x_type", size_type_list},
       {"size_y_type", size_type_list},
       {"style", style_list},
@@ -781,6 +797,11 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
     {
       current_text = lineTypeIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
     }
+  else if (cur_attr_name == "scientific_format" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          scientificFormatIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
   else if (cur_attr_name == "tick_orientation" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
       current_text =
@@ -851,6 +872,10 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
       else if (label == "tick_orientation")
         {
           element->setAttribute(label, tickOrientationStringToInt(value));
+        }
+      else if (label == "scientific_format")
+        {
+          element->setAttribute(label, scientificFormatStringToInt(value));
         }
       else
         {
@@ -1212,7 +1237,13 @@ void GRPlotWidget::AttributeEditEvent()
       amount_scrolled = 0;
       tree_update = true;
       clicked.clear();
-      std::cerr << GRM::toXML(grm_get_document_root()) << std::endl;
+      if (getenv("GRM_DEBUG"))
+        {
+          std::cerr << toXML(grm_get_document_root(),
+                             GRM::SerializerOptions{std::string(2, ' '),
+                                                    GRM::SerializerOptions::InternalAttributesFormat::Plain})
+                    << "\n";
+        }
       reset_pixmap();
     }
   else
@@ -2520,9 +2551,9 @@ void GRPlotWidget::show_bounding_boxes_slot()
 
 void GRPlotWidget::load_file_slot()
 {
-  if (enable_editor)
+  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
     {
-#ifndef NO_LIBXML2
+#ifndef NO_XERCES_C
       std::string path =
           QFileDialog::getOpenFileName(this, "Open XML", QDir::homePath(), "XML files (*.xml)").toStdString();
       if (path.empty())
@@ -2539,8 +2570,8 @@ void GRPlotWidget::load_file_slot()
           return;
         }
       grm_load_graphics_tree(file);
+      global_root = grm_get_document_root();
       redraw();
-      grm_render();
 #else
       std::stringstream text_stream;
       text_stream << "XML support not compiled in. Please recompile GRPlot with libxml2 support.";
@@ -2552,7 +2583,7 @@ void GRPlotWidget::load_file_slot()
 
 void GRPlotWidget::save_file_slot()
 {
-  if (enable_editor)
+  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
     {
       if (grm_get_render() == nullptr)
         {
@@ -2573,7 +2604,8 @@ void GRPlotWidget::save_file_slot()
           QMessageBox::critical(this, "File save not possible", QString::fromStdString(text_stream.str()));
           return;
         }
-      save_file_stream << GRM::toXML(grm_get_render()) << std::endl;
+      auto graphics_tree_str = std::unique_ptr<char, decltype(&std::free)>(grm_dump_graphics_tree_str(), std::free);
+      save_file_stream << graphics_tree_str.get() << std::endl;
       save_file_stream.close();
     }
 }
@@ -2734,6 +2766,7 @@ void GRPlotWidget::processTestCommandsFile()
   while (test_commands_stream && !test_commands_stream->atEnd())
     {
       QString line = test_commands_stream->readLine();
+      if (line.startsWith("#")) continue;
       QStringList words = line.split(",");
       if (!words.empty())
         {
@@ -2946,6 +2979,33 @@ void GRPlotWidget::processTestCommandsFile()
                 {
                   std::cerr << "Failed to open: " << words[1].toStdString() << std::endl;
                   break;
+                }
+            }
+          else if (words[0] == "openXML" && words.size() == 2)
+            {
+#ifndef NO_XERCES_C
+              auto file = fopen(words[1].toStdString().c_str(), "r");
+              if (file)
+                {
+                  grm_load_graphics_tree(file);
+                  global_root = grm_get_document_root();
+                  tooltips.clear();
+                  redraw();
+                  QTimer::singleShot(100, this, &GRPlotWidget::processTestCommandsFile);
+                  return;
+                }
+#else
+              std::cerr << "Xerces-C++ support not compiled in. XML files cannot be openend." << std::endl;
+#endif
+            }
+          else if (words[0] == "saveXML" && words.size() == 2)
+            {
+              std::ofstream save_file_stream(words[1].toStdString());
+              if (save_file_stream)
+                {
+                  auto graphics_tree_str =
+                      std::unique_ptr<char, decltype(&std::free)>(grm_dump_graphics_tree_str(), std::free);
+                  save_file_stream << graphics_tree_str.get() << std::endl;
                 }
             }
           else

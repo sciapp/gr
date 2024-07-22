@@ -23,10 +23,28 @@ extern "C" {
 EXPORT void grm_dump(const grm_args_t *args, FILE *f);
 EXPORT void grm_dump_json(const grm_args_t *args, FILE *f);
 EXPORT char *grm_dump_json_str(void);
+EXPORT void grm_dump_bson(const grm_args_t *args, FILE *f);
 #else
-#define grm_dump
-#define grm_dump_json
-#define grm_dump_json_str
+#define grm_dump(args, f) \
+  do                      \
+    {                     \
+    }                     \
+  while (0)
+#define grm_dump_json(args, f) \
+  do                           \
+    {                          \
+    }                          \
+  while (0)
+#define grm_dump_json_str \
+  do                      \
+    {                     \
+    }                     \
+  while (0)
+#define grm_dump_bson(args, f) \
+  do                           \
+    {                          \
+    }                          \
+  while (0)
 #endif
 
 #ifdef __cplusplus

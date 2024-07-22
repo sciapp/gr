@@ -71,7 +71,7 @@ code-style-check:
       [[ "${file}" != 3rdparty* ]] && [[ "${file}" != apps* ]] || continue;
       [[ "${file}" =~ \.(c|cpp|cxx|m|h|hpp|hxx)$ ]] || continue;
       grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; exit 1; };
-      file --mime "${file}" | grep "charset=us-ascii" >/dev/null || { echo "${file} must be encoded as ASCII text."; exit 1; };
+      file --mime "${file}" | grep -E "charset=(us-ascii|utf-8)" >/dev/null || { echo "${file} must be either encoded in ASCII or UTF-8."; exit 1; };
       clang-format -verbose -style=file "${file}" > "${file}.formatted";
       if ! diff -q "${file}" "${file}.formatted"; then
         diff "${file}" "${file}.formatted";
@@ -84,7 +84,7 @@ code-style-check:
       [[ "${file}" != 3rdparty* ]] && [[ "${file}" != apps* ]] || continue;
       [[ "${file}" =~ (^|/)CMakeLists.txt$ || "${file}" =~ \.cmake$ ]] || continue;
       grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; exit 1; };
-      file --mime "${file}" | grep "charset=us-ascii" >/dev/null || { echo "${file} must be encoded as ASCII text."; exit 1; };
+      file --mime "${file}" | grep -E "charset=(us-ascii|utf-8)" >/dev/null || { echo "${file} must be either encoded in ASCII or UTF-8."; exit 1; };
       echo "Formatting ${file}";
       cmake-format "${file}" > "${file}.formatted";
       if ! diff -q "${file}" "${file}.formatted"; then

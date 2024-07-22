@@ -173,9 +173,62 @@ err_t memwriter_puts(memwriter_t *memwriter, const char *s)
   return memwriter_printf(memwriter, "%s", s);
 }
 
+err_t memwriter_puts_with_len(memwriter_t *memwriter, char *s, size_t length)
+{
+  err_t error = ERROR_NONE;
+
+  while (length > 0)
+    {
+      if ((error = memwriter_putc(memwriter, *(s++))) != ERROR_NONE)
+        {
+          return error;
+        }
+      --length;
+    }
+
+  return error;
+}
+
 err_t memwriter_putc(memwriter_t *memwriter, char c)
 {
   return memwriter_printf(memwriter, "%c", c);
+}
+
+err_t memwriter_memcpy(memwriter_t *memwriter, const void *source, size_t num)
+{
+  err_t error = ERROR_NONE;
+
+  memwriter_ensure_buf(memwriter, num);
+
+  memcpy(&memwriter->buf[memwriter->size], source, num);
+
+  memwriter->size += num;
+
+  return error;
+}
+
+err_t memwriter_memcpy_rev_chunks(memwriter_t *memwriter, const void *source, size_t num, int chunk_size)
+{
+  err_t error = ERROR_NONE;
+
+  memwriter_ensure_buf(memwriter, num);
+
+  char *d = &memwriter->buf[memwriter->size];
+  const char *s = source;
+  int i;
+  int j;
+
+  for (i = 0; i < num; i += chunk_size)
+    {
+      for (j = 0; j < chunk_size; j++)
+        {
+          d[i + chunk_size - j - 1] = s[i + j];
+        }
+    }
+
+  memwriter->size += num;
+
+  return error;
 }
 
 char *memwriter_buf(const memwriter_t *memwriter)

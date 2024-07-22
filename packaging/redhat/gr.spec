@@ -24,7 +24,7 @@ Source:				gr-%{fixedversion}.tar%{?compression:.%{compression}}
 Source1:			https://gr-framework.org/downloads/3rdparty/libogg-1.3.2.tar.gz
 Source2:			https://gr-framework.org/downloads/3rdparty/libtheora-1.1.1.tar.gz
 Source3:			https://gr-framework.org/downloads/3rdparty/libvpx-1.4.0.tar.bz2
-Source4:			https://gr-framework.org/downloads/3rdparty/ffmpeg-4.2.1.tar.gz
+Source4:			https://gr-framework.org/downloads/3rdparty/ffmpeg-5.1.4.tar.gz
 Source5:			https://gr-framework.org/downloads/3rdparty/glfw-3.3.3.tar.gz
 Source6:			https://gr-framework.org/downloads/3rdparty/zeromq-4.3.4.tar.gz
 Source7:			https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
@@ -32,7 +32,7 @@ Source8:			https://gr-framework.org/downloads/3rdparty/cairo-1.16.0.tar.xz
 Source9:			https://gr-framework.org/downloads/3rdparty/pixman-0.42.2.tar.gz
 Source10:			https://gr-framework.org/downloads/3rdparty/tiff-4.5.1.tar.gz
 Source11:			https://gr-framework.org/downloads/3rdparty/libopenh264-2.0.0.tar.gz
-Source12:			https://gr-framework.org/downloads/3rdparty/libxml2-2.10.4.tar.xz
+Source12:			https://gr-framework.org/downloads/3rdparty/xerces-c-3.2.4.tar.gz
 BuildRequires:		git
 BuildRequires:		gcc-c++
 BuildRequires:		libX11-devel

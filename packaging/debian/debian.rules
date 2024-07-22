@@ -25,14 +25,14 @@ override_dh_auto_configure:
 	cp ../SOURCES/libogg-1.3.2.tar.gz ${THIRDPARTY_SRC}
 	cp ../SOURCES/libtheora-1.1.1.tar.gz ${THIRDPARTY_SRC}
 	cp ../SOURCES/libvpx-1.4.0.tar.bz2 ${THIRDPARTY_SRC}
-	cp ../SOURCES/ffmpeg-4.2.1.tar.gz ${THIRDPARTY_SRC}
+	cp ../SOURCES/ffmpeg-5.1.4.tar.gz ${THIRDPARTY_SRC}
 	cp ../SOURCES/glfw-3.3.3.tar.gz ${THIRDPARTY_SRC}
 	cp ../SOURCES/zeromq-4.3.4.tar.gz ${THIRDPARTY_SRC}
 	cp ../SOURCES/cairo-1.16.0.tar.xz ${THIRDPARTY_SRC}
 	cp ../SOURCES/pixman-0.42.2.tar.gz ${THIRDPARTY_SRC}
 	cp ../SOURCES/tiff-4.5.1.tar.gz ${THIRDPARTY_SRC}
 	cp ../SOURCES/libopenh264-2.0.0.tar.gz ${THIRDPARTY_SRC}
-	cp ../SOURCES/libxml2-2.10.4.tar.xz ${THIRDPARTY_SRC}
+	cp ../SOURCES/xerces-c-3.2.4.tar.gz ${THIRDPARTY_SRC}
 
 override_dh_auto_build:
 	make -C 3rdparty GRDIR=${GRDIR} DIR=`pwd`/${THIRDPARTY}

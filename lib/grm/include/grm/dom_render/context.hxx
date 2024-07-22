@@ -1,11 +1,13 @@
 #ifndef CONTEXT_HXX
 #define CONTEXT_HXX
 
+#include <functional>
 #include <map>
 #include <vector>
 #include <iostream>
 #include <string>
 #include <type_traits>
+#include <variant>
 
 #include <grm/util.h>
 #include <grm/dom_render/NotFoundError.hxx>
@@ -85,6 +87,55 @@ public:
   Inner operator[](const std::string &str);
   const Inner operator[](const std::string &str) const;
 
+  /*!
+   * \brief A forward iterator for the Context class.
+   *
+   * This iterator can be used to iterate over all key/value pairs in the context in lexicographical order.
+   */
+  class Iterator
+  {
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type = std::ptrdiff_t;
+    using value_type = std::variant<std::reference_wrapper<std::pair<const std::string, std::vector<int>>>,
+                                    std::reference_wrapper<std::pair<const std::string, std::vector<double>>>,
+                                    std::reference_wrapper<std::pair<const std::string, std::vector<std::string>>>>;
+    using pointer = std::variant<std::pair<const std::string, std::vector<int>> *,
+                                 std::pair<const std::string, std::vector<double>> *,
+                                 std::pair<const std::string, std::vector<std::string>> *>;
+    using reference = value_type;
+
+    Iterator(Context &context, bool is_end_iterator = false);
+
+    reference operator*();
+
+    // Prefix increment
+    Iterator &operator++();
+    // Postfix increment
+    Iterator operator++(int);
+
+    friend bool operator==(const Iterator &a, const Iterator &b);
+    friend bool operator!=(const Iterator &a, const Iterator &b);
+
+  private:
+    std::variant<std::reference_wrapper<std::map<std::string, std::vector<double>>::iterator>,
+                 std::reference_wrapper<std::map<std::string, std::vector<int>>::iterator>,
+                 std::reference_wrapper<std::map<std::string, std::vector<std::string>>::iterator>>
+    next_iterator();
+
+    Context &context_;
+    std::map<std::string, std::vector<double>>::iterator table_double_it_;
+    std::map<std::string, std::vector<int>>::iterator table_int_it_;
+    std::map<std::string, std::vector<std::string>>::iterator table_string_it_;
+    std::variant<std::reference_wrapper<std::map<std::string, std::vector<double>>::iterator>,
+                 std::reference_wrapper<std::map<std::string, std::vector<int>>::iterator>,
+                 std::reference_wrapper<std::map<std::string, std::vector<std::string>>::iterator>>
+        current_it_;
+  };
+
+  Iterator begin();
+  Iterator end();
+
 private:
   friend class Inner;
   std::map<std::string, std::vector<double>> tableDouble;
@@ -92,6 +143,9 @@ private:
   std::map<std::string, std::vector<std::string>> tableString;
   std::map<std::string, int> referenceNumberOfKeys;
 };
+
+bool operator==(const Context::Iterator &a, const Context::Iterator &b);
+bool operator!=(const Context::Iterator &a, const Context::Iterator &b);
 
 template <class T> static T &get(Context::Inner &&data)
 {

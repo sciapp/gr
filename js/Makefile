@@ -18,118 +18,119 @@ OPTS = \
 		-s ALLOW_MEMORY_GROWTH=1 \
 		-s RESERVED_FUNCTION_POINTERS=4 \
 		-s ALLOW_TABLE_GROWTH=1 \
-		--no-heap-copy
+		--no-heap-copy \
+		-s USE_ICU=1
 ifndef DEBUG
-    OPTS += -O3
+    OPTS  += -O3
 else
-    OPTS += -s ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=2
+    OPTS  += -s ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=2
 endif
- DEFINES = -DEMSCRIPTEN -D__SVR4 -DGRDIR=\"\" -DNO_GL -DNO_THREADS -DNO_LIBXML2
-  CFLAGS = $(DEFINES) $(OPTS) $(EXTRA_CFLAGS)
-CXXFLAGS = $(DEFINES) $(OPTS) -std=c++17 $(EXTRA_CXXFLAGS)
- LDFLAGS = $(DEFINES) $(OPTS) $(EXTRA_LDFLAGS)
- JPEGDIR = ../3rdparty/jpeg
-  PNGDIR = ../3rdparty/libpng16
- ZLIBDIR = ../3rdparty/zlib
-QHULLDIR = ../3rdparty/qhull
-   FTDIR = ../3rdparty/freetype
-EXPATDIR = ../3rdparty/expat
-  GKSDIR = ../lib/gks
-   GRDIR = ../lib/gr
-  GR3DIR = ../lib/gr3
-  GRMDIR = ../lib/grm
-INCLUDES = -I$(THIRDPARTYDIR)/include/ \
-           -I$(GRMDIR)/include \
-           -I$(GRMDIR)/src \
-           -I$(GR3DIR) \
-           -I$(GRDIR) \
-           -I$(GKSDIR) \
-           -I$(JPEGDIR) \
-           -I$(PNGDIR) \
-           -I$(ZLIBDIR) \
-           -I$(QHULLDIR) \
-           -I$(FTDIR) \
-           -I$(EXPATDIR)
- GKSOBJS = jsplugin.o \
-           $(GKSDIR)/afm.o \
-           $(GKSDIR)/error.o \
-           $(GKSDIR)/font.o \
-           $(GKSDIR)/ft.o \
-           $(GKSDIR)/gks.o \
-           $(GKSDIR)/io.o \
-           $(GKSDIR)/malloc.o \
-           $(GKSDIR)/util.o \
-           $(GKSDIR)/wiss.o
-  GROBJS = $(GRDIR)/contour.o \
-           $(GRDIR)/contourf.o \
-           $(GRDIR)/delaunay.o \
-           $(GRDIR)/gr.o \
-           $(GRDIR)/grforbnd.o \
-           $(GRDIR)/gridit.o \
-           $(GRDIR)/image.o \
-           $(GRDIR)/import.o \
-           $(GRDIR)/interp2.o \
-           $(GRDIR)/mathtex2.o \
-           $(GRDIR)/mathtex2.tab.o \
-           $(GRDIR)/mathtex2_kerning.o \
-           $(GRDIR)/md5.o \
-           $(GRDIR)/shade.o \
-           $(GRDIR)/spline.o \
-           $(GRDIR)/stream.o \
-           $(GRDIR)/strlib.o \
-           $(GRDIR)/text.o
- GR3OBJS = $(GR3DIR)/gr3.o \
-           $(GR3DIR)/gr3_convenience.o \
-           $(GR3DIR)/gr3_gr.o \
-           $(GR3DIR)/gr3_html.o \
-           $(GR3DIR)/gr3_jpeg.o \
-           $(GR3DIR)/gr3_mc.o \
-           $(GR3DIR)/gr3_png.o \
-           $(GR3DIR)/gr3_povray.o \
-           $(GR3DIR)/gr3_sr.o
- GRMOBJS = $(GRMDIR)/src/grm/args.o \
-           $(GRMDIR)/src/grm/backtrace.o \
-           $(GRMDIR)/src/grm/base64.o \
-           $(GRMDIR)/src/grm/dump.o \
-           $(GRMDIR)/src/grm/dynamic_args_array.o \
-           $(GRMDIR)/src/grm/error.o \
-           $(GRMDIR)/src/grm/event.o \
-           $(GRMDIR)/src/grm/interaction.o \
-           $(GRMDIR)/src/grm/json.o \
-           $(GRMDIR)/src/grm/layout.o \
-           $(GRMDIR)/src/grm/layout_c.o \
-           $(GRMDIR)/src/grm/layout_error.o \
-           $(GRMDIR)/src/grm/logging.o \
-           $(GRMDIR)/src/grm/memwriter.o \
-           $(GRMDIR)/src/grm/net.o \
-           $(GRMDIR)/src/grm/plot.o \
-           $(GRMDIR)/src/grm/util.o \
-           $(GRMDIR)/src/grm/utilcpp.o \
-           $(GRMDIR)/src/grm/import.o \
-           $(GRMDIR)/src/grm/datatype/double_map.o \
-           $(GRMDIR)/src/grm/datatype/string_array_map.o \
-           $(GRMDIR)/src/grm/datatype/string_list.o \
-           $(GRMDIR)/src/grm/datatype/string_map.o \
-           $(GRMDIR)/src/grm/datatype/uint_map.o \
-           $(GRMDIR)/src/grm/dom_render/context.o \
-           $(GRMDIR)/src/grm/dom_render/Drawable.o \
-           $(GRMDIR)/src/grm/dom_render/ManageCustomColorIndex.o \
-           $(GRMDIR)/src/grm/dom_render/ManageGRContextIds.o \
-           $(GRMDIR)/src/grm/dom_render/ManageZIndex.o \
-           $(GRMDIR)/src/grm/dom_render/render.o \
-           $(GRMDIR)/src/grm/dom_render/graphics_tree/Comment.o \
-           $(GRMDIR)/src/grm/dom_render/graphics_tree/Document.o \
-           $(GRMDIR)/src/grm/dom_render/graphics_tree/Element.o \
-           $(GRMDIR)/src/grm/dom_render/graphics_tree/Node.o \
-           $(GRMDIR)/src/grm/dom_render/graphics_tree/Value.o \
-           $(GRMDIR)/src/grm/dom_render/graphics_tree/util.o
-    OBJS = $(GRMOBJS) $(GR3OBJS) $(GROBJS) $(GKSOBJS)
-    LIBS = $(JPEGDIR)/libjpeg.a \
-           $(PNGDIR)/libpng.a \
-           $(ZLIBDIR)/libz.a \
-           $(QHULLDIR)/libqhull_r.a \
-           $(FTDIR)/libfreetype.a \
-           $(EXPATDIR)/libexpat.a
+   DEFINES = -DEMSCRIPTEN -D__SVR4 -DGRDIR=\"\" -DNO_GL -DNO_THREADS
+    CFLAGS = $(DEFINES) $(OPTS) $(EXTRA_CFLAGS)
+  CXXFLAGS = $(DEFINES) $(OPTS) -std=c++17 $(EXTRA_CXXFLAGS)
+   LDFLAGS = $(DEFINES) $(OPTS) $(EXTRA_LDFLAGS)
+   JPEGDIR = ../3rdparty/jpeg
+    PNGDIR = ../3rdparty/libpng16
+   ZLIBDIR = ../3rdparty/zlib
+  QHULLDIR = ../3rdparty/qhull
+     FTDIR = ../3rdparty/freetype
+XERCESCDIR = ../3rdparty/xerces-c
+    GKSDIR = ../lib/gks
+     GRDIR = ../lib/gr
+    GR3DIR = ../lib/gr3
+    GRMDIR = ../lib/grm
+  INCLUDES = -I$(THIRDPARTYDIR)/include/ \
+             -I$(GRMDIR)/include \
+             -I$(GRMDIR)/src \
+             -I$(GR3DIR) \
+             -I$(GRDIR) \
+             -I$(GKSDIR) \
+             -I$(JPEGDIR) \
+             -I$(PNGDIR) \
+             -I$(ZLIBDIR) \
+             -I$(QHULLDIR) \
+             -I$(FTDIR)
+   GKSOBJS = jsplugin.o \
+             $(GKSDIR)/afm.o \
+             $(GKSDIR)/error.o \
+             $(GKSDIR)/font.o \
+             $(GKSDIR)/ft.o \
+             $(GKSDIR)/gks.o \
+             $(GKSDIR)/io.o \
+             $(GKSDIR)/malloc.o \
+             $(GKSDIR)/util.o \
+             $(GKSDIR)/wiss.o
+    GROBJS = $(GRDIR)/contour.o \
+             $(GRDIR)/contourf.o \
+             $(GRDIR)/delaunay.o \
+             $(GRDIR)/gr.o \
+             $(GRDIR)/grforbnd.o \
+             $(GRDIR)/gridit.o \
+             $(GRDIR)/image.o \
+             $(GRDIR)/import.o \
+             $(GRDIR)/interp2.o \
+             $(GRDIR)/mathtex2.o \
+             $(GRDIR)/mathtex2.tab.o \
+             $(GRDIR)/mathtex2_kerning.o \
+             $(GRDIR)/md5.o \
+             $(GRDIR)/shade.o \
+             $(GRDIR)/spline.o \
+             $(GRDIR)/stream.o \
+             $(GRDIR)/strlib.o \
+             $(GRDIR)/text.o
+   GR3OBJS = $(GR3DIR)/gr3.o \
+             $(GR3DIR)/gr3_convenience.o \
+             $(GR3DIR)/gr3_gr.o \
+             $(GR3DIR)/gr3_html.o \
+             $(GR3DIR)/gr3_jpeg.o \
+             $(GR3DIR)/gr3_mc.o \
+             $(GR3DIR)/gr3_png.o \
+             $(GR3DIR)/gr3_povray.o \
+             $(GR3DIR)/gr3_sr.o
+   GRMOBJS = $(GRMDIR)/src/grm/args.o \
+             $(GRMDIR)/src/grm/backtrace.o \
+             $(GRMDIR)/src/grm/base64.o \
+             $(GRMDIR)/src/grm/dump.o \
+             $(GRMDIR)/src/grm/dynamic_args_array.o \
+             $(GRMDIR)/src/grm/error.o \
+             $(GRMDIR)/src/grm/event.o \
+             $(GRMDIR)/src/grm/interaction.o \
+             $(GRMDIR)/src/grm/json.o \
+             $(GRMDIR)/src/grm/layout.o \
+             $(GRMDIR)/src/grm/layout_c.o \
+             $(GRMDIR)/src/grm/layout_error.o \
+             $(GRMDIR)/src/grm/logging.o \
+             $(GRMDIR)/src/grm/memwriter.o \
+             $(GRMDIR)/src/grm/net.o \
+             $(GRMDIR)/src/grm/plot.o \
+             $(GRMDIR)/src/grm/util.o \
+             $(GRMDIR)/src/grm/utilcpp.o \
+             $(GRMDIR)/src/grm/import.o \
+             $(GRMDIR)/src/grm/datatype/double_map.o \
+             $(GRMDIR)/src/grm/datatype/size_t_list.o \
+             $(GRMDIR)/src/grm/datatype/string_array_map.o \
+             $(GRMDIR)/src/grm/datatype/string_list.o \
+             $(GRMDIR)/src/grm/datatype/string_map.o \
+             $(GRMDIR)/src/grm/datatype/uint_map.o \
+             $(GRMDIR)/src/grm/dom_render/context.o \
+             $(GRMDIR)/src/grm/dom_render/Drawable.o \
+             $(GRMDIR)/src/grm/dom_render/ManageCustomColorIndex.o \
+             $(GRMDIR)/src/grm/dom_render/ManageGRContextIds.o \
+             $(GRMDIR)/src/grm/dom_render/ManageZIndex.o \
+             $(GRMDIR)/src/grm/dom_render/render.o \
+             $(GRMDIR)/src/grm/dom_render/graphics_tree/Comment.o \
+             $(GRMDIR)/src/grm/dom_render/graphics_tree/Document.o \
+             $(GRMDIR)/src/grm/dom_render/graphics_tree/Element.o \
+             $(GRMDIR)/src/grm/dom_render/graphics_tree/Node.o \
+             $(GRMDIR)/src/grm/dom_render/graphics_tree/Value.o \
+             $(GRMDIR)/src/grm/dom_render/graphics_tree/util.o
+      OBJS = $(GRMOBJS) $(GR3OBJS) $(GROBJS) $(GKSOBJS)
+      LIBS = $(JPEGDIR)/libjpeg.a \
+             $(PNGDIR)/libpng.a \
+             $(ZLIBDIR)/libz.a \
+             $(QHULLDIR)/libqhull_r.a \
+             $(FTDIR)/libfreetype.a \
+             $(XERCESCDIR)/libxerces-c.a
 
 .PHONY: default clean .SECONDARY .FORCE
 
@@ -167,8 +168,8 @@ $(QHULLDIR)/libqhull_r.a:
 $(FTDIR)/libfreetype.a:
 	$(MAKE) -C $(FTDIR)
 
-$(EXPATDIR)/libexpat.a:
-	$(MAKE) -C $(EXPATDIR) libexpat.a
+$(XERCESCDIR)/libxerces-c.a:
+	$(MAKE) -C $(XERCESCDIR) libxerces-c.a
 
 $(GRDIR)/gr.o: ../lib/gr/gr_version.h
 
@@ -193,5 +194,5 @@ clean:
 	cd $(ZLIBDIR) && make clean
 	cd $(QHULLDIR) && make clean
 	cd $(FTDIR) && make clean
-	cd $(EXPATDIR) && make clean
+	cd $(XERCESCDIR) && make clean
 	rm -rf $(OBJS)

@@ -12,6 +12,10 @@
             <xs:attribute name="clear_ws" type="xs:integer" use="required"/>
             <xs:attribute name="update_ws" type="xs:integer" use="required"/>
         </xs:complexType>
+        <xs:unique name="figureidisunique">
+            <xs:selector xpath="figure"/>
+            <xs:field xpath="@figure_id"/>
+        </xs:unique>
     </xs:element>
 
     <!-- definition of figure -->
@@ -25,7 +29,7 @@
             <xs:attribute name="active" type="xs:integer"/>
             <xs:attribute name="fig_size_x" type="xs:double"/>
             <xs:attribute name="fig_size_y" type="xs:double"/>
-            <xs:attribute name="figure_id" type="xs:ID" use="required"/>
+            <xs:attribute name="figure_id" type="xs:string" use="required"/>
             <xs:attribute name="size_x" type="xs:double"/>
             <xs:attribute name="size_x_type" type="xs:string"/>
             <xs:attribute name="size_x_unit" type="xs:string"/>
@@ -173,6 +177,27 @@
         </xs:complexType>
     </xs:element>
 
+    <!-- definition of marginal_heatmap_plot -->
+    <xs:element name="marginal_heatmap_plot">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="central_region" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="side_region" minOccurs="0" maxOccurs="4"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="1"/> <!-- title -->
+            </xs:choice>
+            <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="algorithm" type="xs:string"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="marginal_heatmap_kind" type="xs:string" use="required"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="x_ind" type="xs:integer"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+            <xs:attribute name="y_ind" type="xs:integer"/>
+            <xs:attribute name="z" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
     <!-- definition of central_region -->
     <xs:element name="central_region">
         <xs:complexType>
@@ -295,15 +320,12 @@
     <xs:element name="coordinate_system">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="axes" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="axes_3d" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="grid" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="axis" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="grid_3d" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polar_axes" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="titles_3d" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="x_tick_label_group" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="y_tick_label_group" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="angle_ticks" type="xs:integer"/>
@@ -326,18 +348,6 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of grid -->
-    <xs:element name="grid">
-        <xs:complexType>
-            <xs:attributeGroup ref="grid"/>
-            <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attribute name="x_major" type="xs:integer"/>
-            <xs:attribute name="x_org_pos" type="xs:string"/>
-            <xs:attribute name="y_major" type="xs:integer"/>
-            <xs:attribute name="y_org_pos" type="xs:string"/>
-        </xs:complexType>
-    </xs:element>
-
     <!-- definition of grid_3d -->
     <xs:element name="grid_3d">
         <xs:complexType>
@@ -353,17 +363,80 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of axes -->
-    <xs:element name="axes">
+    <!-- definition of axis -->
+    <xs:element name="axis">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/> <!-- label -->
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="1"/> <!-- axis-line -->
+                <xs:element ref="tick_group" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attributeGroup ref="axes"/>
-            <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attribute name="axis_type" type="xs:string" use="required"/> <!-- X or Y -->
+            <xs:attribute name="draw_grid" type="xs:integer"/>
+            <xs:attribute name="label_pos" type="xs:double"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="name" type="xs:string"/>
+            <xs:attribute name="num_tick_labels" type="xs:integer"/>
+            <xs:attribute name="num_ticks" type="xs:integer"/>
+            <xs:attribute name="major_count" type="xs:integer"/>
+            <xs:attribute name="max_value" type="xs:double"/>
+            <xs:attribute name="min_value" type="xs:double"/>
+            <xs:attribute name="mirrored_axis" type="xs:integer"/>
+            <xs:attribute name="pos" type="xs:double"/>
+            <xs:attribute name="org" type="xs:double"/>
             <xs:attribute name="scale" type="xs:integer"/>
+            <xs:attribute name="scientific_format" type="strint"/>
+            <xs:attribute name="tick" type="xs:double"/>
+            <xs:attribute name="tick_orientation" type="xs:integer"/>
+            <xs:attribute name="tick_size" type="xs:double"/>
+            <xs:attribute name="x_major" type="xs:integer"/> <!-- remove later -->
+            <xs:attribute name="x_tick" type="xs:integer"/> <!-- remove later -->
+            <xs:attribute name="y_major" type="xs:integer"/> <!-- remove later -->
+            <xs:attribute name="y_tick" type="xs:integer"/> <!-- remove later -->
+            <xs:attribute name="z_index" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of tick_group -->
+    <xs:element name="tick_group">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="grid_line" minOccurs="0" maxOccurs="1"/> <!-- grid -->
+                <xs:element ref="text" minOccurs="0" maxOccurs="2"/> <!-- tick label -->
+                <xs:element ref="tick" minOccurs="0" maxOccurs="2"/> <!-- tick -->
+            </xs:choice>
+        <xs:attributeGroup ref="move_xform_ndc"/>
+        <xs:attribute name="is_major" type="xs:integer"/>
+        <xs:attribute name="line_color_ind" type="xs:integer"/>
+        <xs:attribute name="line_spec" type="xs:string"/>
+        <xs:attribute name="line_type" type="strint"/>
+        <xs:attribute name="line_width" type="xs:double"/>
+        <xs:attribute name="text_align_horizontal" type="strint"/>
+        <xs:attribute name="text_align_vertical" type="strint"/>
+        <xs:attribute name="tick_label" type="xs:string"/>
+        <xs:attribute name="tick_size" type="xs:double"/>
+        <xs:attribute name="value" type="xs:double"/>
+        <xs:attribute name="width" type="xs:double"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of tick -->
+    <xs:element name="tick">
+        <xs:complexType>
+            <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attribute name="is_major" type="xs:integer"/>
+            <xs:attribute name="is_mirrored" type="xs:integer"/>
+            <xs:attribute name="value" type="xs:double"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of grid_line -->
+    <xs:element name="grid_line">
+        <xs:complexType>
+            <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attribute name="is_major" type="xs:integer"/>
+            <xs:attribute name="value" type="xs:double"/>
             <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
@@ -381,32 +454,6 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of x_tick_label_group -->
-    <xs:element name="x_tick_label_group">
-        <xs:complexType>
-            <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
-            </xs:choice>
-            <xs:attributeGroup ref="move_xform_ndc"/>
-            <xs:attribute name="name" type="xs:string"/>
-            <xs:attribute name="text_align_horizontal" type="strint"/>
-            <xs:attribute name="text_align_vertical" type="strint"/>
-        </xs:complexType>
-    </xs:element>
-
-    <!-- definition of y_tick_label_group -->
-    <xs:element name="y_tick_label_group">
-        <xs:complexType>
-            <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
-            </xs:choice>
-            <xs:attributeGroup ref="move_xform_ndc"/>
-            <xs:attribute name="name" type="xs:string"/>
-            <xs:attribute name="text_align_horizontal" type="strint"/>
-            <xs:attribute name="text_align_vertical" type="strint"/>
-        </xs:complexType>
-    </xs:element>
-
     <!-- definition of title, label -->
     <xs:element name="text">
         <xs:complexType>
@@ -420,6 +467,7 @@
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="name" type="xs:string"/>
+            <xs:attribute name="scientific_format" type="strint"/>
             <xs:attribute name="set_text_color_for_background" type="xs:integer"/>
             <xs:attribute name="space" type="xs:integer"/>
             <xs:attribute name="text" type="xs:string" use="required"/>
@@ -574,6 +622,7 @@
             <xs:attributeGroup ref="polyline"/>
             <xs:attribute name="alpha" type="xs:double"/>
             <xs:attribute name="line_spec" type="xs:string"/>
+            <xs:attribute name="line_width" type="xs:double"/>
             <xs:attribute name="x1" type="xs:double"/>
             <xs:attribute name="x2" type="xs:double"/>
             <xs:attribute name="y1" type="xs:double"/>
@@ -629,7 +678,7 @@
     <xs:element name="colorbar">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="axes" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="axis" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="cellarray" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
@@ -748,27 +797,6 @@
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z_index" type="xs:integer"/>
-        </xs:complexType>
-    </xs:element>
-
-    <!-- definition of marginal_heatmap_plot -->
-    <xs:element name="marginal_heatmap_plot">
-        <xs:complexType>
-            <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="central_region" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="side_region" minOccurs="0" maxOccurs="4"/>
-                <xs:element ref="text" minOccurs="0" maxOccurs="1"/> <!-- title -->
-            </xs:choice>
-            <xs:attributeGroup ref="move_xform_ndc"/>
-            <xs:attributeGroup ref="ranges"/>
-            <xs:attribute name="algorithm" type="xs:string"/>
-            <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="marginal_heatmap_kind" type="xs:string" use="required"/>
-            <xs:attribute name="x" type="xs:string" use="required"/>
-            <xs:attribute name="x_ind" type="xs:integer"/>
-            <xs:attribute name="y" type="xs:string" use="required"/>
-            <xs:attribute name="y_ind" type="xs:integer"/>
-            <xs:attribute name="z" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
 
@@ -1376,6 +1404,8 @@
         <xs:attribute name="x" type="xs:string" use="required"/>
         <xs:attribute name="y" type="xs:string" use="required"/>
         <xs:attribute name="z" type="xs:string" use="required"/>
+        <xs:attribute name="z_max" type="xs:double"/>
+        <xs:attribute name="z_min" type="xs:double"/>
     </xs:attributeGroup>
 
     <!-- definition of axes attributes -->

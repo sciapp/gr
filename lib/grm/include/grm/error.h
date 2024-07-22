@@ -141,7 +141,8 @@ extern "C" {
   X(ERROR_LAYOUT_CONTRADICTING_ATTRIBUTES, 58)        \
   X(ERROR_LAYOUT_INVALID_ARGUMENT_RANGE, 59)          \
   X(ERROR_LAYOUT_COMPONENT_LENGTH_MISMATCH, 60)       \
-  Y(ERROR_NOT_IMPLEMENTED, 61)
+  X(ERROR_TMP_DIR_CREATION, 61)                       \
+  Y(ERROR_NOT_IMPLEMENTED, 62)
 
 #define ENUM_VALUE(name, value) name = value,
 #define ENUM_LAST_VALUE(name, value) name = value

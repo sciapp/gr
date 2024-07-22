@@ -6,8 +6,20 @@
 #include <grm/dom_render/render.hxx>
 
 #include <algorithm>
-#include <string>
+#include <array>
+#include <fstream>
+#include <functional>
+#include <memory>
+#include <optional>
 #include <set>
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <variant>
+
+#ifdef __unix__
+#include <unistd.h>
+#endif
 
 extern "C" {
 #include <grm/layout.h>
@@ -24,14 +36,27 @@ extern "C" {
 #include "gks.h"
 #include "gr.h"
 #include "gr3.h"
+#include "json_int.h"
+#include "bson_int.h"
 #include "logging_int.h"
 }
+#include "utilcpp_int.hxx"
 
-#ifndef NO_LIBXML2
-#include <libxml/globals.h>
-#include <libxml/xmlreader.h>
-#elif !defined(NO_EXPAT)
-#include <expat.h>
+#ifndef NO_XERCES_C
+#include <xercesc/sax/InputSource.hpp>
+#include <xercesc/sax2/DefaultHandler.hpp>
+#include <xercesc/sax2/XMLReaderFactory.hpp>
+
+#include <xercesc/parsers/SAX2XMLReaderImpl.hpp>
+
+#include <xercesc/util/BinInputStream.hpp>
+#include <xercesc/util/OutOfMemoryException.hpp>
+#include <xercesc/util/TransService.hpp>
+
+#include <xercesc/framework/XMLFormatter.hpp>
+#include <xercesc/framework/psvi/PSVIAttributeList.hpp>
+#include <xercesc/framework/psvi/PSVIHandler.hpp>
+#include <xercesc/framework/psvi/XSAttributeDeclaration.hpp>
 #endif
 
 #include "plot_int.h"
@@ -52,6 +77,8 @@ extern "C" {
 /* ========================= constants ============================================================================== */
 
 static const std::string SCHEMA_REL_FILEPATH = "share/xml/GRM/grm_graphics_tree_schema.xsd";
+static const std::string PRIVATE_SCHEMA_REL_FILEPATH = "share/xml/GRM/grm_graphics_tree_private_schema.xsd";
+static const std::string FULL_SCHEMA_FILENAME = "grm_graphics_tree_full_schema.xsd";
 static const std::string ENABLE_XML_VALIDATION_ENV_KEY = "GRM_VALIDATE";
 
 /* ========================= datatypes ============================================================================== */
@@ -128,6 +155,17 @@ DECLARE_MAP_METHODS(args_set)
 /* ######################### internal implementation ################################################################ */
 
 /* ========================= static variables ======================================================================= */
+
+/* ------------------------- dump ----------------------------------------------------------------------------------- */
+
+/*!
+ * \brief List of attribute names in the graphics tree which will be exported as-is on XML dumps. Backup attributes
+ * (`_*_org) are ignored for these attribute names.
+ */
+const static std::unordered_set<std::string_view> restore_backup_format_excludes = {
+    "space_3d_phi",
+    "space_3d_theta",
+};
 
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
 
@@ -258,6 +296,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "alpha",
                                     "angle_ticks",
                                     "aspect_ratio",
+                                    "axes_mod",
                                     "background_color",
                                     "bar_color",
                                     "bar_width",
@@ -306,7 +345,6 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "x_lim",
                                     "x_log",
                                     "x_ind",
-                                    "x_tick_labels",
                                     "y_bins",
                                     "y_flip",
                                     "y_grid",
@@ -314,7 +352,6 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "y_lim",
                                     "y_log",
                                     "y_ind",
-                                    "y_tick_labels",
                                     "z_flip",
                                     "z_grid",
                                     "z_label",
@@ -382,6 +419,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"alpha", "d"},
                                               {"aspect_ratio", "d"},
                                               {"append_plots", "i"},
+                                              {"axes_mod", "a"},
                                               {"background_color", "i"},
                                               {"bar_color", "D|i"},
                                               {"c", "D|I"},
@@ -447,9 +485,9 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"x_grid", "i"},
                                               {"x_label", "s"},
                                               {"x_lim", "D"},
+                                              {"x_log", "i"},
                                               {"x_ind", "i"},
                                               {"x_range", "D"},
-                                              {"x_log", "i"},
                                               {"y", "D"},
                                               {"y_bins", "i"},
                                               {"y_colormap", "i"},
@@ -458,9 +496,9 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"y_grid", "i"},
                                               {"y_label", "s"},
                                               {"y_lim", "D"},
+                                              {"y_log", "i"},
                                               {"y_ind", "i"},
                                               {"y_range", "D"},
-                                              {"y_log", "i"},
                                               {"z", "D"},
                                               {"z_dims", "I"},
                                               {"z_flip", "i"},
@@ -469,6 +507,11 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"z_lim", "D"},
                                               {"z_range", "D"},
                                               {"z_log", "i"}};
+
+/* ------------------------- util ----------------------------------------------------------------------------------- */
+
+static const char *grm_tmp_dir = NULL;
+
 
 /* ========================= functions ============================================================================== */
 
@@ -529,6 +572,8 @@ err_t plot_init_static_variables(void)
       }
       type_map = string_array_map_new_from_string_split(array_size(key_to_formats), key_to_formats, '|');
       error_cleanup_and_set_error_if(type_map == nullptr, ERROR_MALLOC);
+      grm_tmp_dir = create_tmp_dir();
+      error_cleanup_and_set_error_if(grm_tmp_dir == nullptr, ERROR_TMP_DIR_CREATION);
       install_backtrace_handler_if_enabled();
       plot_static_variables_initialized = 1;
     }
@@ -3585,38 +3630,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     }
   else
     {
-      if ((strcmp(kind, "barplot") != 0 && strcmp(kind, "imshow") != 0) || pass == 2)
-        {
-          /* xticklabels */
-          char **x_tick_labels = nullptr;
-          unsigned int x_tick_labels_length;
-
-          if (grm_args_first_value(args, "x_tick_labels", "S", &x_tick_labels, &x_tick_labels_length))
-            {
-              std::vector<std::string> x_tick_labels_vec(x_tick_labels, x_tick_labels + x_tick_labels_length);
-              int id = static_cast<int>(global_root->getAttribute("_id"));
-              std::string key = "x_tick_labels" + std::to_string(id);
-              global_root->setAttribute("_id", ++id);
-              global_render->setXTickLabels(group, key, x_tick_labels_vec);
-            }
-
-          /* y_tick_labels */
-          char **y_tick_labels = nullptr;
-          unsigned int y_tick_labels_length;
-
-          if (grm_args_first_value(args, "y_tick_labels", "S", &y_tick_labels, &y_tick_labels_length))
-            {
-              std::vector<std::string> y_tick_labels_vec(y_tick_labels, y_tick_labels + y_tick_labels_length);
-              int id = static_cast<int>(global_root->getAttribute("_id"));
-              std::string key = "y_tick_labels" + std::to_string(id);
-              global_root->setAttribute("_id", ++id);
-              global_render->setYTickLabels(group, key, y_tick_labels_vec);
-            }
-        }
-      else if (strcmp(kind, "imshow") == 0)
-        {
-          group->setAttribute("hide", 1);
-        }
+      if (strcmp(kind, "imshow") == 0) group->setAttribute("hide", 1);
     }
 
   group->setAttribute("plot_type", type);
@@ -3667,6 +3681,338 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   if (grm_args_values(args, "z_label", "s", &z_label))
     {
       group->setAttribute("z_label", z_label);
+    }
+
+  /* axes modifications */
+  grm_args_t *axes_mod = nullptr;
+  auto tick_modification_map = global_render->getTickModificationMap();
+
+  if (grm_args_values(args, "axes_mod", "a", &axes_mod))
+    {
+      grm_args_iterator_t *axis_it = grm_args_iter(axes_mod);
+      arg_t *axis_arg;
+      int axis_id;
+      while ((axis_arg = axis_it->next(axis_it)) != nullptr)
+        {
+          logger((stderr, "Got axis name \"%s\" in \"axes_mod\"\n", axis_arg->key));
+          if (!str_equals_any(axis_arg->key, "x", "y"))
+            {
+              logger((stderr, "Ignoring invalid axis name \"%s\" in \"axes_mod\"\n", axis_arg->key));
+              continue;
+            }
+          if (strcmp(axis_arg->key, "x") == 0)
+            axis_id = global_render->getAxisId() + 1;
+          else if (strcmp(axis_arg->key, "y") == 0)
+            axis_id = global_render->getAxisId();
+
+          grm_args_t **axis_mods;
+          if (!grm_args_values(axes_mod, axis_arg->key, "A", &axis_mods))
+            {
+              logger((stderr, "Expected an array of sub containers for axis \"%s\" in \"axes_mod\"\n", axis_arg->key));
+              continue;
+            }
+          grm_args_t **current_axis_mod = axis_mods;
+          while (*current_axis_mod != nullptr)
+            {
+              double tick_value;
+              if (!grm_args_values(*current_axis_mod, "tick_value", "d", &tick_value))
+                {
+                  int int_tick_value;
+                  if (grm_args_values(*current_axis_mod, "tick_value", "i", &int_tick_value))
+                    {
+                      tick_value = int_tick_value;
+                    }
+                  else
+                    {
+                      logger((stderr, "Expected a number (integer or double) for \"tick_value\".\n"));
+                      ++current_axis_mod;
+                      continue;
+                    }
+                }
+              logger((stderr, "Got tick value \"%lf\" for axis \"%s\"\n", tick_value, axis_arg->key));
+              grm_args_iterator_t *tick_it = grm_args_iter(*current_axis_mod);
+              arg_t *tick_arg;
+              while ((tick_arg = tick_it->next(tick_it)) != nullptr)
+                {
+                  // `tick_value` was read before, so ignore it in this loop
+                  if (strcmp(tick_arg->key, "tick_value") == 0) continue;
+                  logger((stderr, "Next tick_arg: \"%s\" on axis \"%s\"\n", tick_arg->key, axis_arg->key));
+                  if (strcmp(tick_arg->key, "tick_color") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "i") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      int tick_color;
+                      tick_color = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("line_color_ind", tick_color);
+                      logger((stderr, "Got tick_color \"%i\"\n", tick_color));
+                    }
+                  else if (strcmp(tick_arg->key, "line_spec") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "s") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      const char *line_spec;
+                      line_spec = *reinterpret_cast<const char **>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("line_spec", std::string(line_spec));
+                      logger((stderr, "Got line_spec \"%s\"\n", line_spec));
+                    }
+                  else if (strcmp(tick_arg->key, "line_type") == 0)
+                    {
+                      if (str_equals_any(tick_arg->value_format, "s", "i") != 0)
+                        {
+                          logger((stderr,
+                                  "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\" or "
+                                  "\"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      if (strcmp(tick_arg->value_format, "s") == 0)
+                        {
+                          const char *line_type;
+                          line_type = *reinterpret_cast<const char **>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("line_type", std::string(line_type));
+                          logger((stderr, "Got line_type \"%s\"\n", line_type));
+                        }
+                      else
+                        {
+                          int line_type;
+                          line_type = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("line_type", line_type);
+                          logger((stderr, "Got line_type \"%i\"\n", line_type));
+                        }
+                    }
+                  else if (strcmp(tick_arg->key, "tick_length") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "d") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"d\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      double tick_length;
+                      tick_length = *reinterpret_cast<double *>(tick_arg->value_ptr);
+                      (*tick_modification_map)[axis_id][tick_value].emplace("tick_size", tick_length);
+                      logger((stderr, "Got tick_length \"%lf\"\n", tick_length));
+                    }
+                  else if (strcmp(tick_arg->key, "text_align_horizontal") == 0)
+                    {
+                      if (str_equals_any(tick_arg->value_format, "s", "i") != 0)
+                        {
+                          logger((stderr,
+                                  "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\" or "
+                                  "\"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      if (strcmp(tick_arg->value_format, "s") == 0)
+                        {
+                          const char *text_align_horizontal;
+                          text_align_horizontal = *reinterpret_cast<const char **>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("text_align_horizontal",
+                                                                                std::string(text_align_horizontal));
+                          logger((stderr, "Got text_align_horizontal \"%s\"\n", text_align_horizontal));
+                        }
+                      else
+                        {
+                          int text_align_horizontal;
+                          text_align_horizontal = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("text_align_horizontal",
+                                                                                text_align_horizontal);
+                          logger((stderr, "Got text_align_horizontal \"%i\"\n", text_align_horizontal));
+                        }
+                    }
+                  else if (strcmp(tick_arg->key, "text_align_vertical") == 0)
+                    {
+                      if (str_equals_any(tick_arg->value_format, "s", "i") != 0)
+                        {
+                          logger((stderr,
+                                  "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\" or "
+                                  "\"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      if (strcmp(tick_arg->value_format, "s") == 0)
+                        {
+                          const char *text_align_vertical;
+                          text_align_vertical = *reinterpret_cast<const char **>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("text_align_vertical",
+                                                                                std::string(text_align_vertical));
+                          logger((stderr, "Got text_align_vertical \"%s\"\n", text_align_vertical));
+                        }
+                      else
+                        {
+                          int text_align_vertical;
+                          text_align_vertical = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("text_align_vertical",
+                                                                                text_align_vertical);
+                          logger((stderr, "Got text_align_vertical \"%i\"\n", text_align_vertical));
+                        }
+                    }
+                  else if (strcmp(tick_arg->key, "tick_label") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "s") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      const char *tick_label;
+                      tick_label = *reinterpret_cast<const char **>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("tick_label", std::string(tick_label));
+                      logger((stderr, "Got tick_label \"%s\"\n", tick_label));
+                    }
+                  else if (strcmp(tick_arg->key, "tick_width") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "d") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"d\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      double tick_width;
+                      tick_width = *reinterpret_cast<double *>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("tick_size", tick_width);
+                      logger((stderr, "Got tick_width \"%lf\"\n", tick_width));
+                    }
+                  else if (strcmp(tick_arg->key, "new_tick_value") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "d") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"d\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      double new_tick_value;
+                      new_tick_value = *reinterpret_cast<double *>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("value", new_tick_value);
+                      logger((stderr, "Got new_tick_value \"%lf\"\n", new_tick_value));
+                    }
+                  else if (strcmp(tick_arg->key, "tick_is_major") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "i") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      int tick_is_major;
+                      tick_is_major = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("is_major", tick_is_major);
+                      logger((stderr, "Got tick_is_major \"%i\"\n", tick_is_major));
+                    }
+                  else if (strcmp(tick_arg->key, "tick_label_color") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "i") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      int tick_label_color;
+                      tick_label_color = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("text_color_ind", tick_label_color);
+                      logger((stderr, "Got tick_label_color \"%i\"\n", tick_label_color));
+                    }
+                  else if (strcmp(tick_arg->key, "font") == 0)
+                    {
+                      if (str_equals_any(tick_arg->value_format, "s", "i") != 0)
+                        {
+                          logger((stderr,
+                                  "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\" or "
+                                  "\"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      if (strcmp(tick_arg->value_format, "s") == 0)
+                        {
+                          const char *font;
+                          font = *reinterpret_cast<const char **>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("font", std::string(font));
+                          logger((stderr, "Got font \"%s\"\n", font));
+                        }
+                      else
+                        {
+                          int font;
+                          font = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("font", font);
+                          logger((stderr, "Got font \"%i\"\n", font));
+                        }
+                    }
+                  else if (strcmp(tick_arg->key, "font_precision") == 0)
+                    {
+                      if (str_equals_any(tick_arg->value_format, "s", "i") != 0)
+                        {
+                          logger((stderr,
+                                  "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\" or "
+                                  "\"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      if (strcmp(tick_arg->value_format, "s") == 0)
+                        {
+                          const char *font_precision;
+                          font_precision = *reinterpret_cast<const char **>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("font_precision",
+                                                                                std::string(font_precision));
+                          logger((stderr, "Got font_precision \"%s\"\n", font_precision));
+                        }
+                      else
+                        {
+                          int font_precision;
+                          font_precision = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                          (*tick_modification_map)[axis_id][tick_value].emplace("font_precision", font_precision);
+                          logger((stderr, "Got font_precision \"%i\"\n", font_precision));
+                        }
+                    }
+                  else if (strcmp(tick_arg->key, "scientific_format") == 0)
+                    {
+                      if (strcmp(tick_arg->value_format, "i") != 0)
+                        {
+                          logger((stderr, "Invalid value format \"%s\" for axis modification \"%s\", expected \"i\"\n",
+                                  tick_arg->value_format, tick_arg->key));
+                          continue;
+                        }
+                      int scientific_format;
+                      scientific_format = *reinterpret_cast<int *>(tick_arg->value_ptr);
+
+                      (*tick_modification_map)[axis_id][tick_value].emplace("scientific_format", scientific_format);
+                      logger((stderr, "Got scientific_format \"%i\"\n", scientific_format));
+                    }
+                  else
+                    {
+                      logger((stderr, "Ignoring unknown axis modification \"%s\" for tick \"%lf\" on axis \"%s\"\n",
+                              tick_arg->key, tick_value, axis_arg->key));
+                    }
+                }
+              args_iterator_delete(tick_it);
+              ++current_axis_mod;
+            }
+        }
+      args_iterator_delete(axis_it);
     }
 
   return ERROR_NONE;
@@ -3814,7 +4160,7 @@ err_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colo
     {
       colorbar->setAttribute("x_flip", flip);
     }
-  else if (grm_args_values(subplot_args, "y_flip", "i", &flip) && flip)
+  if (grm_args_values(subplot_args, "y_flip", "i", &flip) && flip)
     {
       colorbar->setAttribute("y_flip", flip);
     }
@@ -4240,80 +4586,1229 @@ err_t classes_polar_histogram(grm_args_t *subplot_args)
 
   return error;
 }
+} /* end of extern "C" */
+
+/* ------------------------- dump ----------------------------------------------------------------------------------- */
+
+/*!
+ * \brief Dump the current GRM context object into a file object.
+ *
+ * \param[in] f The file object, the serialized context will be written to.
+ * \param[in] dump_encoding The encoding of the serialized context. The context is exported as JSON or BSON, but an
+ *                          additional encoding step can be necessary to embed the JSON/BSON document into a file (like
+ *                          an XML document). Possible values are:
+ *                          - `DUMP_JSON_PLAIN`: Export as JSON and do not apply any encoding.
+ *                          - `DUMP_JSON_ESCAPE_DOUBLE_MINUS`: Export as JSON and escape double minus signs (`--`) in
+ *                                                             the JSON document by replacing them with `-\-`. This can
+ *                                                             be used to embed the output into an XML comment.
+ *                          - `DUMP_JSON_BASE64`: Export a Base64 encoded JSON document.
+ *                          - `DUMP_BSON_BASE64`: Export a Base64 encoded BSON document.
+ * \param[in] context_keys_to_discard The context keys which will be excluded in the dump.
+ */
+void dump_context(FILE *f, dump_encoding_t dump_encoding,
+                  const std::unordered_set<std::string> *context_keys_to_discard)
+{
+  char *base64_str = dump_context_str(dump_encoding, context_keys_to_discard);
+  fprintf(f, "%s", base64_str);
+  free(base64_str);
+}
+
+/*!
+ * \brief Dump the current GRM context object into a string.
+ *
+ * \param[in] dump_encoding The encoding of the serialized context. See `dump_context` for details.
+ * \param[in] context_keys_to_discard The context keys which will be excluded in the dump.
+ * \return A C-string containing the serialized context. The caller is responsible for freeing the returned string.
+ */
+char *dump_context_str(dump_encoding_t dump_encoding, const std::unordered_set<std::string> *context_keys_to_discard)
+{
+  auto memwriter = memwriter_new();
+  if (memwriter == nullptr)
+    {
+      debug_print_malloc_error();
+      return nullptr;
+    }
+  auto context = global_render->getContext();
+
+  auto write_callback = (dump_encoding != DUMP_BSON_BASE64) ? tojson_write : tobson_write;
+  write_callback(memwriter, "o(");
+  for (auto item : *context)
+    {
+      std::visit(
+          GRM::overloaded{[&memwriter, &context_keys_to_discard, &write_callback](
+                              std::reference_wrapper<std::pair<const std::string, std::vector<double>>> pair_ref) {
+                            if (context_keys_to_discard->find(pair_ref.get().first) != context_keys_to_discard->end())
+                              return;
+                            std::stringstream format_stream;
+                            format_stream << pair_ref.get().first << ":nD";
+                            write_callback(memwriter, format_stream.str().c_str(), pair_ref.get().second.size(),
+                                           pair_ref.get().second.data());
+                          },
+                          [&memwriter, &context_keys_to_discard, &write_callback](
+                              std::reference_wrapper<std::pair<const std::string, std::vector<int>>> pair_ref) {
+                            if (context_keys_to_discard->find(pair_ref.get().first) != context_keys_to_discard->end())
+                              return;
+                            std::stringstream format_stream;
+                            format_stream << pair_ref.get().first << ":nI";
+                            write_callback(memwriter, format_stream.str().c_str(), pair_ref.get().second.size(),
+                                           pair_ref.get().second.data());
+                          },
+                          [&memwriter, &context_keys_to_discard, &write_callback](
+                              std::reference_wrapper<std::pair<const std::string, std::vector<std::string>>> pair_ref) {
+                            if (context_keys_to_discard->find(pair_ref.get().first) != context_keys_to_discard->end())
+                              return;
+                            std::stringstream format_stream;
+                            format_stream << pair_ref.get().first << ":nS";
+                            std::vector<const char *> c_strings;
+                            c_strings.reserve(pair_ref.get().second.size());
+                            for (const auto &str : pair_ref.get().second)
+                              {
+                                c_strings.push_back(str.c_str());
+                              }
+                            write_callback(memwriter, format_stream.str().c_str(), pair_ref.get().second.size(),
+                                           c_strings.data());
+                          }},
+          item);
+    }
+  write_callback(memwriter, ")");
+  char *encoded_string = nullptr;
+  switch (dump_encoding)
+    {
+      err_t error;
+
+    case DUMP_JSON_ESCAPE_DOUBLE_MINUS:
+      encoded_string = strdup(escape_double_minus(memwriter_buf(memwriter)).c_str());
+      break;
+    case DUMP_JSON_BASE64:
+    case DUMP_BSON_BASE64:
+      encoded_string = base64_encode(nullptr, memwriter_buf(memwriter), memwriter_size(memwriter), &error);
+      if (error != ERROR_NONE)
+        {
+          logger((stderr, "Got error \"%d\" (\"%s\")!\n", error, error_names[error]));
+        }
+      break;
+    default:
+      // Plain JSON
+      encoded_string = strdup(memwriter_buf(memwriter));
+    }
+  if (encoded_string == nullptr)
+    {
+      debug_print_malloc_error();
+    }
+
+  memwriter_delete(memwriter);
+  return encoded_string;
+}
+
+/*!
+ * \brief Dump the current GRM context object into an XML comment.
+ *
+ * This function generates a special XML comment and embeds the context object as a JSON document. In order to avoid a
+ * broken XML comment, double minus signs (`--`) in the JSON document are escaped by replacing them with `-\-`.
+ *
+ * \param[in] f The file object, the comment will be written into.
+ * \param[in] context_keys_to_discard The context keys which will be excluded in the dump.
+ */
+void dump_context_as_xml_comment(FILE *f, const std::unordered_set<std::string> *context_keys_to_discard)
+{
+#ifndef NDEBUG
+  // TODO: Undo
+  // auto dump_encoding = DUMP_JSON_ESCAPE_DOUBLE_MINUS;
+  auto dump_encoding = DUMP_BSON_BASE64;
+#else
+  auto dump_encoding = DUMP_BSON_BASE64;
+#endif
+  fprintf(f, "<!-- __grm_context__: ");
+  dump_context(f, dump_encoding, context_keys_to_discard);
+  fprintf(f, " -->\n");
+}
+
+/*!
+ * \brief Dump the current GRM context object into an XML comment. See `dump_context_as_xml_comment` for details.
+ *
+ * \param[in] context_keys_to_discard The context keys which will be excluded in the dump.
+ * \return A C-string containing the XML comment. The caller is responsible for freeing the returned string.
+ */
+char *dump_context_as_xml_comment_str(const std::unordered_set<std::string> *context_keys_to_discard)
+{
+  char *encoded_json_str = nullptr;
+  size_t escaped_json_strlen;
+  char *xml_comment = nullptr;
+
+#ifndef NDEBUG
+  // TODO: Undo
+  // auto dump_encoding = DUMP_JSON_ESCAPE_DOUBLE_MINUS;
+  auto dump_encoding = DUMP_BSON_BASE64;
+#else
+  auto dump_encoding = DUMP_BSON_BASE64;
+#endif
+  encoded_json_str = dump_context_str(dump_encoding, context_keys_to_discard);
+  cleanup_if(encoded_json_str == nullptr);
+  escaped_json_strlen = strlen(encoded_json_str);
+  /* 27 = strlen("<!-- __grm_context__:  -->") + 1 (`\0`) */
+  xml_comment = static_cast<char *>(malloc(escaped_json_strlen + 27));
+  cleanup_if(xml_comment == nullptr);
+  strcpy(xml_comment, "<!-- __grm_context__: ");
+  strcpy(xml_comment + 22, encoded_json_str);
+  strcpy(xml_comment + 22 + escaped_json_strlen, " -->");
+  xml_comment[escaped_json_strlen + 26] = '\0';
+
+cleanup:
+  free(encoded_json_str);
+
+  return xml_comment;
+}
+
+
+/* ------------------------- load ----------------------------------------------------------------------------------- */
+
+namespace internal
+{
+
+/*!
+ * \brief Helper template function to avoid code duplication in `load_context_str`.
+ *
+ * All arguments of this function are simply passed through from `load_context_str`.
+ *
+ * \tparam T The type of the value which is read from the context argument container.
+ * \tparam U The type of the value which is stored in the GRM context.
+ */
+template <typename T, typename U>
+static void put_value_into_context(arg_t *context_arg, grm_args_value_iterator_t *context_arg_value_it,
+                                   GRM::Context &context)
+{
+  if (context_arg_value_it->is_array)
+    {
+      T *value_array = *static_cast<T **>(context_arg_value_it->value_ptr);
+      context[context_arg->key] = std::vector<U>(value_array, value_array + context_arg_value_it->array_length);
+    }
+  else
+    {
+      T value = *static_cast<T *>(context_arg_value_it->value_ptr);
+      context[context_arg->key] = std::vector<U>{value};
+    }
+};
+} // namespace internal
+
+/*!
+ * \brief Load a GRM context object from a JSON string
+ *
+ * \param[in] context The context object to load into
+ * \param[in] context_str The serialized context string to deserialize
+ * \param[in] dump_encoding The encoding of the context string. Set to `DUMP_AUTO_DETECT` to detect the encoding.
+ *                          WARNING: Auto-detection may not be reliable. Currently, only Base64 and double minus escape
+ *                          formats can be detected. Plain JSON is always detected as double minus escape format.
+ * \throw std::runtime_error
+ */
+void load_context_str(GRM::Context &context, const std::string &context_str, dump_encoding_t dump_encoding)
+{
+  const char *serialized_context;
+  std::string serialized_context_tmp_;
+  if (dump_encoding == DUMP_AUTO_DETECT)
+    {
+      if (context_str[0] == '{')
+        {
+          dump_encoding = DUMP_JSON_ESCAPE_DOUBLE_MINUS;
+        }
+      else if (context_str[0] == 'e' && context_str[1] == 'y')
+        {
+          // Base64 encoded `{"` is `ey`
+          dump_encoding = DUMP_JSON_BASE64;
+        }
+      else
+        {
+          dump_encoding = DUMP_BSON_BASE64;
+        }
+    }
+  switch (dump_encoding)
+    {
+    case DUMP_JSON_ESCAPE_DOUBLE_MINUS:
+      serialized_context_tmp_ = unescape_double_minus(context_str);
+      serialized_context = serialized_context_tmp_.c_str();
+      break;
+    case DUMP_JSON_BASE64:
+    case DUMP_BSON_BASE64:
+      err_t error;
+      serialized_context = base64_decode(nullptr, context_str.c_str(), nullptr, &error);
+      if (error != ERROR_NONE)
+        {
+          std::stringstream error_description;
+          error_description << "error \"" << error << "\" (\"" << error_names[error] << "\")";
+          logger((stderr, "Got %s!\n", error_description.str().c_str()));
+          // TODO: Throw a custom exception type when `plot.cxx` has a better C++ interface
+          throw std::runtime_error("Failed to decode base64 context string (" + error_description.str() + ")");
+        }
+      break;
+    default:
+      // Plain JSON
+      serialized_context = context_str.c_str();
+    }
+  auto context_args = grm_args_new();
+  if (context_args == nullptr)
+    {
+      throw std::runtime_error("Failed to create context args object");
+    }
+  if (dump_encoding != DUMP_BSON_BASE64)
+    {
+      fromjson_read(context_args, serialized_context);
+    }
+  else
+    {
+      frombson_read(context_args, serialized_context);
+    }
+  auto context_args_it = grm_args_iter(context_args);
+  arg_t *context_arg;
+  while ((context_arg = context_args_it->next(context_args_it)))
+    {
+      auto context_arg_value_it = grm_arg_value_iter(context_arg);
+      while (context_arg_value_it->next(context_arg_value_it) != NULL)
+        {
+          switch (context_arg_value_it->format)
+            {
+            case 'i':
+              internal::put_value_into_context<int, int>(context_arg, context_arg_value_it, context);
+              break;
+            case 'd':
+              internal::put_value_into_context<double, double>(context_arg, context_arg_value_it, context);
+              break;
+            case 's':
+              internal::put_value_into_context<char *, std::string>(context_arg, context_arg_value_it, context);
+              break;
+            }
+        }
+    }
+}
 
 
 /* ------------------------- xml ------------------------------------------------------------------------------------ */
 
-#ifndef NO_LIBXML2
-#if LIBXML_VERSION >= 21200
-static void schema_parse_error_handler(void *has_schema_errors, const xmlError *error)
-#else
-static void schema_parse_error_handler(void *has_schema_errors, xmlError *error)
-#endif
+#ifndef NO_XERCES_C
+namespace XERCES_CPP_NAMESPACE
 {
-  fprintf(stderr, "XML validation error at line %d, column %d: %s", error->line, error->int2, error->message);
-  *((bool *)has_schema_errors) = true;
+
+/*!
+ * \brief A helper class to encode Xerces strings in UTF-8.
+ *
+ * This class takes a Xerces string and encodes it in UTF-8. By overloading the `<<` operator, the encoding result can
+ * be used with C++ streams directly.
+ */
+class TranscodeToUtf8Str : public TranscodeToStr
+{
+public:
+  TranscodeToUtf8Str(const XMLCh *in) : TranscodeToStr(in, "UTF-8") {}
+};
+
+inline std::ostream &operator<<(std::ostream &target, const TranscodeToStr &to_dump)
+{
+  target << to_dump.str();
+  return target;
 }
 
-err_t validate_graphics_tree(void)
+/*!
+ * \brief Another helper class to encode Xerces strings in another encoding.
+ *
+ * `TranscodeToUtf8Str` is meant to be used with temporary objects in a stream expression. In contrast, objects of
+ * `XMLStringBuffer` are meant to be used with permanent objects to avoid the overhead of constructing new objects for
+ * every string encoding operation.
+ */
+class XMLStringBuffer : public XMLFormatter, private XMLFormatTarget
 {
-  char *gr_dir = get_gr_dir();
-  std::string schema_filepath{std::string(gr_dir) + "/" + SCHEMA_REL_FILEPATH};
-  free(reinterpret_cast<void *>(gr_dir));
-  xmlSchemaParserCtxtPtr schema_parser_ctxt = nullptr;
-  xmlSchemaPtr schema = nullptr;
-  bool has_schema_errors = false;
-  xmlSchemaValidCtxtPtr valid_ctxt = nullptr;
-  xmlDocPtr doc = nullptr;
-  err_t error = ERROR_NONE;
+public:
+  /*!
+   * \brief Construct a new XMLStringBuffer object.
+   *
+   * \param[in] encoding The encoding to apply to Xerces strings, e.g. "UTF-8".
+   */
+  XMLStringBuffer(const char *encoding) : XMLFormatter(encoding, this) {}
 
-  xmlInitParser();
+  void writeChars(const XMLByte *const toWrite, const XMLSize_t count, XMLFormatter *const formatter) override
+  {
+    out_buffer_.write((char *)toWrite, (int)count);
+  }
 
+  /*!
+   * \brief Encode a given Xerces string and return the result.
+   *
+   * \param[in] chars Xerces string to encode.
+   * \return The encoded string.
+   */
+  std::string encode(std::optional<const XMLCh *> chars = std::nullopt)
+  {
+    if (chars)
+      {
+        *this << *chars;
+      }
+    std::string out = out_buffer_.str();
+    out_buffer_.str("");
+    return out;
+  }
+
+private:
+  std::stringstream out_buffer_;
+};
+
+
+/*!
+ * \brief A helper class for `FileInputSource` which manages the file reading.
+ *
+ * This class reads XML data from a FILE handle and decodes obfuscated internal attributes on the fly.
+ */
+class FileBinInputStream : public BinInputStream
+{
+public:
+  explicit FileBinInputStream(FILE *file) : file_(file) {}
+
+  [[nodiscard]] XMLFilePos curPos() const override { return cur_pos_; }
+
+  /*!
+   * \brief Read the requested amoutn of bytes from the wrapped XML file handle, or less if EOF is reached.
+   *
+   * \param[out] to_fill The buffer which is filled with the read bytes. Must be allocated by the user.
+   * \param[in] max_to_read The maximum amount of bytes to read from the file. The buffer must be large enough.
+   * \return The real amount of read bytes.
+   */
+  [[nodiscard]] XMLSize_t readBytes(XMLByte *const to_fill, const XMLSize_t max_to_read) override
+  {
+    size_t max_to_read_from_file = grm_max(0L, static_cast<long>(max_to_read) - static_cast<long>(buffer_.size()));
+    buffer_.resize(buffer_.size() + max_to_read_from_file);
+    auto read_from_file =
+        fread(buffer_.data() + buffer_.size() - max_to_read_from_file, sizeof(char), max_to_read_from_file, file_);
+    buffer_.resize(buffer_.size() - max_to_read_from_file + read_from_file);
+    size_t look_ahead_pos = 0;
+    while (true)
+      {
+        auto buffer_view = std::string_view(buffer_.data(), buffer_.size());
+        look_ahead_pos = buffer_view.find(look_ahead_prefix_, look_ahead_pos);
+        if (look_ahead_pos == std::string_view::npos)
+          {
+            look_ahead_pos = ends_with_any_subprefix(buffer_view, look_ahead_prefix_);
+          }
+
+        if (look_ahead_pos != std::string_view::npos && look_ahead(buffer_, look_ahead_pos))
+          {
+            buffer_ = transform_look_ahead_buffer(buffer_, look_ahead_pos);
+          }
+        else
+          {
+            break;
+          }
+      }
+    size_t bytes_to_copy = grm_min(max_to_read, buffer_.size());
+    std::copy(std::begin(buffer_), std::begin(buffer_) + static_cast<long>(bytes_to_copy), to_fill);
+    buffer_.erase(std::begin(buffer_), std::begin(buffer_) + static_cast<long>(bytes_to_copy));
+
+    cur_pos_ += static_cast<long>(bytes_to_copy);
+    return bytes_to_copy;
+  }
+
+  [[nodiscard]] const XMLCh *getContentType() const override { return nullptr; }
+
+protected:
+  /*!
+   * \brief Look ahead in the opened file to find the end of the next obfuscated internal attribute.
+   *
+   * \param[inout] buffer The buffer to check for an internal attribute. If it only contains a part of an internal
+   *                      attribute, read more bytes from the file and append them to the buffer.
+   * \param[in] look_ahead_pos The position to start the search for the next internal attribute from.
+   * \return If a complete internal attribute was found.
+   */
+  [[nodiscard]] bool look_ahead(std::vector<char> &buffer, size_t look_ahead_pos)
+  {
+    const size_t chunk_size = 100;
+    size_t buffer_view_start = look_ahead_pos;
+    auto buffer_view = std::string_view(buffer.data(), buffer.size()).substr(buffer_view_start);
+    int delimiter_count = 0;
+    bool successful = false;
+
+    auto read_from_file_at_least_once = false;
+    while (true)
+      {
+        auto delimiter_found = false;
+        if (delimiter_count == 0)
+          {
+            if ((delimiter_found = starts_with(buffer_view, look_ahead_prefix_)))
+              {
+                buffer_view_start += look_ahead_prefix_.size();
+                buffer_view = buffer_view.substr(look_ahead_prefix_.size());
+                ++delimiter_count;
+              }
+            else if (read_from_file_at_least_once)
+              {
+                // In this case the first look ahead operation could not complete the searched prefix -> abort now
+                break;
+              }
+          }
+        if (delimiter_count == 1)
+          {
+            if ((delimiter_found = buffer_view.find(attribute_delimiter) != std::string_view::npos))
+              {
+                ++delimiter_count;
+              }
+          }
+        if (delimiter_count == 2)
+          {
+            successful = true;
+            break;
+          }
+        buffer.resize(buffer.size() + chunk_size);
+        auto read_bytes = fread(buffer.data() + buffer.size() - chunk_size, sizeof(char), chunk_size, file_);
+        read_from_file_at_least_once = true;
+        buffer.resize(buffer.size() - chunk_size + read_bytes);
+        if (read_bytes == 0) break;
+        buffer_view = std::string_view(buffer.data(), buffer.size()).substr(buffer_view_start);
+      }
+
+    return successful;
+  }
+
+  /*!
+   * \brief Decode the next internal attribute in the given look ahead buffer and return the result as new buffer.
+   *
+   * \param[in] look_ahead_buffer The buffer to operate on.
+   * \param[in] start_index An optional start_index to start the search for the next internal attribute from.
+   * \return A buffer containing the decoded internal attribute and the rest of the passed look ahead buffer.
+   */
+  [[nodiscard]] std::vector<char> transform_look_ahead_buffer(const std::vector<char> &look_ahead_buffer,
+                                                              size_t start_index = 0) const
+  {
+    auto look_ahead_buffer_view =
+        std::string_view(look_ahead_buffer.data(), look_ahead_buffer.size()).substr(start_index);
+    auto value_start_pos = look_ahead_buffer_view.find(attribute_delimiter) + 1;
+    auto value_end_pos = look_ahead_buffer_view.find(attribute_delimiter, value_start_pos);
+    auto attribute_value = std::string(look_ahead_buffer_view.substr(value_start_pos, value_end_pos - value_start_pos));
+    err_t error = ERROR_NONE;
+    auto bson_data = std::unique_ptr<char, void (*)(void *)>(
+        base64_decode(nullptr, attribute_value.c_str(), nullptr, &error), std::free);
+    if (error != ERROR_NONE)
+      {
+        logger((stderr, "Got error \"%d\" (\"%s\")!\n", error, error_names[error]));
+        throw std::runtime_error("Got error \"" + std::to_string(error) + "\" (\"" + error_names[error] + "\")!");
+      }
+
+    auto internal_args = std::unique_ptr<grm_args_t, void (*)(grm_args_t *)>(grm_args_new(), grm_args_delete);
+    error = frombson_read(internal_args.get(), bson_data.get());
+    if (error != ERROR_NONE)
+      {
+        logger((stderr, "Got error \"%d\" (\"%s\")!\n", error, error_names[error]));
+        throw std::runtime_error("Got error \"" + std::to_string(error) + "\" (\"" + error_names[error] + "\")!");
+      }
+    auto args_it = std::unique_ptr<grm_args_iterator_t, void (*)(grm_args_iterator_t *)>(
+        grm_args_iter(internal_args.get()), args_iterator_delete);
+    arg_t *arg;
+    auto transformed_attribute_value = std::stringstream();
+    while ((arg = args_it->next(args_it.get())) != nullptr)
+      {
+        /* Check if there is already content in the string stream (after first iteration) */
+        if (transformed_attribute_value.rdbuf()->in_avail() > 0)
+          {
+            transformed_attribute_value << " ";
+          }
+        transformed_attribute_value << arg->key << "=" << attribute_delimiter;
+        if (*arg->value_format)
+          {
+            auto value_it = std::unique_ptr<grm_args_value_iterator_t, void (*)(grm_args_value_iterator_t *)>(
+                grm_arg_value_iter(arg), args_value_iterator_delete);
+            while (value_it->next(value_it.get()) != nullptr)
+              {
+                /*
+                 * Decoded attributes must not
+                 * - be arrays
+                 * - be nested
+                 * - be of single char type
+                 * In these cases there is some internal error.
+                 */
+                assert(!value_it->is_array && value_it->format != 'a' && value_it->format != 'c');
+                switch (value_it->format)
+                  {
+                  case 'i':
+                    transformed_attribute_value << *static_cast<int *>(value_it->value_ptr);
+                    break;
+                  case 'd':
+                    {
+                      auto double_as_string = std::to_string(*static_cast<double *>(value_it->value_ptr));
+                      if (double_as_string == "inf" || double_as_string == "-inf")
+                        {
+                          std::transform(std::begin(double_as_string), std::end(double_as_string),
+                                         std::begin(double_as_string), [](auto c) { return std::toupper(c); });
+                        }
+                      else if (double_as_string == "nan")
+                        {
+                          double_as_string = "NaN";
+                        }
+                      transformed_attribute_value << double_as_string;
+                    }
+                    break;
+                  case 's':
+                    transformed_attribute_value << *static_cast<char **>(value_it->value_ptr);
+                    break;
+                  default:
+                    /* This branch should never be reached */
+                    logger((stderr, "Internal error!\n"));
+                    assert(false);
+                  }
+              }
+          }
+        transformed_attribute_value << attribute_delimiter;
+      }
+
+    auto transformed_look_ahead_buffer = std::vector<char>();
+    transformed_look_ahead_buffer.reserve(start_index + transformed_attribute_value.tellp() +
+                                          look_ahead_buffer_view.size() - value_end_pos - 1);
+    transformed_look_ahead_buffer.insert(std::end(transformed_look_ahead_buffer), std::begin(look_ahead_buffer),
+                                         std::begin(look_ahead_buffer) + static_cast<long>(start_index));
+    transformed_look_ahead_buffer.insert(std::end(transformed_look_ahead_buffer),
+                                         std::istreambuf_iterator<char>(transformed_attribute_value),
+                                         std::istreambuf_iterator<char>());
+    transformed_look_ahead_buffer.insert(std::end(transformed_look_ahead_buffer),
+                                         std::begin(look_ahead_buffer_view) + value_end_pos + 1,
+                                         std::end(look_ahead_buffer_view));
+    return transformed_look_ahead_buffer;
+  }
+
+private:
+  const char attribute_delimiter = '"';
+  const std::string look_ahead_prefix_ = "internal=" + std::string(1, attribute_delimiter);
+  std::vector<char> buffer_;
+  XMLFilePos cur_pos_ = 0;
+  FILE *file_;
+};
+
+/*!
+ * \brief An adapter class to read XML data from a file.
+ */
+class FileInputSource : public InputSource
+{
+public:
+  FileInputSource(FILE *file)
+      : file_(file), recovered_filename_(recover_filename()),
+        system_id_transcoder_(reinterpret_cast<const XMLByte *>(recovered_filename_.c_str()),
+                              recovered_filename_.length(), "UTF-8")
+  {
+  }
+
+  BinInputStream *makeStream() const override { return new FileBinInputStream(file_); }
+
+  const XMLCh *getSystemId() const override { return system_id_transcoder_.str(); }
+
+private:
+  /*!
+   * \brief Recover the filename from a file descriptor.
+   *
+   * Xerces assigns a system id to input sources to make them distinguishable from each other. Thus, this function tries
+   * to recover the filename from the given FILE object to have a suitable system id. Currently, this is only possible
+   * on Unix systems with mounted `/proc` filesystem.
+   *
+   * \return The recovered filename if found, otherwise `<unknown>`.
+   */
+  std::string recover_filename() const
+  {
+#ifdef __unix__
+    std::stringstream proc_link_stream;
+    const unsigned int MAXSIZE = 4096;
+    std::array<char, MAXSIZE> filename;
+    ssize_t readlink_bytes;
+
+    proc_link_stream << "/proc/self/fd/" << fileno(file_);
+    auto proc_link{proc_link_stream.str()};
+    readlink_bytes = readlink(proc_link.c_str(), filename.data(), MAXSIZE);
+    filename[readlink_bytes] = '\0';
+    if (readlink_bytes >= 0)
+      {
+        filename[readlink_bytes] = '\0';
+        return filename.data();
+      }
+#endif
+    return "<unknown>";
+  }
+
+  FILE *file_;
+  std::string recovered_filename_;
+  TranscodeFromStr system_id_transcoder_;
+};
+
+/*!
+ * \brief A helper class for `StringInputSource` which reads data from a string.
+ */
+class StringInputStream : public BinInputStream
+{
+public:
+  StringInputStream(const std::string &str) : str_(str), cur_pos_(0) {}
+
+  XMLFilePos curPos() const override { return cur_pos_; }
+
+  XMLSize_t readBytes(XMLByte *const toFill, const XMLSize_t maxToRead) override
+  {
+    auto str_view = std::string_view(str_).substr(cur_pos_, maxToRead);
+    memcpy(toFill, str_view.data(), str_view.length());
+    cur_pos_ += str_view.length();
+    return str_view.length();
+  }
+
+  const XMLCh *getContentType() const override { return nullptr; }
+
+private:
+  const std::string &str_;
+  long cur_pos_;
+};
+
+/*!
+ * \brief An adapter class to read XML data from a string.
+ */
+class StringInputSource : public InputSource
+{
+public:
+  StringInputSource(const std::string &str)
+      : str_(str), system_id_transcoder_(reinterpret_cast<const XMLByte *>("<in-memory-string>"),
+                                         strlen("<in-memory-string>"), "UTF-8")
+  {
+  }
+
+  StringInputSource(std::string &&str)
+      : str_(std::move(str)), system_id_transcoder_(reinterpret_cast<const XMLByte *>("<in-memory-string>"),
+                                                    strlen("<in-memory-string>"), "UTF-8")
+  {
+  }
+
+  BinInputStream *makeStream() const override { return new StringInputStream(str_); }
+
+  const XMLCh *getSystemId() const override { return system_id_transcoder_.str(); }
+
+private:
+  std::string str_;
+  TranscodeFromStr system_id_transcoder_;
+};
+
+/*!
+ * \brief A class which manages error reporting for a SAX parser.
+ */
+class SaxErrorHandler : public ErrorHandler
+{
+public:
+  SaxErrorHandler() = default;
+
+  SaxErrorHandler(const std::string &schema_filepath) : schema_filepath_(schema_filepath), schema_invalid_(false) {}
+
+  void warning(const SAXParseException &e) override
+  {
+    std::cerr << "\nWarning at file " << TranscodeToUtf8Str(e.getSystemId()) << ", line " << e.getLineNumber()
+              << ", char " << e.getColumnNumber() << "\n  Message: " << TranscodeToUtf8Str(e.getMessage()) << std::endl;
+  }
+
+  void error(const SAXParseException &e) override
+  {
+    std::cerr << "\nError at file " << TranscodeToUtf8Str(e.getSystemId()) << ", line " << e.getLineNumber()
+              << ", char " << e.getColumnNumber() << "\n  Message: " << TranscodeToUtf8Str(e.getMessage()) << std::endl;
+  }
+
+  void fatalError(const SAXParseException &e) override
+  {
+    auto system_id{TranscodeToUtf8Str(e.getSystemId())};
+    std::cerr << "\nFatal Error at file " << system_id << ", line " << e.getLineNumber() << ", char "
+              << e.getColumnNumber() << "\n  Message: " << TranscodeToUtf8Str(e.getMessage()) << std::endl;
+    if (std::string(reinterpret_cast<const char *>(system_id.str())) == schema_filepath_)
+      {
+        schema_invalid_ = true;
+      }
+  }
+
+  void resetErrors() override
+  {
+    if (schema_filepath_)
+      {
+        schema_invalid_ = false;
+      }
+  }
+
+  std::optional<bool> schema_invalid() const { return schema_invalid_; }
+
+private:
+  std::optional<std::string> schema_filepath_;
+  std::optional<bool> schema_invalid_;
+};
+
+/*!
+ * \brief The core class to handle SAX parsing of XML encoded graphics trees.
+ *
+ * This class inherits from all parser types that are needed to handle the whole parsing process.
+ */
+class GraphicsTreeParseHandler : public DefaultHandler, public SaxErrorHandler, public PSVIHandler
+{
+public:
+  GraphicsTreeParseHandler(GRM::Context &context) : context_(context) {}
+  ~GraphicsTreeParseHandler() {}
+
+  void startDocument() override {}
+
+  void endDocument() override {}
+
+  /*!
+   * \brief Handle the start of an XML tag in the document.
+   *
+   * This function creates a new GRM tree element and records all attributes which need to be inserted into the element.
+   * All further processing is delayed until the PSVI handler is called since it has access to the XML schema and the
+   * types of all attributes.
+   */
+  void startElement(const XMLCh *const uri, const XMLCh *const localname, const XMLCh *const qname,
+                    const Attributes &attributes) override
+  {
+    const std::string node_name = encode(qname);
+
+    if (node_name == "root")
+      {
+        global_root = global_render->createElement("root");
+        global_render->replaceChildren(global_root);
+        current_element_ = global_root;
+        insertion_parent_ = nullptr;
+      }
+    else
+      {
+        current_element_ = global_render->createElement(node_name);
+      }
+
+    XMLSize_t attribute_count = attributes.getLength();
+    current_attributes_.clear();
+    current_attributes_.reserve(attribute_count);
+    for (XMLSize_t i = 0; i < attribute_count; i++)
+      {
+        current_attributes_.push_back({encode(attributes.getQName(i)), encode(attributes.getValue(i))});
+      }
+  }
+
+  /*!
+   * \brief Handle a closing XML tag.
+   *
+   * This function navigates one level up in the graphics tree hierarchy and sets this value as the new insertion
+   * parent.
+   */
+  void endElement(const XMLCh *const uri, const XMLCh *const localname, const XMLCh *const qname) override
+  {
+    insertion_parent_ = insertion_parent_->parentElement();
+  }
+
+  /*!
+   * \brief Process comments in the XML document.
+   *
+   * This function parses special GRM comments to load a serialized context.
+   */
+  void comment(const XMLCh *const chars, const XMLSize_t length) override
+  {
+    std::string comment{encode(chars)};
+    std::string_view comment_view{comment};
+    comment_view = trim(comment_view);
+    if (starts_with(comment_view, "__grm_context__:"))
+      {
+        comment_view.remove_prefix(16);
+        comment_view = ltrim(comment_view);
+        load_context_str(context_, std::string(comment_view), DUMP_AUTO_DETECT);
+      }
+  }
+
+  /*!
+   * \brief Process the types of all attributes of a new XML tag.
+   *
+   * This handler is called after `startElement`. The type information in this method together with the previously
+   * recorded element data can be used to create a new element in the graphics tree.
+   */
+  void handleAttributesPSVI(const XMLCh *const localName, const XMLCh *const uri,
+                            PSVIAttributeList *psviAttributes) override
+  {
+    XMLSize_t attribute_count = psviAttributes->getLength();
+    for (XMLSize_t i = 0; i < attribute_count; i++)
+      {
+        auto attribute_declaration = psviAttributes->getAttributePSVIAtIndex(i)->getAttributeDeclaration();
+        if (attribute_declaration == nullptr)
+          {
+            continue;
+          }
+
+        const std::string &attribute_name = current_attributes_[i].first;
+        const std::string &attribute_value = current_attributes_[i].second;
+        assert(attribute_name == encode(attribute_declaration->getName()));
+        const std::string attribute_type = encode(attribute_declaration->getTypeDefinition()->getName());
+
+        std::vector<std::string> attribute_types;
+        if (attribute_type == "strint")
+          {
+            attribute_types = {"integer", "string"};
+          }
+        else
+          {
+            attribute_types = {attribute_type};
+          }
+
+        for (const auto &attribute_type : attribute_types)
+          {
+            try
+              {
+                if (attribute_type == "integer")
+                  {
+                    current_element_->setAttribute(attribute_name, std::stoi(attribute_value));
+                  }
+                else if (attribute_type == "double")
+                  {
+                    current_element_->setAttribute(attribute_name, std::stod(attribute_value));
+                  }
+                else
+                  {
+                    current_element_->setAttribute(attribute_name, attribute_value);
+                  }
+                break;
+              }
+            catch (const std::invalid_argument &)
+              {
+              }
+          }
+        if (attribute_name == "active" && attribute_value == "1")
+          {
+            global_render->setActiveFigure(current_element_);
+          }
+      }
+
+    if (insertion_parent_ != nullptr)
+      {
+        insertion_parent_->appendChild(current_element_);
+      }
+    insertion_parent_ = current_element_;
+  }
+
+  void handleElementPSVI(const XMLCh *const localName, const XMLCh *const uri, PSVIElement *elementInfo) override {}
+
+  void handlePartialElementPSVI(const XMLCh *const localName, const XMLCh *const uri, PSVIElement *elementInfo) override
+  {
+  }
+
+  void warning(const SAXParseException &e) override { SaxErrorHandler::warning(e); }
+
+  void error(const SAXParseException &e) override { SaxErrorHandler::error(e); }
+
+  void fatalError(const SAXParseException &e) override { SaxErrorHandler::fatalError(e); }
+
+  void resetErrors() override { SaxErrorHandler::resetErrors(); }
+
+private:
+  std::string encode(std::optional<const XMLCh *> chars = std::nullopt) { return xml_buffer_.encode(chars); }
+
+  XMLStringBuffer xml_buffer_{"UTF-8"};
+  GRM::Context &context_;
+  std::shared_ptr<GRM::Element> insertion_parent_, current_element_;
+  std::vector<std::pair<std::string, std::string>> current_attributes_;
+};
+
+/*!
+ * \brief The core class to handle SAX parsing of XML schemas.
+ *
+ * This class inherits from all parser types that are needed to handle the whole parsing process.
+ */
+class SchemaParseHandler : public DefaultHandler, public SaxErrorHandler
+{
+public:
+  SchemaParseHandler(GRM::Document &document, GRM::Document *document_to_be_merged = nullptr)
+      : document_(document), document_to_be_merged_(document_to_be_merged)
+  {
+  }
+  ~SchemaParseHandler() {}
+
+  void startDocument() override {}
+
+  void endDocument() override {}
+
+  /*!
+   * \brief Handle the start of an XML tag in the document.
+   *
+   * This function creates a new GRM tree element and adds all read attributes to the element.
+   */
+  void startElement(const XMLCh *const uri, const XMLCh *const localname, const XMLCh *const qname,
+                    const Attributes &attributes) override
+  {
+    const std::string node_name = encode(qname);
+
+    if (node_name == "xs:schema")
+      {
+        current_gr_element_ = document_.createElement(node_name);
+        document_.replaceChildren(current_gr_element_);
+        insertion_parent_ = nullptr;
+      }
+    else
+      {
+        current_gr_element_ = document_.createElement(node_name);
+      }
+
+    XMLSize_t attribute_count = attributes.getLength();
+    for (XMLSize_t i = 0; i < attribute_count; i++)
+      {
+        current_gr_element_->setAttribute(encode(attributes.getQName(i)), encode(attributes.getValue(i)));
+      }
+    if (node_name == "xs:schema")
+      {
+        // xmlns namespace attributes are not handled as attributes in this method, so add the namespace explicitly.
+        current_gr_element_->setAttribute("xmlns:xs", "http://www.w3.org/2001/XMLSchema");
+        current_gr_element_->setAttribute("xmlns:vc", "http://www.w3.org/2007/XMLSchema-versioning");
+      }
+    if (insertion_parent_ != nullptr)
+      {
+        insertion_parent_->appendChild(current_gr_element_);
+      }
+    insertion_parent_ = current_gr_element_;
+  }
+
+  /*!
+   * \brief Handle a closing XML tag.
+   *
+   * This function navigates one level up in the graphics tree hierarchy and sets this value as the new insertion
+   * parent.
+   */
+  void endElement(const XMLCh *const uri, const XMLCh *const localname, const XMLCh *const qname) override
+  {
+    current_gr_element_ = insertion_parent_;
+    if (document_to_be_merged_ != nullptr)
+      {
+        if (current_gr_element_->localName() == "xs:element")
+          {
+            auto element_name_attribute = current_gr_element_->getAttribute("name");
+            if (element_name_attribute.isString())
+              {
+                std::stringstream selector;
+                /*
+                 * It would be better to use `xs:element[name="<name>"]` as selector, but `:element` is detected as
+                 * pseudo class in the selector although it part of the name. Thus, use only `[name="<name>"]` and check
+                 * if any result is an `xs:element`.
+                 */
+                selector << "[name=\"" << static_cast<std::string>(element_name_attribute) << "\"]";
+                std::shared_ptr<GRM::Element> element_to_be_merged;
+                for (const auto &matched_element : document_to_be_merged_->querySelectorsAll(selector.str()))
+                  {
+                    if (matched_element->localName() == "xs:element")
+                      {
+                        element_to_be_merged = matched_element;
+                        break;
+                      }
+                  }
+                if (element_to_be_merged)
+                  {
+                    merge_elements_(*current_gr_element_, *element_to_be_merged);
+                  }
+              }
+          }
+        else if (current_gr_element_->localName() == "xs:schema")
+          {
+            /*
+             * At this point, the end of the schema document is reached. Append all attribute groups of the other
+             * document now.
+             */
+            for (const auto &element : document_to_be_merged_->documentElement()->children())
+              {
+                if (element->localName() != "xs:attributeGroup") continue;
+                current_gr_element_->appendChild(element);
+              }
+          }
+      }
+    insertion_parent_ = insertion_parent_->parentElement();
+  }
+
+  void warning(const SAXParseException &e) override { SaxErrorHandler::warning(e); }
+
+  void error(const SAXParseException &e) override { SaxErrorHandler::error(e); }
+
+  void fatalError(const SAXParseException &e) override { SaxErrorHandler::fatalError(e); }
+
+  void resetErrors() override { SaxErrorHandler::resetErrors(); }
+
+protected:
+  static void merge_elements_(GRM::Element &element, GRM::Element &element_to_be_merged)
+  {
+    for (auto &merge_child : element_to_be_merged.children())
+      {
+        auto found_child = false;
+        for (const auto &child : element.children())
+          {
+            if (child->localName() == merge_child->localName() && child->hasChildNodes() &&
+                merge_child->hasChildNodes())
+              {
+                merge_elements_(*child, *merge_child);
+                found_child = true;
+                break;
+              }
+          }
+        if (!found_child)
+          {
+            element.appendChild(merge_child);
+          }
+      }
+  }
+
+private:
+  std::string encode(std::optional<const XMLCh *> chars = std::nullopt) { return xml_buffer_.encode(chars); }
+
+  XMLStringBuffer xml_buffer_{"UTF-8"};
+  GRM::Document &document_;
+  GRM::Document *document_to_be_merged_;
+  std::shared_ptr<GRM::Element> insertion_parent_, current_gr_element_;
+};
+} // namespace XERCES_CPP_NAMESPACE
+
+extern "C" {
+
+/*!
+ * \brief Load a graphics tree from an XML file.
+ *
+ * \param[in] file The file object to parse from.
+ * \return 1 on success, 0 on failure.
+ */
+int grm_load_graphics_tree(FILE *file)
+{
+  using namespace XERCES_CPP_NAMESPACE;
+
+  if (plot_init_static_variables() != ERROR_NONE)
+    {
+      return 0;
+    }
+
+  gr_setscale(0); // TODO: Check why scale is not restored after a render call in `render.cxx` automatically
+
+  std::string schema_filepath{get_merged_schema_filepath()};
+
+  try
+    {
+      XMLPlatformUtils::Initialize();
+    }
+  catch (const XMLException &e)
+    {
+      std::cerr << "Error during initialization! :\n" << TranscodeToUtf8Str(e.getMessage()) << std::endl;
+      return 0;
+    }
+
+  bool auto_update;
+  global_render->getAutoUpdate(&auto_update);
+  global_render->setAutoUpdate(false);
+
+  XMLSize_t errorCount = 0;
+  {
+    auto parser =
+        std::unique_ptr<SAX2XMLReaderImpl>(static_cast<SAX2XMLReaderImpl *>(XMLReaderFactory::createXMLReader()));
+
+    // Activate validation
+    parser->setFeature(XMLUni::fgSAX2CoreValidation, true);
+    parser->setFeature(XMLUni::fgXercesDynamic, false);
+    parser->setFeature(XMLUni::fgXercesSchema, true);
+    parser->setFeature(XMLUni::fgXercesSchemaFullChecking, true);
+    auto schema_filepath_transcoder =
+        TranscodeFromStr(reinterpret_cast<const XMLByte *>(schema_filepath.c_str()), schema_filepath.length(), "UTF-8");
+    parser->setProperty(XMLUni::fgXercesSchemaExternalNoNameSpaceSchemaLocation,
+                        (void *)schema_filepath_transcoder.str());
+
+    try
+      {
+        GraphicsTreeParseHandler handler(*global_render->getContext());
+        parser->setPSVIHandler(&handler);
+        parser->setContentHandler(&handler);
+        parser->setLexicalHandler(&handler);
+        parser->setErrorHandler(static_cast<SaxErrorHandler *>(&handler));
+        parser->parse(FileInputSource(file));
+        errorCount = parser->getErrorCount();
+      }
+    catch (const OutOfMemoryException &)
+      {
+        std::cerr << "OutOfMemoryException" << std::endl;
+      }
+    catch (const XMLException &e)
+      {
+        std::cerr << "\nAn error occurred\n  Error: " << TranscodeToUtf8Str(e.getMessage()) << "\n" << std::endl;
+      }
+
+  } // `parser` must be freed before `XMLPlatformUtils::Terminate()` is called
+
+  XMLPlatformUtils::Terminate();
+
+  edit_figure = global_render->getActiveFigure();
+  global_render->setAutoUpdate(auto_update);
+
+  return errorCount == 0;
+}
+}
+
+/*!
+ * \brief Validate the currently loaded grapics tree against the internal XML schema definition.
+ *
+ * \return ERROR_NONE on success, an error code on failure.
+ */
+err_t validate_graphics_tree(bool include_private_attributes)
+{
+  using namespace XERCES_CPP_NAMESPACE;
+
+  auto schema_filepath{include_private_attributes ? get_merged_schema_filepath()
+                                                  : (std::string(get_gr_dir()) + PATH_SEPARATOR + SCHEMA_REL_FILEPATH)};
   if (!file_exists(schema_filepath.c_str()))
     {
       return ERROR_PARSE_XML_NO_SCHEMA_FILE;
     }
-  schema_parser_ctxt = xmlSchemaNewParserCtxt(schema_filepath.c_str());
-  cleanup_and_set_error_if(schema_parser_ctxt == nullptr, ERROR_PARSE_XML_INVALID_SCHEMA);
-  schema = xmlSchemaParse(schema_parser_ctxt);
-  cleanup_and_set_error_if(schema == nullptr, ERROR_PARSE_XML_INVALID_SCHEMA);
-  xmlSchemaFreeParserCtxt(schema_parser_ctxt);
-  schema_parser_ctxt = nullptr;
-  valid_ctxt = xmlSchemaNewValidCtxt(schema);
-  doc = xmlReadDoc(BAD_CAST toXML(global_root).c_str(), nullptr, nullptr, XML_PARSE_NOBLANKS);
-  cleanup_and_set_error_if(doc == nullptr, ERROR_PARSE_XML_PARSING);
-  xmlSchemaSetValidStructuredErrors(valid_ctxt, schema_parse_error_handler, &has_schema_errors);
-  xmlSchemaValidateDoc(valid_ctxt, doc);
-  cleanup_and_set_error_if(has_schema_errors, ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION);
 
-cleanup:
-  if (doc != nullptr)
+  try
     {
-      xmlFreeDoc(doc);
+      XMLPlatformUtils::Initialize();
     }
-  if (valid_ctxt != nullptr)
+  catch (const XMLException &e)
     {
-      xmlSchemaFreeValidCtxt(valid_ctxt);
+      std::cerr << "Error during initialization! :\n" << TranscodeToUtf8Str(e.getMessage()) << std::endl;
+      return ERROR_PARSE_XML_PARSING;
     }
-  if (schema != nullptr)
-    {
-      xmlSchemaFree(schema);
-    }
-  if (schema_parser_ctxt != nullptr)
-    {
-      xmlSchemaFreeParserCtxt(schema_parser_ctxt);
-    }
-  xmlCleanupParser();
 
-  return error;
+  XMLSize_t errorCount = 0;
+  bool schema_invalid = false;
+  {
+    auto parser =
+        std::unique_ptr<SAX2XMLReaderImpl>(static_cast<SAX2XMLReaderImpl *>(XMLReaderFactory::createXMLReader()));
+
+    // Activate validation
+    parser->setFeature(XMLUni::fgSAX2CoreValidation, true);
+    parser->setFeature(XMLUni::fgXercesDynamic, false);
+    parser->setFeature(XMLUni::fgXercesSchema, true);
+    parser->setFeature(XMLUni::fgXercesSchemaFullChecking, true);
+    auto schema_filepath_transcoder =
+        TranscodeFromStr(reinterpret_cast<const XMLByte *>(schema_filepath.c_str()), schema_filepath.length(), "UTF-8");
+    parser->setProperty(XMLUni::fgXercesSchemaExternalNoNameSpaceSchemaLocation,
+                        (void *)schema_filepath_transcoder.str());
+
+    try
+      {
+        SaxErrorHandler error_handler(schema_filepath);
+        parser->setErrorHandler(&error_handler);
+        parser->parse(StringInputSource(toXML(
+            global_root, GRM::SerializerOptions{"", include_private_attributes
+                                                        ? GRM::SerializerOptions::InternalAttributesFormat::Plain
+                                                        : GRM::SerializerOptions::InternalAttributesFormat::None})));
+        errorCount = parser->getErrorCount();
+        schema_invalid = error_handler.schema_invalid().value();
+      }
+    catch (const OutOfMemoryException &)
+      {
+        std::cerr << "OutOfMemoryException" << std::endl;
+      }
+    catch (const XMLException &e)
+      {
+        std::cerr << "\nAn error occurred\n  Error: " << TranscodeToUtf8Str(e.getMessage()) << "\n" << std::endl;
+      }
+
+  } // `parser` must be freed before `XMLPlatformUtils::Terminate()` is called
+
+  XMLPlatformUtils::Terminate();
+
+  return schema_invalid ? ERROR_PARSE_XML_INVALID_SCHEMA
+                        : ((errorCount == 0) ? ERROR_NONE : ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION);
 }
 
 #endif
 
-int validate_graphics_tree_with_error_messages(void)
+/*!
+ * \brief Validate the currently loaded graphics tree and print error messages to stderr.
+ *
+ * This is a helper function to make `validate_graphics_tree` more convenient to use.
+ *
+ * \return 1 on success, 0 on failure.
+ */
+bool validate_graphics_tree_with_error_messages()
 {
-#ifndef NO_LIBXML2
-  err_t validation_error = validate_graphics_tree();
+#ifndef NO_XERCES_C
+  err_t validation_error = validate_graphics_tree(true);
   if (validation_error == ERROR_NONE)
     {
       fprintf(stderr, "The internal graphics tree passed the validity check.\n");
@@ -4334,15 +5829,38 @@ int validate_graphics_tree_with_error_messages(void)
       return 0;
     }
 #else
-  fprintf(stderr, "No libxml2 support compiled in, no validation possible!\n");
+  fprintf(stderr, "No Xerces-C++ support compiled in, no validation possible!\n");
 #endif
   return 1;
 }
 
 
+#ifndef NO_XERCES_C
+std::string get_merged_schema_filepath()
+{
+  if (plot_init_static_variables() != ERROR_NONE)
+    {
+      throw std::runtime_error("Initialization of static plot variables failed.");
+    }
+
+  std::string schema_filepath{std::string(grm_tmp_dir) + PATH_SEPARATOR + FULL_SCHEMA_FILENAME};
+  if (!file_exists(schema_filepath.c_str()))
+    {
+      const unsigned int indent = 2;
+      auto merged_schema = grm_load_graphics_tree_schema(true);
+      std::ofstream schema_file{schema_filepath};
+      schema_file << toXML(merged_schema, GRM::SerializerOptions{std::string(indent, ' ')});
+    }
+
+  return schema_filepath;
+}
+#endif
+
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- args set ------------------------------------------------------------------------------- */
+
+extern "C" {
 
 DEFINE_SET_METHODS(args)
 
@@ -4428,6 +5946,7 @@ void grm_finalize(void)
       type_map = nullptr;
       grid_delete(global_grid);
       global_grid = nullptr;
+      delete_tmp_dir();
       uninstall_backtrace_handler_if_enabled();
       plot_static_variables_initialized = 0;
     }
@@ -4449,10 +5968,86 @@ int grm_clear(void)
   return 1;
 }
 
+namespace internal
+{
+/*!
+ * \brief Restore backup attributes on the graphics tree when dumped with the `toXML` function.
+ *
+ * Use objects of this class as functor to filter attributes on the graphics tree which have a backup attribute. Rename
+ * backup attributes to match the names of the deleted attributes. This filter is needed to discard tranformed context
+ * data and to export the original data when the graphics tree is saved to an XML file.
+ */
+class RestoreBackupAttributeFilter
+{
+public:
+  /*!
+   * \brief The overloaded ()-operator to provide functor functionality.
+   *
+   * \param[in] attribute_name The name of attribute to filter.
+   * \param[in] element The element the currently processed attribute belongs to.
+   * \param[out] new_attribute_name Can be used to set a modified name for the current attribute. Leave unset or set to
+   *                                `std::nullopt` to keep the current attribute name.
+   * \return `true` if the attribute should be kept, `false` otherwise.
+   */
+  bool operator()(const std::string &attribute_name, const GRM::Element &element,
+                  std::optional<std::string> &new_attribute_name)
+  {
+    if (attribute_name.empty()) return false;
+
+    if (attribute_name[0] == '_')
+      {
+        std::optional<std::string_view> original_attribute_name = is_backup_attribute_for(attribute_name);
+        if (original_attribute_name &&
+            restore_backup_format_excludes.find(*original_attribute_name) == restore_backup_format_excludes.end())
+          {
+            new_attribute_name = *original_attribute_name;
+          }
+        return true;
+      }
+
+    if (restore_backup_format_excludes.find(attribute_name) == restore_backup_format_excludes.end())
+      {
+        std::stringstream potential_backup_attribute_name_stream;
+        potential_backup_attribute_name_stream << "_" << attribute_name << "_org";
+        auto potential_backup_attribute_name = potential_backup_attribute_name_stream.str();
+        if (element.hasAttribute(potential_backup_attribute_name))
+          {
+            if (element.getAttribute(attribute_name) != element.getAttribute(potential_backup_attribute_name) &&
+                str_equals_any(attribute_name, "x", "y", "z"))
+              {
+                context_keys_to_discard_.insert(static_cast<std::string>(element.getAttribute(attribute_name)));
+              }
+            return false;
+          }
+      }
+    return true;
+  }
+
+  /*!
+   * \brief Get the set of context keys which should be discarded when saving the graphics tree to an XML file.
+   */
+  const std::unordered_set<std::string> &context_keys_to_discard() const { return context_keys_to_discard_; }
+
+private:
+  std::unordered_set<std::string> context_keys_to_discard_;
+};
+} // namespace internal
+
 void grm_dump_graphics_tree(FILE *f)
 {
+  internal::RestoreBackupAttributeFilter restore_backup_attribute_filter;
   const unsigned int indent = 2;
-  fprintf(f, "%s\n", toXML(global_root, GRM::SerializerOptions{std::string(indent, ' ')}).c_str());
+  // Use a lambda around `restore_backup_attribute_filter` to make sure it is used by reference.
+  fprintf(f, "%s",
+          toXML(global_root,
+                GRM::SerializerOptions{std::string(indent, ' '),
+                                       GRM::SerializerOptions::InternalAttributesFormat::Obfuscated},
+                [&restore_backup_attribute_filter](const std::string &attribute_name, const GRM::Element &element,
+                                                   std::optional<std::string> &new_attribute_name) -> bool {
+                  return restore_backup_attribute_filter(attribute_name, element, new_attribute_name);
+                })
+              .c_str());
+  dump_context_as_xml_comment(f, &restore_backup_attribute_filter.context_keys_to_discard());
 }
 
 unsigned int grm_max_plotid(void)
@@ -4469,199 +6064,22 @@ unsigned int grm_max_plotid(void)
 
 char *grm_dump_graphics_tree_str(void)
 {
-  std::string graphics_tree_str = toXML(global_root);
-  char *graphics_tree_cstr = new char[graphics_tree_str.length() + 1];
-  strcpy(graphics_tree_cstr, graphics_tree_str.c_str());
-  return graphics_tree_cstr;
+  internal::RestoreBackupAttributeFilter restore_backup_attribute_filter;
+  // Use a lambda around `restore_backup_attribute_filter` to make sure it is used by reference.
+  std::string graphics_tree_str =
+      toXML(global_root, GRM::SerializerOptions{"", GRM::SerializerOptions::InternalAttributesFormat::Obfuscated},
+            [&restore_backup_attribute_filter](const std::string &attribute_name, const GRM::Element &element,
+                                               std::optional<std::string> &new_attribute_name) -> bool {
+              return restore_backup_attribute_filter(attribute_name, element, new_attribute_name);
+            });
+  char *context_cstr = dump_context_as_xml_comment_str(&restore_backup_attribute_filter.context_keys_to_discard());
+  char *graphics_tree_with_context_cstr =
+      static_cast<char *>(malloc(graphics_tree_str.length() + strlen(context_cstr) + 1));
+  strcpy(graphics_tree_with_context_cstr, graphics_tree_str.c_str());
+  strcpy(graphics_tree_with_context_cstr + graphics_tree_str.length(), context_cstr);
+  free(context_cstr);
+  return graphics_tree_with_context_cstr;
 }
-
-#ifndef NO_LIBXML2
-int grm_load_graphics_tree(FILE *file)
-{
-  char *gr_dir = get_gr_dir();
-  std::string schema_filepath{std::string(gr_dir) + "/" + SCHEMA_REL_FILEPATH};
-  free(reinterpret_cast<void *>(gr_dir));
-  bool xml_validation_enabled = false, use_xml_schema = false;
-  xmlSchemaParserCtxtPtr schema_parser_ctxt = nullptr;
-  xmlSchemaPtr schema = nullptr;
-  bool has_schema_errors = false;
-  int ret = -1;
-  xmlSchemaValidCtxtPtr valid_ctxt = nullptr;
-  xmlTextReaderPtr reader = nullptr;
-  std::shared_ptr<GRM::Element> insertion_parent, current_gr_element;
-  err_t error = ERROR_NONE;
-
-  error = plot_init_static_variables();
-  cleanup_if_error;
-
-  xmlInitParser();
-  xml_validation_enabled = is_env_variable_enabled(ENABLE_XML_VALIDATION_ENV_KEY.c_str());
-  use_xml_schema = xml_validation_enabled && file_exists(schema_filepath.c_str());
-  if (use_xml_schema)
-    {
-      schema_parser_ctxt = xmlSchemaNewParserCtxt(schema_filepath.c_str());
-      cleanup_and_set_error_if(schema_parser_ctxt == nullptr, ERROR_PARSE_XML_INVALID_SCHEMA);
-      schema = xmlSchemaParse(schema_parser_ctxt);
-      cleanup_and_set_error_if(schema == nullptr, ERROR_PARSE_XML_INVALID_SCHEMA);
-      xmlSchemaFreeParserCtxt(schema_parser_ctxt);
-      schema_parser_ctxt = nullptr;
-      valid_ctxt = xmlSchemaNewValidCtxt(schema);
-    }
-  reader = xmlReaderForFd(fileno(file), nullptr, nullptr, XML_PARSE_NOBLANKS);
-  cleanup_and_set_error_if(reader == nullptr, ERROR_PARSE_XML_PARSING);
-
-  if (use_xml_schema)
-    {
-      xmlTextReaderSchemaValidateCtxt(reader, valid_ctxt, 0);
-      xmlSchemaSetValidStructuredErrors(valid_ctxt, schema_parse_error_handler, &has_schema_errors);
-    }
-
-  ret = xmlTextReaderRead(reader);
-  cleanup_and_set_error_if(has_schema_errors, ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION);
-  global_render->setAutoUpdate(false);
-  while (ret == 1)
-    {
-      xmlNodePtr node = xmlTextReaderCurrentNode(reader);
-      int node_type = xmlTextReaderNodeType(reader);
-      const xmlChar *node_name = xmlTextReaderConstName(reader);
-      if (node_type == XML_READER_TYPE_ELEMENT)
-        {
-          if (xmlStrEqual(node_name, BAD_CAST "root"))
-            {
-              global_root = global_render->createElement("root");
-              global_render->replaceChildren(global_root);
-              insertion_parent = nullptr;
-              current_gr_element = global_root;
-            }
-          else
-            {
-              current_gr_element = global_render->createElement(reinterpret_cast<const char *>(node_name));
-            }
-          for (xmlAttrPtr attr = node->properties; attr != nullptr; attr = attr->next)
-            {
-              const xmlChar *attr_name = attr->name;
-              xmlChar *attr_value = xmlNodeListGetString(node->doc, attr->children, 1);
-
-              current_gr_element->setAttribute(reinterpret_cast<const char *>(attr_name),
-                                               reinterpret_cast<const char *>(attr_value));
-              if (reinterpret_cast<const char *>(attr_name) == "active" &&
-                  reinterpret_cast<const char *>(attr_value) == "1")
-                global_render->setActiveFigure(current_gr_element);
-              xmlFree(reinterpret_cast<void *>(attr_value));
-            }
-          if (insertion_parent != nullptr)
-            {
-              insertion_parent->appendChild(current_gr_element);
-            }
-          if (!xmlTextReaderIsEmptyElement(reader))
-            {
-              insertion_parent = current_gr_element;
-            }
-        }
-      else if (node_type == XML_READER_TYPE_END_ELEMENT)
-        {
-          insertion_parent = insertion_parent->parentElement();
-        }
-      ret = xmlTextReaderRead(reader);
-      cleanup_and_set_error_if(has_schema_errors, ERROR_PARSE_XML_FAILED_SCHEMA_VALIDATION);
-    }
-  edit_figure = global_render->getActiveFigure();
-  global_render->setAutoUpdate(true);
-
-  if (ret != 0)
-    {
-      const xmlError *xml_error = xmlGetLastError();
-      logger((stderr, "%s: failed to parse in line %d, col %d. Error %d: %s\n", xml_error->file, xml_error->line,
-              xml_error->int2, xml_error->code, xml_error->message));
-      cleanup_and_set_error(ERROR_PARSE_XML_PARSING);
-    }
-
-cleanup:
-  if (reader != nullptr)
-    {
-      xmlFreeTextReader(reader);
-    }
-  if (valid_ctxt != nullptr)
-    {
-      xmlSchemaFreeValidCtxt(valid_ctxt);
-    }
-  if (schema != nullptr)
-    {
-      xmlSchemaFree(schema);
-    }
-  if (schema_parser_ctxt)
-    {
-      xmlSchemaFreeParserCtxt(schema_parser_ctxt);
-    }
-  xmlCleanupParser();
-
-  return error == ERROR_NONE;
-}
-#elif !defined(NO_EXPAT)
-static void xml_parse_start_handler(void *data, const XML_Char *tagName, const XML_Char **attr)
-{
-  auto *insertionParent = (std::shared_ptr<GRM::Element> *)data;
-  if (strcmp(tagName, "root") == 0)
-    {
-      global_root = global_render->createElement("root");
-      global_render->replaceChildren(global_root);
-      if (attr[0])
-        {
-          global_root->setAttribute(attr[0], attr[1]);
-        }
-      (*insertionParent) = global_root;
-    }
-  else if (strcmp(tagName, "figure") == 0)
-    {
-      edit_figure = global_render->createElement("figure");
-      global_root->append(edit_figure);
-    }
-  else
-    {
-      std::shared_ptr<GRM::Element> child = global_render->createElement(tagName);
-      for (int i = 0; attr[i]; i += 2)
-        {
-          child->setAttribute(attr[i], attr[i + 1]);
-        }
-
-      (*insertionParent)->appendChild(child);
-      *insertionParent = child;
-    }
-}
-
-static void xml_parse_end_handler(void *data, const char *tagName)
-{
-  auto currentNode = (std::shared_ptr<GRM::Element> *)data;
-  *((std::shared_ptr<GRM::Element> *)data) = (*currentNode)->parentElement();
-}
-
-int grm_load_graphics_tree(FILE *file)
-{
-  std::string xmlstring;
-  XML_Parser parser = XML_ParserCreate(nullptr);
-  std::shared_ptr<GRM::Element> parentNode;
-
-  std::fseek(file, 0, SEEK_END);
-  xmlstring.resize(std::ftell(file));
-  std::rewind(file);
-  std::fread(&xmlstring[0], 1, xmlstring.size(), file);
-
-  plot_init_static_variables();
-
-  XML_SetUserData(parser, &parentNode);
-  XML_SetElementHandler(parser, xml_parse_start_handler, xml_parse_end_handler);
-
-  if (XML_Parse(parser, xmlstring.c_str(), xmlstring.length(), XML_TRUE) == XML_STATUS_ERROR)
-    {
-      logger((stderr, "Cannot parse XML-String\n"));
-      return 0;
-    }
-
-  XML_ParserFree(parser);
-
-  return 1;
-}
-#endif
 
 int grm_merge(const grm_args_t *args)
 {
@@ -5116,97 +6534,117 @@ int grm_switch(unsigned int id)
   return 1;
 }
 
-} /* end of extern "C" block */
+
+int grm_validate(void)
+{
+#ifndef NO_XERCES_C
+  err_t validation_error = validate_graphics_tree();
+  return (validation_error == ERROR_NONE);
+#endif
+  return 0;
+}
+} /* end of extern "C" */
 
 /* ========================= c++ ==================================================================================== */
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ c++ libxml util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ c++ xerces util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#ifndef NO_LIBXML2
-std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(void)
+#ifndef NO_XERCES_C
+std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(bool with_private_attributes)
 {
-  char *gr_dir = get_gr_dir();
-  std::string schema_filepath{std::string(gr_dir) + "/" + SCHEMA_REL_FILEPATH};
-  free(reinterpret_cast<void *>(gr_dir));
-  int ret = -1;
-  xmlSchemaValidCtxtPtr valid_ctxt = nullptr;
-  xmlTextReaderPtr reader = nullptr;
-  std::shared_ptr<GRM::Document> document;
-  std::shared_ptr<GRM::Element> insertion_parent, current_element;
-  err_t error = ERROR_NONE;
-  FILE *schema_file;
+  using namespace XERCES_CPP_NAMESPACE;
 
-  error = plot_init_static_variables();
-  cleanup_if_error;
+  const std::string gr_dir{get_gr_dir()};
+  const std::string schema_filepath{gr_dir + PATH_SEPARATOR + SCHEMA_REL_FILEPATH};
+  const std::string private_schema_filepath{gr_dir + PATH_SEPARATOR + PRIVATE_SCHEMA_REL_FILEPATH};
 
-  schema_file = fopen(schema_filepath.c_str(), "r");
-  cleanup_and_set_error_if(schema_file == nullptr, ERROR_PARSE_XML_NO_SCHEMA_FILE);
-  xmlInitParser();
-  reader = xmlReaderForFd(fileno(schema_file), nullptr, nullptr, XML_PARSE_NOBLANKS);
-  cleanup_and_set_error_if(reader == nullptr, ERROR_PARSE_XML_PARSING);
-  ret = xmlTextReaderRead(reader);
-  document = GRM::createDocument();
-  while (ret == 1)
+  try
     {
-      xmlNodePtr node = xmlTextReaderCurrentNode(reader);
-      int node_type = xmlTextReaderNodeType(reader);
-      const xmlChar *node_name = xmlTextReaderConstName(reader);
-      if (node_type == XML_READER_TYPE_ELEMENT)
+      XMLPlatformUtils::Initialize();
+    }
+  catch (const XMLException &e)
+    {
+      std::cerr << "Error during initialization! :\n" << TranscodeToUtf8Str(e.getMessage()) << std::endl;
+      return nullptr;
+    }
+
+  bool auto_update;
+  global_render->getAutoUpdate(&auto_update);
+  global_render->setAutoUpdate(false);
+
+  std::shared_ptr<GRM::Document> private_schema_document;
+  XMLSize_t errorCount = 0;
+  if (with_private_attributes)
+    {
+      private_schema_document = GRM::createDocument();
+      auto parser =
+          std::unique_ptr<SAX2XMLReaderImpl>(static_cast<SAX2XMLReaderImpl *>(XMLReaderFactory::createXMLReader()));
+
+      // Deactivate validation since there is no schema to validate the schema
+      parser->setFeature(XMLUni::fgSAX2CoreValidation, false);
+      parser->setFeature(XMLUni::fgXercesDynamic, false);
+      parser->setFeature(XMLUni::fgXercesSchema, false);
+      parser->setFeature(XMLUni::fgXercesSchemaFullChecking, false);
+
+      try
         {
-          current_element = document->createElement(reinterpret_cast<const char *>(node_name));
-          for (xmlAttrPtr attr = node->properties; attr != nullptr; attr = attr->next)
-            {
-              const xmlChar *attr_name = attr->name;
-              xmlChar *attr_value = xmlNodeListGetString(node->doc, attr->children, 1);
-
-              current_element->setAttribute(reinterpret_cast<const char *>(attr_name),
-                                            reinterpret_cast<const char *>(attr_value));
-              xmlFree(reinterpret_cast<void *>(attr_value));
-            }
-          if (insertion_parent != nullptr)
-            {
-              insertion_parent->append(current_element);
-            }
-          else
-            {
-              document->append(current_element);
-            }
-          if (!xmlTextReaderIsEmptyElement(reader))
-            {
-              insertion_parent = current_element;
-            }
+          SchemaParseHandler handler(*private_schema_document);
+          parser->setContentHandler(&handler);
+          parser->setErrorHandler(static_cast<SaxErrorHandler *>(&handler));
+          parser->parse(private_schema_filepath.c_str());
+          errorCount = parser->getErrorCount();
         }
-      else if (node_type == XML_READER_TYPE_END_ELEMENT)
+      catch (const OutOfMemoryException &)
         {
-          insertion_parent = insertion_parent->parentElement();
+          std::cerr << "OutOfMemoryException" << std::endl;
         }
-      ret = xmlTextReaderRead(reader);
+      catch (const XMLException &e)
+        {
+          std::cerr << "\nAn error occurred\n  Error: " << TranscodeToUtf8Str(e.getMessage()) << "\n" << std::endl;
+        }
     }
 
-  if (ret != 0)
+  std::shared_ptr<GRM::Document> schema_document;
+  if (errorCount == 0)
     {
-      const xmlError *xml_error = xmlGetLastError();
-      logger((stderr, "%s: failed to parse in line %d, col %d. Error %d: %s\n", xml_error->file, xml_error->line,
-              xml_error->int2, xml_error->code, xml_error->message));
-      cleanup_and_set_error(ERROR_PARSE_XML_PARSING);
+      errorCount = 0;
+      schema_document = GRM::createDocument();
+      {
+        auto parser =
+            std::unique_ptr<SAX2XMLReaderImpl>(static_cast<SAX2XMLReaderImpl *>(XMLReaderFactory::createXMLReader()));
+
+        // Deactivate validation since there is no schema to validate the schema
+        parser->setFeature(XMLUni::fgSAX2CoreValidation, false);
+        parser->setFeature(XMLUni::fgXercesDynamic, false);
+        parser->setFeature(XMLUni::fgXercesSchema, false);
+        parser->setFeature(XMLUni::fgXercesSchemaFullChecking, false);
+
+        try
+          {
+            SchemaParseHandler handler(*schema_document,
+                                       with_private_attributes ? private_schema_document.get() : nullptr);
+            parser->setContentHandler(&handler);
+            parser->setErrorHandler(static_cast<SaxErrorHandler *>(&handler));
+            parser->parse(schema_filepath.c_str());
+            errorCount = parser->getErrorCount();
+          }
+        catch (const OutOfMemoryException &)
+          {
+            std::cerr << "OutOfMemoryException" << std::endl;
+          }
+        catch (const XMLException &e)
+          {
+            std::cerr << "\nAn error occurred\n  Error: " << TranscodeToUtf8Str(e.getMessage()) << "\n" << std::endl;
+          }
+
+      } // `parser` must be freed before `XMLPlatformUtils::Terminate()` is called
     }
 
-cleanup:
-  if (reader != nullptr)
-    {
-      xmlFreeTextReader(reader);
-    }
-  if (valid_ctxt != nullptr)
-    {
-      xmlSchemaFreeValidCtxt(valid_ctxt);
-    }
-  xmlCleanupParser();
-  if (schema_file != nullptr)
-    {
-      fclose(schema_file);
-    }
+  XMLPlatformUtils::Terminate();
 
-  return (error == ERROR_NONE) ? document : nullptr;
+  global_render->setAutoUpdate(auto_update);
+
+  return (errorCount == 0) ? schema_document : nullptr;
 }
 #endif
 
@@ -5483,13 +6921,4 @@ int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, cons
   *focus_x = (ndc_left - *factor_x * viewport[0]) / (1 - *factor_x) - (viewport[0] + viewport[1]) / 2.0;
   *focus_y = (ndc_top - *factor_y * viewport[3]) / (1 - *factor_y) - (viewport[2] + viewport[3]) / 2.0;
   return 1;
-}
-
-bool grm_validate(void)
-{
-#ifndef NO_LIBXML2
-  err_t validation_error = validate_graphics_tree();
-  return (validation_error == ERROR_NONE);
-#endif
-  return false;
 }
