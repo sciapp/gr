@@ -3748,7 +3748,10 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                       int tick_color;
                       tick_color = *reinterpret_cast<int *>(tick_arg->value_ptr);
 
-                      (*tick_modification_map)[axis_id][tick_value].emplace("line_color_ind", tick_color);
+                      if ((*tick_modification_map)[axis_id][tick_value].count("line_color_ind") > 0)
+                        (*tick_modification_map)[axis_id][tick_value]["line_color_ind"] = GRM::Value(tick_color);
+                      else
+                        (*tick_modification_map)[axis_id][tick_value].emplace("line_color_ind", tick_color);
                       logger((stderr, "Got tick_color \"%i\"\n", tick_color));
                     }
                   else if (strcmp(tick_arg->key, "line_spec") == 0)
@@ -3762,7 +3765,10 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                       const char *line_spec;
                       line_spec = *reinterpret_cast<const char **>(tick_arg->value_ptr);
 
-                      (*tick_modification_map)[axis_id][tick_value].emplace("line_spec", std::string(line_spec));
+                      if ((*tick_modification_map)[axis_id][tick_value].count("line_spec") > 0)
+                        (*tick_modification_map)[axis_id][tick_value]["line_spec"] = GRM::Value(line_spec);
+                      else
+                        (*tick_modification_map)[axis_id][tick_value].emplace("line_spec", line_spec);
                       logger((stderr, "Got line_spec \"%s\"\n", line_spec));
                     }
                   else if (strcmp(tick_arg->key, "line_type") == 0)
@@ -3780,7 +3786,10 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                           const char *line_type;
                           line_type = *reinterpret_cast<const char **>(tick_arg->value_ptr);
 
-                          (*tick_modification_map)[axis_id][tick_value].emplace("line_type", std::string(line_type));
+                          if ((*tick_modification_map)[axis_id][tick_value].count("line_type") > 0)
+                            (*tick_modification_map)[axis_id][tick_value]["line_type"] = GRM::Value(line_type);
+                          else
+                            (*tick_modification_map)[axis_id][tick_value].emplace("line_type", line_type);
                           logger((stderr, "Got line_type \"%s\"\n", line_type));
                         }
                       else
@@ -3788,7 +3797,10 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                           int line_type;
                           line_type = *reinterpret_cast<int *>(tick_arg->value_ptr);
 
-                          (*tick_modification_map)[axis_id][tick_value].emplace("line_type", line_type);
+                          if ((*tick_modification_map)[axis_id][tick_value].count("line_type") > 0)
+                            (*tick_modification_map)[axis_id][tick_value]["line_type"] = GRM::Value(line_type);
+                          else
+                            (*tick_modification_map)[axis_id][tick_value].emplace("line_type", line_type);
                           logger((stderr, "Got line_type \"%i\"\n", line_type));
                         }
                     }
@@ -3802,7 +3814,11 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                         }
                       double tick_length;
                       tick_length = *reinterpret_cast<double *>(tick_arg->value_ptr);
-                      (*tick_modification_map)[axis_id][tick_value].emplace("tick_size", tick_length);
+
+                      if ((*tick_modification_map)[axis_id][tick_value].count("tick_size") > 0)
+                        (*tick_modification_map)[axis_id][tick_value]["tick_size"] = GRM::Value(tick_length);
+                      else
+                        (*tick_modification_map)[axis_id][tick_value].emplace("tick_size", tick_length);
                       logger((stderr, "Got tick_length \"%lf\"\n", tick_length));
                     }
                   else if (strcmp(tick_arg->key, "text_align_horizontal") == 0)
@@ -3820,8 +3836,12 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                           const char *text_align_horizontal;
                           text_align_horizontal = *reinterpret_cast<const char **>(tick_arg->value_ptr);
 
-                          (*tick_modification_map)[axis_id][tick_value].emplace("text_align_horizontal",
-                                                                                std::string(text_align_horizontal));
+                          if ((*tick_modification_map)[axis_id][tick_value].count("text_align_horizontal") > 0)
+                            (*tick_modification_map)[axis_id][tick_value]["text_align_horizontal"] =
+                                GRM::Value(text_align_horizontal);
+                          else
+                            (*tick_modification_map)[axis_id][tick_value].emplace("text_align_horizontal",
+                                                                                  text_align_horizontal);
                           logger((stderr, "Got text_align_horizontal \"%s\"\n", text_align_horizontal));
                         }
                       else
@@ -3829,8 +3849,12 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                           int text_align_horizontal;
                           text_align_horizontal = *reinterpret_cast<int *>(tick_arg->value_ptr);
 
-                          (*tick_modification_map)[axis_id][tick_value].emplace("text_align_horizontal",
-                                                                                text_align_horizontal);
+                          if ((*tick_modification_map)[axis_id][tick_value].count("text_align_horizontal") > 0)
+                            (*tick_modification_map)[axis_id][tick_value]["text_align_horizontal"] =
+                                GRM::Value(text_align_horizontal);
+                          else
+                            (*tick_modification_map)[axis_id][tick_value].emplace("text_align_horizontal",
+                                                                                  text_align_horizontal);
                           logger((stderr, "Got text_align_horizontal \"%i\"\n", text_align_horizontal));
                         }
                     }
@@ -3849,8 +3873,12 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                           const char *text_align_vertical;
                           text_align_vertical = *reinterpret_cast<const char **>(tick_arg->value_ptr);
 
-                          (*tick_modification_map)[axis_id][tick_value].emplace("text_align_vertical",
-                                                                                std::string(text_align_vertical));
+                          if ((*tick_modification_map)[axis_id][tick_value].count("text_align_vertical") > 0)
+                            (*tick_modification_map)[axis_id][tick_value]["text_align_vertical"] =
+                                GRM::Value(text_align_vertical);
+                          else
+                            (*tick_modification_map)[axis_id][tick_value].emplace("text_align_vertical",
+                                                                                  text_align_vertical);
                           logger((stderr, "Got text_align_vertical \"%s\"\n", text_align_vertical));
                         }
                       else
@@ -3858,8 +3886,12 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                           int text_align_vertical;
                           text_align_vertical = *reinterpret_cast<int *>(tick_arg->value_ptr);
 
-                          (*tick_modification_map)[axis_id][tick_value].emplace("text_align_vertical",
-                                                                                text_align_vertical);
+                          if ((*tick_modification_map)[axis_id][tick_value].count("text_align_vertical") > 0)
+                            (*tick_modification_map)[axis_id][tick_value]["text_align_vertical"] =
+                                GRM::Value(text_align_vertical);
+                          else
+                            (*tick_modification_map)[axis_id][tick_value].emplace("text_align_vertical",
+                                                                                  text_align_vertical);
                           logger((stderr, "Got text_align_vertical \"%i\"\n", text_align_vertical));
                         }
                     }
@@ -3874,7 +3906,10 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                       const char *tick_label;
                       tick_label = *reinterpret_cast<const char **>(tick_arg->value_ptr);
 
-                      (*tick_modification_map)[axis_id][tick_value].emplace("tick_label", std::string(tick_label));
+                      if ((*tick_modification_map)[axis_id][tick_value].count("tick_label") > 0)
+                        (*tick_modification_map)[axis_id][tick_value]["tick_label"] = GRM::Value(tick_label);
+                      else
+                        (*tick_modification_map)[axis_id][tick_value].emplace("tick_label", tick_label);
                       logger((stderr, "Got tick_label \"%s\"\n", tick_label));
                     }
                   else if (strcmp(tick_arg->key, "tick_width") == 0)
@@ -3888,7 +3923,10 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                       double tick_width;
                       tick_width = *reinterpret_cast<double *>(tick_arg->value_ptr);
 
-                      (*tick_modification_map)[axis_id][tick_value].emplace("tick_size", tick_width);
+                      if ((*tick_modification_map)[axis_id][tick_value].count("tick_width") > 0)
+                        (*tick_modification_map)[axis_id][tick_value]["tick_width"] = GRM::Value(tick_width);
+                      else
+                        (*tick_modification_map)[axis_id][tick_value].emplace("tick_width", tick_width);
                       logger((stderr, "Got tick_width \"%lf\"\n", tick_width));
                     }
                   else if (strcmp(tick_arg->key, "new_tick_value") == 0)
@@ -3902,7 +3940,10 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                       double new_tick_value;
                       new_tick_value = *reinterpret_cast<double *>(tick_arg->value_ptr);
 
-                      (*tick_modification_map)[axis_id][tick_value].emplace("value", new_tick_value);
+                      if ((*tick_modification_map)[axis_id][tick_value].count("value") > 0)
+                        (*tick_modification_map)[axis_id][tick_value]["value"] = GRM::Value(new_tick_value);
+                      else
+                        (*tick_modification_map)[axis_id][tick_value].emplace("value", new_tick_value);
                       logger((stderr, "Got new_tick_value \"%lf\"\n", new_tick_value));
                     }
                   else if (strcmp(tick_arg->key, "tick_is_major") == 0)
@@ -3916,7 +3957,10 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                       int tick_is_major;
                       tick_is_major = *reinterpret_cast<int *>(tick_arg->value_ptr);
 
-                      (*tick_modification_map)[axis_id][tick_value].emplace("is_major", tick_is_major);
+                      if ((*tick_modification_map)[axis_id][tick_value].count("is_major") > 0)
+                        (*tick_modification_map)[axis_id][tick_value]["is_major"] = GRM::Value(tick_is_major);
+                      else
+                        (*tick_modification_map)[axis_id][tick_value].emplace("is_major", tick_is_major);
                       logger((stderr, "Got tick_is_major \"%i\"\n", tick_is_major));
                     }
                   else if (strcmp(tick_arg->key, "tick_label_color") == 0)
@@ -3930,7 +3974,10 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                       int tick_label_color;
                       tick_label_color = *reinterpret_cast<int *>(tick_arg->value_ptr);
 
-                      (*tick_modification_map)[axis_id][tick_value].emplace("text_color_ind", tick_label_color);
+                      if ((*tick_modification_map)[axis_id][tick_value].count("text_color_ind") > 0)
+                        (*tick_modification_map)[axis_id][tick_value]["text_color_ind"] = GRM::Value(tick_label_color);
+                      else
+                        (*tick_modification_map)[axis_id][tick_value].emplace("text_color_ind", tick_label_color);
                       logger((stderr, "Got tick_label_color \"%i\"\n", tick_label_color));
                     }
                   else if (strcmp(tick_arg->key, "font") == 0)
@@ -3948,7 +3995,10 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                           const char *font;
                           font = *reinterpret_cast<const char **>(tick_arg->value_ptr);
 
-                          (*tick_modification_map)[axis_id][tick_value].emplace("font", std::string(font));
+                          if ((*tick_modification_map)[axis_id][tick_value].count("font") > 0)
+                            (*tick_modification_map)[axis_id][tick_value]["font"] = GRM::Value(font);
+                          else
+                            (*tick_modification_map)[axis_id][tick_value].emplace("font", font);
                           logger((stderr, "Got font \"%s\"\n", font));
                         }
                       else
@@ -3956,7 +4006,10 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                           int font;
                           font = *reinterpret_cast<int *>(tick_arg->value_ptr);
 
-                          (*tick_modification_map)[axis_id][tick_value].emplace("font", font);
+                          if ((*tick_modification_map)[axis_id][tick_value].count("font") > 0)
+                            (*tick_modification_map)[axis_id][tick_value]["font"] = GRM::Value(font);
+                          else
+                            (*tick_modification_map)[axis_id][tick_value].emplace("font", font);
                           logger((stderr, "Got font \"%i\"\n", font));
                         }
                     }
@@ -3975,8 +4028,11 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                           const char *font_precision;
                           font_precision = *reinterpret_cast<const char **>(tick_arg->value_ptr);
 
-                          (*tick_modification_map)[axis_id][tick_value].emplace("font_precision",
-                                                                                std::string(font_precision));
+                          if ((*tick_modification_map)[axis_id][tick_value].count("font_precision") > 0)
+                            (*tick_modification_map)[axis_id][tick_value]["font_precision"] =
+                                GRM::Value(font_precision);
+                          else
+                            (*tick_modification_map)[axis_id][tick_value].emplace("font_precision", font_precision);
                           logger((stderr, "Got font_precision \"%s\"\n", font_precision));
                         }
                       else
@@ -3984,7 +4040,11 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                           int font_precision;
                           font_precision = *reinterpret_cast<int *>(tick_arg->value_ptr);
 
-                          (*tick_modification_map)[axis_id][tick_value].emplace("font_precision", font_precision);
+                          if ((*tick_modification_map)[axis_id][tick_value].count("font_precision") > 0)
+                            (*tick_modification_map)[axis_id][tick_value]["font_precision"] =
+                                GRM::Value(font_precision);
+                          else
+                            (*tick_modification_map)[axis_id][tick_value].emplace("font_precision", font_precision);
                           logger((stderr, "Got font_precision \"%i\"\n", font_precision));
                         }
                     }
@@ -3999,7 +4059,11 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                       int scientific_format;
                       scientific_format = *reinterpret_cast<int *>(tick_arg->value_ptr);
 
-                      (*tick_modification_map)[axis_id][tick_value].emplace("scientific_format", scientific_format);
+                      if ((*tick_modification_map)[axis_id][tick_value].count("scientific_format") > 0)
+                        (*tick_modification_map)[axis_id][tick_value]["scientific_format"] =
+                            GRM::Value(scientific_format);
+                      else
+                        (*tick_modification_map)[axis_id][tick_value].emplace("scientific_format", scientific_format);
                       logger((stderr, "Got scientific_format \"%i\"\n", scientific_format));
                     }
                   else

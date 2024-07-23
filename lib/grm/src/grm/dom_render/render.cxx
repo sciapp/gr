@@ -4788,7 +4788,7 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
   kind = static_cast<std::string>(plot_parent->getAttribute("kind"));
   if (element->hasAttribute("mirrored_axis")) mirrored_axis = static_cast<int>(element->getAttribute("mirrored_axis"));
   axis_type = static_cast<std::string>(element->getAttribute("axis_type"));
-  if (element->hasAttribute("scientific_format")) // TODO: maybe need to be changed if Du Kim's MR gets merged
+  if (element->hasAttribute("scientific_format"))
     scientific_format = static_cast<int>(element->getAttribute("scientific_format"));
   if (plot_parent->hasAttribute("font")) processFont(plot_parent);
   if (plot_parent->hasAttribute("x_flip")) x_flip = static_cast<int>(plot_parent->getAttribute("x_flip"));
@@ -12458,21 +12458,25 @@ static void processTextRegion(const std::shared_ptr<GRM::Element> &element,
 
 static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group, int child_id, del_values del)
 {
-  double char_height;
+  double char_height, tmp = 0;
   double available_width, available_height;
-  double x, y;
-  double null, x_left = 0, x_right = 1; // todo: change x_left and x_right
+  double x, y, y_org, width;
   double window[4];
-  int scientific_format = 0;
+  int scientific_format = 2;
   std::shared_ptr<GRM::Element> text_elem, plot_parent = tick_group;
   char new_label[256];
-  int cur_start = 0, scale = 0;
-  bool x_flip, y_flip;
+  int cur_start = 0, scale = 0, cur_child_count = 0, child_id_org = child_id - 1, i = 0;
+  bool x_flip, y_flip, text_is_empty_or_number = true;
+  int pixel_width, pixel_height;
+  double metric_width, metric_height;
+  double aspect_ratio_ws_metric;
 
+  GRM::Render::getFigureSize(&pixel_width, &pixel_height, &metric_width, &metric_height);
+  aspect_ratio_ws_metric = metric_width / metric_height;
   getPlotParent(plot_parent);
   gr_inqcharheight(&char_height);
+
   auto text = static_cast<std::string>(tick_group->getAttribute("tick_label"));
-  auto width = static_cast<double>(tick_group->getAttribute("width"));
   auto axis_type = static_cast<std::string>(tick_group->parentElement()->getAttribute("axis_type"));
   auto value = static_cast<double>(tick_group->getAttribute("value"));
   auto label_pos = static_cast<double>(tick_group->parentElement()->getAttribute("label_pos"));
@@ -12491,24 +12495,37 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
     scale = static_cast<int>(tick_group->parentElement()->getAttribute("scale"));
   if (plot_parent->hasAttribute("x_flip")) x_flip = static_cast<int>(plot_parent->getAttribute("x_flip"));
   if (plot_parent->hasAttribute("y_flip")) y_flip = static_cast<int>(plot_parent->getAttribute("y_flip"));
+  if (tick_group->parentElement()->hasAttribute("scientific_format"))
+    scientific_format = static_cast<int>(tick_group->parentElement()->getAttribute("scientific_format"));
+  if (tick_group->hasAttribute("scientific_format"))
+    scientific_format = static_cast<int>(tick_group->getAttribute("scientific_format"));
 
-  gr_wctondc(&x_left, &null);
-  gr_wctondc(&x_right, &null);
-
-  if (text.empty()) return;
+  if (text.empty() && del != del_values::update_without_default && del != del_values::update_with_default) return;
   if (axis_type == "x")
     {
-      available_height = 0.8; // Todo: change this number
-      available_width = x_right - x_left;
+      available_height = 2.0; // Todo: change this number respecting the other objects
+      available_width = 1.0;  // Todo: change this number respecting the other label
       x = value;
       y = label_pos;
     }
   else if (axis_type == "y")
     {
-      available_height = x_right - x_left;
-      available_width = 0.8; // Todo: change this number
+      available_height = 3.0; // Todo: change this number respecting the other label
+      available_width = 1.0;  // Todo: change this number respecting the other objects
       x = label_pos;
       y = value;
+    }
+  if (aspect_ratio_ws_metric > 1)
+    available_width *= 1.0 / (aspect_ratio_ws_metric);
+  else
+    available_width *= aspect_ratio_ws_metric;
+  gr_wctondc(&x, &y);
+  y_org = y;
+
+  // get number of text children to figure out if children must be added or removed
+  for (const auto &child : tick_group->children())
+    {
+      if (child->localName() == "text" && child->hasAttribute("_child_id")) cur_child_count += 1;
     }
 
   if (is_number(text))
@@ -12517,14 +12534,11 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
         {
           char text_c[256];
           format_reference_t reference = {1, 1};
-          int sc_format = 2;
           const char minus[] = {(char)0xe2, (char)0x88, (char)0x92, '\0'}; // gr minus sign
           auto em_dash = std::string(minus);
           size_t start_pos = 0;
 
-          if (tick_group->parentElement()->hasAttribute("scientific_format"))
-            sc_format = static_cast<int>(tick_group->parentElement()->getAttribute("scientific_format"));
-          gr_setscientificformat(sc_format);
+          gr_setscientificformat(scientific_format);
 
           if (starts_with(text, em_dash))
             {
@@ -12535,16 +12549,23 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
           snprintf(text_c, 256, "%s", without_minus.c_str());
           text = gr_ftoa(text_c, atof(without_minus.c_str()), &reference);
           if (start_pos != 0) text = em_dash + text;
-          scientific_format = sc_format;
         }
     }
   else
     {
-      if (width > available_width)
+      double tbx[4], tby[4];
+      char text_c[256];
+      snprintf(text_c, 256, "%s", text.c_str());
+      gr_inqtext(x, y, text_c, tbx, tby);
+      gr_wctondc(&tbx[0], &tby[0]);
+      gr_wctondc(&tbx[1], &tby[1]);
+      width = tbx[1] - tbx[0];
+      tick_group->setAttribute("width", width);
+
+      if (width / char_height > available_width)
         {
           int breakpoint_positions[128];
-          int cur_num_breakpoints = 0, i;
-          double tbx[4], tby[4];
+          int cur_num_breakpoints = 0;
           const char *label = text.c_str();
           for (i = 0; i == 0 || label[i - 1] != '\0'; ++i)
             {
@@ -12561,7 +12582,7 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
                   /* add possible breakpoint */
                   breakpoint_positions[cur_num_breakpoints++] = i;
 
-                  if (width > available_width)
+                  if (width / char_height > available_width)
                     {
                       /* part is too big but doesn't have a breakpoint in it */
                       if (cur_num_breakpoints == 1)
@@ -12574,9 +12595,10 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
                           new_label[breakpoint_positions[cur_num_breakpoints - 2]] = '\0';
                         }
 
-                      if ((del != del_values::update_without_default && del != del_values::update_with_default))
+                      if ((del != del_values::update_without_default && del != del_values::update_with_default) ||
+                          cur_child_count + child_id_org < child_id)
                         {
-                          text_elem = global_render->createText(x, y, new_label + cur_start);
+                          text_elem = global_render->createText(x, y, new_label + cur_start, CoordinateSpace::NDC);
                           tick_group->append(text_elem);
                           text_elem->setAttribute("_child_id", child_id++);
                         }
@@ -12585,6 +12607,38 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
                           text_elem = tick_group->querySelectors("text[_child_id=" + std::to_string(child_id++) + "]");
                           if (text_elem != nullptr)
                             global_render->createText(x, y, new_label + cur_start, CoordinateSpace::NDC, text_elem);
+                        }
+                      if (text_elem != nullptr)
+                        {
+                          if (axis_type == "x")
+                            {
+                              text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_CENTER);
+                              if (pos <= 0.5 * (window[2] + window[3]) ||
+                                  ((scale & GR_OPTION_FLIP_Y || y_flip) && pos > 0.5 * (window[2] + window[3])))
+                                {
+                                  text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_TOP);
+                                }
+                              else
+                                {
+                                  text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_BOTTOM);
+                                }
+                            }
+                          else if (axis_type == "y")
+                            {
+                              text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_HALF);
+                              if ((pos <= 0.5 * (window[0] + window[1]) && !(scale & GR_OPTION_FLIP_X || x_flip)) ||
+                                  ((scale & GR_OPTION_FLIP_X || x_flip) && pos > 0.5 * (window[0] + window[1]) &&
+                                   tick_group->parentElement()->parentElement()->localName() != "colorbar"))
+                                {
+                                  text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_RIGHT);
+                                }
+                              else
+                                {
+                                  text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_LEFT);
+                                }
+                            }
+
+                          text_elem->setAttribute("scientific_format", scientific_format);
                         }
 
                       if (cur_num_breakpoints == 1)
@@ -12598,7 +12652,10 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
                           breakpoint_positions[0] = breakpoint_positions[cur_num_breakpoints - 1];
                           cur_num_breakpoints = 1;
                         }
-                      y -= char_height * 1.5;
+                      y -= 1.1 * char_height;
+
+                      // if the available height is passed the rest of the label won't get displayed
+                      if ((y_org - y) / char_height > available_height) break;
                     }
                 }
               else
@@ -12610,21 +12667,26 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
           new_label[i] = '\0';
 
           text = new_label + cur_start;
+          if (text == "" && (del != del_values::update_without_default && del != del_values::update_with_default))
+            del = del_values::update_without_default;
         }
+      if (i >= cur_start && text != " " && text != "\0" && text != "" && cur_child_count + child_id_org < child_id)
+        text_is_empty_or_number = false;
+      if (i < cur_start && !text_is_empty_or_number) child_id_org += 1;
     }
 
-  if (del != del_values::update_without_default && del != del_values::update_with_default)
+  if ((del != del_values::update_without_default && del != del_values::update_with_default) || !text_is_empty_or_number)
     {
-      text_elem = global_render->createText(x, y, text, CoordinateSpace::WC);
+      text_elem = global_render->createText(x, y, text, CoordinateSpace::NDC);
       text_elem->setAttribute("_child_id", child_id);
       tick_group->append(text_elem);
     }
   else
     {
       text_elem = tick_group->querySelectors("text[_child_id=" + std::to_string(child_id) + "]");
-      if (text_elem != nullptr) global_render->createText(x, y, text, CoordinateSpace::WC, text_elem);
+      if (text_elem != nullptr) global_render->createText(x, y, text, CoordinateSpace::NDC, text_elem);
     }
-  if (text_elem != nullptr && del != del_values::update_without_default)
+  if ((text_elem != nullptr && del != del_values::update_without_default) || !text_is_empty_or_number)
     {
       text_elem->setAttribute("text_color_ind", 1);
       // set text align if not set by user
@@ -12658,18 +12720,22 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
                 }
             }
         }
-      if (scientific_format == 2 || tick_group->parentElement()->hasAttribute("scientific_format"))
-        {
-          if (scientific_format != 2)
-            scientific_format = static_cast<int>(tick_group->parentElement()->getAttribute("scientific_format"));
-          text_elem->setAttribute("scientific_format", scientific_format);
-          gr_setscientificformat(scientific_format);
-        }
+      text_elem->setAttribute("scientific_format", scientific_format);
+    }
+
+
+  // remove all text children with _child_id > child_id
+  while (child_id < cur_child_count + child_id_org)
+    {
+      tick_group->querySelectors("text[_child_id=" + std::to_string(child_id++) + "]")->remove();
+      if (child_id == cur_child_count + child_id_org && i >= cur_start &&
+          tick_group->querySelectors("text[_child_id=" + std::to_string(child_id) + "]"))
+        tick_group->querySelectors("text[_child_id=" + std::to_string(child_id) + "]")->remove();
     }
 }
 
 static void applyTickModificationMap(const std::shared_ptr<GRM::Element> &tick_group,
-                                     const std::shared_ptr<GRM::Context> &context, int child_id)
+                                     const std::shared_ptr<GRM::Context> &context, int child_id, del_values del)
 {
   std::shared_ptr<GRM::Element> text_elem = nullptr;
   bool tick_group_attr_changed = false, old_automatic_update = automatic_update;
@@ -12692,24 +12758,32 @@ static void applyTickModificationMap(const std::shared_ptr<GRM::Element> &tick_g
       if (tick_value_to_map.find(value) != tick_value_to_map.end())
         {
           auto key_value_map = tick_value_to_map[value];
-          for (auto const &[attr, val] : key_value_map)
+          if (!key_value_map.empty())
             {
-              if (str_equals_any(attr, "is_major", "line_color_ind", "line_spec", "line_type", "line_width",
-                                 "text_align_horizontal", "text_align_vertical", "tick_label", "tick_size", "value"))
+              for (auto const &[attr, val] : key_value_map)
                 {
-                  tick_group->setAttribute(attr, val);
-                  if (text_elem != nullptr && attr == "tick_label")
-                    text_elem->setAttribute("text", val);
-                  else if (text_elem == nullptr && attr == "tick_label")
-                    tickLabelAdjustment(tick_group, child_id, del_values::recreate_own_children);
-                  else if (str_equals_any(attr, "is_major", "value"))
-                    tick_group->setAttribute("_update_required", true);
-                  tick_group_attr_changed = true;
-                }
-              else if (str_equals_any(attr, "font", "font_precision", "scientific_format", "text", "text_color_ind",
-                                      "text_align_horizontal", "text_align_vertical", "x", "y"))
-                {
-                  text_elem->setAttribute(attr, val);
+                  if (str_equals_any(attr, "is_major", "line_color_ind", "line_spec", "line_type", "line_width",
+                                     "text_align_horizontal", "text_align_vertical", "tick_label", "tick_size",
+                                     "value"))
+                    {
+                      tick_group->setAttribute(attr, val);
+                      if (attr == "tick_label")
+                        {
+                          tick_group->setAttribute("tick_label", val);
+                          tickLabelAdjustment(tick_group, child_id,
+                                              text_elem != nullptr ? del_values::update_without_default : del);
+                        }
+                      else if (str_equals_any(attr, "is_major", "value"))
+                        {
+                          tick_group->setAttribute("_update_required", true);
+                        }
+                      tick_group_attr_changed = true;
+                    }
+                  else if (str_equals_any(attr, "font", "font_precision", "scientific_format", "text", "text_color_ind",
+                                          "text_align_horizontal", "text_align_vertical", "x", "y"))
+                    {
+                      if (text_elem != nullptr) text_elem->setAttribute(attr, val);
+                    }
                 }
             }
           if (tick_group_attr_changed) GRM::Render::processAttributes(tick_group);
@@ -12821,7 +12895,7 @@ static void processTickGroup(const std::shared_ptr<GRM::Element> &element, const
     }
 
   tickLabelAdjustment(element, child_id, del);
-  applyTickModificationMap(element, context, child_id);
+  applyTickModificationMap(element, context, child_id, del);
 }
 
 static void processTick(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -18600,13 +18674,27 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
             {
               auto val = static_cast<double>(element->getAttribute("value"));
               auto map_idx = static_cast<int>(element->parentElement()->getAttribute("_axis_id"));
-              tick_modification_map[map_idx][val].emplace(attr, element->getAttribute(attr));
+              if (tick_modification_map[map_idx][val].count(attr) > 0)
+                {
+                  tick_modification_map[map_idx][val][attr] = element->getAttribute(attr);
+                }
+              else
+                {
+                  tick_modification_map[map_idx][val].emplace(attr, element->getAttribute(attr));
+                }
             }
           else if (element->localName() == "text" && element->parentElement()->localName() == "tick_group")
             {
               auto val = static_cast<double>(element->parentElement()->getAttribute("value"));
               auto map_idx = static_cast<int>(element->parentElement()->parentElement()->getAttribute("_axis_id"));
-              tick_modification_map[map_idx][val].emplace(attr, element->getAttribute(attr));
+              if (tick_modification_map[map_idx][val].count(attr) > 0)
+                {
+                  tick_modification_map[map_idx][val][attr] = element->getAttribute(attr);
+                }
+              else
+                {
+                  tick_modification_map[map_idx][val].emplace(attr, element->getAttribute(attr));
+                }
             }
         }
       global_root->setAttribute("_modified", true);
