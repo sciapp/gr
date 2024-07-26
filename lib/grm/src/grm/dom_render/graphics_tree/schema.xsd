@@ -406,11 +406,13 @@
                 <xs:element ref="tick" minOccurs="0" maxOccurs="2"/> <!-- tick -->
             </xs:choice>
         <xs:attributeGroup ref="move_xform_ndc"/>
+        <xs:attribute name="char_height" type="xs:double"/>
         <xs:attribute name="is_major" type="xs:integer"/>
         <xs:attribute name="line_color_ind" type="xs:integer"/>
         <xs:attribute name="line_spec" type="xs:string"/>
         <xs:attribute name="line_type" type="strint"/>
         <xs:attribute name="line_width" type="xs:double"/>
+        <xs:attribute name="scientific_format" type="xs:integer"/>
         <xs:attribute name="text_align_horizontal" type="strint"/>
         <xs:attribute name="text_align_vertical" type="strint"/>
         <xs:attribute name="tick_label" type="xs:string"/>

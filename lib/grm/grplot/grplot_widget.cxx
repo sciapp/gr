@@ -1145,7 +1145,8 @@ void GRPlotWidget::AttributeEditEvent()
           if (typeid(field) == typeid(QLineEdit) && ((QLineEdit *)fields[i])->isModified())
             {
               std::string name = std::string(current_selection->get_ref()->getAttribute("name"));
-              if (((QLineEdit *)fields[i])->text().toStdString().empty())
+              if (((QLineEdit *)fields[i])->text().toStdString().empty() && labels[i].toStdString() != "tick_label" &&
+                  labels[i].toStdString() != "text")
                 {
                   /* remove attributes from tree when the value got removed */
                   current_selection->get_ref()->removeAttribute(labels[i].toStdString());
