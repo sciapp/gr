@@ -241,7 +241,6 @@
             <xs:attribute name="r_max" type="xs:double"/>
             <xs:attribute name="r_min" type="xs:double"/>
             <xs:attribute name="resample_method" type="strint"/>
-            <xs:attribute name="rings" type="xs:integer"/>
             <xs:attribute name="select_specific_xform" type="xs:integer"/>
             <xs:attribute name="space" type="xs:integer"/>
             <xs:attribute name="space_rotation" type="xs:integer"/>
@@ -327,8 +326,9 @@
                 <xs:element ref="axes_3d" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="axis" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="grid_3d" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="polar_axes" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="polyline" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="rho_axes" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="theta_axes" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="titles_3d" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
@@ -471,7 +471,6 @@
             <xs:attribute name="height" type="xs:double"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="line_width" type="xs:double"/>
-            <xs:attribute name="mathtex" type="xs:int"/>
             <xs:attribute name="name" type="xs:string"/>
             <xs:attribute name="scientific_format" type="strint"/>
             <xs:attribute name="set_text_color_for_background" type="xs:integer"/>
@@ -555,36 +554,70 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of polar_axes -->
-    <xs:element name="polar_axes">
+    <!-- definition of rho_axes -->
+    <xs:element name="rho_axes">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="draw_arc" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="fill_arc" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="axes_text_group" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="arc_grid_line" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="draw_arc" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attribute name="angle_ticks" type="xs:integer" use="required"/>
             <xs:attribute name="line_type" type="strint"/>
-            <xs:attribute name="norm" type="xs:string"/>
-            <xs:attribute name="rings" type="xs:integer"/>
+            <xs:attribute name="scientific_format" type="strint"/>
             <xs:attribute name="text_align_horizontal" type="strint"/>
             <xs:attribute name="text_align_vertical" type="strint"/>
             <xs:attribute name="tick" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of axes_text_group -->
-    <xs:element name="axes_text_group">
+    <!-- definition of arc_grid_line -->
+    <xs:element name="arc_grid_line">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="draw_arc" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="text" minOccurs="0" maxOccurs="1"/>
+            </xs:choice>
+            <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attribute name="arc_label" type="xs:string"/>
+            <xs:attribute name="line_color_ind" type="xs:integer"/>
+            <xs:attribute name="line_type" type="strint"/>
+            <xs:attribute name="text_align_horizontal" type="strint"/>
+            <xs:attribute name="text_align_vertical" type="strint"/>
+            <xs:attribute name="value" type="xs:double"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of theta_axes -->
+    <xs:element name="theta_axes">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="angle_line" minOccurs="0" maxOccurs="8"/>
+            </xs:choice>
+            <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attribute name="line_type" type="strint"/>
+            <xs:attribute name="text_align_horizontal" type="strint"/>
+            <xs:attribute name="text_align_vertical" type="strint"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of angle_line -->
+    <xs:element name="angle_line">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="text" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attribute name="char_height" type="xs:double"/>
-            <xs:attribute name="name" type="xs:string"/>
+            <xs:attribute name="angle_label" type="xs:string"/>
+            <xs:attribute name="line_type" type="strint"/>
+            <xs:attribute name="text_align_horizontal" type="strint"/>
+            <xs:attribute name="text_align_vertical" type="strint"/>
+            <xs:attribute name="text_x0" type="xs:double"/>
+            <xs:attribute name="text_y0" type="xs:double"/>
+            <xs:attribute name="x" type="xs:double"/>
+            <xs:attribute name="y" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -685,7 +718,7 @@
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="axis" minOccurs="0" maxOccurs="1"/>
-                <xs:element ref="cellarray" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="cell_array" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="color_ind" type="xs:integer"/>
@@ -696,10 +729,10 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of cellarray -->
-    <xs:element name="cellarray">
+    <!-- definition of cell_array -->
+    <xs:element name="cell_array">
         <xs:complexType>
-            <xs:attributeGroup ref="cellarray"/>
+            <xs:attributeGroup ref="cell_array"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="name" type="xs:string"/>
             <xs:attribute name="x_dim" type="xs:integer" use="required"/>
@@ -711,10 +744,10 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniform_cellarray -->
-    <xs:element name="nonuniform_cellarray">
+    <!-- definition of nonuniform_cell_array -->
+    <xs:element name="nonuniform_cell_array">
         <xs:complexType>
-            <xs:attributeGroup ref="cellarray"/>
+            <xs:attributeGroup ref="cell_array"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="x_dim" type="xs:integer" use="required"/>
@@ -723,10 +756,10 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of polar_cellarray -->
-    <xs:element name="polar_cellarray">
+    <!-- definition of polar_cell_array -->
+    <xs:element name="polar_cell_array">
         <xs:complexType>
-            <xs:attributeGroup ref="cellarray"/>
+            <xs:attributeGroup ref="cell_array"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="phi_dim" type="xs:integer" use="required"/>
             <xs:attribute name="phi_max" type="xs:double" use="required"/>
@@ -739,10 +772,10 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniform_polar_cellarray -->
-    <xs:element name="nonuniform_polar_cellarray">
+    <!-- definition of nonuniform_polar_cell_array -->
+    <xs:element name="nonuniform_polar_cell_array">
         <xs:complexType>
-            <xs:attributeGroup ref="cellarray"/>
+            <xs:attributeGroup ref="cell_array"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="phi" type="xs:string" use="required"/>
             <xs:attribute name="phi_dim" type="xs:integer" use="required"/>
@@ -776,10 +809,11 @@
             <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
+            <xs:attribute name="z_index" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of fillarc -->
+    <!-- definition of fill_arc -->
     <xs:element name="fill_arc">
         <xs:complexType>
             <xs:attributeGroup ref="arc"/>
@@ -864,7 +898,7 @@
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="draw_image" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="nonuniform_cellarray" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="nonuniform_cell_array" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="heatmap"/>
             <xs:attributeGroup ref="move_xform_wc"/>
@@ -911,7 +945,7 @@
     <xs:element name="series_imshow">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="cellarray" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="cell_array" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
@@ -1042,8 +1076,8 @@
     <xs:element name="series_polar_heatmap">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="nonuniform_polar_cellarray" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="polar_cellarray" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="nonuniform_polar_cell_array" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polar_cell_array" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="heatmap"/>
             <xs:attributeGroup ref="move_xform_wc"/>
@@ -1488,13 +1522,13 @@
         <xs:attribute name="y_min" type="xs:double" use="required"/>
     </xs:attributeGroup>
 
-    <!-- definition of cellarray attributes -->
-    <xs:attributeGroup name="cellarray">
+    <!-- definition of cell_array attributes -->
+    <xs:attributeGroup name="cell_array">
         <xs:attribute name="clip_region" type="xs:integer"/>
-        <xs:attribute name="select_specific_xform" type="xs:integer"/>
         <xs:attribute name="color_ind_values" type="xs:string" use="required"/>
         <xs:attribute name="num_col" type="xs:integer" use="required"/>
         <xs:attribute name="num_row" type="xs:integer" use="required"/>
+        <xs:attribute name="select_specific_xform" type="xs:integer"/>
         <xs:attribute name="start_col" type="xs:integer" use="required"/>
         <xs:attribute name="start_row" type="xs:integer" use="required"/>
     </xs:attributeGroup>

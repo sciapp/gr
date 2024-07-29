@@ -108,6 +108,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   combo_box_attr = QStringList{
       "algorithm",
       "axis_type",
+      "clip_region",
       "colormap",
       "font",
       "font_precision",
@@ -531,6 +532,10 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       "x",
       "y",
   };
+  QStringList clip_region_list{
+      "quadratic",
+      "elliptic",
+  };
   QStringList orientation_list{
       "vertical",
       "horizontal",
@@ -593,6 +598,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   QStringList side_region_location_list{"top", "right", "bottom", "left"};
   static std::map<std::string, QStringList> attributeToList{
       {"axis_type", axis_type_list},
+      {"clip_region", clip_region_list},
       {"size_x_unit", size_unit_list},
       {"size_y_unit", size_unit_list},
       {"colormap", colormap_list},

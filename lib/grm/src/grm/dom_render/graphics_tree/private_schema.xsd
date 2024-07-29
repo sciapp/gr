@@ -89,7 +89,7 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
-            <xs:attribute name="_polar_r_org" type="xs:double"/>
+            <xs:attribute name="_skip_calculations" type="xs:integer"/>
             <xs:attribute name="_space_3d_phi_org" type="xs:double"/>
             <xs:attribute name="_space_3d_theta_org" type="xs:double"/>
             <xs:attribute name="_zoomed" type="xs:int"/>
@@ -248,21 +248,36 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of polar_axes -->
-    <xs:element name="polar_axes">
+    <!-- definition of rho_axes -->
+    <xs:element name="rho_axes">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_r_max" type="xs:double"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of arc_grid_line -->
+    <xs:element name="arc_grid_line">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of axes_text_group -->
-    <xs:element name="axes_text_group">
+    <!-- definition of theta_axes -->
+    <xs:element name="theta_axes">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
-            <xs:attribute name="_char_height_set_by_user" type="xs:integer"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
-            <xs:attribute name="_default_diag_factor" type="xs:double"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of angle_line -->
+    <xs:element name="angle_line">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -332,32 +347,32 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of cellarray -->
-    <xs:element name="cellarray">
+    <!-- definition of cell_array -->
+    <xs:element name="cell_array">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniformcellarray -->
-    <xs:element name="nonuniform_cellarray">
+    <!-- definition of nonuniformcell_array -->
+    <xs:element name="nonuniform_cell_array">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of polar_cellarray -->
-    <xs:element name="polar_cellarray">
+    <!-- definition of polar_cell_array -->
+    <xs:element name="polar_cell_array">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of nonuniform_polar_cellarray -->
-    <xs:element name="nonuniform_polar_cellarray">
+    <!-- definition of nonuniform_polar_cell_array -->
+    <xs:element name="nonuniform_polar_cell_array">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>

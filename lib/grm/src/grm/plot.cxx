@@ -329,7 +329,6 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "rel_width",
                                     "resample_method",
                                     "reset_ranges",
-                                    "rings",
                                     "rotation",
                                     "row",
                                     "row_span",
@@ -2428,7 +2427,6 @@ err_t plot_polar_heatmap(grm_args_t *subplot_args)
   unsigned int i, cols, rows, z_length;
   double *x = nullptr, *y = nullptr, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max;
   err_t error = ERROR_NONE;
-  char *kind;
 
   std::shared_ptr<GRM::Element> group =
       (current_central_region_element) ? current_central_region_element : getCentralRegion();
@@ -2538,8 +2536,6 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "series", "A", &current_series);
   grm_args_values(subplot_args, "kind", "s", &kind);
   grm_args_values(subplot_args, "z_log", "i", &z_log);
-
-  plot_parent->setAttribute("kind", kind);
   while (*current_series != nullptr)
     {
       x = y = nullptr;
@@ -2608,11 +2604,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
       ++current_series;
     }
 
-  if (strcmp(kind, "marginal_heatmap") != 0)
-    {
-      plot_draw_colorbar(subplot_args, 0.0, 256);
-    }
-
+  if (strcmp(kind, "marginal_heatmap") != 0) plot_draw_colorbar(subplot_args, 0.0, 256);
 
   return error;
 }
@@ -6757,7 +6749,7 @@ int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
 
   if (!gridElement->isGrid())
     {
-      grm_args_t **current_subplot_args = &gridElement->subplot_args;
+      grm_args_t **current_subplot_args = &gridElement->plot_args;
       auto layoutGridElement = global_render->createLayoutGridElement(*gridElement, *slice);
       parentDomElement->append(layoutGridElement);
       auto plot = global_render->createPlot(plotId);
@@ -6774,10 +6766,10 @@ int grm_plot_helper(grm::GridElement *gridElement, grm::Slice *slice,
       auto *currentGrid = reinterpret_cast<grm::Grid *>(gridElement);
 
       auto gridDomElement = global_render->createLayoutGrid(*currentGrid);
-      gridDomElement->setAttribute("start_row", slice->rowStart);
-      gridDomElement->setAttribute("stop_row", slice->rowStop);
-      gridDomElement->setAttribute("start_col", slice->colStart);
-      gridDomElement->setAttribute("stop_col", slice->colStop);
+      gridDomElement->setAttribute("start_row", slice->row_start);
+      gridDomElement->setAttribute("stop_row", slice->row_stop);
+      gridDomElement->setAttribute("start_col", slice->col_start);
+      gridDomElement->setAttribute("stop_col", slice->col_stop);
       parentDomElement->append(gridDomElement);
 
       if (!grm_iterate_grid(currentGrid, gridDomElement, plotId)) return 0;

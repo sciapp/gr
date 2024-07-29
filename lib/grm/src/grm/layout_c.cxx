@@ -153,7 +153,7 @@ void grid_finalize(grid_t *a_grid)
 {
   Grid *grid = reinterpret_cast<Grid *>(a_grid);
 
-  grid->finalizeSubplot();
+  grid->finalizePlot();
 }
 
 void trim(grid_t *a_grid)
@@ -295,5 +295,5 @@ void element_setFitParentsWidth(element_t *a_element, int fitParentsWidth)
 void element_getSubplot(element_t *a_element, double **subplot)
 {
   GridElement *element = reinterpret_cast<GridElement *>(a_element);
-  *subplot = element->getSubplot();
+  *subplot = element->getPlot();
 }
