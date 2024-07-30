@@ -410,7 +410,6 @@
         <xs:attribute name="is_major" type="xs:integer"/>
         <xs:attribute name="line_color_ind" type="xs:integer"/>
         <xs:attribute name="line_spec" type="xs:string"/>
-        <xs:attribute name="line_type" type="strint"/>
         <xs:attribute name="line_width" type="xs:double"/>
         <xs:attribute name="scientific_format" type="xs:integer"/>
         <xs:attribute name="text_align_horizontal" type="strint"/>
