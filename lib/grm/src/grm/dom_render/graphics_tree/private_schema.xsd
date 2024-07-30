@@ -158,6 +158,7 @@
             <xs:attribute name="_axis_id" type="xs:integer" use="required"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_tick_size_org" type="xs:double"/>
             <xs:attribute name="_tick_size_set_by_user" type="xs:integer"/>
             <xs:attribute name="_window_old_x_max" type="xs:double"/>
             <xs:attribute name="_window_old_x_min" type="xs:double"/>
@@ -172,6 +173,7 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_tick_size_org" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -196,6 +198,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_tick_size_org" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 

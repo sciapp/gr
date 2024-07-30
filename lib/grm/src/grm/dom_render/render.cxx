@@ -1989,6 +1989,7 @@ static void clearAxisAttributes(const std::shared_ptr<GRM::Element> &axis)
   if (axis->hasAttribute("tick")) axis->removeAttribute("tick");
   if (axis->hasAttribute("major_count")) axis->removeAttribute("major_count");
   if (axis->hasAttribute("tick_size")) axis->removeAttribute("tick_size");
+  if (axis->hasAttribute("_tick_size_org")) axis->removeAttribute("_tick_size_org");
   if (axis->hasAttribute("tick_orientation")) axis->removeAttribute("tick_orientation");
 }
 
@@ -2358,7 +2359,22 @@ static void getTickSize(const std::shared_ptr<GRM::Element> &element, double &ti
       GRM::Render::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
       auto aspect_ratio_ws = metric_width / metric_height;
 
-      tick_size = static_cast<double>(element->getAttribute("tick_size"));
+      if (element->hasAttribute("_tick_size_set_by_user"))
+        {
+          tick_size = static_cast<double>(element->getAttribute("_tick_size_set_by_user"));
+        }
+      else
+        {
+          if (element->hasAttribute("_tick_size_org"))
+            {
+              tick_size = static_cast<double>(element->getAttribute("_tick_size_org"));
+            }
+          else
+            {
+              tick_size = static_cast<double>(element->getAttribute("tick_size"));
+              element->setAttribute("_tick_size_org", tick_size);
+            }
+        }
 
       keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
       only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
@@ -5563,6 +5579,8 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
             {
               auto tick_size = y_axis.tick_size;
               if (axis->hasAttribute("tick_size")) tick_size = static_cast<double>(axis->getAttribute("tick_size"));
+              if (axis->hasAttribute("_tick_size_set_by_user"))
+                tick_size = static_cast<double>(axis->getAttribute("_tick_size_set_by_user"));
 
               global_render->createAxis(y_axis.min, y_axis.max, y_axis.tick, y_axis.org, y_axis.position,
                                         y_axis.major_count, y_axis.num_ticks, y_axis.num_tick_labels, abs(tick_size),
@@ -5603,6 +5621,9 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
             {
               auto tick_size = y_axis.tick_size;
               if (axis->hasAttribute("tick_size")) tick_size = static_cast<double>(axis->getAttribute("tick_size"));
+              if (axis->hasAttribute("_tick_size_set_by_user"))
+                tick_size = static_cast<double>(axis->getAttribute("_tick_size_set_by_user"));
+
               global_render->createAxis(y_axis.min, y_axis.max, y_axis.tick, y_axis.org, y_axis.position,
                                         y_axis.major_count, y_axis.num_ticks, y_axis.num_tick_labels, abs(tick_size),
                                         tick_size > 0 ? 1 : -1, y_axis.label_position, axis);
@@ -5622,7 +5643,10 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
     }
   if (axis != nullptr)
     {
-      axis->setAttribute("tick_size", PLOT_DEFAULT_COLORBAR_TICK_SIZE);
+      if (!axis->hasAttribute("_tick_size_set_by_user"))
+        axis->setAttribute("tick_size", PLOT_DEFAULT_COLORBAR_TICK_SIZE);
+      else
+        axis->setAttribute("tick_size", static_cast<double>(axis->getAttribute("_tick_size_set_by_user")));
       if (del != del_values::update_without_default)
         {
           axis->setAttribute("name", "colorbar y-axis");
@@ -12762,7 +12786,7 @@ static void applyTickModificationMap(const std::shared_ptr<GRM::Element> &tick_g
             {
               for (auto const &[attr, val] : key_value_map)
                 {
-                  if (str_equals_any(attr, "is_major", "line_color_ind", "line_spec", "line_type", "line_width",
+                  if (str_equals_any(attr, "is_major", "line_color_ind", "line_spec", "line_width",
                                      "text_align_horizontal", "text_align_vertical", "tick_label", "tick_size",
                                      "value"))
                     {
@@ -12775,7 +12799,10 @@ static void applyTickModificationMap(const std::shared_ptr<GRM::Element> &tick_g
                         }
                       else if (str_equals_any(attr, "is_major", "value"))
                         {
-                          tick_group->setAttribute("_update_required", true);
+                          for (const auto &child : tick_group->children())
+                            {
+                              child->setAttribute(attr, val);
+                            }
                         }
                       tick_group_attr_changed = true;
                     }
@@ -18695,6 +18722,10 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                 {
                   tick_modification_map[map_idx][val].emplace(attr, element->getAttribute(attr));
                 }
+            }
+          else if (attr == "tick_size")
+            {
+              element->setAttribute("_tick_size_set_by_user", element->getAttribute(attr));
             }
         }
       global_root->setAttribute("_modified", true);

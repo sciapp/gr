@@ -3771,39 +3771,6 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                         (*tick_modification_map)[axis_id][tick_value].emplace("line_spec", line_spec);
                       logger((stderr, "Got line_spec \"%s\"\n", line_spec));
                     }
-                  else if (strcmp(tick_arg->key, "line_type") == 0)
-                    {
-                      if (str_equals_any(tick_arg->value_format, "s", "i") != 0)
-                        {
-                          logger((stderr,
-                                  "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\" or "
-                                  "\"i\"\n",
-                                  tick_arg->value_format, tick_arg->key));
-                          continue;
-                        }
-                      if (strcmp(tick_arg->value_format, "s") == 0)
-                        {
-                          const char *line_type;
-                          line_type = *reinterpret_cast<const char **>(tick_arg->value_ptr);
-
-                          if ((*tick_modification_map)[axis_id][tick_value].count("line_type") > 0)
-                            (*tick_modification_map)[axis_id][tick_value]["line_type"] = GRM::Value(line_type);
-                          else
-                            (*tick_modification_map)[axis_id][tick_value].emplace("line_type", line_type);
-                          logger((stderr, "Got line_type \"%s\"\n", line_type));
-                        }
-                      else
-                        {
-                          int line_type;
-                          line_type = *reinterpret_cast<int *>(tick_arg->value_ptr);
-
-                          if ((*tick_modification_map)[axis_id][tick_value].count("line_type") > 0)
-                            (*tick_modification_map)[axis_id][tick_value]["line_type"] = GRM::Value(line_type);
-                          else
-                            (*tick_modification_map)[axis_id][tick_value].emplace("line_type", line_type);
-                          logger((stderr, "Got line_type \"%i\"\n", line_type));
-                        }
-                    }
                   else if (strcmp(tick_arg->key, "tick_length") == 0)
                     {
                       if (strcmp(tick_arg->value_format, "d") != 0)
@@ -3823,7 +3790,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                     }
                   else if (strcmp(tick_arg->key, "text_align_horizontal") == 0)
                     {
-                      if (str_equals_any(tick_arg->value_format, "s", "i") != 0)
+                      if (!str_equals_any(tick_arg->value_format, "s", "i"))
                         {
                           logger((stderr,
                                   "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\" or "
@@ -3860,7 +3827,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                     }
                   else if (strcmp(tick_arg->key, "text_align_vertical") == 0)
                     {
-                      if (str_equals_any(tick_arg->value_format, "s", "i") != 0)
+                      if (!str_equals_any(tick_arg->value_format, "s", "i"))
                         {
                           logger((stderr,
                                   "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\" or "
@@ -3982,7 +3949,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                     }
                   else if (strcmp(tick_arg->key, "font") == 0)
                     {
-                      if (str_equals_any(tick_arg->value_format, "s", "i") != 0)
+                      if (!str_equals_any(tick_arg->value_format, "s", "i"))
                         {
                           logger((stderr,
                                   "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\" or "
@@ -4015,7 +3982,7 @@ err_t plot_draw_axes(grm_args_t *args, unsigned int pass)
                     }
                   else if (strcmp(tick_arg->key, "font_precision") == 0)
                     {
-                      if (str_equals_any(tick_arg->value_format, "s", "i") != 0)
+                      if (!str_equals_any(tick_arg->value_format, "s", "i"))
                         {
                           logger((stderr,
                                   "Invalid value format \"%s\" for axis modification \"%s\", expected \"s\" or "
