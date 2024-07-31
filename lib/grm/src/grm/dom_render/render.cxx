@@ -4862,7 +4862,7 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
       for (const auto &series : central_region->children())
         {
           if (starts_with(series->localName(), "series_") &&
-              str_equals_any(series->localName(), "series_heatmap", "series_shade"))
+              str_equals_any(series->localName(), "series_contourf", "series_heatmap", "series_shade"))
             {
               tick_orientation = -1;
               break;
@@ -18356,13 +18356,13 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                     }
                   // need to change tick_orientation if old_kind was heatmap, marginal_heatmap or shade and no other
                   // series of these kinds is left
-                  if (grplot && (str_equals_any(old_kind, "heatmap", "marginal_heatmap", "shade")))
+                  if (grplot && (str_equals_any(old_kind, "contourf", "heatmap", "marginal_heatmap", "shade")))
                     {
                       bool one_of_these_kinds_left = true;
                       for (const auto &series : central_region->children())
                         {
                           if (starts_with(series->localName(), "series_") &&
-                              !str_equals_any(series->localName(), "series_heatmap", "series_shade"))
+                              !str_equals_any(series->localName(), "series_contourf", "series_heatmap", "series_shade"))
                             {
                               one_of_these_kinds_left = false;
                               break;
