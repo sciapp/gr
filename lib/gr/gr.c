@@ -5610,7 +5610,7 @@ void gr_drawaxis(char which, axis_t *axis)
 static void draw_axis_grid(char which, axis_t *axis, int pass)
 {
   int errind, tnr, color;
-  double wn[4], vp[4], width;
+  double wn[4], vp[4], width, alpha;
   int i;
 
   /* inquire current normalization transformation */
@@ -5618,10 +5618,11 @@ static void draw_axis_grid(char which, axis_t *axis, int pass)
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
-  /* save line width and line color */
+  /* save line width, line color and transparency */
 
   gks_inq_pline_linewidth(&errind, &width);
   gks_inq_pline_color_index(&errind, &color);
+  gks_inq_transparency(&errind, &alpha);
 
   gks_inq_pline_color_index(&errind, &color);
 
@@ -5629,10 +5630,10 @@ static void draw_axis_grid(char which, axis_t *axis, int pass)
     {
       if (axis->ticks[i].is_major == pass)
         {
-          if (color != 0)
-            gks_set_pline_color_index(axis->ticks[i].is_major ? 88 : 90);
+          if (color != 1)
+            gks_set_transparency(axis->ticks[i].is_major ? alpha * 0.4 : alpha * 0.2);
           else
-            gks_set_pline_linewidth(axis->ticks[i].is_major ? 2.0 : 1.0);
+            gks_set_pline_color_index(axis->ticks[i].is_major ? 88 : 90);
 
           if (which == 'X')
             {
@@ -5649,10 +5650,11 @@ static void draw_axis_grid(char which, axis_t *axis, int pass)
         }
     }
 
-  /* restore line width and line color */
+  /* restore line width, line color and transparency */
 
   gks_set_pline_linewidth(width);
   gks_set_pline_color_index(color);
+  gks_set_transparency(alpha);
 }
 
 void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
@@ -5752,12 +5754,12 @@ void gr_freeaxis(axis_t *axis)
     }
 }
 
-static void grid_line(double x0, double y0, double x1, double y1, int color, int major)
+static void grid_line(double x0, double y0, double x1, double y1, int color, double alpha, int major)
 {
-  if (color != 0)
-    gks_set_pline_color_index(major ? 88 : 90);
+  if (color != 1)
+    gks_set_transparency(major ? alpha * 0.4 : alpha * 0.2);
   else
-    gks_set_pline_linewidth(major ? 2.0 : 1.0);
+    gks_set_pline_color_index(major ? 88 : 90);
 
   start_pline(x0, y0);
   pline(x1, y1);
@@ -5791,7 +5793,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
 {
   int errind, tnr;
   int ltype, color, clsw, major;
-  double width;
+  double width, alpha;
 
   double clrt[4], wn[4], vp[4];
   double x_min, x_max, y_min, y_max, feps;
@@ -5818,11 +5820,12 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
   y_min = wn[2];
   y_max = wn[3];
 
-  /* save linetype, line width, line color and clipping indicator */
+  /* save linetype, line width, line color, transparency  and clipping indicator */
 
   gks_inq_pline_linetype(&errind, &ltype);
   gks_inq_pline_linewidth(&errind, &width);
   gks_inq_pline_color_index(&errind, &color);
+  gks_inq_transparency(&errind, &alpha);
   gks_inq_clip(&errind, &clsw, clrt);
 
   gks_set_pline_linetype(GKS_K_LINETYPE_SOLID);
@@ -5848,7 +5851,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                       major = i == 0 ? 1 : 0;
                       if (yi != y_min)
                         {
-                          if (pass == major) grid_line(x_min, yi, x_max, yi, color, major);
+                          if (pass == major) grid_line(x_min, yi, x_max, yi, color, alpha, major);
                         }
                     }
 
@@ -5881,7 +5884,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                   else
                     major = 0;
 
-                  if (pass == major) grid_line(x_min, yi, x_max, yi, color, major);
+                  if (pass == major) grid_line(x_min, yi, x_max, yi, color, alpha, major);
 
                   i++;
                   yi = y_org + i * y_tick;
@@ -5907,7 +5910,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                       major = i == 0 ? 1 : 0;
                       if (xi != x_min)
                         {
-                          if (pass == major) grid_line(xi, y_min, xi, y_max, color, major);
+                          if (pass == major) grid_line(xi, y_min, xi, y_max, color, alpha, major);
                         }
                     }
 
@@ -5940,7 +5943,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                   else
                     major = 0;
 
-                  if (pass == major) grid_line(xi, y_min, xi, y_max, color, major);
+                  if (pass == major) grid_line(xi, y_min, xi, y_max, color, alpha, major);
 
                   i++;
                   xi = x_org + i * x_tick;
@@ -5949,11 +5952,12 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
         }
     }
 
-  /* restore linetype, line width, line color and clipping indicator */
+  /* restore linetype, line width, line color, transparency and clipping indicator */
 
   gks_set_pline_linetype(ltype);
   gks_set_pline_linewidth(width);
   gks_set_pline_color_index(color);
+  gks_set_transparency(alpha);
   gks_set_clipping(clsw);
 
   if (flag_stream)
@@ -5962,12 +5966,13 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                    x_tick, y_tick, x_org, y_org, major_x, major_y);
 }
 
-static void grid_line3d(double x0, double y0, double z0, double x1, double y1, double z1, int color, int major)
+static void grid_line3d(double x0, double y0, double z0, double x1, double y1, double z1, int color, double alpha,
+                        int major)
 {
-  if (color != 0)
-    gks_set_pline_color_index(major ? 88 : 90);
+  if (color != 1)
+    gks_set_transparency(major ? alpha * 0.4 : alpha * 0.2);
   else
-    gks_set_pline_linewidth(major ? 2.0 : 1.0);
+    gks_set_pline_color_index(major ? 88 : 90);
 
   start_pline3d(x0, y0, z0);
   pline3d(x1, y1, z1);
@@ -6012,7 +6017,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
   int modern_projection_type;
 
   int ltype, color, clsw, major;
-  double width;
+  double width, alpha;
 
   double x_min = 0, x_max = 0, y_min = 0, y_max = 0, z_min = 0, z_max = 0;
 
@@ -6064,11 +6069,12 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
       z_max = wx.zmax;
     }
 
-  /* save linetype, line width, line color and clipping indicator */
+  /* save linetype, line width, line color, transparency  and clipping indicator */
 
   gks_inq_pline_linetype(&errind, &ltype);
   gks_inq_pline_linewidth(&errind, &width);
   gks_inq_pline_color_index(&errind, &color);
+  gks_inq_transparency(&errind, &alpha);
   gks_inq_clip(&errind, &clsw, clrt);
 
   gks_set_pline_linetype(GKS_K_LINETYPE_SOLID);
@@ -6092,8 +6098,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   major = i == 0;
                   if (fabs(zi - z_min) > FEPS * zi)
                     {
-                      grid_line3d(x_org, y_min, zi, x_org, y_max, zi, color, major);
-                      grid_line3d(x_min, y_org, zi, x_max, y_org, zi, color, major);
+                      grid_line3d(x_org, y_min, zi, x_org, y_max, zi, color, alpha, major);
+                      grid_line3d(x_min, y_org, zi, x_max, y_org, zi, color, alpha, major);
                     }
                 }
 
@@ -6127,8 +6133,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
               if (fabs(zi - z_min) > FEPS * zi)
                 {
-                  grid_line3d(x_org, y_min, zi, x_org, y_max, zi, color, major);
-                  grid_line3d(x_min, y_org, zi, x_max, y_org, zi, color, major);
+                  grid_line3d(x_org, y_min, zi, x_org, y_max, zi, color, alpha, major);
+                  grid_line3d(x_min, y_org, zi, x_max, y_org, zi, color, alpha, major);
                 }
 
               i++;
@@ -6155,8 +6161,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   major = i == 0;
                   if (fabs(yi - y_min) > FEPS * yi)
                     {
-                      grid_line3d(x_min, yi, z_org, x_max, yi, z_org, color, major);
-                      grid_line3d(x_org, yi, z_min, x_org, yi, z_max, color, major);
+                      grid_line3d(x_min, yi, z_org, x_max, yi, z_org, color, alpha, major);
+                      grid_line3d(x_org, yi, z_min, x_org, yi, z_max, color, alpha, major);
                     }
                 }
 
@@ -6190,8 +6196,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
               if (fabs(yi - y_min) > FEPS * yi)
                 {
-                  grid_line3d(x_min, yi, z_org, x_max, yi, z_org, color, major);
-                  grid_line3d(x_org, yi, z_min, x_org, yi, z_max, color, major);
+                  grid_line3d(x_min, yi, z_org, x_max, yi, z_org, color, alpha, major);
+                  grid_line3d(x_org, yi, z_min, x_org, yi, z_max, color, alpha, major);
                 }
 
               i++;
@@ -6218,8 +6224,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   major = i == 0;
                   if (fabs(xi - x_min) > FEPS * xi)
                     {
-                      grid_line3d(xi, y_min, z_org, xi, y_max, z_org, color, major);
-                      grid_line3d(xi, y_org, z_min, xi, y_org, z_max, color, major);
+                      grid_line3d(xi, y_min, z_org, xi, y_max, z_org, color, alpha, major);
+                      grid_line3d(xi, y_org, z_min, xi, y_org, z_max, color, alpha, major);
                     }
                 }
 
@@ -6253,8 +6259,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
               if (fabs(xi - x_min) > FEPS * xi)
                 {
-                  grid_line3d(xi, y_min, z_org, xi, y_max, z_org, color, major);
-                  grid_line3d(xi, y_org, z_min, xi, y_org, z_max, color, major);
+                  grid_line3d(xi, y_min, z_org, xi, y_max, z_org, color, alpha, major);
+                  grid_line3d(xi, y_org, z_min, xi, y_org, z_max, color, alpha, major);
                 }
 
               i++;
@@ -6263,11 +6269,12 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
         }
     }
 
-  /* restore linetype, line width, line color and clipping indicator */
+  /* restore linetype, line width, line color, transparency and clipping indicator */
 
   gks_set_pline_linetype(ltype);
   gks_set_pline_linewidth(width);
   gks_set_pline_color_index(color);
+  gks_set_transparency(alpha);
   gks_set_clipping(clsw);
 
   if (flag_stream)
