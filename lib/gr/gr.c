@@ -172,6 +172,7 @@ typedef struct
   int ints;
   int styli;
   int facoli;
+  int clip;
   int tnr;
   double wn[4], vp[4];
   int scale_options;
@@ -12954,6 +12955,7 @@ void gr_savestate(void)
 {
   int errind;
   state_list *s = NULL;
+  double clrt[4];
 
   check_autoinit;
 
@@ -12983,6 +12985,7 @@ void gr_savestate(void)
       gks_inq_fill_color_index(&errind, &s->facoli);
       gks_inq_transparency(&errind, &s->alpha);
 
+      gks_inq_clip(&errind, &s->clip, clrt);
       gks_inq_current_xformno(&errind, &s->tnr);
       gks_inq_xform(WC, &errind, s->wn, s->vp);
 
@@ -13033,6 +13036,7 @@ void gr_restorestate(void)
       gks_set_fill_color_index(s->facoli);
       gks_set_transparency(s->alpha);
 
+      gks_set_clipping(s->clip);
       gks_select_xform(s->tnr);
       gks_set_window(WC, s->wn[0], s->wn[1], s->wn[2], s->wn[3]);
       gks_set_window(MODERN_NDC, -1, 1, -1, 1);
@@ -13077,6 +13081,7 @@ void gr_restorestate(void)
           ctx->styli = s->styli;
           ctx->facoli = s->facoli;
 
+          ctx->clip = s->clip;
           ctx->tnr = s->tnr;
           ctx->wn[0] = s->wn[0];
           ctx->wn[2] = s->wn[2];
@@ -13164,6 +13169,7 @@ void gr_selectcontext(int context)
           ctx->facoli = 1;
           ctx->alpha = 1.0;
 
+          ctx->clip = GKS_K_NOCLIP;
           ctx->tnr = WC;
           ctx->wn[0] = ctx->wn[2] = 0;
           ctx->wn[1] = ctx->wn[3] = 1;
@@ -13205,6 +13211,7 @@ void gr_selectcontext(int context)
       gks_set_fill_color_index(ctx->facoli);
       gks_set_transparency(ctx->alpha);
 
+      gks_set_clipping(ctx->clip);
       gks_select_xform(ctx->tnr);
       gks_set_window(WC, ctx->wn[0], ctx->wn[1], ctx->wn[2], ctx->wn[3]);
       gks_set_window(MODERN_NDC, -1, 1, -1, 1);
@@ -13237,6 +13244,7 @@ void gr_savecontext(int context)
 {
   int errind;
   int id;
+  double clrt[4];
 
   check_autoinit;
 
@@ -13290,6 +13298,7 @@ void gr_savecontext(int context)
       gks_inq_fill_color_index(&errind, &app_context->buf[id]->facoli);
       gks_inq_transparency(&errind, &app_context->buf[id]->alpha);
 
+      gks_inq_clip(&errind, &app_context->buf[id]->clip, clrt);
       gks_inq_current_xformno(&errind, &app_context->buf[id]->tnr);
       gks_inq_xform(WC, &errind, app_context->buf[id]->wn, app_context->buf[id]->vp);
 
@@ -13314,6 +13323,7 @@ void gr_destroycontext(int context)
 {
   int errind;
   int id;
+  double clrt[4];
 
   check_autoinit;
 
@@ -13367,6 +13377,7 @@ void gr_destroycontext(int context)
       gks_inq_fill_color_index(&errind, &app_context->buf[id]->facoli);
       gks_inq_transparency(&errind, &app_context->buf[id]->alpha);
 
+      gks_inq_clip(&errind, &app_context->buf[id]->clip, clrt);
       gks_inq_current_xformno(&errind, &app_context->buf[id]->tnr);
       gks_inq_xform(WC, &errind, app_context->buf[id]->wn, app_context->buf[id]->vp);
 

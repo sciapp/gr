@@ -880,16 +880,23 @@ static void open_ws(int fd, int wstype)
   pdf_open(fd);
 }
 
-static void set_clip(double *clrt)
+static void set_clip_rect(int tnr)
 {
-  double x0, x1, y0, y1;
+  double *clrt, x0, x1, y0, y1;
   int curve, i;
   double x, y, xr, yr;
+
+  if (gkss->clip_tnr != 0)
+    clrt = gkss->viewport[gkss->clip_tnr];
+  else if (gkss->clip == GKS_K_CLIP)
+    clrt = gkss->viewport[tnr];
+  else
+    clrt = gkss->viewport[0];
 
   NDC_to_DC(clrt[0], clrt[2], x0, y0);
   NDC_to_DC(clrt[1], clrt[3], x1, y1);
 
-  if (gkss->clip_region == GKS_K_REGION_ELLIPSE && (gkss->clip_tnr != 0 || gkss->clip == GKS_K_CLIP))
+  if (gkss->clip_region == GKS_K_REGION_ELLIPSE)
     {
       x = 0.5 * (x0 + x1);
       y = 0.5 * (y0 + y1);
@@ -1047,20 +1054,14 @@ static void polyline(int n, double *px, double *py)
   set_transparency(p->alpha);
   set_color(ln_color);
 
-  if (gkss->clip_tnr != 0)
-    {
-      pdf_save(p);
-      set_clip(gkss->viewport[gkss->clip_tnr]);
-    }
+  pdf_save(p);
+  set_clip_rect(gkss->cntnr);
 
   gks_set_dev_xform(gkss, p->window, p->viewport);
   gks_emul_polyline(n, px, py, ln_type, gkss->cntnr, move, draw);
   stroke();
 
-  if (gkss->clip_tnr != 0)
-    {
-      pdf_restore(p);
-    }
+  pdf_restore(p);
 }
 
 static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
@@ -1260,18 +1261,12 @@ static void polymarker(int n, double *px, double *py)
   set_linetype(GKS_K_LINETYPE_SOLID, 1.0);
   set_transparency(p->alpha);
 
-  if (gkss->clip_tnr != 0)
-    {
-      pdf_save(p);
-      set_clip(gkss->viewport[gkss->clip_tnr]);
-    }
+  pdf_save(p);
+  set_clip_rect(gkss->cntnr);
 
   marker_routine(n, px, py, mk_type, mk_size, mk_color);
 
-  if (gkss->clip_tnr != 0)
-    {
-      pdf_restore(p);
-    }
+  pdf_restore(p);
 }
 
 static void set_font(int font)
@@ -1391,11 +1386,8 @@ static void text(double px, double py, int nchars, char *chars)
 
   if (tx_prec != GKS_K_TEXT_PRECISION_STROKE) set_font(tx_font);
 
-  if (gkss->clip_tnr != 0)
-    {
-      pdf_save(p);
-      set_clip(gkss->viewport[gkss->clip_tnr]);
-    }
+  pdf_save(p);
+  set_clip_rect(gkss->cntnr);
 
   if (tx_prec == GKS_K_TEXT_PRECISION_STRING)
     {
@@ -1409,10 +1401,7 @@ static void text(double px, double py, int nchars, char *chars)
       gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
     }
 
-  if (gkss->clip_tnr != 0)
-    {
-      pdf_restore(p);
-    }
+  pdf_restore(p);
 }
 
 static void fill_routine(int n, double *px, double *py, int tnr)
@@ -1485,18 +1474,12 @@ static void fillarea(int n, double *px, double *py)
       set_transparency(p->alpha);
       set_color(fl_color);
 
-      if (gkss->clip_tnr != 0)
-        {
-          pdf_save(p);
-          set_clip(gkss->viewport[gkss->clip_tnr]);
-        }
+      pdf_save(p);
+      set_clip_rect(gkss->cntnr);
 
       line_routine(n, px, py, DrawBorder, gkss->cntnr);
 
-      if (gkss->clip_tnr != 0)
-        {
-          pdf_restore(p);
-        }
+      pdf_restore(p);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
     {
@@ -1504,14 +1487,7 @@ static void fillarea(int n, double *px, double *py)
       set_fillcolor(fl_color);
 
       pdf_save(p);
-      if (gkss->clip_tnr != 0)
-        {
-          set_clip(gkss->viewport[gkss->clip_tnr]);
-        }
-      else
-        {
-          set_clip(gkss->viewport[gkss->clip == GKS_K_CLIP ? gkss->cntnr : 0]);
-        }
+      set_clip_rect(gkss->cntnr);
 
       fill_routine(n, px, py, gkss->cntnr);
 
@@ -1527,14 +1503,7 @@ static void fillarea(int n, double *px, double *py)
       p->pattern = fl_style;
 
       pdf_save(p);
-      if (gkss->clip_tnr != 0)
-        {
-          set_clip(gkss->viewport[gkss->clip_tnr]);
-        }
-      else
-        {
-          set_clip(gkss->viewport[gkss->clip == GKS_K_CLIP ? gkss->cntnr : 0]);
-        }
+      set_clip_rect(gkss->cntnr);
 
       fill_routine(n, px, py, gkss->cntnr);
 
@@ -1586,14 +1555,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   set_transparency(p->alpha);
 
   pdf_save(p);
-  if (gkss->clip_tnr != 0)
-    {
-      set_clip(gkss->viewport[gkss->clip_tnr]);
-    }
-  else
-    {
-      set_clip(gkss->viewport[gkss->clip == GKS_K_CLIP ? gkss->cntnr : 0]);
-    }
+  set_clip_rect(gkss->cntnr);
 
   have_alpha = 0;
   if (true_color)
@@ -2069,11 +2031,9 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
 
 static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
 {
-  if (gkss->clip_tnr != 0)
-    {
-      pdf_save(p);
-      set_clip(gkss->viewport[gkss->clip_tnr]);
-    }
+  pdf_save(p);
+  set_clip_rect(gkss->cntnr);
+
   set_linetype(GKS_K_LINETYPE_SOLID, 1.0);
   switch (primid)
     {
@@ -2096,10 +2056,8 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
       gks_perror("invalid drawing primitive ('%d')", primid);
       exit(1);
     }
-  if (gkss->clip_tnr != 0)
-    {
-      pdf_restore(p);
-    }
+
+  pdf_restore(p);
 }
 
 #ifndef EMSCRIPTEN
