@@ -1395,6 +1395,10 @@ else()
   string(APPEND GR_REPORT "- grplot: No (Qt6 and Qt5 not found)\n")
 endif()
 
+add_executable(gksm lib/gks/gksm.c)
+target_link_libraries(gksm PUBLIC gks_shared Freetype::Freetype ZLIB::ZLIB)
+string(APPEND GR_REPORT "- gksm: Yes\n")
+
 string(APPEND GR_REPORT "\nGRM integrations:\n")
 if(TARGET XercesC::XercesC)
   string(APPEND GR_REPORT "- Xerces-C++: Yes\n")
@@ -1575,6 +1579,13 @@ if(GR_INSTALL)
       FILES lib/grm/grplot/README.md
       DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/grplot
       RENAME grplot.man.md
+    )
+  endif()
+  if(TARGET gksm)
+    install(
+      TARGETS gksm
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      BUNDLE DESTINATION Applications
     )
   endif()
   install(FILES lib/gr/gr.h lib/gks/gks.h lib/gr3/gr3.h lib/grm/include/grm.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
