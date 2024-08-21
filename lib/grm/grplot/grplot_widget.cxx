@@ -110,6 +110,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "axis_type",
       "clip_region",
       "colormap",
+      "error_bar_style",
       "font",
       "font_precision",
       "kind",
@@ -544,6 +545,10 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       "sum",
       "max",
   };
+  QStringList error_bar_style_list{
+      "line",
+      "area",
+  };
   QStringList marginal_heatmap_kind_list{
       "all",
       "line",
@@ -598,6 +603,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   QStringList side_region_location_list{"top", "right", "bottom", "left"};
   static std::map<std::string, QStringList> attributeToList{
       {"axis_type", axis_type_list},
+      {"error_bar_style", error_bar_style_list},
       {"clip_region", clip_region_list},
       {"size_x_unit", size_unit_list},
       {"size_y_unit", size_unit_list},
@@ -815,6 +821,11 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
       current_text =
           tickOrientationIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
     }
+  else if (cur_attr_name == "error_bar_style" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          errorBarStyleIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
   int index = ((QComboBox *)*lineEdit)->findText(current_text.c_str());
   if (index == -1) index += ((QComboBox *)*lineEdit)->count();
   ((QComboBox *)*lineEdit)->setCurrentIndex(index);
@@ -884,6 +895,10 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
       else if (label == "scientific_format")
         {
           element->setAttribute(label, scientificFormatStringToInt(value));
+        }
+      else if (label == "error_bar_style")
+        {
+          element->setAttribute(label, errorBarStyleStringToInt(value));
         }
       else
         {

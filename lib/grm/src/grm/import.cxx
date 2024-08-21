@@ -35,6 +35,7 @@ static std::map<std::string, const char *> key_to_types{
     {"edge_width", "d"},
     {"equal_up_and_down_error", "i"},
     {"error", "a"},
+    {"error_bar_style", "i"},
     {"grplot", "i"},
     {"ind_bar_color", "nA"},
     {"ind_edge_color", "nA"},
@@ -925,7 +926,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
             {
               if (std::find(x_data.begin(), x_data.end(), col) != x_data.end())
                 {
+                  int error_bar_style;
                   grm_args_push(series[x_cnt], "x", "nD", rows, file_data[depth][col].data());
+                  if (grm_args_values(args, "error_bar_style", "i", &error_bar_style))
+                    grm_args_push(series[x_cnt], "error_bar_style", "i", error_bar_style);
                   x_cnt += 1;
                 }
               else if (std::find(error_data.begin(), error_data.end(), col) == error_data.end())

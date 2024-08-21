@@ -37,7 +37,7 @@ For one-dimensional data sets there are also options to define if inside the dat
 
 There are more key-value parameters. These parameters only effect specific plot types. For example `bar_width` only makes sense, if bars are drawn. All possible parameters are:
 
-`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `c`, `clip_negative`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `grplot`, `int_lim`, `isovalue`, `keep_radii_axes`, `kind`, `levels`, `line_spec`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `phi_flip`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `tilt`, `transformation`, `x_bins`, `x_colormap`, `x_flip`, `y_bins`, `y_colormap`, `y_flip`, `y_labels`
+`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `c`, `clip_negative`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `error_bar_style`, `grplot`, `int_lim`, `isovalue`, `keep_radii_axes`, `kind`, `levels`, `line_spec`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `phi_flip`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `tilt`, `transformation`, `x_bins`, `x_colormap`, `x_flip`, `y_bins`, `y_colormap`, `y_flip`, `y_labels`
 
 All parameters are separated by a blank. Some parameters are more complex than others. These parameters represent a container inside GRM.
 
@@ -149,33 +149,34 @@ Possible parameters for the bar plot are:
 
    `error:{{error_bar_color:`color_index`},{downwards_cap_color:`color_index`},{upwards_cap_color:`color_index`}}`
 
-6. `ind_bar_color`: With this parameter the color of specific bars can be changed. The value of this parameter are key-value pairs with the following keys:
+6. `error_bar_style`: Defines how the error-bars are displayed. As single error-lines(0) or as an error-area(1).
+7. `ind_bar_color`: With this parameter the color of specific bars can be changed. The value of this parameter are key-value pairs with the following keys:
     - `indices`: The index number of the bar, which color should be changed.
     - `rgb`: The new color for the specified bar. The value has to be three doubles or integer which represents the RGB value.
 
    The syntax of this parameter is:
 
    `ind_bar_color:`number_of_bars`,{{indices:`first_bar_index`},{rgb:`r1,g1,b1`}`,...`}`
-7. `ind_edge_color`: With this parameter the color of specific edges can be changed. The value of this parameter are key-value pairs with the following keys:
+8. `ind_edge_color`: With this parameter the color of specific edges can be changed. The value of this parameter are key-value pairs with the following keys:
     - `indices`: The index number of the edge, which color should be changed.
     - `rgb`: The new color for the specified edge. The value has to be three doubles or integer which represents the RGB value.
 
    The syntax of this parameter is:
 
    `ind_edge_color:`number_of_edges`,{{indices:`first_edge_index`},{rgb:`r1,g1,b1`}`,...`}`
-8. `ind_edge_width`: With this parameter the width of specific edges can be changed. The value of this parameter are key-value pairs with the following keys:
+9. `ind_edge_width`: With this parameter the width of specific edges can be changed. The value of this parameter are key-value pairs with the following keys:
     - `indices`: The index number of the edge, which width should be changed.
     - `width`: The new width for the specified edge. The value of this parameter has to be an integer or double.
 
    The syntax of this parameter is:
 
    `ind_edge_width:`number_of_edges`,{{indices:`first_edge_index`},{width:`first_edge_width`}`,...`}`
-9. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
-10. `style`: This parameter defines how the data inside the bar plot is displayed. There are three options:
+10. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
+11. `style`: This parameter defines how the data inside the bar plot is displayed. There are three options:
     - `default`: All values are displayed with a separate bar.
     - `stacked`: The values are displayed with bars which are stacked over each other.
     - `lined`: The values are displayed with smaller bars next to each other.
-11. `y_labels`: This parameter allows the user to set labels to specific bars, which can for example display the value of the bar. The syntax of this parameter is `y_labels:{`label1`,`label2`,`...`}`.
+12. `y_labels`: This parameter allows the user to set labels to specific bars, which can for example display the value of the bar. The syntax of this parameter is `y_labels:{`label1`,`label2`,`...`}`.
 
 ### CONTOUR
 
@@ -246,7 +247,9 @@ Possible parameters for the histogram are:
    Note: If the error of the bars is to be displayed, the last two columns of the data are used for the error. If the up and down error are equal use `equal_up_and_down_error` with a value of `1`. In that case only one column is expected for the error data instead of the two. This parameter flag also does not need the `error` parameter to be set. Like by the `error` parameter some of the columns inside the data will get interpreted as error-values. The syntax of this parameter is:
 
    `error:{{error_bar_color:`color_index`},{downwards_cap_color:`color_index`},{upwards_cap_color:`color_index`}}`
-5. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
+
+5. `error_bar_style`: Defines how the error-bars are displayed. As single error-lines(0) or as an error-area(1). 
+6. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
 
 ### IMSHOW
 
@@ -290,19 +293,20 @@ Possible parameters for the line plot are:
 
    `error:{{error_bar_color:`color_index`},{downwards_cap_color:`color_index`},{upwards_cap_color:`color_index`}}`
 
-2. `int_limits_high`: This parameter defines the upper limits of all integrals.
+2. `error_bar_style`: Defines how the error-bars are displayed. As single error-lines(0) or as an error-area(1).
+3. `int_limits_high`: This parameter defines the upper limits of all integrals.
    
     The syntax for this parameter is:
 
    `int_limits_high:`number_of_elements`,`elem_1`,`elem_2`,`...
 
-3. `int_limits_low`: This parameter defines the lower limits of all integrals.
+4. `int_limits_low`: This parameter defines the lower limits of all integrals.
 
     The syntax for this parameter is:
 
    `int_limits_low:`number_of_elements`,`elem_1`,`elem_2`,`...
 
-4. `orientation`: This parameter defines the orientation of the displayed lines. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
+5. `orientation`: This parameter defines the orientation of the displayed lines. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
 
 ### MARGINAL_HEATMAP
 
@@ -391,7 +395,8 @@ Possible parameters for the scatter plot are:
 
    `error:{{error_bar_color:`color_index`},{downwards_cap_color:`color_index`},{upwards_cap_color:`color_index`}}`
 
-2. `marker_type`: This parameter defines the style of the visualized data points, where the effect belonging to the numbers is the same as for [gr_setmarkertype](https://gr-framework.org/c-gr.html?highlight=gr_setmarkertype#_CPPv416gr_setmarkertypei).
+2. `error_bar_style`: Defines how the error-bars are displayed. As single error-lines(0) or as an error-area(1).
+3. `marker_type`: This parameter defines the style of the visualized data points, where the effect belonging to the numbers is the same as for [gr_setmarkertype](https://gr-framework.org/c-gr.html?highlight=gr_setmarkertype#_CPPv416gr_setmarkertypei).
 
 ### SCATTER3
 

@@ -373,6 +373,7 @@ const char *valid_series_keys[] = {"a",
                                    "edge_color",
                                    "edge_width",
                                    "error",
+                                   "error_bar_style",
                                    "face_color",
                                    "foreground_color",
                                    "indices",
@@ -434,6 +435,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"edge_color", "D|i"},
                                               {"edge_width", "d"},
                                               {"error", "a"},
+                                              {"error_bar_style", "i"},
                                               {"fig_size", "D"},
                                               {"fit_parents_height", "i"},
                                               {"fit_parents_width", "i"},
@@ -4299,6 +4301,7 @@ err_t plot_draw_error_bars(grm_args_t *series_args, unsigned int x_length)
   grm_args_t *error_container;
   arg_t *arg_ptr;
   err_t error;
+  int error_bar_style;
 
   double *absolute_upwards = nullptr, *absolute_downwards = nullptr, *relative_upwards = nullptr,
          *relative_downwards = nullptr;
@@ -4380,6 +4383,11 @@ err_t plot_draw_error_bars(grm_args_t *series_args, unsigned int x_length)
   if (relative_downwards_flt != FLT_MAX) subGroup->setAttribute("relative_downwards_flt", relative_downwards_flt);
   if (absolute_upwards_flt != FLT_MAX) subGroup->setAttribute("absolute_upwards_flt", absolute_upwards_flt);
   if (relative_upwards_flt != FLT_MAX) subGroup->setAttribute("relative_upwards_flt", relative_upwards_flt);
+
+  if (grm_args_values(series_args, "error_bar_style", "i", &error_bar_style))
+    {
+      subGroup->setAttribute("error_bar_style", error_bar_style);
+    }
 
   if (error_container != nullptr)
     {

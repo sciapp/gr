@@ -369,6 +369,10 @@ static std::map<std::string, int> scientific_format_string_to_int{
     {"textex", 2},
     {"mathtex", 3},
 };
+static std::map<std::string, int> error_bar_style_string_to_int{
+    {"line", 0},
+    {"area", 1},
+};
 static std::map<std::string, int> text_align_horizontal_string_to_int{
     {"normal", 0},
     {"left", 1},
@@ -915,6 +919,8 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
                  aspect_ratio_ws, start_aspect_ratio_ws);
   sidePlotMargin(top_side_region, &top_margin, (vp3 - vp2) * 0.1, (keep_aspect_ratio && !diag_factor), aspect_ratio_ws,
                  start_aspect_ratio_ws);
+  if (!top_text_is_title && top_margin != 0) top_margin += 0.05;
+  if (bottom_margin != 0) bottom_margin += 0.05;
 
   // in the non keep_aspect_ratio case the viewport vp0 - vp3 can be too small for the resulting side_plot; use a
   // predefined maximum in these cases
@@ -927,9 +933,9 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
     }
 
   // margin respects text in the specific side_region
-  if (left_text_margin) left_margin = 0.05;
-  if (right_text_margin) right_margin = 0.05;
-  if (bottom_text_margin) bottom_margin = 0.05;
+  if (left_text_margin) left_margin += 0.05;
+  if (right_text_margin) right_margin += 0.05;
+  if (bottom_text_margin) bottom_margin += 0.05;
 
   // calculate text impact for top_margin and adjust all margins if defined by attributes
   if (kind == "marginal_heatmap")
@@ -955,7 +961,7 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
     }
   else
     {
-      top_margin = (top_text_margin ? top_text_is_title ? 0.075 : 0.05 : 0.0);
+      top_margin += (top_text_margin ? top_text_is_title ? 0.075 : 0.05 : 0.0);
       if (keep_aspect_ratio && uniform_data && only_quadratic_aspect_ratio)
         {
           if (bottom_margin != left_margin)
@@ -1125,10 +1131,10 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
   else if (location == "left")
     {
       min_vp = getMinViewport(element, true);
-      global_render->setViewport(element, grm_max(viewport[0] - (offset_rel + width_rel), min_vp), viewport[0],
-                                 viewport[2], viewport[3]);
+      global_render->setViewport(element, grm_max(viewport[0] - (offset_rel + width_rel), min_vp),
+                                 viewport[0] - offset_rel, viewport[2], viewport[3]);
       element->setAttribute("_viewport_x_min_org", grm_max(viewport[0] - (offset_rel + width_rel), min_vp));
-      element->setAttribute("_viewport_x_max_org", viewport[0]);
+      element->setAttribute("_viewport_x_max_org", viewport[0] - offset_rel);
       element->setAttribute("_viewport_y_min_org", viewport[2]);
       element->setAttribute("_viewport_y_max_org", viewport[3]);
     }
@@ -1146,11 +1152,11 @@ static void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element>
     {
       min_vp = getMinViewport(element, false);
       global_render->setViewport(element, viewport[0], viewport[1],
-                                 grm_max(viewport[2] - (offset_rel + width_rel), min_vp), viewport[2]);
+                                 grm_max(viewport[2] - (offset_rel + width_rel), min_vp), viewport[2] - offset_rel);
       element->setAttribute("_viewport_x_min_org", viewport[0]);
       element->setAttribute("_viewport_x_max_org", viewport[1]);
       element->setAttribute("_viewport_y_min_org", grm_max(viewport[2] - (offset_rel + width_rel), min_vp));
-      element->setAttribute("_viewport_y_max_org", viewport[2]);
+      element->setAttribute("_viewport_y_max_org", viewport[2] - offset_rel);
     }
 }
 
@@ -1243,6 +1249,8 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
       only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
       kind = static_cast<std::string>(plot_parent->getAttribute("kind"));
 
+      if (element->querySelectors("colorbar")) width = PLOT_DEFAULT_COLORBAR_WIDTH;
+
       if (keep_aspect_ratio && only_quadratic_aspect_ratio)
         {
           for (const auto &series : plot_parent->querySelectors("central_region")->children())
@@ -1328,7 +1336,8 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
         {
           if (location == "top")
             {
-              if (!element->parentElement()->hasAttribute("marginal_heatmap_side_plot"))
+              if (!element->parentElement()->hasAttribute("marginal_heatmap_side_plot") ||
+                  !static_cast<int>(element->parentElement()->getAttribute("marginal_heatmap_side_plot")))
                 {
                   width += (0.025 + ((element->parentElement()->hasAttribute("text_is_title") &&
                                       static_cast<int>(element->parentElement()->getAttribute("text_is_title")))
@@ -1336,6 +1345,10 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
                                          : 0.05)) *
                            (plot_viewport[3] - plot_viewport[2]);
                 }
+              if (!(element->parentElement()->hasAttribute("text_is_title") &&
+                    static_cast<int>(element->parentElement()->getAttribute("text_is_title"))) &&
+                  element->parentElement()->querySelectors("colorbar"))
+                width = 0;
               if (element->parentElement()->hasAttribute("offset"))
                 offset = static_cast<double>(element->parentElement()->getAttribute("offset"));
               if (element->parentElement()->hasAttribute("width"))
@@ -1351,7 +1364,7 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
             }
           if (location == "right")
             {
-              width += (0.075 + 0.05) * (plot_viewport[1] - plot_viewport[0]);
+              width += 0.05 * (plot_viewport[1] - plot_viewport[0]);
             }
         }
 
@@ -1361,7 +1374,7 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
     {
       double plot_viewport[4];
       double offset = PLOT_DEFAULT_SIDEREGION_OFFSET, width = PLOT_DEFAULT_SIDEREGION_WIDTH;
-      std::string kind;
+      std::string kind, location;
       bool keep_aspect_ratio = false, uniform_data = true, only_quadratic_aspect_ratio = false;
       auto plot_parent = element;
       getPlotParent(plot_parent);
@@ -1374,6 +1387,7 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
           static_cast<double>(plot_parent->getAttribute("plot_y_max")) / (DEFAULT_ASPECT_RATIO_FOR_SCALING);
       keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
       only_quadratic_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_quadratic_aspect_ratio"));
+      location = static_cast<std::string>(element->parentElement()->getAttribute("location"));
       kind = static_cast<std::string>(plot_parent->getAttribute("kind"));
 
       if (keep_aspect_ratio && only_quadratic_aspect_ratio)
@@ -1399,6 +1413,27 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
         offset = static_cast<double>(element->parentElement()->getAttribute("offset"));
       if (element->parentElement()->hasAttribute("width"))
         width = static_cast<double>(element->parentElement()->getAttribute("width"));
+
+      if (element->parentElement()->hasAttribute("text_content"))
+        {
+          if (location == "right")
+            {
+              offset += 0.05 * (plot_viewport[1] - plot_viewport[0]);
+            }
+          else if (location == "left")
+            {
+              offset += (0.075 + 0.05) * (plot_viewport[1] - plot_viewport[0]);
+            }
+          else if (location == "bottom")
+            {
+              offset += (0.075 + 0.05) * (plot_viewport[3] - plot_viewport[2]);
+            }
+          else if (location == "top" && !(element->parentElement()->hasAttribute("text_is_title") &&
+                                          static_cast<int>(element->parentElement()->getAttribute("text_is_title"))))
+            {
+              offset += 0.05 * (plot_viewport[3] - plot_viewport[2]);
+            }
+        }
 
       setViewportForSideRegionElements(element, offset, width, false);
     }
@@ -1876,6 +1911,30 @@ std::string scientificFormatIntToString(int scientific_format)
     }
   logger((stderr, "Got unknown scientific_format \"%i\"\n", scientific_format));
   throw std::logic_error("Given scientific_format is unknown.\n");
+}
+
+int errorBarStyleStringToInt(const std::string &error_bar_style_str)
+{
+  if (error_bar_style_string_to_int.count(error_bar_style_str))
+    return error_bar_style_string_to_int[error_bar_style_str];
+  else
+    {
+      logger((stderr, "Got unknown error_bar_style \"%s\"\n", error_bar_style_str.c_str()));
+      throw std::logic_error("Given error_bar_style is unknown.\n");
+    }
+}
+
+std::string errorBarStyleIntToString(int error_bar_style)
+{
+  for (auto const &map_elem : error_bar_style_string_to_int)
+    {
+      if (map_elem.second == error_bar_style)
+        {
+          return map_elem.first;
+        }
+    }
+  logger((stderr, "Got unknown error_bar_style \"%i\"\n", error_bar_style));
+  throw std::logic_error("Given error_bar_style is unknown.\n");
 }
 
 int getVolumeAlgorithm(const std::shared_ptr<GRM::Element> &element)
@@ -4195,6 +4254,7 @@ static void processRelativeCharHeight(const std::shared_ptr<GRM::Element> &eleme
   auto kind = static_cast<std::string>(plot_element->getAttribute("kind"));
   double diag_factor;
   double metric_width, metric_height;
+  std::string location;
   bool uniform_data = true, keep_aspect_ratio = false, only_quadratic_aspect_ratio = false;
 
   // special case where the figure vp is not stored inside the plot element
@@ -4218,6 +4278,7 @@ static void processRelativeCharHeight(const std::shared_ptr<GRM::Element> &eleme
   max_char_height = static_cast<double>(element->getAttribute("max_char_height"));
   keep_aspect_ratio = static_cast<int>(plot_element->getAttribute("keep_aspect_ratio"));
   only_quadratic_aspect_ratio = static_cast<int>(plot_element->getAttribute("only_quadratic_aspect_ratio"));
+  location = static_cast<std::string>(element->parentElement()->parentElement()->getAttribute("location"));
 
   figure_viewport[0] = static_cast<double>(figure_vp_element->getAttribute("plot_x_min"));
   figure_viewport[1] = static_cast<double>(figure_vp_element->getAttribute("plot_x_max"));
@@ -4263,6 +4324,11 @@ static void processRelativeCharHeight(const std::shared_ptr<GRM::Element> &eleme
       double default_diag_factor;
       diag_factor = std::sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
                               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
+      // adjustment especially for horizontal colorbars where the char_height otherwise would be to big
+      if (location == "bottom" || location == "top")
+        diag_factor *= (figure_viewport[3] - figure_viewport[2]);
+      else if (location == "left" || location == "right")
+        diag_factor *= (figure_viewport[1] - figure_viewport[0]);
       if (element->hasAttribute("_default_diag_factor"))
         {
           default_diag_factor = static_cast<double>(element->getAttribute("_default_diag_factor"));
@@ -4733,7 +4799,10 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
     }
   else
     {
-      if ((scale & GR_OPTION_FLIP_X || x_flip) && axis_type == "y") pos = window[0];
+      auto location = static_cast<std::string>(
+          element->parentElement()->parentElement()->parentElement()->getAttribute("location"));
+      if ((scale & GR_OPTION_FLIP_X || x_flip) && axis_type == "y" && location == "right") pos = window[0];
+      if ((scale & GR_OPTION_FLIP_Y || y_flip) && axis_type == "x" && location == "top") pos = window[2];
       processFlip(element->parentElement());
     }
   tick_size *= tick_orientation;
@@ -5345,11 +5414,12 @@ static void processCellArray(const std::shared_ptr<GRM::Element> &element, const
 
 static void processColorbar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
-  double c_min, c_max;
-  int data, i, options;
+  double c_min, c_max, x_min = 0.0, x_max = 1.0;
+  int data, i, options, dim_x = 1;
   int z_log = 0;
+  std::string location, axis_type = "y";
   del_values del = del_values::update_without_default;
-  std::shared_ptr<GRM::Element> cell_array = nullptr, axis = nullptr;
+  std::shared_ptr<GRM::Element> cell_array = nullptr, axis_elem = nullptr;
   auto colors = static_cast<int>(element->getAttribute("color_ind"));
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
@@ -5358,8 +5428,19 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
     throw NotFoundError("Missing limits\n");
 
   z_log = static_cast<int>(plot_parent->getAttribute("z_log"));
-  global_render->setWindow(element->parentElement(), 0.0, 1.0, c_min, c_max);
-  gr_setwindow(0.0, 1.0, c_min, c_max);
+  location = static_cast<std::string>(element->parentElement()->parentElement()->getAttribute("location"));
+
+  if (location == "top" || location == "bottom")
+    {
+      // swap x and y if the colorbar is in the bottom or top side_region
+      x_min = c_min;
+      x_max = c_max;
+      c_min = 0.0;
+      c_max = 1.0;
+      axis_type = "x";
+    }
+  global_render->setWindow(element->parentElement(), x_min, x_max, c_min, c_max);
+  global_render->processWindow(element->parentElement());
 
   calculateViewport(element);
   applyMoveTransformation(element);
@@ -5379,10 +5460,17 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
   clearOldChildren(&del, element);
 
+  if (location == "top" || location == "bottom")
+    {
+      // now swap also the shape of the data for x and y
+      dim_x = colors;
+      colors = 1;
+    }
+
   if (del != del_values::update_without_default && del != del_values::update_with_default)
     {
-      cell_array =
-          global_render->createCellArray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, "data" + str, data_vec);
+      cell_array = global_render->createCellArray(x_min, x_max, c_max, c_min, dim_x, colors, 1, 1, dim_x, colors,
+                                                  "data" + str, data_vec);
       cell_array->setAttribute("_child_id", 0);
       element->append(cell_array);
     }
@@ -5390,8 +5478,8 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
     {
       cell_array = element->querySelectors("cell_array[_child_id=0]");
       if (cell_array != nullptr)
-        global_render->createCellArray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, "data" + str, data_vec, context,
-                                       cell_array);
+        global_render->createCellArray(x_min, x_max, c_max, c_min, dim_x, colors, 1, 1, dim_x, colors, "data" + str,
+                                       data_vec, context, cell_array);
     }
   if (cell_array != nullptr)
     {
@@ -5400,104 +5488,161 @@ static void processColorbar(const std::shared_ptr<GRM::Element> &element, const 
       global_render->setClipRegion(cell_array, 0);
     }
 
+  // depending on the location the position of the axis and the min and max value of the data are different
+  if (location == "top" || location == "bottom")
+    {
+      c_min = x_min;
+      c_max = x_max;
+      x_max = location == "top" ? 1 : 0;
+    }
+  else if (location == "left")
+    {
+      x_max = 0;
+    }
+
   /* create axes */
   gr_inqscale(&options);
   if (options & GR_OPTION_Z_LOG || z_log)
     {
-      axis_t y_axis = {c_min, c_max, 2, c_min, 1, 1, 0, nullptr, NAN, 0, nullptr, NAN, 1};
-      gr_axis('Y', &y_axis);
+      axis_t axis = {c_min, c_max, 2, c_min, x_max, 1, 0, nullptr, NAN, 0, nullptr, NAN, 1};
+      if (location == "top" || location == "bottom")
+        gr_axis('X', &axis);
+      else
+        gr_axis('Y', &axis);
 
-      if ((del != del_values::update_without_default && del != del_values::update_with_default && axis == nullptr) ||
+      if (location == "left" || location == "bottom") axis.tick_size *= -1.0;
+
+      if ((del != del_values::update_without_default && del != del_values::update_with_default &&
+           axis_elem == nullptr) ||
           !element->hasChildNodes())
         {
-          axis = global_render->createAxis(y_axis.min, y_axis.max, y_axis.tick, y_axis.org, y_axis.position,
-                                           y_axis.major_count, y_axis.num_ticks, y_axis.num_tick_labels,
-                                           abs(y_axis.tick_size), y_axis.tick_size > 0 ? 1 : -1, y_axis.label_position);
-          axis->setAttribute("_child_id", 1);
-          global_render->setLineColorInd(axis, 1);
-          element->append(axis);
+          axis_elem = global_render->createAxis(axis.min, axis.max, axis.tick, axis.org, axis.position,
+                                                axis.major_count, axis.num_ticks, axis.num_tick_labels,
+                                                abs(axis.tick_size), axis.tick_size > 0 ? 1 : -1, axis.label_position);
+          axis_elem->setAttribute("_child_id", 1);
+          global_render->setLineColorInd(axis_elem, 1);
+          element->append(axis_elem);
         }
-      else if (axis != nullptr)
+      else if (axis_elem != nullptr)
         {
-          axis = element->querySelectors("axis[_child_id=1]");
-          if (axis != nullptr)
+          axis_elem = element->querySelectors("axis[_child_id=1]");
+          if (axis_elem != nullptr)
             {
-              auto tick_size = y_axis.tick_size;
-              if (axis->hasAttribute("tick_size")) tick_size = static_cast<double>(axis->getAttribute("tick_size"));
-              if (axis->hasAttribute("_tick_size_set_by_user"))
-                tick_size = static_cast<double>(axis->getAttribute("_tick_size_set_by_user"));
+              auto tick_size = axis.tick_size;
+              // change sign of tick_size depending on the location of the colorbar
+              if (axis_elem->hasAttribute("tick_size"))
+                {
+                  tick_size = static_cast<double>(axis_elem->getAttribute("tick_size"));
+                  if (location == "left" || location == "bottom")
+                    {
+                      tick_size *= -1.0;
+                      axis_elem->setAttribute("tick_size", tick_size);
+                    }
+                }
+              if (axis_elem->hasAttribute("_tick_size_set_by_user"))
+                {
+                  tick_size = static_cast<double>(axis_elem->getAttribute("_tick_size_set_by_user"));
+                  if (static_cast<std::string>(axis_elem->getAttribute("axis_type")) != axis_type)
+                    {
+                      tick_size *= -1.0;
+                      axis_elem->setAttribute("_tick_size_set_by_user", tick_size);
+                    }
+                }
 
-              global_render->createAxis(y_axis.min, y_axis.max, y_axis.tick, y_axis.org, y_axis.position,
-                                        y_axis.major_count, y_axis.num_ticks, y_axis.num_tick_labels, abs(tick_size),
-                                        tick_size > 0 ? 1 : -1, y_axis.label_position, axis);
+              global_render->createAxis(axis.min, axis.max, axis.tick, axis.org, axis.position, axis.major_count,
+                                        axis.num_ticks, axis.num_tick_labels, abs(tick_size), tick_size > 0 ? 1 : -1,
+                                        axis.label_position, axis_elem);
             }
         }
-      if (axis != nullptr)
+      if (axis_elem != nullptr)
         {
-          global_render->setScale(axis, GR_OPTION_Y_LOG);
-          global_render->processScale(axis);
-          axis->setAttribute("name", "colorbar y-axis");
-          axis->setAttribute("axis_type", "y");
-          axis->setAttribute("draw_grid", false);
-          axis->setAttribute("mirrored_axis", false);
-          if (del == del_values::update_without_default) axis->setAttribute("min_value", c_min);
+          global_render->setScale(axis_elem, GR_OPTION_Y_LOG);
+          global_render->processScale(axis_elem);
+          axis_elem->setAttribute("name", "colorbar " + axis_type + "-axis");
+          axis_elem->setAttribute("axis_type", axis_type);
+          axis_elem->setAttribute("draw_grid", false);
+          axis_elem->setAttribute("mirrored_axis", false);
+          if (del == del_values::update_without_default) axis_elem->setAttribute("min_value", c_min);
         }
-      gr_freeaxis(&y_axis);
+      gr_freeaxis(&axis);
     }
   else
     {
       double c_tick = autoTick(c_min, c_max);
-      axis_t y_axis = {c_min, c_max, c_tick, c_min, 1, 1, 0, nullptr, NAN, 0, nullptr, NAN, 1};
-      gr_axis('Y', &y_axis);
+      axis_t axis = {c_min, c_max, c_tick, c_min, x_max, 1, 0, nullptr, NAN, 0, nullptr, NAN, 1};
+      if (location == "top" || location == "bottom")
+        gr_axis('X', &axis);
+      else
+        gr_axis('Y', &axis);
+
+      if (location == "left" || location == "bottom") axis.tick_size *= -1;
 
       if (del != del_values::update_without_default && del != del_values::update_with_default)
         {
-          axis = global_render->createAxis(y_axis.min, y_axis.max, y_axis.tick, y_axis.org, y_axis.position,
-                                           y_axis.major_count, y_axis.num_ticks, y_axis.num_tick_labels,
-                                           abs(y_axis.tick_size), y_axis.tick_size > 0 ? 1 : -1, y_axis.label_position);
-          axis->setAttribute("_child_id", 1);
-          global_render->setLineColorInd(axis, 1);
-          element->append(axis);
+          axis_elem = global_render->createAxis(axis.min, axis.max, axis.tick, axis.org, axis.position,
+                                                axis.major_count, axis.num_ticks, axis.num_tick_labels,
+                                                abs(axis.tick_size), axis.tick_size > 0 ? 1 : -1, axis.label_position);
+          axis_elem->setAttribute("_child_id", 1);
+          global_render->setLineColorInd(axis_elem, 1);
+          element->append(axis_elem);
         }
       else
         {
-          axis = element->querySelectors("axis[_child_id=1]");
-          if (axis != nullptr)
+          axis_elem = element->querySelectors("axis[_child_id=1]");
+          if (axis_elem != nullptr)
             {
-              auto tick_size = y_axis.tick_size;
-              if (axis->hasAttribute("tick_size")) tick_size = static_cast<double>(axis->getAttribute("tick_size"));
-              if (axis->hasAttribute("_tick_size_set_by_user"))
-                tick_size = static_cast<double>(axis->getAttribute("_tick_size_set_by_user"));
+              auto tick_size = axis.tick_size;
+              // change sign of tick_size depending on the location of the colorbar
+              if (axis_elem->hasAttribute("tick_size"))
+                {
+                  tick_size = static_cast<double>(axis_elem->getAttribute("tick_size"));
+                  if (location == "left" || location == "bottom")
+                    {
+                      tick_size *= -1.0;
+                      axis_elem->setAttribute("tick_size", tick_size);
+                    }
+                }
+              if (axis_elem->hasAttribute("_tick_size_set_by_user"))
+                {
+                  tick_size = static_cast<double>(axis_elem->getAttribute("_tick_size_set_by_user"));
+                  if (static_cast<std::string>(axis_elem->getAttribute("axis_type")) != axis_type)
+                    {
+                      tick_size *= -1.0;
+                      axis_elem->setAttribute("_tick_size_set_by_user", tick_size);
+                    }
+                }
 
-              global_render->createAxis(y_axis.min, y_axis.max, y_axis.tick, y_axis.org, y_axis.position,
-                                        y_axis.major_count, y_axis.num_ticks, y_axis.num_tick_labels, abs(tick_size),
-                                        tick_size > 0 ? 1 : -1, y_axis.label_position, axis);
+              global_render->createAxis(axis.min, axis.max, axis.tick, axis.org, axis.position, axis.major_count,
+                                        axis.num_ticks, axis.num_tick_labels, abs(tick_size), tick_size > 0 ? 1 : -1,
+                                        axis.label_position, axis_elem);
             }
         }
-      if (axis != nullptr)
+      if (axis_elem != nullptr)
         {
-          axis->setAttribute("scale", 0);
+          axis_elem->setAttribute("scale", 0);
           if (del == del_values::update_without_default)
             {
-              axis->setAttribute("tick", c_tick);
-              axis->setAttribute("min_value", c_min);
+              axis_elem->setAttribute("tick", c_tick);
+              axis_elem->setAttribute("min_value", c_min);
             }
         }
       processFlip(element);
-      gr_freeaxis(&y_axis);
+      gr_freeaxis(&axis);
     }
-  if (axis != nullptr)
+  if (axis_elem != nullptr)
     {
-      if (!axis->hasAttribute("_tick_size_set_by_user"))
-        axis->setAttribute("tick_size", PLOT_DEFAULT_COLORBAR_TICK_SIZE);
+      if (!axis_elem->hasAttribute("_tick_size_set_by_user"))
+        axis_elem->setAttribute("tick_size", (location == "left" || location == "bottom")
+                                                 ? -PLOT_DEFAULT_COLORBAR_TICK_SIZE
+                                                 : PLOT_DEFAULT_COLORBAR_TICK_SIZE);
       else
-        axis->setAttribute("tick_size", static_cast<double>(axis->getAttribute("_tick_size_set_by_user")));
+        axis_elem->setAttribute("tick_size", static_cast<double>(axis_elem->getAttribute("_tick_size_set_by_user")));
+      axis_elem->setAttribute("name", "colorbar " + axis_type + "-axis");
+      axis_elem->setAttribute("axis_type", axis_type);
       if (del != del_values::update_without_default)
         {
-          axis->setAttribute("name", "colorbar y-axis");
-          axis->setAttribute("axis_type", "y");
-          axis->setAttribute("draw_grid", false);
-          axis->setAttribute("mirrored_axis", false);
+          axis_elem->setAttribute("draw_grid", false);
+          axis_elem->setAttribute("mirrored_axis", false);
         }
     }
   applyMoveTransformation(element);
@@ -6315,16 +6460,17 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
   double absolute_upwards_flt, relative_upwards_flt, absolute_downwards_flt, relative_downwards_flt;
   int scale_options, color_upwards_cap, color_downwards_cap, color_error_bar;
   double marker_size, x_min, x_max, y_min, y_max, tick, a, b, e_upwards, e_downwards, x_value;
-  double line_x[2], line_y[2];
+  double line_x[2], line_y[2], last_line_y[2];
   std::vector<double> x_vec, y_vec;
   unsigned int x_length;
   std::string x_key, y_key;
   std::shared_ptr<GRM::Element> series;
   del_values del = del_values::update_without_default;
   int child_id = 0;
+  int error_bar_style = ERRORBAR_DEFAULT_STYLE; // line
 
   absolute_upwards_flt = absolute_downwards_flt = relative_upwards_flt = relative_downwards_flt = FLT_MAX;
-  if (static_cast<std::string>(element->parentElement()->parentElement()->localName()) == "central_region")
+  if (element->parentElement()->parentElement()->localName() == "central_region")
     {
       series = element->parentElement();
     }
@@ -6383,6 +6529,8 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
     relative_downwards_flt = static_cast<double>(element->getAttribute("relative_downwards_flt"));
   if (element->hasAttribute("relative_upwards_flt"))
     relative_upwards_flt = static_cast<double>(element->getAttribute("relative_upwards_flt"));
+  if (element->hasAttribute("error_bar_style"))
+    error_bar_style = static_cast<int>(element->getAttribute("error_bar_style"));
 
   if (absolute_upwards_vec.empty() && relative_upwards_vec.empty() && absolute_upwards_flt == FLT_MAX &&
       relative_upwards_flt == FLT_MAX && absolute_downwards_vec.empty() && relative_downwards_vec.empty() &&
@@ -6421,7 +6569,6 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
   e_upwards = e_downwards = FLT_MAX;
   for (int i = 0; i < x_length; i++)
     {
-      std::shared_ptr<GRM::Element> error_bar;
       if (!absolute_upwards.empty() || !relative_upwards.empty() || absolute_upwards_flt != FLT_MAX ||
           relative_upwards_flt != FLT_MAX)
         {
@@ -6431,7 +6578,6 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
                       (!absolute_upwards.empty() ? absolute_upwards_vec[i]
                                                  : (absolute_upwards_flt != FLT_MAX ? absolute_upwards_flt : 0.));
         }
-
       if (!absolute_downwards.empty() || !relative_downwards.empty() || absolute_downwards_flt != FLT_MAX ||
           relative_downwards_flt != FLT_MAX)
         {
@@ -6443,53 +6589,112 @@ static void processErrorBars(const std::shared_ptr<GRM::Element> &element, const
                                            : (absolute_downwards_flt != FLT_MAX ? absolute_downwards_flt : 0.));
         }
 
-      /* See gr_verrorbars for reference */
-      x_value = x_vec[i];
-      line_x[0] = X_LOG(X_LIN(x_value - tick, scale_options, x_min, x_max, a, b), scale_options, x_min, x_max, a, b);
-      line_x[1] = X_LOG(X_LIN(x_value + tick, scale_options, x_min, x_max, a, b), scale_options, x_min, x_max, a, b);
-
-      if (!is_horizontal)
+      if (i > 0)
         {
-          double tmp1, tmp2;
-          tmp1 = line_x[0], tmp2 = line_x[1];
-          line_x[0] = line_y[0], line_x[1] = line_y[1];
-          line_y[0] = tmp1, line_y[1] = tmp2;
+          last_line_y[0] = line_y[0];
+          last_line_y[1] = line_y[1];
         }
+      line_y[0] = e_upwards != FLT_MAX ? e_upwards : y_vec[i];
+      line_y[1] = e_downwards != FLT_MAX ? e_downwards : y_vec[i];
 
-      if (color_error_bar >= 0)
+      if (error_bar_style == 0)
         {
-          line_y[0] = e_upwards != FLT_MAX ? e_upwards : y_vec[i];
-          line_y[1] = e_downwards != FLT_MAX ? e_downwards : y_vec[i];
+          std::shared_ptr<GRM::Element> error_bar;
+
+          /* See gr_verrorbars for reference */
+          x_value = x_vec[i];
+          line_x[0] =
+              X_LOG(X_LIN(x_value - tick, scale_options, x_min, x_max, a, b), scale_options, x_min, x_max, a, b);
+          line_x[1] =
+              X_LOG(X_LIN(x_value + tick, scale_options, x_min, x_max, a, b), scale_options, x_min, x_max, a, b);
+
+          if (!is_horizontal)
+            {
+              double tmp1, tmp2;
+              tmp1 = line_x[0], tmp2 = line_x[1];
+              line_x[0] = line_y[0], line_x[1] = line_y[1];
+              line_y[0] = tmp1, line_y[1] = tmp2;
+            }
+
+          if (color_error_bar >= 0)
+            {
+              if (del != del_values::update_without_default && del != del_values::update_with_default)
+                {
+                  error_bar = global_render->createErrorBar(x_value, line_y[0], line_y[1], color_error_bar);
+                  error_bar->setAttribute("_child_id", child_id++);
+                  element->append(error_bar);
+                }
+              else
+                {
+                  error_bar = element->querySelectors("error_bar[_child_id=" + std::to_string(child_id++) + "]");
+                  if (error_bar != nullptr)
+                    global_render->createErrorBar(x_value, line_y[0], line_y[1], color_error_bar, error_bar);
+                }
+
+              if (error_bar != nullptr)
+                {
+                  if (e_upwards != FLT_MAX)
+                    {
+                      error_bar->setAttribute("e_upwards", e_upwards);
+                      error_bar->setAttribute("upwards_cap_color", color_upwards_cap);
+                    }
+                  if (e_downwards != FLT_MAX)
+                    {
+                      error_bar->setAttribute("e_downwards", e_downwards);
+                      error_bar->setAttribute("downwards_cap_color", color_downwards_cap);
+                    }
+                  if (e_downwards != FLT_MAX || e_upwards != FLT_MAX)
+                    {
+                      error_bar->setAttribute("cap_x_min", line_x[0]);
+                      error_bar->setAttribute("cap_x_max", line_x[1]);
+                    }
+                }
+            }
+        }
+      else if (error_bar_style == 1 && color_error_bar >= 0)
+        {
+          std::vector<double> f1, f2;
+          std::shared_ptr<GRM::Element> fill_area;
+
+          if (i == 0) continue;
+
+          // fill vector
+          f1.push_back(x_vec[i - 1]);
+          f2.push_back(last_line_y[0]);
+          f1.push_back(x_vec[i - 1]);
+          f2.push_back(last_line_y[1]);
+          f1.push_back(x_vec[i]);
+          f2.push_back(line_y[1]);
+          f1.push_back(x_vec[i]);
+          f2.push_back(line_y[0]);
+
+          auto id = static_cast<int>(global_root->getAttribute("_id"));
+          global_root->setAttribute("_id", id + 1);
+          auto str = std::to_string(id);
+
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
-              error_bar = global_render->createErrorBar(x_value, line_y[0], line_y[1], color_error_bar);
-              error_bar->setAttribute("_child_id", child_id++);
-              element->append(error_bar);
+              fill_area = global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, color_error_bar);
+              fill_area->setAttribute("_child_id", child_id++);
+              element->append(fill_area);
             }
           else
             {
-              error_bar = element->querySelectors("error_bar[_child_id=" + std::to_string(child_id++) + "]");
-              if (error_bar != nullptr)
-                global_render->createErrorBar(x_value, line_y[0], line_y[1], color_error_bar, error_bar);
+              fill_area = element->querySelectors("fill_area[_child_id=" + std::to_string(child_id++) + "]");
+              if (fill_area != nullptr)
+                global_render->createFillArea("x" + str, f1, "y" + str, f2, nullptr, 0, 0, color_error_bar, fill_area);
             }
-
-          if (error_bar != nullptr)
+          if (fill_area != nullptr)
             {
-              if (e_upwards != FLT_MAX)
-                {
-                  error_bar->setAttribute("e_upwards", e_upwards);
-                  error_bar->setAttribute("upwards_cap_color", color_upwards_cap);
-                }
-              if (e_downwards != FLT_MAX)
-                {
-                  error_bar->setAttribute("e_downwards", e_downwards);
-                  error_bar->setAttribute("downwards_cap_color", color_downwards_cap);
-                }
-              if (e_downwards != FLT_MAX || e_upwards != FLT_MAX)
-                {
-                  error_bar->setAttribute("cap_x_min", line_x[0]);
-                  error_bar->setAttribute("cap_x_max", line_x[1]);
-                }
+              double transparency = 0.4;
+              int fill_int_style = 1;
+
+              if (element->hasAttribute("transparency"))
+                transparency = static_cast<double>(element->getAttribute("transparency"));
+              fill_area->setAttribute("transparency", transparency);
+              if (element->hasAttribute("fill_int_style"))
+                fill_int_style = static_cast<int>(element->getAttribute("fill_int_style"));
+              fill_area->setAttribute("fill_int_style", fill_int_style);
             }
         }
     }
@@ -12446,10 +12651,16 @@ static void processTextRegion(const std::shared_ptr<GRM::Element> &element,
     {
       if (location == "left" || location == "top")
         global_render->setTextAlign(text_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-      if (location == "right" || location == "bottom")
+      else if (location == "right" || location == "bottom")
         global_render->setTextAlign(text_elem, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
-      if (location == "top" && is_title) text_elem->setAttribute("z_index", 2);
-      if (location == "left" || location == "right") global_render->setCharUp(text_elem, -1, 0);
+      if (location == "top" && is_title)
+        text_elem->setAttribute("z_index", 2);
+      else
+        text_elem->setAttribute("z_index", 0);
+      if (location == "left" || location == "right")
+        global_render->setCharUp(text_elem, -1, 0);
+      else
+        global_render->setCharUp(text_elem, 0, 1);
     }
 }
 
@@ -12680,7 +12891,9 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
       text_elem = tick_group->querySelectors("text[_child_id=" + std::to_string(child_id) + "]");
       if (text_elem != nullptr) global_render->createText(x, y, text, CoordinateSpace::NDC, text_elem);
     }
-  if ((text_elem != nullptr && del != del_values::update_without_default) || !text_is_empty_or_number)
+  // Todo: Maybe special case for colorbar so that the adjustment is depending on the location and not on the pos
+  if ((text_elem != nullptr && del != del_values::update_without_default) || !text_is_empty_or_number ||
+      (text_elem != nullptr && tick_group->parentElement()->parentElement()->localName() == "colorbar"))
     {
       text_elem->setAttribute("text_color_ind", 1);
       // set text align if not set by user
@@ -12689,7 +12902,7 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
           if (axis_type == "x")
             {
               text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_CENTER);
-              if (pos <= 0.5 * (window[2] + window[3]) ||
+              if ((pos <= 0.5 * (window[2] + window[3]) && !(scale & GR_OPTION_FLIP_Y || y_flip)) ||
                   ((scale & GR_OPTION_FLIP_Y || y_flip) && pos > 0.5 * (window[2] + window[3])))
                 {
                   text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_TOP);
@@ -12703,8 +12916,7 @@ static void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group,
             {
               text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_HALF);
               if ((pos <= 0.5 * (window[0] + window[1]) && !(scale & GR_OPTION_FLIP_X || x_flip)) ||
-                  ((scale & GR_OPTION_FLIP_X || x_flip) && pos > 0.5 * (window[0] + window[1]) &&
-                   tick_group->parentElement()->parentElement()->localName() != "colorbar"))
+                  ((scale & GR_OPTION_FLIP_X || x_flip) && pos > 0.5 * (window[0] + window[1])))
                 {
                   text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_RIGHT);
                 }
@@ -17492,6 +17704,9 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
   std::vector<std::string> error_bar{
       "cap_x_max", "cap_x_min", "e_downwards", "e_upwards", "error_bar_x", "error_bar_y_max", "error_bar_y_min",
   };
+  std::vector<std::string> error_bars{
+      "error_bar_style",
+  };
   std::vector<std::string> marginal_heatmap_plot{
       "algorithm", "marginal_heatmap_kind", "x", "x_flip", "y", "y_flip", "z",
   };
@@ -17620,6 +17835,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
   static std::map<std::string, std::vector<std::string>> element_names{
       {std::string("bar"), bar},
       {std::string("error_bar"), error_bar},
+      {std::string("error_bars"), error_bars},
       {std::string("polar_bar"), polar_bar},
       {std::string("coordinate_system"), coordinate_system_element},
       {std::string("marginal_heatmap_plot"), marginal_heatmap_plot},
@@ -18299,9 +18515,9 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                 {
                   element->setAttribute("_update_required", true);
                   element->setAttribute("_delete_children", 1);
-                  if (str_equals_any(attr, "bin_edges", "bin_widths", "bins", "c", "draw_edges", "inner_series",
-                                     "levels", "marginal_heatmap_kind", "num_bins", "px", "py", "pz", "stairs", "u",
-                                     "v", "x", "x_colormap", "y", "y_colormap", "z"))
+                  if (str_equals_any(attr, "bin_edges", "bin_widths", "bins", "c", "draw_edges", "error_bar_style",
+                                     "inner_series", "levels", "marginal_heatmap_kind", "num_bins", "px", "py", "pz",
+                                     "stairs", "u", "v", "x", "x_colormap", "y", "y_colormap", "z"))
                     element->setAttribute("_delete_children", 2);
                   if (attr == "orientation")
                     {
@@ -18508,6 +18724,67 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               if (element->hasAttribute("y_scale_ndc")) element->removeAttribute("y_scale_ndc");
               if (element->hasAttribute("y_shift_ndc")) element->removeAttribute("y_shift_ndc");
               resetOldBoundingBoxes(element);
+
+              if (str_equals_any(element->localName(), "side_plot_region", "text_region"))
+                {
+                  auto new_location = static_cast<std::string>(element->getAttribute("location"));
+                  auto parent = element->parentElement();
+                  auto other_parent =
+                      parent->parentElement()->querySelectors("side_region[location=" + new_location + "]");
+                  auto parent_text = static_cast<std::string>(parent->getAttribute("text_content"));
+                  auto parent_width = static_cast<double>(parent->getAttribute("width"));
+                  auto parent_offset = static_cast<double>(parent->getAttribute("offset"));
+                  auto other_parent_text = static_cast<std::string>(other_parent->getAttribute("text_content"));
+                  auto other_parent_width = static_cast<double>(other_parent->getAttribute("width"));
+                  auto other_parent_offset = static_cast<double>(other_parent->getAttribute("offset"));
+
+                  for (const auto &child : other_parent->querySelectorsAll(element->localName()))
+                    {
+                      // figure out if an element needs to be swapped back
+                      if (child != element)
+                        {
+                          parent->appendChild(child);
+                          child->setAttribute("_update_required", 1);
+                          child->setAttribute("location", value);
+                          resetOldBoundingBoxes(child);
+                        }
+                    }
+                  // move element between both regions
+                  other_parent->appendChild(element);
+                  if (element->localName() == "text_region")
+                    {
+                      other_parent->setAttribute("text_content", parent_text);
+                      if (!other_parent_text.empty())
+                        parent->setAttribute("text_content", other_parent_text);
+                      else
+                        parent->removeAttribute("text_content");
+                    }
+
+                  if (element->localName() == "side_plot_region")
+                    {
+                      // reset width and offset cause with the side_plot_region change they could be different
+                      other_parent->setAttribute("offset", parent_offset);
+                      other_parent->setAttribute("width", parent_width);
+                      parent->setAttribute("offset", other_parent_offset);
+                      parent->setAttribute("width", other_parent_width);
+                    }
+                  element->setAttribute("_update_required", 1);
+                  resetOldBoundingBoxes(element);
+                }
+              else if (element->localName() == "side_region")
+                {
+                  // switch the complete side_region if its location gets changed
+                  auto new_location = static_cast<std::string>(element->getAttribute("location"));
+                  for (const auto &side_region :
+                       element->parentElement()->querySelectorsAll("side_region[location=" + new_location + "]"))
+                    {
+                      if (side_region != element)
+                        {
+                          side_region->setAttribute("location", value);
+                          resetOldBoundingBoxes(side_region);
+                        }
+                    }
+                }
             }
           else if (element->localName() == "integral" &&
                    std::find(integral_critical_attributes.begin(), integral_critical_attributes.end(), attr) !=
