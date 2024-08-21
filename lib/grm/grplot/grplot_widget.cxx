@@ -108,6 +108,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   combo_box_attr = QStringList{
       "algorithm",
       "axis_type",
+      "clip_region",
       "colormap",
       "font",
       "font_precision",
@@ -142,6 +143,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "adjust_x_lim",
       "adjust_y_lim",
       "adjust_z_lim",
+      "clip_negative",
       "disable_x_trans",
       "disable_y_trans",
       "draw_grid",
@@ -150,6 +152,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "is_major",
       "is_mirrored",
       "keep_aspect_ratio",
+      "keep_radii_axes",
       "keep_window",
       "marginal_heatmap_side_plot",
       "mirrored_axis",
@@ -529,6 +532,10 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       "x",
       "y",
   };
+  QStringList clip_region_list{
+      "quadratic",
+      "elliptic",
+  };
   QStringList orientation_list{
       "vertical",
       "horizontal",
@@ -591,6 +598,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   QStringList side_region_location_list{"top", "right", "bottom", "left"};
   static std::map<std::string, QStringList> attributeToList{
       {"axis_type", axis_type_list},
+      {"clip_region", clip_region_list},
       {"size_x_unit", size_unit_list},
       {"size_y_unit", size_unit_list},
       {"colormap", colormap_list},

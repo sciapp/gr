@@ -23,10 +23,10 @@
 #define PLOT_DEFAULT_CLEAR 1
 #define PLOT_DEFAULT_UPDATE 1
 #define PLOT_DEFAULT_LOCATION 1
-#define PLOT_DEFAULT_SUBPLOT_MIN_X 0.0
-#define PLOT_DEFAULT_SUBPLOT_MAX_X 1.0
-#define PLOT_DEFAULT_SUBPLOT_MIN_Y 0.0
-#define PLOT_DEFAULT_SUBPLOT_MAX_Y 1.0
+#define PLOT_DEFAULT_PLOT_MIN_X 0.0
+#define PLOT_DEFAULT_PLOT_MAX_X 1.0
+#define PLOT_DEFAULT_PLOT_MIN_Y 0.0
+#define PLOT_DEFAULT_PLOT_MAX_Y 1.0
 #define PLOT_DEFAULT_ROTATION 40.0
 #define PLOT_DEFAULT_TILT 60.0
 #define PLOT_DEFAULT_KEEP_ASPECT_RATIO 1
@@ -80,10 +80,11 @@
 #define PLOT_2D_CHAR_HEIGHT 0.018
 #define PLOT_POLAR_CHAR_HEIGHT 0.018
 #define PLOT_DEFAULT_AXES_TICK_SIZE 0.0075
-#define DEFAULT_ASPECT_RATIO_FOR_SCALING 4.0 / 3.0
+#define DEFAULT_ASPECT_RATIO_FOR_SCALING (4.0 / 3.0)
 #define PLOT_DEFAULT_ONLY_QUADRATIC_ASPECT_RATIO 0
 #define MIRRORED_AXIS_DEFAULT 1
 #define SCIENTIFIC_FORMAT_OPTION 2
+#define PLOT_DEFAULT_MODEL 0
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -253,7 +254,7 @@ public:
                                       int tick_orientation, double label_pos,
                                       const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
-  std::shared_ptr<Element> createTickGroup(int is_major, std::string tick_label, double value, double width,
+  std::shared_ptr<Element> createTickGroup(int is_major, const std::string &tick_label, double value, double width,
                                            const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createTick(int is_major, double value,
@@ -266,10 +267,6 @@ public:
                                         const std::string &specs_key, std::optional<std::vector<std::string>> specs,
                                         const std::shared_ptr<GRM::Context> &extContext = nullptr,
                                         const std::shared_ptr<GRM::Element> &extElement = nullptr);
-
-  std::shared_ptr<Element> createDrawPolarAxes(int angle_ticks, const std::string &kind, int phiflip,
-                                               const std::string &norm = "", double tick = 0.0, double line_width = 0.0,
-                                               const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
   std::shared_ptr<Element> createPieLegend(const std::string &labels_key,
                                            std::optional<std::vector<std::string>> labels,
@@ -386,12 +383,21 @@ public:
   std::shared_ptr<Element> createIntegral(double int_lim_low, double int_lim_high,
                                           const std::shared_ptr<GRM::Element> &extElement = nullptr);
 
-  std::shared_ptr<Element> createSideRegion(std::string location,
+  std::shared_ptr<Element> createSideRegion(const std::string &location,
                                             const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createTextRegion(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
   std::shared_ptr<Element> createSidePlotRegion(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+
+  std::shared_ptr<Element> createRhoAxes(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+
+  std::shared_ptr<Element> createThetaAxes(const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+
+  std::shared_ptr<Element> createAngleLine(double x, double y, const std::string &angle_label,
+                                           const std::shared_ptr<GRM::Element> &ext_element = nullptr);
+
+  std::shared_ptr<Element> createArcGridLine(double value, const std::shared_ptr<GRM::Element> &ext_element = nullptr);
 
   //! Modifierfunctions
 
@@ -410,6 +416,8 @@ public:
 
   //! Use Fallback
   void setNextColor(const std::shared_ptr<Element> &element);
+
+  void setClipRegion(const std::shared_ptr<Element> &element, int region);
 
   void setViewport(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
@@ -494,7 +502,7 @@ public:
 
   void setProjectionType(const std::shared_ptr<Element> &element, int type);
 
-  void setSubplot(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
+  void setPlot(const std::shared_ptr<Element> &element, double xmin, double xmax, double ymin, double ymax);
 
   void setOriginPosition(const std::shared_ptr<GRM::Element> &element, const std::string &x_org_pos,
                          const std::string &y_org_pos);
