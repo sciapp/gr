@@ -626,6 +626,7 @@
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="error_bar" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="fill_area" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attribute name="absolute_downwards" type="xs:string"/>
@@ -634,6 +635,8 @@
             <xs:attribute name="absolute_upwards_flt" type="xs:double"/>
             <xs:attribute name="downwards_cap_color" type="xs:integer"/>
             <xs:attribute name="error_bar_color" type="xs:integer"/>
+            <xs:attribute name="error_bar_style" type="xs:integer"/>
+            <xs:attribute name="fill_int_style" type="strint"/>
             <xs:attribute name="relative_downwards" type="xs:string"/>
             <xs:attribute name="relative_downwards_flt" type="xs:double"/>
             <xs:attribute name="relative_upwards" type="xs:string"/>
@@ -834,6 +837,7 @@
             <xs:attribute name="fill_int_style" type="strint"/>
             <xs:attribute name="fill_style" type="strint"/>
             <xs:attribute name="name" type="xs:string"/>
+            <xs:attribute name="transparency" type="xs:double"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="z_index" type="xs:integer"/>

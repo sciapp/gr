@@ -85,6 +85,7 @@
 #define MIRRORED_AXIS_DEFAULT 1
 #define SCIENTIFIC_FORMAT_OPTION 2
 #define PLOT_DEFAULT_MODEL 0
+#define ERRORBAR_DEFAULT_STYLE 0
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -126,6 +127,7 @@ EXPORT int textAlignHorizontalStringToInt(const std::string &text_align_horizont
 EXPORT int textAlignVerticalStringToInt(const std::string &text_align_vertical_str);
 EXPORT int textEncodingStringToInt(const std::string &text_encoding_str);
 EXPORT int tickOrientationStringToInt(const std::string &tick_orientation_str);
+EXPORT int errorBarStyleStringToInt(const std::string &error_bar_stylr_str);
 
 EXPORT std::string algorithmIntToString(int algorithm);
 EXPORT std::string colormapIntToString(int colormap);
@@ -143,6 +145,7 @@ EXPORT std::string textAlignHorizontalIntToString(int text_align_horizontal);
 EXPORT std::string textAlignVerticalIntToString(int text_align_vertical);
 EXPORT std::string textEncodingIntToString(int text_encoding);
 EXPORT std::string tickOrientationIntToString(int tick_orientation);
+EXPORT std::string errorBarStyleIntToString(int error_bar_style);
 
 EXPORT std::vector<std::string> getSizeUnits();
 EXPORT std::vector<std::string> getColormaps();
