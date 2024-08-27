@@ -96,6 +96,8 @@ private slots:
   void stem();
   void shade();
   void hexbin();
+  void polar_line();
+  void polar_scatter();
   void pdf();
   void png();
   void jpeg();
@@ -224,6 +226,7 @@ private:
   QAction *plot3Act, *trisurfAct, *tricontAct, *scatter3Act;
   QAction *histAct, *barplotAct, *stairsAct, *stemAct;
   QAction *shadeAct, *hexbinAct;
+  QAction *polarLineAct, *polarScatterAct;
   QAction *PdfAct, *PngAct, *JpegAct, *SvgAct;
   QAction *show_container_action, *show_bounding_boxes_action, *save_file_action, *load_file_action, *editor_action,
       *add_element_action;

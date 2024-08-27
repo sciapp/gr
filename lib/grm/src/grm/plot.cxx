@@ -198,20 +198,23 @@ event_queue_t *event_queue = nullptr;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},           {"hexbin", "xys"},
-                                           {"polar", "xys"},          {"shade", "xys"},
-                                           {"stem", "xys"},           {"stairs", "xys"},
-                                           {"contour", "xyzc"},       {"contourf", "xyzc"},
-                                           {"tricontour", "xyzc"},    {"trisurface", "xyzc"},
-                                           {"surface", "xyzc"},       {"wireframe", "xyzc"},
-                                           {"plot3", "xyzc"},         {"scatter", "xyzc"},
-                                           {"scatter3", "xyzc"},      {"quiver", "xyuv"},
-                                           {"heatmap", "xyzc"},       {"hist", "x"},
-                                           {"barplot", "y"},          {"isosurface", "c"},
-                                           {"imshow", "c"},           {"nonuniform_heatmap", "xyzc"},
-                                           {"polar_histogram", "x"},  {"pie", "x"},
-                                           {"volume", "c"},           {"marginal_heatmap", "xyzc"},
-                                           {"polar_heatmap", "xyzc"}, {"nonuniform_polar_heatmap", "xyzc"}};
+static string_map_entry_t kind_to_fmt[] = {
+    {"line", "xys"},           {"hexbin", "xys"},
+    {"polar_line", "xys"},     {"shade", "xys"},
+    {"stem", "xys"},           {"stairs", "xys"},
+    {"contour", "xyzc"},       {"contourf", "xyzc"},
+    {"tricontour", "xyzc"},    {"trisurface", "xyzc"},
+    {"surface", "xyzc"},       {"wireframe", "xyzc"},
+    {"plot3", "xyzc"},         {"scatter", "xyzc"},
+    {"scatter3", "xyzc"},      {"quiver", "xyuv"},
+    {"heatmap", "xyzc"},       {"hist", "x"},
+    {"barplot", "y"},          {"isosurface", "c"},
+    {"imshow", "c"},           {"nonuniform_heatmap", "xyzc"},
+    {"polar_histogram", "x"},  {"pie", "x"},
+    {"volume", "c"},           {"marginal_heatmap", "xyzc"},
+    {"polar_heatmap", "xyzc"}, {"nonuniform_polar_heatmap", "xyzc"},
+    {"polar_scatter", "xys"},
+};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -234,7 +237,8 @@ static plot_func_map_entry_t kind_to_func[] = {{"line", plot_line},
                                                {"scatter3", plot_scatter3},
                                                {"imshow", plot_imshow},
                                                {"isosurface", plot_isosurface},
-                                               {"polar", plot_polar},
+                                               {"polar_line", plot_polar_line},
+                                               {"polar_scatter", plot_polar_scatter},
                                                {"trisurface", plot_trisurface},
                                                {"tricontour", plot_tricontour},
                                                {"shade", plot_shade},
@@ -1119,7 +1123,7 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
   plot_process_font(subplot_args);
   plot_process_resample_method(subplot_args);
 
-  if (str_equals_any(kind, "polar", "polar_histogram"))
+  if (str_equals_any(kind, "polar_line", "polar_scatter", "polar_histogram"))
     {
       plot_draw_polar_axes(subplot_args);
     }
@@ -3136,7 +3140,7 @@ err_t plot_volume(grm_args_t *subplot_args)
   return ERROR_NONE;
 }
 
-err_t plot_polar(grm_args_t *subplot_args)
+err_t plot_polar_line(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
 
@@ -3150,8 +3154,8 @@ err_t plot_polar(grm_args_t *subplot_args)
       double y_min, y_max, x_min, x_max;
       unsigned int rho_length, theta_length;
       char *spec;
-      auto subGroup = global_render->createSeries("polar");
-      int clip_negative = 0;
+      auto subGroup = global_render->createSeries("polar_line");
+      int clip_negative = 0, marker_type;
       group->append(subGroup);
 
       grm_args_first_value(*current_series, "x", "D", &theta, &theta_length);
@@ -3169,23 +3173,83 @@ err_t plot_polar(grm_args_t *subplot_args)
       (*context)["y" + str] = rho_vec;
       subGroup->setAttribute("y", "y" + str);
 
-      if (grm_args_values(*current_series, "line_spec", "s", &spec)) subGroup->setAttribute("spec", spec);
       if (grm_args_values(*current_series, "y_range", "dd", &y_min, &y_max))
         {
           subGroup->setAttribute("y_range_min", y_min);
           subGroup->setAttribute("y_range_max", y_max);
-        }
-      if (grm_args_values(*current_series, "clip_negative", "i", &clip_negative))
-        {
-          subGroup->setAttribute("clip_negative", clip_negative);
         }
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
         {
           subGroup->setAttribute("x_range_min", x_min);
           subGroup->setAttribute("x_range_max", x_max);
         }
+      if (grm_args_values(*current_series, "clip_negative", "i", &clip_negative))
+        {
+          subGroup->setAttribute("clip_negative", clip_negative);
+        }
 
-      global_root->setAttribute("_id", id++);
+      if (grm_args_values(*current_series, "line_spec", "s", &spec)) subGroup->setAttribute("line_spec", spec);
+      if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
+        subGroup->setAttribute("marker_type", marker_type);
+
+      global_root->setAttribute("_id", ++id);
+      ++current_series;
+    }
+
+  return ERROR_NONE;
+}
+
+err_t plot_polar_scatter(grm_args_t *subplot_args)
+{
+  grm_args_t **current_series;
+
+  std::shared_ptr<GRM::Element> group =
+      (current_central_region_element) ? current_central_region_element : getCentralRegion();
+
+  grm_args_values(subplot_args, "series", "A", &current_series);
+  while (*current_series != nullptr)
+    {
+      double *rho, *theta;
+      double y_min, y_max, x_min, x_max;
+      unsigned int rho_length, theta_length;
+      auto sub_group = global_render->createSeries("polar_scatter");
+      int clip_negative = 0, marker_type;
+      group->append(sub_group);
+
+      grm_args_first_value(*current_series, "x", "D", &theta, &theta_length);
+      grm_args_first_value(*current_series, "y", "D", &rho, &rho_length);
+
+      int id = static_cast<int>(global_root->getAttribute("_id"));
+      std::string str = std::to_string(id);
+      auto context = global_render->getContext();
+
+      std::vector<double> theta_vec(theta, theta + theta_length);
+      std::vector<double> rho_vec(rho, rho + rho_length);
+
+      (*context)["x" + str] = theta_vec;
+      sub_group->setAttribute("x", "x" + str);
+      (*context)["y" + str] = rho_vec;
+      sub_group->setAttribute("y", "y" + str);
+
+      if (grm_args_values(*current_series, "y_range", "dd", &y_min, &y_max))
+        {
+          sub_group->setAttribute("y_range_min", y_min);
+          sub_group->setAttribute("y_range_max", y_max);
+        }
+      if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
+        {
+          sub_group->setAttribute("x_range_min", x_min);
+          sub_group->setAttribute("x_range_max", x_max);
+        }
+      if (grm_args_values(*current_series, "clip_negative", "i", &clip_negative))
+        {
+          sub_group->setAttribute("clip_negative", clip_negative);
+        }
+
+      if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
+        sub_group->setAttribute("marker_type", marker_type);
+
+      global_root->setAttribute("_id", ++id);
       ++current_series;
     }
 

@@ -99,11 +99,12 @@ static std::map<std::string, const char *> key_to_types{
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static std::list<std::string> kind_types = {
-    "barplot",         "contour",    "contourf", "heatmap",          "hexbin",     "hist",
-    "imshow",          "isosurface", "line",     "marginal_heatmap", "polar",      "polar_heatmap",
-    "polar_histogram", "pie",        "plot3",    "scatter",          "scatter3",   "shade",
-    "surface",         "stem",       "stairs",   "tricontour",       "trisurface", "quiver",
-    "volume",          "wireframe"};
+    "barplot",    "contour",       "contourf",        "heatmap",       "hexbin",
+    "hist",       "imshow",        "isosurface",      "line",          "marginal_heatmap",
+    "polar_line", "polar_heatmap", "polar_histogram", "polar_scatter", "pie",
+    "plot3",      "scatter",       "scatter3",        "shade",         "surface",
+    "stem",       "stairs",        "tricontour",      "trisurface",    "quiver",
+    "volume",     "wireframe"};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ alias for keys ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -1208,7 +1209,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       if (cols > 1) fprintf(stderr, "Only the first column gets displayed\n");
       grm_args_push(args, "x", "nD", rows, file_data[depth][0].data());
     }
-  else if (strcmp(kind, "polar") == 0)
+  else if (strcmp(kind, "polar_line") == 0 || strcmp(kind, "polar_scatter") == 0)
     {
       if (cols > 1) fprintf(stderr, "Only the first 2 columns get displayed\n");
       grm_args_push(args, "x", "nD", rows, file_data[depth][0].data());

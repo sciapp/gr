@@ -376,6 +376,15 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
           type->addAction(shadeAct);
           type->addAction(hexbinAct);
         }
+      else if (strcmp(kind, "polar_line") == 0 || strcmp(kind, "polar_scatter") == 0)
+        {
+          polarLineAct = new QAction(tr("&Polar Line"), this);
+          connect(polarLineAct, &QAction::triggered, this, &GRPlotWidget::polar_line);
+          polarScatterAct = new QAction(tr("&Polar Scatter"), this);
+          connect(polarScatterAct, &QAction::triggered, this, &GRPlotWidget::polar_scatter);
+          type->addAction(polarLineAct);
+          type->addAction(polarScatterAct);
+        }
       moveableModeAct = new QAction(tr("&Disable movable transformation"), this);
       connect(moveableModeAct, &QAction::triggered, this, &GRPlotWidget::moveableMode);
       modi_menu->addAction(moveableModeAct);
@@ -675,7 +684,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       QStringList plot3_group = {"plot3", "scatter", "scatter3", "tricontour", "trisurface"};
       QStringList barplot_group = {"barplot", "hist", "stem", "stairs"};
       QStringList hexbin_group = {"hexbin", "shade"};
-      QStringList other_kinds = {"pie", "polar_histogram", "polar", "polar_heatmap", "polar_histogram", "quiver"};
+      QStringList other_kinds = {"pie", "polar_heatmap", "polar_histogram", "polar_line", "polar_scatter", "quiver"};
       std::string kind;
 
       if (util::startsWith(cur_elem_name, "series_")) kind = cur_elem_name.erase(0, 7);
@@ -2411,6 +2420,26 @@ void GRPlotWidget::hexbin()
   for (const auto &elem : global_root->querySelectorsAll("series_shade"))
     {
       elem->setAttribute("kind", "hexbin");
+    }
+  redraw();
+}
+
+void GRPlotWidget::polar_line()
+{
+  if (global_root == nullptr) global_root = grm_get_document_root();
+  for (const auto &elem : global_root->querySelectorsAll("series_polar_scatter"))
+    {
+      elem->setAttribute("kind", "polar_line");
+    }
+  redraw();
+}
+
+void GRPlotWidget::polar_scatter()
+{
+  auto root = grm_get_document_root();
+  for (const auto &elem : root->querySelectorsAll("series_polar_line"))
+    {
+      elem->setAttribute("kind", "polar_scatter");
     }
   redraw();
 }
