@@ -831,7 +831,16 @@ static void set_clip_rect(int tnr)
       cairo_save(p->cr);
       cairo_translate(p->cr, x + 0.5 * w, y + 0.5 * h);
       cairo_scale(p->cr, 1., h / w);
-      cairo_arc(p->cr, 0., 0., w * 0.5, 0, 2 * M_PI);
+      if (gkss->clip_start_angle > 0 || gkss->clip_end_angle < 360)
+        {
+          cairo_move_to(p->cr, 0, 0);
+          cairo_arc_negative(p->cr, 0, 0, w * 0.5, -gkss->clip_start_angle * M_PI / 180,
+                             -gkss->clip_end_angle * M_PI / 180);
+        }
+      else
+        {
+          cairo_arc(p->cr, 0., 0., w * 0.5, 0, 2 * M_PI);
+        }
       cairo_restore(p->cr);
     }
   else
