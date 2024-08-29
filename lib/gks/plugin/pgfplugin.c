@@ -921,10 +921,18 @@ static void set_clip_rect(int tnr)
           y = (p->rect[tnr][0][1] + p->rect[tnr][1][1]) / 2;
           w = p->rect[tnr][1][0] - p->rect[tnr][0][0];
           h = p->rect[tnr][1][1] - p->rect[tnr][0][1];
-          pgf_printf(p->stream,
-                     "\\begin{scope}\n"
-                     "\\clip (%f,%f) ellipse (%f and %f);\n",
-                     x, y, w / 2, h / 2);
+          if (gkss->clip_start_angle > 0 || gkss->clip_end_angle < 360)
+            pgf_printf(p->stream,
+                       "\\begin{scope}\n"
+                       "\\clip (%f,%f) arc (%f:%f:%f and %f) -- (%f,%f);\n",
+                       x + 0.5 * w * cos(-gkss->clip_start_angle * M_PI / 180),
+                       y + 0.5 * h * sin(-gkss->clip_start_angle * M_PI / 180), -gkss->clip_start_angle,
+                       -gkss->clip_end_angle, w / 2, h / 2, x, y);
+          else
+            pgf_printf(p->stream,
+                       "\\begin{scope}\n"
+                       "\\clip (%f,%f) ellipse (%f and %f);\n",
+                       x, y, w / 2, h / 2);
         }
       else
         {

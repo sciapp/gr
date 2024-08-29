@@ -116,6 +116,7 @@ extern "C" {
 #define INQ_WS_STATE 209
 #define SAMPLE_LOCATOR 210
 #define SET_CLIP_REGION 211
+#define SET_CLIP_SECTOR 212
 
 #define BEGIN_SELECTION 250
 #define END_SELECTION 251
@@ -170,9 +171,10 @@ typedef struct
   double bwidth;
   int bcoli;
   int clip_tnr;
+  int clip_region;
+  double clip_start_angle, clip_end_angle;
   int resize_behaviour;
   double aspect_ratio;
-  int clip_region;
   char *(*callback)(const char *);
   int debug;
 } gks_state_list_t;

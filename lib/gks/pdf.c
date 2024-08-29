@@ -880,6 +880,46 @@ static void open_ws(int fd, int wstype)
   pdf_open(fd);
 }
 
+static void arc(double x, double y, double w, double h, double a1, double a2)
+{
+  double bcp, cos_a1, cos_a2, sin_a1, sin_a2;
+
+  a1 = a1 * M_PI / 180;
+  a2 = a2 * M_PI / 180;
+
+  bcp = (4.0 / 3 * (1 - cos(0.5 * (a2 - a1))) / sin(0.5 * (a2 - a1)));
+
+  sin_a1 = sin(a1);
+  sin_a2 = sin(a2);
+  cos_a1 = cos(a1);
+  cos_a2 = cos(a2);
+
+  pdf_printf(p->content, "%.2f %.2f %.2f %.2f %.2f %.2f c\n", x + w * (cos_a1 - bcp * sin_a1),
+             y + h * (sin_a1 + bcp * cos_a1), x + w * (cos_a2 + bcp * sin_a2), y + h * (sin_a2 - bcp * cos_a2),
+             x + w * cos_a2, y + h * sin_a2);
+}
+
+static void draw_arc(double x, double y, double w, double h, double a1, double a2)
+{
+  if (a1 == a2) return;
+
+  while (fabs(a2 - a1) > 90 + 0.1)
+    {
+      if (a2 > a1)
+        {
+          arc(x, y, w, h, a1, a1 + 90);
+          a1 += 90;
+        }
+      else
+        {
+          arc(x, y, w, h, a1, a1 - 90);
+          a1 -= 90;
+        }
+    }
+
+  if (a1 != a2) arc(x, y, w, h, a1, a2);
+}
+
 static void set_clip_rect(int tnr)
 {
   double *clrt, x0, x1, y0, y1;
@@ -902,14 +942,27 @@ static void set_clip_rect(int tnr)
       y = 0.5 * (y0 + y1);
       xr = 0.5 * (x1 - x0);
       yr = 0.5 * (y1 - y0);
-      pdf_moveto(p, x - xr * cx[3][2], y - yr * cy[3][2]);
-      for (curve = 0; curve < 4; curve++)
+      if (gkss->clip_start_angle > 0 || gkss->clip_end_angle < 360)
         {
-          for (i = 0; i < 3; i++)
+          double w, h;
+          w = xr;
+          h = yr;
+          pdf_moveto(p, x + w * cos(gkss->clip_start_angle * M_PI / 180),
+                     y + h * sin(gkss->clip_start_angle * M_PI / 180));
+          draw_arc(x, y, w, h, gkss->clip_start_angle, gkss->clip_end_angle);
+          pdf_lineto(p, x, y);
+        }
+      else
+        {
+          pdf_moveto(p, x - xr * cx[3][2], y - yr * cy[3][2]);
+          for (curve = 0; curve < 4; curve++)
             {
-              pdf_point(p, x - xr * cx[curve][i], y - yr * cy[curve][i]);
+              for (i = 0; i < 3; i++)
+                {
+                  pdf_point(p, x - xr * cx[curve][i], y - yr * cy[curve][i]);
+                }
+              pdf_curveto(p);
             }
-          pdf_curveto(p);
         }
     }
   else
@@ -1687,46 +1740,6 @@ static void to_DC(int n, double *x, double *y)
       seg_xform(&xn, &yn);
       NDC_to_DC(xn, yn, x[i], y[i]);
     }
-}
-
-static void arc(double x, double y, double w, double h, double a1, double a2)
-{
-  double bcp, cos_a1, cos_a2, sin_a1, sin_a2;
-
-  a1 = a1 * M_PI / 180;
-  a2 = a2 * M_PI / 180;
-
-  bcp = (4.0 / 3 * (1 - cos(0.5 * (a2 - a1))) / sin(0.5 * (a2 - a1)));
-
-  sin_a1 = sin(a1);
-  sin_a2 = sin(a2);
-  cos_a1 = cos(a1);
-  cos_a2 = cos(a2);
-
-  pdf_printf(p->content, "%.2f %.2f %.2f %.2f %.2f %.2f c\n", x + w * (cos_a1 - bcp * sin_a1),
-             y + h * (sin_a1 + bcp * cos_a1), x + w * (cos_a2 + bcp * sin_a2), y + h * (sin_a2 - bcp * cos_a2),
-             x + w * cos_a2, y + h * sin_a2);
-}
-
-static void draw_arc(double x, double y, double w, double h, double a1, double a2)
-{
-  if (a1 == a2) return;
-
-  while (fabs(a2 - a1) > 90)
-    {
-      if (a2 > a1)
-        {
-          arc(x, y, w, h, a1, a1 + 90);
-          a1 += 90;
-        }
-      else
-        {
-          arc(x, y, w, h, a1, a1 - 90);
-          a1 -= 90;
-        }
-    }
-
-  if (a1 != a2) arc(x, y, w, h, a1, a2);
 }
 
 static void draw_path(int n, double *px, double *py, int nc, int *codes)
