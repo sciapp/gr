@@ -539,8 +539,10 @@ void gks_init_gks(void)
       s->bwidth = 1;
       s->bcoli = 0;
       s->clip_tnr = 0;
-      s->resize_behaviour = GKS_K_RESIZE;
       s->clip_region = GKS_K_REGION_RECTANGLE;
+      s->clip_start_angle = 0;
+      s->clip_end_angle = 360;
+      s->resize_behaviour = GKS_K_RESIZE;
       s->aspect_ratio = 1;
 
       s->callback = NULL;
@@ -4554,6 +4556,35 @@ void gks_inq_clip_region(int *errind, int *region)
 {
   *errind = GKS_K_NO_ERROR;
   *region = s->clip_region;
+}
+
+void gks_set_clip_sector(double start_angle, double end_angle)
+{
+  if (state >= GKS_K_GKOP)
+    {
+      if (start_angle >= 0 && end_angle > start_angle && end_angle <= 360)
+        {
+          s->clip_start_angle = f_arr_1[0] = start_angle;
+          s->clip_end_angle = f_arr_2[0] = end_angle;
+
+          /* call the device driver link routine */
+          gks_ddlk(SET_CLIP_SECTOR, 0, 0, 0, i_arr, 1, f_arr_1, 1, f_arr_2, 0, c_arr, NULL);
+        }
+      else
+        /* clip sector angles are invalid */
+        gks_report_error(SET_CLIP_SECTOR, 166);
+    }
+  else
+    /* GKS not in proper state. GKS must be in one of the states
+       GKOP, WSOP, WSAC or SGOP */
+    gks_report_error(SET_CLIP_SECTOR, 8);
+}
+
+void gks_inq_clip_sector(int *errind, double *start_angle, double *end_angle)
+{
+  *errind = GKS_K_NO_ERROR;
+  *start_angle = s->clip_start_angle;
+  *end_angle = s->clip_end_angle;
 }
 
 void gks_set_resize_behaviour(int flag)

@@ -179,7 +179,8 @@ static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_
       COPY(f_arr_1, sizeof(double));
       break;
 
-    case 32: /* set character up vector */
+    case 32:  /* set character up vector */
+    case 212: /* set clip sector */
 
       len = 2 * sizeof(int) + 2 * sizeof(double);
       if (p->nbytes + len > p->size) reallocate(len);
@@ -389,6 +390,7 @@ void gks_drv_mo(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_1,
     case 207:
     case 208:
     case 211:
+    case 212:
 
       if (p->state == GKS_K_WS_ACTIVE)
         {
@@ -575,7 +577,8 @@ static void interp(char *str)
           RESOLVE(f_arr_1, double, sizeof(double));
           break;
 
-        case 32: /* set character up vector */
+        case 32:  /* set character up vector */
+        case 212: /* set clip sector */
 
           RESOLVE(f_arr_1, double, sizeof(double));
           RESOLVE(f_arr_2, double, sizeof(double));
@@ -759,6 +762,9 @@ static void interp(char *str)
           break;
         case 211:
           gks_set_clip_region(i_arr[0]);
+          break;
+        case 212:
+          gks_set_clip_sector(f_arr_1[0], f_arr_2[0]);
           break;
         }
 

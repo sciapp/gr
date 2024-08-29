@@ -278,6 +278,9 @@ const char *gks_function_name(int routine)
     case 211:
       name = "SET_CLIP_REGION";
       break;
+    case 212:
+      name = "SET_CLIP_SECTOR";
+      break;
     case 250:
       name = "BEGIN_SELECTION";
       break;
@@ -475,6 +478,9 @@ void gks_report_error(int routine, int errnum)
       break;
     case 165:
       message = "Clip region type is invalid in routine %s";
+      break;
+    case 166:
+      message = "Clip sector angles are invalid in routine %s";
       break;
     case 401:
       message = "Dimensions of image are invalid in routine %s";

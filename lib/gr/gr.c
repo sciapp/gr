@@ -179,8 +179,9 @@ typedef struct
   double bwidth;
   int bcoli;
   int clip_tnr;
-  int resize_behaviour;
   int clip_region;
+  double clip_start_angle, clip_end_angle;
+  int resize_behaviour;
   double alpha;
   double txoff[2];
 } state_list;
@@ -5578,9 +5579,9 @@ static void draw_axis(char which, axis_t *axis, int pass)
 
 void gr_drawaxis(char which, axis_t *axis)
 {
-  int errind, tnr, ltype, clsw, halign, valign;
+  int errind, tnr, ltype, clsw;
   double wn[4], vp[4], clrt[4];
-  int i, pass;
+  int pass;
 
   check_autoinit;
 
@@ -5662,7 +5663,6 @@ void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
 {
   int errind, tnr, ltype, clsw;
   double wn[4], vp[4], clrt[4];
-  double tick, minor_tick, major_tick;
   int pass;
   axis_t axis;
 
@@ -9838,7 +9838,7 @@ static void rebin(int nx, int ny, double *px, double *py, double *pz, int *nxq, 
 void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, double *pz, int major_h)
 {
   int i, j;
-  int errind, tnr, ltype, color, halign, valign;
+  int errind, ltype, color, halign, valign;
   double chux, chuy;
   int nxq, nyq;
   double *xq = NULL, *yq = NULL, *zq = NULL;
@@ -12994,8 +12994,9 @@ void gr_savestate(void)
       gks_inq_border_width(&errind, &s->bwidth);
       gks_inq_border_color_index(&errind, &s->bcoli);
       gks_inq_clip_xform(&errind, &s->clip_tnr);
-      gks_inq_resize_behaviour(&s->resize_behaviour);
       gks_inq_clip_region(&errind, &s->clip_region);
+      gks_inq_clip_sector(&errind, &s->clip_start_angle, &s->clip_end_angle);
+      gks_inq_resize_behaviour(&s->resize_behaviour);
 
       s->txoff[0] = txoff[0];
       s->txoff[1] = txoff[1];
@@ -13052,8 +13053,9 @@ void gr_restorestate(void)
       gks_set_border_width(s->bwidth);
       gks_set_border_color_index(s->bcoli);
       gks_select_clip_xform(s->clip_tnr);
-      gks_set_resize_behaviour(s->resize_behaviour);
       gks_set_clip_region(s->clip_region);
+      gks_set_clip_sector(s->clip_start_angle, s->clip_end_angle);
+      gks_set_resize_behaviour(s->resize_behaviour);
 
       s->txoff[0] = txoff[0];
       s->txoff[1] = txoff[1];
@@ -13097,8 +13099,10 @@ void gr_restorestate(void)
           ctx->bwidth = s->bwidth;
           ctx->bcoli = s->bcoli;
           ctx->clip_tnr = s->clip_tnr;
-          ctx->resize_behaviour = s->resize_behaviour;
           ctx->clip_region = s->clip_region;
+          ctx->clip_start_angle = s->clip_start_angle;
+          ctx->clip_end_angle = s->clip_end_angle;
+          ctx->resize_behaviour = s->resize_behaviour;
 
           ctx->txoff[0] = s->txoff[0];
           ctx->txoff[1] = s->txoff[1];
@@ -13181,8 +13185,10 @@ void gr_selectcontext(int context)
           ctx->bwidth = 1;
           ctx->bcoli = 1;
           ctx->clip_tnr = 0;
-          ctx->resize_behaviour = GKS_K_RESIZE;
           ctx->clip_region = GKS_K_REGION_RECTANGLE;
+          ctx->clip_start_angle = 0;
+          ctx->clip_end_angle = 360;
+          ctx->resize_behaviour = GKS_K_RESIZE;
 
           ctx->txoff[0] = 0;
           ctx->txoff[1] = 0;
@@ -13227,8 +13233,9 @@ void gr_selectcontext(int context)
       gks_set_border_width(ctx->bwidth);
       gks_set_border_color_index(ctx->bcoli);
       gks_select_clip_xform(ctx->clip_tnr);
-      gks_set_resize_behaviour(ctx->resize_behaviour);
       gks_set_clip_region(ctx->clip_region);
+      gks_set_clip_sector(ctx->clip_start_angle, ctx->clip_end_angle);
+      gks_set_resize_behaviour(ctx->resize_behaviour);
 
       txoff[0] = ctx->txoff[0];
       txoff[1] = ctx->txoff[1];
@@ -13307,8 +13314,9 @@ void gr_savecontext(int context)
       gks_inq_border_width(&errind, &app_context->buf[id]->bwidth);
       gks_inq_border_color_index(&errind, &app_context->buf[id]->bcoli);
       gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
-      gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
       gks_inq_clip_region(&errind, &app_context->buf[id]->clip_region);
+      gks_inq_clip_sector(&errind, &app_context->buf[id]->clip_start_angle, &app_context->buf[id]->clip_end_angle);
+      gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
 
       app_context->buf[id]->txoff[0] = txoff[0];
       app_context->buf[id]->txoff[1] = txoff[1];
@@ -13386,8 +13394,9 @@ void gr_destroycontext(int context)
       gks_inq_border_width(&errind, &app_context->buf[id]->bwidth);
       gks_inq_border_color_index(&errind, &app_context->buf[id]->bcoli);
       gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
-      gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
       gks_inq_clip_region(&errind, &app_context->buf[id]->clip_region);
+      gks_inq_clip_sector(&errind, &app_context->buf[id]->clip_start_angle, &app_context->buf[id]->clip_end_angle);
+      gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
 
       app_context->buf[id]->txoff[0] = txoff[0];
       app_context->buf[id]->txoff[1] = txoff[1];
@@ -14582,6 +14591,29 @@ void gr_inqclipregion(int *region)
   check_autoinit;
 
   gks_inq_clip_region(&errind, region);
+}
+
+void gr_setclipsector(double start_angle, double end_angle)
+{
+  check_autoinit;
+
+  gks_set_clip_sector(start_angle, end_angle);
+  if (ctx)
+    {
+      ctx->clip_start_angle = start_angle;
+      ctx->clip_end_angle = end_angle;
+    }
+
+  if (flag_stream) gr_writestream("<setclipsector start_angle=\"%g\" end_angle=\"%g\"/>\n", start_angle, end_angle);
+}
+
+void gr_inqclipsector(double *start_angle, double *end_angle)
+{
+  int errind;
+
+  check_autoinit;
+
+  gks_inq_clip_sector(&errind, start_angle, end_angle);
 }
 
 void gr_settextoffset(double xoff, double yoff)

@@ -67,14 +67,14 @@ typedef enum
   GR_OPTION_Z_LOG2 = 1u << 8u,
   GR_OPTION_X_LN = 1u << 9u,
   GR_OPTION_Y_LN = 1u << 10u,
-  GR_OPTION_Z_LN = 1u << 11u,
+  GR_OPTION_Z_LN = 1u << 11u
 } scale_option_t;
 
 typedef enum
 {
   GR_SPEC_LINE = 1u << 0u,
   GR_SPEC_MARKER = 1u << 1u,
-  GR_SPEC_COLOR = 1u << 2u,
+  GR_SPEC_COLOR = 1u << 2u
 } linespec_t;
 
 typedef enum
@@ -86,7 +86,7 @@ typedef enum
   GR_OPTION_COLORED_MESH,
   GR_OPTION_CELL_ARRAY,
   GR_OPTION_SHADED_MESH,
-  GR_OPTION_3D_MESH, /* for GR3 */
+  GR_OPTION_3D_MESH /* for GR3 */
 } surface_option_t;
 
 typedef enum
@@ -102,7 +102,7 @@ typedef enum
   GR_LINETO,
   GR_CURVE3,
   GR_CURVE4,
-  GR_CLOSEPOLY = 0x4f,
+  GR_CLOSEPOLY = 0x4f
 } path_code_t;
 
 typedef enum
@@ -112,7 +112,7 @@ typedef enum
   GR_XFORM_LOG,
   GR_XFORM_LOGLOG,
   GR_XFORM_CUBIC,
-  GR_XFORM_EQUALIZED,
+  GR_XFORM_EQUALIZED
 } xform_types_t;
 
 typedef enum
@@ -120,7 +120,7 @@ typedef enum
   GR_INTERP2_NEAREST,
   GR_INTERP2_LINEAR,
   GR_INTERP2_SPLINE,
-  GR_INTERP2_CUBIC,
+  GR_INTERP2_CUBIC
 } interp2_method_t;
 
 typedef struct
@@ -446,6 +446,8 @@ DLLEXPORT void gr_setmathfont(int font);
 DLLEXPORT void gr_inqmathfont(int *font);
 DLLEXPORT void gr_setclipregion(int region);
 DLLEXPORT void gr_inqclipregion(int *region);
+DLLEXPORT void gr_setclipsector(double start_angle, double end_angle);
+DLLEXPORT void gr_inqclipsector(double *start_angle, double *end_angle);
 DLLEXPORT void gr_settextoffset(double xoff, double yoff);
 DLLEXPORT char *gr_ftoa(char *string, double value, format_reference_t *reference);
 DLLEXPORT void gr_getformat(format_reference_t *result, double origin, double min, double max, double tick_width,
