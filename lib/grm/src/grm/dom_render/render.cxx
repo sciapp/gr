@@ -7495,6 +7495,68 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &central_re
     }
 }
 
+static void adjustPolarGridLineTextPosition(double x_lim_min, double x_lim_max, double *x_r, double *y_r, double value,
+                                            std::shared_ptr<GRM::Element> central_region)
+{
+  double window[4];
+  double x0, y0;
+
+  window[0] = static_cast<double>(central_region->getAttribute("window_x_min"));
+  window[1] = static_cast<double>(central_region->getAttribute("window_x_max"));
+  window[2] = static_cast<double>(central_region->getAttribute("window_y_min"));
+  window[3] = static_cast<double>(central_region->getAttribute("window_y_max"));
+  if (x_lim_min > 0 || x_lim_max < 360)
+    {
+      // calculate unscaled position for label
+      x0 = std::cos(x_lim_min * M_PI / 180.0), y0 = std::sin(x_lim_min * M_PI / 180.0);
+      // scale label with the real value of the arc
+      x0 *= value * window[3];
+      y0 *= value * window[3];
+      // add small offset to the resulting position so that the label have some space to the polyline
+      // tested by going through the angles by steps of 15 degree
+      if (x_lim_min <= 135 && x_lim_min >= 45)
+        x0 += 0.03 * (window[1] - window[0]) / 2.0;
+      else if (x_lim_min >= 225 && x_lim_min <= 315)
+        x0 -= 0.03 * (window[1] - window[0]) / 2.0;
+      if (x_lim_min < 23 && x_lim_min >= 0)
+        y0 -= 0.03 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min < 45 && x_lim_min >= 23)
+        y0 -= 0.015 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min > 45 && x_lim_min <= 68)
+        y0 += 0.015 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min > 68 && x_lim_min < 90)
+        y0 += 0.03 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min < 112 && x_lim_min > 90)
+        y0 -= 0.03 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min >= 112 && x_lim_min < 135)
+        y0 -= 0.015 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min > 135 && x_lim_min <= 158)
+        y0 += 0.015 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min < 180 && x_lim_min > 158)
+        y0 += 0.03 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min < 180 && x_lim_min > 135)
+        y0 += 0.03 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min < 180 && x_lim_min > 135)
+        y0 += 0.03 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min >= 202 && x_lim_min < 225)
+        y0 += 0.015 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min <= 248 && x_lim_min > 225)
+        y0 -= 0.015 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min < 270 && x_lim_min > 248)
+        y0 -= 0.03 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min > 270 && x_lim_min < 292)
+        y0 += 0.03 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min >= 292 && x_lim_min < 315)
+        y0 += 0.015 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min > 315 && x_lim_min <= 338)
+        y0 -= 0.015 * (window[3] - window[2]) / 2.0;
+      else if (x_lim_min > 338)
+        y0 -= 0.03 * (window[3] - window[2]) / 2.0;
+      *x_r = x0;
+      *y_r = y0;
+    }
+}
+
 static void processArcGridLine(const std::shared_ptr<GRM::Element> &element,
                                const std::shared_ptr<GRM::Context> &context)
 {
@@ -7503,6 +7565,7 @@ static void processArcGridLine(const std::shared_ptr<GRM::Element> &element,
   del_values del = del_values::update_without_default;
   int child_id = 0;
   bool y_log = false;
+  double x_lim_min = 0, x_lim_max = 360;
   std::shared_ptr<GRM::Element> text, arc, plot_parent = element, central_region;
 
   getPlotParent(plot_parent);
@@ -7531,6 +7594,11 @@ static void processArcGridLine(const std::shared_ptr<GRM::Element> &element,
   // y_log is only supported for kind polar_line and polar_scatter atm
   if (plot_parent->hasAttribute("y_log") && (kind == "polar_line" || kind == "polar_scatter"))
     y_log = static_cast<int>(plot_parent->getAttribute("y_log"));
+  if (plot_parent->hasAttribute("x_lim_min") && plot_parent->hasAttribute("x_lim_max"))
+    {
+      x_lim_min = static_cast<double>(plot_parent->getAttribute("x_lim_min"));
+      x_lim_max = static_cast<double>(plot_parent->getAttribute("x_lim_max"));
+    }
 
   auto value = static_cast<double>(element->getAttribute("value"));
   if (element->hasAttribute("arc_label")) arc_label = static_cast<std::string>(element->getAttribute("arc_label"));
@@ -7559,18 +7627,20 @@ static void processArcGridLine(const std::shared_ptr<GRM::Element> &element,
 
   if (!arc_label.empty())
     {
-      double x0 = 0.05 * (window[1] - window[0]) / 2.0;
+      double x0 = 0.05 * (window[1] - window[0]) / 2.0, y0 = value * window[3];
+
+      adjustPolarGridLineTextPosition(x_lim_min, x_lim_max, &x0, &y0, value, central_region);
 
       if (del != del_values::update_without_default && del != del_values::update_with_default)
         {
-          text = global_render->createText(x0, value * window[3], arc_label, CoordinateSpace::WC);
+          text = global_render->createText(x0, y0, arc_label, CoordinateSpace::WC);
           text->setAttribute("_child_id", child_id++);
           element->append(text);
         }
       else
         {
           text = element->querySelectors("text[_child_id=" + std::to_string(child_id++) + "]");
-          if (text != nullptr) global_render->createText(x0, value * window[3], arc_label, CoordinateSpace::WC, text);
+          if (text != nullptr) global_render->createText(x0, y0, arc_label, CoordinateSpace::WC, text);
         }
       if (text != nullptr)
         {
@@ -7581,6 +7651,22 @@ static void processArcGridLine(const std::shared_ptr<GRM::Element> &element,
               text->setAttribute("scientific_format", scientific_format);
             }
           text->setAttribute("z_index", 1);
+          if (x_lim_min > 0 || x_lim_max < 360)
+            {
+              // use correct aligment for non standard axes
+              if (x_lim_min == 180 || x_lim_min == 0)
+                text->setAttribute("text_align_horizontal", "center");
+              else if (x_lim_min < 180)
+                text->setAttribute("text_align_horizontal", "left");
+              else if (x_lim_min > 180)
+                text->setAttribute("text_align_horizontal", "right");
+              if (x_lim_min < 90 || x_lim_min > 270)
+                text->setAttribute("text_align_vertical", "top");
+              else if (x_lim_min == 90 || x_lim_min == 270)
+                text->setAttribute("text_align_vertical", "half");
+              else if (x_lim_min > 90 && x_lim_min < 270)
+                text->setAttribute("text_align_vertical", "bottom");
+            }
         }
     }
 }
@@ -7769,18 +7855,25 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
       else
         {
           std::shared_ptr<GRM::Element> arc, text;
+          double x_lim_min = 0, x_lim_max = 360;
+          if (plot_parent->hasAttribute("x_lim_min") && plot_parent->hasAttribute("x_lim_max"))
+            {
+              x_lim_min = static_cast<double>(plot_parent->getAttribute("x_lim_min"));
+              x_lim_max = static_cast<double>(plot_parent->getAttribute("x_lim_max"));
+            }
           double x0 = 0.05 * (window[1] - window[0]) / 2.0;
 
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
-              arc = global_render->createDrawArc(window[0], window[1], window[2], window[3], 0, 360);
+              arc = global_render->createDrawArc(window[0], window[1], window[2], window[3], x_lim_min, x_lim_max);
               arc->setAttribute("_child_id", child_id++);
               element->append(arc);
             }
           else
             {
               arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
-              if (arc != nullptr) global_render->createDrawArc(window[0], window[1], window[2], window[3], 0, 360, arc);
+              if (arc != nullptr)
+                global_render->createDrawArc(window[0], window[1], window[2], window[3], x_lim_min, x_lim_max, arc);
             }
           if (arc != nullptr)
             {
@@ -7790,23 +7883,41 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
 
           if (i % 2 == 0 && i == n)
             {
+              double y0 = window[3];
+
+              adjustPolarGridLineTextPosition(x_lim_min, x_lim_max, &x0, &y0, 1, central_region);
               if (del != del_values::update_without_default && del != del_values::update_with_default)
                 {
-                  text = global_render->createText(x0, window[3], value_string, CoordinateSpace::WC);
+                  text = global_render->createText(x0, y0, value_string, CoordinateSpace::WC);
                   text->setAttribute("_child_id", child_id++);
                   element->append(text);
                 }
               else
                 {
                   text = element->querySelectors("text[_child_id=" + std::to_string(child_id++) + "]");
-                  if (text != nullptr)
-                    global_render->createText(x0, window[3], value_string, CoordinateSpace::WC, text);
+                  if (text != nullptr) global_render->createText(x0, y0, value_string, CoordinateSpace::WC, text);
                 }
               if (text != nullptr)
                 {
                   text->setAttribute("name", "rho-axes line");
                   if (y_log) text->setAttribute("scientific_format", 2);
                   text->setAttribute("scientific_format", scientific_format);
+                  if (x_lim_min > 0 || x_lim_max < 360)
+                    {
+                      // use correct aligment for non standard axes
+                      if (x_lim_min == 180 || x_lim_min == 0)
+                        text->setAttribute("text_align_horizontal", "center");
+                      else if (x_lim_min < 180)
+                        text->setAttribute("text_align_horizontal", "left");
+                      else if (x_lim_min > 180)
+                        text->setAttribute("text_align_horizontal", "right");
+                      if (x_lim_min < 90 || x_lim_min > 270)
+                        text->setAttribute("text_align_vertical", "top");
+                      else if (x_lim_min == 90 || x_lim_min == 270)
+                        text->setAttribute("text_align_vertical", "half");
+                      else if (x_lim_min > 90 && x_lim_min < 270)
+                        text->setAttribute("text_align_vertical", "bottom");
+                    }
                 }
             }
           break;
@@ -7838,10 +7949,13 @@ static void processAngleLine(const std::shared_ptr<GRM::Element> &element, const
   if (element->hasAttribute("angle_label"))
     {
       angle_label = static_cast<std::string>(element->getAttribute("angle_label"));
-      if (!element->hasAttribute("text_x0")) throw NotFoundError("Missing text_x0 data for given angle_label!\n");
-      text_x0 = static_cast<double>(element->getAttribute("text_x0"));
-      if (!element->hasAttribute("text_y0")) throw NotFoundError("Missing text_y0 data for given angle_label!\n");
-      text_y0 = static_cast<double>(element->getAttribute("text_y0"));
+      if (!angle_label.empty())
+        {
+          if (!element->hasAttribute("text_x0")) throw NotFoundError("Missing text_x0 data for given angle_label!\n");
+          text_x0 = static_cast<double>(element->getAttribute("text_x0"));
+          if (!element->hasAttribute("text_y0")) throw NotFoundError("Missing text_y0 data for given angle_label!\n");
+          text_y0 = static_cast<double>(element->getAttribute("text_y0"));
+        }
     }
 
   if (del != del_values::update_without_default && del != del_values::update_with_default)
@@ -7885,10 +7999,12 @@ static void processThetaAxes(const std::shared_ptr<GRM::Element> &element, const
 {
   double window[4];
   char text_buffer[PLOT_POLAR_AXES_TEXT_BUFFER];
+  std::string text;
   int interval = 45, alpha;
   del_values del = del_values::update_without_default;
   int child_id = 0;
-  bool skip_calculations = false, phi_flip = false;
+  bool skip_calculations = false, phi_flip = false, pass = false;
+  double x_lim_min = 0, x_lim_max = 360;
   std::shared_ptr<GRM::Element> central_region, plot_parent = element, axes_text_group;
 
   getPlotParent(plot_parent);
@@ -7914,6 +8030,11 @@ static void processThetaAxes(const std::shared_ptr<GRM::Element> &element, const
 
   if (!skip_calculations) calculatePolarLimits(central_region, context);
   if (plot_parent->hasAttribute("phi_flip")) phi_flip = static_cast<int>(plot_parent->getAttribute("phi_flip"));
+  if (plot_parent->hasAttribute("x_lim_min") && plot_parent->hasAttribute("x_lim_max"))
+    {
+      x_lim_min = static_cast<double>(plot_parent->getAttribute("x_lim_min"));
+      x_lim_max = static_cast<double>(plot_parent->getAttribute("x_lim_max"));
+    }
 
   global_render->setLineType(element, GKS_K_LINETYPE_SOLID);
 
@@ -7922,13 +8043,24 @@ static void processThetaAxes(const std::shared_ptr<GRM::Element> &element, const
   clearOldChildren(&del, element);
 
   // Draw sector lines
-  for (alpha = 0; alpha < 360; alpha += interval)
+  for (alpha = 0; alpha <= 360; alpha += interval)
     {
       std::shared_ptr<GRM::Element> angle_line;
       double line_x0 = 0.0, line_y0 = 0.0;
       int text_number = 0;
       double x0 = std::cos(alpha * M_PI / 180.0), y0 = std::sin(alpha * M_PI / 180.0);
 
+      if (alpha == 360 && x_lim_max == 360) continue;
+      if (alpha < x_lim_min && alpha + interval > x_lim_min)
+        {
+          x0 = std::cos(x_lim_min * M_PI / 180.0), y0 = std::sin(x_lim_min * M_PI / 180.0);
+          pass = true;
+        }
+      if (alpha > x_lim_max && alpha - interval < x_lim_max)
+        {
+          x0 = std::cos(x_lim_max * M_PI / 180.0), y0 = std::sin(x_lim_max * M_PI / 180.0);
+          pass = true;
+        }
       if (x0 < -1e-10)
         {
           line_x0 = window[0];
@@ -7956,24 +8088,40 @@ static void processThetaAxes(const std::shared_ptr<GRM::Element> &element, const
       else if (alpha != 0.0)
         text_number = 330 - (int)grm_round(alpha - interval);
       snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", text_number);
+      text = text_buffer;
 
-      if (del != del_values::update_without_default && del != del_values::update_with_default)
+      if ((alpha >= x_lim_min && alpha <= x_lim_max) || pass)
         {
-          angle_line = global_render->createAngleLine(line_x0, line_y0, text_buffer);
-          angle_line->setAttribute("_child_id", child_id++);
-          element->append(angle_line);
-        }
-      else
-        {
-          angle_line = element->querySelectors("angle_line[_child_id=" + std::to_string(child_id++) + "]");
-          if (angle_line != nullptr) global_render->createAngleLine(line_x0, line_y0, text_buffer, angle_line);
-        }
-      if (angle_line != nullptr)
-        {
-          if (!std::string(text_buffer).empty())
+          if (pass)
             {
-              angle_line->setAttribute("text_x0", x0);
-              angle_line->setAttribute("text_y0", y0);
+              text = "";
+              line_x0 = x0;
+              line_y0 = y0;
+              gr_setclip(0);
+            }
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              angle_line = global_render->createAngleLine(line_x0, line_y0, text);
+              angle_line->setAttribute("_child_id", child_id++);
+              element->append(angle_line);
+            }
+          else
+            {
+              angle_line = element->querySelectors("angle_line[_child_id=" + std::to_string(child_id++) + "]");
+              if (angle_line != nullptr) global_render->createAngleLine(line_x0, line_y0, text, angle_line);
+            }
+          if (angle_line != nullptr)
+            {
+              if (!text.empty())
+                {
+                  angle_line->setAttribute("text_x0", x0);
+                  angle_line->setAttribute("text_y0", y0);
+                }
+            }
+          if (pass)
+            {
+              pass = false;
+              gr_setclip(1);
             }
         }
     }
@@ -14811,6 +14959,12 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
 
   if (polar_kinds.count(kind) > 0)
     {
+      if (element->hasAttribute("x_lim_min") && element->hasAttribute("x_lim_max"))
+        {
+          auto x_lim_min = static_cast<double>(element->getAttribute("x_lim_min"));
+          auto x_lim_max = static_cast<double>(element->getAttribute("x_lim_max"));
+          if (!grm_isnan(x_lim_min) && !grm_isnan(x_lim_max)) gr_setclipsector(x_lim_min, x_lim_max);
+        }
       global_render->setClipRegion(central_region, 1);
       global_render->setSelectSpecificXform(central_region, 1);
     }
@@ -19175,6 +19329,22 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
           else if (attr == "tick_size")
             {
               element->setAttribute("_tick_size_set_by_user", element->getAttribute(attr));
+            }
+          else if (attr == "x_lim_min" || attr == "x_lim_max")
+            {
+              auto coordinate_system = element->querySelectors("coordnate_system");
+              auto plot_type = static_cast<std::string>(coordinate_system->getAttribute("plot_type"));
+              if (plot_type == "polar")
+                {
+                  for (const auto &child : coordinate_system->children())
+                    {
+                      if (child->localName() == "theta_axes")
+                        {
+                          child->setAttribute("_update_required", true);
+                          child->setAttribute("_delete_children", 2);
+                        }
+                    }
+                }
             }
         }
       global_root->setAttribute("_modified", true);

@@ -829,7 +829,7 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of fillarea -->
+    <!-- definition of fill_area -->
     <xs:element name="fill_area">
         <xs:complexType>
             <xs:attributeGroup ref="colorrep"/>
