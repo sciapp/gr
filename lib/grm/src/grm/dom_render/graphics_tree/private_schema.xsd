@@ -533,17 +533,6 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of polar -->
-    <xs:element name="series_polar">
-        <xs:complexType>
-            <xs:attributeGroup ref="_bbox"/>
-            <xs:attributeGroup ref="_data"/>
-            <xs:attribute name="_child_id" type="xs:integer"/>
-            <xs:attribute name="_x_range_max" type="xs:double"/>
-            <xs:attribute name="_x_range_min" type="xs:double"/>
-        </xs:complexType>
-    </xs:element>
-
     <!-- definition of polar_heatmap -->
     <xs:element name="series_polar_heatmap">
         <xs:complexType>
@@ -561,6 +550,28 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polar_line -->
+    <xs:element name="series_polar_line">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_x_range_max" type="xs:double"/>
+            <xs:attribute name="_x_range_min" type="xs:double"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polar_scatter -->
+    <xs:element name="series_polar_scatter">
+        <xs:complexType>
+            <xs:attributeGroup ref="_bbox"/>
+            <xs:attributeGroup ref="_data"/>
+            <xs:attribute name="_child_id" type="xs:integer"/>
+            <xs:attribute name="_x_range_max" type="xs:double"/>
+            <xs:attribute name="_x_range_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 

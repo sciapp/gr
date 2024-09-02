@@ -217,9 +217,10 @@
                 <xs:element ref="series_nonuniform_polar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_pie" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_plot3" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element ref="series_polar" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_polar_heatmap" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_polar_histogram" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_polar_line" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="series_polar_scatter" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_quiver" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_scatter" minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element ref="series_scatter3" minOccurs="0" maxOccurs="unbounded"/>
@@ -1058,24 +1059,6 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of polar -->
-    <xs:element name="series_polar">
-        <xs:complexType>
-            <xs:choice minOccurs="1" maxOccurs="unbounded">
-                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
-            </xs:choice>
-            <xs:attributeGroup ref="move_xform_wc"/>
-            <xs:attributeGroup ref="ranges"/>
-            <xs:attribute name="clip_negative" type="xs:int"/>
-            <xs:attribute name="kind" type="xs:string"/>
-            <xs:attribute name="line_spec" type="xs:string"/>
-            <xs:attribute name="r_max" type="xs:double"/>
-            <xs:attribute name="r_min" type="xs:double"/>
-            <xs:attribute name="x" type="xs:string" use="required"/>
-            <xs:attribute name="y" type="xs:string" use="required"/>
-        </xs:complexType>
-    </xs:element>
-
     <!-- definition of polar_heatmap -->
     <xs:element name="series_polar_heatmap">
         <xs:complexType>
@@ -1125,6 +1108,46 @@
             <xs:attribute name="y_colormap" type="xs:integer"/>
             <xs:attribute name="y_range_max" type="xs:double"/>
             <xs:attribute name="y_range_min" type="xs:double"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polar_line -->
+    <xs:element name="series_polar_line">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="polyline" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="clip_negative" type="xs:int"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="line_spec" type="xs:string"/>
+            <xs:attribute name="marker_type" type="xs:int"/>
+            <xs:attribute name="r_max" type="xs:double"/>
+            <xs:attribute name="r_min" type="xs:double"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- definition of polar_scatter -->
+    <xs:element name="series_polar_scatter">
+        <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element ref="polymarker" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+            <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attributeGroup ref="ranges"/>
+            <xs:attribute name="clip_negative" type="xs:int"/>
+            <xs:attribute name="kind" type="xs:string"/>
+            <xs:attribute name="line_spec" type="xs:string"/>
+            <xs:attribute name="marker_size" type="xs:double"/>
+            <xs:attribute name="marker_type" type="xs:int"/>
+            <xs:attribute name="r_max" type="xs:double"/>
+            <xs:attribute name="r_min" type="xs:double"/>
+            <xs:attribute name="x" type="xs:string" use="required"/>
+            <xs:attribute name="y" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>
 

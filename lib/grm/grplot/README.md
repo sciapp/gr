@@ -9,7 +9,7 @@ This program allows to create plots from the command line while using simple key
 The following parameters are key-value pairs which can be used for every plot type.
 
 - `file`: contains the data which should be displayed. If no file is referred this results in an error message. If this parameter is the first argument the `file` keyword may be omitted. More information about these files can be found under the subchapter `Data file`. A hyphen '-' in place of a file path normally means "read from standard input". Since 'grplot' does not read from standard input by default, use '-' to redirect the input. This way 'grplot' can be used in a pipe.
-- `kind`: defines the plot type that should be displayed. Possible options are: `barplot`, `contour`, `contourf`, `heatmap`, `hexbin`, `hist`, `imshow`, `isosurface`, `line`, `marginal_heatmap`, `polar`, `polar_histogram`, `polar_heatmap`, `pie`, `plot3`, `scale`, `scatter`, `scatter3`, `shade`, `surface`, `stairs`, `stem`, `tricontour`, `trisurface`, `quiver`, `volume`, `wireframe`. The default plot type is `line`.
+- `kind`: defines the plot type that should be displayed. Possible options are: `barplot`, `contour`, `contourf`, `heatmap`, `hexbin`, `hist`, `imshow`, `isosurface`, `line`, `marginal_heatmap`, `polar_heatmap`, `polar_histogram`, `polar_line`, `polar_scatter`, `pie`, `plot3`, `scale`, `scatter`, `scatter3`, `shade`, `surface`, `stairs`, `stem`, `tricontour`, `trisurface`, `quiver`, `volume`, `wireframe`. The default plot type is `line`.
 
   To get extra information about a specific plot type use:
 
@@ -115,7 +115,7 @@ The next line after the header may contain the column labels. If the data does n
 5. `barplot`, `hist`, `stem`, `stairs`: One column is expected which represents the y-data. In combination with the `error` parameter the 2nd (and 3rd) column gets interpreted as error-values. More information are found by the `error` parameter itself. There is also another option which allows the user to define which column include the x-, y- and error-values. For this the parameters `x_columns`, `y_columns` and `error_columns` can be used. For these kinds only one column for x and y is expected.
 6. `pie`: The expected data are 1-4 lines. The first line represents the data which should be displayed. The next 3 rows are used to set the RGB of the pie charts. Each row stands for one RGB element.
 7. `polar_histogram`: One column is expected which represents the values.
-8. `polar`: The expected data are two columns containing the angles and values.
+8. `polar_line`, `polar_scatter`: The expected data are two columns containing the angles and values.
 9. `polar_heatmap`: The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in theta- and phi-direction. If not given, theta will be in the range of 0.0 and 3.0 while phi will be in range of 0.0 and 360.0. Both parameters can be changed with `x_range` for theta and `y_range` for phi.
 10. `quiver`: The expected data are two matrices. The first matrix contains the information about the x-directions and the second matrix the information about the y-directions.
 11. `hexbin`, `shade`: The expected data are two columns, representing the x- and y-data.
@@ -324,16 +324,6 @@ Possible parameters for the marginal heatmap are:
 4. `x_flip`: This parameter defines whether the x-axis is flipped or not.
 5. `y_flip`: This parameter defines whether the y-axis is flipped or not.
 
-### POLAR
-
-This plot type converts the data into a polar plot. A polar plot displays a polyline in polar coordinates, with theta indicating the angle in radians and rho indicating the radius value for each point.
-
-The expected data are two columns containing the angles and values.
-
-Possible parameters for the polar plot are:
-
-1. `clip_negative`: If this parameter is set, only positive radii are displayed, otherwise negative will be mirrored
-
 ### POLAR_HEATMAP
 
 This plot type converts the data into a polar heatmap. A polar heatmap is a heatmap in polar coordinates.
@@ -365,6 +355,26 @@ Possible parameters for the polar histogram are:
 11. `x_flip`: This parameter defines whether the x-axis is flipped or not.
 12. `y_colormap`: This parameter sets the colormap for the y-direction.
 13. `y_flip`: This parameter defines whether the y-axis is flipped or not.
+
+### POLAR_LINE
+
+This plot type converts the data into a polar plot/line-plot. A polar plot displays a polyline in polar coordinates, with theta indicating the angle in radians and rho indicating the radius value for each point.
+
+The expected data are two columns containing the angles and values.
+
+Possible parameters for the polar line plot are:
+
+1. `clip_negative`: If this parameter is set, only positive radii are displayed, otherwise negative will be mirrored
+
+### POLAR_SCATTER
+
+This plot type converts the data into a polar scatter plot. A polar scatter displays each data point as a point inside the polar coordinate system, with theta indicating the angle in radians and rho indicating the radius value for each point.
+
+The expected data are two columns containing the angles and values.
+
+Possible parameters for the polar scatter plot are:
+
+1. `clip_negative`: If this parameter is set, only positive radii are displayed, otherwise negative will be mirrored
 
 ### PIE
 

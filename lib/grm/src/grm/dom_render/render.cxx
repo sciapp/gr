@@ -106,9 +106,10 @@ static std::set<std::string> parent_types = {
     "series_nonuniform_polar_heatmap",
     "series_pie",
     "series_plot3",
-    "series_polar",
     "series_polar_heatmap",
     "series_polar_histogram",
+    "series_polar_line",
+    "series_polar_scatter",
     "series_quiver",
     "series_scatter",
     "series_scatter3",
@@ -195,10 +196,7 @@ static std::set<std::string> valid_context_keys = {"absolute_downwards",
                                                    "z_dims"};
 
 static std::set<std::string> polar_kinds = {
-    "polar",
-    "polar_histogram",
-    "polar_heatmap",
-    "nonuniform_polar_heatmap",
+    "nonuniform_polar_heatmap", "polar_heatmap", "polar_histogram", "polar_line", "polar_scatter",
 };
 
 static std::set<std::string> kinds_3d = {
@@ -228,20 +226,23 @@ static bool redraw_ws = false;
 static std::map<int, std::shared_ptr<GRM::Element>> bounding_map;
 static std::map<int, std::map<double, std::map<std::string, GRM::Value>>> tick_modification_map;
 
-static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},           {"hexbin", "xys"},
-                                           {"polar", "xys"},          {"shade", "xys"},
-                                           {"stem", "xys"},           {"stairs", "xys"},
-                                           {"contour", "xyzc"},       {"contourf", "xyzc"},
-                                           {"tricontour", "xyzc"},    {"trisurface", "xyzc"},
-                                           {"surface", "xyzc"},       {"wireframe", "xyzc"},
-                                           {"plot3", "xyzc"},         {"scatter", "xyzc"},
-                                           {"scatter3", "xyzc"},      {"quiver", "xyuv"},
-                                           {"heatmap", "xyzc"},       {"hist", "x"},
-                                           {"barplot", "y"},          {"isosurface", "z"},
-                                           {"imshow", "z"},           {"nonuniform_heatmap", "xyzc"},
-                                           {"polar_histogram", "x"},  {"pie", "x"},
-                                           {"volume", "z"},           {"marginal_heatmap", "xyzc"},
-                                           {"polar_heatmap", "xyzc"}, {"nonuniform_polar_heatmap", "xyzc"}};
+static string_map_entry_t kind_to_fmt[] = {
+    {"line", "xys"},           {"hexbin", "xys"},
+    {"polar_line", "xys"},     {"shade", "xys"},
+    {"stem", "xys"},           {"stairs", "xys"},
+    {"contour", "xyzc"},       {"contourf", "xyzc"},
+    {"tricontour", "xyzc"},    {"trisurface", "xyzc"},
+    {"surface", "xyzc"},       {"wireframe", "xyzc"},
+    {"plot3", "xyzc"},         {"scatter", "xyzc"},
+    {"scatter3", "xyzc"},      {"quiver", "xyuv"},
+    {"heatmap", "xyzc"},       {"hist", "x"},
+    {"barplot", "y"},          {"isosurface", "z"},
+    {"imshow", "z"},           {"nonuniform_heatmap", "xyzc"},
+    {"polar_histogram", "x"},  {"pie", "x"},
+    {"volume", "z"},           {"marginal_heatmap", "xyzc"},
+    {"polar_heatmap", "xyzc"}, {"nonuniform_polar_heatmap", "xyzc"},
+    {"polar_scatter", "xys"},
+};
 
 static string_map_t *fmt_map = string_map_new_with_data(std::size(kind_to_fmt), kind_to_fmt);
 
@@ -417,8 +418,8 @@ static bool isUniformData(const std::shared_ptr<GRM::Element> &element, const st
 {
   std::string x_key, y_key, kind;
   kind = static_cast<std::string>(element->getAttribute("kind"));
-  if (str_equals_any(kind, "line", "scatter", "pie", "polar", "polar_histogram", "polar_heatmap", "imshow", "hist",
-                     "barplot", "stem", "stairs") ||
+  if (str_equals_any(kind, "line", "scatter", "pie", "polar_line", "polar_histogram", "polar_heatmap", "polar_scatter",
+                     "imshow", "hist", "barplot", "stem", "stairs") ||
       kinds_3d.find(kind) != kinds_3d.end())
     return false;
 
@@ -1037,7 +1038,7 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
         }
     }
 
-  if (str_equals_any(kind, "pie", "polar", "polar_histogram", "polar_heatmap", "nonuniform_polar_heatmap"))
+  if (kind == "pie" || polar_kinds.count(kind) > 0)
     {
       double x_center, y_center, r;
 
@@ -1336,21 +1337,21 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
         {
           if (location == "top")
             {
+              bool has_title = (element->parentElement()->hasAttribute("text_is_title") &&
+                                static_cast<int>(element->parentElement()->getAttribute("text_is_title")));
               if (!element->parentElement()->hasAttribute("marginal_heatmap_side_plot") ||
                   !static_cast<int>(element->parentElement()->getAttribute("marginal_heatmap_side_plot")))
                 {
-                  width += (0.025 + ((element->parentElement()->hasAttribute("text_is_title") &&
-                                      static_cast<int>(element->parentElement()->getAttribute("text_is_title")))
-                                         ? 0.075
-                                         : 0.05)) *
-                           (plot_viewport[3] - plot_viewport[2]);
+                  width += (0.025 + (has_title ? 0.075 : 0.05)) * (plot_viewport[3] - plot_viewport[2]);
                 }
-              if (!(element->parentElement()->hasAttribute("text_is_title") &&
-                    static_cast<int>(element->parentElement()->getAttribute("text_is_title"))) &&
-                  element->parentElement()->querySelectors("colorbar"))
-                width = 0;
+              if (!has_title && element->parentElement()->querySelectors("colorbar"))
+                {
+                  width = 0.0;
+                  if (polar_kinds.count(kind) > 0) width += 0.025;
+                }
               if (element->parentElement()->hasAttribute("offset"))
                 offset = static_cast<double>(element->parentElement()->getAttribute("offset"));
+              if (kinds_3d.count(kind) > 0 && !has_title) offset = PLOT_DEFAULT_COLORBAR_OFFSET;
               if (element->parentElement()->hasAttribute("width"))
                 offset += static_cast<double>(element->parentElement()->getAttribute("width"));
             }
@@ -1428,11 +1429,25 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
             {
               offset += (0.075 + 0.05) * (plot_viewport[3] - plot_viewport[2]);
             }
-          else if (location == "top" && !(element->parentElement()->hasAttribute("text_is_title") &&
-                                          static_cast<int>(element->parentElement()->getAttribute("text_is_title"))))
+          else if (location == "top")
             {
-              offset += 0.05 * (plot_viewport[3] - plot_viewport[2]);
+              if (!(element->parentElement()->hasAttribute("text_is_title") &&
+                    static_cast<int>(element->parentElement()->getAttribute("text_is_title"))))
+                {
+                  offset += 0.05 * (plot_viewport[3] - plot_viewport[2]);
+                  if (polar_kinds.count(kind) > 0) offset += 0.05;
+                  if (kinds_3d.count(kind) > 0) offset -= 0.05;
+                }
+              else
+                {
+                  if (kinds_3d.count(kind) > 0) offset = 0.02;
+                }
             }
+        }
+      else
+        {
+          // 180 is bigger than 0 so a adjustment is needed
+          if (polar_kinds.count(kind) > 0 && location == "left") offset += 0.01;
         }
 
       setViewportForSideRegionElements(element, offset, width, false);
@@ -2509,8 +2524,8 @@ static void getMajorCount(const std::shared_ptr<GRM::Element> &element, const st
     }
   else
     {
-      if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurface", "polar_heatmap",
-                         "nonuniform_polar_heatmap", "volume"))
+      if (str_equals_any(kind, "wireframe", "surface", "plot3", "scatter3", "polar_line", "trisurface", "polar_heatmap",
+                         "nonuniform_polar_heatmap", "polar_scatter", "volume"))
         {
           major_count = 2;
         }
@@ -3923,8 +3938,7 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
   const auto kind = static_cast<std::string>(element->getAttribute("kind"));
   gr_inqscale(&scale);
 
-  if (kind != "pie" && kind != "polar" && kind != "polar_histogram" && kind != "polar_heatmap" &&
-      kind != "nonuniform_polar_heatmap")
+  if (kind != "pie" && polar_kinds.count(kind) <= 0)
     {
       scale |= static_cast<int>(element->getAttribute("x_log")) ? GR_OPTION_X_LOG : 0;
       scale |= static_cast<int>(element->getAttribute("y_log")) ? GR_OPTION_Y_LOG : 0;
@@ -5109,7 +5123,7 @@ void GRM::Render::calculateCharHeight(const std::shared_ptr<GRM::Element> &eleme
     {
       char_height = PLOT_3D_CHAR_HEIGHT;
     }
-  else if (str_equals_any(kind, "polar", "polar_histogram", "polar_heatmap", "nonuniform_polar_heatmap"))
+  else if (polar_kinds.count(kind) > 0)
     {
       char_height = PLOT_POLAR_CHAR_HEIGHT;
     }
@@ -7382,13 +7396,14 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &central_re
   if (plot_parent->hasAttribute("keep_radii_axes"))
     keep_radii_axes = static_cast<int>(plot_parent->getAttribute("keep_radii_axes"));
 
-  if ((kind == "polar_histogram" && (!y_lims || keep_radii_axes)) || (kind == "polar" && !y_lims))
+  if ((kind == "polar_histogram" && (!y_lims || keep_radii_axes)) ||
+      ((kind == "polar_line" || kind == "polar_scatter") && !y_lims))
     {
-      if (kind == "polar_histogram" || (kind == "polar" && !y_log))
+      if (kind == "polar_histogram" || ((kind == "polar_line" || kind == "polar_scatter") && !y_log))
         {
-          if (kind == "polar")
+          if (kind == "polar_line" || kind == "polar_scatter")
             {
-              auto series_elem = central_region->querySelectors("series_polar");
+              auto series_elem = central_region->querySelectors("series_" + kind);
               r_max = static_cast<double>(series_elem->getAttribute("y_range_max"));
             }
           r_min = 0.0;
@@ -7396,7 +7411,7 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &central_re
           rings = (int)round((r_max - r_min) / tick);
           if (rings * tick < r_max) rings += 1;
         }
-      else if (kind == "polar" && y_log)
+      else if ((kind == "polar_line" || kind == "polar_scatter") && y_log)
         {
           if (r_max <= 0.0) throw InvalidValueError("The max radius has to be bigger than 0.0 when using y_log");
           max_scale = ceil(log10(r_max));
@@ -7425,7 +7440,7 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &central_re
           // overwrite r_max and r_min because of rounded scales?
           central_region->setAttribute("r_max", pow(10, max_scale));
         }
-      if (kind != "polar" || !y_log)
+      if ((kind != "polar_line" && kind != "polar_scatter") || !y_log)
         {
           central_region->setAttribute("tick", tick);
           central_region->setAttribute("r_max", tick * rings);
@@ -7435,7 +7450,7 @@ static void calculatePolarLimits(const std::shared_ptr<GRM::Element> &central_re
   else
     {
       // currently only plot_polar y_log is supported
-      if (kind == "polar" && y_log) // also with y_lims
+      if ((kind == "polar_line" || kind == "polar_scatter") && y_log) // also with y_lims
         {
           max_scale = ceil(abs(log10(y_lim_max)));
           if (max_scale != 0.0) max_scale *= log10(y_lim_max) / abs(log10(y_lim_max));
@@ -7513,7 +7528,8 @@ static void processArcGridLine(const std::shared_ptr<GRM::Element> &element,
   global_render->setTextAlign(element, GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
 
   kind = static_cast<std::string>(plot_parent->getAttribute("kind"));
-  if (plot_parent->hasAttribute("y_log") && kind == "polar") // y_log is only supported for kind polar atm
+  // y_log is only supported for kind polar_line and polar_scatter atm
+  if (plot_parent->hasAttribute("y_log") && (kind == "polar_line" || kind == "polar_scatter"))
     y_log = static_cast<int>(plot_parent->getAttribute("y_log"));
 
   auto value = static_cast<double>(element->getAttribute("value"));
@@ -7618,7 +7634,8 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
   if (!skip_calculations) calculatePolarLimits(central_region, context);
 
   kind = static_cast<std::string>(plot_parent->getAttribute("kind"));
-  if (plot_parent->hasAttribute("y_log") && kind == "polar") // y_log is only supported for kind polar atm
+  // y_log is only supported for kind polar_line and polar_scatter atm
+  if (plot_parent->hasAttribute("y_log") && (kind == "polar_line" || kind == "polar_scatter"))
     y_log = static_cast<int>(plot_parent->getAttribute("y_log"));
 
   global_render->setLineType(element, GKS_K_LINETYPE_SOLID);
@@ -9136,10 +9153,10 @@ static void processQuiver(const std::shared_ptr<GRM::Element> &element, const st
   if (redraw_ws) gr_quiver(x_length, y_length, x_p, y_p, u_p, v_p, color);
 }
 
-static void processPolar(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
+static void processPolarLine(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   /*!
-   * Processing function for polar
+   * Processing function for polar_line
    *
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
@@ -9158,9 +9175,11 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   getPlotParent(plot_parent);
 
   central_region = plot_parent->querySelectors("central_region");
-  if (!element->hasAttribute("x")) throw NotFoundError("Polar series is missing required attribute x-data (theta).\n");
+  if (!element->hasAttribute("x"))
+    throw NotFoundError("Polar_line series is missing required attribute x-data (theta).\n");
   auto x_key = static_cast<std::string>(element->getAttribute("x"));
-  if (!element->hasAttribute("y")) throw NotFoundError("Polar series is missing required attribute y-data (rho).\n");
+  if (!element->hasAttribute("y"))
+    throw NotFoundError("Polar_line series is missing required attribute y-data (rho).\n");
   auto y_key = static_cast<std::string>(element->getAttribute("y"));
   theta_vec = GRM::get<std::vector<double>>((*context)[x_key]);
   rho_vec = GRM::get<std::vector<double>>((*context)[y_key]);
@@ -9253,7 +9272,7 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
   if (theta_min == x_range_min && theta_max == x_range_max) transform_angles = false;
 
   if (rho_length != theta_length)
-    throw std::length_error("For polar series y(rho)- and x(theta)-data must have the same size.\n");
+    throw std::length_error("For polar_line series y(rho)- and x(theta)-data must have the same size.\n");
   std::vector<double> x(rho_length), y(rho_length);
 
   // transform angles into specified x_ranges if given
@@ -9318,24 +9337,291 @@ static void processPolar(const std::shared_ptr<GRM::Element> &element, const std
 
   auto id = static_cast<int>(global_root->getAttribute("_id"));
   auto str_id = std::to_string(id);
-  global_root->setAttribute("_id", id + 1);
 
   /* clear old polylines */
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
   clearOldChildren(&del, element);
 
-  std::shared_ptr<GRM::Element> line;
-  if (del != del_values::update_without_default && del != del_values::update_with_default)
+  const char *spec_char = line_spec.c_str();
+  int mask = gr_uselinespec((char *)spec_char);
+
+  if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
     {
-      line = global_render->createPolyline("x" + str_id, x, "y" + str_id, y);
-      line->setAttribute("_child_id", child_id++);
-      element->append(line);
+      std::shared_ptr<GRM::Element> line;
+      int current_line_color_ind;
+      gr_inqlinecolorind(&current_line_color_ind);
+
+      if (del != del_values::update_without_default && del != del_values::update_with_default)
+        {
+          line = global_render->createPolyline("x" + str_id, x, "y" + str_id, y);
+          line->setAttribute("_child_id", child_id++);
+          element->append(line);
+        }
+      else
+        {
+          line = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
+          if (line != nullptr)
+            global_render->createPolyline("x" + str_id, x, "y" + str_id, y, nullptr, 0, 0.0, 0, line);
+        }
+      if (line != nullptr) line->setAttribute("line_color_ind", current_line_color_ind);
+    }
+  if (mask & 2)
+    {
+      std::shared_ptr<GRM::Element> marker;
+      int current_marker_color_ind;
+      gr_inqmarkercolorind(&current_marker_color_ind);
+
+      if (del != del_values::update_without_default && del != del_values::update_with_default)
+        {
+          marker = global_render->createPolymarker("x" + str_id, x, "y" + str_id, y);
+          marker->setAttribute("_child_id", child_id++);
+          element->append(marker);
+        }
+      else
+        {
+          marker = element->querySelectors("polymarker[_child_id=" + std::to_string(child_id++) + "]");
+          if (marker != nullptr)
+            global_render->createPolymarker("x" + str_id, x, "y" + str_id, y, nullptr, 0, 0.0, 0, marker);
+        }
+      if (marker != nullptr)
+        {
+          marker->setAttribute("marker_color_ind", current_marker_color_ind);
+          marker->setAttribute("z_index", 2);
+
+          if (element->hasAttribute("marker_type"))
+            {
+              marker->setAttribute("marker_type", static_cast<int>(element->getAttribute("marker_type")));
+            }
+          else
+            {
+              marker->setAttribute("marker_type", *previous_line_marker_type++);
+              if (*previous_line_marker_type == INT_MAX) previous_line_marker_type = plot_scatter_markertypes;
+            }
+        }
+    }
+  global_root->setAttribute("_id", id + 1);
+}
+
+static void processPolarScatter(const std::shared_ptr<GRM::Element> &element,
+                                const std::shared_ptr<GRM::Context> &context)
+{
+  /*!
+   * Processing function for polar_scatter
+   *
+   * \param[in] element The GRM::Element that contains the attributes and data keys
+   * \param[in] context The GRM::Context that contains the actual data
+   */
+  double r_min, r_max;
+  double y_lim_min, y_lim_max, y_range_min, y_range_max, x_range_min, x_range_max;
+  double theta_min, theta_max;
+  bool transform_radii = false, transform_angles = false, ylims = false, clip_negative = false, y_log = false;
+  unsigned int rho_length, theta_length;
+  std::string line_spec = SERIES_DEFAULT_SPEC;
+  unsigned int i, index = 0;
+  std::vector<double> theta_vec, rho_vec;
+  std::shared_ptr<GRM::Element> plot_parent = element, central_region;
+  del_values del = del_values::update_without_default;
+  int child_id = 0;
+  std::shared_ptr<GRM::Element> marker;
+  int current_marker_color_ind;
+  getPlotParent(plot_parent);
+
+  central_region = plot_parent->querySelectors("central_region");
+  if (!element->hasAttribute("x"))
+    throw NotFoundError("Polar_scatter series is missing required attribute x-data (theta).\n");
+  auto x_key = static_cast<std::string>(element->getAttribute("x"));
+  if (!element->hasAttribute("y"))
+    throw NotFoundError("Polar_scatter series is missing required attribute y-data (rho).\n");
+  auto y_key = static_cast<std::string>(element->getAttribute("y"));
+  theta_vec = GRM::get<std::vector<double>>((*context)[x_key]);
+  rho_vec = GRM::get<std::vector<double>>((*context)[y_key]);
+  theta_length = theta_vec.size();
+  rho_length = rho_vec.size();
+
+  if (plot_parent->hasAttribute("y_lim_max") && plot_parent->hasAttribute("y_lim_min"))
+    {
+      y_lim_min = static_cast<double>(plot_parent->getAttribute("y_lim_min"));
+      y_lim_max = static_cast<double>(plot_parent->getAttribute("y_lim_max"));
+      ylims = true;
     }
   else
     {
-      line = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
-      if (line != nullptr) global_render->createPolyline("x" + str_id, x, "y" + str_id, y, nullptr, 0, 0.0, 0, line);
+      y_lim_min = static_cast<double>(central_region->getAttribute("r_min"));
+      y_lim_max = static_cast<double>(central_region->getAttribute("r_max"));
     }
+
+  if (element->hasAttribute("y_range_min") && element->hasAttribute("y_range_max"))
+    {
+      transform_radii = true;
+      y_range_min = static_cast<double>(element->getAttribute("y_range_min"));
+      y_range_max = static_cast<double>(element->getAttribute("y_range_max"));
+    }
+
+  if (plot_parent->hasAttribute("y_log")) y_log = static_cast<int>(plot_parent->getAttribute("y_log"));
+  if (element->hasAttribute("clip_negative")) clip_negative = static_cast<int>(element->getAttribute("clip_negative"));
+
+  if (element->hasAttribute("x_range_min") && element->hasAttribute("x_range_max"))
+    {
+      x_range_min = static_cast<double>(element->getAttribute("x_range_min"));
+      x_range_max = static_cast<double>(element->getAttribute("x_range_max"));
+      transform_angles = true;
+
+      if (x_range_max > 2 * M_PI)
+        {
+          // convert from degrees to radians
+          x_range_max *= (M_PI / 180.0);
+          x_range_min *= (M_PI / 180.0);
+        }
+    }
+
+  // negative radii or NAN are clipped before the transformation into specified y_range (also when y_log is given)
+  if (clip_negative || y_log)
+    {
+      std::vector<unsigned int> indices_vec;
+      for (i = 0; i < rho_length; i++)
+        {
+          if (std::signbit(rho_vec[i]) || std::isnan(rho_vec[i])) indices_vec.insert(indices_vec.begin(), i);
+        }
+
+      for (auto ind : indices_vec)
+        {
+          rho_vec.erase(rho_vec.begin() + ind);
+          theta_vec.erase(theta_vec.begin() + ind);
+        }
+      indices_vec.clear();
+      rho_length = rho_vec.size();
+      theta_length = theta_vec.size();
+    }
+
+  // get the minima and maxima from the data for possible transformations
+  r_min = *std::min_element(rho_vec.begin(), rho_vec.end());
+  r_max = *std::max_element(rho_vec.begin(), rho_vec.end());
+  theta_min = *std::min_element(theta_vec.begin(), theta_vec.end());
+  theta_max = *std::max_element(theta_vec.begin(), theta_vec.end());
+
+  // clip_negative is not compatible with user given ranges, it overwrites
+  if (clip_negative)
+    {
+      if (std::signbit(y_range_min))
+        {
+          x_range_min = theta_min;
+          y_range_min = r_min;
+        }
+      if (std::signbit(x_range_max))
+        {
+          x_range_max = theta_max;
+          y_range_max = r_max;
+        }
+      transform_radii = false;
+      transform_angles = false;
+    }
+  if (r_min == y_range_min && r_max == y_range_max) transform_radii = false;
+  if (theta_min == x_range_min && theta_max == x_range_max) transform_angles = false;
+
+  if (rho_length != theta_length)
+    throw std::length_error("For polar_scatter series y(rho)- and x(theta)-data must have the same size.\n");
+  std::vector<double> x(rho_length), y(rho_length);
+
+  // transform angles into specified x_ranges if given
+  if (transform_angles) transformCoordinatesVector(theta_vec, theta_min, theta_max, x_range_min, x_range_max);
+
+  // transform radii into y_range if given or log scale
+  for (i = 0; i < rho_length; i++)
+    {
+      double current_rho;
+      if (transform_radii || y_log)
+        {
+          double temp_rho = rho_vec[i];
+          if (std::isnan(rho_vec[i])) continue; // skip NAN data
+
+          if (y_log && !transform_radii)
+            {
+              current_rho = transformCoordinate(temp_rho, y_lim_min, y_lim_max, 0.0, 0.0, y_log);
+            }
+          else
+            {
+              current_rho = transformCoordinate(temp_rho, r_min, r_max, y_range_min, y_range_max, y_log);
+            }
+
+          if (ylims)
+            {
+              if (current_rho < 0.0 && y_lim_min > 0.0) current_rho = 0.0;
+              if (temp_rho > y_lim_max) continue; // Todo: somehow use gks_polar_clipping but with a smaller radius?
+            }
+        }
+      else
+        {
+          if (rho_vec[i] < 0)
+            {
+              // iterate over rho_vec and for each negative value add 180 degrees in radian to the corresponding value
+              // in theta_vec and make the rho_vec value positive
+              theta_vec[i] += M_PI;
+              // if theta_vec[i] is bigger than 2 * PI, subtract 2 * PI
+              if (theta_vec[i] > 2 * M_PI) theta_vec[i] -= 2 * M_PI;
+              rho_vec[i] = -rho_vec[i];
+            }
+
+          // subtract y_lim_min from rho_vec if ylims is true
+          if (ylims)
+            {
+              current_rho = (rho_vec[i] - y_lim_min); // Todo: not the correct clipping... see above todo
+              // just set negative radii to 0.0 if y_lim_min > 0.0
+              if (current_rho < 0.0 && y_lim_min > 0.0) current_rho = 0.0;
+              if (current_rho > 1.0) continue;
+            }
+          else
+            {
+              current_rho = rho_vec[i];
+            }
+        }
+      current_rho /= y_lim_max;
+      x[index] = current_rho * cos(theta_vec[index]);
+      y[index] = current_rho * sin(theta_vec[index]);
+      ++index;
+    }
+  x.resize(index);
+  y.resize(index);
+
+  auto id = static_cast<int>(global_root->getAttribute("_id"));
+  auto str_id = std::to_string(id);
+
+  /* clear old polylines */
+  del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
+  clearOldChildren(&del, element);
+
+  if (!element->hasAttribute("marker_type"))
+    {
+      element->setAttribute("marker_type", *previous_scatter_marker_type++);
+      if (*previous_scatter_marker_type == INT_MAX)
+        {
+          previous_scatter_marker_type = plot_scatter_markertypes;
+        }
+    }
+  processMarkerType(element);
+
+  if (del != del_values::update_without_default && del != del_values::update_with_default)
+    {
+      marker = global_render->createPolymarker("x" + str_id, x, "y" + str_id, y);
+      marker->setAttribute("_child_id", child_id++);
+      element->append(marker);
+    }
+  else
+    {
+      marker = element->querySelectors("polymarker[_child_id=" + std::to_string(child_id++) + "]");
+      if (marker != nullptr)
+        global_render->createPolymarker("x" + str_id, x, "y" + str_id, y, nullptr, 0, 0.0, 0, marker);
+    }
+  if (marker != nullptr)
+    {
+      gr_inqmarkercolorind(&current_marker_color_ind);
+      marker->setAttribute("marker_color_ind", current_marker_color_ind);
+      if (element->hasAttribute("marker_size"))
+        {
+          auto marker_size = static_cast<double>(element->getAttribute("marker_size"));
+          marker->setAttribute("marker_size", marker_size);
+        }
+    }
+  global_root->setAttribute("_id", id + 1);
 }
 
 static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
@@ -13841,7 +14127,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               ++current_component_name;
             }
         }
-      if (str_equals_any(kind, "polar_histogram", "polar", "polar_heatmap", "nonuniform_polar_heatmap"))
+      if (polar_kinds.count(kind) > 0)
         {
           if (kind != "polar_histogram")
             {
@@ -14523,7 +14809,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
         }
     }
 
-  if (str_equals_any(kind, "polar", "polar_histogram", "polar_heatmap", "nonuniform_polar_heatmap"))
+  if (polar_kinds.count(kind) > 0)
     {
       global_render->setClipRegion(central_region, 1);
       global_render->setSelectSpecificXform(central_region, 1);
@@ -14781,9 +15067,10 @@ static void processSeries(const std::shared_ptr<GRM::Element> &element, const st
           {std::string("line"), processLine},
           {std::string("pie"), processPie},
           {std::string("plot3"), processPlot3},
-          {std::string("polar"), processPolar},
           {std::string("polar_heatmap"), processPolarHeatmap},
           {std::string("polar_histogram"), processPolarHistogram},
+          {std::string("polar_line"), processPolarLine},
+          {std::string("polar_scatter"), processPolarScatter},
           {std::string("quiver"), PushDrawableToZQueue(processQuiver)},
           {std::string("scatter"), processScatter},
           {std::string("scatter3"), processScatter3},
@@ -17771,15 +18058,18 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       "y",
       "z",
   };
-  std::vector<std::string> series_polar{
-      "clip_negative", "line_spec", "r_max", "r_min", "x", "y",
-  };
   std::vector<std::string> series_polar_heatmap = series_nonuniform_polar_heatmap;
   std::vector<std::string> series_polar_histogram{
       "bin_counts", "bin_edges",    "bin_width",       "bin_widths", "classes",
       "draw_edges", "face_alpha",   "keep_radii_axes", "num_bins",   "norm",
       "r_max",      "r_min",        "stairs",          "theta",      "tick",
       "total",      "transparency", "x_colormap",      "y_colormap",
+  };
+  std::vector<std::string> series_polar_line{
+      "clip_negative", "line_spec", "r_max", "r_min", "x", "y",
+  };
+  std::vector<std::string> series_polar_scatter{
+      "line_spec", "r_max", "r_min", "x", "y",
   };
   std::vector<std::string> series_quiver{
       "color_ind", "u", "v", "x", "y",
@@ -17852,9 +18142,10 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
       {std::string("series_nonuniform_polar_heatmap"), series_nonuniform_polar_heatmap},
       {std::string("series_pie"), series_pie},
       {std::string("series_plot3"), series_plot3},
-      {std::string("series_polar"), series_polar},
       {std::string("series_polar_heatmap"), series_polar_heatmap},
       {std::string("series_polar_histogram"), series_polar_histogram},
+      {std::string("series_polar_line"), series_polar_line},
+      {std::string("series_polar_scatter"), series_polar_scatter},
       {std::string("series_quiver"), series_quiver},
       {std::string("series_scatter"), series_scatter},
       {std::string("series_scatter3"), series_scatter3},
@@ -17897,6 +18188,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
           std::vector<std::string> plot3_group = {"plot3", "scatter", "scatter3", "tricontour", "trisurface"};
           std::vector<std::string> barplot_group = {"barplot", "hist", "stem", "stairs"};
           std::vector<std::string> hexbin_group = {"hexbin", "shade"};
+          std::vector<std::string> polar_line_group = {"polar_line", "polar_scatter"};
           std::shared_ptr<GRM::Element> new_element = nullptr;
           std::shared_ptr<GRM::Element> central_region, central_region_parent;
 
@@ -18163,6 +18455,27 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               new_series->setAttribute("y", element->getAttribute("y"));
               new_series->setAttribute("_bbox_id", -1);
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
+              for (const auto &child : element->children())
+                {
+                  child->remove();
+                }
+              element->remove();
+              new_series->setAttribute("_update_required", true);
+              new_series->setAttribute("_delete_children", 2);
+            }
+          else if (std::find(polar_line_group.begin(), polar_line_group.end(), value) != polar_line_group.end() &&
+                   std::find(polar_line_group.begin(), polar_line_group.end(),
+                             static_cast<std::string>(element->getAttribute("kind"))) != polar_line_group.end())
+            {
+              auto new_series = global_render->createSeries(static_cast<std::string>(element->getAttribute("kind")));
+              new_element = new_series;
+              element->parentElement()->insertBefore(new_series, element);
+              plot_parent->setAttribute("kind", static_cast<std::string>(element->getAttribute("kind")));
+              new_series->setAttribute("x", element->getAttribute("x"));
+              new_series->setAttribute("y", element->getAttribute("y"));
+              new_series->setAttribute("_bbox_id", -1);
+              if (element->hasAttribute("clip_negative"))
+                new_series->setAttribute("clip_negative", element->getAttribute("clip_negative"));
               for (const auto &child : element->children())
                 {
                   child->remove();
