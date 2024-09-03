@@ -158,6 +158,9 @@ EXPORT std::vector<std::string> getTextAlignHorizontal();
 EXPORT std::vector<std::string> getTextAlignVertical();
 EXPORT std::vector<std::string> getAlgorithm();
 EXPORT std::vector<std::string> getModel();
+EXPORT std::vector<std::string> getContextAttributes();
+
+EXPORT void addValidContextKey(std::string key);
 
 /* ========================= classes ================================================================================ */
 

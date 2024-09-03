@@ -42,9 +42,9 @@ struct _grm_file_args_t
 std::string normalize_line(const std::string &str);
 err_t parse_columns(std::list<int> *columns, const char *colms);
 err_t read_data_file(const std::string &path, std::vector<std::vector<std::vector<double>>> &data,
-                     std::vector<int> &x_data, std::vector<int> &error_data, std::vector<std::string> &labels,
-                     grm_args_t *args, const char *colms, const char *x_colms, const char *y_colms, const char *e_colms,
-                     PlotRange *ranges);
+                     std::vector<int> &x_data, std::vector<int> &y_data, std::vector<int> &error_data,
+                     std::vector<std::string> &labels, grm_args_t *args, const char *colms, const char *x_colms,
+                     const char *y_colms, const char *e_colms, PlotRange *ranges);
 int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, int argc, char **argv,
                                   PlotRange *ranges);
 grm_file_args_t *grm_file_args_new();
