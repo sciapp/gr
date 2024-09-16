@@ -9310,7 +9310,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                         gks_set_fill_color_index(color);
                       }
 
-                    gks_select_xform(MODERN_NDC);
+                    if (modern_projection_type) gks_select_xform(MODERN_NDC);
 
                     np = 4;
                     gks_fillarea(np, xn, yn);
@@ -9321,7 +9321,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                         gks_polyline(np, xn, yn);
                       }
 
-                    gks_select_xform(tnr);
+                    if (modern_projection_type) gks_select_xform(tnr);
                   }
 
                 j--;
