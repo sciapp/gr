@@ -17,6 +17,7 @@
 class GRPlotWidget;
 #include "gredit/TreeWidget.h"
 #include "gredit/AddElementWidget.h"
+#include "gredit/TableWidget.h"
 #include "qtterm/receiver_thread.h"
 #include "qtterm/grm_args_t_wrapper.h"
 #include "util.hxx"
@@ -111,6 +112,10 @@ private slots:
   void add_element_slot();
   void received(grm_args_t_wrapper args);
   void screenChanged();
+  void showContextSlot();
+  void addContextSlot();
+  void addGRPlotDataContextSlot();
+  void generateLinearContextSlot();
 
 private:
   struct MouseState
@@ -214,10 +219,11 @@ private:
   bool tree_update = true;
   QSize size_hint;
   QStringList check_box_attr, combo_box_attr;
+  TableWidget *table_widget;
 
   QMenuBar *menu;
   QMenu *type, *algo, *export_menu, *editor_menu, *modi_menu;
-  QMenu *file_menu, *configuration_menu;
+  QMenu *file_menu, *configuration_menu, *context_menu, *add_context_data;
   QAction *marginalheatmapAllAct, *marginalheatmapLineAct;
   QAction *sumAct, *maxAct;
   QAction *lineAct, *scatterAct;
@@ -231,6 +237,7 @@ private:
   QAction *show_container_action, *show_bounding_boxes_action, *save_file_action, *load_file_action, *editor_action,
       *add_element_action;
   QAction *moveableModeAct;
+  QAction *show_context_action, *add_context_action, *generate_linear_context_action, *add_grplot_data_context;
   QCursor *csr;
 
   void reset_pixmap();

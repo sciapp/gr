@@ -875,6 +875,7 @@
             <xs:attribute name="style" type="xs:string"/>
             <xs:attribute name="text_align_horizontal" type="strint"/>
             <xs:attribute name="text_align_vertical" type="strint"/>
+            <xs:attribute name="transparency" type="xs:double"/>
             <xs:attribute name="x" type="xs:string"/>
             <xs:attribute name="y" type="xs:string" use="required"/>
             <xs:attribute name="y_labels" type="xs:string"/>
@@ -941,6 +942,7 @@
             <xs:attribute name="line_color_rgb" type="xs:string"/>
             <xs:attribute name="num_bins" type="xs:integer"/>
             <xs:attribute name="orientation" type="xs:string"/>
+            <xs:attribute name="transparency" type="xs:double"/>
             <xs:attribute name="weights" type="xs:string"/>
             <xs:attribute name="x" type="xs:string" use="required"/>
         </xs:complexType>
@@ -1088,7 +1090,6 @@
             <xs:attribute name="classes" type="xs:string"/>
             <xs:attribute name="color_ind" type="xs:integer"/>
             <xs:attribute name="draw_edges" type="xs:integer"/>
-            <xs:attribute name="face_alpha" type="xs:double"/>
             <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>

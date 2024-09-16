@@ -394,6 +394,7 @@ const char *valid_series_keys[] = {"a",
                                    "s",
                                    "step_where",
                                    "stairs",
+                                   "transparency",
                                    "u",
                                    "v",
                                    "weights",
@@ -482,6 +483,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"tilt", "d"},
                                               {"title", "s"},
                                               {"transformation", "i"},
+                                              {"transparency", "d"},
                                               {"u", "D"},
                                               {"update", "i"},
                                               {"v", "D"},
@@ -1430,7 +1432,7 @@ void plot_post_subplot(grm_args_t *subplot_args)
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   if (grm_args_contains(subplot_args, "labels"))
     {
-      if (str_equals_any(kind, "line", "stairs", "scatter", "stem"))
+      if (str_equals_any(kind, "line", "stairs", "scatter", "stem", "polar_line", "polar_scatter"))
         {
           plot_draw_legend(subplot_args);
         }
@@ -1897,8 +1899,6 @@ err_t plot_hist(grm_args_t *subplot_args)
       (current_central_region_element) ? current_central_region_element : getCentralRegion();
 
   grm_args_values(subplot_args, "series", "A", &current_series);
-  grm_args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]);
-  grm_args_values(subplot_args, "bar_color", "i", &bar_color_index);
 
   while (*current_series != nullptr)
     {
@@ -1908,6 +1908,7 @@ err_t plot_hist(grm_args_t *subplot_args)
       double *bins, *x, *weights;
       unsigned int num_bins = 0, x_length, num_weights;
       char *orientation;
+      double transparency;
 
       auto subGroup = global_render->createSeries("hist");
       group->append(subGroup);
@@ -1916,17 +1917,24 @@ err_t plot_hist(grm_args_t *subplot_args)
       std::string str = std::to_string(id);
       auto context = global_render->getContext();
 
-      std::vector<double> bar_color_rgb_vec(bar_color_rgb, bar_color_rgb + 3);
-      (*context)["fill_color_rgb" + str] = bar_color_rgb_vec;
-      subGroup->setAttribute("fill_color_rgb", "fill_color_rgb" + str);
-      subGroup->setAttribute("fill_color_ind", bar_color_index);
+      if (grm_args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]))
+        {
+          std::vector<double> bar_color_rgb_vec(bar_color_rgb, bar_color_rgb + 3);
+          (*context)["fill_color_rgb" + str] = bar_color_rgb_vec;
+          subGroup->setAttribute("fill_color_rgb", "fill_color_rgb" + str);
+        }
+      if (grm_args_values(subplot_args, "bar_color", "i", &bar_color_index))
+        subGroup->setAttribute("fill_color_ind", bar_color_index);
 
-      grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
-      grm_args_values(*current_series, "edge_color", "i", &edge_color_index);
-      std::vector<double> edge_color_rgb_vec(edge_color_rgb, edge_color_rgb + 3);
-      (*context)["line_color_rgb" + str] = edge_color_rgb_vec;
-      subGroup->setAttribute("line_color_rgb", "line_color_rgb" + str);
-      subGroup->setAttribute("line_color_ind", edge_color_index);
+      if (grm_args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1],
+                          &edge_color_rgb[2]))
+        {
+          std::vector<double> edge_color_rgb_vec(edge_color_rgb, edge_color_rgb + 3);
+          (*context)["line_color_rgb" + str] = edge_color_rgb_vec;
+          subGroup->setAttribute("line_color_rgb", "line_color_rgb" + str);
+        }
+      if (grm_args_values(*current_series, "edge_color", "i", &edge_color_index))
+        subGroup->setAttribute("line_color_ind", edge_color_index);
 
       if (grm_args_first_value(*current_series, "bins", "D", &bins, &num_bins))
         {
@@ -1953,6 +1961,11 @@ err_t plot_hist(grm_args_t *subplot_args)
         {
           subGroup->setAttribute("y_range_min", y_min);
           subGroup->setAttribute("y_range_max", y_max);
+        }
+
+      if (grm_args_values(*current_series, "transparency", "d", &transparency))
+        {
+          subGroup->setAttribute("transparency", transparency);
         }
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -2020,6 +2033,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
       std::vector<int> c_vec;
       std::vector<double> c_rgb_vec;
       double x_min, x_max, y_min, y_max;
+      double transparency;
 
       auto subGroup = global_render->createSeries("barplot");
       group->append(subGroup);
@@ -2047,6 +2061,10 @@ err_t plot_barplot(grm_args_t *subplot_args)
       if (grm_args_values(subplot_args, "orientation", "s", &orientation))
         {
           subGroup->setAttribute("orientation", orientation);
+        }
+      if (grm_args_values(*current_series, "transparency", "d", &transparency))
+        {
+          subGroup->setAttribute("transparency", transparency);
         }
 
       /* Push attributes on the series level to the tree */
@@ -3309,7 +3327,7 @@ err_t plot_polar_scatter(grm_args_t *subplot_args)
  *            It is not compatible nbins or bin_edges.
  * \param[in] num_bins an int setting the number of bins (series)
  *            It is not compatible with bin_edges, nbins or bin_counts.
- * \param[in] face_alpha double value between 0.0 and 1.0 inclusive (series)
+ * \param[in] transparency double value between 0.0 and 1.0 inclusive (series)
  *            Sets the opacity of bins.
  *            A value of 1.0 means fully opaque and 0.0 means completely transparent (invisible).
  *            The default value is 0.75.
@@ -3328,7 +3346,8 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
   int stairs;
   int keep_radii_axes;
   int x_colormap, y_colormap;
-  int draw_edges, phi_flip, edge_color, face_color, face_alpha;
+  int draw_edges, phi_flip, edge_color, face_color;
+  double transparency;
   double xrange_min, xrange_max, ylim_min, ylim_max;
   grm_args_t **series;
 
@@ -3360,10 +3379,10 @@ err_t plot_polar_histogram(grm_args_t *subplot_args)
       series_group->setAttribute("color_ind", face_color);
     }
 
-  /* face_alpha */
-  if (grm_args_values(*series, "face_alpha", "d", &face_alpha))
+  /* transparency */
+  if (grm_args_values(*series, "transparency", "d", &transparency))
     {
-      series_group->setAttribute("face_alpha", face_alpha);
+      series_group->setAttribute("transparency", transparency);
     }
 
   if (grm_args_values(subplot_args, "phi_flip", "i", &phi_flip))
@@ -7056,4 +7075,37 @@ int get_focus_and_factor_from_dom(const int x1, const int y1, const int x2, cons
   *focus_x = (ndc_left - *factor_x * viewport[0]) / (1 - *factor_x) - (viewport[0] + viewport[1]) / 2.0;
   *focus_y = (ndc_top - *factor_y * viewport[3]) / (1 - *factor_y) - (viewport[2] + viewport[3]) / 2.0;
   return 1;
+}
+
+std::map<std::string, std::list<std::string>> grm_get_context_data()
+{
+  std::map<std::string, std::list<std::string>> context_data;
+  auto context = global_render->getContext();
+  for (auto item : *context)
+    {
+      std::visit(
+          GRM::overloaded{
+              [&context_data](std::reference_wrapper<std::pair<const std::string, std::vector<double>>> pair_ref) {
+                for (int row = 0; row < pair_ref.get().second.size(); row++)
+                  {
+                    context_data[pair_ref.get().first.c_str()].emplace_back(
+                        std::to_string(pair_ref.get().second.data()[row]));
+                  }
+              },
+              [&context_data](std::reference_wrapper<std::pair<const std::string, std::vector<int>>> pair_ref) {
+                for (int row = 0; row < pair_ref.get().second.size(); row++)
+                  {
+                    context_data[pair_ref.get().first.c_str()].emplace_back(
+                        std::to_string(pair_ref.get().second.data()[row]));
+                  }
+              },
+              [&context_data](std::reference_wrapper<std::pair<const std::string, std::vector<std::string>>> pair_ref) {
+                for (int row = 0; row < pair_ref.get().second.size(); row++)
+                  {
+                    context_data[pair_ref.get().first.c_str()].emplace_back(pair_ref.get().second.data()[row]);
+                  }
+              }},
+          item);
+    }
+  return context_data;
 }
