@@ -42,6 +42,7 @@ set(GR_DIRECTORY
     CACHE STRING "Default value for GRDIR"
 )
 option(GR_BUILD_DEMOS "Build demos for GR" OFF)
+option(GR_BUILD_GKSM "Build GKS metafile reader for GR" OFF)
 option(GR_INSTALL "Create installation target for GR" ON)
 option(GR_USE_BUNDLED_LIBRARIES "Use thirdparty libraries bundled with GR" OFF)
 option(GR_MANUAL_MOC_AND_RCC "Manually run moc and rcc instead of relying on AUTOMOC and AUTORCC" OFF)
@@ -1427,6 +1428,13 @@ if(GR_BUILD_DEMOS)
 
   add_subdirectory(lib/grm/test/public_api/grm grm_test_public_api)
   add_subdirectory(lib/grm/test/internal_api/grm grm_test_internal_api)
+endif()
+
+if(GR_BUILD_GKSM)
+  add_executable(gksm lib/gks/gksm.c)
+  target_link_libraries(gksm PUBLIC gks_static)
+  target_compile_options(gksm PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(gksm PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
 endif()
 
 if(GR_INSTALL)
