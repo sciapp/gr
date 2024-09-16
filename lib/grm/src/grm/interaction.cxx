@@ -773,7 +773,9 @@ int grm_input(const grm_args_t *input_args)
                   viewport_mid_y = (viewport[2] + viewport[3]) / 2.0;
                   focus_x = ndc_x - viewport_mid_x;
                   focus_y = ndc_y - viewport_mid_y;
-                  if (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar")
+                  if (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar" &&
+                      !(subplot_element->hasAttribute("polar_with_pan") &&
+                        static_cast<int>(subplot_element->getAttribute("polar_with_pan"))))
                     focus_x = focus_y = 0.0;
                   logger(
                       (stderr, "Zoom to ndc focus point (%lf, %lf), angle_delta %lf\n", focus_x, focus_y, angle_delta));
@@ -802,7 +804,9 @@ int grm_input(const grm_args_t *input_args)
                   viewport_mid_y = (viewport[2] + viewport[3]) / 2.0;
                   focus_x = ndc_x - viewport_mid_x;
                   focus_y = ndc_y - viewport_mid_y;
-                  if (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar")
+                  if (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar" &&
+                      !(subplot_element->hasAttribute("polar_with_pan") &&
+                        static_cast<int>(subplot_element->getAttribute("polar_with_pan"))))
                     focus_x = focus_y = 0.0;
                   logger((stderr, "Zoom to ndc focus point (%lf, %lf), factor %lf\n", focus_x, focus_y, factor));
                   auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, factor, factor);
@@ -847,7 +851,9 @@ int grm_input(const grm_args_t *input_args)
           else if (grm_args_values(input_args, "x_shift", "i", &xshift) &&
                    grm_args_values(input_args, "y_shift", "i", &yshift) &&
                    !grm_args_values(input_args, "movable_state", "i", &movable_status) &&
-                   static_cast<std::string>(coordinate_system->getAttribute("plot_type")) != "polar")
+                   (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) != "polar" ||
+                    (subplot_element->hasAttribute("polar_with_pan") &&
+                     static_cast<int>(subplot_element->getAttribute("polar_with_pan")))))
             {
               double ndc_xshift, ndc_yshift, rotation, tilt;
               int shift_pressed;

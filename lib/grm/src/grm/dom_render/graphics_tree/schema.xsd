@@ -159,6 +159,7 @@
             <xs:attribute name="plot_x_min" type="xs:double" use="required"/>
             <xs:attribute name="plot_y_max" type="xs:double" use="required"/>
             <xs:attribute name="plot_y_min" type="xs:double" use="required"/>
+            <xs:attribute name="polar_with_pan" type="xs:integer"/>
             <xs:attribute name="r_lim_max" type="xs:double"/>
             <xs:attribute name="r_lim_min" type="xs:double"/>
             <xs:attribute name="scale" type="xs:integer"/>
@@ -597,6 +598,7 @@
                 <xs:element ref="angle_line" minOccurs="0" maxOccurs="8"/>
             </xs:choice>
             <xs:attributeGroup ref="move_xform_wc"/>
+            <xs:attribute name="angle_line_num" type="xs:integer"/>
             <xs:attribute name="line_type" type="strint"/>
             <xs:attribute name="text_align_horizontal" type="strint"/>
             <xs:attribute name="text_align_vertical" type="strint"/>

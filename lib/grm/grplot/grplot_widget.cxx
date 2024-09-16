@@ -153,6 +153,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "movable",
       "only_quadratic_aspect_ratio",
       "phi_flip",
+      "polar_with_pan",
       "set_text_color_for_background",
       "space",
       "stairs",
@@ -831,6 +832,10 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
     {
       current_text = locationIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
     }
+  else if (cur_attr_name == "clip_region" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text = clipRegionIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
   else if (cur_attr_name == "colormap" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
       current_text = colormapIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
@@ -856,6 +861,11 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
   else if (cur_attr_name == "line_type" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
       current_text = lineTypeIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "resample_method" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          resampleMethodIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
     }
   else if (cur_attr_name == "scientific_format" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
@@ -910,6 +920,10 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
         {
           element->setAttribute(label, locationStringToInt(value));
         }
+      else if (label == "clip_region")
+        {
+          element->setAttribute(label, clipRegionStringToInt(value));
+        }
       else if (label == "colormap")
         {
           element->setAttribute(label, colormapStringToInt(value));
@@ -933,6 +947,10 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
       else if (label == "line_type")
         {
           element->setAttribute(label, lineTypeStringToInt(value));
+        }
+      else if (label == "resample_method")
+        {
+          element->setAttribute(label, resampleMethodStringToInt(value));
         }
       else if (label == "tick_orientation")
         {
@@ -975,7 +993,13 @@ void GRPlotWidget::AttributeEditEvent()
   QWidget *lineEdit;
   std::unordered_map<std::string, std::string> attr_type;
 
+  std::vector<std::string> sorted_names;
   for (const auto &cur_attr_name : current_selection->get_ref()->getAttributeNames())
+    {
+      sorted_names.push_back(cur_attr_name);
+    }
+  std::sort(sorted_names.begin(), sorted_names.end());
+  for (const auto &cur_attr_name : sorted_names)
     {
       if (util::startsWith(cur_attr_name, "_"))
         {

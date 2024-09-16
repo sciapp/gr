@@ -254,6 +254,10 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
             <xs:attribute name="_r_max" type="xs:double"/>
+            <xs:attribute name="_window_old_x_max" type="xs:double"/>
+            <xs:attribute name="_window_old_x_min" type="xs:double"/>
+            <xs:attribute name="_window_old_y_max" type="xs:double"/>
+            <xs:attribute name="_window_old_y_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
