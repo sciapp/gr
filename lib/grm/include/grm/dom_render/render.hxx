@@ -128,6 +128,8 @@ EXPORT int textAlignVerticalStringToInt(const std::string &text_align_vertical_s
 EXPORT int textEncodingStringToInt(const std::string &text_encoding_str);
 EXPORT int tickOrientationStringToInt(const std::string &tick_orientation_str);
 EXPORT int errorBarStyleStringToInt(const std::string &error_bar_stylr_str);
+EXPORT int clipRegionStringToInt(const std::string &error_bar_stylr_str);
+EXPORT int resampleMethodStringToInt(const std::string &error_bar_stylr_str);
 
 EXPORT std::string algorithmIntToString(int algorithm);
 EXPORT std::string colormapIntToString(int colormap);
@@ -146,6 +148,8 @@ EXPORT std::string textAlignVerticalIntToString(int text_align_vertical);
 EXPORT std::string textEncodingIntToString(int text_encoding);
 EXPORT std::string tickOrientationIntToString(int tick_orientation);
 EXPORT std::string errorBarStyleIntToString(int error_bar_style);
+EXPORT std::string clipRegionIntToString(int error_bar_style);
+EXPORT std::string resampleMethodIntToString(int error_bar_style);
 
 EXPORT std::vector<std::string> getSizeUnits();
 EXPORT std::vector<std::string> getColormaps();

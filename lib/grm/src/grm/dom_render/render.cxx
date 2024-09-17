@@ -394,6 +394,16 @@ static std::map<std::string, int> model_string_to_int{
     {"rgb", 0},
     {"hsv", 1},
 };
+static std::map<std::string, int> clip_region_string_to_int{
+    {"quadratic", 0},
+    {"elliptic", 1},
+};
+static std::map<std::string, int> resample_method_string_to_int{
+    {"default", GKS_K_RESAMPLE_DEFAULT},
+    {"nearest", GKS_K_RESAMPLE_NEAREST},
+    {"linear", GKS_K_RESAMPLE_LINEAR},
+    {"lanczos", GKS_K_RESAMPLE_LANCZOS},
+};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ static function header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -1936,6 +1946,54 @@ std::string errorBarStyleIntToString(int error_bar_style)
     }
   logger((stderr, "Got unknown error_bar_style \"%i\"\n", error_bar_style));
   throw std::logic_error("Given error_bar_style is unknown.\n");
+}
+
+int clipRegionStringToInt(const std::string &clip_region_str)
+{
+  if (clip_region_string_to_int.count(clip_region_str))
+    return clip_region_string_to_int[clip_region_str];
+  else
+    {
+      logger((stderr, "Got unknown clip_region \"%s\"\n", clip_region_str.c_str()));
+      throw std::logic_error("Given clip_region is unknown.\n");
+    }
+}
+
+std::string clipRegionIntToString(int clip_region)
+{
+  for (auto const &map_elem : clip_region_string_to_int)
+    {
+      if (map_elem.second == clip_region)
+        {
+          return map_elem.first;
+        }
+    }
+  logger((stderr, "Got unknown clip_region \"%i\"\n", clip_region));
+  throw std::logic_error("Given clip_region is unknown.\n");
+}
+
+int resampleMethodStringToInt(const std::string &resample_method_str)
+{
+  if (resample_method_string_to_int.count(resample_method_str))
+    return resample_method_string_to_int[resample_method_str];
+  else
+    {
+      logger((stderr, "Got unknown resample_method \"%s\"\n", resample_method_str.c_str()));
+      throw std::logic_error("Given resample_method is unknown.\n");
+    }
+}
+
+std::string resampleMethodIntToString(int resample_method)
+{
+  for (auto const &map_elem : resample_method_string_to_int)
+    {
+      if (map_elem.second == resample_method)
+        {
+          return map_elem.first;
+        }
+    }
+  logger((stderr, "Got unknown resample_method \"%i\"\n", resample_method));
+  throw std::logic_error("Given resample_method is unknown.\n");
 }
 
 int getVolumeAlgorithm(const std::shared_ptr<GRM::Element> &element)
@@ -7617,7 +7675,7 @@ static void processArcGridLine(const std::shared_ptr<GRM::Element> &element,
   std::string kind, arc_label;
   del_values del = del_values::update_without_default;
   int child_id = 0;
-  bool y_log = false;
+  bool y_log = false, with_pan = false;
   double x_lim_min = 0, x_lim_max = 360;
   std::shared_ptr<GRM::Element> text, arc, plot_parent = element, central_region;
 
@@ -7630,6 +7688,9 @@ static void processArcGridLine(const std::shared_ptr<GRM::Element> &element,
           break;
         }
     }
+
+  with_pan =
+      plot_parent->hasAttribute("polar_with_pan") && static_cast<int>(plot_parent->getAttribute("polar_with_pan"));
 
   /* clear old arc_grid_lines */
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
@@ -7650,23 +7711,33 @@ static void processArcGridLine(const std::shared_ptr<GRM::Element> &element,
       x_lim_min = static_cast<double>(plot_parent->getAttribute("x_lim_min"));
       x_lim_max = static_cast<double>(plot_parent->getAttribute("x_lim_max"));
     }
+  if (with_pan)
+    {
+      x_lim_min = 0;
+      x_lim_max = 360;
+    }
 
   auto value = static_cast<double>(element->getAttribute("value"));
   if (element->hasAttribute("arc_label")) arc_label = static_cast<std::string>(element->getAttribute("arc_label"));
 
   if (del != del_values::update_without_default && del != del_values::update_with_default)
     {
-      arc = global_render->createDrawArc(value * window[0], value * window[1], value * window[2], value * window[3], 0,
-                                         360);
+      if (!with_pan)
+        arc = global_render->createDrawArc(value * window[0], value * window[1], value * window[2], value * window[3],
+                                           x_lim_min, x_lim_max);
+      else
+        arc = global_render->createDrawArc(-value, value, -value, value, x_lim_min, x_lim_max);
       arc->setAttribute("_child_id", child_id++);
       element->append(arc);
     }
   else
     {
       arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
-      if (arc != nullptr)
-        global_render->createDrawArc(value * window[0], value * window[1], value * window[2], value * window[3], 0, 360,
-                                     arc);
+      if (!with_pan && arc != nullptr)
+        global_render->createDrawArc(value * window[0], value * window[1], value * window[2], value * window[3],
+                                     x_lim_min, x_lim_max, arc);
+      else if (arc != nullptr)
+        global_render->createDrawArc(-value, value, -value, value, x_lim_min, x_lim_max, arc);
     }
   if (arc != nullptr)
     {
@@ -7678,12 +7749,19 @@ static void processArcGridLine(const std::shared_ptr<GRM::Element> &element,
 
   if (!arc_label.empty())
     {
-      double x0 = 0.05 * (window[1] - window[0]) / 2.0, y0 = value * window[3];
+      double x0 = 0.05, y0 = value;
+      if (!with_pan)
+        {
+          x0 *= ((window[1] - window[0]) / 2.0);
+          y0 *= window[3];
+        }
       if (y_log) y0 *= -1.0;
 
       adjustPolarGridLineTextPosition(x_lim_min, x_lim_max, &x0, &y0, value, central_region);
 
-      if (del != del_values::update_without_default && del != del_values::update_with_default)
+      if (with_pan) text = element->querySelectors("text[_child_id=" + std::to_string(child_id) + "]");
+      if ((del != del_values::update_without_default && del != del_values::update_with_default) ||
+          (with_pan && text == nullptr))
         {
           text = global_render->createText(x0, y0, arc_label, CoordinateSpace::WC);
           text->setAttribute("_child_id", child_id++);
@@ -7721,19 +7799,25 @@ static void processArcGridLine(const std::shared_ptr<GRM::Element> &element,
             }
         }
     }
+  else if (with_pan)
+    {
+      text = element->querySelectors("text[_child_id=" + std::to_string(child_id++) + "]");
+      if (text != nullptr) element->removeChild(text);
+    }
 }
 
 static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
-  double window[4];
+  double window[4], old_window[4];
   double first_tick, last_tick, new_tick, r_max;
   double min_scale = 0, max_scale; // used for y_log (with negative exponents)
+  double factor = 1;
   int i;
   std::string kind;
   del_values del = del_values::update_without_default;
   int child_id = 0;
   double y_lim_min = NAN, y_lim_max = NAN;
-  bool y_log = false, skip_calculations = false, keep_radii_axes = false;
+  bool y_log = false, skip_calculations = false, keep_radii_axes = false, with_pan = false;
   std::shared_ptr<GRM::Element> central_region, plot_parent = element;
   int scientific_format = 0;
 
@@ -7751,6 +7835,28 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
   window[1] = static_cast<double>(central_region->getAttribute("window_x_max"));
   window[2] = static_cast<double>(central_region->getAttribute("window_y_min"));
   window[3] = static_cast<double>(central_region->getAttribute("window_y_max"));
+
+  with_pan =
+      plot_parent->hasAttribute("polar_with_pan") && static_cast<int>(plot_parent->getAttribute("polar_with_pan"));
+  if (with_pan)
+    {
+      factor = grm_max(abs(window[0]), grm_max(abs(window[1]), grm_max(abs(window[2]), abs(window[3])))) * sqrt(2);
+      if (element->hasAttribute("_window_old_x_min"))
+        old_window[0] = static_cast<double>(element->getAttribute("_window_old_x_min"));
+      if (element->hasAttribute("_window_old_x_max"))
+        old_window[1] = static_cast<double>(element->getAttribute("_window_old_x_max"));
+      if (element->hasAttribute("_window_old_y_min"))
+        old_window[2] = static_cast<double>(element->getAttribute("_window_old_y_min"));
+      if (element->hasAttribute("_window_old_y_max"))
+        old_window[3] = static_cast<double>(element->getAttribute("_window_old_y_max"));
+      element->setAttribute("_window_old_x_min", window[0]);
+      element->setAttribute("_window_old_x_max", window[1]);
+      element->setAttribute("_window_old_y_min", window[2]);
+      element->setAttribute("_window_old_y_max", window[3]);
+      if (old_window[0] == window[0] && old_window[1] == window[1] && old_window[2] == window[2] &&
+          old_window[3] == window[3])
+        return;
+    }
 
   if (element->hasAttribute("scientific_format"))
     scientific_format = static_cast<int>(element->getAttribute("scientific_format"));
@@ -7821,7 +7927,7 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
     }
   new_tick = autoTick(first_tick, r_max);
 
-  auto n = (int)round((r_max - first_tick) / new_tick);
+  auto n = (int)round(((r_max * factor) - first_tick) / new_tick);
   if (n <= 4 && kind != "polar_histogram") // special case to get some more useful axes
     {
       new_tick /= 2;
@@ -7837,47 +7943,50 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
       if (y_log) r = log10(((n + 1) - i) * new_tick / (r_max - first_tick));
 
       if (i == n + 1) r = 1;
-      if (r > 1) continue;
+      if (!with_pan && r > 1) continue;
       if (i % 2 == 0 || r == 1)
         {
           double value = (first_tick / new_tick + i) * new_tick;
           if (r == 1)
             {
-              // Todo: if pan is included the window below must be changed
-              double tmp_tick = (last_tick - first_tick) / n * abs(window[3] - window[2]) / 2.0;
+              double tmp_tick = (last_tick - first_tick) / n;
+              if (!with_pan) tmp_tick *= (abs(window[3] - window[2]) / 2.0);
               value = (i == n + 1) ? first_tick + tmp_tick * (i - ((i - 1) * tmp_tick / (r_max - first_tick)))
                                    : first_tick + tmp_tick * i;
               element->setAttribute("_r_max", value);
             }
-          if (y_log) // y_log uses the exponential notation
+          if (!with_pan || (r > window[2] && window[3] > r))
             {
-              snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d^{%.1f}", 10, log10(value));
-              value_string = text_buffer;
-            }
-          else
-            {
-              format_reference_t reference;
-              gr_getformat(&reference, first_tick, first_tick, last_tick, new_tick, 2);
-              snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%s", std::to_string(value).c_str());
-              value_string = gr_ftoa(text_buffer, value, &reference);
-
-              if (value_string.size() > 7)
+              if (y_log) // y_log uses the exponential notation
                 {
-                  reference = {1, 1};
-                  const char minus[] = {(char)0xe2, (char)0x88, (char)0x92, '\0'}; // gr minus sign
-                  auto em_dash = std::string(minus);
-                  size_t start_pos = 0;
+                  snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d^{%.1f}", 10, log10(value));
+                  value_string = text_buffer;
+                }
+              else
+                {
+                  format_reference_t reference;
+                  gr_getformat(&reference, first_tick, first_tick, last_tick, new_tick, 2);
+                  snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%s", std::to_string(value).c_str());
+                  value_string = gr_ftoa(text_buffer, value, &reference);
 
-                  scientific_format = 2;
-                  gr_setscientificformat(scientific_format);
+                  if (value_string.size() > 7)
+                    {
+                      reference = {1, 1};
+                      const char minus[] = {(char)0xe2, (char)0x88, (char)0x92, '\0'}; // gr minus sign
+                      auto em_dash = std::string(minus);
+                      size_t start_pos = 0;
 
-                  if (starts_with(value_string, em_dash)) start_pos = em_dash.size();
-                  auto without_minus = value_string.substr(start_pos);
+                      scientific_format = 2;
+                      gr_setscientificformat(scientific_format);
 
-                  snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%s", without_minus.c_str());
-                  value_string = gr_ftoa(text_buffer, atof(without_minus.c_str()), &reference);
-                  if (start_pos != 0) value_string = em_dash.append(value_string);
-                  element->setAttribute("scientific_format", scientific_format);
+                      if (starts_with(value_string, em_dash)) start_pos = em_dash.size();
+                      auto without_minus = value_string.substr(start_pos);
+
+                      snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%s", without_minus.c_str());
+                      value_string = gr_ftoa(text_buffer, atof(without_minus.c_str()), &reference);
+                      if (start_pos != 0) value_string = em_dash.append(value_string);
+                      element->setAttribute("scientific_format", scientific_format);
+                    }
                 }
             }
         }
@@ -7916,19 +8025,24 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
 
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
-              arc = global_render->createDrawArc(window[0], window[1], window[2], window[3], x_lim_min, x_lim_max);
+              if (!with_pan)
+                arc = global_render->createDrawArc(window[0], window[1], window[2], window[3], x_lim_min, x_lim_max);
+              else
+                arc = global_render->createDrawArc(-1, 1, -1, 1, x_lim_min, x_lim_max);
               arc->setAttribute("_child_id", child_id++);
               element->append(arc);
             }
           else
             {
               arc = element->querySelectors("draw_arc[_child_id=" + std::to_string(child_id++) + "]");
-              if (arc != nullptr)
+              if (arc != nullptr && !with_pan)
                 global_render->createDrawArc(window[0], window[1], window[2], window[3], x_lim_min, x_lim_max, arc);
+              else if (arc != nullptr)
+                global_render->createDrawArc(-1, 1, -1, 1, x_lim_min, x_lim_max, arc);
             }
           if (arc != nullptr)
             {
-              arc->setAttribute("name", "rho-axes line");
+              if (!with_pan) arc->setAttribute("name", "rho-axes line");
               arc->setAttribute("line_color_ind", 88);
             }
 
@@ -7972,7 +8086,7 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
                     }
                 }
             }
-          break;
+          if (!with_pan) break;
         }
     }
 
@@ -7983,12 +8097,17 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
 
 static void processAngleLine(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
-  double text_x0 = 0.0, text_y0 = 0.0;
+  double text_x0 = 0.0, text_y0 = 0.0, factor = 1.1;
   std::string angle_label;
   del_values del = del_values::update_without_default;
   int child_id = 0;
+  bool with_pan = false;
   std::shared_ptr<GRM::Element> plot_parent = element, line, text;
   getPlotParent(plot_parent);
+
+  with_pan =
+      plot_parent->hasAttribute("polar_with_pan") && static_cast<int>(plot_parent->getAttribute("polar_with_pan"));
+  if (with_pan) factor = 0.9;
 
   /* clear old angle_line elements */
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
@@ -8028,9 +8147,11 @@ static void processAngleLine(const std::shared_ptr<GRM::Element> &element, const
 
   if (!angle_label.empty())
     {
-      if (del != del_values::update_without_default && del != del_values::update_with_default)
+      if (with_pan) text = element->querySelectors("text[_child_id=" + std::to_string(child_id) + "]");
+      if ((del != del_values::update_without_default && del != del_values::update_with_default) ||
+          (with_pan && text == nullptr))
         {
-          text = global_render->createText(text_x0 * 1.1, text_y0 * 1.1, angle_label, CoordinateSpace::WC);
+          text = global_render->createText(text_x0 * factor, text_y0 * factor, angle_label, CoordinateSpace::WC);
           text->setAttribute("_child_id", child_id++);
           element->append(text);
         }
@@ -8038,12 +8159,17 @@ static void processAngleLine(const std::shared_ptr<GRM::Element> &element, const
         {
           text = element->querySelectors("text[_child_id=" + std::to_string(child_id++) + "]");
           if (text != nullptr)
-            global_render->createText(text_x0 * 1.1, text_y0 * 1.1, angle_label, CoordinateSpace::WC, text);
+            global_render->createText(text_x0 * factor, text_y0 * factor, angle_label, CoordinateSpace::WC, text);
         }
       if (text != nullptr && del != del_values::update_without_default)
         {
           global_render->setTextAlign(text, GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
         }
+    }
+  else if (with_pan)
+    {
+      text = element->querySelectors("text[_child_id=" + std::to_string(child_id++) + "]");
+      if (text != nullptr) element->removeChild(text);
     }
 }
 
@@ -8052,10 +8178,11 @@ static void processThetaAxes(const std::shared_ptr<GRM::Element> &element, const
   double window[4];
   char text_buffer[PLOT_POLAR_AXES_TEXT_BUFFER];
   std::string text;
-  int interval = 45, alpha;
+  double interval, factor = 1;
+  int angle_line_num = 8;
   del_values del = del_values::update_without_default;
   int child_id = 0;
-  bool skip_calculations = false, phi_flip = false, pass = false;
+  bool skip_calculations = false, phi_flip = false, pass = false, with_pan = false;
   double x_lim_min = 0, x_lim_max = 360;
   std::shared_ptr<GRM::Element> central_region, plot_parent = element, axes_text_group;
 
@@ -8074,6 +8201,11 @@ static void processThetaAxes(const std::shared_ptr<GRM::Element> &element, const
   window[2] = static_cast<double>(central_region->getAttribute("window_y_min"));
   window[3] = static_cast<double>(central_region->getAttribute("window_y_max"));
 
+  with_pan =
+      plot_parent->hasAttribute("polar_with_pan") && static_cast<int>(plot_parent->getAttribute("polar_with_pan"));
+  if (with_pan)
+    factor = grm_max(abs(window[0]), grm_max(abs(window[1]), grm_max(abs(window[2]), abs(window[3])))) * sqrt(2);
+
   if (central_region->hasAttribute("_skip_calculations"))
     {
       skip_calculations = static_cast<int>(central_region->getAttribute("_skip_calculations"));
@@ -8087,19 +8219,28 @@ static void processThetaAxes(const std::shared_ptr<GRM::Element> &element, const
       x_lim_min = static_cast<double>(plot_parent->getAttribute("x_lim_min"));
       x_lim_max = static_cast<double>(plot_parent->getAttribute("x_lim_max"));
     }
+  if (with_pan)
+    {
+      x_lim_min = 0;
+      x_lim_max = 360;
+    }
+  if (element->hasAttribute("angle_line_num"))
+    angle_line_num = static_cast<int>(element->getAttribute("angle_line_num"));
 
   global_render->setLineType(element, GKS_K_LINETYPE_SOLID);
 
   /* clear old theta_axes_elements */
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
+  if (angle_line_num != 8) del = del_values::recreate_own_children; // could be improved
   clearOldChildren(&del, element);
 
   // Draw sector lines
-  for (alpha = 0; alpha <= 360; alpha += interval)
+  interval = 360.0 / angle_line_num;
+  for (int i = 0; i <= angle_line_num; i++)
     {
       std::shared_ptr<GRM::Element> angle_line;
-      double line_x0 = 0.0, line_y0 = 0.0;
       int text_number = 0;
+      double alpha = i * interval;
       double x0 = std::cos(alpha * M_PI / 180.0), y0 = std::sin(alpha * M_PI / 180.0);
 
       if (alpha == 360 && x_lim_max == 360) continue;
@@ -8113,32 +8254,14 @@ static void processThetaAxes(const std::shared_ptr<GRM::Element> &element, const
           x0 = std::cos(x_lim_max * M_PI / 180.0), y0 = std::sin(x_lim_max * M_PI / 180.0);
           pass = true;
         }
-      if (x0 < -1e-10)
+      if (!with_pan)
         {
-          line_x0 = window[0];
-          x0 *= -window[0];
-        }
-      else if (x0 > 1e-10)
-        {
-          line_x0 = window[1];
           x0 *= window[1];
-        }
-      if (y0 < -1e-10)
-        {
-          line_y0 = window[2];
-          y0 *= -window[2];
-        }
-      else if (y0 > 1e-10)
-        {
-          line_y0 = window[3];
           y0 *= window[3];
         }
 
       // define the number which will be stored inside the text
-      if (!phi_flip)
-        text_number = (int)grm_round(alpha);
-      else if (alpha != 0.0)
-        text_number = 330 - (int)grm_round(alpha - interval);
+      text_number = phi_flip ? 360 - (int)grm_round(alpha) : (int)grm_round(alpha);
       snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", text_number);
       text = text_buffer;
 
@@ -8147,24 +8270,30 @@ static void processThetaAxes(const std::shared_ptr<GRM::Element> &element, const
           if (pass)
             {
               text = "";
-              line_x0 = x0;
-              line_y0 = y0;
               gr_setclip(0);
             }
           if (del != del_values::update_without_default && del != del_values::update_with_default)
             {
-              angle_line = global_render->createAngleLine(line_x0, line_y0, text);
+              angle_line = global_render->createAngleLine(x0 * factor, y0 * factor, text);
               angle_line->setAttribute("_child_id", child_id++);
               element->append(angle_line);
             }
           else
             {
               angle_line = element->querySelectors("angle_line[_child_id=" + std::to_string(child_id++) + "]");
-              if (angle_line != nullptr) global_render->createAngleLine(line_x0, line_y0, text, angle_line);
+              if (angle_line != nullptr) global_render->createAngleLine(x0 * factor, y0 * factor, text, angle_line);
             }
           if (angle_line != nullptr)
             {
-              if (!text.empty())
+              if (with_pan &&
+                  (window[0] >= x0 * 0.9 || x0 * 0.9 >= window[1] || window[2] >= y0 * 0.9 || y0 * 0.9 >= window[3]))
+                {
+                  text = "";
+                  if (angle_line->hasAttribute("text_x0")) angle_line->removeAttribute("text_x0");
+                  if (angle_line->hasAttribute("text_y0")) angle_line->removeAttribute("text_y0");
+                  angle_line->setAttribute("angle_label", text);
+                }
+              else if (!text.empty())
                 {
                   angle_line->setAttribute("text_x0", x0);
                   angle_line->setAttribute("text_y0", y0);
@@ -9967,8 +10096,11 @@ static void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element,
                                                           "color_ind_values" + str, data, nullptr, polar_cell_array);
         }
     }
-  global_render->setClipRegion(polar_cell_array, 1);
-  global_render->setSelectSpecificXform(polar_cell_array, 1);
+  if (!plot_parent->hasAttribute("polar_with_pan") || !static_cast<int>(plot_parent->getAttribute("polar_with_pan")))
+    {
+      global_render->setClipRegion(polar_cell_array, 1);
+      global_render->setSelectSpecificXform(polar_cell_array, 1);
+    }
 }
 
 static void preBarplot(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -13976,7 +14108,7 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
               if (!element->hasAttribute(static_cast<std::string>(current_range_keys->plot) + "_min") ||
                   !element->hasAttribute(static_cast<std::string>(current_range_keys->plot) + "_max") ||
-                  str_equals_any(kind, "heatmap", "marginal_heatmap", "polar_heatmap", "nonuniform_polar_heatmap"))
+                  str_equals_any(kind, "heatmap", "marginal_heatmap") || polar_kinds.count(kind) > 0)
                 {
                   std::shared_ptr<GRM::Element> series_parent = central_region;
                   if (kind == "marginal_heatmap") series_parent = element;
@@ -14282,9 +14414,8 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
               series->setAttribute("_x_range_min", xmin);
               series->setAttribute("_x_range_max", xmax);
 
-              auto ymax = static_cast<double>(element->getAttribute("_y_lim_max"));
               auto ymin = static_cast<double>(element->getAttribute("_y_lim_min"));
-
+              auto ymax = static_cast<double>(element->getAttribute("_y_lim_max"));
               central_region->setAttribute("r_min", ymin);
               central_region->setAttribute("r_max", ymax);
             }
@@ -14965,8 +15096,11 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
           auto x_lim_max = static_cast<double>(element->getAttribute("x_lim_max"));
           if (!grm_isnan(x_lim_min) && !grm_isnan(x_lim_max)) gr_setclipsector(x_lim_min, x_lim_max);
         }
-      global_render->setClipRegion(central_region, 1);
-      global_render->setSelectSpecificXform(central_region, 1);
+      if (!element->hasAttribute("polar_with_pan") || !static_cast<int>(element->getAttribute("polar_with_pan")))
+        {
+          global_render->setClipRegion(central_region, 1);
+          global_render->setSelectSpecificXform(central_region, 1);
+        }
     }
 
   // set the x-, y- and z-data to NAN if the value is <= 0
@@ -16025,6 +16159,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("algorithm"), std::vector<std::string>{"sum", "The used algorithm for the calculation"}},
       {std::string("ambient"), std::vector<std::string>{"0.2", "The ambient light"}},
       {std::string("angle_label"), std::vector<std::string>{"", "The angle labels for the theta axes"}},
+      {std::string("angle_line_num"), std::vector<std::string>{"8", "The number of angle lines"}},
       {std::string("arc_label"), std::vector<std::string>{"", "The arc labels for the rho axes"}},
       {std::string("axis_type"), std::vector<std::string>{"None", "Defines if the axis is getting used for x or y"}},
       {std::string("bar_width"), std::vector<std::string>{"None", "The width of all bars"}},
@@ -16181,6 +16316,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("plot_x_min"), std::vector<std::string>{"None", "The beginning x-coordinate of the plot"}},
       {std::string("plot_y_max"), std::vector<std::string>{"None", "The ending y-coordinate of the plot"}},
       {std::string("plot_y_min"), std::vector<std::string>{"None", "The beginning y-coordinate of the plot"}},
+      {std::string("polar_with_pan"), std::vector<std::string>{"False", "Defines if pan is allowed on polar plots"}},
       {std::string("pos"),
        std::vector<std::string>{
            "None", "F.e. where the x-axis should be placed in relation to the y-axis (position on the y-axis)"}},
@@ -19349,7 +19485,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
             }
           else if (attr == "x_lim_min" || attr == "x_lim_max")
             {
-              auto coordinate_system = element->querySelectors("coordnate_system");
+              auto coordinate_system = element->querySelectors("coordinate_system");
               auto plot_type = static_cast<std::string>(coordinate_system->getAttribute("plot_type"));
               if (plot_type == "polar")
                 {
@@ -19361,6 +19497,22 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                           child->setAttribute("_delete_children", 2);
                         }
                     }
+                }
+            }
+          else if (element->localName() == "plot" && attr == "polar_with_pan")
+            {
+              auto central_region = element->querySelectors("central_region");
+              auto coordinate_system = central_region->querySelectors("coordinate_system");
+              auto plot_type = static_cast<std::string>(coordinate_system->getAttribute("plot_type"));
+              if (plot_type == "polar")
+                {
+                  global_render->setClipRegion(central_region, !static_cast<int>(element->getAttribute(attr)));
+                  global_render->setSelectSpecificXform(central_region, 1);
+                  processClipRegion(central_region);
+                  element->setAttribute("reset_ranges", 1);
+
+                  auto theta_axes = coordinate_system->querySelectors("theta_axes");
+                  theta_axes->setAttribute("_delete_children", 2);
                 }
             }
         }
