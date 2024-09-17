@@ -17,6 +17,7 @@
 class GRPlotWidget;
 #include "gredit/TreeWidget.h"
 #include "gredit/AddElementWidget.h"
+#include "gredit/EditElementWidget.h"
 #include "gredit/TableWidget.h"
 #include "qtterm/receiver_thread.h"
 #include "qtterm/grm_args_t_wrapper.h"
@@ -40,7 +41,7 @@ public:
   void set_selected_parent(Bounding_object *parent);
   Bounding_object *get_selected_parent();
   void set_current_selection(Bounding_object *current_selection);
-  Bounding_object *get_current_selection();
+  Bounding_object **get_current_selection();
   void add_current_selection(std::unique_ptr<Bounding_object> current_selection);
   std::list<std::unique_ptr<Bounding_object>>::iterator
   erase_current_selection(std::list<std::unique_ptr<Bounding_object>>::const_iterator current_selection);
@@ -51,6 +52,10 @@ public:
   QStringList getComboBoxAttributes();
   void attributeSetForComboBox(const std::string &attr_type, std::shared_ptr<GRM::Element> element,
                                const std::string &value, const std::string &label);
+  void advancedAttributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name,
+                                        QWidget **lineEdit);
+  void setTreeUpdate(bool status);
+  void editElementAccepted();
 
 protected:
   virtual void draw();
@@ -220,6 +225,7 @@ private:
   QSize size_hint;
   QStringList check_box_attr, combo_box_attr;
   TableWidget *table_widget;
+  EditElementWidget *edit_element_widget;
 
   QMenuBar *menu;
   QMenu *type, *algo, *export_menu, *editor_menu, *modi_menu;
@@ -249,8 +255,6 @@ private:
   QSize sizeHint() const override;
   void size_callback(const grm_event_t *);
   void cmd_callback(const grm_request_event_t *);
-  void advancedAttributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name,
-                                        QWidget **lineEdit);
 };
 
 #endif /* ifndef GRPLOT_WIDGET_H_INCLUDED */

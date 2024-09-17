@@ -131,7 +131,8 @@ void TableWidget::applyTableChanges(int row, int column)
         {
           int max_attr_length = 50;
           auto pos = tree_str.find(token);
-          auto interesting_part = tree_str.substr(pos - max_attr_length, max_attr_length + token.size());
+          auto interesting_part =
+              tree_str.substr(std::max<int>(0, pos - max_attr_length), max_attr_length + token.size());
           auto start = interesting_part.find_last_of(" ");
           auto selector_token = interesting_part.substr(start + 1, (max_attr_length - start - 1) + token.size());
           auto attr = interesting_part.substr(start + 1, (max_attr_length - start - 1));
