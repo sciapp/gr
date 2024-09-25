@@ -552,7 +552,7 @@ int grm_input(const grm_args_t *input_args)
           viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
           viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
 
-          kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
+          kind = static_cast<std::string>(subplot_element->getAttribute("_kind"));
           if (kind == "marginal_heatmap")
             {
               auto current_series = subplot_element->querySelectorsAll("series_heatmap")[0];
@@ -717,8 +717,8 @@ int grm_input(const grm_args_t *input_args)
                     {
                       for (auto &child : side_region->children())
                         {
-                          std::string childKind = static_cast<std::string>(child->getAttribute("kind"));
-                          if (childKind == "hist")
+                          std::string child_kind = static_cast<std::string>(child->getAttribute("kind"));
+                          if (child_kind == "hist")
                             {
                               // reset bar colors
                               // bar level
@@ -1007,7 +1007,7 @@ int grm_is3d(const int x, const int y)
 
   auto subplot_element = get_subplot_from_ndc_points_using_dom(1, &ndc_x, &ndc_y);
 
-  if (subplot_element && str_equals_any(static_cast<std::string>(subplot_element->getAttribute("kind")), "wireframe",
+  if (subplot_element && str_equals_any(static_cast<std::string>(subplot_element->getAttribute("_kind")), "wireframe",
                                         "surface", "plot3", "scatter3", "trisurface", "volume", "isosurface"))
     {
       return 1;
@@ -1271,7 +1271,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
   if (subplot_element != nullptr)
     {
-      kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
+      kind = static_cast<std::string>(subplot_element->getAttribute("_kind"));
       if (subplot_element->hasAttribute("orientation"))
         {
           orientation = static_cast<std::string>(subplot_element->getAttribute("orientation"));

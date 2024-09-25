@@ -94,6 +94,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   treewidget->hide();
   table_widget = new TableWidget(this);
   table_widget->hide();
+  edit_element_widget = new EditElementWidget(this);
+  edit_element_widget->hide();
   selected_parent = nullptr;
   csr = new QCursor(Qt::ArrowCursor);
   setCursor(*csr);
@@ -973,377 +975,8 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
 
 void GRPlotWidget::AttributeEditEvent()
 {
-  if (current_selection == nullptr)
-    {
-      return;
-    }
-  std::string currently_clicked_name = current_selection->get_ref()->localName();
-
-  QDialog dialog(this);
-  QString title("Selected: ");
-  title.append(currently_clicked_name.c_str());
-  dialog.setWindowTitle(title);
-  auto changeParametersLabel = new QLabel("Change Parameters:");
-  changeParametersLabel->setStyleSheet("font-weight: bold");
-  auto form = new QFormLayout;
-  form->addRow(changeParametersLabel);
-
-  QList<QString> labels;
-  QList<QWidget *> fields;
-  QWidget *lineEdit;
-  std::unordered_map<std::string, std::string> attr_type;
-
-  std::vector<std::string> sorted_names;
-  for (const auto &cur_attr_name : current_selection->get_ref()->getAttributeNames())
-    {
-      sorted_names.push_back(cur_attr_name);
-    }
-  std::sort(sorted_names.begin(), sorted_names.end());
-  for (const auto &cur_attr_name : sorted_names)
-    {
-      if (util::startsWith(cur_attr_name, "_"))
-        {
-          continue;
-        }
-      QString tooltipString = GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
-      tooltipString.append(".  Default: ");
-      tooltipString.append(GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
-
-      if (combo_box_attr.contains(cur_attr_name.c_str()))
-        {
-          lineEdit = new QComboBox(&dialog);
-          advancedAttributeComboBoxHandler(cur_attr_name, current_selection->get_ref()->localName(), &lineEdit);
-          if (current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
-            {
-              attr_type.emplace(cur_attr_name, "xs:integer");
-            }
-          else if (current_selection->get_ref()->getAttribute(cur_attr_name).isDouble())
-            {
-              attr_type.emplace(cur_attr_name, "xs:double");
-            }
-          else
-            {
-              attr_type.emplace(cur_attr_name, "xs:string");
-            }
-          ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
-        }
-      else if (check_box_attr.contains(cur_attr_name.c_str()))
-        {
-          lineEdit = new QCheckBox(&dialog);
-          ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
-          ((QCheckBox *)lineEdit)
-              ->setChecked(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)) == 1);
-        }
-      else
-        {
-          if (current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
-            {
-              attr_type.emplace(cur_attr_name, "xs:integer");
-            }
-          else if (current_selection->get_ref()->getAttribute(cur_attr_name).isDouble())
-            {
-              attr_type.emplace(cur_attr_name, "xs:double");
-            }
-          else
-            {
-              attr_type.emplace(cur_attr_name, "xs:string");
-            }
-          lineEdit = new QLineEdit(&dialog);
-          ((QLineEdit *)lineEdit)
-              ->setText(static_cast<std::string>(current_selection->get_ref()->getAttribute(cur_attr_name)).c_str());
-          ((QLineEdit *)lineEdit)->setToolTip(tooltipString);
-        }
-      QString text_label = QString(cur_attr_name.c_str());
-      form->addRow(text_label, lineEdit);
-
-      labels << text_label;
-      fields << lineEdit;
-    }
-
-  if (schema_tree != nullptr)
-    {
-      std::shared_ptr<GRM::Element> element;
-      auto selections = schema_tree->querySelectorsAll("[name=" + currently_clicked_name + "]");
-      for (const auto &selection : selections)
-        {
-          if (selection->localName() == "xs:element") element = selection->children()[0];
-        }
-
-      /* iterate through complextype elements */
-      for (const auto &child : element->children())
-        {
-          if (child->localName() == "xs:attribute")
-            {
-              auto attr_name = static_cast<std::string>(child->getAttribute("name"));
-              if (!current_selection->get_ref()->hasAttribute(attr_name))
-                {
-                  /* attributes of an element which aren't already in the tree getting added with red text color
-                   */
-                  auto type_name = static_cast<std::string>(child->getAttribute("type"));
-                  attr_type.emplace(attr_name, type_name);
-                  QString tooltipString =
-                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), attr_name)[1].c_str();
-                  tooltipString.append(".  Default: ");
-                  tooltipString.append(
-                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), attr_name)[0].c_str());
-
-                  if (combo_box_attr.contains(attr_name.c_str()))
-                    {
-                      lineEdit = new QComboBox(&dialog);
-                      advancedAttributeComboBoxHandler(attr_name, current_selection->get_ref()->localName(), &lineEdit);
-                      ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
-                    }
-                  else if (check_box_attr.contains(attr_name.c_str()))
-                    {
-                      lineEdit = new QCheckBox(&dialog);
-                      ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
-                      ((QCheckBox *)lineEdit)
-                          ->setChecked(static_cast<int>(current_selection->get_ref()->getAttribute(attr_name)) == 1);
-                    }
-                  else
-                    {
-                      lineEdit = new QLineEdit(&dialog);
-                      ((QLineEdit *)lineEdit)->setToolTip(tooltipString);
-                      ((QLineEdit *)lineEdit)->setText("");
-                    }
-                  QString text_label = QString("<span style='color:#ff0000;'>%1</span>").arg(attr_name.c_str());
-                  form->addRow(text_label, lineEdit);
-
-                  labels << text_label;
-                  fields << lineEdit;
-                }
-            }
-          else if (child->localName() == "xs:attributegroup")
-            {
-              /* when an element contains one or more attributegroups all attributes from these groups must be
-               * added */
-              std::shared_ptr<GRM::Element> group;
-              auto group_name = static_cast<std::string>(child->getAttribute("ref"));
-
-              if (group_name != "colorrep")
-                {
-                  auto attr_group_selections = schema_tree->querySelectorsAll("[name=" + group_name + "]");
-                  for (const auto &selection : attr_group_selections)
-                    {
-                      if (selection->localName() == "xs:attributegroup") group = selection;
-                    }
-
-                  /* iterate through attribute elements */
-                  for (const auto &childchild : group->children())
-                    {
-                      if (childchild->localName() == "xs:attribute")
-                        {
-                          auto attr_name = static_cast<std::string>(childchild->getAttribute("name"));
-                          if (!current_selection->get_ref()->hasAttribute(attr_name))
-                            {
-                              /* attributes of an element which aren't already in the tree getting added with
-                               * red text color */
-                              auto type_name = static_cast<std::string>(childchild->getAttribute("type"));
-                              attr_type.emplace(attr_name, type_name);
-                              QString tooltipString =
-                                  GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), attr_name)[1].c_str();
-                              tooltipString.append(".  Default: ");
-                              tooltipString.append(
-                                  GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), attr_name)[0]
-                                      .c_str());
-
-                              if (combo_box_attr.contains(attr_name.c_str()))
-                                {
-                                  lineEdit = new QComboBox(&dialog);
-                                  advancedAttributeComboBoxHandler(attr_name, current_selection->get_ref()->localName(),
-                                                                   &lineEdit);
-                                  ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
-                                }
-                              else if (check_box_attr.contains(attr_name.c_str()))
-                                {
-                                  lineEdit = new QCheckBox(&dialog);
-                                  ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
-                                  ((QCheckBox *)lineEdit)
-                                      ->setChecked(
-                                          static_cast<int>(current_selection->get_ref()->getAttribute(attr_name)) == 1);
-                                }
-                              else
-                                {
-                                  lineEdit = new QLineEdit(&dialog);
-                                  ((QLineEdit *)lineEdit)->setToolTip(tooltipString);
-                                  ((QLineEdit *)lineEdit)->setText("");
-                                }
-                              QString text_label =
-                                  QString("<span style='color:#ff0000;'>%1</span>").arg(attr_name.c_str());
-                              form->addRow(text_label, lineEdit);
-
-                              labels << text_label;
-                              fields << lineEdit;
-                            }
-                        }
-                    }
-                }
-              else
-                {
-                  /* special case for colorrep cause there are way to many attributes inside the attributegroup
-                   */
-                  lineEdit = new QLineEdit(&dialog);
-                  ((QLineEdit *)lineEdit)->setText("");
-                  QString text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("Colorrep-index");
-                  form->addRow(text_label, lineEdit);
-
-                  attr_type.emplace("Colorrep-index", "xs:string");
-                  labels << text_label;
-                  fields << lineEdit;
-
-                  lineEdit = new QLineEdit(&dialog);
-                  ((QLineEdit *)lineEdit)->setText("");
-                  text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("Colorrep-value");
-                  form->addRow(text_label, lineEdit);
-
-                  attr_type.emplace("Colorrep-value", "xs:string");
-                  labels << text_label;
-                  fields << lineEdit;
-                }
-            }
-        }
-    }
-
-  QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
-  form->addRow(&buttonBox);
-  QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
-  QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
-
-  auto scrollAreaContent = new QWidget;
-  scrollAreaContent->setLayout(form);
-  auto scrollArea = new QScrollArea;
-  scrollArea = new QScrollArea;
-  scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-  scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-  scrollArea->setWidgetResizable(true);
-  scrollArea->setWidget(scrollAreaContent);
-
-  auto groupBoxLayout = new QVBoxLayout;
-  groupBoxLayout->addWidget(scrollArea);
-  dialog.setLayout(groupBoxLayout);
-
-  if (dialog.exec() == QDialog::Accepted)
-    {
-      for (int i = 0; i < labels.count(); i++)
-        {
-          qDebug() << typeid(fields[i]).name();
-          auto &field = *fields[i]; // because typeid(*fields[i]) is bad :(
-          if (util::startsWith(labels[i].toStdString(), "<span style='color:#ff0000;'>") &&
-              util::endsWith(labels[i].toStdString(), "</span>"))
-            {
-              labels[i].remove(0, 29);
-              labels[i].remove(labels[i].size() - 7, 7);
-            }
-          std::string attr_name = labels[i].toStdString();
-          if (typeid(field) == typeid(QLineEdit) && ((QLineEdit *)fields[i])->isModified())
-            {
-              std::string name = std::string(current_selection->get_ref()->getAttribute("name"));
-              if (((QLineEdit *)fields[i])->text().toStdString().empty() && labels[i].toStdString() != "tick_label" &&
-                  labels[i].toStdString() != "text")
-                {
-                  /* remove attributes from tree when the value got removed */
-                  current_selection->get_ref()->removeAttribute(labels[i].toStdString());
-                }
-              else
-                {
-                  if (labels[i].toStdString() == "text")
-                    {
-                      const std::string value = ((QLineEdit *)fields[i])->text().toStdString();
-                      if (attr_type[attr_name] == "xs:string" ||
-                          (attr_type[attr_name] == "strint" && !util::is_digits(value)))
-                        {
-                          if (current_selection->get_ref()->parentElement()->localName() == "text_region")
-                            {
-                              current_selection->get_ref()->parentElement()->parentElement()->setAttribute(
-                                  "text_content", value);
-                            }
-                          else if (name == "xlabel" || name == "ylabel")
-                            {
-                              current_selection->get_ref()
-                                  ->parentElement()
-                                  ->parentElement()
-                                  ->querySelectors(name)
-                                  ->setAttribute(name, value);
-                            }
-                        }
-                      else if (attr_type[attr_name] == "xs:double")
-                        {
-                          current_selection->get_ref()->parentElement()->setAttribute(labels[i].toStdString(),
-                                                                                      std::stod(value));
-                        }
-                      else if (attr_type[attr_name] == "xs:integer" ||
-                               (attr_type[attr_name] == "strint" && util::is_digits(value)))
-                        {
-                          current_selection->get_ref()->parentElement()->setAttribute(labels[i].toStdString(),
-                                                                                      std::stoi(value));
-                        }
-                    }
-                  if (labels[i].toStdString() == "Colorrep-index")
-                    {
-                      /* special case for colorrep attribute */
-                      current_selection->get_ref()->setAttribute("colorrep." +
-                                                                     ((QLineEdit *)fields[i])->text().toStdString(),
-                                                                 ((QLineEdit *)fields[i + 1])->text().toStdString());
-                    }
-                  else if (labels[i].toStdString() != "Colorrep-value")
-                    {
-                      const std::string value = ((QLineEdit *)fields[i])->text().toStdString();
-                      if (attr_type[attr_name] == "xs:string" ||
-                          (attr_type[attr_name] == "strint" && !util::is_digits(value)))
-                        {
-                          current_selection->get_ref()->setAttribute(labels[i].toStdString(), value);
-                        }
-                      else if (attr_type[attr_name] == "xs:double")
-                        {
-                          current_selection->get_ref()->setAttribute(labels[i].toStdString(), std::stod(value));
-                        }
-                      else if (attr_type[attr_name] == "xs:integer" ||
-                               (attr_type[attr_name] == "strint" && util::is_digits(value)))
-                        {
-                          current_selection->get_ref()->setAttribute(labels[i].toStdString(), std::stoi(value));
-                        }
-                    }
-                }
-            }
-          else if (typeid(field) == typeid(QComboBox))
-            {
-              int index = ((QComboBox *)fields[i])->currentIndex();
-              if (((QComboBox *)fields[i])->itemText(index).toStdString().empty())
-                {
-                  /* remove attributes from tree when the value got removed */
-                  current_selection->get_ref()->removeAttribute(labels[i].toStdString());
-                }
-              else
-                {
-                  const std::string value = ((QComboBox *)fields[i])->itemText(index).toStdString();
-                  attributeSetForComboBox(attr_type[attr_name], current_selection->get_ref(), value,
-                                          (labels[i]).toStdString());
-                }
-            }
-          else if (typeid(field) == typeid(QCheckBox))
-            {
-              current_selection->get_ref()->setAttribute(labels[i].toStdString(),
-                                                         ((QCheckBox *)fields[i])->isChecked());
-            }
-        }
-      current_selection = nullptr;
-      mouse_move_selection = nullptr;
-      amount_scrolled = 0;
-      tree_update = true;
-      clicked.clear();
-      if (getenv("GRM_DEBUG"))
-        {
-          std::cerr << toXML(grm_get_document_root(),
-                             GRM::SerializerOptions{std::string(2, ' '),
-                                                    GRM::SerializerOptions::InternalAttributesFormat::Plain})
-                    << "\n";
-        }
-      reset_pixmap();
-    }
-  else
-    {
-      tree_update = false;
-    }
+  edit_element_widget->show();
+  edit_element_widget->AttributeEditEvent();
 }
 
 void GRPlotWidget::draw()
@@ -1355,7 +988,7 @@ void GRPlotWidget::draw()
 
       if (global_root == nullptr) global_root = grm_get_document_root();
       auto plot_elem = global_root->querySelectors("plot");
-      auto kind = static_cast<std::string>(plot_elem->getAttribute("kind"));
+      auto kind = static_cast<std::string>(plot_elem->getAttribute("_kind"));
       snprintf(file, 50, "grplot_%s.%s", kind.c_str(), file_export.c_str());
       grm_export(file);
     }
@@ -1557,7 +1190,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
               label.setHtml(QString::fromStdString(info));
               if (global_root == nullptr) global_root = grm_get_document_root();
               auto plot_elem = global_root->querySelectors("plot");
-              kind = static_cast<std::string>(plot_elem->getAttribute("kind"));
+              kind = static_cast<std::string>(plot_elem->getAttribute("_kind"));
               if (kind == "heatmap" || kind == "marginal_heatmap")
                 {
                   background.setAlpha(224);
@@ -1816,7 +1449,7 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
           auto plot_elem = global_root->querySelectors("plot");
           if (plot_elem)
             {
-              kind = static_cast<std::string>(plot_elem->getAttribute("kind"));
+              kind = static_cast<std::string>(plot_elem->getAttribute("_kind"));
               if (kind == "marginal_heatmap")
                 {
                   grm_args_t *input_args;
@@ -2588,7 +2221,7 @@ void GRPlotWidget::extract_bounding_boxes_from_grm(QPainter &painter)
 
           if (xmin == DBL_MAX || xmax == -DBL_MAX || ymin == DBL_MAX || ymax == -DBL_MAX)
             {
-              qDebug() << "skipping" << cur_child->localName().c_str();
+              if (getenv("GRM_DEBUG")) qDebug() << "skipping" << cur_child->localName().c_str();
             }
           else
             {
@@ -3320,9 +2953,9 @@ void GRPlotWidget::set_current_selection(Bounding_object *p_current_selection)
   this->current_selection = p_current_selection;
 }
 
-Bounding_object *GRPlotWidget::get_current_selection()
+Bounding_object **GRPlotWidget::get_current_selection()
 {
-  return this->current_selection;
+  return &(this->current_selection);
 }
 
 QStringList GRPlotWidget::getCheckBoxAttributes()
@@ -3349,4 +2982,18 @@ GRPlotWidget::erase_current_selection(std::list<std::unique_ptr<Bounding_object>
 const std::list<std::unique_ptr<Bounding_object>> &GRPlotWidget::get_current_selections() const
 {
   return current_selections;
+}
+
+void GRPlotWidget::setTreeUpdate(bool status)
+{
+  this->tree_update = status;
+}
+
+void GRPlotWidget::editElementAccepted()
+{
+  current_selection = nullptr;
+  mouse_move_selection = nullptr;
+  amount_scrolled = 0;
+  clicked.clear();
+  reset_pixmap();
 }

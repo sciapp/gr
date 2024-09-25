@@ -6,11 +6,17 @@
     <!-- definition of root -->
     <xs:element name="root">
         <xs:complexType>
+            <xs:attribute name="_clear_ws" type="xs:integer" use="required"/>
             <xs:attribute name="_id" type="xs:integer" use="required"/>
             <xs:attribute name="_modified" type="xs:integer" use="required"/>
+            <xs:attribute name="_update_ws" type="xs:integer" use="required"/>
         </xs:complexType>
         <xs:unique name="_bboxidisunique">
             <xs:field xpath="@_bbox_id"/>
+        </xs:unique>
+        <xs:unique name="figureidisunique">
+            <xs:selector xpath="figure"/>
+            <xs:field xpath="@_figure_id"/>
         </xs:unique>
     </xs:element>
 
@@ -19,9 +25,14 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_figure_id" type="xs:string" use="required"/>
             <xs:attribute name="_previous_pixel_height" type="xs:integer"/>
             <xs:attribute name="_previous_pixel_width" type="xs:integer"/>
         </xs:complexType>
+        <xs:unique name="plotidisunique">
+            <xs:selector xpath="plot"/>
+            <xs:field xpath="@_plot_id"/>
+        </xs:unique>
     </xs:element>
 
     <!-- definition of layout_grid -->
@@ -54,6 +65,7 @@
             <xs:attribute name="_c_lim_min" type="xs:double"/>
             <xs:attribute name="_char_height_set_by_user" type="xs:integer"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_kind" type="xs:string" use="required"/>
             <xs:attribute name="_original_adjust_x_lim" type="xs:integer"/>
             <xs:attribute name="_original_adjust_y_lim" type="xs:integer"/>
             <xs:attribute name="_original_x_lim" type="xs:integer"/>
@@ -63,6 +75,7 @@
             <xs:attribute name="_original_y_max" type="xs:double"/>
             <xs:attribute name="_original_y_min" type="xs:double"/>
             <xs:attribute name="_overwrite_kind_dependent_defaults" type="xs:integer"/>
+            <xs:attribute name="_plot_id" type="xs:string" use="required"/>
             <xs:attribute name="_start_aspect_ratio" type="xs:double"/>
             <xs:attribute name="_update_limits" type="xs:integer"/>
             <xs:attribute name="_x_lim_max" type="xs:double"/>

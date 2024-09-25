@@ -9,13 +9,7 @@
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element ref="figure" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
-            <xs:attribute name="clear_ws" type="xs:integer" use="required"/>
-            <xs:attribute name="update_ws" type="xs:integer" use="required"/>
         </xs:complexType>
-        <xs:unique name="figureidisunique">
-            <xs:selector xpath="figure"/>
-            <xs:field xpath="@figure_id"/>
-        </xs:unique>
     </xs:element>
 
     <!-- definition of figure -->
@@ -29,7 +23,6 @@
             <xs:attribute name="active" type="xs:integer"/>
             <xs:attribute name="fig_size_x" type="xs:double"/>
             <xs:attribute name="fig_size_y" type="xs:double"/>
-            <xs:attribute name="figure_id" type="xs:string" use="required"/>
             <xs:attribute name="size_x" type="xs:double"/>
             <xs:attribute name="size_x_type" type="xs:string"/>
             <xs:attribute name="size_x_unit" type="xs:string"/>
@@ -46,10 +39,6 @@
             <xs:attribute name="ws_window_y_max" type="xs:double"/>
             <xs:attribute name="ws_window_y_min" type="xs:double"/>
         </xs:complexType>
-        <xs:unique name="plotidisunique">
-            <xs:selector xpath="plot"/>
-            <xs:field xpath="@plot_id"/>
-        </xs:unique>
     </xs:element>
 
     <!-- definition of layout_grid -->
@@ -145,7 +134,6 @@
             <xs:attribute name="grplot" type="xs:integer"/> <!-- all plots are made with grplot or none -->
             <xs:attribute name="keep_aspect_ratio" type="xs:integer" use="required"/>
             <xs:attribute name="keep_radii_axes" type="xs:integer"/>
-            <xs:attribute name="kind" type="xs:string" use="required"/>
             <xs:attribute name="line_spec" type="xs:string"/>
             <xs:attribute name="location" type="strint"/>
             <xs:attribute name="max_y_length" type="xs:integer"/>
@@ -154,7 +142,6 @@
             <xs:attribute name="phi_lim_max" type="xs:double"/>
             <xs:attribute name="phi_lim_min" type="xs:double"/>
             <xs:attribute name="plot_group" type="xs:integer"/>
-            <xs:attribute name="plot_id" type="xs:string" use="required"/>
             <xs:attribute name="plot_x_max" type="xs:double" use="required"/>
             <xs:attribute name="plot_x_min" type="xs:double" use="required"/>
             <xs:attribute name="plot_y_max" type="xs:double" use="required"/>
@@ -344,11 +331,9 @@
             <xs:attribute name="plot_type" type="xs:string"/>
             <xs:attribute name="x_grid" type="xs:integer"/>
             <xs:attribute name="x_label" type="xs:string"/>
-            <xs:attribute name="x_tick_labels" type="xs:string"/>
             <xs:attribute name="y_grid" type="xs:integer"/>
             <xs:attribute name="y_line" type="xs:integer"/>
             <xs:attribute name="y_label" type="xs:string"/>
-            <xs:attribute name="y_tick_labels" type="xs:string"/>
             <xs:attribute name="z_grid" type="xs:integer"/>
             <xs:attribute name="z_label" type="xs:string"/>
         </xs:complexType>

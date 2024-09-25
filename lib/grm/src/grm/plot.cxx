@@ -1091,7 +1091,7 @@ void plot_pre_plot(grm_args_t *plot_args)
   if (grm_args_values(plot_args, "clear", "i", &clear))
     {
       logger((stderr, "Got keyword \"clear\" with value %d\n", clear));
-      global_root->setAttribute("clear_ws", clear);
+      global_root->setAttribute("_clear_ws", clear);
     }
 
   if (grm_args_values(plot_args, "previous_pixel_size", "ii", &previous_pixel_width, &previous_pixel_height))
@@ -1383,7 +1383,7 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
     }
 
   grm_args_values(subplot_args, "kind", "s", &kind);
-  group->setAttribute("kind", kind);
+  group->setAttribute("_kind", kind);
 
   if (grm_args_values(subplot_args, "x_lim", "dd", &x_min, &x_max))
     {
@@ -1418,7 +1418,7 @@ void plot_post_plot(grm_args_t *plot_args)
   if (grm_args_values(plot_args, "update", "i", &update))
     {
       logger((stderr, "Got keyword \"update\" with value %d\n", update));
-      global_root->setAttribute("update_ws", update);
+      global_root->setAttribute("_update_ws", update);
     }
 }
 
@@ -3686,10 +3686,10 @@ err_t plot_raw(grm_args_t *plot_args)
   graphics_data = base64_decode(nullptr, base64_data, nullptr, &error);
   cleanup_if_error;
 
-  global_root->setAttribute("clear_ws", 1);
+  global_root->setAttribute("_clear_ws", 1);
   data_vec = std::vector<int>(graphics_data, graphics_data + strlen(graphics_data));
   edit_figure->append(global_render->createDrawGraphics("graphics", data_vec));
-  global_root->setAttribute("update_ws", 1);
+  global_root->setAttribute("_update_ws", 1);
 
 cleanup:
   if (graphics_data != nullptr)
@@ -4236,8 +4236,8 @@ err_t plot_draw_legend(grm_args_t *subplot_args)
   int id = static_cast<int>(global_root->getAttribute("_id"));
   global_root->setAttribute("_id", ++id);
 
-  std::string labels_key = std::to_string(id) + "labels";
-  std::string specs_key = std::to_string(id) + "specs";
+  std::string labels_key = "labels" + std::to_string(id);
+  std::string specs_key = "specs" + std::to_string(id);
   std::vector<std::string> labels_vec(labels, labels + num_labels);
 
   std::vector<std::string> specs_vec;
@@ -6299,7 +6299,7 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : edit_figure->lastChildElement();
   grm_args_values(subplot_args, "kind", "s", &kind);
-  group->setAttribute("kind", kind);
+  group->setAttribute("_kind", kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
 
   if (plot_pre_subplot(subplot_args) != ERROR_NONE)
@@ -6417,14 +6417,14 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
         }
 
       /* check if given figure_id (even default 0) already exists in the render */
-      auto figure_element = global_root->querySelectors("[figure_id=figure" + std::to_string(figure_id) + "]");
+      auto figure_element = global_root->querySelectors("[_figure_id=figure" + std::to_string(figure_id) + "]");
 
       auto last_figure = global_root->hasChildNodes() ? global_root->children().back() : nullptr;
       if (append_figures && !figure_id_given)
         {
           if (last_figure != nullptr && !last_figure->hasChildNodes())
             {
-              auto figure_id_str = static_cast<std::string>(last_figure->getAttribute("figure_id"));
+              auto figure_id_str = static_cast<std::string>(last_figure->getAttribute("_figure_id"));
               figure_id = std::stoi(figure_id_str.substr(6)); // Remove a `figure` prefix before converting
               last_figure->remove();
             }
@@ -6435,14 +6435,14 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
             }
           edit_figure = global_render->createElement("figure");
           global_root->append(edit_figure);
-          edit_figure->setAttribute("figure_id", "figure" + std::to_string(figure_id));
+          edit_figure->setAttribute("_figure_id", "figure" + std::to_string(figure_id));
         }
       else
         {
           if (figure_element != nullptr) figure_element->remove();
           edit_figure = global_render->createElement("figure");
           global_root->append(edit_figure);
-          edit_figure->setAttribute("figure_id", "figure" + std::to_string(figure_id));
+          edit_figure->setAttribute("_figure_id", "figure" + std::to_string(figure_id));
         }
       current_dom_element = nullptr;
       current_central_region_element = nullptr;
@@ -6589,7 +6589,7 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
             }
           plot_post_plot(edit_plot_args);
         }
-      edit_figure = global_root->querySelectors("[figure_id=figure" + std::to_string(active_plot_index - 1) + "]");
+      edit_figure = global_root->querySelectors("[_figure_id=figure" + std::to_string(active_plot_index - 1) + "]");
       global_render->setActiveFigure(edit_figure);
       global_render->render();
       global_render->setAutoUpdate(true);
@@ -6656,7 +6656,7 @@ int grm_switch(unsigned int id)
   grm_args_t **args_array = nullptr;
   unsigned int args_array_length = 0;
 
-  auto figure_element = global_root->querySelectors("[figure_id=figure" + std::to_string(id) + "]");
+  auto figure_element = global_root->querySelectors("[_figure_id=figure" + std::to_string(id) + "]");
   if (figure_element == nullptr)
     {
       /* it is a new figure_id, but only with grm_switch will it be really active
@@ -6667,7 +6667,7 @@ int grm_switch(unsigned int id)
       global_root->append(edit_figure);
       global_render->getAutoUpdate(&auto_update);
       global_render->setAutoUpdate(false);
-      edit_figure->setAttribute("figure_id", "figure" + std::to_string(id));
+      edit_figure->setAttribute("_figure_id", "figure" + std::to_string(id));
       global_render->setAutoUpdate(auto_update);
       global_render->setActiveFigure(edit_figure);
     }
@@ -6883,7 +6883,7 @@ int get_free_id_from_figure_elements()
   std::vector<std::string> given_ids;
   for (auto &fig : global_root->children())
     {
-      given_ids.push_back(static_cast<std::string>(fig->getAttribute("figure_id")));
+      given_ids.push_back(static_cast<std::string>(fig->getAttribute("_figure_id")));
     }
   int free_id = 0;
   while (true)
