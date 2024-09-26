@@ -192,7 +192,10 @@ static std::set<std::string> valid_context_attributes = {"absolute_downwards",
                                                          "y",
                                                          "y_labels",
                                                          "z",
-                                                         "z_dims"};
+                                                         "z_dims",
+                                                         "_x_org",
+                                                         "_y_org",
+                                                         "_z_org"};
 
 static std::set<std::string> valid_context_keys = valid_context_attributes;
 
@@ -586,16 +589,16 @@ static double transformCoordinate(double value, double v_min, double v_max, doub
 {
   if (log_scale)
     {
-      double trans_val;
-      if (!(range_min == 0.0 && range_max == 0.0))
+      if (range_min != 0.0 || range_max != 0.0)
         {
-          trans_val = (range_max - range_min) * (value - v_min) / (v_max - v_min) + range_min;
+          value = (range_max - range_min) * (value - v_min) / (v_max - v_min) + range_min;
         }
       else
         {
-          trans_val = value;
+          range_min = v_min;
+          range_max = v_max;
         }
-      return log10(trans_val);
+      return (log10(value) - range_min) * range_max / (range_max - range_min);
     }
   return (range_max - range_min) * (value - v_min) / (v_max - v_min) + range_min;
 }
@@ -1443,6 +1446,9 @@ static void calculateViewport(const std::shared_ptr<GRM::Element> &element)
         {
           // 180 is bigger than 0 so a adjustment is needed
           if (polar_kinds.count(kind) > 0 && location == "left") offset += 0.01;
+          // with no label there must be an extra offset so that the tick-labels don't get overlapped
+          if (polar_kinds.count(kind) == 0 && kinds_3d.count(kind) == 0 && location == "left") offset += 0.05;
+          if (polar_kinds.count(kind) == 0 && kinds_3d.count(kind) == 0 && location == "bottom") offset += 0.05;
         }
 
       setViewportForSideRegionElements(element, offset, width, false);
@@ -2624,16 +2630,12 @@ static void getAxesInformation(const std::shared_ptr<GRM::Element> &element, con
               auto barplots = central_region->querySelectorsAll("series_barplot");
               for (const auto &barplot : barplots)
                 {
-                  if (!barplot->hasAttribute("style") ||
-                      static_cast<std::string>(barplot->getAttribute("style")) == "default")
+                  auto y_key = static_cast<std::string>(barplot->getAttribute("y"));
+                  std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y_key]);
+                  if (size(y_vec) > 20 || xmax - xmin > 20) // 20 based on the looking of the resulting plots
                     {
-                      auto y_key = static_cast<std::string>(barplot->getAttribute("y"));
-                      std::vector<double> y_vec = GRM::get<std::vector<double>>((*context)[y_key]);
-                      if (size(y_vec) > 20 || xmax - xmin > 20) // 20 based on the looking of the resulting plots
-                        {
-                          problematic_bar_num = true;
-                          break;
-                        }
+                      problematic_bar_num = true;
+                      break;
                     }
                 }
               x_major = problematic_bar_num ? major_count : 1;
@@ -5342,7 +5344,6 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &element, const std::s
   double window[4];
   double ymin = 0, series_y_min = DBL_MAX;
   double line_x1, line_x2, line_y1, line_y2;
-  bool equal_min = true;
   std::shared_ptr<GRM::Element> series = nullptr, line, central_region, central_region_parent;
   std::string orientation = PLOT_DEFAULT_ORIENTATION;
   del_values del = del_values::update_without_default;
@@ -5366,25 +5367,36 @@ static void drawYLine(const std::shared_ptr<GRM::Element> &element, const std::s
   window[2] = static_cast<double>(central_region->getAttribute("window_y_min"));
   window[3] = static_cast<double>(central_region->getAttribute("window_y_max"));
 
+  auto y_log = plot_element->hasAttribute("y_log") && static_cast<int>(plot_element->getAttribute("y_log"));
   for (const auto &child : central_region->children())
     {
       if (child->localName() != "series_barplot" && child->localName() != "series_stem") continue;
       if (series == nullptr) series = child;
       if (child->hasAttribute("y_range_min"))
         {
-          if (plot_element->hasAttribute("y_log") && static_cast<int>(plot_element->getAttribute("y_log")))
+          if (y_log)
             {
               series_y_min = grm_min(series_y_min, static_cast<double>(child->getAttribute("y_range_min")));
             }
           else
             {
-              if (series_y_min == DBL_MAX) series_y_min = static_cast<double>(child->getAttribute("y_range_min"));
-              if (series_y_min != static_cast<double>(child->getAttribute("y_range_min"))) equal_min = false;
+              auto y_min = static_cast<double>(child->getAttribute("y_range_min"));
+              if (series_y_min == DBL_MAX) series_y_min = y_min;
+              series_y_min = grm_min(series_y_min, y_min);
             }
         }
     }
-  if (equal_min) ymin = series_y_min;
-  if (series != nullptr && series->localName() == "series_barplot" && ymin < 0) ymin = 0;
+  if (series_y_min != DBL_MAX) ymin = series_y_min;
+  if (plot_element->hasAttribute("_y_line_pos")) ymin = static_cast<double>(plot_element->getAttribute("_y_line_pos"));
+  if (ymin <= 0 && y_log)
+    {
+      ymin = 1;
+      if (series_y_min > 0) ymin = grm_min(ymin, series_y_min);
+    }
+  bool grplot = plot_element->hasAttribute("grplot") ? static_cast<int>(plot_element->getAttribute("grplot")) : false;
+  if (series != nullptr && series->localName() == "series_barplot" && ymin < 0 && !grplot &&
+      static_cast<std::string>(series->getAttribute("style")) == "stacked")
+    ymin = 0;
 
   if (series != nullptr)
     {
@@ -5880,8 +5892,17 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
           x_min -= 1; // in the later calculation there is always a +1 in combination with x
           wfac = 0.9 * bar_width;
         }
-      // can't move this line outside the if, else cpp-test nr. 11 fails
-      if (element->hasAttribute("y_range_min")) y_min = static_cast<double>(element->getAttribute("y_range_min"));
+    }
+  if (style != "stacked" && element->hasAttribute("y_range_min"))
+    y_min = static_cast<double>(element->getAttribute("y_range_min"));
+  auto coordinate_system = element->parentElement()->querySelectors("coordinate_system");
+  if (coordinate_system != nullptr && coordinate_system->hasAttribute("y_line"))
+    {
+      auto y_line = coordinate_system->querySelectors("polyline[name=\"y_line\"]");
+      if (y_line != nullptr)
+        {
+          y_min = static_cast<double>(y_line->getAttribute(orientation == "horizontal" ? "y1" : "x1"));
+        }
     }
 
   if (style != "lined" && inner_series) throw TypeError("Unsupported operation for barplot series.\n");
@@ -7749,7 +7770,6 @@ static void processArcGridLine(const std::shared_ptr<GRM::Element> &element,
           x0 *= ((window[1] - window[0]) / 2.0);
           y0 *= window[3];
         }
-      if (y_log) y0 *= -1.0;
 
       adjustPolarGridLineTextPosition(x_lim_min, x_lim_max, &x0, &y0, value, central_region);
 
@@ -7806,7 +7826,7 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
   double first_tick, last_tick, new_tick, r_max;
   double min_scale = 0, max_scale; // used for y_log (with negative exponents)
   double factor = 1;
-  int i;
+  int i, start_n = 1, labeled_arc_line_skip;
   std::string kind;
   del_values del = del_values::update_without_default;
   int child_id = 0;
@@ -7928,32 +7948,55 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
       n *= 2;
     }
 
+  if (y_log)
+    {
+      start_n = 2 * floor(log10(last_tick) - log10(first_tick)) * factor;
+      n = 2 * floor(log10(r_max) - log10(first_tick)) * factor;
+    }
+  // mechanism to reduce the labels for polar_with_pan and y_log, where n could be pretty high
+  labeled_arc_line_skip = 2 + 2 * floor(n / 15);
+
+  int cnt = labeled_arc_line_skip;
   for (i = 0; i <= n + 1; i++) // Create arc_grid_lines and rho_axes line
     {
       std::shared_ptr<GRM::Element> arc_grid_line;
       std::string value_string;
       char text_buffer[PLOT_POLAR_AXES_TEXT_BUFFER] = "";
-      double r = i * new_tick / (r_max - first_tick);
-      if (y_log) r = log10(((n + 1) - i) * new_tick / (r_max - first_tick));
+      double r;
+      if (!y_log)
+        {
+          r = i * new_tick / (r_max - first_tick);
+        }
+      else
+        {
+          r = ((i / 2) + (i % 2 == 1 ? log10(5) : 0)) / (log10(r_max) - log10(first_tick));
+          if (!with_pan && r > 1) r = 1;
+        }
 
       if (i == n + 1) r = 1;
       if (!with_pan && r > 1) continue;
-      if (i % 2 == 0 || r == 1)
+      if (i % labeled_arc_line_skip == 0 || r == 1)
         {
-          double value = (first_tick / new_tick + i) * new_tick;
+          double value = first_tick + i * new_tick;
+          if (y_log) value = pow(10, (i / 2) + floor(log10(first_tick)));
           if (r == 1)
             {
               double tmp_tick = (last_tick - first_tick) / n;
               if (!with_pan) tmp_tick *= (abs(window[3] - window[2]) / 2.0);
-              value = (i == n + 1) ? first_tick + tmp_tick * (i - ((i - 1) * tmp_tick / (r_max - first_tick)))
-                                   : first_tick + tmp_tick * i;
+
+              if (y_log && !with_pan)
+                value =
+                    first_tick + pow(10, floor(log10(first_tick)) + start_n / 2 * (abs(window[3] - window[2]) / 2.0));
+              else
+                value = (i == n + 1) ? first_tick + tmp_tick * (i - ((i - 1) * tmp_tick / (r_max - first_tick)))
+                                     : first_tick + tmp_tick * i;
               element->setAttribute("_r_max", value);
             }
           if (!with_pan || (r > window[2] && window[3] > r))
             {
               if (y_log) // y_log uses the exponential notation
                 {
-                  snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d^{%.1f}", 10, log10(value));
+                  snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d^{%.0f}", 10, log10(value));
                   value_string = text_buffer;
                 }
               else
@@ -7984,6 +8027,10 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
                 }
             }
         }
+
+      // skip the lines without label in y_log case
+      if (i > cnt) cnt += labeled_arc_line_skip;
+      if (y_log && i != cnt && (labeled_arc_line_skip != 2 || i != cnt - 1) && (r != 1 && !with_pan)) continue;
 
       if (r != 1)
         {
@@ -8040,7 +8087,7 @@ static void processRhoAxes(const std::shared_ptr<GRM::Element> &element, const s
               arc->setAttribute("line_color_ind", 88);
             }
 
-          if (i % 2 == 0 && i == n)
+          if (i % labeled_arc_line_skip == 0 && i == n)
             {
               double y0 = window[3];
 
@@ -8932,7 +8979,10 @@ static void processHist(const std::shared_ptr<GRM::Element> &element, const std:
   x_max = static_cast<double>(element->getAttribute("x_range_max"));
   y_min = static_cast<double>(element->getAttribute("y_range_min"));
   y_max = static_cast<double>(element->getAttribute("y_range_max"));
+  if (plot_parent->hasAttribute("_y_line_pos")) y_min = static_cast<double>(plot_parent->getAttribute("_y_line_pos"));
   if (std::isnan(y_min)) y_min = 0.0;
+  if (plot_parent->hasAttribute("y_log") && static_cast<int>(plot_parent->getAttribute("y_log")) && y_min < 0)
+    y_min = 1;
 
   if (element->parentElement()->parentElement()->hasAttribute("marginal_heatmap_side_plot"))
     {
@@ -9558,7 +9608,7 @@ void calculatePolarXAndY(std::vector<double> &x, std::vector<double> &y, const s
       for (i = 0; i < rho_length; i++)
         {
           if (std::signbit(rho_vec[i]) || std::isnan(rho_vec[i])) indices_vec.insert(indices_vec.begin(), i);
-          if (clip_negative && y_log && log10(rho_vec[i]) <= 0) indices_vec.insert(indices_vec.begin(), i);
+          if (clip_negative && y_log && rho_vec[i] <= 0) indices_vec.insert(indices_vec.begin(), i);
         }
 
       for (auto ind : indices_vec)
@@ -14523,7 +14573,6 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
             {
               double xmin, xmax;
 
-
               for (const auto &series : central_region->children())
                 {
                   if (series->localName() != "series_barplot") continue;
@@ -14545,8 +14594,16 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                         }
                       else
                         {
-                          x_min = grm_min(x_min, xmin - (x_max - 1));
-                          x_max = grm_max(x_max, xmin + (x_max - 1));
+                          if (x_min == DBL_MAX) x_min = xmin;
+                          if (style == "stacked")
+                            x_min = xmin - series_count;
+                          else
+                            x_min = grm_min(x_min, xmin - (x_max - 1));
+                          if (x_max == -DBL_MAX) x_max = xmax;
+                          if (style == "stacked")
+                            x_max = xmin + series_count;
+                          else
+                            x_max = grm_max(x_max, xmin + (x_max - 1));
                         }
                     }
                   else
@@ -14594,18 +14651,18 @@ static void plotCoordinateRanges(const std::shared_ptr<GRM::Element> &element,
                       y_min = grm_min(y_min, ymin);
                       if (style == "stacked")
                         {
-                          double tmp_ymax;
-                          tmp_ymax = ymin;
+                          double tmp_ymax, tmp_ymin = 0;
+                          if (element->hasAttribute("y_log") && static_cast<int>(element->getAttribute("y_log")))
+                            tmp_ymin = 1;
                           for (i = 0; i < current_point_count; i++)
                             {
-                              if (y_min < 0)
-                                {
-                                  tmp_ymax += fabs(y[i]);
-                                }
-                              else
-                                {
-                                  tmp_ymax += y[i] - y_min;
-                                }
+                              if (y[i] < 0) tmp_ymin += y[i];
+                            }
+                          y_min = grm_min(y_min, tmp_ymin);
+                          tmp_ymax = tmp_ymin;
+                          for (i = 0; i < current_point_count; i++)
+                            {
+                              tmp_ymax += (y_min < 0) ? fabs(y[i]) : y[i] - y_min;
                             }
                           y_max = grm_max(y_max, tmp_ymax);
                         }
@@ -14812,10 +14869,10 @@ static void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element
 
   for (const auto &parent_child : element->parentElement()->children())
     {
-      if (parent_child->localName() == "series_barplot" || parent_child->localName() == "series_stem")
+      if (str_equals_any(parent_child->localName(), "series_barplot", "series_stem"))
         {
           auto series_kind = static_cast<std::string>(parent_child->getAttribute("kind"));
-          if ((series_kind == "barplot" || series_kind == "stem") && !element->hasAttribute("y_line"))
+          if (str_equals_any(series_kind, "barplot", "stem") && !element->hasAttribute("y_line"))
             element->setAttribute("y_line", true);
           break;
         }
@@ -15228,7 +15285,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
 
               (*context)["y" + str] = y_vec;
               child->setAttribute("y", "y" + str);
-              if (kind == "barplot") y_min = grm_min(y_min, 1);
+              if (kind == "barplot" && y_min <= 0) y_min = 1;
               if (child->hasAttribute("y_range_min")) child->setAttribute("y_range_min", y_min);
               if (child->hasAttribute("y_range_max")) child->setAttribute("y_range_max", y_max);
             }
@@ -18984,11 +19041,11 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                             }
                         }
                     }
-                  if (grplot && (new_kind == "barplot" || new_kind == "stem"))
+                  if (grplot && str_equals_any(new_kind, "barplot", "stem"))
                     {
                       if (coordinate_system->hasAttribute("y_line")) coordinate_system->setAttribute("y_line", true);
                     }
-                  else if (grplot && (old_kind == "barplot" || old_kind == "stem"))
+                  else if (grplot && str_equals_any(old_kind, "barplot", "stem"))
                     {
                       if (coordinate_system->hasAttribute("y_line")) coordinate_system->setAttribute("y_line", false);
                     }

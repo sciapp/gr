@@ -354,6 +354,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "y_grid",
                                     "y_label",
                                     "y_lim",
+                                    "y_line_pos",
                                     "y_log",
                                     "y_ind",
                                     "z_flip",
@@ -404,6 +405,7 @@ const char *valid_series_keys[] = {"a",
                                    "y",
                                    "y_colormap",
                                    "y_labels",
+                                   "y_line_pos",
                                    "y_range",
                                    "z",
                                    "z_dims",
@@ -505,6 +507,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"y_grid", "i"},
                                               {"y_label", "s"},
                                               {"y_lim", "D"},
+                                              {"y_line_pos", "d"},
                                               {"y_log", "i"},
                                               {"y_ind", "i"},
                                               {"y_range", "D"},
@@ -1649,6 +1652,7 @@ err_t plot_stairs(grm_args_t *subplot_args)
       unsigned int x_length, y_length;
       char *spec;
       const char *where;
+      double y_line_pos;
       auto subGroup = global_render->createSeries("stairs");
       group->append(subGroup);
 
@@ -1680,6 +1684,9 @@ err_t plot_stairs(grm_args_t *subplot_args)
           subGroup->setAttribute("y_range_min", y_min);
           subGroup->setAttribute("y_range_max", y_max);
         }
+
+      if (grm_args_values(*current_series, "y_line_pos", "d", &y_line_pos))
+        group->parentElement()->setAttribute("_y_line_pos", y_line_pos);
 
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) subGroup->setAttribute("line_spec", spec);
 
@@ -1850,7 +1857,7 @@ err_t plot_stem(grm_args_t *subplot_args)
       double *x, *y;
       unsigned int x_length, y_length;
       char *spec;
-      double y_min, y_max;
+      double y_min, y_max, y_line_pos;
 
       auto subGroup = global_render->createSeries("stem");
       group->append(subGroup);
@@ -1879,6 +1886,9 @@ err_t plot_stem(grm_args_t *subplot_args)
           subGroup->setAttribute("y_range_max", y_max);
         }
 
+      if (grm_args_values(*current_series, "y_line_pos", "d", &y_line_pos))
+        group->parentElement()->setAttribute("_y_line_pos", y_line_pos);
+
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) subGroup->setAttribute("line_spec", spec);
 
       global_root->setAttribute("_id", ++id);
@@ -1904,7 +1914,7 @@ err_t plot_hist(grm_args_t *subplot_args)
     {
       int edge_color_index = 1;
       double edge_color_rgb[3] = {-1};
-      double x_min, x_max, bar_width, y_min, y_max;
+      double x_min, x_max, bar_width, y_min, y_max, y_line_pos;
       double *bins, *x, *weights;
       unsigned int num_bins = 0, x_length, num_weights;
       char *orientation;
@@ -1962,6 +1972,9 @@ err_t plot_hist(grm_args_t *subplot_args)
           subGroup->setAttribute("y_range_min", y_min);
           subGroup->setAttribute("y_range_max", y_max);
         }
+
+      if (grm_args_values(*current_series, "y_line_pos", "d", &y_line_pos))
+        group->parentElement()->setAttribute("_y_line_pos", y_line_pos);
 
       if (grm_args_values(*current_series, "transparency", "d", &transparency))
         {
@@ -2032,7 +2045,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
       unsigned int y_labels_length = 0;
       std::vector<int> c_vec;
       std::vector<double> c_rgb_vec;
-      double x_min, x_max, y_min, y_max;
+      double x_min, x_max, y_min, y_max, y_line_pos;
       double transparency;
 
       auto subGroup = global_render->createSeries("barplot");
@@ -2093,6 +2106,8 @@ err_t plot_barplot(grm_args_t *subplot_args)
           subGroup->setAttribute("y_range_min", y_min);
           subGroup->setAttribute("y_range_max", y_max);
         }
+      if (grm_args_values(*current_series, "y_line_pos", "d", &y_line_pos))
+        group->parentElement()->setAttribute("_y_line_pos", y_line_pos);
       if (grm_args_first_value(*current_series, "y_labels", "S", &y_labels, &y_labels_length))
         {
           std::vector<std::string> y_labels_vec(y_labels, y_labels + y_labels_length);
