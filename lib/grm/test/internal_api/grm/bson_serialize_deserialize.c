@@ -1,11 +1,15 @@
+#ifdef __unix__
 #define _POSIX_C_SOURCE 200809L
 #define _XOPEN_SOURCE 500
+#endif
 
 #include <assert.h>
 #include <ftw.h>
 #include <signal.h>
 #include <string.h>
+#include <unistd.h>
 #include <grm.h>
+#include "grm/bson_int.h"
 #include "grm/memwriter_int.h"
 
 
