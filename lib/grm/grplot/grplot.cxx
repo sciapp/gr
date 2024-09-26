@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 #else
       std::cerr << e.what() << std::endl;
 #endif
-      std::cerr << "Failed to set the \"GRDIR\" envionment variable, falling back to GRDIR=\"" << GRDIR << "\"."
+      std::cerr << "Failed to set the \"GRDIR\" environment variable, falling back to GRDIR=\"" << GRDIR << "\"."
                 << std::endl;
     }
 

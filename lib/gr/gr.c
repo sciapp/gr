@@ -12038,7 +12038,7 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
               rename(png, path);
               if (remove(tex) != 0 || remove(dvi) != 0)
                 {
-                  fprintf(stderr, "error deleting temprorary files\n");
+                  fprintf(stderr, "error deleting temporary files\n");
                 }
             }
           else
