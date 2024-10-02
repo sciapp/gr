@@ -2287,6 +2287,23 @@ void GRPlotWidget::highlight_current_selection(QPainter &painter)
             }
           painter.fillRect(rect, QBrush(QColor(255, 0, 0, 30), Qt::SolidPattern));
         }
+      if (!referenced_elements.empty())
+        {
+          for (const auto &elem : referenced_elements)
+            {
+              auto rect = elem.boundingRect();
+              if (elem.get_ref() != nullptr)
+                {
+                  auto bbox_xmin = static_cast<double>(elem.get_ref()->getAttribute("_bbox_x_min"));
+                  auto bbox_xmax = static_cast<double>(elem.get_ref()->getAttribute("_bbox_x_max"));
+                  auto bbox_ymin = static_cast<double>(elem.get_ref()->getAttribute("_bbox_y_min"));
+                  auto bbox_ymax = static_cast<double>(elem.get_ref()->getAttribute("_bbox_y_max"));
+                  rect = QRectF(bbox_xmin, bbox_ymin, bbox_xmax - bbox_xmin, bbox_ymax - bbox_ymin);
+                  painter.drawText(rect.topLeft() + QPointF(5, 10), elem.get_ref()->localName().c_str());
+                }
+              painter.fillRect(rect, QBrush(QColor(243, 224, 59, 40), Qt::SolidPattern));
+            }
+        }
     }
 }
 
@@ -2996,4 +3013,9 @@ void GRPlotWidget::editElementAccepted()
   amount_scrolled = 0;
   clicked.clear();
   reset_pixmap();
+}
+
+void GRPlotWidget::set_referenced_elements(std::vector<Bounding_object> referenced_elements)
+{
+  this->referenced_elements = referenced_elements;
 }

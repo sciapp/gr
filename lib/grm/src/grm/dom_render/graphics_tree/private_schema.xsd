@@ -82,6 +82,7 @@
             <xs:attribute name="_x_lim_min" type="xs:double"/>
             <xs:attribute name="_y_lim_max" type="xs:double"/>
             <xs:attribute name="_y_lim_min" type="xs:double"/>
+            <xs:attribute name="_y_line_pos" type="xs:double"/>
             <xs:attribute name="_z_lim_max" type="xs:double"/>
             <xs:attribute name="_z_lim_min" type="xs:double"/>
         </xs:complexType>
@@ -753,6 +754,7 @@
         <xs:attribute name="_bbox_y_max" type="xs:double"/>
         <xs:attribute name="_bbox_y_min" type="xs:double"/>
         <xs:attribute name="_delete_children" type="xs:integer"/>
+        <xs:attribute name="_selected" type="xs:integer"/>
         <xs:attribute name="_update_required" type="xs:integer"/>
     </xs:attributeGroup>
 

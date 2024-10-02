@@ -18,11 +18,14 @@ public:
 
 private slots:
   void applyTableChanges(int row, int column);
+  void showUsagesOfContext(int row, int column);
 
 private:
   GRPlotWidget *grplot_widget;
   std::shared_ptr<GRM::Context> context;
   std::vector<std::string> context_names;
+  std::vector<std::string> context_attributes;
+  std::vector<Bounding_object> referenced_attributes;
   int col_num;
 };
 

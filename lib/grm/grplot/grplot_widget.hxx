@@ -56,6 +56,7 @@ public:
                                         QWidget **lineEdit);
   void setTreeUpdate(bool status);
   void editElementAccepted();
+  void set_referenced_elements(std::vector<Bounding_object> referenced_elements);
 
 protected:
   virtual void draw();
@@ -211,7 +212,7 @@ private:
   std::vector<TooltipWrapper> tooltips;
   QTextDocument label;
   Bounding_logic *bounding_logic;
-  std::vector<Bounding_object> clicked;
+  std::vector<Bounding_object> clicked, referenced_elements;
   Bounding_object *current_selection, *mouse_move_selection, *selected_parent;
   std::list<std::unique_ptr<Bounding_object>> current_selections;
   bool highlightBoundingObjects;

@@ -1325,6 +1325,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 grm_args_push(series[tmp_cnt++], "y_range", "dd", ymin, ymax);
             }
           adjust_ranges(&ranges.ymin, &ranges.ymax, std::min<double>(0.0, y_min), y_max);
+          grm_args_push(args, "y_line_pos", "d", 0.0);
         }
       else
         {
@@ -1348,8 +1349,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                             std::begin(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)]),
                             std::end(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)])));
             }
-          if (str_equals_any(kind, "barplot", "hist")) ymin = 0;
-          if (strcmp(kind, "stem") == 0) ymin = grm_min(ymin, 0);
+          if (str_equals_any(kind, "barplot", "hist", "stem")) ymin = grm_min(ymin, 0);
           for (col = 0; col < cols; ++col)
             {
               if (std::find(x_data.begin(), x_data.end(), col) != x_data.end()) continue;
@@ -1360,6 +1360,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                                                                  ((double)file_data[depth][col][row] - ymin);
                 }
             }
+          grm_args_push(args, "y_line_pos", "d",
+                        ranges.ymin + (ranges.ymax - ranges.ymin) / (ymax - ymin) * (0.0 - ymin));
         }
 
       // push the data into the container structure
