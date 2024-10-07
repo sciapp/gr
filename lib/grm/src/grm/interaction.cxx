@@ -513,14 +513,14 @@ int grm_input(const grm_args_t *input_args)
               if (subplot_element != nullptr)
                 {
                   auto coordinate_system = subplot_element->querySelectors("coordinate_system");
-                  if (coordinate_system->hasAttribute("plot_type") &&
+                  if (coordinate_system != nullptr && coordinate_system->hasAttribute("plot_type") &&
                       (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "2d" ||
                        static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar"))
                     {
                       logger((stderr, "Reset single subplot coordinate ranges\n"));
                       subplot_element->setAttribute("reset_ranges", 1);
                     }
-                  if (coordinate_system->hasAttribute("plot_type") &&
+                  if (coordinate_system != nullptr && coordinate_system->hasAttribute("plot_type") &&
                       static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "3d")
                     {
                       logger((stderr, "Reset single subplot coordinate rotation\n"));
@@ -773,7 +773,8 @@ int grm_input(const grm_args_t *input_args)
                   viewport_mid_y = (viewport[2] + viewport[3]) / 2.0;
                   focus_x = ndc_x - viewport_mid_x;
                   focus_y = ndc_y - viewport_mid_y;
-                  if (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar" &&
+                  if (coordinate_system != nullptr &&
+                      static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar" &&
                       !(subplot_element->hasAttribute("polar_with_pan") &&
                         static_cast<int>(subplot_element->getAttribute("polar_with_pan"))))
                     focus_x = focus_y = 0.0;
@@ -804,7 +805,8 @@ int grm_input(const grm_args_t *input_args)
                   viewport_mid_y = (viewport[2] + viewport[3]) / 2.0;
                   focus_x = ndc_x - viewport_mid_x;
                   focus_y = ndc_y - viewport_mid_y;
-                  if (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar" &&
+                  if (coordinate_system != nullptr &&
+                      static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar" &&
                       !(subplot_element->hasAttribute("polar_with_pan") &&
                         static_cast<int>(subplot_element->getAttribute("polar_with_pan"))))
                     focus_x = focus_y = 0.0;
@@ -851,7 +853,8 @@ int grm_input(const grm_args_t *input_args)
           else if (grm_args_values(input_args, "x_shift", "i", &xshift) &&
                    grm_args_values(input_args, "y_shift", "i", &yshift) &&
                    !grm_args_values(input_args, "movable_state", "i", &movable_status) &&
-                   (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) != "polar" ||
+                   (coordinate_system != nullptr &&
+                        static_cast<std::string>(coordinate_system->getAttribute("plot_type")) != "polar" ||
                     (subplot_element->hasAttribute("polar_with_pan") &&
                      static_cast<int>(subplot_element->getAttribute("polar_with_pan")))))
             {
@@ -874,15 +877,8 @@ int grm_input(const grm_args_t *input_args)
 
                       rotation += xshift * 0.2;
                       tilt -= yshift * 0.2;
+                      tilt = grm_min(180, grm_max(0, tilt));
 
-                      if (tilt > 180)
-                        {
-                          tilt = 180;
-                        }
-                      else if (tilt < 0)
-                        {
-                          tilt = 0;
-                        }
                       grm_get_render()->setAutoUpdate(false);
                       central_region->setAttribute("space_3d_phi", rotation);
                       central_region->setAttribute("space_3d_theta", tilt);
@@ -1310,7 +1306,6 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
   gr_ndctowc(&x, &y);
 
   auto axes_vec = subplot_element->querySelectorsAll("axes");
-  auto coordinate_system = subplot_element->querySelectors("coordinate_system");
   auto left_side_region = subplot_element->querySelectors("side_region[location=\"left\"]");
   auto bottom_side_region = subplot_element->querySelectors("side_region[location=\"bottom\"]");
   struct
@@ -1483,8 +1478,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
               z_key = static_cast<std::string>(current_series->getAttribute(z_key_string));
             }
 
-          std::vector<double> x_series_vec;
-          std::vector<double> y_series_vec;
+          std::vector<double> x_series_vec, y_series_vec;
 
           if (is_vertical)
             {
