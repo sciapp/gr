@@ -12,6 +12,7 @@
             <xs:attribute name="_update_ws" type="xs:integer" use="required"/>
         </xs:complexType>
         <xs:unique name="_bboxidisunique">
+            <xs:selector xpath=".//*"/>
             <xs:field xpath="@_bbox_id"/>
         </xs:unique>
         <xs:unique name="figureidisunique">
