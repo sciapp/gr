@@ -9,7 +9,7 @@ This program allows to create plots from the command line while using simple key
 The following parameters are key-value pairs which can be used for every plot type.
 
 - `file`: contains the data which should be displayed. If no file is referred this results in an error message. If this parameter is the first argument the `file` keyword may be omitted. More information about these files can be found under the subchapter `Data file`. A hyphen '-' in place of a file path normally means "read from standard input". Since 'grplot' does not read from standard input by default, use '-' to redirect the input. This way 'grplot' can be used in a pipe.
-- `kind`: defines the plot type that should be displayed. Possible options are: `barplot`, `contour`, `contourf`, `heatmap`, `hexbin`, `hist`, `imshow`, `isosurface`, `line`, `marginal_heatmap`, `polar`, `polar_histogram`, `polar_heatmap`, `pie`, `plot3`, `scale`, `scatter`, `scatter3`, `shade`, `surface`, `stairs`, `stem`, `tricontour`, `trisurface`, `quiver`, `volume`, `wireframe`. The default plot type is `line`.
+- `kind`: defines the plot type that should be displayed. Possible options are: `barplot`, `contour`, `contourf`, `heatmap`, `hexbin`, `hist`, `imshow`, `isosurface`, `line`, `marginal_heatmap`, `polar_heatmap`, `polar_histogram`, `polar_line`, `polar_scatter`, `pie`, `plot3`, `scale`, `scatter`, `scatter3`, `shade`, `surface`, `stairs`, `stem`, `tricontour`, `trisurface`, `quiver`, `volume`, `wireframe`. The default plot type is `line`.
 
   To get extra information about a specific plot type use:
 
@@ -22,11 +22,11 @@ The following parameters are key-value pairs which can be used for every plot ty
 There is another parameter that can be used for all two-dimensional data sets:
 
 - `keep_aspect_ratio` or `aspect`: defines whether the aspect ratio of the initial picture is kept or not. Possible values for this parameter are 0 or 1.
-- `only_quadratic_aspect_ratio`: defines whether the aspect ratio of quadratic data (x, y) is forced to be quadratic and kept this way or not. Notice this parameter will not work when the `keep_aspect_ratio` parameter has the value of 0. Possible values for this parameter are 0 or 1.
+- `only_quadratic_aspect_ratio`: defines whether the aspect ratio of quadratic data (x, y) is forced to be quadratic and kept this way or not. Notice this parameter will not work if the `keep_aspect_ratio` parameter has the value of 0. Possible values for this parameter are 0 or 1.
 
 For plots where multiple columns are read there is also a parameter that allows to select columns.
 
-- `columns`: define the columns of the file which should be respected in the plot. The default is all columns. If all columns from x to y should be drawn use `x:y`. The `y` is necessary even when all lines from `x` to the end should be drawn. To select more than 1 specific column use the `,` without whitespace as separator.
+- `columns`: define the columns of the file which should be respected in the plot. The default is all columns. If all columns from x to y should be drawn use `x:y`. The `y` is necessary even if all lines from `x` to the end should be drawn. To select more than 1 specific column use the `,` without whitespace as separator.
 
 For one-dimensional data sets there are also options to define if inside the data-file there are not just y- and maybe error-values included. These parameters are similar to the previous `column` parameter and can also be used in combination with it.
 
@@ -35,9 +35,9 @@ For one-dimensional data sets there are also options to define if inside the dat
 - `error_columns`: define the columns of the file which should represent the error-data. Depending on the status of the flag parameter `equal_up_and_down_error` this parameter must include either one or two columns for each y-column which should have error bars later. If this parameter is used and includes enough columns it is not needed to set `error` to enable the error bars. It can still be set to edit the resulting error bars.
 - `xye_file`: defines a special case of the data-file. In this case the first column represents the x-, the second the y- and the third and maybe fourth column the error-values. The parameter can only have the values 0 and 1. If this parameter has the value 1 it is not needed to set `error` to enable the error bars. It can still be set to edit the resulting error bars.
 
-There are more key-value parameters. These parameters only effect specific plot types. For example `bar_width` only makes sense, when bars are drawn. All possible parameters are:
+There are more key-value parameters. These parameters only effect specific plot types. For example `bar_width` only makes sense, if bars are drawn. All possible parameters are:
 
-`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `c`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `grplot`, `int_lim`, `isovalue`, `kind`, `levels`, `line_spec`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `phi_flip`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `tilt`, `transformation`, `x_bins`, `x_colormap`, `x_flip`, `y_bins`, `y_colormap`, `y_flip`, `y_labels`
+`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `c`, `clip_negative`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `error_bar_style`, `grplot`, `int_lim`, `isovalue`, `keep_radii_axes`, `kind`, `levels`, `line_spec`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `phi_flip`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `tilt`, `transformation`, `x_bins`, `x_colormap`, `x_flip`, `y_bins`, `y_colormap`, `y_flip`, `y_labels`
 
 All parameters are separated by a blank. Some parameters are more complex than others. These parameters represent a container inside GRM.
 
@@ -72,7 +72,7 @@ This is an advanced example for a command line, where container parameters are s
 ../../../../lib/grm/grplot/data/test.dat kind:barplot ind_edge_width:2,{{indices:2},{width:5.0},{indices:1},{width:8.0}} error:{error_bar_color:4}
 ```
 
-If wanted the plot can be exported as a `pdf`, `png`, `jpeg` or `svg` file using the interactive menu. Alternatively these files can directly be created from console line when the environment variable `GKS_WSTYPE` is set.
+If wanted the plot can be exported as a `pdf`, `png`, `jpeg` or `svg` file using the interactive menu. Alternatively these files can directly be created from console line if the environment variable `GKS_WSTYPE` is set.
 
 ## Test
 
@@ -96,7 +96,7 @@ Valid keys are:
 
 1. `title`: sets the title of the plot
 2. `x_label`, `y_label`, `z_label`: set the label for the respective axis
-3. `resample_method`: defines how the data is resampled when needed
+3. `resample_method`: defines how the data is resampled if needed
 4. `location`: defines where the legend should be drawn
 5. `x_log`, `y_log`, `z_log`: defines whether the respective axis is plotted logarithmic. These options only work if the data respects the definition of the logarithmic function.
 6. `x_grid`, `y_grid`, `z_grid`: defines the grid for the respective axis
@@ -112,15 +112,15 @@ The next line after the header may contain the column labels. If the data does n
 2. `line`, `scatter`: One or more columns are expected here. Each column will be displayed in a single plot. The values inside the columns gets therefore interpreted as y-values. In combination with the `error` parameter every 2nd (and 3rd) column gets interpreted as error-values. More information are found by the `error` parameter itself. There is also another option which allows the user to define which columns include the x-, y- and error-values. For this the parameters `x_columns`, `y_columns` and `error_columns` can be used. 
 3. `isosurface`, `volume`: The expected data are multiple matrices. Each matrix represents a slice inside the volume.
 4. `plot3`, `scatter`, `scatter3`, `tricontour`, `trisurface`: Three columns with data are expected, representing the x-, y- and z-data.
-5. `barplot`, `hist`, `stem`, `stairs`: One column is expected which represents the y-data. In combination with the `error` parameter the 2nd (and 3rd) column gets interpreted as error-values. More information are found by the `error` parameter itself. There is also another option which allows the user to define which column include the x-, y- and error-values. For this the parameters `x_columns`, `y_columns` and `error_columns` can be used. For these kinds only one column for x and y is expected.
+5. `barplot`, `hist`, `stem`, `stairs`: One or more columns are expected. Each column will be displayed in a single plot. The values inside the columns gets therefore interpreted as y-values. In combination with the `error` parameter the 2nd (and 3rd) column gets interpreted as error-values. More information are found by the `error` parameter itself. There is also another option which allows the user to define which column include the x-, y- and error-values. For this the parameters `x_columns`, `y_columns` and `error_columns` can be used.
 6. `pie`: The expected data are 1-4 lines. The first line represents the data which should be displayed. The next 3 rows are used to set the RGB of the pie charts. Each row stands for one RGB element.
 7. `polar_histogram`: One column is expected which represents the values.
-8. `polar`: The expected data are two columns containing the angles and values.
-9. `polar_heatmap`: The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in theta- and phi-direction. When not given, theta will be in the range of 0.0 and 3.0 while phi will be in range of 0.0 and 360.0. Both parameters can be changed with `x_range` for theta and `y_range` for phi.
+8. `polar_line`, `polar_scatter`: The expected data are pairs of two columns containing the angles and values.
+9. `polar_heatmap`: The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in theta- and phi-direction. If not given, theta will be in the range of 0.0 and 3.0 while phi will be in range of 0.0 and 360.0. Both parameters can be changed with `x_range` for theta and `y_range` for phi.
 10. `quiver`: The expected data are two matrices. The first matrix contains the information about the x-directions and the second matrix the information about the y-directions.
 11. `hexbin`, `shade`: The expected data are two columns, representing the x- and y-data.
 
-A plot type that expect the same data shape as other plot types can be converted using an interactive menu. The interaction also yields extra information about the plot, when the mouse is being hovered over them.
+A plot type that expect the same data shape as other plot types can be converted using an interactive menu. The interaction also yields extra information about the plot, if the mouse is being hovered over them.
 
 ## Editor
 
@@ -136,9 +136,9 @@ The expected data is one column representing the y-data.
 
 Possible parameters for the bar plot are:
 
-1. `bar_color`: This parameter defines the color of all bars inside the plot except of those which are referred with `ind_bar_color`. The value of this parameter can either be an integer which represents a color index or three doubles which represent the RGB value of the color. When the parameter isn't set the bars will have the color with index 989 (dark blue).
+1. `bar_color`: This parameter defines the color of all bars inside the plot except of those which are referred with `ind_bar_color`. The value of this parameter can either be an integer which represents a color index or three doubles which represent the RGB value of the color. If the parameter isn't set the bars will have the color with index 989 (dark blue).
 2. `bar_width`: This parameter defines the width of all bars inside the plot. Depending on the specified width the bars may overlap. The value of this parameter is a double number where its default is 0.8.
-3. `edge_color`: This parameter defines the color of all edges inside the plot except of those which are referred with `ind_edge_color`. The value of this parameter can either be an integer which represents a color index or three doubles which represents the RGB value of the color. When the parameter isn't set the edges will have the color with index 1 (black).
+3. `edge_color`: This parameter defines the color of all edges inside the plot except of those which are referred with `ind_edge_color`. The value of this parameter can either be an integer which represents a color index or three doubles which represents the RGB value of the color. If the parameter isn't set the edges will have the color with index 1 (black).
 4. `edge_width`: This parameter defines the width of all edges inside the plot except those which are referred with `ind_edge_width`. The value of this parameter is a double number where its default is 1.0.
 5. `error`: With this parameter the relative error of each bar can be displayed. The values for this parameter are key-value pairs with the following keys:
     - `error_bar_color`: Defines the color of the error bars as an integer. If no color is given an error is raised.
@@ -149,33 +149,34 @@ Possible parameters for the bar plot are:
 
    `error:{{error_bar_color:`color_index`},{downwards_cap_color:`color_index`},{upwards_cap_color:`color_index`}}`
 
-6. `ind_bar_color`: With this parameter the color of specific bars can be changed. The value of this parameter are key-value pairs with the following keys:
+6. `error_bar_style`: Defines how the error-bars are displayed. As single error-lines(0) or as an error-area(1).
+7. `ind_bar_color`: With this parameter the color of specific bars can be changed. The value of this parameter are key-value pairs with the following keys:
     - `indices`: The index number of the bar, which color should be changed.
     - `rgb`: The new color for the specified bar. The value has to be three doubles or integer which represents the RGB value.
 
    The syntax of this parameter is:
 
    `ind_bar_color:`number_of_bars`,{{indices:`first_bar_index`},{rgb:`r1,g1,b1`}`,...`}`
-7. `ind_edge_color`: With this parameter the color of specific edges can be changed. The value of this parameter are key-value pairs with the following keys:
+8. `ind_edge_color`: With this parameter the color of specific edges can be changed. The value of this parameter are key-value pairs with the following keys:
     - `indices`: The index number of the edge, which color should be changed.
     - `rgb`: The new color for the specified edge. The value has to be three doubles or integer which represents the RGB value.
 
    The syntax of this parameter is:
 
    `ind_edge_color:`number_of_edges`,{{indices:`first_edge_index`},{rgb:`r1,g1,b1`}`,...`}`
-8. `ind_edge_width`: With this parameter the width of specific edges can be changed. The value of this parameter are key-value pairs with the following keys:
+9. `ind_edge_width`: With this parameter the width of specific edges can be changed. The value of this parameter are key-value pairs with the following keys:
     - `indices`: The index number of the edge, which width should be changed.
     - `width`: The new width for the specified edge. The value of this parameter has to be an integer or double.
 
    The syntax of this parameter is:
 
    `ind_edge_width:`number_of_edges`,{{indices:`first_edge_index`},{width:`first_edge_width`}`,...`}`
-9. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
-10. `style`: This parameter defines how the data inside the bar plot is displayed. There are three options:
+10. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
+11. `style`: This parameter defines how the data inside the bar plot is displayed. There are three options:
     - `default`: All values are displayed with a separate bar.
     - `stacked`: The values are displayed with bars which are stacked over each other.
     - `lined`: The values are displayed with smaller bars next to each other.
-11. `y_labels`: This parameter allows the user to set labels to specific bars, which can for example display the value of the bar. The syntax of this parameter is `y_labels:{`label1`,`label2`,`...`}`.
+12. `y_labels`: This parameter allows the user to set labels to specific bars, which can for example display the value of the bar. The syntax of this parameter is `y_labels:{`label1`,`label2`,`...`}`.
 
 ### CONTOUR
 
@@ -246,7 +247,9 @@ Possible parameters for the histogram are:
    Note: If the error of the bars is to be displayed, the last two columns of the data are used for the error. If the up and down error are equal use `equal_up_and_down_error` with a value of `1`. In that case only one column is expected for the error data instead of the two. This parameter flag also does not need the `error` parameter to be set. Like by the `error` parameter some of the columns inside the data will get interpreted as error-values. The syntax of this parameter is:
 
    `error:{{error_bar_color:`color_index`},{downwards_cap_color:`color_index`},{upwards_cap_color:`color_index`}}`
-5. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
+
+5. `error_bar_style`: Defines how the error-bars are displayed. As single error-lines(0) or as an error-area(1). 
+6. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
 
 ### IMSHOW
 
@@ -257,7 +260,7 @@ The expected data is a matrix. Each element of the matrix is displayed according
 Possible parameters for the imshow plot are:
 
 1. `colormap` or `cmap`: This parameter defines the colormap to be used. The default is 44 (viridis).
-2. `grplot`: This parameter is there for the consistency between the plot types `contour`, `contourf`, `heatmap`, `imshow`, `marginal_heatmap`, `surface`, `wireframe`. When set the data is displayed in the same order by all of these types where in general the imshow plot would be flipped. The value can be either 0 or 1 where the value if not otherwise set is always 1.
+2. `grplot`: This parameter is there for the consistency between the plot types `contour`, `contourf`, `heatmap`, `imshow`, `marginal_heatmap`, `surface`, `wireframe`. If set the data is displayed in the same order by all of these types where in general the imshow plot would be flipped. The value can be either 0 or 1 where the value if not otherwise set is always 1.
 3. `x_flip`: This parameter defines whether the x-axis is flipped or not.
 4. `y_flip`: This parameter defines whether the y-axis is flipped or not.
 
@@ -282,7 +285,7 @@ The expected data are columns. Each column will be interpreted as a single line.
 Possible parameters for the line plot are:
 
 1. `error`: With this parameter the relative error of each line can be displayed. The value of this parameter are key-value pairs with the following keys:
-    - `error_bar_color`: Defines the color of the error bars. The value of this parameter has to be an integer. When no color is given this leads to an error.
+    - `error_bar_color`: Defines the color of the error bars. The value of this parameter has to be an integer. If no color is given this leads to an error.
     - `downwards_cap_color`: Defines the downwards cap color of the error bars. The value of this parameter has to be an integer.
     - `upwards_cap_color`: Defines the upwards cap color of the error bars. The value of this parameter has to be an integer.
 
@@ -290,19 +293,20 @@ Possible parameters for the line plot are:
 
    `error:{{error_bar_color:`color_index`},{downwards_cap_color:`color_index`},{upwards_cap_color:`color_index`}}`
 
-2. `int_limits_high`: This parameter defines the upper limits of all integrals.
+2. `error_bar_style`: Defines how the error-bars are displayed. As single error-lines(0) or as an error-area(1).
+3. `int_limits_high`: This parameter defines the upper limits of all integrals.
    
     The syntax for this parameter is:
 
    `int_limits_high:`number_of_elements`,`elem_1`,`elem_2`,`...
 
-3. `int_limits_low`: This parameter defines the lower limits of all integrals.
+4. `int_limits_low`: This parameter defines the lower limits of all integrals.
 
     The syntax for this parameter is:
 
    `int_limits_low:`number_of_elements`,`elem_1`,`elem_2`,`...
 
-4. `orientation`: This parameter defines the orientation of the displayed lines. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
+5. `orientation`: This parameter defines the orientation of the displayed lines. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
 
 ### MARGINAL_HEATMAP
 
@@ -315,22 +319,16 @@ Possible parameters for the marginal heatmap are:
 1. `algorithm`: This parameter defines whether the data is summed up or if the maximum to be used for the side plots. Possible values are `max` and `sum` where the default is `sum`.
 2. `colormap` or `cmap`: This parameter defines the colormap to be used. The default is 44 (viridis).
 3. `marginal_heatmap_kind` or `h_kind`: This parameter defines what part of the data is displayed inside the side plots. Possible options are:
-    - `all`: When the kind is set to all, the side plots respect the complete data of the heatmap. This is the default case.
-    - `line`: When the kind is set to line, the side plots respect only a specific row/column of the data.
+    - `all`: If the kind is set to all, the side plots respect the complete data of the heatmap. This is the default case.
+    - `line`: If the kind is set to line, the side plots respect only a specific row/column of the data.
 4. `x_flip`: This parameter defines whether the x-axis is flipped or not.
 5. `y_flip`: This parameter defines whether the y-axis is flipped or not.
-
-### POLAR
-
-This plot type converts the data into a polar plot. A polar plot displays a polyline in polar coordinates, with theta indicating the angle in radians and rho indicating the radius value for each point.
-
-The expected data are two columns containing the angles and values.
 
 ### POLAR_HEATMAP
 
 This plot type converts the data into a polar heatmap. A polar heatmap is a heatmap in polar coordinates.
 
-The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in phi- and theta-direction. When not given, theta will be in the range of 0.0 and 3.0 while phi will be in range of 0.0 and 360.0. Both parameters can be changed with `x_range` for phi and `y_range` for theta.
+The expected data is a matrix. Each element of the matrix is displayed according to its position inside the matrix. These elements are interpreted as values in phi- and theta-direction. If not given, theta will be in the range of 0.0 and 3.0 while phi will be in range of 0.0 and 360.0. Both parameters can be changed with `x_range` for phi and `y_range` for theta.
 
 Possible parameters for the polar heatmap are:
 
@@ -347,15 +345,36 @@ Possible parameters for the polar histogram are:
 1. `bin_counts`: This parameter sets the amount of classes without binning.
 2. `bin_edges`: This parameter sets the borders of the classes.
 3. `bin_width`: This parameter sets the width of all the bins.
-4. `draw_edges`: When a colormap is used this parameter decides whether the outer shape is drawn or not. The value can be either 0 or 1.
-5. `num_bins`: This parameter sets the number of classes which are respected during the binning.
-6. `normalization`: This parameter sets the type of normalization for the polar histogram. The value can be `count`, `probability`, `countdensity`, `pdf`, `cumcount` or `cdf`.
-7. `phi_flip`: This parameter decides whether the phi values are flipped or not. The value can be either 0 or 1.
-8. `stairs`: When this parameter is set, only the outer shapes of the bins are drawn. The value can be either 0 or 1.
-9. `x_colormap`: This parameter sets the colormap for the x-direction.
-10. `x_flip`: This parameter defines whether the x-axis is flipped or not.
-11. `y_colormap`: This parameter sets the colormap for the y-direction.
-12. `y_flip`: This parameter defines whether the y-axis is flipped or not.
+4. `draw_edges`: If a colormap is used this parameter decides whether the outer shape is drawn or not. The value can be either 0 or 1.
+5. `keep_radii_axes`: This parameter only have an impact, if `y_lim` is set. In that case the ranges for the radii axes from `y_lim` get ignored while the polar histogram still gets affected by the `y_lim`.
+6. `num_bins`: This parameter sets the number of classes which are respected during the binning.
+7. `normalization`: This parameter sets the type of normalization for the polar histogram. The value can be `count`, `probability`, `countdensity`, `pdf`, `cumcount` or `cdf`.
+8. `phi_flip`: This parameter decides whether the phi values are flipped or not. The value can be either 0 or 1.
+9. `stairs`: If this parameter is set, only the outer shapes of the bins are drawn. The value can be either 0 or 1.
+10. `x_colormap`: This parameter sets the colormap for the x-direction.
+11. `x_flip`: This parameter defines whether the x-axis is flipped or not.
+12. `y_colormap`: This parameter sets the colormap for the y-direction.
+13. `y_flip`: This parameter defines whether the y-axis is flipped or not.
+
+### POLAR_LINE
+
+This plot type converts the data into a polar plot/line-plot. A polar plot displays a polyline in polar coordinates, with theta indicating the angle in radians and rho indicating the radius value for each point.
+
+The expected data are two columns containing the angles and values.
+
+Possible parameters for the polar line plot are:
+
+1. `clip_negative`: If this parameter is set, only positive radii are displayed, otherwise negative will be mirrored
+
+### POLAR_SCATTER
+
+This plot type converts the data into a polar scatter plot. A polar scatter displays each data point as a point inside the polar coordinate system, with theta indicating the angle in radians and rho indicating the radius value for each point.
+
+The expected data are two columns containing the angles and values.
+
+Possible parameters for the polar scatter plot are:
+
+1. `clip_negative`: If this parameter is set, only positive radii are displayed, otherwise negative will be mirrored
 
 ### PIE
 
@@ -378,7 +397,7 @@ The expected data are columns. Each column will be interpreted as a single plot.
 Possible parameters for the scatter plot are:
 
 1. `error`: With this parameter the relative error of each line can be displayed. The value of this parameter are key-value pairs with the following keys:
-    - `error_bar_color`: Defines the color of the error bars. The value of this parameter has to be an integer. When no color is given this leads to an error.
+    - `error_bar_color`: Defines the color of the error bars. The value of this parameter has to be an integer. If no color is given this leads to an error.
     - `downwards_cap_color`: Defines the downwards cap color of the error bars. The value of this parameter has to be an integer.
     - `upwards_cap_color`: Defines the upwards cap color of the error bars. The value of this parameter has to be an integer.
 
@@ -386,7 +405,8 @@ Possible parameters for the scatter plot are:
 
    `error:{{error_bar_color:`color_index`},{downwards_cap_color:`color_index`},{upwards_cap_color:`color_index`}}`
 
-2. `marker_type`: This parameter defines the style of the visualized data points, where the effect belonging to the numbers is the same as for [gr_setmarkertype](https://gr-framework.org/c-gr.html?highlight=gr_setmarkertype#_CPPv416gr_setmarkertypei).
+2. `error_bar_style`: Defines how the error-bars are displayed. As single error-lines(0) or as an error-area(1).
+3. `marker_type`: This parameter defines the style of the visualized data points, where the effect belonging to the numbers is the same as for [gr_setmarkertype](https://gr-framework.org/c-gr.html?highlight=gr_setmarkertype#_CPPv416gr_setmarkertypei).
 
 ### SCATTER3
 

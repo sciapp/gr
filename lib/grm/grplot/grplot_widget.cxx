@@ -1,7 +1,4 @@
 #include <QFile>
-#include <QPainter>
-#include <QPainterPath>
-#include <QResizeEvent>
 #include <cmath>
 #include <cstdio>
 #include <iostream>
@@ -13,20 +10,14 @@
 #include <gr.h>
 
 #include <QInputDialog>
-#include <QFormLayout>
-#include <QLabel>
-#include <QDialogButtonBox>
-#include <QComboBox>
 #include <QtWidgets>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <cfloat>
 #include <QtGlobal>
 #include <QApplication>
-#include <QToolTip>
 #include <QTimer>
 #include <QEvent>
-#include <QRubberBand>
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsScene>
 #include <QWindow>
@@ -101,6 +92,10 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   amount_scrolled = 0;
   treewidget = new TreeWidget(this);
   treewidget->hide();
+  table_widget = new TableWidget(this);
+  table_widget->hide();
+  edit_element_widget = new EditElementWidget(this);
+  edit_element_widget->hide();
   selected_parent = nullptr;
   csr = new QCursor(Qt::ArrowCursor);
   setCursor(*csr);
@@ -108,7 +103,9 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
   combo_box_attr = QStringList{
       "algorithm",
       "axis_type",
+      "clip_region",
       "colormap",
+      "error_bar_style",
       "font",
       "font_precision",
       "kind",
@@ -142,6 +139,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "adjust_x_lim",
       "adjust_y_lim",
       "adjust_z_lim",
+      "clip_negative",
       "disable_x_trans",
       "disable_y_trans",
       "draw_grid",
@@ -150,12 +148,14 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "is_major",
       "is_mirrored",
       "keep_aspect_ratio",
+      "keep_radii_axes",
       "keep_window",
       "marginal_heatmap_side_plot",
       "mirrored_axis",
       "movable",
       "only_quadratic_aspect_ratio",
       "phi_flip",
+      "polar_with_pan",
       "set_text_color_for_background",
       "space",
       "stairs",
@@ -171,6 +171,13 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "z_grid",
       "z_log",
   };
+
+  // add context attributes to combobox list
+  auto context_attributes = getContextAttributes();
+  for (const auto &attr : context_attributes)
+    {
+      combo_box_attr.push_back(attr.c_str());
+    }
 
 #ifdef _WIN32
   putenv("GKS_WSTYPE=381");
@@ -354,7 +361,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
           connect(histAct, &QAction::triggered, this, &GRPlotWidget::hist);
           barplotAct = new QAction(tr("&Barplot"), this);
           connect(barplotAct, &QAction::triggered, this, &GRPlotWidget::barplot);
-          stairsAct = new QAction(tr("&Step"), this);
+          stairsAct = new QAction(tr("&Stairs"), this);
           connect(stairsAct, &QAction::triggered, this, &GRPlotWidget::stairs);
           stemAct = new QAction(tr("&Stem"), this);
           connect(stemAct, &QAction::triggered, this, &GRPlotWidget::stem);
@@ -371,6 +378,15 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
           connect(hexbinAct, &QAction::triggered, this, &GRPlotWidget::hexbin);
           type->addAction(shadeAct);
           type->addAction(hexbinAct);
+        }
+      else if (strcmp(kind, "polar_line") == 0 || strcmp(kind, "polar_scatter") == 0)
+        {
+          polarLineAct = new QAction(tr("&Polar Line"), this);
+          connect(polarLineAct, &QAction::triggered, this, &GRPlotWidget::polar_line);
+          polarScatterAct = new QAction(tr("&Polar Scatter"), this);
+          connect(polarScatterAct, &QAction::triggered, this, &GRPlotWidget::polar_scatter);
+          type->addAction(polarLineAct);
+          type->addAction(polarScatterAct);
         }
       moveableModeAct = new QAction(tr("&Disable movable transformation"), this);
       connect(moveableModeAct, &QAction::triggered, this, &GRPlotWidget::moveableMode);
@@ -434,7 +450,28 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       QObject::connect(add_element_action, SIGNAL(triggered()), this, SLOT(add_element_slot()));
       add_element_action->setVisible(false);
 
-      if (strcmp(argv[1], "--test") != 0 && !test_commands_stream) menu->addMenu(editor_menu);
+      context_menu = new QMenu("&Data");
+      add_context_data = new QMenu("Add Data-Context");
+      show_context_action = new QAction(tr("&Display Data-Context"));
+      show_context_action->setCheckable(true);
+      QObject::connect(show_context_action, SIGNAL(triggered()), this, SLOT(showContextSlot()));
+      context_menu->addAction(show_context_action);
+      add_context_action = new QAction(tr("&Column files"));
+      QObject::connect(add_context_action, SIGNAL(triggered()), this, SLOT(addContextSlot()));
+      add_context_data->addAction(add_context_action);
+      add_grplot_data_context = new QAction(tr("&Interpret matrix as 1 column data"));
+      QObject::connect(add_grplot_data_context, SIGNAL(triggered()), this, SLOT(addGRPlotDataContextSlot()));
+      add_context_data->addAction(add_grplot_data_context);
+      generate_linear_context_action = new QAction(tr("&Generate linear Data-Context"));
+      QObject::connect(generate_linear_context_action, SIGNAL(triggered()), this, SLOT(generateLinearContextSlot()));
+      add_context_data->addAction(generate_linear_context_action);
+
+      if (strcmp(argv[1], "--test") != 0 && !test_commands_stream)
+        {
+          menu->addMenu(editor_menu);
+          menu->addMenu(context_menu);
+          context_menu->addMenu(add_context_data);
+        }
     }
   global_root = grm_get_document_root();
 }
@@ -457,7 +494,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
                                             QWidget **lineEdit)
 {
   QStringList size_unit_list, colormap_list, font_list, font_precision_list, line_type_list, location_list,
-      marker_type_list, text_align_horizontal_list, text_align_vertical_list, algorithm_volume_list, model_list;
+      marker_type_list, text_align_horizontal_list, text_align_vertical_list, algorithm_volume_list, model_list,
+      context_attr_list;
   auto size_unit_vec = getSizeUnits();
   size_unit_list.reserve((int)size_unit_vec.size());
   for (auto &i : size_unit_vec)
@@ -524,10 +562,21 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
     {
       model_list.push_back(i.c_str());
     }
+  table_widget->extractContextNames(grm_get_render()->getContext());
+  auto context_attr_vec = table_widget->getContextNames();
+  context_attr_list.reserve((int)context_attr_vec.size());
+  for (auto &i : context_attr_vec)
+    {
+      context_attr_list.push_back(i.c_str());
+    }
 
   QStringList axis_type_list{
       "x",
       "y",
+  };
+  QStringList clip_region_list{
+      "quadratic",
+      "elliptic",
   };
   QStringList orientation_list{
       "vertical",
@@ -536,6 +585,10 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   QStringList algorithm_marginal_heatmap_list{
       "sum",
       "max",
+  };
+  QStringList error_bar_style_list{
+      "line",
+      "area",
   };
   QStringList marginal_heatmap_kind_list{
       "all",
@@ -591,6 +644,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   QStringList side_region_location_list{"top", "right", "bottom", "left"};
   static std::map<std::string, QStringList> attributeToList{
       {"axis_type", axis_type_list},
+      {"error_bar_style", error_bar_style_list},
+      {"clip_region", clip_region_list},
       {"size_x_unit", size_unit_list},
       {"size_y_unit", size_unit_list},
       {"colormap", colormap_list},
@@ -618,6 +673,14 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"z_org_pos", org_pos_list},
       {"tick_orientation", tick_orientation_list},
   };
+  // add for all context attributes all possible values
+  for (const auto &attr : getContextAttributes())
+    {
+      if (attributeToList.count(attr) >= 1)
+        attributeToList[attr] = context_attr_list;
+      else
+        attributeToList.emplace(attr, context_attr_list);
+    }
 
   ((QComboBox *)*lineEdit)->setEditable(true);
   if (attributeToList.count(cur_attr_name))
@@ -661,7 +724,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       QStringList plot3_group = {"plot3", "scatter", "scatter3", "tricontour", "trisurface"};
       QStringList barplot_group = {"barplot", "hist", "stem", "stairs"};
       QStringList hexbin_group = {"hexbin", "shade"};
-      QStringList other_kinds = {"pie", "polar_histogram", "polar", "polar_heatmap", "polar_histogram", "quiver"};
+      QStringList other_kinds = {"pie", "polar_heatmap", "polar_histogram", "polar_line", "polar_scatter", "quiver"};
       std::string kind;
 
       if (util::startsWith(cur_elem_name, "series_")) kind = cur_elem_name.erase(0, 7);
@@ -771,6 +834,10 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
     {
       current_text = locationIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
     }
+  else if (cur_attr_name == "clip_region" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text = clipRegionIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
   else if (cur_attr_name == "colormap" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
       current_text = colormapIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
@@ -797,6 +864,11 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
     {
       current_text = lineTypeIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
     }
+  else if (cur_attr_name == "resample_method" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          resampleMethodIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
   else if (cur_attr_name == "scientific_format" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
       current_text =
@@ -806,6 +878,11 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
     {
       current_text =
           tickOrientationIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "error_bar_style" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      current_text =
+          errorBarStyleIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
     }
   int index = ((QComboBox *)*lineEdit)->findText(current_text.c_str());
   if (index == -1) index += ((QComboBox *)*lineEdit)->count();
@@ -845,6 +922,10 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
         {
           element->setAttribute(label, locationStringToInt(value));
         }
+      else if (label == "clip_region")
+        {
+          element->setAttribute(label, clipRegionStringToInt(value));
+        }
       else if (label == "colormap")
         {
           element->setAttribute(label, colormapStringToInt(value));
@@ -869,6 +950,10 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
         {
           element->setAttribute(label, lineTypeStringToInt(value));
         }
+      else if (label == "resample_method")
+        {
+          element->setAttribute(label, resampleMethodStringToInt(value));
+        }
       else if (label == "tick_orientation")
         {
           element->setAttribute(label, tickOrientationStringToInt(value));
@@ -876,6 +961,10 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
       else if (label == "scientific_format")
         {
           element->setAttribute(label, scientificFormatStringToInt(value));
+        }
+      else if (label == "error_bar_style")
+        {
+          element->setAttribute(label, errorBarStyleStringToInt(value));
         }
       else
         {
@@ -886,370 +975,8 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
 
 void GRPlotWidget::AttributeEditEvent()
 {
-  if (current_selection == nullptr)
-    {
-      return;
-    }
-  std::string currently_clicked_name = current_selection->get_ref()->localName();
-
-  QDialog dialog(this);
-  QString title("Selected: ");
-  title.append(currently_clicked_name.c_str());
-  dialog.setWindowTitle(title);
-  auto changeParametersLabel = new QLabel("Change Parameters:");
-  changeParametersLabel->setStyleSheet("font-weight: bold");
-  auto form = new QFormLayout;
-  form->addRow(changeParametersLabel);
-
-  QList<QString> labels;
-  QList<QWidget *> fields;
-  QWidget *lineEdit;
-  std::unordered_map<std::string, std::string> attr_type;
-
-  for (const auto &cur_attr_name : current_selection->get_ref()->getAttributeNames())
-    {
-      if (util::startsWith(cur_attr_name, "_"))
-        {
-          continue;
-        }
-      QString tooltipString = GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[1].c_str();
-      tooltipString.append(".  Default: ");
-      tooltipString.append(GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), cur_attr_name)[0].c_str());
-
-      if (combo_box_attr.contains(cur_attr_name.c_str()))
-        {
-          lineEdit = new QComboBox(&dialog);
-          advancedAttributeComboBoxHandler(cur_attr_name, current_selection->get_ref()->localName(), &lineEdit);
-          if (current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
-            {
-              attr_type.emplace(cur_attr_name, "xs:integer");
-            }
-          else if (current_selection->get_ref()->getAttribute(cur_attr_name).isDouble())
-            {
-              attr_type.emplace(cur_attr_name, "xs:double");
-            }
-          else
-            {
-              attr_type.emplace(cur_attr_name, "xs:string");
-            }
-          ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
-        }
-      else if (check_box_attr.contains(cur_attr_name.c_str()))
-        {
-          lineEdit = new QCheckBox(&dialog);
-          ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
-          ((QCheckBox *)lineEdit)
-              ->setChecked(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)) == 1);
-        }
-      else
-        {
-          if (current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
-            {
-              attr_type.emplace(cur_attr_name, "xs:integer");
-            }
-          else if (current_selection->get_ref()->getAttribute(cur_attr_name).isDouble())
-            {
-              attr_type.emplace(cur_attr_name, "xs:double");
-            }
-          else
-            {
-              attr_type.emplace(cur_attr_name, "xs:string");
-            }
-          lineEdit = new QLineEdit(&dialog);
-          ((QLineEdit *)lineEdit)
-              ->setText(static_cast<std::string>(current_selection->get_ref()->getAttribute(cur_attr_name)).c_str());
-          ((QLineEdit *)lineEdit)->setToolTip(tooltipString);
-        }
-      QString text_label = QString(cur_attr_name.c_str());
-      form->addRow(text_label, lineEdit);
-
-      labels << text_label;
-      fields << lineEdit;
-    }
-
-  if (schema_tree != nullptr)
-    {
-      std::shared_ptr<GRM::Element> element;
-      auto selections = schema_tree->querySelectorsAll("[name=" + currently_clicked_name + "]");
-      for (const auto &selection : selections)
-        {
-          if (selection->localName() == "xs:element") element = selection->children()[0];
-        }
-
-      /* iterate through complextype elements */
-      for (const auto &child : element->children())
-        {
-          if (child->localName() == "xs:attribute")
-            {
-              auto attr_name = static_cast<std::string>(child->getAttribute("name"));
-              if (!current_selection->get_ref()->hasAttribute(attr_name))
-                {
-                  /* attributes of an element which aren't already in the tree getting added with red text color
-                   */
-                  auto type_name = static_cast<std::string>(child->getAttribute("type"));
-                  attr_type.emplace(attr_name, type_name);
-                  QString tooltipString =
-                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), attr_name)[1].c_str();
-                  tooltipString.append(".  Default: ");
-                  tooltipString.append(
-                      GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), attr_name)[0].c_str());
-
-                  if (combo_box_attr.contains(attr_name.c_str()))
-                    {
-                      lineEdit = new QComboBox(&dialog);
-                      advancedAttributeComboBoxHandler(attr_name, current_selection->get_ref()->localName(), &lineEdit);
-                      ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
-                    }
-                  else if (check_box_attr.contains(attr_name.c_str()))
-                    {
-                      lineEdit = new QCheckBox(&dialog);
-                      ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
-                      ((QCheckBox *)lineEdit)
-                          ->setChecked(static_cast<int>(current_selection->get_ref()->getAttribute(attr_name)) == 1);
-                    }
-                  else
-                    {
-                      lineEdit = new QLineEdit(&dialog);
-                      ((QLineEdit *)lineEdit)->setToolTip(tooltipString);
-                      ((QLineEdit *)lineEdit)->setText("");
-                    }
-                  QString text_label = QString("<span style='color:#ff0000;'>%1</span>").arg(attr_name.c_str());
-                  form->addRow(text_label, lineEdit);
-
-                  labels << text_label;
-                  fields << lineEdit;
-                }
-            }
-          else if (child->localName() == "xs:attributegroup")
-            {
-              /* when an element contains one or more attributegroups all attributes from these groups must be
-               * added */
-              std::shared_ptr<GRM::Element> group;
-              auto group_name = static_cast<std::string>(child->getAttribute("ref"));
-
-              if (group_name != "colorrep")
-                {
-                  auto attr_group_selections = schema_tree->querySelectorsAll("[name=" + group_name + "]");
-                  for (const auto &selection : attr_group_selections)
-                    {
-                      if (selection->localName() == "xs:attributegroup") group = selection;
-                    }
-
-                  /* iterate through attribute elements */
-                  for (const auto &childchild : group->children())
-                    {
-                      if (childchild->localName() == "xs:attribute")
-                        {
-                          auto attr_name = static_cast<std::string>(childchild->getAttribute("name"));
-                          if (!current_selection->get_ref()->hasAttribute(attr_name))
-                            {
-                              /* attributes of an element which aren't already in the tree getting added with
-                               * red text color */
-                              auto type_name = static_cast<std::string>(childchild->getAttribute("type"));
-                              attr_type.emplace(attr_name, type_name);
-                              QString tooltipString =
-                                  GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), attr_name)[1].c_str();
-                              tooltipString.append(".  Default: ");
-                              tooltipString.append(
-                                  GRM::Render::getDefaultAndTooltip(current_selection->get_ref(), attr_name)[0]
-                                      .c_str());
-
-                              if (combo_box_attr.contains(attr_name.c_str()))
-                                {
-                                  lineEdit = new QComboBox(&dialog);
-                                  advancedAttributeComboBoxHandler(attr_name, current_selection->get_ref()->localName(),
-                                                                   &lineEdit);
-                                  ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
-                                }
-                              else if (check_box_attr.contains(attr_name.c_str()))
-                                {
-                                  lineEdit = new QCheckBox(&dialog);
-                                  ((QCheckBox *)lineEdit)->setToolTip(tooltipString);
-                                  ((QCheckBox *)lineEdit)
-                                      ->setChecked(
-                                          static_cast<int>(current_selection->get_ref()->getAttribute(attr_name)) == 1);
-                                }
-                              else
-                                {
-                                  lineEdit = new QLineEdit(&dialog);
-                                  ((QLineEdit *)lineEdit)->setToolTip(tooltipString);
-                                  ((QLineEdit *)lineEdit)->setText("");
-                                }
-                              QString text_label =
-                                  QString("<span style='color:#ff0000;'>%1</span>").arg(attr_name.c_str());
-                              form->addRow(text_label, lineEdit);
-
-                              labels << text_label;
-                              fields << lineEdit;
-                            }
-                        }
-                    }
-                }
-              else
-                {
-                  /* special case for colorrep cause there are way to many attributes inside the attributegroup
-                   */
-                  lineEdit = new QLineEdit(&dialog);
-                  ((QLineEdit *)lineEdit)->setText("");
-                  QString text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("Colorrep-index");
-                  form->addRow(text_label, lineEdit);
-
-                  attr_type.emplace("Colorrep-index", "xs:string");
-                  labels << text_label;
-                  fields << lineEdit;
-
-                  lineEdit = new QLineEdit(&dialog);
-                  ((QLineEdit *)lineEdit)->setText("");
-                  text_label = QString("<span style='color:#ff0000;'>%1</span>").arg("Colorrep-value");
-                  form->addRow(text_label, lineEdit);
-
-                  attr_type.emplace("Colorrep-value", "xs:string");
-                  labels << text_label;
-                  fields << lineEdit;
-                }
-            }
-        }
-    }
-
-  QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
-  form->addRow(&buttonBox);
-  QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
-  QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
-
-  auto scrollAreaContent = new QWidget;
-  scrollAreaContent->setLayout(form);
-  auto scrollArea = new QScrollArea;
-  scrollArea = new QScrollArea;
-  scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-  scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-  scrollArea->setWidgetResizable(true);
-  scrollArea->setWidget(scrollAreaContent);
-
-  auto groupBoxLayout = new QVBoxLayout;
-  groupBoxLayout->addWidget(scrollArea);
-  dialog.setLayout(groupBoxLayout);
-
-  if (dialog.exec() == QDialog::Accepted)
-    {
-      for (int i = 0; i < labels.count(); i++)
-        {
-          qDebug() << typeid(fields[i]).name();
-          auto &field = *fields[i]; // because typeid(*fields[i]) is bad :(
-          if (util::startsWith(labels[i].toStdString(), "<span style='color:#ff0000;'>") &&
-              util::endsWith(labels[i].toStdString(), "</span>"))
-            {
-              labels[i].remove(0, 29);
-              labels[i].remove(labels[i].size() - 7, 7);
-            }
-          std::string attr_name = labels[i].toStdString();
-          if (typeid(field) == typeid(QLineEdit) && ((QLineEdit *)fields[i])->isModified())
-            {
-              std::string name = std::string(current_selection->get_ref()->getAttribute("name"));
-              if (((QLineEdit *)fields[i])->text().toStdString().empty())
-                {
-                  /* remove attributes from tree when the value got removed */
-                  current_selection->get_ref()->removeAttribute(labels[i].toStdString());
-                }
-              else
-                {
-                  if (labels[i].toStdString() == "text")
-                    {
-                      const std::string value = ((QLineEdit *)fields[i])->text().toStdString();
-                      if (attr_type[attr_name] == "xs:string" ||
-                          (attr_type[attr_name] == "strint" && !util::is_digits(value)))
-                        {
-                          if (current_selection->get_ref()->parentElement()->localName() == "text_region")
-                            {
-                              current_selection->get_ref()->parentElement()->parentElement()->setAttribute(
-                                  "text_content", value);
-                            }
-                          else if (name == "xlabel" || name == "ylabel")
-                            {
-                              current_selection->get_ref()
-                                  ->parentElement()
-                                  ->parentElement()
-                                  ->querySelectors(name)
-                                  ->setAttribute(name, value);
-                            }
-                        }
-                      else if (attr_type[attr_name] == "xs:double")
-                        {
-                          current_selection->get_ref()->parentElement()->setAttribute(labels[i].toStdString(),
-                                                                                      std::stod(value));
-                        }
-                      else if (attr_type[attr_name] == "xs:integer" ||
-                               (attr_type[attr_name] == "strint" && util::is_digits(value)))
-                        {
-                          current_selection->get_ref()->parentElement()->setAttribute(labels[i].toStdString(),
-                                                                                      std::stoi(value));
-                        }
-                    }
-                  if (labels[i].toStdString() == "Colorrep-index")
-                    {
-                      /* special case for colorrep attribute */
-                      current_selection->get_ref()->setAttribute("colorrep." +
-                                                                     ((QLineEdit *)fields[i])->text().toStdString(),
-                                                                 ((QLineEdit *)fields[i + 1])->text().toStdString());
-                    }
-                  else if (labels[i].toStdString() != "Colorrep-value")
-                    {
-                      const std::string value = ((QLineEdit *)fields[i])->text().toStdString();
-                      if (attr_type[attr_name] == "xs:string" ||
-                          (attr_type[attr_name] == "strint" && !util::is_digits(value)))
-                        {
-                          current_selection->get_ref()->setAttribute(labels[i].toStdString(), value);
-                        }
-                      else if (attr_type[attr_name] == "xs:double")
-                        {
-                          current_selection->get_ref()->setAttribute(labels[i].toStdString(), std::stod(value));
-                        }
-                      else if (attr_type[attr_name] == "xs:integer" ||
-                               (attr_type[attr_name] == "strint" && util::is_digits(value)))
-                        {
-                          current_selection->get_ref()->setAttribute(labels[i].toStdString(), std::stoi(value));
-                        }
-                    }
-                }
-            }
-          else if (typeid(field) == typeid(QComboBox))
-            {
-              int index = ((QComboBox *)fields[i])->currentIndex();
-              if (((QComboBox *)fields[i])->itemText(index).toStdString().empty())
-                {
-                  /* remove attributes from tree when the value got removed */
-                  current_selection->get_ref()->removeAttribute(labels[i].toStdString());
-                }
-              else
-                {
-                  const std::string value = ((QComboBox *)fields[i])->itemText(index).toStdString();
-                  attributeSetForComboBox(attr_type[attr_name], current_selection->get_ref(), value,
-                                          (labels[i]).toStdString());
-                }
-            }
-          else if (typeid(field) == typeid(QCheckBox))
-            {
-              current_selection->get_ref()->setAttribute(labels[i].toStdString(),
-                                                         ((QCheckBox *)fields[i])->isChecked());
-            }
-        }
-      current_selection = nullptr;
-      mouse_move_selection = nullptr;
-      amount_scrolled = 0;
-      tree_update = true;
-      clicked.clear();
-      if (getenv("GRM_DEBUG"))
-        {
-          std::cerr << toXML(grm_get_document_root(),
-                             GRM::SerializerOptions{std::string(2, ' '),
-                                                    GRM::SerializerOptions::InternalAttributesFormat::Plain})
-                    << "\n";
-        }
-      reset_pixmap();
-    }
-  else
-    {
-      tree_update = false;
-    }
+  edit_element_widget->show();
+  edit_element_widget->AttributeEditEvent();
 }
 
 void GRPlotWidget::draw()
@@ -1261,7 +988,7 @@ void GRPlotWidget::draw()
 
       if (global_root == nullptr) global_root = grm_get_document_root();
       auto plot_elem = global_root->querySelectors("plot");
-      auto kind = static_cast<std::string>(plot_elem->getAttribute("kind"));
+      auto kind = static_cast<std::string>(plot_elem->getAttribute("_kind"));
       snprintf(file, 50, "grplot_%s.%s", kind.c_str(), file_export.c_str());
       grm_export(file);
     }
@@ -1351,6 +1078,12 @@ static const std::string accumulatedTooltipTemplate{"\
 
 void GRPlotWidget::paintEvent(QPaintEvent *event)
 {
+  if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
+    {
+      if (!table_widget->isVisible() && show_context_action->isChecked()) show_context_action->setChecked(false);
+      if (!treewidget->isVisible() && show_container_action->isChecked()) show_container_action->setChecked(false);
+      if (!add_element_widget->isVisible() && add_element_action->isChecked()) add_element_action->setChecked(false);
+    }
   util::unused(event);
   paint(this);
 }
@@ -1457,7 +1190,7 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
               label.setHtml(QString::fromStdString(info));
               if (global_root == nullptr) global_root = grm_get_document_root();
               auto plot_elem = global_root->querySelectors("plot");
-              kind = static_cast<std::string>(plot_elem->getAttribute("kind"));
+              kind = static_cast<std::string>(plot_elem->getAttribute("_kind"));
               if (kind == "heatmap" || kind == "marginal_heatmap")
                 {
                   background.setAlpha(224);
@@ -1716,7 +1449,7 @@ void GRPlotWidget::mouseMoveEvent(QMouseEvent *event)
           auto plot_elem = global_root->querySelectors("plot");
           if (plot_elem)
             {
-              kind = static_cast<std::string>(plot_elem->getAttribute("kind"));
+              kind = static_cast<std::string>(plot_elem->getAttribute("_kind"));
               if (kind == "marginal_heatmap")
                 {
                   grm_args_t *input_args;
@@ -2323,6 +2056,12 @@ void GRPlotWidget::hist()
           series_elem->setAttribute("kind", "hist");
         }
     }
+
+  // to get the same bars then before all bars have to exist during render call so that the linespec work properly
+  for (const auto &elem : global_root->querySelectorsAll("series_hist"))
+    {
+      elem->setAttribute("_update_required", true);
+    }
   redraw();
 }
 
@@ -2338,6 +2077,13 @@ void GRPlotWidget::barplot()
           series_elem->setAttribute("kind", "barplot");
         }
     }
+
+  // to get the same bars then before all bars have to exist during render call so that the linespec work properly
+  for (const auto &elem : global_root->querySelectorsAll("series_barplot"))
+    {
+      elem->removeAttribute("fill_color_ind");
+      elem->setAttribute("_update_required", true);
+    }
   redraw();
 }
 
@@ -2352,6 +2098,12 @@ void GRPlotWidget::stairs()
         {
           series_elem->setAttribute("kind", "stairs");
         }
+    }
+
+  // to get the same lines then before all lines have to exist during render call so that the linespec work properly
+  for (const auto &elem : global_root->querySelectorsAll("series_stairs"))
+    {
+      elem->setAttribute("_update_required", true);
     }
   redraw();
 }
@@ -2387,6 +2139,26 @@ void GRPlotWidget::hexbin()
   for (const auto &elem : global_root->querySelectorsAll("series_shade"))
     {
       elem->setAttribute("kind", "hexbin");
+    }
+  redraw();
+}
+
+void GRPlotWidget::polar_line()
+{
+  if (global_root == nullptr) global_root = grm_get_document_root();
+  for (const auto &elem : global_root->querySelectorsAll("series_polar_scatter"))
+    {
+      elem->setAttribute("kind", "polar_line");
+    }
+  redraw();
+}
+
+void GRPlotWidget::polar_scatter()
+{
+  auto root = grm_get_document_root();
+  for (const auto &elem : root->querySelectorsAll("series_polar_line"))
+    {
+      elem->setAttribute("kind", "polar_scatter");
     }
   redraw();
 }
@@ -2449,7 +2221,7 @@ void GRPlotWidget::extract_bounding_boxes_from_grm(QPainter &painter)
 
           if (xmin == DBL_MAX || xmax == -DBL_MAX || ymin == DBL_MAX || ymax == -DBL_MAX)
             {
-              qDebug() << "skipping" << cur_child->localName().c_str();
+              if (getenv("GRM_DEBUG")) qDebug() << "skipping" << cur_child->localName().c_str();
             }
           else
             {
@@ -2515,6 +2287,23 @@ void GRPlotWidget::highlight_current_selection(QPainter &painter)
             }
           painter.fillRect(rect, QBrush(QColor(255, 0, 0, 30), Qt::SolidPattern));
         }
+      if (!referenced_elements.empty())
+        {
+          for (const auto &elem : referenced_elements)
+            {
+              auto rect = elem.boundingRect();
+              if (elem.get_ref() != nullptr)
+                {
+                  auto bbox_xmin = static_cast<double>(elem.get_ref()->getAttribute("_bbox_x_min"));
+                  auto bbox_xmax = static_cast<double>(elem.get_ref()->getAttribute("_bbox_x_max"));
+                  auto bbox_ymin = static_cast<double>(elem.get_ref()->getAttribute("_bbox_y_min"));
+                  auto bbox_ymax = static_cast<double>(elem.get_ref()->getAttribute("_bbox_y_max"));
+                  rect = QRectF(bbox_xmin, bbox_ymin, bbox_xmax - bbox_xmin, bbox_ymax - bbox_ymin);
+                  painter.drawText(rect.topLeft() + QPointF(5, 10), elem.get_ref()->localName().c_str());
+                }
+              painter.fillRect(rect, QBrush(QColor(243, 224, 59, 40), Qt::SolidPattern));
+            }
+        }
     }
 }
 
@@ -2572,6 +2361,7 @@ void GRPlotWidget::load_file_slot()
       grm_load_graphics_tree(file);
       global_root = grm_get_document_root();
       redraw();
+      if (table_widget->isVisible()) table_widget->updateData(grm_get_render()->getContext());
 #else
       std::stringstream text_stream;
       text_stream << "XML support not compiled in. Please recompile GRPlot with libxml2 support.";
@@ -2736,6 +2526,136 @@ void GRPlotWidget::screenChanged()
   redraw();
 }
 
+void GRPlotWidget::showContextSlot()
+{
+  if (show_context_action->isChecked())
+    {
+      auto context = grm_get_render()->getContext();
+      table_widget->updateData(context);
+      table_widget->show();
+    }
+  else
+    {
+      table_widget->hide();
+    }
+  table_widget->resize(width(), 350);
+  table_widget->move((int)(this->pos().x() + 0.5 * this->width() - 61),
+                     this->pos().y() - 28 + table_widget->geometry().y());
+}
+
+void GRPlotWidget::addContextSlot()
+{
+  std::string path =
+      QFileDialog::getOpenFileName(this, "Open column data file", QDir::homePath(), "(*.dat *.csv *.xyz)")
+          .toStdString();
+  if (path.empty()) return;
+
+  // convert the data
+  if (!grm_context_data_from_file(grm_get_render()->getContext(), path))
+    {
+      fprintf(stderr, "Could not interpret the file to context data\n");
+      return;
+    }
+  auto context = grm_get_render()->getContext();
+  table_widget->updateData(context);
+}
+
+void GRPlotWidget::addGRPlotDataContextSlot()
+{
+  std::string path =
+      QFileDialog::getOpenFileName(this, "Interpret matrix as 1 column data", QDir::homePath(), "(*.dat *.csv *.xyz)")
+          .toStdString();
+  if (path.empty()) return;
+
+  // convert the data
+  if (!grm_context_data_from_file(grm_get_render()->getContext(), path, true))
+    {
+      fprintf(stderr, "Could not interpret the file to context data\n");
+      return;
+    }
+  auto context = grm_get_render()->getContext();
+  table_widget->updateData(context);
+}
+
+void GRPlotWidget::generateLinearContextSlot()
+{
+  QList<QWidget *> fields;
+  std::vector<std::string> label = {"Context-Data key:", "Min value:", "Max value", "Number of data"};
+  QDialog dialog(this);
+  QString title("Generate linear context entry");
+  dialog.setWindowTitle(title);
+  auto form = new QFormLayout;
+
+  // needed information to generate linear data for the context
+  for (int i = 0; i < 4; i++)
+    {
+      auto lineEdit = new QLineEdit(&dialog);
+      ((QLineEdit *)lineEdit)->setText("");
+      auto text_label = QString(label[i].c_str());
+      form->addRow(text_label, lineEdit);
+      fields << lineEdit;
+    }
+
+  QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
+  form->addRow(&buttonBox);
+  QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+  QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+  auto scrollAreaContent = new QWidget;
+  scrollAreaContent->setLayout(form);
+  auto scrollArea = new QScrollArea;
+  scrollArea = new QScrollArea;
+  scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+  scrollArea->setWidgetResizable(true);
+  scrollArea->setWidget(scrollAreaContent);
+
+  auto groupBoxLayout = new QVBoxLayout;
+  groupBoxLayout->addWidget(scrollArea);
+  dialog.setLayout(groupBoxLayout);
+
+  if (dialog.exec() == QDialog::Accepted)
+    {
+      int n;
+      double start, end;
+      std::vector<std::string> values;
+      std::vector<double> data_vec;
+      std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
+
+      for (int i = 0; i < 4; i++)
+        {
+          auto &field = *fields[i];
+          auto value = ((QLineEdit *)fields[i])->text().toStdString();
+          if (value.empty())
+            {
+              fprintf(stderr, "All fields must be filled to generate linear context data\n");
+              return;
+            }
+          values.push_back(value);
+        }
+
+      // convert entries into linear data vec
+      try
+        {
+          start = std::stod(values[1]);
+          end = std::stod(values[2]);
+          n = std::stoi(values[3]);
+          for (int i = 0; i < n; i++)
+            {
+              data_vec.push_back(start + i * (end - start) / (n - 1));
+            }
+
+          (*context)[values[0]] = data_vec;
+          table_widget->updateData(context);
+        }
+      catch (std::invalid_argument &e)
+        {
+          fprintf(stderr, "Invalid argument for generate linear context parameter\n");
+          return;
+        }
+    }
+}
+
 void GRPlotWidget::size_callback(const grm_event_t *new_size_object)
 {
   // TODO: Get Plot ID
@@ -2794,13 +2714,24 @@ void GRPlotWidget::processTestCommandsFile()
                 {
                   elem->setAttribute(words[n - 2].toUtf8().constData(), words[n - 1].toUtf8().constData());
                 }
+              auto value = words[n - 1].toUtf8().constData();
 
-              if (strcmp(words[n - 1].toUtf8().constData(), "line") == 0)
+              if (strcmp(value, "line") == 0)
                 {
                   // to get the same lines then before all lines have to exist during render call so that the linespec
                   // work properly
                   for (const auto &elem : global_root->querySelectorsAll("series_line"))
                     {
+                      elem->setAttribute("_update_required", true);
+                    }
+                }
+              if (strcmp(value, "barplot") == 0 || strcmp(value, "hist") == 0 || strcmp(value, "stairs") == 0)
+                {
+                  // to get the same barplots then before all lines have to exist during render call so that the
+                  // linespec work properly
+                  for (const auto &elem : global_root->querySelectorsAll("series_" + std::string(value)))
+                    {
+                      if (strcmp(value, "barplot") == 0) elem->removeAttribute("fill_color_ind");
                       elem->setAttribute("_update_required", true);
                     }
                 }
@@ -3039,9 +2970,9 @@ void GRPlotWidget::set_current_selection(Bounding_object *p_current_selection)
   this->current_selection = p_current_selection;
 }
 
-Bounding_object *GRPlotWidget::get_current_selection()
+Bounding_object **GRPlotWidget::get_current_selection()
 {
-  return this->current_selection;
+  return &(this->current_selection);
 }
 
 QStringList GRPlotWidget::getCheckBoxAttributes()
@@ -3068,4 +2999,23 @@ GRPlotWidget::erase_current_selection(std::list<std::unique_ptr<Bounding_object>
 const std::list<std::unique_ptr<Bounding_object>> &GRPlotWidget::get_current_selections() const
 {
   return current_selections;
+}
+
+void GRPlotWidget::setTreeUpdate(bool status)
+{
+  this->tree_update = status;
+}
+
+void GRPlotWidget::editElementAccepted()
+{
+  current_selection = nullptr;
+  mouse_move_selection = nullptr;
+  amount_scrolled = 0;
+  clicked.clear();
+  reset_pixmap();
+}
+
+void GRPlotWidget::set_referenced_elements(std::vector<Bounding_object> referenced_elements)
+{
+  this->referenced_elements = referenced_elements;
 }

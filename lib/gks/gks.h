@@ -709,6 +709,9 @@ DLLEXPORT void gks_inq_resize_behaviour(int *flag);
 DLLEXPORT void gks_set_clip_region(int region);
 DLLEXPORT void gks_inq_clip_region(int *errind, int *region);
 
+DLLEXPORT void gks_set_clip_sector(double start_angle, double end_angle);
+DLLEXPORT void gks_inq_clip_sector(int *errind, double *start_angle, double *end_angle);
+
 /* Entry point definitions */
 
 #define gsetlinecolorind gsetlinecolourind

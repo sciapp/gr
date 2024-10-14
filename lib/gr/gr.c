@@ -172,14 +172,16 @@ typedef struct
   int ints;
   int styli;
   int facoli;
+  int clip;
   int tnr;
   double wn[4], vp[4];
   int scale_options;
   double bwidth;
   int bcoli;
   int clip_tnr;
-  int resize_behaviour;
   int clip_region;
+  double clip_start_angle, clip_end_angle;
+  int resize_behaviour;
   double alpha;
   double txoff[2];
 } state_list;
@@ -5577,9 +5579,9 @@ static void draw_axis(char which, axis_t *axis, int pass)
 
 void gr_drawaxis(char which, axis_t *axis)
 {
-  int errind, tnr, ltype, clsw, halign, valign;
+  int errind, tnr, ltype, clsw;
   double wn[4], vp[4], clrt[4];
-  int i, pass;
+  int pass;
 
   check_autoinit;
 
@@ -5610,7 +5612,7 @@ void gr_drawaxis(char which, axis_t *axis)
 static void draw_axis_grid(char which, axis_t *axis, int pass)
 {
   int errind, tnr, color;
-  double wn[4], vp[4], width;
+  double wn[4], vp[4], width, alpha;
   int i;
 
   /* inquire current normalization transformation */
@@ -5618,10 +5620,11 @@ static void draw_axis_grid(char which, axis_t *axis, int pass)
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
-  /* save line width and line color */
+  /* save line width, line color and transparency */
 
   gks_inq_pline_linewidth(&errind, &width);
   gks_inq_pline_color_index(&errind, &color);
+  gks_inq_transparency(&errind, &alpha);
 
   gks_inq_pline_color_index(&errind, &color);
 
@@ -5629,10 +5632,10 @@ static void draw_axis_grid(char which, axis_t *axis, int pass)
     {
       if (axis->ticks[i].is_major == pass)
         {
-          if (color != 0)
-            gks_set_pline_color_index(axis->ticks[i].is_major ? 88 : 90);
+          if (color != 1)
+            gks_set_transparency(axis->ticks[i].is_major ? alpha * 0.4 : alpha * 0.2);
           else
-            gks_set_pline_linewidth(axis->ticks[i].is_major ? 2.0 : 1.0);
+            gks_set_pline_color_index(axis->ticks[i].is_major ? 88 : 90);
 
           if (which == 'X')
             {
@@ -5649,17 +5652,17 @@ static void draw_axis_grid(char which, axis_t *axis, int pass)
         }
     }
 
-  /* restore line width and line color */
+  /* restore line width, line color and transparency */
 
   gks_set_pline_linewidth(width);
   gks_set_pline_color_index(color);
+  gks_set_transparency(alpha);
 }
 
 void gr_drawaxes(axis_t *x_axis, axis_t *y_axis, int options)
 {
   int errind, tnr, ltype, clsw;
   double wn[4], vp[4], clrt[4];
-  double tick, minor_tick, major_tick;
   int pass;
   axis_t axis;
 
@@ -5752,12 +5755,12 @@ void gr_freeaxis(axis_t *axis)
     }
 }
 
-static void grid_line(double x0, double y0, double x1, double y1, int color, int major)
+static void grid_line(double x0, double y0, double x1, double y1, int color, double alpha, int major)
 {
-  if (color != 0)
-    gks_set_pline_color_index(major ? 88 : 90);
+  if (color != 1)
+    gks_set_transparency(major ? alpha * 0.4 : alpha * 0.2);
   else
-    gks_set_pline_linewidth(major ? 2.0 : 1.0);
+    gks_set_pline_color_index(major ? 88 : 90);
 
   start_pline(x0, y0);
   pline(x1, y1);
@@ -5791,7 +5794,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
 {
   int errind, tnr;
   int ltype, color, clsw, major;
-  double width;
+  double width, alpha;
 
   double clrt[4], wn[4], vp[4];
   double x_min, x_max, y_min, y_max, feps;
@@ -5818,11 +5821,12 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
   y_min = wn[2];
   y_max = wn[3];
 
-  /* save linetype, line width, line color and clipping indicator */
+  /* save linetype, line width, line color, transparency  and clipping indicator */
 
   gks_inq_pline_linetype(&errind, &ltype);
   gks_inq_pline_linewidth(&errind, &width);
   gks_inq_pline_color_index(&errind, &color);
+  gks_inq_transparency(&errind, &alpha);
   gks_inq_clip(&errind, &clsw, clrt);
 
   gks_set_pline_linetype(GKS_K_LINETYPE_SOLID);
@@ -5848,7 +5852,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                       major = i == 0 ? 1 : 0;
                       if (yi != y_min)
                         {
-                          if (pass == major) grid_line(x_min, yi, x_max, yi, color, major);
+                          if (pass == major) grid_line(x_min, yi, x_max, yi, color, alpha, major);
                         }
                     }
 
@@ -5881,7 +5885,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                   else
                     major = 0;
 
-                  if (pass == major) grid_line(x_min, yi, x_max, yi, color, major);
+                  if (pass == major) grid_line(x_min, yi, x_max, yi, color, alpha, major);
 
                   i++;
                   yi = y_org + i * y_tick;
@@ -5907,7 +5911,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                       major = i == 0 ? 1 : 0;
                       if (xi != x_min)
                         {
-                          if (pass == major) grid_line(xi, y_min, xi, y_max, color, major);
+                          if (pass == major) grid_line(xi, y_min, xi, y_max, color, alpha, major);
                         }
                     }
 
@@ -5940,7 +5944,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                   else
                     major = 0;
 
-                  if (pass == major) grid_line(xi, y_min, xi, y_max, color, major);
+                  if (pass == major) grid_line(xi, y_min, xi, y_max, color, alpha, major);
 
                   i++;
                   xi = x_org + i * x_tick;
@@ -5949,11 +5953,12 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
         }
     }
 
-  /* restore linetype, line width, line color and clipping indicator */
+  /* restore linetype, line width, line color, transparency and clipping indicator */
 
   gks_set_pline_linetype(ltype);
   gks_set_pline_linewidth(width);
   gks_set_pline_color_index(color);
+  gks_set_transparency(alpha);
   gks_set_clipping(clsw);
 
   if (flag_stream)
@@ -5962,12 +5967,13 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                    x_tick, y_tick, x_org, y_org, major_x, major_y);
 }
 
-static void grid_line3d(double x0, double y0, double z0, double x1, double y1, double z1, int color, int major)
+static void grid_line3d(double x0, double y0, double z0, double x1, double y1, double z1, int color, double alpha,
+                        int major)
 {
-  if (color != 0)
-    gks_set_pline_color_index(major ? 88 : 90);
+  if (color != 1)
+    gks_set_transparency(major ? alpha * 0.4 : alpha * 0.2);
   else
-    gks_set_pline_linewidth(major ? 2.0 : 1.0);
+    gks_set_pline_color_index(major ? 88 : 90);
 
   start_pline3d(x0, y0, z0);
   pline3d(x1, y1, z1);
@@ -6012,7 +6018,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
   int modern_projection_type;
 
   int ltype, color, clsw, major;
-  double width;
+  double width, alpha;
 
   double x_min = 0, x_max = 0, y_min = 0, y_max = 0, z_min = 0, z_max = 0;
 
@@ -6064,11 +6070,12 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
       z_max = wx.zmax;
     }
 
-  /* save linetype, line width, line color and clipping indicator */
+  /* save linetype, line width, line color, transparency  and clipping indicator */
 
   gks_inq_pline_linetype(&errind, &ltype);
   gks_inq_pline_linewidth(&errind, &width);
   gks_inq_pline_color_index(&errind, &color);
+  gks_inq_transparency(&errind, &alpha);
   gks_inq_clip(&errind, &clsw, clrt);
 
   gks_set_pline_linetype(GKS_K_LINETYPE_SOLID);
@@ -6092,8 +6099,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   major = i == 0;
                   if (fabs(zi - z_min) > FEPS * zi)
                     {
-                      grid_line3d(x_org, y_min, zi, x_org, y_max, zi, color, major);
-                      grid_line3d(x_min, y_org, zi, x_max, y_org, zi, color, major);
+                      grid_line3d(x_org, y_min, zi, x_org, y_max, zi, color, alpha, major);
+                      grid_line3d(x_min, y_org, zi, x_max, y_org, zi, color, alpha, major);
                     }
                 }
 
@@ -6127,8 +6134,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
               if (fabs(zi - z_min) > FEPS * zi)
                 {
-                  grid_line3d(x_org, y_min, zi, x_org, y_max, zi, color, major);
-                  grid_line3d(x_min, y_org, zi, x_max, y_org, zi, color, major);
+                  grid_line3d(x_org, y_min, zi, x_org, y_max, zi, color, alpha, major);
+                  grid_line3d(x_min, y_org, zi, x_max, y_org, zi, color, alpha, major);
                 }
 
               i++;
@@ -6155,8 +6162,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   major = i == 0;
                   if (fabs(yi - y_min) > FEPS * yi)
                     {
-                      grid_line3d(x_min, yi, z_org, x_max, yi, z_org, color, major);
-                      grid_line3d(x_org, yi, z_min, x_org, yi, z_max, color, major);
+                      grid_line3d(x_min, yi, z_org, x_max, yi, z_org, color, alpha, major);
+                      grid_line3d(x_org, yi, z_min, x_org, yi, z_max, color, alpha, major);
                     }
                 }
 
@@ -6190,8 +6197,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
               if (fabs(yi - y_min) > FEPS * yi)
                 {
-                  grid_line3d(x_min, yi, z_org, x_max, yi, z_org, color, major);
-                  grid_line3d(x_org, yi, z_min, x_org, yi, z_max, color, major);
+                  grid_line3d(x_min, yi, z_org, x_max, yi, z_org, color, alpha, major);
+                  grid_line3d(x_org, yi, z_min, x_org, yi, z_max, color, alpha, major);
                 }
 
               i++;
@@ -6218,8 +6225,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   major = i == 0;
                   if (fabs(xi - x_min) > FEPS * xi)
                     {
-                      grid_line3d(xi, y_min, z_org, xi, y_max, z_org, color, major);
-                      grid_line3d(xi, y_org, z_min, xi, y_org, z_max, color, major);
+                      grid_line3d(xi, y_min, z_org, xi, y_max, z_org, color, alpha, major);
+                      grid_line3d(xi, y_org, z_min, xi, y_org, z_max, color, alpha, major);
                     }
                 }
 
@@ -6253,8 +6260,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
               if (fabs(xi - x_min) > FEPS * xi)
                 {
-                  grid_line3d(xi, y_min, z_org, xi, y_max, z_org, color, major);
-                  grid_line3d(xi, y_org, z_min, xi, y_org, z_max, color, major);
+                  grid_line3d(xi, y_min, z_org, xi, y_max, z_org, color, alpha, major);
+                  grid_line3d(xi, y_org, z_min, xi, y_org, z_max, color, alpha, major);
                 }
 
               i++;
@@ -6263,11 +6270,12 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
         }
     }
 
-  /* restore linetype, line width, line color and clipping indicator */
+  /* restore linetype, line width, line color, transparency and clipping indicator */
 
   gks_set_pline_linetype(ltype);
   gks_set_pline_linewidth(width);
   gks_set_pline_color_index(color);
+  gks_set_transparency(alpha);
   gks_set_clipping(clsw);
 
   if (flag_stream)
@@ -9302,7 +9310,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                         gks_set_fill_color_index(color);
                       }
 
-                    gks_select_xform(MODERN_NDC);
+                    if (modern_projection_type) gks_select_xform(MODERN_NDC);
 
                     np = 4;
                     gks_fillarea(np, xn, yn);
@@ -9313,7 +9321,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                         gks_polyline(np, xn, yn);
                       }
 
-                    gks_select_xform(tnr);
+                    if (modern_projection_type) gks_select_xform(tnr);
                   }
 
                 j--;
@@ -9830,7 +9838,7 @@ static void rebin(int nx, int ny, double *px, double *py, double *pz, int *nxq, 
 void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, double *pz, int major_h)
 {
   int i, j;
-  int errind, tnr, ltype, color, halign, valign;
+  int errind, ltype, color, halign, valign;
   double chux, chuy;
   int nxq, nyq;
   double *xq = NULL, *yq = NULL, *zq = NULL;
@@ -12030,7 +12038,7 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
               rename(png, path);
               if (remove(tex) != 0 || remove(dvi) != 0)
                 {
-                  fprintf(stderr, "error deleting temprorary files\n");
+                  fprintf(stderr, "error deleting temporary files\n");
                 }
             }
           else
@@ -12947,6 +12955,7 @@ void gr_savestate(void)
 {
   int errind;
   state_list *s = NULL;
+  double clrt[4];
 
   check_autoinit;
 
@@ -12976,6 +12985,7 @@ void gr_savestate(void)
       gks_inq_fill_color_index(&errind, &s->facoli);
       gks_inq_transparency(&errind, &s->alpha);
 
+      gks_inq_clip(&errind, &s->clip, clrt);
       gks_inq_current_xformno(&errind, &s->tnr);
       gks_inq_xform(WC, &errind, s->wn, s->vp);
 
@@ -12984,8 +12994,9 @@ void gr_savestate(void)
       gks_inq_border_width(&errind, &s->bwidth);
       gks_inq_border_color_index(&errind, &s->bcoli);
       gks_inq_clip_xform(&errind, &s->clip_tnr);
-      gks_inq_resize_behaviour(&s->resize_behaviour);
       gks_inq_clip_region(&errind, &s->clip_region);
+      gks_inq_clip_sector(&errind, &s->clip_start_angle, &s->clip_end_angle);
+      gks_inq_resize_behaviour(&s->resize_behaviour);
 
       s->txoff[0] = txoff[0];
       s->txoff[1] = txoff[1];
@@ -13026,6 +13037,7 @@ void gr_restorestate(void)
       gks_set_fill_color_index(s->facoli);
       gks_set_transparency(s->alpha);
 
+      gks_set_clipping(s->clip);
       gks_select_xform(s->tnr);
       gks_set_window(WC, s->wn[0], s->wn[1], s->wn[2], s->wn[3]);
       gks_set_window(MODERN_NDC, -1, 1, -1, 1);
@@ -13041,8 +13053,9 @@ void gr_restorestate(void)
       gks_set_border_width(s->bwidth);
       gks_set_border_color_index(s->bcoli);
       gks_select_clip_xform(s->clip_tnr);
-      gks_set_resize_behaviour(s->resize_behaviour);
       gks_set_clip_region(s->clip_region);
+      gks_set_clip_sector(s->clip_start_angle, s->clip_end_angle);
+      gks_set_resize_behaviour(s->resize_behaviour);
 
       s->txoff[0] = txoff[0];
       s->txoff[1] = txoff[1];
@@ -13070,6 +13083,7 @@ void gr_restorestate(void)
           ctx->styli = s->styli;
           ctx->facoli = s->facoli;
 
+          ctx->clip = s->clip;
           ctx->tnr = s->tnr;
           ctx->wn[0] = s->wn[0];
           ctx->wn[2] = s->wn[2];
@@ -13085,8 +13099,10 @@ void gr_restorestate(void)
           ctx->bwidth = s->bwidth;
           ctx->bcoli = s->bcoli;
           ctx->clip_tnr = s->clip_tnr;
-          ctx->resize_behaviour = s->resize_behaviour;
           ctx->clip_region = s->clip_region;
+          ctx->clip_start_angle = s->clip_start_angle;
+          ctx->clip_end_angle = s->clip_end_angle;
+          ctx->resize_behaviour = s->resize_behaviour;
 
           ctx->txoff[0] = s->txoff[0];
           ctx->txoff[1] = s->txoff[1];
@@ -13157,6 +13173,7 @@ void gr_selectcontext(int context)
           ctx->facoli = 1;
           ctx->alpha = 1.0;
 
+          ctx->clip = GKS_K_NOCLIP;
           ctx->tnr = WC;
           ctx->wn[0] = ctx->wn[2] = 0;
           ctx->wn[1] = ctx->wn[3] = 1;
@@ -13168,8 +13185,10 @@ void gr_selectcontext(int context)
           ctx->bwidth = 1;
           ctx->bcoli = 1;
           ctx->clip_tnr = 0;
-          ctx->resize_behaviour = GKS_K_RESIZE;
           ctx->clip_region = GKS_K_REGION_RECTANGLE;
+          ctx->clip_start_angle = 0;
+          ctx->clip_end_angle = 360;
+          ctx->resize_behaviour = GKS_K_RESIZE;
 
           ctx->txoff[0] = 0;
           ctx->txoff[1] = 0;
@@ -13198,6 +13217,7 @@ void gr_selectcontext(int context)
       gks_set_fill_color_index(ctx->facoli);
       gks_set_transparency(ctx->alpha);
 
+      gks_set_clipping(ctx->clip);
       gks_select_xform(ctx->tnr);
       gks_set_window(WC, ctx->wn[0], ctx->wn[1], ctx->wn[2], ctx->wn[3]);
       gks_set_window(MODERN_NDC, -1, 1, -1, 1);
@@ -13213,8 +13233,9 @@ void gr_selectcontext(int context)
       gks_set_border_width(ctx->bwidth);
       gks_set_border_color_index(ctx->bcoli);
       gks_select_clip_xform(ctx->clip_tnr);
-      gks_set_resize_behaviour(ctx->resize_behaviour);
       gks_set_clip_region(ctx->clip_region);
+      gks_set_clip_sector(ctx->clip_start_angle, ctx->clip_end_angle);
+      gks_set_resize_behaviour(ctx->resize_behaviour);
 
       txoff[0] = ctx->txoff[0];
       txoff[1] = ctx->txoff[1];
@@ -13230,6 +13251,7 @@ void gr_savecontext(int context)
 {
   int errind;
   int id;
+  double clrt[4];
 
   check_autoinit;
 
@@ -13283,6 +13305,7 @@ void gr_savecontext(int context)
       gks_inq_fill_color_index(&errind, &app_context->buf[id]->facoli);
       gks_inq_transparency(&errind, &app_context->buf[id]->alpha);
 
+      gks_inq_clip(&errind, &app_context->buf[id]->clip, clrt);
       gks_inq_current_xformno(&errind, &app_context->buf[id]->tnr);
       gks_inq_xform(WC, &errind, app_context->buf[id]->wn, app_context->buf[id]->vp);
 
@@ -13291,8 +13314,9 @@ void gr_savecontext(int context)
       gks_inq_border_width(&errind, &app_context->buf[id]->bwidth);
       gks_inq_border_color_index(&errind, &app_context->buf[id]->bcoli);
       gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
-      gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
       gks_inq_clip_region(&errind, &app_context->buf[id]->clip_region);
+      gks_inq_clip_sector(&errind, &app_context->buf[id]->clip_start_angle, &app_context->buf[id]->clip_end_angle);
+      gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
 
       app_context->buf[id]->txoff[0] = txoff[0];
       app_context->buf[id]->txoff[1] = txoff[1];
@@ -13307,6 +13331,7 @@ void gr_destroycontext(int context)
 {
   int errind;
   int id;
+  double clrt[4];
 
   check_autoinit;
 
@@ -13360,6 +13385,7 @@ void gr_destroycontext(int context)
       gks_inq_fill_color_index(&errind, &app_context->buf[id]->facoli);
       gks_inq_transparency(&errind, &app_context->buf[id]->alpha);
 
+      gks_inq_clip(&errind, &app_context->buf[id]->clip, clrt);
       gks_inq_current_xformno(&errind, &app_context->buf[id]->tnr);
       gks_inq_xform(WC, &errind, app_context->buf[id]->wn, app_context->buf[id]->vp);
 
@@ -13368,8 +13394,9 @@ void gr_destroycontext(int context)
       gks_inq_border_width(&errind, &app_context->buf[id]->bwidth);
       gks_inq_border_color_index(&errind, &app_context->buf[id]->bcoli);
       gks_inq_clip_xform(&errind, &app_context->buf[id]->clip_tnr);
-      gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
       gks_inq_clip_region(&errind, &app_context->buf[id]->clip_region);
+      gks_inq_clip_sector(&errind, &app_context->buf[id]->clip_start_angle, &app_context->buf[id]->clip_end_angle);
+      gks_inq_resize_behaviour(&app_context->buf[id]->resize_behaviour);
 
       app_context->buf[id]->txoff[0] = txoff[0];
       app_context->buf[id]->txoff[1] = txoff[1];
@@ -14564,6 +14591,29 @@ void gr_inqclipregion(int *region)
   check_autoinit;
 
   gks_inq_clip_region(&errind, region);
+}
+
+void gr_setclipsector(double start_angle, double end_angle)
+{
+  check_autoinit;
+
+  gks_set_clip_sector(start_angle, end_angle);
+  if (ctx)
+    {
+      ctx->clip_start_angle = start_angle;
+      ctx->clip_end_angle = end_angle;
+    }
+
+  if (flag_stream) gr_writestream("<setclipsector start_angle=\"%g\" end_angle=\"%g\"/>\n", start_angle, end_angle);
+}
+
+void gr_inqclipsector(double *start_angle, double *end_angle)
+{
+  int errind;
+
+  check_autoinit;
+
+  gks_inq_clip_sector(&errind, start_angle, end_angle);
 }
 
 void gr_settextoffset(double xoff, double yoff)

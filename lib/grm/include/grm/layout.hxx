@@ -21,10 +21,10 @@ public:
   bool isPositive();
   bool isForward();
 
-  int rowStart;
-  int rowStop;
-  int colStart;
-  int colStop;
+  int row_start;
+  int row_stop;
+  int col_start;
+  int col_stop;
   friend class Grid;
 };
 
@@ -35,9 +35,9 @@ public:
   GridElement(double absHeight, double absWidth, int absHeightPxl, int absWidthPxl, int fitParentsHeight,
               int fitParentsWidth, double relativeHeight, double relativeWidth, double aspectRatio);
   virtual ~GridElement();
-  virtual void finalizeSubplot();
+  virtual void finalizePlot();
   virtual bool isGrid();
-  void setSubplot(double x1, double x2, double y1, double y2);
+  void setPlot(double x1, double x2, double y1, double y2);
   void setAbsHeight(double height);
   void setAbsHeightPxl(int height);
   void setRelativeHeight(double height);
@@ -47,31 +47,31 @@ public:
   void setAspectRatio(double ar);
   void setFitParentsHeight(bool fitParentsHeight);
   void setFitParentsWidth(bool fitParentsWidth);
-  double *getSubplot();
-  grm_args_t *subplot_args = nullptr;
+  double *getPlot();
+  grm_args_t *plot_args = nullptr;
 
-  double *subplot;
+  double *plot;
 
-  double absHeight = -1;
-  double absWidth = -1;
-  int absHeightPxl = -1;
-  int absWidthPxl = -1;
-  int fitParentsHeight = 0;
-  int fitParentsWidth = 1;
-  double relativeHeight = -1;
-  double relativeWidth = -1;
-  double aspectRatio = -1;
+  double abs_height = -1;
+  double abs_width = -1;
+  int abs_height_pxl = -1;
+  int abs_width_pxl = -1;
+  int fit_parents_height = 0;
+  int fit_parents_width = 1;
+  double relative_height = -1;
+  double relative_width = -1;
+  double aspect_ratio = -1;
 
-  int widthSet = 0;
-  int heightSet = 0;
-  int arSet = 0;
-  int subplotSet = 0;
+  int width_set = 0;
+  int height_set = 0;
+  int ar_set = 0;
+  int plot_set = 0;
 
   int finalized = 0;
 
 
   friend class Grid;
-  std::shared_ptr<GRM::Element> elementInDOM = nullptr;
+  std::shared_ptr<GRM::Element> element_in_dom = nullptr;
 };
 
 class EXPORT Grid : public GridElement
@@ -90,7 +90,7 @@ public:
   void ensureCellsAreGrid(Slice *slice);
   GridElement *getElement(int row, int col) const;
   void printGrid() const;
-  virtual void finalizeSubplot() override;
+  virtual void finalizePlot() override;
   bool isGrid() override;
   void trim();
   int getColSpan(GridElement *element);

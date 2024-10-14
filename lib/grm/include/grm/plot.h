@@ -65,6 +65,7 @@ EXPORT int get_focus_and_factor_from_dom(const int x1, const int y1, const int x
                                          const int keep_aspect_ratio, double *factor_x, double *factor_y,
                                          double *focus_x, double *focus_y,
                                          std::shared_ptr<GRM::Element> &subplot_element);
+EXPORT std::map<std::string, std::list<std::string>> grm_get_context_data();
 
 #if !defined(NO_XERCES_C)
 EXPORT std::shared_ptr<GRM::Document> grm_load_graphics_tree_schema(bool with_private_attributes = false);

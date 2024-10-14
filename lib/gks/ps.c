@@ -806,14 +806,16 @@ static void set_clip(double *clrt)
 
   if (gkss->clip_region == GKS_K_REGION_ELLIPSE && (gkss->clip_tnr != 0 || gkss->clip == GKS_K_CLIP))
     {
-      int x, y, rx, ry;
+      double x, y, rx, ry;
 
-      x = (int)(0.5 * (cx1 + cx2) + 0.5);
-      y = (int)(0.5 * (cy1 + cy2) + 0.5);
-      rx = (int)(0.5 * (cx2 - cx1) + 1);
-      ry = (int)(0.5 * (cy2 - cy1) + 1);
+      x = 0.5 * (cx1 + cx2);
+      y = 0.5 * (cy1 + cy2);
+      rx = 0.5 * (cx2 - cx1);
+      ry = 0.5 * (cy2 - cy1);
 
-      snprintf(buffer, 120, "np %d %d %d %d 0 360 ellipse clip", x, y, rx, ry);
+      snprintf(buffer, 120, "np %.2f %.2f m %.2f %.2f l %.2f %.2f %.2f %.2f %.2f %.2f ellipse clip", x, y,
+               x + rx * cos(gkss->clip_start_angle * M_PI / 180), y + ry * sin(gkss->clip_start_angle * M_PI / 180), x,
+               y, rx, ry, gkss->clip_start_angle, gkss->clip_end_angle);
     }
   else
     {
