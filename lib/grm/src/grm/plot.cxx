@@ -5848,17 +5848,21 @@ public:
 protected:
   static void merge_elements_(GRM::Element &element, GRM::Element &element_to_be_merged)
   {
+    const std::unordered_set<std::string> element_merge_whitelist{"xs:complexType"};
     for (auto &merge_child : element_to_be_merged.children())
       {
         auto found_child = false;
-        for (const auto &child : element.children())
+        if (element_merge_whitelist.find(merge_child->localName()) != element_merge_whitelist.end())
           {
-            if (child->localName() == merge_child->localName() && child->hasChildNodes() &&
-                merge_child->hasChildNodes())
+            for (const auto &child : element.children())
               {
-                merge_elements_(*child, *merge_child);
-                found_child = true;
-                break;
+                if (child->localName() == merge_child->localName() && child->hasChildNodes() &&
+                    merge_child->hasChildNodes())
+                  {
+                    merge_elements_(*child, *merge_child);
+                    found_child = true;
+                    break;
+                  }
               }
           }
         if (!found_child)
