@@ -2,7 +2,7 @@ ifeq ($(strip $(PREFIX)),)
 override PREFIX = $(abspath $(CURDIR)/../build)
 endif
 
-VERSION = 4.5.1
+VERSION = 4.7.0
 TIFF_EXTRA_CONFIGURE_FLAGS ?=
 ifeq ($(shell uname),Darwin)
  TIFF_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
