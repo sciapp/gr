@@ -1468,6 +1468,24 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
     }
 }
 
+static void svg_arc_path(double x, double y, double rx, double ry, double start_angle, double end_angle)
+{
+  double a1, a2;
+  double start_x, start_y, end_x, end_y;
+  int sweep_flag;
+
+  a1 = -start_angle * M_PI / 180;
+  a2 = -end_angle * M_PI / 180;
+  start_x = x + rx * cos(a2);
+  start_y = y + ry * sin(a2);
+  end_x = x + rx * cos(a1);
+  end_y = y + ry * sin(a1);
+  sweep_flag = end_angle - start_angle <= 180 ? 0 : 1;
+
+  svg_printf(p->stream, "<path d=\"M %g %g L %g %g A %g %g 0 %d 1 %g %g Z\"/>", x, y, start_x, start_y, rx, ry,
+             sweep_flag, end_x, end_y);
+}
+
 static void set_clip_path(int tnr)
 {
   double *vp;
@@ -1517,11 +1535,21 @@ static void set_clip_path(int tnr)
       p->cr[p->clip_index].region = gkss->clip_region;
       p->rect_index = p->clip_index;
       if (gkss->clip_region == GKS_K_REGION_ELLIPSE && (gkss->clip_tnr != 0 || gkss->clip == GKS_K_CLIP))
-        svg_printf(p->stream,
-                   "<defs>\n  <clipPath id=\"clip%02d%d\">\n    <ellipse"
-                   " cx=\"%d\" cy=\"%d\" rx=\"%d\" ry=\"%d\"/>\n  </clip"
-                   "Path>\n</defs>\n",
-                   path_id, p->rect_index, x + width / 2, y + height / 2, width / 2, height / 2);
+        {
+          if (gkss->clip_start_angle > 0 || gkss->clip_end_angle < 360)
+            {
+              svg_printf(p->stream, "<defs>\n  <clipPath id=\"clip%02d%d\">\n", path_id, p->rect_index);
+              svg_arc_path(x + width / 2, y + height / 2, width / 2, height / 2, gkss->clip_start_angle,
+                           gkss->clip_end_angle);
+              svg_printf(p->stream, "  </clipPath>\n</defs>\n");
+            }
+          else
+            svg_printf(p->stream,
+                       "<defs>\n  <clipPath id=\"clip%02d%d\">\n    <ellipse"
+                       " cx=\"%d\" cy=\"%d\" rx=\"%d\" ry=\"%d\"/>\n"
+                       "  </clipPath>\n</defs>\n",
+                       path_id, p->rect_index, x + width / 2, y + height / 2, width / 2, height / 2);
+        }
       else
         svg_printf(p->stream,
                    "<defs>\n  <clipPath id=\"clip%02d%d\">\n    <rect"

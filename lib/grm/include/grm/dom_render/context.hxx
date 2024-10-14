@@ -46,9 +46,6 @@ public:
   private:
     Context *context;
     std::string key;
-    bool intUsed();
-    bool doubleUsed();
-    bool stringUsed();
     void increment_key(const std::string &);
 
   public:
@@ -77,6 +74,9 @@ public:
     explicit operator std::vector<std::string> *();
     explicit operator const std::vector<std::string> *() const;
 
+    bool intUsed();
+    bool doubleUsed();
+    bool stringUsed();
     void delete_key(const std::string &);
     void use_context_key(const std::string &key, const std::string &old_key = "");
     void decrement_key(const std::string &);

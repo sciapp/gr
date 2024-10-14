@@ -345,7 +345,8 @@ static void seg_xform_rel(double *x, double *y) {}
           RESOLVE(f_arr_1, double, sizeof(double));
           break;
 
-        case 32: /* set character up vector */
+        case 32:  /* set character up vector */
+        case 212: /* set clip sector */
           RESOLVE(f_arr_1, double, sizeof(double));
           RESOLVE(f_arr_2, double, sizeof(double));
           break;
@@ -636,6 +637,11 @@ static void seg_xform_rel(double *x, double *y) {}
 
         case 211:
           gkss->clip_region = i_arr[0];
+          break;
+
+        case 212:
+          gkss->clip_start_angle = f_arr_1[0];
+          gkss->clip_end_angle = f_arr_2[0];
           break;
         }
 
@@ -1133,8 +1139,33 @@ static void begin_context(CGContextRef context)
   if (gkss->clip_region == GKS_K_REGION_ELLIPSE && (gkss->clip_tnr != 0 || gkss->clip == GKS_K_CLIP))
     {
       CGMutablePathRef path = CGPathCreateMutable();
-      CGPathAddEllipseInRect(path, NULL, clipRect);
-      CGContextAddPath(context, path);
+      if (gkss->clip_start_angle > 0 || gkss->clip_end_angle < 360)
+        {
+          double a1, a2, x, y, start_x, start_y, end_x, end_y, w, h;
+
+          a1 = gkss->clip_start_angle * M_PI / 180;
+          a2 = gkss->clip_end_angle * M_PI / 180;
+          w = clipRect.size.width;
+          h = clipRect.size.height;
+          x = clipRect.origin.x + w * 0.5;
+          y = clipRect.origin.y + h * 0.5;
+          start_x = x + w * cos(a1);
+          start_y = y + h * sin(a1);
+          end_x = x + w * cos(a2);
+          end_y = y + h * sin(a2);
+
+          CGAffineTransform m = CGAffineTransformMakeTranslation(x, y);
+          m = CGAffineTransformConcat(CGAffineTransformMakeScale(1.0, h / w), m);
+          CGPathAddArc(path, &m, 0, 0, 0.5 * w, a1, a2, a1 > a2);
+          CGPathAddLineToPoint(path, &m, 0, 0);
+          CGContextAddPath(context, path);
+          CGContextClosePath(context);
+        }
+      else
+        {
+          CGPathAddEllipseInRect(path, NULL, clipRect);
+          CGContextAddPath(context, path);
+        }
       CGContextClip(context);
       CGPathRelease(path);
     }

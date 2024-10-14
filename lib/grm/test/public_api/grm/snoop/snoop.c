@@ -378,7 +378,7 @@ static int test_polar(void)
   /* TODO: Support `angles` and `radii` names in GRM! */
   grm_args_push(args, "x", "nD", n, angles);
   grm_args_push(args, "y", "nD", n, radii);
-  grm_args_push(args, "kind", "s", "polar");
+  grm_args_push(args, "kind", "s", "polar_line");
   grm_args_push(args, "size", "ii", PLOT_WIDTH, PLOT_HEIGHT);
 
   was_successful = grm_plot(args);

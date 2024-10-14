@@ -32,5 +32,7 @@ EXPORT int grm_plot_from_file(int argc, char **argv);
 
 #ifdef __cplusplus
 }
+EXPORT int grm_context_data_from_file(const std::shared_ptr<GRM::Context> &context, const std::string &path,
+                                      bool interpret_matrix_as_one_column = false);
 #endif
 #endif // GRM_IMPORT_H_INCLUDED

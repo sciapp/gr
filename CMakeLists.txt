@@ -42,6 +42,7 @@ set(GR_DIRECTORY
     CACHE STRING "Default value for GRDIR"
 )
 option(GR_BUILD_DEMOS "Build demos for GR" OFF)
+option(GR_BUILD_GKSM "Build GKS metafile reader for GR" OFF)
 option(GR_INSTALL "Create installation target for GR" ON)
 option(GR_USE_BUNDLED_LIBRARIES "Use thirdparty libraries bundled with GR" OFF)
 option(GR_MANUAL_MOC_AND_RCC "Manually run moc and rcc instead of relying on AUTOMOC and AUTORCC" OFF)
@@ -1243,6 +1244,8 @@ if((Qt6Widgets_FOUND
       lib/grm/grplot/gredit/Bounding_logic.cpp
       lib/grm/grplot/gredit/Bounding_object.cpp
       lib/grm/grplot/gredit/CustomTreeWidgetItem.cpp
+      lib/grm/grplot/gredit/EditElementWidget.cpp
+      lib/grm/grplot/gredit/TableWidget.cpp
       lib/grm/grplot/gredit/TreeWidget.cpp
       lib/grm/grplot/grplot.cxx
       lib/grm/grplot/grplot_mainwindow.cxx
@@ -1353,15 +1356,33 @@ if((Qt6Widgets_FOUND
           ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.h
       )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_EditElementWidget.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/EditElementWidget.h -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_EditElementWidget.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/EditElementWidget.h
+      )
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_TableWidget.cpp
+        COMMAND
+          ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TableWidget.h -o
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_TableWidget.cpp
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TableWidget.h
+      )
       target_sources(
         grplot
         PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_mainwindow.cxx
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_grplot_widget.cxx
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_logic.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_Bounding_object.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_EditElementWidget.cpp
+                ${CMAKE_CURRENT_BINARY_DIR}/moc_TableWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cpp
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_grm_args_t_wrapper.cpp
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_receiver_thread.cpp
       )
@@ -1371,11 +1392,13 @@ if((Qt6Widgets_FOUND
         grplot
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_mainwindow.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/grplot_widget.hxx
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.h
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_logic.h
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/Bounding_object.h
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.h
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/EditElementWidget.h
+                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TableWidget.h
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.h
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.h
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/grm_args_t_wrapper.h
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/receiver_thread.h
       )
@@ -1416,6 +1439,13 @@ if(GR_BUILD_DEMOS)
 
   add_subdirectory(lib/grm/test/public_api/grm grm_test_public_api)
   add_subdirectory(lib/grm/test/internal_api/grm grm_test_internal_api)
+endif()
+
+if(GR_BUILD_GKSM)
+  add_executable(gksm lib/gks/gksm.c)
+  target_link_libraries(gksm PUBLIC gks_static)
+  target_compile_options(gksm PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(gksm PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
 endif()
 
 if(GR_INSTALL)

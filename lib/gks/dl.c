@@ -319,7 +319,8 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
       COPY(f_arr_1, sizeof(double));
       break;
 
-    case 32: /* set character up vector */
+    case 32:  /* set character up vector */
+    case 212: /* set clip sector */
 
       len = 2 * sizeof(int) + 2 * sizeof(double);
       if (d->nbytes + len > d->size) reallocate(d, len);
@@ -551,7 +552,7 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
       break;
 
     case 32:  /* set character up vector */
-    case 252: /* move selection */
+    case 212: /* set clip sector */
       RESOLVE(r1, double, sizeof(double));
       RESOLVE(r2, double, sizeof(double));
       break;
@@ -584,6 +585,11 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
       break;
 
     case 251: /* end selection */
+      break;
+
+    case 252: /* move selection */
+      RESOLVE(r1, double, sizeof(double));
+      RESOLVE(r2, double, sizeof(double));
       break;
     }
 
@@ -695,6 +701,10 @@ int gks_dl_read_item(char *dl, gks_state_list_t **gkss,
       break;
     case 211:
       (*gkss)->clip_region = ia[0];
+      break;
+    case 212:
+      (*gkss)->clip_start_angle = r1[0];
+      (*gkss)->clip_end_angle = r2[0];
       break;
     }
 

@@ -514,7 +514,8 @@ int grm_input(const grm_args_t *input_args)
                 {
                   auto coordinate_system = subplot_element->querySelectors("coordinate_system");
                   if (coordinate_system->hasAttribute("plot_type") &&
-                      static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "2d")
+                      (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "2d" ||
+                       static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar"))
                     {
                       logger((stderr, "Reset single subplot coordinate ranges\n"));
                       subplot_element->setAttribute("reset_ranges", 1);
@@ -545,12 +546,13 @@ int grm_input(const grm_args_t *input_args)
           std::string kind;
           double viewport[4];
           auto central_region = subplot_element->querySelectors("central_region");
+          auto coordinate_system = subplot_element->querySelectors("coordinate_system");
           viewport[0] = static_cast<double>(central_region->getAttribute("viewport_x_min"));
           viewport[1] = static_cast<double>(central_region->getAttribute("viewport_x_max"));
           viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
           viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
 
-          kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
+          kind = static_cast<std::string>(subplot_element->getAttribute("_kind"));
           if (kind == "marginal_heatmap")
             {
               auto current_series = subplot_element->querySelectorsAll("series_heatmap")[0];
@@ -715,8 +717,8 @@ int grm_input(const grm_args_t *input_args)
                     {
                       for (auto &child : side_region->children())
                         {
-                          std::string childKind = static_cast<std::string>(child->getAttribute("kind"));
-                          if (childKind == "hist")
+                          std::string child_kind = static_cast<std::string>(child->getAttribute("kind"));
+                          if (child_kind == "hist")
                             {
                               // reset bar colors
                               // bar level
@@ -771,6 +773,10 @@ int grm_input(const grm_args_t *input_args)
                   viewport_mid_y = (viewport[2] + viewport[3]) / 2.0;
                   focus_x = ndc_x - viewport_mid_x;
                   focus_y = ndc_y - viewport_mid_y;
+                  if (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar" &&
+                      !(subplot_element->hasAttribute("polar_with_pan") &&
+                        static_cast<int>(subplot_element->getAttribute("polar_with_pan"))))
+                    focus_x = focus_y = 0.0;
                   logger(
                       (stderr, "Zoom to ndc focus point (%lf, %lf), angle_delta %lf\n", focus_x, focus_y, angle_delta));
                   double zoom = 1.0 - INPUT_ANGLE_DELTA_FACTOR * angle_delta;
@@ -798,6 +804,10 @@ int grm_input(const grm_args_t *input_args)
                   viewport_mid_y = (viewport[2] + viewport[3]) / 2.0;
                   focus_x = ndc_x - viewport_mid_x;
                   focus_y = ndc_y - viewport_mid_y;
+                  if (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "polar" &&
+                      !(subplot_element->hasAttribute("polar_with_pan") &&
+                        static_cast<int>(subplot_element->getAttribute("polar_with_pan"))))
+                    focus_x = focus_y = 0.0;
                   logger((stderr, "Zoom to ndc focus point (%lf, %lf), factor %lf\n", focus_x, focus_y, factor));
                   auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, factor, factor);
                   subplot_element->append(panzoom_element);
@@ -840,7 +850,10 @@ int grm_input(const grm_args_t *input_args)
             }
           else if (grm_args_values(input_args, "x_shift", "i", &xshift) &&
                    grm_args_values(input_args, "y_shift", "i", &yshift) &&
-                   !grm_args_values(input_args, "movable_state", "i", &movable_status))
+                   !grm_args_values(input_args, "movable_state", "i", &movable_status) &&
+                   (static_cast<std::string>(coordinate_system->getAttribute("plot_type")) != "polar" ||
+                    (subplot_element->hasAttribute("polar_with_pan") &&
+                     static_cast<int>(subplot_element->getAttribute("polar_with_pan")))))
             {
               double ndc_xshift, ndc_yshift, rotation, tilt;
               int shift_pressed;
@@ -994,7 +1007,7 @@ int grm_is3d(const int x, const int y)
 
   auto subplot_element = get_subplot_from_ndc_points_using_dom(1, &ndc_x, &ndc_y);
 
-  if (subplot_element && str_equals_any(static_cast<std::string>(subplot_element->getAttribute("kind")), "wireframe",
+  if (subplot_element && str_equals_any(static_cast<std::string>(subplot_element->getAttribute("_kind")), "wireframe",
                                         "surface", "plot3", "scatter3", "trisurface", "volume", "isosurface"))
     {
       return 1;
@@ -1258,7 +1271,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
   if (subplot_element != nullptr)
     {
-      kind = static_cast<std::string>(subplot_element->getAttribute("kind"));
+      kind = static_cast<std::string>(subplot_element->getAttribute("_kind"));
       if (subplot_element->hasAttribute("orientation"))
         {
           orientation = static_cast<std::string>(subplot_element->getAttribute("orientation"));

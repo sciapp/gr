@@ -304,23 +304,26 @@ static void seg_xform_rel(double *x, double *y)
 
 static void set_clip_rect(int tnr)
 {
-  if (gkss->clip_region == GKS_K_REGION_ELLIPSE)
+  if (gkss->clip_tnr != 0)
+    tnr = gkss->clip_tnr;
+  else if (gkss->clip == GKS_K_NOCLIP)
+    tnr = 0;
+
+  if (gkss->clip_region == GKS_K_REGION_ELLIPSE && tnr != 0)
     {
-      if (gkss->clip_tnr != 0)
-        p->painter->setClipRegion(QRegion(p->rect[gkss->clip_tnr].toRect(), QRegion::Ellipse));
-      else if (gkss->clip == GKS_K_CLIP)
-        p->painter->setClipRegion(QRegion(p->rect[tnr].toRect(), QRegion::Ellipse));
+      if (gkss->clip_start_angle > 0 || gkss->clip_end_angle < 360)
+        {
+          QPainterPath path;
+          path.moveTo(p->rect[tnr].center());
+          path.arcTo(p->rect[tnr].toRect(), gkss->clip_start_angle, gkss->clip_end_angle - gkss->clip_start_angle);
+          p->painter->setClipPath(path);
+        }
       else
-        p->painter->setClipRect(p->rect[0]);
+        p->painter->setClipRegion(QRegion(p->rect[tnr].toRect(), QRegion::Ellipse));
     }
   else
     {
-      if (gkss->clip_tnr != 0)
-        p->painter->setClipRect(p->rect[gkss->clip_tnr]);
-      else if (gkss->clip == GKS_K_CLIP)
-        p->painter->setClipRect(p->rect[tnr]);
-      else
-        p->painter->setClipRect(p->rect[0]);
+      p->painter->setClipRect(p->rect[tnr]);
     }
 }
 

@@ -816,30 +816,38 @@ static void set_clip_rect(int tnr)
 
   cairo_reset_clip(p->cr);
 
-  if (gkss->clip_tnr != 0 || gkss->clip == GKS_K_CLIP)
+  if (gkss->clip_tnr != 0)
+    tnr = gkss->clip_tnr;
+  else if (gkss->clip == GKS_K_NOCLIP)
+    tnr = 0;
+
+  x = p->rect[tnr][0][0];
+  y = p->rect[tnr][0][1];
+  w = p->rect[tnr][1][0] - p->rect[tnr][0][0];
+  h = p->rect[tnr][1][1] - p->rect[tnr][0][1];
+
+  if (gkss->clip_region == GKS_K_REGION_ELLIPSE)
     {
-      if (gkss->clip_tnr != 0)
+      cairo_save(p->cr);
+      cairo_translate(p->cr, x + 0.5 * w, y + 0.5 * h);
+      cairo_scale(p->cr, 1., h / w);
+      if (gkss->clip_start_angle > 0 || gkss->clip_end_angle < 360)
         {
-          tnr = gkss->clip_tnr;
-        }
-      x = p->rect[tnr][0][0];
-      y = p->rect[tnr][0][1];
-      w = p->rect[tnr][1][0] - p->rect[tnr][0][0];
-      h = p->rect[tnr][1][1] - p->rect[tnr][0][1];
-      if (gkss->clip_region == GKS_K_REGION_ELLIPSE)
-        {
-          cairo_save(p->cr);
-          cairo_translate(p->cr, x + 0.5 * w, y + 0.5 * h);
-          cairo_scale(p->cr, 1., h / w);
-          cairo_arc(p->cr, 0., 0., w * 0.5, 0, 2 * M_PI);
-          cairo_restore(p->cr);
+          cairo_move_to(p->cr, 0, 0);
+          cairo_arc_negative(p->cr, 0, 0, w * 0.5, -gkss->clip_start_angle * M_PI / 180,
+                             -gkss->clip_end_angle * M_PI / 180);
         }
       else
         {
-          cairo_rectangle(p->cr, x, y, w, h);
+          cairo_arc(p->cr, 0., 0., w * 0.5, 0, 2 * M_PI);
         }
-      cairo_clip(p->cr);
+      cairo_restore(p->cr);
     }
+  else
+    {
+      cairo_rectangle(p->cr, x, y, w, h);
+    }
+  cairo_clip(p->cr);
 }
 
 static void set_clipping(int index)
