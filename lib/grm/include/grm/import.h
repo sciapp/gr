@@ -22,6 +22,7 @@ extern "C" {
 
 struct _grm_file_args_t;
 typedef struct _grm_file_args_t grm_file_args_t;
+typedef struct _grm_special_axis_series_t grm_special_axis_series_t;
 
 /* ========================= functions ============================================================================== */
 

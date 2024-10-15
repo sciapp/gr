@@ -118,6 +118,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
       "norm",
       "orientation",
       "projection_type",
+      "ref_x_axis_location",
+      "ref_y_axis_location",
       "resample_method",
       "scientific_format",
       "size_x_type",
@@ -494,8 +496,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
                                             QWidget **lineEdit)
 {
   QStringList size_unit_list, colormap_list, font_list, font_precision_list, line_type_list, location_list,
-      marker_type_list, text_align_horizontal_list, text_align_vertical_list, algorithm_volume_list, model_list,
-      context_attr_list;
+      x_axis_location_list, y_axis_location_list, marker_type_list, text_align_horizontal_list,
+      text_align_vertical_list, algorithm_volume_list, model_list, context_attr_list;
   auto size_unit_vec = getSizeUnits();
   size_unit_list.reserve((int)size_unit_vec.size());
   for (auto &i : size_unit_vec)
@@ -531,6 +533,18 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   for (auto &i : location_vec)
     {
       location_list.push_back(i.c_str());
+    }
+  auto x_axis_location_vec = getXAxisLocations();
+  x_axis_location_list.reserve((int)x_axis_location_vec.size());
+  for (auto &i : x_axis_location_vec)
+    {
+      x_axis_location_list.push_back(i.c_str());
+    }
+  auto y_axis_location_vec = getYAxisLocations();
+  y_axis_location_list.reserve((int)y_axis_location_vec.size());
+  for (auto &i : y_axis_location_vec)
+    {
+      y_axis_location_list.push_back(i.c_str());
     }
   auto marker_type_vec = getMarkerTypes();
   marker_type_list.reserve((int)marker_type_vec.size());
@@ -661,6 +675,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"norm", norm_list},
       {"plot_type", plot_type_list},
       {"projection_type", projection_type_list},
+      {"ref_x_axis_location", x_axis_location_list},
+      {"ref_y_axis_location", y_axis_location_list},
       {"resample_method", resample_method_list},
       {"scientific_format", scientific_format_list},
       {"size_x_type", size_type_list},
@@ -769,7 +785,8 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       ((QComboBox *)*lineEdit)->setCompleter(completer);
     }
   else if (cur_attr_name == "location" &&
-           (cur_elem_name == "side_region" || cur_elem_name == "side_plot_region" || cur_elem_name == "text_region"))
+           (cur_elem_name == "side_region" || cur_elem_name == "side_plot_region" || cur_elem_name == "text_region") &&
+           cur_elem_name != "axis")
     {
       for (const auto &elem : side_region_location_list)
         {
@@ -780,13 +797,26 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       ((QComboBox *)*lineEdit)->setCompleter(completer);
     }
   else if (cur_attr_name == "location" &&
-           !(cur_elem_name == "side_region" || cur_elem_name == "side_plot_region" || cur_elem_name == "text_region"))
+           !(cur_elem_name == "side_region" || cur_elem_name == "side_plot_region" || cur_elem_name == "text_region") &&
+           cur_elem_name != "axis")
     {
       for (const auto &elem : location_list)
         {
           ((QComboBox *)*lineEdit)->addItem(elem.toStdString().c_str());
         }
       auto *completer = new QCompleter(location_list, this);
+      completer->setCaseSensitivity(Qt::CaseInsensitive);
+      ((QComboBox *)*lineEdit)->setCompleter(completer);
+    }
+  else if (cur_attr_name == "location" &&
+           !(cur_elem_name == "side_region" || cur_elem_name == "side_plot_region" || cur_elem_name == "text_region") &&
+           cur_elem_name == "axis")
+    {
+      for (const auto &elem : (x_axis_location_list + y_axis_location_list))
+        {
+          ((QComboBox *)*lineEdit)->addItem(elem.toStdString().c_str());
+        }
+      auto *completer = new QCompleter((x_axis_location_list + y_axis_location_list), this);
       completer->setCaseSensitivity(Qt::CaseInsensitive);
       ((QComboBox *)*lineEdit)->setCompleter(completer);
     }
@@ -830,9 +860,25 @@ void GRPlotWidget::advancedAttributeComboBoxHandler(const std::string &cur_attr_
            !(current_selection->get_ref()->localName() == "side_region" ||
              current_selection->get_ref()->localName() == "side_plot_region" ||
              current_selection->get_ref()->localName() == "text_region") &&
+           current_selection->get_ref()->localName() != "axis" &&
            current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
       current_text = locationIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+    }
+  else if (cur_attr_name == "location" &&
+           !(current_selection->get_ref()->localName() == "side_region" ||
+             current_selection->get_ref()->localName() == "side_plot_region" ||
+             current_selection->get_ref()->localName() == "text_region") &&
+           current_selection->get_ref()->localName() == "axis" &&
+           current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
+    {
+      auto type = static_cast<std::string>(current_selection->get_ref()->getAttribute("axis_type"));
+      if (type == "x")
+        current_text =
+            xAxisLocationIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
+      else
+        current_text =
+            yAxisLocationIntToString(static_cast<int>(current_selection->get_ref()->getAttribute(cur_attr_name)));
     }
   else if (cur_attr_name == "clip_region" && current_selection->get_ref()->getAttribute(cur_attr_name).isInt())
     {
@@ -918,9 +964,17 @@ void GRPlotWidget::attributeSetForComboBox(const std::string &attr_type, std::sh
         {
           element->setAttribute(label, projectionTypeStringToInt(value));
         }
-      else if (label == "location")
+      else if (label == "location" && element->localName() != "axis")
         {
           element->setAttribute(label, locationStringToInt(value));
+        }
+      else if (label == "location" && element->localName() == "axis")
+        {
+          auto type = static_cast<std::string>(current_selection->get_ref()->getAttribute("axis_type"));
+          if (type == "x")
+            element->setAttribute(label, xAxisLocationStringToInt(value));
+          else
+            element->setAttribute(label, yAxisLocationStringToInt(value));
         }
       else if (label == "clip_region")
         {

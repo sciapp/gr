@@ -37,7 +37,7 @@ For one-dimensional data sets there are also options to define if inside the dat
 
 There are more key-value parameters. These parameters only effect specific plot types. For example `bar_width` only makes sense, if bars are drawn. All possible parameters are:
 
-`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `c`, `clip_negative`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `error_bar_style`, `grplot`, `int_lim`, `isovalue`, `keep_radii_axes`, `kind`, `levels`, `line_spec`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `phi_flip`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `tilt`, `transformation`, `x_bins`, `x_colormap`, `x_flip`, `y_bins`, `y_colormap`, `y_flip`, `y_labels`
+`accelerate`, `algorithm`, `bar_color`, `bar_width`, `bin_counts`, `bin_edges`, `bottom`, `c`, `clip_negative`, `colormap`, `draw_edges`, `edge_color`, `edge_width`, `error_bar_style`, `error_columns`, `grplot`, `int_lim`, `isovalue`, `keep_radii_axes`, `kind`, `left`, `levels`, `line_spec`, `major_h`, `marginal_heatmap_kind`, `marker_type`, `num_bins`, `normalization`, `orientation`, `phi_flip`, `right`, `rotation`, `scatter_z`, `stairs`, `step_where`, `style`, `tilt`, `top`, `transformation`, `twin_x`, `twin_y`, `x_bins`, `x_colormap`, `x_columns` `x_flip`, `y_bins`, `y_colormap`, `y_columns`, `y_flip`, `y_labels`
 
 All parameters are separated by a blank. Some parameters are more complex than others. These parameters represent a container inside GRM.
 
@@ -121,6 +121,8 @@ The next line after the header may contain the column labels. If the data does n
 11. `hexbin`, `shade`: The expected data are two columns, representing the x- and y-data.
 
 A plot type that expect the same data shape as other plot types can be converted using an interactive menu. The interaction also yields extra information about the plot, if the mouse is being hovered over them.
+
+If some data from the data file should be plotted to a different axis as the rest of the data, this can be achieved with the following parameters: `bottom`, `left`, `right`, `top`, `twin_x`, `twin_y`. Each of these parameters defines an axis at the named position. The values of these keys specify a single or more series which will be plotted to that axis from key.
 
 ## Editor
 
