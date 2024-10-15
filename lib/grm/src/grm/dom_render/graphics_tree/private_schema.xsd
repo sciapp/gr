@@ -61,11 +61,19 @@
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_viewport"/>
+            <xs:attribute name="_bottom_window_xform_a" type="xs:double"/>
+            <xs:attribute name="_bottom_window_xform_a_org" type="xs:double"/>
+            <xs:attribute name="_bottom_window_xform_b" type="xs:double"/>
+            <xs:attribute name="_bottom_window_xform_b_org" type="xs:double"/>
             <xs:attribute name="_c_lim_max" type="xs:double"/>
             <xs:attribute name="_c_lim_min" type="xs:double"/>
             <xs:attribute name="_char_height_set_by_user" type="xs:integer"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
             <xs:attribute name="_kind" type="xs:string" use="required"/>
+            <xs:attribute name="_left_window_xform_a" type="xs:double"/>
+            <xs:attribute name="_left_window_xform_a_org" type="xs:double"/>
+            <xs:attribute name="_left_window_xform_b" type="xs:double"/>
+            <xs:attribute name="_left_window_xform_b_org" type="xs:double"/>
             <xs:attribute name="_original_adjust_x_lim" type="xs:integer"/>
             <xs:attribute name="_original_adjust_y_lim" type="xs:integer"/>
             <xs:attribute name="_original_x_lim" type="xs:integer"/>
@@ -76,7 +84,23 @@
             <xs:attribute name="_original_y_min" type="xs:double"/>
             <xs:attribute name="_overwrite_kind_dependent_defaults" type="xs:integer"/>
             <xs:attribute name="_plot_id" type="xs:string" use="required"/>
+            <xs:attribute name="_right_window_xform_a" type="xs:double"/>
+            <xs:attribute name="_right_window_xform_a_org" type="xs:double"/>
+            <xs:attribute name="_right_window_xform_b" type="xs:double"/>
+            <xs:attribute name="_right_window_xform_b_org" type="xs:double"/>
             <xs:attribute name="_start_aspect_ratio" type="xs:double"/>
+            <xs:attribute name="_top_window_xform_a" type="xs:double"/>
+            <xs:attribute name="_top_window_xform_a_org" type="xs:double"/>
+            <xs:attribute name="_top_window_xform_b" type="xs:double"/>
+            <xs:attribute name="_top_window_xform_b_org" type="xs:double"/>
+            <xs:attribute name="_twin_x_window_xform_a" type="xs:double"/>
+            <xs:attribute name="_twin_x_window_xform_a_org" type="xs:double"/>
+            <xs:attribute name="_twin_x_window_xform_b" type="xs:double"/>
+            <xs:attribute name="_twin_x_window_xform_b_org" type="xs:double"/>
+            <xs:attribute name="_twin_y_window_xform_a" type="xs:double"/>
+            <xs:attribute name="_twin_y_window_xform_a_org" type="xs:double"/>
+            <xs:attribute name="_twin_y_window_xform_b" type="xs:double"/>
+            <xs:attribute name="_twin_y_window_xform_b_org" type="xs:double"/>
             <xs:attribute name="_update_limits" type="xs:integer"/>
             <xs:attribute name="_x_lim_max" type="xs:double"/>
             <xs:attribute name="_x_lim_min" type="xs:double"/>
@@ -528,8 +552,6 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
-            <xs:attribute name="_x_range_max" type="xs:double"/>
-            <xs:attribute name="_x_range_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -557,8 +579,6 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
-            <xs:attribute name="_x_range_max" type="xs:double"/>
-            <xs:attribute name="_x_range_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -577,8 +597,6 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
-            <xs:attribute name="_x_range_max" type="xs:double"/>
-            <xs:attribute name="_x_range_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 
@@ -588,8 +606,6 @@
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>
             <xs:attribute name="_child_id" type="xs:integer"/>
-            <xs:attribute name="_x_range_max" type="xs:double"/>
-            <xs:attribute name="_x_range_min" type="xs:double"/>
         </xs:complexType>
     </xs:element>
 

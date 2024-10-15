@@ -390,6 +390,8 @@ const char *valid_series_keys[] = {"a",
                                    "marker_type",
                                    "num_bins",
                                    "phi_lim",
+                                   "ref_x_axis_location",
+                                   "ref_y_axis_location",
                                    "rgb",
                                    "r_lim",
                                    "s",
@@ -471,6 +473,8 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"orientation", "s"},
                                               {"panzoom", "D"},
                                               {"raw", "s"},
+                                              {"ref_x_axis_location", "s"},
+                                              {"ref_y_axis_location", "s"},
                                               {"rel_height", "d"},
                                               {"rel_width", "d"},
                                               {"resample_method", "s|i"},
@@ -1546,6 +1550,7 @@ err_t plot_line(grm_args_t *subplot_args)
       unsigned int x_length = 0, y_length = 0, limits_high_num = 0, limits_low_num = 0;
       char *spec;
       double x_min, x_max, y_min, y_max;
+      const char *x_axis_ref, *y_axis_ref;
       auto subGroup = global_render->createSeries("line");
       group->append(subGroup);
 
@@ -1581,6 +1586,11 @@ err_t plot_line(grm_args_t *subplot_args)
           subGroup->setAttribute("y_range_min", y_min);
           subGroup->setAttribute("y_range_max", y_max);
         }
+
+      if (grm_args_values(*current_series, "ref_x_axis_location", "s", &x_axis_ref))
+        subGroup->setAttribute("ref_x_axis_location", x_axis_ref);
+      if (grm_args_values(*current_series, "ref_y_axis_location", "s", &y_axis_ref))
+        subGroup->setAttribute("ref_y_axis_location", y_axis_ref);
 
       if (grm_args_values(*current_series, "line_spec", "s", &spec)) subGroup->setAttribute("line_spec", spec);
       if (grm_args_values(*current_series, "marker_type", "i", &marker_type))
@@ -1653,6 +1663,7 @@ err_t plot_stairs(grm_args_t *subplot_args)
       char *spec;
       const char *where;
       double y_line_pos;
+      const char *x_axis_ref, *y_axis_ref;
       auto subGroup = global_render->createSeries("stairs");
       group->append(subGroup);
 
@@ -1684,6 +1695,11 @@ err_t plot_stairs(grm_args_t *subplot_args)
           subGroup->setAttribute("y_range_min", y_min);
           subGroup->setAttribute("y_range_max", y_max);
         }
+
+      if (grm_args_values(*current_series, "ref_x_axis_location", "s", &x_axis_ref))
+        subGroup->setAttribute("ref_x_axis_location", x_axis_ref);
+      if (grm_args_values(*current_series, "ref_y_axis_location", "s", &y_axis_ref))
+        subGroup->setAttribute("ref_y_axis_location", y_axis_ref);
 
       if (grm_args_values(*current_series, "y_line_pos", "d", &y_line_pos))
         group->parentElement()->setAttribute("_y_line_pos", y_line_pos);
@@ -1727,6 +1743,7 @@ err_t plot_scatter(grm_args_t *subplot_args)
       unsigned int x_length, y_length, z_length, c_length;
       int i, c_index = -1, marker_type;
       double x_min, x_max, y_min, y_max;
+      const char *x_axis_ref, *y_axis_ref;
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -1784,6 +1801,11 @@ err_t plot_scatter(grm_args_t *subplot_args)
           subGroup->setAttribute("y_range_max", y_max);
         }
 
+      if (grm_args_values(*current_series, "ref_x_axis_location", "s", &x_axis_ref))
+        subGroup->setAttribute("ref_x_axis_location", x_axis_ref);
+      if (grm_args_values(*current_series, "ref_y_axis_location", "s", &y_axis_ref))
+        subGroup->setAttribute("ref_y_axis_location", y_axis_ref);
+
       error = plot_draw_error_bars(*current_series, x_length);
       return_if_error;
       global_root->setAttribute("_id", ++id);
@@ -1807,6 +1829,7 @@ err_t plot_quiver(grm_args_t *subplot_args)
       double *x = nullptr, *y = nullptr, *u = nullptr, *v = nullptr;
       unsigned int x_length, y_length, u_length, v_length;
       double x_min, x_max, y_min, y_max;
+      const char *x_axis_ref, *y_axis_ref;
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "u", "D", &u, &u_length);
@@ -1832,8 +1855,13 @@ err_t plot_quiver(grm_args_t *subplot_args)
           temp->setAttribute("y_range_min", y_min);
           temp->setAttribute("y_range_max", y_max);
         }
-      group->append(temp);
 
+      if (grm_args_values(*current_series, "ref_x_axis_location", "s", &x_axis_ref))
+        temp->setAttribute("ref_x_axis_location", x_axis_ref);
+      if (grm_args_values(*current_series, "ref_y_axis_location", "s", &y_axis_ref))
+        temp->setAttribute("ref_y_axis_location", y_axis_ref);
+
+      group->append(temp);
       global_root->setAttribute("_id", id++);
       ++current_series;
     }
@@ -1858,6 +1886,7 @@ err_t plot_stem(grm_args_t *subplot_args)
       unsigned int x_length, y_length;
       char *spec;
       double y_min, y_max, y_line_pos;
+      const char *x_axis_ref, *y_axis_ref;
 
       auto subGroup = global_render->createSeries("stem");
       group->append(subGroup);
@@ -1885,6 +1914,11 @@ err_t plot_stem(grm_args_t *subplot_args)
           subGroup->setAttribute("y_range_min", y_min);
           subGroup->setAttribute("y_range_max", y_max);
         }
+
+      if (grm_args_values(*current_series, "ref_x_axis_location", "s", &x_axis_ref))
+        subGroup->setAttribute("ref_x_axis_location", x_axis_ref);
+      if (grm_args_values(*current_series, "ref_y_axis_location", "s", &y_axis_ref))
+        subGroup->setAttribute("ref_y_axis_location", y_axis_ref);
 
       if (grm_args_values(*current_series, "y_line_pos", "d", &y_line_pos))
         group->parentElement()->setAttribute("_y_line_pos", y_line_pos);
@@ -1919,6 +1953,7 @@ err_t plot_hist(grm_args_t *subplot_args)
       unsigned int num_bins = 0, x_length, num_weights;
       char *orientation;
       double transparency;
+      const char *x_axis_ref, *y_axis_ref;
 
       auto subGroup = global_render->createSeries("hist");
       group->append(subGroup);
@@ -1972,6 +2007,11 @@ err_t plot_hist(grm_args_t *subplot_args)
           subGroup->setAttribute("y_range_min", y_min);
           subGroup->setAttribute("y_range_max", y_max);
         }
+
+      if (grm_args_values(*current_series, "ref_x_axis_location", "s", &x_axis_ref))
+        subGroup->setAttribute("ref_x_axis_location", x_axis_ref);
+      if (grm_args_values(*current_series, "ref_y_axis_location", "s", &y_axis_ref))
+        subGroup->setAttribute("ref_y_axis_location", y_axis_ref);
 
       if (grm_args_values(*current_series, "y_line_pos", "d", &y_line_pos))
         group->parentElement()->setAttribute("_y_line_pos", y_line_pos);
@@ -2047,6 +2087,7 @@ err_t plot_barplot(grm_args_t *subplot_args)
       std::vector<double> c_rgb_vec;
       double x_min, x_max, y_min, y_max, y_line_pos;
       double transparency;
+      const char *x_axis_ref, *y_axis_ref;
 
       auto subGroup = global_render->createSeries("barplot");
       group->append(subGroup);
@@ -2106,6 +2147,12 @@ err_t plot_barplot(grm_args_t *subplot_args)
           subGroup->setAttribute("y_range_min", y_min);
           subGroup->setAttribute("y_range_max", y_max);
         }
+
+      if (grm_args_values(*current_series, "ref_x_axis_location", "s", &x_axis_ref))
+        subGroup->setAttribute("ref_x_axis_location", x_axis_ref);
+      if (grm_args_values(*current_series, "ref_y_axis_location", "s", &y_axis_ref))
+        subGroup->setAttribute("ref_y_axis_location", y_axis_ref);
+
       if (grm_args_values(*current_series, "y_line_pos", "d", &y_line_pos))
         group->parentElement()->setAttribute("_y_line_pos", y_line_pos);
       if (grm_args_first_value(*current_series, "y_labels", "S", &y_labels, &y_labels_length))
@@ -2299,6 +2346,7 @@ err_t plot_contour(grm_args_t *subplot_args)
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
       double x_min, x_max, y_min, y_max, z_min, z_max;
+      const char *x_axis_ref, *y_axis_ref;
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
       grm_args_first_value(*current_series, "z", "D", &z, &z_length);
@@ -2336,8 +2384,13 @@ err_t plot_contour(grm_args_t *subplot_args)
           subGroup->setAttribute("z_range_min", z_min);
           subGroup->setAttribute("z_range_max", z_max);
         }
-      if (grm_args_values(subplot_args, "major_h", "i", &major_h)) subGroup->setAttribute("major_h", major_h);
 
+      if (grm_args_values(*current_series, "ref_x_axis_location", "s", &x_axis_ref))
+        subGroup->setAttribute("ref_x_axis_location", x_axis_ref);
+      if (grm_args_values(*current_series, "ref_y_axis_location", "s", &y_axis_ref))
+        subGroup->setAttribute("ref_y_axis_location", y_axis_ref);
+
+      if (grm_args_values(subplot_args, "major_h", "i", &major_h)) subGroup->setAttribute("major_h", major_h);
       if (has_levels) subGroup->setAttribute("levels", num_levels);
 
       global_root->setAttribute("_id", ++id);
@@ -2364,6 +2417,7 @@ err_t plot_contourf(grm_args_t *subplot_args)
       double *x, *y, *z;
       unsigned int x_length, y_length, z_length;
       double x_min, x_max, y_min, y_max, z_min, z_max;
+      const char *x_axis_ref, *y_axis_ref;
       auto subGroup = global_render->createSeries("contourf");
       group->append(subGroup);
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
@@ -2401,8 +2455,13 @@ err_t plot_contourf(grm_args_t *subplot_args)
           subGroup->setAttribute("z_range_min", z_min);
           subGroup->setAttribute("z_range_max", z_max);
         }
-      if (grm_args_values(subplot_args, "major_h", "i", &major_h)) subGroup->setAttribute("major_h", major_h);
 
+      if (grm_args_values(*current_series, "ref_x_axis_location", "s", &x_axis_ref))
+        subGroup->setAttribute("ref_x_axis_location", x_axis_ref);
+      if (grm_args_values(*current_series, "ref_y_axis_location", "s", &y_axis_ref))
+        subGroup->setAttribute("ref_y_axis_location", y_axis_ref);
+
+      if (grm_args_values(subplot_args, "major_h", "i", &major_h)) subGroup->setAttribute("major_h", major_h);
       if (has_levels) subGroup->setAttribute("levels", num_levels);
 
       global_root->setAttribute("_id", ++id);
@@ -2427,6 +2486,7 @@ err_t plot_hexbin(grm_args_t *subplot_args)
       unsigned int x_length, y_length;
       int cntmax, nbins;
       double x_min, x_max, y_min, y_max;
+      const char *x_axis_ref, *y_axis_ref;
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
 
@@ -2449,6 +2509,11 @@ err_t plot_hexbin(grm_args_t *subplot_args)
           subGroup->setAttribute("y_range_min", y_min);
           subGroup->setAttribute("y_range_max", y_max);
         }
+
+      if (grm_args_values(*current_series, "ref_x_axis_location", "s", &x_axis_ref))
+        subGroup->setAttribute("ref_x_axis_location", x_axis_ref);
+      if (grm_args_values(*current_series, "ref_y_axis_location", "s", &y_axis_ref))
+        subGroup->setAttribute("ref_y_axis_location", y_axis_ref);
 
       plot_draw_colorbar(subplot_args, 0.0, 256);
 
@@ -2577,6 +2642,7 @@ err_t plot_heatmap(grm_args_t *subplot_args)
   grm_args_values(subplot_args, "z_log", "i", &z_log);
   while (*current_series != nullptr)
     {
+      const char *x_axis_ref, *y_axis_ref;
       x = y = nullptr;
       auto subGroup = global_render->createSeries("heatmap");
       group->append(subGroup);
@@ -2638,6 +2704,11 @@ err_t plot_heatmap(grm_args_t *subplot_args)
           subGroup->setAttribute("c_range_min", c_min);
           subGroup->setAttribute("c_range_max", c_max);
         }
+
+      if (grm_args_values(*current_series, "ref_x_axis_location", "s", &x_axis_ref))
+        subGroup->setAttribute("ref_x_axis_location", x_axis_ref);
+      if (grm_args_values(*current_series, "ref_y_axis_location", "s", &y_axis_ref))
+        subGroup->setAttribute("ref_y_axis_location", y_axis_ref);
 
       global_root->setAttribute("_id", ++id);
       ++current_series;

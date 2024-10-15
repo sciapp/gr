@@ -165,7 +165,7 @@ void EditElementWidget::AttributeEditEvent()
                   fields << lineEdit;
                 }
             }
-          else if (child->localName() == "xs:attributegroup")
+          else if (child->localName() == "xs:attributeGroup")
             {
               /* when an element contains one or more attributegroups all attributes from these groups must be
                * added */
@@ -177,7 +177,7 @@ void EditElementWidget::AttributeEditEvent()
                   auto attr_group_selections = schema_tree->querySelectorsAll("[name=" + group_name + "]");
                   for (const auto &selection : attr_group_selections)
                     {
-                      if (selection->localName() == "xs:attributegroup") group = selection;
+                      if (selection->localName() == "xs:attributeGroup") group = selection;
                     }
 
                   /* iterate through attribute elements */

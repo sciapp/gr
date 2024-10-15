@@ -509,12 +509,44 @@ grm_file_args_t *grm_file_args_new()
   return args;
 }
 
+grm_special_axis_series_t *grm_special_axis_series_new()
+{
+  auto *args = new grm_special_axis_series_t;
+  if (args == nullptr)
+    {
+      debug_print_malloc_error();
+      return nullptr;
+    }
+  args->bottom = "";
+  args->left = "";
+  args->right = "";
+  args->top = "";
+  args->twin_x = "";
+  args->twin_y = "";
+  return args;
+}
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utils ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void adjust_ranges(double *range_min, double *range_max, double default_value_min, double default_value_max)
 {
   *range_min = (*range_min == INFINITY) ? default_value_min : grm_min(*range_min, default_value_min);
   *range_max = (*range_max == INFINITY) ? default_value_max : grm_max(*range_max, default_value_max);
+}
+
+void setSeriesLocation(std::vector<grm_args_t *> series, int idx, std::list<int> bottom_series,
+                       std::list<int> left_series, std::list<int> right_series, std::list<int> top_series,
+                       std::list<int> twin_x_series, std::list<int> twin_y_series)
+{
+  std::string x_location, y_location;
+  if (std::find(bottom_series.begin(), bottom_series.end(), idx) != bottom_series.end()) x_location = "bottom";
+  if (std::find(left_series.begin(), left_series.end(), idx) != left_series.end()) y_location = "left";
+  if (std::find(right_series.begin(), right_series.end(), idx) != right_series.end()) y_location = "right";
+  if (std::find(top_series.begin(), top_series.end(), idx) != top_series.end()) x_location = "top";
+  if (std::find(twin_x_series.begin(), twin_x_series.end(), idx) != twin_x_series.end()) x_location = "twin_x";
+  if (std::find(twin_y_series.begin(), twin_y_series.end(), idx) != twin_y_series.end()) y_location = "twin_y";
+  if (!x_location.empty()) grm_args_push(series[idx], "ref_x_axis_location", "s", x_location.c_str());
+  if (!y_location.empty()) grm_args_push(series[idx], "ref_y_axis_location", "s", y_location.c_str());
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -555,6 +587,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   size_t row, col, rows, cols, depth;
   std::vector<std::vector<std::vector<double>>> file_data;
   std::vector<int> x_data, y_data, error_data;
+  std::list<int> bottom_series, left_series, right_series, top_series, twin_x_series, twin_y_series;
   std::vector<std::string> labels;
   std::vector<const char *> labels_c;
   std::vector<grm_args_t *> series;
@@ -562,14 +595,11 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   void *handle = nullptr;
   const char *kind;
   int grplot;
-  grm_file_args_t *file_args;
-  file_args = grm_file_args_new();
+  grm_file_args_t *file_args = grm_file_args_new();
+  grm_special_axis_series_t *special_axis_series = grm_special_axis_series_new();
   PlotRange ranges = {INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY};
 
-  if (!convert_inputstream_into_args(args, file_args, argc, argv, &ranges))
-    {
-      return 0;
-    }
+  if (!convert_inputstream_into_args(args, file_args, argc, argv, &ranges, special_axis_series)) return 0;
 
   if (file_args->file_path != "-" && !file_exists(file_args->file_path))
     {
@@ -600,6 +630,14 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
     {
       return 0;
     }
+
+  // convert grm_special_axis_series_t entries into int vector
+  if (parse_columns(&bottom_series, special_axis_series->bottom.c_str()) != ERROR_NONE) return 0;
+  if (parse_columns(&left_series, special_axis_series->left.c_str()) != ERROR_NONE) return 0;
+  if (parse_columns(&right_series, special_axis_series->right.c_str()) != ERROR_NONE) return 0;
+  if (parse_columns(&top_series, special_axis_series->top.c_str()) != ERROR_NONE) return 0;
+  if (parse_columns(&twin_x_series, special_axis_series->twin_x.c_str()) != ERROR_NONE) return 0;
+  if (parse_columns(&twin_y_series, special_axis_series->twin_y.c_str()) != ERROR_NONE) return 0;
 
   if (!file_data.empty())
     {
@@ -935,6 +973,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           for (col = 0; col < series_num; col++)
             {
               series[col] = grm_args_new();
+              setSeriesLocation(series, col, bottom_series, left_series, right_series, top_series, twin_x_series,
+                                twin_y_series);
             }
         }
       else
@@ -946,6 +986,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           if (x_data.empty() && y_data.empty() && error_data.empty())
             {
               series[col] = grm_args_new();
+              setSeriesLocation(series, col, bottom_series, left_series, right_series, top_series, twin_x_series,
+                                twin_y_series);
               grm_args_push(series[col], "x", "nD", rows, x.data());
               grm_args_push(series[col], "y", "nD", rows,
                             file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)].data());
@@ -1232,6 +1274,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       for (col = 0; col < series_num; col++)
         {
           series[col] = grm_args_new();
+          setSeriesLocation(series, col, bottom_series, left_series, right_series, top_series, twin_x_series,
+                            twin_y_series);
         }
 
       // find min and max value of all x-data and make sure the all data points are inside that range
@@ -1712,7 +1756,7 @@ int grm_context_data_from_file(const std::shared_ptr<GRM::Context> &context, con
  */
 
 int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, int argc, char **argv,
-                                  PlotRange *ranges)
+                                  PlotRange *ranges, grm_special_axis_series_t *special_axis_series)
 {
   int i;
   std::string token, found_key;
@@ -1748,6 +1792,30 @@ int convert_inputstream_into_args(grm_args_t *args, grm_file_args_t *file_args, 
       else if (starts_with(token, "error_columns:"))
         {
           file_args->file_error_columns = token.substr(14, token.length() - 1);
+        }
+      else if (starts_with(token, "bottom:"))
+        {
+          special_axis_series->bottom = token.substr(7, token.length() - 1);
+        }
+      else if (starts_with(token, "left:"))
+        {
+          special_axis_series->left = token.substr(5, token.length() - 1);
+        }
+      else if (starts_with(token, "right:"))
+        {
+          special_axis_series->right = token.substr(6, token.length() - 1);
+        }
+      else if (starts_with(token, "top:"))
+        {
+          special_axis_series->top = token.substr(4, token.length() - 1);
+        }
+      else if (starts_with(token, "twin_x:"))
+        {
+          special_axis_series->twin_x = token.substr(7, token.length() - 1);
+        }
+      else if (starts_with(token, "twin_y:"))
+        {
+          special_axis_series->twin_y = token.substr(7, token.length() - 1);
         }
       else
         {
