@@ -30,7 +30,7 @@ override_dh_auto_configure:
 	cp ../SOURCES/zeromq-4.3.4.tar.gz ${THIRDPARTY_SRC}
 	cp ../SOURCES/cairo-1.16.0.tar.xz ${THIRDPARTY_SRC}
 	cp ../SOURCES/pixman-0.42.2.tar.gz ${THIRDPARTY_SRC}
-	cp ../SOURCES/tiff-4.5.1.tar.gz ${THIRDPARTY_SRC}
+	cp ../SOURCES/tiff-4.7.0.tar.gz ${THIRDPARTY_SRC}
 	cp ../SOURCES/libopenh264-2.0.0.tar.gz ${THIRDPARTY_SRC}
 	cp ../SOURCES/xerces-c-3.2.4.tar.gz ${THIRDPARTY_SRC}
 
