@@ -629,7 +629,7 @@ static void resetOldBoundingBoxes(const std::shared_ptr<GRM::Element> &element)
 {
   if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
     {
-      element->setAttribute("_bbox_id", -1);
+      element->setAttribute("_bbox_id", -(bounding_id++));
       element->removeAttribute("_bbox_x_min");
       element->removeAttribute("_bbox_x_max");
       element->removeAttribute("_bbox_y_min");
@@ -15885,7 +15885,7 @@ static void missingBboxCalculator(const std::shared_ptr<GRM::Element> &element,
 {
   double elem_bbox_xmin = DBL_MAX, elem_bbox_xmax = -DBL_MAX, elem_bbox_ymin = DBL_MAX, elem_bbox_ymax = -DBL_MAX;
 
-  if (element->hasAttribute("_bbox_id") && static_cast<int>(element->getAttribute("_bbox_id")) != -1)
+  if (element->hasAttribute("_bbox_id") && static_cast<int>(element->getAttribute("_bbox_id")) >= 0)
     {
       *bbox_xmin = static_cast<double>(element->getAttribute("_bbox_x_min"));
       *bbox_xmax = static_cast<double>(element->getAttribute("_bbox_x_max"));
@@ -15910,13 +15910,21 @@ static void missingBboxCalculator(const std::shared_ptr<GRM::Element> &element,
     }
 
   if (element->localName() != "root" &&
-      (!element->hasAttribute("_bbox_id") || static_cast<int>(element->getAttribute("_bbox_id")) == -1))
+      (!element->hasAttribute("_bbox_id") || static_cast<int>(element->getAttribute("_bbox_id")) < 0))
     {
       if (!(elem_bbox_xmin == DBL_MAX || elem_bbox_xmax == -DBL_MAX || elem_bbox_ymin == DBL_MAX ||
             elem_bbox_ymax == -DBL_MAX))
         {
-          if (static_cast<int>(element->getAttribute("_bbox_id")) != -1)
-            element->setAttribute("_bbox_id", bounding_id++);
+          if (element->hasAttribute("_bbox_id"))
+            {
+              /* In this case the element already has a negative (placeholder) bounding box id which can be reused by
+                 turning into positive. */
+              element->setAttribute("_bbox_id", -static_cast<int>(element->getAttribute("_bbox_id")));
+            }
+          else
+            {
+              element->setAttribute("_bbox_id", bounding_id++);
+            }
           element->setAttribute("_bbox_x_min", elem_bbox_xmin);
           element->setAttribute("_bbox_x_max", elem_bbox_xmax);
           element->setAttribute("_bbox_y_min", elem_bbox_ymin);
@@ -16309,9 +16317,9 @@ void GRM::Render::render()
       // needed when series_line is changed to series_scatter for example
       if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
         {
-          for (const auto &child : global_render->querySelectorsAll("[_bbox_id=-1]"))
+          for (const auto &child : global_render->querySelectorsAll("[_bbox_id]"))
             {
-              child->removeAttribute("_bbox_id");
+              if (static_cast<int>(child->getAttribute("_bbox_id")) >= 0) continue;
               missingBboxCalculator(child, this->context);
             }
         }
@@ -18740,7 +18748,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               plot_parent->setAttribute("_kind", kind);
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
-              new_series->setAttribute("_bbox_id", -1);
+              new_series->setAttribute("_bbox_id", -(bounding_id++));
               if (element->hasAttribute("orientation"))
                 new_series->setAttribute("orientation", static_cast<std::string>(element->getAttribute("orientation")));
               if (element->hasAttribute("ref_x_axis_location"))
@@ -18851,7 +18859,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
               new_series->setAttribute("z", element->getAttribute("z"));
-              new_series->setAttribute("_bbox_id", -1);
+              new_series->setAttribute("_bbox_id", -(bounding_id++));
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               if (kind == "imshow")
                 {
@@ -18902,7 +18910,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               new_series->setAttribute("z_dims", element->getAttribute("z_dims"));
               if (element->hasAttribute("d_min")) new_series->setAttribute("d_min", element->getAttribute("d_min"));
               if (element->hasAttribute("d_max")) new_series->setAttribute("d_max", element->getAttribute("d_max"));
-              new_series->setAttribute("_bbox_id", -1);
+              new_series->setAttribute("_bbox_id", -(bounding_id++));
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())
                 {
@@ -18922,7 +18930,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
               new_series->setAttribute("z", element->getAttribute("z"));
-              new_series->setAttribute("_bbox_id", -1);
+              new_series->setAttribute("_bbox_id", -(bounding_id++));
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())
                 {
@@ -18940,7 +18948,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               element->parentElement()->insertBefore(new_series, element);
               plot_parent->setAttribute("_kind", kind);
               new_series->setAttribute("x", element->getAttribute("x"));
-              new_series->setAttribute("_bbox_id", -1);
+              new_series->setAttribute("_bbox_id", -(bounding_id++));
               if (element->hasAttribute("orientation"))
                 new_series->setAttribute("orientation", static_cast<std::string>(element->getAttribute("orientation")));
               if (element->hasAttribute("ref_x_axis_location"))
@@ -18998,7 +19006,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               plot_parent->setAttribute("_kind", kind);
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
-              new_series->setAttribute("_bbox_id", -1);
+              new_series->setAttribute("_bbox_id", -(bounding_id++));
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())
                 {
@@ -19017,7 +19025,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               plot_parent->setAttribute("_kind", kind);
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
-              new_series->setAttribute("_bbox_id", -1);
+              new_series->setAttribute("_bbox_id", -(bounding_id++));
               if (element->hasAttribute("clip_negative"))
                 new_series->setAttribute("clip_negative", element->getAttribute("clip_negative"));
               for (const auto &child : element->children())
