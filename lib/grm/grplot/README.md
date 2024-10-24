@@ -9,7 +9,7 @@ This program allows to create plots from the command line while using simple key
 The following parameters are key-value pairs which can be used for every plot type.
 
 - `file`: contains the data which should be displayed. If no file is referred this results in an error message. If this parameter is the first argument the `file` keyword may be omitted. More information about these files can be found under the subchapter `Data file`. A hyphen '-' in place of a file path normally means "read from standard input". Since 'grplot' does not read from standard input by default, use '-' to redirect the input. This way 'grplot' can be used in a pipe.
-- `kind`: defines the plot type that should be displayed. Possible options are: `barplot`, `contour`, `contourf`, `heatmap`, `hexbin`, `hist`, `imshow`, `isosurface`, `line`, `marginal_heatmap`, `polar_heatmap`, `polar_histogram`, `polar_line`, `polar_scatter`, `pie`, `plot3`, `scale`, `scatter`, `scatter3`, `shade`, `surface`, `stairs`, `stem`, `tricontour`, `trisurface`, `quiver`, `volume`, `wireframe`. The default plot type is `line`.
+- `kind`: defines the plot type that should be displayed. Possible options are: `barplot`, `contour`, `contourf`, `heatmap`, `hexbin`, `histogram`, `imshow`, `isosurface`, `line`, `marginal_heatmap`, `polar_heatmap`, `polar_histogram`, `polar_line`, `polar_scatter`, `pie`, `plot3`, `scale`, `scatter`, `scatter3`, `shade`, `surface`, `stairs`, `stem`, `tricontour`, `trisurface`, `quiver`, `volume`, `wireframe`. The default plot type is `line`.
 
   To get extra information about a specific plot type use:
 
@@ -19,10 +19,11 @@ The following parameters are key-value pairs which can be used for every plot ty
 
   Alternatively `-h` can be used instead of `--help`.
 
-There is another parameter that can be used for all two-dimensional data sets:
+There are more parameters that can be used for all two-dimensional data sets:
 
 - `keep_aspect_ratio` or `aspect`: defines whether the aspect ratio of the initial picture is kept or not. Possible values for this parameter are 0 or 1.
 - `only_quadratic_aspect_ratio`: defines whether the aspect ratio of quadratic data (x, y) is forced to be quadratic and kept this way or not. Notice this parameter will not work if the `keep_aspect_ratio` parameter has the value of 0. Possible values for this parameter are 0 or 1.
+- `orientation`: This parameter defines the orientation of the displayed series. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
 
 For plots where multiple columns are read there is also a parameter that allows to select columns.
 
@@ -112,7 +113,7 @@ The next line after the header may contain the column labels. If the data does n
 2. `line`, `scatter`: One or more columns are expected here. Each column will be displayed in a single plot. The values inside the columns gets therefore interpreted as y-values. In combination with the `error` parameter every 2nd (and 3rd) column gets interpreted as error-values. More information are found by the `error` parameter itself. There is also another option which allows the user to define which columns include the x-, y- and error-values. For this the parameters `x_columns`, `y_columns` and `error_columns` can be used. 
 3. `isosurface`, `volume`: The expected data are multiple matrices. Each matrix represents a slice inside the volume.
 4. `plot3`, `scatter`, `scatter3`, `tricontour`, `trisurface`: Three columns with data are expected, representing the x-, y- and z-data.
-5. `barplot`, `hist`, `stem`, `stairs`: One or more columns are expected. Each column will be displayed in a single plot. The values inside the columns gets therefore interpreted as y-values. In combination with the `error` parameter the 2nd (and 3rd) column gets interpreted as error-values. More information are found by the `error` parameter itself. There is also another option which allows the user to define which column include the x-, y- and error-values. For this the parameters `x_columns`, `y_columns` and `error_columns` can be used.
+5. `barplot`, `histogram`, `stem`, `stairs`: One or more columns are expected. Each column will be displayed in a single plot. The values inside the columns gets therefore interpreted as y-values. In combination with the `error` parameter the 2nd (and 3rd) column gets interpreted as error-values. More information are found by the `error` parameter itself. There is also another option which allows the user to define which column include the x-, y- and error-values. For this the parameters `x_columns`, `y_columns` and `error_columns` can be used.
 6. `pie`: The expected data are 1-4 lines. The first line represents the data which should be displayed. The next 3 rows are used to set the RGB of the pie charts. Each row stands for one RGB element.
 7. `polar_histogram`: One column is expected which represents the values.
 8. `polar_line`, `polar_scatter`: The expected data are pairs of two columns containing the angles and values.
@@ -173,12 +174,11 @@ Possible parameters for the bar plot are:
    The syntax of this parameter is:
 
    `ind_edge_width:`number_of_edges`,{{indices:`first_edge_index`},{width:`first_edge_width`}`,...`}`
-10. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
-11. `style`: This parameter defines how the data inside the bar plot is displayed. There are three options:
+10. `style`: This parameter defines how the data inside the bar plot is displayed. There are three options:
     - `default`: All values are displayed with a separate bar.
     - `stacked`: The values are displayed with bars which are stacked over each other.
     - `lined`: The values are displayed with smaller bars next to each other.
-12. `y_labels`: This parameter allows the user to set labels to specific bars, which can for example display the value of the bar. The syntax of this parameter is `y_labels:{`label1`,`label2`,`...`}`.
+11. `y_labels`: This parameter allows the user to set labels to specific bars, which can for example display the value of the bar. The syntax of this parameter is `y_labels:{`label1`,`label2`,`...`}`.
 
 ### CONTOUR
 
@@ -232,7 +232,7 @@ Possible parameters for the hexbin are:
 3. `levels`: This parameter defines how many contour lines should be drawn. The default is 20.
 4. `x_flip`: This parameter defines whether the x-axis is flipped or not.
 
-### HIST
+### HISTOGRAM
 
 This plot type converts the data into a histogram. A histogram is an approximate representation of the distribution of numerical data. Two columns are expected containing the x- and the y-data.
 
@@ -250,8 +250,7 @@ Possible parameters for the histogram are:
 
    `error:{{error_bar_color:`color_index`},{downwards_cap_color:`color_index`},{upwards_cap_color:`color_index`}}`
 
-5. `error_bar_style`: Defines how the error-bars are displayed. As single error-lines(0) or as an error-area(1). 
-6. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
+5. `error_bar_style`: Defines how the error-bars are displayed. As single error-lines(0) or as an error-area(1).
 
 ### IMSHOW
 
@@ -307,8 +306,6 @@ Possible parameters for the line plot are:
     The syntax for this parameter is:
 
    `int_limits_low:`number_of_elements`,`elem_1`,`elem_2`,`...
-
-5. `orientation`: This parameter defines the orientation of the displayed lines. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
 
 ### MARGINAL_HEATMAP
 
@@ -449,18 +446,13 @@ The expected data is 1 column. This column represents the y-data.
 
 Possible parameters for the stairs plot are:
 
-1. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
-2. `step_where`: This parameter defines the calculation of the steps. The possible values are `pre`, `post` and `mid` which is also the default case.
+1. `step_where`: This parameter defines the calculation of the steps. The possible values are `pre`, `post` and `mid` which is also the default case.
 
 ### STEM
 
 This plot type converts the data into a stem plot. A stem plot draws lines perpendicular to a baseline at each location from the baseline to the data values.
 
 The expected data is one column containing the y-data.
-
-Possible parameters for the stem plot are:
-
-1. `orientation`: This parameter defines the orientation of the displayed bars. They can either be drawn `horizontal` or `vertical` while the default is `horizontal`.
 
 ### TRICONTOUR
 
