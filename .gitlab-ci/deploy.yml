@@ -24,6 +24,7 @@ deploy-to-obs:
     mv -f ${OBS_PROJECT}/gr/_service.new
     ${OBS_PROJECT}/gr/_service
   - osc commit ${OBS_PROJECT}/gr/_service -m "Release $REVISION"
+  - osc results -w -F ${OBS_PROJECT}/gr
 
 deploy-to-aur:
   stage: deploy
