@@ -132,7 +132,7 @@ libGRM${GR_SHARED_LIBRARY_SUFFIX}: $(GRMOBJS) libGR libGR3
 	$(CXX) -o $@ $(SOFLAGS) $(GRMOBJS) $(LIBS) $(LDFLAGS) $(INSTALL_NAME)
 
 grplot:
-	$(MAKE) -C grplot -f makefile.mak GRDIR=$(GRDIR)
+	$(MAKE) -C grplot -f makefile.mak GRDIR=$(GRDIR) THIRDPARTYDIR=$(THIRDPARTYDIR)
 
 install:
 	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
