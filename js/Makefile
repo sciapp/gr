@@ -19,6 +19,7 @@ endif
     CFLAGS = $(DEFINES) $(OPTS) $(EXTRA_CFLAGS)
   CXXFLAGS = $(DEFINES) $(OPTS) -std=c++17 $(EXTRA_CXXFLAGS)
    LDFLAGS = $(DEFINES) $(OPTS) $(EXTRA_LDFLAGS) \
+		-sDYNCALLS=1 \
 		-s ERROR_ON_UNDEFINED_SYMBOLS=0 \
 		-s LEGACY_GL_EMULATION=1 \
 		-s 'EXPORTED_RUNTIME_METHODS=["ccall", "cwrap", "getValue", "setValue", "addFunction", "removeFunction", "UTF8ToString", "stringToUTF8", "lengthBytesUTF8"]' \
