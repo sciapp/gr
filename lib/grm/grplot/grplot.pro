@@ -29,6 +29,9 @@ if (macx) {
     } else {
       LIBS += -L$(GRDIR)/lib -lGRM -lGR -Wl,-rpath-link,$(GRDIR)/lib
     }
+    if (exists($$(THIRDPARTYDIR)/lib/libicuuc.a) && exists($$(THIRDPARTYDIR)/lib/libicudata.a)) {
+      LIBS += $$(THIRDPARTYDIR)/lib/libicuuc.a $$(THIRDPARTYDIR)/lib/libicudata.a
+    }
     # On every other system, the grplot executable is located in `$(GRDIR)/bin`
     # and we need to resolve `libGRM.so` in `$(GRDIR)/lib`
     QMAKE_RPATHDIR += ../lib
