@@ -389,6 +389,8 @@ void EditElementWidget::accept()
             }
           else
             {
+              if (attr_name == "location" && (*current_selection)->get_ref()->localName() == "axis")
+                (*current_selection)->get_ref()->setAttribute("_ignore_next_tick_orientation", true);
               const std::string value = ((QComboBox *)fields[i])->itemText(index).toStdString();
               grplot_widget->attributeSetForComboBox(attr_type[attr_name], (*current_selection)->get_ref(), value,
                                                      (labels[i]).toStdString());

@@ -812,11 +812,12 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
            !(cur_elem_name == "side_region" || cur_elem_name == "side_plot_region" || cur_elem_name == "text_region") &&
            cur_elem_name == "axis")
     {
-      for (const auto &elem : (x_axis_location_list + y_axis_location_list))
+      auto axis_type = static_cast<std::string>(current_selection->get_ref()->getAttribute("axis_type"));
+      for (const auto &elem : (axis_type == "x" ? x_axis_location_list : y_axis_location_list))
         {
           ((QComboBox *)*lineEdit)->addItem(elem.toStdString().c_str());
         }
-      auto *completer = new QCompleter((x_axis_location_list + y_axis_location_list), this);
+      auto *completer = new QCompleter((axis_type == "x" ? x_axis_location_list : y_axis_location_list), this);
       completer->setCaseSensitivity(Qt::CaseInsensitive);
       ((QComboBox *)*lineEdit)->setCompleter(completer);
     }

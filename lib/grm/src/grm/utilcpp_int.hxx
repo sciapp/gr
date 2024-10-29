@@ -71,5 +71,8 @@ template <typename... Args> constexpr bool str_equals_any(std::string_view targe
 }
 
 bool is_number(std::string_view str);
+double round(double val, int digits);
+double ceil(double val, int digits);
+double floor(double val, int digits);
 
 #endif // GRM_UTIL_INT_HXX_INCLUDED

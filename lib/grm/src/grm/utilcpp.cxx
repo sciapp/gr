@@ -238,3 +238,19 @@ bool is_number(std::string_view str)
   auto pos = str.find_first_not_of(".-0123456789", start_pos);
   return pos == std::string::npos;
 }
+
+double round(double val, int digits)
+{
+  if (digits < 0) return (round((val * pow(0.1, digits)) + ((val < 0) ? -0.5 : 0.5))) / pow(0.1, digits);
+  return (round((val * pow(0.1, digits)) + ((val < 0) ? -0.5 : 0.5) * pow(0.1, digits))) / pow(0.1, digits);
+}
+
+double ceil(double val, int digits)
+{
+  return ceil(val * pow(0.1, digits)) / pow(0.1, digits);
+}
+
+double floor(double val, int digits)
+{
+  return floor(round(val, -15) * pow(0.1, digits)) / pow(0.1, digits);
+}

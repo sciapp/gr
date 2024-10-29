@@ -948,6 +948,9 @@ static void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::
   if (right_text_margin) right_margin += 0.05;
   if (bottom_text_margin) bottom_margin += 0.05;
 
+  if (plot_parent->hasAttribute("_twin_y_window_xform_a_org")) right_margin += 0.025;
+  if (plot_parent->hasAttribute("_twin_x_window_xform_a_org") && !top_text_margin) top_margin += 0.025;
+
   // calculate text impact for top_margin and adjust all margins if defined by attributes
   if (kind == "marginal_heatmap")
     {
@@ -4221,6 +4224,10 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
   if (!(scale & GR_OPTION_X_LOG))
     {
       adjust_x_lim = static_cast<int>(element->getAttribute("adjust_x_lim"));
+      auto x_axis = element->querySelectors("axis[location=\"x\"]");
+      if (x_axis != nullptr && x_axis->hasAttribute("adjust_x_lim") && kinds_3d.count(kind) == 0 &&
+          polar_kinds.count(kind) == 0)
+        adjust_x_lim = static_cast<int>(x_axis->getAttribute("adjust_x_lim"));
       if (adjust_x_lim)
         {
           logger((stderr, "_x_lim before \"gr_adjustlimits\": (%lf, %lf)\n", xmin, xmax));
@@ -4232,6 +4239,10 @@ void GRM::Render::processLimits(const std::shared_ptr<GRM::Element> &element)
   if (!(scale & GR_OPTION_Y_LOG))
     {
       adjust_y_lim = static_cast<int>(element->getAttribute("adjust_y_lim"));
+      auto y_axis = element->querySelectors("axis[location=\"y\"]");
+      if (y_axis != nullptr && y_axis->hasAttribute("adjust_y_lim") && kinds_3d.count(kind) == 0 &&
+          polar_kinds.count(kind) == 0)
+        adjust_y_lim = static_cast<int>(y_axis->getAttribute("adjust_y_lim"));
       if (adjust_y_lim)
         {
           logger((stderr, "_y_lim before \"gr_adjustlimits\": (%lf, %lf)\n", ymin, ymax));
@@ -4829,36 +4840,143 @@ static void axisArgumentsConvertedIntoTickGroups(tick_t *ticks, tick_label_t *ti
                                                  const std::shared_ptr<GRM::Element> &axis, del_values del)
 {
   int child_id = 1, label_ind = 0;
-  std::shared_ptr<GRM::Element> tick_group;
+  std::string filter;
+  std::shared_ptr<GRM::Element> tick_group, axis_ref;
   auto num_ticks = static_cast<int>(axis->getAttribute("num_ticks"));
   auto num_labels = static_cast<int>(axis->getAttribute("num_tick_labels"));
   auto axis_type = static_cast<std::string>(axis->getAttribute("axis_type"));
+  auto location = static_cast<std::string>(axis->getAttribute("location"));
+
+  if (location == "twin_x")
+    filter = "x";
+  else if (location == "twin_y")
+    filter = "y";
+  if (!filter.empty()) axis_ref = axis->parentElement()->querySelectors("axis[location=\"" + filter + "\"]");
 
   if (static_cast<int>(axis->getAttribute("mirrored_axis"))) child_id += 1;
-  for (int i = 0; i < num_ticks; i++)
+  if (!str_equals_any(location, "twin_x", "twin_y") || !axis->hasAttribute("_" + location + "_window_xform_a") ||
+      !axis_ref->hasAttribute("draw_grid") || !static_cast<int>(axis_ref->getAttribute("draw_grid")))
     {
-      std::string label;
-      double width = 0.0;
-      if (label_ind < num_labels && tick_labels[label_ind].tick == ticks[i].value)
+      for (int i = 0; i < num_ticks; i++)
         {
-          if (tick_labels[label_ind].label) label = tick_labels[label_ind].label;
-          if (tick_labels[label_ind].width) width = tick_labels[label_ind].width;
-          label_ind += 1;
-        }
+          std::string label;
+          double width = 0.0;
+          if (label_ind < num_labels && tick_labels[label_ind].tick == ticks[i].value)
+            {
+              if (tick_labels[label_ind].label) label = tick_labels[label_ind].label;
+              if (tick_labels[label_ind].width) width = tick_labels[label_ind].width;
+              label_ind += 1;
+            }
 
-      if (del != del_values::update_without_default && del != del_values::update_with_default)
-        {
-          tick_group = global_render->createTickGroup(ticks[i].is_major, label, ticks[i].value, width);
-          tick_group->setAttribute("_child_id", child_id++);
-          axis->append(tick_group);
-        }
-      else
-        {
-          tick_group = axis->querySelectors("tick_group[_child_id=" + std::to_string(child_id++) + "]");
-          if (tick_group != nullptr)
-            tick_group = global_render->createTickGroup(ticks[i].is_major, label, ticks[i].value, width, tick_group);
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              tick_group = global_render->createTickGroup(ticks[i].is_major, label, ticks[i].value, width);
+              tick_group->setAttribute("_child_id", child_id++);
+              axis->append(tick_group);
+            }
+          else
+            {
+              tick_group = axis->querySelectors("tick_group[_child_id=" + std::to_string(child_id++) + "]");
+              if (tick_group != nullptr)
+                tick_group =
+                    global_render->createTickGroup(ticks[i].is_major, label, ticks[i].value, width, tick_group);
+            }
         }
     }
+  else
+    {
+      std::shared_ptr<GRM::Element> plot_parent = axis;
+      getPlotParent(plot_parent);
+
+      axis->setAttribute("num_ticks", static_cast<int>(axis_ref->getAttribute("num_ticks")));
+      axis->setAttribute("num_tick_labels", static_cast<int>(axis_ref->getAttribute("num_tick_labels")));
+      auto org = static_cast<double>(axis->getAttribute("org"));
+      auto min = static_cast<double>(axis->getAttribute("min"));
+      auto max = static_cast<double>(axis->getAttribute("max"));
+      auto tick = static_cast<double>(axis->getAttribute("tick"));
+      auto major_count = static_cast<double>(axis->getAttribute("major_count"));
+
+      for (int i = 0; i < static_cast<int>(axis->getAttribute("num_ticks")); i++)
+        {
+          std::string label;
+          double width = 0.0;
+
+          auto a = static_cast<double>(plot_parent->getAttribute("_" + location + "_window_xform_a"));
+          auto b = static_cast<double>(plot_parent->getAttribute("_" + location + "_window_xform_b"));
+          auto ref_tick_group = axis_ref->querySelectors("tick_group[_child_id=" + std::to_string(child_id) + "]");
+          auto is_major = static_cast<int>(ref_tick_group->getAttribute("is_major"));
+          auto tick_value = static_cast<double>(ref_tick_group->getAttribute("value"));
+          tick_value = a * tick_value + b;
+
+          if (label_ind < static_cast<int>(axis->getAttribute("num_tick_labels")) &&
+              !static_cast<std::string>(ref_tick_group->getAttribute("tick_label")).empty())
+            {
+              char text_buffer[PLOT_POLAR_AXES_TEXT_BUFFER] = "";
+              format_reference_t reference;
+              gr_getformat(&reference, org, min, max, tick, major_count);
+              snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%s", std::to_string(tick_value).c_str());
+
+              auto value_string = gr_ftoa(text_buffer, tick_value, &reference);
+              label = value_string;
+              width = static_cast<double>(ref_tick_group->getAttribute("width"));
+              label_ind += 1;
+            }
+
+          if (del != del_values::update_without_default && del != del_values::update_with_default)
+            {
+              tick_group = global_render->createTickGroup(is_major, label, tick_value, width);
+              tick_group->setAttribute("_child_id", child_id++);
+              axis->append(tick_group);
+            }
+          else
+            {
+              tick_group = axis->querySelectors("tick_group[_child_id=" + std::to_string(child_id++) + "]");
+              if (tick_group != nullptr)
+                tick_group = global_render->createTickGroup(is_major, label, tick_value, width, tick_group);
+            }
+        }
+    }
+}
+
+static void newWindowForTwinAxis(const std::shared_ptr<GRM::Element> &element,
+                                 const std::shared_ptr<GRM::Element> &axis_ref, double *new_w_min, double *new_w_max,
+                                 double old_w_min, double old_w_max)
+{
+  double a, b;
+  double rounded_tick, tick, diff;
+  int diff_log, num_ticks_log, decimal_places, num_ticks;
+  std::shared_ptr<GRM::Element> plot_parent = element;
+  getPlotParent(plot_parent);
+
+  auto location = static_cast<std::string>(element->getAttribute("location"));
+
+  diff = *new_w_max - *new_w_min;
+  diff_log = ceil(log10(diff));
+  num_ticks = static_cast<int>(axis_ref->getAttribute("num_ticks")) - 1;
+  num_ticks_log = ceil(log10(num_ticks));
+  decimal_places = diff_log - num_ticks_log - 1;
+
+  // modify start window to control the first labels decimal places
+  *new_w_min = floor(*new_w_min, decimal_places);
+  *new_w_max = ceil(*new_w_max, decimal_places);
+
+  diff = *new_w_max - *new_w_min;
+  tick = diff / num_ticks;
+  rounded_tick = round(tick, decimal_places);
+
+  if (fabs(tick - rounded_tick) > 1e-12) //  more digits than wanted
+    {
+      auto new_tick = ceil(tick, decimal_places);
+      auto modification = fabs(new_tick * num_ticks - diff) / 2.0;
+      *new_w_min -= modification;
+      *new_w_max += modification;
+    }
+  calculateWindowTransformationParameter(element, old_w_min, old_w_max, *new_w_min, *new_w_max, location, &a, &b);
+
+  element->setAttribute("_" + location + "_window_xform_a", a);
+  element->setAttribute("_" + location + "_window_xform_b", b);
+  plot_parent->setAttribute("_" + location + "_window_xform_a", a);
+  plot_parent->setAttribute("_" + location + "_window_xform_b", b);
 }
 
 static void processAxis(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -4936,6 +5054,19 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
       // calculate the window for non default axis
       a = static_cast<double>(plot_parent->getAttribute("_" + location + "_window_xform_a"));
       b = static_cast<double>(plot_parent->getAttribute("_" + location + "_window_xform_b"));
+      if (str_equals_any(location, "twin_x", "twin_y") && element->hasAttribute("_" + location + "_window_xform_a"))
+        {
+          std::string filter = (location == "twin_x") ? "x" : "y";
+          auto axis_ref = element->parentElement()->querySelectors("axis[location=\"" + filter + "\"]");
+          if (axis_ref->hasAttribute("draw_grid") && static_cast<int>(axis_ref->getAttribute("draw_grid")))
+            {
+              // get special transformation for twin axes with grid
+              a = static_cast<double>(element->getAttribute("_" + location + "_window_xform_a"));
+              b = static_cast<double>(element->getAttribute("_" + location + "_window_xform_b"));
+              plot_parent->setAttribute("_" + location + "_window_xform_a", a);
+              plot_parent->setAttribute("_" + location + "_window_xform_b", b);
+            }
+        }
       if (axis_type == "x")
         {
           double tmp_window_0, tmp_window_1;
@@ -4958,6 +5089,15 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
 
               plot_parent->setAttribute("_" + location + "_window_xform_a", a);
               plot_parent->setAttribute("_" + location + "_window_xform_b", b);
+            }
+
+          if (location == "twin_x" && !element->hasAttribute("_" + location + "_window_xform_a"))
+            {
+              auto x_axis = element->parentElement()->querySelectors("axis[location=\"x\"]");
+              if (x_axis->hasAttribute("draw_grid") && static_cast<int>(x_axis->getAttribute("draw_grid")))
+                {
+                  newWindowForTwinAxis(element, x_axis, &tmp_window_0, &tmp_window_1, window[0], window[1]);
+                }
             }
           window[0] = tmp_window_0;
           window[1] = tmp_window_1;
@@ -4984,6 +5124,15 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
 
               plot_parent->setAttribute("_" + location + "_window_xform_a", a);
               plot_parent->setAttribute("_" + location + "_window_xform_b", b);
+            }
+
+          if (location == "twin_y" && !element->hasAttribute("_" + location + "_window_xform_a"))
+            {
+              auto y_axis = element->parentElement()->querySelectors("axis[location=\"y\"]");
+              if (y_axis->hasAttribute("draw_grid") && static_cast<int>(y_axis->getAttribute("draw_grid")))
+                {
+                  newWindowForTwinAxis(element, y_axis, &tmp_window_2, &tmp_window_3, window[2], window[3]);
+                }
             }
           window[2] = tmp_window_2;
           window[3] = tmp_window_3;
@@ -5061,11 +5210,11 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
         tick_orientation = static_cast<int>(element->getAttribute("tick_orientation"));
     }
 
+  if (str_equals_any(location, "right", "top", "twin_x", "twin_y")) tick_orientation = -1;
+
   // special cases for x- and y-flip
   if ((scale & GR_OPTION_FLIP_X || x_flip) && axis_type == "y") pos = window[1];
   if ((scale & GR_OPTION_FLIP_Y || y_flip) && axis_type == "x") pos = window[3];
-
-  if (str_equals_any(location, "right", "top", "twin_x", "twin_y")) tick_orientation = -1;
 
   // axis
   if (element->parentElement()->localName() != "colorbar")
@@ -5094,9 +5243,7 @@ static void processAxis(const std::shared_ptr<GRM::Element> &element, const std:
   tick_size *= tick_orientation;
   axis_t axis = {min_val, max_val, tick, org, pos, major_count, 0, nullptr, tick_size, 0, nullptr, NAN, 1};
   if (axis_type == "x")
-    {
-      gr_axis('X', &axis);
-    }
+    gr_axis('X', &axis);
   else if (axis_type == "y")
     gr_axis('Y', &axis);
   tick_orientation = axis.tick_size < 0 ? -1 : 1;
@@ -5456,28 +5603,44 @@ static void processRefAxisLocation(const std::shared_ptr<GRM::Element> &element)
 {
   std::shared_ptr<GRM::Element> plot_parent = element, coordinate_system;
   double window[4];
+  std::string orientation = PLOT_DEFAULT_ORIENTATION;
 
   getPlotParent(plot_parent);
   coordinate_system = plot_parent->querySelectors("coordinate_system");
   if (coordinate_system != nullptr && static_cast<std::string>(coordinate_system->getAttribute("plot_type")) == "2d" &&
       element->localName() != "series_pie")
     {
+      if (element->hasAttribute("orientation"))
+        orientation = static_cast<std::string>(element->getAttribute("orientation"));
+
       auto x_location = static_cast<std::string>(element->getAttribute("ref_x_axis_location"));
       if (x_location.empty()) x_location = "x";
-      auto ref_x_axis = plot_parent->querySelectors("axis[location=\"" + x_location + "\"]");
+      auto y_location = static_cast<std::string>(element->getAttribute("ref_y_axis_location"));
+      if (y_location.empty()) y_location = "y";
 
+      if (orientation == "vertical")
+        {
+          auto tmp = x_location;
+          x_location = y_location;
+          y_location = tmp;
+
+          if (y_location == "twin_x") y_location = "twin_y";
+          if (y_location == "top") y_location = "right";
+          if (y_location == "bottom") y_location = "left";
+          if (x_location == "twin_y") x_location = "twin_x";
+          if (x_location == "right") x_location = "top";
+          if (x_location == "left") x_location = "bottom";
+        }
+
+      auto ref_x_axis = plot_parent->querySelectors("axis[location=\"" + x_location + "\"]");
       if (!ref_x_axis->hasAttribute("window_x_min") || !ref_x_axis->hasAttribute("window_x_max"))
         processAxis(ref_x_axis, global_render->getContext());
-
       window[0] = static_cast<double>(ref_x_axis->getAttribute("window_x_min"));
       window[1] = static_cast<double>(ref_x_axis->getAttribute("window_x_max"));
 
-      auto y_location = static_cast<std::string>(element->getAttribute("ref_y_axis_location"));
-      if (y_location.empty()) y_location = "y";
       auto ref_y_axis = plot_parent->querySelectors("axis[location=\"" + y_location + "\"]");
       if (!ref_y_axis->hasAttribute("window_y_min") || !ref_y_axis->hasAttribute("window_y_max"))
         processAxis(ref_y_axis, global_render->getContext());
-
       window[2] = static_cast<double>(ref_y_axis->getAttribute("window_y_min"));
       window[3] = static_cast<double>(ref_y_axis->getAttribute("window_y_max"));
 
@@ -6047,6 +6210,7 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
   bool inner_series, inner_c = false, inner_c_rgb = false;
   del_values del = del_values::update_without_default;
   int child_id = 0;
+  double eps = 1e-12;
 
   /* clear old bars */
   del = del_values(static_cast<int>(element->getAttribute("_delete_children")));
@@ -6276,7 +6440,7 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
             }
           x1 += x_min;
           x2 += x_min;
-          if (x_log && x1 <= 0) x1 = 1;
+          if (x_log && x1 <= 0) x1 = 0 + eps;
           if (x_log && x2 <= x1) continue;
 
           if (is_vertical)
@@ -6387,7 +6551,7 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
                 }
               x1 += x_min;
               x2 += x_min;
-              if (x_log && x1 <= 0) x1 = 1;
+              if (x_log && x1 <= 0) x1 = 0 + eps;
               if (x_log && x2 <= x1) continue;
 
               if (is_vertical)
@@ -6482,7 +6646,7 @@ static void processBarplot(const std::shared_ptr<GRM::Element> &element, const s
                   x1 = x_min + series_index + 1 - 0.5 * bar_width;
                   x2 = x_min + series_index + 1 + 0.5 * bar_width;
                 }
-              if (x_log && x1 <= 0) x1 = 1;
+              if (x_log && x1 <= 0) x1 = 0 + eps;
               if (x_log && x2 <= x1) continue;
               bar_centers.push_back((x1 + x2) / 2.0);
             }
@@ -14387,6 +14551,24 @@ static void kindDependentCoordinateLimAdjustments(const std::shared_ptr<GRM::Ele
   x_log = element->hasAttribute("x_log") && static_cast<int>(element->getAttribute("x_log"));
   y_log = element->hasAttribute("y_log") && static_cast<int>(element->getAttribute("y_log"));
 
+  std::string orientation = PLOT_DEFAULT_ORIENTATION;
+  if (kind != "marginal_heatmap" && kinds_3d.count(kind) == 0 && polar_kinds.count(kind) == 0)
+    {
+      for (const auto &series : central_region->children())
+        {
+          if (!starts_with(series->localName(), "series_")) continue;
+          if (series->hasAttribute("orientation"))
+            orientation = static_cast<std::string>(series->getAttribute("orientation"));
+        }
+    }
+  if (orientation == "vertical")
+    {
+      if (lim == "x_lim")
+        lim = "y_lim";
+      else if (lim == "y_lim")
+        lim = "x_lim";
+    }
+
   for (const auto &series : central_region->children())
     {
       if (!starts_with(series->localName(), "series_")) continue;
@@ -14631,6 +14813,10 @@ static void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &
 
           while (!(*current_component_name).empty())
             {
+              if (orientation == "vertical" && (*current_component_name) == "x")
+                (*current_component_name) = "y";
+              else if (orientation == "vertical" && (*current_component_name) == "y")
+                (*current_component_name) = "x";
               std::list<std::string> location_names = {"tmp"};
               if (*current_component_name == "x" && plot_type == "2d")
                 location_names = {"x", "twin_x", "top", "bottom"};
@@ -14668,16 +14854,16 @@ static void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &
                                 continue;
                               if (series->hasAttribute("style"))
                                 style = static_cast<std::string>(series->getAttribute("style"));
-                              if (!series->hasAttribute(static_cast<std::string>(current_range_keys->series) +
-                                                        "_min") ||
-                                  !series->hasAttribute(
-                                      (static_cast<std::string>(current_range_keys->series) + "_max")))
+
+                              auto key = static_cast<std::string>(current_range_keys->series);
+                              if (orientation == "vertical") key = (key == "x_range") ? "y_range" : "x_range";
+                              if (!series->hasAttribute(key + "_min") || !series->hasAttribute(key + "_max"))
                                 {
                                   if (series->hasAttribute(*current_component_name))
                                     {
-                                      auto key =
+                                      auto cntx_key =
                                           static_cast<std::string>(series->getAttribute(*current_component_name));
-                                      current_component = GRM::get<std::vector<double>>((*context)[key]);
+                                      current_component = GRM::get<std::vector<double>>((*context)[cntx_key]);
                                       current_point_count = (int)current_component.size();
                                       if (series_kind == "barplot")
                                         {
@@ -14710,8 +14896,8 @@ static void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &
                                     {
                                       if (!series->hasAttribute("y"))
                                         throw NotFoundError("Series is missing required attribute y.\n");
-                                      auto key = static_cast<std::string>(series->getAttribute("y"));
-                                      auto y_vec = GRM::get<std::vector<double>>((*context)[key]);
+                                      auto cntx_key = static_cast<std::string>(series->getAttribute("y"));
+                                      auto y_vec = GRM::get<std::vector<double>>((*context)[cntx_key]);
                                       auto y_length = y_vec.size();
                                       current_min_component = 0.0;
                                       current_max_component = y_length - 1;
@@ -14730,9 +14916,9 @@ static void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &
                                           /* The other component is given -> the missing dimension can be calculated */
                                           unsigned int z_length;
 
-                                          auto key =
+                                          auto cntx_key =
                                               static_cast<std::string>(series->getAttribute(other_component_name));
-                                          auto other_component = GRM::get<std::vector<double>>((*context)[key]);
+                                          auto other_component = GRM::get<std::vector<double>>((*context)[cntx_key]);
                                           auto other_point_count = other_component.size();
 
                                           if (!series->hasAttribute("z"))
@@ -14766,9 +14952,9 @@ static void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &
                                       if (series->hasAttribute(*current_component_name))
                                         {
                                           int index_sum = 0;
-                                          auto key =
+                                          auto cntx_key =
                                               static_cast<std::string>(series->getAttribute(*current_component_name));
-                                          current_component = GRM::get<std::vector<double>>((*context)[key]);
+                                          current_component = GRM::get<std::vector<double>>((*context)[cntx_key]);
                                           current_point_count = (int)current_component.size();
 
                                           current_max_component = 0;
@@ -14800,18 +14986,14 @@ static void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &
                                 }
                               else
                                 {
-                                  current_min_component = static_cast<double>(series->getAttribute(
-                                      static_cast<std::string>(current_range_keys->series) + "_min"));
-                                  current_max_component = static_cast<double>(series->getAttribute(
-                                      static_cast<std::string>(current_range_keys->series) + "_max"));
+                                  current_min_component = static_cast<double>(series->getAttribute(key + "_min"));
+                                  current_max_component = static_cast<double>(series->getAttribute(key + "_max"));
                                 }
 
                               if (current_min_component != DBL_MAX && current_max_component != -DBL_MAX)
                                 {
-                                  series->setAttribute(static_cast<std::string>(current_range_keys->series) + "_min",
-                                                       current_min_component);
-                                  series->setAttribute(static_cast<std::string>(current_range_keys->series) + "_max",
-                                                       current_max_component);
+                                  series->setAttribute(key + "_min", current_min_component);
+                                  series->setAttribute(key + "_max", current_max_component);
                                 }
                               min_component = grm_min(current_min_component, min_component);
                               max_component = grm_max(current_max_component, max_component);
@@ -14867,6 +15049,18 @@ static void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &
                           max_component = static_cast<double>(
                               element->getAttribute(static_cast<std::string>(current_range_keys->plot) + "_max"));
                         }
+                      if (str_equals_any(static_cast<std::string>(current_range_keys->plot), "x_lim", "y_lim"))
+                        {
+                          std::string l = (static_cast<std::string>(current_range_keys->plot) == "x_lim") ? "x" : "y";
+                          auto axis = element->querySelectors("axis[location=\"" + l + "\"]");
+                          if (axis != nullptr && axis->hasAttribute(l + "_lim_min") &&
+                              axis->hasAttribute(l + "_lim_max") && kinds_3d.count(kind) == 0 &&
+                              polar_kinds.count(kind) == 0)
+                            {
+                              min_component = static_cast<double>(axis->getAttribute(l + "_lim_min"));
+                              max_component = static_cast<double>(axis->getAttribute(l + "_lim_max"));
+                            }
+                        }
 
                       if (polar_kinds.count(kind) > 0)
                         {
@@ -14887,19 +15081,11 @@ static void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &
                   if (min_component != DBL_MAX && max_component != -DBL_MAX)
                     {
                       auto lim = static_cast<std::string>(current_range_keys->plot);
-                      if (lim == "x_lim")
-                        {
-                          if (orientation == "vertical") lim = "y_lim";
-                        }
-                      else if (lim == "y_lim")
-                        {
-                          if (orientation == "vertical") lim = "x_lim";
-                        }
-
                       if (str_equals_any(*current_component_name, "x", "y") && !str_equals_any(location, "x", "y") &&
                           plot_type == "2d")
                         {
                           double a, b;
+                          std::string real_location = location;
                           // calculate transformation from default window to extra axis window (a * w1 + b = w2)
                           auto lim_min = static_cast<double>(element->getAttribute("_" + lim + "_min"));
                           auto lim_max = static_cast<double>(element->getAttribute("_" + lim + "_max"));
@@ -14907,10 +15093,19 @@ static void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &
                           calculateWindowTransformationParameter(element, lim_min, lim_max, min_component,
                                                                  max_component, location, &a, &b);
 
-                          element->setAttribute("_" + location + "_window_xform_a_org", a);
-                          element->setAttribute("_" + location + "_window_xform_a", a);
-                          element->setAttribute("_" + location + "_window_xform_b_org", b);
-                          element->setAttribute("_" + location + "_window_xform_b", b);
+                          if (orientation == "vertical")
+                            {
+                              if (location == "twin_x") real_location = "twin_y";
+                              if (location == "top") real_location = "right";
+                              if (location == "bottom") real_location = "left";
+                              if (location == "twin_y") real_location = "twin_x";
+                              if (location == "right") real_location = "top";
+                              if (location == "left") real_location = "bottom";
+                            }
+                          element->setAttribute("_" + real_location + "_window_xform_a_org", a);
+                          element->setAttribute("_" + real_location + "_window_xform_a", a);
+                          element->setAttribute("_" + real_location + "_window_xform_b_org", b);
+                          element->setAttribute("_" + real_location + "_window_xform_b", b);
                         }
                       else
                         {
@@ -14919,6 +15114,10 @@ static void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &
                         }
                     }
                 }
+              if (orientation == "vertical" && (*current_component_name) == "x")
+                (*current_component_name) = "y";
+              else if (orientation == "vertical" && (*current_component_name) == "y")
+                (*current_component_name) = "x";
               ++current_range_keys;
               ++current_component_name;
             }
@@ -15548,7 +15747,7 @@ static void processPlot(const std::shared_ptr<GRM::Element> &element, const std:
               std::shared_ptr<GRM::Element> axis;
               auto side_plot_region = global_render->createSidePlotRegion();
               side_region->append(side_plot_region);
-              if (str_equals_any(location, "right", "top")) side_region->setAttribute("offset", 0.05);
+              if (location == "right") side_region->setAttribute("offset", 0.05);
               side_region->setAttribute("width", 0.03);
 
               if (!side_plot_region->querySelectors("axis"))
@@ -19395,6 +19594,24 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                       element->setAttribute("_delete_children", 0);
                     }
                 }
+              if (attr == "ref_y_axis_location" || attr == "ref_x_axis_location")
+                {
+                  auto plot_parent = element->parentElement()->parentElement();
+                  auto coordinate_system = plot_parent->querySelectors("coordinate_system");
+
+                  auto plot_type = static_cast<std::string>(coordinate_system->getAttribute("plot_type"));
+                  if (plot_type == "2d")
+                    {
+                      plot_parent->setAttribute("_update_limits", true);
+                      plot_parent->setAttribute("_update_required", true);
+
+                      if (str_equals_any(static_cast<std::string>(element->getAttribute(attr)), "twin_x", "twin_y"))
+                        {
+                          coordinate_system->setAttribute("_update_required", true);
+                          coordinate_system->setAttribute("_delete_children", 2);
+                        }
+                    }
+                }
             }
           else if (starts_with(element->localName(), "series"))
             {
@@ -19443,8 +19660,8 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                 {
                   auto x_ind = static_cast<int>(element->getAttribute("x_ind"));
                   auto y_ind = static_cast<int>(element->getAttribute("y_ind"));
-                  if (attr == "x_ind" && y_ind != -1) element->setAttribute("_update_required", true);
-                  if (attr == "y_ind" && x_ind != -1) element->setAttribute("_update_required", true);
+                  if ((attr == "x_ind" && y_ind != -1) || (attr == "y_ind" && x_ind != -1))
+                    element->setAttribute("_update_required", true);
                 }
             }
           else if ((attr == "size_x" || attr == "size_y") && element->localName() == "figure" &&
@@ -19651,6 +19868,258 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                         }
                     }
                 }
+              else if (element->localName() == "axis")
+                {
+                  std::shared_ptr<GRM::Element> plot_parent = element, new_parent;
+                  getPlotParent(plot_parent);
+
+                  auto new_location = static_cast<std::string>(element->getAttribute(attr));
+                  auto parent = element->parentElement();
+
+                  if (!str_equals_any(std::string(value), "x", "y") ||
+                      plot_parent->querySelectors("axis[location=\"" + std::string(value) + "\"]") ||
+                      plot_parent->querySelectors("axis[location=\"" + new_location + "\"]"))
+                    {
+                      if ((str_equals_any(std::string(value), "left", "right", "twin_y", "y") &&
+                           str_equals_any(new_location, "left", "right", "twin_y", "y")) ||
+                          (str_equals_any(std::string(value), "bottom", "top", "twin_x", "x") &&
+                           str_equals_any(new_location, "bottom", "top", "twin_x", "x")))
+                        {
+                          auto a = plot_parent->getAttribute("_" + std::string(value) + "_window_xform_a_org");
+                          auto b = plot_parent->getAttribute("_" + std::string(value) + "_window_xform_b_org");
+
+                          plot_parent->setAttribute("_" + new_location + "_window_xform_a_org", a);
+                          plot_parent->setAttribute("_" + new_location + "_window_xform_b_org", b);
+
+                          plot_parent->removeAttribute("_" + std::string(value) + "_window_xform_a");
+                          plot_parent->removeAttribute("_" + std::string(value) + "_window_xform_b");
+                          plot_parent->removeAttribute("_" + std::string(value) + "_window_xform_a_org");
+                          plot_parent->removeAttribute("_" + std::string(value) + "_window_xform_b_org");
+
+                          // change the reference on the series elements
+                          for (const auto &series : plot_parent->querySelectors("central_region")->children())
+                            {
+                              if (!starts_with(series->localName(), "series_")) continue;
+
+                              if (str_equals_any(new_location, "bottom", "top", "twin_x", "x"))
+                                {
+                                  if ((series->hasAttribute("ref_x_axis_location") &&
+                                       static_cast<std::string>(series->getAttribute("ref_x_axis_location")) ==
+                                           std::string(value)) ||
+                                      (std::string(value) == "x" && !series->hasAttribute("ref_x_axis_location")))
+                                    {
+                                      series->setAttribute("ref_x_axis_location", new_location);
+                                    }
+                                  else if ((series->hasAttribute("ref_x_axis_location") &&
+                                            static_cast<std::string>(series->getAttribute("ref_x_axis_location")) ==
+                                                new_location) ||
+                                           (new_location == "x" && !series->hasAttribute("ref_x_axis_location")))
+                                    {
+                                      series->setAttribute("ref_x_axis_location", std::string(value));
+                                    }
+                                }
+                              else if (str_equals_any(new_location, "left", "right", "twin_y", "y"))
+                                {
+                                  if ((series->hasAttribute("ref_y_axis_location") &&
+                                       static_cast<std::string>(series->getAttribute("ref_y_axis_location")) ==
+                                           std::string(value)) ||
+                                      (std::string(value) == "y" && !series->hasAttribute("ref_y_axis_location")))
+                                    {
+                                      series->setAttribute("ref_y_axis_location", new_location);
+                                    }
+                                  else if ((series->hasAttribute("ref_y_axis_location") &&
+                                            static_cast<std::string>(series->getAttribute("ref_y_axis_location")) ==
+                                                new_location) ||
+                                           (new_location == "y" && !series->hasAttribute("ref_y_axis_location")))
+                                    {
+                                      series->setAttribute("ref_y_axis_location", std::string(value));
+                                    }
+                                }
+                            }
+
+                          // special cases to reset special twin-axis xform whioch allows a grid
+                          if (element->hasAttribute("_twin_x_window_xform_a"))
+                            {
+                              element->removeAttribute("_twin_x_window_xform_a");
+                              element->removeAttribute("_twin_x_window_xform_b");
+                            }
+                          if (element->hasAttribute("_twin_y_window_xform_a"))
+                            {
+                              element->removeAttribute("_twin_y_window_xform_a");
+                              element->removeAttribute("_twin_y_window_xform_b");
+                            }
+                          if (str_equals_any(new_location, "x", "y"))
+                            {
+                              auto axis = plot_parent->querySelectors("axis[location=\"twin_x\"");
+                              if (axis != nullptr && axis->hasAttribute("_twin_x_window_xform_a"))
+                                {
+                                  axis->removeAttribute("_twin_x_window_xform_a");
+                                  axis->removeAttribute("_twin_x_window_xform_b");
+                                }
+                              axis = plot_parent->querySelectors("axis[location=\"twin_y\"");
+                              if (axis != nullptr && axis->hasAttribute("_twin_y_window_xform_a"))
+                                {
+                                  axis->removeAttribute("_twin_y_window_xform_a");
+                                  axis->removeAttribute("_twin_y_window_xform_b");
+                                }
+                            }
+
+                          // get the parent element for the new axis
+                          if (str_equals_any(new_location, "twin_x", "twin_y", "x", "y"))
+                            new_parent = plot_parent->querySelectors("coordinate_system");
+                          else if (str_equals_any(new_location, "bottom", "left", "right", "top"))
+                            new_parent = plot_parent->querySelectors("side_region[location=" + new_location + "]");
+
+                          // figure out if an element needs to be swapped back
+                          for (const auto &child : new_parent->querySelectorsAll(element->localName()))
+                            {
+                              if (child != element && child->localName() == "side_plot_region")
+                                {
+                                  parent->appendChild(child);
+                                  child->setAttribute("_update_required", 1);
+                                  child->setAttribute("location", value);
+                                  resetOldBoundingBoxes(child);
+                                }
+                              else if (child != element &&
+                                       static_cast<std::string>(child->getAttribute("location")) == new_location)
+                                {
+                                  child->setAttribute("_update_required", 1);
+                                  child->setAttribute("location", value);
+                                }
+                            }
+
+                          // move the old axis to the new parent
+                          if (str_equals_any(new_location, "twin_x", "twin_y", "x", "y"))
+                            {
+                              if (!str_equals_any(std::string(value), "twin_x", "twin_y", "x", "y"))
+                                new_parent->appendChild(element);
+                              if (str_equals_any(std::string(value), "x", "y"))
+                                plot_parent->setAttribute("_update_required", true);
+                              if (new_location == "twin_x")
+                                {
+                                  auto x_axis = plot_parent->querySelectors("axis[location=\"x\"]");
+                                  x_axis->setAttribute("_update_required", true);
+                                  x_axis->setAttribute("_delete_children", 2);
+                                  x_axis->setAttribute("draw_grid", false);
+                                  if (str_equals_any(std::string(value), "x", "y"))
+                                    plot_parent->setAttribute("_update_limits", true);
+                                  if (!str_equals_any(std::string(value), "twin_x", "twin_y", "x", "y"))
+                                    parent->remove();
+                                }
+                              else if (new_location == "twin_y")
+                                {
+                                  auto y_axis = plot_parent->querySelectors("axis[location=\"y\"]");
+                                  y_axis->setAttribute("_update_required", true);
+                                  y_axis->setAttribute("_delete_children", 2);
+                                  y_axis->setAttribute("draw_grid", false);
+                                  if (str_equals_any(std::string(value), "x", "y"))
+                                    plot_parent->setAttribute("_update_limits", true);
+                                  if (!str_equals_any(std::string(value), "twin_x", "twin_y", "x", "y"))
+                                    parent->remove();
+                                }
+                              else if (str_equals_any(new_location, "x", "y"))
+                                {
+                                  auto axis = plot_parent->querySelectors("axis[location=\"" + value + "\"]");
+                                  for (const auto &child : axis->children())
+                                    {
+                                      child->remove();
+                                    }
+                                  clearAxisAttributes(axis);
+                                  axis->setAttribute("_update_required", true);
+                                  plot_parent->setAttribute("_update_limits", true);
+                                  if (!str_equals_any(std::string(value), "twin_x", "twin_y"))
+                                    {
+                                      new_parent->appendChild(element);
+                                      new_parent->setAttribute("offset", 0.02);
+                                      if (new_location == "right") new_parent->setAttribute("offset", 0.05);
+                                      new_parent->setAttribute("width", 0.03);
+                                      element->setAttribute("mirrored_axis", true);
+                                      element->setAttribute("draw_grid", true);
+                                      parent->appendChild(axis);
+                                      axis->setAttribute("mirrored_axis", false);
+                                      axis->setAttribute("line_color_ind", 1);
+                                    }
+                                }
+                              for (const auto &child : element->children())
+                                {
+                                  child->remove();
+                                }
+
+                              clearAxisAttributes(element);
+                              element->setAttribute("_update_required", true);
+                            }
+                          else if (str_equals_any(new_location, "bottom", "left", "right", "top"))
+                            {
+                              if (str_equals_any(std::string(value), "twin_x", "twin_y", "x", "y"))
+                                {
+                                  auto axis = new_parent->querySelectors("axis[location=\"" + value + "\"]");
+                                  if (new_parent->querySelectors("side_plot_region") != nullptr)
+                                    {
+                                      new_parent->querySelectors("side_plot_region")->appendChild(element);
+                                    }
+                                  else
+                                    {
+                                      auto side_plot_region = global_render->createSidePlotRegion();
+                                      new_parent->appendChild(side_plot_region);
+                                      side_plot_region->appendChild(element);
+                                    }
+
+                                  element->setAttribute("mirrored_axis", false);
+                                  element->setAttribute("line_color_ind", 1);
+                                  if (axis != nullptr)
+                                    {
+                                      parent->appendChild(axis);
+                                      axis->setAttribute("mirrored_ticks", true);
+                                      axis->setAttribute("draw_grid", true);
+                                    }
+                                  else if (std::string(value) == "twin_x")
+                                    {
+                                      auto x_axis = plot_parent->querySelectors("axis[location=\"x\"]");
+                                      x_axis->setAttribute("mirrored_axis", true);
+                                      x_axis->setAttribute("_delete_children", 2);
+                                      x_axis->setAttribute("_update_required", true);
+                                    }
+                                  else if (std::string(value) == "twin_y")
+                                    {
+                                      auto y_axis = plot_parent->querySelectors("axis[location=\"y\"]");
+                                      y_axis->setAttribute("mirrored_axis", true);
+                                      y_axis->setAttribute("_delete_children", 2);
+                                      y_axis->setAttribute("_update_required", true);
+                                    }
+                                }
+                              else
+                                {
+                                  new_parent->appendChild(parent);
+                                }
+                              new_parent->setAttribute("offset", 0.02);
+                              if (new_location == "right") new_parent->setAttribute("offset", 0.05);
+                              new_parent->setAttribute("width", 0.03);
+                              for (const auto &child : element->children())
+                                {
+                                  child->remove();
+                                }
+                              clearAxisAttributes(element);
+                              element->setAttribute("_update_required", true);
+                              if (str_equals_any(std::string(value), "x", "y"))
+                                plot_parent->setAttribute("_update_limits", true);
+                            }
+                          resetOldBoundingBoxes(new_parent);
+                          resetOldBoundingBoxes(parent);
+                        }
+                      else
+                        {
+                          fprintf(stderr, "The location can only be swapped if the old and new location match the same "
+                                          "axis_type.\n");
+                        }
+                    }
+                  else
+                    {
+                      fprintf(stderr,
+                              "The location swap is invalid. If the selected axis has the location x or y the new "
+                              "location must match an existing axis. Therefore no location change was made.\n");
+                      element->setAttribute("location", value);
+                    }
+                }
             }
           else if (element->localName() == "integral" &&
                    std::find(integral_critical_attributes.begin(), integral_critical_attributes.end(), attr) !=
@@ -19773,6 +20242,47 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                   auto theta_axes = coordinate_system->querySelectors("theta_axes");
                   theta_axes->setAttribute("_delete_children", 2);
                 }
+            }
+          else if (element->localName() == "axis" && attr == "tick_orientation")
+            {
+              if (element->hasAttribute("_ignore_next_tick_orientation"))
+                {
+                  element->removeAttribute("_ignore_next_tick_orientation");
+                  element->setAttribute("tick_orientation", value);
+                }
+            }
+          else if (element->localName() == "axis" && str_equals_any(attr, "adjust_x_lim", "adjust_y_lim", "x_lim_max",
+                                                                    "x_lim_min", "y_lim_max", "y_lim_min"))
+            {
+              auto plot_parent = element;
+              getPlotParent(plot_parent);
+              auto location = static_cast<std::string>(element->getAttribute("location"));
+              if (str_equals_any(location, "x", "y"))
+                {
+                  plot_parent->setAttribute("_update_limits", true);
+                  clearAxisAttributes(element);
+                }
+
+              if (str_equals_any(location, "twin_x", "twin_y", "x", "y"))
+                {
+                  auto axis = plot_parent->querySelectors("axis[location=\"twin_x\"");
+                  if (axis != nullptr && axis->hasAttribute("_twin_x_window_xform_a"))
+                    {
+                      axis->removeAttribute("_twin_x_window_xform_a");
+                      axis->removeAttribute("_twin_x_window_xform_b");
+                    }
+                  axis = plot_parent->querySelectors("axis[location=\"twin_y\"");
+                  if (axis != nullptr && axis->hasAttribute("_twin_y_window_xform_a"))
+                    {
+                      axis->removeAttribute("_twin_y_window_xform_a");
+                      axis->removeAttribute("_twin_y_window_xform_b");
+                    }
+                }
+            }
+          else if (element->localName() == "axis" && str_equals_any(attr, "draw_grid", "mirrored_axis"))
+            {
+              element->setAttribute("_update_required", true);
+              element->setAttribute("_delete_children", 2);
             }
         }
       global_root->setAttribute("_modified", true);

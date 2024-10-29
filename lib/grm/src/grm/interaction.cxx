@@ -1502,23 +1502,45 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
             {
               for (i = 0; i < x_series_vec.size(); i++)
                 {
-                  if (x_series_vec[i] < x_range_min || x_series_vec[i] > x_range_max)
-                    {
-                      continue;
-                    }
                   x_px = x_series_vec[i];
+                  if (current_series->parentElement()->hasAttribute("ref_x_axis_location") &&
+                      static_cast<std::string>(current_series->parentElement()->getAttribute("ref_x_axis_location")) !=
+                          "x")
+                    {
+                      auto location = static_cast<std::string>(
+                          current_series->parentElement()->getAttribute("ref_x_axis_location"));
+                      auto a = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_a"));
+                      auto b = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_b"));
+
+                      x_px = (x_px - b) / a;
+                    }
+                  if (x_px < x_range_min || x_px > x_range_max) continue;
+
                   y_px = y_series_vec[i];
+                  if (current_series->parentElement()->hasAttribute("ref_y_axis_location") &&
+                      static_cast<std::string>(current_series->parentElement()->getAttribute("ref_y_axis_location")) !=
+                          "y")
+                    {
+                      auto location = static_cast<std::string>(
+                          current_series->parentElement()->getAttribute("ref_y_axis_location"));
+                      auto a = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_a"));
+                      auto b = static_cast<double>(subplot_element->getAttribute("_" + location + "_window_xform_b"));
+
+                      y_px = (y_px - b) / a;
+                    }
+                  if (y_px < y_range_min || y_px > y_range_max) continue;
+
                   gr_wctondc(&x_px, &y_px);
-                  x_px = (x_px * max_width_height);
-                  y_px = (height - y_px * max_width_height);
-                  diff = fabs(x_px - mouse_x);
+                  x_px = x_px * max_width_height;
+                  y_px = y_px * max_width_height;
+                  diff = sqrt(pow(x_px - mouse_x, 2) + pow((height - y_px) - mouse_y, 2));
                   if (diff < mindiff && diff <= MAX_MOUSE_DIST)
                     {
                       mindiff = diff;
                       info->x = x_series_vec[i];
                       info->y = y_series_vec[i];
                       info->x_px = (int)x_px;
-                      info->y_px = (int)y_px;
+                      info->y_px = height - (int)y_px;
                       if (num_labels > series_i)
                         {
                           static std::vector<std::string> line_label = labels;
