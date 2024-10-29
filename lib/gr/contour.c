@@ -147,12 +147,12 @@ static void gradient(int ind, int n, double *xpts, double *ypts, enum contour_op
       if (i == txpt)
         {
           t = typt - j;
-          j++;
+          if (j < contour_vars.ydim - 1) j++;
         }
       else
         {
           t = txpt - i;
-          i++;
+          if (i < contour_vars.xdim - 1) i++;
         }
 
       if (i == 0)
