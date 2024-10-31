@@ -479,11 +479,14 @@ int grm_input_(const grm_args_t *input_args)
   max_width_height = grm_max(width, height);
   logger((stderr, "Using size (%d, %d)\n", width, height));
 
-  auto marginal_heatmap = grm_get_document_root()->querySelectorsAll("marginal_heatmap_plot");
-  if (!marginal_heatmap.empty())
+  auto marginal_heatmaps = grm_get_document_root()->querySelectorsAll("marginal_heatmap_plot");
+  if (!marginal_heatmaps.empty())
     {
-      if (marginal_heatmap[0]->hasAttribute("x_ind")) marginal_heatmap[0]->setAttribute("x_ind", -1);
-      if (marginal_heatmap[0]->hasAttribute("y_ind")) marginal_heatmap[0]->setAttribute("y_ind", -1);
+      for (const auto &mheatmap : marginal_heatmaps)
+        {
+          if (mheatmap->hasAttribute("x_ind")) mheatmap->setAttribute("x_ind", -1);
+          if (mheatmap->hasAttribute("y_ind")) mheatmap->setAttribute("y_ind", -1);
+        }
     }
 
   if (grm_args_values(input_args, "clear_locked_state", "i", &clear_locked_state) && clear_locked_state)
@@ -558,6 +561,7 @@ int grm_input_(const grm_args_t *input_args)
           viewport[2] = static_cast<double>(central_region->getAttribute("viewport_y_min"));
           viewport[3] = static_cast<double>(central_region->getAttribute("viewport_y_max"));
 
+          gr_savestate();
           kind = static_cast<std::string>(subplot_element->getAttribute("_kind"));
           if (kind == "marginal_heatmap")
             {
@@ -613,8 +617,8 @@ int grm_input_(const grm_args_t *input_args)
 
               GRM::Render::processLimits(subplot_element);
               GRM::Render::processWindow(central_region);
-
               gr_savestate();
+
               for (const auto &elem : subplot_element->parentElement()->children())
                 {
                   if (elem->hasAttribute("scale"))
@@ -709,15 +713,16 @@ int grm_input_(const grm_args_t *input_args)
                   yind = (int)yind_d;
                 }
 
-              auto old_xind = static_cast<int>(marginal_heatmap[0]->getAttribute("x_ind"));
-              auto old_yind = static_cast<int>(marginal_heatmap[0]->getAttribute("y_ind"));
-              marginal_heatmap[0]->setAttribute("x_ind", xind);
-              marginal_heatmap[0]->setAttribute("y_ind", yind);
-              if (static_cast<std::string>(marginal_heatmap[0]->getAttribute("marginal_heatmap_kind")) == "line" &&
+              auto marginal_heatmap = subplot_element->querySelectors("marginal_heatmap_plot");
+              auto old_xind = static_cast<int>(marginal_heatmap->getAttribute("x_ind"));
+              auto old_yind = static_cast<int>(marginal_heatmap->getAttribute("y_ind"));
+              marginal_heatmap->setAttribute("x_ind", xind);
+              marginal_heatmap->setAttribute("y_ind", yind);
+              if (static_cast<std::string>(marginal_heatmap->getAttribute("marginal_heatmap_kind")) == "line" &&
                   ((old_xind == -1 || old_yind == -1) && xind != -1 && yind != -1))
-                marginal_heatmap[0]->setAttribute("_update_required", true);
+                marginal_heatmap->setAttribute("_update_required", true);
 
-              for (auto &side_region : marginal_heatmap[0]->children())
+              for (auto &side_region : marginal_heatmap->children())
                 {
                   if (side_region->localName() == "side_region")
                     {
@@ -790,9 +795,11 @@ int grm_input_(const grm_args_t *input_args)
                   auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, zoom, zoom);
                   subplot_element->append(panzoom_element);
                   subplot_element->setAttribute("panzoom", true);
+                  gr_savestate();
                   GRM::Render::processLimits(subplot_element);
+                  gr_restorestate();
                 }
-
+              gr_restorestate();
               return 1;
             }
           else if (grm_args_values(input_args, "factor", "d", &factor))
@@ -821,8 +828,11 @@ int grm_input_(const grm_args_t *input_args)
                   auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, factor, factor);
                   subplot_element->append(panzoom_element);
                   subplot_element->setAttribute("panzoom", true);
+                  gr_savestate();
                   GRM::Render::processLimits(subplot_element);
+                  gr_restorestate();
                 }
+              gr_restorestate();
               return 1;
             }
 
@@ -830,10 +840,10 @@ int grm_input_(const grm_args_t *input_args)
               grm_args_values(input_args, "y_shift", "i", &yshift) &&
               grm_args_values(input_args, "move_selection", "i", &selection_status))
             {
+              gr_savestate();
               GRM::Render::processLimits(subplot_element);
               GRM::Render::processWindow(central_region);
 
-              gr_savestate();
               for (const auto &elem : subplot_element->parentElement()->children())
                 {
                   if (elem->hasAttribute("scale"))
@@ -899,8 +909,11 @@ int grm_input_(const grm_args_t *input_args)
                   auto panzoom_element = grm_get_render()->createPanzoom(ndc_xshift, ndc_yshift, 0, 0);
                   subplot_element->append(panzoom_element);
                   subplot_element->setAttribute("panzoom", true);
+                  gr_savestate();
                   GRM::Render::processLimits(subplot_element);
+                  gr_restorestate();
                 }
+              gr_restorestate();
               return 1;
             }
           else if (grm_args_values(input_args, "x_shift", "i", &xshift) &&
@@ -939,10 +952,10 @@ int grm_input_(const grm_args_t *input_args)
                 {
                   movable_obj_ref = movable;
 
+                  gr_savestate();
                   GRM::Render::processLimits(subplot_element);
                   GRM::Render::processWindow(central_region);
 
-                  gr_savestate();
                   for (const auto &elem : subplot_element->parentElement()->children())
                     {
                       if (elem->hasAttribute("scale"))
@@ -965,6 +978,7 @@ int grm_input_(const grm_args_t *input_args)
                   gr_restorestate();
                 }
             }
+          gr_restorestate();
         }
     }
 
@@ -991,7 +1005,9 @@ int grm_input_(const grm_args_t *input_args)
       auto panzoom_element = grm_get_render()->createPanzoom(focus_x, focus_y, factor_x, factor_y);
       subplot_element->append(panzoom_element);
       subplot_element->setAttribute("panzoom", true);
+      gr_savestate();
       GRM::Render::processLimits(subplot_element);
+      gr_restorestate();
 
       return 1;
     }
@@ -1319,9 +1335,8 @@ err_t get_tooltips_(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int
       return ERROR_NONE;
     }
 
-  GRM::Render::processLimits(subplot_element);
-
   gr_savestate();
+  GRM::Render::processLimits(subplot_element);
   auto central_region = subplot_element->querySelectors("central_region");
   if (central_region->hasAttribute("orientation"))
     orientation = static_cast<std::string>(central_region->getAttribute("orientation"));

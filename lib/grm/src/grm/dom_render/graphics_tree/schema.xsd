@@ -21,8 +21,6 @@
                 <xs:element ref="plot" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attribute name="active" type="xs:integer"/>
-            <xs:attribute name="fig_size_x" type="xs:double"/>
-            <xs:attribute name="fig_size_y" type="xs:double"/>
             <xs:attribute name="size_x" type="xs:double"/>
             <xs:attribute name="size_x_type" type="xs:string"/>
             <xs:attribute name="size_x_unit" type="xs:string"/>
@@ -50,24 +48,27 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="absolute_height" type="xs:double"/>
-            <xs:attribute name="absolute_height_pxl" type="xs:int"/>
+            <xs:attribute name="absolute_height_pxl" type="xs:integer"/>
             <xs:attribute name="absolute_width" type="xs:double"/>
-            <xs:attribute name="absolute_width_pxl" type="xs:int"/>
+            <xs:attribute name="absolute_width_pxl" type="xs:integer"/>
             <xs:attribute name="aspect_ratio" type="xs:double"/>
-            <xs:attribute name="fit_parents_height" type="xs:int" use="required"/>
-            <xs:attribute name="fit_parents_width" type="xs:int" use="required"/>
-            <xs:attribute name="num_col" type="xs:int" use="required"/>
-            <xs:attribute name="num_row" type="xs:int" use="required"/>
+            <xs:attribute name="fit_parents_height" type="xs:integer" use="required"/>
+            <xs:attribute name="fit_parents_width" type="xs:integer" use="required"/>
+            <xs:attribute name="flip_col_and_row" type="xs:integer"/>
+            <xs:attribute name="num_col" type="xs:integer" use="required"/>
+            <xs:attribute name="num_row" type="xs:integer" use="required"/>
             <xs:attribute name="plot_x_max" type="xs:double"/>
             <xs:attribute name="plot_x_min" type="xs:double"/>
             <xs:attribute name="plot_y_max" type="xs:double"/>
             <xs:attribute name="plot_y_min" type="xs:double"/>
             <xs:attribute name="relative_height" type="xs:double"/>
             <xs:attribute name="relative_width" type="xs:double"/>
-            <xs:attribute name="start_col" type="xs:int"/>
-            <xs:attribute name="start_row" type="xs:int"/>
-            <xs:attribute name="stop_col" type="xs:int"/>
-            <xs:attribute name="stop_row" type="xs:int"/>
+            <xs:attribute name="start_col" type="xs:integer"/>
+            <xs:attribute name="start_row" type="xs:integer"/>
+            <xs:attribute name="stop_col" type="xs:integer"/>
+            <xs:attribute name="stop_row" type="xs:integer"/>
+            <xs:attribute name="trim_col" type="xs:integer"/>
+            <xs:attribute name="trim_row" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -79,22 +80,22 @@
             </xs:choice>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attribute name="absolute_height" type="xs:double"/>
-            <xs:attribute name="absolute_height_pxl" type="xs:int"/>
+            <xs:attribute name="absolute_height_pxl" type="xs:integer"/>
             <xs:attribute name="absolute_width" type="xs:double"/>
-            <xs:attribute name="absolute_width_pxl" type="xs:int"/>
+            <xs:attribute name="absolute_width_pxl" type="xs:integer"/>
             <xs:attribute name="aspect_ratio" type="xs:double"/>
-            <xs:attribute name="fit_parents_height" type="xs:int" use="required"/>
-            <xs:attribute name="fit_parents_width" type="xs:int" use="required"/>
+            <xs:attribute name="col_span" type="xs:integer"/>
+            <xs:attribute name="fit_parents_height" type="xs:integer" use="required"/>
+            <xs:attribute name="fit_parents_width" type="xs:integer" use="required"/>
+            <xs:attribute name="keep_size_if_swapped" type="xs:integer"/>
             <xs:attribute name="plot_x_max" type="xs:double"/>
             <xs:attribute name="plot_x_min" type="xs:double"/>
             <xs:attribute name="plot_y_max" type="xs:double"/>
             <xs:attribute name="plot_y_min" type="xs:double"/>
+            <xs:attribute name="position" type="xs:string"/>
             <xs:attribute name="relative_height" type="xs:double"/>
             <xs:attribute name="relative_width" type="xs:double"/>
-            <xs:attribute name="start_col" type="xs:int"/>
-            <xs:attribute name="start_row" type="xs:int"/>
-            <xs:attribute name="stop_col" type="xs:int"/>
-            <xs:attribute name="stop_row" type="xs:int"/>
+            <xs:attribute name="row_span" type="xs:integer"/>
         </xs:complexType>
     </xs:element>
 
@@ -536,6 +537,7 @@
             </xs:choice>
             <xs:attributeGroup ref="colorrep"/>
             <xs:attributeGroup ref="move_xform_ndc"/>
+            <xs:attribute name="char_height" type="xs:double"/>
             <xs:attribute name="fill_color_ind" type="xs:integer"/>
             <xs:attribute name="line_color_ind" type="xs:integer"/>
             <xs:attribute name="line_spec" type="xs:string"/>
