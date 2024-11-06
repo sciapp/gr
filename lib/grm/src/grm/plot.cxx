@@ -207,7 +207,7 @@ static string_map_entry_t kind_to_fmt[] = {
     {"surface", "xyzc"},       {"wireframe", "xyzc"},
     {"plot3", "xyzc"},         {"scatter", "xyzc"},
     {"scatter3", "xyzc"},      {"quiver", "xyuv"},
-    {"heatmap", "xyzc"},       {"hist", "x"},
+    {"heatmap", "xyzc"},       {"histogram", "x"},
     {"barplot", "y"},          {"isosurface", "c"},
     {"imshow", "c"},           {"nonuniform_heatmap", "xyzc"},
     {"polar_histogram", "x"},  {"pie", "x"},
@@ -224,7 +224,7 @@ static plot_func_map_entry_t kind_to_func[] = {{"line", plot_line},
                                                {"scatter", plot_scatter},
                                                {"quiver", plot_quiver},
                                                {"stem", plot_stem},
-                                               {"hist", plot_hist},
+                                               {"histogram", plot_histogram},
                                                {"barplot", plot_barplot},
                                                {"contour", plot_contour},
                                                {"contourf", plot_contourf},
@@ -1123,6 +1123,11 @@ err_t plot_pre_subplot(grm_args_t *subplot_args)
   logger((stderr, "Pre subplot processing\n"));
 
   grm_args_values(subplot_args, "kind", "s", &kind);
+  if (strcmp(kind, "hist") == 0)
+    {
+      kind = "histogram";
+      grm_args_push(subplot_args, "kind", "s", kind);
+    }
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   error = plot_store_coordinate_ranges(subplot_args);
   return_if_error;
@@ -1339,7 +1344,7 @@ void plot_process_resample_method(grm_args_t *subplot_args)
 void plot_process_window(grm_args_t *subplot_args)
 {
   int scale = 0;
-  const char *kind;
+  const char *kind, *orientation = PLOT_DEFAULT_ORIENTATION;
   int x_log, y_log, z_log;
   int x_flip, y_flip, z_flip;
   double rotation, tilt;
@@ -1348,6 +1353,11 @@ void plot_process_window(grm_args_t *subplot_args)
   auto central_region = getCentralRegion();
 
   grm_args_values(subplot_args, "kind", "s", &kind);
+  if (strcmp(kind, "hist") == 0)
+    {
+      kind = "histogram";
+      grm_args_push(subplot_args, "kind", "s", kind);
+    }
   if (grm_args_values(subplot_args, "x_log", "i", &x_log)) group->setAttribute("x_log", x_log);
   if (grm_args_values(subplot_args, "y_log", "i", &y_log)) group->setAttribute("y_log", y_log);
   if (grm_args_values(subplot_args, "z_log", "i", &z_log)) group->setAttribute("z_log", z_log);
@@ -1372,6 +1382,8 @@ void plot_process_window(grm_args_t *subplot_args)
       if (grm_args_values(subplot_args, "tilt", "d", &tilt)) central_region->setAttribute("space_3d_theta", tilt);
     }
 
+  if (grm_args_values(subplot_args, "orientation", "s", &orientation))
+    getCentralRegion()->setAttribute("orientation", orientation);
   if (grm_args_values(subplot_args, "scale", "i", scale))
     global_render->setScale(edit_figure->lastChildElement(), scale);
 }
@@ -1390,6 +1402,11 @@ err_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
     }
 
   grm_args_values(subplot_args, "kind", "s", &kind);
+  if (strcmp(kind, "hist") == 0)
+    {
+      kind = "histogram";
+      grm_args_push(subplot_args, "kind", "s", kind);
+    }
   group->setAttribute("_kind", kind);
 
   if (grm_args_values(subplot_args, "x_lim", "dd", &x_min, &x_max))
@@ -1537,7 +1554,6 @@ err_t plot_line(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
   err_t error = ERROR_NONE;
-  const char *orientation;
   int marker_type;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
@@ -1572,9 +1588,6 @@ err_t plot_line(grm_args_t *subplot_args)
           (*context)["x" + str] = x_vec;
           subGroup->setAttribute("x", "x" + str);
         }
-
-      if (grm_args_values(subplot_args, "orientation", "s", &orientation))
-        subGroup->setAttribute("orientation", orientation);
 
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
         {
@@ -1647,7 +1660,6 @@ err_t plot_stairs(grm_args_t *subplot_args)
    */
 
   grm_args_t **current_series;
-  char *orientation;
   double x_min, x_max, y_min, y_max;
   double *x = nullptr, *y = nullptr, *xi;
   err_t error = ERROR_NONE;
@@ -1666,9 +1678,6 @@ err_t plot_stairs(grm_args_t *subplot_args)
       const char *x_axis_ref, *y_axis_ref;
       auto subGroup = global_render->createSeries("stairs");
       group->append(subGroup);
-
-      if (grm_args_values(subplot_args, "orientation", "s", &orientation))
-        subGroup->setAttribute("orientation", orientation);
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -1726,7 +1735,6 @@ err_t plot_scatter(grm_args_t *subplot_args)
    */
   grm_args_t **current_series;
   err_t error;
-  char *orientation;
 
   grm_args_values(subplot_args, "series", "A", &current_series);
   std::shared_ptr<GRM::Element> group =
@@ -1736,8 +1744,6 @@ err_t plot_scatter(grm_args_t *subplot_args)
     {
       auto subGroup = global_render->createSeries("scatter");
       group->append(subGroup);
-      if (grm_args_values(subplot_args, "orientation", "s", &orientation))
-        subGroup->setAttribute("orientation", orientation);
 
       double *x = nullptr, *y = nullptr, *z = nullptr, *c = nullptr, c_min, c_max;
       unsigned int x_length, y_length, z_length, c_length;
@@ -1876,8 +1882,6 @@ err_t plot_stem(grm_args_t *subplot_args)
   std::shared_ptr<GRM::Element> group =
       (current_central_region_element) ? current_central_region_element : getCentralRegion();
 
-  char *orientation;
-
   grm_args_values(subplot_args, "series", "A", &current_series);
 
   while (*current_series != nullptr)
@@ -1890,9 +1894,6 @@ err_t plot_stem(grm_args_t *subplot_args)
 
       auto subGroup = global_render->createSeries("stem");
       group->append(subGroup);
-
-      if (grm_args_values(subplot_args, "orientation", "s", &orientation))
-        subGroup->setAttribute("orientation", orientation);
 
       grm_args_first_value(*current_series, "x", "D", &x, &x_length);
       grm_args_first_value(*current_series, "y", "D", &y, &y_length);
@@ -1932,7 +1933,7 @@ err_t plot_stem(grm_args_t *subplot_args)
   return ERROR_NONE;
 }
 
-err_t plot_hist(grm_args_t *subplot_args)
+err_t plot_histogram(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
   int bar_color_index = 989, i;
@@ -1951,11 +1952,10 @@ err_t plot_hist(grm_args_t *subplot_args)
       double x_min, x_max, bar_width, y_min, y_max, y_line_pos;
       double *bins, *x, *weights;
       unsigned int num_bins = 0, x_length, num_weights;
-      char *orientation;
       double transparency;
       const char *x_axis_ref, *y_axis_ref;
 
-      auto subGroup = global_render->createSeries("hist");
+      auto subGroup = global_render->createSeries("histogram");
       group->append(subGroup);
 
       int id = static_cast<int>(global_root->getAttribute("_id"));
@@ -1992,9 +1992,6 @@ err_t plot_hist(grm_args_t *subplot_args)
           if (grm_args_values(*current_series, "num_bins", "i", &num_bins))
             subGroup->setAttribute("num_bins", (int)num_bins);
         }
-
-      if (grm_args_values(subplot_args, "orientation", "s", &orientation))
-        subGroup->setAttribute("orientation", orientation);
 
       if (grm_args_values(*current_series, "x_range", "dd", &x_min, &x_max))
         {
@@ -2061,7 +2058,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
   int series_index = 0;
   unsigned int i;
   err_t error = ERROR_NONE;
-  char *orientation;
 
   std::shared_ptr<GRM::Element> group =
       (current_central_region_element) ? current_central_region_element : getCentralRegion();
@@ -2111,10 +2107,6 @@ err_t plot_barplot(grm_args_t *subplot_args)
       if (grm_args_values(subplot_args, "style", "s", &style))
         {
           subGroup->setAttribute("style", style);
-        }
-      if (grm_args_values(subplot_args, "orientation", "s", &orientation))
-        {
-          subGroup->setAttribute("orientation", orientation);
         }
       if (grm_args_values(*current_series, "transparency", "d", &transparency))
         {
@@ -6375,23 +6367,23 @@ int grm_merge_named(const grm_args_t *args, const char *identificator)
 int plot_process_subplot_args(grm_args_t *subplot_args)
 {
   plot_func_t plot_func;
-  char *y_label, *x_label, *title, *kind;
+  char *kind;
   int keep_aspect_ratio, location, adjust_x_lim, adjust_y_lim, only_quadratic_aspect_ratio;
   double *subplot;
   double x_lim_min, x_lim_max, y_lim_min, y_lim_max, z_lim_min, z_lim_max;
-  double x_min, x_max, y_min, y_max, z_min, z_max;
-  grm_args_t **current_series;
   int grplot = 0;
 
   std::shared_ptr<GRM::Element> group = (current_dom_element) ? current_dom_element : edit_figure->lastChildElement();
   grm_args_values(subplot_args, "kind", "s", &kind);
+  if (strcmp(kind, "hist") == 0)
+    {
+      kind = (char *)"histogram";
+      grm_args_push(subplot_args, "kind", "s", kind);
+    }
   group->setAttribute("_kind", kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
 
-  if (plot_pre_subplot(subplot_args) != ERROR_NONE)
-    {
-      return 0;
-    }
+  if (plot_pre_subplot(subplot_args) != ERROR_NONE) return 0;
 
   auto central_region = getCentralRegion();
   if (grm_args_values(subplot_args, "keep_aspect_ratio", "i", &keep_aspect_ratio))
@@ -6444,14 +6436,9 @@ int plot_process_subplot_args(grm_args_t *subplot_args)
       group->setAttribute("grplot", grplot);
     }
 
-  if (!plot_func_map_at(plot_func_map, kind, &plot_func))
-    {
-      return 0;
-    }
-  if (plot_func(subplot_args) != ERROR_NONE)
-    {
-      return 0;
-    }
+  if (!plot_func_map_at(plot_func_map, kind, &plot_func)) return 0;
+  if (plot_func(subplot_args) != ERROR_NONE) return 0;
+
   plot_post_subplot(subplot_args);
   return 1;
 }
@@ -6460,7 +6447,6 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
 {
   grm_args_t **current_subplot_args;
   grm::Grid *currentGrid;
-  plot_func_t plot_func;
   int fig_size_x, fig_size_y, tmp_size_i[2];
   double tmp_size_d[2];
   grm_args_ptr_t tmp_size_a[2];

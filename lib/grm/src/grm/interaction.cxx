@@ -368,7 +368,7 @@ static void moveTransformationHelper(const std::shared_ptr<GRM::Element> &elemen
   std::vector<std::string> ndc_transformation_elems = {"figure",
                                                        "plot",
                                                        "colorbar",
-                                                       "labels_group",
+                                                       "label",
                                                        "titles_3d",
                                                        "text",
                                                        "layout_grid_element",
@@ -718,7 +718,7 @@ int grm_input(const grm_args_t *input_args)
                       for (auto &child : side_region->children())
                         {
                           std::string child_kind = static_cast<std::string>(child->getAttribute("kind"));
-                          if (child_kind == "hist")
+                          if (child_kind == "histogram")
                             {
                               // reset bar colors
                               // bar level
@@ -1243,10 +1243,8 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
   int width, height, max_width_height;
   std::vector<std::string> labels;
   unsigned int num_labels = 0;
-  std::string kind;
+  std::string kind, orientation = PLOT_DEFAULT_ORIENTATION;
   unsigned int x_length, y_length, z_length, series_i = 0, i;
-  std::string orientation;
-  int is_vertical = 0;
 
   auto info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
   return_error_if(info == nullptr, ERROR_MALLOC);
@@ -1265,15 +1263,7 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
   auto subplot_element = get_subplot_from_ndc_points_using_dom(1, &x, &y);
 
-  if (subplot_element != nullptr)
-    {
-      kind = static_cast<std::string>(subplot_element->getAttribute("_kind"));
-      if (subplot_element->hasAttribute("orientation"))
-        {
-          orientation = static_cast<std::string>(subplot_element->getAttribute("orientation"));
-          is_vertical = orientation == "vertical";
-        }
-    }
+  if (subplot_element != nullptr) kind = static_cast<std::string>(subplot_element->getAttribute("_kind"));
   if (subplot_element == nullptr ||
       !str_equals_any(kind, "line", "scatter", "stem", "stairs", "heatmap", "marginal_heatmap", "contour", "imshow",
                       "contourf", "pie", "hexbin", "shade", "quiver"))
@@ -1286,6 +1276,8 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
 
   gr_savestate();
   auto central_region = subplot_element->querySelectors("central_region");
+  if (central_region->hasAttribute("orientation"))
+    orientation = static_cast<std::string>(central_region->getAttribute("orientation"));
   GRM::Render::processWindow(central_region);
   if (central_region->hasAttribute("viewport_x_min"))
     {
@@ -1478,20 +1470,16 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
               z_key = static_cast<std::string>(current_series->getAttribute(z_key_string));
             }
 
-          std::vector<double> x_series_vec, y_series_vec;
+          std::vector<double> x_series_vec, y_series_vec, z_series_vec;
 
-          if (is_vertical)
+          if (str_equals_any(kind, "heatmap", "hexbin", "quiver", "shade") && orientation == "vertical")
             {
-              x_series_vec = GRM::get<std::vector<double>>((*context)[y_key]);
-              y_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);
+              auto tmp = x_key;
+              x_key = y_key;
+              y_key = tmp;
             }
-          else
-            {
-              x_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);
-              y_series_vec = GRM::get<std::vector<double>>((*context)[y_key]);
-            }
-          std::vector<double> z_series_vec;
-
+          x_series_vec = GRM::get<std::vector<double>>((*context)[x_key]);
+          y_series_vec = GRM::get<std::vector<double>>((*context)[y_key]);
           if (str_equals_any(kind, "heatmap", "marginal_heatmap", "contour", "imshow", "contourf"))
             {
               z_series_vec = GRM::get<std::vector<double>>((*context)[z_key]);
@@ -1682,6 +1670,13 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                 {
                   info->xlabel = (char *)"u";
                   info->ylabel = (char *)"v";
+                  if (orientation == "vertical")
+                    {
+                      auto tmp = y_series_idx;
+                      y_series_idx = x_series_idx;
+                      x_series_idx = tmp;
+                      x_length = y_length;
+                    }
                   info->x = u_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
                   info->y = v_series[(int)(y_series_idx)*x_length + (int)(x_series_idx)];
                 }
@@ -1699,6 +1694,13 @@ err_t get_tooltips(int mouse_x, int mouse_y, err_t (*tooltip_callback)(int, int,
                 }
               else
                 {
+                  if (kind == "heatmap" && orientation == "vertical")
+                    {
+                      auto tmp = y_series_idx;
+                      y_series_idx = x_series_idx;
+                      x_series_idx = tmp;
+                      x_length = y_length;
+                    }
                   num = (grm_isnan(z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx]))
                             ? NAN
                             : z_series_vec[(int)y_series_idx * x_length + (int)x_series_idx];

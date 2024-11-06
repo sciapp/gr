@@ -275,14 +275,6 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of labels_group -->
-    <xs:element name="labels_group">
-        <xs:complexType>
-            <xs:attributeGroup ref="_bbox"/>
-            <xs:attribute name="_child_id" type="xs:integer"/>
-        </xs:complexType>
-    </xs:element>
-
     <!-- definition of label -->
     <xs:element name="label">
         <xs:complexType>
@@ -506,8 +498,8 @@
         </xs:complexType>
     </xs:element>
 
-    <!-- definition of hist -->
-    <xs:element name="series_hist">
+    <!-- definition of histogram -->
+    <xs:element name="series_histogram">
         <xs:complexType>
             <xs:attributeGroup ref="_bbox"/>
             <xs:attributeGroup ref="_data"/>

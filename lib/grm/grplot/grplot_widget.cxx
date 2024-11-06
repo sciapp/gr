@@ -355,19 +355,19 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv)
           type->addAction(scatter3Act);
           type->addAction(scatterAct);
         }
-      else if ((strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0 || strcmp(kind, "stairs") == 0 ||
+      else if ((strcmp(kind, "histogram") == 0 || strcmp(kind, "barplot") == 0 || strcmp(kind, "stairs") == 0 ||
                 strcmp(kind, "stem") == 0) &&
                !error)
         {
-          histAct = new QAction(tr("&Hist"), this);
-          connect(histAct, &QAction::triggered, this, &GRPlotWidget::hist);
+          histogramAct = new QAction(tr("&Histogram"), this);
+          connect(histogramAct, &QAction::triggered, this, &GRPlotWidget::histogram);
           barplotAct = new QAction(tr("&Barplot"), this);
           connect(barplotAct, &QAction::triggered, this, &GRPlotWidget::barplot);
           stairsAct = new QAction(tr("&Stairs"), this);
           connect(stairsAct, &QAction::triggered, this, &GRPlotWidget::stairs);
           stemAct = new QAction(tr("&Stem"), this);
           connect(stemAct, &QAction::triggered, this, &GRPlotWidget::stem);
-          type->addAction(histAct);
+          type->addAction(histogramAct);
           type->addAction(barplotAct);
           type->addAction(stairsAct);
           type->addAction(stemAct);
@@ -738,7 +738,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
                                    "marginal_heatmap", "surface",  "wireframe"};
       QStringList isosurface_group = {"isosurface", "volume"};
       QStringList plot3_group = {"plot3", "scatter", "scatter3", "tricontour", "trisurface"};
-      QStringList barplot_group = {"barplot", "hist", "stem", "stairs"};
+      QStringList barplot_group = {"barplot", "histogram", "stem", "stairs"};
       QStringList hexbin_group = {"hexbin", "shade"};
       QStringList other_kinds = {"pie", "polar_heatmap", "polar_histogram", "polar_line", "polar_scatter", "quiver"};
       std::string kind;
@@ -2099,7 +2099,7 @@ void GRPlotWidget::scatter()
   redraw();
 }
 
-void GRPlotWidget::hist()
+void GRPlotWidget::histogram()
 {
   if (global_root == nullptr) global_root = grm_get_document_root();
   std::vector<std::string> valid_series_names = {"series_barplot", "series_stem", "series_stairs"};
@@ -2108,12 +2108,12 @@ void GRPlotWidget::hist()
       auto series_elements = global_root->querySelectorsAll(name);
       for (const auto &series_elem : series_elements)
         {
-          series_elem->setAttribute("kind", "hist");
+          series_elem->setAttribute("kind", "histogram");
         }
     }
 
   // to get the same bars then before all bars have to exist during render call so that the linespec work properly
-  for (const auto &elem : global_root->querySelectorsAll("series_hist"))
+  for (const auto &elem : global_root->querySelectorsAll("series_histogram"))
     {
       elem->setAttribute("_update_required", true);
     }
@@ -2123,7 +2123,7 @@ void GRPlotWidget::hist()
 void GRPlotWidget::barplot()
 {
   if (global_root == nullptr) global_root = grm_get_document_root();
-  std::vector<std::string> valid_series_names = {"series_hist", "series_stem", "series_stairs"};
+  std::vector<std::string> valid_series_names = {"series_histogram", "series_stem", "series_stairs"};
   for (const auto &name : valid_series_names)
     {
       auto series_elements = global_root->querySelectorsAll(name);
@@ -2145,7 +2145,7 @@ void GRPlotWidget::barplot()
 void GRPlotWidget::stairs()
 {
   if (global_root == nullptr) global_root = grm_get_document_root();
-  std::vector<std::string> valid_series_names = {"series_barplot", "series_stem", "series_hist"};
+  std::vector<std::string> valid_series_names = {"series_barplot", "series_stem", "series_histogram"};
   for (const auto &name : valid_series_names)
     {
       auto series_elements = global_root->querySelectorsAll(name);
@@ -2166,7 +2166,7 @@ void GRPlotWidget::stairs()
 void GRPlotWidget::stem()
 {
   if (global_root == nullptr) global_root = grm_get_document_root();
-  std::vector<std::string> valid_series_names = {"series_barplot", "series_hist", "series_stairs"};
+  std::vector<std::string> valid_series_names = {"series_barplot", "series_histogram", "series_stairs"};
   for (const auto &name : valid_series_names)
     {
       auto series_elements = global_root->querySelectorsAll(name);
@@ -2770,6 +2770,7 @@ void GRPlotWidget::processTestCommandsFile()
                   elem->setAttribute(words[n - 2].toUtf8().constData(), words[n - 1].toUtf8().constData());
                 }
               auto value = words[n - 1].toUtf8().constData();
+              if (strcmp(value, "hist") == 0) value = "histogram";
 
               if (strcmp(value, "line") == 0)
                 {
@@ -2780,7 +2781,7 @@ void GRPlotWidget::processTestCommandsFile()
                       elem->setAttribute("_update_required", true);
                     }
                 }
-              if (strcmp(value, "barplot") == 0 || strcmp(value, "hist") == 0 || strcmp(value, "stairs") == 0)
+              if (strcmp(value, "barplot") == 0 || strcmp(value, "histogram") == 0 || strcmp(value, "stairs") == 0)
                 {
                   // to get the same barplots then before all lines have to exist during render call so that the
                   // linespec work properly
