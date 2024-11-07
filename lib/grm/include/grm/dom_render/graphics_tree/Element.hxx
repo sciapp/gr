@@ -15,6 +15,8 @@ class Document;
 class EXPORT Element : public Node
 {
 public:
+  virtual ~Element();
+
   // Element interface
   std::string localName() const;
 

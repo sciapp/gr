@@ -5,6 +5,7 @@
 
 #include <grm/util.h>
 #include <cassert>
+#include <list>
 #include <numeric>
 #include <optional>
 #include <string>
@@ -14,6 +15,55 @@
 
 
 /* ######################### internal interface ##################################################################### */
+
+/* ========================= classes ================================================================================ */
+
+/* ------------------------- IdPool --------------------------------------------------------------------------------- */
+
+class NoCurrentIdError : public std::exception
+{
+public:
+  NoCurrentIdError() {}
+
+  const char *what() const noexcept { return "No ID in use"; }
+};
+
+template <typename T> class IdNotFoundError : public std::exception
+{
+public:
+  IdNotFoundError(T id) : id_(id)
+  {
+    std::ostringstream ss;
+    ss << "ID \"" << id_ << "\" not found";
+    message_ = ss.str();
+  }
+
+  const char *what() const noexcept { return message_.c_str(); }
+
+  T id() const { return id_; }
+
+private:
+  const T id_;
+  std::string message_;
+};
+
+template <typename T> class IdPool
+{
+public:
+  IdPool(T start_id = 0);
+  T current();
+  T next();
+  void release(T id);
+  void reset();
+
+private:
+  const T start_id_;
+  std::optional<T> current_id_;
+  std::list<std::pair<T, T>> used_id_ranges_;
+};
+
+/* Use generated code for unsigned int IDs from the translation unit `utilcpp.cxx` */
+extern template class IdPool<int>;
 
 /* ========================= macros ================================================================================= */
 

@@ -226,7 +226,8 @@ static int plot_scatter_markertypes[] = {
 static int *previous_scatter_marker_type = plot_scatter_markertypes;
 static int *previous_line_marker_type = plot_scatter_markertypes;
 
-static int bounding_id = 0, axis_id = 0;
+static IdPool<int> id_pool;
+static int axis_id = 0;
 static bool automatic_update = false;
 static bool redraw_ws = false;
 static std::map<int, std::shared_ptr<GRM::Element>> bounding_map;
@@ -631,11 +632,46 @@ static void resetOldBoundingBoxes(const std::shared_ptr<GRM::Element> &element)
 {
   if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
     {
-      element->setAttribute("_bbox_id", -1);
+      if (element->hasAttribute("_bbox_id"))
+        {
+          element->setAttribute("_bbox_id", -std::abs(static_cast<int>(element->getAttribute("_bbox_id"))));
+        }
+      else
+        {
+          element->setAttribute("_bbox_id", -id_pool.next());
+        }
       element->removeAttribute("_bbox_x_min");
       element->removeAttribute("_bbox_x_max");
       element->removeAttribute("_bbox_y_min");
       element->removeAttribute("_bbox_y_max");
+    }
+}
+
+static bool removeBoundingBoxId(GRM::Element &element)
+{
+  if (element.hasAttribute("_bbox_id"))
+    {
+      auto bbox_id = std::abs(static_cast<int>(element.getAttribute("_bbox_id")));
+      element.removeAttribute("_bbox_id");
+      id_pool.release(bbox_id);
+      return true;
+    }
+  return false;
+}
+
+static bool applyBoundingBoxId(GRM::Element &new_element, GRM::Element &old_element, bool only_reserve_id = false)
+{
+  if (old_element.hasAttribute("_bbox_id"))
+    {
+      new_element.setAttribute("_bbox_id", std::abs(static_cast<int>(old_element.getAttribute("_bbox_id"))) *
+                                               (only_reserve_id ? -1 : 1));
+      old_element.removeAttribute("_bbox_id");
+      return true;
+    }
+  else
+    {
+      new_element.setAttribute("_bbox_id", id_pool.next() * (only_reserve_id ? -1 : 1));
+      return false;
     }
 }
 
@@ -16176,9 +16212,8 @@ static void renderHelper(const std::shared_ptr<GRM::Element> &element, const std
 
   if (bounding_boxes && !isDrawable(element))
     {
-      gr_setbboxcallback(bounding_id, &receiverFunction);
-      bounding_map[bounding_id] = element;
-      bounding_id++;
+      gr_setbboxcallback(id_pool.next(), &receiverFunction);
+      bounding_map[id_pool.current()] = element;
     }
 
   processElement(element, context);
@@ -16203,7 +16238,7 @@ static void missingBboxCalculator(const std::shared_ptr<GRM::Element> &element,
 {
   double elem_bbox_xmin = DBL_MAX, elem_bbox_xmax = -DBL_MAX, elem_bbox_ymin = DBL_MAX, elem_bbox_ymax = -DBL_MAX;
 
-  if (element->hasAttribute("_bbox_id") && static_cast<int>(element->getAttribute("_bbox_id")) != -1)
+  if (element->hasAttribute("_bbox_id") && static_cast<int>(element->getAttribute("_bbox_id")) >= 0)
     {
       *bbox_xmin = static_cast<double>(element->getAttribute("_bbox_x_min"));
       *bbox_xmax = static_cast<double>(element->getAttribute("_bbox_x_max"));
@@ -16228,13 +16263,21 @@ static void missingBboxCalculator(const std::shared_ptr<GRM::Element> &element,
     }
 
   if (element->localName() != "root" &&
-      (!element->hasAttribute("_bbox_id") || static_cast<int>(element->getAttribute("_bbox_id")) == -1))
+      (!element->hasAttribute("_bbox_id") || static_cast<int>(element->getAttribute("_bbox_id")) < 0))
     {
       if (!(elem_bbox_xmin == DBL_MAX || elem_bbox_xmax == -DBL_MAX || elem_bbox_ymin == DBL_MAX ||
             elem_bbox_ymax == -DBL_MAX))
         {
-          if (static_cast<int>(element->getAttribute("_bbox_id")) != -1)
-            element->setAttribute("_bbox_id", bounding_id++);
+          if (element->hasAttribute("_bbox_id"))
+            {
+              /* In this case the element already has a negative (placeholder) bounding box id which can be reused by
+                 turning into positive. */
+              element->setAttribute("_bbox_id", -static_cast<int>(element->getAttribute("_bbox_id")));
+            }
+          else
+            {
+              element->setAttribute("_bbox_id", id_pool.next());
+            }
           element->setAttribute("_bbox_x_min", elem_bbox_xmin);
           element->setAttribute("_bbox_x_max", elem_bbox_xmax);
           element->setAttribute("_bbox_y_min", elem_bbox_ymin);
@@ -16262,9 +16305,8 @@ static void renderZQueue(const std::shared_ptr<GRM::Context> &context)
 
       if (bounding_boxes)
         {
-          gr_setbboxcallback(bounding_id, &receiverFunction);
-          bounding_map[bounding_id] = element;
-          bounding_id++;
+          gr_setbboxcallback(id_pool.next(), &receiverFunction);
+          bounding_map[id_pool.current()] = element;
         }
 
       custom_color_index_manager.selectcontext(drawable->getGrContextId());
@@ -16607,7 +16649,6 @@ void GRM::Render::render()
       const unsigned int indent = 2;
 
       redraw_ws = true;
-      bounding_id = 0;
       if (!global_render) GRM::Render::createRender();
       applyRootDefaults(root);
       if (logger_enabled())
@@ -16627,9 +16668,9 @@ void GRM::Render::render()
       // needed when series_line is changed to series_scatter for example
       if (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "edit") == 0)
         {
-          for (const auto &child : global_render->querySelectorsAll("[_bbox_id=-1]"))
+          for (const auto &child : global_render->querySelectorsAll("[_bbox_id]"))
             {
-              child->removeAttribute("_bbox_id");
+              if (static_cast<int>(child->getAttribute("_bbox_id")) >= 0) continue;
               missingBboxCalculator(child, this->context);
             }
         }
@@ -16667,6 +16708,7 @@ std::shared_ptr<GRM::Render> GRM::Render::createRender()
   global_render = std::shared_ptr<Render>(new Render());
   global_render->ownerDocument()->setUpdateFct(&renderCaller, &updateFilter);
   global_render->ownerDocument()->setContextFct(&deleteContextAttribute, &updateContextAttribute);
+  global_render->ownerDocument()->setElementCleanupFct(&cleanupElement);
   return global_render;
 }
 
@@ -19061,7 +19103,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               plot_parent->setAttribute("_kind", kind);
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
-              new_series->setAttribute("_bbox_id", -1);
+              applyBoundingBoxId(*new_series, *element, true);
               if (element->hasAttribute("ref_x_axis_location"))
                 new_series->setAttribute("ref_x_axis_location",
                                          static_cast<std::string>(element->getAttribute("ref_x_axis_location")));
@@ -19170,7 +19212,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
               new_series->setAttribute("z", element->getAttribute("z"));
-              new_series->setAttribute("_bbox_id", -1);
+              applyBoundingBoxId(*new_series, *element, true);
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               if (kind == "imshow")
                 {
@@ -19221,7 +19263,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               new_series->setAttribute("z_dims", element->getAttribute("z_dims"));
               if (element->hasAttribute("d_min")) new_series->setAttribute("d_min", element->getAttribute("d_min"));
               if (element->hasAttribute("d_max")) new_series->setAttribute("d_max", element->getAttribute("d_max"));
-              new_series->setAttribute("_bbox_id", -1);
+              applyBoundingBoxId(*new_series, *element, true);
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())
                 {
@@ -19241,7 +19283,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
               new_series->setAttribute("z", element->getAttribute("z"));
-              new_series->setAttribute("_bbox_id", -1);
+              applyBoundingBoxId(*new_series, *element, true);
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())
                 {
@@ -19259,7 +19301,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               element->parentElement()->insertBefore(new_series, element);
               plot_parent->setAttribute("_kind", kind);
               new_series->setAttribute("x", element->getAttribute("x"));
-              new_series->setAttribute("_bbox_id", -1);
+              applyBoundingBoxId(*new_series, *element, true);
               if (element->hasAttribute("ref_x_axis_location"))
                 new_series->setAttribute("ref_x_axis_location",
                                          static_cast<std::string>(element->getAttribute("ref_x_axis_location")));
@@ -19315,7 +19357,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               plot_parent->setAttribute("_kind", kind);
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
-              new_series->setAttribute("_bbox_id", -1);
+              applyBoundingBoxId(*new_series, *element, true);
               if (static_cast<int>(central_region->getAttribute("keep_window"))) setRanges(element, new_series);
               for (const auto &child : element->children())
                 {
@@ -19334,7 +19376,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
               plot_parent->setAttribute("_kind", kind);
               new_series->setAttribute("x", element->getAttribute("x"));
               new_series->setAttribute("y", element->getAttribute("y"));
-              new_series->setAttribute("_bbox_id", -1);
+              applyBoundingBoxId(*new_series, *element, true);
               if (element->hasAttribute("clip_negative"))
                 new_series->setAttribute("clip_negative", element->getAttribute("clip_negative"));
               for (const auto &child : element->children())
@@ -19814,13 +19856,13 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                     {
                       resetOldBoundingBoxes(elem);
                       // plot gets calculated to quit so this special case is needed to get the right bboxes
-                      if (name == "plot") elem->removeAttribute("_bbox_id");
+                      if (name == "plot") removeBoundingBoxId(*elem);
                     }
                 }
 
               // reset the bounding boxes for figure
               resetOldBoundingBoxes(element);
-              element->removeAttribute("_bbox_id");
+              removeBoundingBoxId(*element);
             }
           else if (element->localName() == "plot" && std::find(plot_bbox_attributes.begin(), plot_bbox_attributes.end(),
                                                                attr) != plot_bbox_attributes.end())
@@ -20406,7 +20448,7 @@ void updateFilter(const std::shared_ptr<GRM::Element> &element, const std::strin
                 }
               resetOldBoundingBoxes(element->parentElement());
               resetOldBoundingBoxes(element);
-              element->removeAttribute("_bbox_id");
+              removeBoundingBoxId(*element);
             }
         }
       global_root->setAttribute("_modified", true);
@@ -20436,8 +20478,7 @@ std::shared_ptr<GRM::Element> GRM::Render::getActiveFigure()
   return active_figure;
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ modify context ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ modify context ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void updateContextAttribute(const std::shared_ptr<GRM::Element> &element, const std::string &attr,
                             const GRM::Value &old_value)
@@ -20474,5 +20515,15 @@ void deleteContextAttribute(const std::shared_ptr<GRM::Element> &element)
         {
           (*context)[attr].decrement_key(static_cast<std::string>(value));
         }
+    }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ cleanup element ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+void cleanupElement(GRM::Element &element)
+{
+  if (element.hasAttribute("_bbox_id"))
+    {
+      id_pool.release(std::abs(static_cast<int>(element.getAttribute("_bbox_id"))));
     }
 }
